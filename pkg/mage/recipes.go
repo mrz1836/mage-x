@@ -384,7 +384,7 @@ func getBuiltinRecipes() []Recipe {
 			Category:    "quality",
 			Tags:        []string{"quality", "linting", "formatting"},
 			Steps: []RecipeStep{
-				{Name: "Add .golangci.yml", Command: "create-golangci-config"},
+				{Name: "Add .golangci.json", Command: "create-golangci-config"},
 				{Name: "Add pre-commit hooks", Command: "create-pre-commit-hooks"},
 				{Name: "Configure formatting", Command: "setup-formatting"},
 				{Name: "Add quality scripts", Command: "create-quality-scripts"},

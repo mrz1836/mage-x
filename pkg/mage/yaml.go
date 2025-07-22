@@ -338,7 +338,7 @@ func createDefaultConfig() *MageConfig {
 		},
 		Lint: LintYamlConfig{
 			Enabled:    true,
-			ConfigFile: ".golangci.yml",
+			ConfigFile: ".golangci.json",
 			Timeout:    "5m",
 			Parallel:   4,
 			Format:     "colored-line-number",

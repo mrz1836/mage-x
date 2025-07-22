@@ -73,7 +73,7 @@ func Compliance() error {
 // Lint runs comprehensive linting
 func Lint() error {
 	fmt.Println("Running enterprise linting...")
-	return sh.Run("golangci-lint", "run", "--timeout=10m", "--config=.golangci.yml")
+	return sh.Run("golangci-lint", "run", "--timeout=10m", "--config=.golangci.json")
 }
 
 // Format formats the code with enterprise standards

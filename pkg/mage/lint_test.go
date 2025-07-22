@@ -506,15 +506,19 @@ func TestLintConfig(t *testing.T) {
 	env.CreateGoMod("github.com/test/project")
 
 	// Create config files
-	env.CreateFile(".golangci.yml", `run:
-  timeout: 5m
-  tests: false
-
-linters:
-  enable:
-    - gofmt
-    - golint
-    - govet`)
+	env.CreateFile(".golangci.json", `{
+  "run": {
+    "timeout": "5m",
+    "tests": false
+  },
+  "linters": {
+    "enable": [
+      "gofmt",
+      "golint",
+      "govet"
+    ]
+  }
+}`)
 
 	tests := []struct {
 		name      string

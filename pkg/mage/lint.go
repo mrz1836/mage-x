@@ -31,11 +31,9 @@ func (Lint) Default() error {
 
 	args := []string{"run", "./pkg/..."}
 
-	// Check for config files in order of preference
+	// Check for config file
 	if utils.FileExists(".golangci.json") {
 		args = append(args, "--config", ".golangci.json")
-	} else if utils.FileExists(".golangci.yml") {
-		args = append(args, "--config", ".golangci.yml")
 	}
 
 	if cfg.Lint.Timeout != "" {
@@ -73,11 +71,9 @@ func (Lint) Fix() error {
 
 	args := []string{"run", "--fix", "./pkg/..."}
 
-	// Check for config files in order of preference
+	// Check for config file
 	if utils.FileExists(".golangci.json") {
 		args = append(args, "--config", ".golangci.json")
-	} else if utils.FileExists(".golangci.yml") {
-		args = append(args, "--config", ".golangci.yml")
 	}
 
 	if cfg.Lint.Timeout != "" {
