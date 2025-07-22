@@ -1,0 +1,622 @@
+package mage
+
+import (
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestInstallBinary(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		target    string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:   "successful binary install",
+			target: "/usr/local/bin",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("build", nil).
+							ExpectAnyCommand(nil) // cp command
+			},
+			expectErr: false,
+		},
+		{
+			name:   "install to custom location",
+			target: "/opt/bin",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("build", nil).
+							ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:   "build failure",
+			target: "/usr/local/bin",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("build", assert.AnError) // build fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.Binary()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallGo(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful go install",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "go install failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.Go()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallDeps(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful deps install",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("mod", nil) // go mod download
+			},
+			expectErr: false,
+		},
+		{
+			name: "deps install failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("mod", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.Deps()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallTools(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+	env.CreateMageConfig(`
+tools:
+  golangci_lint: v1.55.2
+  fumpt: latest
+  govulncheck: latest
+`)
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful tools install",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", nil).
+							ExpectAnyCommand(nil). // golangci-lint install
+							ExpectGoCommand("install", nil).
+							ExpectGoCommand("install", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "tools install failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", assert.AnError) // tool install fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.Tools()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallMage(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful mage install",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", nil) // go install github.com/magefile/mage
+			},
+			expectErr: false,
+		},
+		{
+			name: "mage install failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.Mage()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallDocker(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful docker install",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker installation script
+			},
+			expectErr: false,
+		},
+		{
+			name: "docker install failure",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // install script fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.Docker()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallGitHooks(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	// Initialize git repo
+	env.Builder.ExpectGitCommand("init", "", nil)
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful git hooks install",
+			setupMock: func() {
+				// File operations for hook installation
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.GitHooks()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallCI(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name     string
+		provider string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:     "install GitHub Actions",
+			provider: "github",
+			setupMock: func() {
+				// File creation for workflow files
+			},
+			expectErr: false,
+		},
+		{
+			name:     "install GitLab CI",
+			provider: "gitlab",
+			setupMock: func() {
+				// File creation for .gitlab-ci.yml
+			},
+			expectErr: false,
+		},
+		{
+			name:     "unsupported CI provider",
+			provider: "unknown",
+			setupMock: func() {
+				// No mocks needed for validation error
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.CI()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallCerts(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful certs install",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // certificate installation
+			},
+			expectErr: false,
+		},
+		{
+			name: "certs install failure",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // cert install fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.Certs()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallPackage(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name        string
+		packageName string
+		version     string
+		setupMock   func()
+		expectErr   bool
+	}{
+		{
+			name:        "install latest package",
+			packageName: "github.com/stretchr/testify",
+			version:     "latest",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("get", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:        "install specific version",
+			packageName: "github.com/gin-gonic/gin",
+			version:     "v1.9.1",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("get", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:        "package install failure",
+			packageName: "github.com/invalid/package",
+			version:     "latest",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("get", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.Package()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInstallAll(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+	env.CreateMageConfig(`
+tools:
+  golangci_lint: v1.55.2
+  fumpt: latest
+`)
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful install all",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("mod", nil).     // deps
+							ExpectGoCommand("install", nil). // tools
+							ExpectAnyCommand(nil).           // other installations
+							ExpectGoCommand("install", nil). // mage
+							ExpectGoCommand("install", nil)  // more tools
+			},
+			expectErr: false,
+		},
+		{
+			name: "install all failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("mod", assert.AnError) // deps fail
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			install := Install{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return install.All()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}

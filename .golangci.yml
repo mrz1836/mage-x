@@ -1,0 +1,125 @@
+run:
+  timeout: 5m
+  go: '1.21'
+  build-tags:
+    - mage
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  misspell:
+    locale: US
+  lll:
+    line-length: 120
+  goimports:
+    local-prefixes: github.com/mrz1836/go-mage
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - dupl
+    - errcheck
+    - exportloopref
+    - gocyclo
+    - gofmt
+    - goimports
+    - gomnd
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+    - gochecknoinits
+    - gochecknoglobals
+
+  # Disabled problematic linters
+  disable:
+    - funlen
+    - gocognit
+    - godot
+    - godox
+    - goerr113
+    - gomnd
+    - gomoddirectives
+    - gomodguard
+    - nestif
+    - nlreturn
+    - testpackage
+    - wsl
+
+# Skip certain issues
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gomnd
+        - lll
+        - dupl
+    
+    # Exclude magefile.go from certain checks
+    - path: magefile\.go
+      linters:
+        - gochecknoglobals
+        - gochecknoinits
+    
+    # Exclude generated files
+    - path: ".*\\.pb\\.go"
+      linters:
+        - lll
+        - dupl
+    
+    # Exclude mocks
+    - path: mock.*\.go
+      linters:
+        - gomnd
+        - lll
+        - dupl
+        - unused
+        - goconst
+
+    # Allow globals in main packages
+    - path: cmd/
+      linters:
+        - gochecknoglobals
+        - gochecknoinits

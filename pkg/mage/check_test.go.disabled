@@ -1,0 +1,523 @@
+package mage
+
+import (
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestCheckAll(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "all checks pass",
+			setupMock: func() {
+				// Mock all check operations
+				env.Builder.ExpectGoCommand("mod", nil).       // mod verify
+							ExpectGoCommand("vet", nil).       // vet
+							ExpectAnyCommand(nil).             // golangci-lint
+							ExpectGoCommand("test", nil).      // tests
+							ExpectAnyCommand(nil)              // security scan
+			},
+			expectErr: false,
+		},
+		{
+			name: "some checks fail",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("mod", assert.AnError) // mod verify fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.All()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCheckFormat(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "code is properly formatted",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // gofumpt check
+			},
+			expectErr: false,
+		},
+		{
+			name: "code formatting issues",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // gofumpt finds issues
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.Format()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCheckImports(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "imports are properly organized",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // goimports check
+			},
+			expectErr: false,
+		},
+		{
+			name: "import issues found",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // goimports finds issues
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.Imports()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCheckLicense(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "license headers present",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // license check tool
+			},
+			expectErr: false,
+		},
+		{
+			name: "missing license headers",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // license issues found
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.License()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCheckSecurity(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "no security vulnerabilities",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // govulncheck
+			},
+			expectErr: false,
+		},
+		{
+			name: "security vulnerabilities found",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // vulnerabilities detected
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.Security()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCheckDeps(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "dependencies are valid",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("mod", nil) // go mod verify
+			},
+			expectErr: false,
+		},
+		{
+			name: "dependency verification fails",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("mod", assert.AnError) // mod verify fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.Deps()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCheckTidy(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "go.mod is tidy",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("mod", nil) // go mod tidy check
+			},
+			expectErr: false,
+		},
+		{
+			name: "go.mod needs tidying",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("mod", assert.AnError) // tidy check fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.Tidy()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCheckGenerate(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "generated files are up to date",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("generate", nil) // go generate check
+			},
+			expectErr: false,
+		},
+		{
+			name: "generated files need update",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("generate", assert.AnError) // generate check fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.Generate()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCheckSpelling(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "no spelling errors",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // spell check tool
+			},
+			expectErr: false,
+		},
+		{
+			name: "spelling errors found",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // spelling issues
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.Spelling()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCheckDocs(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "documentation is complete",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // doc check tool
+			},
+			expectErr: false,
+		},
+		{
+			name: "missing documentation",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // doc issues found
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			check := Check{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return check.Docs()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}

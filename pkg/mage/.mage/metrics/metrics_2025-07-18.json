@@ -1,0 +1,5042 @@
+[
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101069000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:36.525925-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101069000,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101058167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:36.628703-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101058167,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101076916,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:36.7307-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101076916,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51070750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:36.783283-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51070750,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51047250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:36.836534-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51047250,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51056208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:36.888402-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51056208,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201144375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:37.090279-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201144375,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201115458,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:37.29365-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201115458,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200078708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:37.496114-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 200078708,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151049583,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:37.648184-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151049583,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151123667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:37.800242-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151123667,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151050250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:37.952347-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151050250,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76047042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:38.029294-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76047042,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76077458,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:38.106253-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76077458,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75474375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:05:38.183782-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 75474375,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101039625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:18.206677-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101039625,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101109750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:18.311489-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101109750,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101135625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:18.420549-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101135625,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50776667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:18.480908-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 50776667,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51064375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:18.537785-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51064375,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50998459,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:18.60011-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 50998459,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 203449708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:18.810731-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 203449708,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201111917,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:19.02085-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201111917,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200620083,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:19.228998-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 200620083,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 150512125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:19.384845-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 150512125,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151064792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:19.547137-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151064792,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 150453708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:19.703331-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 150453708,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76046375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:19.787578-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76046375,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75641875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:19.870435-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 75641875,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76040250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:06:19.959756-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76040250,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101030209,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:26.539488-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101030209,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101073625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:26.642603-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101073625,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101076084,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:26.74524-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101076084,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51026208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:26.797591-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51026208,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51046000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:26.84967-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51046000,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51060792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:26.901812-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51060792,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201054042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:27.104181-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201054042,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201056917,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:27.306604-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201056917,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201054542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:27.508996-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201054542,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151052625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:27.661282-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151052625,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151052709,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:27.813441-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151052709,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151075333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:27.965618-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151075333,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76023625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:28.043199-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76023625,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76052125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:28.120675-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76052125,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76034916,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:21:28.197924-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76034916,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 102047333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:04.790807-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 102047333,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 102563042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:04.89729-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 102563042,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100738708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:05.000233-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 100738708,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51048666,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:05.054948-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51048666,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51071167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:05.108504-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51071167,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51062417,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:05.161322-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51062417,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201095708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:05.364025-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201095708,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201091583,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:05.569044-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201091583,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200956416,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:05.772743-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 200956416,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151126667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:05.9267-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151126667,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151076167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:06.080284-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151076167,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151099084,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:06.234257-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151099084,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75841625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:06.312871-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 75841625,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76008500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:06.391653-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76008500,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75410875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:06.468731-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 75410875,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101105667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:30.417736-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101105667,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101030042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:30.538326-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101030042,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101304084,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:30.653788-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101304084,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51061500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:30.724485-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51061500,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51067667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:30.789809-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51067667,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51101000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:30.862424-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51101000,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201041584,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:31.079804-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201041584,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201128666,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:31.295579-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201128666,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201081792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:31.516889-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201081792,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151059333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:31.685128-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151059333,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 150691208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:31.852762-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 150691208,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151127792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:32.022286-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151127792,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76067542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:32.112802-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76067542,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76045459,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:32.203031-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76045459,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76073625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:23:32.288976-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76073625,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101055792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:22.393786-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101055792,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101192250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:22.4987-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101192250,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100452416,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:22.602831-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 100452416,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50108958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:22.656783-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 50108958,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51048041,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:22.710238-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51048041,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51061750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:22.763101-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51061750,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201080792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:22.966739-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201080792,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201048000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:23.169886-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201048000,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201102708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:23.371966-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201102708,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 150131250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:23.527057-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 150131250,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151057208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:23.679918-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151057208,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151161542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:23.832653-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151161542,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75706083,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:23.913148-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 75706083,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76036375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:23.991089-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76036375,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76044917,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:24.069192-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76044917,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101053208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:40.715152-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101053208,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101105583,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:40.819362-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101105583,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100352542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:40.922377-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 100352542,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50365750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:40.975069-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 50365750,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51039166,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:41.027964-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51039166,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51048500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:41.082105-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51048500,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201057666,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:41.283917-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201057666,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200995959,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:41.486803-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 200995959,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201181750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:41.689966-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201181750,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151052667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:41.844453-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151052667,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151060708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:41.997385-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151060708,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151155625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:42.15059-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151155625,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76154500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:42.230916-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76154500,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76081500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:42.310375-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76081500,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76095166,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:24:42.391047-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76095166,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101082458,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:16.765472-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101082458,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101053750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:16.883702-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101053750,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101071584,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:16.994043-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101071584,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51033291,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:17.058005-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51033291,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51016125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:17.12111-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51016125,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51027167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:17.183603-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51027167,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201124625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:17.397706-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201124625,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201123959,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:17.620374-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201123959,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201105042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:17.84375-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201105042,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151078625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:18.016513-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151078625,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151084542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:18.185968-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151084542,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151108667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:18.356559-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151108667,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76048166,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:18.45471-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76048166,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76041417,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:18.550522-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76041417,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76058250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:25:18.643559-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76058250,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101086250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:30:59.704561-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101086250,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100246666,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:30:59.810268-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 100246666,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100938958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:30:59.914879-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 100938958,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51769208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:30:59.969547-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51769208,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51036333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:00.025288-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51036333,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51068458,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:00.077564-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51068458,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201030875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:00.284176-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201030875,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 203307708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:00.49166-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 203307708,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 202079542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:00.698789-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 202079542,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151076500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:00.857319-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151076500,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 150232750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:01.009029-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 150232750,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 150853625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:01.163298-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 150853625,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75258625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:01.242338-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 75258625,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75663500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:01.324995-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 75663500,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76110833,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:31:01.406458-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76110833,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101048541,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:16.647691-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101048541,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100649167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:16.752129-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 100649167,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101053583,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:16.856038-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101053583,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51042958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:16.909525-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51042958,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51054417,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:16.962812-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51054417,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50209959,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:17.015112-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 50209959,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200049542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:17.217161-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 200049542,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201050875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:17.420587-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201050875,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201063875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:17.624191-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201063875,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151048167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:17.777704-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151048167,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151033291,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:17.930632-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151033291,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151042792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:18.084111-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151042792,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76078375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:18.162917-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76078375,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75165416,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:18.240863-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 75165416,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75281625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:33:18.318758-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 75281625,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101043292,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:26.54018-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101043292,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100992833,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:26.644844-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 100992833,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101063500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:26.747547-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101063500,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51061500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:26.800074-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51061500,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51041958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:26.855022-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51041958,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51073000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:26.908584-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51073000,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201093750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:27.114105-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201093750,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201110834,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:27.318338-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201110834,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201111167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:27.523979-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201111167,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151111584,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:27.677936-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151111584,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151100667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:27.833752-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151100667,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151096000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:27.9901-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151096000,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76105833,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:28.070367-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76105833,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76078792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:28.150478-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76078792,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76046334,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:28.230334-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76046334,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101873333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:43.839848-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101873333,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100816209,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:43.94484-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 100816209,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100261834,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:44.048998-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 100261834,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51271542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:44.101415-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51271542,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 57424000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:44.164034-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 57424000,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51053042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:44.217611-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51053042,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200708625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:44.422479-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 200708625,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200409125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:44.625686-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 200409125,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200844334,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:44.830364-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 200844334,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151031250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:44.985866-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151031250,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 152448916,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:45.141555-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 152448916,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151004833,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:45.298633-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151004833,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76038708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:45.375934-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76038708,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76034583,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:45.455257-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76034583,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75294917,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:45.534378-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 75294917,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101157167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:55.030198-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101157167,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100954416,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:55.136224-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 100954416,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100830416,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:55.241207-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 100830416,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50134208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:55.298384-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 50134208,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50456292,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:55.355684-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 50456292,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50123166,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:55.410254-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 50123166,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201091542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:55.616583-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201091542,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201078916,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:55.826299-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201078916,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201702459,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:56.034201-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201702459,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151969334,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:56.1932-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151969334,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151073666,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:56.368963-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151073666,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151016042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:56.524996-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151016042,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75255625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:56.60743-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 75255625,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76865458,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:56.688322-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76865458,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75733542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:44:56.768068-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 75733542,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101148708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:04.600417-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101148708,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101087125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:04.708238-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101087125,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101091167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:04.819458-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101091167,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51081042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:04.875253-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51081042,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51096792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:04.930473-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51096792,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50984750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:04.987997-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 50984750,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201107959,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:05.192919-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201107959,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200731709,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:05.399662-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 200731709,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201112750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:05.609936-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201112750,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151058792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:05.766558-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151058792,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151205500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:05.920285-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151205500,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151080291,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:06.081287-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151080291,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75853375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:06.161516-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 75853375,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76060333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:06.244713-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76060333,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76115000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:06.328363-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76115000,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100546708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:20.528227-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 100546708,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101105042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:20.634825-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101105042,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101101042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:20.743935-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101101042,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50110292,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:20.802476-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 50110292,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50768125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:20.858049-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 50768125,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51117500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:20.913904-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51117500,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201502542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:21.126441-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201502542,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201242834,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:21.333642-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201242834,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201148667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:21.540985-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201148667,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151112583,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:21.700408-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151112583,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151115250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:21.855629-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151115250,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 150517625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:22.011604-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 150517625,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75938375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:22.092429-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 75938375,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76065917,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:22.174256-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76065917,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76281125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:22.257565-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76281125,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 103953666,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:36.930347-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 103953666,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101045833,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:37.066923-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101045833,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100408166,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:37.195003-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 100408166,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51050292,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:37.274039-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51050292,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51070500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:37.348009-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51070500,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51039000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:37.420282-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51039000,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200866667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:37.642521-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 200866667,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201063708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:37.876097-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201063708,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201063917,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:38.105636-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201063917,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151046000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:38.289901-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151046000,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151065958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:38.4739-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151065958,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151060000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:38.653683-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151060000,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76021083,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:38.753472-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76021083,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76072542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:38.853125-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76072542,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76036500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:45:38.953606-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76036500,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101029333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:35.630635-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101029333,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101039250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:35.735185-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101039250,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101052417,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:35.83942-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101052417,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51050208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:35.89432-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51050208,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51019875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:35.947362-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51019875,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51061333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:36.002443-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51061333,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201067375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:36.20991-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201067375,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201055125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:36.413936-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201055125,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201096667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:36.619288-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201096667,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151030166,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:36.777288-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151030166,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151038625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:36.930793-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151038625,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151052667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:37.085673-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151052667,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76116041,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:37.165584-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76116041,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76381750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:37.245387-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76381750,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76065958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:37.328436-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76065958,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101045083,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:58.378237-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101045083,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100926667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:58.511735-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 100926667,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101081500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:58.638347-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101081500,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51054541,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:58.716987-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51054541,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51044042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:58.793102-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51044042,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51032333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:58.868953-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51032333,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201073000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:59.093989-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201073000,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201061208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:59.330952-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201061208,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200869666,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:59.565949-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 200869666,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151086667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:59.747246-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151086667,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151077750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:48:59.934377-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151077750,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151065834,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:49:00.120213-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151065834,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76037458,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:49:00.228605-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76037458,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76021834,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:49:00.334522-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76021834,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76021667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:49:00.440311-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76021667,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101020417,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:20.487193-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101020417,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101019167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:20.592402-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101019167,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101032792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:20.697374-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101032792,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51053542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:20.752401-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51053542,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51031875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:20.80706-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51031875,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51038625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:20.861503-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51038625,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201110292,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:21.067998-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201110292,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201077709,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:21.2751-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201077709,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201067000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:21.480371-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201067000,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151025125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:21.63512-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151025125,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151062917,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:21.789896-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151062917,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151068958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:21.94463-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151068958,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76056041,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:22.025274-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76056041,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76088000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:22.105522-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76088000,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76072375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T18:50:22.186909-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76072375,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101822834,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:27.303438-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101822834,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101111750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:27.41445-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101111750,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101153500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:27.525717-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101153500,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51046166,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:27.586392-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51046166,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51077958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:27.640861-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51077958,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51043833,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:27.701826-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51043833,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201108458,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:27.91139-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201108458,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201107083,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:28.121782-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201107083,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201090000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:28.328351-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201090000,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 150489416,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:28.48922-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 150489416,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 150260250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:28.649975-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 150260250,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151054500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:28.804782-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151054500,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76014042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:28.885844-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76014042,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76072625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:28.964959-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76072625,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76106625,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:28:29.045927-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76106625,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101520792,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:17.85622-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101520792,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100755334,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:17.963759-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 100755334,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101076209,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:18.074563-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101076209,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50505667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:18.133688-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 50505667,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51066250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:18.18934-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51066250,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51070875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:18.248992-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51070875,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201232667,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:18.454825-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201232667,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201052875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:18.662179-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201052875,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200925208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:18.867293-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 200925208,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151123791,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:19.024395-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151123791,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151080167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:19.187544-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151080167,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151078125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:19.344057-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151078125,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 75897250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:19.425361-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 75897250,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76056000,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:19.5116-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76056000,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76045292,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:19.59708-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76045292,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101069875,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:43.159398-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101069875,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101054958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:43.301275-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101054958,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101047583,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:43.437256-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101047583,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51045417,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:43.513038-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51045417,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51038417,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:43.589811-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51038417,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51088041,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:43.665534-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51088041,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201102042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:43.88953-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201102042,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201085917,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:44.132741-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 201085917,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201074208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:44.380647-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201074208,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151065208,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:44.57661-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151065208,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151090250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:44.765456-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151090250,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151039167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:44.951029-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151039167,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76040209,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:45.061792-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76040209,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76019542,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:45.167404-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76019542,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76024083,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:45.271629-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76024083,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101051167,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:58.68961-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101051167,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100979666,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:58.800704-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 100979666,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 100519834,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:58.908697-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 100519834,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 58396583,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:58.972816-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 58396583,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51059375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:59.0282-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51059375,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 50157250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:59.086183-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 50157250,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200487958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:59.30276-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 200487958,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200154375,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:59.512529-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 200154375,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201029791,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:59.716215-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201029791,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151035459,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:31:59.870841-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151035459,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151061958,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:32:00.026615-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151061958,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151080500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:32:00.182377-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151080500,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76049834,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:32:00.269512-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76049834,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76042292,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:32:00.350123-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76042292,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76059042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T19:32:00.430116-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76059042,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101224125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:08.587811-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 101224125,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101060458,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:08.704712-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 101060458,
+    "success": true
+  },
+  {
+    "name": "benchmark_build_performance",
+    "type": "timer",
+    "value": 101106042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:08.808723-04:00",
+    "tags": {
+      "benchmark": "Build Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 101106042,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51041583,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:08.871009-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 51041583,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51485708,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:08.939755-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 51485708,
+    "success": true
+  },
+  {
+    "name": "benchmark_test_performance",
+    "type": "timer",
+    "value": 51042500,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:08.998961-04:00",
+    "tags": {
+      "benchmark": "Test Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 51042500,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201172959,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:09.207837-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 201172959,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 200686250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:09.423556-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 200686250,
+    "success": true
+  },
+  {
+    "name": "benchmark_dependency_resolution",
+    "type": "timer",
+    "value": 201075042,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:09.639617-04:00",
+    "tags": {
+      "benchmark": "Dependency Resolution",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 201075042,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151079333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:09.795885-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 151079333,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151876417,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:09.950967-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 151876417,
+    "success": true
+  },
+  {
+    "name": "benchmark_code_generation",
+    "type": "timer",
+    "value": 151072959,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:10.115929-04:00",
+    "tags": {
+      "benchmark": "Code Generation",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 151072959,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76071833,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:10.198414-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "1"
+    },
+    "metadata": null,
+    "duration": 76071833,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76048125,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:10.282144-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "2"
+    },
+    "metadata": null,
+    "duration": 76048125,
+    "success": true
+  },
+  {
+    "name": "benchmark_linting_performance",
+    "type": "timer",
+    "value": 76067333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-18T21:47:10.364201-04:00",
+    "tags": {
+      "benchmark": "Linting Performance",
+      "iteration": "3"
+    },
+    "metadata": null,
+    "duration": 76067333,
+    "success": true
+  }
+]

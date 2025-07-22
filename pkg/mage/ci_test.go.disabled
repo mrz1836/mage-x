@@ -1,0 +1,745 @@
+package mage
+
+import (
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestCISetup(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name     string
+		provider string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:     "setup GitHub Actions",
+			provider: "github",
+			setupMock: func() {
+				// File creation doesn't require external commands
+			},
+			expectErr: false,
+		},
+		{
+			name:     "setup GitLab CI",
+			provider: "gitlab",
+			setupMock: func() {
+				// File creation doesn't require external commands
+			},
+			expectErr: false,
+		},
+		{
+			name:     "setup Jenkins",
+			provider: "jenkins",
+			setupMock: func() {
+				// File creation doesn't require external commands
+			},
+			expectErr: false,
+		},
+		{
+			name:     "setup CircleCI",
+			provider: "circleci",
+			setupMock: func() {
+				// File creation doesn't require external commands
+			},
+			expectErr: false,
+		},
+		{
+			name:     "unsupported provider",
+			provider: "unknown",
+			setupMock: func() {
+				// No mocks needed for validation error
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Setup(tt.provider)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCIValidate(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	// Create CI configuration files
+	env.CreateFile(".github/workflows/ci.yml", `name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - run: go test ./...`)
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "valid CI configuration",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // yaml validation
+			},
+			expectErr: false,
+		},
+		{
+			name: "invalid CI configuration",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // validation fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Validate()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCIRun(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		job       string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "run all CI jobs",
+			job:  "",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("test", nil).  // tests
+							ExpectGoCommand("vet", nil).   // vet
+							ExpectAnyCommand(nil).         // lint
+							ExpectGoCommand("build", nil)  // build
+			},
+			expectErr: false,
+		},
+		{
+			name: "run specific job",
+			job:  "test",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("test", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "CI run failure",
+			job:  "",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("test", assert.AnError) // tests fail
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Run(tt.job)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCIStatus(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		branch    string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:   "check status for main branch",
+			branch: "main",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // CI API call
+			},
+			expectErr: false,
+		},
+		{
+			name:   "check status for feature branch",
+			branch: "feature/new-feature",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:   "status check failure",
+			branch: "main",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // API call fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Status(tt.branch)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCILogs(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		buildID   string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:    "view recent build logs",
+			buildID: "",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // CI API call
+			},
+			expectErr: false,
+		},
+		{
+			name:    "view specific build logs",
+			buildID: "12345",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:    "log retrieval failure",
+			buildID: "invalid",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // API call fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Logs(tt.buildID)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCITrigger(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		branch    string
+		workflow  string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:     "trigger CI on main branch",
+			branch:   "main",
+			workflow: "",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // CI trigger API
+			},
+			expectErr: false,
+		},
+		{
+			name:     "trigger specific workflow",
+			branch:   "main",
+			workflow: "release",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:     "trigger failure",
+			branch:   "main",
+			workflow: "",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // trigger fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Trigger(tt.branch, tt.workflow)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCISecrets(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		action    string
+		key       string
+		value     string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:   "list secrets",
+			action: "list",
+			key:    "",
+			value:  "",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // CI API call
+			},
+			expectErr: false,
+		},
+		{
+			name:   "set secret",
+			action: "set",
+			key:    "API_KEY",
+			value:  "secret-value",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // CI API call
+			},
+			expectErr: false,
+		},
+		{
+			name:   "delete secret",
+			action: "delete",
+			key:    "API_KEY",
+			value:  "",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:   "secrets operation failure",
+			action: "set",
+			key:    "API_KEY",
+			value:  "secret-value",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // API call fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Secrets(tt.action, tt.key, tt.value)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCICache(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		action    string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:   "list cache entries",
+			action: "list",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // CI API call
+			},
+			expectErr: false,
+		},
+		{
+			name:   "clear cache",
+			action: "clear",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:   "cache operation failure",
+			action: "clear",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // API call fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Cache(tt.action)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCIMatrix(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		config    map[string][]string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "generate Go version matrix",
+			config: map[string][]string{
+				"go-version": {"1.20", "1.21", "1.22"},
+				"os":         {"ubuntu-latest", "macos-latest", "windows-latest"},
+			},
+			setupMock: func() {
+				// File generation doesn't require external commands
+			},
+			expectErr: false,
+		},
+		{
+			name: "generate simple matrix",
+			config: map[string][]string{
+				"node-version": {"16", "18", "20"},
+			},
+			setupMock: func() {
+				// File generation doesn't require external commands
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Matrix(tt.config)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCIArtifacts(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		action    string
+		buildID   string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:    "list artifacts",
+			action:  "list",
+			buildID: "12345",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // CI API call
+			},
+			expectErr: false,
+		},
+		{
+			name:    "download artifacts",
+			action:  "download",
+			buildID: "12345",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:    "artifacts operation failure",
+			action:  "download",
+			buildID: "invalid",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // API call fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Artifacts(tt.action, tt.buildID)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCIEnvironments(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name        string
+		action      string
+		environment string
+		setupMock   func()
+		expectErr   bool
+	}{
+		{
+			name:        "list environments",
+			action:      "list",
+			environment: "",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // CI API call
+			},
+			expectErr: false,
+		},
+		{
+			name:        "create environment",
+			action:      "create",
+			environment: "staging",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:        "delete environment",
+			action:      "delete",
+			environment: "staging",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:        "environment operation failure",
+			action:      "create",
+			environment: "production",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // API call fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			ci := CI{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return ci.Environments(tt.action, tt.environment)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}

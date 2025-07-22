@@ -1,0 +1,596 @@
+package mage
+
+import (
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestDockerBuild(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	// Create Dockerfile
+	env.CreateFile("Dockerfile", `FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY . .
+RUN go build -o app .
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/app .
+CMD ["./app"]`)
+
+	tests := []struct {
+		name      string
+		tag       string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful docker build",
+			tag:  "myapp:latest",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker build
+			},
+			expectErr: false,
+		},
+		{
+			name: "docker build with custom tag",
+			tag:  "myapp:v1.0.0",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker build
+			},
+			expectErr: false,
+		},
+		{
+			name: "docker build failure",
+			tag:  "myapp:latest",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // docker build fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			docker := Docker{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return docker.Build(tt.tag)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDockerPush(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		tag       string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful docker push",
+			tag:  "myregistry.com/myapp:latest",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker push
+			},
+			expectErr: false,
+		},
+		{
+			name: "docker push with version tag",
+			tag:  "myregistry.com/myapp:v1.0.0",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker push
+			},
+			expectErr: false,
+		},
+		{
+			name: "docker push failure",
+			tag:  "myregistry.com/myapp:latest",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // docker push fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			docker := Docker{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return docker.Push(tt.tag)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDockerRun(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		tag       string
+		args      []string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful docker run",
+			tag:  "myapp:latest",
+			args: []string{},
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker run
+			},
+			expectErr: false,
+		},
+		{
+			name: "docker run with port mapping",
+			tag:  "myapp:latest",
+			args: []string{"-p", "8080:8080"},
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker run
+			},
+			expectErr: false,
+		},
+		{
+			name: "docker run with environment variables",
+			tag:  "myapp:latest",
+			args: []string{"-e", "ENV=production", "-e", "PORT=8080"},
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker run
+			},
+			expectErr: false,
+		},
+		{
+			name: "docker run failure",
+			tag:  "myapp:latest",
+			args: []string{},
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // docker run fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			docker := Docker{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return docker.Run(tt.tag, tt.args...)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDockerStop(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name        string
+		containerID string
+		setupMock   func()
+		expectErr   bool
+	}{
+		{
+			name:        "successful docker stop",
+			containerID: "abc123",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker stop
+			},
+			expectErr: false,
+		},
+		{
+			name:        "docker stop by name",
+			containerID: "myapp-container",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker stop
+			},
+			expectErr: false,
+		},
+		{
+			name:        "docker stop failure",
+			containerID: "nonexistent",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // docker stop fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			docker := Docker{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return docker.Stop(tt.containerID)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDockerLogs(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name        string
+		containerID string
+		setupMock   func()
+		expectErr   bool
+	}{
+		{
+			name:        "successful docker logs",
+			containerID: "abc123",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker logs
+			},
+			expectErr: false,
+		},
+		{
+			name:        "docker logs failure",
+			containerID: "nonexistent",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // docker logs fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			docker := Docker{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return docker.Logs(tt.containerID)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDockerClean(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful docker clean",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil). // docker container prune
+							ExpectAnyCommand(nil). // docker image prune
+							ExpectAnyCommand(nil)  // docker volume prune
+			},
+			expectErr: false,
+		},
+		{
+			name: "docker clean failure",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // docker prune fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			docker := Docker{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return docker.Clean()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDockerCompose(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	// Create docker-compose.yml
+	env.CreateFile("docker-compose.yml", `version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - ENV=production
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=myapp
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+`)
+
+	tests := []struct {
+		name      string
+		command   string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:    "docker compose up",
+			command: "up",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker-compose up
+			},
+			expectErr: false,
+		},
+		{
+			name:    "docker compose down",
+			command: "down",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker-compose down
+			},
+			expectErr: false,
+		},
+		{
+			name:    "docker compose build",
+			command: "build",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker-compose build
+			},
+			expectErr: false,
+		},
+		{
+			name:    "docker compose failure",
+			command: "up",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // docker-compose fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			docker := Docker{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return docker.Compose(tt.command)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDockerTag(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		source    string
+		target    string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:   "successful docker tag",
+			source: "myapp:latest",
+			target: "myregistry.com/myapp:v1.0.0",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker tag
+			},
+			expectErr: false,
+		},
+		{
+			name:   "docker tag failure",
+			source: "nonexistent:latest",
+			target: "myregistry.com/myapp:v1.0.0",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // docker tag fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			docker := Docker{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return docker.Tag(tt.source, tt.target)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDockerPull(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		image     string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:  "successful docker pull",
+			image: "nginx:latest",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker pull
+			},
+			expectErr: false,
+		},
+		{
+			name:  "docker pull with specific tag",
+			image: "postgres:15",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // docker pull
+			},
+			expectErr: false,
+		},
+		{
+			name:  "docker pull failure",
+			image: "nonexistent/image:latest",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // docker pull fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			docker := Docker{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return docker.Pull(tt.image)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}

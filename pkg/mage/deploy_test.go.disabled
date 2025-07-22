@@ -1,0 +1,656 @@
+package mage
+
+import (
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestDeployLocal(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful local deploy",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("build", nil).
+							ExpectAnyCommand(nil) // systemctl or service management
+			},
+			expectErr: false,
+		},
+		{
+			name: "local deploy failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("build", assert.AnError) // build fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.Local()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeployStaging(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful staging deploy",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("build", nil).
+							ExpectAnyCommand(nil). // docker build
+							ExpectAnyCommand(nil)  // docker push to staging
+			},
+			expectErr: false,
+		},
+		{
+			name: "staging deploy failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("build", nil).
+							ExpectAnyCommand(assert.AnError) // docker push fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.Staging()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeployProduction(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful production deploy",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("test", nil).   // run tests first
+							ExpectGoCommand("build", nil). // build
+							ExpectAnyCommand(nil).         // docker build
+							ExpectAnyCommand(nil)          // docker push to production
+			},
+			expectErr: false,
+		},
+		{
+			name: "production deploy test failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("test", assert.AnError) // tests fail
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.Production()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeployKubernetes(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	// Create Kubernetes manifests
+	env.CreateFile("k8s/deployment.yaml", `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:latest
+        ports:
+        - containerPort: 8080`)
+
+	tests := []struct {
+		name      string
+		namespace string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:      "successful kubernetes deploy",
+			namespace: "default",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil). // kubectl apply
+							ExpectAnyCommand(nil)  // kubectl rollout status
+			},
+			expectErr: false,
+		},
+		{
+			name:      "kubernetes deploy to custom namespace",
+			namespace: "production",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil).
+							ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:      "kubernetes deploy failure",
+			namespace: "default",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // kubectl apply fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.Kubernetes(tt.namespace)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeployAWS(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		service   string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:    "deploy to ECS",
+			service: "ecs",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil). // aws ecs commands
+							ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:    "deploy to Lambda",
+			service: "lambda",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("build", nil). // build for lambda
+							ExpectAnyCommand(nil)          // aws lambda commands
+			},
+			expectErr: false,
+		},
+		{
+			name:    "deploy to EC2",
+			service: "ec2",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // aws ec2 commands
+			},
+			expectErr: false,
+		},
+		{
+			name:    "AWS deploy failure",
+			service: "ecs",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // aws command fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.AWS(tt.service)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeployGCP(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		service   string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:    "deploy to Cloud Run",
+			service: "cloudrun",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil). // gcloud run commands
+							ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:    "deploy to App Engine",
+			service: "appengine",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // gcloud app commands
+			},
+			expectErr: false,
+		},
+		{
+			name:    "deploy to Cloud Functions",
+			service: "functions",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // gcloud functions commands
+			},
+			expectErr: false,
+		},
+		{
+			name:    "GCP deploy failure",
+			service: "cloudrun",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // gcloud command fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.GCP(tt.service)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeployAzure(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		service   string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:    "deploy to Container Instances",
+			service: "aci",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // az container commands
+			},
+			expectErr: false,
+		},
+		{
+			name:    "deploy to App Service",
+			service: "webapp",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // az webapp commands
+			},
+			expectErr: false,
+		},
+		{
+			name:    "deploy to Functions",
+			service: "functions",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // az functionapp commands
+			},
+			expectErr: false,
+		},
+		{
+			name:    "Azure deploy failure",
+			service: "aci",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // az command fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.Azure(tt.service)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeployHeroku(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		app       string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful heroku deploy",
+			app:  "myapp-staging",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // heroku commands
+			},
+			expectErr: false,
+		},
+		{
+			name: "heroku deploy to production",
+			app:  "myapp-production",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "heroku deploy failure",
+			app:  "myapp-staging",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // heroku command fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.Heroku(tt.app)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeployRollback(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name        string
+		environment string
+		version     string
+		setupMock   func()
+		expectErr   bool
+	}{
+		{
+			name:        "rollback staging",
+			environment: "staging",
+			version:     "v1.0.0",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // rollback commands
+			},
+			expectErr: false,
+		},
+		{
+			name:        "rollback production",
+			environment: "production",
+			version:     "v1.0.0",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:        "rollback failure",
+			environment: "staging",
+			version:     "v1.0.0",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // rollback fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.Rollback(tt.environment, tt.version)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeployStatus(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name        string
+		environment string
+		setupMock   func()
+		expectErr   bool
+	}{
+		{
+			name:        "check staging status",
+			environment: "staging",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // status check commands
+			},
+			expectErr: false,
+		},
+		{
+			name:        "check production status",
+			environment: "production",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:        "status check failure",
+			environment: "staging",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // status check fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			deploy := Deploy{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return deploy.Status(tt.environment)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}

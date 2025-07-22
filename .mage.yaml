@@ -1,0 +1,138 @@
+# Example .mage.yaml configuration file
+# Copy this to your project root and customize as needed
+
+project:
+  name: go-mage
+  binary: go-mage
+  version: v1.0.0
+  description: "My awesome Go project"
+  
+build:
+  # Build tags to apply
+  tags: 
+    - prod
+  
+  # LD flags for linking
+  ldflags: 
+    - -s -w  # Strip debug info for smaller binaries
+  
+  # Target platforms for cross-compilation
+  platforms:
+    - linux/amd64
+    - linux/arm64
+    - darwin/amd64
+    - darwin/arm64
+    - windows/amd64
+  
+  # Output directory for binaries
+  output: bin
+  
+  # Strip file paths for reproducible builds
+  trimpath: true
+  
+  # Number of parallel build jobs
+  parallel: 4  # 0 = number of CPUs
+
+test:
+  # Run tests in parallel
+  parallel: true
+  
+  # Test timeout
+  timeout: 10m
+  
+  # Enable race detector by default
+  race: false
+  
+  # Enable coverage by default
+  cover: false
+  
+  # Coverage mode (set, count, atomic)
+  covermode: atomic
+  
+  # Packages to include in coverage
+  coverpkg: []
+  
+  # Build tags for tests
+  tags: []
+  
+  # Skip fuzz tests
+  skip_fuzz: false
+  
+lint:
+  # golangci-lint version
+  golangci_version: v1.55.2
+  
+  # Lint timeout
+  timeout: 5m
+  
+  # Directories to skip
+  skip_dirs:
+    - vendor
+    - .git
+    - testdata
+  
+  # Files to skip
+  skip_files: []
+  
+  # Enable all linters
+  enable_all: false
+  
+  # Explicitly disable linters
+  disable_linters: []
+  
+  # Explicitly enable linters
+  enable_linters: []
+    
+tools:
+  # Tool versions (use "latest" for latest version)
+  golangci_lint: v1.55.2
+  fumpt: latest
+  govulncheck: latest
+  mockgen: latest
+  swag: latest
+  
+  # Custom tools (name: module@version)
+  custom: {}
+    # Example:
+    # migrate: github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+docker:
+  # Docker registry
+  registry: docker.io
+  
+  # Repository name
+  repository: myorg/myapp
+  
+  # Dockerfile path
+  dockerfile: Dockerfile
+  
+  # Build arguments
+  build_args: {}
+    # Example:
+    # GO_VERSION: "1.21"
+  
+  # Target platforms for multi-arch builds
+  platforms:
+    - linux/amd64
+    - linux/arm64
+  
+release:
+  # GitHub token environment variable
+  github_token_env: GITHUB_TOKEN
+  
+  # Generate changelog
+  changelog: true
+  
+  # Create draft release
+  draft: false
+  
+  # Mark as prerelease
+  prerelease: false
+  
+  # Release name template
+  name_template: "{{.ProjectName}} {{.Tag}}"
+  
+  # Archive formats
+  formats:
+    - tar.gz
+    - zip

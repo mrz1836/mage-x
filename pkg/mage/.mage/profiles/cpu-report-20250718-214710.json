@@ -1,0 +1,49 @@
+{
+  "type": "cpu",
+  "duration": 30000000000,
+  "timestamp": "2025-07-18T21:47:10.369289-04:00",
+  "samples": [
+    {
+      "function": "main.main",
+      "file": "main.go",
+      "line": 10,
+      "samples": 100,
+      "percent": 45.5
+    },
+    {
+      "function": "github.com/mrz1836/go-mage/pkg/mage.Build",
+      "file": "build.go",
+      "line": 25,
+      "samples": 80,
+      "percent": 36.4
+    },
+    {
+      "function": "runtime.GC",
+      "file": "runtime/mgc.go",
+      "line": 1000,
+      "samples": 40,
+      "percent": 18.1
+    }
+  ],
+  "summary": {
+    "total_samples": 220,
+    "total_time": 30000000000,
+    "top_functions": [
+      {
+        "name": "main.main",
+        "samples": 100,
+        "percent": 45.5
+      },
+      {
+        "name": "github.com/mrz1836/go-mage/pkg/mage.Build",
+        "samples": 80,
+        "percent": 36.4
+      },
+      {
+        "name": "runtime.GC",
+        "samples": 40,
+        "percent": 18.1
+      }
+    ]
+  }
+}

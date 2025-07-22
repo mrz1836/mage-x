@@ -1,0 +1,522 @@
+package mage
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/common/config"
+	"github.com/mrz1836/go-mage/pkg/common/env"
+	"github.com/mrz1836/go-mage/pkg/common/errors"
+	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/go-mage/pkg/common/paths"
+)
+
+// Mock implementations for testing
+
+// mockCommandRunner implements CommandRunner for testing
+type mockCommandRunner struct {
+	commands []executedCommand
+	outputs  map[string]string
+	errors   map[string]error
+}
+
+type executedCommand struct {
+	name string
+	args []string
+}
+
+func newMockCommandRunner() *mockCommandRunner {
+	return &mockCommandRunner{
+		commands: []executedCommand{},
+		outputs:  make(map[string]string),
+		errors:   make(map[string]error),
+	}
+}
+
+func (m *mockCommandRunner) RunCmd(name string, args ...string) error {
+	m.commands = append(m.commands, executedCommand{name: name, args: args})
+
+	key := fmt.Sprintf("%s %v", name, args)
+	if err, exists := m.errors[key]; exists {
+		return err
+	}
+	return nil
+}
+
+func (m *mockCommandRunner) RunCmdOutput(name string, args ...string) (string, error) {
+	m.commands = append(m.commands, executedCommand{name: name, args: args})
+
+	key := fmt.Sprintf("%s %v", name, args)
+	if err, exists := m.errors[key]; exists {
+		return "", err
+	}
+	if output, exists := m.outputs[key]; exists {
+		return output, nil
+	}
+	return "", nil
+}
+
+func (m *mockCommandRunner) RunCmdInDir(dir, name string, args ...string) error {
+	return m.RunCmd(name, args...)
+}
+
+func (m *mockCommandRunner) RunCmdOutputInDir(dir, name string, args ...string) (string, error) {
+	return m.RunCmdOutput(name, args...)
+}
+
+func (m *mockCommandRunner) RunCmdWithEnv(env []string, name string, args ...string) error {
+	return m.RunCmd(name, args...)
+}
+
+func (m *mockCommandRunner) setOutput(command string, output string) {
+	m.outputs[command] = output
+}
+
+func (m *mockCommandRunner) setError(command string, err error) {
+	m.errors[command] = err
+}
+
+// TestBuildDefault tests the Default build method
+func TestBuildDefault(t *testing.T) {
+	// Create mocks
+	mockConfig := config.NewMockConfigLoader()
+	mockEnv := env.NewMockEnvironment()
+	mockFiles := fileops.NewMockFileOperator()
+	mockRunner := newMockCommandRunner()
+
+	// Set up test configuration
+	testConfig := &Config{
+		Project: ProjectConfig{
+			Name:   "test-project",
+			Binary: "test-app",
+		},
+		Build: BuildConfig{
+			Output:  "dist",
+			Verbose: true,
+		},
+	}
+	mockConfig.SetData(testConfig)
+
+	// Set up command outputs
+	mockRunner.setOutput("git describe --tags --abbrev=0 []", "v1.0.0")
+	mockRunner.setOutput("git rev-parse --short HEAD []", "abc123")
+
+	// Create build implementation
+	build := NewBuildImpl(mockConfig, mockEnv, mockFiles, mockRunner)
+
+	// Execute build
+	err := build.Default()
+
+	// Verify no errors
+	if err != nil {
+		t.Fatalf("Default() failed: %v", err)
+	}
+
+	// Verify commands were executed
+	if len(mockRunner.commands) != 1 {
+		t.Fatalf("Expected 1 command, got %d", len(mockRunner.commands))
+	}
+
+	cmd := mockRunner.commands[0]
+	if cmd.name != "go" {
+		t.Errorf("Expected 'go' command, got '%s'", cmd.name)
+	}
+
+	// Verify build command includes expected flags
+	expectedArgs := []string{"build", "-tags", "-ldflags", "-o", "dist/test-app", "-v"}
+	for _, expected := range expectedArgs {
+		found := false
+		for _, arg := range cmd.args {
+			if arg == expected {
+				found = true
+				break
+			}
+		}
+		if !found && expected != "-tags" && expected != "-ldflags" { // These might be optional
+			t.Errorf("Expected argument '%s' not found in command args", expected)
+		}
+	}
+}
+
+// TestBuildPlatform tests cross-platform builds
+func TestBuildPlatform(t *testing.T) {
+	tests := []struct {
+		name     string
+		platform string
+		wantOS   string
+		wantArch string
+		wantErr  bool
+	}{
+		{
+			name:     "Linux AMD64",
+			platform: "linux/amd64",
+			wantOS:   "linux",
+			wantArch: "amd64",
+			wantErr:  false,
+		},
+		{
+			name:     "Darwin ARM64",
+			platform: "darwin/arm64",
+			wantOS:   "darwin",
+			wantArch: "arm64",
+			wantErr:  false,
+		},
+		{
+			name:     "Invalid Platform",
+			platform: "invalid",
+			wantOS:   "",
+			wantArch: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create mocks
+			mockConfig := config.NewMockConfigLoader()
+			mockEnv := env.NewMockEnvironment()
+			mockFiles := fileops.NewMockFileOperator()
+			mockRunner := newMockCommandRunner()
+
+			// Set up test configuration
+			testConfig := &Config{
+				Project: ProjectConfig{
+					Name:   "test-project",
+					Binary: "test-app",
+				},
+				Build: BuildConfig{
+					Output: "dist",
+				},
+			}
+			mockConfig.SetData(testConfig)
+
+			// Create build implementation
+			build := NewBuildImpl(mockConfig, mockEnv, mockFiles, mockRunner)
+
+			// Execute platform build
+			err := build.Platform(tt.platform)
+
+			// Check error expectation
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Platform() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr {
+				// Verify environment was set correctly
+				if mockEnv.GetCallCount("Set") != 2 {
+					t.Errorf("Expected 2 Set calls for GOOS and GOARCH, got %d",
+						mockEnv.GetCallCount("Set"))
+				}
+
+				// Verify the build command was executed
+				if len(mockRunner.commands) == 0 {
+					t.Fatal("No commands were executed")
+				}
+			}
+		})
+	}
+}
+
+// TestBuildDocker tests Docker image building
+func TestBuildDocker(t *testing.T) {
+	// Create mocks
+	mockConfig := config.NewMockConfigLoader()
+	mockEnv := env.NewMockEnvironment()
+	mockFiles := fileops.NewMockFileOperator()
+	mockRunner := newMockCommandRunner()
+
+	// Set up test configuration
+	testConfig := &Config{
+		Docker: DockerConfig{
+			Registry:   "docker.io",
+			Repository: "myapp",
+			Dockerfile: "Dockerfile",
+			BuildArgs: map[string]string{
+				"VERSION": "1.0.0",
+			},
+		},
+	}
+	mockConfig.SetData(testConfig)
+
+	// Mock Dockerfile existence
+	mockFiles.SetFileExists("Dockerfile", true)
+
+	// Mock version command
+	mockRunner.setOutput("git describe --tags --abbrev=0 []", "v1.0.0")
+
+	// Create build implementation
+	build := NewBuildImpl(mockConfig, mockEnv, mockFiles, mockRunner)
+
+	// Execute Docker build
+	err := build.Docker()
+
+	// Verify no errors
+	if err != nil {
+		t.Fatalf("Docker() failed: %v", err)
+	}
+
+	// Verify docker command was executed
+	if len(mockRunner.commands) != 1 {
+		t.Fatalf("Expected 1 command, got %d", len(mockRunner.commands))
+	}
+
+	cmd := mockRunner.commands[0]
+	if cmd.name != "docker" {
+		t.Errorf("Expected 'docker' command, got '%s'", cmd.name)
+	}
+
+	// Verify build args were included
+	buildArgFound := false
+	for i, arg := range cmd.args {
+		if arg == "--build-arg" && i+1 < len(cmd.args) {
+			if cmd.args[i+1] == "VERSION=1.0.0" {
+				buildArgFound = true
+				break
+			}
+		}
+	}
+	if !buildArgFound {
+		t.Error("Build arg VERSION=1.0.0 not found in docker command")
+	}
+}
+
+// TestBuildClean tests the Clean method
+func TestBuildClean(t *testing.T) {
+	// Create mocks
+	mockConfig := config.NewMockConfigLoader()
+	mockEnv := env.NewMockEnvironment()
+	mockFiles := fileops.NewMockFileOperator()
+	mockRunner := newMockCommandRunner()
+
+	// Set up test configuration
+	testConfig := &Config{
+		Build: BuildConfig{
+			Output: "dist",
+		},
+	}
+	mockConfig.SetData(testConfig)
+
+	// Set up environment
+	mockEnv.Set("CLEAN_CACHE", "true")
+
+	// Create build implementation
+	build := NewBuildImpl(mockConfig, mockEnv, mockFiles, mockRunner)
+
+	// Execute clean
+	err := build.Clean()
+
+	// Verify no errors
+	if err != nil {
+		t.Fatalf("Clean() failed: %v", err)
+	}
+
+	// Verify clean commands were executed
+	expectedCommands := []string{
+		"go clean -testcache",
+		"go clean -cache", // Because CLEAN_CACHE=true
+	}
+
+	if len(mockRunner.commands) != len(expectedCommands) {
+		t.Fatalf("Expected %d commands, got %d", len(expectedCommands), len(mockRunner.commands))
+	}
+
+	// Verify each command
+	for i, expected := range expectedCommands {
+		cmd := mockRunner.commands[i]
+		fullCmd := fmt.Sprintf("%s %s", cmd.name, strings.Join(cmd.args, " "))
+		if fullCmd != expected {
+			t.Errorf("Command %d: expected '%s', got '%s'", i, expected, fullCmd)
+		}
+	}
+}
+
+// TestBuildWithErrors tests error handling
+func TestBuildWithErrors(t *testing.T) {
+	// Create mocks
+	mockConfig := config.NewMockConfigLoader()
+	mockEnv := env.NewMockEnvironment()
+	mockFiles := fileops.NewMockFileOperator()
+	mockRunner := newMockCommandRunner()
+
+	// Set up test configuration
+	testConfig := &Config{
+		Project: ProjectConfig{
+			Binary: "test-app",
+		},
+		Build: BuildConfig{
+			Output: "dist",
+		},
+	}
+	mockConfig.SetData(testConfig)
+
+	// Set build command to fail
+	mockRunner.setError("go [build -ldflags -X main.version=unknown -X main.commit=unknown -X main.date=2023-01-01T00:00:00Z -s -w -o dist/test-app]",
+		fmt.Errorf("build failed"))
+
+	// Create build implementation
+	build := NewBuildImpl(mockConfig, mockEnv, mockFiles, mockRunner)
+
+	// Execute build
+	err := build.Default()
+
+	// Verify error is returned and properly wrapped
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	// Check if it's a MageError with correct code
+	if mageErr, ok := err.(errors.MageError); ok {
+		if mageErr.Code() != errors.ErrBuildFailed {
+			t.Errorf("Expected error code %s, got %s", errors.ErrBuildFailed, mageErr.Code())
+		}
+	} else {
+		t.Error("Expected MageError type")
+	}
+}
+
+// TestBuildAll tests parallel builds for all platforms
+func TestBuildAll(t *testing.T) {
+	// Create mocks
+	mockConfig := config.NewMockConfigLoader()
+	mockEnv := env.NewMockEnvironment()
+	mockFiles := fileops.NewMockFileOperator()
+	mockRunner := newMockCommandRunner()
+
+	// Set up test configuration with multiple platforms
+	testConfig := &Config{
+		Project: ProjectConfig{
+			Binary: "test-app",
+		},
+		Build: BuildConfig{
+			Output: "dist",
+			Platforms: []string{
+				"linux/amd64",
+				"darwin/amd64",
+				"windows/amd64",
+			},
+		},
+	}
+	mockConfig.SetData(testConfig)
+
+	// Create build implementation
+	build := NewBuildImpl(mockConfig, mockEnv, mockFiles, mockRunner)
+
+	// Execute build all
+	err := build.All()
+
+	// Verify no errors
+	if err != nil {
+		t.Fatalf("All() failed: %v", err)
+	}
+
+	// Verify all platforms were built
+	if len(mockRunner.commands) != 3 {
+		t.Fatalf("Expected 3 commands (one per platform), got %d", len(mockRunner.commands))
+	}
+}
+
+// TestNamespaceRegistry tests the namespace registry
+func TestNamespaceRegistry(t *testing.T) {
+	registry := NewNamespaceRegistry()
+
+	// Test default implementations
+	if registry.Build() == nil {
+		t.Error("Build() should return non-nil implementation")
+	}
+
+	if registry.Test() == nil {
+		t.Error("Test() should return non-nil implementation")
+	}
+
+	// Test custom implementation
+	customBuild := &mockBuildNamespace{}
+	registry.SetBuild(customBuild)
+
+	if registry.Build() != customBuild {
+		t.Error("SetBuild() should replace the implementation")
+	}
+}
+
+// mockBuildNamespace is a mock implementation for testing
+type mockBuildNamespace struct {
+	defaultCalled bool
+	allCalled     bool
+}
+
+func (m *mockBuildNamespace) Default() error {
+	m.defaultCalled = true
+	return nil
+}
+
+func (m *mockBuildNamespace) All() error {
+	m.allCalled = true
+	return nil
+}
+
+func (m *mockBuildNamespace) Platform(platform string) error {
+	return nil
+}
+
+func (m *mockBuildNamespace) Linux() error {
+	return nil
+}
+
+func (m *mockBuildNamespace) Darwin() error {
+	return nil
+}
+
+func (m *mockBuildNamespace) Windows() error {
+	return nil
+}
+
+func (m *mockBuildNamespace) Docker() error {
+	return nil
+}
+
+func (m *mockBuildNamespace) Clean() error {
+	return nil
+}
+
+func (m *mockBuildNamespace) Install() error {
+	return nil
+}
+
+func (m *mockBuildNamespace) Generate() error {
+	return nil
+}
+
+func (m *mockBuildNamespace) PreBuild() error {
+	return nil
+}
+
+// BenchmarkBuild benchmarks the build process
+func BenchmarkBuildDefault(b *testing.B) {
+	// Create mocks
+	mockConfig := config.NewMockConfigLoader()
+	mockEnv := env.NewMockEnvironment()
+	mockFiles := fileops.NewMockFileOperator()
+	mockRunner := newMockCommandRunner()
+
+	// Set up test configuration
+	testConfig := &Config{
+		Project: ProjectConfig{
+			Binary: "test-app",
+		},
+		Build: BuildConfig{
+			Output: "dist",
+		},
+	}
+	mockConfig.SetData(testConfig)
+
+	// Create build implementation
+	build := NewBuildImpl(mockConfig, mockEnv, mockFiles, mockRunner)
+
+	// Run benchmark
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = build.Default()
+	}
+}

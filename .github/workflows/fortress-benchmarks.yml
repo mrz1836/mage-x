@@ -1,0 +1,209 @@
+name: Fortress Benchmarks
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+          which mage
+          mage -version
+
+      - name: Run benchmarks
+        run: |
+          echo "## Running Go Benchmarks"
+          echo "Starting benchmark tests..."
+          mage test:bench | tee benchmark-results.txt
+
+      - name: Parse benchmark results
+        run: |
+          echo "## Benchmark Results"
+          if [ -f benchmark-results.txt ]; then
+            echo "### Summary"
+            grep -E "^Benchmark" benchmark-results.txt || echo "No benchmark results found"
+            
+            echo ""
+            echo "### Memory Allocations"
+            grep -E "allocs/op" benchmark-results.txt || echo "No allocation data found"
+          else
+            echo "No benchmark results file found"
+          fi
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: benchmark-results.txt
+          retention-days: 30
+
+  benchmark-comparison:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+          go install golang.org/x/perf/cmd/benchstat@latest
+
+      - name: Run benchmarks on PR branch
+        run: |
+          mage test:bench > pr-benchmarks.txt
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+
+      - name: Run benchmarks on base branch
+        run: |
+          mage test:bench > base-benchmarks.txt
+
+      - name: Compare benchmarks
+        run: |
+          echo "## Benchmark Comparison"
+          echo "Comparing PR branch against base branch (${{ github.base_ref }}):"
+          echo ""
+          benchstat base-benchmarks.txt pr-benchmarks.txt || echo "No significant differences found"
+
+      - name: Upload comparison results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-comparison
+          path: |
+            pr-benchmarks.txt
+            base-benchmarks.txt
+          retention-days: 30
+
+  profile-cpu:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage and profiling tools
+        run: |
+          go install github.com/magefile/mage@latest
+          go install github.com/google/pprof@latest
+
+      - name: Run CPU profiling
+        run: |
+          echo "## CPU Profiling"
+          # Run benchmarks with CPU profiling
+          go test -bench=. -benchtime=10s -cpuprofile=cpu.prof ./... || echo "CPU profiling completed"
+          
+          if [ -f cpu.prof ]; then
+            echo "### Top CPU consumers:"
+            go tool pprof -top -nodecount=10 cpu.prof || echo "Could not analyze CPU profile"
+          fi
+
+      - name: Upload CPU profile
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cpu-profile
+          path: cpu.prof
+          retention-days: 7
+
+  profile-memory:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+
+      - name: Run memory profiling
+        run: |
+          echo "## Memory Profiling"
+          # Run benchmarks with memory profiling
+          go test -bench=. -benchtime=10s -memprofile=mem.prof ./... || echo "Memory profiling completed"
+          
+          if [ -f mem.prof ]; then
+            echo "### Top memory allocators:"
+            go tool pprof -top -nodecount=10 mem.prof || echo "Could not analyze memory profile"
+          fi
+
+      - name: Upload memory profile
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: memory-profile
+          path: mem.prof
+          retention-days: 7
+
+  summary:
+    needs: [benchmarks, benchmark-comparison, profile-cpu, profile-memory]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Benchmark Summary
+        run: |
+          echo "## Benchmark Suite Summary"
+          echo ""
+          echo "### Job Results:"
+          echo "- Benchmarks: ${{ needs.benchmarks.result }}"
+          echo "- Benchmark Comparison: ${{ needs.benchmark-comparison.result }}"
+          echo "- CPU Profiling: ${{ needs.profile-cpu.result }}"
+          echo "- Memory Profiling: ${{ needs.profile-memory.result }}"
+          echo ""
+          
+          if [[ "${{ needs.benchmarks.result }}" == "success" ]]; then
+            echo "✅ Benchmark suite completed successfully!"
+          else
+            echo "⚠️ Some benchmark jobs did not complete successfully."
+          fi
+          
+          echo ""
+          echo "### Notes:"
+          echo "- Benchmark results are available as artifacts"
+          echo "- CPU and memory profiles can be downloaded for detailed analysis"
+          echo "- Use 'go tool pprof' locally to analyze the profile files"

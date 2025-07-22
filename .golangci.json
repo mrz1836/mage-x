@@ -1,0 +1,404 @@
+{
+	"version": "2",
+	"formatters": {
+		"enable": [
+			"gofmt",
+			"gofumpt"
+		],
+		"exclusions": {
+			"generated": "lax",
+			"paths": [
+				".*_test\\.go$",
+				"testdata",
+				"vendor",
+				"\\.git",
+				"examples",
+				"templates"
+			]
+		},
+		"settings": {
+			"gci": {
+				"sections": [
+					"standard",
+					"default",
+					"prefix(github.com/mrz1836/go-mage)"
+				]
+			},
+			"gofmt": {
+				"simplify": true
+			},
+			"gofumpt": {
+				"extra-rules": false
+			},
+			"goimports": {
+				"local-prefixes": [
+					"github.com/mrz1836/go-mage"
+				]
+			}
+		}
+	},
+	"linters": {
+		"enable": [
+			"asasalint",
+			"asciicheck",
+			"bidichk",
+			"bodyclose",
+			"containedctx",
+			"contextcheck",
+			"copyloopvar",
+			"dogsled",
+			"durationcheck",
+			"errcheck",
+			"errchkjson",
+			"errname",
+			"errorlint",
+			"exhaustive",
+			"forbidigo",
+			"gocheckcompilerdirectives",
+			"gochecknoinits",
+			"gocognit",
+			"goconst",
+			"gocritic",
+			"gocyclo",
+			"gomoddirectives",
+			"goprintffuncname",
+			"gosec",
+			"govet",
+			"ineffassign",
+			"lll",
+			"loggercheck",
+			"makezero",
+			"misspell",
+			"musttag",
+			"nakedret",
+			"nestif",
+			"nilerr",
+			"nilnesserr",
+			"noctx",
+			"nolintlint",
+			"nosprintfhostport",
+			"prealloc",
+			"predeclared",
+			"reassign",
+			"revive",
+			"rowserrcheck",
+			"staticcheck",
+			"testifylint",
+			"unconvert",
+			"unparam",
+			"unused",
+			"wastedassign",
+			"whitespace"
+		],
+		"disable": [
+			"gochecknoglobals",
+			"godox",
+			"godot",
+			"errcheck",
+			"gosec",
+			"exhaustive",
+			"gocognit",
+			"gocyclo",
+			"goconst",
+			"lll",
+			"nestif",
+			"revive",
+			"unparam",
+			"unused",
+			"gocritic",
+			"forbidigo",
+			"musttag",
+			"nolintlint",
+			"testifylint",
+			"errchkjson",
+			"goprintffuncname",
+			"ineffassign",
+			"staticcheck",
+			"bodyclose",
+			"noctx",
+			"wastedassign",
+			"makezero",
+			"prealloc",
+			"predeclared",
+			"rowserrcheck",
+			"govet",
+			"nilerr"
+		],
+		"settings": {
+			"depguard": {
+				"list-type": "blacklist",
+				"include-go-root": false,
+				"packages": [
+					"github.com/sirupsen/logrus"
+				]
+			},
+			"dogsled": {
+				"max-blank-identifiers": 2
+			},
+			"dupl": {
+				"threshold": 100
+			},
+			"errcheck": {
+				"check-type-assertions": true,
+				"check-blank": true
+			},
+			"exhaustive": {
+				"default-signifies-exhaustive": false
+			},
+			"funcorder": {
+				"constructor-after-struct": true
+			},
+			"funlen": {
+				"lines": 100,
+				"statements": 50
+			},
+			"gocognit": {
+				"min-complexity": 15
+			},
+			"goconst": {
+				"min-len": 3,
+				"min-occurrences": 5
+			},
+			"gocritic": {
+				"enabled-tags": [
+					"diagnostic",
+					"style",
+					"performance",
+					"experimental"
+				],
+				"disabled-checks": [
+					"commentedOutCode",
+					"ifElseChain"
+				]
+			},
+			"gocyclo": {
+				"min-complexity": 15
+			},
+			"govet": {
+				"enable": [
+					"atomicalign",
+					"shadow"
+				],
+				"check-shadowing": true,
+				"settings": {
+					"printf": {
+						"funcs": [
+							"(github.com/mrz1836/go-mage/pkg/utils.Logger).Infof",
+							"(github.com/mrz1836/go-mage/pkg/utils.Logger).Warnf",
+							"(github.com/mrz1836/go-mage/pkg/utils.Logger).Errorf",
+							"(github.com/mrz1836/go-mage/pkg/utils.Logger).Fatalf"
+						]
+					}
+				}
+			},
+			"lll": {
+				"line-length": 120,
+				"tab-width": 1
+			},
+			"misspell": {
+				"locale": "US",
+				"ignore-rules": [
+					"mage",
+					"golang"
+				]
+			},
+			"nakedret": {
+				"max-func-lines": 30
+			},
+			"nestif": {
+				"min-complexity": 4
+			},
+			"nolintlint": {
+				"allow-unused": false,
+				"require-explanation": true,
+				"require-specific": true
+			},
+			"prealloc": {
+				"simple": true,
+				"range-loops": true,
+				"for-loops": false
+			},
+			"revive": {
+				"ignore-generated-header": true,
+				"severity": "warning",
+				"rules": [
+					{
+						"name": "blank-imports"
+					},
+					{
+						"name": "context-as-argument"
+					},
+					{
+						"name": "context-keys-type"
+					},
+					{
+						"name": "dot-imports"
+					},
+					{
+						"name": "error-return"
+					},
+					{
+						"name": "error-strings"
+					},
+					{
+						"name": "error-naming"
+					},
+					{
+						"name": "exported"
+					},
+					{
+						"name": "if-return"
+					},
+					{
+						"name": "increment-decrement"
+					},
+					{
+						"name": "var-naming"
+					},
+					{
+						"name": "var-declaration"
+					},
+					{
+						"name": "package-comments"
+					},
+					{
+						"name": "range"
+					},
+					{
+						"name": "receiver-naming"
+					},
+					{
+						"name": "time-naming"
+					},
+					{
+						"name": "unexported-return"
+					},
+					{
+						"name": "indent-error-flow"
+					},
+					{
+						"name": "errorf"
+					},
+					{
+						"name": "empty-block"
+					},
+					{
+						"name": "superfluous-else"
+					},
+					{
+						"name": "unused-parameter"
+					},
+					{
+						"name": "unreachable-code"
+					},
+					{
+						"name": "redefines-builtin-id"
+					}
+				]
+			},
+			"unparam": {
+				"check-exported": false
+			},
+			"unused": {
+				"check-exported": false
+			}
+		}
+	},
+	"run": {
+		"allow-parallel-runners": true,
+		"concurrency": 8,
+		"timeout": "5m",
+		"issues-exit-code": 1,
+		"tests": true,
+		"build-tags": [
+			"mage"
+		],
+		"exclude-dirs": [
+			"vendor",
+			".git",
+			"testdata",
+			"examples",
+			"tmp",
+			"bin"
+		]
+	},
+	"output": {
+		"formats": {
+			"text": {
+				"path": "stdout",
+				"print-issued-lines": true,
+				"print-linter-name": true
+			}
+		}
+	},
+	"severity": {
+		"default": "warning",
+		"rules": [
+			{
+				"linters": [
+					"dupl",
+					"misspell",
+					"makezero",
+					"goconst"
+				],
+				"severity": "info"
+			},
+			{
+				"linters": [
+					"gosec",
+					"errcheck",
+					"staticcheck"
+				],
+				"severity": "error"
+			}
+		]
+	},
+	"issues": {
+		"uniq-by-line": true,
+		"exclude-rules": [
+			{
+				"path": "_test\\.go",
+				"linters": [
+					"gocyclo",
+					"errcheck",
+					"dupl",
+					"gosec",
+					"funlen",
+					"goconst",
+					"gocognit"
+				]
+			},
+			{
+				"linters": [
+					"stylecheck"
+				],
+				"text": "ST1000:"
+			},
+			{
+				"linters": [
+					"lll"
+				],
+				"source": "https://"
+			},
+			{
+				"path": "magefile\\.go",
+				"linters": [
+					"gochecknoinits"
+				]
+			},
+			{
+				"path": "examples/",
+				"linters": [
+					"errcheck",
+					"gosec",
+					"goconst"
+				]
+			}
+		],
+		"exclude-use-default": false,
+		"max-issues-per-linter": 50,
+		"max-same-issues": 10,
+		"new": false,
+		"fix": true
+	}
+}

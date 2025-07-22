@@ -1,0 +1,533 @@
+package mage
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/common/providers"
+	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+)
+
+// TestIntegrationV2Architecture tests the complete v2 architecture integration
+func TestIntegrationV2Architecture(t *testing.T) {
+	// Create temporary workspace
+	tempDir, err := os.MkdirTemp("", "mage-integration-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Test different provider configurations
+	providerTypes := []string{"local", "aws", "azure", "gcp", "docker", "kubernetes"}
+
+	for _, providerType := range providerTypes {
+		t.Run("Provider_"+providerType, func(t *testing.T) {
+			testProviderIntegration(t, providerType, tempDir)
+		})
+	}
+}
+
+func testProviderIntegration(t *testing.T, providerType, tempDir string) {
+	// Create provider
+	provider, err := providers.NewProvider(providerType)
+	if err != nil {
+		t.Fatalf("Failed to create %s provider: %v", providerType, err)
+	}
+
+	// Test that all components are available and working
+	testProviderComponents(t, provider, tempDir)
+
+	// Test namespace operations with this provider
+	testNamespaceOperations(t, provider, tempDir)
+}
+
+func testProviderComponents(t *testing.T, provider providers.Provider, tempDir string) {
+	t.Run("Config component", func(t *testing.T) {
+		configLoader := provider.Config()
+		if configLoader == nil {
+			t.Fatal("Config loader should not be nil")
+		}
+
+		// Test configuration operations
+		config, err := configLoader.Load()
+		if err != nil {
+			t.Errorf("Failed to load config: %v", err)
+		}
+
+		if config == nil {
+			t.Error("Config should not be nil")
+		}
+
+		// Test validation
+		err = configLoader.Validate(config)
+		if err != nil {
+			t.Errorf("Config validation failed: %v", err)
+		}
+	})
+
+	t.Run("Environment component", func(t *testing.T) {
+		env := provider.Environment()
+		if env == nil {
+			t.Fatal("Environment should not be nil")
+		}
+
+		// Test environment operations
+		testKey := "INTEGRATION_TEST_KEY"
+		testValue := "integration_test_value"
+
+		err := env.Set(testKey, testValue)
+		if err != nil {
+			t.Errorf("Failed to set environment variable: %v", err)
+		}
+
+		retrievedValue := env.Get(testKey)
+		if retrievedValue != testValue {
+			t.Errorf("Expected %s, got %s", testValue, retrievedValue)
+		}
+
+		// Test default values
+		defaultValue := env.GetWithDefault("NON_EXISTENT_KEY", "default")
+		if defaultValue != "default" {
+			t.Errorf("Expected default value 'default', got %s", defaultValue)
+		}
+	})
+
+	t.Run("FileOperator component", func(t *testing.T) {
+		fileOps := provider.FileOperator()
+		if fileOps == nil {
+			t.Fatal("FileOperator should not be nil")
+		}
+
+		// Test file operations
+		testFile := filepath.Join(tempDir, "integration_test.txt")
+		testData := []byte("Integration test data")
+
+		err := fileOps.WriteFile(testFile, testData)
+		if err != nil {
+			t.Errorf("Failed to write file: %v", err)
+		}
+
+		if !fileOps.Exists(testFile) {
+			t.Error("File should exist after writing")
+		}
+
+		readData, err := fileOps.ReadFile(testFile)
+		if err != nil {
+			t.Errorf("Failed to read file: %v", err)
+		}
+
+		if string(readData) != string(testData) {
+			t.Errorf("Expected %s, got %s", string(testData), string(readData))
+		}
+	})
+
+	t.Run("PathBuilder component", func(t *testing.T) {
+		pathBuilder := provider.PathBuilder()
+		if pathBuilder == nil {
+			t.Fatal("PathBuilder should not be nil")
+		}
+
+		// Test path operations
+		joined := pathBuilder.Join("integration", "test", "path")
+		if joined == "" {
+			t.Error("Joined path should not be empty")
+		}
+
+		base := pathBuilder.Base(joined)
+		if base == "" {
+			t.Error("Base path should not be empty")
+		}
+
+		dir := pathBuilder.Dir(joined)
+		if dir == "" {
+			t.Error("Directory path should not be empty")
+		}
+	})
+}
+
+func testNamespaceOperations(t *testing.T, provider providers.Provider, tempDir string) {
+	// Test Build namespace
+	t.Run("Build namespace", func(t *testing.T) {
+		mockRunner := &testutil.MockRunner{
+			Commands: make(map[string]testutil.MockCommand),
+		}
+		mockRunner.Commands["go build ."] = testutil.MockCommand{
+			Output:   "Build successful",
+			ExitCode: 0,
+		}
+
+		buildService := NewBuildWithDeps(
+			provider.Config(),
+			provider.Environment(),
+			provider.FileOperator(),
+			provider.PathBuilder(),
+			mockRunner,
+		)
+
+		err := buildService.All()
+		if err != nil {
+			t.Errorf("Build.All() failed: %v", err)
+		}
+	})
+
+	// Test Analytics namespace
+	t.Run("Analytics namespace", func(t *testing.T) {
+		mockRunner := &testutil.MockRunner{
+			Commands: make(map[string]testutil.MockCommand),
+		}
+
+		analyticsService := NewAnalyticsWithDeps(
+			provider.Config(),
+			provider.Environment(),
+			provider.FileOperator(),
+			provider.PathBuilder(),
+			mockRunner,
+		)
+
+		err := analyticsService.Collect()
+		if err != nil {
+			t.Errorf("Analytics.Collect() failed: %v", err)
+		}
+	})
+
+	// Test Test namespace
+	t.Run("Test namespace", func(t *testing.T) {
+		mockRunner := &testutil.MockRunner{
+			Commands: make(map[string]testutil.MockCommand),
+		}
+		mockRunner.Commands["go test ./..."] = testutil.MockCommand{
+			Output:   "PASS",
+			ExitCode: 0,
+		}
+
+		testService := NewTestWithDeps(
+			provider.Config(),
+			provider.Environment(),
+			provider.FileOperator(),
+			provider.PathBuilder(),
+			mockRunner,
+		)
+
+		err := testService.All()
+		if err != nil {
+			t.Errorf("Test.All() failed: %v", err)
+		}
+	})
+}
+
+// TestBackwardCompatibility ensures v1 namespace syntax still works
+func TestBackwardCompatibility(t *testing.T) {
+	t.Run("V1 namespace syntax", func(t *testing.T) {
+		// Test that original namespace syntax still works
+		err := (Build{}).All()
+		if err != nil {
+			t.Errorf("Build{}.All() backward compatibility failed: %v", err)
+		}
+
+		err = (Test{}).All()
+		if err != nil {
+			t.Errorf("Test{}.All() backward compatibility failed: %v", err)
+		}
+
+		err = (Analytics{}).Collect()
+		if err != nil {
+			t.Errorf("Analytics{}.Collect() backward compatibility failed: %v", err)
+		}
+	})
+
+	t.Run("Function call syntax", func(t *testing.T) {
+		// Test that direct function calls still work
+		build := GetBuild()
+		if build == nil {
+			t.Error("GetBuild() should not return nil")
+		}
+
+		err := build.All()
+		if err != nil {
+			t.Errorf("GetBuild().All() failed: %v", err)
+		}
+
+		analytics := GetAnalytics()
+		if analytics == nil {
+			t.Error("GetAnalytics() should not return nil")
+		}
+
+		err = analytics.Collect()
+		if err != nil {
+			t.Errorf("GetAnalytics().Collect() failed: %v", err)
+		}
+	})
+}
+
+// TestFileOpsMigration verifies that all file operations use the fileops package
+func TestFileOpsMigration(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "fileops-migration-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	provider, err := providers.NewProvider("local")
+	if err != nil {
+		t.Fatalf("Failed to create provider: %v", err)
+	}
+
+	fileOps := provider.FileOperator()
+
+	t.Run("JSON operations", func(t *testing.T) {
+		jsonFile := filepath.Join(tempDir, "test.json")
+		testData := map[string]interface{}{
+			"name":    "test",
+			"version": "1.0.0",
+			"enabled": true,
+		}
+
+		// Test JSON write
+		err := fileOps.WriteJSON(jsonFile, testData)
+		if err != nil {
+			t.Errorf("WriteJSON failed: %v", err)
+		}
+
+		// Test JSON read
+		var readData map[string]interface{}
+		err = fileOps.ReadJSON(jsonFile, &readData)
+		if err != nil {
+			t.Errorf("ReadJSON failed: %v", err)
+		}
+
+		if readData["name"] != testData["name"] {
+			t.Errorf("Expected name %s, got %s", testData["name"], readData["name"])
+		}
+	})
+
+	t.Run("YAML operations", func(t *testing.T) {
+		yamlFile := filepath.Join(tempDir, "test.yaml")
+
+		type TestConfig struct {
+			Name    string `yaml:"name"`
+			Version string `yaml:"version"`
+			Enabled bool   `yaml:"enabled"`
+		}
+
+		testData := TestConfig{
+			Name:    "test-app",
+			Version: "2.0.0",
+			Enabled: false,
+		}
+
+		// Test YAML write
+		err := fileOps.WriteYAML(yamlFile, testData)
+		if err != nil {
+			t.Errorf("WriteYAML failed: %v", err)
+		}
+
+		// Test YAML read
+		var readData TestConfig
+		err = fileOps.ReadYAML(yamlFile, &readData)
+		if err != nil {
+			t.Errorf("ReadYAML failed: %v", err)
+		}
+
+		if readData.Name != testData.Name {
+			t.Errorf("Expected name %s, got %s", testData.Name, readData.Name)
+		}
+
+		if readData.Version != testData.Version {
+			t.Errorf("Expected version %s, got %s", testData.Version, readData.Version)
+		}
+
+		if readData.Enabled != testData.Enabled {
+			t.Errorf("Expected enabled %v, got %v", testData.Enabled, readData.Enabled)
+		}
+	})
+
+	t.Run("Atomic operations", func(t *testing.T) {
+		atomic := fileOps.Atomic()
+		if atomic == nil {
+			t.Error("Atomic operations should be available")
+		}
+		// Note: Actual atomic operation testing would require more setup
+	})
+}
+
+// TestInterfaceImplementation verifies all v2 implementations satisfy their interfaces
+func TestInterfaceImplementation(t *testing.T) {
+	t.Run("Interface compliance", func(t *testing.T) {
+		// Test that all implementations satisfy their interfaces
+		var _ BuildInterface = (*buildImpl)(nil)
+		var _ TestInterface = (*testImpl)(nil)
+		var _ AnalyticsInterface = (*analyticsImpl)(nil)
+		var _ AuditInterface = (*auditImpl)(nil)
+		var _ CleanInterface = (*cleanImpl)(nil)
+		var _ LintInterface = (*lintImpl)(nil)
+		var _ FormatInterface = (*formatImpl)(nil)
+
+		// Add more interface compliance tests as needed
+		t.Log("All interface compliance checks passed")
+	})
+}
+
+// TestConcurrency verifies that v2 implementations are thread-safe
+func TestConcurrency(t *testing.T) {
+	provider, err := providers.NewProvider("local")
+	if err != nil {
+		t.Fatalf("Failed to create provider: %v", err)
+	}
+
+	mockRunner := &testutil.MockRunner{
+		Commands: make(map[string]testutil.MockCommand),
+	}
+
+	buildService := NewBuildWithDeps(
+		provider.Config(),
+		provider.Environment(),
+		provider.FileOperator(),
+		provider.PathBuilder(),
+		mockRunner,
+	)
+
+	t.Run("Concurrent operations", func(t *testing.T) {
+		const numGoroutines = 10
+
+		errorChan := make(chan error, numGoroutines)
+
+		// Run multiple operations concurrently
+		for i := 0; i < numGoroutines; i++ {
+			go func() {
+				err := buildService.All()
+				errorChan <- err
+			}()
+		}
+
+		// Check for errors
+		for i := 0; i < numGoroutines; i++ {
+			err := <-errorChan
+			if err != nil {
+				t.Errorf("Concurrent operation %d failed: %v", i, err)
+			}
+		}
+	})
+}
+
+// TestPerformanceRegression ensures v2 implementations don't significantly slow down operations
+func TestPerformanceRegression(t *testing.T) {
+	provider, err := providers.NewProvider("local")
+	if err != nil {
+		t.Fatalf("Failed to create provider: %v", err)
+	}
+
+	mockRunner := &testutil.MockRunner{
+		Commands: make(map[string]testutil.MockCommand),
+	}
+
+	// Create services
+	buildService := NewBuildWithDeps(
+		provider.Config(),
+		provider.Environment(),
+		provider.FileOperator(),
+		provider.PathBuilder(),
+		mockRunner,
+	)
+
+	analyticsService := NewAnalyticsWithDeps(
+		provider.Config(),
+		provider.Environment(),
+		provider.FileOperator(),
+		provider.PathBuilder(),
+		mockRunner,
+	)
+
+	t.Run("Performance baseline", func(t *testing.T) {
+		// Run operations multiple times to establish baseline
+		iterations := 100
+
+		for i := 0; i < iterations; i++ {
+			err := buildService.All()
+			if err != nil {
+				t.Errorf("Build operation %d failed: %v", i, err)
+			}
+
+			err = analyticsService.Collect()
+			if err != nil {
+				t.Errorf("Analytics operation %d failed: %v", i, err)
+			}
+		}
+
+		t.Logf("Completed %d iterations of build and analytics operations", iterations)
+	})
+}
+
+// TestErrorPropagation verifies that errors are properly propagated through the system
+func TestErrorPropagation(t *testing.T) {
+	provider, err := providers.NewProvider("local")
+	if err != nil {
+		t.Fatalf("Failed to create provider: %v", err)
+	}
+
+	// Create a mock runner that will fail
+	mockRunner := &testutil.MockRunner{
+		Commands: make(map[string]testutil.MockCommand),
+	}
+	mockRunner.Commands["go build ."] = testutil.MockCommand{
+		Output:   "Build failed",
+		ExitCode: 1,
+		Error:    "mock build failure",
+	}
+
+	buildService := NewBuildWithDeps(
+		provider.Config(),
+		provider.Environment(),
+		provider.FileOperator(),
+		provider.PathBuilder(),
+		mockRunner,
+	)
+
+	t.Run("Error propagation", func(t *testing.T) {
+		err := buildService.All()
+		if err == nil {
+			t.Error("Expected error from failing build")
+		}
+
+		// Verify error contains expected information
+		if err.Error() != "mock build failure" {
+			t.Errorf("Expected 'mock build failure', got %s", err.Error())
+		}
+	})
+}
+
+// TestConfigurationOverrides verifies that configuration can be overridden at different levels
+func TestConfigurationOverrides(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "config-override-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	t.Run("Environment variable override", func(t *testing.T) {
+		// Set environment variables
+		os.Setenv("MAGE_BUILD_PLATFORM", "darwin/arm64")
+		os.Setenv("MAGE_TEST_TIMEOUT", "300")
+		defer func() {
+			os.Unsetenv("MAGE_BUILD_PLATFORM")
+			os.Unsetenv("MAGE_TEST_TIMEOUT")
+		}()
+
+		provider, err := providers.NewProvider("local")
+		if err != nil {
+			t.Fatalf("Failed to create provider: %v", err)
+		}
+
+		env := provider.Environment()
+
+		platform := env.Get("MAGE_BUILD_PLATFORM")
+		if platform != "darwin/arm64" {
+			t.Errorf("Expected platform 'darwin/arm64', got %s", platform)
+		}
+
+		timeout := env.Get("MAGE_TEST_TIMEOUT")
+		if timeout != "300" {
+			t.Errorf("Expected timeout '300', got %s", timeout)
+		}
+	})
+}

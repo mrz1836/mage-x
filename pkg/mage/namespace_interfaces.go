@@ -1,0 +1,877 @@
+// Package mage provides namespace interfaces for mage build operations
+package mage
+
+// BuildNamespace interface defines the contract for build operations
+type BuildNamespace interface {
+	// Default builds the application for the current platform
+	Default() error
+
+	// All builds for all configured platforms
+	All() error
+
+	// Platform builds for a specific platform (e.g., "linux/amd64")
+	Platform(platform string) error
+
+	// Linux builds for Linux (amd64)
+	Linux() error
+
+	// Darwin builds for macOS (amd64 and arm64)
+	Darwin() error
+
+	// Windows builds for Windows (amd64)
+	Windows() error
+
+	// Docker builds a Docker image
+	Docker() error
+
+	// Clean removes build artifacts
+	Clean() error
+
+	// Install installs the binary to $GOPATH/bin
+	Install() error
+
+	// Generate runs go generate
+	Generate() error
+
+	// PreBuild pre-builds all packages to warm cache
+	PreBuild() error
+}
+
+// TestNamespace interface defines the contract for test operations
+type TestNamespace interface {
+	// Default runs standard test suite
+	Default() error
+
+	// Unit runs unit tests only
+	Unit() error
+
+	// Short runs short tests
+	Short() error
+
+	// Race runs tests with race detector
+	Race() error
+
+	// Cover runs tests with coverage
+	Cover() error
+
+	// CoverRace runs tests with coverage and race detector
+	CoverRace() error
+
+	// CoverReport generates coverage report
+	CoverReport() error
+
+	// CoverHTML generates HTML coverage report
+	CoverHTML() error
+
+	// Fuzz runs fuzz tests
+	Fuzz() error
+
+	// Bench runs benchmarks
+	Bench(params ...string) error
+
+	// Integration runs integration tests
+	Integration() error
+
+	// CI runs CI test suite
+	CI() error
+
+	// Parallel runs tests in parallel
+	Parallel() error
+
+	// NoLint runs tests without linting
+	NoLint() error
+
+	// CINoRace runs CI tests without race detector
+	CINoRace() error
+
+	// Run runs a specific test pattern
+	Run() error
+
+	// Coverage runs tests and generates coverage
+	Coverage(args ...string) error
+
+	// Vet runs go vet
+	Vet() error
+
+	// Lint runs linting
+	Lint() error
+
+	// Clean cleans test cache
+	Clean() error
+
+	// All runs all tests
+	All() error
+}
+
+// LintNamespace interface defines the contract for linting operations
+type LintNamespace interface {
+	// Default runs default linters
+	Default() error
+
+	// All runs all configured linters
+	All() error
+
+	// Go runs Go linters
+	Go() error
+
+	// Yaml runs YAML linters
+	Yaml() error
+
+	// Docker runs Dockerfile linters
+	Docker() error
+
+	// Markdown runs Markdown linters
+	Markdown() error
+
+	// Shell runs shell script linters
+	Shell() error
+
+	// Fix attempts to fix linting issues
+	Fix() error
+
+	// CI runs linters for CI environment
+	CI() error
+
+	// Fast runs fast linters only
+	Fast() error
+
+	// Config validates linter configuration
+	Config() error
+}
+
+// FormatNamespace interface defines the contract for formatting operations
+type FormatNamespace interface {
+	// Default formats all code
+	Default() error
+
+	// Check checks if code is formatted
+	Check() error
+
+	// Go formats Go code
+	Go() error
+
+	// Yaml formats YAML files
+	Yaml() error
+
+	// Json formats JSON files
+	Json() error
+
+	// Markdown formats Markdown files
+	Markdown() error
+
+	// All formats all supported file types
+	All() error
+
+	// Fix fixes formatting issues
+	Fix() error
+}
+
+// DepsNamespace interface defines the contract for dependency operations
+type DepsNamespace interface {
+	// Default manages default dependencies
+	Default() error
+
+	// Download downloads dependencies
+	Download() error
+
+	// Update updates dependencies
+	Update() error
+
+	// Tidy runs go mod tidy
+	Tidy() error
+
+	// Vendor vendors dependencies
+	Vendor() error
+
+	// Verify verifies dependencies
+	Verify() error
+
+	// Clean cleans dependency cache
+	Clean() error
+
+	// Graph shows dependency graph
+	Graph() error
+
+	// Why shows why a dependency is needed
+	Why(dep string) error
+
+	// VulnCheck checks for vulnerabilities
+	VulnCheck() error
+
+	// List lists all dependencies
+	List() error
+
+	// Outdated shows outdated dependencies
+	Outdated() error
+
+	// Init initializes a new module
+	Init(module string) error
+
+	// Licenses shows dependency licenses
+	Licenses() error
+
+	// Audit performs comprehensive dependency audit
+	Audit() error
+
+	// Check checks for updates
+	Check() error
+}
+
+// GitNamespace interface defines the contract for git operations
+type GitNamespace interface {
+	// Diff shows git diff and checks for uncommitted changes
+	Diff() error
+
+	// Tag creates and pushes a new tag
+	Tag() error
+
+	// TagRemove removes local and remote tags
+	TagRemove() error
+}
+
+// ReleaseNamespace interface defines the contract for release operations
+type ReleaseNamespace interface {
+	// Default creates a default release
+	Default() error
+
+	// Create creates a new release
+	Create() error
+
+	// Build builds release artifacts
+	Build() error
+
+	// Package packages release artifacts
+	Package() error
+
+	// Publish publishes release
+	Publish() error
+
+	// Notes generates release notes
+	Notes() error
+
+	// Changelog generates changelog
+	Changelog() error
+
+	// Draft creates a draft release
+	Draft() error
+
+	// Alpha creates an alpha release
+	Alpha() error
+
+	// Beta creates a beta release
+	Beta() error
+
+	// RC creates a release candidate
+	RC() error
+
+	// Final creates a final release
+	Final() error
+}
+
+// DocsNamespace interface defines the contract for documentation operations
+type DocsNamespace interface {
+	// Default generates default documentation
+	Default() error
+
+	// Generate generates documentation
+	Generate() error
+
+	// Serve serves documentation locally
+	Serve() error
+
+	// Build builds documentation
+	Build() error
+
+	// Clean cleans documentation artifacts
+	Clean() error
+
+	// Check validates documentation
+	Check() error
+
+	// API generates API documentation
+	API() error
+
+	// Markdown generates Markdown documentation
+	Markdown() error
+}
+
+// DeployNamespace interface defines the contract for deployment operations
+type DeployNamespace interface {
+	// Dev deploys to development environment
+	Dev() error
+
+	// Staging deploys to staging environment
+	Staging() error
+
+	// Production deploys to production environment
+	Production() error
+
+	// Rollback rolls back deployment
+	Rollback() error
+
+	// Status shows deployment status
+	Status() error
+
+	// Logs shows deployment logs
+	Logs() error
+
+	// Scale scales deployment
+	Scale() error
+}
+
+// ToolsNamespace interface defines the contract for tool management
+type ToolsNamespace interface {
+	// Default installs default tools
+	Default() error
+
+	// Install installs required tools
+	Install() error
+
+	// Update updates installed tools
+	Update() error
+
+	// Check checks tool versions
+	Check() error
+
+	// Clean removes tool installations
+	Clean() error
+
+	// List lists installed tools
+	List() error
+}
+
+// SecurityNamespace interface defines the contract for security operations
+type SecurityNamespace interface {
+	// Default runs default security checks
+	Default() error
+
+	// Scan runs security scans
+	Scan() error
+
+	// Audit runs security audit
+	Audit() error
+
+	// Dependencies checks dependency vulnerabilities
+	Dependencies() error
+
+	// Secrets scans for exposed secrets
+	Secrets() error
+
+	// SAST runs static application security testing
+	SAST() error
+
+	// License checks license compliance
+	License() error
+
+	// Report generates security report
+	Report() error
+}
+
+// GenerateNamespace interface defines the contract for code generation
+type GenerateNamespace interface {
+	// Default runs default generators
+	Default() error
+
+	// Code generates code
+	Code() error
+
+	// Mocks generates mocks
+	Mocks() error
+
+	// Proto generates from protobuf
+	Proto() error
+
+	// OpenAPI generates from OpenAPI spec
+	OpenAPI() error
+
+	// GraphQL generates GraphQL code
+	GraphQL() error
+
+	// Docs generates documentation
+	Docs() error
+
+	// Clean cleans generated files
+	Clean() error
+}
+
+// CLINamespace interface defines the contract for CLI operations
+type CLINamespace interface {
+	// Default shows CLI help
+	Default() error
+
+	// Help shows help information
+	Help() error
+
+	// Version shows version information
+	Version() error
+
+	// Completion generates shell completion
+	Completion() error
+
+	// Config manages CLI configuration
+	Config() error
+
+	// Update updates CLI
+	Update() error
+}
+
+// UpdateNamespace interface defines the contract for update operations
+type UpdateNamespace interface {
+	// Check checks for available updates
+	Check() error
+
+	// Install installs the latest update
+	Install() error
+
+	// Auto enables automatic update checking
+	Auto() error
+
+	// History shows update history
+	History() error
+
+	// Rollback rolls back to a previous version
+	Rollback() error
+}
+
+// ModNamespace interface defines the contract for Go module operations
+type ModNamespace interface {
+	// Download downloads all module dependencies
+	Download() error
+
+	// Tidy cleans up go.mod and go.sum
+	Tidy() error
+
+	// Update updates all dependencies to latest versions
+	Update() error
+
+	// Clean removes the module cache
+	Clean() error
+
+	// Graph generates a dependency graph
+	Graph() error
+
+	// Why shows why a module is needed
+	Why() error
+
+	// Vendor vendors all dependencies
+	Vendor() error
+
+	// Init initializes a new Go module
+	Init() error
+
+	// Verify verifies module dependencies
+	Verify() error
+
+	// Edit edits go.mod from tools or scripts
+	Edit(args ...string) error
+
+	// Get adds dependencies
+	Get(packages ...string) error
+
+	// List lists modules
+	List(pattern ...string) error
+}
+
+// RecipesNamespace interface defines the contract for recipe operations
+type RecipesNamespace interface {
+	// Default lists available recipes
+	Default() error
+
+	// List shows all available recipes
+	List() error
+
+	// Show displays details of a specific recipe
+	Show() error
+
+	// Run executes a recipe
+	Run() error
+
+	// Search searches for recipes by keyword
+	Search() error
+
+	// Create creates a new custom recipe
+	Create() error
+
+	// Install installs a recipe from a repository
+	Install() error
+}
+
+// MetricsNamespace interface defines the contract for metrics operations
+type MetricsNamespace interface {
+	// LOC displays lines of code statistics
+	LOC() error
+
+	// Coverage analyzes test coverage across the codebase
+	Coverage() error
+
+	// Complexity analyzes code complexity
+	Complexity() error
+
+	// Size analyzes binary and module sizes
+	Size() error
+
+	// Quality runs various code quality metrics
+	Quality() error
+
+	// Imports analyzes import dependencies
+	Imports() error
+}
+
+// WorkflowNamespace interface defines the contract for workflow operations
+type WorkflowNamespace interface {
+	// Execute runs a predefined workflow
+	Execute() error
+
+	// List displays available workflows
+	List() error
+
+	// Status shows workflow status
+	Status() error
+
+	// Create creates a new workflow
+	Create() error
+
+	// Validate validates workflow definitions
+	Validate() error
+
+	// Schedule schedules workflow execution
+	Schedule() error
+
+	// Template creates workflow from template
+	Template() error
+
+	// History shows workflow execution history
+	History() error
+}
+
+// NamespaceRegistry provides access to all namespace implementations
+type NamespaceRegistry interface {
+	// Build returns the build namespace
+	Build() BuildNamespace
+
+	// Test returns the test namespace
+	Test() TestNamespace
+
+	// Lint returns the lint namespace
+	Lint() LintNamespace
+
+	// Format returns the format namespace
+	Format() FormatNamespace
+
+	// Deps returns the dependencies namespace
+	Deps() DepsNamespace
+
+	// Git returns the git namespace
+	Git() GitNamespace
+
+	// Release returns the release namespace
+	Release() ReleaseNamespace
+
+	// Docs returns the documentation namespace
+	Docs() DocsNamespace
+
+	// Deploy returns the deployment namespace
+	Deploy() DeployNamespace
+
+	// Tools returns the tools namespace
+	Tools() ToolsNamespace
+
+	// Security returns the security namespace
+	Security() SecurityNamespace
+
+	// Generate returns the generate namespace
+	Generate() GenerateNamespace
+
+	// CLI returns the CLI namespace
+	CLI() CLINamespace
+
+	// Update returns the update namespace
+	Update() UpdateNamespace
+
+	// Mod returns the mod namespace
+	Mod() ModNamespace
+
+	// Recipes returns the recipes namespace
+	Recipes() RecipesNamespace
+
+	// Metrics returns the metrics namespace
+	Metrics() MetricsNamespace
+
+	// Workflow returns the workflow namespace
+	Workflow() WorkflowNamespace
+}
+
+// DefaultNamespaceRegistry provides the default namespace implementations
+type DefaultNamespaceRegistry struct {
+	build    BuildNamespace
+	test     TestNamespace
+	lint     LintNamespace
+	format   FormatNamespace
+	deps     DepsNamespace
+	git      GitNamespace
+	release  ReleaseNamespace
+	docs     DocsNamespace
+	deploy   DeployNamespace
+	tools    ToolsNamespace
+	security SecurityNamespace
+	generate GenerateNamespace
+	cli      CLINamespace
+	update   UpdateNamespace
+	mod      ModNamespace
+	recipes  RecipesNamespace
+	metrics  MetricsNamespace
+	workflow WorkflowNamespace
+}
+
+// NewNamespaceRegistry creates a new namespace registry with default implementations
+func NewNamespaceRegistry() *DefaultNamespaceRegistry {
+	return &DefaultNamespaceRegistry{
+		// These will be populated with wrapper implementations
+	}
+}
+
+// Build returns the build namespace
+func (r *DefaultNamespaceRegistry) Build() BuildNamespace {
+	if r.build == nil {
+		r.build = &buildNamespaceWrapper{Build{}}
+	}
+	return r.build
+}
+
+// Test returns the test namespace
+func (r *DefaultNamespaceRegistry) Test() TestNamespace {
+	if r.test == nil {
+		r.test = &testNamespaceWrapper{Test{}}
+	}
+	return r.test
+}
+
+// Lint returns the lint namespace
+func (r *DefaultNamespaceRegistry) Lint() LintNamespace {
+	if r.lint == nil {
+		r.lint = &lintNamespaceWrapper{Lint{}}
+	}
+	return r.lint
+}
+
+// Format returns the format namespace
+func (r *DefaultNamespaceRegistry) Format() FormatNamespace {
+	if r.format == nil {
+		r.format = &formatNamespaceWrapper{Format{}}
+	}
+	return r.format
+}
+
+// Deps returns the dependencies namespace
+func (r *DefaultNamespaceRegistry) Deps() DepsNamespace {
+	if r.deps == nil {
+		r.deps = &depsNamespaceWrapper{Deps{}}
+	}
+	return r.deps
+}
+
+// Git returns the git namespace
+func (r *DefaultNamespaceRegistry) Git() GitNamespace {
+	if r.git == nil {
+		r.git = &gitNamespaceWrapper{Git{}}
+	}
+	return r.git
+}
+
+// Release returns the release namespace
+func (r *DefaultNamespaceRegistry) Release() ReleaseNamespace {
+	if r.release == nil {
+		r.release = &releaseNamespaceWrapper{Release{}}
+	}
+	return r.release
+}
+
+// Docs returns the documentation namespace
+func (r *DefaultNamespaceRegistry) Docs() DocsNamespace {
+	if r.docs == nil {
+		r.docs = &docsNamespaceWrapper{Docs{}}
+	}
+	return r.docs
+}
+
+// Deploy returns the deployment namespace
+func (r *DefaultNamespaceRegistry) Deploy() DeployNamespace {
+	// Deploy might not exist in current implementation
+	return r.deploy
+}
+
+// Tools returns the tools namespace
+func (r *DefaultNamespaceRegistry) Tools() ToolsNamespace {
+	if r.tools == nil {
+		r.tools = &toolsNamespaceWrapper{Tools{}}
+	}
+	return r.tools
+}
+
+// Security returns the security namespace
+func (r *DefaultNamespaceRegistry) Security() SecurityNamespace {
+	// if r.security == nil {
+	// 	r.security = &securityNamespaceWrapper{Security{}}
+	// }
+	// return r.security
+	return nil // Temporarily disabled
+}
+
+// Generate returns the generate namespace
+func (r *DefaultNamespaceRegistry) Generate() GenerateNamespace {
+	if r.generate == nil {
+		r.generate = &generateNamespaceWrapper{Generate{}}
+	}
+	return r.generate
+}
+
+// CLI returns the CLI namespace
+func (r *DefaultNamespaceRegistry) CLI() CLINamespace {
+	if r.cli == nil {
+		r.cli = &cliNamespaceWrapper{CLI{}}
+	}
+	return r.cli
+}
+
+// SetBuild sets a custom build namespace implementation
+func (r *DefaultNamespaceRegistry) SetBuild(build BuildNamespace) {
+	r.build = build
+}
+
+// SetTest sets a custom test namespace implementation
+func (r *DefaultNamespaceRegistry) SetTest(test TestNamespace) {
+	r.test = test
+}
+
+// SetLint sets a custom lint namespace implementation
+func (r *DefaultNamespaceRegistry) SetLint(lint LintNamespace) {
+	r.lint = lint
+}
+
+// SetFormat sets a custom format namespace implementation
+func (r *DefaultNamespaceRegistry) SetFormat(format FormatNamespace) {
+	r.format = format
+}
+
+// SetDeps sets a custom dependencies namespace implementation
+func (r *DefaultNamespaceRegistry) SetDeps(deps DepsNamespace) {
+	r.deps = deps
+}
+
+// SetGit sets a custom git namespace implementation
+func (r *DefaultNamespaceRegistry) SetGit(git GitNamespace) {
+	r.git = git
+}
+
+// SetRelease sets a custom release namespace implementation
+func (r *DefaultNamespaceRegistry) SetRelease(release ReleaseNamespace) {
+	r.release = release
+}
+
+// SetDocs sets a custom documentation namespace implementation
+func (r *DefaultNamespaceRegistry) SetDocs(docs DocsNamespace) {
+	r.docs = docs
+}
+
+// SetDeploy sets a custom deployment namespace implementation
+func (r *DefaultNamespaceRegistry) SetDeploy(deploy DeployNamespace) {
+	r.deploy = deploy
+}
+
+// SetTools sets a custom tools namespace implementation
+func (r *DefaultNamespaceRegistry) SetTools(tools ToolsNamespace) {
+	r.tools = tools
+}
+
+// SetSecurity sets a custom security namespace implementation
+func (r *DefaultNamespaceRegistry) SetSecurity(security SecurityNamespace) {
+	r.security = security
+}
+
+// SetGenerate sets a custom generate namespace implementation
+func (r *DefaultNamespaceRegistry) SetGenerate(generate GenerateNamespace) {
+	r.generate = generate
+}
+
+// SetCLI sets a custom CLI namespace implementation
+func (r *DefaultNamespaceRegistry) SetCLI(cli CLINamespace) {
+	r.cli = cli
+}
+
+// Update returns the update namespace
+func (r *DefaultNamespaceRegistry) Update() UpdateNamespace {
+	if r.update == nil {
+		r.update = &updateNamespaceWrapper{Update{}}
+	}
+	return r.update
+}
+
+// SetUpdate sets a custom update namespace implementation
+func (r *DefaultNamespaceRegistry) SetUpdate(update UpdateNamespace) {
+	r.update = update
+}
+
+// Mod returns the mod namespace
+func (r *DefaultNamespaceRegistry) Mod() ModNamespace {
+	if r.mod == nil {
+		r.mod = &modNamespaceWrapper{Mod{}}
+	}
+	return r.mod
+}
+
+// SetMod sets a custom mod namespace implementation
+func (r *DefaultNamespaceRegistry) SetMod(mod ModNamespace) {
+	r.mod = mod
+}
+
+// Recipes returns the recipes namespace
+func (r *DefaultNamespaceRegistry) Recipes() RecipesNamespace {
+	if r.recipes == nil {
+		r.recipes = &recipesNamespaceWrapper{Recipes{}}
+	}
+	return r.recipes
+}
+
+// SetRecipes sets a custom recipes namespace implementation
+func (r *DefaultNamespaceRegistry) SetRecipes(recipes RecipesNamespace) {
+	r.recipes = recipes
+}
+
+// Metrics returns the metrics namespace
+func (r *DefaultNamespaceRegistry) Metrics() MetricsNamespace {
+	if r.metrics == nil {
+		r.metrics = &metricsNamespaceWrapper{Metrics{}}
+	}
+	return r.metrics
+}
+
+// SetMetrics sets a custom metrics namespace implementation
+func (r *DefaultNamespaceRegistry) SetMetrics(metrics MetricsNamespace) {
+	r.metrics = metrics
+}
+
+// Workflow returns the workflow namespace
+func (r *DefaultNamespaceRegistry) Workflow() WorkflowNamespace {
+	if r.workflow == nil {
+		r.workflow = &workflowNamespaceWrapper{Workflow{}}
+	}
+	return r.workflow
+}
+
+// SetWorkflow sets a custom workflow namespace implementation
+func (r *DefaultNamespaceRegistry) SetWorkflow(workflow WorkflowNamespace) {
+	r.workflow = workflow
+}
+
+// Global registry instance
+var globalNamespaceRegistry = NewNamespaceRegistry()
+
+// GetNamespaceRegistry returns the global namespace registry
+func GetNamespaceRegistry() *DefaultNamespaceRegistry {
+	return globalNamespaceRegistry
+}
+
+// SetNamespaceRegistry sets the global namespace registry
+func SetNamespaceRegistry(registry *DefaultNamespaceRegistry) {
+	globalNamespaceRegistry = registry
+}

@@ -1,0 +1,673 @@
+package mage
+
+import (
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestGitInit(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful git init",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("init", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "git init failure",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("init", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.Init()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitStatus(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "clean working tree",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("status", "nothing to commit, working tree clean", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "dirty working tree",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("status", "Changes not staged for commit", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "git status failure",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("status", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.Status()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitAdd(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		files     []string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:  "add single file",
+			files: []string{"main.go"},
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("add", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:  "add multiple files",
+			files: []string{"main.go", "config.yaml"},
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("add", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:  "add all files",
+			files: []string{"."},
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("add", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:  "add failure",
+			files: []string{"nonexistent.go"},
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("add", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.Add(tt.files...)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitCommit(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		message   string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:    "successful commit",
+			message: "Add new feature",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("commit", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:    "commit with multiline message",
+			message: "Add new feature\n\nThis feature adds support for xyz",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("commit", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:    "commit failure",
+			message: "Fix bug",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("commit", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.Commit(tt.message)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitPush(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		remote    string
+		branch    string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:   "push to origin main",
+			remote: "origin",
+			branch: "main",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("push", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:   "push to upstream develop",
+			remote: "upstream",
+			branch: "develop",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("push", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:   "push failure",
+			remote: "origin",
+			branch: "main",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("push", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.Push(tt.remote, tt.branch)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitPull(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		remote    string
+		branch    string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:   "pull from origin main",
+			remote: "origin",
+			branch: "main",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("pull", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:   "pull with conflicts",
+			remote: "origin",
+			branch: "main",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("pull", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.PullWithRemote(tt.remote, tt.branch)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitTag(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		tag       string
+		message   string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:    "create lightweight tag",
+			tag:     "v1.0.0",
+			message: "",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("tag", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:    "create annotated tag",
+			tag:     "v1.0.0",
+			message: "Release version 1.0.0",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("tag", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:    "tag creation failure",
+			tag:     "v1.0.0",
+			message: "",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("tag", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.TagWithMessage(tt.tag, tt.message)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitBranch(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		branch    string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:   "create new branch",
+			branch: "feature/new-feature",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("checkout", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:   "switch to existing branch",
+			branch: "main",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("checkout", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:   "branch creation failure",
+			branch: "invalid/branch/name",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("checkout", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.BranchWithName(tt.branch)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitClone(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	tests := []struct {
+		name      string
+		url       string
+		dir       string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "clone repository",
+			url:  "https://github.com/example/repo.git",
+			dir:  "repo",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("clone", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "clone to current directory",
+			url:  "https://github.com/example/repo.git",
+			dir:  "",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("clone", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "clone failure",
+			url:  "https://github.com/invalid/repo.git",
+			dir:  "repo",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("clone", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.CloneRepo(tt.url, tt.dir)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitDiff(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "show diff",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("diff", "diff --git a/file.go b/file.go", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "no changes",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("diff", "", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "diff failure",
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("diff", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.Diff()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGitLog(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+
+	tests := []struct {
+		name      string
+		limit     int
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:  "show recent commits",
+			limit: 10,
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("log", "commit abc123\nAuthor: Test", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:  "show all commits",
+			limit: 0,
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("log", "commit abc123\nAuthor: Test", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:  "log failure",
+			limit: 10,
+			setupMock: func() {
+				env.Builder.ExpectGitCommand("log", "", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			git := Git{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return git.LogWithCount(tt.limit)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}

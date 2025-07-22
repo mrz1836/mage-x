@@ -1,0 +1,202 @@
+name: Fortress CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip test suite'
+        required: false
+        default: false
+        type: boolean
+      skip_security:
+        description: 'Skip security scans'
+        required: false
+        default: false
+        type: boolean
+      skip_benchmarks:
+        description: 'Skip benchmarks'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  # Quick validation before running expensive jobs
+  pre-flight:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run_tests: ${{ steps.check.outputs.run_tests }}
+      should_run_security: ${{ steps.check.outputs.run_security }}
+      should_run_benchmarks: ${{ steps.check.outputs.run_benchmarks }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+          mage -version
+
+      - name: Quick validation
+        run: |
+          echo "## Pre-flight checks"
+          
+          # Check if go.mod is valid
+          go mod verify || exit 1
+          
+          # List available mage targets
+          echo "### Available Mage targets:"
+          mage -l
+
+      - name: Determine which jobs to run
+        id: check
+        run: |
+          # Check inputs and determine what to run
+          if [[ "${{ github.event.inputs.skip_tests }}" == "true" ]]; then
+            echo "run_tests=false" >> $GITHUB_OUTPUT
+          else
+            echo "run_tests=true" >> $GITHUB_OUTPUT
+          fi
+          
+          if [[ "${{ github.event.inputs.skip_security }}" == "true" ]]; then
+            echo "run_security=false" >> $GITHUB_OUTPUT
+          else
+            echo "run_security=true" >> $GITHUB_OUTPUT
+          fi
+          
+          if [[ "${{ github.event.inputs.skip_benchmarks }}" == "true" ]]; then
+            echo "run_benchmarks=false" >> $GITHUB_OUTPUT
+          else
+            echo "run_benchmarks=true" >> $GITHUB_OUTPUT
+          fi
+
+  # Validate mage installation and functionality
+  validate-mage:
+    needs: pre-flight
+    uses: ./.github/workflows/fortress-test-mage.yml
+
+  # Run the test suite
+  test-suite:
+    needs: pre-flight
+    if: needs.pre-flight.outputs.should_run_tests == 'true'
+    uses: ./.github/workflows/fortress-test-suite.yml
+
+  # Run security scans
+  security-scans:
+    needs: pre-flight
+    if: needs.pre-flight.outputs.should_run_security == 'true'
+    uses: ./.github/workflows/fortress-security-scans.yml
+
+  # Run benchmarks
+  benchmarks:
+    needs: pre-flight
+    if: needs.pre-flight.outputs.should_run_benchmarks == 'true'
+    uses: ./.github/workflows/fortress-benchmarks.yml
+
+  # Build artifacts
+  build:
+    needs: [validate-mage, test-suite]
+    if: always() && !cancelled() && needs.test-suite.result == 'success'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+
+      - name: Build artifacts
+        run: |
+          echo "## Building artifacts"
+          
+          # Build for current platform
+          mage build
+          
+          # Build for all platforms
+          mage build:all
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            bin/
+            dist/
+          retention-days: 7
+
+  # Final summary
+  summary:
+    needs: [pre-flight, validate-mage, test-suite, security-scans, benchmarks, build]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Pipeline Summary
+        run: |
+          echo "# 🏰 Fortress Pipeline Summary"
+          echo ""
+          echo "## Job Results"
+          echo ""
+          echo "| Job | Status |"
+          echo "|-----|--------|"
+          echo "| Pre-flight Checks | ${{ needs.pre-flight.result }} |"
+          echo "| Mage Validation | ${{ needs.validate-mage.result }} |"
+          echo "| Test Suite | ${{ needs.test-suite.result }} |"
+          echo "| Security Scans | ${{ needs.security-scans.result }} |"
+          echo "| Benchmarks | ${{ needs.benchmarks.result }} |"
+          echo "| Build | ${{ needs.build.result }} |"
+          echo ""
+          
+          # Determine overall status
+          if [[ "${{ needs.pre-flight.result }}" == "failure" ]] || \
+             [[ "${{ needs.validate-mage.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-suite.result }}" == "failure" ]] || \
+             [[ "${{ needs.security-scans.result }}" == "failure" ]] || \
+             [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "## ❌ Pipeline Failed"
+            echo ""
+            echo "One or more critical jobs failed. Please check the logs above."
+            exit 1
+          elif [[ "${{ needs.test-suite.result }}" == "skipped" ]] && \
+               [[ "${{ needs.security-scans.result }}" == "skipped" ]] && \
+               [[ "${{ needs.benchmarks.result }}" == "skipped" ]]; then
+            echo "## ⚠️ All checks were skipped"
+            echo ""
+            echo "All major checks were skipped. This is unusual for a CI pipeline."
+          else
+            echo "## ✅ Pipeline Passed"
+            echo ""
+            echo "All enabled checks passed successfully!"
+          fi
+          
+          echo ""
+          echo "### Configuration"
+          echo "- Tests Run: ${{ needs.pre-flight.outputs.should_run_tests }}"
+          echo "- Security Run: ${{ needs.pre-flight.outputs.should_run_security }}"
+          echo "- Benchmarks Run: ${{ needs.pre-flight.outputs.should_run_benchmarks }}"
+          echo ""
+          echo "---"
+          echo "*Powered by Mage 🪄*"

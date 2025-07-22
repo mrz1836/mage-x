@@ -1,0 +1,372 @@
+package mage
+
+import (
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestToolsInstall(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+	env.CreateMageConfig(`
+tools:
+  golangci_lint: v1.55.2
+  fumpt: latest
+  govulncheck: latest
+`)
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful install",
+			setupMock: func() {
+				// Mock tool installations
+				env.Builder.ExpectGoCommand("install", nil).
+					ExpectAnyCommand(nil) // for other installation methods
+			},
+			expectErr: false,
+		},
+		{
+			name: "install failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			tools := Tools{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return tools.Install()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestToolsUpdate(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+	env.CreateMageConfig(`
+tools:
+  golangci_lint: v1.55.2
+  fumpt: latest
+`)
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful update",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", nil).
+					ExpectAnyCommand(nil) // for brew and other commands
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			tools := Tools{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return tools.Update()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestToolsVerify(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+	env.CreateMageConfig(`
+tools:
+  golangci_lint: v1.55.2
+  fumpt: latest
+`)
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "all tools present",
+			setupMock: func() {
+				// Mock successful version checks
+				env.Runner.On("RunCmdOutput", "gofumpt",
+					testutil.Cmd.ContainsArg("--version")).Return("v0.5.0", nil).Maybe()
+				env.Builder.ExpectAnyCommand(nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "missing tools",
+			setupMock: func() {
+				// Mock failed version checks to simulate missing tools
+				env.Runner.On("RunCmdOutput", "golangci-lint",
+					testutil.Cmd.ContainsArg("--version")).Return("", assert.AnError).Maybe()
+				env.Builder.ExpectAnyCommand(assert.AnError)
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			tools := Tools{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return tools.Verify()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestToolsList(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+	env.CreateMageConfig(`
+tools:
+  golangci_lint: v1.55.2
+  fumpt: latest
+  custom:
+    mytool: github.com/example/tool@v1.0.0
+`)
+
+	tools := Tools{}
+	err := env.WithMockRunner(
+		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func() interface{} { return GetRunner() },
+		func() error {
+			return tools.List()
+		},
+	)
+
+	assert.NoError(t, err)
+}
+
+func TestToolsVulnCheck(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful vulnerability check",
+			setupMock: func() {
+				// Mock govulncheck installation and execution
+				env.Builder.ExpectGoCommand("install", nil).
+					ExpectAnyCommand(nil) // for govulncheck execution
+			},
+			expectErr: false,
+		},
+		{
+			name: "vulnerability check failure",
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", nil).
+					ExpectAnyCommand(assert.AnError) // govulncheck fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			tools := Tools{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return tools.VulnCheck()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGetRequiredTools(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	cfg := &Config{
+		Tools: ToolsConfig{
+			GolangciLint: "v1.55.2",
+			Fumpt:        "latest",
+			GoVulnCheck:  "latest",
+			Mockgen:      "latest",
+			Swag:         "v1.8.0",
+			Custom: map[string]string{
+				"mytool": "github.com/example/tool@v1.0.0",
+			},
+		},
+	}
+
+	tools := getRequiredTools(cfg)
+
+	// Should have standard tools
+	assert.True(t, len(tools) >= 3) // golangci-lint, gofumpt, govulncheck
+
+	// Check that optional tools are included when configured
+	var foundMockgen, foundSwag, foundCustom bool
+	for _, tool := range tools {
+		switch tool.Name {
+		case "mockgen":
+			foundMockgen = true
+		case "swag":
+			foundSwag = true
+		case "mytool":
+			foundCustom = true
+		}
+	}
+
+	assert.True(t, foundMockgen, "mockgen should be included when configured")
+	assert.True(t, foundSwag, "swag should be included when configured")
+	assert.True(t, foundCustom, "custom tools should be included")
+}
+
+func TestInstallTool(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	tests := []struct {
+		name      string
+		tool      Tool
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "install regular tool",
+			tool: Tool{
+				Name:    "gofumpt",
+				Module:  "mvdan.cc/gofumpt",
+				Version: "latest",
+				Check:   "gofumpt",
+			},
+			setupMock: func() {
+				env.Builder.ExpectGoCommand("install", nil)
+			},
+			expectErr: false,
+		},
+		{
+			name: "tool already installed",
+			tool: Tool{
+				Name:    "existingtool",
+				Module:  "example.com/tool",
+				Version: "latest",
+				Check:   "go", // using 'go' as it should exist
+			},
+			setupMock: func() {
+				// No mock needed - tool should be detected as already installed
+			},
+			expectErr: false,
+		},
+		{
+			name: "golangci-lint special case",
+			tool: Tool{
+				Name:    "golangci-lint",
+				Module:  "",
+				Version: "v1.55.2",
+				Check:   "golangci-lint",
+			},
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // for special installation
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return installTool(tt.tool)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}

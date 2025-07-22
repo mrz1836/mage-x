@@ -1,0 +1,107 @@
+package config
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
+
+// FileConfigLoader implements ConfigLoader for file-based configurations
+type FileConfigLoader struct {
+	defaultPath string
+}
+
+// NewFileLoader creates a new file-based configuration loader
+func NewFileLoader(defaultPath string) ConfigLoader {
+	return &FileConfigLoader{
+		defaultPath: defaultPath,
+	}
+}
+
+// Load loads configuration from multiple file paths with fallback
+func (f *FileConfigLoader) Load(paths []string, dest interface{}) (string, error) {
+	// Add default path if provided
+	if f.defaultPath != "" {
+		paths = append([]string{f.defaultPath}, paths...)
+	}
+
+	for _, path := range paths {
+		if err := f.LoadFrom(path, dest); err == nil {
+			return path, nil
+		}
+	}
+
+	return "", fmt.Errorf("no configuration file found in paths: %v", paths)
+}
+
+// LoadFrom loads configuration from a specific file
+func (f *FileConfigLoader) LoadFrom(path string, dest interface{}) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read config file %s: %w", path, err)
+	}
+
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".json":
+		return json.Unmarshal(data, dest)
+	case ".yaml", ".yml":
+		return yaml.Unmarshal(data, dest)
+	default:
+		// Try to detect format from content
+		if err := json.Unmarshal(data, dest); err == nil {
+			return nil
+		}
+		if err := yaml.Unmarshal(data, dest); err == nil {
+			return nil
+		}
+		return fmt.Errorf("unsupported file format: %s", ext)
+	}
+}
+
+// Save saves configuration to a file in the specified format
+func (f *FileConfigLoader) Save(path string, data interface{}, format string) error {
+	var content []byte
+	var err error
+
+	switch strings.ToLower(format) {
+	case "json":
+		content, err = json.MarshalIndent(data, "", "  ")
+	case "yaml", "yml":
+		content, err = yaml.Marshal(data)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	// Ensure directory exists
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	return os.WriteFile(path, content, 0o644)
+}
+
+// Validate validates configuration data
+func (f *FileConfigLoader) Validate(data interface{}) error {
+	// Basic validation - ensure data is not nil
+	if data == nil {
+		return fmt.Errorf("configuration data is nil")
+	}
+
+	// Additional validation can be added here based on specific requirements
+	return nil
+}
+
+// GetSupportedFormats returns list of supported file formats
+func (f *FileConfigLoader) GetSupportedFormats() []string {
+	return []string{"json", "yaml", "yml"}
+}

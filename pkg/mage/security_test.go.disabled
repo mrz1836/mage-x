@@ -1,0 +1,174 @@
+package mage
+
+import (
+	"testing"
+
+	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestSecurityScan(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful security scan",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // govulncheck
+			},
+			expectErr: false,
+		},
+		{
+			name: "vulnerabilities found",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // vulnerabilities detected
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			security := Security{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return security.Scan()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestSecurityAudit(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name: "successful security audit",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil). // nancy audit
+							ExpectAnyCommand(nil). // gosec scan
+							ExpectAnyCommand(nil)  // govulncheck
+			},
+			expectErr: false,
+		},
+		{
+			name: "audit finds issues",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // security issues found
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			security := Security{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return security.Audit()
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}
+
+func TestSecurityReport(t *testing.T) {
+	env := testutil.NewTestEnvironment(t)
+	defer env.Cleanup()
+
+	env.CreateProjectStructure()
+	env.CreateGoMod("github.com/test/project")
+
+	tests := []struct {
+		name      string
+		format    string
+		setupMock func()
+		expectErr bool
+	}{
+		{
+			name:   "generate JSON report",
+			format: "json",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // security report generator
+			},
+			expectErr: false,
+		},
+		{
+			name:   "generate HTML report",
+			format: "html",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(nil) // security report generator
+			},
+			expectErr: false,
+		},
+		{
+			name:   "report generation failure",
+			format: "json",
+			setupMock: func() {
+				env.Builder.ExpectAnyCommand(assert.AnError) // report generation fails
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+
+			security := Security{}
+			err := env.WithMockRunner(
+				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func() interface{} { return GetRunner() },
+				func() error {
+					return security.Report(tt.format)
+				},
+			)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			env.Runner.AssertExpectations(t)
+		})
+	}
+}

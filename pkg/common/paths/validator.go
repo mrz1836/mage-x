@@ -1,0 +1,543 @@
+package paths
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"sync"
+)
+
+// DefaultPathValidator implements PathValidator
+type DefaultPathValidator struct {
+	mu    sync.RWMutex
+	rules []ValidationRule
+}
+
+// NewPathValidator creates a new path validator
+func NewPathValidator() *DefaultPathValidator {
+	return &DefaultPathValidator{
+		rules: make([]ValidationRule, 0),
+	}
+}
+
+// Validation rules
+
+// AddRule adds a validation rule
+func (pv *DefaultPathValidator) AddRule(rule ValidationRule) error {
+	if rule == nil {
+		return fmt.Errorf("rule cannot be nil")
+	}
+
+	pv.mu.Lock()
+	defer pv.mu.Unlock()
+
+	pv.rules = append(pv.rules, rule)
+	return nil
+}
+
+// RemoveRule removes a validation rule by name
+func (pv *DefaultPathValidator) RemoveRule(name string) error {
+	pv.mu.Lock()
+	defer pv.mu.Unlock()
+
+	for i, rule := range pv.rules {
+		if rule.Name() == name {
+			pv.rules = append(pv.rules[:i], pv.rules[i+1:]...)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("rule %q not found", name)
+}
+
+// ClearRules removes all validation rules
+func (pv *DefaultPathValidator) ClearRules() error {
+	pv.mu.Lock()
+	defer pv.mu.Unlock()
+
+	pv.rules = make([]ValidationRule, 0)
+	return nil
+}
+
+// Rules returns all validation rules
+func (pv *DefaultPathValidator) Rules() []ValidationRule {
+	pv.mu.RLock()
+	defer pv.mu.RUnlock()
+
+	result := make([]ValidationRule, len(pv.rules))
+	copy(result, pv.rules)
+	return result
+}
+
+// Validation operations
+
+// Validate validates a path against all rules
+func (pv *DefaultPathValidator) Validate(path string) []ValidationError {
+	pv.mu.RLock()
+	defer pv.mu.RUnlock()
+
+	var errors []ValidationError
+
+	for _, rule := range pv.rules {
+		if err := rule.Validate(path); err != nil {
+			errors = append(errors, ValidationError{
+				Path:    path,
+				Rule:    rule.Name(),
+				Message: err.Error(),
+				Code:    "VALIDATION_FAILED",
+			})
+		}
+	}
+
+	return errors
+}
+
+// ValidatePath validates a PathBuilder against all rules
+func (pv *DefaultPathValidator) ValidatePath(path PathBuilder) []ValidationError {
+	pv.mu.RLock()
+	defer pv.mu.RUnlock()
+
+	var errors []ValidationError
+
+	for _, rule := range pv.rules {
+		if err := rule.ValidatePath(path); err != nil {
+			errors = append(errors, ValidationError{
+				Path:    path.String(),
+				Rule:    rule.Name(),
+				Message: err.Error(),
+				Code:    "VALIDATION_FAILED",
+			})
+		}
+	}
+
+	return errors
+}
+
+// IsValid returns true if the path passes all validation rules
+func (pv *DefaultPathValidator) IsValid(path string) bool {
+	return len(pv.Validate(path)) == 0
+}
+
+// IsValidPath returns true if the PathBuilder passes all validation rules
+func (pv *DefaultPathValidator) IsValidPath(path PathBuilder) bool {
+	return len(pv.ValidatePath(path)) == 0
+}
+
+// Built-in validators
+
+// RequireAbsolute requires the path to be absolute
+func (pv *DefaultPathValidator) RequireAbsolute() PathValidator {
+	pv.AddRule(&AbsolutePathRule{})
+	return pv
+}
+
+// RequireRelative requires the path to be relative
+func (pv *DefaultPathValidator) RequireRelative() PathValidator {
+	pv.AddRule(&RelativePathRule{})
+	return pv
+}
+
+// RequireExists requires the path to exist
+func (pv *DefaultPathValidator) RequireExists() PathValidator {
+	pv.AddRule(&ExistsRule{})
+	return pv
+}
+
+// RequireNotExists requires the path to not exist
+func (pv *DefaultPathValidator) RequireNotExists() PathValidator {
+	pv.AddRule(&NotExistsRule{})
+	return pv
+}
+
+// RequireReadable requires the path to be readable
+func (pv *DefaultPathValidator) RequireReadable() PathValidator {
+	pv.AddRule(&ReadableRule{})
+	return pv
+}
+
+// RequireWritable requires the path to be writable
+func (pv *DefaultPathValidator) RequireWritable() PathValidator {
+	pv.AddRule(&WritableRule{})
+	return pv
+}
+
+// RequireExecutable requires the path to be executable
+func (pv *DefaultPathValidator) RequireExecutable() PathValidator {
+	pv.AddRule(&ExecutableRule{})
+	return pv
+}
+
+// RequireDirectory requires the path to be a directory
+func (pv *DefaultPathValidator) RequireDirectory() PathValidator {
+	pv.AddRule(&DirectoryRule{})
+	return pv
+}
+
+// RequireFile requires the path to be a file
+func (pv *DefaultPathValidator) RequireFile() PathValidator {
+	pv.AddRule(&FileRule{})
+	return pv
+}
+
+// RequireExtension requires the path to have one of the specified extensions
+func (pv *DefaultPathValidator) RequireExtension(exts ...string) PathValidator {
+	pv.AddRule(&ExtensionRule{Extensions: exts})
+	return pv
+}
+
+// RequireMaxLength requires the path to be shorter than the specified length
+func (pv *DefaultPathValidator) RequireMaxLength(length int) PathValidator {
+	pv.AddRule(&MaxLengthRule{MaxLength: length})
+	return pv
+}
+
+// RequirePattern requires the path to match a pattern
+func (pv *DefaultPathValidator) RequirePattern(pattern string) PathValidator {
+	pv.AddRule(&PatternRule{Pattern: pattern, Required: true})
+	return pv
+}
+
+// ForbidPattern forbids the path from matching a pattern
+func (pv *DefaultPathValidator) ForbidPattern(pattern string) PathValidator {
+	pv.AddRule(&PatternRule{Pattern: pattern, Required: false})
+	return pv
+}
+
+// Built-in validation rules
+
+// AbsolutePathRule validates that a path is absolute
+type AbsolutePathRule struct{}
+
+func (r *AbsolutePathRule) Name() string        { return "absolute-path" }
+func (r *AbsolutePathRule) Description() string { return "path must be absolute" }
+
+func (r *AbsolutePathRule) Validate(path string) error {
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf("path must be absolute")
+	}
+	return nil
+}
+
+func (r *AbsolutePathRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// RelativePathRule validates that a path is relative
+type RelativePathRule struct{}
+
+func (r *RelativePathRule) Name() string        { return "relative-path" }
+func (r *RelativePathRule) Description() string { return "path must be relative" }
+
+func (r *RelativePathRule) Validate(path string) error {
+	if filepath.IsAbs(path) {
+		return fmt.Errorf("path must be relative")
+	}
+	return nil
+}
+
+func (r *RelativePathRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// ExistsRule validates that a path exists
+type ExistsRule struct{}
+
+func (r *ExistsRule) Name() string        { return "exists" }
+func (r *ExistsRule) Description() string { return "path must exist" }
+
+func (r *ExistsRule) Validate(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return fmt.Errorf("path does not exist")
+	}
+	return nil
+}
+
+func (r *ExistsRule) ValidatePath(path PathBuilder) error {
+	if !path.Exists() {
+		return fmt.Errorf("path does not exist")
+	}
+	return nil
+}
+
+// NotExistsRule validates that a path does not exist
+type NotExistsRule struct{}
+
+func (r *NotExistsRule) Name() string        { return "not-exists" }
+func (r *NotExistsRule) Description() string { return "path must not exist" }
+
+func (r *NotExistsRule) Validate(path string) error {
+	if _, err := os.Stat(path); err == nil {
+		return fmt.Errorf("path already exists")
+	}
+	return nil
+}
+
+func (r *NotExistsRule) ValidatePath(path PathBuilder) error {
+	if path.Exists() {
+		return fmt.Errorf("path already exists")
+	}
+	return nil
+}
+
+// ReadableRule validates that a path is readable
+type ReadableRule struct{}
+
+func (r *ReadableRule) Name() string        { return "readable" }
+func (r *ReadableRule) Description() string { return "path must be readable" }
+
+func (r *ReadableRule) Validate(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("path is not readable: %w", err)
+	}
+	file.Close()
+	return nil
+}
+
+func (r *ReadableRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// WritableRule validates that a path is writable
+type WritableRule struct{}
+
+func (r *WritableRule) Name() string        { return "writable" }
+func (r *WritableRule) Description() string { return "path must be writable" }
+
+func (r *WritableRule) Validate(path string) error {
+	// Check if path exists
+	info, err := os.Stat(path)
+	if err != nil {
+		// Path doesn't exist, check if parent directory is writable
+		parentDir := filepath.Dir(path)
+		return r.checkDirWritable(parentDir)
+	}
+
+	// Path exists, check if it's writable
+	if info.IsDir() {
+		return r.checkDirWritable(path)
+	}
+
+	// It's a file, try to open for writing
+	file, err := os.OpenFile(path, os.O_WRONLY, 0)
+	if err != nil {
+		return fmt.Errorf("path is not writable: %w", err)
+	}
+	file.Close()
+	return nil
+}
+
+func (r *WritableRule) checkDirWritable(dir string) error {
+	// Try to create a temporary file in the directory
+	tempFile, err := os.CreateTemp(dir, "write_test_*")
+	if err != nil {
+		return fmt.Errorf("directory is not writable: %w", err)
+	}
+	tempFile.Close()
+	os.Remove(tempFile.Name())
+	return nil
+}
+
+func (r *WritableRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// ExecutableRule validates that a path is executable
+type ExecutableRule struct{}
+
+func (r *ExecutableRule) Name() string        { return "executable" }
+func (r *ExecutableRule) Description() string { return "path must be executable" }
+
+func (r *ExecutableRule) Validate(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("path does not exist: %w", err)
+	}
+
+	if info.Mode()&0o111 == 0 {
+		return fmt.Errorf("path is not executable")
+	}
+
+	return nil
+}
+
+func (r *ExecutableRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// DirectoryRule validates that a path is a directory
+type DirectoryRule struct{}
+
+func (r *DirectoryRule) Name() string        { return "directory" }
+func (r *DirectoryRule) Description() string { return "path must be a directory" }
+
+func (r *DirectoryRule) Validate(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("path does not exist: %w", err)
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("path is not a directory")
+	}
+
+	return nil
+}
+
+func (r *DirectoryRule) ValidatePath(path PathBuilder) error {
+	if !path.IsDir() {
+		return fmt.Errorf("path is not a directory")
+	}
+	return nil
+}
+
+// FileRule validates that a path is a file
+type FileRule struct{}
+
+func (r *FileRule) Name() string        { return "file" }
+func (r *FileRule) Description() string { return "path must be a file" }
+
+func (r *FileRule) Validate(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("path does not exist: %w", err)
+	}
+
+	if info.IsDir() {
+		return fmt.Errorf("path is not a file")
+	}
+
+	return nil
+}
+
+func (r *FileRule) ValidatePath(path PathBuilder) error {
+	if !path.IsFile() {
+		return fmt.Errorf("path is not a file")
+	}
+	return nil
+}
+
+// ExtensionRule validates that a path has one of the allowed extensions
+type ExtensionRule struct {
+	Extensions []string
+}
+
+func (r *ExtensionRule) Name() string        { return "extension" }
+func (r *ExtensionRule) Description() string { return "path must have allowed extension" }
+
+func (r *ExtensionRule) Validate(path string) error {
+	ext := strings.ToLower(filepath.Ext(path))
+
+	for _, allowedExt := range r.Extensions {
+		if !strings.HasPrefix(allowedExt, ".") {
+			allowedExt = "." + allowedExt
+		}
+		if strings.ToLower(allowedExt) == ext {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("path must have one of these extensions: %v", r.Extensions)
+}
+
+func (r *ExtensionRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// MaxLengthRule validates that a path is shorter than the maximum length
+type MaxLengthRule struct {
+	MaxLength int
+}
+
+func (r *MaxLengthRule) Name() string        { return "max-length" }
+func (r *MaxLengthRule) Description() string { return "path must not exceed maximum length" }
+
+func (r *MaxLengthRule) Validate(path string) error {
+	if len(path) > r.MaxLength {
+		return fmt.Errorf("path length %d exceeds maximum %d", len(path), r.MaxLength)
+	}
+	return nil
+}
+
+func (r *MaxLengthRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// PatternRule validates that a path matches or doesn't match a pattern
+type PatternRule struct {
+	Pattern  string
+	Required bool // true = must match, false = must not match
+}
+
+func (r *PatternRule) Name() string {
+	if r.Required {
+		return "require-pattern"
+	}
+	return "forbid-pattern"
+}
+
+func (r *PatternRule) Description() string {
+	if r.Required {
+		return "path must match pattern"
+	}
+	return "path must not match pattern"
+}
+
+func (r *PatternRule) Validate(path string) error {
+	matched, err := regexp.MatchString(r.Pattern, path)
+	if err != nil {
+		return fmt.Errorf("invalid pattern: %w", err)
+	}
+
+	if r.Required && !matched {
+		return fmt.Errorf("path does not match required pattern %s", r.Pattern)
+	}
+
+	if !r.Required && matched {
+		return fmt.Errorf("path matches forbidden pattern %s", r.Pattern)
+	}
+
+	return nil
+}
+
+func (r *PatternRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// Package-level convenience functions
+
+// Validate validates a path with a validator
+func Validate(path string, validator PathValidator) []ValidationError {
+	return validator.Validate(path)
+}
+
+// IsValid returns true if a path is valid according to the validator
+func IsValid(path string, validator PathValidator) bool {
+	return validator.IsValid(path)
+}
+
+// ValidateExists returns an error if the path doesn't exist
+func ValidateExists(path string) error {
+	rule := &ExistsRule{}
+	return rule.Validate(path)
+}
+
+// ValidateReadable returns an error if the path isn't readable
+func ValidateReadable(path string) error {
+	rule := &ReadableRule{}
+	return rule.Validate(path)
+}
+
+// ValidateWritable returns an error if the path isn't writable
+func ValidateWritable(path string) error {
+	rule := &WritableRule{}
+	return rule.Validate(path)
+}
+
+// ValidateExtension returns an error if the path doesn't have the required extension
+func ValidateExtension(path string, extensions ...string) error {
+	rule := &ExtensionRule{Extensions: extensions}
+	return rule.Validate(path)
+}

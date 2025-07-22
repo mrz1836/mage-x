@@ -1,0 +1,22 @@
+{
+  "id": "deploy-1752878942",
+  "environment": "staging",
+  "version": "dev",
+  "timestamp": "2025-07-18T18:49:02.776586-04:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "status": "failed",
+  "user": "mrz",
+  "config": {
+    "description": "Staging environment",
+    "endpoint": "https://staging.example.com",
+    "requires_approval": false,
+    "auto_deploy": false,
+    "variables": {},
+    "secrets": [],
+    "health_check_url": "/health",
+    "notification_channels": [
+      "slack"
+    ]
+  },
+  "error": "project name is required"
+}

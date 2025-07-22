@@ -1,0 +1,201 @@
+name: Fortress Security Scans
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+          which mage
+          mage -version
+
+      - name: Run govulncheck
+        run: |
+          echo "## Running Go Vulnerability Check"
+          mage tools:vulncheck
+
+  static-analysis:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+
+      - name: Run go vet
+        run: |
+          echo "## Running go vet"
+          mage lint:vet
+
+      - name: Run golangci-lint
+        run: |
+          echo "## Running golangci-lint"
+          mage lint
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+
+      - name: Check dependencies
+        run: |
+          echo "## Checking dependencies"
+          mage mod:tidy
+          
+          # Check if go.mod or go.sum were modified
+          if ! git diff --quiet go.mod go.sum; then
+            echo "::warning::Dependencies are not up to date. Run 'mage mod:tidy' locally."
+            git diff go.mod go.sum
+            exit 1
+          fi
+          
+          echo "✅ Dependencies are up to date"
+
+  license-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install go-licenses
+        run: |
+          go install github.com/google/go-licenses@latest
+
+      - name: Check licenses
+        continue-on-error: true
+        run: |
+          echo "## Checking licenses"
+          go-licenses check ./... || echo "::warning::Some license issues detected"
+
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+
+      - name: Check code formatting
+        run: |
+          echo "## Checking code formatting with gofumpt"
+          mage lint:fumpt
+          
+          # Check if any files were modified
+          if ! git diff --quiet; then
+            echo "::warning::Code formatting issues detected. Run 'mage lint:fumpt' locally."
+            git diff --name-only
+            exit 1
+          fi
+          
+          echo "✅ Code formatting is correct"
+
+  gosec:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: '-fmt sarif -out gosec-results.sarif ./...'
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gosec-results.sarif
+
+  summary:
+    needs: [govulncheck, static-analysis, dependency-check, license-check, code-quality, gosec]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Security Scan Summary
+        run: |
+          echo "## Security Scan Summary"
+          echo ""
+          echo "### Scan Results:"
+          echo "- Go Vulnerability Check: ${{ needs.govulncheck.result }}"
+          echo "- Static Analysis: ${{ needs.static-analysis.result }}"
+          echo "- Dependency Check: ${{ needs.dependency-check.result }}"
+          echo "- License Check: ${{ needs.license-check.result }}"
+          echo "- Code Quality: ${{ needs.code-quality.result }}"
+          echo "- Gosec Security: ${{ needs.gosec.result }}"
+          echo ""
+          
+          # Check if any scan failed
+          if [[ "${{ needs.govulncheck.result }}" == "failure" ]] || \
+             [[ "${{ needs.static-analysis.result }}" == "failure" ]] || \
+             [[ "${{ needs.dependency-check.result }}" == "failure" ]] || \
+             [[ "${{ needs.code-quality.result }}" == "failure" ]] || \
+             [[ "${{ needs.gosec.result }}" == "failure" ]]; then
+            echo "❌ Some security scans failed. Please review the results above."
+            exit 1
+          else
+            echo "✅ All security scans passed!"
+          fi

@@ -1,0 +1,611 @@
+// Package mage provides reusable build tasks for Go projects using Mage
+package mage
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/magefile/mage/mg"
+	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Yaml namespace for mage.yaml configuration management
+type Yaml mg.Namespace
+
+// MageConfig represents the complete mage.yaml configuration
+type MageConfig struct {
+	Version string            `yaml:"version"`
+	Project ProjectYamlConfig `yaml:"project"`
+	Build   BuildYamlConfig   `yaml:"build"`
+	Test    TestYamlConfig    `yaml:"test"`
+	Lint    LintYamlConfig    `yaml:"lint"`
+	Release ReleaseYamlConfig `yaml:"release"`
+	Docker  DockerYamlConfig  `yaml:"docker"`
+	CI      CIYamlConfig      `yaml:"ci"`
+}
+
+// ProjectYamlConfig contains project-specific configuration
+type ProjectYamlConfig struct {
+	Name        string   `yaml:"name"`
+	Description string   `yaml:"description"`
+	Module      string   `yaml:"module"`
+	MainPkg     string   `yaml:"main_pkg"`
+	BinaryName  string   `yaml:"binary_name"`
+	Version     string   `yaml:"version"`
+	Authors     []string `yaml:"authors"`
+	License     string   `yaml:"license"`
+	Homepage    string   `yaml:"homepage"`
+	Repository  string   `yaml:"repository"`
+}
+
+// BuildYamlConfig contains build configuration
+type BuildYamlConfig struct {
+	Dir         string            `yaml:"dir"`
+	OutputDir   string            `yaml:"output_dir"`
+	LDFlags     string            `yaml:"ldflags"`
+	Tags        []string          `yaml:"tags"`
+	Platforms   []string          `yaml:"platforms"`
+	CGO         bool              `yaml:"cgo"`
+	Parallel    int               `yaml:"parallel"`
+	Env         map[string]string `yaml:"env"`
+	BeforeBuild []string          `yaml:"before_build"`
+	AfterBuild  []string          `yaml:"after_build"`
+}
+
+// TestYamlConfig contains test configuration
+type TestYamlConfig struct {
+	Timeout    string   `yaml:"timeout"`
+	Parallel   bool     `yaml:"parallel"`
+	Race       bool     `yaml:"race"`
+	Cover      bool     `yaml:"cover"`
+	CoverMode  string   `yaml:"cover_mode"`
+	CoverPkg   []string `yaml:"cover_pkg"`
+	Tags       []string `yaml:"tags"`
+	Verbose    bool     `yaml:"verbose"`
+	Short      bool     `yaml:"short"`
+	SkipFuzz   bool     `yaml:"skip_fuzz"`
+	Benchmarks bool     `yaml:"benchmarks"`
+}
+
+// LintYamlConfig contains lint configuration
+type LintYamlConfig struct {
+	Enabled    bool              `yaml:"enabled"`
+	ConfigFile string            `yaml:"config_file"`
+	Timeout    string            `yaml:"timeout"`
+	Parallel   int               `yaml:"parallel"`
+	Format     string            `yaml:"format"`
+	Exclude    []string          `yaml:"exclude"`
+	Enable     []string          `yaml:"enable"`
+	Disable    []string          `yaml:"disable"`
+	Settings   map[string]string `yaml:"settings"`
+}
+
+// ReleaseYamlConfig contains release configuration
+type ReleaseYamlConfig struct {
+	Enabled       bool                `yaml:"enabled"`
+	Channel       string              `yaml:"channel"`
+	Prerelease    bool                `yaml:"prerelease"`
+	Draft         bool                `yaml:"draft"`
+	Assets        []string            `yaml:"assets"`
+	Platforms     []string            `yaml:"platforms"`
+	BeforeRelease []string            `yaml:"before_release"`
+	AfterRelease  []string            `yaml:"after_release"`
+	Changelog     ChangelogConfig     `yaml:"changelog"`
+	GitHub        GitHubReleaseConfig `yaml:"github"`
+}
+
+// ChangelogConfig contains changelog configuration
+type ChangelogConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Format  string `yaml:"format"`
+	File    string `yaml:"file"`
+}
+
+// GitHubReleaseConfig contains GitHub release configuration
+type GitHubReleaseConfig struct {
+	Owner      string `yaml:"owner"`
+	Repository string `yaml:"repository"`
+	Token      string `yaml:"token"`
+}
+
+// DockerYamlConfig contains Docker configuration
+type DockerYamlConfig struct {
+	Enabled    bool     `yaml:"enabled"`
+	Dockerfile string   `yaml:"dockerfile"`
+	Image      string   `yaml:"image"`
+	Tags       []string `yaml:"tags"`
+	Registry   string   `yaml:"registry"`
+	BuildArgs  []string `yaml:"build_args"`
+}
+
+// CIYamlConfig contains CI/CD configuration
+type CIYamlConfig struct {
+	Enabled   bool     `yaml:"enabled"`
+	Provider  string   `yaml:"provider"`
+	Workflows []string `yaml:"workflows"`
+	Matrix    CIMatrix `yaml:"matrix"`
+}
+
+// CIMatrix contains CI matrix configuration
+type CIMatrix struct {
+	GoVersions []string `yaml:"go_versions"`
+	Platforms  []string `yaml:"platforms"`
+}
+
+// Init creates a new mage.yaml configuration file
+func (Yaml) Init() error {
+	utils.Header("📝 Initializing mage.yaml Configuration")
+
+	// Check if mage.yaml already exists
+	if utils.FileExists("mage.yaml") {
+		return fmt.Errorf("mage.yaml already exists")
+	}
+
+	// Create default configuration
+	config := createDefaultConfig()
+
+	// Try to populate from existing project
+	if err := populateFromProject(config); err != nil {
+		utils.Warn("Failed to populate from existing project: %v", err)
+	}
+
+	// Write configuration
+	if err := writeConfig(config, "mage.yaml"); err != nil {
+		return fmt.Errorf("failed to write configuration: %w", err)
+	}
+
+	utils.Success("Created mage.yaml configuration")
+	utils.Info("Edit mage.yaml to customize your project settings")
+
+	return nil
+}
+
+// Validate validates the mage.yaml configuration
+func (Yaml) Validate() error {
+	utils.Header("✅ Validating mage.yaml Configuration")
+
+	config, err := loadConfig("mage.yaml")
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	// Validate configuration
+	if err := validateConfig(config); err != nil {
+		return fmt.Errorf("configuration validation failed: %w", err)
+	}
+
+	utils.Success("Configuration is valid")
+	return nil
+}
+
+// Show displays the current configuration
+func (Yaml) Show() error {
+	utils.Header("📋 Current mage.yaml Configuration")
+
+	config, err := loadConfig("mage.yaml")
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	// Display configuration
+	displayConfig(config)
+
+	return nil
+}
+
+// Update updates the mage.yaml configuration
+func (Yaml) Update() error {
+	utils.Header("🔄 Updating mage.yaml Configuration")
+
+	// Load existing configuration
+	config, err := loadConfig("mage.yaml")
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	// Update from environment variables
+	updateFromEnv(config)
+
+	// Update from project changes
+	if err := populateFromProject(config); err != nil {
+		utils.Warn("Failed to update from project: %v", err)
+	}
+
+	// Write updated configuration
+	if err := writeConfig(config, "mage.yaml"); err != nil {
+		return fmt.Errorf("failed to write configuration: %w", err)
+	}
+
+	utils.Success("Updated mage.yaml configuration")
+	return nil
+}
+
+// Template creates a configuration template for different project types
+func (Yaml) Template() error {
+	utils.Header("📄 Creating Configuration Template")
+
+	projectType := utils.GetEnv("PROJECT_TYPE", "library")
+
+	var config *MageConfig
+
+	switch projectType {
+	case "library":
+		config = createLibraryTemplate()
+	case "cli":
+		config = createCLITemplate()
+	case "webapi":
+		config = createWebAPITemplate()
+	case "microservice":
+		config = createMicroserviceTemplate()
+	case "tool":
+		config = createToolTemplate()
+	default:
+		config = createDefaultConfig()
+	}
+
+	// Write template
+	filename := fmt.Sprintf("mage.%s.yaml", projectType)
+	if err := writeConfig(config, filename); err != nil {
+		return fmt.Errorf("failed to write template: %w", err)
+	}
+
+	utils.Success("Created configuration template: %s", filename)
+	utils.Info("Copy to mage.yaml and customize for your project")
+
+	return nil
+}
+
+// Migrate migrates from old configuration format
+func (Yaml) Migrate() error {
+	utils.Header("🔄 Migrating Configuration")
+
+	// Check for old configuration files
+	oldFiles := []string{".mage.yaml", "mage.yml", ".mage.yml"}
+
+	var oldFile string
+	for _, file := range oldFiles {
+		if utils.FileExists(file) {
+			oldFile = file
+			break
+		}
+	}
+
+	if oldFile == "" {
+		utils.Info("No old configuration files found")
+		return nil
+	}
+
+	utils.Info("Found old configuration: %s", oldFile)
+
+	// Load old configuration
+	oldConfig, err := loadConfig(oldFile)
+	if err != nil {
+		return fmt.Errorf("failed to load old configuration: %w", err)
+	}
+
+	// Migrate to new format
+	newConfig := migrateConfig(oldConfig)
+
+	// Write new configuration
+	if err := writeConfig(newConfig, "mage.yaml"); err != nil {
+		return fmt.Errorf("failed to write new configuration: %w", err)
+	}
+
+	utils.Success("Migrated configuration to mage.yaml")
+	utils.Info("Review the new configuration and delete %s when ready", oldFile)
+
+	return nil
+}
+
+// Helper functions
+
+// createDefaultConfig creates a default configuration
+func createDefaultConfig() *MageConfig {
+	return &MageConfig{
+		Version: "1.0",
+		Project: ProjectYamlConfig{
+			Name:        "my-project",
+			Description: "A Go project built with MAGE-X",
+			Module:      "github.com/username/my-project",
+			MainPkg:     ".",
+			BinaryName:  "my-project",
+			Version:     "v1.0.0",
+			Authors:     []string{"Your Name <your.email@example.com>"},
+			License:     "MIT",
+		},
+		Build: BuildYamlConfig{
+			Dir:       ".",
+			OutputDir: "bin",
+			LDFlags:   "-s -w",
+			Tags:      []string{},
+			Platforms: []string{"linux/amd64", "darwin/amd64", "windows/amd64"},
+			CGO:       false,
+			Parallel:  4,
+			Env:       map[string]string{},
+		},
+		Test: TestYamlConfig{
+			Timeout:   "10m",
+			Parallel:  true,
+			Race:      false,
+			Cover:     true,
+			CoverMode: "atomic",
+			CoverPkg:  []string{},
+			Tags:      []string{},
+			Verbose:   false,
+			Short:     false,
+			SkipFuzz:  false,
+		},
+		Lint: LintYamlConfig{
+			Enabled:    true,
+			ConfigFile: ".golangci.yml",
+			Timeout:    "5m",
+			Parallel:   4,
+			Format:     "colored-line-number",
+			Exclude:    []string{},
+			Enable:     []string{},
+			Disable:    []string{},
+			Settings:   map[string]string{},
+		},
+		Release: ReleaseYamlConfig{
+			Enabled:    true,
+			Channel:    "stable",
+			Prerelease: false,
+			Draft:      false,
+			Assets:     []string{},
+			Platforms:  []string{"linux/amd64", "darwin/amd64", "windows/amd64"},
+			Changelog: ChangelogConfig{
+				Enabled: true,
+				Format:  "markdown",
+				File:    "CHANGELOG.md",
+			},
+			GitHub: GitHubReleaseConfig{
+				Owner:      "username",
+				Repository: "repository",
+				Token:      "GITHUB_TOKEN",
+			},
+		},
+		Docker: DockerYamlConfig{
+			Enabled:    false,
+			Dockerfile: "Dockerfile",
+			Image:      "my-project",
+			Tags:       []string{"latest"},
+			Registry:   "docker.io",
+			BuildArgs:  []string{},
+		},
+		CI: CIYamlConfig{
+			Enabled:   true,
+			Provider:  "github",
+			Workflows: []string{"ci.yml"},
+			Matrix: CIMatrix{
+				GoVersions: []string{"1.21", "1.22"},
+				Platforms:  []string{"ubuntu-latest", "macos-latest", "windows-latest"},
+			},
+		},
+	}
+}
+
+// createLibraryTemplate creates a library project template
+func createLibraryTemplate() *MageConfig {
+	config := createDefaultConfig()
+	config.Project.Description = "A Go library built with MAGE-X"
+	config.Build.Platforms = []string{"linux/amd64", "darwin/amd64", "windows/amd64"}
+	config.Test.Benchmarks = true
+	config.Docker.Enabled = false
+	return config
+}
+
+// createCLITemplate creates a CLI project template
+func createCLITemplate() *MageConfig {
+	config := createDefaultConfig()
+	config.Project.Description = "A CLI application built with MAGE-X"
+	config.Build.Platforms = []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64", "windows/amd64"}
+	config.Release.Assets = []string{"completions/*", "docs/*"}
+	config.Docker.Enabled = true
+	return config
+}
+
+// createWebAPITemplate creates a web API project template
+func createWebAPITemplate() *MageConfig {
+	config := createDefaultConfig()
+	config.Project.Description = "A web API built with MAGE-X"
+	config.Build.Tags = []string{"netgo"}
+	config.Test.Tags = []string{"integration"}
+	config.Docker.Enabled = true
+	config.Docker.BuildArgs = []string{"--target=production"}
+	return config
+}
+
+// createMicroserviceTemplate creates a microservice project template
+func createMicroserviceTemplate() *MageConfig {
+	config := createDefaultConfig()
+	config.Project.Description = "A microservice built with MAGE-X"
+	config.Build.Tags = []string{"netgo"}
+	config.Test.Tags = []string{"integration", "e2e"}
+	config.Docker.Enabled = true
+	config.Docker.Tags = []string{"latest", "v1.0.0"}
+	return config
+}
+
+// createToolTemplate creates a tool project template
+func createToolTemplate() *MageConfig {
+	config := createDefaultConfig()
+	config.Project.Description = "A developer tool built with MAGE-X"
+	config.Build.Platforms = []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64", "windows/amd64"}
+	config.Release.Assets = []string{"LICENSE", "README.md"}
+	config.Docker.Enabled = false
+	return config
+}
+
+// populateFromProject populates configuration from existing project
+func populateFromProject(config *MageConfig) error {
+	// Get module name
+	if module, err := getModuleName(); err == nil {
+		config.Project.Module = module
+
+		// Extract project name from module
+		parts := strings.Split(module, "/")
+		if len(parts) > 0 {
+			config.Project.Name = parts[len(parts)-1]
+			config.Project.BinaryName = parts[len(parts)-1]
+		}
+
+		// Extract GitHub info
+		if len(parts) >= 3 && parts[0] == "github.com" {
+			config.Release.GitHub.Owner = parts[1]
+			config.Release.GitHub.Repository = parts[2]
+		}
+	}
+
+	// Get version
+	if version := getVersion(); version != "dev" {
+		config.Project.Version = version
+	}
+
+	// Check for existing files
+	if utils.FileExists("README.md") {
+		// Could parse README for description
+	}
+
+	if utils.FileExists("LICENSE") {
+		// Could parse LICENSE for license type
+	}
+
+	if utils.FileExists("Dockerfile") {
+		config.Docker.Enabled = true
+	}
+
+	if utils.FileExists(".github/workflows") {
+		config.CI.Enabled = true
+	}
+
+	return nil
+}
+
+// updateFromEnv updates configuration from environment variables
+func updateFromEnv(config *MageConfig) {
+	// Update from environment variables
+	if name := utils.GetEnv("PROJECT_NAME", ""); name != "" {
+		config.Project.Name = name
+	}
+
+	if desc := utils.GetEnv("PROJECT_DESCRIPTION", ""); desc != "" {
+		config.Project.Description = desc
+	}
+
+	if version := utils.GetEnv("PROJECT_VERSION", ""); version != "" {
+		config.Project.Version = version
+	}
+
+	if license := utils.GetEnv("PROJECT_LICENSE", ""); license != "" {
+		config.Project.License = license
+	}
+
+	// Build configuration
+	if ldflags := utils.GetEnv("BUILD_LDFLAGS", ""); ldflags != "" {
+		config.Build.LDFlags = ldflags
+	}
+
+	if platforms := utils.GetEnv("BUILD_PLATFORMS", ""); platforms != "" {
+		config.Build.Platforms = strings.Split(platforms, ",")
+	}
+
+	// Test configuration
+	if timeout := utils.GetEnv("TEST_TIMEOUT", ""); timeout != "" {
+		config.Test.Timeout = timeout
+	}
+
+	config.Test.Verbose = utils.GetEnvBool("TEST_VERBOSE", config.Test.Verbose)
+	config.Test.Race = utils.GetEnvBool("TEST_RACE", config.Test.Race)
+	config.Test.Cover = utils.GetEnvBool("TEST_COVER", config.Test.Cover)
+}
+
+// loadConfig loads configuration from file
+func loadConfig(filename string) (*MageConfig, error) {
+	fileOps := fileops.New()
+	var config MageConfig
+	if err := fileOps.YAML.ReadYAML(filename, &config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
+// writeConfig writes configuration to file
+func writeConfig(config *MageConfig, filename string) error {
+	fileOps := fileops.New()
+	return fileOps.SaveConfig(filename, config, "yaml")
+}
+
+// validateConfig validates the configuration
+func validateConfig(config *MageConfig) error {
+	if config.Project.Name == "" {
+		return fmt.Errorf("project.name is required")
+	}
+
+	if config.Project.Module == "" {
+		return fmt.Errorf("project.module is required")
+	}
+
+	if config.Build.OutputDir == "" {
+		return fmt.Errorf("build.output_dir is required")
+	}
+
+	// Validate platforms
+	for _, platform := range config.Build.Platforms {
+		parts := strings.Split(platform, "/")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid platform format: %s", platform)
+		}
+	}
+
+	return nil
+}
+
+// displayConfig displays the configuration
+func displayConfig(config *MageConfig) {
+	fmt.Printf("📦 Project: %s\n", config.Project.Name)
+	fmt.Printf("📝 Description: %s\n", config.Project.Description)
+	fmt.Printf("🏗️  Module: %s\n", config.Project.Module)
+	fmt.Printf("📊 Version: %s\n", config.Project.Version)
+	fmt.Printf("📄 License: %s\n", config.Project.License)
+
+	fmt.Printf("\n🔨 Build Configuration:\n")
+	fmt.Printf("  Output Directory: %s\n", config.Build.OutputDir)
+	fmt.Printf("  Platforms: %s\n", strings.Join(config.Build.Platforms, ", "))
+	fmt.Printf("  CGO Enabled: %t\n", config.Build.CGO)
+	fmt.Printf("  Parallel Jobs: %d\n", config.Build.Parallel)
+
+	fmt.Printf("\n🧪 Test Configuration:\n")
+	fmt.Printf("  Timeout: %s\n", config.Test.Timeout)
+	fmt.Printf("  Parallel: %t\n", config.Test.Parallel)
+	fmt.Printf("  Race Detection: %t\n", config.Test.Race)
+	fmt.Printf("  Coverage: %t\n", config.Test.Cover)
+
+	fmt.Printf("\n🔍 Lint Configuration:\n")
+	fmt.Printf("  Enabled: %t\n", config.Lint.Enabled)
+	fmt.Printf("  Config File: %s\n", config.Lint.ConfigFile)
+	fmt.Printf("  Timeout: %s\n", config.Lint.Timeout)
+
+	fmt.Printf("\n🚀 Release Configuration:\n")
+	fmt.Printf("  Enabled: %t\n", config.Release.Enabled)
+	fmt.Printf("  Channel: %s\n", config.Release.Channel)
+	fmt.Printf("  Prerelease: %t\n", config.Release.Prerelease)
+
+	fmt.Printf("\n🐳 Docker Configuration:\n")
+	fmt.Printf("  Enabled: %t\n", config.Docker.Enabled)
+	fmt.Printf("  Image: %s\n", config.Docker.Image)
+	fmt.Printf("  Registry: %s\n", config.Docker.Registry)
+
+	fmt.Printf("\n⚙️  CI Configuration:\n")
+	fmt.Printf("  Enabled: %t\n", config.CI.Enabled)
+	fmt.Printf("  Provider: %s\n", config.CI.Provider)
+	fmt.Printf("  Go Versions: %s\n", strings.Join(config.CI.Matrix.GoVersions, ", "))
+}
+
+// migrateConfig migrates old configuration to new format
+func migrateConfig(old *MageConfig) *MageConfig {
+	// For now, just return the old config
+	// In the future, this would handle version migrations
+	return old
+}
