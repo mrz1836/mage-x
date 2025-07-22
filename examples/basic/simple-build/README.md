@@ -4,7 +4,7 @@ This example demonstrates the basic usage of the Go-Mage namespace interface arc
 
 ## Overview
 
-The example provides a simple build script that uses the new namespace interface pattern instead of the old direct struct instantiation.
+The example provides a simple build script that uses the namespace interface pattern for build automation.
 
 ## Key Features
 
@@ -31,15 +31,7 @@ mage prebuild   # Run pre-build tasks
 
 ## Code Comparison
 
-### Old Pattern (still works)
-```go
-func Build() error {
-    build := mage.Build{}
-    return build.Default()
-}
-```
-
-### New Pattern (recommended)
+### Pattern
 ```go
 func Build() error {
     build := mage.NewBuildNamespace()
@@ -66,13 +58,6 @@ After understanding this basic example, explore:
 - [CI Pipeline](../ci-pipeline/) - Complete CI/CD pipeline
 - [Custom Implementations](../../custom/) - Creating custom namespace implementations
 
-## Migration Note
+## Getting Started
 
-This example can be gradually migrated from existing magefiles:
-
-1. Keep existing functions working
-2. Add new interface-based functions
-3. Update existing functions to use new pattern
-4. Remove old pattern when comfortable
-
-The migration is completely safe with zero breaking changes.
+This example shows how to use MAGE-X with namespace interfaces for clean, modular build automation.

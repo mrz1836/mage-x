@@ -38,10 +38,10 @@ Initialize enterprise features in your project:
 
 ```bash
 # Interactive enterprise setup
-mage configure:enterprise
+mage configureEnterprise
 
 # Manual configuration initialization
-mage configure:init
+mage configureInit
 cat > .mage.enterprise.yaml << 'EOF'
 metadata:
   version: "1.0.0"
@@ -109,20 +109,20 @@ export JIRA_PROJECT_KEY="ENG"
 
 ```bash
 # Enable audit logging
-mage audit:enable
+mage auditEnable
 
 # View audit logs
-mage audit:show
+mage auditShow
 
 # Filter audit logs
-mage audit:show --user=john@company.com --action=build --since=1h
+mage auditShow --user=john@company.com --action=build --since=1h
 
 # Export compliance reports
-mage audit:export --format=json --output=compliance-report.json
-mage audit:export --format=csv --timeframe=30d --output=monthly-report.csv
+mage auditExport --format=json --output=compliance-report.json
+mage auditExport --format=csv --timeframe=30d --output=monthly-report.csv
 
 # Configure retention policies
-mage audit:retention --days=90 --archive-after=30d
+mage auditRetention --days=90 --archive-after=30d
 ```
 
 ### Audit Log Format
@@ -172,19 +172,19 @@ MAGE-X Enterprise supports multiple compliance frameworks:
 
 ```bash
 # Run comprehensive security scan
-mage security:scan
+mage securityScan
 
 # Enable vulnerability monitoring
-mage security:monitor
+mage securityMonitor
 
 # Generate security report
-mage security:report --format=sarif --output=security-report.sarif
+mage securityReport --format=sarif --output=security-report.sarif
 
 # Configure security policies
-mage security:policy --name=dependency-scanning --severity=high --enabled=true
+mage securityPolicy --name=dependency-scanning --severity=high --enabled=true
 
 # Update dependencies automatically
-mage security:update --auto-merge=true --severity=high
+mage securityUpdate --auto-merge=true --severity=high
 ```
 
 ### Security Policies
@@ -232,18 +232,18 @@ security:
 
 ```bash
 # Set up team configuration
-mage team:setup
+mage teamSetup
 
 # Configure user roles and permissions
-mage team:roles --user=john@company.com --role=developer
-mage team:roles --user=jane@company.com --role=admin
+mage teamRoles --user=john@company.com --role=developer
+mage teamRoles --user=jane@company.com --role=admin
 
 # Team analytics and insights
-mage team:analytics
-mage team:analytics --team=backend --timeframe=30d
+mage teamAnalytics
+mage teamAnalytics --team=backend --timeframe=30d
 
 # Onboarding workflows
-mage team:onboard --user=new@company.com --team=frontend
+mage teamOnboard --user=new@company.com --team=frontend
 ```
 
 ### Role Definitions
@@ -293,19 +293,19 @@ organization:
 
 ```bash
 # View build analytics
-mage analytics:dashboard
+mage analyticsDashboard
 
 # Performance metrics
-mage analytics:performance
+mage analyticsPerformance
 
 # Export metrics data
-mage analytics:export --timeframe=30d --format=json --output=metrics.json
+mage analyticsExport --timeframe=30d --format=json --output=metrics.json
 
 # Generate performance reports
-mage analytics:report --type=performance --timeframe=7d
+mage analyticsReport --type=performance --timeframe=7d
 
 # Custom queries
-mage analytics:query --metric=build_duration --filter="project=myapp" --since=24h
+mage analyticsQuery --metric=build_duration --filter="project=myapp" --since=24h
 ```
 
 ### Metrics Collection
@@ -355,19 +355,19 @@ analytics:
 
 ```bash
 # Bulk operations across multiple repositories
-mage cli:bulk --operation=build --repos=repo1,repo2,repo3
-mage cli:bulk --operation=test --filter="tag=backend"
+mage cliBulk --operation=build --repos=repo1,repo2,repo3
+mage cliBulk --operation=test --filter="tag=backend"
 
 # Advanced querying and filtering
-mage cli:query --filter="status=failed" --last=24h
-mage cli:query --filter="project=myapp AND duration>60s"
+mage cliQuery --filter="status=failed" --last=24h
+mage cliQuery --filter="project=myapp AND duration>60s"
 
 # Interactive dashboard
-mage cli:dashboard
+mage cliDashboard
 
 # Batch processing
-mage cli:batch --workflow=ci-cd --parallel=5
-mage cli:batch --operation=security:scan --repos=all
+mage cliBatch --workflow=ci-cd --parallel=5
+mage cliBatch --operation=securityScan --repos=all
 ```
 
 ### Query Language
@@ -376,18 +376,18 @@ The CLI supports a powerful query language for filtering and searching:
 
 ```bash
 # Basic filters
-mage cli:query --filter="status=success"
-mage cli:query --filter="duration>30s"
-mage cli:query --filter="project=myapp"
+mage cliQuery --filter="status=success"
+mage cliQuery --filter="duration>30s"
+mage cliQuery --filter="project=myapp"
 
 # Complex filters
-mage cli:query --filter="status=failed AND project=myapp"
-mage cli:query --filter="duration>60s OR status=failed"
-mage cli:query --filter="project IN (app1,app2,app3)"
+mage cliQuery --filter="status=failed AND project=myapp"
+mage cliQuery --filter="duration>60s OR status=failed"
+mage cliQuery --filter="project IN (app1,app2,app3)"
 
 # Time-based filters
-mage cli:query --filter="timestamp>2024-01-01"
-mage cli:query --since=1h --until=30m
+mage cliQuery --filter="timestamp>2024-01-01"
+mage cliQuery --since=1h --until=30m
 ```
 
 ## Enterprise Workflow Engine
@@ -404,21 +404,21 @@ mage cli:query --since=1h --until=30m
 
 ```bash
 # Create workflow from template
-mage workflow:create --name=ci-cd --template=enterprise
+mage workflowCreate --name=ci-cd --template=enterprise
 
 # Execute workflow
-mage workflow:execute --workflow=ci-cd
+mage workflowExecute --workflow=ci-cd
 
 # Schedule workflows
-mage workflow:schedule --workflow=ci-cd --cron="0 2 * * *"
+mage workflowSchedule --workflow=ci-cd --cron="0 2 * * *"
 
 # View workflow history
-mage workflow:history --workflow=ci-cd --limit=10
+mage workflowHistory --workflow=ci-cd --limit=10
 
 # Workflow management
-mage workflow:list
-mage workflow:validate --workflow=ci-cd
-mage workflow:status --execution=exec-12345
+mage workflowList
+mage workflowValidate --workflow=ci-cd
+mage workflowStatus --execution=exec-12345
 ```
 
 ### Workflow Templates
@@ -456,7 +456,7 @@ Pre-built workflow templates for common scenarios:
       "name": "security-scan",
       "type": "shell",
       "command": "mage",
-      "args": ["security:scan"],
+      "args": ["securityScan"],
       "dependencies": ["build"],
       "parallel": true
     },
@@ -481,27 +481,27 @@ Pre-built workflow templates for common scenarios:
       "name": "dependency-scan",
       "type": "shell",
       "command": "mage",
-      "args": ["security:scan", "--type=dependencies"]
+      "args": ["securityScan", "--type=dependencies"]
     },
     {
       "name": "license-check",
       "type": "shell",
       "command": "mage",
-      "args": ["security:scan", "--type=licenses"],
+      "args": ["securityScan", "--type=licenses"],
       "parallel": true
     },
     {
       "name": "vulnerability-scan",
       "type": "shell",
       "command": "mage",
-      "args": ["security:scan", "--type=vulnerabilities"],
+      "args": ["securityScan", "--type=vulnerabilities"],
       "parallel": true
     },
     {
       "name": "compliance-report",
       "type": "shell",
       "command": "mage",
-      "args": ["audit:export", "--format=json"],
+      "args": ["auditExport", "--format=json"],
       "dependencies": ["dependency-scan", "license-check", "vulnerability-scan"]
     }
   ]
@@ -523,19 +523,19 @@ Pre-built workflow templates for common scenarios:
 
 ```bash
 # Configure integrations
-mage integrations:setup
+mage integrationsSetup
 
 # Test integrations
-mage integrations:test --service=slack
-mage integrations:test --service=jira
+mage integrationsTest --service=slack
+mage integrationsTest --service=jira
 
 # Sync with external systems
-mage integrations:sync --service=jira --project=ENG
-mage integrations:sync --service=github --repository=myorg/myapp
+mage integrationsSync --service=jira --project=ENG
+mage integrationsSync --service=github --repository=myorg/myapp
 
 # Notification management
-mage integrations:notify --service=slack --message="Build completed"
-mage integrations:webhook --service=jira --event=build-failed
+mage integrationsNotify --service=slack --message="Build completed"
+mage integrationsWebhook --service=jira --event=build-failed
 ```
 
 ### Integration Configuration
@@ -1054,7 +1054,7 @@ dashboard, err := mage.CreateDashboard(mage.DashboardConfig{
 
 **Solution**:
 1. Check configuration file location: `.mage.enterprise.yaml`
-2. Validate YAML syntax: `mage configure:validate`
+2. Validate YAML syntax: `mage configureValidate`
 3. Check environment variables: `env | grep MAGE_`
 4. Verify file permissions: `ls -la .mage.enterprise.yaml`
 
@@ -1063,31 +1063,31 @@ dashboard, err := mage.CreateDashboard(mage.DashboardConfig{
 **Problem**: Audit events are not being logged.
 
 **Solution**:
-1. Check if audit logging is enabled: `mage audit:status`
+1. Check if audit logging is enabled: `mage auditStatus`
 2. Verify log file permissions: `ls -la .mage/audit/`
 3. Check disk space: `df -h`
-4. Verify audit configuration: `mage configure:show`
+4. Verify audit configuration: `mage configureShow`
 
 #### Security Scan Failures
 
 **Problem**: Security scans are failing or not detecting vulnerabilities.
 
 **Solution**:
-1. Update vulnerability databases: `mage security:update-db`
+1. Update vulnerability databases: `mage securityUpdateDB`
 2. Check network connectivity to vulnerability databases
-3. Verify security policies: `mage security:policy --list`
-4. Check scan configuration: `mage configure:show`
+3. Verify security policies: `mage securityPolicy --list`
+4. Check scan configuration: `mage configureShow`
 
 #### Integration Issues
 
 **Problem**: Integrations with external services are not working.
 
 **Solution**:
-1. Test individual integrations: `mage integrations:test --service=slack`
+1. Test individual integrations: `mage integrationsTest --service=slack`
 2. Check API credentials and permissions
 3. Verify network connectivity and firewall rules
 4. Check service status pages
-5. Review integration logs: `mage integrations:logs --service=slack`
+5. Review integration logs: `mage integrationsLogs --service=slack`
 
 ### Performance Optimization
 
@@ -1100,7 +1100,7 @@ dashboard, err := mage.CreateDashboard(mage.DashboardConfig{
 2. Use parallel execution for workflows
 3. Configure appropriate resource limits
 4. Enable caching for expensive operations
-5. Monitor resource usage: `mage analytics:performance`
+5. Monitor resource usage: `mage analyticsPerformance`
 
 #### High Memory Usage
 
@@ -1110,7 +1110,7 @@ dashboard, err := mage.CreateDashboard(mage.DashboardConfig{
 1. Reduce metrics collection interval
 2. Optimize audit log retention
 3. Configure appropriate buffer sizes
-4. Monitor memory usage: `mage analytics:resources`
+4. Monitor memory usage: `mage analyticsResources`
 
 ### Getting Help
 

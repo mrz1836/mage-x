@@ -26,7 +26,7 @@ mage test
 mage lint
 
 # Build for all platforms
-mage build:all
+mage buildAll
 ```
 
 ## What You Get
@@ -35,35 +35,35 @@ With just 3 lines of code, you get:
 
 ### Build Tasks
 - `build` - Build for current platform
-- `build:all` - Build for all platforms
-- `build:linux`, `build:darwin`, `build:windows` - Platform-specific builds
-- `build:docker` - Build Docker image
-- `build:clean` - Clean build artifacts
-- `build:install` - Install to $GOPATH/bin
+- `buildAll` - Build for all platforms
+- `buildLinux`, `buildDarwin`, `buildWindows` - Platform-specific builds
+- `buildDocker` - Build Docker image
+- `buildClean` - Clean build artifacts
+- `buildInstall` - Install to $GOPATH/bin
 
 ### Test Tasks
 - `test` - Run tests with linting
-- `test:unit` - Unit tests only
-- `test:race` - Tests with race detector
-- `test:cover` - Tests with coverage
-- `test:bench` - Run benchmarks
-- `test:fuzz` - Run fuzz tests
+- `testUnit` - Unit tests only
+- `testRace` - Tests with race detector
+- `testCover` - Tests with coverage
+- `testBench` - Run benchmarks
+- `testFuzz` - Run fuzz tests
 
 ### Lint Tasks
 - `lint` - Run golangci-lint
-- `lint:fix` - Auto-fix issues
-- `lint:fmt` - Format code
-- `lint:vet` - Run go vet
+- `lintFix` - Auto-fix issues
+- `lintFmt` - Format code
+- `lintVet` - Run go vet
 
 ### Dependency Tasks
-- `deps:download` - Download dependencies
-- `deps:update` - Update all dependencies
-- `deps:tidy` - Clean up go.mod
-- `deps:vulncheck` - Check for vulnerabilities
+- `depsDownload` - Download dependencies
+- `depsUpdate` - Update all dependencies
+- `depsTidy` - Clean up go.mod
+- `depsVulncheck` - Check for vulnerabilities
 
 ### Tool Tasks
-- `tools:install` - Install dev tools
-- `tools:verify` - Verify tools are installed
+- `toolsInstall` - Install dev tools
+- `toolsVerify` - Verify tools are installed
 
 ## Customization
 

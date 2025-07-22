@@ -149,13 +149,13 @@ func TestEnvOverrides(t *testing.T) {
 mage test
 
 # Run with coverage
-mage test:cover
+mage testCover
 
 # Run with race detector
-mage test:race
+mage testRace
 
 # Run short tests only
-mage test:short
+mage testShort
 
 # Run specific package tests
 go test ./pkg/mage
@@ -171,7 +171,7 @@ VERBOSE=1 mage test
 
 ```bash
 # Run integration tests
-mage test:integration
+mage testIntegration
 
 # Run with build tag
 go test -tags integration ./...
@@ -181,20 +181,20 @@ go test -tags integration ./...
 
 ```bash
 # Run all benchmarks
-mage test:bench
+mage testBench
 
 # Run specific benchmark
 go test -bench=BenchmarkBuildFlags ./pkg/mage
 
 # Run with custom time
-BENCH_TIME=30s mage test:bench
+BENCH_TIME=30s mage testBench
 ```
 
 ### Fuzz Tests
 
 ```bash
 # Run fuzz tests
-mage test:fuzz
+mage testFuzz
 
 # Run specific fuzz test
 go test -fuzz=FuzzReverse -fuzztime=10s ./pkg/utils
@@ -322,13 +322,13 @@ func TestFileOperations(t *testing.T) {
 
 ```bash
 # Generate coverage file
-mage test:cover
+mage testCover
 
 # View coverage in terminal
-mage test:coverreport
+mage testCoverReport
 
 # Generate HTML report
-mage test:coverhtml
+mage testCoverHTML
 
 # Check coverage threshold
 go test -coverprofile=coverage.out ./... && \
@@ -372,7 +372,7 @@ jobs:
         run: go install github.com/magefile/mage@latest
       
       - name: Run Tests
-        run: mage test:ci
+        run: mage testCI
       
       - name: Upload Coverage
         uses: codecov/codecov-action@v3

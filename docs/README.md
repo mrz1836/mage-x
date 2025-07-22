@@ -17,7 +17,6 @@ Welcome to the comprehensive documentation for MAGE-X, the enterprise-grade buil
 
 ### Architecture & Interfaces
 - [Namespace Interface Architecture](NAMESPACE_INTERFACES.md) - Modern interface-based namespace system
-- [Migration Guide](MIGRATION_GUIDE.md) - Step-by-step migration to new architecture
 - [API Reference](API_REFERENCE.md) - Complete interface and API documentation
 - [Provider Pattern](PROVIDER_PATTERN.md) - Dependency injection and provider system
 
@@ -49,7 +48,6 @@ Welcome to the comprehensive documentation for MAGE-X, the enterprise-grade buil
 - [Configuration](CONFIGURATION.md) - Set up your project
 - [Build Commands](BUILD.md) - Available build commands
 - [Testing](TESTING.md) - Test automation
-- [Migration Guide](MIGRATION_GUIDE.md) - Upgrade to new architecture
 
 ### For DevOps Engineers
 - [Enterprise Setup](ENTERPRISE.md) - Enterprise feature configuration
@@ -77,14 +75,14 @@ MAGE-X provides interactive help directly in your terminal:
 # Get help for any command
 mage help
 mage help build
-mage help security:scan
+mage help securityScan
 
 # Interactive mode with guided assistance
 mage interactive
 
 # Configuration wizard
-mage configure:init
-mage configure:enterprise
+mage configureInit
+mage configureEnterprise
 ```
 
 ## 📊 Command Reference
@@ -107,19 +105,19 @@ mage deps           # Manage dependencies
 ### Enterprise Commands
 ```bash
 # Enterprise setup
-mage configure:enterprise  # Initialize enterprise features
-mage team:setup           # Set up team management
-mage audit:enable         # Enable audit logging
+mage configureEnterprise  # Initialize enterprise features
+mage teamSetup           # Set up team management
+mage auditEnable         # Enable audit logging
 
 # Security and compliance
-mage security:scan        # Run security scan
-mage security:report      # Generate security report
-mage audit:export         # Export audit logs
+mage securityScan        # Run security scan
+mage securityReport      # Generate security report
+mage auditExport         # Export audit logs
 
 # Analytics and monitoring
-mage analytics:dashboard  # View analytics dashboard
-mage analytics:export     # Export metrics data
-mage workflow:execute     # Execute workflows
+mage analyticsDashboard  # View analytics dashboard
+mage analyticsExport     # Export metrics data
+mage workflowExecute     # Execute workflows
 ```
 
 ## 🔗 External Resources

@@ -6,58 +6,58 @@ This example shows how to extend MAGE-X with your own custom tasks while still b
 
 ### 1. Custom Namespaces
 - `Custom` - Project-specific deployment tasks
-- `DB` - Database operations (migrate, seed, reset)
+- `DB` - Database operations (setup, seed, reset)
 - `Docker` - Docker build and deployment
 - `Generate` - Code generation tasks
 
 ### 2. Environment-Specific Deployment
 ```bash
 # Deploy to different environments
-mage custom:deploy dev
-mage custom:deploy staging
-mage custom:deploy prod
+mage customDeploy dev
+mage customDeploy staging
+mage customDeploy prod
 ```
 
 ### 3. Database Operations
 ```bash
-# Run migrations
-mage db:migrate
+# Setup database
+mage dbSetup
 
-# Rollback last migration
-mage db:rollback
+# Rollback last change
+mage dbRollback
 
 # Seed database
-mage db:seed
+mage dbSeed
 
-# Reset database (drop, migrate, seed)
-mage db:reset
+# Reset database (drop, setup, seed)
+mage dbReset
 ```
 
 ### 4. Docker Workflows
 ```bash
 # Build Docker image
-mage docker:build
+mage dockerBuild
 
 # Run locally in Docker
-mage docker:run
+mage dockerRun
 
 # Push to registry
-mage docker:push
+mage dockerPush
 ```
 
 ### 5. Code Generation
 ```bash
 # Generate mocks
-mage generate:mocks
+mage generateMocks
 
 # Generate Swagger docs
-mage generate:swagger
+mage generateSwagger
 
 # Generate protobuf code
-mage generate:proto
+mage generateProto
 
 # Run all generators
-mage generate:all
+mage generateAll
 ```
 
 ### 6. Development Workflow
@@ -141,7 +141,7 @@ docker:
 tools:
   custom:
     air: github.com/cosmtrek/air@latest
-    migrate: github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+    dbmate: github.com/amacneil/dbmate@latest
 ```
 
 ## Best Practices
