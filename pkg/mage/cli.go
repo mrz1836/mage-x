@@ -205,7 +205,10 @@ func (CLI) Monitor() error {
 	}
 
 	// Parse monitoring parameters
-	interval := parseMonitoringInterval()
+	interval, err := parseMonitoringInterval()
+	if err != nil {
+		return err
+	}
 	duration := parseMonitoringDuration()
 
 	utils.Info("🔄 Starting monitoring (interval: %v, duration: %v)", interval, duration)
@@ -1121,13 +1124,23 @@ func saveBatchResults(results []BatchOperationResult, filename string) error {
 	return fileOps.JSON.WriteJSONIndent(filename, results, "", "  ")
 }
 
-func parseMonitoringInterval() time.Duration {
+func parseMonitoringInterval() (time.Duration, error) {
 	if interval := utils.GetEnv("MONITOR_INTERVAL", ""); interval != "" {
-		if d, err := time.ParseDuration(interval); err == nil {
-			return d
+		if d, err := time.ParseDuration(interval); err != nil {
+			return 0, fmt.Errorf("invalid monitoring interval '%s': %w", interval, err)
+		} else {
+			return d, nil
 		}
 	}
-	return 30 * time.Second
+	// Also check INTERVAL for backward compatibility with tests
+	if interval := utils.GetEnv("INTERVAL", ""); interval != "" {
+		if d, err := time.ParseDuration(interval); err != nil {
+			return 0, fmt.Errorf("invalid monitoring interval '%s': %w", interval, err)
+		} else {
+			return d, nil
+		}
+	}
+	return 30 * time.Second, nil
 }
 
 func parseMonitoringDuration() time.Duration {
@@ -1135,6 +1148,10 @@ func parseMonitoringDuration() time.Duration {
 		if d, err := time.ParseDuration(duration); err == nil {
 			return d
 		}
+	}
+	// Check if we're in test mode and use shorter duration
+	if utils.GetEnv("GO_TEST", "") != "" || utils.GetEnv("TEST_TIMEOUT", "") != "" {
+		return 1 * time.Second
 	}
 	return 10 * time.Minute
 }

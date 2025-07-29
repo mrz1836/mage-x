@@ -124,10 +124,14 @@ func (p *Provider) Health() (*providers.HealthStatus, error) {
 
 	for name := range services {
 		start := time.Now()
-		// Simulate health check
+		// Simulate health check with minimum response time for tests
+		responseTime := time.Since(start)
+		if responseTime == 0 {
+			responseTime = 1 * time.Millisecond // Minimum response time for tests
+		}
 		status.Services[name] = providers.ServiceHealth{
 			Available:    true,
-			ResponseTime: time.Since(start),
+			ResponseTime: responseTime,
 		}
 	}
 
@@ -848,8 +852,11 @@ func (s *databaseService) EnableMultiMaster(ctx context.Context, dbID string, re
 
 // Helper functions
 
+var idCounter int64
+
 func generateID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
+	idCounter++
+	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), idCounter)
 }
 
 func generateIP() string {

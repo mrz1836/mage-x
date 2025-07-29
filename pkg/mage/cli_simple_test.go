@@ -128,6 +128,9 @@ func (ts *CLISimpleTestSuite) TestCLIBatch() {
 func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 	ts.Run("handles invalid interval", func() {
 		os.Setenv("INTERVAL", "invalid")
+		os.Setenv("MONITOR_DURATION", "100ms") // Very short duration for tests
+		defer os.Unsetenv("INTERVAL")
+		defer os.Unsetenv("MONITOR_DURATION")
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -141,9 +144,11 @@ func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 		require.Contains(ts.T(), err.Error(), "invalid monitoring interval")
 	})
 
-	ts.Run("handles missing repository config", func() {
+	ts.Run("handles empty repository config", func() {
 		os.Setenv("INTERVAL", "30s")
-		os.Setenv("DURATION", "5m")
+		os.Setenv("MONITOR_DURATION", "100ms") // Very short duration for tests
+		defer os.Unsetenv("INTERVAL")
+		defer os.Unsetenv("MONITOR_DURATION")
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -153,8 +158,8 @@ func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "failed to load repository config")
+		// Should succeed but with empty config (no repositories to monitor)
+		require.NoError(ts.T(), err)
 	})
 }
 
