@@ -289,7 +289,7 @@ func TestProviderFileOperations(t *testing.T) {
 	testData := []byte("test data")
 
 	// Write file
-	err = fileOps.WriteFile(tempFile, testData, 0644)
+	err = fileOps.WriteFile(tempFile, testData, 0o644)
 	if err != nil {
 		t.Errorf("Failed to write file: %v", err)
 	}

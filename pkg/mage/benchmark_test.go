@@ -62,7 +62,7 @@ test:
 lint:
   timeout: 5m
 `
-	os.WriteFile(".mage.yaml", []byte(configYAML), 0644)
+	os.WriteFile(".mage.yaml", []byte(configYAML), 0o644)
 
 	b.Run("LoadConfig", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -139,7 +139,7 @@ func BenchmarkFileOperations(b *testing.B) {
 	b.Run("WriteSmallFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			path := filepath.Join(tempDir, "small.txt")
-			_ = fileOps.File.WriteFile(path, smallData, 0644)
+			_ = fileOps.File.WriteFile(path, smallData, 0o644)
 			os.Remove(path)
 		}
 	})
@@ -147,7 +147,7 @@ func BenchmarkFileOperations(b *testing.B) {
 	b.Run("WriteMediumFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			path := filepath.Join(tempDir, "medium.txt")
-			_ = fileOps.File.WriteFile(path, mediumData, 0644)
+			_ = fileOps.File.WriteFile(path, mediumData, 0o644)
 			os.Remove(path)
 		}
 	})
@@ -155,7 +155,7 @@ func BenchmarkFileOperations(b *testing.B) {
 	b.Run("WriteLargeFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			path := filepath.Join(tempDir, "large.txt")
-			_ = fileOps.File.WriteFile(path, largeData, 0644)
+			_ = fileOps.File.WriteFile(path, largeData, 0o644)
 			os.Remove(path)
 		}
 	})
@@ -165,9 +165,9 @@ func BenchmarkFileOperations(b *testing.B) {
 	mediumPath := filepath.Join(tempDir, "read_medium.txt")
 	largePath := filepath.Join(tempDir, "read_large.txt")
 
-	fileOps.File.WriteFile(smallPath, smallData, 0644)
-	fileOps.File.WriteFile(mediumPath, mediumData, 0644)
-	fileOps.File.WriteFile(largePath, largeData, 0644)
+	fileOps.File.WriteFile(smallPath, smallData, 0o644)
+	fileOps.File.WriteFile(mediumPath, mediumData, 0o644)
+	fileOps.File.WriteFile(largePath, largeData, 0o644)
 
 	b.Run("ReadSmallFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -243,8 +243,8 @@ func BenchmarkBuildOperations(b *testing.B) {
 	os.Chdir(tempDir)
 
 	// Create a simple project
-	os.WriteFile("go.mod", []byte("module bench\n\ngo 1.24\n"), 0644)
-	os.WriteFile("main.go", []byte("package main\nfunc main() {}\n"), 0644)
+	os.WriteFile("go.mod", []byte("module bench\n\ngo 1.24\n"), 0o644)
+	os.WriteFile("main.go", []byte("package main\nfunc main() {}\n"), 0o644)
 
 	cfg = &Config{
 		Project: ProjectConfig{

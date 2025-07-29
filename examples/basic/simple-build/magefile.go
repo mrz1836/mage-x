@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/mrz1836/go-mage/pkg/mage"
 )
 
@@ -46,27 +47,27 @@ func Clean() error {
 // All runs the complete build pipeline
 func All() error {
 	fmt.Println("🚀 Running complete build pipeline...")
-	
+
 	// Format first
 	if err := Format(); err != nil {
 		return fmt.Errorf("formatting failed: %w", err)
 	}
-	
+
 	// Then lint
 	if err := Lint(); err != nil {
 		return fmt.Errorf("linting failed: %w", err)
 	}
-	
+
 	// Then test
 	if err := Test(); err != nil {
 		return fmt.Errorf("tests failed: %w", err)
 	}
-	
+
 	// Finally build
 	if err := Build(); err != nil {
 		return fmt.Errorf("build failed: %w", err)
 	}
-	
+
 	fmt.Println("✅ All tasks completed successfully!")
 	return nil
 }

@@ -55,7 +55,7 @@ func TestAuditLogger_Basic(t *testing.T) {
 		// Try to create database in a directory that cannot be created
 		// Use a path that will definitely fail cross-platform
 		invalidConfig := config
-		
+
 		// Use an invalid path - root permissions typically don't exist in tests
 		if runtime.GOOS == "windows" {
 			// On Windows, try to create in a system directory we can't write to
@@ -64,11 +64,11 @@ func TestAuditLogger_Basic(t *testing.T) {
 			// On Unix, try to create under a file (not directory)
 			tempDir := t.TempDir()
 			existingFile := filepath.Join(tempDir, "existing_file")
-			
+
 			// Create a regular file
 			err := os.WriteFile(existingFile, []byte("test"), 0o644)
 			require.NoError(t, err)
-			
+
 			// Try to create database under this file (should fail)
 			invalidConfig.DatabasePath = filepath.Join(existingFile, "subdir", "audit.db")
 		}

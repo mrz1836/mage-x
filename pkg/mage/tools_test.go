@@ -230,14 +230,14 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallFirst() {
 func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallError() {
 	expectedError := require.New(ts.T())
 	ts.setupConfig()
-	
+
 	// Temporarily modify PATH to ensure govulncheck is not found
 	originalPath := os.Getenv("PATH")
 	defer func() {
 		os.Setenv("PATH", originalPath)
 	}()
 	os.Setenv("PATH", "/nonexistent")
-	
+
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(errors.New("install failed"))
 
 	err := ts.env.WithMockRunner(

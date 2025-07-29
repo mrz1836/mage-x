@@ -238,7 +238,7 @@ func TestSecureExecutor_FilterEnvironment(t *testing.T) {
 
 func TestSecureExecutor_Execute(t *testing.T) {
 	tempDir := t.TempDir() // Create cross-platform temp directory
-	
+
 	tests := []struct {
 		name    string
 		setup   func(*SecureExecutor)
@@ -291,12 +291,12 @@ func TestSecureExecutor_Execute(t *testing.T) {
 				assert.Error(t, err)
 				// The error might be different on various platforms
 				errMsg := err.Error()
-				assert.True(t, 
-					strings.Contains(errMsg, "killed") || 
-					strings.Contains(errMsg, "context deadline exceeded") ||
-					strings.Contains(errMsg, "exit status") ||
-					strings.Contains(errMsg, "terminated") ||
-					strings.Contains(errMsg, "context canceled"),
+				assert.True(t,
+					strings.Contains(errMsg, "killed") ||
+						strings.Contains(errMsg, "context deadline exceeded") ||
+						strings.Contains(errMsg, "exit status") ||
+						strings.Contains(errMsg, "terminated") ||
+						strings.Contains(errMsg, "context canceled"),
 					"Expected timeout-related error but got: %s", errMsg)
 			},
 		},
@@ -478,15 +478,15 @@ func TestValidatePath(t *testing.T) {
 		{"path traversal with ..", "../../../etc/passwd", true, "path traversal detected"},
 		{"path traversal hidden", "path/../../../etc/passwd", true, "path traversal detected"},
 		{
-			name: "absolute path outside /tmp", 
+			name: "absolute path outside /tmp",
 			path: func() string {
 				if runtime.GOOS == "windows" {
 					return "C:\\Windows\\System32\\drivers\\etc\\hosts"
 				}
 				return "/etc/passwd"
-			}(), 
-			wantErr: true, 
-			errMsg: "absolute paths not allowed",
+			}(),
+			wantErr: true,
+			errMsg:  "absolute paths not allowed",
 		},
 		{"absolute path in /tmp", "/tmp/test.txt", false, ""},
 		{"current directory", ".", false, ""},
@@ -573,12 +573,12 @@ func TestSecureExecutor_ContextCancellation(t *testing.T) {
 	assert.Error(t, err)
 	// Context cancellation can result in different error messages on different platforms
 	errMsg := err.Error()
-	assert.True(t, 
-		strings.Contains(errMsg, "context canceled") || 
-		strings.Contains(errMsg, "signal: killed") || 
-		strings.Contains(errMsg, "killed") ||
-		strings.Contains(errMsg, "exit status") ||
-		strings.Contains(errMsg, "terminated"),
+	assert.True(t,
+		strings.Contains(errMsg, "context canceled") ||
+			strings.Contains(errMsg, "signal: killed") ||
+			strings.Contains(errMsg, "killed") ||
+			strings.Contains(errMsg, "exit status") ||
+			strings.Contains(errMsg, "terminated"),
 		"Expected cancellation-related error but got: %s", errMsg)
 }
 

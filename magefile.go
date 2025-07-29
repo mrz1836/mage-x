@@ -330,7 +330,7 @@ func InstallBinary() error {
 	return i.Binary()
 }
 
-// TestShort runs short tests (excludes integration tests) 
+// TestShort runs short tests (excludes integration tests)
 func TestShort() error {
 	var t Test
 	return t.Short()
