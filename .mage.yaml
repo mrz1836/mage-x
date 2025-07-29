@@ -60,7 +60,7 @@ test:
 
 lint:
   # golangci-lint version
-  golangci_version: v1.55.2
+  golangci_version: v2.2.2
 
   # Lint timeout
   timeout: 5m
@@ -85,7 +85,7 @@ lint:
 
 tools:
   # Tool versions (use "latest" for latest version)
-  golangci_lint: v1.55.2
+  golangci_lint: v2.2.2
   fumpt: latest
   govulncheck: latest
   mockgen: latest

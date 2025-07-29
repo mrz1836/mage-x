@@ -57,7 +57,7 @@ func TestBuildNamespace_Default(t *testing.T) {
 				// Mock commit hash detection
 				m.On("RunCmdOutput", "git", "rev-parse", "--short", "HEAD").Return("abc123", nil).Maybe()
 				// Mock actual build command (with variable number of args)
-				m.On("RunCmd", "go", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil).Maybe()
+				m.On("RunCmd", "go", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil).Maybe()
 			},
 			wantErr: false,
 		},
@@ -69,7 +69,7 @@ func TestBuildNamespace_Default(t *testing.T) {
 				// Mock commit hash detection
 				m.On("RunCmdOutput", "git", "rev-parse", "--short", "HEAD").Return("", errors.New("not a git repo")).Maybe()
 				// Mock build failure (with variable number of args)
-				m.On("RunCmd", "go", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(errors.New("build failed")).Maybe()
+				m.On("RunCmd", "go", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(errors.New("build failed")).Maybe()
 			},
 			wantErr: true,
 		},

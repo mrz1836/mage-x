@@ -1019,5 +1019,104 @@
     "tags": null,
     "metadata": null,
     "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 84,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T12:49:59.698819-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 84,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T12:49:59.700446-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T12:49:59.700859-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 333,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T12:50:19.390784-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 333,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T12:50:19.391997-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T12:50:19.39259-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 41,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T12:51:21.93466-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 41,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T12:51:21.93521-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T12:51:21.935787-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
   }
 ]

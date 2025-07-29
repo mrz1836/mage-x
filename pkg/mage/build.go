@@ -52,6 +52,21 @@ func (Build) Default() error {
 
 	outputPath := filepath.Join(cfg.Build.Output, binary)
 
+	// Check if we have a cmd directory with main packages
+	packagePath := ""
+	if utils.DirExists("cmd/mage-init") {
+		packagePath = "./cmd/mage-init"
+	} else if utils.DirExists("cmd/example") {
+		packagePath = "./cmd/example"
+	} else if utils.FileExists("main.go") {
+		packagePath = "."
+	} else {
+		// This is a library project, just verify compilation
+		utils.Info("No main package found, building library packages for verification")
+		outputPath = "/dev/null"
+		packagePath = "./..."
+	}
+
 	// Initialize cache manager
 	cacheManager := initCacheManager()
 
@@ -64,8 +79,7 @@ func (Build) Default() error {
 		args = append(args, "-v")
 	}
 
-	// Add the package path to build
-	args = append(args, ".")
+	args = append(args, packagePath)
 
 	ldflags := strings.Join(cfg.Build.LDFlags, " ")
 	if ldflags == "" {
@@ -220,7 +234,19 @@ func (b Build) Platform(platform string) error {
 	args := []string{"build"}
 	args = append(args, buildFlags(cfg)...)
 	args = append(args, "-o", outputPath)
-	args = append(args, ".") // Add package path
+
+	// Add the package path to build
+	if utils.DirExists("cmd/mage-init") {
+		args = append(args, "./cmd/mage-init")
+	} else if utils.DirExists("cmd/example") {
+		args = append(args, "./cmd/example")
+	} else if utils.FileExists("main.go") {
+		args = append(args, ".")
+	} else {
+		// This is a library project, skip platform builds
+		utils.Info("Skipping %s build for library project", platform)
+		return nil
+	}
 
 	utils.Info("Building %s", platform)
 
@@ -338,7 +364,16 @@ func (Build) Install() error {
 	}
 
 	// Add the package path to install
-	args = append(args, ".")
+	if utils.DirExists("cmd/mage-init") {
+		args = append(args, "./cmd/mage-init")
+	} else if utils.DirExists("cmd/example") {
+		args = append(args, "./cmd/example")
+	} else if utils.FileExists("main.go") {
+		args = append(args, ".")
+	} else {
+		// This is a library project, install all packages
+		args = append(args, "./...")
+	}
 
 	if err := GetRunner().RunCmd("go", args...); err != nil {
 		return fmt.Errorf("install failed: %w", err)
