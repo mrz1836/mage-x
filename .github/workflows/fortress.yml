@@ -135,8 +135,11 @@ jobs:
           # Build for current platform
           mage build
 
-          # Build for all platforms
-          mage buildAll
+          # Build for multiple platforms
+          echo "Building for multiple platforms..."
+          GOOS=linux GOARCH=amd64 mage build
+          GOOS=darwin GOARCH=amd64 mage build
+          GOOS=windows GOARCH=amd64 mage build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

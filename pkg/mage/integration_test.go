@@ -33,7 +33,7 @@ func TestBuildIntegration(t *testing.T) {
 	// Create go.mod
 	goMod := `module test-project
 
-go 1.21
+go 1.24
 `
 	require.NoError(t, os.WriteFile("go.mod", []byte(goMod), 0644))
 
@@ -145,7 +145,7 @@ func TestMultipleNamespaceIntegration(t *testing.T) {
 	require.NoError(t, os.Chdir(tempDir))
 
 	// Create a Go project with tests
-	require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.21\n"), 0644))
+	require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0644))
 	require.NoError(t, os.WriteFile("main.go", []byte(`package main
 
 func Add(a, b int) int {
@@ -316,7 +316,7 @@ func TestCacheIntegration(t *testing.T) {
 	require.NoError(t, os.Chdir(projectDir))
 
 	// Create project
-	require.NoError(t, os.WriteFile("go.mod", []byte("module cache-test\n\ngo 1.21\n"), 0644))
+	require.NoError(t, os.WriteFile("go.mod", []byte("module cache-test\n\ngo 1.24\n"), 0644))
 	require.NoError(t, os.WriteFile("main.go", []byte(`package main
 
 func main() {
@@ -438,7 +438,7 @@ func TestErrorHandling(t *testing.T) {
 
 	// Test build error handling
 	t.Run("build with missing main", func(t *testing.T) {
-		require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.21\n"), 0644))
+		require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0644))
 		// No main.go file
 
 		cfg = &Config{

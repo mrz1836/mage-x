@@ -54,7 +54,7 @@ func main() {
 	flag.StringVar(&opts.ProjectName, "name", "", "Project name")
 	flag.StringVar(&opts.ProjectPath, "path", ".", "Project path (default: current directory)")
 	flag.StringVar(&opts.Template, "template", "basic", "Project template (basic, advanced, enterprise, cli, web, microservice)")
-	flag.StringVar(&opts.GoVersion, "go-version", "1.21", "Go version to use")
+	flag.StringVar(&opts.GoVersion, "go-version", "1.24", "Go version to use")
 	flag.StringVar(&opts.ModulePath, "module", "", "Go module path (e.g., github.com/user/project)")
 	flag.BoolVar(&opts.Force, "force", false, "Force initialization even if directory is not empty")
 	flag.BoolVar(&opts.Verbose, "verbose", false, "Verbose output")
@@ -354,7 +354,7 @@ OPTIONS:
     -name string          Project name
     -path string          Project path (default: current directory)
     -template string      Project template (default: basic)
-    -go-version string    Go version (default: 1.21)
+    -go-version string    Go version (default: 1.24)
     -module string        Go module path
     -force               Force initialization in non-empty directory
     -verbose             Verbose output

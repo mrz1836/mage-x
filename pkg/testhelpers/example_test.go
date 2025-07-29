@@ -39,7 +39,7 @@ func ExampleMockRunner() {
 	runner := testhelpers.NewMockRunner()
 
 	// Set up expectations
-	runner.SetOutputForCommand("go", "go version go1.21.0 linux/amd64")
+	runner.SetOutputForCommand("go", "go version go1.24.0 linux/amd64")
 	runner.SetOutputForCommand("git", "v2.34.0")
 
 	// Use the runner
@@ -50,7 +50,7 @@ func ExampleMockRunner() {
 	fmt.Printf("Commands executed: %d\n", runner.GetCommandCount())
 
 	// Output:
-	// go version go1.21.0 linux/amd64
+	// go version go1.24.0 linux/amd64
 	// Commands executed: 1
 }
 

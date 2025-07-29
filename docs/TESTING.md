@@ -283,12 +283,12 @@ func TestCommandExecution(t *testing.T) {
     runner := NewMockCommandRunner(t)
     
     // Setup expectations
-    runner.AddCommand("go version", "go version go1.21.0 linux/amd64", nil)
+    runner.AddCommand("go version", "go version go1.24.0 linux/amd64", nil)
     runner.AddCommand("go build -o bin/app", "", nil)
     
     // Execute test
     version, _ := runner.RunCmdOutput("go", "version")
-    assert.Contains(t, version, "go1.21.0")
+    assert.Contains(t, version, "go1.24.0")
     
     err := runner.RunCmd("go", "build", "-o", "bin/app")
     assert.NoError(t, err)
@@ -359,7 +359,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        go: ['1.21', '1.22']
+        go: ['1.24', '1.22']
     
     steps:
       - uses: actions/checkout@v4

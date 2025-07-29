@@ -81,7 +81,7 @@ func (env *TestEnvironment) WithMockRunner(setter RunnerSetter, getter RunnerGet
 func (env *TestEnvironment) CreateGoMod(moduleName string) {
 	content := `module ` + moduleName + `
 
-go 1.21
+go 1.24
 
 require (
 	github.com/magefile/mage v1.15.0

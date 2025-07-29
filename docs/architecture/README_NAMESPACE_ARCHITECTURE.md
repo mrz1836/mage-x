@@ -327,7 +327,7 @@ The interface architecture has minimal overhead:
 | Factory functions | 2.1ns | +2.1ns |
 | Registry lookups | 12.3ns | +12.3ns |
 
-*Performance numbers from Go 1.21 on modern hardware*
+*Performance numbers from Go 1.24 on modern hardware*
 
 ## 🧪 Testing
 

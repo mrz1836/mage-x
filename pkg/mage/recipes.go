@@ -690,7 +690,7 @@ func createAPIStructure() error {
 }
 
 func createDockerfile(context *RecipeContext) error {
-	content := fmt.Sprintf(`FROM golang:1.21-alpine AS builder
+	content := fmt.Sprintf(`FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -728,7 +728,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.24'
 
     - name: Install Mage
       run: go install github.com/magefile/mage@latest

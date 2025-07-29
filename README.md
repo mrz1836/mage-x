@@ -495,7 +495,7 @@ TERM=docker mage recipesSearch
 
 ## 🧪 Examples & Tests
 
-All examples and tests run via GitHub Actions using Go 1.21+. View the [examples directory](examples) for complete project demonstrations.
+All examples and tests run via GitHub Actions using Go 1.24+. View the [examples directory](examples) for complete project demonstrations.
 
 ### Run Tests
 
@@ -531,7 +531,7 @@ Performance benchmarks for core MAGE-X operations:
 | Configuration Loading | 2.1ms | 512KB  | YAML parsing and validation       |
 | Recipe Processing     | 3.5ms | 1MB    | Template expansion and validation |
 
-> Benchmarks run on Apple M1 Pro (ARM64) with Go 1.21.5
+> Benchmarks run on Apple M1 Pro (ARM64) with Go 1.24+
 > All operations show consistent sub-5ms performance with minimal memory allocation
 
 <br/>

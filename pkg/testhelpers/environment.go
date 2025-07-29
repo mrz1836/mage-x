@@ -397,7 +397,7 @@ func (te *TestEnvironment) CreateGoModule(module string) {
 
 	content := fmt.Sprintf(`module %s
 
-go 1.21
+go 1.24
 
 require github.com/magefile/mage v1.15.0
 `, module)

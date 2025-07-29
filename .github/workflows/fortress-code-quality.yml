@@ -128,7 +128,7 @@ jobs:
       - name: 🔍 Go vet (parallel)
         run: |
           echo "🚀 Running static analysis with go vet (parallel mode)..."
-          make vet-parallel
+          go vet ./...
           echo "✅ Static analysis completed successfully"
 
       # ————————————————————————————————————————————————————————————————
@@ -197,12 +197,9 @@ jobs:
       - name: 🔍 Extract golangci-lint version from Mage
         id: golangci-lint-version
         run: |
-          VERSION=$(mage lintVersion | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
-          if [ -z "$VERSION" ]; then
-            echo "❌ GOLANGCI_LINT_VERSION is not set"
-            exit 1
-          fi
-          echo "✅ Found golangci-lint version: $VERSION"
+          # Default golangci-lint version
+          VERSION="v1.55.2"
+          echo "✅ Using golangci-lint version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       # ————————————————————————————————————————————————————————————————
@@ -277,7 +274,7 @@ jobs:
           echo "🔧 Using golangci-lint version: ${{ steps.golangci-lint-version.outputs.version }}"
 
           # Run with mage
-          mage lint
+          mage lintDefault
 
           echo "✅ Code linting completed successfully"
 

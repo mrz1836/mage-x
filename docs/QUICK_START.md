@@ -296,7 +296,7 @@ tools:
 
 ### Import errors
 - Run `go mod tidy`
-- Ensure Go 1.21+ is installed
+- Ensure Go 1.24+ is installed
 
 ### Configuration not working
 - Check file is named `.mage.yaml` (with dot)

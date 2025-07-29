@@ -303,7 +303,7 @@ func GetGoVersion() (string, error) {
 		return "", err
 	}
 
-	// Parse version from output like "go version go1.21.0 darwin/amd64"
+	// Parse version from output like "go version go1.24.0 darwin/amd64"
 	parts := strings.Fields(output)
 	if len(parts) >= 3 {
 		return strings.TrimPrefix(parts[2], "go"), nil

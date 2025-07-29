@@ -290,13 +290,13 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			os.Setenv("MAGE_VERBOSE", originalMageVerbose)
 		}()
 
-		os.Setenv("GO_VERSION", "1.21.0")
+		os.Setenv("GO_VERSION", "1.24.0")
 		os.Setenv("GOPATH", "/go")
 		os.Setenv("MAGE_VERBOSE", "true")
 
 		env := getFilteredEnvironment()
 		require.Contains(ts.T(), env, "GO_VERSION")
-		require.Equal(ts.T(), "1.21.0", env["GO_VERSION"])
+		require.Equal(ts.T(), "1.24.0", env["GO_VERSION"])
 		require.Contains(ts.T(), env, "GOPATH")
 		require.Contains(ts.T(), env, "MAGE_VERBOSE")
 		
@@ -312,7 +312,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			defer env.Cleanup()
 			
 			// Mock successful go version command
-			env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go1.21.0 linux/amd64", nil)
+			env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go1.24.0 linux/amd64", nil)
 
 			version := ""
 			err := env.WithMockRunner(
@@ -325,7 +325,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			)
 
 			require.NoError(ts.T(), err)
-			require.Equal(ts.T(), "1.21.0", version)
+			require.Equal(ts.T(), "1.24.0", version)
 		})
 
 		ts.Run("failed go version detection", func() {
@@ -431,7 +431,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 	ts.Run("complete audit workflow", func() {
 		// Mock git and go version commands that are called by LogCommandExecution
 		ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.0.0", nil)
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go1.21.0 linux/amd64", nil)
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go1.24.0 linux/amd64", nil)
 		
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -491,7 +491,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 		os.Setenv("SUCCESS", "true")
 		os.Setenv("LIMIT", "25")
 		os.Setenv("OUTPUT", "test-audit.json")
-		os.Setenv("GO_VERSION", "1.21.0")
+		os.Setenv("GO_VERSION", "1.24.0")
 		os.Setenv("MAGE_AUDIT_ENABLED", "true")
 
 		err := ts.env.WithMockRunner(

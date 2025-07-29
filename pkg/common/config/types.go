@@ -185,7 +185,7 @@ func (m *configManagerImpl) Validate(config *MageConfig) error {
 
 	// Validate build fields
 	if config.Build.GoVersion != "" {
-		// Simple Go version validation - should be like "1.21", "1.20", etc.
+		// Simple Go version validation - should be like "1.24", "1.20", etc.
 		if len(config.Build.GoVersion) < 4 || config.Build.GoVersion[:2] != "1." {
 			return fmt.Errorf("invalid Go version format: %s", config.Build.GoVersion)
 		}
@@ -207,7 +207,7 @@ func (m *configManagerImpl) GetDefaults() *MageConfig {
 			Version: "1.0.0",
 		},
 		Build: BuildConfig{
-			GoVersion:  "1.21",
+			GoVersion:  "1.24",
 			Platform:   "linux/amd64",
 			CGOEnabled: false,
 		},

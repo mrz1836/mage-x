@@ -130,7 +130,7 @@ func TestLintDocker(t *testing.T) {
 	env.CreateGoMod("github.com/test/project")
 
 	// Create Dockerfile
-	env.CreateFile("Dockerfile", `FROM golang:1.21-alpine
+	env.CreateFile("Dockerfile", `FROM golang:1.24-alpine
 WORKDIR /app
 COPY . .
 RUN go build -o app .

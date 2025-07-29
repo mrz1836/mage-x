@@ -396,7 +396,7 @@ func (wb *WorkspaceBuilder) WithDir(path string) *WorkspaceBuilder {
 
 // WithGoModule adds a go.mod file
 func (wb *WorkspaceBuilder) WithGoModule(module string) *WorkspaceBuilder {
-	content := fmt.Sprintf("module %s\n\ngo 1.21\n", module)
+	content := fmt.Sprintf("module %s\n\ngo 1.24\n", module)
 	return wb.WithFile("go.mod", content)
 }
 

@@ -243,7 +243,7 @@ func BenchmarkBuildOperations(b *testing.B) {
 	os.Chdir(tempDir)
 
 	// Create a simple project
-	os.WriteFile("go.mod", []byte("module bench\n\ngo 1.21\n"), 0644)
+	os.WriteFile("go.mod", []byte("module bench\n\ngo 1.24\n"), 0644)
 	os.WriteFile("main.go", []byte("package main\nfunc main() {}\n"), 0644)
 
 	cfg = &Config{

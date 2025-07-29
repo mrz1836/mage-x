@@ -324,7 +324,7 @@ func main() {
 func (ts *BuildTestSuite) TestBuildDocker() {
 	ts.Run("builds docker image with default settings", func() {
 		// Create Dockerfile
-		ts.env.CreateFile("Dockerfile", `FROM golang:1.21-alpine
+		ts.env.CreateFile("Dockerfile", `FROM golang:1.24-alpine
 WORKDIR /app
 COPY . .
 RUN go build -o app .

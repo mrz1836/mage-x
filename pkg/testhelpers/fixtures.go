@@ -45,7 +45,7 @@ func (tf *TestFixtures) CreateGoProject(name string) {
 	// Create go.mod
 	tf.env.WriteFile("go.mod", fmt.Sprintf(`module github.com/example/%s
 
-go 1.21
+go 1.24
 
 require (
 	github.com/magefile/mage v1.15.0
@@ -307,7 +307,7 @@ func (tf *TestFixtures) CreateDockerfile(app string) {
 	tf.t.Helper()
 
 	tf.env.WriteFile("Dockerfile", fmt.Sprintf(`# Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates
 
@@ -409,7 +409,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.24'
     
     - name: Install Mage
       run: go install github.com/magefile/mage@latest
@@ -430,7 +430,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.24'
     
     - name: Install Mage
       run: go install github.com/magefile/mage@latest
@@ -447,7 +447,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.24'
     
     - name: Install Mage
       run: go install github.com/magefile/mage@latest

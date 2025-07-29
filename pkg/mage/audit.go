@@ -433,7 +433,7 @@ func getGoVersion() string {
 		return "unknown"
 	}
 
-	// Parse "go version go1.21.0 linux/amd64" -> "1.21.0"
+	// Parse "go version go1.24.0 linux/amd64" -> "1.24.0"
 	parts := strings.Fields(output)
 	if len(parts) >= 3 {
 		version := parts[2]

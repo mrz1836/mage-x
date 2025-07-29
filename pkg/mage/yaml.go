@@ -336,7 +336,7 @@ func createDefaultConfig() *MageConfig {
 			Provider:  "github",
 			Workflows: []string{"ci.yml"},
 			Matrix: CIMatrix{
-				GoVersions: []string{"1.21", "1.22"},
+				GoVersions: []string{"1.24", "1.22"},
 				Platforms:  []string{"ubuntu-latest", "macos-latest", "windows-latest"},
 			},
 		},

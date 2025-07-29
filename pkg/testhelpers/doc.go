@@ -25,7 +25,7 @@
 //
 //	func TestBuildTask(t *testing.T) {
 //	    runner := testhelpers.NewMockRunner()
-//	    runner.SetOutputForCommand("go", "1.21.0")
+//	    runner.SetOutputForCommand("go", "1.24.0")
 //
 //	    // Inject mock runner
 //	    mage.SetRunner(runner)

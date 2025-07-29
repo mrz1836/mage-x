@@ -31,7 +31,8 @@ jobs:
       - name: Run govulncheck
         run: |
           echo "## Running Go Vulnerability Check"
-          mage toolsVulnCheck
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
 
   static-analysis:
     runs-on: ubuntu-latest
@@ -53,12 +54,12 @@ jobs:
       - name: Run go vet
         run: |
           echo "## Running go vet"
-          mage lintVet
+          go vet ./...
 
       - name: Run golangci-lint
         run: |
           echo "## Running golangci-lint"
-          mage lint
+          mage lintDefault
 
   dependency-check:
     runs-on: ubuntu-latest
@@ -134,7 +135,8 @@ jobs:
       - name: Check code formatting
         run: |
           echo "## Checking code formatting with gofumpt"
-          mage lintFumpt
+          go install mvdan.cc/gofumpt@latest
+          gofumpt -l -d .
 
           # Check if any files were modified
           if ! git diff --quiet; then

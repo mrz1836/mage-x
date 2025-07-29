@@ -777,7 +777,7 @@ func main() {
 // createDockerFiles creates Dockerfile and docker-compose.yml
 func createDockerFiles(config *InitProjectConfig) error {
 	// Create Dockerfile
-	dockerfile := `FROM golang:1.21-alpine AS builder
+	dockerfile := `FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -855,7 +855,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.24'
 
     - name: Install Mage
       run: go install github.com/magefile/mage@latest

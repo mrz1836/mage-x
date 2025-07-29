@@ -28,7 +28,7 @@ func TestConfigManagerAdvanced(t *testing.T) {
 				License:     "MIT",
 			},
 			Build: BuildConfig{
-				GoVersion:  "1.21",
+				GoVersion:  "1.24",
 				Platform:   "linux/amd64",
 				Tags:       []string{"integration", "performance", "security"},
 				LDFlags:    "-s -w -X main.version=2.1.0",
@@ -81,8 +81,8 @@ func TestConfigManagerAdvanced(t *testing.T) {
 		}
 
 		// Verify build configuration
-		if loadedConfig.Build.GoVersion != "1.21" {
-			t.Errorf("Expected Go version 1.21, got %s", loadedConfig.Build.GoVersion)
+		if loadedConfig.Build.GoVersion != "1.24" {
+			t.Errorf("Expected Go version 1.24, got %s", loadedConfig.Build.GoVersion)
 		}
 
 		if len(loadedConfig.Build.Tags) != 3 {
@@ -132,7 +132,7 @@ func TestConfigManagerAdvanced(t *testing.T) {
 				Description: "Updated description", // Add description
 			},
 			Build: BuildConfig{
-				GoVersion: "1.21", // Override Go version
+				GoVersion: "1.24", // Override Go version
 				Tags:      []string{"production"}, // Add tags
 			},
 			Test: TestConfig{
@@ -158,8 +158,8 @@ func TestConfigManagerAdvanced(t *testing.T) {
 			t.Errorf("Expected description 'Updated description', got %s", mergedConfig.Project.Description)
 		}
 
-		if mergedConfig.Build.GoVersion != "1.21" {
-			t.Errorf("Expected Go version '1.21', got %s", mergedConfig.Build.GoVersion)
+		if mergedConfig.Build.GoVersion != "1.24" {
+			t.Errorf("Expected Go version '1.24', got %s", mergedConfig.Build.GoVersion)
 		}
 
 		if mergedConfig.Build.Platform != "linux/amd64" {
@@ -258,7 +258,7 @@ func TestConfigManagerAdvanced(t *testing.T) {
 	t.Run("Environment variable interpolation", func(t *testing.T) {
 		// Set test environment variables
 		os.Setenv("TEST_PROJECT_NAME", "env-project")
-		os.Setenv("TEST_GO_VERSION", "1.21")
+		os.Setenv("TEST_GO_VERSION", "1.24")
 		os.Setenv("TEST_PARALLEL_COUNT", "8")
 		defer func() {
 			os.Unsetenv("TEST_PROJECT_NAME")
@@ -466,7 +466,7 @@ func BenchmarkConfigOperations(b *testing.B) {
 			Version: "1.0.0",
 		},
 		Build: BuildConfig{
-			GoVersion: "1.21",
+			GoVersion: "1.24",
 			Platform:  "linux/amd64",
 		},
 	}
