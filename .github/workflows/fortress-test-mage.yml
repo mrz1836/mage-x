@@ -78,12 +78,12 @@ jobs:
       fail-fast: false
       matrix:
         namespace:
-          - {name: "Build", cmds: ["mage build:default", "mage build:clean"]}
-          - {name: "Test", cmds: ["mage test:unit", "mage test:short"]}
-          - {name: "Lint", cmds: ["mage lint:version"]}
-          - {name: "Tools", cmds: ["mage tools:install"]}
-          - {name: "Deps", cmds: ["mage deps:download"]}
-          - {name: "Mod", cmds: ["mage mod:download"]}
+          - {name: "Build", cmds: ["mage buildDefault", "mage buildClean"]}
+          - {name: "Test", cmds: ["mage testUnit", "mage testShort"]}
+          - {name: "Lint", cmds: ["mage lintVersion"]}
+          - {name: "Tools", cmds: ["mage toolsInstall"]}
+          - {name: "Deps", cmds: ["mage depsDownload"]}
+          - {name: "Mod", cmds: ["mage modDownload"]}
 
     steps:
       - name: Checkout code
