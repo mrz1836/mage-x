@@ -256,48 +256,6 @@ func (Yaml) Template() error {
 	return nil
 }
 
-// Migrate migrates from old configuration format
-func (Yaml) Migrate() error {
-	utils.Header("🔄 Migrating Configuration")
-
-	// Check for old configuration files
-	oldFiles := []string{".mage.yaml", "mage.yml", ".mage.yml"}
-
-	var oldFile string
-	for _, file := range oldFiles {
-		if utils.FileExists(file) {
-			oldFile = file
-			break
-		}
-	}
-
-	if oldFile == "" {
-		utils.Info("No old configuration files found")
-		return nil
-	}
-
-	utils.Info("Found old configuration: %s", oldFile)
-
-	// Load old configuration
-	oldConfig, err := loadConfig(oldFile)
-	if err != nil {
-		return fmt.Errorf("failed to load old configuration: %w", err)
-	}
-
-	// Migrate to new format
-	newConfig := migrateConfig(oldConfig)
-
-	// Write new configuration
-	if err := writeConfig(newConfig, "mage.yaml"); err != nil {
-		return fmt.Errorf("failed to write new configuration: %w", err)
-	}
-
-	utils.Success("Migrated configuration to mage.yaml")
-	utils.Info("Review the new configuration and delete %s when ready", oldFile)
-
-	return nil
-}
-
 // Helper functions
 
 // createDefaultConfig creates a default configuration
@@ -601,11 +559,4 @@ func displayConfig(config *MageConfig) {
 	fmt.Printf("  Enabled: %t\n", config.CI.Enabled)
 	fmt.Printf("  Provider: %s\n", config.CI.Provider)
 	fmt.Printf("  Go Versions: %s\n", strings.Join(config.CI.Matrix.GoVersions, ", "))
-}
-
-// migrateConfig migrates old configuration to new format
-func migrateConfig(old *MageConfig) *MageConfig {
-	// For now, just return the old config
-	// In the future, this would handle version migrations
-	return old
 }

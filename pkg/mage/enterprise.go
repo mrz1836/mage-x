@@ -186,7 +186,6 @@ func (Enterprise) Deploy() error {
 		{Name: "Security Scan", Action: runSecurityScan},
 		{Name: "Dependency Check", Action: func() error { return checkDependencies([]string{}) }},
 		{Name: "Configuration Validation", Action: func() error { return validateConfiguration(nil) }},
-		{Name: "Database Migration", Action: runDatabaseMigration},
 		{Name: "Service Deployment", Action: deployService},
 		{Name: "Health Check", Action: runHealthCheck},
 		{Name: "Rollback Preparation", Action: prepareRollback},
@@ -927,12 +926,11 @@ func getCurrentUser() string {
 }
 
 // Deployment step implementations (placeholders)
-func validateBuild() error        { return nil }
-func runSecurityScan() error      { return nil }
-func runDatabaseMigration() error { return nil }
-func deployService() error        { return nil }
-func runHealthCheck() error       { return nil }
-func prepareRollback() error      { return nil }
+func validateBuild() error   { return nil }
+func runSecurityScan() error { return nil }
+func deployService() error   { return nil }
+func runHealthCheck() error  { return nil }
+func prepareRollback() error { return nil }
 
 // Rollback step implementations (placeholders)
 func validateRollback() error      { return nil }

@@ -44,7 +44,7 @@ func (Lint) Default() error {
 		args = append(args, "--verbose")
 	}
 
-	// Skip adding deprecated flags - these are now handled in .golangci.json for v2
+	// Skip adding deprecated flags - these are now handled in .golangci.json
 
 	start := time.Now()
 	if err := GetRunner().RunCmd("golangci-lint", args...); err != nil {
