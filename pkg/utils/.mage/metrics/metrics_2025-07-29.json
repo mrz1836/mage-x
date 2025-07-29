@@ -921,5 +921,103 @@
     "tags": null,
     "metadata": null,
     "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 41,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T11:40:14.633679-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 41,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T11:40:14.63514-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T11:40:14.635619-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 0,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T11:47:49.71336-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T11:47:49.714784-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T11:47:49.715259-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 42,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T11:55:56.506924-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 42,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T11:55:56.508615-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T11:55:56.509147-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
   }
 ]
