@@ -64,6 +64,9 @@ func (Build) Default() error {
 		args = append(args, "-v")
 	}
 
+	// Add the package path to build
+	args = append(args, ".")
+
 	ldflags := strings.Join(cfg.Build.LDFlags, " ")
 	if ldflags == "" {
 		// Use default ldflags for hash
@@ -217,6 +220,7 @@ func (b Build) Platform(platform string) error {
 	args := []string{"build"}
 	args = append(args, buildFlags(cfg)...)
 	args = append(args, "-o", outputPath)
+	args = append(args, ".") // Add package path
 
 	utils.Info("Building %s", platform)
 
@@ -332,6 +336,9 @@ func (Build) Install() error {
 	if cfg.Build.Verbose {
 		args = append(args, "-v")
 	}
+
+	// Add the package path to install
+	args = append(args, ".")
 
 	if err := GetRunner().RunCmd("go", args...); err != nil {
 		return fmt.Errorf("install failed: %w", err)

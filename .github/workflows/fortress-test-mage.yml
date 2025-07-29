@@ -43,7 +43,7 @@ jobs:
           - {name: "Help System", cmd: "mage -l", desc: "List all available targets"}
           - {name: "Version", cmd: "mage -version", desc: "Show mage version"}
           - {name: "Default Target", cmd: "mage", desc: "Run default target"}
-          - {name: "Build", cmd: "mage build", desc: "Test build functionality"}
+          - {name: "Build", cmd: "mage buildDefault", desc: "Test build functionality"}
           - {name: "Clean", cmd: "mage buildClean", desc: "Test clean functionality"}
 
     steps:
@@ -106,8 +106,8 @@ jobs:
           # Run commands based on namespace
           case "${{ matrix.namespace.name }}" in
             "Build")
-              echo "### Running: mage build"
-              mage build
+              echo "### Running: mage buildDefault"
+              mage buildDefault
               echo "### Running: mage buildClean"
               mage buildClean
               ;;
