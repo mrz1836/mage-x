@@ -169,8 +169,8 @@ mage interactive
 
 # Or dive right in
 mage build          # Build your project
-mage test           # Run tests with linting
-mage release        # Create a release
+mage testDefault    # Run tests with linting
+mage releaseDefault # Create a release
 ```
 
 ### 4. Advanced Setup (Optional)
@@ -561,7 +561,7 @@ mage installStdlib      # Install Go standard library for cross-compilation
 #### 🧪 Test Commands
 ```bash
 # Test Execution
-mage test               # Run complete test suite with linting (default)
+mage testDefault        # Run complete test suite with linting (default)
 mage testUnit           # Run unit tests only (no linting)
 mage testRace           # Run tests with race detector
 mage testCover          # Run tests with coverage analysis
@@ -573,7 +573,7 @@ mage testIntegration    # Run integration tests
 #### 🔍 Code Quality & Linting
 ```bash
 # Linting and Code Quality
-mage lint               # Run default linter (default)
+mage lintDefault        # Run default linter (default)
 mage lintAll            # Run all linting checks
 mage lintFix            # Automatically fix linting issues
 ```
@@ -645,7 +645,7 @@ mage versionCheck       # Check version information
 #### 🚀 Release Management
 ```bash
 # Release Operations
-mage release            # Create a new release (default)
+mage releaseDefault     # Create a new release (default)
 mage releaseDefault     # Create default release
 ```
 
@@ -654,8 +654,8 @@ mage releaseDefault     # Create default release
 # Quick Access Commands
 mage                    # Run default build
 mage build              # Same as above
-mage test               # Run complete test suite
-mage lint               # Run linter
+mage testDefault        # Run complete test suite
+mage lintDefault        # Run linter
 ```
 
 
@@ -710,7 +710,7 @@ All examples and tests run via GitHub Actions using Go 1.21+. View the [examples
 
 ```bash
 # Quick test suite
-mage test
+mage testDefault
 
 # Comprehensive testing
 mage testRace testCover testFuzz
@@ -806,10 +806,10 @@ cd go-mage
 go mod download
 
 # Run tests
-mage test
+mage testDefault
 
 # Run linter
-mage lint
+mage lintDefault
 
 # Start interactive mode to explore features
 mage interactive

@@ -823,11 +823,26 @@ func percentile(values []float64, p float64) float64 {
 	if len(values) == 0 {
 		return 0
 	}
-	index := int(p/100*float64(len(values)-1) + 0.5)
-	if index >= len(values) {
-		index = len(values) - 1
+	if len(values) == 1 {
+		return values[0]
 	}
-	return values[index]
+
+	// Use linear interpolation for percentile calculation
+	pos := p / 100 * float64(len(values)-1)
+	if pos == float64(int(pos)) {
+		// Exact position
+		return values[int(pos)]
+	}
+
+	// Interpolate between two positions
+	lower := int(pos)
+	upper := lower + 1
+	if upper >= len(values) {
+		upper = len(values) - 1
+	}
+
+	fraction := pos - float64(lower)
+	return values[lower] + fraction*(values[upper]-values[lower])
 }
 
 func average(values []float64) float64 {
@@ -929,8 +944,8 @@ func (js *JSONStorage) Query(query MetricsQuery) ([]*Metric, error) {
 
 	var allMetrics []*Metric
 
-	// Read all metric files in the date range
-	for d := query.StartTime; d.Before(query.EndTime); d = d.AddDate(0, 0, 1) {
+	// Read all metric files in the date range (inclusive of end date)
+	for d := query.StartTime; d.Before(query.EndTime.AddDate(0, 0, 1)); d = d.AddDate(0, 0, 1) {
 		filename := fmt.Sprintf("metrics_%s.json", d.Format("2006-01-02"))
 		filePath := filepath.Join(js.storagePath, filename)
 
@@ -945,7 +960,8 @@ func (js *JSONStorage) Query(query MetricsQuery) ([]*Metric, error) {
 	// Filter metrics based on query
 	var filteredMetrics []*Metric
 	for _, metric := range allMetrics {
-		if metric.Timestamp.After(query.StartTime) && metric.Timestamp.Before(query.EndTime) {
+		if (metric.Timestamp.After(query.StartTime) || metric.Timestamp.Equal(query.StartTime)) &&
+			(metric.Timestamp.Before(query.EndTime) || metric.Timestamp.Equal(query.EndTime)) {
 			// Check names filter
 			if len(query.Names) > 0 {
 				found := false

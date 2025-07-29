@@ -85,6 +85,11 @@ func (s *FileStore) ListReleases(channel Channel) ([]*Release, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	return s.listReleasesUnlocked(channel)
+}
+
+// listReleasesUnlocked lists all releases in a channel without acquiring locks
+func (s *FileStore) listReleasesUnlocked(channel Channel) ([]*Release, error) {
 	channelDir := filepath.Join(s.baseDir, "releases", channel.String())
 
 	if !s.fileOps.Exists(channelDir) {
@@ -230,6 +235,11 @@ func (s *FileStore) GetPromotionHistory(version string) ([]*PromotionRequest, er
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	return s.getPromotionHistoryUnlocked(version)
+}
+
+// getPromotionHistoryUnlocked retrieves promotion history for a version without acquiring locks
+func (s *FileStore) getPromotionHistoryUnlocked(version string) ([]*PromotionRequest, error) {
 	// Sanitize version for filename
 	safeVersion := sanitizeVersion(version)
 	path := filepath.Join(s.baseDir, "promotions", fmt.Sprintf("%s.json", safeVersion))
@@ -257,7 +267,7 @@ func (s *FileStore) SavePromotionRequest(request *PromotionRequest) error {
 	defer s.mu.Unlock()
 
 	// Get existing history
-	history, err := s.GetPromotionHistory(request.Version)
+	history, err := s.getPromotionHistoryUnlocked(request.Version)
 	if err != nil {
 		return err
 	}
@@ -294,7 +304,7 @@ func (s *FileStore) getReleasePath(channel Channel, version string) string {
 func (s *FileStore) updateChannelIndex(channel Channel) error {
 	indexPath := filepath.Join(s.baseDir, "channels", fmt.Sprintf("%s-index.json", channel))
 
-	releases, err := s.ListReleases(channel)
+	releases, err := s.listReleasesUnlocked(channel)
 	if err != nil {
 		return err
 	}

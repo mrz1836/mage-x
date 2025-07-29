@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -163,12 +164,20 @@ func (m *Manager) GenerateDependencyHash(modFile, sumFile string, environment ma
 		return "", err
 	}
 
-	// Include relevant environment variables
-	envStr := ""
-	for k, v := range environment {
+	// Include relevant environment variables (sorted for deterministic hashing)
+	var envKeys []string
+	for k := range environment {
 		if strings.HasPrefix(k, "GO") || k == "PATH" {
-			envStr += fmt.Sprintf("%s=%s|", k, v)
+			envKeys = append(envKeys, k)
 		}
+	}
+
+	// Sort keys for deterministic output
+	sort.Strings(envKeys)
+
+	envStr := ""
+	for _, k := range envKeys {
+		envStr += fmt.Sprintf("%s=%s|", k, environment[k])
 	}
 
 	return m.buildCache.GenerateHash(

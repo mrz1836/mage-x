@@ -113,8 +113,11 @@ func (m *Manager) Initialize() error {
 			if err := m.store.SaveChannelConfig(config); err != nil {
 				return errors.Wrap(err, "failed to save channel config")
 			}
+			m.configs[config.Name] = config
+		} else {
+			// Use existing config
+			m.configs[config.Name] = existing
 		}
-		m.configs[config.Name] = config
 	}
 
 	return nil
