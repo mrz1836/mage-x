@@ -353,14 +353,14 @@ func ValidatePath(path string) error {
 		return fmt.Errorf("path contains control character")
 	}
 
-	// Clean the path
-	cleaned := filepath.Clean(path)
-
-	// Check for path traversal (Unix and Windows styles)
-	if strings.Contains(cleaned, "../") || strings.Contains(cleaned, "..\\") ||
-		strings.HasSuffix(cleaned, "..") || cleaned == ".." {
+	// Check for path traversal BEFORE cleaning (Unix and Windows styles)
+	if strings.Contains(path, "../") || strings.Contains(path, "..\\") ||
+		strings.HasSuffix(path, "..") || path == ".." {
 		return fmt.Errorf("path traversal detected")
 	}
+
+	// Clean the path
+	cleaned := filepath.Clean(path)
 
 	// Check for Windows-style paths (which should be rejected on Unix systems)
 	if strings.Contains(path, ":") && len(path) > 1 && path[1] == ':' {

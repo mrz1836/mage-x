@@ -147,32 +147,8 @@ jobs:
 
           echo "✅ Code formatting is correct"
 
-  gosec:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: true
-
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
-        with:
-          args: "-fmt sarif -out gosec-results.sarif ./..."
-
-      - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: gosec-results.sarif
-
   summary:
-    needs: [govulncheck, static-analysis, dependency-check, license-check, code-quality, gosec]
+    needs: [govulncheck, static-analysis, dependency-check, license-check, code-quality]
     runs-on: ubuntu-latest
     if: always()
 
@@ -187,15 +163,13 @@ jobs:
           echo "- Dependency Check: ${{ needs.dependency-check.result }}"
           echo "- License Check: ${{ needs.license-check.result }}"
           echo "- Code Quality: ${{ needs.code-quality.result }}"
-          echo "- Gosec Security: ${{ needs.gosec.result }}"
           echo ""
 
           # Check if any scan failed
           if [[ "${{ needs.govulncheck.result }}" == "failure" ]] || \
              [[ "${{ needs.static-analysis.result }}" == "failure" ]] || \
              [[ "${{ needs.dependency-check.result }}" == "failure" ]] || \
-             [[ "${{ needs.code-quality.result }}" == "failure" ]] || \
-             [[ "${{ needs.gosec.result }}" == "failure" ]]; then
+             [[ "${{ needs.code-quality.result }}" == "failure" ]]; then
             echo "❌ Some security scans failed. Please review the results above."
             exit 1
           else

@@ -51,9 +51,18 @@ func TestAuditLogger_Basic(t *testing.T) {
 	})
 
 	t.Run("database initialization failure", func(t *testing.T) {
-		// Try to create database in invalid location
+		// Try to create database in a directory that cannot be created
+		// Use a path under a file (not directory) to ensure it fails cross-platform
+		tempDir := t.TempDir()
+		existingFile := filepath.Join(tempDir, "existing_file")
+		
+		// Create a regular file
+		err := os.WriteFile(existingFile, []byte("test"), 0644)
+		require.NoError(t, err)
+		
+		// Try to create database under this file (should fail)
 		invalidConfig := config
-		invalidConfig.DatabasePath = "/invalid/path/audit.db"
+		invalidConfig.DatabasePath = filepath.Join(existingFile, "subdir", "audit.db")
 
 		logger := NewAuditLogger(invalidConfig)
 		assert.False(t, logger.enabled) // Should be disabled on init failure
