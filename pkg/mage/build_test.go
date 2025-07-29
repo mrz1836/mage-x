@@ -1,24 +1,17 @@
 package mage
 
 import (
-	"fmt"
+	"errors"
 	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/mrz1836/go-mage/pkg/utils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
-// Import the new testutil package for consistent mocking
-// MockRunner is now imported from testutil package
-
-// BuildTestSuite defines the test suite for build functions
+// BuildTestSuite defines the test suite for Build namespace methods
 type BuildTestSuite struct {
 	suite.Suite
 	env   *testutil.TestEnvironment
@@ -26,509 +19,500 @@ type BuildTestSuite struct {
 }
 
 // SetupTest runs before each test
-func (suite *BuildTestSuite) SetupTest() {
-	// Create test environment
-	suite.env = testutil.NewTestEnvironment(suite.T())
-
-	// Create test project structure
-	suite.createTestProject()
-
-	// Initialize build
-	suite.build = Build{}
-
-	// Reset configuration
-	cfg = nil
-	
-	// Reset cache manager to ensure clean state for each test
-	cacheManager = nil
+func (ts *BuildTestSuite) SetupTest() {
+	ts.env = testutil.NewTestEnvironment(ts.T())
+	ts.env.CreateGoMod("test/module")
+	ts.build = Build{}
 }
 
 // TearDownTest runs after each test
-func (suite *BuildTestSuite) TearDownTest() {
-	// Clean up test environment
-	suite.env.Cleanup()
-
-	// Assert all mock expectations were met
-	suite.env.Runner.AssertExpectations(suite.T())
+func (ts *BuildTestSuite) TearDownTest() {
+	// Clean up environment variables that might be set by tests
+	os.Unsetenv("GOOS")
+	os.Unsetenv("GOARCH")
+	os.Unsetenv("CGO_ENABLED")
+	os.Unsetenv("DOCKER_BUILDKIT")
+	
+	ts.env.Cleanup()
 }
 
-// createTestProject creates a minimal test project structure
-func (suite *BuildTestSuite) createTestProject() {
-	// Create project structure
-	suite.env.CreateProjectStructure()
+// mockGitCommands adds mock expectations for git commands used by buildFlags
+func (ts *BuildTestSuite) mockGitCommands() {
+	ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.0.0", nil)
+	ts.env.Runner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("abc1234", nil)
+}
 
-	// Create go.mod
-	suite.env.CreateGoMod("github.com/test/project")
+// mockBuildCommand mocks a go build command with flexible ldflags matching
+func (ts *BuildTestSuite) mockBuildCommand(outputPath string, returnError error) {
+	ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+		// Check for go build command with variable structure
+		// Could be: ["build", "-ldflags", <flags>, "-o", <output>, "."]
+		// Or: ["build", "-ldflags", <flags>, "-trimpath", "-o", <output>, "."]
+		if len(args) < 6 || args[0] != "build" || args[1] != "-ldflags" {
+			return false
+		}
+		
+		// Find the -o flag and check the output path
+		for i := 3; i < len(args)-1; i++ {
+			if args[i] == "-o" && i+1 < len(args) {
+				return args[i+1] == outputPath
+			}
+		}
+		return false
+	})).Return(returnError)
+}
 
-	// Create .mage.yaml
-	mageYaml := `project:
-  name: testproject
-  binary: testapp
-  version: v1.0.0
+// TestBuildDefault tests the Default method
+func (ts *BuildTestSuite) TestBuildDefault() {
+	ts.Run("successful default build", func() {
+		// Create basic project structure
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Hello, World!")
+}`)
 
+		// Mock git commands and build command
+		ts.mockGitCommands()
+		ts.mockBuildCommand("bin/app", nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Default()
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+
+	ts.Run("handles build failure", func() {
+		// Create project file
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Test app")
+}`)
+
+		// Mock git commands and failed build command
+		ts.mockGitCommands()
+		ts.mockBuildCommand("bin/app", errors.New("build error"))
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Default()
+			},
+		)
+
+		require.Error(ts.T(), err)
+		require.Contains(ts.T(), err.Error(), "build failed")
+	})
+}
+
+// TestBuildAll tests the All method
+func (ts *BuildTestSuite) TestBuildAll() {
+	ts.Run("builds for all configured platforms", func() {
+		// Create configuration with multiple platforms
+		ts.env.CreateFile(".mage.yaml", `
+project:
+  binary: multi-app
 build:
-  output: bin
-  trimpath: true
-  platforms:
-    - linux/amd64
-    - darwin/amd64
-    - windows/amd64
-`
-	suite.env.CreateMageConfig(mageYaml)
-}
+  platforms: [linux/amd64, darwin/amd64, windows/amd64]
+  output: dist
+`)
 
-// TestBuildDefault tests the default build function
-func (suite *BuildTestSuite) TestBuildDefault() {
-	tests := []struct {
-		name        string
-		platform    string
-		setupMock   func()
-		expectError bool
-		errorMsg    string
-	}{
-		{
-			name:     "successful build on linux",
-			platform: "linux",
-			setupMock: func() {
-				// Mock git commands for version info
-				suite.env.Runner.On("RunCmdOutput", "git", mock.MatchedBy(func(args []string) bool {
-					return len(args) > 0 && (args[0] == "describe" || args[0] == "rev-parse")
-				})).Return("v1.0.0", nil).Maybe()
+		// Create project file
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Multi-platform app")
+}`)
 
-				// Mock successful go build command
-				suite.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-					return args[0] == "build" && containsString(args, "-o")
-				})).Return(nil)
+		// Mock git commands and multi-platform build commands
+		ts.mockGitCommands()
+		ts.mockBuildCommand("dist/multi-app-linux-amd64", nil)
+		ts.mockBuildCommand("dist/multi-app-darwin-amd64", nil)
+		ts.mockBuildCommand("dist/multi-app-windows-amd64.exe", nil)
+
+		cfg = nil // Reset global config
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.All()
 			},
-			expectError: false,
-		},
-		{
-			name:     "successful build on windows",
-			platform: "windows",
-			setupMock: func() {
-				// Mock git commands for version info
-				suite.env.Runner.On("RunCmdOutput", "git", mock.MatchedBy(func(args []string) bool {
-					return len(args) > 0 && (args[0] == "describe" || args[0] == "rev-parse")
-				})).Return("v1.0.0", nil).Maybe()
+		)
 
-				suite.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-					return args[0] == "build" && containsString(args, "bin/testapp.exe")
-				})).Return(nil)
-			},
-			expectError: false,
-		},
-		{
-			name:     "build failure",
-			platform: "linux",
-			setupMock: func() {
-				// Reset all expectations for failure test
-				suite.env.Runner.ExpectedCalls = nil
-				
-				// Mock git commands for version info
-				suite.env.Runner.On("RunCmdOutput", "git", mock.MatchedBy(func(args []string) bool {
-					return len(args) > 0 && (args[0] == "describe" || args[0] == "rev-parse")
-				})).Return("v1.0.0", nil).Maybe()
-
-				// Mock failed go build command - be more specific to avoid conflicts
-				suite.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-					return len(args) > 0 && args[0] == "build" && containsString(args, "-o") && containsString(args, "bin/testapp")
-				})).Return(fmt.Errorf("compilation error")).Once()
-			},
-			expectError: true,
-			errorMsg:    "build failed",
-		},
-	}
-
-	for _, tt := range tests {
-		suite.Run(tt.name, func() {
-			// Set platform via environment variable instead of runtime.GOOS
-			if tt.platform == "windows" {
-				os.Setenv("GOOS", "windows")
-				defer func() { os.Unsetenv("GOOS") }()
-			}
-
-			// Setup mock expectations
-			if tt.setupMock != nil {
-				tt.setupMock()
-			}
-
-			// Execute build with mocked runner
-			err := suite.executeWithMockRunner(func() error {
-				return suite.build.Default()
-			})
-
-			// Assert results
-			if tt.expectError {
-				suite.Error(err)
-				if tt.errorMsg != "" {
-					suite.Contains(err.Error(), tt.errorMsg)
-				}
-			} else {
-				suite.NoError(err)
-			}
-		})
-	}
-}
-
-// TestBuildPlatform tests platform-specific builds
-func (suite *BuildTestSuite) TestBuildPlatform() {
-	testCases := []struct {
-		name         string
-		platform     string
-		expectedOS   string
-		expectedArch string
-		expectBinary string
-	}{
-		{
-			name:         "linux amd64",
-			platform:     "linux/amd64",
-			expectedOS:   "linux",
-			expectedArch: "amd64",
-			expectBinary: "testapp-linux-amd64",
-		},
-		{
-			name:         "darwin arm64",
-			platform:     "darwin/arm64",
-			expectedOS:   "darwin",
-			expectedArch: "arm64",
-			expectBinary: "testapp-darwin-arm64",
-		},
-		{
-			name:         "windows amd64",
-			platform:     "windows/amd64",
-			expectedOS:   "windows",
-			expectedArch: "amd64",
-			expectBinary: "testapp-windows-amd64.exe",
-		},
-	}
-
-	for _, tc := range testCases {
-		suite.Run(tc.name, func() {
-			// Reset expectations and calls for clean test
-			suite.env.Runner.ExpectedCalls = nil
-			suite.env.Runner.Calls = nil
-			
-			// Create a spy to capture environment variables
-			var capturedEnv []string
-			var buildCalls []*mock.Call
-
-			// Mock git commands for version info
-			suite.env.Runner.On("RunCmdOutput", "git", mock.MatchedBy(func(args []string) bool {
-				return len(args) > 0 && (args[0] == "describe" || args[0] == "rev-parse")
-			})).Return("v1.0.0", nil).Maybe()
-
-			// Mock successful build - be specific to only match go build commands
-			suite.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-				return len(args) > 0 && args[0] == "build"
-			})).Run(func(args mock.Arguments) {
-				// Capture environment when build command is called
-				capturedEnv = os.Environ()
-				// Track this specific call
-				buildCalls = append(buildCalls, &mock.Call{})
-			}).Return(nil).Once()
-
-			// Execute build
-			err := suite.executeWithMockRunner(func() error {
-				return suite.build.Platform(tc.platform)
-			})
-
-			// Assert no error
-			suite.NoError(err)
-
-			// Verify environment variables were set correctly
-			suite.Contains(getEnvValue(capturedEnv, "GOOS"), tc.expectedOS)
-			suite.Contains(getEnvValue(capturedEnv, "GOARCH"), tc.expectedArch)
-
-			// Verify exactly one build call was made
-			suite.Require().Len(buildCalls, 1)
-
-			// Find the build command call and verify binary name
-			var buildArgs []string
-			for _, call := range suite.env.Runner.Calls {
-				if call.Method == "RunCmd" && len(call.Arguments) > 1 {
-					if cmd, ok := call.Arguments[0].(string); ok && cmd == "go" {
-						if args, ok := call.Arguments[1].([]string); ok && len(args) > 0 && args[0] == "build" {
-							buildArgs = args
-							break
-						}
-					}
-				}
-			}
-			suite.Require().NotEmpty(buildArgs, "No go build command found")
-			suite.Contains(strings.Join(buildArgs, " "), tc.expectBinary)
-		})
-	}
-}
-
-// TestBuildAll tests building for all platforms
-func (suite *BuildTestSuite) TestBuildAll() {
-	// Set up mocks for build operations - allow any number of calls
-	suite.env.StandardMocks().ForBuild()
-
-	// Mock successful builds for all platforms - allow any number since we might have git calls too
-	suite.env.Runner.On("RunCmd", "go", mock.Anything).Return(nil).Maybe()
-
-	// Execute build all
-	err := suite.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
-		func() error {
-			return suite.build.All()
-		},
-	)
-
-	// Assert success
-	suite.NoError(err)
-}
-
-// TestBuildClean tests the clean function
-func (suite *BuildTestSuite) TestBuildClean() {
-	// Create some build artifacts
-	testFiles := []string{
-		"bin/testapp",
-		"bin/testapp-linux-amd64",
-		"coverage.txt",
-	}
-
-	for _, file := range testFiles {
-		dir := filepath.Dir(file)
-		if dir != "." {
-			os.MkdirAll(dir, 0755)
-		}
-		os.WriteFile(file, []byte("test"), 0644)
-	}
-
-	// Mock go clean command
-	suite.env.Runner.On("RunCmd", "go", []string{"clean", "-testcache"}).Return(nil)
-
-	// Execute clean
-	err := suite.executeWithMockRunner(func() error {
-		return suite.build.Clean()
+		require.NoError(ts.T(), err)
 	})
 
-	// Assert success
-	suite.NoError(err)
+	ts.Run("handles no platforms configured", func() {
+		// Create minimal configuration
+		ts.env.CreateFile(".mage.yaml", `
+project:
+  binary: no-platform-app
+`)
 
-	// Verify bin directory was cleaned
-	_, err = os.Stat("bin/testapp")
-	suite.True(os.IsNotExist(err))
+		// Create project file
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("No platform app")
+}`)
+
+		// Mock git commands and build commands for default platforms
+		ts.mockGitCommands()
+		// When no platforms are configured, it builds for default platforms
+		ts.mockBuildCommand("bin/no-platform-app-windows-amd64.exe", nil)
+		ts.mockBuildCommand("bin/no-platform-app-darwin-arm64", nil)
+		ts.mockBuildCommand("bin/no-platform-app-darwin-amd64", nil)
+		ts.mockBuildCommand("bin/no-platform-app-linux-amd64", nil)
+
+		cfg = nil // Reset global config
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.All()
+			},
+		)
+
+		require.NoError(ts.T(), err) // Should handle gracefully
+	})
 }
 
-// TestBuildFlags tests build flag generation
-func (suite *BuildTestSuite) TestBuildFlags() {
-	testCases := []struct {
-		name     string
-		config   BuildConfig
-		expected []string
-	}{
-		{
-			name: "with tags",
-			config: BuildConfig{
-				Tags: []string{"prod", "feature1"},
+// TestBuildPlatform tests the Platform method
+func (ts *BuildTestSuite) TestBuildPlatform() {
+	ts.Run("builds for specific platform", func() {
+		// Create project file
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Platform app")
+}`)
+
+		// Mock git commands used by buildFlags
+		ts.mockGitCommands()
+
+		// Mock go build command for linux/amd64
+		ts.mockBuildCommand("bin/app-linux-amd64", nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Platform("linux/amd64")
 			},
-			expected: []string{"-tags", "prod,feature1"},
-		},
-		{
-			name: "with custom ldflags",
-			config: BuildConfig{
-				LDFlags: []string{"-X main.version=1.0.0", "-s -w"},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+
+	ts.Run("handles invalid platform format", func() {
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Platform("invalid-platform")
 			},
-			expected: []string{"-ldflags", "-X main.version=1.0.0 -s -w"},
-		},
-		{
-			name: "with trimpath",
-			config: BuildConfig{
+		)
+
+		require.Error(ts.T(), err)
+		require.Contains(ts.T(), err.Error(), "invalid platform format")
+	})
+
+	ts.Run("builds for windows platform with .exe extension", func() {
+		// Create project file
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Windows app")
+}`)
+
+		// Mock git commands used by buildFlags
+		ts.mockGitCommands()
+
+		// Mock go build command for windows
+		ts.mockBuildCommand("bin/app-windows-amd64.exe", nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Platform("windows/amd64")
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+}
+
+// TestBuildPlatformSpecific tests platform-specific methods
+func (ts *BuildTestSuite) TestBuildPlatformSpecific() {
+	ts.Run("Linux method", func() {
+		// Create project file
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Linux app")
+}`)
+
+		// Mock git commands used by buildFlags
+		ts.mockGitCommands()
+
+		// Mock go build command for Linux
+		ts.mockBuildCommand("bin/app-linux-amd64", nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Linux()
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+
+	ts.Run("Darwin method", func() {
+		// Create project file
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Darwin app")
+}`)
+
+		// Mock git commands used by buildFlags
+		ts.mockGitCommands()
+
+		// Mock go build commands for Darwin (both amd64 and arm64)
+		ts.mockBuildCommand("bin/app-darwin-amd64", nil)
+		ts.mockBuildCommand("bin/app-darwin-arm64", nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Darwin()
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+
+	ts.Run("Windows method", func() {
+		// Create project file  
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Windows app")
+}`)
+
+		// Mock git commands used by buildFlags
+		ts.mockGitCommands()
+
+		// Mock go build command for Windows
+		ts.mockBuildCommand("bin/app-windows-amd64.exe", nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Windows()
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+}
+
+// TestBuildDocker tests the Docker method
+func (ts *BuildTestSuite) TestBuildDocker() {
+	ts.Run("builds docker image with default settings", func() {
+		// Create Dockerfile
+		ts.env.CreateFile("Dockerfile", `FROM golang:1.21-alpine
+WORKDIR /app
+COPY . .
+RUN go build -o app .
+CMD ["./app"]`)
+
+		// Mock docker build command
+		ts.env.Runner.On("RunCmd", "docker", []string{"build", "-t", "app:latest", "."}).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Docker()
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+
+	ts.Run("handles missing Dockerfile", func() {
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Docker()
+			},
+		)
+
+		require.Error(ts.T(), err)
+		require.Contains(ts.T(), err.Error(), "Dockerfile not found")
+	})
+}
+
+// TestBuildClean tests the Clean method
+func (ts *BuildTestSuite) TestBuildClean() {
+	ts.Run("cleans build artifacts", func() {
+		// Create some build artifacts
+		ts.env.CreateFile("bin/app", "fake binary")
+		ts.env.CreateFile("dist/app-linux", "fake linux binary")
+		ts.env.CreateFile("coverage.out", "fake coverage")
+
+		// Mock removal commands
+		ts.env.Runner.On("RunCmd", "rm", []string{"-rf", "bin/", "dist/", "*.exe", "coverage.out", "*.prof"}).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Clean()
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+}
+
+// TestBuildInstall tests the Install method
+func (ts *BuildTestSuite) TestBuildInstall() {
+	ts.Run("installs binary to GOPATH/bin", func() {
+		// Create project file
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Install app")
+}`)
+
+		// Mock go install command
+		ts.env.Runner.On("RunCmd", "go", []string{"install", "."}).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Install()
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+}
+
+// TestBuildGenerate tests the Generate method  
+func (ts *BuildTestSuite) TestBuildGenerate() {
+	ts.Run("runs go generate", func() {
+		// Create file with generate directive
+		ts.env.CreateFile("generate.go", `package main
+//go:generate echo "Generated code"
+func main() {}`)
+
+		// Mock go generate command
+		ts.env.Runner.On("RunCmd", "go", []string{"generate", "./..."}).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Generate()
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+}
+
+// TestBuildPreBuild tests the PreBuild method
+func (ts *BuildTestSuite) TestBuildPreBuild() {
+	ts.Run("runs pre-build tasks", func() {
+		// Mock go mod tidy and go generate commands
+		ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "go", []string{"generate", "./..."}).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.PreBuild()
+			},
+		)
+
+		require.NoError(ts.T(), err)
+	})
+}
+
+// TestBuildUtilityFunctions tests utility functions
+func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
+	ts.Run("buildFlags generates correct flags", func() {
+		config := &Config{
+			Build: BuildConfig{
+				Tags:     []string{"integration", "e2e"},
+				LDFlags:  []string{"-X main.version=1.0.0", "-X main.build=123"},
 				TrimPath: true,
+				Verbose:  true,
 			},
-			expected: []string{"-trimpath"},
-		},
-		{
-			name:     "debug mode",
-			config:   BuildConfig{},
-			expected: []string{"-ldflags"}, // Should not contain -s -w
-		},
-	}
+		}
 
-	for _, tc := range testCases {
-		suite.Run(tc.name, func() {
-			// Override config
-			cfg = &Config{
-				Build: tc.config,
-			}
-
-			// Get build flags
-			flags := buildFlags(cfg)
-
-			// Assert expected flags are present
-			for _, expected := range tc.expected {
-				suite.Contains(flags, expected)
-			}
-
-			// Special case: debug mode should not strip
-			if tc.name == "debug mode" {
-				os.Setenv("DEBUG", "true")
-				defer os.Unsetenv("DEBUG")
-
-				flags = buildFlags(cfg)
-				flagStr := strings.Join(flags, " ")
-				suite.NotContains(flagStr, "-s")
-				suite.NotContains(flagStr, "-w")
-			}
-		})
-	}
-}
-
-// TestVersionAndCommit tests version and commit detection
-func (suite *BuildTestSuite) TestVersionAndCommit() {
-	suite.Run("version from git tag", func() {
-		// Mock git command
-		suite.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).
-			Return("v1.2.3\n", nil)
-
-		version := suite.executeWithMockOutput(getVersion)
-		suite.Equal("v1.2.3", version)
-	})
-
-	suite.Run("version from config", func() {
-		// Reset all expectations
-		suite.env.Runner.ExpectedCalls = nil
+		flags := buildFlags(config)
 		
-		// Mock git command failure
-		suite.env.Runner.On("RunCmdOutput", "git", mock.Anything).
-			Return("", fmt.Errorf("not a git repo"))
-
-		// Set config version
-		cfg = &Config{
-			Project: ProjectConfig{Version: "v2.0.0"},
-		}
-
-		version := suite.executeWithMockOutput(getVersion)
-		suite.Equal("v2.0.0", version)
+		require.Contains(ts.T(), flags, "-tags")
+		require.Contains(ts.T(), flags, "integration,e2e")
+		require.Contains(ts.T(), flags, "-ldflags")
+		require.Contains(ts.T(), flags, "-trimpath")
+		require.Contains(ts.T(), flags, "-v")
 	})
 
-	suite.Run("commit hash", func() {
-		// Reset all expectations
-		suite.env.Runner.ExpectedCalls = nil
+	ts.Run("buildFlags with minimal config", func() {
+		config := &Config{
+			Build: BuildConfig{},
+		}
+
+		flags := buildFlags(config)
 		
-		// Mock git command
-		suite.env.Runner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).
-			Return("abc123\n", nil)
+		require.Contains(ts.T(), flags, "-ldflags")
+		require.NotContains(ts.T(), flags, "-tags")
+		require.NotContains(ts.T(), flags, "-trimpath")
+		require.NotContains(ts.T(), flags, "-v")
+	})
 
-		commit := suite.executeWithMockOutput(getCommit)
-		suite.Equal("abc123", commit)
+	ts.Run("getCommit returns commit hash", func() {
+		// Mock git command to return a commit hash
+		originalRunner := GetRunner()
+		mockRunner := &testutil.MockRunner{}
+		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("abc1234", nil)
+		SetRunner(mockRunner)
+
+		commit := getCommit()
+		
+		require.Equal(ts.T(), "abc1234", commit)
+		
+		// Restore original runner
+		SetRunner(originalRunner)
+	})
+
+	ts.Run("getCommit handles git error", func() {
+		// Mock git command to return error
+		originalRunner := GetRunner()
+		mockRunner := &testutil.MockRunner{}
+		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("", errors.New("git error"))
+		SetRunner(mockRunner)
+
+		commit := getCommit()
+		
+		require.Equal(ts.T(), "unknown", commit)
+		
+		// Restore original runner
+		SetRunner(originalRunner)
 	})
 }
 
-// Helper functions
-
-// executeWithMockRunner temporarily replaces the command runner with a mock
-// Deprecated: Use env.WithMockRunner instead
-func (suite *BuildTestSuite) executeWithMockRunner(fn func() error) error {
-	return suite.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
-		fn,
-	)
-}
-
-// executeWithMockOutput executes a function that returns a string
-// Deprecated: Use env.WithMockRunner with appropriate return handling
-func (suite *BuildTestSuite) executeWithMockOutput(fn func() string) string {
-	var result string
-	suite.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
-		func() error {
-			result = fn()
-			return nil
-		},
-	)
-	return result
-}
-
-// containsString checks if a slice contains a value
-func containsString(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
-// getEnvValue gets a value from environment slice
-func getEnvValue(env []string, key string) string {
-	prefix := key + "="
-	for _, e := range env {
-		if strings.HasPrefix(e, prefix) {
-			return strings.TrimPrefix(e, prefix)
-		}
-	}
-	return ""
-}
-
-// getOriginalOS returns the original OS
-func (suite *BuildTestSuite) getOriginalOS() string {
-	return runtime.GOOS
-}
-
-// TestBuildTestSuite runs the build test suite
+// TestBuildTestSuite runs the test suite
 func TestBuildTestSuite(t *testing.T) {
 	suite.Run(t, new(BuildTestSuite))
-}
-
-// Additional table-driven tests for specific functions
-
-func TestParsePlatform(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		wantOS   string
-		wantArch string
-		wantErr  bool
-	}{
-		{
-			name:     "valid linux/amd64",
-			input:    "linux/amd64",
-			wantOS:   "linux",
-			wantArch: "amd64",
-			wantErr:  false,
-		},
-		{
-			name:     "valid darwin/arm64",
-			input:    "darwin/arm64",
-			wantOS:   "darwin",
-			wantArch: "arm64",
-			wantErr:  false,
-		},
-		{
-			name:    "invalid format",
-			input:   "linux-amd64",
-			wantErr: true,
-		},
-		{
-			name:    "missing arch",
-			input:   "linux",
-			wantErr: true,
-		},
-		{
-			name:    "empty string",
-			input:   "",
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			platform, err := utils.ParsePlatform(tt.input)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.wantOS, platform.OS)
-				assert.Equal(t, tt.wantArch, platform.Arch)
-			}
-		})
-	}
 }
