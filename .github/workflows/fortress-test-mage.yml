@@ -10,7 +10,7 @@ permissions:
 jobs:
   test-mage-installation:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,17 +25,17 @@ jobs:
         run: |
           echo "## Installing Mage"
           go install github.com/magefile/mage@latest
-          
+
           echo "## Verifying Installation"
           which mage
           mage -version
-          
+
           echo "## Mage installation successful ✅"
 
   test-mage-core:
     needs: test-mage-installation
     runs-on: ubuntu-latest
-    
+
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +44,7 @@ jobs:
           - {name: "Version", cmd: "mage -version", desc: "Show mage version"}
           - {name: "Default Target", cmd: "mage", desc: "Run default target"}
           - {name: "Build", cmd: "mage build", desc: "Test build functionality"}
-          - {name: "Clean", cmd: "mage build:clean", desc: "Test clean functionality"}
+          - {name: "Clean", cmd: "mage buildClean", desc: "Test clean functionality"}
 
     steps:
       - name: Checkout code
@@ -65,25 +65,25 @@ jobs:
           echo "Command: ${{ matrix.test.cmd }}"
           echo "Purpose: ${{ matrix.test.desc }}"
           echo "----------------------------------------"
-          
+
           ${{ matrix.test.cmd }}
-          
+
           echo "✅ ${{ matrix.test.name }} completed successfully"
 
   test-mage-namespaces:
     needs: test-mage-installation
     runs-on: ubuntu-latest
-    
+
     strategy:
       fail-fast: false
       matrix:
         namespace:
-          - {name: "Build", cmds: ["mage build:default", "mage build:clean"]}
-          - {name: "Test", cmds: ["mage test:unit", "mage test:short"]}
-          - {name: "Lint", cmds: ["mage lint:version"]}
-          - {name: "Tools", cmds: ["mage tools:install"]}
-          - {name: "Deps", cmds: ["mage deps:download"]}
-          - {name: "Mod", cmds: ["mage mod:download"]}
+          - {name: "Build", cmds: ["mage buildDefault", "mage buildClean"]}
+          - {name: "Test", cmds: ["mage testUnit", "mage testShort"]}
+          - {name: "Lint", cmds: ["mage lintVersion"]}
+          - {name: "Tools", cmds: ["mage toolsInstall"]}
+          - {name: "Deps", cmds: ["mage depsDownload"]}
+          - {name: "Mod", cmds: ["mage modDownload"]}
 
     steps:
       - name: Checkout code
@@ -102,7 +102,7 @@ jobs:
         run: |
           echo "## Testing ${{ matrix.namespace.name }} Namespace"
           echo "========================================="
-          
+
           # Test each command in the namespace
           for cmd in ${{ join(matrix.namespace.cmds, ' ') }}; do
             echo ""
@@ -114,14 +114,14 @@ jobs:
               exit 1
             fi
           done
-          
+
           echo ""
           echo "✅ All ${{ matrix.namespace.name }} namespace commands completed successfully"
 
   test-mage-help:
     needs: test-mage-installation
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -139,10 +139,10 @@ jobs:
         run: |
           echo "## Testing Mage Help System"
           echo ""
-          
+
           echo "### List all targets"
           mage -l
-          
+
           echo ""
           echo "### Verify namespace targets are visible"
           if mage -l | grep -q "build:"; then
@@ -151,14 +151,14 @@ jobs:
             echo "❌ Build namespace targets not found"
             exit 1
           fi
-          
+
           if mage -l | grep -q "test:"; then
             echo "✅ Test namespace targets found"
           else
             echo "❌ Test namespace targets not found"
             exit 1
           fi
-          
+
           echo ""
           echo "✅ Help system working correctly"
 
@@ -167,9 +167,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-    
+
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -183,24 +183,24 @@ jobs:
       - name: Install and Test Mage on ${{ matrix.os }}
         run: |
           echo "## Testing Mage on ${{ matrix.os }}"
-          
+
           # Install mage
           go install github.com/magefile/mage@latest
-          
+
           # Test basic functionality
           mage -version
           mage -l
-          
+
           # Run a simple build
-          mage build:clean
-          
+          mage buildClean
+
           echo "✅ Mage works correctly on ${{ matrix.os }}"
 
   summary:
     needs: [test-mage-installation, test-mage-core, test-mage-namespaces, test-mage-help, test-cross-platform]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: Mage Test Summary
         run: |
@@ -216,7 +216,7 @@ jobs:
           echo "| Help System | ${{ needs.test-mage-help.result }} |"
           echo "| Cross-Platform | ${{ needs.test-cross-platform.result }} |"
           echo ""
-          
+
           # Determine overall status
           if [[ "${{ needs.test-mage-installation.result }}" == "failure" ]] || \
              [[ "${{ needs.test-mage-core.result }}" == "failure" ]] || \

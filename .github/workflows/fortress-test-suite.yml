@@ -10,7 +10,7 @@ permissions:
 jobs:
   standard-tests:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
 
   coverage-tests:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
           go install github.com/magefile/mage@latest
 
       - name: Run tests with coverage
-        run: mage test:cover
+        run: mage testCover
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -60,7 +60,7 @@ jobs:
 
   race-tests:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,11 +76,11 @@ jobs:
           go install github.com/magefile/mage@latest
 
       - name: Run tests with race detector
-        run: mage test:race
+        run: mage testRace
 
   coverage-race-tests:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -96,7 +96,7 @@ jobs:
           go install github.com/magefile/mage@latest
 
       - name: Run tests with coverage and race detector
-        run: mage test:coverrace
+        run: mage testCoverRace
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -109,7 +109,7 @@ jobs:
   fuzz-tests:
     runs-on: ubuntu-latest
     continue-on-error: true
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -130,25 +130,25 @@ jobs:
           echo ""
           echo "### Security Validator Fuzzing"
           go test -fuzz=FuzzValidate -fuzztime=30s ./pkg/security || true
-          
+
           echo ""
           echo "### Command Validation Fuzzing"
           go test -fuzz=FuzzValidateCommand -fuzztime=30s ./pkg/security || true
           go test -fuzz=FuzzValidatePath -fuzztime=30s ./pkg/security || true
           go test -fuzz=FuzzFilterEnvironment -fuzztime=30s ./pkg/security || true
-          
+
           echo ""
           echo "### Config Parsing Fuzzing"
           go test -fuzz=FuzzYAMLParsing -fuzztime=30s ./pkg/common/config || true
           go test -fuzz=FuzzJSONParsing -fuzztime=30s ./pkg/common/config || true
           go test -fuzz=FuzzPathExpansion -fuzztime=30s ./pkg/common/config || true
-          
+
           echo ""
           echo "Fuzz tests completed"
 
   loc-metrics:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -166,16 +166,16 @@ jobs:
       - name: Count lines of code
         run: |
           echo "## Lines of Code Metrics"
-          mage metrics:loc
+          mage metricsLOC
 
   test-matrix:
     strategy:
       matrix:
-        go-version: ['1.21', '1.22', '1.23']
+        go-version: ["1.21", "1.22", "1.23"]
         os: [ubuntu-latest, macos-latest, windows-latest]
-    
+
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -190,13 +190,13 @@ jobs:
         run: go install github.com/magefile/mage@latest
 
       - name: Run tests
-        run: mage test:unit
+        run: mage testUnit
 
   summary:
     needs: [standard-tests, coverage-tests, race-tests, coverage-race-tests, fuzz-tests, loc-metrics, test-matrix]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: Test Suite Summary
         run: |

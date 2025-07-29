@@ -2,23 +2,23 @@ name: Fortress CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
     inputs:
       skip_tests:
-        description: 'Skip test suite'
+        description: "Skip test suite"
         required: false
         default: false
         type: boolean
       skip_security:
-        description: 'Skip security scans'
+        description: "Skip security scans"
         required: false
         default: false
         type: boolean
       skip_benchmarks:
-        description: 'Skip benchmarks'
+        description: "Skip benchmarks"
         required: false
         default: false
         type: boolean
@@ -36,7 +36,7 @@ jobs:
       should_run_tests: ${{ steps.check.outputs.run_tests }}
       should_run_security: ${{ steps.check.outputs.run_security }}
       should_run_benchmarks: ${{ steps.check.outputs.run_benchmarks }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,10 +55,10 @@ jobs:
       - name: Quick validation
         run: |
           echo "## Pre-flight checks"
-          
+
           # Check if go.mod is valid
           go mod verify || exit 1
-          
+
           # List available mage targets
           echo "### Available Mage targets:"
           mage -l
@@ -72,13 +72,13 @@ jobs:
           else
             echo "run_tests=true" >> $GITHUB_OUTPUT
           fi
-          
+
           if [[ "${{ github.event.inputs.skip_security }}" == "true" ]]; then
             echo "run_security=false" >> $GITHUB_OUTPUT
           else
             echo "run_security=true" >> $GITHUB_OUTPUT
           fi
-          
+
           if [[ "${{ github.event.inputs.skip_benchmarks }}" == "true" ]]; then
             echo "run_benchmarks=false" >> $GITHUB_OUTPUT
           else
@@ -113,7 +113,7 @@ jobs:
     needs: [validate-mage, test-suite]
     if: always() && !cancelled() && needs.test-suite.result == 'success'
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -131,12 +131,12 @@ jobs:
       - name: Build artifacts
         run: |
           echo "## Building artifacts"
-          
+
           # Build for current platform
           mage build
-          
+
           # Build for all platforms
-          mage build:all
+          mage buildAll
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -152,7 +152,7 @@ jobs:
     needs: [pre-flight, validate-mage, test-suite, security-scans, benchmarks, build]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: Pipeline Summary
         run: |
@@ -169,7 +169,7 @@ jobs:
           echo "| Benchmarks | ${{ needs.benchmarks.result }} |"
           echo "| Build | ${{ needs.build.result }} |"
           echo ""
-          
+
           # Determine overall status
           if [[ "${{ needs.pre-flight.result }}" == "failure" ]] || \
              [[ "${{ needs.validate-mage.result }}" == "failure" ]] || \
@@ -191,7 +191,7 @@ jobs:
             echo ""
             echo "All enabled checks passed successfully!"
           fi
-          
+
           echo ""
           echo "### Configuration"
           echo "- Tests Run: ${{ needs.pre-flight.outputs.should_run_tests }}"

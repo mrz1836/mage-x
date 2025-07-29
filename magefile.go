@@ -329,3 +329,27 @@ func InstallBinary() error {
 	var i Install
 	return i.Binary()
 }
+
+// TestShort runs short tests (excludes integration tests) 
+func TestShort() error {
+	var t Test
+	return t.Short()
+}
+
+// TestCoverRace runs tests with both coverage and race detector
+func TestCoverRace() error {
+	var t Test
+	return t.CoverRace()
+}
+
+// LintVersion shows the linter version information
+func LintVersion() error {
+	var l Lint
+	return l.Version()
+}
+
+// BuildAll builds for all configured platforms
+func BuildAll() error {
+	var b Build
+	return b.All()
+}

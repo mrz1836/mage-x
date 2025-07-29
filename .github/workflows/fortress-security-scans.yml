@@ -11,7 +11,7 @@ permissions:
 jobs:
   govulncheck:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
 
   static-analysis:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
 
   dependency-check:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -81,19 +81,19 @@ jobs:
         run: |
           echo "## Checking dependencies"
           mage mod:tidy
-          
+
           # Check if go.mod or go.sum were modified
           if ! git diff --quiet go.mod go.sum; then
             echo "::warning::Dependencies are not up to date. Run 'mage mod:tidy' locally."
             git diff go.mod go.sum
             exit 1
           fi
-          
+
           echo "✅ Dependencies are up to date"
 
   license-check:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -116,7 +116,7 @@ jobs:
 
   code-quality:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -135,19 +135,19 @@ jobs:
         run: |
           echo "## Checking code formatting with gofumpt"
           mage lint:fumpt
-          
+
           # Check if any files were modified
           if ! git diff --quiet; then
             echo "::warning::Code formatting issues detected. Run 'mage lint:fumpt' locally."
             git diff --name-only
             exit 1
           fi
-          
+
           echo "✅ Code formatting is correct"
 
   gosec:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -161,7 +161,7 @@ jobs:
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
-          args: '-fmt sarif -out gosec-results.sarif ./...'
+          args: "-fmt sarif -out gosec-results.sarif ./..."
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
@@ -173,7 +173,7 @@ jobs:
     needs: [govulncheck, static-analysis, dependency-check, license-check, code-quality, gosec]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: Security Scan Summary
         run: |
@@ -187,7 +187,7 @@ jobs:
           echo "- Code Quality: ${{ needs.code-quality.result }}"
           echo "- Gosec Security: ${{ needs.gosec.result }}"
           echo ""
-          
+
           # Check if any scan failed
           if [[ "${{ needs.govulncheck.result }}" == "failure" ]] || \
              [[ "${{ needs.static-analysis.result }}" == "failure" ]] || \

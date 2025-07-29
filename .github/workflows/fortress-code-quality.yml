@@ -190,14 +190,14 @@ jobs:
           echo "📦 Installing Mage..."
           go install github.com/magefile/mage@latest
           echo "✅ Mage installed successfully"
-      
+
       # ————————————————————————————————————————————————————————————————
       # Extract golangci-lint version from Mage
       # ————————————————————————————————————————————————————————————————
       - name: 🔍 Extract golangci-lint version from Mage
         id: golangci-lint-version
         run: |
-          VERSION=$(mage lint:version | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+          VERSION=$(mage lintVersion | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
           if [ -z "$VERSION" ]; then
             echo "❌ GOLANGCI_LINT_VERSION is not set"
             exit 1

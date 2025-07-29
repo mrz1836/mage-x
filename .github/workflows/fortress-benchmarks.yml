@@ -10,7 +10,7 @@ permissions:
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
         run: |
           echo "## Running Go Benchmarks"
           echo "Starting benchmark tests..."
-          mage test:bench | tee benchmark-results.txt
+          mage testBench | tee benchmark-results.txt
 
       - name: Parse benchmark results
         run: |
@@ -58,7 +58,7 @@ jobs:
   benchmark-comparison:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
+
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -76,7 +76,7 @@ jobs:
 
       - name: Run benchmarks on PR branch
         run: |
-          mage test:bench > pr-benchmarks.txt
+          mage testBench > pr-benchmarks.txt
 
       - name: Checkout base branch
         uses: actions/checkout@v4
@@ -85,7 +85,7 @@ jobs:
 
       - name: Run benchmarks on base branch
         run: |
-          mage test:bench > base-benchmarks.txt
+          mage testBench > base-benchmarks.txt
 
       - name: Compare benchmarks
         run: |
@@ -107,7 +107,7 @@ jobs:
   profile-cpu:
     runs-on: ubuntu-latest
     continue-on-error: true
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -128,7 +128,7 @@ jobs:
           echo "## CPU Profiling"
           # Run benchmarks with CPU profiling
           go test -bench=. -benchtime=10s -cpuprofile=cpu.prof ./... || echo "CPU profiling completed"
-          
+
           if [ -f cpu.prof ]; then
             echo "### Top CPU consumers:"
             go tool pprof -top -nodecount=10 cpu.prof || echo "Could not analyze CPU profile"
@@ -145,7 +145,7 @@ jobs:
   profile-memory:
     runs-on: ubuntu-latest
     continue-on-error: true
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -165,7 +165,7 @@ jobs:
           echo "## Memory Profiling"
           # Run benchmarks with memory profiling
           go test -bench=. -benchtime=10s -memprofile=mem.prof ./... || echo "Memory profiling completed"
-          
+
           if [ -f mem.prof ]; then
             echo "### Top memory allocators:"
             go tool pprof -top -nodecount=10 mem.prof || echo "Could not analyze memory profile"
@@ -183,7 +183,7 @@ jobs:
     needs: [benchmarks, benchmark-comparison, profile-cpu, profile-memory]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: Benchmark Summary
         run: |
@@ -195,13 +195,13 @@ jobs:
           echo "- CPU Profiling: ${{ needs.profile-cpu.result }}"
           echo "- Memory Profiling: ${{ needs.profile-memory.result }}"
           echo ""
-          
+
           if [[ "${{ needs.benchmarks.result }}" == "success" ]]; then
             echo "✅ Benchmark suite completed successfully!"
           else
             echo "⚠️ Some benchmark jobs did not complete successfully."
           fi
-          
+
           echo ""
           echo "### Notes:"
           echo "- Benchmark results are available as artifacts"
