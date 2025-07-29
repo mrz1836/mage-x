@@ -2,6 +2,7 @@ package mage
 
 import (
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
@@ -229,9 +230,15 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallFirst() {
 func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallError() {
 	expectedError := require.New(ts.T())
 	ts.setupConfig()
+	
+	// Temporarily modify PATH to ensure govulncheck is not found
+	originalPath := os.Getenv("PATH")
+	defer func() {
+		os.Setenv("PATH", originalPath)
+	}()
+	os.Setenv("PATH", "/nonexistent")
+	
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(errors.New("install failed"))
-	// Also mock the govulncheck command in case it already exists in the test environment
-	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil).Maybe()
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) { SetRunner(r.(CommandRunner)) },
