@@ -261,5 +261,137 @@
     "tags": null,
     "metadata": null,
     "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T00:41:39.957859-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 250,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T00:41:39.960126-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T00:41:39.961787-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 250,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T00:49:50.18991-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 250,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T00:49:50.192236-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T00:49:50.194029-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 42,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T01:07:38.062022-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 42,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T01:07:38.063186-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T01:07:38.063441-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 750,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T01:09:42.080175-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 750,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T01:09:42.080667-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T01:09:42.080978-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
   }
 ]
