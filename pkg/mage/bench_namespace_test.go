@@ -38,7 +38,7 @@ func (ts *BenchTestSuite) TearDownTest() {
 	os.Unsetenv("TRACE_FILE")
 	os.Unsetenv("UPDATE_BASELINE")
 	os.Unsetenv("BENCH_BASELINE")
-	
+
 	ts.env.Cleanup()
 }
 
@@ -183,7 +183,7 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 		// Ensure old.txt doesn't exist
 		os.Remove("old.txt")
 		os.Remove("new.txt")
-		
+
 		// Mock benchstat installation but don't create old.txt file
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/perf/cmd/benchstat@latest"}).Return(nil)
 
@@ -203,7 +203,7 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 		// Ensure new.txt doesn't exist, but old.txt does
 		os.Remove("new.txt")
 		ts.env.CreateFile("old.txt", "BenchmarkTest 1000 1000000 ns/op")
-		
+
 		// Mock benchstat installation but don't create new.txt file
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/perf/cmd/benchstat@latest"}).Return(nil)
 

@@ -112,7 +112,7 @@ func (ts *ConstantsTestSuite) TestGoFlags() {
 	}
 
 	for name, flag := range goFlags {
-		require.True(ts.T(), strings.HasPrefix(flag, "-"), 
+		require.True(ts.T(), strings.HasPrefix(flag, "-"),
 			"Go flag %s (%s) should start with hyphen", name, flag)
 		require.NotEmpty(ts.T(), flag, "Go flag %s should not be empty", name)
 	}
@@ -183,7 +183,7 @@ func (ts *ConstantsTestSuite) TestFileAndDirectoryNames() {
 	dirNames := []string{DirBin, DirBuild, DirDist, DirVendor, DirTestdata, DirCmd, DirPkg, DirInternal}
 	for _, dirName := range dirNames {
 		require.NotEmpty(ts.T(), dirName, "Directory name should not be empty")
-		require.False(ts.T(), strings.HasPrefix(dirName, "/"), 
+		require.False(ts.T(), strings.HasPrefix(dirName, "/"),
 			"Directory name (%s) should be relative", dirName)
 	}
 
@@ -282,7 +282,7 @@ func (ts *ConstantsTestSuite) TestCoverageModes() {
 
 	for _, mode := range coverageModes {
 		require.NotEmpty(ts.T(), mode, "Coverage mode should not be empty")
-		require.True(ts.T(), validModes[mode], 
+		require.True(ts.T(), validModes[mode],
 			"Coverage mode (%s) should be valid Go coverage mode", mode)
 	}
 
@@ -435,7 +435,7 @@ func (ts *ConstantsTestSuite) TestFormatStrings() {
 
 	for name, format := range formatStrings {
 		require.NotEmpty(ts.T(), format, "Format string %s should not be empty", name)
-		require.Contains(ts.T(), format, "%", 
+		require.Contains(ts.T(), format, "%",
 			"Format string %s (%s) should contain format specifier", name, format)
 	}
 

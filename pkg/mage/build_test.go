@@ -32,7 +32,7 @@ func (ts *BuildTestSuite) TearDownTest() {
 	os.Unsetenv("GOARCH")
 	os.Unsetenv("CGO_ENABLED")
 	os.Unsetenv("DOCKER_BUILDKIT")
-	
+
 	ts.env.Cleanup()
 }
 
@@ -51,7 +51,7 @@ func (ts *BuildTestSuite) mockBuildCommand(outputPath string, returnError error)
 		if len(args) < 6 || args[0] != "build" || args[1] != "-ldflags" {
 			return false
 		}
-		
+
 		// Find the -o flag and check the output path
 		for i := 3; i < len(args)-1; i++ {
 			if args[i] == "-o" && i+1 < len(args) {
@@ -296,7 +296,7 @@ func main() {
 	})
 
 	ts.Run("Windows method", func() {
-		// Create project file  
+		// Create project file
 		ts.env.CreateFile("main.go", `package main
 func main() {
 	println("Windows app")
@@ -395,7 +395,7 @@ func main() {
 	println("Install app")
 }`)
 
-		// Mock git commands needed for version info  
+		// Mock git commands needed for version info
 		ts.mockGitCommands()
 
 		// Mock go install command
@@ -413,7 +413,7 @@ func main() {
 	})
 }
 
-// TestBuildGenerate tests the Generate method  
+// TestBuildGenerate tests the Generate method
 func (ts *BuildTestSuite) TestBuildGenerate() {
 	ts.Run("runs go generate", func() {
 		// Create file with generate directive
@@ -468,7 +468,7 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		}
 
 		flags := buildFlags(config)
-		
+
 		require.Contains(ts.T(), flags, "-tags")
 		require.Contains(ts.T(), flags, "integration,e2e")
 		require.Contains(ts.T(), flags, "-ldflags")
@@ -482,7 +482,7 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		}
 
 		flags := buildFlags(config)
-		
+
 		require.Contains(ts.T(), flags, "-ldflags")
 		require.NotContains(ts.T(), flags, "-tags")
 		require.NotContains(ts.T(), flags, "-trimpath")
@@ -497,9 +497,9 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		SetRunner(mockRunner)
 
 		commit := getCommit()
-		
+
 		require.Equal(ts.T(), "abc1234", commit)
-		
+
 		// Restore original runner
 		SetRunner(originalRunner)
 	})
@@ -512,9 +512,9 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		SetRunner(mockRunner)
 
 		commit := getCommit()
-		
+
 		require.Equal(ts.T(), "unknown", commit)
-		
+
 		// Restore original runner
 		SetRunner(originalRunner)
 	})

@@ -36,9 +36,9 @@ func TestDefaultConfigLoader(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "config-test-*")
 	require.NoError(t, err, "Failed to create temp dir")
 	defer os.RemoveAll(tmpDir)
-	
+
 	loader := NewDefaultConfigLoader()
-	
+
 	type TestConfig struct {
 		Database struct {
 			Host string `yaml:"host" json:"host"`
@@ -46,26 +46,26 @@ func TestDefaultConfigLoader(t *testing.T) {
 		} `yaml:"database" json:"database"`
 		Debug bool `yaml:"debug" json:"debug"`
 	}
-	
+
 	t.Run("Load YAML config", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "test.yaml")
 		yamlContent := `database:
   host: localhost
   port: 5432
 debug: true`
-		
+
 		err := os.WriteFile(configPath, []byte(yamlContent), 0644)
 		require.NoError(t, err, "Failed to write config file")
-		
+
 		var config TestConfig
 		err = loader.LoadFrom(configPath, &config)
 		require.NoError(t, err, "Failed to load config")
-		
+
 		assert.Equal(t, "localhost", config.Database.Host, "Database host should match")
 		assert.Equal(t, 5432, config.Database.Port, "Database port should match")
 		assert.True(t, config.Debug, "Debug should be true")
 	})
-	
+
 	t.Run("Load JSON config", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "test.json")
 		jsonContent := `{
@@ -75,88 +75,88 @@ debug: true`
   },
   "debug": false
 }`
-		
+
 		err := os.WriteFile(configPath, []byte(jsonContent), 0644)
 		require.NoError(t, err, "Failed to write config file")
-		
+
 		var config TestConfig
 		err = loader.LoadFrom(configPath, &config)
 		require.NoError(t, err, "Failed to load config")
-		
+
 		assert.Equal(t, "dbhost", config.Database.Host, "Database host should match")
 		assert.Equal(t, 3306, config.Database.Port, "Database port should match")
 		assert.False(t, config.Debug, "Debug should be false")
 	})
-	
+
 	t.Run("Load with fallback", func(t *testing.T) {
 		config1Path := filepath.Join(tmpDir, "nonexistent.yaml")
 		config2Path := filepath.Join(tmpDir, "fallback.yaml")
-		
+
 		yamlContent := `database:
   host: fallback-host
   port: 9999
 debug: true`
-		
+
 		err := os.WriteFile(config2Path, []byte(yamlContent), 0644)
 		require.NoError(t, err, "Failed to write config file")
-		
+
 		var config TestConfig
 		foundPath, err := loader.Load([]string{config1Path, config2Path}, &config)
 		require.NoError(t, err, "Failed to load config with fallback")
-		
+
 		assert.Equal(t, config2Path, foundPath, "Should find config at fallback path")
 		assert.Equal(t, "fallback-host", config.Database.Host, "Database host should match")
 		assert.Equal(t, 9999, config.Database.Port, "Database port should match")
 	})
-	
+
 	t.Run("Load non-existent file", func(t *testing.T) {
 		var config TestConfig
 		err := loader.LoadFrom("/non/existent/file.yaml", &config)
 		assert.Error(t, err, "Should error when loading non-existent file")
 	})
-	
+
 	t.Run("Load all missing", func(t *testing.T) {
 		var config TestConfig
 		_, err := loader.Load([]string{"/non/existent1.yaml", "/non/existent2.yaml"}, &config)
 		assert.Error(t, err, "Should error when all files are missing")
 	})
-	
+
 	t.Run("Save config", func(t *testing.T) {
 		config := TestConfig{}
 		config.Database.Host = "saved-host"
 		config.Database.Port = 8080
 		config.Debug = false
-		
+
 		configPath := filepath.Join(tmpDir, "saved.yaml")
-		
+
 		err := loader.Save(configPath, config, "yaml")
 		require.NoError(t, err, "Failed to save config")
-		
+
 		// Load it back
 		var loadedConfig TestConfig
 		err = loader.LoadFrom(configPath, &loadedConfig)
 		require.NoError(t, err, "Failed to load saved config")
-		
+
 		assert.Equal(t, config.Database.Host, loadedConfig.Database.Host, "Host should match after save/load")
 		assert.Equal(t, config.Database.Port, loadedConfig.Database.Port, "Port should match after save/load")
 		assert.Equal(t, config.Debug, loadedConfig.Debug, "Debug should match after save/load")
 	})
-	
+
 	t.Run("Save with invalid format", func(t *testing.T) {
 		config := TestConfig{}
 		configPath := filepath.Join(tmpDir, "invalid.txt")
-		
+
 		err := loader.Save(configPath, config, "invalid")
 		assert.Error(t, err, "Should error on invalid format")
 	})
-	
+
 	t.Run("Load invalid YAML", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "invalid.yaml")
 		invalidContent := `invalid: yaml: content:`
-		
+
 		err := os.WriteFile(configPath, []byte(invalidContent), 0644)
 		require.NoError(t, err)
-		
+
 		var config TestConfig
 		err = loader.LoadFrom(configPath, &config)
 		assert.Error(t, err, "Should error on invalid YAML")
@@ -165,41 +165,41 @@ debug: true`
 
 func TestDefaultEnvProvider(t *testing.T) {
 	env := NewDefaultEnvProvider()
-	
+
 	testKey := "TEST_CONFIG_VAR"
 	testValue := "test_value"
-	
+
 	// Clean up any existing value
 	os.Unsetenv(testKey)
 	defer os.Unsetenv(testKey)
-	
+
 	t.Run("Set and Get", func(t *testing.T) {
 		err := env.Set(testKey, testValue)
 		require.NoError(t, err, "Failed to set env var")
-		
+
 		value := env.Get(testKey)
 		assert.Equal(t, testValue, value, "Get should return the set value")
 	})
-	
+
 	t.Run("GetWithDefault", func(t *testing.T) {
 		// Test with existing value
 		value := env.GetWithDefault(testKey, "default")
 		assert.Equal(t, testValue, value, "Should return existing value")
-		
+
 		// Test with non-existing value
 		value = env.GetWithDefault("NON_EXISTING_VAR", "default")
 		assert.Equal(t, "default", value, "Should return default for non-existing var")
 	})
-	
+
 	t.Run("LookupEnv", func(t *testing.T) {
 		value, found := env.LookupEnv(testKey)
 		assert.True(t, found, "Should find existing env var")
 		assert.Equal(t, testValue, value, "Should return correct value")
-		
+
 		_, found = env.LookupEnv("NON_EXISTING_VAR")
 		assert.False(t, found, "Should not find non-existing env var")
 	})
-	
+
 	t.Run("GetBool", func(t *testing.T) {
 		testCases := []struct {
 			name     string
@@ -220,7 +220,7 @@ func TestDefaultEnvProvider(t *testing.T) {
 			{"invalid value", "invalid", false},
 			{"empty string", "", false},
 		}
-		
+
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				env.Set("TEST_BOOL", tc.value)
@@ -228,36 +228,36 @@ func TestDefaultEnvProvider(t *testing.T) {
 				assert.Equal(t, tc.expected, result, "Boolean parsing for '%s'", tc.value)
 			})
 		}
-		
+
 		// Test default value
 		result := env.GetBool("NON_EXISTING_BOOL", true)
 		assert.True(t, result, "Should return default when var doesn't exist")
-		
+
 		os.Unsetenv("TEST_BOOL")
 	})
-	
+
 	t.Run("GetInt", func(t *testing.T) {
 		env.Set("TEST_INT", "42")
 		result := env.GetInt("TEST_INT", 0)
 		assert.Equal(t, 42, result, "Should parse int correctly")
-		
+
 		// Test negative number
 		env.Set("TEST_INT", "-100")
 		result = env.GetInt("TEST_INT", 0)
 		assert.Equal(t, -100, result, "Should parse negative int correctly")
-		
+
 		// Test default with invalid value
 		env.Set("TEST_INT", "invalid")
 		result = env.GetInt("TEST_INT", 100)
 		assert.Equal(t, 100, result, "Should return default for invalid int")
-		
+
 		// Test default with non-existing var
 		result = env.GetInt("NON_EXISTING_INT", 200)
 		assert.Equal(t, 200, result, "Should return default for non-existing var")
-		
+
 		os.Unsetenv("TEST_INT")
 	})
-	
+
 	t.Run("GetDuration", func(t *testing.T) {
 		testCases := []struct {
 			value    string
@@ -269,27 +269,27 @@ func TestDefaultEnvProvider(t *testing.T) {
 			{"2h30m", 2*time.Hour + 30*time.Minute},
 			{"100ms", 100 * time.Millisecond},
 		}
-		
+
 		for _, tc := range testCases {
 			env.Set("TEST_DURATION", tc.value)
 			result := env.GetDuration("TEST_DURATION", time.Second)
 			assert.Equal(t, tc.expected, result, "Should parse duration '%s' correctly", tc.value)
 		}
-		
+
 		// Test invalid duration
 		env.Set("TEST_DURATION", "invalid")
 		result := env.GetDuration("TEST_DURATION", 10*time.Second)
 		assert.Equal(t, 10*time.Second, result, "Should return default for invalid duration")
-		
+
 		os.Unsetenv("TEST_DURATION")
 	})
-	
+
 	t.Run("GetStringSlice", func(t *testing.T) {
 		env.Set("TEST_SLICE", "a,b,c")
 		result := env.GetStringSlice("TEST_SLICE", []string{"default"})
 		expected := []string{"a", "b", "c"}
 		assert.ElementsMatch(t, expected, result, "Should parse comma-separated list")
-		
+
 		// Test with spaces (should be trimmed)
 		env.Set("TEST_SLICE", "a, b, c")
 		result = env.GetStringSlice("TEST_SLICE", []string{"default"})
@@ -297,16 +297,16 @@ func TestDefaultEnvProvider(t *testing.T) {
 		assert.Equal(t, "a", result[0])
 		assert.Equal(t, "b", result[1]) // Spaces are trimmed
 		assert.Equal(t, "c", result[2])
-		
+
 		// Test empty string (returns default)
 		env.Set("TEST_SLICE", "")
 		result = env.GetStringSlice("TEST_SLICE", []string{"default"})
 		assert.ElementsMatch(t, []string{"default"}, result, "Empty string returns default")
-		
+
 		// Test non-existing var
 		result = env.GetStringSlice("NON_EXISTING_SLICE", []string{"def1", "def2"})
 		assert.ElementsMatch(t, []string{"def1", "def2"}, result, "Should return default for non-existing var")
-		
+
 		os.Unsetenv("TEST_SLICE")
 	})
 }
@@ -315,52 +315,52 @@ func TestFileConfigSource(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "source-test-*")
 	require.NoError(t, err, "Failed to create temp dir")
 	defer os.RemoveAll(tmpDir)
-	
+
 	configPath := filepath.Join(tmpDir, "test.yaml")
 	configContent := `test: value
 nested:
   key: nestedvalue`
-	
+
 	err = os.WriteFile(configPath, []byte(configContent), 0644)
 	require.NoError(t, err, "Failed to write config file")
-	
+
 	source := NewFileConfigSource(configPath, FormatYAML, 100)
-	
+
 	t.Run("Name", func(t *testing.T) {
 		name := source.Name()
 		expected := "file:" + configPath
 		assert.Equal(t, expected, name, "Source name should include file prefix and path")
 	})
-	
+
 	t.Run("IsAvailable", func(t *testing.T) {
 		assert.True(t, source.IsAvailable(), "Source should be available for existing file")
-		
+
 		// Test with non-existing file
 		nonExistentSource := NewFileConfigSource("/non/existent/file.yaml", FormatYAML, 100)
 		assert.False(t, nonExistentSource.IsAvailable(), "Source should not be available for non-existent file")
 	})
-	
+
 	t.Run("Priority", func(t *testing.T) {
 		priority := source.Priority()
 		assert.Equal(t, 100, priority, "Priority should match constructor value")
-		
+
 		// Test different priority
 		source2 := NewFileConfigSource(configPath, FormatYAML, 200)
 		assert.Equal(t, 200, source2.Priority())
 	})
-	
+
 	t.Run("Load", func(t *testing.T) {
 		var config map[string]interface{}
 		err := source.Load(&config)
 		require.NoError(t, err, "Failed to load config")
-		
+
 		assert.Equal(t, "value", config["test"], "Should load top-level value")
-		
+
 		nested, ok := config["nested"].(map[string]interface{})
 		require.True(t, ok, "Nested should be a map")
 		assert.Equal(t, "nestedvalue", nested["key"], "Should load nested value")
 	})
-	
+
 	t.Run("Load with structured config", func(t *testing.T) {
 		type StructuredConfig struct {
 			Test   string `yaml:"test"`
@@ -368,11 +368,11 @@ nested:
 				Key string `yaml:"key"`
 			} `yaml:"nested"`
 		}
-		
+
 		var config StructuredConfig
 		err := source.Load(&config)
 		require.NoError(t, err, "Failed to load structured config")
-		
+
 		assert.Equal(t, "value", config.Test)
 		assert.Equal(t, "nestedvalue", config.Nested.Key)
 	})
@@ -380,7 +380,7 @@ nested:
 
 func (suite *ConfigTestSuite) TestConfigFacade() {
 	config := New()
-	
+
 	type TestConfig struct {
 		App struct {
 			Name    string   `yaml:"name" json:"name"`
@@ -389,7 +389,7 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
 			Tags    []string `yaml:"tags" json:"tags"`
 		} `yaml:"app" json:"app"`
 	}
-	
+
 	suite.Run("LoadFromPaths", func() {
 		// Create config file
 		configPath := filepath.Join(suite.tmpDir, "myapp.yaml")
@@ -400,48 +400,48 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
   tags:
     - production
     - stable`
-		
+
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(suite.T(), err, "Failed to write config file")
-		
+
 		var testConfig TestConfig
 		foundPath, err := config.LoadFromPaths(&testConfig, "myapp", suite.tmpDir)
 		require.NoError(suite.T(), err, "Failed to load config")
-		
+
 		assert.Equal(suite.T(), configPath, foundPath, "Should find config at expected path")
 		assert.Equal(suite.T(), "testapp", testConfig.App.Name, "App name should match")
 		assert.Equal(suite.T(), 8080, testConfig.App.Port, "App port should match")
 		assert.True(suite.T(), testConfig.App.Enabled, "App should be enabled")
 		assert.ElementsMatch(suite.T(), []string{"production", "stable"}, testConfig.App.Tags, "Tags should match")
 	})
-	
+
 	suite.Run("LoadWithEnvOverrides", func() {
 		// Set environment variables
 		os.Setenv("MYAPP_APP_NAME", "env-override")
 		os.Setenv("MYAPP_APP_PORT", "9090")
 		defer os.Unsetenv("MYAPP_APP_NAME")
 		defer os.Unsetenv("MYAPP_APP_PORT")
-		
+
 		// Create config file
 		configPath := filepath.Join(suite.tmpDir, "myapp-env.yaml")
 		configContent := `app:
   name: file-value
   port: 8080`
-		
+
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(suite.T(), err)
-		
+
 		var testConfig TestConfig
 		foundPath, err := config.LoadWithEnvOverrides(&testConfig, "myapp-env", "MYAPP", suite.tmpDir)
 		require.NoError(suite.T(), err, "Failed to load config with env overrides")
-		
+
 		assert.Equal(suite.T(), configPath, foundPath)
 		// These assertions depend on whether env override is implemented
 		// If implemented, values should come from env vars
 		// assert.Equal(suite.T(), "env-override", testConfig.App.Name)
 		// assert.Equal(suite.T(), 9090, testConfig.App.Port)
 	})
-	
+
 	suite.Run("SetupManager", func() {
 		config.SetupManager("testapp", "TEST", suite.tmpDir)
 		// Manager setup verification would require checking internal state
@@ -451,9 +451,9 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
 
 func TestGetCommonConfigPaths(t *testing.T) {
 	paths := GetCommonConfigPaths("myapp")
-	
+
 	assert.NotEmpty(t, paths, "Should return at least one config path")
-	
+
 	// Check that common patterns are included
 	expectedPatterns := []string{
 		".myapp.yaml",
@@ -463,7 +463,7 @@ func TestGetCommonConfigPaths(t *testing.T) {
 		".myapp.json",
 		"myapp.json",
 	}
-	
+
 	for _, pattern := range expectedPatterns {
 		found := false
 		for _, path := range paths {
@@ -474,12 +474,12 @@ func TestGetCommonConfigPaths(t *testing.T) {
 		}
 		assert.True(t, found, "Should include pattern %s in common paths", pattern)
 	}
-	
+
 	// Check that it includes home directory configs
 	homeFound := false
 	for _, path := range paths {
 		if strings.Contains(path, filepath.Join("$HOME", ".config")) ||
-		   strings.Contains(path, filepath.Join("${HOME}", ".config")) {
+			strings.Contains(path, filepath.Join("${HOME}", ".config")) {
 			homeFound = true
 			break
 		}
@@ -489,7 +489,7 @@ func TestGetCommonConfigPaths(t *testing.T) {
 
 func TestPackageLevelFunctions(t *testing.T) {
 	// Test package-level convenience functions
-	
+
 	// Set up test environment variables
 	testCases := []struct {
 		key   string
@@ -501,48 +501,48 @@ func TestPackageLevelFunctions(t *testing.T) {
 		{"TEST_PKG_DURATION", "5m"},
 		{"TEST_PKG_SLICE", "a,b,c"},
 	}
-	
+
 	for _, tc := range testCases {
 		os.Setenv(tc.key, tc.value)
 		defer os.Unsetenv(tc.key)
 	}
-	
+
 	t.Run("GetString", func(t *testing.T) {
 		result := GetString("TEST_PKG_STRING", "default")
 		assert.Equal(t, "package_test", result, "Should get string value")
-		
+
 		result = GetString("NON_EXISTENT", "default")
 		assert.Equal(t, "default", result, "Should return default for non-existent")
 	})
-	
+
 	t.Run("GetBool", func(t *testing.T) {
 		result := GetBool("TEST_PKG_BOOL", false)
 		assert.True(t, result, "Should get bool value")
-		
+
 		result = GetBool("NON_EXISTENT_BOOL", true)
 		assert.True(t, result, "Should return default for non-existent")
 	})
-	
+
 	t.Run("GetInt", func(t *testing.T) {
 		result := GetInt("TEST_PKG_INT", 0)
 		assert.Equal(t, 123, result, "Should get int value")
-		
+
 		result = GetInt("NON_EXISTENT_INT", 456)
 		assert.Equal(t, 456, result, "Should return default for non-existent")
 	})
-	
+
 	t.Run("GetDuration", func(t *testing.T) {
 		result := GetDuration("TEST_PKG_DURATION", time.Second)
 		assert.Equal(t, 5*time.Minute, result, "Should get duration value")
-		
+
 		result = GetDuration("NON_EXISTENT_DURATION", 10*time.Second)
 		assert.Equal(t, 10*time.Second, result, "Should return default for non-existent")
 	})
-	
+
 	t.Run("GetStringSlice", func(t *testing.T) {
 		result := GetStringSlice("TEST_PKG_SLICE", []string{"default"})
 		assert.ElementsMatch(t, []string{"a", "b", "c"}, result, "Should get string slice")
-		
+
 		result = GetStringSlice("NON_EXISTENT_SLICE", []string{"d", "e"})
 		assert.ElementsMatch(t, []string{"d", "e"}, result, "Should return default for non-existent")
 	})
@@ -564,7 +564,7 @@ func TestEnvProviderBoolParsing(t *testing.T) {
 		{"YES", "YES", true},
 		{"on", "on", true},
 		{"ON", "ON", true},
-		
+
 		// False values
 		{"false", "false", false},
 		{"FALSE", "FALSE", false},
@@ -574,7 +574,7 @@ func TestEnvProviderBoolParsing(t *testing.T) {
 		{"NO", "NO", false},
 		{"off", "off", false},
 		{"OFF", "OFF", false},
-		
+
 		// Invalid values (should return default)
 		{"empty", "", false},
 		{"invalid", "invalid", false},
@@ -583,9 +583,9 @@ func TestEnvProviderBoolParsing(t *testing.T) {
 		{"y", "y", false},
 		{"n", "n", false},
 	}
-	
+
 	env := NewDefaultEnvProvider()
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env.Set("TEST_BOOL_TABLE", tt.input)
@@ -600,7 +600,7 @@ func BenchmarkConfigLoad(b *testing.B) {
 	tmpDir, err := os.MkdirTemp("", "bench-config-*")
 	require.NoError(b, err)
 	defer os.RemoveAll(tmpDir)
-	
+
 	// Create a test config
 	configPath := filepath.Join(tmpDir, "bench.yaml")
 	configContent := `
@@ -623,9 +623,9 @@ settings:
 `
 	err = os.WriteFile(configPath, []byte(configContent), 0644)
 	require.NoError(b, err)
-	
+
 	loader := NewDefaultConfigLoader()
-	
+
 	type BenchConfig struct {
 		Database struct {
 			Host     string `yaml:"host"`
@@ -644,9 +644,9 @@ settings:
 			Debug   bool          `yaml:"debug"`
 		} `yaml:"settings"`
 	}
-	
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		var config BenchConfig
 		err := loader.LoadFrom(configPath, &config)

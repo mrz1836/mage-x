@@ -373,7 +373,7 @@ func (ts *DepsTestSuite) TestDeps_Init() {
 	// Clean up and recreate environment without go.mod for this specific test
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
-	
+
 	ts.env.Builder.ExpectGoCommand("mod", nil)
 
 	err := ts.env.WithMockRunner(

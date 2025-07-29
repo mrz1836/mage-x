@@ -635,7 +635,7 @@ func TestFileSystemOperations(t *testing.T) {
 		// Test cleaning non-existent directory
 		nonExistentDir := filepath.Join(tempDir, "nonexistent")
 		err = CleanDir(nonExistentDir)
-		assert.NoError(t, err) // Should not error
+		assert.NoError(t, err)                    // Should not error
 		assert.True(t, DirExists(nonExistentDir)) // Should create it
 	})
 

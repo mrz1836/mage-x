@@ -64,9 +64,9 @@ func FuzzValidateVersion(f *testing.F) {
 		err := ValidateVersion(version)
 
 		// Check for dangerous patterns first - if present, validation should have failed
-		if strings.Contains(version, "..") || strings.Contains(version, "$(") || 
-		   strings.Contains(version, "`") || strings.Contains(version, "\x00") ||
-		   strings.Contains(version, "\n") || strings.Contains(version, "\r") {
+		if strings.Contains(version, "..") || strings.Contains(version, "$(") ||
+			strings.Contains(version, "`") || strings.Contains(version, "\x00") ||
+			strings.Contains(version, "\n") || strings.Contains(version, "\r") {
 			assert.Error(t, err, "Version with dangerous patterns should be rejected: %s", version)
 			return
 		}
@@ -75,7 +75,7 @@ func FuzzValidateVersion(f *testing.F) {
 		if err == nil {
 			// Should match our version pattern
 			cleaned := strings.TrimPrefix(version, "v")
-			assert.Regexp(t, `^\d+\.\d+\.\d+(-[a-zA-Z0-9\-\.]+)?(\+[a-zA-Z0-9\-\.]+)?$`, cleaned, 
+			assert.Regexp(t, `^\d+\.\d+\.\d+(-[a-zA-Z0-9\-\.]+)?(\+[a-zA-Z0-9\-\.]+)?$`, cleaned,
 				"ValidateVersion accepted invalid version: %s", version)
 		}
 
@@ -148,16 +148,16 @@ func FuzzValidateGitRef(f *testing.F) {
 
 		if err == nil {
 			// Verify it only contains allowed characters
-			assert.Regexp(t, `^[a-zA-Z0-9\-_\.\/]+$`, ref, 
+			assert.Regexp(t, `^[a-zA-Z0-9\-_\.\/]+$`, ref,
 				"ValidateGitRef accepted ref with invalid characters: %s", ref)
-			
+
 			// Verify no dangerous patterns
 			dangerousPatterns := []string{"..", "~", "^", ":", "\\", "*", "?", "[", " "}
 			for _, pattern := range dangerousPatterns {
-				assert.NotContains(t, ref, pattern, 
+				assert.NotContains(t, ref, pattern,
 					"Git ref contains dangerous pattern '%s': %s", pattern, ref)
 			}
-			
+
 			// Should not be empty
 			assert.NotEmpty(t, ref, "ValidateGitRef accepted empty ref")
 		}
@@ -230,9 +230,9 @@ func FuzzValidateFilename(f *testing.F) {
 		err := ValidateFilename(filename)
 
 		// Check for dangerous patterns - if present, validation should have failed
-		if filename == ".." || filename == "." || strings.Contains(filename, "/") || 
-		   strings.Contains(filename, "\\") || strings.Contains(filename, "\x00") ||
-		   filename == "" || strings.TrimSpace(filename) != filename {
+		if filename == ".." || filename == "." || strings.Contains(filename, "/") ||
+			strings.Contains(filename, "\\") || strings.Contains(filename, "\x00") ||
+			filename == "" || strings.TrimSpace(filename) != filename {
 			assert.Error(t, err, "Filename with dangerous patterns should be rejected: %s", filename)
 			return
 		}
@@ -241,7 +241,7 @@ func FuzzValidateFilename(f *testing.F) {
 			// Should match safe pattern
 			assert.Regexp(t, `^[a-zA-Z0-9\-_\.]+$`, filename,
 				"Filename contains unsafe characters: %s", filename)
-			
+
 			// Should not be empty
 			assert.NotEmpty(t, filename, "ValidateFilename accepted empty filename")
 		}
@@ -316,7 +316,7 @@ func FuzzValidateURL(f *testing.F) {
 
 		// Check for other dangerous patterns
 		if url == "" || strings.Contains(url, "\x00") || strings.Contains(url, "\n") ||
-		   strings.Contains(url, "\r") || (!strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://")) {
+			strings.Contains(url, "\r") || (!strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://")) {
 			assert.Error(t, err, "URL with dangerous patterns should be rejected: %s", url)
 			return
 		}
@@ -325,7 +325,7 @@ func FuzzValidateURL(f *testing.F) {
 			// Should start with http:// or https://
 			assert.True(t, strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://"),
 				"URL doesn't start with http:// or https://: %s", url)
-			
+
 			// Should not be empty
 			assert.NotEmpty(t, url, "ValidateURL accepted empty URL")
 		}
@@ -396,14 +396,14 @@ func FuzzValidateEmail(f *testing.F) {
 			// Should have exactly one @
 			parts := strings.Split(email, "@")
 			require.Len(t, parts, 2, "Email should have exactly one @ symbol")
-			
+
 			// Both parts should not be empty
 			assert.NotEmpty(t, parts[0], "Email local part is empty")
 			assert.NotEmpty(t, parts[1], "Email domain part is empty")
-			
+
 			// Domain should have at least one dot
 			assert.Contains(t, parts[1], ".", "Email domain should contain at least one dot")
-			
+
 			// Should not be just whitespace
 			assert.NotEqual(t, strings.TrimSpace(email), "", "Email is just whitespace")
 		}
@@ -414,8 +414,8 @@ func FuzzValidateEmail(f *testing.F) {
 func FuzzValidatePort(f *testing.F) {
 	// Add seed corpus with edge cases
 	testcases := []int{
-		0, 1, 22, 80, 443, 1023, 1024, 3000, 8080, 8443, 
-		65534, 65535, 65536, -1, -80, -65535, 
+		0, 1, 22, 80, 443, 1023, 1024, 3000, 8080, 8443,
+		65534, 65535, 65536, -1, -80, -65535,
 		999999, -999999, 1<<31 - 1, -(1 << 31),
 	}
 
@@ -432,7 +432,7 @@ func FuzzValidatePort(f *testing.F) {
 			assert.LessOrEqual(t, port, 65535, "Port should be <= 65535")
 		} else {
 			// If error, port should be out of range
-			assert.True(t, port < 1 || port > 65535, 
+			assert.True(t, port < 1 || port > 65535,
 				"ValidatePort returned error for valid port %d", port)
 		}
 	})
@@ -507,15 +507,15 @@ func FuzzValidateEnvVar(f *testing.F) {
 		if err == nil {
 			// Should not be empty
 			assert.NotEmpty(t, name, "ValidateEnvVar accepted empty name")
-			
+
 			// Should start with letter or underscore
 			if len(name) > 0 {
 				firstChar := name[0]
-				assert.True(t, (firstChar >= 'a' && firstChar <= 'z') || 
+				assert.True(t, (firstChar >= 'a' && firstChar <= 'z') ||
 					(firstChar >= 'A' && firstChar <= 'Z') || firstChar == '_',
 					"Env var should start with letter or underscore: %s", name)
 			}
-			
+
 			// Should only contain alphanumeric and underscore
 			assert.Regexp(t, `^[a-zA-Z_][a-zA-Z0-9_]*$`, name,
 				"Env var contains invalid characters: %s", name)

@@ -13,7 +13,7 @@ import (
 
 func TestDefaultAuditConfig(t *testing.T) {
 	config := DefaultAuditConfig()
-	
+
 	assert.False(t, config.Enabled) // Opt-in by default
 	assert.Equal(t, ".mage/audit.db", config.DatabasePath)
 	assert.Equal(t, 90, config.RetentionDays)
@@ -27,8 +27,8 @@ func TestDefaultAuditConfig(t *testing.T) {
 func TestAuditLogger_Basic(t *testing.T) {
 	tempDir := t.TempDir()
 	config := AuditConfig{
-		Enabled:      true,
-		DatabasePath: filepath.Join(tempDir, "test_audit.db"),
+		Enabled:       true,
+		DatabasePath:  filepath.Join(tempDir, "test_audit.db"),
 		RetentionDays: 30,
 	}
 
@@ -43,7 +43,7 @@ func TestAuditLogger_Basic(t *testing.T) {
 	t.Run("disabled logger", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		
+
 		logger := NewAuditLogger(disabledConfig)
 		assert.NotNil(t, logger)
 		assert.False(t, logger.enabled)
@@ -54,7 +54,7 @@ func TestAuditLogger_Basic(t *testing.T) {
 		// Try to create database in invalid location
 		invalidConfig := config
 		invalidConfig.DatabasePath = "/invalid/path/audit.db"
-		
+
 		logger := NewAuditLogger(invalidConfig)
 		assert.False(t, logger.enabled) // Should be disabled on init failure
 	})
@@ -111,7 +111,7 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 		assert.Equal(t, event.Args, stored.Args)
 		assert.Equal(t, event.Success, stored.Success)
 		assert.Equal(t, event.Metadata, stored.Metadata)
-		
+
 		// Check that sensitive environment was filtered
 		assert.Equal(t, "[REDACTED]", stored.Environment["SECRET_KEY"])
 		assert.Equal(t, "/usr/bin", stored.Environment["PATH"])
@@ -257,7 +257,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 		results, err := logger.GetEvents(filter)
 		require.NoError(t, err)
 		assert.Len(t, results, 2)
-		
+
 		for _, result := range results {
 			assert.Equal(t, "user1", result.User)
 		}
@@ -487,11 +487,11 @@ func TestAuditLogger_FilterSensitiveEnvs(t *testing.T) {
 
 	t.Run("filterSensitiveEnvs redacts sensitive variables", func(t *testing.T) {
 		env := map[string]string{
-			"PATH":         "/usr/bin",
-			"SECRET":       "supersecret",
-			"PASSWORD":     "mypassword",
-			"TOKEN":        "abc123",
-			"NORMAL_VAR":   "normal_value",
+			"PATH":       "/usr/bin",
+			"SECRET":     "supersecret",
+			"PASSWORD":   "mypassword",
+			"TOKEN":      "abc123",
+			"NORMAL_VAR": "normal_value",
 		}
 
 		filtered := logger.filterSensitiveEnvs(env)
@@ -522,7 +522,7 @@ func TestAuditFilter(t *testing.T) {
 	t.Run("AuditFilter struct creation", func(t *testing.T) {
 		now := time.Now()
 		success := true
-		
+
 		filter := AuditFilter{
 			StartTime: now.Add(-time.Hour),
 			EndTime:   now,
@@ -576,7 +576,7 @@ func TestPackageLevelAuditFunctions(t *testing.T) {
 	t.Run("GetAuditLogger returns singleton", func(t *testing.T) {
 		logger1 := GetAuditLogger()
 		logger2 := GetAuditLogger()
-		
+
 		// Should return the same instance
 		assert.Equal(t, logger1, logger2)
 	})

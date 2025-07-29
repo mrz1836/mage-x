@@ -119,7 +119,7 @@ func (m *MockEnvironment) GetWithPrefix(prefix string) map[string]string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	m.calls["GetWithPrefix"]++
-	
+
 	result := make(map[string]string)
 	for k, v := range m.vars {
 		if len(k) >= len(prefix) && k[:len(prefix)] == prefix {
@@ -143,7 +143,7 @@ func (m *MockEnvironment) GetAll() map[string]string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	m.calls["GetAll"]++
-	
+
 	result := make(map[string]string)
 	for k, v := range m.vars {
 		result[k] = v
@@ -189,9 +189,9 @@ func (m *MockEnvironment) GetCallCount(method string) int {
 
 // MockPathResolver is a mock implementation of PathResolver interface
 type MockPathResolver struct {
-	calls   map[string]int
-	paths   map[string]string
-	mu      sync.RWMutex
+	calls map[string]int
+	paths map[string]string
+	mu    sync.RWMutex
 }
 
 // NewMockPathResolver creates a new mock path resolver
@@ -346,7 +346,7 @@ func (m *MockEnvManager) PushScope() EnvScope {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls["PushScope"]++
-	
+
 	scope := NewMockEnvScope()
 	m.scopes = append(m.scopes, scope)
 	return scope
@@ -357,7 +357,7 @@ func (m *MockEnvManager) PopScope() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls["PopScope"]++
-	
+
 	if len(m.scopes) == 0 {
 		return &ValidationError{Message: "no scopes to pop"}
 	}
@@ -444,7 +444,7 @@ func (m *MockEnvScope) Changes() map[string]EnvChange {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	m.calls["Changes"]++
-	
+
 	result := make(map[string]EnvChange)
 	for k, v := range m.changes {
 		result[k] = v
@@ -488,7 +488,7 @@ func (m *MockEnvContext) Variables() map[string]string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	m.calls["Variables"]++
-	
+
 	result := make(map[string]string)
 	for k, v := range m.variables {
 		result[k] = v
@@ -542,7 +542,7 @@ func (m *MockEnvValidator) AddRule(key string, rule ValidationRule) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls["AddRule"]++
-	
+
 	if m.rules[key] == nil {
 		m.rules[key] = make([]ValidationRule, 0)
 	}

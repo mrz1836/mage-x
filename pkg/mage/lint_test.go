@@ -263,9 +263,9 @@ This is a test project for demonstration purposes.
 
 ## Installation
 
-` + "```bash" + `
+`+"```bash"+`
 go install
-` + "```" + `
+`+"```"+`
 `)
 
 	tests := []struct {

@@ -499,7 +499,7 @@ func TestMockExecutor(t *testing.T) {
 	assert.Equal(t, "hello", output)
 	assert.Len(t, mock.ExecuteOutputCalls, 1)
 
-	// Test failing command  
+	// Test failing command
 	output, err = mock.ExecuteOutput(ctx, "failing-command")
 	assert.Error(t, err)
 	assert.Equal(t, "command failed", err.Error())

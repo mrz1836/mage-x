@@ -268,13 +268,13 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 		// Test logging a command execution
 		startTime := time.Now()
 		duration := 100 * time.Millisecond
-		
+
 		// This function should not return an error (errors handled internally)
 		LogCommandExecution("test", []string{"arg1", "arg2"}, startTime, duration, 0, true)
-		
+
 		// Test with failed command
 		LogCommandExecution("failed-test", []string{}, startTime, duration, 1, false)
-		
+
 		// These should complete without panics
 		require.True(ts.T(), true)
 	})
@@ -299,7 +299,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 		require.Equal(ts.T(), "1.24.0", env["GO_VERSION"])
 		require.Contains(ts.T(), env, "GOPATH")
 		require.Contains(ts.T(), env, "MAGE_VERBOSE")
-		
+
 		// Should not contain non-relevant environment variables
 		require.NotContains(ts.T(), env, "HOME")
 		require.NotContains(ts.T(), env, "PATH")
@@ -310,7 +310,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			// Create fresh test environment for isolated testing
 			env := testutil.NewTestEnvironment(ts.T())
 			defer env.Cleanup()
-			
+
 			// Mock successful go version command
 			env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go1.24.0 linux/amd64", nil)
 
@@ -332,7 +332,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			// Create fresh test environment for isolated testing
 			env := testutil.NewTestEnvironment(ts.T())
 			defer env.Cleanup()
-			
+
 			// Mock failed go version command
 			env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("", errors.New("command failed"))
 
@@ -354,7 +354,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			// Create fresh test environment for isolated testing
 			env := testutil.NewTestEnvironment(ts.T())
 			defer env.Cleanup()
-			
+
 			// Mock malformed go version output
 			env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("invalid output", nil)
 
@@ -377,7 +377,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 		// Test string truncation helper used in Show method
 		result := truncateString("This is a very long string that should be truncated", 10)
 		require.LessOrEqual(ts.T(), len(result), 13) // Account for ellipsis
-		
+
 		// Test short string (no truncation needed)
 		shortString := "short"
 		result = truncateString(shortString, 10)
@@ -432,7 +432,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 		// Mock git and go version commands that are called by LogCommandExecution
 		ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.0.0", nil)
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go1.24.0 linux/amd64", nil)
-		
+
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
@@ -457,7 +457,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 
 				// Disable audit logging (may fail if file doesn't exist)
 				_ = ts.audit.Disable()
-				
+
 				return nil
 			},
 		)

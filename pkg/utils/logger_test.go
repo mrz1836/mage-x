@@ -43,51 +43,51 @@ func TestLogger_Basic(t *testing.T) {
 
 func TestLogger_Logging(t *testing.T) {
 	tests := []struct {
-		name     string
-		level    LogLevel
-		logLevel LogLevel
-		logFunc  func(*Logger, string, ...interface{})
-		message  string
+		name      string
+		level     LogLevel
+		logLevel  LogLevel
+		logFunc   func(*Logger, string, ...interface{})
+		message   string
 		shouldLog bool
 	}{
 		{
-			name:     "debug message logged at debug level",
-			level:    LogLevelDebug,
-			logLevel: LogLevelDebug,
-			logFunc:  (*Logger).Debug,
-			message:  "debug message",
+			name:      "debug message logged at debug level",
+			level:     LogLevelDebug,
+			logLevel:  LogLevelDebug,
+			logFunc:   (*Logger).Debug,
+			message:   "debug message",
 			shouldLog: true,
 		},
 		{
-			name:     "debug message not logged at info level",
-			level:    LogLevelInfo,
-			logLevel: LogLevelDebug,
-			logFunc:  (*Logger).Debug,
-			message:  "debug message",
+			name:      "debug message not logged at info level",
+			level:     LogLevelInfo,
+			logLevel:  LogLevelDebug,
+			logFunc:   (*Logger).Debug,
+			message:   "debug message",
 			shouldLog: false,
 		},
 		{
-			name:     "info message logged at info level",
-			level:    LogLevelInfo,
-			logLevel: LogLevelInfo,
-			logFunc:  (*Logger).Info,
-			message:  "info message",
+			name:      "info message logged at info level",
+			level:     LogLevelInfo,
+			logLevel:  LogLevelInfo,
+			logFunc:   (*Logger).Info,
+			message:   "info message",
 			shouldLog: true,
 		},
 		{
-			name:     "warn message logged at info level",
-			level:    LogLevelInfo,
-			logLevel: LogLevelWarn,
-			logFunc:  (*Logger).Warn,
-			message:  "warn message",
+			name:      "warn message logged at info level",
+			level:     LogLevelInfo,
+			logLevel:  LogLevelWarn,
+			logFunc:   (*Logger).Warn,
+			message:   "warn message",
 			shouldLog: true,
 		},
 		{
-			name:     "error message logged at info level",
-			level:    LogLevelInfo,
-			logLevel: LogLevelError,
-			logFunc:  (*Logger).Error,
-			message:  "error message",
+			name:      "error message logged at info level",
+			level:     LogLevelInfo,
+			logLevel:  LogLevelError,
+			logFunc:   (*Logger).Error,
+			message:   "error message",
 			shouldLog: true,
 		},
 	}
@@ -249,13 +249,13 @@ func TestLogger_Context(t *testing.T) {
 			hour     int
 			expected string
 		}{
-			{6, "morning"},   // 6 AM
-			{11, "morning"},  // 11 AM
+			{6, "morning"},    // 6 AM
+			{11, "morning"},   // 11 AM
 			{13, "afternoon"}, // 1 PM
 			{16, "afternoon"}, // 4 PM
-			{19, "evening"},  // 7 PM
-			{23, "evening"},  // 11 PM
-			{2, "evening"},   // 2 AM
+			{19, "evening"},   // 7 PM
+			{23, "evening"},   // 11 PM
+			{2, "evening"},    // 2 AM
 		}
 
 		for _, tc := range testCases {
@@ -273,7 +273,7 @@ func TestLogger_Context(t *testing.T) {
 				assert.Equal(t, tc.expected, context)
 			})
 		}
-		
+
 		// Just verify the actual function works
 		_ = logger.GetTimeContext()
 	})

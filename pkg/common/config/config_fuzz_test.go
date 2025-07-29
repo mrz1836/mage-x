@@ -113,17 +113,17 @@ key: value`,
 	f.Fuzz(func(t *testing.T, input string) {
 		// Test with a generic map structure
 		var result map[string]interface{}
-		
+
 		// Should not panic
 		decoder := yaml.NewDecoder(bytes.NewReader([]byte(input)))
 		err := decoder.Decode(&result)
-		
+
 		// If it parsed successfully, verify some properties
 		if err == nil {
 			// Result should be a valid map (could be nil for empty docs)
 			// Just ensure we can safely access it
 			_ = len(result)
-			
+
 			// Try to encode it back (should not panic)
 			var buf bytes.Buffer
 			encoder := yaml.NewEncoder(&buf)
@@ -135,10 +135,10 @@ key: value`,
 				assert.NoError(t, decodeErr, "Failed to decode round-tripped YAML")
 			}
 		}
-		
+
 		// Also test with the config loader
 		loader := NewDefaultConfigLoader()
-		
+
 		// Create a test config structure
 		type TestConfig struct {
 			Project struct {
@@ -154,24 +154,24 @@ key: value`,
 				Timeout  string `yaml:"timeout"`
 			} `yaml:"test"`
 		}
-		
+
 		var cfg TestConfig
-		
+
 		// Write to temp file and try to load
 		tempFile := t.TempDir() + "/config.yaml"
 		err = writeFile(tempFile, []byte(input))
 		require.NoError(t, err, "Failed to write temp file")
-		
+
 		// Should not panic
 		_, loadErr := loader.Load([]string{tempFile}, &cfg)
-		
+
 		// If loaded successfully, validate the config
 		if loadErr == nil {
 			// Ensure strings don't contain null bytes
 			assert.NotContains(t, cfg.Project.Name, "\x00", "Config contains null byte")
 			assert.NotContains(t, cfg.Project.Version, "\x00", "Config contains null byte")
 			assert.NotContains(t, cfg.Build.Target, "\x00", "Config contains null byte")
-			
+
 			// Ensure no command injection in string fields
 			dangerousPatterns := []string{"$(", "`", "${IFS}", "&&", "||", ";"}
 			for _, pattern := range dangerousPatterns {
@@ -252,10 +252,10 @@ func FuzzJSONParsing(f *testing.F) {
 	f.Fuzz(func(t *testing.T, input string) {
 		// Test with a generic map structure
 		var result map[string]interface{}
-		
+
 		// Should not panic
 		err := json.Unmarshal([]byte(input), &result)
-		
+
 		// If it parsed successfully, verify some properties
 		if err == nil {
 			// Try to encode it back (should not panic)
@@ -267,10 +267,10 @@ func FuzzJSONParsing(f *testing.F) {
 				assert.NoError(t, decodeErr, "Failed to decode round-tripped JSON")
 			}
 		}
-		
+
 		// Also test with the config loader
 		loader := NewDefaultConfigLoader()
-		
+
 		// Create a test config structure
 		type TestConfig struct {
 			Project struct {
@@ -286,17 +286,17 @@ func FuzzJSONParsing(f *testing.F) {
 				Timeout  string `json:"timeout"`
 			} `json:"test"`
 		}
-		
+
 		var cfg TestConfig
-		
+
 		// Write to temp file and try to load
 		tempFile := t.TempDir() + "/config.json"
 		err = writeFile(tempFile, []byte(input))
 		require.NoError(t, err, "Failed to write temp file")
-		
+
 		// Should not panic
 		_, loadErr := loader.Load([]string{tempFile}, &cfg)
-		
+
 		// If loaded successfully, validate the config
 		if loadErr == nil {
 			// Ensure strings don't contain null bytes
@@ -311,7 +311,7 @@ func FuzzJSONParsing(f *testing.F) {
 func FuzzPathExpansion(f *testing.F) {
 	// Create a config instance
 	cfg := New()
-	
+
 	// Add seed corpus
 	testcases := []string{
 		// Normal paths
@@ -324,7 +324,7 @@ func FuzzPathExpansion(f *testing.F) {
 		"${HOME}/config.yaml",
 		"$HOME/.config/app.yaml",
 		"${HOME}/.config/app.yaml",
-		
+
 		// Environment variables
 		"$USER/config.yaml",
 		"${USER}/config.yaml",
@@ -332,12 +332,12 @@ func FuzzPathExpansion(f *testing.F) {
 		"${PATH}/config.yaml",
 		"$UNDEFINED/config.yaml",
 		"${UNDEFINED}/config.yaml",
-		
+
 		// Multiple variables
 		"$HOME/$USER/config.yaml",
 		"${HOME}/${USER}/config.yaml",
 		"$HOME/$USER/$PATH/config.yaml",
-		
+
 		// Edge cases
 		"",
 		".",
@@ -354,7 +354,7 @@ func FuzzPathExpansion(f *testing.F) {
 		"${HOME}}",
 		"$HO ME/config.yaml",
 		"${HO ME}/config.yaml",
-		
+
 		// Potential security issues
 		"$HOME/../../etc/passwd",
 		"${HOME}/../../etc/passwd",
@@ -365,7 +365,7 @@ func FuzzPathExpansion(f *testing.F) {
 		"&&whoami",
 		"||whoami",
 		"|whoami",
-		
+
 		// Special characters
 		"config\x00.yaml",
 		"config\n.yaml",
@@ -376,13 +376,13 @@ func FuzzPathExpansion(f *testing.F) {
 		"config|cmd.yaml",
 		"config>output.yaml",
 		"config<input.yaml",
-		
+
 		// Unicode
 		"配置.yaml",
 		"конфиг.yaml",
 		"🚀.yaml",
 		"$HOME/🚀/config.yaml",
-		
+
 		// Long paths
 		strings.Repeat("a", 255) + ".yaml",
 		"$HOME/" + strings.Repeat("b", 255) + "/config.yaml",
@@ -396,15 +396,15 @@ func FuzzPathExpansion(f *testing.F) {
 	f.Fuzz(func(t *testing.T, path string) {
 		// Should not panic
 		expanded := cfg.expandPath(path)
-		
+
 		// Expanded path should be a string (even if empty)
 		assert.NotNil(t, expanded, "expandPath returned nil")
-		
+
 		// If path was empty, expanded should also be empty
 		if path == "" {
 			assert.Equal(t, "", expanded, "Empty path should expand to empty")
 		}
-		
+
 		// Check that dangerous patterns don't cause execution (they should be left as-is)
 		// This simple expandPath implementation only handles $HOME, so other patterns remain unchanged
 		if strings.Contains(path, "$(") || strings.Contains(path, "`") {
@@ -412,20 +412,20 @@ func FuzzPathExpansion(f *testing.F) {
 			assert.True(t, strings.Contains(expanded, "$(") || strings.Contains(expanded, "`") || !strings.Contains(path, expanded),
 				"Dangerous patterns should not be executed, path: %s, expanded: %s", path, expanded)
 		}
-		
+
 		// If the original path had environment variables, they should be expanded or left as-is
 		if strings.Contains(path, "$HOME") || strings.Contains(path, "${HOME}") {
 			// HOME should either be expanded or left as-is if not set
 			// Just ensure it doesn't cause issues
 			_ = expanded
 		}
-		
+
 		// Test buildConfigPaths with the fuzzed input
 		paths := cfg.buildConfigPaths(path, ".", "/etc", "$HOME")
-		
+
 		// Should return some paths
 		assert.NotNil(t, paths, "buildConfigPaths returned nil")
-		
+
 		// Each path should be a string
 		for _, p := range paths {
 			assert.IsType(t, "", p, "Path is not a string")
@@ -455,12 +455,12 @@ func FuzzConfigManager(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, format, data string) {
 		manager := NewDefaultConfigManager()
-		
+
 		// Create a file source
 		tempFile := t.TempDir() + "/config." + format
 		err := writeFile(tempFile, []byte(data))
 		require.NoError(t, err, "Failed to write temp file")
-		
+
 		// Add source (should not panic)
 		var configFormat ConfigFormat
 		switch format {
@@ -473,7 +473,7 @@ func FuzzConfigManager(f *testing.F) {
 		}
 		source := NewFileConfigSource(tempFile, configFormat, 100)
 		manager.AddSource(source)
-		
+
 		// Try to load config (should not panic)
 		type TestConfig struct {
 			Key    string `yaml:"key" json:"key" env:"KEY"`
@@ -481,23 +481,23 @@ func FuzzConfigManager(f *testing.F) {
 				Key string `yaml:"key" json:"key" env:"NESTED_KEY"`
 			} `yaml:"nested" json:"nested"`
 		}
-		
+
 		var cfg TestConfig
 		err = manager.LoadConfig(&cfg)
-		
+
 		// If loaded successfully, validate
 		if err == nil {
 			// Ensure no null bytes
 			assert.NotContains(t, cfg.Key, "\x00", "Config contains null byte")
 			assert.NotContains(t, cfg.Nested.Key, "\x00", "Config contains null byte")
 		}
-		
+
 		// Test Watch (should not panic even if not implemented)
 		watchCallback := func(interface{}) {
 			// Simple callback for testing
 		}
 		_ = manager.Watch(watchCallback)
-		
+
 		// Test Reload (should not panic)
 		_ = manager.Reload(&cfg)
 	})

@@ -137,7 +137,6 @@ func (ts *ToolsTestSuite) TestTools_Verify() {
 	require.Contains(ts.T(), err.Error(), "some tools are missing")
 }
 
-
 // TestTools_Verify_ConfigError tests Verify function with clean config (LoadConfig creates default)
 func (ts *ToolsTestSuite) TestTools_Verify_ConfigError() {
 	cfg = nil // This causes LoadConfig to create a default config
@@ -153,7 +152,6 @@ func (ts *ToolsTestSuite) TestTools_Verify_ConfigError() {
 			return ts.tools.Verify()
 		},
 	)
-
 	// Since some tools might be missing, expect error in most cases
 	// But if all tools are installed, no error is expected
 	if err != nil {
@@ -232,6 +230,8 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallError() {
 	expectedError := require.New(ts.T())
 	ts.setupConfig()
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(errors.New("install failed"))
+	// Also mock the govulncheck command in case it already exists in the test environment
+	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil).Maybe()
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -268,7 +268,7 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_CheckError() {
 // TestTools_VulnCheck_ConfigError tests VulnCheck function with clean config (since LoadConfig creates default)
 func (ts *ToolsTestSuite) TestTools_VulnCheck_ConfigError() {
 	cfg = nil // This causes LoadConfig to create a default config
-	
+
 	// Mock installation and vulnerability check calls
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
@@ -488,13 +488,13 @@ func (ts *ToolsTestSuite) setupConfig() {
 // setupSuccessfulInstall sets up mocks for successful tool installation
 func (ts *ToolsTestSuite) setupSuccessfulInstall() {
 	ts.setupConfig()
-	
+
 	// Mock installation commands for various tools
 	// Note: golangci-lint is a special case and uses ensureGolangciLint which we can't easily mock here
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@v0.4.0"}).Return(nil).Maybe()
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil).Maybe()
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "gotest.tools/gotestsum@v1.8.0"}).Return(nil).Maybe()
-	
+
 	// golangci-lint might try brew or curl installation
 	ts.env.Runner.On("RunCmd", "brew", []string{"install", "golangci-lint"}).Return(nil).Maybe()
 }
@@ -502,16 +502,15 @@ func (ts *ToolsTestSuite) setupSuccessfulInstall() {
 // setupSuccessfulUpdate sets up mocks for successful tool updates
 func (ts *ToolsTestSuite) setupSuccessfulUpdate() {
 	ts.setupConfig()
-	
+
 	// Mock brew upgrade for golangci-lint (assumes Mac)
 	ts.env.Runner.On("RunCmd", "brew", []string{"upgrade", "golangci-lint"}).Return(nil)
-	
+
 	// Mock go install commands for tool updates
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@v0.4.0"}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "gotest.tools/gotestsum@v1.8.0"}).Return(nil)
 }
-
 
 // TestToolsTestSuite runs the test suite
 func TestToolsTestSuite(t *testing.T) {

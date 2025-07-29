@@ -297,16 +297,16 @@ func TestSecurityBypasses(t *testing.T) {
 
 		// Try various ways to hide sensitive vars
 		env := []string{
-			"API_KEY=visible",           // Should be filtered
-			"api_key=lowercase",         // Should be filtered
-			"ApI_kEy=mixedcase",         // Should be filtered
-			"XAPI_KEY=prefixed",         // Should pass
-			"API_KEYX=suffixed",         // Should pass
-			"API KEY=with space",        // Malformed, but should pass
-			"=API_KEY",                  // Malformed
-			"API_KEY",                   // Malformed (no =)
-			"PRIVATE_KEY_FILE=/path",    // Should be filtered (PRIVATE_KEY prefix)
-			"MY_PRIVATE_KEY=value",      // Should pass (PRIVATE_KEY not at start)
+			"API_KEY=visible",        // Should be filtered
+			"api_key=lowercase",      // Should be filtered
+			"ApI_kEy=mixedcase",      // Should be filtered
+			"XAPI_KEY=prefixed",      // Should pass
+			"API_KEYX=suffixed",      // Should pass
+			"API KEY=with space",     // Malformed, but should pass
+			"=API_KEY",               // Malformed
+			"API_KEY",                // Malformed (no =)
+			"PRIVATE_KEY_FILE=/path", // Should be filtered (PRIVATE_KEY prefix)
+			"MY_PRIVATE_KEY=value",   // Should pass (PRIVATE_KEY not at start)
 		}
 
 		result := executor.filterEnvironment(env)

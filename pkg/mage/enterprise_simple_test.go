@@ -30,7 +30,7 @@ func (ts *EnterpriseSimpleTestSuite) TearDownTest() {
 func (ts *EnterpriseSimpleTestSuite) TestNewEnterpriseConfiguration() {
 	ts.Run("creates default enterprise configuration", func() {
 		config := NewEnterpriseConfiguration()
-		
+
 		require.NotNil(ts.T(), config)
 		require.NotNil(ts.T(), config.Organization)
 		require.NotNil(ts.T(), config.Security)
@@ -195,7 +195,7 @@ func (ts *EnterpriseSimpleTestSuite) TestConfigSaveMethods() {
 		}
 
 		err := SaveConfig(config)
-		
+
 		require.NoError(ts.T(), err)
 		require.True(ts.T(), ts.env.FileExists(".mage.yaml"))
 	})
@@ -205,7 +205,7 @@ func (ts *EnterpriseSimpleTestSuite) TestConfigSaveMethods() {
 		enterpriseConfig.Organization.Name = "test-enterprise"
 
 		err := SaveEnterpriseConfig(enterpriseConfig)
-		
+
 		require.NoError(ts.T(), err)
 		require.True(ts.T(), ts.env.FileExists(".mage"))
 		require.True(ts.T(), ts.env.FileExists(".mage/enterprise.yaml"))
@@ -218,7 +218,7 @@ func (ts *EnterpriseSimpleTestSuite) TestConfigSaveMethods() {
 		os.Setenv("ENTERPRISE_ORG_NAME", "setup-org")
 
 		err := SetupEnterpriseConfig()
-		
+
 		require.NoError(ts.T(), err)
 		require.True(ts.T(), ts.env.FileExists(".mage"))
 		require.True(ts.T(), ts.env.FileExists(".mage/enterprise.yaml"))

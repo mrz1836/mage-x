@@ -359,7 +359,6 @@ func TestSecureCommandRunner_ValidatesCommands(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-
 // Test command validation through namespaces
 func TestNamespaceCommandValidation(t *testing.T) {
 	// Create a custom executor that tracks validation

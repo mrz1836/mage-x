@@ -15,7 +15,7 @@ func TestDefaultEnvironment(t *testing.T) {
 	// Test Set and Get
 	key := "TEST_VAR_123"
 	value := "test_value"
-	
+
 	// Clean up at the end
 	defer env.Unset(key)
 
@@ -44,7 +44,7 @@ func TestDefaultEnvironment(t *testing.T) {
 
 func TestDefaultEnvironment_TypedGetters(t *testing.T) {
 	env := NewDefaultEnvironment()
-	
+
 	// Clean up at the end
 	defer func() {
 		env.Unset("TEST_BOOL")
@@ -96,14 +96,14 @@ func TestDefaultEnvironment_TypedGetters(t *testing.T) {
 
 func TestDefaultEnvironment_Advanced(t *testing.T) {
 	env := NewDefaultEnvironment()
-	
+
 	// Test SetMultiple
 	vars := map[string]string{
 		"TEST_VAR1": "value1",
 		"TEST_VAR2": "value2",
 		"TEST_VAR3": "value3",
 	}
-	
+
 	defer func() {
 		for key := range vars {
 			env.Unset(key)
@@ -147,7 +147,7 @@ func TestDefaultPathResolver(t *testing.T) {
 
 	// Test standard directories
 	appName := "test-app"
-	
+
 	configDir := resolver.ConfigDir(appName)
 	if configDir == "" || !strings.Contains(configDir, appName) {
 		t.Errorf("ConfigDir() = %v, should contain app name", configDir)
@@ -245,7 +245,7 @@ func TestDefaultEnvManager(t *testing.T) {
 	// Test setting in scope
 	testKey := "SCOPE_TEST_VAR"
 	testValue := "scope_value"
-	
+
 	defer func() {
 		// Clean up
 		scope.Unset(testKey)
@@ -277,11 +277,11 @@ func TestDefaultEnvManager(t *testing.T) {
 
 func TestDefaultEnvManager_Context(t *testing.T) {
 	manager := NewDefaultEnvManager()
-	
+
 	// Set up test environment
 	testKey := "CONTEXT_TEST_VAR"
 	testValue := "context_value"
-	
+
 	defer func() {
 		manager.RestoreContext(&DefaultEnvContext{variables: make(map[string]string)})
 	}()
@@ -314,14 +314,14 @@ func TestDefaultEnvManager_Context(t *testing.T) {
 
 func TestDefaultEnvManager_Isolation(t *testing.T) {
 	manager := NewDefaultEnvManager()
-	
+
 	testKey := "ISOLATION_TEST_VAR"
 	originalValue := "original"
 	isolatedValue := "isolated"
-	
+
 	// Set original value
 	manager.baseEnv.Set(testKey, originalValue)
-	
+
 	defer manager.baseEnv.Unset(testKey)
 
 	// Test isolation
@@ -347,10 +347,10 @@ func TestDefaultEnvManager_Isolation(t *testing.T) {
 
 func TestDefaultEnvValidator(t *testing.T) {
 	validator := NewDefaultEnvValidator()
-	
+
 	// Test required validation
 	validator.Required("REQUIRED_VAR")
-	
+
 	// Should fail for empty value
 	if err := validator.Validate("REQUIRED_VAR", ""); err == nil {
 		t.Error("Required validation should fail for empty value")
@@ -363,7 +363,7 @@ func TestDefaultEnvValidator(t *testing.T) {
 
 	// Test pattern validation
 	validator.Pattern("EMAIL_VAR", `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	
+
 	if err := validator.Validate("EMAIL_VAR", "invalid-email"); err == nil {
 		t.Error("Pattern validation should fail for invalid email")
 	}
@@ -374,7 +374,7 @@ func TestDefaultEnvValidator(t *testing.T) {
 
 	// Test range validation
 	validator.Range("PORT_VAR", 1, 65535)
-	
+
 	if err := validator.Validate("PORT_VAR", "0"); err == nil {
 		t.Error("Range validation should fail for value below minimum")
 	}
@@ -385,7 +385,7 @@ func TestDefaultEnvValidator(t *testing.T) {
 
 	// Test one-of validation
 	validator.OneOf("ENV_VAR", "dev", "staging", "prod")
-	
+
 	if err := validator.Validate("ENV_VAR", "invalid"); err == nil {
 		t.Error("OneOf validation should fail for invalid value")
 	}
@@ -421,15 +421,15 @@ func TestEnvContext_Operations(t *testing.T) {
 	// Test merge
 	merged := ctx1.Merge(ctx2)
 	mergedVars := merged.Variables()
-	
+
 	if mergedVars["VAR1"] != "value1" {
 		t.Error("Merge should preserve VAR1 from ctx1")
 	}
-	
+
 	if mergedVars["VAR2"] != "modified2" {
 		t.Error("Merge should use VAR2 from ctx2")
 	}
-	
+
 	if mergedVars["VAR3"] != "value3" {
 		t.Error("Merge should include VAR3 from ctx2")
 	}
@@ -438,15 +438,15 @@ func TestEnvContext_Operations(t *testing.T) {
 func TestEnvOptions(t *testing.T) {
 	// Test with auto-trim enabled
 	options := EnvOptions{
-		AutoTrim: true,
+		AutoTrim:       true,
 		AllowOverwrite: true,
 	}
-	
+
 	env := NewDefaultEnvironmentWithOptions(options)
-	
+
 	testKey := "TRIM_TEST_VAR"
 	testValue := "  trimmed  "
-	
+
 	defer env.Unset(testKey)
 
 	if err := env.Set(testKey, testValue); err != nil {

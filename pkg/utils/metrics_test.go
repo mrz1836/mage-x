@@ -12,7 +12,7 @@ import (
 
 func TestDefaultMetricsConfig(t *testing.T) {
 	config := DefaultMetricsConfig()
-	
+
 	assert.True(t, config.Enabled)
 	assert.Equal(t, ".mage/metrics", config.StoragePath)
 	assert.Equal(t, 30, config.RetentionDays)
@@ -42,7 +42,7 @@ func TestMetricsCollector_Basic(t *testing.T) {
 	t.Run("disabled collector", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		
+
 		collector := NewMetricsCollector(disabledConfig)
 		assert.NotNil(t, collector)
 		assert.False(t, collector.config.Enabled)
@@ -60,7 +60,7 @@ func TestPerformanceTimer(t *testing.T) {
 	t.Run("StartTimer creates timer", func(t *testing.T) {
 		tags := map[string]string{"operation": "test"}
 		timer := collector.StartTimer("test_operation", tags)
-		
+
 		assert.NotNil(t, timer)
 		assert.Equal(t, "test_operation", timer.Name)
 		assert.Equal(t, tags, timer.Tags)
@@ -71,12 +71,12 @@ func TestPerformanceTimer(t *testing.T) {
 	t.Run("Stop records metric", func(t *testing.T) {
 		timer := collector.StartTimer("test_stop", nil)
 		time.Sleep(10 * time.Millisecond) // Ensure some duration
-		
+
 		duration := timer.Stop()
-		
+
 		assert.True(t, duration > 0)
 		assert.True(t, duration >= 10*time.Millisecond)
-		
+
 		// Check that metric was recorded
 		assert.True(t, len(collector.metrics) > 0)
 	})
@@ -84,12 +84,12 @@ func TestPerformanceTimer(t *testing.T) {
 	t.Run("StopWithError records error metric", func(t *testing.T) {
 		timer := collector.StartTimer("test_error", nil)
 		time.Sleep(5 * time.Millisecond)
-		
+
 		testErr := assert.AnError
 		duration := timer.StopWithError(testErr)
-		
+
 		assert.True(t, duration > 0)
-		
+
 		// Find the recorded metric
 		var errorMetric *Metric
 		for _, metric := range collector.metrics {
@@ -98,7 +98,7 @@ func TestPerformanceTimer(t *testing.T) {
 				break
 			}
 		}
-		
+
 		require.NotNil(t, errorMetric)
 		assert.False(t, errorMetric.Success)
 		assert.Equal(t, testErr.Error(), errorMetric.Error)
@@ -108,10 +108,10 @@ func TestPerformanceTimer(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
 		disabledCollector := NewMetricsCollector(disabledConfig)
-		
+
 		timer := disabledCollector.StartTimer("disabled_test", nil)
 		duration := timer.Stop()
-		
+
 		// Should work but not record metrics
 		assert.True(t, duration >= 0)
 		assert.Equal(t, 0, len(disabledCollector.metrics))
@@ -130,7 +130,7 @@ func TestMetricsRecording(t *testing.T) {
 		tags := map[string]string{"component": "test"}
 		err := collector.RecordCounter("test_counter", 42.0, tags)
 		require.NoError(t, err)
-		
+
 		// Find the recorded metric
 		var counterMetric *Metric
 		for _, metric := range collector.metrics {
@@ -139,7 +139,7 @@ func TestMetricsRecording(t *testing.T) {
 				break
 			}
 		}
-		
+
 		require.NotNil(t, counterMetric)
 		assert.Equal(t, MetricTypeCounter, counterMetric.Type)
 		assert.Equal(t, 42.0, counterMetric.Value)
@@ -152,7 +152,7 @@ func TestMetricsRecording(t *testing.T) {
 		tags := map[string]string{"type": "memory"}
 		err := collector.RecordGauge("memory_usage", 1024.0, "bytes", tags)
 		require.NoError(t, err)
-		
+
 		// Find the recorded metric
 		var gaugeMetric *Metric
 		for _, metric := range collector.metrics {
@@ -161,7 +161,7 @@ func TestMetricsRecording(t *testing.T) {
 				break
 			}
 		}
-		
+
 		require.NotNil(t, gaugeMetric)
 		assert.Equal(t, MetricTypeGauge, gaugeMetric.Type)
 		assert.Equal(t, 1024.0, gaugeMetric.Value)
@@ -194,10 +194,10 @@ func TestMetricsRecording(t *testing.T) {
 			Success:   true,
 			Tags:      map[string]string{"platform": "linux"},
 		}
-		
+
 		err := collector.RecordBuildMetrics(buildMetrics)
 		require.NoError(t, err)
-		
+
 		// Check that multiple metrics were recorded
 		buildMetricNames := []string{
 			"build_duration",
@@ -209,7 +209,7 @@ func TestMetricsRecording(t *testing.T) {
 			"build_cpu_usage",
 			"build_memory_usage",
 		}
-		
+
 		for _, name := range buildMetricNames {
 			found := false
 			for _, metric := range collector.metrics {
@@ -228,7 +228,7 @@ func TestMetricsRecording(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
 		disabledCollector := NewMetricsCollector(disabledConfig)
-		
+
 		err := disabledCollector.RecordCounter("disabled_counter", 1.0, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(disabledCollector.metrics))
@@ -245,7 +245,7 @@ func TestResourceMetrics(t *testing.T) {
 
 	t.Run("GetCurrentResourceMetrics", func(t *testing.T) {
 		metrics := collector.GetCurrentResourceMetrics()
-		
+
 		// Basic sanity checks - these values depend on the system
 		assert.True(t, metrics.MemoryUsage >= 0)
 		assert.True(t, metrics.Goroutines > 0) // There should be at least 1 goroutine running
@@ -282,12 +282,12 @@ func TestMetricsQuery(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
 		disabledCollector := NewMetricsCollector(disabledConfig)
-		
+
 		query := MetricsQuery{
 			StartTime: now.Add(-time.Hour),
 			EndTime:   now.Add(time.Hour),
 		}
-		
+
 		_, err := disabledCollector.QueryMetrics(query)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "metrics collection is disabled")
@@ -305,7 +305,7 @@ func TestPerformanceReport(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
 		disabledCollector := NewMetricsCollector(disabledConfig)
-		
+
 		_, err := disabledCollector.GenerateReport("day")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "metrics collection is disabled")
@@ -317,9 +317,9 @@ func TestPerformanceReport(t *testing.T) {
 			Enabled:     true,
 			StoragePath: filepath.Join(tempDir, "test_storage"),
 		})
-		
+
 		periods := []string{"day", "week", "month", "invalid"}
-		
+
 		for _, period := range periods {
 			t.Run(period, func(t *testing.T) {
 				_, err := storageCollector.GenerateReport(period)
@@ -342,7 +342,7 @@ func TestCleanup(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
 		disabledCollector := NewMetricsCollector(disabledConfig)
-		
+
 		err := disabledCollector.Cleanup()
 		assert.NoError(t, err) // Should be no-op
 	})
@@ -366,7 +366,7 @@ func TestMetricTypes(t *testing.T) {
 
 	expectedValues := []string{
 		"counter",
-		"gauge", 
+		"gauge",
 		"histogram",
 		"timer",
 		"summary",
@@ -386,7 +386,7 @@ func TestJSONStorage(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, storage)
 		assert.Equal(t, storagePath, storage.storagePath)
-		
+
 		// Check that directory was created
 		assert.DirExists(t, storagePath)
 	})
@@ -526,7 +526,7 @@ func TestJSONStorage(t *testing.T) {
 		oldDate := time.Now().AddDate(0, 0, -10)
 		oldFilename := "metrics_" + oldDate.Format("2006-01-02") + ".json"
 		oldFilePath := filepath.Join(testStoragePath, oldFilename)
-		
+
 		err = os.WriteFile(oldFilePath, []byte("[]"), 0644)
 		require.NoError(t, err)
 
@@ -544,7 +544,7 @@ func TestPackageLevelMetricsFunctions(t *testing.T) {
 	t.Run("global collector functions work", func(t *testing.T) {
 		// These functions use the global collector which may or may not be enabled
 		// We'll test that they don't panic
-		
+
 		assert.NotPanics(t, func() {
 			timer := StartTimer("test_global", map[string]string{"global": "true"})
 			timer.Stop()
@@ -570,7 +570,7 @@ func TestPackageLevelMetricsFunctions(t *testing.T) {
 	t.Run("GetMetricsCollector returns singleton", func(t *testing.T) {
 		collector1 := GetMetricsCollector()
 		collector2 := GetMetricsCollector()
-		
+
 		// Should return the same instance
 		assert.Equal(t, collector1, collector2)
 	})
@@ -579,13 +579,13 @@ func TestPackageLevelMetricsFunctions(t *testing.T) {
 func TestHelperFunctions(t *testing.T) {
 	t.Run("percentile calculation", func(t *testing.T) {
 		values := []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}
-		
+
 		p50 := percentile(values, 50)
 		assert.InDelta(t, 5.5, p50, 0.1) // 50th percentile should be around 5.5
-		
+
 		p95 := percentile(values, 95)
 		assert.InDelta(t, 9.5, p95, 0.1) // 95th percentile should be around 9.5
-		
+
 		// Edge cases
 		assert.Equal(t, 0.0, percentile([]float64{}, 50))
 		assert.Equal(t, 1.0, percentile([]float64{1.0}, 50))
@@ -595,7 +595,7 @@ func TestHelperFunctions(t *testing.T) {
 		values := []float64{1.0, 2.0, 3.0, 4.0, 5.0}
 		avg := average(values)
 		assert.Equal(t, 3.0, avg)
-		
+
 		// Edge cases
 		assert.Equal(t, 0.0, average([]float64{}))
 		assert.Equal(t, 5.0, average([]float64{5.0}))
@@ -608,16 +608,16 @@ func TestHelperFunctions(t *testing.T) {
 			{Name: "build_success"},
 			{Name: "deploy_time"},
 		}
-		
+
 		buildMetrics := filterMetrics(metrics, "build_")
 		assert.Len(t, buildMetrics, 2)
 		assert.Equal(t, "build_duration", buildMetrics[0].Name)
 		assert.Equal(t, "build_success", buildMetrics[1].Name)
-		
+
 		testMetrics := filterMetrics(metrics, "test_")
 		assert.Len(t, testMetrics, 1)
 		assert.Equal(t, "test_count", testMetrics[0].Name)
-		
+
 		noMatch := filterMetrics(metrics, "none_")
 		assert.Len(t, noMatch, 0)
 	})

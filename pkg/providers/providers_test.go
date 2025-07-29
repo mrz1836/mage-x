@@ -247,10 +247,10 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 	provider := &mockProvider{}
 	err := provider.Initialize(ProviderConfig{})
 	require.NoError(ts.T(), err)
-	
+
 	ts.Run("ComputeService operations", func() {
 		compute := provider.Compute()
-		
+
 		// Test instance creation
 		req := &CreateInstanceRequest{
 			Name:   "test-instance",
@@ -287,7 +287,7 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 
 		// Test advanced operations
 		require.NoError(ts.T(), compute.ResizeInstance(ctx, instance.ID, "large"))
-		
+
 		snapshot, err := compute.SnapshotInstance(ctx, instance.ID, "test-snapshot")
 		require.NoError(ts.T(), err)
 		require.Equal(ts.T(), "test-snapshot", snapshot.Name)
@@ -594,11 +594,11 @@ type mockServices struct {
 	quantum    *mockQuantumService
 }
 
-func (p *mockProvider) Name() string { 
+func (p *mockProvider) Name() string {
 	if p.providerName != "" {
 		return p.providerName
 	}
-	return "mock" 
+	return "mock"
 }
 
 func (p *mockProvider) Initialize(config ProviderConfig) error {
@@ -642,20 +642,20 @@ func (p *mockProvider) Health() (*HealthStatus, error) {
 func (p *mockProvider) Close() error { return nil }
 
 // Service accessors
-func (p *mockProvider) Compute() ComputeService       { return p.services.compute }
-func (p *mockProvider) Storage() StorageService       { return p.services.storage }
-func (p *mockProvider) Network() NetworkService       { return p.services.network }
-func (p *mockProvider) Container() ContainerService   { return p.services.container }
-func (p *mockProvider) Database() DatabaseService     { return p.services.database }
-func (p *mockProvider) Security() SecurityService     { return p.services.security }
-func (p *mockProvider) Monitoring() MonitoringService { return p.services.monitoring }
-func (p *mockProvider) Serverless() ServerlessService { return p.services.serverless }
-func (p *mockProvider) AI() AIService                 { return p.services.ai }
-func (p *mockProvider) Cost() CostService             { return p.services.cost }
-func (p *mockProvider) Compliance() ComplianceService { return p.services.compliance }
+func (p *mockProvider) Compute() ComputeService           { return p.services.compute }
+func (p *mockProvider) Storage() StorageService           { return p.services.storage }
+func (p *mockProvider) Network() NetworkService           { return p.services.network }
+func (p *mockProvider) Container() ContainerService       { return p.services.container }
+func (p *mockProvider) Database() DatabaseService         { return p.services.database }
+func (p *mockProvider) Security() SecurityService         { return p.services.security }
+func (p *mockProvider) Monitoring() MonitoringService     { return p.services.monitoring }
+func (p *mockProvider) Serverless() ServerlessService     { return p.services.serverless }
+func (p *mockProvider) AI() AIService                     { return p.services.ai }
+func (p *mockProvider) Cost() CostService                 { return p.services.cost }
+func (p *mockProvider) Compliance() ComplianceService     { return p.services.compliance }
 func (p *mockProvider) Disaster() DisasterRecoveryService { return p.services.disaster }
-func (p *mockProvider) Edge() EdgeService             { return p.services.edge }
-func (p *mockProvider) Quantum() QuantumService       { return p.services.quantum }
+func (p *mockProvider) Edge() EdgeService                 { return p.services.edge }
+func (p *mockProvider) Quantum() QuantumService           { return p.services.quantum }
 
 // Mock service implementations
 

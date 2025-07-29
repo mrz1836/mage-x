@@ -30,7 +30,7 @@ func FuzzValidateCommandArg(f *testing.F) {
 		"192.168.1.1",
 		"[::1]",
 		"localhost:8080",
-		
+
 		// Shell injection attempts
 		"$(whoami)",
 		"$(echo test)",
@@ -47,7 +47,7 @@ func FuzzValidateCommandArg(f *testing.F) {
 		"$(echo${IFS}test)",
 		"${IFS}",
 		"$IFS",
-		
+
 		// Complex injection attempts
 		"test$(whoami)test",
 		"test`whoami`test",
@@ -60,14 +60,14 @@ func FuzzValidateCommandArg(f *testing.F) {
 		"test\nwhoami",
 		"test\rwhoami",
 		"test\r\nwhoami",
-		
+
 		// Path traversal attempts
 		"../../etc/passwd",
 		"..\\..\\windows\\system32",
 		"/etc/passwd",
 		"C:\\Windows\\System32\\cmd.exe",
 		"\\\\server\\share",
-		
+
 		// Special characters
 		"test\x00null",
 		"test\nnewline",
@@ -89,7 +89,7 @@ func FuzzValidateCommandArg(f *testing.F) {
 		"test[bracket]",
 		"test{brace}",
 		"test~tilde",
-		
+
 		// Unicode and emoji
 		"test🚀rocket",
 		"测试",
@@ -97,12 +97,12 @@ func FuzzValidateCommandArg(f *testing.F) {
 		"тест",
 		"🚀",
 		strings.Repeat("🚀", 100),
-		
+
 		// Long strings
 		strings.Repeat("a", 1000),
 		strings.Repeat("a", 10000),
 		strings.Repeat("$(whoami)", 100),
-		
+
 		// Empty and whitespace
 		"",
 		" ",
@@ -111,13 +111,13 @@ func FuzzValidateCommandArg(f *testing.F) {
 		"\r",
 		"\r\n",
 		"   ",
-		
+
 		// URLs with potential issues
 		"http://example.com/;whoami",
 		"https://example.com/$(whoami)",
 		"http://example.com|whoami",
 		"https://example.com`whoami`",
-		
+
 		// Regex patterns (should be allowed)
 		"^test.*$",
 		"[a-z]+",
@@ -127,7 +127,7 @@ func FuzzValidateCommandArg(f *testing.F) {
 		"test?",
 		"test*",
 		"test+",
-		
+
 		// Environment variable references (should be careful)
 		"$HOME",
 		"$PATH",
@@ -157,12 +157,12 @@ func FuzzValidateCommandArg(f *testing.F) {
 				"$(echo",
 				"${IFS}",
 			}
-			
+
 			for _, pattern := range dangerousPatterns {
 				assert.NotContains(t, arg, pattern,
 					"ValidateCommandArg accepted argument with dangerous pattern '%s': %s", pattern, arg)
 			}
-			
+
 			// Special handling for pipe - should only be in regex or URLs
 			if strings.Contains(arg, "|") {
 				isRegex := strings.ContainsAny(arg, "^$[]()+*?.{}\\")
@@ -170,7 +170,7 @@ func FuzzValidateCommandArg(f *testing.F) {
 				assert.True(t, isRegex || isURL,
 					"ValidateCommandArg accepted pipe outside of regex/URL context: %s", arg)
 			}
-			
+
 			// Redirects should not be allowed
 			assert.NotContains(t, arg, ">", "Argument contains output redirect")
 			assert.NotContains(t, arg, "<", "Argument contains input redirect")
@@ -197,7 +197,7 @@ func FuzzValidatePath(f *testing.F) {
 		"dir/../dir/file.txt",
 		"/tmp/file.txt",
 		"/tmp/dir/file.txt",
-		
+
 		// Path traversal attempts
 		"../file.txt",
 		"../../file.txt",
@@ -208,7 +208,7 @@ func FuzzValidatePath(f *testing.F) {
 		"./../etc/passwd",
 		"..\\..\\windows\\system32",
 		"dir\\..\\..\\windows\\system32",
-		
+
 		// Absolute paths
 		"/etc/passwd",
 		"/home/user/file.txt",
@@ -217,7 +217,7 @@ func FuzzValidatePath(f *testing.F) {
 		"D:\\file.txt",
 		"\\\\server\\share\\file.txt",
 		"//server/share/file.txt",
-		
+
 		// Special cases
 		"",
 		".",
@@ -227,7 +227,7 @@ func FuzzValidatePath(f *testing.F) {
 		"\\",
 		"//",
 		"\\\\",
-		
+
 		// Tricky paths
 		"file..txt",
 		"file...txt",
@@ -239,7 +239,7 @@ func FuzzValidatePath(f *testing.F) {
 		"...hidden",
 		"dir/.hidden",
 		"dir/..hidden",
-		
+
 		// With special characters
 		"file\x00.txt",
 		"file\n.txt",
@@ -253,18 +253,18 @@ func FuzzValidatePath(f *testing.F) {
 		"file`cmd`.txt",
 		"file$(cmd).txt",
 		"file${var}.txt",
-		
+
 		// Unicode paths
 		"файл.txt",
 		"文件.txt",
 		"🚀.txt",
 		"dir/🚀/file.txt",
-		
+
 		// Long paths
 		strings.Repeat("a", 255) + ".txt",
 		"dir/" + strings.Repeat("b", 255) + "/file.txt",
 		strings.Repeat("dir/", 50) + "file.txt",
-		
+
 		// Windows special paths
 		"CON",
 		"PRN",
@@ -274,7 +274,7 @@ func FuzzValidatePath(f *testing.F) {
 		"LPT1",
 		"con.txt",
 		"prn.txt",
-		
+
 		// URL-like paths
 		"http://example.com/file.txt",
 		"https://example.com/file.txt",
@@ -293,9 +293,9 @@ func FuzzValidatePath(f *testing.F) {
 		// Check for dangerous patterns - if present, validation should have failed
 		cleaned := filepath.Clean(path)
 		if strings.Contains(cleaned, "../") || strings.Contains(cleaned, "..\\") ||
-		   cleaned == ".." || strings.HasSuffix(cleaned, "/..") ||
-		   strings.Contains(path, "\x00") || strings.Contains(path, "\n") ||
-		   strings.Contains(path, "\r") {
+			cleaned == ".." || strings.HasSuffix(cleaned, "/..") ||
+			strings.Contains(path, "\x00") || strings.Contains(path, "\n") ||
+			strings.Contains(path, "\r") {
 			assert.Error(t, err, "Path with dangerous patterns should be rejected: cleaned=%s, original=%s", cleaned, path)
 			return
 		}
@@ -303,18 +303,18 @@ func FuzzValidatePath(f *testing.F) {
 		if err == nil {
 			// Clean the path for verification
 			cleaned := filepath.Clean(path)
-			
+
 			// Should not be absolute path (except /tmp)
 			if !strings.HasPrefix(cleaned, "/tmp") {
 				assert.False(t, filepath.IsAbs(cleaned),
 					"ValidatePath accepted absolute path outside /tmp: %s", path)
-				
+
 				// Check for Windows absolute paths
 				if runtime.GOOS != "windows" {
 					assert.False(t, len(path) > 1 && path[1] == ':',
 						"Path looks like Windows drive path: %s", path)
 				}
-				
+
 				// Check for UNC paths
 				assert.False(t, strings.HasPrefix(path, "\\\\"),
 					"Path is UNC path: %s", path)
@@ -327,12 +327,12 @@ func FuzzValidatePath(f *testing.F) {
 func FuzzFilterEnvironment(f *testing.F) {
 	// Create executor for testing
 	executor := NewSecureExecutor()
-	
+
 	// Add seed corpus
 	testcases := [][]string{
 		// Normal environment variables
 		{"PATH=/usr/bin:/usr/local/bin", "HOME=/home/user", "USER=testuser"},
-		
+
 		// Sensitive variables that should be filtered
 		{"AWS_SECRET_ACCESS_KEY=secret123", "PATH=/usr/bin"},
 		{"GITHUB_TOKEN=ghp_xxxxxxxxxxxx", "USER=test"},
@@ -343,27 +343,27 @@ func FuzzFilterEnvironment(f *testing.F) {
 		{"API_KEY=key123", "API_URL=https://api.example.com"},
 		{"SECRET_KEY=secret", "APP_ENV=production"},
 		{"PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----", "PUBLIC_KEY=-----BEGIN PUBLIC KEY-----"},
-		
+
 		// Edge cases
 		{"AWS_SECRET=not_exactly_match", "AWS_SECRETS=plural"},
 		{"SECRET_API_KEY=should_filter", "API_SECRET_KEY=should_filter"},
 		{"SECRETKEY=no_underscore", "SECRET=exact_match"},
 		{"MY_SECRET=not_prefix", "SECRET_VALUE=yes_prefix"},
-		
+
 		// Malformed entries
 		{"NOEQUALS", "=NOKEY", "KEY=", "=", ""},
 		{"KEY=VALUE=EXTRA", "KEY==DOUBLE"},
-		
+
 		// Special characters in values
 		{"KEY=value with spaces", "KEY=value\nwith\nnewlines"},
 		{"KEY=value\twith\ttabs", "KEY=value;with;semicolons"},
 		{"KEY=value|with|pipes", "KEY=value&with&ampersands"},
 		{"KEY=value$with$dollars", "KEY=value`with`backticks"},
-		
+
 		// Unicode
 		{"KEY=значение", "KEY=値", "KEY=🚀"},
 		{"КЛЮЧ=value", "键=value", "🚀=value"},
-		
+
 		// Very long entries
 		{"KEY=" + strings.Repeat("a", 1000)},
 		{strings.Repeat("A", 255) + "=value"},
@@ -380,32 +380,32 @@ func FuzzFilterEnvironment(f *testing.F) {
 	f.Fuzz(func(t *testing.T, envVar string) {
 		// Create a slice with this environment variable
 		env := []string{envVar}
-		
+
 		// Should not panic
 		filtered := executor.filterEnvironment(env)
-		
+
 		// Verify filtering logic
 		if len(filtered) == 0 {
 			// Variable was filtered out
 			parts := strings.SplitN(envVar, "=", 2)
 			if len(parts) == 2 {
 				varName := strings.ToUpper(parts[0])
-				
+
 				// Check if it should have been filtered
 				sensitivePrefix := []string{
 					"AWS_SECRET", "GITHUB_TOKEN", "GITLAB_TOKEN", "NPM_TOKEN",
 					"DOCKER_PASSWORD", "DATABASE_PASSWORD", "API_KEY", "SECRET", "PRIVATE_KEY",
 				}
-				
+
 				wasFiltered := false
 				for _, prefix := range sensitivePrefix {
-					if strings.HasPrefix(varName, prefix) && 
+					if strings.HasPrefix(varName, prefix) &&
 						(len(varName) == len(prefix) || varName[len(prefix)] == '_') {
 						wasFiltered = true
 						break
 					}
 				}
-				
+
 				assert.True(t, wasFiltered || len(parts) < 2,
 					"Variable was filtered but shouldn't have been: %s", envVar)
 			}
@@ -413,20 +413,20 @@ func FuzzFilterEnvironment(f *testing.F) {
 			// Variable was kept
 			assert.Len(t, filtered, 1, "Filter changed number of variables")
 			assert.Equal(t, envVar, filtered[0], "Filter modified variable")
-			
+
 			// Verify it's not sensitive
 			parts := strings.SplitN(envVar, "=", 2)
 			if len(parts) == 2 {
 				varName := strings.ToUpper(parts[0])
-				
+
 				// These prefixes should be filtered
 				sensitivePrefix := []string{
 					"AWS_SECRET", "GITHUB_TOKEN", "GITLAB_TOKEN", "NPM_TOKEN",
 					"DOCKER_PASSWORD", "DATABASE_PASSWORD", "API_KEY", "SECRET", "PRIVATE_KEY",
 				}
-				
+
 				for _, prefix := range sensitivePrefix {
-					if strings.HasPrefix(varName, prefix) && 
+					if strings.HasPrefix(varName, prefix) &&
 						(len(varName) == len(prefix) || varName[len(prefix)] == '_') {
 						assert.Fail(t, "Sensitive variable was not filtered: %s", envVar)
 					}
@@ -439,7 +439,7 @@ func FuzzFilterEnvironment(f *testing.F) {
 // FuzzFilterEnvironmentMultiple tests filtering multiple environment variables
 func FuzzFilterEnvironmentMultiple(f *testing.F) {
 	executor := NewSecureExecutor()
-	
+
 	// Add seed corpus with multiple variables
 	testcases := []string{
 		"PATH=/usr/bin",
@@ -474,33 +474,33 @@ func FuzzFilterEnvironmentMultiple(f *testing.F) {
 	f.Fuzz(func(t *testing.T, env1, env2, env3 string) {
 		// Create environment with three variables
 		env := []string{env1, env2, env3}
-		
+
 		// Should not panic
 		filtered := executor.filterEnvironment(env)
-		
+
 		// Filtered should not have more items than original
 		assert.LessOrEqual(t, len(filtered), len(env),
 			"Filtered environment has more items than original")
-		
+
 		// Each filtered item should be from the original
 		for _, item := range filtered {
 			assert.Contains(t, env, item,
 				"Filtered environment contains item not in original: %s", item)
 		}
-		
+
 		// Check that filtering doesn't introduce new duplicates
 		// Count occurrences in original
 		originalCount := make(map[string]int)
 		for _, item := range env {
 			originalCount[item]++
 		}
-		
+
 		// Count occurrences in filtered
 		filteredCount := make(map[string]int)
 		for _, item := range filtered {
 			filteredCount[item]++
 		}
-		
+
 		// Filtered count should not exceed original count for any item
 		for item, count := range filteredCount {
 			assert.LessOrEqual(t, count, originalCount[item],

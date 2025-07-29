@@ -346,7 +346,7 @@ func BenchmarkPathBuilder_String(b *testing.B) {
 	pb := NewPathBuilder("home/user/documents/file.txt")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		pb.String()
+		_ = pb.String()
 	}
 }
 

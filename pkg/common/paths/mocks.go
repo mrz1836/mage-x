@@ -50,12 +50,12 @@ func (m *MockPathBuilder) Join(elements ...string) PathBuilder {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls["Join"]++
-	
+
 	newPath := m.path
 	for _, elem := range elements {
 		newPath += "/" + elem
 	}
-	
+
 	return &MockPathBuilder{
 		path:     newPath,
 		calls:    make(map[string]int),
@@ -662,7 +662,7 @@ func (m *MockPathSet) Add(path string) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls["Add"]++
-	
+
 	if m.paths[path] {
 		return false
 	}
@@ -679,7 +679,7 @@ func (m *MockPathSet) Remove(path string) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls["Remove"]++
-	
+
 	if !m.paths[path] {
 		return false
 	}
@@ -728,7 +728,7 @@ func (m *MockPathSet) Paths() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	m.calls["Paths"]++
-	
+
 	result := make([]string, 0, len(m.paths))
 	for path := range m.paths {
 		result = append(result, path)

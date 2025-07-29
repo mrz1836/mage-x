@@ -526,10 +526,10 @@ func TestTestAll(t *testing.T) {
 			name: "all tests pass",
 			setupMock: func() {
 				// Expect multiple test commands (unit, integration, vet, lint)
-				env.Builder.ExpectGoCommand("test", nil).      // unit tests
-							ExpectGoCommand("test", nil).      // integration tests
-							ExpectGoCommand("vet", nil).       // vet
-							ExpectAnyCommand(nil)              // lint
+				env.Builder.ExpectGoCommand("test", nil). // unit tests
+										ExpectGoCommand("test", nil). // integration tests
+										ExpectGoCommand("vet", nil).  // vet
+										ExpectAnyCommand(nil)         // lint
 			},
 			expectErr: false,
 		},

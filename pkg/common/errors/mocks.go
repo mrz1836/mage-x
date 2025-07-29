@@ -79,7 +79,7 @@ func (m *MockMageError) WithCode(code ErrorCode) MageError {
 	m.mu.Lock()
 	m.calls["WithCode"]++
 	m.mu.Unlock()
-	
+
 	newErr := &MockMageError{
 		message:  m.message,
 		code:     code,
@@ -95,7 +95,7 @@ func (m *MockMageError) WithSeverity(severity Severity) MageError {
 	m.mu.Lock()
 	m.calls["WithSeverity"]++
 	m.mu.Unlock()
-	
+
 	newErr := &MockMageError{
 		message:  m.message,
 		code:     m.code,
@@ -111,7 +111,7 @@ func (m *MockMageError) WithContext(ctx ErrorContext) MageError {
 	m.mu.Lock()
 	m.calls["WithContext"]++
 	m.mu.Unlock()
-	
+
 	newErr := &MockMageError{
 		message:  m.message,
 		code:     m.code,
@@ -132,7 +132,7 @@ func (m *MockMageError) WithField(key string, value interface{}) MageError {
 	}
 	newContext.Fields[key] = value
 	m.mu.Unlock()
-	
+
 	return m.WithContext(newContext)
 }
 
@@ -147,7 +147,7 @@ func (m *MockMageError) WithFields(fields map[string]interface{}) MageError {
 		newContext.Fields[k] = v
 	}
 	m.mu.Unlock()
-	
+
 	return m.WithContext(newContext)
 }
 
@@ -155,7 +155,7 @@ func (m *MockMageError) WithCause(cause error) MageError {
 	m.mu.Lock()
 	m.calls["WithCause"]++
 	m.mu.Unlock()
-	
+
 	newErr := &MockMageError{
 		message:  m.message,
 		code:     m.code,
@@ -173,7 +173,7 @@ func (m *MockMageError) WithOperation(operation string) MageError {
 	newContext := m.context
 	newContext.Operation = operation
 	m.mu.Unlock()
-	
+
 	return m.WithContext(newContext)
 }
 
@@ -183,7 +183,7 @@ func (m *MockMageError) WithResource(resource string) MageError {
 	newContext := m.context
 	newContext.Resource = resource
 	m.mu.Unlock()
-	
+
 	return m.WithContext(newContext)
 }
 
@@ -191,7 +191,7 @@ func (m *MockMageError) Format(includeStack bool) string {
 	m.mu.Lock()
 	m.calls["Format"]++
 	m.mu.Unlock()
-	
+
 	return m.message
 }
 
@@ -199,7 +199,7 @@ func (m *MockMageError) Is(target error) bool {
 	m.mu.Lock()
 	m.calls["Is"]++
 	m.mu.Unlock()
-	
+
 	return false
 }
 
@@ -207,7 +207,7 @@ func (m *MockMageError) As(target interface{}) bool {
 	m.mu.Lock()
 	m.calls["As"]++
 	m.mu.Unlock()
-	
+
 	return false
 }
 
@@ -219,9 +219,9 @@ func (m *MockMageError) GetCallCount(method string) int {
 
 // MockErrorBuilder is a mock implementation of ErrorBuilder
 type MockErrorBuilder struct {
-	mu     sync.Mutex
-	err    *MockMageError
-	calls  map[string]int
+	mu    sync.Mutex
+	err   *MockMageError
+	calls map[string]int
 }
 
 // NewMockErrorBuilder creates a new mock error builder
@@ -328,9 +328,9 @@ func (b *MockErrorBuilder) GetCallCount(method string) int {
 
 // MockErrorHandler is a mock implementation of ErrorHandler
 type MockErrorHandler struct {
-	mu               sync.Mutex
-	calls            map[string]int
-	handleFunc       func(error) error
+	mu                sync.Mutex
+	calls             map[string]int
+	handleFunc        func(error) error
 	handleContextFunc func(context.Context, error) error
 }
 
@@ -346,7 +346,7 @@ func (h *MockErrorHandler) Handle(err error) error {
 	h.calls["Handle"]++
 	handleFunc := h.handleFunc
 	h.mu.Unlock()
-	
+
 	if handleFunc != nil {
 		return handleFunc(err)
 	}
@@ -358,7 +358,7 @@ func (h *MockErrorHandler) HandleWithContext(ctx context.Context, err error) err
 	h.calls["HandleWithContext"]++
 	handleFunc := h.handleContextFunc
 	h.mu.Unlock()
-	
+
 	if handleFunc != nil {
 		return handleFunc(ctx, err)
 	}
@@ -435,7 +435,7 @@ func (c *MockErrorChain) Error() string {
 	c.mu.Lock()
 	c.calls["Error"]++
 	c.mu.Unlock()
-	
+
 	if len(c.errors) == 0 {
 		return "no errors"
 	}
@@ -455,7 +455,7 @@ func (c *MockErrorChain) First() error {
 	c.mu.Lock()
 	c.calls["First"]++
 	c.mu.Unlock()
-	
+
 	if len(c.errors) == 0 {
 		return nil
 	}
@@ -466,7 +466,7 @@ func (c *MockErrorChain) Last() error {
 	c.mu.Lock()
 	c.calls["Last"]++
 	c.mu.Unlock()
-	
+
 	if len(c.errors) == 0 {
 		return nil
 	}

@@ -195,7 +195,7 @@ func (ts *CommonTestSuite) TestGetDirSize() {
 		file2 := filepath.Join(ts.env.TempDir, "nested", "deep", "middle.txt")
 		file3 := filepath.Join(nestedDir, "bottom.txt")
 
-		err = os.WriteFile(file1, []byte("top"), 0o644)    // 3 bytes
+		err = os.WriteFile(file1, []byte("top"), 0o644) // 3 bytes
 		require.NoError(ts.T(), err)
 		err = os.WriteFile(file2, []byte("middle"), 0o644) // 6 bytes
 		require.NoError(ts.T(), err)

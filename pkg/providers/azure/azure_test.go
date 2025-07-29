@@ -73,10 +73,10 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 				},
 			},
 		}
-		
+
 		provider, err := New(validConfig)
 		require.NoError(ts.T(), err)
-		
+
 		err = provider.Validate()
 		require.NoError(ts.T(), err)
 	})
@@ -93,10 +93,10 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 				},
 			},
 		}
-		
+
 		provider, err := New(certConfig)
 		require.NoError(ts.T(), err)
-		
+
 		err = provider.Validate()
 		require.NoError(ts.T(), err)
 	})
@@ -111,7 +111,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 				// Missing subscription_id in Extra
 			},
 		}
-		
+
 		_, err := New(invalidConfig)
 		require.Error(ts.T(), err)
 		require.Contains(ts.T(), err.Error(), "Azure subscription ID is required")
@@ -128,10 +128,10 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 				},
 			},
 		}
-		
+
 		provider, err := New(invalidConfig)
 		require.NoError(ts.T(), err) // Creation should succeed
-		
+
 		err = provider.Validate()
 		require.Error(ts.T(), err)
 		require.Contains(ts.T(), err.Error(), "Azure client ID and client secret are required")
@@ -148,10 +148,10 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 				},
 			},
 		}
-		
+
 		provider, err := New(invalidConfig)
 		require.NoError(ts.T(), err) // Creation should succeed
-		
+
 		err = provider.Validate()
 		require.Error(ts.T(), err)
 		require.Contains(ts.T(), err.Error(), "Azure certificate and key paths are required")
@@ -164,12 +164,12 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 		require.True(ts.T(), health.Healthy)
 		require.Equal(ts.T(), "healthy", health.Status)
 		require.NotEmpty(ts.T(), health.Services)
-		
+
 		// Check specific service health
 		require.Contains(ts.T(), health.Services, "compute")
 		require.Contains(ts.T(), health.Services, "storage")
 		require.Contains(ts.T(), health.Services, "network")
-		
+
 		computeHealth := health.Services["compute"]
 		require.True(ts.T(), computeHealth.Available)
 		require.Greater(ts.T(), computeHealth.ResponseTime, time.Duration(0))
@@ -208,31 +208,31 @@ func (ts *AzureProviderTestSuite) TestAzureServiceAccessors() {
 	ts.Run("Service types are correct", func() {
 		// Verify we get the correct Azure-specific service implementations
 		azureProvider := ts.provider.(*Provider)
-		
+
 		_, ok := azureProvider.services.compute.(*azureComputeService)
 		require.True(ts.T(), ok, "Compute service should be Azure-specific implementation")
-		
+
 		_, ok = azureProvider.services.storage.(*azureStorageService)
 		require.True(ts.T(), ok, "Storage service should be Azure-specific implementation")
-		
+
 		_, ok = azureProvider.services.network.(*azureNetworkService)
 		require.True(ts.T(), ok, "Network service should be Azure-specific implementation")
-		
+
 		_, ok = azureProvider.services.container.(*azureContainerService)
 		require.True(ts.T(), ok, "Container service should be Azure-specific implementation")
-		
+
 		_, ok = azureProvider.services.database.(*azureDatabaseService)
 		require.True(ts.T(), ok, "Database service should be Azure-specific implementation")
-		
+
 		_, ok = azureProvider.services.security.(*azureSecurityService)
 		require.True(ts.T(), ok, "Security service should be Azure-specific implementation")
-		
+
 		_, ok = azureProvider.services.monitoring.(*azureMonitoringService)
 		require.True(ts.T(), ok, "Monitoring service should be Azure-specific implementation")
-		
+
 		_, ok = azureProvider.services.serverless.(*azureServerlessService)
 		require.True(ts.T(), ok, "Serverless service should be Azure-specific implementation")
-		
+
 		_, ok = azureProvider.services.ai.(*azureAIService)
 		require.True(ts.T(), ok, "AI service should be Azure-specific implementation")
 	})
@@ -257,7 +257,7 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
 		require.Equal(ts.T(), "azure", provider.Name())
-		
+
 		azureProvider := provider.(*Provider)
 		require.Equal(ts.T(), "12345678-1234-1234-1234-123456789012", azureProvider.subscription)
 		require.Equal(ts.T(), config, azureProvider.config)
@@ -281,7 +281,7 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
 		require.Equal(ts.T(), "azure", provider.Name())
-		
+
 		azureProvider := provider.(*Provider)
 		require.Equal(ts.T(), "98765432-4321-4321-4321-210987654321", azureProvider.subscription)
 	})
@@ -301,7 +301,7 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
 		require.Equal(ts.T(), "azure", provider.Name())
-		
+
 		azureProvider := provider.(*Provider)
 		require.Equal(ts.T(), "11111111-2222-3333-4444-555555555555", azureProvider.subscription)
 	})
@@ -311,7 +311,7 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 func (ts *AzureProviderTestSuite) TestAzureRegions() {
 	regions := []string{
 		"eastus",
-		"eastus2", 
+		"eastus2",
 		"westus",
 		"westus2",
 		"westus3",
@@ -363,7 +363,7 @@ func (ts *AzureProviderTestSuite) TestAzureRegions() {
 			provider, err := New(config)
 			require.NoError(ts.T(), err)
 			require.Equal(ts.T(), "azure", provider.Name())
-			
+
 			azureProvider := provider.(*Provider)
 			require.Equal(ts.T(), region, azureProvider.config.Region)
 		})
@@ -388,7 +388,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
-		
+
 		azureProvider := provider.(*Provider)
 		require.Equal(ts.T(), "https://management.usgovcloudapi.net", azureProvider.config.Endpoint)
 	})
@@ -410,7 +410,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
-		
+
 		azureProvider := provider.(*Provider)
 		require.Equal(ts.T(), 60*time.Second, azureProvider.config.Timeout)
 		require.Equal(ts.T(), 5, azureProvider.config.MaxRetries)
@@ -420,7 +420,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 		config := providers.ProviderConfig{
 			Region: "southeastasia",
 			CustomHeaders: map[string]string{
-				"User-Agent":     "MyApp/1.0 AzureGoSDK",
+				"User-Agent":      "MyApp/1.0 AzureGoSDK",
 				"X-Custom-Header": "custom-value",
 			},
 			ProxyURL: "http://corporate-proxy.company.com:8080",
@@ -436,7 +436,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
-		
+
 		azureProvider := provider.(*Provider)
 		require.Equal(ts.T(), "MyApp/1.0 AzureGoSDK", azureProvider.config.CustomHeaders["User-Agent"])
 		require.Equal(ts.T(), "custom-value", azureProvider.config.CustomHeaders["X-Custom-Header"])
@@ -465,7 +465,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
-		
+
 		azureProvider := provider.(*Provider)
 		require.NotNil(ts.T(), azureProvider.config.TLSConfig)
 		require.False(ts.T(), azureProvider.config.TLSConfig.InsecureSkipVerify)
@@ -489,7 +489,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 
 		provider, err := New(config)
 		require.NoError(ts.T(), err) // Creation should succeed
-		
+
 		err = provider.Validate()
 		require.NoError(ts.T(), err) // Validation should pass for unknown types (handled gracefully)
 	})
@@ -570,7 +570,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderRegistration() {
 		require.NoError(ts.T(), err)
 		require.NotNil(ts.T(), provider)
 		require.Equal(ts.T(), "azure", provider.Name())
-		
+
 		// Verify it's the correct type
 		azureProvider, ok := provider.(*Provider)
 		require.True(ts.T(), ok)
@@ -605,10 +605,10 @@ func (ts *AzureProviderTestSuite) TestAzureProviderComparison() {
 		azureHealth, err := azureProvider.Health()
 		require.NoError(ts.T(), err)
 		require.True(ts.T(), azureHealth.Healthy)
-		
+
 		// Azure uses service names like compute, storage, network, aks, sql, keyvault, etc.
 		require.Contains(ts.T(), azureHealth.Services, "compute")
-		require.Contains(ts.T(), azureHealth.Services, "storage") 
+		require.Contains(ts.T(), azureHealth.Services, "storage")
 		require.Contains(ts.T(), azureHealth.Services, "network")
 		require.Contains(ts.T(), azureHealth.Services, "aks")
 		require.Contains(ts.T(), azureHealth.Services, "sql")

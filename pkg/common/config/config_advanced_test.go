@@ -36,16 +36,16 @@ func TestConfigManagerAdvanced(t *testing.T) {
 				CGOEnabled: false,
 			},
 			Test: TestConfig{
-				Timeout:     300,
-				Coverage:    true,
-				Verbose:     true,
-				Race:        true,
-				Parallel:    4,
-				Tags:        []string{"unit", "integration"},
-				OutputDir:   "test-results",
-				BenchTime:   "10s",
-				MemProfile:  true,
-				CPUProfile:  true,
+				Timeout:    300,
+				Coverage:   true,
+				Verbose:    true,
+				Race:       true,
+				Parallel:   4,
+				Tags:       []string{"unit", "integration"},
+				OutputDir:  "test-results",
+				BenchTime:  "10s",
+				MemProfile: true,
+				CPUProfile: true,
 			},
 			Analytics: AnalyticsConfig{
 				Enabled:       true,
@@ -128,17 +128,17 @@ func TestConfigManagerAdvanced(t *testing.T) {
 		// Create override configuration
 		overrideConfig := &MageConfig{
 			Project: ProjectConfig{
-				Version:     "1.1.0", // Override version
+				Version:     "1.1.0",               // Override version
 				Description: "Updated description", // Add description
 			},
 			Build: BuildConfig{
-				GoVersion: "1.24", // Override Go version
+				GoVersion: "1.24",                 // Override Go version
 				Tags:      []string{"production"}, // Add tags
 			},
 			Test: TestConfig{
-				Coverage: true,  // Override coverage
-				Race:     true,  // Add race detection
-				Parallel: 8,     // Add parallel setting
+				Coverage: true, // Override coverage
+				Race:     true, // Add race detection
+				Parallel: 8,    // Add parallel setting
 			},
 		}
 
@@ -278,7 +278,7 @@ func TestConfigManagerAdvanced(t *testing.T) {
 				Platform:  "linux/amd64",
 			},
 			Test: TestConfig{
-				Timeout:  120,
+				Timeout: 120,
 				// Note: For this test we'll assume the config system
 				// would expand environment variables during loading
 			},
@@ -358,10 +358,10 @@ func TestConfigWatching(t *testing.T) {
 
 	t.Run("Configuration file watching", func(t *testing.T) {
 		configFile := filepath.Join(tempDir, "watched.yaml")
-		
+
 		// This test is more of a structure test since implementing
 		// file watching requires more complex setup
-		
+
 		// Create initial configuration
 		initialConfig := &MageConfig{
 			Project: ProjectConfig{
@@ -404,7 +404,7 @@ func TestConfigMigration(t *testing.T) {
 	t.Run("Configuration schema migration", func(t *testing.T) {
 		// Simulate an old configuration format
 		oldConfigFile := filepath.Join(tempDir, "old.yaml")
-		
+
 		// In a real implementation, this would represent an older schema
 		oldConfig := &MageConfig{
 			Project: ProjectConfig{

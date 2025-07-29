@@ -38,7 +38,7 @@ func (ts *CLISimpleTestSuite) TearDownTest() {
 	os.Unsetenv("WORKSPACE_ACTION")
 	os.Unsetenv("PIPELINE_ACTION")
 	os.Unsetenv("COMPLIANCE_ACTION")
-	
+
 	ts.env.Cleanup()
 }
 

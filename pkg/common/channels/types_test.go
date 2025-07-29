@@ -52,10 +52,10 @@ func TestChannel_String(t *testing.T) {
 
 func TestChannel_CanPromoteTo(t *testing.T) {
 	tests := []struct {
-		name   string
-		from   Channel
-		to     Channel
-		canDo  bool
+		name  string
+		from  Channel
+		to    Channel
+		canDo bool
 	}{
 		{"Edge to Beta", Edge, Beta, true},
 		{"Edge to Nightly", Edge, Nightly, true},
@@ -220,7 +220,7 @@ func TestRelease_Validate(t *testing.T) {
 
 func TestRelease_IsExpired(t *testing.T) {
 	now := time.Now()
-	
+
 	t.Run("not expired", func(t *testing.T) {
 		release := &Release{
 			PublishedAt: now.Add(-5 * 24 * time.Hour), // 5 days ago
@@ -242,7 +242,7 @@ func TestRelease_IsExpired(t *testing.T) {
 			PublishedAt: now.Add(-100 * 24 * time.Hour), // 100 days ago
 		}
 
-		assert.False(t, release.IsExpired(0)) // No expiration
+		assert.False(t, release.IsExpired(0))  // No expiration
 		assert.False(t, release.IsExpired(-1)) // No expiration
 	})
 
@@ -492,7 +492,7 @@ func TestDependency(t *testing.T) {
 // Benchmark tests
 func BenchmarkChannel_IsValid(b *testing.B) {
 	channels := []Channel{Stable, Beta, Edge, Nightly, LTS, Channel("invalid")}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		channel := channels[i%len(channels)]
@@ -503,7 +503,7 @@ func BenchmarkChannel_IsValid(b *testing.B) {
 func BenchmarkChannel_CanPromoteTo(b *testing.B) {
 	fromChannels := []Channel{Edge, Nightly, Beta, Stable}
 	toChannels := []Channel{Beta, Stable, LTS}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		from := fromChannels[i%len(fromChannels)]
@@ -528,7 +528,7 @@ func BenchmarkRelease_Validate(b *testing.B) {
 			},
 		},
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = release.Validate()
@@ -546,13 +546,13 @@ func BenchmarkRelease_GetArtifact(b *testing.B) {
 			Checksum: fmt.Sprintf("checksum%d", i),
 		}
 	}
-	
+
 	release := &Release{
 		Version:   "1.0.0",
 		Channel:   Stable,
 		Artifacts: artifacts,
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = release.GetArtifact("linux", fmt.Sprintf("arch%d", i%10))

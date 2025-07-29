@@ -2,7 +2,7 @@ package main
 
 // Additional template functions that were missing
 
-// getEnterpriseMagefileContent returns enterprise magefile content  
+// getEnterpriseMagefileContent returns enterprise magefile content
 func getEnterpriseMagefileContent() string {
 	return `//go:build mage
 // +build mage

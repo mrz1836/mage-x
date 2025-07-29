@@ -114,13 +114,13 @@ func (m *MockTester) RunIntegration(ctx context.Context, opts TestOptions) (*Tes
 }
 
 type MockDeployer struct {
-	deployCalled      bool
-	validateCalled    bool
-	rollbackCalled    bool
-	getStatusCalled   bool
+	deployCalled       bool
+	validateCalled     bool
+	rollbackCalled     bool
+	getStatusCalled    bool
 	scaleServiceCalled bool
-	logsCalled        bool
-	shouldError       bool
+	logsCalled         bool
+	shouldError        bool
 }
 
 func (m *MockDeployer) Deploy(ctx context.Context, target DeployTarget, opts DeployOptions) error {
@@ -175,39 +175,39 @@ func (m *MockDeployer) Logs(ctx context.Context, target DeployTarget, opts LogOp
 func TestBuilder_Interface(t *testing.T) {
 	ctx := context.Background()
 	builder := &MockBuilder{}
-	
+
 	t.Run("Build", func(t *testing.T) {
 		opts := BuildOptions{Verbose: true}
 		err := builder.Build(ctx, opts)
 		require.NoError(t, err)
 		assert.True(t, builder.buildCalled)
 	})
-	
+
 	t.Run("CrossCompile", func(t *testing.T) {
 		platforms := []Platform{{OS: "linux", Arch: "amd64"}}
 		err := builder.CrossCompile(ctx, platforms)
 		require.NoError(t, err)
 		assert.True(t, builder.crossCompileCalled)
 	})
-	
+
 	t.Run("Package", func(t *testing.T) {
 		err := builder.Package(ctx, PackageFormatTarGz)
 		require.NoError(t, err)
 		assert.True(t, builder.packageCalled)
 	})
-	
+
 	t.Run("Clean", func(t *testing.T) {
 		err := builder.Clean(ctx)
 		require.NoError(t, err)
 		assert.True(t, builder.cleanCalled)
 	})
-	
+
 	t.Run("Install", func(t *testing.T) {
 		err := builder.Install(ctx, "/usr/local/bin")
 		require.NoError(t, err)
 		assert.True(t, builder.installCalled)
 	})
-	
+
 	t.Run("Error handling", func(t *testing.T) {
 		errorBuilder := &MockBuilder{shouldError: true}
 		err := errorBuilder.Build(ctx, BuildOptions{})
@@ -219,7 +219,7 @@ func TestBuilder_Interface(t *testing.T) {
 func TestTester_Interface(t *testing.T) {
 	ctx := context.Background()
 	tester := &MockTester{}
-	
+
 	t.Run("RunTests", func(t *testing.T) {
 		opts := TestOptions{Verbose: true}
 		results, err := tester.RunTests(ctx, opts)
@@ -229,7 +229,7 @@ func TestTester_Interface(t *testing.T) {
 		assert.Equal(t, 10, results.Passed)
 		assert.Equal(t, 0, results.Failed)
 	})
-	
+
 	t.Run("RunBenchmarks", func(t *testing.T) {
 		opts := IBenchmarkOptions{}
 		results, err := tester.RunBenchmarks(ctx, opts)
@@ -237,7 +237,7 @@ func TestTester_Interface(t *testing.T) {
 		require.NotNil(t, results)
 		assert.True(t, tester.runBenchmarksCalled)
 	})
-	
+
 	t.Run("GenerateCoverage", func(t *testing.T) {
 		opts := CoverageOptions{}
 		report, err := tester.GenerateCoverage(ctx, opts)
@@ -246,7 +246,7 @@ func TestTester_Interface(t *testing.T) {
 		assert.True(t, tester.generateCovCalled)
 		assert.Equal(t, 85.5, report.Overall.Percentage)
 	})
-	
+
 	t.Run("RunUnit", func(t *testing.T) {
 		opts := TestOptions{}
 		results, err := tester.RunUnit(ctx, opts)
@@ -255,7 +255,7 @@ func TestTester_Interface(t *testing.T) {
 		assert.True(t, tester.runUnitCalled)
 		assert.Equal(t, 5, results.Passed)
 	})
-	
+
 	t.Run("RunIntegration", func(t *testing.T) {
 		opts := TestOptions{}
 		results, err := tester.RunIntegration(ctx, opts)
@@ -264,7 +264,7 @@ func TestTester_Interface(t *testing.T) {
 		assert.True(t, tester.runIntegrationCalled)
 		assert.Equal(t, 5, results.Passed)
 	})
-	
+
 	t.Run("Error handling", func(t *testing.T) {
 		errorTester := &MockTester{shouldError: true}
 		_, err := errorTester.RunTests(ctx, TestOptions{})
@@ -276,7 +276,7 @@ func TestTester_Interface(t *testing.T) {
 func TestDeployer_Interface(t *testing.T) {
 	ctx := context.Background()
 	deployer := &MockDeployer{}
-	
+
 	t.Run("Deploy", func(t *testing.T) {
 		target := DeployTarget{Environment: "staging"}
 		opts := DeployOptions{}
@@ -284,21 +284,21 @@ func TestDeployer_Interface(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, deployer.deployCalled)
 	})
-	
+
 	t.Run("Validate", func(t *testing.T) {
 		target := DeployTarget{Environment: "production"}
 		err := deployer.Validate(ctx, target)
 		require.NoError(t, err)
 		assert.True(t, deployer.validateCalled)
 	})
-	
+
 	t.Run("Rollback", func(t *testing.T) {
 		target := DeployTarget{Environment: "production"}
 		err := deployer.Rollback(ctx, target, "v1.0.0")
 		require.NoError(t, err)
 		assert.True(t, deployer.rollbackCalled)
 	})
-	
+
 	t.Run("Status", func(t *testing.T) {
 		target := DeployTarget{Environment: "production"}
 		status, err := deployer.Status(ctx, target)
@@ -308,14 +308,14 @@ func TestDeployer_Interface(t *testing.T) {
 		assert.Equal(t, "1.0.0", status.Version)
 		assert.Equal(t, "running", status.State)
 	})
-	
+
 	t.Run("Scale", func(t *testing.T) {
 		target := DeployTarget{Environment: "production"}
 		err := deployer.Scale(ctx, target, 3)
 		require.NoError(t, err)
 		assert.True(t, deployer.scaleServiceCalled)
 	})
-	
+
 	t.Run("Logs", func(t *testing.T) {
 		target := DeployTarget{Environment: "production"}
 		logs, err := deployer.Logs(ctx, target, LogOptions{})
@@ -325,7 +325,7 @@ func TestDeployer_Interface(t *testing.T) {
 		assert.Len(t, logs, 2)
 		assert.Equal(t, "log line 1", logs[0])
 	})
-	
+
 	t.Run("Error handling", func(t *testing.T) {
 		errorDeployer := &MockDeployer{shouldError: true}
 		err := errorDeployer.Deploy(ctx, DeployTarget{}, DeployOptions{})
@@ -341,7 +341,7 @@ func TestBuildOptions(t *testing.T) {
 		assert.Empty(t, opts.Tags)
 		assert.Empty(t, opts.Output)
 	})
-	
+
 	t.Run("with custom values", func(t *testing.T) {
 		opts := BuildOptions{
 			Verbose: true,
@@ -349,7 +349,7 @@ func TestBuildOptions(t *testing.T) {
 			Output:  "/tmp/myapp",
 			LDFlags: []string{"-s", "-w"},
 		}
-		
+
 		assert.True(t, opts.Verbose)
 		assert.Equal(t, []string{"integration"}, opts.Tags)
 		assert.Equal(t, "/tmp/myapp", opts.Output)
@@ -364,7 +364,7 @@ func TestTestOptions(t *testing.T) {
 		assert.Empty(t, opts.Tags)
 		assert.Empty(t, opts.Packages)
 	})
-	
+
 	t.Run("with custom values", func(t *testing.T) {
 		opts := TestOptions{
 			Verbose:   true,
@@ -376,7 +376,7 @@ func TestTestOptions(t *testing.T) {
 			Cover:     true,
 			Parallel:  4,
 		}
-		
+
 		assert.True(t, opts.Verbose)
 		assert.Equal(t, []string{"unit"}, opts.Tags)
 		assert.Equal(t, []string{"./..."}, opts.Packages)
@@ -394,13 +394,13 @@ func TestPlatform(t *testing.T) {
 		assert.Equal(t, "linux", platform.OS)
 		assert.Equal(t, "amd64", platform.Arch)
 	})
-	
+
 	t.Run("empty platform", func(t *testing.T) {
 		platform := Platform{}
 		assert.Empty(t, platform.OS)
 		assert.Empty(t, platform.Arch)
 	})
-	
+
 	t.Run("common platforms", func(t *testing.T) {
 		platforms := []Platform{
 			{OS: "linux", Arch: "amd64"},
@@ -409,10 +409,10 @@ func TestPlatform(t *testing.T) {
 			{OS: "darwin", Arch: "arm64"},
 			{OS: "windows", Arch: "amd64"},
 		}
-		
+
 		expectedOS := []string{"linux", "linux", "darwin", "darwin", "windows"}
 		expectedArch := []string{"amd64", "arm64", "amd64", "arm64", "amd64"}
-		
+
 		for i, platform := range platforms {
 			assert.Equal(t, expectedOS[i], platform.OS)
 			assert.Equal(t, expectedArch[i], platform.Arch)
@@ -429,9 +429,9 @@ func TestPackageFormat(t *testing.T) {
 			PackageFormatRPM,
 			PackageFormatDMG,
 		}
-		
+
 		expected := []string{"tar.gz", "zip", "deb", "rpm", "dmg"}
-		
+
 		for i, format := range formats {
 			assert.Equal(t, expected[i], string(format))
 		}
@@ -446,21 +446,21 @@ func TestTestResults(t *testing.T) {
 			Skipped:  2,
 			Duration: time.Second * 5,
 		}
-		
+
 		assert.Equal(t, 10, results.Passed)
 		assert.Equal(t, 0, results.Failed)
 		assert.Equal(t, 2, results.Skipped)
 		assert.Equal(t, time.Second*5, results.Duration)
 		assert.Equal(t, 12, results.Passed+results.Failed+results.Skipped)
 	})
-	
+
 	t.Run("failed test results", func(t *testing.T) {
 		results := TestResults{
 			Passed:  8,
 			Failed:  2,
 			Skipped: 1,
 		}
-		
+
 		assert.Equal(t, 11, results.Passed+results.Failed+results.Skipped)
 	})
 }
@@ -475,7 +475,7 @@ func TestCoverageReport(t *testing.T) {
 				Lines:      1000,
 			},
 		}
-		
+
 		assert.Equal(t, 92.5, report.Overall.Percentage)
 		assert.Equal(t, 925, report.Overall.Covered)
 		assert.Equal(t, 1000, report.Overall.Lines)
@@ -490,7 +490,7 @@ func TestDeployTarget(t *testing.T) {
 			Name:        "prod-cluster",
 			Provider:    "kubernetes",
 		}
-		
+
 		assert.Equal(t, "production", target.Environment)
 		assert.Equal(t, "us-west-2", target.Region)
 		assert.Equal(t, "prod-cluster", target.Name)
@@ -507,7 +507,7 @@ func TestDeployStatus(t *testing.T) {
 			Total:       3,
 			LastUpdated: time.Now(),
 		}
-		
+
 		assert.Equal(t, "v1.2.3", status.Version)
 		assert.Equal(t, "running", status.State)
 		assert.Equal(t, 3, status.Ready)
@@ -521,7 +521,7 @@ func BenchmarkBuilder_Build(b *testing.B) {
 	ctx := context.Background()
 	builder := &MockBuilder{}
 	opts := BuildOptions{Verbose: false}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = builder.Build(ctx, opts)
@@ -532,7 +532,7 @@ func BenchmarkTester_RunTests(b *testing.B) {
 	ctx := context.Background()
 	tester := &MockTester{}
 	opts := TestOptions{Verbose: false}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = tester.RunTests(ctx, opts)
@@ -544,7 +544,7 @@ func BenchmarkDeployer_Deploy(b *testing.B) {
 	deployer := &MockDeployer{}
 	target := DeployTarget{Environment: "test"}
 	opts := DeployOptions{}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = deployer.Deploy(ctx, target, opts)
@@ -553,7 +553,7 @@ func BenchmarkDeployer_Deploy(b *testing.B) {
 
 func BenchmarkPlatform_Access(b *testing.B) {
 	platform := Platform{OS: "linux", Arch: "amd64"}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = platform.OS + "/" + platform.Arch

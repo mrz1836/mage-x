@@ -72,10 +72,10 @@ func (ts *AWSProviderTestSuite) TestAWSProviderBasics() {
 				// Missing AccessKey and SecretKey
 			},
 		}
-		
+
 		provider, err := New(invalidConfig)
 		require.NoError(ts.T(), err) // Creation should succeed
-		
+
 		err = provider.Validate()
 		require.Error(ts.T(), err)
 		require.Contains(ts.T(), err.Error(), "AWS access key and secret key are required")
@@ -90,10 +90,10 @@ func (ts *AWSProviderTestSuite) TestAWSProviderBasics() {
 				SecretKey: "test-secret",
 			},
 		}
-		
+
 		provider, err := New(invalidConfig)
 		require.NoError(ts.T(), err) // Creation should succeed
-		
+
 		err = provider.Validate()
 		require.Error(ts.T(), err)
 		require.Contains(ts.T(), err.Error(), "AWS region is required")
@@ -106,12 +106,12 @@ func (ts *AWSProviderTestSuite) TestAWSProviderBasics() {
 		require.True(ts.T(), health.Healthy)
 		require.Equal(ts.T(), "healthy", health.Status)
 		require.NotEmpty(ts.T(), health.Services)
-		
+
 		// Check specific service health
 		require.Contains(ts.T(), health.Services, "ec2")
 		require.Contains(ts.T(), health.Services, "s3")
 		require.Contains(ts.T(), health.Services, "rds")
-		
+
 		ec2Health := health.Services["ec2"]
 		require.True(ts.T(), ec2Health.Available)
 		require.Greater(ts.T(), ec2Health.ResponseTime, time.Duration(0))
@@ -355,7 +355,7 @@ func (ts *AWSProviderTestSuite) TestAWSStorageService() {
 
 	ts.Run("Advanced S3 operations", func() {
 		bucketName := "test-mage-bucket"
-		
+
 		// Multipart upload
 		err := storage.MultipartUpload(ctx, bucketName, "large-file.dat", strings.NewReader("large file content"))
 		require.NoError(ts.T(), err)
@@ -601,7 +601,7 @@ func (ts *AWSProviderTestSuite) TestAWSNetworkService() {
 
 		// Update load balancer
 		updateReq := &providers.UpdateLoadBalancerRequest{
-			Name: stringPtr("updated-load-balancer"),
+			Name:           stringPtr("updated-load-balancer"),
 			SecurityGroups: []string{"sg-new"},
 			Tags: map[string]string{
 				"Updated": "true",
@@ -617,7 +617,7 @@ func (ts *AWSProviderTestSuite) TestHelperFunctions() {
 	ts.Run("ID generation", func() {
 		id1 := generateID()
 		id2 := generateID()
-		
+
 		require.NotEmpty(ts.T(), id1)
 		require.NotEmpty(ts.T(), id2)
 		require.NotEqual(ts.T(), id1, id2) // Should be unique
@@ -626,14 +626,14 @@ func (ts *AWSProviderTestSuite) TestHelperFunctions() {
 	ts.Run("IP generation", func() {
 		publicIP := generateIP()
 		privateIP := generatePrivateIP()
-		
+
 		require.NotEmpty(ts.T(), publicIP)
 		require.NotEmpty(ts.T(), privateIP)
-		
+
 		// Check IP format
 		require.True(ts.T(), strings.HasPrefix(publicIP, "54."))
 		require.True(ts.T(), strings.HasPrefix(privateIP, "10.0."))
-		
+
 		// Should contain 4 octets
 		require.Len(ts.T(), strings.Split(publicIP, "."), 4)
 		require.Len(ts.T(), strings.Split(privateIP, "."), 4)
@@ -662,7 +662,7 @@ func (ts *AWSProviderTestSuite) TestAWSProviderRegistration() {
 		require.NoError(ts.T(), err)
 		require.NotNil(ts.T(), provider)
 		require.Equal(ts.T(), "aws", provider.Name())
-		
+
 		// Verify it's the correct type
 		awsProvider, ok := provider.(*Provider)
 		require.True(ts.T(), ok)
