@@ -334,7 +334,6 @@ func TestDefaultEnvManager_Isolation(t *testing.T) {
 		}
 		return nil
 	})
-
 	if err != nil {
 		t.Fatalf("Isolation failed: %v", err)
 	}

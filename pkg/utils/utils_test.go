@@ -593,7 +593,7 @@ func TestFileSystemOperations(t *testing.T) {
 	t.Run("FileExists and DirExists", func(t *testing.T) {
 		// Test file
 		testFile := filepath.Join(tempDir, "test.txt")
-		err := os.WriteFile(testFile, []byte("test"), 0644)
+		err := os.WriteFile(testFile, []byte("test"), 0o644)
 		require.NoError(t, err)
 
 		assert.True(t, FileExists(testFile))
@@ -601,7 +601,7 @@ func TestFileSystemOperations(t *testing.T) {
 
 		// Test directory
 		testDir := filepath.Join(tempDir, "testdir")
-		err = os.MkdirAll(testDir, 0755)
+		err = os.MkdirAll(testDir, 0o755)
 		require.NoError(t, err)
 
 		assert.True(t, DirExists(testDir))
@@ -617,11 +617,11 @@ func TestFileSystemOperations(t *testing.T) {
 		testDir := filepath.Join(tempDir, "cleantest")
 
 		// Create directory with content
-		err := os.MkdirAll(testDir, 0755)
+		err := os.MkdirAll(testDir, 0o755)
 		require.NoError(t, err)
 
 		testFile := filepath.Join(testDir, "file.txt")
-		err = os.WriteFile(testFile, []byte("content"), 0644)
+		err = os.WriteFile(testFile, []byte("content"), 0o644)
 		require.NoError(t, err)
 
 		// Clean directory
@@ -643,7 +643,7 @@ func TestFileSystemOperations(t *testing.T) {
 		// Create source file
 		srcFile := filepath.Join(tempDir, "source.txt")
 		content := "test file content"
-		err := os.WriteFile(srcFile, []byte(content), 0644)
+		err := os.WriteFile(srcFile, []byte(content), 0o644)
 		require.NoError(t, err)
 
 		// Copy file
@@ -663,7 +663,7 @@ func TestFileSystemOperations(t *testing.T) {
 		testFiles := []string{"test.go", "test.txt", "other.go", "README.md"}
 		for _, file := range testFiles {
 			filePath := filepath.Join(tempDir, file)
-			err := os.WriteFile(filePath, []byte("content"), 0644)
+			err := os.WriteFile(filePath, []byte("content"), 0o644)
 			require.NoError(t, err)
 		}
 

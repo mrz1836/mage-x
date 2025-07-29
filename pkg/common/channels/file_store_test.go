@@ -189,11 +189,11 @@ func TestFileStore_ListReleases(t *testing.T) {
 	t.Run("ignore non-json files", func(t *testing.T) {
 		// Create a non-JSON file in the channel directory
 		channelDir := filepath.Join(tempDir, "releases", "beta")
-		err := os.MkdirAll(channelDir, 0755)
+		err := os.MkdirAll(channelDir, 0o755)
 		require.NoError(t, err)
 
 		nonJSONFile := filepath.Join(channelDir, "README.txt")
-		err = os.WriteFile(nonJSONFile, []byte("This is not a release"), 0644)
+		err = os.WriteFile(nonJSONFile, []byte("This is not a release"), 0o644)
 		require.NoError(t, err)
 
 		// Should ignore the non-JSON file
@@ -217,7 +217,7 @@ func TestFileStore_ListReleases(t *testing.T) {
 		// Create a corrupted JSON file
 		channelDir := filepath.Join(tempDir, "releases", "nightly")
 		corruptedFile := filepath.Join(channelDir, "corrupted.json")
-		err = os.WriteFile(corruptedFile, []byte("invalid json content"), 0644)
+		err = os.WriteFile(corruptedFile, []byte("invalid json content"), 0o644)
 		require.NoError(t, err)
 
 		// Should handle corrupted file gracefully and return valid releases

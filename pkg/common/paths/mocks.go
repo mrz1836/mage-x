@@ -200,7 +200,7 @@ func (m *MockPathBuilder) Mode() fs.FileMode {
 	if value, exists := m.GetMockData("mode"); exists {
 		return value.(fs.FileMode)
 	}
-	return 0644
+	return 0o644
 }
 
 // Directory operations

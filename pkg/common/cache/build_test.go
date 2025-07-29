@@ -100,7 +100,7 @@ func TestBuildCache_BuildResult(t *testing.T) {
 	t.Run("store and get build result", func(t *testing.T) {
 		// Create a binary file for the test
 		binaryPath := filepath.Join(tempDir, "test-binary")
-		err = os.WriteFile(binaryPath, []byte("binary content"), 0755)
+		err = os.WriteFile(binaryPath, []byte("binary content"), 0o755)
 		require.NoError(t, err)
 
 		buildResult.Binary = binaryPath
@@ -351,9 +351,9 @@ func TestBuildCache_GenerateFileHash(t *testing.T) {
 	testFile2 := filepath.Join(tempDir, "test2.txt")
 	largeFile := filepath.Join(tempDir, "large.txt")
 
-	err := os.WriteFile(testFile1, []byte("content1"), 0644)
+	err := os.WriteFile(testFile1, []byte("content1"), 0o644)
 	require.NoError(t, err)
-	err = os.WriteFile(testFile2, []byte("content2"), 0644)
+	err = os.WriteFile(testFile2, []byte("content2"), 0o644)
 	require.NoError(t, err)
 
 	// Create a large file (> 1MB) to test size limit
@@ -361,7 +361,7 @@ func TestBuildCache_GenerateFileHash(t *testing.T) {
 	for i := range largeContent {
 		largeContent[i] = byte(i % 256)
 	}
-	err = os.WriteFile(largeFile, largeContent, 0644)
+	err = os.WriteFile(largeFile, largeContent, 0o644)
 	require.NoError(t, err)
 
 	t.Run("hash existing files", func(t *testing.T) {
@@ -406,7 +406,7 @@ func TestBuildCache_GenerateFileHash(t *testing.T) {
 
 		// Modify file content
 		time.Sleep(time.Millisecond * 10) // Ensure different timestamp
-		err = os.WriteFile(testFile1, []byte("modified content"), 0644)
+		err = os.WriteFile(testFile1, []byte("modified content"), 0o644)
 		require.NoError(t, err)
 
 		hash2, err := cache.GenerateFileHash([]string{testFile1})
@@ -509,7 +509,7 @@ func TestBuildCache_Clear(t *testing.T) {
 	t.Run("clear all cache", func(t *testing.T) {
 		// Create a binary file for the test
 		binaryPath := filepath.Join(tempDir, "clear-test-binary")
-		err = os.WriteFile(binaryPath, []byte("binary content"), 0755)
+		err = os.WriteFile(binaryPath, []byte("binary content"), 0o755)
 		require.NoError(t, err)
 
 		// Add some test data
@@ -575,7 +575,7 @@ func TestBuildCache_removeCacheEntry(t *testing.T) {
 
 	// Create a test file
 	testFile := filepath.Join(tempDir, "builds", "test.json")
-	err = os.WriteFile(testFile, []byte(`{"test": "data"}`), 0644)
+	err = os.WriteFile(testFile, []byte(`{"test": "data"}`), 0o644)
 	require.NoError(t, err)
 
 	// Verify file exists
@@ -597,7 +597,7 @@ func TestBuildCache_CacheEntryExpiration(t *testing.T) {
 
 	// Create a build result with a binary file
 	binaryPath := filepath.Join(tempDir, "test-binary")
-	err = os.WriteFile(binaryPath, []byte("binary content"), 0755)
+	err = os.WriteFile(binaryPath, []byte("binary content"), 0o755)
 	require.NoError(t, err)
 
 	buildResult := &BuildResult{
@@ -804,7 +804,7 @@ func BenchmarkBuildCache_GenerateFileHash(b *testing.B) {
 	files := make([]string, 10)
 	for i := 0; i < 10; i++ {
 		file := filepath.Join(tempDir, fmt.Sprintf("test%d.go", i))
-		err := os.WriteFile(file, []byte(fmt.Sprintf("package main\nfunc test%d() {}", i)), 0644)
+		err := os.WriteFile(file, []byte(fmt.Sprintf("package main\nfunc test%d() {}", i)), 0o644)
 		if err != nil {
 			b.Fatal(err)
 		}

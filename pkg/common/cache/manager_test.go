@@ -145,11 +145,11 @@ func TestManager_GenerateBuildHash(t *testing.T) {
 	testFile2 := filepath.Join(tempDir, "test2.go")
 	configFile := filepath.Join(tempDir, "config.yaml")
 
-	err := os.WriteFile(testFile1, []byte("package main\nfunc main() {}"), 0644)
+	err := os.WriteFile(testFile1, []byte("package main\nfunc main() {}"), 0o644)
 	require.NoError(t, err)
-	err = os.WriteFile(testFile2, []byte("package main\nvar x = 1"), 0644)
+	err = os.WriteFile(testFile2, []byte("package main\nvar x = 1"), 0o644)
 	require.NoError(t, err)
-	err = os.WriteFile(configFile, []byte("config: value"), 0644)
+	err = os.WriteFile(configFile, []byte("config: value"), 0o644)
 	require.NoError(t, err)
 
 	config := &Config{
@@ -208,7 +208,7 @@ func TestManager_GenerateBuildHash(t *testing.T) {
 		assert.NotEmpty(t, hash1)
 
 		// Modify file content
-		err = os.WriteFile(testFile1, []byte("package main\nfunc main() { println(\"hello\") }"), 0644)
+		err = os.WriteFile(testFile1, []byte("package main\nfunc main() { println(\"hello\") }"), 0o644)
 		require.NoError(t, err)
 
 		hash2, err := manager.GenerateBuildHash(
@@ -268,7 +268,7 @@ func TestManager_GenerateTestHash(t *testing.T) {
 
 	// Create test files
 	testFile := filepath.Join(tempDir, "test.go")
-	err := os.WriteFile(testFile, []byte("package main\nfunc TestExample(t *testing.T) {}"), 0644)
+	err := os.WriteFile(testFile, []byte("package main\nfunc TestExample(t *testing.T) {}"), 0o644)
 	require.NoError(t, err)
 
 	config := &Config{
@@ -314,9 +314,9 @@ func TestManager_GenerateLintHash(t *testing.T) {
 	sourceFile := filepath.Join(tempDir, "main.go")
 	configFile := filepath.Join(tempDir, ".golangci.yml")
 
-	err := os.WriteFile(sourceFile, []byte("package main\nfunc main() {}"), 0644)
+	err := os.WriteFile(sourceFile, []byte("package main\nfunc main() {}"), 0o644)
 	require.NoError(t, err)
-	err = os.WriteFile(configFile, []byte("linters:\n  enable:\n    - gofmt"), 0644)
+	err = os.WriteFile(configFile, []byte("linters:\n  enable:\n    - gofmt"), 0o644)
 	require.NoError(t, err)
 
 	config := &Config{
@@ -362,9 +362,9 @@ func TestManager_GenerateDependencyHash(t *testing.T) {
 	modFile := filepath.Join(tempDir, "go.mod")
 	sumFile := filepath.Join(tempDir, "go.sum")
 
-	err := os.WriteFile(modFile, []byte("module test\ngo 1.19"), 0644)
+	err := os.WriteFile(modFile, []byte("module test\ngo 1.19"), 0o644)
 	require.NoError(t, err)
-	err = os.WriteFile(sumFile, []byte("github.com/example/lib v1.0.0 h1:hash"), 0644)
+	err = os.WriteFile(sumFile, []byte("github.com/example/lib v1.0.0 h1:hash"), 0o644)
 	require.NoError(t, err)
 
 	config := &Config{
@@ -483,7 +483,7 @@ func TestManager_Clear(t *testing.T) {
 
 		// Create some test cache files
 		testFile := filepath.Join(tempDir, "builds", "test.json")
-		err = os.WriteFile(testFile, []byte(`{"test": "data"}`), 0644)
+		err = os.WriteFile(testFile, []byte(`{"test": "data"}`), 0o644)
 		require.NoError(t, err)
 
 		err = manager.Clear()
@@ -557,9 +557,9 @@ func TestManager_HashGenerationMethods(t *testing.T) {
 	sourceFile := filepath.Join(tempDir, "main.go")
 	configFile := filepath.Join(tempDir, "config.json")
 
-	err := os.WriteFile(sourceFile, []byte("package main\nfunc main() {}"), 0644)
+	err := os.WriteFile(sourceFile, []byte("package main\nfunc main() {}"), 0o644)
 	require.NoError(t, err)
-	err = os.WriteFile(configFile, []byte(`{"key": "value"}`), 0644)
+	err = os.WriteFile(configFile, []byte(`{"key": "value"}`), 0o644)
 	require.NoError(t, err)
 
 	config := &Config{
@@ -613,7 +613,7 @@ func TestManager_performSizeBasedCleanup(t *testing.T) {
 	// Create some cache files to exceed the size limit
 	for i := 0; i < 5; i++ {
 		testFile := filepath.Join(tempDir, "builds", fmt.Sprintf("test%d.json", i))
-		err = os.WriteFile(testFile, make([]byte, 300), 0644) // 300 bytes each
+		err = os.WriteFile(testFile, make([]byte, 300), 0o644) // 300 bytes each
 		require.NoError(t, err)
 	}
 
@@ -627,7 +627,7 @@ func BenchmarkManager_GenerateBuildHash(b *testing.B) {
 
 	// Create test files
 	sourceFile := filepath.Join(tempDir, "main.go")
-	err := os.WriteFile(sourceFile, []byte("package main\nfunc main() {}"), 0644)
+	err := os.WriteFile(sourceFile, []byte("package main\nfunc main() {}"), 0o644)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -665,7 +665,7 @@ func BenchmarkManager_GenerateTestHash(b *testing.B) {
 
 	// Create test files
 	testFile := filepath.Join(tempDir, "test.go")
-	err := os.WriteFile(testFile, []byte("package main\nfunc TestExample(t *testing.T) {}"), 0644)
+	err := os.WriteFile(testFile, []byte("package main\nfunc TestExample(t *testing.T) {}"), 0o644)
 	if err != nil {
 		b.Fatal(err)
 	}

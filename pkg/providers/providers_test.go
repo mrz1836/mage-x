@@ -962,15 +962,19 @@ type mockSecurityService struct{}
 func (s *mockSecurityService) CreateRole(ctx context.Context, req *CreateRoleRequest) (*Role, error) {
 	return &Role{ID: "role-123", Name: req.Name}, nil
 }
+
 func (s *mockSecurityService) CreatePolicy(ctx context.Context, req *CreatePolicyRequest) (*Policy, error) {
 	return &Policy{ID: "policy-123", Name: req.Name}, nil
 }
+
 func (s *mockSecurityService) AttachPolicy(ctx context.Context, roleID, policyID string) error {
 	return nil
 }
+
 func (s *mockSecurityService) CreateSecret(ctx context.Context, req *CreateSecretRequest) (*Secret, error) {
 	return &Secret{ID: "secret-123", Name: req.Name}, nil
 }
+
 func (s *mockSecurityService) GetSecret(ctx context.Context, id string) (*Secret, error) {
 	return &Secret{ID: id}, nil
 }
@@ -978,15 +982,19 @@ func (s *mockSecurityService) RotateSecret(ctx context.Context, id string) error
 func (s *mockSecurityService) EnableAuditLogging(ctx context.Context, config *AuditConfig) error {
 	return nil
 }
+
 func (s *mockSecurityService) GetComplianceReport(ctx context.Context, standard string) (*ComplianceReport, error) {
 	return &ComplianceReport{Standard: standard}, nil
 }
+
 func (s *mockSecurityService) CreateKMSKey(ctx context.Context, req *CreateKeyRequest) (*KMSKey, error) {
 	return &KMSKey{ID: "key-123", Name: req.Name}, nil
 }
+
 func (s *mockSecurityService) Encrypt(ctx context.Context, keyID string, data []byte) ([]byte, error) {
 	return data, nil
 }
+
 func (s *mockSecurityService) Decrypt(ctx context.Context, keyID string, data []byte) ([]byte, error) {
 	return data, nil
 }
@@ -997,6 +1005,7 @@ func (s *mockMonitoringService) PutMetric(ctx context.Context, metric *Metric) e
 func (s *mockMonitoringService) GetMetrics(ctx context.Context, query *MetricQuery) ([]*MetricData, error) {
 	return []*MetricData{}, nil
 }
+
 func (s *mockMonitoringService) CreateDashboard(ctx context.Context, req *CreateDashboardRequest) (*Dashboard, error) {
 	return &Dashboard{ID: "dash-123", Name: req.Name}, nil
 }
@@ -1004,15 +1013,19 @@ func (s *mockMonitoringService) CreateLogGroup(ctx context.Context, name string)
 func (s *mockMonitoringService) PutLogs(ctx context.Context, group string, logs []*LogEntry) error {
 	return nil
 }
+
 func (s *mockMonitoringService) QueryLogs(ctx context.Context, query *LogQuery) ([]*LogEntry, error) {
 	return []*LogEntry{}, nil
 }
+
 func (s *mockMonitoringService) CreateAlert(ctx context.Context, req *CreateAlertRequest) (*Alert, error) {
 	return &Alert{ID: "alert-123", Name: req.Name}, nil
 }
+
 func (s *mockMonitoringService) UpdateAlert(ctx context.Context, id string, req *UpdateAlertRequest) error {
 	return nil
 }
+
 func (s *mockMonitoringService) ListAlerts(ctx context.Context) ([]*Alert, error) {
 	return []*Alert{}, nil
 }
@@ -1020,6 +1033,7 @@ func (s *mockMonitoringService) PutTrace(ctx context.Context, trace *Trace) erro
 func (s *mockMonitoringService) GetTrace(ctx context.Context, id string) (*Trace, error) {
 	return &Trace{ID: id}, nil
 }
+
 func (s *mockMonitoringService) QueryTraces(ctx context.Context, query *TraceQuery) ([]*Trace, error) {
 	return []*Trace{}, nil
 }
@@ -1029,9 +1043,11 @@ type mockServerlessService struct{}
 func (s *mockServerlessService) CreateFunction(ctx context.Context, req *CreateFunctionRequest) (*Function, error) {
 	return &Function{ID: "func-123", Name: req.Name}, nil
 }
+
 func (s *mockServerlessService) UpdateFunction(ctx context.Context, id string, req *UpdateFunctionRequest) error {
 	return nil
 }
+
 func (s *mockServerlessService) InvokeFunction(ctx context.Context, id string, payload []byte) ([]byte, error) {
 	return []byte("result"), nil
 }
@@ -1039,12 +1055,15 @@ func (s *mockServerlessService) DeleteFunction(ctx context.Context, id string) e
 func (s *mockServerlessService) CreateEventTrigger(ctx context.Context, functionID string, trigger *EventTrigger) error {
 	return nil
 }
+
 func (s *mockServerlessService) CreateAPIGateway(ctx context.Context, req *CreateAPIGatewayRequest) (*APIGateway, error) {
 	return &APIGateway{ID: "api-123", Name: req.Name}, nil
 }
+
 func (s *mockServerlessService) CreateWorkflow(ctx context.Context, req *CreateWorkflowRequest) (*Workflow, error) {
 	return &Workflow{ID: "wf-123", Name: req.Name}, nil
 }
+
 func (s *mockServerlessService) ExecuteWorkflow(ctx context.Context, id string, input map[string]interface{}) (*WorkflowExecution, error) {
 	return &WorkflowExecution{ID: "exec-123", WorkflowID: id}, nil
 }
@@ -1054,27 +1073,35 @@ type mockAIService struct{}
 func (s *mockAIService) CreateModel(ctx context.Context, req *CreateModelRequest) (*AIModel, error) {
 	return &AIModel{ID: "model-123", Name: req.Name}, nil
 }
+
 func (s *mockAIService) TrainModel(ctx context.Context, id string, dataset *Dataset) (*TrainingJob, error) {
 	return &TrainingJob{ID: "job-123", ModelID: id}, nil
 }
+
 func (s *mockAIService) DeployModel(ctx context.Context, id string, config *DeploymentConfig) (*ModelEndpoint, error) {
 	return &ModelEndpoint{ID: "endpoint-123", ModelID: id}, nil
 }
+
 func (s *mockAIService) Predict(ctx context.Context, endpointID string, data interface{}) (interface{}, error) {
 	return "prediction", nil
 }
+
 func (s *mockAIService) CreateDataset(ctx context.Context, req *CreateDatasetRequest) (*Dataset, error) {
 	return &Dataset{ID: "dataset-123", Name: req.Name}, nil
 }
+
 func (s *mockAIService) PreprocessData(ctx context.Context, datasetID string, pipeline *Pipeline) error {
 	return nil
 }
+
 func (s *mockAIService) CreateNeuralNetwork(ctx context.Context, architecture *NetworkArchitecture) (*NeuralNetwork, error) {
 	return &NeuralNetwork{ID: "nn-123"}, nil
 }
+
 func (s *mockAIService) FineTuneModel(ctx context.Context, modelID string, dataset *Dataset) (*AIModel, error) {
 	return &AIModel{ID: modelID + "-tuned"}, nil
 }
+
 func (s *mockAIService) ExplainPrediction(ctx context.Context, modelID string, input interface{}) (*Explanation, error) {
 	return &Explanation{Prediction: "explained"}, nil
 }
@@ -1084,15 +1111,19 @@ type mockCostService struct{}
 func (s *mockCostService) GetCurrentSpend(ctx context.Context) (*SpendSummary, error) {
 	return &SpendSummary{Total: 1000.0}, nil
 }
+
 func (s *mockCostService) GetForecast(ctx context.Context, period time.Duration) (*CostForecast, error) {
 	return &CostForecast{Predicted: 1200.0}, nil
 }
+
 func (s *mockCostService) SetBudget(ctx context.Context, req *SetBudgetRequest) (*Budget, error) {
 	return &Budget{ID: "budget-123", Name: req.Name}, nil
 }
+
 func (s *mockCostService) GetRecommendations(ctx context.Context) ([]*CostRecommendation, error) {
 	return []*CostRecommendation{}, nil
 }
+
 func (s *mockCostService) EnableCostAlerts(ctx context.Context, config *AlertConfig) error {
 	return nil
 }
@@ -1102,15 +1133,19 @@ type mockComplianceService struct{}
 func (s *mockComplianceService) RunComplianceCheck(ctx context.Context, standard string) (*ComplianceResult, error) {
 	return &ComplianceResult{Standard: standard}, nil
 }
+
 func (s *mockComplianceService) GetComplianceStatus(ctx context.Context) (*ComplianceStatus, error) {
 	return &ComplianceStatus{Overall: 0.95}, nil
 }
+
 func (s *mockComplianceService) RemediateIssue(ctx context.Context, issueID string) error {
 	return nil
 }
+
 func (s *mockComplianceService) GenerateComplianceReport(ctx context.Context, req *ReportRequest) (*Report, error) {
 	return &Report{ID: "report-123", Type: req.Type}, nil
 }
+
 func (s *mockComplianceService) EnableContinuousCompliance(ctx context.Context, standards []string) error {
 	return nil
 }
@@ -1120,15 +1155,19 @@ type mockDisasterService struct{}
 func (s *mockDisasterService) CreateBackupPlan(ctx context.Context, req *CreateBackupPlanRequest) (*BackupPlan, error) {
 	return &BackupPlan{ID: "plan-123", Name: req.Name}, nil
 }
+
 func (s *mockDisasterService) TestFailover(ctx context.Context, planID string) (*FailoverTest, error) {
 	return &FailoverTest{ID: "test-123", PlanID: planID}, nil
 }
+
 func (s *mockDisasterService) InitiateFailover(ctx context.Context, planID string) (*Failover, error) {
 	return &Failover{ID: "failover-123", PlanID: planID}, nil
 }
+
 func (s *mockDisasterService) GetRPO(ctx context.Context) (time.Duration, error) {
 	return 15 * time.Minute, nil
 }
+
 func (s *mockDisasterService) GetRTO(ctx context.Context) (time.Duration, error) {
 	return 30 * time.Minute, nil
 }
@@ -1138,12 +1177,15 @@ type mockEdgeService struct{}
 func (s *mockEdgeService) DeployToEdge(ctx context.Context, req *EdgeDeployRequest) (*EdgeDeployment, error) {
 	return &EdgeDeployment{ID: "edge-123", Name: req.Name}, nil
 }
+
 func (s *mockEdgeService) ListEdgeLocations(ctx context.Context) ([]*EdgeLocation, error) {
 	return []*EdgeLocation{}, nil
 }
+
 func (s *mockEdgeService) UpdateEdgeConfig(ctx context.Context, locationID string, config *EdgeConfig) error {
 	return nil
 }
+
 func (s *mockEdgeService) GetEdgeMetrics(ctx context.Context, locationID string) (*EdgeMetrics, error) {
 	return &EdgeMetrics{LocationID: locationID}, nil
 }
@@ -1153,12 +1195,15 @@ type mockQuantumService struct{}
 func (s *mockQuantumService) CreateQuantumCircuit(ctx context.Context, req *CreateCircuitRequest) (*QuantumCircuit, error) {
 	return &QuantumCircuit{ID: "circuit-123", Name: req.Name}, nil
 }
+
 func (s *mockQuantumService) RunQuantumJob(ctx context.Context, circuitID string, shots int) (*QuantumResult, error) {
 	return &QuantumResult{ID: "result-123", CircuitID: circuitID}, nil
 }
+
 func (s *mockQuantumService) GetQuantumState(ctx context.Context, jobID string) (*QuantumState, error) {
 	return &QuantumState{}, nil
 }
+
 func (s *mockQuantumService) OptimizeWithQuantum(ctx context.Context, problem *OptimizationProblem) (*Solution, error) {
 	return &Solution{}, nil
 }

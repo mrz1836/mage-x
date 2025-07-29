@@ -41,7 +41,6 @@ func (ts *AuditTestSuite) TestAuditShow() {
 				return ts.audit.Show()
 			},
 		)
-
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
 			require.Contains(ts.T(), err.Error(), "audit")
@@ -79,7 +78,6 @@ func (ts *AuditTestSuite) TestAuditShow() {
 				return ts.audit.Show()
 			},
 		)
-
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
 			require.Contains(ts.T(), err.Error(), "audit")
@@ -97,7 +95,6 @@ func (ts *AuditTestSuite) TestAuditStats() {
 				return ts.audit.Stats()
 			},
 		)
-
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
 			require.Contains(ts.T(), err.Error(), "audit")
@@ -115,7 +112,6 @@ func (ts *AuditTestSuite) TestAuditExport() {
 				return ts.audit.Export()
 			},
 		)
-
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
 			require.Contains(ts.T(), err.Error(), "audit")
@@ -135,7 +131,6 @@ func (ts *AuditTestSuite) TestAuditExport() {
 				return ts.audit.Export()
 			},
 		)
-
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
 			require.Contains(ts.T(), err.Error(), "audit")
@@ -201,7 +196,6 @@ func (ts *AuditTestSuite) TestAuditDisable() {
 				return ts.audit.Disable()
 			},
 		)
-
 		// May fail if directory doesn't exist, which is acceptable
 		if err != nil {
 			require.Contains(ts.T(), err.Error(), "no such file or directory")
@@ -234,7 +228,6 @@ func (ts *AuditTestSuite) TestAuditReport() {
 				return ts.audit.Report()
 			},
 		)
-
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
 			require.Contains(ts.T(), err.Error(), "audit")
@@ -254,7 +247,6 @@ func (ts *AuditTestSuite) TestAuditReport() {
 				return ts.audit.Report()
 			},
 		)
-
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
 			require.Contains(ts.T(), err.Error(), "audit")

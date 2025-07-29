@@ -1,5 +1,9 @@
 name: Fortress CI/CD Pipeline
 
+concurrency:
+  group: fortress-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, develop]

@@ -226,7 +226,6 @@ func TestDeployApp(t *testing.T) {
 		platforms := []string{"linux/amd64", "darwin/amd64", "windows/amd64"}
 
 		err := deployApp(mockBuild, platforms)
-
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -276,7 +275,6 @@ func TestRunCI(t *testing.T) {
 		mockTest := NewMockTest()
 
 		err := runCI(mockBuild, mockTest)
-
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -351,7 +349,6 @@ func TestBuildPipeline(t *testing.T) {
 		mockBuild := NewMockBuild()
 
 		err := buildPipeline(mockBuild)
-
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}

@@ -27,7 +27,7 @@ func TestBuildIntegration(t *testing.T) {
 
 	// Create a simple Go project
 	projectDir := filepath.Join(tempDir, "test-project")
-	require.NoError(t, os.MkdirAll(projectDir, 0755))
+	require.NoError(t, os.MkdirAll(projectDir, 0o755))
 	require.NoError(t, os.Chdir(projectDir))
 
 	// Create go.mod
@@ -35,7 +35,7 @@ func TestBuildIntegration(t *testing.T) {
 
 go 1.24
 `
-	require.NoError(t, os.WriteFile("go.mod", []byte(goMod), 0644))
+	require.NoError(t, os.WriteFile("go.mod", []byte(goMod), 0o644))
 
 	// Create main.go
 	mainGo := `package main
@@ -46,7 +46,7 @@ func main() {
 	fmt.Println("Hello, Integration Test!")
 }
 `
-	require.NoError(t, os.WriteFile("main.go", []byte(mainGo), 0644))
+	require.NoError(t, os.WriteFile("main.go", []byte(mainGo), 0o644))
 
 	// Create mage config
 	config := &Config{
@@ -145,7 +145,7 @@ func TestMultipleNamespaceIntegration(t *testing.T) {
 	require.NoError(t, os.Chdir(tempDir))
 
 	// Create a Go project with tests
-	require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0644))
+	require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0o644))
 	require.NoError(t, os.WriteFile("main.go", []byte(`package main
 
 func Add(a, b int) int {
@@ -153,7 +153,7 @@ func Add(a, b int) int {
 }
 
 func main() {}
-`), 0644))
+`), 0o644))
 
 	require.NoError(t, os.WriteFile("main_test.go", []byte(`package main
 
@@ -164,7 +164,7 @@ func TestAdd(t *testing.T) {
 		t.Error("1 + 2 should equal 3")
 	}
 }
-`), 0644))
+`), 0o644))
 
 	// Override config
 	cfg = &Config{
@@ -288,7 +288,7 @@ test:
   cover: true
   race: true
 `
-		require.NoError(t, os.WriteFile(".mage.yaml", []byte(configYAML), 0644))
+		require.NoError(t, os.WriteFile(".mage.yaml", []byte(configYAML), 0o644))
 
 		cfg = nil // Reset
 		config, err := LoadConfig()
@@ -312,17 +312,17 @@ func TestCacheIntegration(t *testing.T) {
 	defer os.Chdir(originalWd)
 
 	projectDir := filepath.Join(tempDir, "cache-test")
-	require.NoError(t, os.MkdirAll(projectDir, 0755))
+	require.NoError(t, os.MkdirAll(projectDir, 0o755))
 	require.NoError(t, os.Chdir(projectDir))
 
 	// Create project
-	require.NoError(t, os.WriteFile("go.mod", []byte("module cache-test\n\ngo 1.24\n"), 0644))
+	require.NoError(t, os.WriteFile("go.mod", []byte("module cache-test\n\ngo 1.24\n"), 0o644))
 	require.NoError(t, os.WriteFile("main.go", []byte(`package main
 
 func main() {
 	println("cache test")
 }
-`), 0644))
+`), 0o644))
 
 	// Setup config with caching enabled
 	cfg = &Config{
@@ -426,7 +426,7 @@ func TestErrorHandling(t *testing.T) {
 
 	// Test build error handling
 	t.Run("build with missing main", func(t *testing.T) {
-		require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0644))
+		require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0o644))
 		// No main.go file
 
 		cfg = &Config{
