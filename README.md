@@ -1,5 +1,5 @@
  # 🪄 MAGE-X
-> Write Once, Mage Everywhere: Enterprise-Grade Build Automation for Go
+> Write Once, Mage Everywhere: Modern Build Automation for Go
 
 <table>
   <thead>
@@ -72,7 +72,7 @@
 * [What's Inside](#-whats-inside)
 * [Quick Start](#-quick-start)
 * [Features](#-features)
-* [Enterprise Features](#-enterprise-features)
+* [Advanced Features](#-advanced-features)
 * [Configuration](#-configuration)
 * [Documentation](#-documentation)
 * [Examples & Tests](#-examples--tests)
@@ -87,7 +87,7 @@
 
 ## 🧩 What's Inside
 
-**MAGE-X** is a comprehensive build automation toolkit that transforms how you manage Go projects. Built on the philosophy of "Write Once, Mage Everywhere," it provides enterprise-grade development tools with a delightfully friendly user experience.
+**MAGE-X** is a comprehensive build automation toolkit that transforms how you manage Go projects. Built on the philosophy of "Write Once, Mage Everywhere," it provides modern development tools with a delightfully friendly user experience.
 
 Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminates build boilerplate and delivers consistency across your entire development workflow.
 
@@ -216,241 +216,32 @@ mage recipesList
 
 <br/>
 
-## 🏢 Enterprise Features
+## 🏢 Advanced Features
 
-MAGE-X provides comprehensive enterprise capabilities for organizations that need governance, security, and compliance in their build automation workflows.
+MAGE-X includes basic enterprise capabilities and extensibility for organizations.
 
-### Enterprise Configuration Setup
+### Basic Enterprise Features
 
-Initialize enterprise features in your project:
-
-```bash
-# Initialize enterprise configuration
-mage configureEnterprise
-
-# Or set up manually
-mage configureInit
-```
-
-### Audit Logging & Compliance
-
-Track all build activities with comprehensive audit logging:
+Available enterprise-focused functionality:
 
 ```bash
-# Enable audit logging
-mage auditEnable
-
-# View audit logs
+# Basic audit logging
 mage auditShow
 
-# Export compliance reports
-mage auditExport --format=json --output=compliance-report.json
+# Enterprise configuration
+mage configureEnterprise
+
+# Workflow management
+mage workflowShow
 ```
 
-**Features:**
-- **Activity Tracking**: Every command, build, test, and release is logged
-- **User Attribution**: Track who performed what actions and when
-- **Compliance Reporting**: Generate reports for security audits and compliance
-- **Retention Policies**: Configurable log retention and archival
-- **Integration Support**: Export to SIEM systems and compliance tools
+**Currently Available:**
+- **Basic Audit Logging**: Track build and deployment activities
+- **Configuration Management**: Centralized project configuration
+- **Workflow Templates**: Basic workflow definitions and execution
+- **Integration Framework**: Foundation for external tool integration
 
-### Security Scanning & Policy Enforcement
-
-Advanced security scanning with policy enforcement:
-
-```bash
-# Run comprehensive security scan
-mage securityScan
-
-# Enable vulnerability monitoring
-mage securityMonitor
-
-# Generate security report
-mage securityReport --format=sarif
-```
-
-**Features:**
-- **Vulnerability Detection**: Scan dependencies for known vulnerabilities
-- **Policy Enforcement**: Configurable security policies and gates
-- **Compliance Frameworks**: Support for SOC2, ISO 27001, and other frameworks
-- **Integration Support**: GitHub Security Advisories, Snyk, and other security tools
-- **Automated Remediation**: Automatic dependency updates and security patches
-
-### Team Management & Collaboration
-
-Enterprise-grade team management and collaboration features:
-
-```bash
-# Set up team configuration
-mage teamSetup
-
-# Configure user roles and permissions
-mage teamRoles --user=john@company.com --role=developer
-
-# Team analytics and insights
-mage teamAnalytics
-```
-
-**Features:**
-- **Role-Based Access**: Fine-grained permissions for team members
-- **Team Analytics**: Track team productivity and build metrics
-- **Collaboration Tools**: Integration with Slack, Teams, and other platforms
-- **Project Templates**: Standardized project templates for consistency
-- **Onboarding Workflows**: Automated team member onboarding
-
-### Analytics & Performance Metrics
-
-Comprehensive analytics and performance tracking:
-
-```bash
-# View build analytics
-mage analyticsDashboard
-
-# Performance metrics
-mage analyticsPerformance
-
-# Export metrics data
-mage analyticsExport --timeframe=30d --format=json
-```
-
-**Features:**
-- **Build Metrics**: Track build times, success rates, and performance trends
-- **Resource Utilization**: Monitor CPU, memory, and disk usage
-- **Dependency Analysis**: Track dependency updates and security metrics
-- **Performance Optimization**: Identify bottlenecks and optimization opportunities
-- **Custom Dashboards**: Create custom dashboards for different stakeholders
-
-### Advanced CLI Features
-
-Enterprise-focused CLI capabilities:
-
-```bash
-# Bulk operations across multiple repositories
-mage cliBulk --operation=build --repos=repo1,repo2,repo3
-
-# Advanced querying and filtering
-mage cliQuery --filter="status=failed" --last=24h
-
-# Interactive dashboard
-mage cliDashboard
-
-# Batch processing
-mage cliBatch --workflow=ci-cd --parallel=5
-```
-
-**Features:**
-- **Bulk Operations**: Execute commands across multiple repositories
-- **Advanced Querying**: Filter and search across projects and builds
-- **Interactive Dashboard**: Real-time monitoring and management
-- **Batch Processing**: Efficient processing of multiple operations
-- **Workflow Management**: Define and execute complex workflows
-
-### Enterprise Workflow Engine
-
-Define and execute complex workflows:
-
-```bash
-# Create workflow from template
-mage workflowCreate --name=ci-cd --template=enterprise
-
-# Execute workflow
-mage workflowExecute --workflow=ci-cd
-
-# Schedule workflows
-mage workflowSchedule --workflow=ci-cd --cron="0 2 * * *"
-
-# View workflow history
-mage workflowHistory --workflow=ci-cd --limit=10
-```
-
-**Features:**
-- **Workflow Templates**: Pre-built templates for common enterprise scenarios
-- **Dependency Management**: Define step dependencies and parallel execution
-- **Conditional Execution**: Execute steps based on conditions and variables
-- **Scheduling**: Cron-based scheduling for automated workflows
-- **History Tracking**: Complete workflow execution history and analytics
-
-### Enterprise Integration Hub
-
-Connect with your existing enterprise tools:
-
-```bash
-# Configure integrations
-mage integrationsSetup
-
-# Test integrations
-mage integrationsTest --service=slack
-
-# Sync with external systems
-mage integrationsSync --service=jira
-```
-
-**Supported Integrations:**
-- **Communication**: Slack, Microsoft Teams, Discord
-- **Project Management**: Jira, Asana, Linear, GitHub Issues
-- **CI/CD**: Jenkins, GitLab CI, GitHub Actions, Azure DevOps
-- **Infrastructure**: Docker, Kubernetes, AWS, Azure, GCP
-- **Monitoring**: Prometheus, Grafana, DataDog, New Relic
-- **Security**: Vault, SIEM systems, security scanners
-
-### Enterprise Configuration File
-
-Create `.mage.enterprise.yaml` for advanced configuration:
-
-```yaml
-metadata:
-  version: "1.0.0"
-  created_at: "2024-01-01T00:00:00Z"
-  updated_at: "2024-01-01T00:00:00Z"
-
-organization:
-  name: "Acme Corporation"
-  domain: "acme.com"
-  departments:
-    - name: "Engineering"
-      teams: ["backend", "frontend", "devops"]
-    - name: "Security"
-      teams: ["security", "compliance"]
-
-security:
-  level: "enterprise"
-  policies:
-    - name: "dependency-scanning"
-      enabled: true
-      severity: "high"
-  vault_integration:
-    enabled: true
-    address: "https://vault.acme.com"
-  compliance_frameworks:
-    - "SOC2"
-    - "ISO27001"
-
-analytics:
-  enabled: true
-  metrics_interval: "5m"
-  retention_days: 90
-  export_formats: ["json", "csv", "prometheus"]
-
-integrations:
-  slack:
-    enabled: true
-    webhook_url: "${SLACK_WEBHOOK_URL}"
-    channels: ["#builds", "#alerts"]
-  jira:
-    enabled: true
-    url: "https://acme.atlassian.net"
-    project_key: "ENG"
-  vault:
-    enabled: true
-    address: "https://vault.acme.com"
-    auth_method: "jwt"
-
-workflows:
-  templates_dir: ".mage/workflows"
-  execution_timeout: "1h"
-  max_concurrent_jobs: 10
-  notification_on_failure: true
-```
+**Note:** Advanced enterprise features like comprehensive analytics, team management, and security scanning are under development. The current implementation provides a solid foundation with basic enterprise capabilities.
 
 <br/>
 

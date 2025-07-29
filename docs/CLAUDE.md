@@ -140,7 +140,7 @@ var Default = CustomBuild{}.Default
 - Don't break backward compatibility
 - Don't remove existing public methods
 - Don't modify the registry pattern without testing
-- Avoid touching disabled files (*.disabled, v2_temp/)
+- Avoid touching disabled files
 
 #### Adding New Namespaces
 1. Add interface to `namespace_interfaces.go`
