@@ -137,7 +137,7 @@ jobs:
           echo "## Building artifacts"
 
           # Build for current platform
-          mage build
+          mage buildDefault
 
           # Build for multiple platforms
           echo "Building for multiple platforms..."
