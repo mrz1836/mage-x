@@ -31,7 +31,7 @@ jobs:
       - name: Run govulncheck
         run: |
           echo "## Running Go Vulnerability Check"
-          mage tools:vulncheck
+          mage toolsVulnCheck
 
   static-analysis:
     runs-on: ubuntu-latest
@@ -53,7 +53,7 @@ jobs:
       - name: Run go vet
         run: |
           echo "## Running go vet"
-          mage lint:vet
+          mage lintVet
 
       - name: Run golangci-lint
         run: |
@@ -80,7 +80,7 @@ jobs:
       - name: Check dependencies
         run: |
           echo "## Checking dependencies"
-          mage mod:tidy
+          mage modTidy
 
           # Check if go.mod or go.sum were modified
           if ! git diff --quiet go.mod go.sum; then
@@ -134,7 +134,7 @@ jobs:
       - name: Check code formatting
         run: |
           echo "## Checking code formatting with gofumpt"
-          mage lint:fumpt
+          mage lintFumpt
 
           # Check if any files were modified
           if ! git diff --quiet; then

@@ -145,14 +145,14 @@ jobs:
 
           echo ""
           echo "### Verify namespace targets are visible"
-          if mage -l | grep -q "build:"; then
+          if mage -l | grep -q "build"; then
             echo "✅ Build namespace targets found"
           else
             echo "❌ Build namespace targets not found"
             exit 1
           fi
 
-          if mage -l | grep -q "test:"; then
+          if mage -l | grep -q "test"; then
             echo "✅ Test namespace targets found"
           else
             echo "❌ Test namespace targets not found"

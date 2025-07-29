@@ -353,3 +353,21 @@ func BuildAll() error {
 	var b Build
 	return b.All()
 }
+
+// ToolsVulnCheck runs vulnerability check using govulncheck
+func ToolsVulnCheck() error {
+	var t Tools
+	return t.VulnCheck()
+}
+
+// LintVet runs go vet static analysis
+func LintVet() error {
+	var l Lint
+	return l.Vet()
+}
+
+// LintFumpt runs gofumpt code formatting
+func LintFumpt() error {
+	var l Lint
+	return l.Fumpt()
+}

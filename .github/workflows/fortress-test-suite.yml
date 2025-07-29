@@ -28,7 +28,7 @@ jobs:
           mage -version
 
       - name: Run standard tests
-        run: mage test
+        run: mage testDefault
 
   coverage-tests:
     runs-on: ubuntu-latest
