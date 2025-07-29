@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -52,17 +53,25 @@ func TestAuditLogger_Basic(t *testing.T) {
 
 	t.Run("database initialization failure", func(t *testing.T) {
 		// Try to create database in a directory that cannot be created
-		// Use a path under a file (not directory) to ensure it fails cross-platform
-		tempDir := t.TempDir()
-		existingFile := filepath.Join(tempDir, "existing_file")
-		
-		// Create a regular file
-		err := os.WriteFile(existingFile, []byte("test"), 0644)
-		require.NoError(t, err)
-		
-		// Try to create database under this file (should fail)
+		// Use a path that will definitely fail cross-platform
 		invalidConfig := config
-		invalidConfig.DatabasePath = filepath.Join(existingFile, "subdir", "audit.db")
+		
+		// Use an invalid path - root permissions typically don't exist in tests
+		if runtime.GOOS == "windows" {
+			// On Windows, try to create in a system directory we can't write to
+			invalidConfig.DatabasePath = filepath.Join("C:", "Windows", "System32", "audit.db")
+		} else {
+			// On Unix, try to create under a file (not directory)
+			tempDir := t.TempDir()
+			existingFile := filepath.Join(tempDir, "existing_file")
+			
+			// Create a regular file
+			err := os.WriteFile(existingFile, []byte("test"), 0o644)
+			require.NoError(t, err)
+			
+			// Try to create database under this file (should fail)
+			invalidConfig.DatabasePath = filepath.Join(existingFile, "subdir", "audit.db")
+		}
 
 		logger := NewAuditLogger(invalidConfig)
 		assert.False(t, logger.enabled) // Should be disabled on init failure

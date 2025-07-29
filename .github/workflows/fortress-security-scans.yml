@@ -136,7 +136,7 @@ jobs:
         run: |
           echo "## Checking code formatting with gofumpt"
           go install mvdan.cc/gofumpt@latest
-          gofumpt -l -d .
+          gofumpt -w .
 
           # Check if any files were modified
           if ! git diff --quiet; then

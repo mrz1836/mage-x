@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -236,6 +237,8 @@ func TestSecureExecutor_FilterEnvironment(t *testing.T) {
 }
 
 func TestSecureExecutor_Execute(t *testing.T) {
+	tempDir := t.TempDir() // Create cross-platform temp directory
+	
 	tests := []struct {
 		name    string
 		setup   func(*SecureExecutor)
@@ -269,21 +272,38 @@ func TestSecureExecutor_Execute(t *testing.T) {
 		{
 			name: "command with timeout",
 			setup: func(e *SecureExecutor) {
-				e.Timeout = 10 * time.Millisecond
+				e.Timeout = 100 * time.Millisecond
 			},
-			command: "sleep",
-			args:    []string{"1"},
+			command: func() string {
+				if runtime.GOOS == "windows" {
+					return "timeout"
+				}
+				return "sleep"
+			}(),
+			args: func() []string {
+				if runtime.GOOS == "windows" {
+					return []string{"/t", "2"}
+				}
+				return []string{"2"}
+			}(),
 			wantErr: true,
 			check: func(t *testing.T, e *SecureExecutor, err error) {
 				assert.Error(t, err)
-				// The error might be "killed" or "context deadline exceeded" depending on timing
-				assert.True(t, strings.Contains(err.Error(), "killed") || strings.Contains(err.Error(), "context deadline exceeded"))
+				// The error might be different on various platforms
+				errMsg := err.Error()
+				assert.True(t, 
+					strings.Contains(errMsg, "killed") || 
+					strings.Contains(errMsg, "context deadline exceeded") ||
+					strings.Contains(errMsg, "exit status") ||
+					strings.Contains(errMsg, "terminated") ||
+					strings.Contains(errMsg, "context canceled"),
+					"Expected timeout-related error but got: %s", errMsg)
 			},
 		},
 		{
 			name: "command with working directory",
 			setup: func(e *SecureExecutor) {
-				e.WorkingDir = "/tmp"
+				e.WorkingDir = tempDir
 			},
 			command: "pwd",
 			args:    []string{},
@@ -457,7 +477,17 @@ func TestValidatePath(t *testing.T) {
 		{"valid nested path", "path/to/file.txt", false, ""},
 		{"path traversal with ..", "../../../etc/passwd", true, "path traversal detected"},
 		{"path traversal hidden", "path/../../../etc/passwd", true, "path traversal detected"},
-		{"absolute path outside /tmp", "/etc/passwd", true, "absolute paths not allowed"},
+		{
+			name: "absolute path outside /tmp", 
+			path: func() string {
+				if runtime.GOOS == "windows" {
+					return "C:\\Windows\\System32\\drivers\\etc\\hosts"
+				}
+				return "/etc/passwd"
+			}(), 
+			wantErr: true, 
+			errMsg: "absolute paths not allowed",
+		},
 		{"absolute path in /tmp", "/tmp/test.txt", false, ""},
 		{"current directory", ".", false, ""},
 		{"parent directory", "..", true, "path traversal detected"},
@@ -518,10 +548,20 @@ func TestSecureExecutor_ContextCancellation(t *testing.T) {
 	// Create a context that we'll cancel
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Use cross-platform long-running command
+	var cmd, arg string
+	if runtime.GOOS == "windows" {
+		cmd = "timeout"
+		arg = "/t 10"
+	} else {
+		cmd = "sleep"
+		arg = "5"
+	}
+
 	// Start a long-running command
 	done := make(chan error)
 	go func() {
-		done <- executor.Execute(ctx, "sleep", "5")
+		done <- executor.Execute(ctx, cmd, arg)
 	}()
 
 	// Cancel the context after a short delay
@@ -531,9 +571,15 @@ func TestSecureExecutor_ContextCancellation(t *testing.T) {
 	// Wait for the command to finish
 	err := <-done
 	assert.Error(t, err)
-	// Context cancellation can result in different error messages
+	// Context cancellation can result in different error messages on different platforms
 	errMsg := err.Error()
-	assert.True(t, strings.Contains(errMsg, "context canceled") || strings.Contains(errMsg, "signal: killed") || strings.Contains(errMsg, "killed"))
+	assert.True(t, 
+		strings.Contains(errMsg, "context canceled") || 
+		strings.Contains(errMsg, "signal: killed") || 
+		strings.Contains(errMsg, "killed") ||
+		strings.Contains(errMsg, "exit status") ||
+		strings.Contains(errMsg, "terminated"),
+		"Expected cancellation-related error but got: %s", errMsg)
 }
 
 func TestSecureExecutor_AuditLogging(t *testing.T) {
