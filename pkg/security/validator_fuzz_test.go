@@ -79,8 +79,10 @@ func FuzzValidateVersion(f *testing.F) {
 				"ValidateVersion accepted invalid version: %s", version)
 		}
 
-		// Verify UTF-8 validity
-		assert.True(t, utf8.ValidString(version), "Input is not valid UTF-8")
+		// If the function rejected invalid UTF-8, that's correct behavior
+		if err != nil && strings.Contains(err.Error(), "invalid UTF-8") {
+			assert.False(t, utf8.ValidString(version), "Function rejected valid UTF-8")
+		}
 	})
 }
 

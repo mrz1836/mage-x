@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 var (
@@ -21,6 +22,11 @@ var (
 
 // ValidateVersion validates a semantic version string
 func ValidateVersion(version string) error {
+	// Check for valid UTF-8
+	if !utf8.ValidString(version) {
+		return fmt.Errorf("version contains invalid UTF-8")
+	}
+
 	// Check for dangerous patterns first
 	if strings.Contains(version, "..") {
 		return fmt.Errorf("version contains path traversal pattern: %s", version)
@@ -37,6 +43,11 @@ func ValidateVersion(version string) error {
 
 	// Remove leading 'v' if present for validation
 	cleanVersion := strings.TrimPrefix(version, "v")
+
+	// The cleaned version should not start with 'v' (no double 'v' allowed)
+	if strings.HasPrefix(cleanVersion, "v") {
+		return fmt.Errorf("invalid version format: %s (double 'v' prefix not allowed)", version)
+	}
 
 	if !versionRegex.MatchString(cleanVersion) {
 		return fmt.Errorf("invalid version format: %s (expected format: X.Y.Z or vX.Y.Z)", version)

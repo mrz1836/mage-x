@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // CommandExecutor defines the interface for executing commands
@@ -304,6 +305,11 @@ func (e *SecureExecutor) filterEnvironment(env []string) []string {
 
 // ValidateCommandArg validates a command argument for security issues
 func ValidateCommandArg(arg string) error {
+	// Check for valid UTF-8
+	if !utf8.ValidString(arg) {
+		return fmt.Errorf("argument contains invalid UTF-8")
+	}
+
 	// Check for shell injection attempts
 	dangerousPatterns := []string{
 		"$(",     // Command substitution

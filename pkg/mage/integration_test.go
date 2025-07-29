@@ -4,7 +4,6 @@ package mage
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -369,25 +368,13 @@ func TestEnterpriseFeatures(t *testing.T) {
 	// Create enterprise config
 	enterpriseConfig := &EnterpriseConfiguration{
 		Metadata: ECConfigMetadata{
-			Version:     "1.0.0",
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-			Environment: "test",
+			Version:   "1.0.0",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
-		Organization: ECOrganization{
+		Organization: OrganizationConfig{
 			Name:   "Test Corp",
 			Domain: "test.com",
-			Teams: []ECTeam{
-				{
-					Name: "Dev Team",
-					Members: []ECTeamMember{
-						{
-							Email: "dev@test.com",
-							Roles: []string{"developer"},
-						},
-					},
-				},
-			},
 		},
 	}
 

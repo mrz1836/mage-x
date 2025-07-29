@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -407,7 +408,11 @@ func buildTestArgs(cfg *Config, race, cover bool) []string {
 	args := []string{"test"}
 
 	if cfg.Test.Parallel {
-		args = append(args, "-p", fmt.Sprintf("%d", cfg.Build.Parallel))
+		parallelCount := cfg.Build.Parallel
+		if parallelCount <= 0 {
+			parallelCount = runtime.NumCPU()
+		}
+		args = append(args, "-p", fmt.Sprintf("%d", parallelCount))
 	}
 
 	if cfg.Test.Verbose {
