@@ -55,6 +55,7 @@
 			"exhaustive",
 			"forbidigo",
 			"gocheckcompilerdirectives",
+			"gochecknoglobals",
 			"gochecknoinits",
 			"gocognit",
 			"goconst",
@@ -91,7 +92,6 @@
 			"whitespace"
 		],
 		"disable": [
-			"gochecknoglobals",
 			"godox",
 			"godot",
 			"errcheck",
@@ -115,7 +115,6 @@
 			"ineffassign",
 			"staticcheck",
 			"bodyclose",
-			"noctx",
 			"wastedassign",
 			"makezero",
 			"prealloc",
@@ -365,7 +364,8 @@
 					"gosec",
 					"funlen",
 					"goconst",
-					"gocognit"
+					"gocognit",
+					"gochecknoglobals"
 				]
 			},
 			{
