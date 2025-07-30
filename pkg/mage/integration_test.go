@@ -263,7 +263,7 @@ func TestConfigurationLoading(t *testing.T) {
 
 	// Test default config
 	t.Run("default config", func(t *testing.T) {
-		cfg = nil // Reset
+		TestResetConfig() // Reset
 		config, err := LoadConfig()
 		assert.NoError(t, err)
 		assert.NotNil(t, config)
@@ -290,7 +290,7 @@ test:
 `
 		require.NoError(t, os.WriteFile(".mage.yaml", []byte(configYAML), 0o644))
 
-		cfg = nil // Reset
+		TestResetConfig() // Reset
 		config, err := LoadConfig()
 		assert.NoError(t, err)
 		assert.Equal(t, "my-app", config.Project.Name)
@@ -388,7 +388,7 @@ func TestEnterpriseFeatures(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Load and verify
-	cfg = nil
+	TestResetConfig()
 	config, err := LoadConfig()
 	assert.NoError(t, err)
 	assert.NotNil(t, config.Enterprise)
@@ -477,7 +477,7 @@ func TestPerformanceRegression(t *testing.T) {
 	t.Run("config loading", func(t *testing.T) {
 		start := time.Now()
 		for i := 0; i < 100; i++ {
-			cfg = nil
+			TestResetConfig()
 			_, _ = LoadConfig()
 		}
 		duration := time.Since(start)

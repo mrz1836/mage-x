@@ -39,7 +39,7 @@ const (
 	SpinnerStyleBounce
 )
 
-var spinnerFrames = map[SpinnerStyle][]string{
+var spinnerFrames = map[SpinnerStyle][]string{ //nolint:gochecknoglobals // Package-level configuration
 	SpinnerStyleDots:   {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
 	SpinnerStyleLine:   {"-", "\\", "|", "/"},
 	SpinnerStyleCircle: {"◐", "◓", "◑", "◒"},
@@ -347,14 +347,14 @@ type treeSymbols struct {
 }
 
 var (
-	unicodeTreeSymbols = treeSymbols{
+	unicodeTreeSymbols = treeSymbols{ //nolint:gochecknoglobals // Package-level configuration
 		branch:     "├─",
 		lastBranch: "└─",
 		vertical:   "│ ",
 		empty:      "  ",
 	}
 
-	asciiTreeSymbols = treeSymbols{
+	asciiTreeSymbols = treeSymbols{ //nolint:gochecknoglobals // Package-level configuration
 		branch:     "|-",
 		lastBranch: "`-",
 		vertical:   "| ",

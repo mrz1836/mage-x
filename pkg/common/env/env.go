@@ -15,10 +15,10 @@ func NewOSEnvironment() Environment {
 
 // Global default instances
 var (
-	DefaultEnv      Environment  = NewDefaultEnvironment()
-	DefaultPaths    PathResolver = NewDefaultPathResolver()
-	DefaultManager  EnvManager   = NewDefaultEnvManager()
-	DefaultValidate EnvValidator = NewDefaultEnvValidator()
+	DefaultEnv      Environment  = NewDefaultEnvironment()  //nolint:gochecknoglobals // Package-level default
+	DefaultPaths    PathResolver = NewDefaultPathResolver() //nolint:gochecknoglobals // Package-level default
+	DefaultManager  EnvManager   = NewDefaultEnvManager()   //nolint:gochecknoglobals // Package-level default
+	DefaultValidate EnvValidator = NewDefaultEnvValidator() //nolint:gochecknoglobals // Package-level default
 )
 
 // Environment variable convenience functions

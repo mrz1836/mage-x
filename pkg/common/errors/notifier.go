@@ -89,7 +89,7 @@ func (n *DefaultErrorNotifier) NotifyWithContext(ctx context.Context, err error)
 	var errors []error
 	for _, channel := range n.channels {
 		if channel.IsEnabled() {
-			if err := channel.Send(notification); err != nil {
+			if err := channel.Send(ctx, notification); err != nil {
 				errors = append(errors, fmt.Errorf("failed to send notification via %s: %w", channel.Name(), err))
 			}
 		}
@@ -230,7 +230,7 @@ func (e *EmailChannel) Name() string {
 	return e.name
 }
 
-func (e *EmailChannel) Send(notification ErrorNotification) error {
+func (e *EmailChannel) Send(ctx context.Context, notification ErrorNotification) error {
 	if !e.enabled {
 		return nil
 	}
@@ -316,7 +316,7 @@ func (w *WebhookChannel) Name() string {
 	return w.name
 }
 
-func (w *WebhookChannel) Send(notification ErrorNotification) error {
+func (w *WebhookChannel) Send(ctx context.Context, notification ErrorNotification) error {
 	if !w.enabled {
 		return nil
 	}
@@ -339,7 +339,7 @@ func (w *WebhookChannel) Send(notification ErrorNotification) error {
 	)
 
 	// Create request
-	req, err := http.NewRequest("POST", w.url, strings.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, "POST", w.url, strings.NewReader(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create webhook request: %w", err)
 	}
@@ -392,7 +392,7 @@ func (c *ConsoleChannel) Name() string {
 	return c.name
 }
 
-func (c *ConsoleChannel) Send(notification ErrorNotification) error {
+func (c *ConsoleChannel) Send(ctx context.Context, notification ErrorNotification) error {
 	if !c.enabled {
 		return nil
 	}

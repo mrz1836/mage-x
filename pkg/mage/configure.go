@@ -36,7 +36,7 @@ func (Configure) Init() error {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
-	utils.Success("✅ Configuration initialized: %s", configFile)
+	utils.Success("✅ Configuration initialized: %s", getConfigFilePath())
 	return nil
 }
 

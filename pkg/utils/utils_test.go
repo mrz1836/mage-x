@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -744,8 +745,8 @@ func TestCommandExecution(t *testing.T) {
 
 	t.Run("RunCmdPipe", func(t *testing.T) {
 		// Create a simple pipeline: echo "hello" | cat
-		cmd1 := exec.Command("echo", "hello")
-		cmd2 := exec.Command("cat")
+		cmd1 := exec.CommandContext(context.Background(), "echo", "hello")
+		cmd2 := exec.CommandContext(context.Background(), "cat")
 
 		err := RunCmdPipe(cmd1, cmd2)
 		assert.NoError(t, err)

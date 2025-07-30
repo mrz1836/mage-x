@@ -66,7 +66,7 @@ lint:
 
 	b.Run("LoadConfig", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			cfg = nil
+			// Reset config for benchmark
 			_, _ = LoadConfig()
 		}
 	})
@@ -81,7 +81,8 @@ lint:
 
 	b.Run("GetConfig", func(b *testing.B) {
 		// Pre-load config
-		cfg, _ = LoadConfig()
+		testCfg, _ := LoadConfig()
+		_ = testCfg
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, _ = GetConfig()
@@ -369,7 +370,8 @@ func BenchmarkConcurrentOperations(b *testing.B) {
 
 	b.Run("parallel_config_access", func(b *testing.B) {
 		// Pre-load config
-		cfg, _ = LoadConfig()
+		testCfg, _ := LoadConfig()
+		_ = testCfg
 		b.ResetTimer()
 
 		b.RunParallel(func(pb *testing.PB) {

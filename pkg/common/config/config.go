@@ -150,41 +150,43 @@ func GetCommonConfigPaths(appName string) []string {
 }
 
 // Package-level convenience instance
-var Default = New()
+func GetDefault() *Config {
+	return New()
+}
 
 // Package-level convenience functions
 
 // LoadFromPaths loads configuration using the default instance
 func LoadFromPaths(dest interface{}, baseName string, searchDirs ...string) (string, error) {
-	return Default.LoadFromPaths(dest, baseName, searchDirs...)
+	return GetDefault().LoadFromPaths(dest, baseName, searchDirs...)
 }
 
 // LoadWithEnvOverrides loads configuration with env overrides using the default instance
 func LoadWithEnvOverrides(dest interface{}, baseName, envPrefix string, searchDirs ...string) (string, error) {
-	return Default.LoadWithEnvOverrides(dest, baseName, envPrefix, searchDirs...)
+	return GetDefault().LoadWithEnvOverrides(dest, baseName, envPrefix, searchDirs...)
 }
 
 // GetBool gets a boolean environment variable using the default instance
 func GetBool(key string, defaultValue bool) bool {
-	return Default.Env.GetBool(key, defaultValue)
+	return GetDefault().Env.GetBool(key, defaultValue)
 }
 
 // GetInt gets an integer environment variable using the default instance
 func GetInt(key string, defaultValue int) int {
-	return Default.Env.GetInt(key, defaultValue)
+	return GetDefault().Env.GetInt(key, defaultValue)
 }
 
 // GetString gets a string environment variable using the default instance
 func GetString(key, defaultValue string) string {
-	return Default.Env.GetWithDefault(key, defaultValue)
+	return GetDefault().Env.GetWithDefault(key, defaultValue)
 }
 
 // GetStringSlice gets a string slice environment variable using the default instance
 func GetStringSlice(key string, defaultValue []string) []string {
-	return Default.Env.GetStringSlice(key, defaultValue)
+	return GetDefault().Env.GetStringSlice(key, defaultValue)
 }
 
 // GetDuration gets a duration environment variable using the default instance
 func GetDuration(key string, defaultValue time.Duration) time.Duration {
-	return Default.Env.GetDuration(key, defaultValue)
+	return GetDefault().Env.GetDuration(key, defaultValue)
 }

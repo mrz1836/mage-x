@@ -4,29 +4,29 @@ on:
   workflow_dispatch:
     inputs:
       benchmark_time:
-        description: 'Benchmark duration (e.g., 1s, 10s)'
+        description: "Benchmark duration (e.g., 1s, 10s)"
         required: false
-        default: '1s'
+        default: "1s"
         type: string
       enable_profiling:
-        description: 'Enable CPU and memory profiling'
+        description: "Enable CPU and memory profiling"
         required: false
         default: false
         type: boolean
       packages:
-        description: 'Packages to benchmark (default: ./pkg/mage)'
+        description: "Packages to benchmark (default: ./pkg/mage)"
         required: false
-        default: './pkg/mage'
+        default: "./pkg/mage"
         type: string
   workflow_call:
     inputs:
       benchmark_time:
-        description: 'Benchmark duration'
+        description: "Benchmark duration"
         required: false
-        default: '1s'
+        default: "1s"
         type: string
       enable_profiling:
-        description: 'Enable profiling'
+        description: "Enable profiling"
         required: false
         default: false
         type: boolean
@@ -63,10 +63,10 @@ jobs:
           echo "Benchmark time: $BENCH_TIME"
           echo "Packages: $BENCH_PACKAGES"
           echo ""
-          
+
           # Run benchmarks on specific packages with shorter duration
           go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME $BENCH_PACKAGES | tee benchmark-results.txt
-          
+
           # Show summary
           echo ""
           echo "### Summary"
@@ -159,7 +159,7 @@ jobs:
         run: |
           echo "## CPU Profiling"
           echo "Running benchmarks with CPU profiling on: $BENCH_PACKAGES"
-          
+
           # Run benchmarks with CPU profiling on specific packages
           go test -bench=. -benchtime=$BENCH_TIME -cpuprofile=cpu.prof $BENCH_PACKAGES || echo "CPU profiling completed"
 
@@ -198,7 +198,7 @@ jobs:
         run: |
           echo "## Memory Profiling"
           echo "Running benchmarks with memory profiling on: $BENCH_PACKAGES"
-          
+
           # Run benchmarks with memory profiling on specific packages
           go test -bench=. -benchtime=$BENCH_TIME -memprofile=mem.prof $BENCH_PACKAGES || echo "Memory profiling completed"
 
@@ -232,19 +232,19 @@ jobs:
           echo ""
           echo "### Job Results:"
           echo "- Benchmarks: ${{ needs.benchmarks.result }}"
-          
+
           if [[ "${{ inputs.enable_profiling }}" == "true" ]]; then
             echo "- CPU Profiling: Available as artifact"
             echo "- Memory Profiling: Available as artifact"
           fi
-          
+
           echo ""
           if [[ "${{ needs.benchmarks.result }}" == "success" ]]; then
             echo "✅ Benchmark suite completed successfully!"
           else
             echo "⚠️ Benchmark job did not complete successfully."
           fi
-          
+
           echo ""
           echo "### Performance Tips:"
           echo "- Quick benchmarks use 1s duration by default"

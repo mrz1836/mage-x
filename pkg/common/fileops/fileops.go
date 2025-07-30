@@ -168,58 +168,60 @@ func (f *FileOps) ensureDir(path string) error {
 }
 
 // Package-level convenience instance
-var Default = New()
+func GetDefault() *FileOps {
+	return New()
+}
 
 // Package-level convenience functions
 
 // WriteJSONSafe writes JSON data atomically using the default instance
 func WriteJSONSafe(path string, data interface{}) error {
-	return Default.WriteJSONSafe(path, data)
+	return GetDefault().WriteJSONSafe(path, data)
 }
 
 // WriteYAMLSafe writes YAML data atomically using the default instance
 func WriteYAMLSafe(path string, data interface{}) error {
-	return Default.WriteYAMLSafe(path, data)
+	return GetDefault().WriteYAMLSafe(path, data)
 }
 
 // LoadConfig loads configuration using the default instance
 func LoadConfig(paths []string, dest interface{}) (string, error) {
-	return Default.LoadConfig(paths, dest)
+	return GetDefault().LoadConfig(paths, dest)
 }
 
 // SaveConfig saves configuration using the default instance
 func SaveConfig(path string, data interface{}, format string) error {
-	return Default.SaveConfig(path, data, format)
+	return GetDefault().SaveConfig(path, data, format)
 }
 
 // Exists checks if a file exists using the default instance
 func Exists(path string) bool {
-	return Default.File.Exists(path)
+	return GetDefault().File.Exists(path)
 }
 
 // ReadFile reads a file using the default instance
 func ReadFile(path string) ([]byte, error) {
-	return Default.File.ReadFile(path)
+	return GetDefault().File.ReadFile(path)
 }
 
 // WriteFile writes a file using the default instance
 func WriteFile(path string, data []byte, perm os.FileMode) error {
-	return Default.File.WriteFile(path, data, perm)
+	return GetDefault().File.WriteFile(path, data, perm)
 }
 
 // Remove removes a file using the default instance
 func Remove(path string) error {
-	return Default.File.Remove(path)
+	return GetDefault().File.Remove(path)
 }
 
 // IsDir checks if path is a directory using the default instance
 func IsDir(path string) bool {
-	return Default.File.IsDir(path)
+	return GetDefault().File.IsDir(path)
 }
 
 // IsFile checks if path is a file using the default instance
 func IsFile(path string) bool {
-	if Default.File.Exists(path) && !Default.File.IsDir(path) {
+	if GetDefault().File.Exists(path) && !GetDefault().File.IsDir(path) {
 		return true
 	}
 	return false
@@ -227,10 +229,10 @@ func IsFile(path string) bool {
 
 // MkdirAll creates directories using the default instance
 func MkdirAll(path string, perm os.FileMode) error {
-	return Default.File.MkdirAll(path, perm)
+	return GetDefault().File.MkdirAll(path, perm)
 }
 
 // Copy copies a file using the default instance
 func Copy(src, dst string) error {
-	return Default.File.Copy(src, dst)
+	return GetDefault().File.Copy(src, dst)
 }

@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -1105,7 +1106,7 @@ func testSlackIntegration(integration IntegrationConfig) error {
 	}
 
 	// Create HTTP request
-	req, err := http.NewRequest("POST", webhookURL, strings.NewReader(string(data)))
+	req, err := http.NewRequestWithContext(context.Background(), "POST", webhookURL, strings.NewReader(string(data)))
 	if err != nil {
 		return err
 	}

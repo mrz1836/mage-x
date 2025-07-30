@@ -63,7 +63,7 @@ func (ts *ToolsTestSuite) TestTools_Install() {
 
 // TestTools_Install_ConfigError tests Install function with clean config (LoadConfig creates default)
 func (ts *ToolsTestSuite) TestTools_Install_ConfigError() {
-	cfg = nil // This causes LoadConfig to create a default config
+	TestResetConfig() // This causes LoadConfig to create a default config
 
 	// Mock expected tool installation calls for default config
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@latest"}).Return(nil)
@@ -97,7 +97,7 @@ func (ts *ToolsTestSuite) TestTools_Update() {
 
 // TestTools_Update_ConfigError tests Update function with clean config (LoadConfig creates default)
 func (ts *ToolsTestSuite) TestTools_Update_ConfigError() {
-	cfg = nil // This causes LoadConfig to create a default config
+	TestResetConfig() // This causes LoadConfig to create a default config
 
 	// Mock expected tool update calls for default config
 	ts.env.Runner.On("RunCmd", "brew", []string{"upgrade", "golangci-lint"}).Return(nil)
@@ -140,7 +140,7 @@ func (ts *ToolsTestSuite) TestTools_Verify() {
 
 // TestTools_Verify_ConfigError tests Verify function with clean config (LoadConfig creates default)
 func (ts *ToolsTestSuite) TestTools_Verify_ConfigError() {
-	cfg = nil // This causes LoadConfig to create a default config
+	TestResetConfig() // This causes LoadConfig to create a default config
 
 	// Mock version check calls for any tools that might exist on the system
 	// This is needed because utils.CommandExists checks the real PATH
@@ -178,7 +178,7 @@ func (ts *ToolsTestSuite) TestTools_List() {
 
 // TestTools_List_ConfigError tests List function with clean config (LoadConfig creates default)
 func (ts *ToolsTestSuite) TestTools_List_ConfigError() {
-	cfg = nil // This causes LoadConfig to create a default config
+	TestResetConfig() // This causes LoadConfig to create a default config
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -274,7 +274,7 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_CheckError() {
 
 // TestTools_VulnCheck_ConfigError tests VulnCheck function with clean config (since LoadConfig creates default)
 func (ts *ToolsTestSuite) TestTools_VulnCheck_ConfigError() {
-	cfg = nil // This causes LoadConfig to create a default config
+	TestResetConfig() // This causes LoadConfig to create a default config
 
 	// Mock installation and vulnerability check calls
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)

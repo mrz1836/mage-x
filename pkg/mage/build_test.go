@@ -40,7 +40,7 @@ func (ts *BuildTestSuite) TearDownTest() {
 	os.Unsetenv("MAGE_CACHE_DISABLED")
 
 	// Reset global config
-	cfg = nil
+	TestResetConfig()
 
 	ts.env.Cleanup()
 }
@@ -159,7 +159,7 @@ func main() {
 		ts.mockBuildCommand("dist/multi-app-darwin-amd64", nil)
 		ts.mockBuildCommand("dist/multi-app-windows-amd64.exe", nil)
 
-		cfg = nil // Reset global config
+		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
@@ -192,7 +192,7 @@ func main() {
 		ts.mockBuildCommand("bin/no-platform-app-darwin-amd64", nil)
 		ts.mockBuildCommand("bin/no-platform-app-linux-amd64", nil)
 
-		cfg = nil // Reset global config
+		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },

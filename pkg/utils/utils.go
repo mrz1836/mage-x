@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,7 +18,7 @@ import (
 
 // RunCmd executes a command and returns its output
 func RunCmd(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
@@ -37,7 +38,7 @@ func RunCmdV(name string, args ...string) error {
 
 // RunCmdOutput executes a command and returns its output
 func RunCmdOutput(name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...)
 	cmd.Env = os.Environ()
 
 	if IsVerbose() {
@@ -137,37 +138,35 @@ func IsCI() bool {
 
 // --- fs.go ---
 
-var fileOps = fileops.New()
-
 // FileExists checks if a file exists
 func FileExists(path string) bool {
-	return fileOps.File.Exists(path)
+	return fileops.GetDefault().File.Exists(path)
 }
 
 // DirExists checks if a directory exists
 func DirExists(path string) bool {
-	return fileOps.File.Exists(path) && fileOps.File.IsDir(path)
+	return fileops.GetDefault().File.Exists(path) && fileops.GetDefault().File.IsDir(path)
 }
 
 // EnsureDir creates a directory if it doesn't exist
 func EnsureDir(path string) error {
-	return fileOps.File.MkdirAll(path, 0o755)
+	return fileops.GetDefault().File.MkdirAll(path, 0o755)
 }
 
 // CleanDir removes and recreates a directory
 func CleanDir(path string) error {
-	if err := fileOps.File.RemoveAll(path); err != nil {
+	if err := fileops.GetDefault().File.RemoveAll(path); err != nil {
 		// Ignore "not exists" errors, similar to original behavior
 		if !os.IsNotExist(err) {
 			return err
 		}
 	}
-	return fileOps.File.MkdirAll(path, 0o755)
+	return fileops.GetDefault().File.MkdirAll(path, 0o755)
 }
 
 // CopyFile copies a file from src to dst
 func CopyFile(src, dst string) error {
-	return fileOps.File.Copy(src, dst)
+	return fileops.GetDefault().File.Copy(src, dst)
 }
 
 // FindFiles finds files matching a pattern
@@ -189,7 +188,7 @@ func findFiles(root, pattern string) ([]string, error) {
 		}
 
 		// Use fileops to check if it's a file (not directory)
-		if matched && fileOps.File.Exists(path) && !fileOps.File.IsDir(path) {
+		if matched && fileops.GetDefault().File.Exists(path) && !fileops.GetDefault().File.IsDir(path) {
 			files = append(files, path)
 		}
 

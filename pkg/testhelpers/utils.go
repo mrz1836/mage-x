@@ -2,6 +2,7 @@ package testhelpers
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +16,7 @@ import (
 func RunCommand(t *testing.T, name string, args ...string) (string, error) {
 	t.Helper()
 
-	cmd := exec.Command(name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -32,7 +33,7 @@ func RunCommand(t *testing.T, name string, args ...string) (string, error) {
 func RunCommandWithInput(t *testing.T, input string, name string, args ...string) (string, error) {
 	t.Helper()
 
-	cmd := exec.Command(name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...)
 	cmd.Stdin = strings.NewReader(input)
 
 	var stdout, stderr bytes.Buffer
@@ -74,7 +75,7 @@ func RequireNetwork(t *testing.T) {
 	t.Helper()
 
 	// Try to resolve a well-known domain
-	cmd := exec.Command("ping", "-c", "1", "-W", "1", "google.com")
+	cmd := exec.CommandContext(context.Background(), "ping", "-c", "1", "-W", "1", "google.com")
 	if err := cmd.Run(); err != nil {
 		t.Skip("Network not available")
 	}
@@ -87,7 +88,7 @@ func RequireDocker(t *testing.T) {
 	RequireCommand(t, "docker")
 
 	// Check if Docker daemon is running
-	cmd := exec.Command("docker", "info")
+	cmd := exec.CommandContext(context.Background(), "docker", "info")
 	if err := cmd.Run(); err != nil {
 		t.Skip("Docker daemon not running")
 	}

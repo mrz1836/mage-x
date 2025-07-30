@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/magefile/mage/mg"
@@ -16,11 +17,14 @@ import (
 // Build namespace for build-related tasks
 type Build mg.Namespace
 
-var cacheManager *cache.Manager
+var (
+	cacheManager *cache.Manager //nolint:gochecknoglobals // Required for cache singleton
+	cacheOnce    sync.Once      //nolint:gochecknoglobals // Required for singleton initialization
+)
 
 // initCacheManager initializes the cache manager if not already done
 func initCacheManager() *cache.Manager {
-	if cacheManager == nil {
+	cacheOnce.Do(func() {
 		config := cache.DefaultConfig()
 		// TODO: Add cache configuration to Config struct if needed
 		// For now, use default cache configuration
@@ -31,13 +35,15 @@ func initCacheManager() *cache.Manager {
 		}
 
 		cacheManager = cache.NewManager(config)
-		if err := cacheManager.Init(); err != nil {
-			utils.Warn("Failed to initialize cache: %v", err)
-			// Continue without caching
-			config.Enabled = false
-			cacheManager = cache.NewManager(config)
+		if cacheManager != nil {
+			if err := cacheManager.Init(); err != nil {
+				utils.Warn("Failed to initialize cache: %v", err)
+				// Continue without caching
+				config.Enabled = false
+				cacheManager = cache.NewManager(config)
+			}
 		}
-	}
+	})
 	return cacheManager
 }
 
@@ -49,6 +55,8 @@ func (Build) Default() error {
 	if err != nil {
 		return err
 	}
+
+	cm := initCacheManager()
 
 	binary := cfg.Project.Binary
 	if runtime.GOOS == "windows" {
@@ -71,9 +79,6 @@ func (Build) Default() error {
 		outputPath = "/dev/null"
 		packagePath = "./..."
 	}
-
-	// Initialize cache manager
-	cacheManager := initCacheManager()
 
 	// Generate cache hash for this build
 	args := []string{"build"}
@@ -113,13 +118,19 @@ func (Build) Default() error {
 	}
 
 	platform := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
-	buildHash, err := cacheManager.GenerateBuildHash(platform, ldflags, sourceFiles, configFiles)
-	if err != nil {
-		utils.Warn("Failed to generate build hash: %v", err)
-		// Continue without caching
-	} else {
+	var buildHash string
+	if cm != nil {
+		var hashErr error
+		buildHash, hashErr = cm.GenerateBuildHash(platform, ldflags, sourceFiles, configFiles)
+		if hashErr != nil {
+			utils.Warn("Failed to generate build hash: %v", hashErr)
+			// Continue without caching
+		}
+	}
+
+	if buildHash != "" && cm != nil {
 		// Check cache first
-		if buildResult, found := cacheManager.GetBuildCache().GetBuildResult(buildHash); found {
+		if buildResult, found := cm.GetBuildCache().GetBuildResult(buildHash); found {
 			if buildResult.Success && utils.FileExists(buildResult.Binary) {
 				utils.Success("Build cache hit! Using cached binary %s (built in %s)",
 					buildResult.Binary,
@@ -153,7 +164,7 @@ func (Build) Default() error {
 	buildDuration := time.Since(start)
 
 	// Store result in cache if caching is enabled
-	if buildHash != "" && cacheManager.IsEnabled() {
+	if buildHash != "" && cm != nil && cm.IsEnabled() {
 		buildResult := &cache.BuildResult{
 			Binary:     outputPath,
 			Platform:   platform,
@@ -166,7 +177,7 @@ func (Build) Default() error {
 			},
 		}
 
-		if err := cacheManager.GetBuildCache().StoreBuildResult(buildHash, buildResult); err != nil {
+		if err := cm.GetBuildCache().StoreBuildResult(buildHash, buildResult); err != nil {
 			utils.Warn("Failed to store build result in cache: %v", err)
 		}
 	}

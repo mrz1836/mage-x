@@ -207,8 +207,8 @@ type PerformanceComparison struct {
 
 var (
 	// globalMetricsCollector is the singleton metrics collector
-	globalMetricsCollector *MetricsCollector
-	metricsOnce            sync.Once
+	globalMetricsCollector *MetricsCollector //nolint:gochecknoglobals // Required for metrics singleton
+	metricsOnce            sync.Once         //nolint:gochecknoglobals // Required for singleton initialization
 )
 
 // GetMetricsCollector returns the global metrics collector instance

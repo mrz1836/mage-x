@@ -74,10 +74,10 @@ const (
 
 var (
 	// DefaultLogger is the global logger instance
-	DefaultLogger = NewLogger()
+	DefaultLogger = NewLogger() //nolint:gochecknoglobals // Package-level default
 
 	// Contextual messages based on time and state
-	contextualMessages = map[string][]string{
+	contextualMessages = map[string][]string{ //nolint:gochecknoglobals // Package-level configuration
 		"morning": {
 			"☕ Time to build something great!",
 			"🌅 Fresh build, fresh start!",

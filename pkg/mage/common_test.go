@@ -87,9 +87,8 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		// Mock git and file system to fail
 		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", fmt.Errorf("not a git repository"))
 
-		// Set global config
-		originalCfg := cfg
-		defer func() { cfg = originalCfg }()
+		// Set global config for test
+		TestResetConfig()
 		cfg = &Config{
 			Project: ProjectConfig{
 				Version: "3.0.0",
@@ -117,10 +116,8 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		// Mock git to fail
 		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", fmt.Errorf("not a git repository"))
 
-		// Ensure no config
-		originalCfg := cfg
-		defer func() { cfg = originalCfg }()
-		cfg = nil
+		// Reset config for test
+		TestResetConfig()
 
 		err := env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },

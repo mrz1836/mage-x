@@ -10,28 +10,28 @@ import (
 // Global instances
 var (
 	// DefaultRegistry is the global error registry
-	DefaultRegistry = NewRegistry()
+	DefaultRegistry = NewRegistry() //nolint:gochecknoglobals // Package-level default
 
 	// DefaultHandler is the global error handler
-	DefaultHandler = NewHandler()
+	DefaultHandler = NewHandler() //nolint:gochecknoglobals // Package-level default
 
 	// DefaultFormatter is the global error formatter
-	DefaultFormatter = NewFormatter()
+	DefaultFormatter = NewFormatter() //nolint:gochecknoglobals // Package-level default
 
 	// DefaultRecovery is the global error recovery handler
-	DefaultRecovery = NewRecovery()
+	DefaultRecovery = NewRecovery() //nolint:gochecknoglobals // Package-level default
 
 	// DefaultMetrics is the global error metrics collector
-	DefaultMetrics = NewMetrics()
+	DefaultMetrics = NewMetrics() //nolint:gochecknoglobals // Package-level default
 
 	// DefaultLogger is the global error logger
-	DefaultLogger = NewErrorLogger()
+	DefaultLogger = NewErrorLogger() //nolint:gochecknoglobals // Package-level default
 
 	// DefaultNotifier is the global error notifier
-	DefaultNotifier = NewErrorNotifier()
+	DefaultNotifier = NewErrorNotifier() //nolint:gochecknoglobals // Package-level default
 
 	// DefaultTransformer is the global error transformer
-	DefaultTransformer = NewErrorTransformer()
+	DefaultTransformer = NewErrorTransformer() //nolint:gochecknoglobals // Package-level default
 )
 
 // Package initialization

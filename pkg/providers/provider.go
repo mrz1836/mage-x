@@ -326,7 +326,7 @@ type Registry struct {
 type ProviderFactory func(config ProviderConfig) (Provider, error)
 
 // Global registry
-var globalRegistry = &Registry{
+var globalRegistry = &Registry{ //nolint:gochecknoglobals // Required for provider registry singleton
 	providers: make(map[string]ProviderFactory),
 }
 

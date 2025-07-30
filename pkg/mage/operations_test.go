@@ -50,8 +50,8 @@ func (m *MockRunner) Reset() {
 
 // Override the runner for testing
 var (
-	originalRunner CommandRunner
-	mockRunner     *MockRunner
+	originalRunner CommandRunner //nolint:gochecknoglobals // Test global for mocking
+	mockRunner     *MockRunner   //nolint:gochecknoglobals // Test global for mocking
 )
 
 func setupMockRunner() {

@@ -852,7 +852,7 @@ func (s *databaseService) EnableMultiMaster(ctx context.Context, dbID string, re
 
 // Helper functions
 
-var idCounter int64
+var idCounter int64 //nolint:gochecknoglobals // Required for ID generation singleton
 
 func generateID() string {
 	idCounter++

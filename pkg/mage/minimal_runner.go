@@ -34,7 +34,7 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 }
 
 // Global runner instance - now using secure executor
-var defaultRunner = NewSecureCommandRunner()
+var defaultRunner = NewSecureCommandRunner() //nolint:gochecknoglobals // Package-level default
 
 // GetRunner returns the secure command runner
 func GetRunner() CommandRunner {

@@ -864,7 +864,7 @@ func (r *DefaultNamespaceRegistry) SetWorkflow(workflow WorkflowNamespace) {
 }
 
 // Global registry instance
-var globalNamespaceRegistry = NewNamespaceRegistry()
+var globalNamespaceRegistry = NewNamespaceRegistry() //nolint:gochecknoglobals // Required for namespace registry singleton
 
 // GetNamespaceRegistry returns the global namespace registry
 func GetNamespaceRegistry() *DefaultNamespaceRegistry {

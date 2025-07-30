@@ -8,12 +8,12 @@ import (
 
 // Global default instances
 var (
-	DefaultBuilder   = NewPathBuilder("")
-	DefaultMatcher   = NewPathMatcher()
-	DefaultValidator = NewPathValidator()
-	DefaultSet       = NewPathSet()
-	DefaultWatcher   = NewPathWatcher()
-	DefaultCache     = NewPathCache()
+	DefaultBuilder   = NewPathBuilder("") //nolint:gochecknoglobals // Package-level default
+	DefaultMatcher   = NewPathMatcher()   //nolint:gochecknoglobals // Package-level default
+	DefaultValidator = NewPathValidator() //nolint:gochecknoglobals // Package-level default
+	DefaultSet       = NewPathSet()       //nolint:gochecknoglobals // Package-level default
+	DefaultWatcher   = NewPathWatcher()   //nolint:gochecknoglobals // Package-level default
+	DefaultCache     = NewPathCache()     //nolint:gochecknoglobals // Package-level default
 )
 
 // Path Builder convenience functions
@@ -323,7 +323,7 @@ func SetDefaultOptions(options PathOptions) {
 }
 
 // Global options storage
-var globalPathOptions = PathOptions{
+var globalPathOptions = PathOptions{ //nolint:gochecknoglobals // Package-level configuration
 	CreateMode:    0o755,
 	CreateParents: true,
 	BufferSize:    8192,

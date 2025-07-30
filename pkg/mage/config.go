@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"gopkg.in/yaml.v3"
@@ -111,61 +112,85 @@ type ReleaseConfig struct {
 }
 
 var (
-	// cfg holds the loaded configuration
-	cfg *Config
-	// configFile is the path to the config file
-	configFile = ".mage.yaml"
+	// configOnce ensures configuration is loaded only once
+	configOnce sync.Once //nolint:gochecknoglobals // Required for singleton initialization
+	// loadedConfig holds the loaded configuration
+	loadedConfig *Config //nolint:gochecknoglobals // Required for singleton configuration
+	// errLoadConfig stores any error encountered during config loading
+	errLoadConfig error //nolint:gochecknoglobals // Required for singleton error handling
+	// cfg is a backward compatibility variable for tests
+	cfg *Config //nolint:gochecknoglobals // Backward compatibility for tests
 )
 
 // LoadConfig loads the configuration from file or returns defaults
 func LoadConfig() (*Config, error) {
+	// Check if cfg is already set by tests
 	if cfg != nil {
 		return cfg, nil
 	}
 
-	cfg = defaultConfig()
+	configOnce.Do(func() {
+		loadedConfig = defaultConfig()
+		configFile := ".mage.yaml"
 
-	// Try multiple config file names
-	configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
+		// Try multiple config file names
+		configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
 
-	for _, cf := range configFiles {
-		if _, err := os.Stat(cf); err == nil {
-			configFile = cf
-			break
+		for _, cf := range configFiles {
+			if _, err := os.Stat(cf); err == nil {
+				configFile = cf
+				break
+			}
 		}
-	}
 
-	// Check for enterprise configuration file
-	enterpriseConfigFile := ".mage.enterprise.yaml"
-	fileOps := fileops.New()
-	if fileOps.File.Exists(enterpriseConfigFile) {
-		// Load enterprise configuration
-		var enterpriseConfig EnterpriseConfiguration
-		if err := fileOps.YAML.ReadYAML(enterpriseConfigFile, &enterpriseConfig); err == nil {
-			cfg.Enterprise = &enterpriseConfig
+		// Check for enterprise configuration file
+		enterpriseConfigFile := ".mage.enterprise.yaml"
+		fileOps := fileops.New()
+		if fileOps.File.Exists(enterpriseConfigFile) {
+			// Load enterprise configuration
+			var enterpriseConfig EnterpriseConfiguration
+			if err := fileOps.YAML.ReadYAML(enterpriseConfigFile, &enterpriseConfig); err == nil {
+				loadedConfig.Enterprise = &enterpriseConfig
+			}
 		}
-	}
 
-	if !fileOps.File.Exists(configFile) {
-		// Config file doesn't exist, use defaults
-		return cfg, nil
-	}
+		if !fileOps.File.Exists(configFile) {
+			// Config file doesn't exist, use defaults
+			return
+		}
 
-	data, err := fileOps.File.ReadFile(configFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config: %w", err)
-	}
+		data, err := fileOps.File.ReadFile(configFile)
+		if err != nil {
+			errLoadConfig = fmt.Errorf("failed to read config: %w", err)
+			return
+		}
 
-	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
-	}
+		if err := yaml.Unmarshal(data, loadedConfig); err != nil {
+			errLoadConfig = fmt.Errorf("failed to parse config: %w", err)
+			return
+		}
 
-	// Apply environment variable overrides
-	applyEnvOverrides(cfg)
+		// Apply environment variable overrides
+		applyEnvOverrides(loadedConfig)
 
-	// TODO: Add enterprise configuration validation when EnterpriseConfiguration type is defined
+		// TODO: Add enterprise configuration validation when EnterpriseConfiguration type is defined
+	})
+	cfg = loadedConfig // Keep backward compatibility variable in sync
+	return loadedConfig, errLoadConfig
+}
 
-	return cfg, nil
+// GetConfig is an alias for LoadConfig for backward compatibility
+func GetConfig() (*Config, error) {
+	return LoadConfig()
+}
+
+// TestResetConfig resets the config for testing purposes only
+// This should only be used in tests
+func TestResetConfig() {
+	configOnce = sync.Once{}
+	loadedConfig = nil
+	errLoadConfig = nil
+	cfg = nil
 }
 
 // defaultConfig returns the default configuration
@@ -292,11 +317,6 @@ func applyEnterpriseEnvOverrides(cfg *EnterpriseConfiguration) {
 	_ = os.Getenv("MAGE_METRICS_INTERVAL")  // placeholder for metrics interval
 }
 
-// GetConfig returns the current configuration
-func GetConfig() (*Config, error) {
-	return LoadConfig()
-}
-
 // BinaryName returns the configured binary name
 func BinaryName() string {
 	c, _ := GetConfig()
@@ -336,7 +356,19 @@ func GetEnterpriseConfig() *EnterpriseConfiguration {
 // SaveConfig saves the configuration to file
 func SaveConfig(cfg *Config) error {
 	fileOps := fileops.New()
+	configFile := getConfigFilePath()
 	return fileOps.SaveConfig(configFile, cfg, "yaml")
+}
+
+// getConfigFilePath returns the path to the config file
+func getConfigFilePath() string {
+	configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
+	for _, cf := range configFiles {
+		if _, err := os.Stat(cf); err == nil {
+			return cf
+		}
+	}
+	return ".mage.yaml" // default
 }
 
 // SaveEnterpriseConfig saves the enterprise configuration to a separate file

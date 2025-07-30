@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -73,8 +74,8 @@ func DefaultAuditConfig() AuditConfig {
 
 var (
 	// globalAuditLogger is the singleton audit logger instance
-	globalAuditLogger *AuditLogger
-	auditOnce         sync.Once
+	globalAuditLogger *AuditLogger //nolint:gochecknoglobals // Required for audit singleton
+	auditOnce         sync.Once    //nolint:gochecknoglobals // Required for singleton initialization
 )
 
 // GetAuditLogger returns the global audit logger instance
@@ -152,7 +153,7 @@ func (a *AuditLogger) initDatabase() error {
 	CREATE INDEX IF NOT EXISTS idx_success ON audit_events(success);
 	`
 
-	if _, err := db.Exec(createTableSQL); err != nil {
+	if _, err := db.ExecContext(context.Background(), createTableSQL); err != nil {
 		db.Close()
 		return fmt.Errorf("failed to create audit table: %w", err)
 	}
@@ -194,7 +195,7 @@ func (a *AuditLogger) LogEvent(event AuditEvent) error {
 		duration, exit_code, success, environment, metadata
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	_, err := a.db.Exec(query,
+	_, err := a.db.ExecContext(context.Background(), query,
 		event.Timestamp,
 		event.User,
 		event.Command,
@@ -260,7 +261,7 @@ func (a *AuditLogger) GetEvents(filter AuditFilter) ([]AuditEvent, error) {
 		args = append(args, filter.Limit)
 	}
 
-	rows, err := a.db.Query(query, args...)
+	rows, err := a.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query audit events: %w", err)
 	}
@@ -313,30 +314,30 @@ func (a *AuditLogger) GetStats() (AuditStats, error) {
 	var stats AuditStats
 
 	// Total events
-	err := a.db.QueryRow("SELECT COUNT(*) FROM audit_events").Scan(&stats.TotalEvents)
+	err := a.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM audit_events").Scan(&stats.TotalEvents)
 	if err != nil {
 		return stats, fmt.Errorf("failed to get total events: %w", err)
 	}
 
 	// Success/failure counts
-	err = a.db.QueryRow("SELECT COUNT(*) FROM audit_events WHERE success = 1").Scan(&stats.SuccessfulEvents)
+	err = a.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM audit_events WHERE success = 1").Scan(&stats.SuccessfulEvents)
 	if err != nil {
 		return stats, fmt.Errorf("failed to get successful events: %w", err)
 	}
 
-	err = a.db.QueryRow("SELECT COUNT(*) FROM audit_events WHERE success = 0").Scan(&stats.FailedEvents)
+	err = a.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM audit_events WHERE success = 0").Scan(&stats.FailedEvents)
 	if err != nil {
 		return stats, fmt.Errorf("failed to get failed events: %w", err)
 	}
 
 	// Date range
-	err = a.db.QueryRow("SELECT MIN(timestamp), MAX(timestamp) FROM audit_events").Scan(&stats.EarliestEvent, &stats.LatestEvent)
+	err = a.db.QueryRowContext(context.Background(), "SELECT MIN(timestamp), MAX(timestamp) FROM audit_events").Scan(&stats.EarliestEvent, &stats.LatestEvent)
 	if err != nil {
 		return stats, fmt.Errorf("failed to get date range: %w", err)
 	}
 
 	// Top users
-	rows, err := a.db.Query(`
+	rows, err := a.db.QueryContext(context.Background(), `
 		SELECT user, COUNT(*) as count 
 		FROM audit_events 
 		GROUP BY user 
@@ -358,7 +359,7 @@ func (a *AuditLogger) GetStats() (AuditStats, error) {
 	}
 
 	// Top commands
-	rows, err = a.db.Query(`
+	rows, err = a.db.QueryContext(context.Background(), `
 		SELECT command, COUNT(*) as count 
 		FROM audit_events 
 		GROUP BY command 
@@ -393,7 +394,7 @@ func (a *AuditLogger) CleanupOldEvents() error {
 
 	cutoffTime := time.Now().AddDate(0, 0, -a.config.RetentionDays)
 
-	result, err := a.db.Exec("DELETE FROM audit_events WHERE timestamp < ?", cutoffTime)
+	result, err := a.db.ExecContext(context.Background(), "DELETE FROM audit_events WHERE timestamp < ?", cutoffTime)
 	if err != nil {
 		return fmt.Errorf("failed to cleanup old events: %w", err)
 	}

@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -39,9 +40,9 @@ type VersionReleaseAsset struct {
 
 var (
 	// Version info that can be set at build time
-	version   = "dev"
-	commit    = "unknown"
-	buildDate = "unknown"
+	version   = "dev"     //nolint:gochecknoglobals // Build-time variables
+	commit    = "unknown" //nolint:gochecknoglobals // Build-time variables
+	buildDate = "unknown" //nolint:gochecknoglobals // Build-time variables
 )
 
 // Show displays the current version
@@ -351,7 +352,11 @@ func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(url)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}

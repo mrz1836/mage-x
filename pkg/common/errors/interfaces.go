@@ -260,7 +260,7 @@ type ErrorNotifier interface {
 // NotificationChannel represents a notification channel
 type NotificationChannel interface {
 	Name() string
-	Send(notification ErrorNotification) error
+	Send(ctx context.Context, notification ErrorNotification) error
 	IsEnabled() bool
 	SetEnabled(enabled bool)
 }

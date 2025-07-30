@@ -116,4 +116,4 @@ func (CommandMatcher) ContainsFlag(flag string) func([]string) bool {
 }
 
 // Global command matcher instance
-var Cmd = CommandMatcher{}
+var Cmd = CommandMatcher{} //nolint:gochecknoglobals // Test utility global

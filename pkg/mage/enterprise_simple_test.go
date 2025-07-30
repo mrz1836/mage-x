@@ -160,25 +160,25 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 // TestConfigBasicMethods tests basic config methods
 func (ts *EnterpriseSimpleTestSuite) TestConfigBasicMethods() {
 	ts.Run("BinaryName with default config", func() {
-		cfg = nil // Reset global config
+		TestResetConfig() // Reset global config
 		name := BinaryName()
 		require.Equal(ts.T(), "app", name) // default value
 	})
 
 	ts.Run("IsVerbose with default config", func() {
-		cfg = nil // Reset global config
+		TestResetConfig() // Reset global config
 		verbose := IsVerbose()
 		require.False(ts.T(), verbose)
 	})
 
 	ts.Run("HasEnterpriseConfig with no config", func() {
-		cfg = nil // Reset global config
+		TestResetConfig() // Reset global config
 		hasEnterprise := HasEnterpriseConfig()
 		require.False(ts.T(), hasEnterprise)
 	})
 
 	ts.Run("GetEnterpriseConfig with no config", func() {
-		cfg = nil // Reset global config
+		TestResetConfig() // Reset global config
 		enterpriseConfig := GetEnterpriseConfig()
 		require.Nil(ts.T(), enterpriseConfig)
 	})
