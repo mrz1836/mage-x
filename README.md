@@ -612,7 +612,7 @@ mage interactive
 
 ## 📝 License
 
-[![License](https://img.shields.io/github/license/mrz1836/go-mage.svg?style=flat)](LICENSE)
+[![License](https://img.shields.io/github/license/mrz1836/go-mage.svg?style=flat&v=1)](LICENSE)
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
