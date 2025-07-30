@@ -25,7 +25,7 @@
       </td>
       <td valign="top" align="left">
         <a href="https://goreportcard.com/report/github.com/mrz1836/go-mage">
-          <img src="https://goreportcard.com/badge/github.com/mrz1836/go-mage?style=flat" alt="Go Report Card">
+          <img src="https://goreportcard.com/badge/github.com/mrz1836/go-mage?style=flat&v=1" alt="Go Report Card">
         </a><br/>
         <a href="https://codecov.io/gh/mrz1836/go-mage">
           <img src="https://codecov.io/gh/mrz1836/go-mage/branch/main/graph/badge.svg?style=flat" alt="Code Coverage">
