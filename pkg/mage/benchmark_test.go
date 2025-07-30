@@ -84,25 +84,25 @@ lint:
 	b.Run("LoadConfig", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			// Reset config for benchmark
-			_, _ = LoadConfig()
+			_, _ = LoadConfig() //nolint:errcheck // Benchmark ignores errors
 		}
 	})
 
 	b.Run("SaveConfig", func(b *testing.B) {
-		config, _ := LoadConfig()
+		config, _ := LoadConfig() //nolint:errcheck // Benchmark ignores errors
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = SaveConfig(config)
+			_ = SaveConfig(config) //nolint:errcheck // Benchmark ignores errors
 		}
 	})
 
 	b.Run("GetConfig", func(b *testing.B) {
 		// Pre-load config
-		testCfg, _ := LoadConfig()
+		testCfg, _ := LoadConfig() //nolint:errcheck // Benchmark ignores errors
 		_ = testCfg
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, _ = GetConfig()
+			_, _ = GetConfig() //nolint:errcheck // Benchmark ignores errors
 		}
 	})
 }
@@ -312,7 +312,7 @@ func BenchmarkBuildOperations(b *testing.B) {
 	}
 
 	b.Run("buildFlags", func(b *testing.B) {
-		config, _ := GetConfig()
+		config, _ := GetConfig() //nolint:errcheck // Benchmark ignores errors
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_ = buildFlags(config)
@@ -395,7 +395,7 @@ func BenchmarkPlatformParsing(b *testing.B) {
 	b.Run("parsePlatform", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for _, p := range platforms {
-				_, _, _ = parsePlatform(p)
+				_, _, _ = parsePlatform(p) //nolint:errcheck // Benchmark ignores errors
 			}
 		}
 	})
@@ -403,7 +403,7 @@ func BenchmarkPlatformParsing(b *testing.B) {
 	b.Run("generateOutputPath", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for _, p := range platforms {
-				goos, goarch, _ := parsePlatform(p)
+				goos, goarch, _ := parsePlatform(p) //nolint:errcheck // Benchmark ignores errors
 				_ = generateOutputPath("myapp", goos, goarch)
 			}
 		}
@@ -424,13 +424,13 @@ func BenchmarkConcurrentOperations(b *testing.B) {
 
 	b.Run("parallel_config_access", func(b *testing.B) {
 		// Pre-load config
-		testCfg, _ := LoadConfig()
+		testCfg, _ := LoadConfig() //nolint:errcheck // Benchmark ignores errors
 		_ = testCfg
 		b.ResetTimer()
 
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				_, _ = GetConfig()
+				_, _ = GetConfig() //nolint:errcheck // Benchmark ignores errors
 				_ = BinaryName()
 				_ = IsVerbose()
 			}

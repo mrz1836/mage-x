@@ -446,7 +446,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	}
 	defer func() {
 		// Ignore error in defer cleanup
-		if err := resp.Body.Close(); err != nil {
+		if closeErr := resp.Body.Close(); closeErr != nil {
 			// Best effort cleanup - ignore error
 		}
 	}()
@@ -522,6 +522,10 @@ func saveUpdateRecord(info *UpdateInfo) {
 	}
 
 	// Ensure directory exists and save
-	_ = fileOps.File.MkdirAll(filepath.Dir(historyPath), 0o755)      // Ignore error - best effort
-	_ = fileOps.JSON.WriteJSONIndent(historyPath, history, "", "  ") // Ignore error - best effort
+	if err := fileOps.File.MkdirAll(filepath.Dir(historyPath), 0o755); err != nil {
+		// Best effort - ignore error in cleanup
+	}
+	if err := fileOps.JSON.WriteJSONIndent(historyPath, history, "", "  "); err != nil {
+		// Best effort - ignore error in cleanup
+	}
 }

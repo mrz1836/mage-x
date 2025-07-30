@@ -361,11 +361,16 @@ func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
 		return nil, err
 	}
 	defer func() {
-		_ = resp.Body.Close() // Ignore error in defer cleanup
+		if err := resp.Body.Close(); err != nil {
+			// Ignore error in defer cleanup
+		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("GitHub API error: failed to read response body: %w", readErr)
+		}
 		return nil, fmt.Errorf("GitHub API error: %s", body)
 	}
 
