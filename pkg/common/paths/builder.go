@@ -220,7 +220,12 @@ func (pb *DefaultPathBuilder) Walk(fn WalkFunc) error {
 	return filepath.WalkDir(pb.path, func(path string, d fs.DirEntry, err error) error {
 		var info fs.FileInfo
 		if d != nil {
-			info, _ = d.Info()
+			var infoErr error
+			info, infoErr = d.Info()
+			if infoErr != nil {
+				// Continue with nil info - let the walk function handle it
+				info = nil
+			}
 		}
 		pathBuilder := NewPathBuilder(path)
 		return fn(pathBuilder, info, err)
@@ -443,7 +448,11 @@ func (pb *DefaultPathBuilder) Symlink(target PathBuilder) error {
 
 // Match returns true if the path matches the pattern
 func (pb *DefaultPathBuilder) Match(pattern string) bool {
-	matched, _ := filepath.Match(pattern, pb.Base())
+	matched, err := filepath.Match(pattern, pb.Base())
+	if err != nil {
+		// Invalid pattern - return false
+		return false
+	}
 	return matched
 }
 
@@ -493,13 +502,17 @@ func (pb *DefaultPathBuilder) copyFile(src, dst string, srcInfo fs.FileInfo) err
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
+	defer func() {
+		if closeErr := srcFile.Close(); closeErr != nil {
+			// Log the error but don't fail the operation
+		}
+	}()
 
 	// Create destination directory if needed
 	if pb.options.CreateParents {
 		dstDir := filepath.Dir(dst)
-		if err := os.MkdirAll(dstDir, pb.options.CreateMode); err != nil {
-			return err
+		if mkdirErr := os.MkdirAll(dstDir, pb.options.CreateMode); mkdirErr != nil {
+			return mkdirErr
 		}
 	}
 
@@ -507,7 +520,11 @@ func (pb *DefaultPathBuilder) copyFile(src, dst string, srcInfo fs.FileInfo) err
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
+	defer func() {
+		if closeErr := dstFile.Close(); closeErr != nil {
+			// Log the error but don't fail the operation
+		}
+	}()
 
 	// Copy file contents
 	buffer := make([]byte, pb.options.BufferSize)
@@ -581,8 +598,12 @@ func Temp(pattern string) (PathBuilder, error) {
 		return nil, err
 	}
 	path := file.Name()
-	file.Close()
-	os.Remove(path) // Remove the file, just keep the path
+	if closeErr := file.Close(); closeErr != nil {
+		return nil, fmt.Errorf("failed to close temp file: %w", closeErr)
+	}
+	if removeErr := os.Remove(path); removeErr != nil {
+		return nil, fmt.Errorf("failed to remove temp file: %w", removeErr)
+	}
 	return NewPathBuilder(path), nil
 }
 

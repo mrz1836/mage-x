@@ -284,8 +284,7 @@ func applyEnvOverrides(c *Config) {
 	// Parallel override
 	if v := os.Getenv("PARALLEL"); v != "" {
 		var parallel int
-		_, _ = fmt.Sscanf(v, "%d", &parallel)
-		if parallel > 0 {
+		if _, err := fmt.Sscanf(v, "%d", &parallel); err == nil && parallel > 0 {
 			c.Build.Parallel = parallel
 		}
 	}

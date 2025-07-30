@@ -81,7 +81,10 @@ func (Metrics) Coverage() error {
 	}
 
 	// Clean up temp file
-	os.Remove("coverage.tmp")
+	if err := os.Remove("coverage.tmp"); err != nil {
+		// Log but don't fail - this is cleanup
+		utils.Debug("Failed to remove coverage temp file: %v", err)
+	}
 
 	// Show detailed coverage by package
 	utils.Info("\nPackage coverage:")
@@ -135,7 +138,12 @@ func (Metrics) Size() error {
 	if err := GetRunner().RunCmd("go", "build", "-o", binaryName); err != nil {
 		return fmt.Errorf("failed to build binary: %w", err)
 	}
-	defer os.Remove(binaryName)
+	defer func() {
+		if err := os.Remove(binaryName); err != nil {
+			// Log but don't fail - this is cleanup
+			utils.Debug("Failed to remove binary %s: %v", binaryName, err)
+		}
+	}()
 
 	// Get binary size
 	stat, err := os.Stat(binaryName)

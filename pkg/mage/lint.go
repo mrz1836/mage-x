@@ -19,13 +19,13 @@ type Lint mg.Namespace
 func (Lint) Default() error {
 	utils.Header("Running Linter")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	// Ensure golangci-lint is installed
-	if err := ensureGolangciLint(cfg); err != nil {
+	if err := ensureGolangciLint(config); err != nil {
 		return err
 	}
 
@@ -36,11 +36,11 @@ func (Lint) Default() error {
 		args = append(args, "--config", ".golangci.json")
 	}
 
-	if cfg.Lint.Timeout != "" {
-		args = append(args, "--timeout", cfg.Lint.Timeout)
+	if config.Lint.Timeout != "" {
+		args = append(args, "--timeout", config.Lint.Timeout)
 	}
 
-	if cfg.Build.Verbose {
+	if config.Build.Verbose {
 		args = append(args, "--verbose")
 	}
 
@@ -59,13 +59,13 @@ func (Lint) Default() error {
 func (Lint) Fix() error {
 	utils.Header("Running Linter with Auto-Fix")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	// Ensure golangci-lint is installed
-	if err := ensureGolangciLint(cfg); err != nil {
+	if err := ensureGolangciLint(config); err != nil {
 		return err
 	}
 
@@ -76,8 +76,8 @@ func (Lint) Fix() error {
 		args = append(args, "--config", ".golangci.json")
 	}
 
-	if cfg.Lint.Timeout != "" {
-		args = append(args, "--timeout", cfg.Lint.Timeout)
+	if config.Lint.Timeout != "" {
+		args = append(args, "--timeout", config.Lint.Timeout)
 	}
 
 	if err := GetRunner().RunCmd("golangci-lint", args...); err != nil {
@@ -133,7 +133,7 @@ func (Lint) Fmt() error {
 func (Lint) Fumpt() error {
 	utils.Header("Running gofumpt")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (Lint) Fumpt() error {
 	// Ensure gofumpt is installed
 	if !utils.CommandExists("gofumpt") {
 		utils.Info("Installing gofumpt...")
-		version := cfg.Tools.Fumpt
+		version := config.Tools.Fumpt
 		if version == "" || version == "latest" {
 			version = "@latest"
 		} else if !strings.HasPrefix(version, "@") {
@@ -166,7 +166,7 @@ func (Lint) Fumpt() error {
 func (Lint) Vet() error {
 	utils.Header("Running go vet")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
@@ -197,12 +197,12 @@ func (Lint) Vet() error {
 
 	args := []string{"vet"}
 
-	if cfg.Build.Verbose {
+	if config.Build.Verbose {
 		args = append(args, "-v")
 	}
 
-	if len(cfg.Build.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(cfg.Build.Tags, ","))
+	if len(config.Build.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
 	}
 
 	args = append(args, modulePackages...)
@@ -220,7 +220,7 @@ func (Lint) Vet() error {
 func (Lint) VetParallel() error {
 	utils.Header("Running go vet in parallel")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func (Lint) VetParallel() error {
 
 	// Create channel for errors
 	errors := make(chan error, len(modulePackages))
-	semaphore := make(chan struct{}, cfg.Build.Parallel)
+	semaphore := make(chan struct{}, config.Build.Parallel)
 
 	start := time.Now()
 
@@ -262,8 +262,8 @@ func (Lint) VetParallel() error {
 			defer func() { <-semaphore }()
 
 			args := []string{"vet"}
-			if len(cfg.Build.Tags) > 0 {
-				args = append(args, "-tags", strings.Join(cfg.Build.Tags, ","))
+			if len(config.Build.Tags) > 0 {
+				args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
 			}
 			args = append(args, p)
 
@@ -293,12 +293,12 @@ func (Lint) VetParallel() error {
 
 // Version shows golangci-lint version
 func (Lint) Version() error {
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Configured golangci-lint version: %s\n", cfg.Lint.GolangciVersion)
+	fmt.Printf("Configured golangci-lint version: %s\n", config.Lint.GolangciVersion)
 
 	if utils.CommandExists("golangci-lint") {
 		fmt.Println("\nInstalled version:")

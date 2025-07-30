@@ -55,8 +55,8 @@ func (Workflow) Execute() error {
 		execution.Error = err.Error()
 		execution.EndTime = time.Now()
 
-		if err := saveWorkflowExecution(execution); err != nil {
-			utils.Warn("Failed to save workflow execution: %v", err)
+		if saveErr := saveWorkflowExecution(execution); saveErr != nil {
+			utils.Warn("Failed to save workflow execution: %v", saveErr)
 		}
 
 		return fmt.Errorf("workflow execution failed: %w", err)

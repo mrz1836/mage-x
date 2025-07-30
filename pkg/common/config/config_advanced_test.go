@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfigManagerAdvanced(t *testing.T) {
@@ -12,7 +14,11 @@ func TestConfigManagerAdvanced(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Logf("Failed to remove temp dir: %v", err)
+		}
+	}()
 
 	manager := NewManager()
 
@@ -257,13 +263,19 @@ func TestConfigManagerAdvanced(t *testing.T) {
 
 	t.Run("Environment variable interpolation", func(t *testing.T) {
 		// Set test environment variables
-		os.Setenv("TEST_PROJECT_NAME", "env-project")
-		os.Setenv("TEST_GO_VERSION", "1.24")
-		os.Setenv("TEST_PARALLEL_COUNT", "8")
+		require.NoError(t, os.Setenv("TEST_PROJECT_NAME", "env-project"))
+		require.NoError(t, os.Setenv("TEST_GO_VERSION", "1.24"))
+		require.NoError(t, os.Setenv("TEST_PARALLEL_COUNT", "8"))
 		defer func() {
-			os.Unsetenv("TEST_PROJECT_NAME")
-			os.Unsetenv("TEST_GO_VERSION")
-			os.Unsetenv("TEST_PARALLEL_COUNT")
+			if err := os.Unsetenv("TEST_PROJECT_NAME"); err != nil {
+				t.Logf("Failed to unset TEST_PROJECT_NAME: %v", err)
+			}
+			if err := os.Unsetenv("TEST_GO_VERSION"); err != nil {
+				t.Logf("Failed to unset TEST_GO_VERSION: %v", err)
+			}
+			if err := os.Unsetenv("TEST_PARALLEL_COUNT"); err != nil {
+				t.Logf("Failed to unset TEST_PARALLEL_COUNT: %v", err)
+			}
 		}()
 
 		// Create configuration with environment variable references
@@ -310,7 +322,11 @@ func TestConfigCaching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Logf("Failed to remove temp dir: %v", err)
+		}
+	}()
 
 	manager := NewManager()
 
@@ -354,7 +370,11 @@ func TestConfigWatching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Logf("Failed to remove temp dir: %v", err)
+		}
+	}()
 
 	t.Run("Configuration file watching", func(t *testing.T) {
 		configFile := filepath.Join(tempDir, "watched.yaml")
@@ -399,7 +419,11 @@ func TestConfigMigration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Logf("Failed to remove temp dir: %v", err)
+		}
+	}()
 
 	t.Run("Configuration schema migration", func(t *testing.T) {
 		// Simulate an old configuration format
@@ -457,7 +481,11 @@ func BenchmarkConfigOperations(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			b.Logf("Failed to remove temp dir: %v", err)
+		}
+	}()
 
 	manager := NewManager()
 	testConfig := &MageConfig{

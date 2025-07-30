@@ -272,7 +272,10 @@ func getInitProjectConfig() (*InitProjectConfig, error) {
 
 	// If not provided via env, use defaults based on current directory
 	if config.Name == "" {
-		pwd, _ := os.Getwd()
+		pwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current directory: %w", err)
+		}
 		config.Name = filepath.Base(pwd)
 	}
 

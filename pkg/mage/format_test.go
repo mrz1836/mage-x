@@ -35,7 +35,7 @@ func (ts *FormatTestSuite) TestFormatGofmt() {
 		ts.env.Runner.On("RunCmdOutput", "gofmt", []string{"-l", "."}).Return("", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Gofmt()
@@ -51,7 +51,7 @@ func (ts *FormatTestSuite) TestFormatGofmt() {
 		ts.env.Runner.On("RunCmd", "gofmt", []string{"-w", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Gofmt()
@@ -69,7 +69,7 @@ func (ts *FormatTestSuite) TestFormatCheck() {
 		ts.env.Runner.On("RunCmdOutput", "gofmt", []string{"-l", "."}).Return("", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Check()
@@ -88,7 +88,7 @@ func (ts *FormatTestSuite) TestFormatInstallTools() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.InstallTools()
@@ -106,7 +106,7 @@ func (ts *FormatTestSuite) TestFormatAll() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting all files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.All()
@@ -124,7 +124,7 @@ func (ts *FormatTestSuite) TestFormatGo() {
 		ts.env.Runner.On("RunCmd", "gofmt", []string{"-w", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Go()
@@ -142,7 +142,7 @@ func (ts *FormatTestSuite) TestFormatYAML() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting YAML files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.YAML()
@@ -160,7 +160,7 @@ func (ts *FormatTestSuite) TestFormatYaml() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting YAML files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Yaml()
@@ -178,7 +178,7 @@ func (ts *FormatTestSuite) TestFormatJSON() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting JSON files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.JSON()
@@ -196,7 +196,7 @@ func (ts *FormatTestSuite) TestFormatJson() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting JSON files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Json()
@@ -214,7 +214,7 @@ func (ts *FormatTestSuite) TestFormatMarkdown() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting Markdown files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Markdown()
@@ -232,7 +232,7 @@ func (ts *FormatTestSuite) TestFormatSQL() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting SQL files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.SQL()
@@ -250,7 +250,7 @@ func (ts *FormatTestSuite) TestFormatDockerfile() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting Dockerfile"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Dockerfile()
@@ -268,7 +268,7 @@ func (ts *FormatTestSuite) TestFormatShell() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting shell scripts"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Shell()
@@ -286,7 +286,7 @@ func (ts *FormatTestSuite) TestFormatFix() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Fixing formatting issues"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.Fix()

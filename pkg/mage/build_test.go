@@ -27,17 +27,29 @@ func (ts *BuildTestSuite) SetupTest() {
 	// Reset cache manager to avoid test interference
 	cacheManager = nil
 	// Disable cache for tests
-	os.Setenv("MAGE_CACHE_DISABLED", "true")
+	if err := os.Setenv("MAGE_CACHE_DISABLED", "true"); err != nil {
+		ts.T().Fatalf("Failed to set MAGE_CACHE_DISABLED: %v", err)
+	}
 }
 
 // TearDownTest runs after each test
 func (ts *BuildTestSuite) TearDownTest() {
 	// Clean up environment variables that might be set by tests
-	os.Unsetenv("GOOS")
-	os.Unsetenv("GOARCH")
-	os.Unsetenv("CGO_ENABLED")
-	os.Unsetenv("DOCKER_BUILDKIT")
-	os.Unsetenv("MAGE_CACHE_DISABLED")
+	if err := os.Unsetenv("GOOS"); err != nil {
+		ts.T().Logf("Failed to unset GOOS: %v", err)
+	}
+	if err := os.Unsetenv("GOARCH"); err != nil {
+		ts.T().Logf("Failed to unset GOARCH: %v", err)
+	}
+	if err := os.Unsetenv("CGO_ENABLED"); err != nil {
+		ts.T().Logf("Failed to unset CGO_ENABLED: %v", err)
+	}
+	if err := os.Unsetenv("DOCKER_BUILDKIT"); err != nil {
+		ts.T().Logf("Failed to unset DOCKER_BUILDKIT: %v", err)
+	}
+	if err := os.Unsetenv("MAGE_CACHE_DISABLED"); err != nil {
+		ts.T().Logf("Failed to unset MAGE_CACHE_DISABLED: %v", err)
+	}
 
 	// Reset global config
 	TestResetConfig()
@@ -85,7 +97,7 @@ func main() {
 		ts.mockBuildCommand("bin/module", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Default()
@@ -123,7 +135,7 @@ func main() {
 		})).Return(errors.New("build error"))
 
 		err := env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Default()
@@ -161,7 +173,7 @@ func main() {
 
 		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.All()
@@ -194,7 +206,7 @@ func main() {
 
 		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.All()
@@ -221,7 +233,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-linux-amd64", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Platform("linux/amd64")
@@ -233,7 +245,7 @@ func main() {
 
 	ts.Run("handles invalid platform format", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Platform("invalid-platform")
@@ -258,7 +270,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-windows-amd64.exe", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Platform("windows/amd64")
@@ -285,7 +297,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-linux-amd64", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Linux()
@@ -310,7 +322,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-darwin-arm64", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Darwin()
@@ -334,7 +346,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-windows-amd64.exe", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Windows()
@@ -364,7 +376,7 @@ CMD ["./app"]`)
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Docker()
@@ -376,10 +388,12 @@ CMD ["./app"]`)
 
 	ts.Run("handles missing Dockerfile", func() {
 		// Ensure the Dockerfile doesn't exist
-		os.RemoveAll(filepath.Join(ts.env.TempDir, "Dockerfile"))
+		if err := os.RemoveAll(filepath.Join(ts.env.TempDir, "Dockerfile")); err != nil {
+			ts.T().Logf("Failed to remove Dockerfile: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Docker()
@@ -403,7 +417,7 @@ func (ts *BuildTestSuite) TestBuildClean() {
 		ts.env.Runner.On("RunCmd", "go", []string{"clean", "-testcache"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Clean()
@@ -432,7 +446,7 @@ func main() {
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Install()
@@ -455,7 +469,7 @@ func main() {}`)
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Generate()
@@ -477,7 +491,7 @@ func (ts *BuildTestSuite) TestBuildPreBuild() {
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.PreBuild()

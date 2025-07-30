@@ -247,7 +247,7 @@ func TestManager_Initialize(t *testing.T) {
 			Name:        Beta,
 			Description: "Custom beta config",
 		}
-		store.SaveChannelConfig(customConfig)
+		require.NoError(t, store.SaveChannelConfig(customConfig))
 
 		manager := NewManager(store, fileops.New().File)
 		err := manager.Initialize()
@@ -1010,7 +1010,9 @@ func TestManager_GetPromotionHistory(t *testing.T) {
 func BenchmarkManager_PublishRelease(b *testing.B) {
 	store := NewMockStore()
 	manager := NewManager(store, fileops.New().File)
-	manager.Initialize()
+	if err := manager.Initialize(); err != nil {
+		b.Fatal(err)
+	}
 
 	release := &Release{
 		Version:    "1.0.0",
@@ -1054,7 +1056,9 @@ func BenchmarkManager_GetLatestRelease(b *testing.B) {
 			PublishedAt: time.Now().Add(time.Duration(i) * time.Minute),
 			Artifacts:   []Artifact{{Name: "binary", URL: "https://example.com/binary", Checksum: "abc123"}},
 		}
-		store.SaveRelease(release)
+		if err := store.SaveRelease(release); err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	b.ResetTimer()

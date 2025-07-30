@@ -42,8 +42,12 @@ func GetRunner() CommandRunner {
 }
 
 // SetRunner allows setting a custom runner (mainly for testing)
-func SetRunner(r CommandRunner) {
+func SetRunner(r CommandRunner) error {
+	if r == nil {
+		return fmt.Errorf("runner cannot be nil")
+	}
 	defaultRunner = r
+	return nil
 }
 
 // truncateString truncates a string to the specified length

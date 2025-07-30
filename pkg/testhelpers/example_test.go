@@ -43,7 +43,11 @@ func ExampleMockRunner() {
 	runner.SetOutputForCommand("git", "v2.34.0")
 
 	// Use the runner
-	version, _ := runner.RunCmdOutput("go", "version")
+	version, err := runner.RunCmdOutput("go", "version")
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
 	fmt.Println(version)
 
 	// Verify calls

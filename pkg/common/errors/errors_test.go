@@ -132,7 +132,7 @@ func TestErrorChain(t *testing.T) {
 	err2 := WithCode(ErrTestFailed, "test failed")
 	err3 := New("generic error")
 
-	chain.Add(err1).Add(err2).Add(err3)
+	chain = chain.Add(err1).Add(err2).Add(err3)
 
 	// Test count
 	assert.Equal(t, 3, chain.Count(), "Chain should have count 3")
@@ -152,10 +152,11 @@ func TestErrorChain(t *testing.T) {
 
 	// Test ForEach
 	count := 0
-	chain.ForEach(func(err error) error {
+	forEachErr := chain.ForEach(func(err error) error {
 		count++
 		return nil
 	})
+	require.NoError(t, forEachErr, "ForEach should not fail")
 	assert.Equal(t, 3, count, "ForEach should iterate over all errors")
 
 	// Test Filter
@@ -180,7 +181,8 @@ func TestErrorHandler(t *testing.T) {
 	})
 
 	err := WithCode(ErrBuildFailed, "build failed")
-	handler.Handle(err)
+	result := handler.Handle(err)
+	require.NoError(t, result, "Handle should not return an error")
 
 	assert.True(t, handled, "Code handler should have been called")
 
@@ -195,7 +197,8 @@ func TestErrorHandler(t *testing.T) {
 		WithMessage("critical error").
 		WithSeverity(SeverityCritical).
 		Build()
-	handler.Handle(criticalErr)
+	result = handler.Handle(criticalErr)
+	require.NoError(t, result, "Handle should not return an error")
 
 	assert.True(t, severityHandled, "Severity handler should have been called")
 
@@ -203,11 +206,12 @@ func TestErrorHandler(t *testing.T) {
 	defaultHandled := false
 	handler.SetDefault(func(err error) error {
 		defaultHandled = true
-		return err
+		return nil
 	})
 
 	genericErr := fmt.Errorf("generic error")
-	handler.Handle(genericErr)
+	result = handler.Handle(genericErr)
+	require.NoError(t, result, "Handle should not return an error")
 
 	assert.True(t, defaultHandled, "Default handler should have been called")
 
@@ -215,8 +219,8 @@ func TestErrorHandler(t *testing.T) {
 	ctx := context.WithValue(context.Background(), "requestID", "12345")
 	contextErr := New("context error")
 
-	result := handler.HandleWithContext(ctx, contextErr)
-	assert.NotNil(t, result, "HandleWithContext should return an error")
+	result = handler.HandleWithContext(ctx, contextErr)
+	assert.Nil(t, result, "HandleWithContext should not return an error when handled by default handler")
 }
 
 func TestErrorRegistry(t *testing.T) {
@@ -243,8 +247,10 @@ func TestErrorRegistry(t *testing.T) {
 	assert.NotEmpty(t, list, "List should return registered errors")
 
 	// Test ListByPrefix
-	registry.Register("PREFIX_TEST_1", "Test error 1")
-	registry.Register("PREFIX_TEST_2", "Test error 2")
+	err = registry.Register("PREFIX_TEST_1", "Test error 1")
+	require.NoError(t, err, "Register should not fail")
+	err = registry.Register("PREFIX_TEST_2", "Test error 2")
+	require.NoError(t, err, "Register should not fail")
 
 	testErrors := registry.ListByPrefix("PREFIX_TEST_")
 	assert.Len(t, testErrors, 2, "ListByPrefix should return 2 errors")
@@ -358,8 +364,8 @@ func TestErrorFormatter(t *testing.T) {
 
 	// Test chain formatting
 	chain := NewChain()
-	chain.Add(WithCode(ErrBuildFailed, "build failed"))
-	chain.Add(WithCode(ErrTestFailed, "test failed"))
+	chain = chain.Add(WithCode(ErrBuildFailed, "build failed"))
+	chain = chain.Add(WithCode(ErrTestFailed, "test failed"))
 
 	chainFormatted := formatter.FormatChain(chain)
 	assert.Contains(t, chainFormatted, "2 errors", "Chain format should show error count")
@@ -462,19 +468,25 @@ func TestSeverity(t *testing.T) {
 func BenchmarkErrorCreation(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = New("test error")
+		err := New("test error")
+		if err == nil {
+			b.Fatal("expected error, got nil")
+		}
 	}
 }
 
 func BenchmarkErrorBuilder(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = NewBuilder().
+		err := NewBuilder().
 			WithMessage("test error").
 			WithCode(ErrBuildFailed).
 			WithSeverity(SeverityError).
 			WithField("key", "value").
 			Build()
+		if err == nil {
+			b.Fatal("expected error, got nil")
+		}
 	}
 }
 
@@ -503,7 +515,7 @@ func BenchmarkErrorChain(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		chain := NewChain()
 		for _, err := range errors {
-			chain.Add(err)
+			chain = chain.Add(err)
 		}
 		_ = chain.Count()
 	}

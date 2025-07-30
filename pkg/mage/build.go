@@ -267,11 +267,19 @@ func (b Build) Platform(platform string) error {
 	utils.Info("Building %s", platform)
 
 	// Set environment for cross-compilation
-	os.Setenv("GOOS", p.OS)
-	os.Setenv("GOARCH", p.Arch)
+	if err := os.Setenv("GOOS", p.OS); err != nil {
+		return fmt.Errorf("failed to set GOOS: %w", err)
+	}
+	if err := os.Setenv("GOARCH", p.Arch); err != nil {
+		return fmt.Errorf("failed to set GOARCH: %w", err)
+	}
 	defer func() {
-		os.Unsetenv("GOOS")
-		os.Unsetenv("GOARCH")
+		if err := os.Unsetenv("GOOS"); err != nil {
+			utils.Warn("Failed to unset GOOS: %v", err)
+		}
+		if err := os.Unsetenv("GOARCH"); err != nil {
+			utils.Warn("Failed to unset GOARCH: %v", err)
+		}
 	}()
 
 	if err := GetRunner().RunCmd("go", args...); err != nil {

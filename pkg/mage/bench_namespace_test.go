@@ -26,18 +26,42 @@ func (ts *BenchTestSuite) SetupTest() {
 // TearDownTest runs after each test
 func (ts *BenchTestSuite) TearDownTest() {
 	// Clean up environment variables that might be set by tests
-	os.Unsetenv("BENCH_TIME")
-	os.Unsetenv("BENCH_COUNT")
-	os.Unsetenv("BENCH_CPU_PROFILE")
-	os.Unsetenv("BENCH_MEM_PROFILE")
-	os.Unsetenv("BENCH_FILE")
-	os.Unsetenv("BENCH_OLD")
-	os.Unsetenv("BENCH_NEW")
-	os.Unsetenv("CPU_PROFILE")
-	os.Unsetenv("MEM_PROFILE")
-	os.Unsetenv("TRACE_FILE")
-	os.Unsetenv("UPDATE_BASELINE")
-	os.Unsetenv("BENCH_BASELINE")
+	if err := os.Unsetenv("BENCH_TIME"); err != nil {
+		ts.T().Logf("Failed to unset BENCH_TIME: %v", err)
+	}
+	if err := os.Unsetenv("BENCH_COUNT"); err != nil {
+		ts.T().Logf("Failed to unset BENCH_COUNT: %v", err)
+	}
+	if err := os.Unsetenv("BENCH_CPU_PROFILE"); err != nil {
+		ts.T().Logf("Failed to unset BENCH_CPU_PROFILE: %v", err)
+	}
+	if err := os.Unsetenv("BENCH_MEM_PROFILE"); err != nil {
+		ts.T().Logf("Failed to unset BENCH_MEM_PROFILE: %v", err)
+	}
+	if err := os.Unsetenv("BENCH_FILE"); err != nil {
+		ts.T().Logf("Failed to unset BENCH_FILE: %v", err)
+	}
+	if err := os.Unsetenv("BENCH_OLD"); err != nil {
+		ts.T().Logf("Failed to unset BENCH_OLD: %v", err)
+	}
+	if err := os.Unsetenv("BENCH_NEW"); err != nil {
+		ts.T().Logf("Failed to unset BENCH_NEW: %v", err)
+	}
+	if err := os.Unsetenv("CPU_PROFILE"); err != nil {
+		ts.T().Logf("Failed to unset CPU_PROFILE: %v", err)
+	}
+	if err := os.Unsetenv("MEM_PROFILE"); err != nil {
+		ts.T().Logf("Failed to unset MEM_PROFILE: %v", err)
+	}
+	if err := os.Unsetenv("TRACE_FILE"); err != nil {
+		ts.T().Logf("Failed to unset TRACE_FILE: %v", err)
+	}
+	if err := os.Unsetenv("UPDATE_BASELINE"); err != nil {
+		ts.T().Logf("Failed to unset UPDATE_BASELINE: %v", err)
+	}
+	if err := os.Unsetenv("BENCH_BASELINE"); err != nil {
+		ts.T().Logf("Failed to unset BENCH_BASELINE: %v", err)
+	}
 
 	ts.env.Cleanup()
 }
@@ -49,7 +73,7 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Default()
@@ -62,14 +86,20 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 	ts.Run("benchmark with custom time", func() {
 		// Set environment variable for custom bench time
 		originalBenchTime := os.Getenv("BENCH_TIME")
-		defer os.Setenv("BENCH_TIME", originalBenchTime)
-		os.Setenv("BENCH_TIME", "5s")
+		defer func() {
+			if err := os.Setenv("BENCH_TIME", originalBenchTime); err != nil {
+				ts.T().Logf("Failed to restore BENCH_TIME: %v", err)
+			}
+		}()
+		if err := os.Setenv("BENCH_TIME", "5s"); err != nil {
+			ts.T().Fatalf("Failed to set BENCH_TIME: %v", err)
+		}
 
 		// Mock successful go test benchmark command with custom time
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "5s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Default()
@@ -82,14 +112,20 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 	ts.Run("benchmark with count", func() {
 		// Set environment variable for count
 		originalBenchCount := os.Getenv("BENCH_COUNT")
-		defer os.Setenv("BENCH_COUNT", originalBenchCount)
-		os.Setenv("BENCH_COUNT", "3")
+		defer func() {
+			if err := os.Setenv("BENCH_COUNT", originalBenchCount); err != nil {
+				ts.T().Logf("Failed to restore BENCH_COUNT: %v", err)
+			}
+		}()
+		if err := os.Setenv("BENCH_COUNT", "3"); err != nil {
+			ts.T().Fatalf("Failed to set BENCH_COUNT: %v", err)
+		}
 
 		// Mock successful go test benchmark command with count
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-count", "3", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Default()
@@ -104,18 +140,26 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 		originalCPUProfile := os.Getenv("BENCH_CPU_PROFILE")
 		originalMemProfile := os.Getenv("BENCH_MEM_PROFILE")
 		defer func() {
-			os.Setenv("BENCH_CPU_PROFILE", originalCPUProfile)
-			os.Setenv("BENCH_MEM_PROFILE", originalMemProfile)
+			if err := os.Setenv("BENCH_CPU_PROFILE", originalCPUProfile); err != nil {
+				ts.T().Logf("Failed to restore BENCH_CPU_PROFILE: %v", err)
+			}
+			if err := os.Setenv("BENCH_MEM_PROFILE", originalMemProfile); err != nil {
+				ts.T().Logf("Failed to restore BENCH_MEM_PROFILE: %v", err)
+			}
 		}()
 
-		os.Setenv("BENCH_CPU_PROFILE", "cpu.prof")
-		os.Setenv("BENCH_MEM_PROFILE", "mem.prof")
+		if err := os.Setenv("BENCH_CPU_PROFILE", "cpu.prof"); err != nil {
+			ts.T().Fatalf("Failed to set BENCH_CPU_PROFILE: %v", err)
+		}
+		if err := os.Setenv("BENCH_MEM_PROFILE", "mem.prof"); err != nil {
+			ts.T().Fatalf("Failed to set BENCH_MEM_PROFILE: %v", err)
+		}
 
 		// Mock successful go test benchmark command with profiling
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-cpuprofile", "cpu.prof", "-memprofile", "mem.prof", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Default()
@@ -138,7 +182,7 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"old.txt", "new.txt"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Compare()
@@ -153,12 +197,20 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 		originalOld := os.Getenv("BENCH_OLD")
 		originalNew := os.Getenv("BENCH_NEW")
 		defer func() {
-			os.Setenv("BENCH_OLD", originalOld)
-			os.Setenv("BENCH_NEW", originalNew)
+			if err := os.Setenv("BENCH_OLD", originalOld); err != nil {
+				ts.T().Logf("Failed to restore BENCH_OLD: %v", err)
+			}
+			if err := os.Setenv("BENCH_NEW", originalNew); err != nil {
+				ts.T().Logf("Failed to restore BENCH_NEW: %v", err)
+			}
 		}()
 
-		os.Setenv("BENCH_OLD", "baseline.txt")
-		os.Setenv("BENCH_NEW", "current.txt")
+		if err := os.Setenv("BENCH_OLD", "baseline.txt"); err != nil {
+			ts.T().Fatalf("Failed to set BENCH_OLD: %v", err)
+		}
+		if err := os.Setenv("BENCH_NEW", "current.txt"); err != nil {
+			ts.T().Fatalf("Failed to set BENCH_NEW: %v", err)
+		}
 
 		// Create test benchmark files
 		ts.env.CreateFile("baseline.txt", "BenchmarkTest 1000 1000000 ns/op")
@@ -169,7 +221,7 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"baseline.txt", "current.txt"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Compare()
@@ -181,14 +233,18 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 
 	ts.Run("missing old benchmark file", func() {
 		// Ensure old.txt doesn't exist
-		os.Remove("old.txt")
-		os.Remove("new.txt")
+		if err := os.Remove("old.txt"); err != nil && !os.IsNotExist(err) {
+			require.NoError(ts.T(), err)
+		}
+		if err := os.Remove("new.txt"); err != nil && !os.IsNotExist(err) {
+			require.NoError(ts.T(), err)
+		}
 
 		// Mock benchstat installation but don't create old.txt file
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/perf/cmd/benchstat@latest"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Compare()
@@ -201,14 +257,16 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 
 	ts.Run("missing new benchmark file", func() {
 		// Ensure new.txt doesn't exist, but old.txt does
-		os.Remove("new.txt")
+		if err := os.Remove("new.txt"); err != nil && !os.IsNotExist(err) {
+			require.NoError(ts.T(), err)
+		}
 		ts.env.CreateFile("old.txt", "BenchmarkTest 1000 1000000 ns/op")
 
 		// Mock benchstat installation but don't create new.txt file
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/perf/cmd/benchstat@latest"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Compare()
@@ -227,7 +285,7 @@ func (ts *BenchTestSuite) TestBenchSave() {
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Save()
@@ -240,14 +298,20 @@ func (ts *BenchTestSuite) TestBenchSave() {
 	ts.Run("benchmark save with custom filename", func() {
 		// Set environment variable for custom output file
 		originalBenchFile := os.Getenv("BENCH_FILE")
-		defer os.Setenv("BENCH_FILE", originalBenchFile)
-		os.Setenv("BENCH_FILE", "custom-bench.txt")
+		defer func() {
+			if err := os.Setenv("BENCH_FILE", originalBenchFile); err != nil {
+				ts.T().Logf("Failed to restore BENCH_FILE: %v", err)
+			}
+		}()
+		if err := os.Setenv("BENCH_FILE", "custom-bench.txt"); err != nil {
+			ts.T().Fatalf("Failed to set BENCH_FILE: %v", err)
+		}
 
 		// Mock successful go test benchmark command and output
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Save()
@@ -261,14 +325,20 @@ func (ts *BenchTestSuite) TestBenchSave() {
 	ts.Run("benchmark save with directory creation", func() {
 		// Set environment variable for output file in subdirectory
 		originalBenchFile := os.Getenv("BENCH_FILE")
-		defer os.Setenv("BENCH_FILE", originalBenchFile)
-		os.Setenv("BENCH_FILE", "benchmarks/results.txt")
+		defer func() {
+			if err := os.Setenv("BENCH_FILE", originalBenchFile); err != nil {
+				ts.T().Logf("Failed to restore BENCH_FILE: %v", err)
+			}
+		}()
+		if err := os.Setenv("BENCH_FILE", "benchmarks/results.txt"); err != nil {
+			ts.T().Fatalf("Failed to set BENCH_FILE: %v", err)
+		}
 
 		// Mock successful go test benchmark command and output
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Save()
@@ -290,7 +360,7 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "cpu.prof"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.CPU()
@@ -303,8 +373,14 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 	ts.Run("CPU profiling with custom profile name", func() {
 		// Set environment variable for custom CPU profile name
 		originalCPUProfile := os.Getenv("CPU_PROFILE")
-		defer os.Setenv("CPU_PROFILE", originalCPUProfile)
-		os.Setenv("CPU_PROFILE", "custom-cpu.prof")
+		defer func() {
+			if err := os.Setenv("CPU_PROFILE", originalCPUProfile); err != nil {
+				ts.T().Logf("Failed to restore CPU_PROFILE: %v", err)
+			}
+		}()
+		if err := os.Setenv("CPU_PROFILE", "custom-cpu.prof"); err != nil {
+			ts.T().Fatalf("Failed to set CPU_PROFILE: %v", err)
+		}
 
 		// Mock successful go test benchmark command with custom CPU profile
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-cpuprofile", "custom-cpu.prof", "./..."}).Return(nil)
@@ -312,7 +388,7 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "custom-cpu.prof"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.CPU()
@@ -332,7 +408,7 @@ func (ts *BenchTestSuite) TestBenchMem() {
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "-alloc_space", "mem.prof"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Mem()
@@ -345,8 +421,14 @@ func (ts *BenchTestSuite) TestBenchMem() {
 	ts.Run("memory profiling with custom profile name", func() {
 		// Set environment variable for custom memory profile name
 		originalMemProfile := os.Getenv("MEM_PROFILE")
-		defer os.Setenv("MEM_PROFILE", originalMemProfile)
-		os.Setenv("MEM_PROFILE", "custom-mem.prof")
+		defer func() {
+			if err := os.Setenv("MEM_PROFILE", originalMemProfile); err != nil {
+				ts.T().Logf("Failed to restore MEM_PROFILE: %v", err)
+			}
+		}()
+		if err := os.Setenv("MEM_PROFILE", "custom-mem.prof"); err != nil {
+			ts.T().Fatalf("Failed to set MEM_PROFILE: %v", err)
+		}
 
 		// Mock successful go test benchmark command with custom memory profile
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-memprofile", "custom-mem.prof", "./..."}).Return(nil)
@@ -354,7 +436,7 @@ func (ts *BenchTestSuite) TestBenchMem() {
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "-alloc_space", "custom-mem.prof"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Mem()
@@ -372,7 +454,7 @@ func (ts *BenchTestSuite) TestBenchProfile() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-cpuprofile", "cpu.prof", "-memprofile", "mem.prof", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Profile()
@@ -390,7 +472,7 @@ func (ts *BenchTestSuite) TestBenchTrace() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", "trace.out", "-benchtime", "10s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Trace()
@@ -403,14 +485,20 @@ func (ts *BenchTestSuite) TestBenchTrace() {
 	ts.Run("tracing with custom trace file", func() {
 		// Set environment variable for custom trace file
 		originalTraceFile := os.Getenv("TRACE_FILE")
-		defer os.Setenv("TRACE_FILE", originalTraceFile)
-		os.Setenv("TRACE_FILE", "custom-trace.out")
+		defer func() {
+			if err := os.Setenv("TRACE_FILE", originalTraceFile); err != nil {
+				ts.T().Logf("Failed to restore TRACE_FILE: %v", err)
+			}
+		}()
+		if err := os.Setenv("TRACE_FILE", "custom-trace.out"); err != nil {
+			ts.T().Fatalf("Failed to set TRACE_FILE: %v", err)
+		}
 
 		// Mock successful go test benchmark command with custom trace file
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", "custom-trace.out", "-benchtime", "10s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Trace()
@@ -428,7 +516,7 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Regression()
@@ -449,7 +537,7 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"bench-baseline.txt", "bench-current.txt"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Regression()
@@ -463,8 +551,14 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 	ts.Run("regression check with baseline update", func() {
 		// Set environment variable to update baseline
 		originalUpdateBaseline := os.Getenv("UPDATE_BASELINE")
-		defer os.Setenv("UPDATE_BASELINE", originalUpdateBaseline)
-		os.Setenv("UPDATE_BASELINE", "true")
+		defer func() {
+			if err := os.Setenv("UPDATE_BASELINE", originalUpdateBaseline); err != nil {
+				ts.T().Logf("Failed to restore UPDATE_BASELINE: %v", err)
+			}
+		}()
+		if err := os.Setenv("UPDATE_BASELINE", "true"); err != nil {
+			ts.T().Fatalf("Failed to set UPDATE_BASELINE: %v", err)
+		}
 
 		// Create existing baseline
 		ts.env.CreateFile("bench-baseline.txt", "BenchmarkTest 1000 1000000 ns/op")
@@ -475,7 +569,7 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"bench-baseline.txt", "bench-current.txt"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.bench.Regression()

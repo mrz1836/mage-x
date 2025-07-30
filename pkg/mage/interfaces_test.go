@@ -524,7 +524,9 @@ func BenchmarkBuilder_Build(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = builder.Build(ctx, opts)
+		if err := builder.Build(ctx, opts); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -535,7 +537,9 @@ func BenchmarkTester_RunTests(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = tester.RunTests(ctx, opts)
+		if _, err := tester.RunTests(ctx, opts); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -547,7 +551,9 @@ func BenchmarkDeployer_Deploy(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = deployer.Deploy(ctx, target, opts)
+		if err := deployer.Deploy(ctx, target, opts); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 

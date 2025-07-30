@@ -320,7 +320,9 @@ func (c *DefaultPathCache) evict() {
 	case EvictLRU:
 		// Remove least recently used (back of list)
 		if element := c.lruList.Back(); element != nil {
-			itemToEvict = element.Value.(*cacheItem)
+			if item, ok := element.Value.(*cacheItem); ok {
+				itemToEvict = item
+			}
 		}
 
 	case EvictLFU:

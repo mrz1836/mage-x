@@ -60,8 +60,10 @@ func TestRequireCommand(t *testing.T) {
 func TestRequireEnv(t *testing.T) {
 	t.Run("existing env var", func(t *testing.T) {
 		// Set a test env var
-		os.Setenv("TEST_REQUIRE_ENV", "test_value")
-		defer os.Unsetenv("TEST_REQUIRE_ENV")
+		require.NoError(t, os.Setenv("TEST_REQUIRE_ENV", "test_value"))
+		defer func() {
+			require.NoError(t, os.Unsetenv("TEST_REQUIRE_ENV"))
+		}()
 
 		value := RequireEnv(t, "TEST_REQUIRE_ENV")
 		require.Equal(t, "test_value", value)
@@ -255,15 +257,15 @@ func TestSkipIfCI(t *testing.T) {
 	origCI := os.Getenv("CI")
 	defer func() {
 		if origCI == "" {
-			os.Unsetenv("CI")
+			require.NoError(t, os.Unsetenv("CI"))
 		} else {
-			os.Setenv("CI", origCI)
+			require.NoError(t, os.Setenv("CI", origCI))
 		}
 	}()
 
 	t.Run("not in CI", func(t *testing.T) {
-		os.Unsetenv("CI")
-		os.Unsetenv("GITHUB_ACTIONS")
+		require.NoError(t, os.Unsetenv("CI"))
+		require.NoError(t, os.Unsetenv("GITHUB_ACTIONS"))
 
 		SkipIfCI(t)
 		// If we get here, we're not in CI
@@ -346,7 +348,7 @@ func TestGolden(t *testing.T) {
 	t.Run("check without update", func(t *testing.T) {
 		// Create a golden file
 		goldenPath := tempDir + "/test.golden"
-		os.WriteFile(goldenPath, []byte("expected content"), 0o644)
+		require.NoError(t, os.WriteFile(goldenPath, []byte("expected content"), 0o644))
 
 		g := &Golden{
 			t:      t,
@@ -372,8 +374,10 @@ func TestNewGolden(t *testing.T) {
 	})
 
 	t.Run("with update env", func(t *testing.T) {
-		os.Setenv("UPDATE_GOLDEN", "true")
-		defer os.Unsetenv("UPDATE_GOLDEN")
+		require.NoError(t, os.Setenv("UPDATE_GOLDEN", "true"))
+		defer func() {
+			require.NoError(t, os.Unsetenv("UPDATE_GOLDEN"))
+		}()
 
 		g := NewGolden(t, "")
 		require.True(t, g.update)

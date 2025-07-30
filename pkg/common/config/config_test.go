@@ -25,7 +25,9 @@ func (suite *ConfigTestSuite) SetupSuite() {
 }
 
 func (suite *ConfigTestSuite) TearDownSuite() {
-	os.RemoveAll(suite.tmpDir)
+	if err := os.RemoveAll(suite.tmpDir); err != nil {
+		suite.T().Logf("Failed to remove temp dir: %v", err)
+	}
 }
 
 func TestConfigTestSuite(t *testing.T) {
@@ -35,7 +37,11 @@ func TestConfigTestSuite(t *testing.T) {
 func TestDefaultConfigLoader(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "config-test-*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	loader := NewDefaultConfigLoader()
 
@@ -170,8 +176,14 @@ func TestDefaultEnvProvider(t *testing.T) {
 	testValue := "test_value"
 
 	// Clean up any existing value
-	os.Unsetenv(testKey)
-	defer os.Unsetenv(testKey)
+	if err := os.Unsetenv(testKey); err != nil {
+		t.Logf("Failed to unset %s: %v", testKey, err)
+	}
+	defer func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			t.Logf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	t.Run("Set and Get", func(t *testing.T) {
 		err := env.Set(testKey, testValue)
@@ -223,7 +235,9 @@ func TestDefaultEnvProvider(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				env.Set("TEST_BOOL", tc.value)
+				if err := env.Set("TEST_BOOL", tc.value); err != nil {
+					t.Fatalf("Failed to set TEST_BOOL: %v", err)
+				}
 				result := env.GetBool("TEST_BOOL", false)
 				assert.Equal(t, tc.expected, result, "Boolean parsing for '%s'", tc.value)
 			})
@@ -233,21 +247,29 @@ func TestDefaultEnvProvider(t *testing.T) {
 		result := env.GetBool("NON_EXISTING_BOOL", true)
 		assert.True(t, result, "Should return default when var doesn't exist")
 
-		os.Unsetenv("TEST_BOOL")
+		if err := os.Unsetenv("TEST_BOOL"); err != nil {
+			t.Logf("Failed to unset TEST_BOOL: %v", err)
+		}
 	})
 
 	t.Run("GetInt", func(t *testing.T) {
-		env.Set("TEST_INT", "42")
+		if err := env.Set("TEST_INT", "42"); err != nil {
+			t.Fatalf("Failed to set TEST_INT: %v", err)
+		}
 		result := env.GetInt("TEST_INT", 0)
 		assert.Equal(t, 42, result, "Should parse int correctly")
 
 		// Test negative number
-		env.Set("TEST_INT", "-100")
+		if err := env.Set("TEST_INT", "-100"); err != nil {
+			t.Fatalf("Failed to set TEST_INT: %v", err)
+		}
 		result = env.GetInt("TEST_INT", 0)
 		assert.Equal(t, -100, result, "Should parse negative int correctly")
 
 		// Test default with invalid value
-		env.Set("TEST_INT", "invalid")
+		if err := env.Set("TEST_INT", "invalid"); err != nil {
+			t.Fatalf("Failed to set TEST_INT: %v", err)
+		}
 		result = env.GetInt("TEST_INT", 100)
 		assert.Equal(t, 100, result, "Should return default for invalid int")
 
@@ -255,7 +277,9 @@ func TestDefaultEnvProvider(t *testing.T) {
 		result = env.GetInt("NON_EXISTING_INT", 200)
 		assert.Equal(t, 200, result, "Should return default for non-existing var")
 
-		os.Unsetenv("TEST_INT")
+		if err := os.Unsetenv("TEST_INT"); err != nil {
+			t.Logf("Failed to unset TEST_INT: %v", err)
+		}
 	})
 
 	t.Run("GetDuration", func(t *testing.T) {
@@ -271,27 +295,37 @@ func TestDefaultEnvProvider(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			env.Set("TEST_DURATION", tc.value)
+			if err := env.Set("TEST_DURATION", tc.value); err != nil {
+				t.Fatalf("Failed to set TEST_DURATION: %v", err)
+			}
 			result := env.GetDuration("TEST_DURATION", time.Second)
 			assert.Equal(t, tc.expected, result, "Should parse duration '%s' correctly", tc.value)
 		}
 
 		// Test invalid duration
-		env.Set("TEST_DURATION", "invalid")
+		if err := env.Set("TEST_DURATION", "invalid"); err != nil {
+			t.Fatalf("Failed to set TEST_DURATION: %v", err)
+		}
 		result := env.GetDuration("TEST_DURATION", 10*time.Second)
 		assert.Equal(t, 10*time.Second, result, "Should return default for invalid duration")
 
-		os.Unsetenv("TEST_DURATION")
+		if err := os.Unsetenv("TEST_DURATION"); err != nil {
+			t.Logf("Failed to unset TEST_DURATION: %v", err)
+		}
 	})
 
 	t.Run("GetStringSlice", func(t *testing.T) {
-		env.Set("TEST_SLICE", "a,b,c")
+		if err := env.Set("TEST_SLICE", "a,b,c"); err != nil {
+			t.Fatalf("Failed to set TEST_SLICE: %v", err)
+		}
 		result := env.GetStringSlice("TEST_SLICE", []string{"default"})
 		expected := []string{"a", "b", "c"}
 		assert.ElementsMatch(t, expected, result, "Should parse comma-separated list")
 
 		// Test with spaces (should be trimmed)
-		env.Set("TEST_SLICE", "a, b, c")
+		if err := env.Set("TEST_SLICE", "a, b, c"); err != nil {
+			t.Fatalf("Failed to set TEST_SLICE: %v", err)
+		}
 		result = env.GetStringSlice("TEST_SLICE", []string{"default"})
 		assert.Len(t, result, 3, "Should handle spaces correctly")
 		assert.Equal(t, "a", result[0])
@@ -299,7 +333,9 @@ func TestDefaultEnvProvider(t *testing.T) {
 		assert.Equal(t, "c", result[2])
 
 		// Test empty string (returns default)
-		env.Set("TEST_SLICE", "")
+		if err := env.Set("TEST_SLICE", ""); err != nil {
+			t.Fatalf("Failed to set TEST_SLICE: %v", err)
+		}
 		result = env.GetStringSlice("TEST_SLICE", []string{"default"})
 		assert.ElementsMatch(t, []string{"default"}, result, "Empty string returns default")
 
@@ -307,14 +343,20 @@ func TestDefaultEnvProvider(t *testing.T) {
 		result = env.GetStringSlice("NON_EXISTING_SLICE", []string{"def1", "def2"})
 		assert.ElementsMatch(t, []string{"def1", "def2"}, result, "Should return default for non-existing var")
 
-		os.Unsetenv("TEST_SLICE")
+		if err := os.Unsetenv("TEST_SLICE"); err != nil {
+			t.Logf("Failed to unset TEST_SLICE: %v", err)
+		}
 	})
 }
 
 func TestFileConfigSource(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "source-test-*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	configPath := filepath.Join(tmpDir, "test.yaml")
 	configContent := `test: value
@@ -417,10 +459,18 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
 
 	suite.Run("LoadWithEnvOverrides", func() {
 		// Set environment variables
-		os.Setenv("MYAPP_APP_NAME", "env-override")
-		os.Setenv("MYAPP_APP_PORT", "9090")
-		defer os.Unsetenv("MYAPP_APP_NAME")
-		defer os.Unsetenv("MYAPP_APP_PORT")
+		require.NoError(suite.T(), os.Setenv("MYAPP_APP_NAME", "env-override"))
+		require.NoError(suite.T(), os.Setenv("MYAPP_APP_PORT", "9090"))
+		defer func() {
+			if err := os.Unsetenv("MYAPP_APP_NAME"); err != nil {
+				suite.T().Logf("Failed to unset MYAPP_APP_NAME: %v", err)
+			}
+		}()
+		defer func() {
+			if err := os.Unsetenv("MYAPP_APP_PORT"); err != nil {
+				suite.T().Logf("Failed to unset MYAPP_APP_PORT: %v", err)
+			}
+		}()
 
 		// Create config file
 		configPath := filepath.Join(suite.tmpDir, "myapp-env.yaml")
@@ -503,8 +553,12 @@ func TestPackageLevelFunctions(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		os.Setenv(tc.key, tc.value)
-		defer os.Unsetenv(tc.key)
+		require.NoError(t, os.Setenv(tc.key, tc.value))
+		defer func(key string) {
+			if err := os.Unsetenv(key); err != nil {
+				t.Logf("Failed to unset %s: %v", key, err)
+			}
+		}(tc.key)
 	}
 
 	t.Run("GetString", func(t *testing.T) {
@@ -588,7 +642,9 @@ func TestEnvProviderBoolParsing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			env.Set("TEST_BOOL_TABLE", tt.input)
+			if err := env.Set("TEST_BOOL_TABLE", tt.input); err != nil {
+				t.Fatalf("Failed to set TEST_BOOL_TABLE: %v", err)
+			}
 			result := env.GetBool("TEST_BOOL_TABLE", false)
 			assert.Equal(t, tt.expected, result, "For input '%s'", tt.input)
 		})
@@ -599,7 +655,11 @@ func TestEnvProviderBoolParsing(t *testing.T) {
 func BenchmarkConfigLoad(b *testing.B) {
 	tmpDir, err := os.MkdirTemp("", "bench-config-*")
 	require.NoError(b, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
+			b.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	// Create a test config
 	configPath := filepath.Join(tmpDir, "bench.yaml")

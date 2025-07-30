@@ -75,16 +75,26 @@ func (d *DefaultFileOperator) Copy(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
-	defer sourceFile.Close()
+	defer func() {
+		if closeErr := sourceFile.Close(); closeErr != nil {
+			// Log error but don't override the main operation error
+			fmt.Fprintf(os.Stderr, "Warning: failed to close source file: %v\n", closeErr)
+		}
+	}()
 
 	destFile, err := os.Create(dst)
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer destFile.Close()
+	defer func() {
+		if closeErr := destFile.Close(); closeErr != nil {
+			// Log error but don't override the main operation error
+			fmt.Fprintf(os.Stderr, "Warning: failed to close destination file: %v\n", closeErr)
+		}
+	}()
 
-	if _, err := io.Copy(destFile, sourceFile); err != nil {
-		return fmt.Errorf("failed to copy file: %w", err)
+	if _, copyErr := io.Copy(destFile, sourceFile); copyErr != nil {
+		return fmt.Errorf("failed to copy file: %w", copyErr)
 	}
 
 	// Copy file permissions
@@ -156,8 +166,8 @@ func (d *DefaultJSONOperator) ReadJSON(path string, v interface{}) error {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
-	if err := json.Unmarshal(data, v); err != nil {
-		return fmt.Errorf("failed to unmarshal JSON: %w", err)
+	if unmarshalErr := json.Unmarshal(data, v); unmarshalErr != nil {
+		return fmt.Errorf("failed to unmarshal JSON: %w", unmarshalErr)
 	}
 
 	return nil
@@ -203,8 +213,8 @@ func (d *DefaultYAMLOperator) ReadYAML(path string, v interface{}) error {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
-	if err := yaml.Unmarshal(data, v); err != nil {
-		return fmt.Errorf("failed to unmarshal YAML: %w", err)
+	if unmarshalErr := yaml.Unmarshal(data, v); unmarshalErr != nil {
+		return fmt.Errorf("failed to unmarshal YAML: %w", unmarshalErr)
 	}
 
 	return nil
@@ -236,13 +246,17 @@ func (d *DefaultSafeFileOperator) WriteFileAtomic(path string, data []byte, perm
 	// Clean up temp file on error
 	defer func() {
 		if err != nil {
-			os.Remove(tmpPath)
+			if removeErr := os.Remove(tmpPath); removeErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to remove temp file %s: %v\n", tmpPath, removeErr)
+			}
 		}
 	}()
 
 	// Write data to temp file
 	if _, err = tmpFile.Write(data); err != nil {
-		tmpFile.Close()
+		if closeErr := tmpFile.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close temp file: %v\n", closeErr)
+		}
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 

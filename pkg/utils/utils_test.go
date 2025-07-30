@@ -50,12 +50,20 @@ func TestGetEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up first
-			os.Unsetenv(tt.key)
+			if err := os.Unsetenv(tt.key); err != nil {
+				t.Logf("Warning: failed to unset %s: %v", tt.key, err)
+			}
 
 			// Set environment variable if needed
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
-				defer os.Unsetenv(tt.key)
+				if err := os.Setenv(tt.key, tt.envValue); err != nil {
+					t.Fatalf("Failed to set %s: %v", tt.key, err)
+				}
+				defer func() {
+					if err := os.Unsetenv(tt.key); err != nil {
+						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
+					}
+				}()
 			}
 
 			result := GetEnv(tt.key, tt.defaultValue)
@@ -133,12 +141,20 @@ func TestGetEnvBool(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up first
-			os.Unsetenv(tt.key)
+			if err := os.Unsetenv(tt.key); err != nil {
+				t.Logf("Warning: failed to unset %s: %v", tt.key, err)
+			}
 
 			// Set environment variable if needed
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
-				defer os.Unsetenv(tt.key)
+				if err := os.Setenv(tt.key, tt.envValue); err != nil {
+					t.Fatalf("Failed to set %s: %v", tt.key, err)
+				}
+				defer func() {
+					if err := os.Unsetenv(tt.key); err != nil {
+						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
+					}
+				}()
 			}
 
 			result := GetEnvBool(tt.key, tt.defaultValue)
@@ -195,12 +211,20 @@ func TestGetEnvInt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up first
-			os.Unsetenv(tt.key)
+			if err := os.Unsetenv(tt.key); err != nil {
+				t.Logf("Warning: failed to unset %s: %v", tt.key, err)
+			}
 
 			// Set environment variable if needed
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
-				defer os.Unsetenv(tt.key)
+				if err := os.Setenv(tt.key, tt.envValue); err != nil {
+					t.Fatalf("Failed to set %s: %v", tt.key, err)
+				}
+				defer func() {
+					if err := os.Unsetenv(tt.key); err != nil {
+						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
+					}
+				}()
 			}
 
 			result := GetEnvInt(tt.key, tt.defaultValue)
@@ -251,17 +275,33 @@ func TestIsVerbose(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up first
-			os.Unsetenv("VERBOSE")
-			os.Unsetenv("V")
+			if err := os.Unsetenv("VERBOSE"); err != nil {
+				t.Logf("Warning: failed to unset VERBOSE: %v", err)
+			}
+			if err := os.Unsetenv("V"); err != nil {
+				t.Logf("Warning: failed to unset V: %v", err)
+			}
 
 			// Set environment variables
 			if tt.verbose != "" {
-				os.Setenv("VERBOSE", tt.verbose)
-				defer os.Unsetenv("VERBOSE")
+				if err := os.Setenv("VERBOSE", tt.verbose); err != nil {
+					t.Fatalf("Failed to set VERBOSE: %v", err)
+				}
+				defer func() {
+					if err := os.Unsetenv("VERBOSE"); err != nil {
+						t.Logf("Warning: failed to unset VERBOSE: %v", err)
+					}
+				}()
 			}
 			if tt.v != "" {
-				os.Setenv("V", tt.v)
-				defer os.Unsetenv("V")
+				if err := os.Setenv("V", tt.v); err != nil {
+					t.Fatalf("Failed to set V: %v", err)
+				}
+				defer func() {
+					if err := os.Unsetenv("V"); err != nil {
+						t.Logf("Warning: failed to unset V: %v", err)
+					}
+				}()
 			}
 
 			result := IsVerbose()
@@ -287,12 +327,20 @@ func TestIsCI(t *testing.T) {
 		t.Run(fmt.Sprintf("returns true for %s", ciVar), func(t *testing.T) {
 			// Clean up all CI vars first
 			for _, v := range ciVars {
-				os.Unsetenv(v)
+				if err := os.Unsetenv(v); err != nil {
+					t.Logf("Warning: failed to unset %s: %v", v, err)
+				}
 			}
 
 			// Set the test variable
-			os.Setenv(ciVar, "true")
-			defer os.Unsetenv(ciVar)
+			if err := os.Setenv(ciVar, "true"); err != nil {
+				t.Fatalf("Failed to set %s: %v", ciVar, err)
+			}
+			defer func() {
+				if err := os.Unsetenv(ciVar); err != nil {
+					t.Logf("Warning: failed to unset %s: %v", ciVar, err)
+				}
+			}()
 
 			result := IsCI()
 			assert.True(t, result)
@@ -302,7 +350,9 @@ func TestIsCI(t *testing.T) {
 	t.Run("returns false when no CI vars set", func(t *testing.T) {
 		// Clean up all CI vars
 		for _, v := range ciVars {
-			os.Unsetenv(v)
+			if err := os.Unsetenv(v); err != nil {
+				t.Logf("Warning: failed to unset %s: %v", v, err)
+			}
 		}
 
 		result := IsCI()
@@ -755,8 +805,14 @@ func TestCommandExecution(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkGetEnv(b *testing.B) {
-	os.Setenv("BENCH_TEST", "value")
-	defer os.Unsetenv("BENCH_TEST")
+	if err := os.Setenv("BENCH_TEST", "value"); err != nil {
+		b.Fatalf("Failed to set BENCH_TEST: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("BENCH_TEST"); err != nil {
+			b.Logf("Warning: failed to unset BENCH_TEST: %v", err)
+		}
+	}()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -765,8 +821,14 @@ func BenchmarkGetEnv(b *testing.B) {
 }
 
 func BenchmarkIsVerbose(b *testing.B) {
-	os.Setenv("VERBOSE", "true")
-	defer os.Unsetenv("VERBOSE")
+	if err := os.Setenv("VERBOSE", "true"); err != nil {
+		b.Fatalf("Failed to set VERBOSE: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("VERBOSE"); err != nil {
+			b.Logf("Warning: failed to unset VERBOSE: %v", err)
+		}
+	}()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -790,6 +852,9 @@ func BenchmarkParallel(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Parallel(fns...)
+		err := Parallel(fns...)
+		if err != nil {
+			b.Logf("Parallel error in benchmark: %v", err)
+		}
 	}
 }

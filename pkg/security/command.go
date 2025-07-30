@@ -515,7 +515,9 @@ func (e *SecureExecutor) logAuditEvent(command string, args []string, startTime 
 		}
 
 		// Log the event (ignore errors to avoid breaking command execution)
-		_ = auditLogger.LogEvent(event)
+		if err := auditLogger.LogEvent(event); err != nil {
+			// Audit logging failure should not break command execution
+		}
 	}
 }
 

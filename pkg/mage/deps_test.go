@@ -33,7 +33,7 @@ func (ts *DepsTestSuite) TestDeps_Default() {
 	ts.env.Builder.ExpectGoCommand("mod", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Default()
@@ -48,7 +48,7 @@ func (ts *DepsTestSuite) TestDeps_Download() {
 	ts.env.Builder.ExpectGoCommand("mod", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Download()
@@ -64,7 +64,7 @@ func (ts *DepsTestSuite) TestDeps_Download_Error() {
 	ts.env.Builder.ExpectFailure("download failed")
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Download()
@@ -80,7 +80,7 @@ func (ts *DepsTestSuite) TestDeps_Tidy() {
 	ts.env.Builder.ExpectGoCommand("mod", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Tidy()
@@ -96,7 +96,7 @@ func (ts *DepsTestSuite) TestDeps_Tidy_Error() {
 	ts.env.Builder.ExpectFailure("tidy failed")
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Tidy()
@@ -118,7 +118,7 @@ func (ts *DepsTestSuite) TestDeps_Update() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Update()
@@ -134,7 +134,7 @@ func (ts *DepsTestSuite) TestDeps_Update_ListError() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", errors.New("list failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Update()
@@ -154,7 +154,7 @@ func (ts *DepsTestSuite) TestDeps_Update_TidyError() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(errors.New("tidy failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Update()
@@ -170,7 +170,7 @@ func (ts *DepsTestSuite) TestDeps_Clean() {
 	ts.env.Builder.ExpectGoCommand("clean", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Clean()
@@ -186,7 +186,7 @@ func (ts *DepsTestSuite) TestDeps_Clean_Error() {
 	ts.env.Builder.ExpectFailure("clean failed")
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Clean()
@@ -202,7 +202,7 @@ func (ts *DepsTestSuite) TestDeps_Graph() {
 	ts.env.Builder.ExpectGoCommand("mod", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Graph()
@@ -217,7 +217,7 @@ func (ts *DepsTestSuite) TestDeps_Why() {
 	ts.env.Builder.ExpectGoCommand("mod", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Why("github.com/pkg/errors")
@@ -230,7 +230,7 @@ func (ts *DepsTestSuite) TestDeps_Why() {
 // TestDeps_Why_EmptyDep tests Why function with empty dependency
 func (ts *DepsTestSuite) TestDeps_Why_EmptyDep() {
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Why("")
@@ -246,7 +246,7 @@ func (ts *DepsTestSuite) TestDeps_Verify() {
 	ts.env.Builder.ExpectGoCommand("mod", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Verify()
@@ -262,7 +262,7 @@ func (ts *DepsTestSuite) TestDeps_Verify_Error() {
 	ts.env.Builder.ExpectFailure("verify failed")
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Verify()
@@ -279,7 +279,7 @@ func (ts *DepsTestSuite) TestDeps_List() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if .Indirect}}1{{end}}", "all"}).Return("1\n1\n1", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.List()
@@ -294,7 +294,7 @@ func (ts *DepsTestSuite) TestDeps_Outdated() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} -> {{.Update.Version}}{{end}}", "all"}).Return("", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Outdated()
@@ -309,7 +309,7 @@ func (ts *DepsTestSuite) TestDeps_Outdated_WithUpdates() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} -> {{.Update.Version}}{{end}}", "all"}).Return("github.com/pkg/errors v0.9.0 -> v0.9.1\ngithub.com/stretchr/testify v1.8.0 -> v1.9.0", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Outdated()
@@ -325,7 +325,7 @@ func (ts *DepsTestSuite) TestDeps_Outdated_Error() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} -> {{.Update.Version}}{{end}}", "all"}).Return("", errors.New("outdated check failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Outdated()
@@ -341,7 +341,7 @@ func (ts *DepsTestSuite) TestDeps_Vendor() {
 	ts.env.Builder.ExpectGoCommand("mod", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Vendor()
@@ -357,7 +357,7 @@ func (ts *DepsTestSuite) TestDeps_Vendor_Error() {
 	ts.env.Builder.ExpectFailure("vendor failed")
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Vendor()
@@ -377,7 +377,7 @@ func (ts *DepsTestSuite) TestDeps_Init() {
 	ts.env.Builder.ExpectGoCommand("mod", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Init("github.com/example/project")
@@ -390,7 +390,7 @@ func (ts *DepsTestSuite) TestDeps_Init() {
 // TestDeps_Init_EmptyModule tests Init function with empty module name
 func (ts *DepsTestSuite) TestDeps_Init_EmptyModule() {
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Init("")
@@ -405,7 +405,7 @@ func (ts *DepsTestSuite) TestDeps_Init_EmptyModule() {
 func (ts *DepsTestSuite) TestDeps_Init_GoModExists() {
 	// go.mod is created in SetupTest, so it already exists
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Init("github.com/example/project")
@@ -426,7 +426,7 @@ func (ts *DepsTestSuite) TestDeps_Init_Error() {
 	ts.env.Builder.ExpectFailure("init failed")
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Init("github.com/example/project")
@@ -442,7 +442,7 @@ func (ts *DepsTestSuite) TestDeps_Audit() {
 	ts.env.Builder.ExpectGoCommand("list", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Audit()
@@ -457,7 +457,7 @@ func (ts *DepsTestSuite) TestDeps_Licenses() {
 	ts.env.Runner.On("RunCmd", "echo", []string{"Checking dependency licenses"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Licenses()
@@ -472,7 +472,7 @@ func (ts *DepsTestSuite) TestDeps_Check() {
 	ts.env.Builder.ExpectGoCommand("list", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.deps.Check()

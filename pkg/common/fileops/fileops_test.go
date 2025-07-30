@@ -29,7 +29,9 @@ func (suite *FileOpsTestSuite) SetupSuite() {
 
 func (suite *FileOpsTestSuite) TearDownSuite() {
 	// Clean up temp directory
-	os.RemoveAll(suite.tmpDir)
+	if err := os.RemoveAll(suite.tmpDir); err != nil {
+		suite.T().Logf("Failed to remove temp dir %s: %v", suite.tmpDir, err)
+	}
 }
 
 func TestFileOpsTestSuite(t *testing.T) {
@@ -40,7 +42,11 @@ func TestDefaultFileOperator(t *testing.T) {
 	// Create temporary directory for tests
 	tmpDir, err := os.MkdirTemp("", "fileops-test-*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
+		}
+	}()
 
 	ops := NewDefaultFileOperator()
 
@@ -133,7 +139,11 @@ func TestDefaultFileOperator(t *testing.T) {
 func TestDefaultJSONOperator(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "json-test-*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
+		}
+	}()
 
 	fileOps := NewDefaultFileOperator()
 	jsonOps := NewDefaultJSONOperator(fileOps)
@@ -224,7 +234,11 @@ func TestDefaultJSONOperator(t *testing.T) {
 func TestDefaultYAMLOperator(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "yaml-test-*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
+		}
+	}()
 
 	fileOps := NewDefaultFileOperator()
 	yamlOps := NewDefaultYAMLOperator(fileOps)
@@ -301,7 +315,11 @@ func TestDefaultYAMLOperator(t *testing.T) {
 func TestSafeFileOperator(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "safe-test-*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
+		}
+	}()
 
 	ops := NewDefaultSafeFileOperator()
 
@@ -449,7 +467,11 @@ func (suite *FileOpsTestSuite) TestFileOpsFacade() {
 func TestPackageLevelFunctions(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "package-test-*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
+			t.Logf("Failed to remove temp dir %s: %v", tmpDir, removeErr)
+		}
+	}()
 
 	testFile := filepath.Join(tmpDir, "package-test.txt")
 	testData := []byte("Package level test")

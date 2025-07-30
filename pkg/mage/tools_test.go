@@ -36,7 +36,7 @@ func (ts *ToolsTestSuite) TestTools_Default() {
 	ts.setupSuccessfulInstall()
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.Default()
@@ -51,7 +51,7 @@ func (ts *ToolsTestSuite) TestTools_Install() {
 	ts.setupSuccessfulInstall()
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.Install()
@@ -70,7 +70,7 @@ func (ts *ToolsTestSuite) TestTools_Install_ConfigError() {
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.Install()
@@ -85,7 +85,7 @@ func (ts *ToolsTestSuite) TestTools_Update() {
 	ts.setupSuccessfulUpdate()
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.Update()
@@ -105,7 +105,7 @@ func (ts *ToolsTestSuite) TestTools_Update_ConfigError() {
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.Update()
@@ -126,7 +126,7 @@ func (ts *ToolsTestSuite) TestTools_Verify() {
 	ts.env.Runner.On("RunCmdOutput", "gotestsum", []string{"--version"}).Return("gotestsum version v1.8.0", nil).Maybe()
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.Verify()
@@ -147,7 +147,7 @@ func (ts *ToolsTestSuite) TestTools_Verify_ConfigError() {
 	ts.env.Runner.On("RunCmdOutput", mock.MatchedBy(func(cmd string) bool { return true }), mock.Anything).Return("version info", nil).Maybe()
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.Verify()
@@ -166,7 +166,7 @@ func (ts *ToolsTestSuite) TestTools_List() {
 	ts.setupConfig()
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.List()
@@ -181,7 +181,7 @@ func (ts *ToolsTestSuite) TestTools_List_ConfigError() {
 	TestResetConfig() // This causes LoadConfig to create a default config
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.List()
@@ -199,7 +199,7 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck() {
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.VulnCheck()
@@ -216,7 +216,7 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallFirst() {
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.VulnCheck()
@@ -241,7 +241,7 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallError() {
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(errors.New("install failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.VulnCheck()
@@ -261,7 +261,7 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_CheckError() {
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(errors.New("vulnerability found"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.VulnCheck()
@@ -281,7 +281,7 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_ConfigError() {
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.VulnCheck()
@@ -296,7 +296,7 @@ func (ts *ToolsTestSuite) TestTools_Check() {
 	ts.env.Runner.On("RunCmd", "echo", []string{"Checking tool versions"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.Check()
@@ -311,7 +311,7 @@ func (ts *ToolsTestSuite) TestTools_Clean() {
 	ts.env.Runner.On("RunCmd", "echo", []string{"Cleaning tool installations"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.tools.Clean()
@@ -401,7 +401,7 @@ func (ts *ToolsTestSuite) TestInstallTool_AlreadyInstalled() {
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@latest"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return installTool(tool)
@@ -423,7 +423,7 @@ func (ts *ToolsTestSuite) TestInstallTool_NewInstall() {
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "go.uber.org/mock/mockgen@v1.6.0"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return installTool(tool)
@@ -444,7 +444,7 @@ func (ts *ToolsTestSuite) TestInstallTool_GolangciLint() {
 	ts.setupConfig()
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return installTool(tool)
@@ -466,7 +466,7 @@ func (ts *ToolsTestSuite) TestInstallTool_InstallError() {
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "go.uber.org/mock/mockgen@latest"}).Return(errors.New("install failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return installTool(tool)

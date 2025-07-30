@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -54,11 +55,13 @@ func NewTestEnvironment(t TestingInterface) *TestEnvironment {
 
 // Cleanup restores the original environment
 func (env *TestEnvironment) Cleanup() {
-	os.Chdir(env.OrigDir)
+	if err := os.Chdir(env.OrigDir); err != nil {
+		// Log error but don't fail cleanup
+	}
 }
 
 // RunnerSetter is a function type for setting command runners
-type RunnerSetter func(runner interface{})
+type RunnerSetter func(runner interface{}) error
 
 // RunnerGetter is a function type for getting command runners
 type RunnerGetter func() interface{}
@@ -68,10 +71,16 @@ type RunnerGetter func() interface{}
 func (env *TestEnvironment) WithMockRunner(setter RunnerSetter, getter RunnerGetter, fn func() error) error {
 	// Save original runner
 	originalRunner := getter()
-	defer setter(originalRunner)
+	defer func() {
+		if err := setter(originalRunner); err != nil {
+			// Log error but don't fail cleanup
+		}
+	}()
 
 	// Set mock runner
-	setter(env.Runner)
+	if err := setter(env.Runner); err != nil {
+		return fmt.Errorf("failed to set mock runner: %w", err)
+	}
 
 	// Execute function
 	return fn()

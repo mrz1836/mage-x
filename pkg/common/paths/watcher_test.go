@@ -11,12 +11,20 @@ import (
 
 func TestDefaultPathWatcher_BasicOperations(t *testing.T) {
 	watcher := NewPathWatcher()
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
 
 	// Create a temp directory to watch
 	tempDir, err := TempDir("watchertest_*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	// Test Watch
 	err = watcher.Watch(tempDir.String(), EventAll)
@@ -33,12 +41,20 @@ func TestDefaultPathWatcher_BasicOperations(t *testing.T) {
 
 func TestDefaultPathWatcher_WatchPath(t *testing.T) {
 	watcher := NewPathWatcher()
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
 
 	// Create a temp directory to watch
 	tempDir, err := TempDir("watchertest_*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	// Test WatchPath with PathBuilder
 	err = watcher.WatchPath(tempDir, EventCreate|EventWrite)
@@ -49,12 +65,20 @@ func TestDefaultPathWatcher_WatchPath(t *testing.T) {
 
 func TestDefaultPathWatcher_Unwatch(t *testing.T) {
 	watcher := NewPathWatcher()
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
 
 	// Create a temp directory to watch
 	tempDir, err := TempDir("watchertest_*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	// Watch and then unwatch
 	err = watcher.Watch(tempDir.String(), EventAll)
@@ -73,12 +97,20 @@ func TestDefaultPathWatcher_Unwatch(t *testing.T) {
 
 func TestDefaultPathWatcher_UnwatchPath(t *testing.T) {
 	watcher := NewPathWatcher()
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
 
 	// Create a temp directory to watch
 	tempDir, err := TempDir("watchertest_*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	// Watch and then unwatch using PathBuilder
 	err = watcher.WatchPath(tempDir, EventAll)
@@ -92,7 +124,11 @@ func TestDefaultPathWatcher_UnwatchPath(t *testing.T) {
 
 func TestDefaultPathWatcher_Configuration(t *testing.T) {
 	watcher := NewPathWatcher()
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
 
 	// Test SetBufferSize
 	result := watcher.SetBufferSize(500)
@@ -109,7 +145,11 @@ func TestDefaultPathWatcher_Configuration(t *testing.T) {
 
 func TestDefaultPathWatcher_Channels(t *testing.T) {
 	watcher := NewPathWatcher()
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
 
 	// Test Events channel
 	events := watcher.Events()
@@ -143,7 +183,11 @@ func TestDefaultPathWatcher_EventGeneration(t *testing.T) {
 
 func TestDefaultPathWatcher_ErrorHandling(t *testing.T) {
 	watcher := NewPathWatcher()
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
 
 	// The implementation doesn't validate empty paths or zero events
 	// Let's test what actually causes errors
@@ -155,12 +199,20 @@ func TestDefaultPathWatcher_ErrorHandling(t *testing.T) {
 
 func TestDefaultPathWatcher_RecursiveWatching(t *testing.T) {
 	watcher := NewPathWatcher()
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
 
 	// Create nested directories
 	tempDir, err := TempDir("watchertest_*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	subDir := tempDir.Join("subdir")
 	err = subDir.CreateDir()
@@ -247,23 +299,37 @@ func TestEventMask_Bitwise(t *testing.T) {
 
 func TestDefaultPathWatcher_ConcurrentAccess(t *testing.T) {
 	watcher := NewPathWatcher()
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
 
 	// Create temp directories
 	tempDir1, err := TempDir("watchertest1_*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir1.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir1.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	tempDir2, err := TempDir("watchertest2_*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir2.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir2.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	done := make(chan bool, 3)
 
 	// Concurrent watches
 	go func() {
 		for i := 0; i < 10; i++ {
-			watcher.Watch(tempDir1.String(), EventAll)
+			if err := watcher.Watch(tempDir1.String(), EventAll); err != nil {
+				// Ignore errors in concurrent test
+			}
 			watcher.IsWatching(tempDir1.String())
 		}
 		done <- true
@@ -272,8 +338,12 @@ func TestDefaultPathWatcher_ConcurrentAccess(t *testing.T) {
 	// Concurrent unwatches
 	go func() {
 		for i := 0; i < 10; i++ {
-			watcher.Watch(tempDir2.String(), EventAll)
-			watcher.Unwatch(tempDir2.String())
+			if err := watcher.Watch(tempDir2.String(), EventAll); err != nil {
+				// Ignore errors in concurrent test
+			}
+			if err := watcher.Unwatch(tempDir2.String()); err != nil {
+				// Ignore errors in concurrent test
+			}
 		}
 		done <- true
 	}()

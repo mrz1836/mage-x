@@ -53,7 +53,11 @@ func RunCmdOutput(name string, args ...string) (string, error) {
 func RunCmdPipe(cmds ...*exec.Cmd) error {
 	for i, cmd := range cmds {
 		if i > 0 {
-			cmds[i].Stdin, _ = cmds[i-1].StdoutPipe()
+			pipe, err := cmds[i-1].StdoutPipe()
+			if err != nil {
+				return fmt.Errorf("failed to create stdout pipe: %w", err)
+			}
+			cmds[i].Stdin = pipe
 		}
 		if i < len(cmds)-1 {
 			cmd.Stdout = nil

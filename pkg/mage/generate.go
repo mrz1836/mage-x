@@ -239,18 +239,22 @@ func (Generate) Check() error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir); removeErr != nil {
+			utils.Warn("Failed to remove temp directory: %v", removeErr)
+		}
+	}()
 
 	// Copy current generated files
 	utils.Info("Backing up current generated files...")
-	if err := backupGeneratedFiles(tempDir); err != nil {
-		return fmt.Errorf("failed to backup files: %w", err)
+	if backupErr := backupGeneratedFiles(tempDir); backupErr != nil {
+		return fmt.Errorf("failed to backup files: %w", backupErr)
 	}
 
 	// Run generation
 	utils.Info("Running code generation...")
-	if err := (Generate{}).All(); err != nil {
-		return fmt.Errorf("generation failed: %w", err)
+	if genErr := (Generate{}).All(); genErr != nil {
+		return fmt.Errorf("generation failed: %w", genErr)
 	}
 
 	// Compare files
@@ -285,7 +289,7 @@ func checkForGenerateDirectives() (bool, []string) {
 	var files []string
 	hasGenerate := false
 
-	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}
@@ -310,6 +314,9 @@ func checkForGenerateDirectives() (bool, []string) {
 
 		return nil
 	})
+	if err != nil {
+		utils.Warn("Error walking directory for generate directives: %v", err)
+	}
 
 	return hasGenerate, files
 }
@@ -320,7 +327,7 @@ func findInterfaces() []Interface {
 
 	// This is a simplified version - in reality, you'd use go/ast to parse
 	// For now, we'll look for common patterns
-	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}
@@ -332,13 +339,20 @@ func findInterfaces() []Interface {
 
 		return nil
 	})
+	if err != nil {
+		utils.Warn("Error walking directory for interfaces: %v", err)
+	}
 
 	return interfaces
 }
 
 // checkForGRPCService checks if proto files contain service definitions
 func checkForGRPCService() bool {
-	protoFiles, _ := utils.FindFiles(".", "*.proto")
+	protoFiles, err := utils.FindFiles(".", "*.proto")
+	if err != nil {
+		utils.Warn("Error finding proto files: %v", err)
+		return false
+	}
 
 	fileOps := fileops.New()
 	for _, proto := range protoFiles {

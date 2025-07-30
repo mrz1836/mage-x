@@ -242,7 +242,11 @@ func SaveToFile(filename string, prefix string) error {
 
 // Backup creates a backup of the current environment
 func Backup() EnvContext {
-	ctx, _ := SaveContext()
+	ctx, err := SaveContext()
+	if err != nil {
+		// Return empty context on error - this maintains backward compatibility
+		return &DefaultEnvContext{variables: make(map[string]string)}
+	}
 	return ctx
 }
 

@@ -285,18 +285,25 @@ func CaptureLog(t *testing.T, fn func()) string {
 
 	// Save original stderr
 	origStderr := os.Stderr
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
 	os.Stderr = w
 
 	// Run function
 	fn()
 
 	// Restore stderr
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Logf("Warning: failed to close pipe writer: %v", err)
+	}
 	os.Stderr = origStderr
 
 	// Read captured output
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Logf("Warning: failed to read from pipe: %v", err)
+	}
 
 	return buf.String()
 }

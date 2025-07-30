@@ -235,7 +235,11 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_BasicOperations() {
 	testValue := "test_value"
 
 	// Clean up
-	defer os.Unsetenv(testKey)
+	defer func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	ts.Run("Set and Get", func() {
 		err := provider.Set(testKey, testValue)
@@ -254,7 +258,9 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_BasicOperations() {
 	})
 
 	ts.Run("GetWithDefault - missing", func() {
-		os.Unsetenv(testKey)
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
 		value := provider.GetWithDefault(testKey, "default")
 		require.Equal(ts.T(), "default", value)
 	})
@@ -269,7 +275,9 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_BasicOperations() {
 	})
 
 	ts.Run("LookupEnv - missing", func() {
-		os.Unsetenv(testKey)
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
 		value, found := provider.LookupEnv(testKey)
 		require.False(ts.T(), found)
 		require.Empty(ts.T(), value)
@@ -294,7 +302,11 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetAll() {
 	testValue := "test_all_value"
 
 	// Clean up
-	defer os.Unsetenv(testKey)
+	defer func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	err := provider.Set(testKey, testValue)
 	require.NoError(ts.T(), err)
@@ -310,7 +322,11 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetBool() {
 	testKey := "TEST_CONFIG_BOOL"
 
 	// Clean up
-	defer os.Unsetenv(testKey)
+	defer func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	testCases := []struct {
 		name         string
@@ -336,9 +352,13 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetBool() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			if tc.value != "" {
-				os.Setenv(testKey, tc.value)
+				if err := os.Setenv(testKey, tc.value); err != nil {
+					ts.T().Fatalf("Failed to set %s: %v", testKey, err)
+				}
 			} else {
-				os.Unsetenv(testKey)
+				if err := os.Unsetenv(testKey); err != nil {
+					ts.T().Logf("Failed to unset %s: %v", testKey, err)
+				}
 			}
 
 			result := provider.GetBool(testKey, tc.defaultValue)
@@ -353,7 +373,11 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetInt() {
 	testKey := "TEST_CONFIG_INT"
 
 	// Clean up
-	defer os.Unsetenv(testKey)
+	defer func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	testCases := []struct {
 		name         string
@@ -371,9 +395,13 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetInt() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			if tc.value != "" {
-				os.Setenv(testKey, tc.value)
+				if err := os.Setenv(testKey, tc.value); err != nil {
+					ts.T().Fatalf("Failed to set %s: %v", testKey, err)
+				}
 			} else {
-				os.Unsetenv(testKey)
+				if err := os.Unsetenv(testKey); err != nil {
+					ts.T().Logf("Failed to unset %s: %v", testKey, err)
+				}
 			}
 
 			result := provider.GetInt(testKey, tc.defaultValue)
@@ -388,7 +416,11 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetInt64() {
 	testKey := "TEST_CONFIG_INT64"
 
 	// Clean up
-	defer os.Unsetenv(testKey)
+	defer func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	testCases := []struct {
 		name         string
@@ -405,9 +437,13 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetInt64() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			if tc.value != "" {
-				os.Setenv(testKey, tc.value)
+				if err := os.Setenv(testKey, tc.value); err != nil {
+					ts.T().Fatalf("Failed to set %s: %v", testKey, err)
+				}
 			} else {
-				os.Unsetenv(testKey)
+				if err := os.Unsetenv(testKey); err != nil {
+					ts.T().Logf("Failed to unset %s: %v", testKey, err)
+				}
 			}
 
 			result := provider.GetInt64(testKey, tc.defaultValue)
@@ -422,7 +458,11 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetFloat64() {
 	testKey := "TEST_CONFIG_FLOAT64"
 
 	// Clean up
-	defer os.Unsetenv(testKey)
+	defer func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	testCases := []struct {
 		name         string
@@ -440,9 +480,13 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetFloat64() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			if tc.value != "" {
-				os.Setenv(testKey, tc.value)
+				if err := os.Setenv(testKey, tc.value); err != nil {
+					ts.T().Fatalf("Failed to set %s: %v", testKey, err)
+				}
 			} else {
-				os.Unsetenv(testKey)
+				if err := os.Unsetenv(testKey); err != nil {
+					ts.T().Logf("Failed to unset %s: %v", testKey, err)
+				}
 			}
 
 			result := provider.GetFloat64(testKey, tc.defaultValue)
@@ -457,7 +501,11 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetDuration() {
 	testKey := "TEST_CONFIG_DURATION"
 
 	// Clean up
-	defer os.Unsetenv(testKey)
+	defer func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	testCases := []struct {
 		name         string
@@ -476,9 +524,13 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetDuration() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			if tc.value != "" {
-				os.Setenv(testKey, tc.value)
+				if err := os.Setenv(testKey, tc.value); err != nil {
+					ts.T().Fatalf("Failed to set %s: %v", testKey, err)
+				}
 			} else {
-				os.Unsetenv(testKey)
+				if err := os.Unsetenv(testKey); err != nil {
+					ts.T().Logf("Failed to unset %s: %v", testKey, err)
+				}
 			}
 
 			result := provider.GetDuration(testKey, tc.defaultValue)
@@ -493,7 +545,11 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetStringSlice() {
 	testKey := "TEST_CONFIG_STRING_SLICE"
 
 	// Clean up
-	defer os.Unsetenv(testKey)
+	defer func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	testCases := []struct {
 		name         string
@@ -512,9 +568,13 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetStringSlice() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			if tc.value != "" {
-				os.Setenv(testKey, tc.value)
+				if err := os.Setenv(testKey, tc.value); err != nil {
+					ts.T().Fatalf("Failed to set %s: %v", testKey, err)
+				}
 			} else {
-				os.Unsetenv(testKey)
+				if err := os.Unsetenv(testKey); err != nil {
+					ts.T().Logf("Failed to unset %s: %v", testKey, err)
+				}
 			}
 
 			result := provider.GetStringSlice(testKey, tc.defaultValue)

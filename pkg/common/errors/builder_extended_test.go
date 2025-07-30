@@ -84,8 +84,8 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 	})
 
 	t.Run("WithField", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
-		b := builder.WithField("key1", "value1")
+		testBuilder := &DefaultErrorBuilder{}
+		b := testBuilder.WithField("key1", "value1")
 		assert.NotNil(t, b)
 
 		err := b.Build()
@@ -95,13 +95,13 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 	})
 
 	t.Run("WithFields", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		testBuilder := &DefaultErrorBuilder{}
 		fields := map[string]interface{}{
 			"field1": "value1",
 			"field2": 123,
 			"field3": true,
 		}
-		b := builder.WithFields(fields)
+		b := testBuilder.WithFields(fields)
 		assert.NotNil(t, b)
 
 		err := b.Build()
@@ -148,7 +148,8 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 		var mageErr MageError
 		require.True(t, errors.As(err, &mageErr))
 		// Stack trace is captured but might be empty in the default implementation
-		_ = mageErr.Context().StackTrace
+		stackTrace := mageErr.Context().StackTrace
+		_ = stackTrace // Stack trace might be empty in some environments
 	})
 
 	t.Run("Build", func(t *testing.T) {
@@ -211,7 +212,8 @@ func TestDefaultErrorBuilder_ComplexScenario(t *testing.T) {
 	assert.Equal(t, "some info", ctx.Fields["additional_info"])
 	assert.Equal(t, 3, ctx.Fields["retry_count"])
 	// Stack trace might be empty in some environments
-	_ = ctx.StackTrace
+	stackTrace := ctx.StackTrace
+	_ = stackTrace // Stack trace might be empty in some environments
 }
 
 func TestDefaultErrorBuilder_NilFields(t *testing.T) {
@@ -239,5 +241,6 @@ func TestDefaultErrorBuilder_EmptyBuild(t *testing.T) {
 	assert.Equal(t, ErrUnknown, mageErr.Code())        // Default code
 	assert.Equal(t, SeverityError, mageErr.Severity()) // Default severity
 	// Default error has empty message
-	_ = mageErr.Error()
+	errorMsg := mageErr.Error()
+	_ = errorMsg // Error message might be empty for default error
 }

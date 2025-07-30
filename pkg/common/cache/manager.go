@@ -133,7 +133,11 @@ func (m *Manager) GenerateTestHash(pkg string, testFiles []string, buildFlags []
 		runtime.GOOS,
 		runtime.GOARCH,
 		func() string {
-			hash, _ := m.buildCache.GenerateFileHash(allFiles)
+			hash, err := m.buildCache.GenerateFileHash(allFiles)
+			if err != nil {
+				// Return empty string on error - will affect cache key but won't fail
+				return ""
+			}
 			return hash
 		}(),
 	), nil

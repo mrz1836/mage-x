@@ -327,7 +327,9 @@ func (pm *DefaultPathMatcher) matchGlob(path, pattern string) bool {
 // Match returns true if path matches pattern
 func Match(pattern, path string) bool {
 	matcher := NewPathMatcher()
-	matcher.AddPattern(pattern)
+	if err := matcher.AddPattern(pattern); err != nil {
+		return false
+	}
 	return matcher.Match(path)
 }
 
@@ -335,7 +337,9 @@ func Match(pattern, path string) bool {
 func MatchAny(path string, patterns ...string) bool {
 	matcher := NewPathMatcher()
 	for _, pattern := range patterns {
-		matcher.AddPattern(pattern)
+		if err := matcher.AddPattern(pattern); err != nil {
+			return false
+		}
 	}
 	return matcher.Match(path)
 }

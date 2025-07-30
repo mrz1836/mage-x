@@ -30,12 +30,12 @@ func (Test) Default() error {
 func (Test) Unit() error {
 	utils.Header("Running Unit Tests")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	args := buildTestArgs(cfg, false, false)
+	args := buildTestArgs(config, false, false)
 	args = append(args, "./...")
 
 	start := time.Now()
@@ -51,12 +51,12 @@ func (Test) Unit() error {
 func (Test) Short() error {
 	utils.Header("Running Short Tests")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	args := buildTestArgs(cfg, false, false)
+	args := buildTestArgs(config, false, false)
 	args = append(args, "-short")
 	args = append(args, "./...")
 
@@ -72,12 +72,12 @@ func (Test) Short() error {
 func (Test) Race() error {
 	utils.Header("Running Tests with Race Detector")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	args := buildTestArgs(cfg, true, false)
+	args := buildTestArgs(config, true, false)
 	args = append(args, "./...")
 
 	start := time.Now()
@@ -93,17 +93,17 @@ func (Test) Race() error {
 func (Test) Cover() error {
 	utils.Header("Running Tests with Coverage")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	args := buildTestArgs(cfg, false, true)
+	args := buildTestArgs(config, false, true)
 	args = append(args, "-coverprofile=coverage.txt")
-	args = append(args, "-covermode="+cfg.Test.CoverMode)
+	args = append(args, "-covermode="+config.Test.CoverMode)
 
-	if len(cfg.Test.CoverPkg) > 0 {
-		args = append(args, "-coverpkg="+strings.Join(cfg.Test.CoverPkg, ","))
+	if len(config.Test.CoverPkg) > 0 {
+		args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
 	}
 
 	args = append(args, "./...")
@@ -123,17 +123,17 @@ func (Test) Cover() error {
 func (Test) CoverRace() error {
 	utils.Header("Running Tests with Coverage and Race Detector")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	args := buildTestArgs(cfg, true, true)
+	args := buildTestArgs(config, true, true)
 	args = append(args, "-coverprofile=coverage.txt")
 	args = append(args, "-covermode=atomic") // atomic is required with race
 
-	if len(cfg.Test.CoverPkg) > 0 {
-		args = append(args, "-coverpkg="+strings.Join(cfg.Test.CoverPkg, ","))
+	if len(config.Test.CoverPkg) > 0 {
+		args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
 	}
 
 	args = append(args, "./...")
@@ -187,12 +187,12 @@ func (Test) CoverHTML() error {
 func (Test) Fuzz() error {
 	utils.Header("Running Fuzz Tests")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	if cfg.Test.SkipFuzz {
+	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
 		return nil
 	}
@@ -228,7 +228,7 @@ func (Test) Fuzz() error {
 			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
 			args = append(args, "-fuzztime", fuzzTime)
 
-			if cfg.Test.Verbose {
+			if config.Test.Verbose {
 				args = append(args, "-v")
 			}
 
@@ -248,19 +248,19 @@ func (Test) Fuzz() error {
 func (Test) Bench(params ...string) error {
 	utils.Header("Running Benchmarks")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
-	if cfg.Test.Verbose {
+	if config.Test.Verbose {
 		args = append(args, "-v")
 	}
 
-	if len(cfg.Test.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(cfg.Test.Tags, ","))
+	if len(config.Test.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(config.Test.Tags, ","))
 	}
 
 	benchTime := utils.GetEnv("BENCH_TIME", "10s")
@@ -285,18 +285,18 @@ func (Test) Bench(params ...string) error {
 func (Test) Integration() error {
 	utils.Header("Running Integration Tests")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	// Set integration test tag
-	tags := append(cfg.Test.Tags, "integration")
+	tags := append(config.Test.Tags, "integration")
 
 	args := []string{"test"}
 	args = append(args, "-tags", strings.Join(tags, ","))
 
-	if cfg.Test.Verbose {
+	if config.Test.Verbose {
 		args = append(args, "-v")
 	}
 
@@ -332,7 +332,7 @@ func (Test) CI() error {
 func (Test) Parallel() error {
 	utils.Header("Running Tests in Parallel")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
@@ -342,12 +342,12 @@ func (Test) Parallel() error {
 
 	args := []string{"test", "-p", fmt.Sprintf("%d", parallel)}
 
-	if cfg.Test.Verbose {
+	if config.Test.Verbose {
 		args = append(args, "-v")
 	}
 
-	if len(cfg.Test.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(cfg.Test.Tags, ","))
+	if len(config.Test.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(config.Test.Tags, ","))
 	}
 
 	args = append(args, "./...")
@@ -367,13 +367,13 @@ func (Test) Parallel() error {
 func (Test) NoLint() error {
 	utils.Header("Running Tests (No Lint)")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	// Run unit tests without linting
-	args := buildTestArgs(cfg, false, false)
+	args := buildTestArgs(config, false, false)
 
 	// Force parallel execution
 	parallel := getCPUCount()

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // BuildCache provides caching for build operations
@@ -181,13 +182,17 @@ func (c *BuildCache) GetBuildResult(hash string) (*BuildResult, bool) {
 
 	// Check if cache entry is expired
 	if time.Since(result.Timestamp) > c.ttl {
-		c.removeCacheEntry(path)
+		if err := c.removeCacheEntry(path); err != nil {
+			utils.Warn("Failed to remove expired cache entry %s: %v", path, err)
+		}
 		return nil, false
 	}
 
 	// Verify binary still exists
 	if result.Success && !c.fileOps.File.Exists(result.Binary) {
-		c.removeCacheEntry(path)
+		if err := c.removeCacheEntry(path); err != nil {
+			utils.Warn("Failed to remove cache entry with missing binary %s: %v", path, err)
+		}
 		return nil, false
 	}
 
@@ -235,7 +240,9 @@ func (c *BuildCache) GetTestResult(hash string) (*TestResult, bool) {
 
 	// Check if cache entry is expired
 	if time.Since(result.Timestamp) > c.ttl {
-		c.removeCacheEntry(path)
+		if err := c.removeCacheEntry(path); err != nil {
+			utils.Warn("Failed to remove expired test cache entry %s: %v", path, err)
+		}
 		return nil, false
 	}
 
@@ -283,7 +290,9 @@ func (c *BuildCache) GetLintResult(hash string) (*LintResult, bool) {
 
 	// Check if cache entry is expired
 	if time.Since(result.Timestamp) > c.ttl {
-		c.removeCacheEntry(path)
+		if err := c.removeCacheEntry(path); err != nil {
+			utils.Warn("Failed to remove expired lint cache entry %s: %v", path, err)
+		}
 		return nil, false
 	}
 
@@ -331,7 +340,9 @@ func (c *BuildCache) GetDependencyResult(hash string) (*DependencyResult, bool) 
 
 	// Check if cache entry is expired
 	if time.Since(result.Timestamp) > c.ttl {
-		c.removeCacheEntry(path)
+		if err := c.removeCacheEntry(path); err != nil {
+			utils.Warn("Failed to remove expired dependency cache entry %s: %v", path, err)
+		}
 		return nil, false
 	}
 

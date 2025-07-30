@@ -179,12 +179,16 @@ func getRequestIDFromContext(ctx context.Context) string {
 		return ""
 	}
 
-	if requestID, ok := ctx.Value("request_id").(string); ok {
-		return requestID
+	if value := ctx.Value("request_id"); value != nil {
+		if requestID, ok := value.(string); ok {
+			return requestID
+		}
 	}
 
-	if requestID, ok := ctx.Value("requestId").(string); ok {
-		return requestID
+	if value := ctx.Value("requestId"); value != nil {
+		if requestID, ok := value.(string); ok {
+			return requestID
+		}
 	}
 
 	return ""
@@ -207,8 +211,14 @@ type StructuredErrorLogger struct {
 // NewStructuredErrorLogger creates a new structured error logger
 func NewStructuredErrorLogger() *StructuredErrorLogger {
 	return &StructuredErrorLogger{
-		DefaultErrorLogger: NewErrorLogger().(*DefaultErrorLogger),
-		fields:             make(map[string]interface{}),
+		DefaultErrorLogger: func() *DefaultErrorLogger {
+			logger := NewErrorLogger()
+			if defaultLogger, ok := logger.(*DefaultErrorLogger); ok {
+				return defaultLogger
+			}
+			return nil
+		}(),
+		fields: make(map[string]interface{}),
 	}
 }
 
@@ -286,15 +296,23 @@ func NewFileRotatingLogger(filepath string, maxSize int64, maxFiles int) (*FileR
 	// Get current file size
 	info, err := file.Stat()
 	if err != nil {
-		file.Close()
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close file: %v\n", closeErr)
+		}
 		return nil, fmt.Errorf("failed to stat log file: %w", err)
 	}
 
 	return &FileRotatingLogger{
-		DefaultErrorLogger: NewErrorLoggerWithOptions(ErrorLoggerOptions{
-			Output:  file,
-			Enabled: true,
-		}).(*DefaultErrorLogger),
+		DefaultErrorLogger: func() *DefaultErrorLogger {
+			logger := NewErrorLoggerWithOptions(ErrorLoggerOptions{
+				Output:  file,
+				Enabled: true,
+			})
+			if defaultLogger, ok := logger.(*DefaultErrorLogger); ok {
+				return defaultLogger
+			}
+			return nil
+		}(),
 		filepath:    filepath,
 		maxSize:     maxSize,
 		maxFiles:    maxFiles,

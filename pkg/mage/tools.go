@@ -29,12 +29,12 @@ type ToolDefinition struct {
 func (Tools) Install() error {
 	utils.Header("Installing Development Tools")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	tools := getRequiredTools(cfg)
+	tools := getRequiredTools(config)
 
 	for _, tool := range tools {
 		if err := installTool(tool); err != nil {
@@ -50,7 +50,7 @@ func (Tools) Install() error {
 func (Tools) Update() error {
 	utils.Header("Updating Development Tools")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (Tools) Update() error {
 	}
 
 	// Update other tools
-	tools := getRequiredTools(cfg)
+	tools := getRequiredTools(config)
 	for _, tool := range tools {
 		if tool.Module == "" {
 			continue
@@ -90,12 +90,12 @@ func (Tools) Update() error {
 func (Tools) Verify() error {
 	utils.Header("Verifying Development Tools")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	tools := getRequiredTools(cfg)
+	tools := getRequiredTools(config)
 	allGood := true
 
 	for _, tool := range tools {
@@ -128,7 +128,7 @@ func (Tools) Verify() error {
 
 // List lists all configured tools
 func (Tools) List() error {
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
@@ -137,16 +137,16 @@ func (Tools) List() error {
 	fmt.Println()
 
 	// Standard tools
-	fmt.Printf("  golangci-lint: %s\n", cfg.Tools.GolangciLint)
-	fmt.Printf("  fumpt:         %s\n", cfg.Tools.Fumpt)
-	fmt.Printf("  govulncheck:   %s\n", cfg.Tools.GoVulnCheck)
-	fmt.Printf("  mockgen:       %s\n", cfg.Tools.Mockgen)
-	fmt.Printf("  swag:          %s\n", cfg.Tools.Swag)
+	fmt.Printf("  golangci-lint: %s\n", config.Tools.GolangciLint)
+	fmt.Printf("  fumpt:         %s\n", config.Tools.Fumpt)
+	fmt.Printf("  govulncheck:   %s\n", config.Tools.GoVulnCheck)
+	fmt.Printf("  mockgen:       %s\n", config.Tools.Mockgen)
+	fmt.Printf("  swag:          %s\n", config.Tools.Swag)
 
 	// Custom tools
-	if len(cfg.Tools.Custom) > 0 {
+	if len(config.Tools.Custom) > 0 {
 		fmt.Println("\nCustom tools:")
-		for name, version := range cfg.Tools.Custom {
+		for name, version := range config.Tools.Custom {
 			fmt.Printf("  %s: %s\n", name, version)
 		}
 	}
@@ -158,7 +158,7 @@ func (Tools) List() error {
 func (Tools) VulnCheck() error {
 	utils.Header("Checking for Vulnerabilities")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (Tools) VulnCheck() error {
 	if !utils.CommandExists("govulncheck") {
 		utils.Info("Installing govulncheck...")
 
-		version := cfg.Tools.GoVulnCheck
+		version := config.Tools.GoVulnCheck
 		if version == "" || version == "latest" {
 			version = "@latest"
 		} else if !strings.HasPrefix(version, "@") {
@@ -265,8 +265,8 @@ func installTool(tool ToolDefinition) error {
 
 	// Special case for golangci-lint
 	if tool.Name == "golangci-lint" {
-		cfg, _ := GetConfig()
-		return ensureGolangciLint(cfg)
+		config, _ := GetConfig()
+		return ensureGolangciLint(config)
 	}
 
 	// Install via go install

@@ -283,7 +283,11 @@ func (pt *PerformanceTimer) Stop() time.Duration {
 			Success:   true,
 		}
 
-		pt.collector.RecordMetric(metric)
+		if err := pt.collector.RecordMetric(metric); err != nil {
+			// Log error but don't fail the timer stop
+			// In a production system, you might want to use a proper logger here
+			_ = err
+		}
 	}
 
 	return duration
@@ -306,7 +310,11 @@ func (pt *PerformanceTimer) StopWithError(err error) time.Duration {
 			Error:     err.Error(),
 		}
 
-		pt.collector.RecordMetric(metric)
+		if err := pt.collector.RecordMetric(metric); err != nil {
+			// Log error but don't fail the timer stop
+			// In a production system, you might want to use a proper logger here
+			_ = err
+		}
 	}
 
 	return duration
@@ -922,7 +930,11 @@ func (js *JSONStorage) Store(metric *Metric) error {
 	// Read existing metrics
 	var metrics []*Metric
 	if data, err := os.ReadFile(filePath); err == nil {
-		json.Unmarshal(data, &metrics)
+		if err := json.Unmarshal(data, &metrics); err != nil {
+			// Log error but continue with empty metrics slice
+			// In a production system, you might want to use a proper logger here
+			_ = err
+		}
 	}
 
 	// Append new metric

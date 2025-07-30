@@ -45,7 +45,9 @@ func NewTestEnvironment(t *testing.T) *TestEnvironment {
 	// Create work directory within root
 	workDir := filepath.Join(rootDir, "work")
 	if err := os.MkdirAll(workDir, 0o755); err != nil {
-		os.RemoveAll(rootDir)
+		if rmErr := os.RemoveAll(rootDir); rmErr != nil {
+			t.Logf("Warning: failed to cleanup root dir after work dir creation failed: %v", rmErr)
+		}
 		t.Fatalf("Failed to create work dir: %v", err)
 	}
 
@@ -214,7 +216,9 @@ func (te *TestEnvironment) CaptureOutput(fn func()) string {
 	fn()
 
 	// Close writer and restore stdout
-	w.Close()
+	if closeErr := w.Close(); closeErr != nil {
+		te.t.Logf("Warning: failed to close pipe writer: %v", closeErr)
+	}
 	os.Stdout = origStdout
 
 	// Read output
@@ -244,9 +248,9 @@ func (te *TestEnvironment) CaptureError(fn func()) (string, string) {
 		te.t.Fatalf("Failed to create stdout pipe: %v", err)
 	}
 
-	rErr, wErr, err := os.Pipe()
-	if err != nil {
-		te.t.Fatalf("Failed to create stderr pipe: %v", err)
+	rErr, wErr, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		te.t.Fatalf("Failed to create stderr pipe: %v", pipeErr)
 	}
 
 	// Set stdout and stderr to pipe writers
@@ -257,20 +261,24 @@ func (te *TestEnvironment) CaptureError(fn func()) (string, string) {
 	fn()
 
 	// Close writers and restore
-	wOut.Close()
-	wErr.Close()
+	if err := wOut.Close(); err != nil {
+		te.t.Logf("Warning: failed to close stdout pipe writer: %v", err)
+	}
+	if err := wErr.Close(); err != nil {
+		te.t.Logf("Warning: failed to close stderr pipe writer: %v", err)
+	}
 	os.Stdout = origStdout
 	os.Stderr = origStderr
 
 	// Read outputs
-	stdout, err := io.ReadAll(rOut)
-	if err != nil {
-		te.t.Fatalf("Failed to read stdout: %v", err)
+	stdout, readErr := io.ReadAll(rOut)
+	if readErr != nil {
+		te.t.Fatalf("Failed to read stdout: %v", readErr)
 	}
 
-	stderr, err := io.ReadAll(rErr)
-	if err != nil {
-		te.t.Fatalf("Failed to read stderr: %v", err)
+	stderr, readErr := io.ReadAll(rErr)
+	if readErr != nil {
+		te.t.Fatalf("Failed to read stderr: %v", readErr)
 	}
 
 	return string(stdout), string(stderr)
@@ -376,19 +384,27 @@ func (te *TestEnvironment) Cleanup() {
 	}
 
 	// Restore original directory
-	os.Chdir(te.origDir)
+	if err := os.Chdir(te.origDir); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to restore original directory: %v\n", err)
+	}
 
 	// Restore original environment
 	for key, value := range te.origEnv {
 		if value == "" {
-			os.Unsetenv(key)
+			if err := os.Unsetenv(key); err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to unset env var %s: %v\n", key, err)
+			}
 		} else {
-			os.Setenv(key, value)
+			if err := os.Setenv(key, value); err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to restore env var %s: %v\n", key, err)
+			}
 		}
 	}
 
 	// Remove temporary directory
-	os.RemoveAll(te.rootDir)
+	if err := os.RemoveAll(te.rootDir); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to remove temp directory %s: %v\n", te.rootDir, err)
+	}
 }
 
 // CreateGoModule creates a go.mod file in the test environment

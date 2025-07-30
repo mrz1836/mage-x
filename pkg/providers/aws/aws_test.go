@@ -40,7 +40,9 @@ func (ts *AWSProviderTestSuite) SetupTest() {
 // TearDownTest runs after each test
 func (ts *AWSProviderTestSuite) TearDownTest() {
 	if ts.provider != nil {
-		ts.provider.Close()
+		if err := ts.provider.Close(); err != nil {
+			ts.T().Logf("Warning: failed to close AWS provider in teardown: %v", err)
+		}
 	}
 }
 
@@ -51,7 +53,8 @@ func (ts *AWSProviderTestSuite) TestAWSProviderBasics() {
 	})
 
 	ts.Run("Provider initialization", func() {
-		awsProvider := ts.provider.(*Provider)
+		awsProvider, ok := ts.provider.(*Provider)
+		require.True(ts.T(), ok, "Provider should be of type *Provider")
 		require.Equal(ts.T(), "us-east-1", awsProvider.region)
 		require.NotNil(ts.T(), awsProvider.services)
 		require.NotNil(ts.T(), awsProvider.services.compute)

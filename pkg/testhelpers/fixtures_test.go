@@ -95,11 +95,17 @@ func TestTestFixtures_CreateMageProject(t *testing.T) {
 	err := yaml.Unmarshal([]byte(content), &config)
 	require.NoError(t, err)
 
-	project := config["project"].(map[string]interface{})
+	projectValue, ok := config["project"]
+	require.True(t, ok, "project key should exist")
+	project, ok := projectValue.(map[string]interface{})
+	require.True(t, ok, "project should be a map")
 	require.Equal(t, "myapp", project["name"])
 	require.Equal(t, "1.0.0", project["version"])
 
-	build := config["build"].(map[string]interface{})
+	buildValue, ok := config["build"]
+	require.True(t, ok, "build key should exist")
+	build, ok := buildValue.(map[string]interface{})
+	require.True(t, ok, "build should be a map")
 	require.Equal(t, "bin/", build["output"])
 	require.Equal(t, "myapp", build["binary"])
 }
@@ -201,7 +207,10 @@ func TestTestFixtures_CreateTestData(t *testing.T) {
 	var yamlData map[string]interface{}
 	err = yaml.Unmarshal([]byte(yamlContent), &yamlData)
 	require.NoError(t, err)
-	database := yamlData["database"].(map[string]interface{})
+	databaseValue, ok := yamlData["database"]
+	require.True(t, ok, "database key should exist")
+	database, ok := databaseValue.(map[string]interface{})
+	require.True(t, ok, "database should be a map")
 	require.Equal(t, "localhost", database["host"])
 	require.Equal(t, 5432, database["port"])
 
@@ -421,7 +430,10 @@ func TestTestFixtures_CreateNodeProject(t *testing.T) {
 	require.Equal(t, "1.0.0", pkg["version"])
 	require.Equal(t, "src/index.js", pkg["main"])
 
-	scripts := pkg["scripts"].(map[string]interface{})
+	scriptsValue, ok := pkg["scripts"]
+	require.True(t, ok, "scripts key should exist")
+	scripts, ok := scriptsValue.(map[string]interface{})
+	require.True(t, ok, "scripts should be a map")
 	require.Equal(t, "node src/index.js", scripts["start"])
 	require.Equal(t, "jest", scripts["test"])
 
@@ -467,9 +479,9 @@ func TestTestFixtures_ComplexScenario(t *testing.T) {
 
 	// Count files
 	fileCount := 0
-	err := filepath.Walk(env.AbsPath("tree"), func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	err := filepath.Walk(env.AbsPath("tree"), func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
 		}
 		if !info.IsDir() {
 			fileCount++

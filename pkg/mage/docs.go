@@ -61,13 +61,13 @@ func (Docs) Citation() error {
 func (Docs) GoDocs() error {
 	utils.Header("Syndicating to pkg.go.dev")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	// Construct module path
-	module := cfg.Project.Module
+	module := config.Project.Module
 	if module == "" {
 		module, err = utils.GetModuleName()
 		if err != nil {
@@ -162,11 +162,17 @@ func (Docs) Serve() error {
 
 		switch runtime.GOOS {
 		case "darwin":
-			GetRunner().RunCmd("open", url)
+			if err := GetRunner().RunCmd("open", url); err != nil {
+				utils.Warn("Failed to open browser: %v", err)
+			}
 		case "linux":
-			GetRunner().RunCmd("xdg-open", url)
+			if err := GetRunner().RunCmd("xdg-open", url); err != nil {
+				utils.Warn("Failed to open browser: %v", err)
+			}
 		case "windows":
-			GetRunner().RunCmd("cmd", "/c", "start", url)
+			if err := GetRunner().RunCmd("cmd", "/c", "start", url); err != nil {
+				utils.Warn("Failed to open browser: %v", err)
+			}
 		}
 	}()
 
@@ -215,7 +221,11 @@ func (Docs) Check() error {
 	}
 
 	// Check for example files
-	examples, _ := utils.FindFiles(".", "example*.go")
+	examples, err := utils.FindFiles(".", "example*.go")
+	if err != nil {
+		utils.Warn("Failed to find example files: %v", err)
+		examples = []string{}
+	}
 	if len(examples) == 0 {
 		utils.Info("No example files found (consider adding examples)")
 	} else {

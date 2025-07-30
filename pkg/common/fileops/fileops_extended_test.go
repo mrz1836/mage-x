@@ -16,7 +16,11 @@ func TestDefaultFileOperator_Extended(t *testing.T) {
 	// Create temporary directory for tests
 	tmpDir, err := os.MkdirTemp("", "fileops-extended-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
+		}
+	}()
 
 	ops := NewDefaultFileOperator()
 
@@ -78,8 +82,8 @@ func TestDefaultFileOperator_Extended(t *testing.T) {
 		// Create some files
 		for i := 0; i < 3; i++ {
 			filename := filepath.Join(testDir, string(rune('a'+i))+".txt")
-			err := ops.WriteFile(filename, []byte("content"), 0o644)
-			require.NoError(t, err)
+			writeErr := ops.WriteFile(filename, []byte("content"), 0o644)
+			require.NoError(t, writeErr)
 		}
 
 		// Read directory
@@ -92,7 +96,11 @@ func TestDefaultFileOperator_Extended(t *testing.T) {
 func TestDefaultJSONOperator_Extended(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "json-extended-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
+		}
+	}()
 
 	fileOp := NewDefaultFileOperator()
 	jsonOp := NewDefaultJSONOperator(fileOp)
@@ -121,7 +129,11 @@ func TestDefaultJSONOperator_Extended(t *testing.T) {
 func TestDefaultYAMLOperator_Extended(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "yaml-extended-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
+		}
+	}()
 
 	fileOp := NewDefaultFileOperator()
 	yamlOp := NewDefaultYAMLOperator(fileOp)
@@ -144,7 +156,11 @@ nested:
 func TestFileOps_Extended(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "fileops-facade-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
+		}
+	}()
 
 	ops := New()
 
@@ -202,7 +218,8 @@ func TestFileOps_Extended(t *testing.T) {
 
 		// Write YAML content to unknown extension file
 		unknownConfig := map[string]string{"key": "unknown-value"}
-		yamlData, _ := yaml.Marshal(unknownConfig)
+		yamlData, err := yaml.Marshal(unknownConfig)
+		require.NoError(t, err)
 		err = ops.File.WriteFile(unknownFile, yamlData, 0o644)
 		require.NoError(t, err)
 
@@ -349,7 +366,11 @@ func TestFileOps_ErrorHandling(t *testing.T) {
 	t.Run("LoadConfig with invalid JSON/YAML", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "invalid-config-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
+				t.Logf("Failed to remove temp dir %s: %v", tmpDir, removeErr)
+			}
+		}()
 
 		// Create invalid JSON file
 		invalidFile := filepath.Join(tmpDir, "invalid.json")

@@ -10,7 +10,7 @@ import (
 )
 
 func TestErrorChain_AddWithContext(t *testing.T) {
-	chain := NewErrorChain()
+	var chain ErrorChain = NewErrorChain()
 
 	// Add error with context
 	err1 := errors.New("first error")
@@ -19,7 +19,7 @@ func TestErrorChain_AddWithContext(t *testing.T) {
 		Resource:  "Resource1",
 		User:      "user1",
 	}
-	chain.AddWithContext(err1, ctx1)
+	chain = chain.AddWithContext(err1, ctx1)
 
 	// Add another error with different context
 	err2 := fmt.Errorf("second error")
@@ -28,7 +28,7 @@ func TestErrorChain_AddWithContext(t *testing.T) {
 		Resource:  "Resource2",
 		User:      "user2",
 	}
-	chain.AddWithContext(err2, ctx2)
+	chain = chain.AddWithContext(err2, ctx2)
 
 	// Verify chain has both errors
 	assert.Equal(t, 2, chain.Count())
@@ -57,21 +57,21 @@ func TestErrorChain_AddWithContext(t *testing.T) {
 
 func TestErrorChain_Error(t *testing.T) {
 	t.Run("empty chain", func(t *testing.T) {
-		chain := NewErrorChain()
+		var chain ErrorChain = NewErrorChain()
 		assert.Equal(t, "no errors", chain.Error())
 	})
 
 	t.Run("single error", func(t *testing.T) {
-		chain := NewErrorChain()
-		chain.Add(errors.New("single error"))
+		var chain ErrorChain = NewErrorChain()
+		chain = chain.Add(errors.New("single error"))
 		assert.Equal(t, "single error", chain.Error())
 	})
 
 	t.Run("multiple errors", func(t *testing.T) {
-		chain := NewErrorChain()
-		chain.Add(errors.New("error 1"))
-		chain.Add(errors.New("error 2"))
-		chain.Add(errors.New("error 3"))
+		var chain ErrorChain = NewErrorChain()
+		chain = chain.Add(errors.New("error 1"))
+		chain = chain.Add(errors.New("error 2"))
+		chain = chain.Add(errors.New("error 3"))
 
 		errStr := chain.Error()
 		assert.Contains(t, errStr, "3 errors occurred")
@@ -81,13 +81,13 @@ func TestErrorChain_Error(t *testing.T) {
 	})
 
 	t.Run("errors with context", func(t *testing.T) {
-		chain := NewErrorChain()
+		var chain ErrorChain = NewErrorChain()
 
 		ctx := ErrorContext{
 			Operation: "TestOp",
 			Resource:  "TestResource",
 		}
-		chain.AddWithContext(errors.New("error with context"), ctx)
+		chain = chain.AddWithContext(errors.New("error with context"), ctx)
 
 		errStr := chain.Error()
 		assert.Contains(t, errStr, "error with context")
@@ -96,24 +96,24 @@ func TestErrorChain_Error(t *testing.T) {
 	})
 
 	t.Run("mixed errors", func(t *testing.T) {
-		chain := NewErrorChain()
+		var chain ErrorChain = NewErrorChain()
 
 		// Add regular error
-		chain.Add(errors.New("regular error"))
+		chain = chain.Add(errors.New("regular error"))
 
 		// Add error with context
 		ctx := ErrorContext{
 			Operation: "Op1",
 			Resource:  "Res1",
 		}
-		chain.AddWithContext(errors.New("context error"), ctx)
+		chain = chain.AddWithContext(errors.New("context error"), ctx)
 
 		// Add MageError
 		mageErr := NewErrorBuilder().
 			WithCode(ErrInternal).
 			WithMessage("mage error").
 			Build()
-		chain.Add(mageErr)
+		chain = chain.Add(mageErr)
 
 		errStr := chain.Error()
 		assert.Contains(t, errStr, "3 errors occurred")
@@ -127,7 +127,7 @@ func TestErrorChain_Error(t *testing.T) {
 
 func TestChainError_Methods(t *testing.T) {
 	// Test chain error by creating errors with context
-	chain := NewErrorChain()
+	var chain ErrorChain = NewErrorChain()
 
 	baseErr := errors.New("base error")
 	ctx := ErrorContext{
@@ -135,7 +135,7 @@ func TestChainError_Methods(t *testing.T) {
 		Resource:  "TestRes",
 		User:      "testuser",
 	}
-	chain.AddWithContext(baseErr, ctx)
+	chain = chain.AddWithContext(baseErr, ctx)
 
 	errs := chain.Errors()
 	require.Len(t, errs, 1)
@@ -157,13 +157,13 @@ func TestChainError_Methods(t *testing.T) {
 
 func TestErrorChain_ComplexScenario(t *testing.T) {
 	// Create a chain with various error types
-	chain := NewErrorChain()
+	var chain ErrorChain = NewErrorChain()
 
 	// Add standard error
-	chain.Add(errors.New("standard error"))
+	chain = chain.Add(errors.New("standard error"))
 
 	// Add formatted error
-	chain.Add(fmt.Errorf("formatted error: %d", 42))
+	chain = chain.Add(fmt.Errorf("formatted error: %d", 42))
 
 	// Add error with context
 	ctx := ErrorContext{
@@ -173,7 +173,7 @@ func TestErrorChain_ComplexScenario(t *testing.T) {
 		RequestID:   "req-123",
 		Environment: "production",
 	}
-	chain.AddWithContext(errors.New("database connection failed"), ctx)
+	chain = chain.AddWithContext(errors.New("database connection failed"), ctx)
 
 	// Add MageError
 	mageErr := NewErrorBuilder().
@@ -182,11 +182,11 @@ func TestErrorChain_ComplexScenario(t *testing.T) {
 		WithMessage("critical database error").
 		WithField("retry_count", 3).
 		Build()
-	chain.Add(mageErr)
+	chain = chain.Add(mageErr)
 
 	// Add wrapped error
 	wrappedErr := fmt.Errorf("wrapped: %w", errors.New("inner error"))
-	chain.Add(wrappedErr)
+	chain = chain.Add(wrappedErr)
 
 	// Verify chain properties
 	assert.Equal(t, 5, chain.Count())
@@ -213,21 +213,21 @@ func TestErrorChain_ComplexScenario(t *testing.T) {
 
 func TestErrorChain_EdgeCases(t *testing.T) {
 	t.Run("nil errors", func(t *testing.T) {
-		chain := NewErrorChain()
+		var chain ErrorChain = NewErrorChain()
 
 		// Adding nil should be ignored
-		chain.Add(nil)
+		chain = chain.Add(nil)
 		assert.Equal(t, 0, chain.Count())
 		assert.False(t, chain.HasError(ErrUnknown))
 
 		// AddWithContext with nil should be ignored
-		chain.AddWithContext(nil, ErrorContext{})
+		chain = chain.AddWithContext(nil, ErrorContext{})
 		assert.Equal(t, 0, chain.Count())
 	})
 
 	t.Run("empty context", func(t *testing.T) {
-		chain := NewErrorChain()
-		chain.AddWithContext(errors.New("error"), ErrorContext{})
+		var chain ErrorChain = NewErrorChain()
+		chain = chain.AddWithContext(errors.New("error"), ErrorContext{})
 
 		errMsg := chain.Error()
 		assert.Contains(t, errMsg, "error")
@@ -236,19 +236,20 @@ func TestErrorChain_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("partial context", func(t *testing.T) {
-		chain := NewErrorChain()
+		var chain ErrorChain = NewErrorChain()
 
 		// Only operation
 		ctx1 := ErrorContext{Operation: "Op1"}
-		chain.AddWithContext(errors.New("error1"), ctx1)
+		chain = chain.AddWithContext(errors.New("error1"), ctx1)
 
 		// Only resource
 		ctx2 := ErrorContext{Resource: "Res2"}
-		chain.AddWithContext(errors.New("error2"), ctx2)
+		chain = chain.AddWithContext(errors.New("error2"), ctx2)
 
-		_ = chain.Error()
+		errStr := chain.Error()
 		// The current implementation doesn't include context in error string
 		// assert.Contains(t, errStr, "(in Op1)")
 		// assert.Contains(t, errStr, "(on Res2)")
+		assert.NotEmpty(t, errStr) // Verify error string is not empty
 	})
 }

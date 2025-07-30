@@ -603,7 +603,9 @@ func BenchmarkSecureExecutor_Execute(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = executor.Execute(ctx, "echo", "test")
+		if err := executor.Execute(ctx, "echo", "test"); err != nil {
+			b.Errorf("Execute failed: %v", err)
+		}
 	}
 }
 
@@ -613,7 +615,9 @@ func BenchmarkSecureExecutor_ValidateCommand(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = executor.validateCommand("echo", args)
+		if err := executor.validateCommand("echo", args); err != nil {
+			b.Errorf("validateCommand failed: %v", err)
+		}
 	}
 }
 

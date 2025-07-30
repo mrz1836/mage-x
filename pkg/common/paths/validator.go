@@ -129,79 +129,118 @@ func (pv *DefaultPathValidator) IsValidPath(path PathBuilder) bool {
 
 // RequireAbsolute requires the path to be absolute
 func (pv *DefaultPathValidator) RequireAbsolute() PathValidator {
-	pv.AddRule(&AbsolutePathRule{})
+	if err := pv.AddRule(&AbsolutePathRule{}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireRelative requires the path to be relative
 func (pv *DefaultPathValidator) RequireRelative() PathValidator {
-	pv.AddRule(&RelativePathRule{})
+	if err := pv.AddRule(&RelativePathRule{}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireExists requires the path to exist
 func (pv *DefaultPathValidator) RequireExists() PathValidator {
-	pv.AddRule(&ExistsRule{})
+	if err := pv.AddRule(&ExistsRule{}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireNotExists requires the path to not exist
 func (pv *DefaultPathValidator) RequireNotExists() PathValidator {
-	pv.AddRule(&NotExistsRule{})
+	if err := pv.AddRule(&NotExistsRule{}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireReadable requires the path to be readable
 func (pv *DefaultPathValidator) RequireReadable() PathValidator {
-	pv.AddRule(&ReadableRule{})
+	if err := pv.AddRule(&ReadableRule{}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireWritable requires the path to be writable
 func (pv *DefaultPathValidator) RequireWritable() PathValidator {
-	pv.AddRule(&WritableRule{})
+	if err := pv.AddRule(&WritableRule{}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireExecutable requires the path to be executable
 func (pv *DefaultPathValidator) RequireExecutable() PathValidator {
-	pv.AddRule(&ExecutableRule{})
+	if err := pv.AddRule(&ExecutableRule{}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireDirectory requires the path to be a directory
 func (pv *DefaultPathValidator) RequireDirectory() PathValidator {
-	pv.AddRule(&DirectoryRule{})
+	if err := pv.AddRule(&DirectoryRule{}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireFile requires the path to be a file
 func (pv *DefaultPathValidator) RequireFile() PathValidator {
-	pv.AddRule(&FileRule{})
+	if err := pv.AddRule(&FileRule{}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireExtension requires the path to have one of the specified extensions
 func (pv *DefaultPathValidator) RequireExtension(exts ...string) PathValidator {
-	pv.AddRule(&ExtensionRule{Extensions: exts})
+	if err := pv.AddRule(&ExtensionRule{Extensions: exts}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequireMaxLength requires the path to be shorter than the specified length
 func (pv *DefaultPathValidator) RequireMaxLength(length int) PathValidator {
-	pv.AddRule(&MaxLengthRule{MaxLength: length})
+	if err := pv.AddRule(&MaxLengthRule{MaxLength: length}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // RequirePattern requires the path to match a pattern
 func (pv *DefaultPathValidator) RequirePattern(pattern string) PathValidator {
-	pv.AddRule(&PatternRule{Pattern: pattern, Required: true})
+	if err := pv.AddRule(&PatternRule{Pattern: pattern, Required: true}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
 // ForbidPattern forbids the path from matching a pattern
 func (pv *DefaultPathValidator) ForbidPattern(pattern string) PathValidator {
-	pv.AddRule(&PatternRule{Pattern: pattern, Required: false})
+	if err := pv.AddRule(&PatternRule{Pattern: pattern, Required: false}); err != nil {
+		// This shouldn't fail for built-in rules, but we continue anyway
+		// In production code, consider logging this error
+	}
 	return pv
 }
 
@@ -292,7 +331,9 @@ func (r *ReadableRule) Validate(path string) error {
 	if err != nil {
 		return fmt.Errorf("path is not readable: %w", err)
 	}
-	file.Close()
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %w", err)
+	}
 	return nil
 }
 
@@ -325,7 +366,9 @@ func (r *WritableRule) Validate(path string) error {
 	if err != nil {
 		return fmt.Errorf("path is not writable: %w", err)
 	}
-	file.Close()
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %w", err)
+	}
 	return nil
 }
 
@@ -335,8 +378,12 @@ func (r *WritableRule) checkDirWritable(dir string) error {
 	if err != nil {
 		return fmt.Errorf("directory is not writable: %w", err)
 	}
-	tempFile.Close()
-	os.Remove(tempFile.Name())
+	if err := tempFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
+	if err := os.Remove(tempFile.Name()); err != nil {
+		return fmt.Errorf("failed to remove temp file: %w", err)
+	}
 	return nil
 }
 

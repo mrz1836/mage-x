@@ -531,7 +531,9 @@ func BenchmarkRelease_Validate(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = release.Validate()
+		if err := release.Validate(); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 

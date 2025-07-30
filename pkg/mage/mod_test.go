@@ -35,7 +35,7 @@ func (ts *ModTestSuite) TestMod_Download() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "verify"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Download()
@@ -51,7 +51,7 @@ func (ts *ModTestSuite) TestMod_Download_DownloadError() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "download"}).Return(errors.New("download failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Download()
@@ -68,7 +68,7 @@ func (ts *ModTestSuite) TestMod_Download_VerifyFails() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "verify"}).Return(errors.New("verify failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Download()
@@ -84,7 +84,7 @@ func (ts *ModTestSuite) TestMod_Tidy() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"status", "--porcelain", "go.mod", "go.sum"}).Return("", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Tidy()
@@ -100,7 +100,7 @@ func (ts *ModTestSuite) TestMod_Tidy_WithChanges() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"status", "--porcelain", "go.mod", "go.sum"}).Return(" M go.mod\n M go.sum", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Tidy()
@@ -116,7 +116,7 @@ func (ts *ModTestSuite) TestMod_Tidy_Error() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(errors.New("tidy failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Tidy()
@@ -135,7 +135,7 @@ func (ts *ModTestSuite) TestMod_Update() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Update()
@@ -151,7 +151,7 @@ func (ts *ModTestSuite) TestMod_Update_NoUpdates() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-u", "-m", "all"}).Return(listOutput, nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Update()
@@ -167,7 +167,7 @@ func (ts *ModTestSuite) TestMod_Update_ListError() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-u", "-m", "all"}).Return("", errors.New("list failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Update()
@@ -186,7 +186,7 @@ func (ts *ModTestSuite) TestMod_Update_GetError() {
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(errors.New("get failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Update()
@@ -206,7 +206,7 @@ func (ts *ModTestSuite) TestMod_Update_TidyError() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(errors.New("tidy failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Update()
@@ -220,12 +220,12 @@ func (ts *ModTestSuite) TestMod_Update_TidyError() {
 // TestMod_Clean tests the Clean function with FORCE environment variable
 func (ts *ModTestSuite) TestMod_Clean() {
 	os.Setenv("FORCE", "true")
-	defer os.Unsetenv("FORCE")
+	defer func() { _ = os.Unsetenv("FORCE") }()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"clean", "-modcache"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Clean()
@@ -237,10 +237,10 @@ func (ts *ModTestSuite) TestMod_Clean() {
 
 // TestMod_Clean_NoForce tests Clean function without FORCE environment variable
 func (ts *ModTestSuite) TestMod_Clean_NoForce() {
-	os.Unsetenv("FORCE")
+	_ = os.Unsetenv("FORCE")
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Clean()
@@ -255,12 +255,12 @@ func (ts *ModTestSuite) TestMod_Clean_NoForce() {
 func (ts *ModTestSuite) TestMod_Clean_Error() {
 	expectedError := require.New(ts.T())
 	os.Setenv("FORCE", "true")
-	defer os.Unsetenv("FORCE")
+	defer func() { _ = os.Unsetenv("FORCE") }()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"clean", "-modcache"}).Return(errors.New("clean failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Clean()
@@ -277,7 +277,7 @@ func (ts *ModTestSuite) TestMod_Graph() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(graphOutput, nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Graph()
@@ -291,12 +291,12 @@ func (ts *ModTestSuite) TestMod_Graph() {
 func (ts *ModTestSuite) TestMod_Graph_WithGraphFile() {
 	graphOutput := "test/module github.com/stretchr/testify@v1.9.0"
 	os.Setenv("GRAPH_FILE", "test-graph.txt")
-	defer os.Unsetenv("GRAPH_FILE")
+	defer func() { _ = os.Unsetenv("GRAPH_FILE") }()
 
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(graphOutput, nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Graph()
@@ -312,7 +312,7 @@ func (ts *ModTestSuite) TestMod_Graph_Error() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return("", errors.New("graph failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Graph()
@@ -326,14 +326,14 @@ func (ts *ModTestSuite) TestMod_Graph_Error() {
 // TestMod_Why tests the Why function with MODULE environment variable
 func (ts *ModTestSuite) TestMod_Why() {
 	os.Setenv("MODULE", "github.com/pkg/errors")
-	defer os.Unsetenv("MODULE")
+	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	whyOutput := "# github.com/pkg/errors\ntest/module\ngithub.com/pkg/errors"
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/pkg/errors"}).Return(whyOutput, nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Require}}", "all"}).Return("github.com/pkg/errors", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Why()
@@ -345,10 +345,10 @@ func (ts *ModTestSuite) TestMod_Why() {
 
 // TestMod_Why_NoModule tests Why function without MODULE environment variable
 func (ts *ModTestSuite) TestMod_Why_NoModule() {
-	os.Unsetenv("MODULE")
+	_ = os.Unsetenv("MODULE")
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Why()
@@ -362,14 +362,14 @@ func (ts *ModTestSuite) TestMod_Why_NoModule() {
 // TestMod_Why_IndirectDependency tests Why function for indirect dependency
 func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
 	os.Setenv("MODULE", "github.com/indirect/dep")
-	defer os.Unsetenv("MODULE")
+	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	whyOutput := "# github.com/indirect/dep\ntest/module\ngithub.com/some/other\ngithub.com/indirect/dep"
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/indirect/dep"}).Return(whyOutput, nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Require}}", "all"}).Return("github.com/pkg/errors", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Why()
@@ -383,12 +383,12 @@ func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
 func (ts *ModTestSuite) TestMod_Why_Error() {
 	expectedError := require.New(ts.T())
 	os.Setenv("MODULE", "github.com/pkg/errors")
-	defer os.Unsetenv("MODULE")
+	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/pkg/errors"}).Return("", errors.New("why failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Why()
@@ -404,7 +404,7 @@ func (ts *ModTestSuite) TestMod_Vendor() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "vendor"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Vendor()
@@ -420,7 +420,7 @@ func (ts *ModTestSuite) TestMod_Vendor_Error() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "vendor"}).Return(errors.New("vendor failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Vendor()
@@ -438,12 +438,12 @@ func (ts *ModTestSuite) TestMod_Init() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
 	os.Setenv("MODULE", "github.com/example/project")
-	defer os.Unsetenv("MODULE")
+	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "init", "github.com/example/project"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Init()
@@ -459,13 +459,13 @@ func (ts *ModTestSuite) TestMod_Init_WithGitRemote() {
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
-	os.Unsetenv("MODULE")
+	_ = os.Unsetenv("MODULE")
 
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"remote", "get-url", "origin"}).Return("https://github.com/example/project.git", nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "init", "github.com/example/project"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Init()
@@ -478,10 +478,10 @@ func (ts *ModTestSuite) TestMod_Init_WithGitRemote() {
 // TestMod_Init_GoModExists tests Init function when go.mod already exists
 func (ts *ModTestSuite) TestMod_Init_GoModExists() {
 	os.Setenv("MODULE", "github.com/example/project")
-	defer os.Unsetenv("MODULE")
+	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Init()
@@ -498,11 +498,11 @@ func (ts *ModTestSuite) TestMod_Init_NoModule() {
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
-	os.Unsetenv("MODULE")
+	_ = os.Unsetenv("MODULE")
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"remote", "get-url", "origin"}).Return("", errors.New("no remote"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Init()
@@ -521,12 +521,12 @@ func (ts *ModTestSuite) TestMod_Init_InitError() {
 
 	expectedError := require.New(ts.T())
 	os.Setenv("MODULE", "github.com/example/project")
-	defer os.Unsetenv("MODULE")
+	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "init", "github.com/example/project"}).Return(errors.New("init failed"))
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Init()
@@ -542,7 +542,7 @@ func (ts *ModTestSuite) TestMod_Verify() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "verify"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Verify()
@@ -557,7 +557,7 @@ func (ts *ModTestSuite) TestMod_Edit() {
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "edit", "-require", "github.com/pkg/errors@v0.9.1"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Edit("-require", "github.com/pkg/errors@v0.9.1")
@@ -572,7 +572,7 @@ func (ts *ModTestSuite) TestMod_Get() {
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "github.com/pkg/errors@v0.9.1", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.Get("github.com/pkg/errors@v0.9.1", "github.com/stretchr/testify@v1.9.0")
@@ -587,7 +587,7 @@ func (ts *ModTestSuite) TestMod_List() {
 	ts.env.Runner.On("RunCmd", "go", []string{"list", "-m", "all"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.List()
@@ -602,7 +602,7 @@ func (ts *ModTestSuite) TestMod_List_WithPattern() {
 	ts.env.Runner.On("RunCmd", "go", []string{"list", "-m", "github.com/pkg/*"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) { SetRunner(r.(CommandRunner)) },
+		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 		func() interface{} { return GetRunner() },
 		func() error {
 			return ts.mod.List("github.com/pkg/*")
@@ -664,25 +664,25 @@ func (ts *ModTestSuite) TestGetModCache() {
 		if originalGomodcache != "" {
 			os.Setenv("GOMODCACHE", originalGomodcache)
 		} else {
-			os.Unsetenv("GOMODCACHE")
+			_ = os.Unsetenv("GOMODCACHE")
 		}
 		if originalGopath != "" {
 			os.Setenv("GOPATH", originalGopath)
 		} else {
-			os.Unsetenv("GOPATH")
+			_ = os.Unsetenv("GOPATH")
 		}
 	}()
 
 	ts.Run("with GOMODCACHE", func() {
 		os.Setenv("GOMODCACHE", "/custom/modcache")
-		os.Unsetenv("GOPATH")
+		_ = os.Unsetenv("GOPATH")
 
 		result := getModCache()
 		require.Equal(ts.T(), "/custom/modcache", result)
 	})
 
 	ts.Run("with GOPATH", func() {
-		os.Unsetenv("GOMODCACHE")
+		_ = os.Unsetenv("GOMODCACHE")
 		os.Setenv("GOPATH", "/custom/gopath")
 
 		result := getModCache()
@@ -690,8 +690,8 @@ func (ts *ModTestSuite) TestGetModCache() {
 	})
 
 	ts.Run("default location", func() {
-		os.Unsetenv("GOMODCACHE")
-		os.Unsetenv("GOPATH")
+		_ = os.Unsetenv("GOMODCACHE")
+		_ = os.Unsetenv("GOPATH")
 
 		result := getModCache()
 		require.Contains(ts.T(), result, "go/pkg/mod")

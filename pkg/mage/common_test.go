@@ -36,7 +36,7 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.2.3", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				version := getVersion()
@@ -62,12 +62,18 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		require.NoError(ts.T(), err)
 
 		// Change to temp directory
-		oldDir, _ := os.Getwd()
-		defer os.Chdir(oldDir)
-		os.Chdir(env.TempDir)
+		oldDir, err := os.Getwd()
+		require.NoError(ts.T(), err)
+		defer func() {
+			if chdirErr := os.Chdir(oldDir); chdirErr != nil {
+				ts.T().Logf("Failed to restore working directory: %v", chdirErr)
+			}
+		}()
+		err = os.Chdir(env.TempDir)
+		require.NoError(ts.T(), err)
 
 		err = env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				version := getVersion()
@@ -96,7 +102,7 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		}
 
 		err := env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				version := getVersion()
@@ -120,7 +126,7 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		TestResetConfig()
 
 		err := env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				version := getVersion()

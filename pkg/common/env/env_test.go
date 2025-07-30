@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultEnvironment(t *testing.T) {
@@ -17,7 +19,11 @@ func TestDefaultEnvironment(t *testing.T) {
 	value := "test_value"
 
 	// Clean up at the end
-	defer env.Unset(key)
+	defer func() {
+		if err := env.Unset(key); err != nil {
+			t.Errorf("Failed to unset %s: %v", key, err)
+		}
+	}()
 
 	if err := env.Set(key, value); err != nil {
 		t.Fatalf("Failed to set environment variable: %v", err)
@@ -47,47 +53,46 @@ func TestDefaultEnvironment_TypedGetters(t *testing.T) {
 
 	// Clean up at the end
 	defer func() {
-		env.Unset("TEST_BOOL")
-		env.Unset("TEST_INT")
-		env.Unset("TEST_INT64")
-		env.Unset("TEST_FLOAT64")
-		env.Unset("TEST_DURATION")
-		env.Unset("TEST_SLICE")
+		for _, key := range []string{"TEST_BOOL", "TEST_INT", "TEST_INT64", "TEST_FLOAT64", "TEST_DURATION", "TEST_SLICE"} {
+			if err := env.Unset(key); err != nil {
+				t.Errorf("Failed to unset %s: %v", key, err)
+			}
+		}
 	}()
 
 	// Test GetBool
-	env.Set("TEST_BOOL", "true")
+	require.NoError(t, env.Set("TEST_BOOL", "true"))
 	if !env.GetBool("TEST_BOOL", false) {
 		t.Error("GetBool() should return true for 'true'")
 	}
 
 	// Test GetInt
-	env.Set("TEST_INT", "42")
+	require.NoError(t, env.Set("TEST_INT", "42"))
 	if got := env.GetInt("TEST_INT", 0); got != 42 {
 		t.Errorf("GetInt() = %v, want 42", got)
 	}
 
 	// Test GetInt64
-	env.Set("TEST_INT64", "9223372036854775807")
+	require.NoError(t, env.Set("TEST_INT64", "9223372036854775807"))
 	if got := env.GetInt64("TEST_INT64", 0); got != 9223372036854775807 {
 		t.Errorf("GetInt64() = %v, want 9223372036854775807", got)
 	}
 
 	// Test GetFloat64
-	env.Set("TEST_FLOAT64", "3.14159")
+	require.NoError(t, env.Set("TEST_FLOAT64", "3.14159"))
 	if got := env.GetFloat64("TEST_FLOAT64", 0.0); got != 3.14159 {
 		t.Errorf("GetFloat64() = %v, want 3.14159", got)
 	}
 
 	// Test GetDuration
-	env.Set("TEST_DURATION", "5m30s")
+	require.NoError(t, env.Set("TEST_DURATION", "5m30s"))
 	expected := 5*time.Minute + 30*time.Second
 	if got := env.GetDuration("TEST_DURATION", 0); got != expected {
 		t.Errorf("GetDuration() = %v, want %v", got, expected)
 	}
 
 	// Test GetStringSlice
-	env.Set("TEST_SLICE", "one,two,three")
+	require.NoError(t, env.Set("TEST_SLICE", "one,two,three"))
 	expected_slice := []string{"one", "two", "three"}
 	if got := env.GetStringSlice("TEST_SLICE", nil); !equalStringSlices(got, expected_slice) {
 		t.Errorf("GetStringSlice() = %v, want %v", got, expected_slice)
@@ -106,7 +111,9 @@ func TestDefaultEnvironment_Advanced(t *testing.T) {
 
 	defer func() {
 		for key := range vars {
-			env.Unset(key)
+			if err := env.Unset(key); err != nil {
+				t.Errorf("Failed to unset %s: %v", key, err)
+			}
 		}
 	}()
 
@@ -248,8 +255,12 @@ func TestDefaultEnvManager(t *testing.T) {
 
 	defer func() {
 		// Clean up
-		scope.Unset(testKey)
-		manager.PopScope()
+		if err := scope.Unset(testKey); err != nil {
+			t.Errorf("Failed to unset %s in scope: %v", testKey, err)
+		}
+		if err := manager.PopScope(); err != nil {
+			t.Errorf("Failed to pop scope: %v", err)
+		}
 	}()
 
 	if err := scope.Set(testKey, testValue); err != nil {
@@ -283,10 +294,12 @@ func TestDefaultEnvManager_Context(t *testing.T) {
 	testValue := "context_value"
 
 	defer func() {
-		manager.RestoreContext(&DefaultEnvContext{variables: make(map[string]string)})
+		if err := manager.RestoreContext(&DefaultEnvContext{variables: make(map[string]string)}); err != nil {
+			t.Errorf("Failed to restore context: %v", err)
+		}
 	}()
 
-	manager.baseEnv.Set(testKey, testValue)
+	require.NoError(t, manager.baseEnv.Set(testKey, testValue))
 
 	// Save context
 	ctx, err := manager.SaveContext()
@@ -299,7 +312,7 @@ func TestDefaultEnvManager_Context(t *testing.T) {
 	}
 
 	// Modify environment
-	manager.baseEnv.Set(testKey, "modified_value")
+	require.NoError(t, manager.baseEnv.Set(testKey, "modified_value"))
 
 	// Restore context
 	if err := manager.RestoreContext(ctx); err != nil {
@@ -320,9 +333,13 @@ func TestDefaultEnvManager_Isolation(t *testing.T) {
 	isolatedValue := "isolated"
 
 	// Set original value
-	manager.baseEnv.Set(testKey, originalValue)
+	require.NoError(t, manager.baseEnv.Set(testKey, originalValue))
 
-	defer manager.baseEnv.Unset(testKey)
+	defer func() {
+		if err := manager.baseEnv.Unset(testKey); err != nil {
+			t.Errorf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	// Test isolation
 	err := manager.Isolate(map[string]string{
@@ -446,7 +463,11 @@ func TestEnvOptions(t *testing.T) {
 	testKey := "TRIM_TEST_VAR"
 	testValue := "  trimmed  "
 
-	defer env.Unset(testKey)
+	defer func() {
+		if err := env.Unset(testKey); err != nil {
+			t.Errorf("Failed to unset %s: %v", testKey, err)
+		}
+	}()
 
 	if err := env.Set(testKey, testValue); err != nil {
 		t.Fatalf("Failed to set variable: %v", err)
@@ -475,8 +496,14 @@ func equalStringSlices(a, b []string) bool {
 
 func BenchmarkEnvironment_Get(b *testing.B) {
 	env := NewDefaultEnvironment()
-	env.Set("BENCH_VAR", "benchmark_value")
-	defer env.Unset("BENCH_VAR")
+	if err := env.Set("BENCH_VAR", "benchmark_value"); err != nil {
+		b.Fatalf("Failed to set BENCH_VAR: %v", err)
+	}
+	defer func() {
+		if err := env.Unset("BENCH_VAR"); err != nil {
+			b.Logf("Failed to unset BENCH_VAR: %v", err)
+		}
+	}()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -486,11 +513,17 @@ func BenchmarkEnvironment_Get(b *testing.B) {
 
 func BenchmarkEnvironment_Set(b *testing.B) {
 	env := NewDefaultEnvironment()
-	defer env.Unset("BENCH_SET_VAR")
+	defer func() {
+		if err := env.Unset("BENCH_SET_VAR"); err != nil {
+			b.Logf("Failed to unset BENCH_SET_VAR: %v", err)
+		}
+	}()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		env.Set("BENCH_SET_VAR", fmt.Sprintf("value_%d", i))
+		if err := env.Set("BENCH_SET_VAR", fmt.Sprintf("value_%d", i)); err != nil {
+			b.Fatalf("Failed to set BENCH_SET_VAR: %v", err)
+		}
 	}
 }
 
@@ -508,9 +541,13 @@ func BenchmarkEnvManager_WithScope(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		manager.WithScope(func(scope EnvScope) error {
-			scope.Set("BENCH_SCOPE_VAR", "value")
+		if err := manager.WithScope(func(scope EnvScope) error {
+			if err := scope.Set("BENCH_SCOPE_VAR", "value"); err != nil {
+				return err
+			}
 			return nil
-		})
+		}); err != nil {
+			b.Fatalf("WithScope failed: %v", err)
+		}
 	}
 }

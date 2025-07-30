@@ -24,13 +24,13 @@ func (Install) Local() error {
 func (Install) Uninstall() error {
 	utils.Header("Uninstalling Application")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	// Get binary name
-	binaryName := cfg.Project.Binary
+	binaryName := config.Project.Binary
 	if binaryName == "" {
 		// Try to get from module name
 		if module, err := utils.GetModuleName(); err == nil {
@@ -70,13 +70,13 @@ func (Install) Uninstall() error {
 func (Install) Default() error {
 	utils.Header("Installing Application")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	// Get binary name
-	binaryName := cfg.Project.Binary
+	binaryName := config.Project.Binary
 	if binaryName == "" {
 		// Try to get from module name
 		if module, err := utils.GetModuleName(); err == nil {
@@ -250,13 +250,13 @@ func (Install) SystemWide() error {
 		return fmt.Errorf("system-wide installation not supported on Windows")
 	}
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	// Get binary name
-	binaryName := cfg.Project.Binary
+	binaryName := config.Project.Binary
 	if binaryName == "" {
 		if module, err := utils.GetModuleName(); err == nil {
 			parts := strings.Split(module, "/")
@@ -304,7 +304,10 @@ func (Install) SystemWide() error {
 	}
 
 	// Clean up temp file
-	os.Remove(tempBinary)
+	if err := os.Remove(tempBinary); err != nil {
+		// Log but don't fail - this is cleanup
+		utils.Debug("Failed to remove temporary file %s: %v", tempBinary, err)
+	}
 
 	utils.Success("Successfully installed %s system-wide", binaryName)
 	utils.Info("Binary location: %s", installPath)

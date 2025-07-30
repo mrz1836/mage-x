@@ -188,25 +188,25 @@ func (c *RealDefaultChainError) ToSlice() []error {
 
 // Update DefaultChainError methods to use the real implementation
 func (c *DefaultChainError) Add(err error) ErrorChain {
-	chain := NewErrorChain()
+	var chain ErrorChain = NewErrorChain()
 	for _, e := range c.errors {
-		chain.Add(e)
+		chain = chain.Add(e)
 	}
 	return chain.Add(err)
 }
 
 func (c *DefaultChainError) AddWithContext(err error, ctx ErrorContext) ErrorChain {
-	chain := NewErrorChain()
+	var chain ErrorChain = NewErrorChain()
 	for _, e := range c.errors {
-		chain.Add(e)
+		chain = chain.Add(e)
 	}
 	return chain.AddWithContext(err, ctx)
 }
 
 func (c *DefaultChainError) Error() string {
-	chain := NewErrorChain()
+	var chain ErrorChain = NewErrorChain()
 	for _, e := range c.errors {
-		chain.Add(e)
+		chain = chain.Add(e)
 	}
 	return chain.Error()
 }

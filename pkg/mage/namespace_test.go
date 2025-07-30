@@ -81,7 +81,10 @@ func TestBuildNamespace_Default(t *testing.T) {
 				tt.setupMock(mockRunner)
 
 				build := NewBuildNamespace()
-				_ = build.Default() // Ignore error for now, just test that it doesn't panic
+				if err := build.Default(); err != nil {
+					// Expected to potentially fail in test environment
+					t.Logf("Build failed as expected: %v", err)
+				}
 			})
 		})
 	}
@@ -216,7 +219,10 @@ func TestToolsNamespace_Install(t *testing.T) {
 
 		tools := NewToolsNamespace()
 		// Note: actual installation may skip if tools are already installed
-		_ = tools.Install()
+		if err := tools.Install(); err != nil {
+			// Expected to potentially fail in test environment
+			t.Logf("Tools install failed as expected: %v", err)
+		}
 		// Just verify no panic occurred
 	})
 }
@@ -267,7 +273,10 @@ func TestUpdateNamespace_Check(t *testing.T) {
 
 		update := NewUpdateNamespace()
 		// Check method might fail due to network, but shouldn't panic
-		_ = update.Check()
+		if err := update.Check(); err != nil {
+			// Expected to potentially fail in test environment
+			t.Logf("Update check failed as expected: %v", err)
+		}
 	})
 }
 
@@ -288,7 +297,10 @@ func TestMetricsNamespace_LOC(t *testing.T) {
 
 		metrics := NewMetricsNamespace()
 		// Metrics might fail due to missing tools, but shouldn't panic
-		_ = metrics.LOC()
+		if err := metrics.LOC(); err != nil {
+			// Expected to potentially fail in test environment
+			t.Logf("Metrics LOC failed as expected: %v", err)
+		}
 	})
 }
 

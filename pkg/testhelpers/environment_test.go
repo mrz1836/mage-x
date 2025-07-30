@@ -105,7 +105,7 @@ func TestTestEnvironment_SetEnv(t *testing.T) {
 	require.Equal(t, "test_value", os.Getenv("TEST_VAR"))
 
 	// Override an existing variable
-	os.Setenv("EXISTING_VAR", "original")
+	require.NoError(t, os.Setenv("EXISTING_VAR", "original"))
 	te.SetEnv("EXISTING_VAR", "modified")
 	require.Equal(t, "modified", os.Getenv("EXISTING_VAR"))
 }
@@ -114,7 +114,7 @@ func TestTestEnvironment_UnsetEnv(t *testing.T) {
 	te := NewTestEnvironment(t)
 
 	// Set and then unset a variable
-	os.Setenv("TO_UNSET", "value")
+	require.NoError(t, os.Setenv("TO_UNSET", "value"))
 	te.UnsetEnv("TO_UNSET")
 	require.Empty(t, os.Getenv("TO_UNSET"))
 }
@@ -173,7 +173,8 @@ func TestTestEnvironment_CaptureOutput(t *testing.T) {
 	te := NewTestEnvironment(t)
 
 	output := te.CaptureOutput(func() {
-		os.Stdout.WriteString("captured output")
+		_, err := os.Stdout.WriteString("captured output")
+		require.NoError(t, err)
 	})
 
 	require.Equal(t, "captured output", output)
@@ -183,8 +184,10 @@ func TestTestEnvironment_CaptureError(t *testing.T) {
 	te := NewTestEnvironment(t)
 
 	stdout, stderr := te.CaptureError(func() {
-		os.Stdout.WriteString("stdout content")
-		os.Stderr.WriteString("stderr content")
+		_, err := os.Stdout.WriteString("stdout content")
+		require.NoError(t, err)
+		_, err = os.Stderr.WriteString("stderr content")
+		require.NoError(t, err)
 	})
 
 	require.Equal(t, "stdout content", stdout)
@@ -363,7 +366,8 @@ func TestTestEnvironment_CreateConfigFile(t *testing.T) {
 
 func TestTestEnvironment_Cleanup(t *testing.T) {
 	// Save original state
-	origDir, _ := os.Getwd()
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
 	origEnv := os.Getenv("TEST_CLEANUP_VAR")
 
 	te := NewTestEnvironment(t)
@@ -378,12 +382,13 @@ func TestTestEnvironment_Cleanup(t *testing.T) {
 	te.Cleanup()
 
 	// Verify state was restored
-	currentDir, _ := os.Getwd()
+	currentDir, err := os.Getwd()
+	require.NoError(t, err)
 	require.Equal(t, origDir, currentDir)
 	require.Equal(t, origEnv, os.Getenv("TEST_CLEANUP_VAR"))
 
 	// Verify temp directory was removed
-	_, err := os.Stat(rootDir)
+	_, err = os.Stat(rootDir)
 	require.True(t, os.IsNotExist(err))
 }
 

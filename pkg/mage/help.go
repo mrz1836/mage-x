@@ -105,10 +105,14 @@ func (Help) Commands() error {
 		})
 
 		for _, cmd := range nsCommands {
-			fmt.Fprintf(w, "  %s\t%s\n", cmd.Name, cmd.Description)
+			if _, err := fmt.Fprintf(w, "  %s\t%s\n", cmd.Name, cmd.Description); err != nil {
+				return fmt.Errorf("failed to write command help: %w", err)
+			}
 		}
 
-		w.Flush()
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("failed to flush help output: %w", err)
+		}
 	}
 
 	fmt.Println("\nUsage:")
@@ -153,9 +157,13 @@ func (Help) Command() error {
 			if opt.Default != "" {
 				defaultVal = fmt.Sprintf(" [default: %s]", opt.Default)
 			}
-			fmt.Fprintf(w, "  %s\t%s%s%s\n", opt.Name, opt.Description, required, defaultVal)
+			if _, err := fmt.Fprintf(w, "  %s\t%s%s%s\n", opt.Name, opt.Description, required, defaultVal); err != nil {
+				return fmt.Errorf("failed to write option help: %w", err)
+			}
 		}
-		w.Flush()
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("failed to flush option help: %w", err)
+		}
 	}
 
 	if len(cmd.Examples) > 0 {
@@ -395,9 +403,13 @@ func (Help) Topics() error {
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	for _, topic := range topics {
-		fmt.Fprintf(w, "  %s\t%s\t%s\n", topic.Name, topic.Description, topic.Command)
+		if _, err := fmt.Fprintf(w, "  %s\t%s\t%s\n", topic.Name, topic.Description, topic.Command); err != nil {
+			return fmt.Errorf("failed to write topic help: %w", err)
+		}
 	}
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("failed to flush topic help: %w", err)
+	}
 
 	fmt.Println("\nUsage:")
 	fmt.Println("  mage help:TOPIC")

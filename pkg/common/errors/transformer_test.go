@@ -10,7 +10,8 @@ import (
 )
 
 func TestDefaultErrorTransformer_RemoveTransformer(t *testing.T) {
-	transformer := NewErrorTransformer().(*DefaultErrorTransformer)
+	transformer, ok := NewErrorTransformer().(*DefaultErrorTransformer)
+	require.True(t, ok, "NewErrorTransformer should return *DefaultErrorTransformer")
 
 	// Add some transformers
 	transformer.AddNamedTransformer("test1", func(err error) error {
@@ -44,7 +45,8 @@ func TestDefaultErrorTransformer_RemoveTransformer(t *testing.T) {
 }
 
 func TestDefaultErrorTransformer_SetEnabled(t *testing.T) {
-	transformer := NewErrorTransformer().(*DefaultErrorTransformer)
+	transformer, ok := NewErrorTransformer().(*DefaultErrorTransformer)
+	require.True(t, ok, "NewErrorTransformer should return *DefaultErrorTransformer")
 
 	// Should be enabled by default
 	assert.True(t, transformer.IsEnabled())
@@ -75,7 +77,8 @@ func TestDefaultErrorTransformer_SetEnabled(t *testing.T) {
 }
 
 func TestDefaultErrorTransformer_GetTransformers(t *testing.T) {
-	transformer := NewErrorTransformer().(*DefaultErrorTransformer)
+	transformer, ok := NewErrorTransformer().(*DefaultErrorTransformer)
+	require.True(t, ok, "NewErrorTransformer should return *DefaultErrorTransformer")
 
 	// Initially empty
 	assert.Empty(t, transformer.GetTransformers())
@@ -108,7 +111,8 @@ func TestDefaultErrorTransformer_GetTransformers(t *testing.T) {
 }
 
 func TestDefaultErrorTransformer_ClearTransformers(t *testing.T) {
-	transformer := NewErrorTransformer().(*DefaultErrorTransformer)
+	transformer, ok := NewErrorTransformer().(*DefaultErrorTransformer)
+	require.True(t, ok, "NewErrorTransformer should return *DefaultErrorTransformer")
 
 	// Add various transformations
 	transformer.TransformCode(ErrNotFound, ErrUnknown)
@@ -146,7 +150,8 @@ func TestDefaultErrorTransformer_ClearTransformers(t *testing.T) {
 }
 
 func TestTransformMageError(t *testing.T) {
-	transformer := NewErrorTransformer().(*DefaultErrorTransformer)
+	transformer, ok := NewErrorTransformer().(*DefaultErrorTransformer)
+	require.True(t, ok, "NewErrorTransformer should return *DefaultErrorTransformer")
 
 	// Set up transformations
 	transformer.TransformCode(ErrInvalidArgument, ErrConfigInvalid)
@@ -650,7 +655,8 @@ func TestMockErrorTransformer(t *testing.T) {
 }
 
 func TestTransformerConcurrency(t *testing.T) {
-	transformer := NewErrorTransformer().(*DefaultErrorTransformer)
+	transformer, ok := NewErrorTransformer().(*DefaultErrorTransformer)
+	require.True(t, ok, "NewErrorTransformer should return *DefaultErrorTransformer")
 
 	// Add some transformations
 	transformer.TransformCode(ErrNotFound, ErrUnknown)
@@ -678,10 +684,13 @@ func TestTransformerConcurrency(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		go func() {
 			for j := 0; j < 100; j++ {
-				_ = transformer.GetTransformers()
-				_ = transformer.IsEnabled()
+				transformer.GetTransformers()
+				transformer.IsEnabled()
 				err := errors.New("test")
-				_ = transformer.Transform(err)
+				transformed := transformer.Transform(err)
+				if transformed == nil {
+					continue // Expected in concurrent test
+				}
 			}
 			done <- true
 		}()
@@ -697,6 +706,9 @@ func TestTransformerConcurrency(t *testing.T) {
 		transformer.ClearTransformers()
 		transformer.SetEnabled(true)
 		err := errors.New("final test")
-		_ = transformer.Transform(err)
+		result := transformer.Transform(err)
+		if result == nil {
+			// This is acceptable for the test
+		}
 	})
 }

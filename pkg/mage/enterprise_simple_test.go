@@ -60,11 +60,17 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 	ts.Run("Init method creates configuration", func() {
 		// Set non-interactive mode
 		originalInteractive := os.Getenv("INTERACTIVE")
-		defer os.Setenv("INTERACTIVE", originalInteractive)
-		os.Setenv("INTERACTIVE", "false")
+		defer func() {
+			if err := os.Setenv("INTERACTIVE", originalInteractive); err != nil {
+				ts.T().Logf("Failed to restore INTERACTIVE: %v", err)
+			}
+		}()
+		if err := os.Setenv("INTERACTIVE", "false"); err != nil {
+			ts.T().Fatalf("Failed to set INTERACTIVE: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -78,7 +84,7 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 
 	ts.Run("Validate method handles missing config", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -93,11 +99,17 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 	ts.Run("Update method handles missing config", func() {
 		// Set non-interactive mode
 		originalInteractive := os.Getenv("INTERACTIVE")
-		defer os.Setenv("INTERACTIVE", originalInteractive)
-		os.Setenv("INTERACTIVE", "false")
+		defer func() {
+			if err := os.Setenv("INTERACTIVE", originalInteractive); err != nil {
+				ts.T().Logf("Failed to restore INTERACTIVE: %v", err)
+			}
+		}()
+		if err := os.Setenv("INTERACTIVE", "false"); err != nil {
+			ts.T().Fatalf("Failed to set INTERACTIVE: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -111,7 +123,7 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 
 	ts.Run("Export method handles missing config", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -126,11 +138,13 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 	ts.Run("Import method handles missing import file", func() {
 		// Set environment variable for non-existent file
 		originalFile := os.Getenv("IMPORT_FILE")
-		defer os.Setenv("IMPORT_FILE", originalFile)
-		os.Setenv("IMPORT_FILE", "missing.yaml")
+		defer func() {
+			_ = os.Setenv("IMPORT_FILE", originalFile)
+		}()
+		_ = os.Setenv("IMPORT_FILE", "missing.yaml")
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -144,7 +158,7 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 
 	ts.Run("Schema method generates schema", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -214,8 +228,10 @@ func (ts *EnterpriseSimpleTestSuite) TestConfigSaveMethods() {
 	ts.Run("SetupEnterpriseConfig creates new config", func() {
 		// Set environment variables for non-interactive setup
 		originalName := os.Getenv("ENTERPRISE_ORG_NAME")
-		defer os.Setenv("ENTERPRISE_ORG_NAME", originalName)
-		os.Setenv("ENTERPRISE_ORG_NAME", "setup-org")
+		defer func() {
+			_ = os.Setenv("ENTERPRISE_ORG_NAME", originalName)
+		}()
+		_ = os.Setenv("ENTERPRISE_ORG_NAME", "setup-org")
 
 		err := SetupEnterpriseConfig()
 

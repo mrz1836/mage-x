@@ -15,19 +15,25 @@ func BenchmarkCommandExecution(b *testing.B) {
 
 	b.Run("echo", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_ = runner.RunCmd("echo", "test")
+			if err := runner.RunCmd("echo", "test"); err != nil {
+				b.Logf("RunCmd error (expected in benchmark): %v", err)
+			}
 		}
 	})
 
 	b.Run("echo_with_output", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, _ = runner.RunCmdOutput("echo", "test")
+			if _, err := runner.RunCmdOutput("echo", "test"); err != nil {
+				b.Logf("RunCmdOutput error (expected in benchmark): %v", err)
+			}
 		}
 	})
 
 	b.Run("true_command", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_ = runner.RunCmd("true")
+			if err := runner.RunCmd("true"); err != nil {
+				b.Logf("RunCmd error (expected in benchmark): %v", err)
+			}
 		}
 	})
 }
@@ -36,9 +42,18 @@ func BenchmarkCommandExecution(b *testing.B) {
 func BenchmarkConfigOperations(b *testing.B) {
 	// Setup
 	tempDir := b.TempDir()
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
-	os.Chdir(tempDir)
+	originalWd, err := os.Getwd()
+	if err != nil {
+		b.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(originalWd); err != nil {
+			b.Logf("Failed to restore working directory: %v", err)
+		}
+	}()
+	if err := os.Chdir(tempDir); err != nil {
+		b.Fatalf("Failed to change directory: %v", err)
+	}
 
 	// Create a config file
 	configYAML := `
@@ -62,7 +77,9 @@ test:
 lint:
   timeout: 5m
 `
-	os.WriteFile(".mage.yaml", []byte(configYAML), 0o644)
+	if err := os.WriteFile(".mage.yaml", []byte(configYAML), 0o644); err != nil {
+		b.Fatalf("Failed to write config file: %v", err)
+	}
 
 	b.Run("LoadConfig", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -140,24 +157,36 @@ func BenchmarkFileOperations(b *testing.B) {
 	b.Run("WriteSmallFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			path := filepath.Join(tempDir, "small.txt")
-			_ = fileOps.File.WriteFile(path, smallData, 0o644)
-			os.Remove(path)
+			if err := fileOps.File.WriteFile(path, smallData, 0o644); err != nil {
+				b.Logf("WriteFile error: %v", err)
+			}
+			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+				b.Logf("Remove error: %v", err)
+			}
 		}
 	})
 
 	b.Run("WriteMediumFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			path := filepath.Join(tempDir, "medium.txt")
-			_ = fileOps.File.WriteFile(path, mediumData, 0o644)
-			os.Remove(path)
+			if err := fileOps.File.WriteFile(path, mediumData, 0o644); err != nil {
+				b.Logf("WriteFile error: %v", err)
+			}
+			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+				b.Logf("Remove error: %v", err)
+			}
 		}
 	})
 
 	b.Run("WriteLargeFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			path := filepath.Join(tempDir, "large.txt")
-			_ = fileOps.File.WriteFile(path, largeData, 0o644)
-			os.Remove(path)
+			if err := fileOps.File.WriteFile(path, largeData, 0o644); err != nil {
+				b.Logf("WriteFile error: %v", err)
+			}
+			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+				b.Logf("Remove error: %v", err)
+			}
 		}
 	})
 
@@ -166,25 +195,37 @@ func BenchmarkFileOperations(b *testing.B) {
 	mediumPath := filepath.Join(tempDir, "read_medium.txt")
 	largePath := filepath.Join(tempDir, "read_large.txt")
 
-	fileOps.File.WriteFile(smallPath, smallData, 0o644)
-	fileOps.File.WriteFile(mediumPath, mediumData, 0o644)
-	fileOps.File.WriteFile(largePath, largeData, 0o644)
+	if err := fileOps.File.WriteFile(smallPath, smallData, 0o644); err != nil {
+		b.Fatalf("Failed to write small file: %v", err)
+	}
+	if err := fileOps.File.WriteFile(mediumPath, mediumData, 0o644); err != nil {
+		b.Fatalf("Failed to write medium file: %v", err)
+	}
+	if err := fileOps.File.WriteFile(largePath, largeData, 0o644); err != nil {
+		b.Fatalf("Failed to write large file: %v", err)
+	}
 
 	b.Run("ReadSmallFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, _ = fileOps.File.ReadFile(smallPath)
+			if _, err := fileOps.File.ReadFile(smallPath); err != nil {
+				b.Logf("ReadFile error: %v", err)
+			}
 		}
 	})
 
 	b.Run("ReadMediumFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, _ = fileOps.File.ReadFile(mediumPath)
+			if _, err := fileOps.File.ReadFile(mediumPath); err != nil {
+				b.Logf("ReadFile error: %v", err)
+			}
 		}
 	})
 
 	b.Run("ReadLargeFile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, _ = fileOps.File.ReadFile(largePath)
+			if _, err := fileOps.File.ReadFile(largePath); err != nil {
+				b.Logf("ReadFile error: %v", err)
+			}
 		}
 	})
 }
@@ -239,13 +280,26 @@ func BenchmarkStringOperations(b *testing.B) {
 func BenchmarkBuildOperations(b *testing.B) {
 	// Setup
 	tempDir := b.TempDir()
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
-	os.Chdir(tempDir)
+	originalWd, err := os.Getwd()
+	if err != nil {
+		b.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(originalWd); err != nil {
+			b.Logf("Failed to restore working directory: %v", err)
+		}
+	}()
+	if err := os.Chdir(tempDir); err != nil {
+		b.Fatalf("Failed to change directory: %v", err)
+	}
 
 	// Create a simple project
-	os.WriteFile("go.mod", []byte("module bench\n\ngo 1.24\n"), 0o644)
-	os.WriteFile("main.go", []byte("package main\nfunc main() {}\n"), 0o644)
+	if err := os.WriteFile("go.mod", []byte("module bench\n\ngo 1.24\n"), 0o644); err != nil {
+		b.Fatalf("Failed to write go.mod: %v", err)
+	}
+	if err := os.WriteFile("main.go", []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
+		b.Fatalf("Failed to write main.go: %v", err)
+	}
 
 	cfg = &Config{
 		Project: ProjectConfig{

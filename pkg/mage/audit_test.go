@@ -35,7 +35,12 @@ func (ts *AuditTestSuite) TearDownTest() {
 func (ts *AuditTestSuite) TestAuditShow() {
 	ts.Run("show audit events handles disabled audit gracefully", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Show()
@@ -56,23 +61,52 @@ func (ts *AuditTestSuite) TestAuditShow() {
 		originalSuccess := os.Getenv("SUCCESS")
 		originalLimit := os.Getenv("LIMIT")
 		defer func() {
-			os.Setenv("START_TIME", originalStartTime)
-			os.Setenv("END_TIME", originalEndTime)
-			os.Setenv("USER", originalUser)
-			os.Setenv("COMMAND", originalCommand)
-			os.Setenv("SUCCESS", originalSuccess)
-			os.Setenv("LIMIT", originalLimit)
+			if err := os.Setenv("START_TIME", originalStartTime); err != nil {
+				ts.T().Logf("Failed to restore START_TIME: %v", err)
+			}
+			if err := os.Setenv("END_TIME", originalEndTime); err != nil {
+				ts.T().Logf("Failed to restore END_TIME: %v", err)
+			}
+			if err := os.Setenv("USER", originalUser); err != nil {
+				ts.T().Logf("Failed to restore USER: %v", err)
+			}
+			if err := os.Setenv("COMMAND", originalCommand); err != nil {
+				ts.T().Logf("Failed to restore COMMAND: %v", err)
+			}
+			if err := os.Setenv("SUCCESS", originalSuccess); err != nil {
+				ts.T().Logf("Failed to restore SUCCESS: %v", err)
+			}
+			if err := os.Setenv("LIMIT", originalLimit); err != nil {
+				ts.T().Logf("Failed to restore LIMIT: %v", err)
+			}
 		}()
 
-		os.Setenv("START_TIME", "2023-01-01")
-		os.Setenv("END_TIME", "2023-12-31")
-		os.Setenv("USER", "testuser")
-		os.Setenv("COMMAND", "test:run")
-		os.Setenv("SUCCESS", "true")
-		os.Setenv("LIMIT", "10")
+		if err := os.Setenv("START_TIME", "2023-01-01"); err != nil {
+			ts.T().Fatalf("Failed to set START_TIME: %v", err)
+		}
+		if err := os.Setenv("END_TIME", "2023-12-31"); err != nil {
+			ts.T().Fatalf("Failed to set END_TIME: %v", err)
+		}
+		if err := os.Setenv("USER", "testuser"); err != nil {
+			ts.T().Fatalf("Failed to set USER: %v", err)
+		}
+		if err := os.Setenv("COMMAND", "test:run"); err != nil {
+			ts.T().Fatalf("Failed to set COMMAND: %v", err)
+		}
+		if err := os.Setenv("SUCCESS", "true"); err != nil {
+			ts.T().Fatalf("Failed to set SUCCESS: %v", err)
+		}
+		if err := os.Setenv("LIMIT", "10"); err != nil {
+			ts.T().Fatalf("Failed to set LIMIT: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Show()
@@ -89,7 +123,12 @@ func (ts *AuditTestSuite) TestAuditShow() {
 func (ts *AuditTestSuite) TestAuditStats() {
 	ts.Run("display audit statistics handles disabled audit gracefully", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Stats()
@@ -106,7 +145,12 @@ func (ts *AuditTestSuite) TestAuditStats() {
 func (ts *AuditTestSuite) TestAuditExport() {
 	ts.Run("export audit events with default settings", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Export()
@@ -121,11 +165,22 @@ func (ts *AuditTestSuite) TestAuditExport() {
 	ts.Run("export audit events with custom output file", func() {
 		// Set custom output file
 		originalOutput := os.Getenv("OUTPUT")
-		defer os.Setenv("OUTPUT", originalOutput)
-		os.Setenv("OUTPUT", "custom-audit.json")
+		defer func() {
+			if err := os.Setenv("OUTPUT", originalOutput); err != nil {
+				ts.T().Logf("Failed to restore OUTPUT: %v", err)
+			}
+		}()
+		if err := os.Setenv("OUTPUT", "custom-audit.json"); err != nil {
+			ts.T().Fatalf("Failed to set OUTPUT: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Export()
@@ -142,7 +197,12 @@ func (ts *AuditTestSuite) TestAuditExport() {
 func (ts *AuditTestSuite) TestAuditCleanup() {
 	ts.Run("cleanup old audit events", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Cleanup()
@@ -157,7 +217,12 @@ func (ts *AuditTestSuite) TestAuditCleanup() {
 func (ts *AuditTestSuite) TestAuditEnable() {
 	ts.Run("enable audit logging", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Enable()
@@ -175,7 +240,12 @@ func (ts *AuditTestSuite) TestAuditEnable() {
 		ts.env.CreateFile(".mage/config.yaml", `{"audit": {"enabled": false}}`)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Enable()
@@ -190,7 +260,12 @@ func (ts *AuditTestSuite) TestAuditEnable() {
 func (ts *AuditTestSuite) TestAuditDisable() {
 	ts.Run("disable audit logging without existing config", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Disable()
@@ -207,7 +282,12 @@ func (ts *AuditTestSuite) TestAuditDisable() {
 		ts.env.CreateFile(".mage/config.yaml", `{"audit": {"enabled": true}}`)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Disable()
@@ -222,7 +302,12 @@ func (ts *AuditTestSuite) TestAuditDisable() {
 func (ts *AuditTestSuite) TestAuditReport() {
 	ts.Run("generate compliance report handles disabled audit gracefully", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Report()
@@ -237,11 +322,22 @@ func (ts *AuditTestSuite) TestAuditReport() {
 	ts.Run("generate compliance report with custom output", func() {
 		// Set custom output file
 		originalOutput := os.Getenv("OUTPUT")
-		defer os.Setenv("OUTPUT", originalOutput)
-		os.Setenv("OUTPUT", "custom-report.json")
+		defer func() {
+			if err := os.Setenv("OUTPUT", originalOutput); err != nil {
+				ts.T().Logf("Failed to restore OUTPUT: %v", err)
+			}
+		}()
+		if err := os.Setenv("OUTPUT", "custom-report.json"); err != nil {
+			ts.T().Fatalf("Failed to set OUTPUT: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.audit.Report()
@@ -277,14 +373,26 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 		originalGoPath := os.Getenv("GOPATH")
 		originalMageVerbose := os.Getenv("MAGE_VERBOSE")
 		defer func() {
-			os.Setenv("GO_VERSION", originalGoVersion)
-			os.Setenv("GOPATH", originalGoPath)
-			os.Setenv("MAGE_VERBOSE", originalMageVerbose)
+			if err := os.Setenv("GO_VERSION", originalGoVersion); err != nil {
+				ts.T().Logf("Failed to restore GO_VERSION: %v", err)
+			}
+			if err := os.Setenv("GOPATH", originalGoPath); err != nil {
+				ts.T().Logf("Failed to restore GOPATH: %v", err)
+			}
+			if err := os.Setenv("MAGE_VERBOSE", originalMageVerbose); err != nil {
+				ts.T().Logf("Failed to restore MAGE_VERBOSE: %v", err)
+			}
 		}()
 
-		os.Setenv("GO_VERSION", "1.24.0")
-		os.Setenv("GOPATH", "/go")
-		os.Setenv("MAGE_VERBOSE", "true")
+		if err := os.Setenv("GO_VERSION", "1.24.0"); err != nil {
+			ts.T().Fatalf("Failed to set GO_VERSION: %v", err)
+		}
+		if err := os.Setenv("GOPATH", "/go"); err != nil {
+			ts.T().Fatalf("Failed to set GOPATH: %v", err)
+		}
+		if err := os.Setenv("MAGE_VERBOSE", "true"); err != nil {
+			ts.T().Fatalf("Failed to set MAGE_VERBOSE: %v", err)
+		}
 
 		env := getFilteredEnvironment()
 		require.Contains(ts.T(), env, "GO_VERSION")
@@ -308,7 +416,12 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 
 			version := ""
 			err := env.WithMockRunner(
-				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func(r interface{}) error {
+					if err := SetRunner(r.(CommandRunner)); err != nil {
+						return err
+					}
+					return nil
+				},
 				func() interface{} { return GetRunner() },
 				func() error {
 					version = getGoVersion()
@@ -330,7 +443,12 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 
 			version := ""
 			err := env.WithMockRunner(
-				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func(r interface{}) error {
+					if err := SetRunner(r.(CommandRunner)); err != nil {
+						return err
+					}
+					return nil
+				},
 				func() interface{} { return GetRunner() },
 				func() error {
 					version = getGoVersion()
@@ -352,7 +470,12 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 
 			version := ""
 			err := env.WithMockRunner(
-				func(r interface{}) { SetRunner(r.(CommandRunner)) },
+				func(r interface{}) error {
+					if err := SetRunner(r.(CommandRunner)); err != nil {
+						return err
+					}
+					return nil
+				},
 				func() interface{} { return GetRunner() },
 				func() error {
 					version = getGoVersion()
@@ -382,7 +505,12 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 
 		version := ""
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				version = getVersion()
@@ -426,11 +554,18 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go1.24.0 linux/amd64", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				// Enable audit logging (may fail if directory doesn't exist)
-				_ = ts.audit.Enable()
+				if err := ts.audit.Enable(); err != nil {
+					// Error expected and acceptable - audit may be disabled
+				}
 
 				// Log some command executions (these should not fail)
 				startTime := time.Now()
@@ -439,16 +574,28 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 				LogCommandExecution("test", []string{"-v"}, startTime, duration, 1, false)
 
 				// These operations may fail if audit is disabled, which is acceptable
-				_ = ts.audit.Show()
-				_ = ts.audit.Stats()
-				_ = ts.audit.Export()
-				_ = ts.audit.Report()
+				if err := ts.audit.Show(); err != nil {
+					// Error expected and acceptable - audit may be disabled
+				}
+				if err := ts.audit.Stats(); err != nil {
+					// Error expected and acceptable - audit may be disabled
+				}
+				if err := ts.audit.Export(); err != nil {
+					// Error expected and acceptable - audit may be disabled
+				}
+				if err := ts.audit.Report(); err != nil {
+					// Error expected and acceptable - audit may be disabled
+				}
 
 				// Cleanup should work regardless
-				_ = ts.audit.Cleanup()
+				if err := ts.audit.Cleanup(); err != nil {
+					// Error expected and acceptable - cleanup is best-effort
+				}
 
 				// Disable audit logging (may fail if file doesn't exist)
-				_ = ts.audit.Disable()
+				if err := ts.audit.Disable(); err != nil {
+					// Error expected and acceptable - audit may already be disabled
+				}
 
 				return nil
 			},
@@ -472,29 +619,60 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 		}
 		defer func() {
 			for key, value := range originalVars {
-				os.Setenv(key, value)
+				if err := os.Setenv(key, value); err != nil {
+					ts.T().Logf("Failed to restore %s: %v", key, err)
+				}
 			}
 		}()
 
-		os.Setenv("START_TIME", "2023-01-01")
-		os.Setenv("END_TIME", "2023-12-31")
-		os.Setenv("USER", "testuser")
-		os.Setenv("COMMAND", "test")
-		os.Setenv("SUCCESS", "true")
-		os.Setenv("LIMIT", "25")
-		os.Setenv("OUTPUT", "test-audit.json")
-		os.Setenv("GO_VERSION", "1.24.0")
-		os.Setenv("MAGE_AUDIT_ENABLED", "true")
+		if err := os.Setenv("START_TIME", "2023-01-01"); err != nil {
+			ts.T().Fatalf("Failed to set START_TIME: %v", err)
+		}
+		if err := os.Setenv("END_TIME", "2023-12-31"); err != nil {
+			ts.T().Fatalf("Failed to set END_TIME: %v", err)
+		}
+		if err := os.Setenv("USER", "testuser"); err != nil {
+			ts.T().Fatalf("Failed to set USER: %v", err)
+		}
+		if err := os.Setenv("COMMAND", "test"); err != nil {
+			ts.T().Fatalf("Failed to set COMMAND: %v", err)
+		}
+		if err := os.Setenv("SUCCESS", "true"); err != nil {
+			ts.T().Fatalf("Failed to set SUCCESS: %v", err)
+		}
+		if err := os.Setenv("LIMIT", "25"); err != nil {
+			ts.T().Fatalf("Failed to set LIMIT: %v", err)
+		}
+		if err := os.Setenv("OUTPUT", "test-audit.json"); err != nil {
+			ts.T().Fatalf("Failed to set OUTPUT: %v", err)
+		}
+		if err := os.Setenv("GO_VERSION", "1.24.0"); err != nil {
+			ts.T().Fatalf("Failed to set GO_VERSION: %v", err)
+		}
+		if err := os.Setenv("MAGE_AUDIT_ENABLED", "true"); err != nil {
+			ts.T().Fatalf("Failed to set MAGE_AUDIT_ENABLED: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				if err := SetRunner(r.(CommandRunner)); err != nil {
+					return err
+				}
+				return nil
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				// Test all methods with environment variables set
 				// These may fail if audit is disabled, which is acceptable
-				_ = ts.audit.Show()
-				_ = ts.audit.Export()
-				_ = ts.audit.Report()
+				if err := ts.audit.Show(); err != nil {
+					// Error expected and acceptable - audit may be disabled
+				}
+				if err := ts.audit.Export(); err != nil {
+					// Error expected and acceptable - audit may be disabled
+				}
+				if err := ts.audit.Report(); err != nil {
+					// Error expected and acceptable - audit may be disabled
+				}
 				return nil
 			},
 		)

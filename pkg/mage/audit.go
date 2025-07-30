@@ -397,8 +397,11 @@ func LogCommandExecution(command string, args []string, startTime time.Time, dur
 		},
 	}
 
-	// Log the event (errors are handled internally)
-	_ = auditLogger.LogEvent(event)
+	// Log the event (errors are handled internally by the logger)
+	if err := auditLogger.LogEvent(event); err != nil {
+		// Log error but don't fail the operation
+		fmt.Printf("Warning: Failed to log audit event: %v\n", err)
+	}
 }
 
 // getFilteredEnvironment returns a filtered environment map

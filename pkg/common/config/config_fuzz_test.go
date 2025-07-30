@@ -496,10 +496,16 @@ func FuzzConfigManager(f *testing.F) {
 		watchCallback := func(interface{}) {
 			// Simple callback for testing
 		}
-		_ = manager.Watch(watchCallback)
+		if err := manager.Watch(watchCallback); err != nil {
+			// Log but don't fail, as Watch may not be fully implemented
+			t.Logf("Watch returned error: %v", err)
+		}
 
 		// Test Reload (should not panic)
-		_ = manager.Reload(&cfg)
+		if err := manager.Reload(&cfg); err != nil {
+			// Log but don't fail, as this is a fuzz test
+			t.Logf("Reload returned error: %v", err)
+		}
 	})
 }
 

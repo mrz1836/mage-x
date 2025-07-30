@@ -35,7 +35,7 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 		ts.env.CreateFile("main.go", "package main\n\nfunc main() {}\n")
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Default()
@@ -53,7 +53,7 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Default()
@@ -66,8 +66,10 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 	ts.Run("generate with build tags", func() {
 		// Set environment variable for build tags
 		originalTags := os.Getenv("GO_BUILD_TAGS")
-		defer os.Setenv("GO_BUILD_TAGS", originalTags)
-		os.Setenv("GO_BUILD_TAGS", "test,dev")
+		defer func() {
+			_ = os.Setenv("GO_BUILD_TAGS", originalTags)
+		}()
+		_ = os.Setenv("GO_BUILD_TAGS", "test,dev")
 
 		// Create a Go file with generate directives
 		ts.env.CreateFile("generate.go", "package main\n\n//go:generate echo test\n\nfunc main() {}\n")
@@ -76,7 +78,7 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "-tags", "test,dev"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Default()
@@ -94,7 +96,7 @@ func (ts *GenerateTestSuite) TestGenerateAll() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.All()
@@ -107,14 +109,16 @@ func (ts *GenerateTestSuite) TestGenerateAll() {
 	ts.Run("generate all with build tags", func() {
 		// Set environment variable for build tags
 		originalTags := os.Getenv("GO_BUILD_TAGS")
-		defer os.Setenv("GO_BUILD_TAGS", originalTags)
-		os.Setenv("GO_BUILD_TAGS", "integration")
+		defer func() {
+			_ = os.Setenv("GO_BUILD_TAGS", originalTags)
+		}()
+		_ = os.Setenv("GO_BUILD_TAGS", "integration")
 
 		// Mock successful go generate command with tags
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "./...", "-tags", "integration"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.All()
@@ -132,7 +136,7 @@ func (ts *GenerateTestSuite) TestGenerateMocks() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/golang/mock/mockgen@latest"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Mocks()
@@ -147,7 +151,7 @@ func (ts *GenerateTestSuite) TestGenerateMocks() {
 func (ts *GenerateTestSuite) TestGenerateClean() {
 	ts.Run("no generated files to clean", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Clean()
@@ -163,7 +167,7 @@ func (ts *GenerateTestSuite) TestGenerateClean() {
 		ts.env.CreateFile("test_gen.go", "// Generated file")
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Clean()
@@ -176,11 +180,13 @@ func (ts *GenerateTestSuite) TestGenerateClean() {
 	ts.Run("clean with custom patterns", func() {
 		// Set custom patterns environment variable
 		originalPatterns := os.Getenv("GENERATED_PATTERNS")
-		defer os.Setenv("GENERATED_PATTERNS", originalPatterns)
-		os.Setenv("GENERATED_PATTERNS", "*.custom.go,*_test_gen.go")
+		defer func() {
+			_ = os.Setenv("GENERATED_PATTERNS", originalPatterns)
+		}()
+		_ = os.Setenv("GENERATED_PATTERNS", "*.custom.go,*_test_gen.go")
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Clean()
@@ -198,7 +204,7 @@ func (ts *GenerateTestSuite) TestGenerateCode() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Code()
@@ -216,7 +222,7 @@ func (ts *GenerateTestSuite) TestGenerateDocs() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Generating documentation"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Docs()
@@ -234,7 +240,7 @@ func (ts *GenerateTestSuite) TestGenerateSwagger() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Generating Swagger docs"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Swagger()
@@ -252,7 +258,7 @@ func (ts *GenerateTestSuite) TestGenerateOpenAPI() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Generating OpenAPI spec"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.OpenAPI()
@@ -270,7 +276,7 @@ func (ts *GenerateTestSuite) TestGenerateGraphQL() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Generating GraphQL code"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.GraphQL()
@@ -288,7 +294,7 @@ func (ts *GenerateTestSuite) TestGenerateSQL() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Generating SQL files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.SQL()
@@ -306,7 +312,7 @@ func (ts *GenerateTestSuite) TestGenerateWire() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Generating wire files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Wire()
@@ -324,7 +330,7 @@ func (ts *GenerateTestSuite) TestGenerateConfig() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"Generating config files"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.generate.Config()
@@ -393,7 +399,7 @@ func (ts *GenerateTestSuite) TestGenerateIntegration() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				// Run default generation
@@ -413,11 +419,11 @@ func (ts *GenerateTestSuite) TestGenerateIntegration() {
 		originalTags := os.Getenv("GO_BUILD_TAGS")
 		originalPatterns := os.Getenv("GENERATED_PATTERNS")
 		defer func() {
-			os.Setenv("GO_BUILD_TAGS", originalTags)
-			os.Setenv("GENERATED_PATTERNS", originalPatterns)
+			_ = os.Setenv("GO_BUILD_TAGS", originalTags)
+			_ = os.Setenv("GENERATED_PATTERNS", originalPatterns)
 		}()
-		os.Setenv("GO_BUILD_TAGS", "test")
-		os.Setenv("GENERATED_PATTERNS", "*.custom.go")
+		_ = os.Setenv("GO_BUILD_TAGS", "test")
+		_ = os.Setenv("GENERATED_PATTERNS", "*.custom.go")
 
 		// Create test files
 		ts.env.CreateFile("generate.go", "package main\n\n//go:generate echo test\n\nfunc main() {}\n")
@@ -427,7 +433,7 @@ func (ts *GenerateTestSuite) TestGenerateIntegration() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "-tags", "test"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				// Run generation with tags

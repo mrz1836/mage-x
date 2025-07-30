@@ -77,7 +77,11 @@ func TestPathBuilder_TempOperations(t *testing.T) {
 	// Test TempDir
 	tempDir, err := TempDir("testdir_*")
 	require.NoError(t, err, "TempDir() should not fail")
-	defer os.RemoveAll(tempDir.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	assert.True(t, tempDir.Exists(), "TempDir should exist")
 	assert.True(t, tempDir.IsDir(), "TempDir should be a directory")
@@ -87,7 +91,11 @@ func TestPathBuilder_FileOperations(t *testing.T) {
 	// Create a temporary directory for testing
 	tempDir, err := TempDir("pathtest_*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tempDir.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	// Test Create
 	testFile := tempDir.Join("test.txt")
@@ -112,16 +120,23 @@ func TestPathBuilder_Listing(t *testing.T) {
 	// Create a temporary directory with some files
 	tempDir, err := TempDir("listtest_*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tempDir.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	// Create test files and directories
 	testFile1 := tempDir.Join("file1.txt")
 	testFile2 := tempDir.Join("file2.go")
 	testSubDir := tempDir.Join("subdir")
 
-	testFile1.Create()
-	testFile2.Create()
-	testSubDir.CreateDir()
+	err = testFile1.Create()
+	require.NoError(t, err)
+	err = testFile2.Create()
+	require.NoError(t, err)
+	err = testSubDir.CreateDir()
+	require.NoError(t, err)
 
 	// Test List
 	entries, err := tempDir.List()
@@ -206,7 +221,8 @@ func TestPathMatcher(t *testing.T) {
 	assert.False(t, matcher.Match("test.go"), "Should not match test.go")
 
 	// Test multiple patterns
-	matcher.AddPattern("*.go")
+	err = matcher.AddPattern("*.go")
+	require.NoError(t, err)
 	assert.True(t, matcher.Match("test.go"), "Should match test.go after adding pattern")
 
 	// Test case sensitivity
@@ -296,12 +312,19 @@ func TestPackageConvenienceFunctions(t *testing.T) {
 	// Test GlobPaths (create some test files first)
 	tempDir, err := TempDir("globtest_*")
 	require.NoError(t, err, "Failed to create temp dir")
-	defer os.RemoveAll(tempDir.String())
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
 
 	// Create test files
-	tempDir.Join("test1.txt").Create()
-	tempDir.Join("test2.txt").Create()
-	tempDir.Join("test1.go").Create()
+	err = tempDir.Join("test1.txt").Create()
+	require.NoError(t, err)
+	err = tempDir.Join("test2.txt").Create()
+	require.NoError(t, err)
+	err = tempDir.Join("test1.go").Create()
+	require.NoError(t, err)
 
 	pattern := filepath.Join(tempDir.String(), "*.txt")
 	matches, err := GlobPaths(pattern)
@@ -352,9 +375,15 @@ func BenchmarkPathBuilder_String(b *testing.B) {
 
 func BenchmarkPathMatcher_Match(b *testing.B) {
 	matcher := NewPathMatcher()
-	matcher.AddPattern("*.txt")
-	matcher.AddPattern("*.go")
-	matcher.AddPattern("test_*")
+	if err := matcher.AddPattern("*.txt"); err != nil {
+		b.Fatal(err)
+	}
+	if err := matcher.AddPattern("*.go"); err != nil {
+		b.Fatal(err)
+	}
+	if err := matcher.AddPattern("test_*"); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

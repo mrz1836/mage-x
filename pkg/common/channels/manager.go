@@ -388,7 +388,7 @@ func (m *Manager) CleanupExpiredReleases() error {
 	if len(cleanupErrors) > 0 {
 		chain := errors.NewChain()
 		for _, err := range cleanupErrors {
-			chain.Add(err)
+			chain = chain.Add(err)
 		}
 		return chain
 	}

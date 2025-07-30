@@ -88,7 +88,11 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 		SensitiveEnvs:   []string{"SECRET_KEY", "PASSWORD"},
 	}
 	logger := NewAuditLogger(config)
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Logf("Warning: failed to close logger: %v", err)
+		}
+	}()
 
 	t.Run("LogEvent stores event", func(t *testing.T) {
 		event := AuditEvent{
@@ -178,7 +182,11 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 		noEnvConfig := config
 		noEnvConfig.LogEnvironment = false
 		noEnvLogger := NewAuditLogger(noEnvConfig)
-		defer noEnvLogger.Close()
+		defer func() {
+			if err := noEnvLogger.Close(); err != nil {
+				t.Logf("Warning: failed to close logger: %v", err)
+			}
+		}()
 
 		event := AuditEvent{
 			Timestamp: time.Now(),
@@ -214,7 +222,11 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 		DatabasePath: filepath.Join(tempDir, "test_audit.db"),
 	}
 	logger := NewAuditLogger(config)
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Logf("Warning: failed to close logger: %v", err)
+		}
+	}()
 
 	// Store test events
 	baseTime := time.Now().Add(-time.Hour)
@@ -352,7 +364,11 @@ func TestAuditLogger_GetStats(t *testing.T) {
 		DatabasePath: filepath.Join(tempDir, "test_audit.db"),
 	}
 	logger := NewAuditLogger(config)
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Logf("Warning: failed to close logger: %v", err)
+		}
+	}()
 
 	// Store test events
 	baseTime := time.Now()
@@ -416,7 +432,11 @@ func TestAuditLogger_CleanupOldEvents(t *testing.T) {
 		RetentionDays: 7,
 	}
 	logger := NewAuditLogger(config)
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Logf("Warning: failed to close logger: %v", err)
+		}
+	}()
 
 	// Store old and new events
 	oldTime := time.Now().AddDate(0, 0, -10) // 10 days old
@@ -465,7 +485,11 @@ func TestAuditLogger_ExportEvents(t *testing.T) {
 		DatabasePath: filepath.Join(tempDir, "test_audit.db"),
 	}
 	logger := NewAuditLogger(config)
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Logf("Warning: failed to close logger: %v", err)
+		}
+	}()
 
 	// Store test event
 	event := AuditEvent{
@@ -571,23 +595,38 @@ func TestPackageLevelAuditFunctions(t *testing.T) {
 		}
 
 		assert.NotPanics(t, func() {
-			LogAuditEvent(event)
+			err := LogAuditEvent(event)
+			if err != nil {
+				// Expected - package function may return error
+			}
 		})
 
 		assert.NotPanics(t, func() {
-			GetAuditEvents(AuditFilter{Limit: 1})
+			_, err := GetAuditEvents(AuditFilter{Limit: 1})
+			if err != nil {
+				// Expected - package function may return error
+			}
 		})
 
 		assert.NotPanics(t, func() {
-			GetAuditStats()
+			_, err := GetAuditStats()
+			if err != nil {
+				// Expected - package function may return error
+			}
 		})
 
 		assert.NotPanics(t, func() {
-			CleanupAuditEvents()
+			err := CleanupAuditEvents()
+			if err != nil {
+				// Expected - package function may return error
+			}
 		})
 
 		assert.NotPanics(t, func() {
-			ExportAuditEvents(AuditFilter{Limit: 1})
+			_, err := ExportAuditEvents(AuditFilter{Limit: 1})
+			if err != nil {
+				// Expected - package function may return error
+			}
 		})
 	})
 
@@ -606,9 +645,13 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 		original := os.Getenv("MAGE_AUDIT_ENABLED")
 		defer func() {
 			if original == "" {
-				os.Unsetenv("MAGE_AUDIT_ENABLED")
+				if err := os.Unsetenv("MAGE_AUDIT_ENABLED"); err != nil {
+					t.Logf("Warning: failed to unset MAGE_AUDIT_ENABLED: %v", err)
+				}
 			} else {
-				os.Setenv("MAGE_AUDIT_ENABLED", original)
+				if err := os.Setenv("MAGE_AUDIT_ENABLED", original); err != nil {
+					t.Logf("Warning: failed to set MAGE_AUDIT_ENABLED: %v", err)
+				}
 			}
 		}()
 
@@ -617,7 +660,9 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 		auditOnce = sync.Once{}
 
 		// Set environment variable
-		os.Setenv("MAGE_AUDIT_ENABLED", "true")
+		if err := os.Setenv("MAGE_AUDIT_ENABLED", "true"); err != nil {
+			t.Fatalf("Failed to set MAGE_AUDIT_ENABLED: %v", err)
+		}
 
 		logger := GetAuditLogger()
 		// The logger might still be disabled if database init fails, but config should show enabled
@@ -630,14 +675,22 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 		originalDB := os.Getenv("MAGE_AUDIT_DB")
 		defer func() {
 			if originalEnabled == "" {
-				os.Unsetenv("MAGE_AUDIT_ENABLED")
+				if err := os.Unsetenv("MAGE_AUDIT_ENABLED"); err != nil {
+					t.Logf("Warning: failed to unset MAGE_AUDIT_ENABLED: %v", err)
+				}
 			} else {
-				os.Setenv("MAGE_AUDIT_ENABLED", originalEnabled)
+				if err := os.Setenv("MAGE_AUDIT_ENABLED", originalEnabled); err != nil {
+					t.Logf("Warning: failed to set MAGE_AUDIT_ENABLED: %v", err)
+				}
 			}
 			if originalDB == "" {
-				os.Unsetenv("MAGE_AUDIT_DB")
+				if err := os.Unsetenv("MAGE_AUDIT_DB"); err != nil {
+					t.Logf("Warning: failed to unset MAGE_AUDIT_DB: %v", err)
+				}
 			} else {
-				os.Setenv("MAGE_AUDIT_DB", originalDB)
+				if err := os.Setenv("MAGE_AUDIT_DB", originalDB); err != nil {
+					t.Logf("Warning: failed to set MAGE_AUDIT_DB: %v", err)
+				}
 			}
 		}()
 
@@ -646,8 +699,12 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 		auditOnce = sync.Once{}
 
 		// Set environment variables
-		os.Setenv("MAGE_AUDIT_ENABLED", "true")
-		os.Setenv("MAGE_AUDIT_DB", "/custom/path/audit.db")
+		if err := os.Setenv("MAGE_AUDIT_ENABLED", "true"); err != nil {
+			t.Fatalf("Failed to set MAGE_AUDIT_ENABLED: %v", err)
+		}
+		if err := os.Setenv("MAGE_AUDIT_DB", "/custom/path/audit.db"); err != nil {
+			t.Fatalf("Failed to set MAGE_AUDIT_DB: %v", err)
+		}
 
 		logger := GetAuditLogger()
 		assert.Equal(t, "/custom/path/audit.db", logger.config.DatabasePath)
@@ -662,7 +719,11 @@ func BenchmarkAuditLogger_LogEvent(b *testing.B) {
 		DatabasePath: filepath.Join(tempDir, "bench_audit.db"),
 	}
 	logger := NewAuditLogger(config)
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			b.Logf("Warning: failed to close logger: %v", err)
+		}
+	}()
 
 	event := AuditEvent{
 		Timestamp:  time.Now(),
@@ -676,7 +737,10 @@ func BenchmarkAuditLogger_LogEvent(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.LogEvent(event)
+		err := logger.LogEvent(event)
+		if err != nil {
+			b.Logf("LogEvent error in benchmark: %v", err)
+		}
 	}
 }
 
@@ -687,7 +751,11 @@ func BenchmarkAuditLogger_GetEvents(b *testing.B) {
 		DatabasePath: filepath.Join(tempDir, "bench_audit.db"),
 	}
 	logger := NewAuditLogger(config)
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			b.Logf("Warning: failed to close logger: %v", err)
+		}
+	}()
 
 	// Store some test events
 	for i := 0; i < 100; i++ {
@@ -697,7 +765,9 @@ func BenchmarkAuditLogger_GetEvents(b *testing.B) {
 			Command:   "bench_command",
 			Success:   true,
 		}
-		logger.LogEvent(event)
+		if err := logger.LogEvent(event); err != nil {
+			b.Fatalf("Failed to log event in benchmark setup: %v", err)
+		}
 	}
 
 	filter := AuditFilter{
@@ -708,6 +778,8 @@ func BenchmarkAuditLogger_GetEvents(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.GetEvents(filter)
+		if _, err := logger.GetEvents(filter); err != nil {
+			b.Logf("GetEvents error in benchmark: %v", err)
+		}
 	}
 }

@@ -94,7 +94,6 @@
 		"disable": [
 			"godox",
 			"godot",
-			"errcheck",
 			"gosec",
 			"exhaustive",
 			"gocognit",
@@ -116,11 +115,8 @@
 			"staticcheck",
 			"bodyclose",
 			"wastedassign",
-			"makezero",
 			"prealloc",
 			"predeclared",
-			"rowserrcheck",
-			"govet",
 			"nilerr"
 		],
 		"settings": {

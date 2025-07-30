@@ -442,13 +442,19 @@ func TestShouldUseColor(t *testing.T) {
 		originalNoColor := os.Getenv("NO_COLOR")
 		defer func() {
 			if originalNoColor == "" {
-				os.Unsetenv("NO_COLOR")
+				if err := os.Unsetenv("NO_COLOR"); err != nil {
+					t.Logf("Warning: failed to unset NO_COLOR: %v", err)
+				}
 			} else {
-				os.Setenv("NO_COLOR", originalNoColor)
+				if err := os.Setenv("NO_COLOR", originalNoColor); err != nil {
+					t.Logf("Warning: failed to set NO_COLOR: %v", err)
+				}
 			}
 		}()
 
-		os.Setenv("NO_COLOR", "1")
+		if err := os.Setenv("NO_COLOR", "1"); err != nil {
+			t.Fatalf("Failed to set NO_COLOR: %v", err)
+		}
 		result := shouldUseColor()
 		assert.False(t, result)
 	})
@@ -457,13 +463,19 @@ func TestShouldUseColor(t *testing.T) {
 		originalCI := os.Getenv("CI")
 		defer func() {
 			if originalCI == "" {
-				os.Unsetenv("CI")
+				if err := os.Unsetenv("CI"); err != nil {
+					t.Logf("Warning: failed to unset CI: %v", err)
+				}
 			} else {
-				os.Setenv("CI", originalCI)
+				if err := os.Setenv("CI", originalCI); err != nil {
+					t.Logf("Warning: failed to set CI: %v", err)
+				}
 			}
 		}()
 
-		os.Setenv("CI", "true")
+		if err := os.Setenv("CI", "true"); err != nil {
+			t.Fatalf("Failed to set CI: %v", err)
+		}
 		result := shouldUseColor()
 		assert.False(t, result)
 	})

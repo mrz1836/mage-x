@@ -49,12 +49,15 @@ func TestDefaultPathCache_Clear(t *testing.T) {
 	cache := NewPathCache()
 
 	// Add multiple items
-	cache.Set("key1", NewPathBuilder("/path1"))
-	cache.Set("key2", NewPathBuilder("/path2"))
-	cache.Set("key3", NewPathBuilder("/path3"))
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
+	err = cache.Set("key2", NewPathBuilder("/path2"))
+	require.NoError(t, err)
+	err = cache.Set("key3", NewPathBuilder("/path3"))
+	require.NoError(t, err)
 
 	// Clear cache
-	err := cache.Clear()
+	err = cache.Clear()
 	require.NoError(t, err)
 
 	// Verify all items are gone
@@ -71,7 +74,8 @@ func TestDefaultPathCache_Stats(t *testing.T) {
 	assert.Equal(t, int64(0), stats.Misses)
 
 	// Add item and test hit/miss
-	cache.Set("key1", NewPathBuilder("/path1"))
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
 
 	_, _ = cache.Get("key1")        // Hit
 	_, _ = cache.Get("nonexistent") // Miss
@@ -85,8 +89,10 @@ func TestDefaultPathCache_KeysAndContains(t *testing.T) {
 	cache := NewPathCache()
 
 	// Add items
-	cache.Set("key1", NewPathBuilder("/path1"))
-	cache.Set("key2", NewPathBuilder("/path2"))
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
+	err = cache.Set("key2", NewPathBuilder("/path2"))
+	require.NoError(t, err)
 
 	// Test Keys
 	keys := cache.Keys()
@@ -108,7 +114,8 @@ func TestDefaultPathCache_TTLExpiration(t *testing.T) {
 	})
 
 	// Add item
-	cache.Set("key1", NewPathBuilder("/path1"))
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
 
 	// Verify it exists
 	_, exists := cache.Get("key1")
@@ -124,16 +131,19 @@ func TestDefaultPathCache_TTLExpiration(t *testing.T) {
 
 func TestDefaultPathCache_Expire(t *testing.T) {
 	// Create cache with TTL
-	cacheImpl := NewPathCacheWithOptions(CacheOptions{
+	cacheImpl, ok := NewPathCacheWithOptions(CacheOptions{
 		MaxSize: 100,
 		TTL:     100 * time.Millisecond,
 		Policy:  EvictLRU,
 	}).(*DefaultPathCache)
+	require.True(t, ok)
 
 	// Add items
-	cacheImpl.Set("key1", NewPathBuilder("/path1"))
+	err := cacheImpl.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
 	time.Sleep(50 * time.Millisecond)
-	cacheImpl.Set("key2", NewPathBuilder("/path2"))
+	err = cacheImpl.Set("key2", NewPathBuilder("/path2"))
+	require.NoError(t, err)
 
 	// Wait for first item to expire
 	time.Sleep(60 * time.Millisecond)
@@ -152,7 +162,8 @@ func TestDefaultPathCache_SetMaxSize(t *testing.T) {
 
 	// Add items
 	for i := 0; i < 10; i++ {
-		cache.Set(string(rune('a'+i)), NewPathBuilder("/path"))
+		err := cache.Set(string(rune('a'+i)), NewPathBuilder("/path"))
+		require.NoError(t, err)
 	}
 
 	// Reduce max size
@@ -169,7 +180,8 @@ func TestDefaultPathCache_SetTTL(t *testing.T) {
 	cache.SetTTL(50 * time.Millisecond)
 
 	// Add item
-	cache.Set("key1", NewPathBuilder("/path1"))
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
 
 	// Wait for expiration
 	time.Sleep(100 * time.Millisecond)
@@ -214,10 +226,11 @@ func TestDefaultPathCache_Refresh(t *testing.T) {
 	cache := NewPathCache()
 
 	// Add item
-	cache.Set("key1", NewPathBuilder("/path1"))
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
 
 	// Refresh existing key
-	err := cache.Refresh("key1")
+	err = cache.Refresh("key1")
 	assert.NoError(t, err)
 
 	// Try to refresh non-existent key
@@ -229,11 +242,13 @@ func TestDefaultPathCache_RefreshAll(t *testing.T) {
 	cache := NewPathCache()
 
 	// Add items
-	cache.Set("key1", NewPathBuilder("/path1"))
-	cache.Set("key2", NewPathBuilder("/path2"))
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
+	err = cache.Set("key2", NewPathBuilder("/path2"))
+	require.NoError(t, err)
 
 	// Refresh all
-	err := cache.RefreshAll()
+	err = cache.RefreshAll()
 	assert.NoError(t, err)
 }
 
@@ -259,7 +274,8 @@ func TestDefaultPathCache_EvictionPolicies(t *testing.T) {
 
 			// Add more items than max size to trigger eviction
 			for i := 0; i < 5; i++ {
-				cache.Set(string(rune('a'+i)), NewPathBuilder("/path"))
+				err := cache.Set(string(rune('a'+i)), NewPathBuilder("/path"))
+				assert.NoError(t, err)
 			}
 
 			// Should have exactly max size items
@@ -276,10 +292,12 @@ func TestDefaultPathCache_UpdateExisting(t *testing.T) {
 	cache := NewPathCache()
 
 	// Add item
-	cache.Set("key1", NewPathBuilder("/path1"))
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
 
 	// Update with new value
-	cache.Set("key1", NewPathBuilder("/path2"))
+	err = cache.Set("key1", NewPathBuilder("/path2"))
+	require.NoError(t, err)
 
 	// Should get updated value
 	pb, exists := cache.Get("key1")
@@ -328,7 +346,8 @@ func TestMockPathCache(t *testing.T) {
 	assert.Len(t, mock.DeleteCalls, 1)
 
 	// Test Clear
-	mock.Clear()
+	err = mock.Clear()
+	assert.NoError(t, err)
 	assert.Equal(t, 1, mock.ClearCalls)
 
 	// Test with error
@@ -339,11 +358,12 @@ func TestMockPathCache(t *testing.T) {
 
 func TestDefaultPathCache_NoTTL(t *testing.T) {
 	// Create cache with no TTL
-	cacheImpl := NewPathCacheWithOptions(CacheOptions{
+	cacheImpl, ok := NewPathCacheWithOptions(CacheOptions{
 		MaxSize: 100,
 		TTL:     0,
 		Policy:  EvictLRU,
 	}).(*DefaultPathCache)
+	require.True(t, ok)
 
 	// Expire should return 0 when TTL is not set
 	expired := cacheImpl.Expire()
@@ -357,7 +377,10 @@ func TestDefaultPathCache_ConcurrentAccess(t *testing.T) {
 	// Concurrent writes
 	go func() {
 		for i := 0; i < 100; i++ {
-			cache.Set(string(rune('a'+i%26)), NewPathBuilder("/path"))
+			// Ignore errors in concurrent test for performance
+			if err := cache.Set(string(rune('a'+i%26)), NewPathBuilder("/path")); err != nil {
+				// Error expected in concurrent test, ignore
+			}
 		}
 		done <- true
 	}()
@@ -365,7 +388,7 @@ func TestDefaultPathCache_ConcurrentAccess(t *testing.T) {
 	// Concurrent reads
 	go func() {
 		for i := 0; i < 100; i++ {
-			cache.Get(string(rune('a' + i%26)))
+			_, _ = cache.Get(string(rune('a' + i%26)))
 		}
 		done <- true
 	}()
@@ -373,7 +396,10 @@ func TestDefaultPathCache_ConcurrentAccess(t *testing.T) {
 	// Concurrent deletes
 	go func() {
 		for i := 0; i < 100; i++ {
-			cache.Delete(string(rune('a' + i%26)))
+			// Ignore errors in concurrent test for performance
+			if err := cache.Delete(string(rune('a' + i%26))); err != nil {
+				// Error expected in concurrent test, ignore
+			}
 		}
 		done <- true
 	}()

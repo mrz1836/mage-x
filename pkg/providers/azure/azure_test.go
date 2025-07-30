@@ -42,7 +42,9 @@ func (ts *AzureProviderTestSuite) SetupTest() {
 // TearDownTest runs after each test
 func (ts *AzureProviderTestSuite) TearDownTest() {
 	if ts.provider != nil {
-		ts.provider.Close()
+		if err := ts.provider.Close(); err != nil {
+			ts.T().Logf("Warning: failed to close Azure provider in teardown: %v", err)
+		}
 	}
 }
 
@@ -53,7 +55,8 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 	})
 
 	ts.Run("Provider initialization", func() {
-		azureProvider := ts.provider.(*Provider)
+		azureProvider, ok := ts.provider.(*Provider)
+		require.True(ts.T(), ok)
 		require.Equal(ts.T(), "12345678-1234-1234-1234-123456789012", azureProvider.subscription)
 		require.NotNil(ts.T(), azureProvider.services)
 		require.NotNil(ts.T(), azureProvider.services.compute)
@@ -207,9 +210,10 @@ func (ts *AzureProviderTestSuite) TestAzureServiceAccessors() {
 
 	ts.Run("Service types are correct", func() {
 		// Verify we get the correct Azure-specific service implementations
-		azureProvider := ts.provider.(*Provider)
+		azureProvider, ok := ts.provider.(*Provider)
+		require.True(ts.T(), ok)
 
-		_, ok := azureProvider.services.compute.(*azureComputeService)
+		_, ok = azureProvider.services.compute.(*azureComputeService)
 		require.True(ts.T(), ok, "Compute service should be Azure-specific implementation")
 
 		_, ok = azureProvider.services.storage.(*azureStorageService)
@@ -258,7 +262,8 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 		require.NoError(ts.T(), err)
 		require.Equal(ts.T(), "azure", provider.Name())
 
-		azureProvider := provider.(*Provider)
+		azureProvider, ok := provider.(*Provider)
+		require.True(ts.T(), ok)
 		require.Equal(ts.T(), "12345678-1234-1234-1234-123456789012", azureProvider.subscription)
 		require.Equal(ts.T(), config, azureProvider.config)
 	})
@@ -282,7 +287,8 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 		require.NoError(ts.T(), err)
 		require.Equal(ts.T(), "azure", provider.Name())
 
-		azureProvider := provider.(*Provider)
+		azureProvider, ok := provider.(*Provider)
+		require.True(ts.T(), ok)
 		require.Equal(ts.T(), "98765432-4321-4321-4321-210987654321", azureProvider.subscription)
 	})
 
@@ -302,7 +308,8 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 		require.NoError(ts.T(), err)
 		require.Equal(ts.T(), "azure", provider.Name())
 
-		azureProvider := provider.(*Provider)
+		azureProvider, ok := provider.(*Provider)
+		require.True(ts.T(), ok)
 		require.Equal(ts.T(), "11111111-2222-3333-4444-555555555555", azureProvider.subscription)
 	})
 }
@@ -364,7 +371,8 @@ func (ts *AzureProviderTestSuite) TestAzureRegions() {
 			require.NoError(ts.T(), err)
 			require.Equal(ts.T(), "azure", provider.Name())
 
-			azureProvider := provider.(*Provider)
+			azureProvider, ok := provider.(*Provider)
+			require.True(ts.T(), ok)
 			require.Equal(ts.T(), region, azureProvider.config.Region)
 		})
 	}
@@ -389,7 +397,8 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
 
-		azureProvider := provider.(*Provider)
+		azureProvider, ok := provider.(*Provider)
+		require.True(ts.T(), ok)
 		require.Equal(ts.T(), "https://management.usgovcloudapi.net", azureProvider.config.Endpoint)
 	})
 
@@ -411,7 +420,8 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
 
-		azureProvider := provider.(*Provider)
+		azureProvider, ok := provider.(*Provider)
+		require.True(ts.T(), ok)
 		require.Equal(ts.T(), 60*time.Second, azureProvider.config.Timeout)
 		require.Equal(ts.T(), 5, azureProvider.config.MaxRetries)
 	})
@@ -437,7 +447,8 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
 
-		azureProvider := provider.(*Provider)
+		azureProvider, ok := provider.(*Provider)
+		require.True(ts.T(), ok)
 		require.Equal(ts.T(), "MyApp/1.0 AzureGoSDK", azureProvider.config.CustomHeaders["User-Agent"])
 		require.Equal(ts.T(), "custom-value", azureProvider.config.CustomHeaders["X-Custom-Header"])
 		require.Equal(ts.T(), "http://corporate-proxy.company.com:8080", azureProvider.config.ProxyURL)
@@ -466,7 +477,8 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 		provider, err := New(config)
 		require.NoError(ts.T(), err)
 
-		azureProvider := provider.(*Provider)
+		azureProvider, ok := provider.(*Provider)
+		require.True(ts.T(), ok)
 		require.NotNil(ts.T(), azureProvider.config.TLSConfig)
 		require.False(ts.T(), azureProvider.config.TLSConfig.InsecureSkipVerify)
 		require.Equal(ts.T(), "/etc/ssl/certs/azure-ca.pem", azureProvider.config.TLSConfig.CAPath)

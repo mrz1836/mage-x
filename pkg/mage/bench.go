@@ -150,7 +150,9 @@ func (Bench) CPU() error {
 	utils.Header("Running Benchmarks with CPU Profiling")
 
 	profile := utils.GetEnv("CPU_PROFILE", "cpu.prof")
-	os.Setenv("BENCH_CPU_PROFILE", profile)
+	if err := os.Setenv("BENCH_CPU_PROFILE", profile); err != nil {
+		return fmt.Errorf("failed to set BENCH_CPU_PROFILE: %w", err)
+	}
 
 	var b Bench
 	if err := b.Default(); err != nil {
@@ -162,7 +164,10 @@ func (Bench) CPU() error {
 
 	// Show top functions
 	utils.Info("\nTop CPU consuming functions:")
-	GetRunner().RunCmd("go", "tool", "pprof", "-top", profile)
+	if err := GetRunner().RunCmd("go", "tool", "pprof", "-top", profile); err != nil {
+		// Error expected and acceptable - analysis command may fail
+		utils.Warn("CPU profile analysis failed: %v", err)
+	}
 
 	return nil
 }
@@ -172,7 +177,9 @@ func (Bench) Mem() error {
 	utils.Header("Running Benchmarks with Memory Profiling")
 
 	profile := utils.GetEnv("MEM_PROFILE", "mem.prof")
-	os.Setenv("BENCH_MEM_PROFILE", profile)
+	if err := os.Setenv("BENCH_MEM_PROFILE", profile); err != nil {
+		return fmt.Errorf("failed to set BENCH_MEM_PROFILE: %w", err)
+	}
 
 	var b Bench
 	if err := b.Default(); err != nil {
@@ -184,7 +191,10 @@ func (Bench) Mem() error {
 
 	// Show top memory allocations
 	utils.Info("\nTop memory allocating functions:")
-	GetRunner().RunCmd("go", "tool", "pprof", "-top", "-alloc_space", profile)
+	if err := GetRunner().RunCmd("go", "tool", "pprof", "-top", "-alloc_space", profile); err != nil {
+		// Error expected and acceptable - analysis command may fail
+		utils.Warn("Memory profile analysis failed: %v", err)
+	}
 
 	return nil
 }
@@ -193,8 +203,12 @@ func (Bench) Mem() error {
 func (Bench) Profile() error {
 	utils.Header("Running Benchmarks with Full Profiling")
 
-	os.Setenv("BENCH_CPU_PROFILE", "cpu.prof")
-	os.Setenv("BENCH_MEM_PROFILE", "mem.prof")
+	if err := os.Setenv("BENCH_CPU_PROFILE", "cpu.prof"); err != nil {
+		return fmt.Errorf("failed to set BENCH_CPU_PROFILE: %w", err)
+	}
+	if err := os.Setenv("BENCH_MEM_PROFILE", "mem.prof"); err != nil {
+		return fmt.Errorf("failed to set BENCH_MEM_PROFILE: %w", err)
+	}
 
 	var b Bench
 	if err := b.Default(); err != nil {
@@ -240,7 +254,9 @@ func (Bench) Regression() error {
 	utils.Header("Checking for Performance Regressions")
 
 	// Save current results
-	os.Setenv("BENCH_FILE", "bench-current.txt")
+	if err := os.Setenv("BENCH_FILE", "bench-current.txt"); err != nil {
+		return fmt.Errorf("failed to set BENCH_FILE: %w", err)
+	}
 	var b Bench
 	if err := b.Save(); err != nil {
 		return err
@@ -261,8 +277,12 @@ func (Bench) Regression() error {
 	}
 
 	// Compare with baseline
-	os.Setenv("BENCH_OLD", baseline)
-	os.Setenv("BENCH_NEW", "bench-current.txt")
+	if err := os.Setenv("BENCH_OLD", baseline); err != nil {
+		return fmt.Errorf("failed to set BENCH_OLD: %w", err)
+	}
+	if err := os.Setenv("BENCH_NEW", "bench-current.txt"); err != nil {
+		return fmt.Errorf("failed to set BENCH_NEW: %w", err)
+	}
 
 	utils.Info("\nComparing with baseline...")
 	if err := b.Compare(); err != nil {

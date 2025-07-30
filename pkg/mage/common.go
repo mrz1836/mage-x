@@ -78,8 +78,14 @@ func isNewer(a, b string) bool {
 
 	for i := 0; i < len(aParts) && i < len(bParts); i++ {
 		var aNum, bNum int
-		_, _ = fmt.Sscanf(aParts[i], "%d", &aNum)
-		_, _ = fmt.Sscanf(bParts[i], "%d", &bNum)
+		if _, err := fmt.Sscanf(aParts[i], "%d", &aNum); err != nil {
+			// Non-numeric parts are treated as 0
+			aNum = 0
+		}
+		if _, err := fmt.Sscanf(bParts[i], "%d", &bNum); err != nil {
+			// Non-numeric parts are treated as 0
+			bNum = 0
+		}
 
 		if aNum > bNum {
 			return true

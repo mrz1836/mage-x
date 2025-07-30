@@ -275,7 +275,8 @@ func TestTempWorkspace_Walk(t *testing.T) {
 	tw.Walk(func(path string, info os.FileInfo, err error) error {
 		require.NoError(t, err)
 		if !info.IsDir() {
-			relPath, _ := filepath.Rel(tw.Root(), path)
+			relPath, relErr := filepath.Rel(tw.Root(), path)
+			require.NoError(t, relErr)
 			paths = append(paths, relPath)
 		}
 		return nil
@@ -415,7 +416,9 @@ func TestSandboxedWorkspace(t *testing.T) {
 	// Test allowed external path
 	tempFile, err := os.CreateTemp("", "external-*.txt")
 	require.NoError(t, err)
-	defer os.Remove(tempFile.Name())
+	defer func() {
+		require.NoError(t, os.Remove(tempFile.Name()))
+	}()
 
 	sw.AllowPath(filepath.Dir(tempFile.Name()))
 

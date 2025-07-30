@@ -214,11 +214,19 @@ func (l *Logger) Header(text string) {
 
 	line := strings.Repeat("=", 60)
 	if l.useColor {
-		fmt.Fprintf(l.output, "\n%s%s%s\n", colorBold+colorBlue, line, colorReset)
-		fmt.Fprintf(l.output, "%s%s %s %s%s\n", colorBold+colorBlue, "===", text, "===", colorReset)
-		fmt.Fprintf(l.output, "%s%s%s\n\n", colorBold+colorBlue, line, colorReset)
+		if _, err := fmt.Fprintf(l.output, "\n%s%s%s\n", colorBold+colorBlue, line, colorReset); err != nil {
+			// Continue if write fails
+		}
+		if _, err := fmt.Fprintf(l.output, "%s%s %s %s%s\n", colorBold+colorBlue, "===", text, "===", colorReset); err != nil {
+			// Continue if write fails
+		}
+		if _, err := fmt.Fprintf(l.output, "%s%s%s\n\n", colorBold+colorBlue, line, colorReset); err != nil {
+			// Continue if write fails
+		}
 	} else {
-		fmt.Fprintf(l.output, "\n%s\n=== %s ===\n%s\n\n", line, text, line)
+		if _, err := fmt.Fprintf(l.output, "\n%s\n=== %s ===\n%s\n\n", line, text, line); err != nil {
+			// Continue if write fails
+		}
 	}
 }
 
@@ -334,9 +342,13 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	}
 
 	if l.useColor {
-		fmt.Fprintf(l.output, "%s%s [%s]%s %s\n", color, timestamp, levelStr, colorReset, msg)
+		if _, err := fmt.Fprintf(l.output, "%s%s [%s]%s %s\n", color, timestamp, levelStr, colorReset, msg); err != nil {
+			// Continue if write fails
+		}
 	} else {
-		fmt.Fprintf(l.output, "%s [%s] %s\n", timestamp, levelStr, msg)
+		if _, err := fmt.Fprintf(l.output, "%s [%s] %s\n", timestamp, levelStr, msg); err != nil {
+			// Continue if write fails
+		}
 	}
 }
 
@@ -372,9 +384,13 @@ func (l *Logger) logWithEmoji(level LogLevel, emoji, msg string) {
 	}
 
 	if l.useColor {
-		fmt.Fprintf(l.output, "%s %s%s%s\n", emoji, color, msg, colorReset)
+		if _, err := fmt.Fprintf(l.output, "%s %s%s%s\n", emoji, color, msg, colorReset); err != nil {
+			// Continue if write fails
+		}
 	} else {
-		fmt.Fprintf(l.output, "%s %s\n", emoji, msg)
+		if _, err := fmt.Fprintf(l.output, "%s %s\n", emoji, msg); err != nil {
+			// Continue if write fails
+		}
 	}
 }
 
@@ -391,7 +407,11 @@ func shouldUseColor() bool {
 	}
 
 	// Disable color if not a terminal
-	if fileInfo, _ := os.Stdout.Stat(); (fileInfo.Mode() & os.ModeCharDevice) == 0 {
+	fileInfo, err := os.Stdout.Stat()
+	if err != nil {
+		return false // Assume no color on error
+	}
+	if (fileInfo.Mode() & os.ModeCharDevice) == 0 {
 		return false
 	}
 

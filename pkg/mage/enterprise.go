@@ -433,8 +433,8 @@ func (Enterprise) Backup() error {
 	// Save backup
 	backupDir := ".mage/enterprise/backups"
 	fileOps := fileops.New()
-	if err := fileOps.File.MkdirAll(backupDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create backup directory: %w", err)
+	if mkdirErr := fileOps.File.MkdirAll(backupDir, 0o755); mkdirErr != nil {
+		return fmt.Errorf("failed to create backup directory: %w", mkdirErr)
 	}
 
 	backupFile := filepath.Join(backupDir, fmt.Sprintf("backup-%s.json", backup.ID))
@@ -471,8 +471,8 @@ func (Enterprise) Restore() error {
 	}
 
 	var backup ConfigBackup
-	if err := json.Unmarshal(data, &backup); err != nil {
-		return fmt.Errorf("failed to unmarshal backup: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &backup); unmarshalErr != nil {
+		return fmt.Errorf("failed to unmarshal backup: %w", unmarshalErr)
 	}
 
 	utils.Info("🔄 Restoring backup from %s", backup.Timestamp.Format("2006-01-02 15:04:05"))
@@ -497,7 +497,9 @@ func (Enterprise) Restore() error {
 		preRestoreFile := filepath.Join(".mage/enterprise/backups", fmt.Sprintf("pre-restore-%s.json", preRestoreBackup.ID))
 		if data, err := json.MarshalIndent(preRestoreBackup, "", "  "); err == nil {
 			fileOps := fileops.New()
-			fileOps.File.WriteFile(preRestoreFile, data, 0o644)
+			if err := fileOps.File.WriteFile(preRestoreFile, data, 0o644); err != nil {
+				utils.Warn("Failed to write pre-restore backup: %v", err)
+			}
 			utils.Info("📁 Current config backed up to: %s", preRestoreFile)
 		}
 	}

@@ -129,14 +129,22 @@ func (tw *TempWorkspace) CopyFile(src, dst string) {
 	if err != nil {
 		tw.t.Fatalf("Failed to open source file: %v", err)
 	}
-	defer srcFile.Close()
+	defer func() {
+		if closeErr := srcFile.Close(); closeErr != nil {
+			tw.t.Logf("Warning: failed to close source file: %v", closeErr)
+		}
+	}()
 
 	// Create destination file
 	dstFile, err := os.Create(dstPath)
 	if err != nil {
 		tw.t.Fatalf("Failed to create destination file: %v", err)
 	}
-	defer dstFile.Close()
+	defer func() {
+		if err := dstFile.Close(); err != nil {
+			tw.t.Logf("Warning: failed to close destination file: %v", err)
+		}
+	}()
 
 	// Copy content
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
@@ -157,9 +165,9 @@ func (tw *TempWorkspace) CopyDir(src, dst string) {
 		}
 
 		// Calculate relative path
-		relPath, err := filepath.Rel(srcPath, path)
-		if err != nil {
-			return err
+		relPath, relErr := filepath.Rel(srcPath, path)
+		if relErr != nil {
+			return relErr
 		}
 
 		// Calculate destination path
@@ -175,13 +183,21 @@ func (tw *TempWorkspace) CopyDir(src, dst string) {
 		if err != nil {
 			return err
 		}
-		defer srcFile.Close()
+		defer func() {
+			if closeErr := srcFile.Close(); closeErr != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to close source file %s: %v\n", path, closeErr)
+			}
+		}()
 
 		dstFile, err := os.Create(destPath)
 		if err != nil {
 			return err
 		}
-		defer dstFile.Close()
+		defer func() {
+			if closeErr := dstFile.Close(); closeErr != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to close destination file %s: %v\n", destPath, closeErr)
+			}
+		}()
 
 		_, err = io.Copy(dstFile, srcFile)
 		return err
@@ -328,7 +344,9 @@ func (tw *TempWorkspace) Cleanup() {
 	}
 
 	// Remove workspace
-	os.RemoveAll(tw.rootDir)
+	if err := os.RemoveAll(tw.rootDir); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to remove workspace %s: %v\n", tw.rootDir, err)
+	}
 }
 
 // AssertExists asserts that a path exists

@@ -75,30 +75,38 @@ func setupDefaultHandlers() {
 // registerAdditionalErrors registers additional error codes
 func registerAdditionalErrors() {
 	// Register deployment errors
-	DefaultRegistry.RegisterWithSeverity(
+	if err := DefaultRegistry.RegisterWithSeverity(
 		"DEPLOY_FAILED",
 		"Deployment process failed",
 		SeverityError,
-	)
+	); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to register error DEPLOY_FAILED: %v\n", err)
+	}
 
-	DefaultRegistry.RegisterWithSeverity(
+	if err := DefaultRegistry.RegisterWithSeverity(
 		"DEPLOY_ROLLBACK",
 		"Deployment rolled back",
 		SeverityWarning,
-	)
+	); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to register error DEPLOY_ROLLBACK: %v\n", err)
+	}
 
 	// Register security errors
-	DefaultRegistry.RegisterWithSeverity(
+	if err := DefaultRegistry.RegisterWithSeverity(
 		"SECURITY_VIOLATION",
 		"Security violation detected",
 		SeverityCritical,
-	)
+	); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to register error SECURITY_VIOLATION: %v\n", err)
+	}
 
-	DefaultRegistry.RegisterWithSeverity(
+	if err := DefaultRegistry.RegisterWithSeverity(
 		"AUTH_FAILED",
 		"Authentication failed",
 		SeverityError,
-	)
+	); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to register error AUTH_FAILED: %v\n", err)
+	}
 }
 
 // Common error creation helpers
@@ -206,7 +214,7 @@ func Combine(errors ...error) error {
 	chain := NewChain()
 	for _, err := range errors {
 		if err != nil {
-			chain.Add(err)
+			chain = chain.Add(err)
 		}
 	}
 

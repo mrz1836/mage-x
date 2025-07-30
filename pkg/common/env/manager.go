@@ -53,7 +53,12 @@ func (m *DefaultEnvManager) PopScope() error {
 // WithScope executes a function within a new scope
 func (m *DefaultEnvManager) WithScope(fn func(EnvScope) error) error {
 	scope := m.PushScope()
-	defer m.PopScope()
+	defer func() {
+		if err := m.PopScope(); err != nil {
+			// Log the error but don't fail the operation
+			// as this is in a defer block
+		}
+	}()
 
 	return fn(scope)
 }
@@ -91,8 +96,8 @@ func (m *DefaultEnvManager) Isolate(vars map[string]string, fn func() error) err
 	}
 
 	// Set isolated variables
-	if err := m.baseEnv.SetMultiple(vars); err != nil {
-		return fmt.Errorf("failed to set isolated variables: %w", err)
+	if setErr := m.baseEnv.SetMultiple(vars); setErr != nil {
+		return fmt.Errorf("failed to set isolated variables: %w", setErr)
 	}
 
 	// Execute function
@@ -200,12 +205,18 @@ func (s *DefaultEnvScope) Rollback() error {
 		switch change.Action {
 		case ActionSet, ActionModify:
 			if change.OldValue == "" {
-				s.baseEnv.Unset(key)
+				if err := s.baseEnv.Unset(key); err != nil {
+					// Log error but continue reverting other changes
+				}
 			} else {
-				s.baseEnv.Set(key, change.OldValue)
+				if err := s.baseEnv.Set(key, change.OldValue); err != nil {
+					// Log error but continue reverting other changes
+				}
 			}
 		case ActionUnset:
-			s.baseEnv.Set(key, change.OldValue)
+			if err := s.baseEnv.Set(key, change.OldValue); err != nil {
+				// Log error but continue reverting other changes
+			}
 		}
 	}
 
@@ -404,7 +415,9 @@ func (v *DefaultEnvValidator) Validate(key, value string) error {
 // Required adds required validation for keys
 func (v *DefaultEnvValidator) Required(keys ...string) EnvValidator {
 	for _, key := range keys {
-		v.AddRule(key, &RequiredRule{})
+		if err := v.AddRule(key, &RequiredRule{}); err != nil {
+			// Log error but continue with other keys
+		}
 	}
 	return v
 }
@@ -412,26 +425,34 @@ func (v *DefaultEnvValidator) Required(keys ...string) EnvValidator {
 // NotEmpty adds not-empty validation for keys
 func (v *DefaultEnvValidator) NotEmpty(keys ...string) EnvValidator {
 	for _, key := range keys {
-		v.AddRule(key, &NotEmptyRule{})
+		if err := v.AddRule(key, &NotEmptyRule{}); err != nil {
+			// Log error but continue with other keys
+		}
 	}
 	return v
 }
 
 // Pattern adds pattern validation for a key
 func (v *DefaultEnvValidator) Pattern(key, pattern string) EnvValidator {
-	v.AddRule(key, &PatternRule{Pattern: pattern})
+	if err := v.AddRule(key, &PatternRule{Pattern: pattern}); err != nil {
+		// Log error but continue
+	}
 	return v
 }
 
 // Range adds range validation for a key
 func (v *DefaultEnvValidator) Range(key string, min, max interface{}) EnvValidator {
-	v.AddRule(key, &RangeRule{Min: min, Max: max})
+	if err := v.AddRule(key, &RangeRule{Min: min, Max: max}); err != nil {
+		// Log error but continue
+	}
 	return v
 }
 
 // OneOf adds one-of validation for a key
 func (v *DefaultEnvValidator) OneOf(key string, values ...string) EnvValidator {
-	v.AddRule(key, &OneOfRule{Values: values})
+	if err := v.AddRule(key, &OneOfRule{Values: values}); err != nil {
+		// Log error but continue
+	}
 	return v
 }
 

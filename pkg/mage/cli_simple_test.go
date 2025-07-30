@@ -26,18 +26,17 @@ func (ts *CLISimpleTestSuite) SetupTest() {
 // TearDownTest runs after each test
 func (ts *CLISimpleTestSuite) TearDownTest() {
 	// Clean up environment variables that might be set by tests
-	os.Unsetenv("OPERATION")
-	os.Unsetenv("TARGETS")
-	os.Unsetenv("MAX_CONCURRENT")
-	os.Unsetenv("QUERY")
-	os.Unsetenv("OUTPUT_FORMAT")
-	os.Unsetenv("SAVE_RESULTS")
-	os.Unsetenv("BATCH_SIZE")
-	os.Unsetenv("INTERVAL")
-	os.Unsetenv("DURATION")
-	os.Unsetenv("WORKSPACE_ACTION")
-	os.Unsetenv("PIPELINE_ACTION")
-	os.Unsetenv("COMPLIANCE_ACTION")
+	envVars := []string{
+		"OPERATION", "TARGETS", "MAX_CONCURRENT", "QUERY",
+		"OUTPUT_FORMAT", "SAVE_RESULTS", "BATCH_SIZE",
+		"INTERVAL", "DURATION", "WORKSPACE_ACTION",
+		"PIPELINE_ACTION", "COMPLIANCE_ACTION",
+	}
+	for _, v := range envVars {
+		if err := os.Unsetenv(v); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", v, err)
+		}
+	}
 
 	ts.env.Cleanup()
 }
@@ -47,7 +46,7 @@ func (ts *CLISimpleTestSuite) TestCLIBulk() {
 	ts.Run("handles missing operation", func() {
 		// Don't set OPERATION environment variable
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Bulk()
@@ -59,10 +58,12 @@ func (ts *CLISimpleTestSuite) TestCLIBulk() {
 	})
 
 	ts.Run("handles missing repository config", func() {
-		os.Setenv("OPERATION", "status")
+		if err := os.Setenv("OPERATION", "status"); err != nil {
+			ts.T().Fatalf("Failed to set OPERATION: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Bulk()
@@ -77,10 +78,12 @@ func (ts *CLISimpleTestSuite) TestCLIBulk() {
 // TestCLIQuery tests the Query method
 func (ts *CLISimpleTestSuite) TestCLIQuery() {
 	ts.Run("handles missing repository config", func() {
-		os.Setenv("QUERY", "language:go")
+		if err := os.Setenv("QUERY", "language:go"); err != nil {
+			ts.T().Fatalf("Failed to set QUERY: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Query()
@@ -96,7 +99,7 @@ func (ts *CLISimpleTestSuite) TestCLIQuery() {
 func (ts *CLISimpleTestSuite) TestCLIDashboard() {
 	ts.Run("handles missing repository config", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Dashboard()
@@ -112,7 +115,7 @@ func (ts *CLISimpleTestSuite) TestCLIDashboard() {
 func (ts *CLISimpleTestSuite) TestCLIBatch() {
 	ts.Run("handles missing batch configuration", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Batch()
@@ -127,13 +130,23 @@ func (ts *CLISimpleTestSuite) TestCLIBatch() {
 // TestCLIMonitor tests the Monitor method
 func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 	ts.Run("handles invalid interval", func() {
-		os.Setenv("INTERVAL", "invalid")
-		os.Setenv("MONITOR_DURATION", "100ms") // Very short duration for tests
-		defer os.Unsetenv("INTERVAL")
-		defer os.Unsetenv("MONITOR_DURATION")
+		if err := os.Setenv("INTERVAL", "invalid"); err != nil {
+			ts.T().Fatalf("Failed to set INTERVAL: %v", err)
+		}
+		if err := os.Setenv("MONITOR_DURATION", "100ms"); err != nil { // Very short duration for tests
+			ts.T().Fatalf("Failed to set MONITOR_DURATION: %v", err)
+		}
+		defer func() {
+			if err := os.Unsetenv("INTERVAL"); err != nil {
+				ts.T().Logf("Failed to unset INTERVAL: %v", err)
+			}
+			if err := os.Unsetenv("MONITOR_DURATION"); err != nil {
+				ts.T().Logf("Failed to unset MONITOR_DURATION: %v", err)
+			}
+		}()
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Monitor()
@@ -145,13 +158,23 @@ func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 	})
 
 	ts.Run("handles empty repository config", func() {
-		os.Setenv("INTERVAL", "30s")
-		os.Setenv("MONITOR_DURATION", "100ms") // Very short duration for tests
-		defer os.Unsetenv("INTERVAL")
-		defer os.Unsetenv("MONITOR_DURATION")
+		if err := os.Setenv("INTERVAL", "30s"); err != nil {
+			ts.T().Fatalf("Failed to set INTERVAL: %v", err)
+		}
+		if err := os.Setenv("MONITOR_DURATION", "100ms"); err != nil { // Very short duration for tests
+			ts.T().Fatalf("Failed to set MONITOR_DURATION: %v", err)
+		}
+		defer func() {
+			if err := os.Unsetenv("INTERVAL"); err != nil {
+				ts.T().Logf("Failed to unset INTERVAL: %v", err)
+			}
+			if err := os.Unsetenv("MONITOR_DURATION"); err != nil {
+				ts.T().Logf("Failed to unset MONITOR_DURATION: %v", err)
+			}
+		}()
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Monitor()
@@ -166,10 +189,12 @@ func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 // TestCLIWorkspace tests the Workspace method
 func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 	ts.Run("shows workspace status", func() {
-		os.Setenv("WORKSPACE_ACTION", "status")
+		if err := os.Setenv("WORKSPACE_ACTION", "status"); err != nil {
+			ts.T().Fatalf("Failed to set WORKSPACE_ACTION: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -180,13 +205,15 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 	})
 
 	ts.Run("syncs workspace", func() {
-		os.Setenv("WORKSPACE_ACTION", "sync")
+		if err := os.Setenv("WORKSPACE_ACTION", "sync"); err != nil {
+			ts.T().Fatalf("Failed to set WORKSPACE_ACTION: %v", err)
+		}
 
 		// Mock git operations
 		ts.env.Runner.On("RunCmd", "git", []string{"status", "--porcelain"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -197,14 +224,16 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 	})
 
 	ts.Run("cleans workspace", func() {
-		os.Setenv("WORKSPACE_ACTION", "clean")
+		if err := os.Setenv("WORKSPACE_ACTION", "clean"); err != nil {
+			ts.T().Fatalf("Failed to set WORKSPACE_ACTION: %v", err)
+		}
 
 		// Mock cleanup operations
 		ts.env.Runner.On("RunCmd", "git", []string{"clean", "-fd"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "go", []string{"clean", "-cache"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -215,13 +244,15 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 	})
 
 	ts.Run("backups workspace", func() {
-		os.Setenv("WORKSPACE_ACTION", "backup")
+		if err := os.Setenv("WORKSPACE_ACTION", "backup"); err != nil {
+			ts.T().Fatalf("Failed to set WORKSPACE_ACTION: %v", err)
+		}
 
 		// Mock backup operations
 		ts.env.Runner.On("RunCmd", "tar", []string{"-czf", "workspace-backup.tar.gz", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -234,13 +265,15 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 	ts.Run("restores workspace", func() {
 		// Create backup file
 		ts.env.CreateFile("workspace-backup.tar.gz", "fake backup content")
-		os.Setenv("WORKSPACE_ACTION", "restore")
+		if err := os.Setenv("WORKSPACE_ACTION", "restore"); err != nil {
+			ts.T().Fatalf("Failed to set WORKSPACE_ACTION: %v", err)
+		}
 
 		// Mock restore operations
 		ts.env.Runner.On("RunCmd", "tar", []string{"-xzf", "workspace-backup.tar.gz"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -254,10 +287,12 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 // TestCLIPipeline tests the Pipeline method
 func (ts *CLISimpleTestSuite) TestCLIPipeline() {
 	ts.Run("handles missing pipeline configuration", func() {
-		os.Setenv("PIPELINE_ACTION", "status")
+		if err := os.Setenv("PIPELINE_ACTION", "status"); err != nil {
+			ts.T().Fatalf("Failed to set PIPELINE_ACTION: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Pipeline()
@@ -272,14 +307,16 @@ func (ts *CLISimpleTestSuite) TestCLIPipeline() {
 // TestCLICompliance tests the Compliance method
 func (ts *CLISimpleTestSuite) TestCLICompliance() {
 	ts.Run("runs compliance scan", func() {
-		os.Setenv("COMPLIANCE_ACTION", "scan")
+		if err := os.Setenv("COMPLIANCE_ACTION", "scan"); err != nil {
+			ts.T().Fatalf("Failed to set COMPLIANCE_ACTION: %v", err)
+		}
 
 		// Mock compliance scanning tools
 		ts.env.Runner.On("RunCmd", "gosec", []string{"./..."}).Return(nil)
 		ts.env.Runner.On("RunCmd", "govulncheck", []string{"./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Compliance()
@@ -290,10 +327,12 @@ func (ts *CLISimpleTestSuite) TestCLICompliance() {
 	})
 
 	ts.Run("generates compliance report", func() {
-		os.Setenv("COMPLIANCE_ACTION", "report")
+		if err := os.Setenv("COMPLIANCE_ACTION", "report"); err != nil {
+			ts.T().Fatalf("Failed to set COMPLIANCE_ACTION: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Compliance()
@@ -305,10 +344,12 @@ func (ts *CLISimpleTestSuite) TestCLICompliance() {
 	})
 
 	ts.Run("exports compliance data", func() {
-		os.Setenv("COMPLIANCE_ACTION", "export")
+		if err := os.Setenv("COMPLIANCE_ACTION", "export"); err != nil {
+			ts.T().Fatalf("Failed to set COMPLIANCE_ACTION: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Compliance()
@@ -343,13 +384,21 @@ func (ts *CLISimpleTestSuite) TestCLIUtilityMethods() {
 
 	ts.Run("getMaxConcurrency", func() {
 		originalMax := os.Getenv("MAX_CONCURRENT")
-		defer os.Setenv("MAX_CONCURRENT", originalMax)
+		defer func() {
+			if err := os.Setenv("MAX_CONCURRENT", originalMax); err != nil {
+				ts.T().Logf("Failed to restore MAX_CONCURRENT: %v", err)
+			}
+		}()
 
-		os.Setenv("MAX_CONCURRENT", "8")
+		if err := os.Setenv("MAX_CONCURRENT", "8"); err != nil {
+			ts.T().Fatalf("Failed to set MAX_CONCURRENT: %v", err)
+		}
 		result := getMaxConcurrency()
 		require.Equal(ts.T(), 8, result)
 
-		os.Setenv("MAX_CONCURRENT", "invalid")
+		if err := os.Setenv("MAX_CONCURRENT", "invalid"); err != nil {
+			ts.T().Fatalf("Failed to set MAX_CONCURRENT: %v", err)
+		}
 		result = getMaxConcurrency()
 		require.Equal(ts.T(), 4, result) // default value
 	})
@@ -359,7 +408,7 @@ func (ts *CLISimpleTestSuite) TestCLIUtilityMethods() {
 func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 	ts.Run("Default method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Default()
@@ -371,7 +420,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 
 	ts.Run("Help method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Help()
@@ -383,7 +432,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 
 	ts.Run("Version method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Version()
@@ -395,7 +444,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 
 	ts.Run("Completion method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Completion()
@@ -407,7 +456,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 
 	ts.Run("Config method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Config()
@@ -422,7 +471,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 		ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/mrz1836/go-mage"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) { SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Update()

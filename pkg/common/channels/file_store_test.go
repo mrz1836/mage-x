@@ -645,7 +645,9 @@ func BenchmarkFileStore_GetRelease(b *testing.B) {
 			ReleasedBy:  "developer",
 			Artifacts:   []Artifact{{Name: "binary", URL: "https://example.com/binary", Checksum: "abc123"}},
 		}
-		store.SaveRelease(release)
+		if err := store.SaveRelease(release); err != nil {
+			b.Fatalf("Failed to save release for benchmark setup: %v", err)
+		}
 	}
 
 	b.ResetTimer()
@@ -675,7 +677,9 @@ func BenchmarkFileStore_ListReleases(b *testing.B) {
 			ReleasedBy:  "developer",
 			Artifacts:   []Artifact{{Name: "binary", URL: "https://example.com/binary", Checksum: "abc123"}},
 		}
-		store.SaveRelease(release)
+		if err := store.SaveRelease(release); err != nil {
+			b.Fatalf("Failed to save release for benchmark setup: %v", err)
+		}
 	}
 
 	b.ResetTimer()

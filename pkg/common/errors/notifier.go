@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/smtp"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -355,7 +356,12 @@ func (w *WebhookChannel) Send(ctx context.Context, notification ErrorNotificatio
 	if err != nil {
 		return fmt.Errorf("failed to send webhook: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			// Log close error but don't fail the operation
+			fmt.Fprintf(os.Stderr, "Warning: failed to close response body: %v\n", closeErr)
+		}
+	}()
 
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("webhook returned error status: %d", resp.StatusCode)

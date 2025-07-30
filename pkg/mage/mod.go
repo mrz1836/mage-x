@@ -155,7 +155,11 @@ func (Mod) Graph() error {
 	}
 
 	// Show direct dependencies
-	module, _ := utils.GetModuleName()
+	module, err := utils.GetModuleName()
+	if err != nil {
+		utils.Debug("Failed to get module name: %v", err)
+		module = "unknown"
+	}
 	if directDeps, ok := deps[module]; ok {
 		utils.Info("\nDirect dependencies (%d):", len(directDeps))
 		for _, dep := range directDeps {
@@ -283,7 +287,12 @@ func getModCache() string {
 		return filepath.Join(gopath, "pkg", "mod")
 	}
 
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		// Fallback to a reasonable default
+		utils.Debug("Failed to get user home directory: %v", err)
+		return filepath.Join(".", "go", "pkg", "mod")
+	}
 	return filepath.Join(home, "go", "pkg", "mod")
 }
 

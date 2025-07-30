@@ -29,10 +29,10 @@ func (Configure) Init() error {
 	}
 
 	// Create default configuration
-	cfg := defaultConfig()
+	config := defaultConfig()
 
 	// Save configuration
-	if err := SaveConfig(cfg); err != nil {
+	if err := SaveConfig(config); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
@@ -44,43 +44,43 @@ func (Configure) Init() error {
 func (Configure) Show() error {
 	utils.Header("📋 Current Configuration")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Display basic configuration
-	utils.Info("📁 Project: %s", cfg.Project.Name)
-	utils.Info("🔧 Binary: %s", cfg.Project.Binary)
-	utils.Info("📦 Module: %s", cfg.Project.Module)
-	utils.Info("🌍 Git Domain: %s", cfg.Project.GitDomain)
+	utils.Info("📁 Project: %s", config.Project.Name)
+	utils.Info("🔧 Binary: %s", config.Project.Binary)
+	utils.Info("📦 Module: %s", config.Project.Module)
+	utils.Info("🌍 Git Domain: %s", config.Project.GitDomain)
 
-	if cfg.Project.RepoOwner != "" {
-		utils.Info("👤 Repository: %s/%s", cfg.Project.RepoOwner, cfg.Project.RepoName)
+	if config.Project.RepoOwner != "" {
+		utils.Info("👤 Repository: %s/%s", config.Project.RepoOwner, config.Project.RepoName)
 	}
 
 	// Display build configuration
 	fmt.Printf("\n🏗️  Build Configuration:\n")
-	fmt.Printf("  Output: %s\n", cfg.Build.Output)
-	fmt.Printf("  Parallel: %d\n", cfg.Build.Parallel)
-	fmt.Printf("  Platforms: %s\n", strings.Join(cfg.Build.Platforms, ", "))
-	fmt.Printf("  Trim Path: %v\n", cfg.Build.TrimPath)
+	fmt.Printf("  Output: %s\n", config.Build.Output)
+	fmt.Printf("  Parallel: %d\n", config.Build.Parallel)
+	fmt.Printf("  Platforms: %s\n", strings.Join(config.Build.Platforms, ", "))
+	fmt.Printf("  Trim Path: %v\n", config.Build.TrimPath)
 
 	// Display test configuration
 	fmt.Printf("\n🧪 Test Configuration:\n")
-	fmt.Printf("  Parallel: %v\n", cfg.Test.Parallel)
-	fmt.Printf("  Timeout: %s\n", cfg.Test.Timeout)
-	fmt.Printf("  Cover Mode: %s\n", cfg.Test.CoverMode)
-	fmt.Printf("  Race Detection: %v\n", cfg.Test.Race)
+	fmt.Printf("  Parallel: %v\n", config.Test.Parallel)
+	fmt.Printf("  Timeout: %s\n", config.Test.Timeout)
+	fmt.Printf("  Cover Mode: %s\n", config.Test.CoverMode)
+	fmt.Printf("  Race Detection: %v\n", config.Test.Race)
 
 	// Display enterprise configuration if available
-	if cfg.Enterprise != nil {
+	if config.Enterprise != nil {
 		fmt.Printf("\n🏢 Enterprise Configuration:\n")
-		fmt.Printf("  Organization: %s\n", cfg.Enterprise.Organization.Name)
-		fmt.Printf("  Domain: %s\n", cfg.Enterprise.Organization.Domain)
-		fmt.Printf("  Security Level: %s\n", cfg.Enterprise.Security.Level)
-		fmt.Printf("  Analytics: %v\n", cfg.Enterprise.Analytics.Enabled)
-		fmt.Printf("  Integrations: %d configured\n", len(cfg.Enterprise.Integrations.Providers))
+		fmt.Printf("  Organization: %s\n", config.Enterprise.Organization.Name)
+		fmt.Printf("  Domain: %s\n", config.Enterprise.Organization.Domain)
+		fmt.Printf("  Security Level: %s\n", config.Enterprise.Security.Level)
+		fmt.Printf("  Analytics: %v\n", config.Enterprise.Analytics.Enabled)
+		fmt.Printf("  Integrations: %d configured\n", len(config.Enterprise.Integrations.Providers))
 	}
 
 	return nil
@@ -90,14 +90,14 @@ func (Configure) Show() error {
 func (Configure) Update() error {
 	utils.Header("🔄 Update Configuration")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Interactive update wizard
 	wizard := &ConfigurationWizard{
-		Config: cfg,
+		Config: config,
 	}
 
 	if err := wizard.Run(); err != nil {
@@ -119,7 +119,9 @@ func (Configure) Enterprise() error {
 		// Ask if user wants to update
 		fmt.Print("Would you like to update the existing configuration? (y/N): ")
 		var response string
-		fmt.Scanln(&response)
+		if _, err := fmt.Scanln(&response); err != nil && err.Error() != "unexpected newline" {
+			return fmt.Errorf("failed to read response: %w", err)
+		}
 
 		if !strings.EqualFold(response, "y") && !strings.EqualFold(response, "yes") {
 			return nil
@@ -134,7 +136,7 @@ func (Configure) Enterprise() error {
 func (Configure) Export() error {
 	utils.Header("📤 Export Configuration")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -147,10 +149,10 @@ func (Configure) Export() error {
 
 	switch format {
 	case "yaml", "yml":
-		data, err = yaml.Marshal(cfg)
+		data, err = yaml.Marshal(config)
 		ext = ".yaml"
 	case "json":
-		data, err = marshalJSON(cfg)
+		data, err = marshalJSON(config)
 		ext = ".json"
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
@@ -235,12 +237,12 @@ func (Configure) Import() error {
 func (Configure) Validate() error {
 	utils.Header("🔍 Validate Configuration")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	if err := validateConfiguration(cfg); err != nil {
+	if err := validateConfiguration(config); err != nil {
 		utils.Error("❌ Configuration validation failed: %v", err)
 		return err
 	}
@@ -305,21 +307,27 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 
 	fmt.Printf("Project Name [%s]: ", w.Config.Project.Name)
 	var name string
-	fmt.Scanln(&name)
+	if _, err := fmt.Scanln(&name); err != nil && err.Error() != "unexpected newline" {
+		// Empty input is acceptable
+	}
 	if name != "" {
 		w.Config.Project.Name = name
 	}
 
 	fmt.Printf("Binary Name [%s]: ", w.Config.Project.Binary)
 	var binary string
-	fmt.Scanln(&binary)
+	if _, err := fmt.Scanln(&binary); err != nil && err.Error() != "unexpected newline" {
+		// Empty input is acceptable
+	}
 	if binary != "" {
 		w.Config.Project.Binary = binary
 	}
 
 	fmt.Printf("Module Path [%s]: ", w.Config.Project.Module)
 	var module string
-	fmt.Scanln(&module)
+	if _, err := fmt.Scanln(&module); err != nil && err.Error() != "unexpected newline" {
+		// Empty input is acceptable
+	}
 	if module != "" {
 		w.Config.Project.Module = module
 	}
@@ -332,14 +340,19 @@ func (w *ConfigurationWizard) updateBuildConfig() error {
 
 	fmt.Printf("Output Directory [%s]: ", w.Config.Build.Output)
 	var output string
-	fmt.Scanln(&output)
+	if _, err := fmt.Scanln(&output); err != nil && err.Error() != "unexpected newline" {
+		// Empty input is acceptable
+	}
 	if output != "" {
 		w.Config.Build.Output = output
 	}
 
 	fmt.Printf("Parallel Jobs [%d]: ", w.Config.Build.Parallel)
 	var parallel int
-	fmt.Scanf("%d", &parallel)
+	if _, err := fmt.Scanf("%d", &parallel); err != nil {
+		// Invalid input, keep default
+		parallel = 0
+	}
 	if parallel > 0 {
 		w.Config.Build.Parallel = parallel
 	}
@@ -352,14 +365,18 @@ func (w *ConfigurationWizard) updateTestConfig() error {
 
 	fmt.Printf("Test Timeout [%s]: ", w.Config.Test.Timeout)
 	var timeout string
-	fmt.Scanln(&timeout)
+	if _, err := fmt.Scanln(&timeout); err != nil && err.Error() != "unexpected newline" {
+		// Empty input is acceptable
+	}
 	if timeout != "" {
 		w.Config.Test.Timeout = timeout
 	}
 
 	fmt.Printf("Enable Race Detection [%v]: ", w.Config.Test.Race)
 	var race string
-	fmt.Scanln(&race)
+	if _, err := fmt.Scanln(&race); err != nil && err.Error() != "unexpected newline" {
+		// Empty input is acceptable
+	}
 	if race != "" {
 		w.Config.Test.Race = strings.EqualFold(race, "true") || race == "y"
 	}

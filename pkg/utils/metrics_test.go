@@ -275,7 +275,9 @@ func TestMetricsQuery(t *testing.T) {
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			Success:   true,
 		}
-		collector.RecordMetric(metric)
+		if err := collector.RecordMetric(metric); err != nil {
+			t.Fatalf("Failed to record metric in test setup: %v", err)
+		}
 	}
 
 	t.Run("QueryMetrics with disabled collector", func(t *testing.T) {
@@ -551,11 +553,17 @@ func TestPackageLevelMetricsFunctions(t *testing.T) {
 		})
 
 		assert.NotPanics(t, func() {
-			RecordCounter("global_counter", 1.0, nil)
+			err := RecordCounter("global_counter", 1.0, nil)
+			if err != nil {
+				// Expected - package function may return error
+			}
 		})
 
 		assert.NotPanics(t, func() {
-			RecordGauge("global_gauge", 50.0, "percent", nil)
+			err := RecordGauge("global_gauge", 50.0, "percent", nil)
+			if err != nil {
+				// Expected - package function may return error
+			}
 		})
 
 		assert.NotPanics(t, func() {
@@ -563,7 +571,10 @@ func TestPackageLevelMetricsFunctions(t *testing.T) {
 		})
 
 		assert.NotPanics(t, func() {
-			CleanupMetrics()
+			err := CleanupMetrics()
+			if err != nil {
+				// Expected - package function may return error
+			}
 		})
 	})
 
@@ -635,7 +646,10 @@ func BenchmarkMetricsCollector_RecordCounter(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		collector.RecordCounter("bench_counter", float64(i), tags)
+		err := collector.RecordCounter("bench_counter", float64(i), tags)
+		if err != nil {
+			b.Logf("RecordCounter error in benchmark: %v", err)
+		}
 	}
 }
 
@@ -672,6 +686,9 @@ func BenchmarkJSONStorage_Store(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		storage.Store(metric)
+		err := storage.Store(metric)
+		if err != nil {
+			b.Logf("Store error in benchmark: %v", err)
+		}
 	}
 }
