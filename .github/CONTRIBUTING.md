@@ -1,302 +1,371 @@
-# Contributing to MAGE-X
+# 🤝 Contributing to go-mage
 
-Thank you for your interest in contributing to MAGE-X! This guide will help you get started.
+Thank you for your interest in contributing to go-mage! This document provides guidelines to help you contribute effectively while maintaining code quality and consistency.
 
-## Table of Contents
+## 📋 Quick Reference
 
-1. [Code of Conduct](#code-of-conduct)
-2. [Getting Started](#getting-started)
-3. [Development Setup](#development-setup)
-4. [Making Changes](#making-changes)
-5. [Testing](#testing)
-6. [Submitting Changes](#submitting-changes)
-7. [Style Guidelines](#style-guidelines)
-8. [Adding New Features](#adding-new-features)
+- **Before starting**: Check [existing issues](../../issues) and [pull requests](../../pulls)
+- **Code style**: Use `make lint` and `make fmt` before submitting
+- **Tests required**: All changes must include tests and pass `make test-race`
+- **Documentation**: Update relevant docs and add examples for new features
 
-## Code of Conduct
+## 📦 How to Contribute
 
-By participating in this project, you agree to abide by our Code of Conduct:
-
-- Be respectful and inclusive
-- Welcome newcomers and help them get started
-- Focus on constructive criticism
-- Accept feedback gracefully
-- Prioritize the project's best interests
-
-## Getting Started
-
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
+1. **Fork the repo** and create a feature branch
+2. **Install pre-commit hooks**:
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+3. **Development setup**:
    ```bash
    git clone https://github.com/mrz1836/go-mage.git
-   cd MAGE-X
+   cd go-mage
+   go mod download
    ```
-3. **Add upstream remote**:
+4. **Make changes following guidelines** (see sections below)
+5. **Write comprehensive tests** and ensure they pass
+6. **Open a pull request** with clear description of changes
+
+More info on [pull requests](http://help.github.com/pull-requests/).
+
+<br/>
+
+## 🔄 Code Duplication Prevention
+
+**Important**: go-mage follows strict anti-duplication practices. Before writing new code, always check for existing utilities and patterns.
+
+### Shared Utilities
+
+Before implementing common functionality, check these packages:
+
+#### 🧪 Testing Utilities (`internal/testutil`)
+- **Mock utilities**: `ValidateArgs()`, `ExtractResult()`, `ExtractError()`
+- **File helpers**: `CreateTestFiles()`, `WriteTestFile()`, `CreateTestDirectory()`
+- **Test patterns**: `TestCase[T,R]`, `RunTableTests()`, `BenchmarkCase`
+- **Assertions**: `AssertNoError()`, `AssertError()`, `AssertEqual()`
+
+```go
+// ✅ Use shared test patterns
+tests := []testutil.TestCase[string, int]{
+    {Name: "valid input", Input: "42", Expected: 42, WantErr: false},
+}
+testutil.RunTableTests(t, tests, func(t *testing.T, tc testutil.TestCase[string, int]) {
+    result, err := processInput(tc.Input)
+    testutil.AssertNoError(t, err)
+    testutil.AssertEqual(t, tc.Expected, result)
+})
+
+// ❌ Don't duplicate test patterns
+for _, tt := range []struct{name string; input string; want int; wantErr bool}{...} {
+    t.Run(tt.name, func(t *testing.T) {
+        // repeated assertion patterns
+    })
+}
+```
+
+#### 🔧 Error Handling (`internal/errors`)
+- **Wrapping**: `WrapWithContext()` for consistent error context
+- **Validation**: `InvalidField()`, `EmptyField()`, `RequiredField()`
+- **Commands**: `CommandFailed()` for command execution errors
+- **Security**: `PathTraversal()` for path validation errors
+
+```go
+// ✅ Use standardized error utilities
+if err := processFile(path); err != nil {
+    return errors.WrapWithContext(err, "process config file")
+}
+
+if name == "" {
+    return errors.EmptyField("repository name")
+}
+
+// ❌ Don't create ad-hoc errors
+return fmt.Errorf("failed to process config file: %w", err)
+return fmt.Errorf("repository name cannot be empty")
+```
+
+#### ✅ Validation (`internal/validation`)
+- **Repository**: `ValidateRepository()` for owner/repo format
+- **Paths**: `ValidatePath()` with security checks
+- **Branches**: `ValidateBranch()` for Git branch names
+- **Batch validation**: `ValidateFields()` for multiple checks
+
+```go
+// ✅ Use centralized validation
+if err := validation.ValidateRepository(repo); err != nil {
+    return err
+}
+
+// ❌ Don't duplicate validation logic
+if !regexp.MustCompile(`^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$`).MatchString(repo) {
+    return fmt.Errorf("invalid repository format")
+}
+```
+
+#### 🏃 Benchmarking (`internal/benchmark`)
+- **Memory tracking**: `WithMemoryTracking()` for consistent measurement
+- **File setup**: `SetupBenchmarkFiles()`, `SetupBenchmarkRepo()`
+- **Standardized sizes**: `StandardSizes()` for scaling tests
+- **Data generation**: `CreateBenchmarkData()` for test data
+
+```go
+// ✅ Use shared benchmark patterns
+func BenchmarkOperation(b *testing.B) {
+    files := benchmark.SetupBenchmarkFiles(b, tempDir, 100)
+    
+    benchmark.WithMemoryTracking(b, func() {
+        for i := 0; i < b.N; i++ {
+            processFiles(files)
+        }
+    })
+}
+
+// ❌ Don't duplicate benchmark setup
+func BenchmarkOperation(b *testing.B) {
+    b.ReportAllocs()
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        // manual setup and teardown
+    }
+    b.StopTimer()
+}
+```
+
+#### 📄 JSON Processing (`internal/jsonutil`)
+- **Type-safe operations**: `MarshalJSON[T]()`, `UnmarshalJSON[T]()`
+- **Test data**: `GenerateTestJSON()` for consistent test data
+- **Formatting**: `PrettyPrint()`, `CompactJSON()`
+- **Merging**: `MergeJSON()` for combining objects
+
+```go
+// ✅ Use type-safe JSON utilities
+config, err := jsonutil.UnmarshalJSON[Config](data)
+if err != nil {
+    return err
+}
+
+// ❌ Don't use manual JSON handling
+var config Config
+if err := json.Unmarshal(data, &config); err != nil {
+    return fmt.Errorf("failed to unmarshal config: %w", err)
+}
+```
+
+### Pre-Contribution Checklist
+
+Before writing new code, ask yourself:
+
+1. **Does similar functionality already exist?**
+   - Check `internal/` packages for utilities
+   - Search for similar patterns: `grep -r "similar_pattern" internal/`
+
+2. **Can existing utilities be extended?**
+   - Add functions to existing packages vs. creating new ones
+   - Follow established patterns and naming conventions
+
+3. **Is this a one-off or reusable pattern?**
+   - If used in 2+ places, extract to shared utility
+   - Consider future use cases when designing APIs
+
+4. **Does it follow security best practices?**
+   - Use validation utilities for user input
+   - Wrap errors with proper context
+   - Follow path traversal prevention patterns
+
+### Code Review Guidelines
+
+When reviewing code, check for:
+
+- **Duplication**: Could this use existing utilities?
+- **Patterns**: Does this follow established conventions?
+- **Testing**: Are shared test utilities used appropriately?
+- **Errors**: Are errors wrapped with proper context?
+- **Security**: Are inputs validated using shared validators?
+
+## 🧪 Testing Requirements
+
+### Test Coverage
+All tests follow standard Go patterns. We love:
+
+* ✅ [Go Tests](https://golang.org/pkg/testing/)
+* 📘 [Go Examples](https://golang.org/pkg/testing/#hdr-Examples)
+* ⚡ [Go Benchmarks](https://golang.org/pkg/testing/#hdr-Benchmarks)
+
+- **Unit tests**: All new functions must have tests
+- **Integration tests**: Add to `test/integration/` for end-to-end scenarios
+- **Benchmarks**: Performance-critical code needs benchmarks
+- **Fuzz tests**: Add fuzz tests for parser/validation code
+
+Tests should be:
+- Easy to understand
+- Focused on one behavior
+- Fast
+
+Use `require` over `assert` where possible (we lint for this).
+
+This project aims for >= **90% code coverage**. Every code path must be tested to keep the Codecov badge green and CI passing.
+
+### Test Patterns
+```go
+// ✅ Table-driven tests with shared utilities
+func TestNewFunction(t *testing.T) {
+    tests := []testutil.TestCase[Input, Output]{
+        {Name: "description", Input: input, Expected: output, WantErr: false},
+    }
+    
+    testutil.RunTableTests(t, tests, func(t *testing.T, tc testutil.TestCase[Input, Output]) {
+        result, err := NewFunction(tc.Input)
+        if tc.WantErr {
+            testutil.AssertError(t, err)
+        } else {
+            testutil.AssertNoError(t, err)
+            testutil.AssertEqual(t, tc.Expected, result)
+        }
+    })
+}
+```
+
+### Development Commands
+```bash
+make test          # Fast tests with linting
+make test-race     # Tests with race detection
+make test-cover    # Tests with coverage report
+make lint          # Run all linters
+make fmt           # Format code
+make fumpt         # Advanced formatting
+```
+
+<br/>
+
+## 🧹 Coding Conventions
+
+We follow [Effective Go](https://golang.org/doc/effective_go.html), plus:
+
+* 📖 [godoc](https://godoc.org/golang.org/x/tools/cmd/godoc)
+* 🧼 [golangci-lint](https://golangci-lint.run/)
+* 🧾 [Go Report Card](https://goreportcard.com/)
+
+Format your code with `gofmt`, lint with `golangci-lint`, and keep your diffs minimal.
+
+### Common Patterns
+
+#### Error Handling
+```go
+// ✅ Consistent error patterns
+func ProcessFile(path string) error {
+    if err := validation.ValidatePath(path); err != nil {
+        return err
+    }
+    
+    data, err := os.ReadFile(path)
+    if err != nil {
+        return errors.WrapWithContext(err, "read file")
+    }
+    
+    return processData(data)
+}
+```
+
+#### File Operations in Tests
+```go
+// ✅ Use testutil for file operations
+func TestFileProcessing(t *testing.T) {
+    tempDir := testutil.CreateTestDirectory(t)
+    files := testutil.CreateTestFiles(t, tempDir, 5)
+    
+    for _, file := range files {
+        err := ProcessFile(file)
+        testutil.AssertNoError(t, err)
+    }
+}
+```
+
+#### Configuration Validation
+```go
+// ✅ Batch validation pattern
+func ValidateConfig(cfg *Config) error {
+    return validation.ValidateFields(map[string]func() error{
+        "repository": func() error { return validation.ValidateRepository(cfg.Repo) },
+        "branch":     func() error { return validation.ValidateBranch(cfg.Branch) },
+        "webhook":    func() error { return validation.ValidateURL(cfg.WebhookURL) },
+    })
+}
+```
+
+## 🛡️ Security Guidelines
+
+1. **Input validation**: Always validate user input using shared validators
+2. **Path traversal**: Use `validation.ValidatePath()` for file paths
+3. **Error context**: Don't expose sensitive information in error messages
+4. **Dependencies**: Keep dependencies up to date
+
+<br/>
+
+## 🚀 Pull Request Process
+
+1. **Create feature branch**:
    ```bash
-   git remote add upstream https://github.com/originalowner/MAGE-X.git
+   git checkout -b feature/description
    ```
 
-## Development Setup
+2. **Make changes following guidelines**:
+   - Use existing utilities where possible
+   - Add comprehensive tests
+   - Update documentation
 
-### Prerequisites
+3. **Verify quality**:
+   ```bash
+   make test-race    # All tests pass
+   make lint         # No lint errors
+   make bench        # Benchmarks run successfully
+   ```
 
-- Go 1.21 or later
-- Mage (`go install github.com/magefile/mage@latest`)
-- Git
+4. **Submit PR**:
+   - Clear title describing the change
+   - Reference any related issues
+   - Include examples of new functionality
 
-### Initial Setup
+### PR Template
+```markdown
+## Summary
+Brief description of changes and motivation.
 
-```bash
-# Install dependencies
-go mod download
-
-# Install development tools
-mage tools:install
-
-# Run tests to verify setup
-mage test
-```
-
-## Making Changes
-
-### 1. Create a Branch
-
-```bash
-# Update main branch
-git checkout main
-git pull upstream main
-
-# Create feature branch
-git checkout -b feature/your-feature-name
-```
-
-### 2. Make Your Changes
-
-- Write clear, concise code
-- Follow the existing code style
-- Add tests for new functionality
-- Update documentation as needed
-
-### 3. Test Your Changes
-
-```bash
-# Run all tests
-mage test
-
-# Run with race detector
-mage test:race
-
-# Run with coverage
-mage test:cover
-
-# Run linter
-mage lint
-
-# Fix linting issues
-mage lint:fix
-```
-
-### 4. Commit Your Changes
-
-Follow conventional commit format:
-
-```bash
-git add .
-git commit -m "feat: add new awesome feature"
-```
-
-Commit types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, etc.)
-- `refactor`: Code refactoring
-- `perf`: Performance improvements
-- `test`: Test additions or changes
-- `chore`: Build process or auxiliary tool changes
+## Changes
+- List of specific changes made
+- New utilities added/used
+- Tests added
 
 ## Testing
+- [ ] Unit tests pass (`make test`)
+- [ ] Race tests pass (`make test-race`)
+- [ ] Lint checks pass (`make lint`)
+- [ ] Benchmarks run successfully
 
-### Writing Tests
-
-1. **Unit Tests**: Test individual functions
-   ```go
-   func TestMyFunction(t *testing.T) {
-       result := MyFunction(input)
-       assert.Equal(t, expected, result)
-   }
-   ```
-
-2. **Table-Driven Tests**: Test multiple scenarios
-   ```go
-   tests := []struct {
-       name     string
-       input    string
-       expected string
-   }{
-       {"basic test", "input", "expected"},
-   }
-   
-   for _, tt := range tests {
-       t.Run(tt.name, func(t *testing.T) {
-           result := MyFunction(tt.input)
-           assert.Equal(t, tt.expected, result)
-       })
-   }
-   ```
-
-3. **Integration Tests**: Test complete workflows
-   ```go
-   //go:build integration
-   // +build integration
-   
-   func TestIntegration(t *testing.T) {
-       // Integration test code
-   }
-   ```
-
-### Coverage Requirements
-
-- New code should have >80% test coverage
-- Run `mage test:cover` to check coverage
-- View detailed report with `mage test:coverhtml`
-
-## Submitting Changes
-
-### 1. Push to Your Fork
-
-```bash
-git push origin feature/your-feature-name
+## Documentation
+- [ ] Updated relevant README files
+- [ ] Added code examples
+- [ ] Updated API documentation
 ```
 
-### 2. Create Pull Request
+## 🤝 Community Guidelines
 
-1. Go to GitHub and create a pull request
-2. Fill out the PR template
-3. Link any related issues
-4. Ensure all CI checks pass
+- **Be respectful**: Follow the [Code of Conduct](../CODE_OF_CONDUCT.md)
+- **Ask questions**: Use [GitHub Discussions](../../discussions) for questions
+- **Report issues**: Use the issue template for bug reports
+- **Share knowledge**: Help others with code reviews and discussions
 
-### 3. PR Guidelines
+## 📞 Getting Help
 
-- **Title**: Clear and descriptive
-- **Description**: Explain what and why
-- **Testing**: Describe how you tested
-- **Screenshots**: Include if relevant
-- **Breaking Changes**: Clearly marked
+- **Documentation**: Check the [README](../README.md) and package docs
+- **Issues**: Search [existing issues](../../issues) first
+- **Discussions**: Use [GitHub Discussions](../../discussions) for questions
+- **Code examples**: Check the [examples directory](../examples/)
 
-### 4. Review Process
+## 📚 More Guidance
 
-- Maintainers will review your PR
-- Address any requested changes
-- Once approved, it will be merged
+For detailed workflows, commit standards, branch naming, PR templates, and more—read [AGENTS.md](./AGENTS.md). It's the rulebook.
 
-## Style Guidelines
+<br/>
 
-### Go Code Style
-
-1. **Format**: Use `gofmt` (run `mage lint:fmt`)
-2. **Imports**: Group standard library, external, and internal imports
-3. **Comments**: Export functions must have comments
-4. **Error Handling**: Always handle errors explicitly
-5. **Names**: Use clear, descriptive names
-
-### Documentation Style
-
-1. **README**: Update when adding features
-2. **Code Comments**: Explain why, not what
-3. **Examples**: Provide usage examples
-4. **Godoc**: Follow Go documentation conventions
-
-## Adding New Features
-
-### 1. New Task Module
-
-Create a new file in `pkg/mage/`:
-
-```go
-package mage
-
-import (
-    "github.com/magefile/mage/mg"
-    "github.com/mrz1836/go-mage/pkg/utils"
-)
-
-// NewFeature namespace for new feature tasks
-type NewFeature mg.Namespace
-
-// Task performs the new task
-func (NewFeature) Task() error {
-    utils.PrintHeader("Running New Task")
-    // Implementation
-    return nil
-}
-```
-
-### 2. Add Configuration
-
-Update `pkg/mage/config.go`:
-
-```go
-type Config struct {
-    // ... existing fields
-    NewFeature NewFeatureConfig `yaml:"new_feature"`
-}
-
-type NewFeatureConfig struct {
-    Enabled bool   `yaml:"enabled"`
-    Options string `yaml:"options"`
-}
-```
-
-### 3. Add Tests
-
-Create `pkg/mage/newfeature_test.go`:
-
-```go
-func TestNewFeature(t *testing.T) {
-    // Test implementation
-}
-```
-
-### 4. Update Documentation
-
-- Add to README.md
-- Update examples
-- Add to AGENTS.md if relevant
-
-## Common Tasks
-
-### Update Dependencies
-
-```bash
-mage deps:update
-mage deps:tidy
-```
-
-### Run Full CI Locally
-
-```bash
-mage ci
-```
-
-### Generate Mocks
-
-```bash
-go generate ./...
-```
-
-## Getting Help
-
-- **Issues**: Check existing issues or create a new one
-- **Discussions**: Use GitHub Discussions for questions
-- **Documentation**: Read the docs thoroughly
-- **Examples**: Look at existing code for patterns
-
-## Recognition
-
-Contributors will be:
-- Listed in CONTRIBUTORS.md
-- Mentioned in release notes
-- Given credit in commit messages
-
-Thank you for contributing to MAGE-X! 🎉
+Thank you for contributing to go-mage! Let's build something great. 💪 🎉

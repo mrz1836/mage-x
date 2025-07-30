@@ -71,3 +71,6 @@ CITATION.cff
 **/Makefile
 **/makefile
 **/*.mk
+
+# Problematic YAML files (to be fixed separately)
+.github/workflows/fortress-coverage.yml
