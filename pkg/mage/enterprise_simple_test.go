@@ -139,9 +139,13 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 		// Set environment variable for non-existent file
 		originalFile := os.Getenv("IMPORT_FILE")
 		defer func() {
-			_ = os.Setenv("IMPORT_FILE", originalFile)
+			if err := os.Setenv("IMPORT_FILE", originalFile); err != nil {
+				ts.T().Logf("Failed to restore IMPORT_FILE: %v", err)
+			}
 		}()
-		_ = os.Setenv("IMPORT_FILE", "missing.yaml")
+		if err := os.Setenv("IMPORT_FILE", "missing.yaml"); err != nil {
+			ts.T().Fatalf("Failed to set IMPORT_FILE: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
@@ -229,9 +233,13 @@ func (ts *EnterpriseSimpleTestSuite) TestConfigSaveMethods() {
 		// Set environment variables for non-interactive setup
 		originalName := os.Getenv("ENTERPRISE_ORG_NAME")
 		defer func() {
-			_ = os.Setenv("ENTERPRISE_ORG_NAME", originalName)
+			if err := os.Setenv("ENTERPRISE_ORG_NAME", originalName); err != nil {
+				ts.T().Logf("Failed to restore ENTERPRISE_ORG_NAME: %v", err)
+			}
 		}()
-		_ = os.Setenv("ENTERPRISE_ORG_NAME", "setup-org")
+		if err := os.Setenv("ENTERPRISE_ORG_NAME", "setup-org"); err != nil {
+			ts.T().Fatalf("Failed to set ENTERPRISE_ORG_NAME: %v", err)
+		}
 
 		err := SetupEnterpriseConfig()
 

@@ -67,9 +67,13 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 		// Set environment variable for build tags
 		originalTags := os.Getenv("GO_BUILD_TAGS")
 		defer func() {
-			_ = os.Setenv("GO_BUILD_TAGS", originalTags)
+			if err := os.Setenv("GO_BUILD_TAGS", originalTags); err != nil {
+				ts.T().Logf("Failed to restore GO_BUILD_TAGS: %v", err)
+			}
 		}()
-		_ = os.Setenv("GO_BUILD_TAGS", "test,dev")
+		if err := os.Setenv("GO_BUILD_TAGS", "test,dev"); err != nil {
+			ts.T().Fatalf("Failed to set GO_BUILD_TAGS: %v", err)
+		}
 
 		// Create a Go file with generate directives
 		ts.env.CreateFile("generate.go", "package main\n\n//go:generate echo test\n\nfunc main() {}\n")
@@ -110,9 +114,13 @@ func (ts *GenerateTestSuite) TestGenerateAll() {
 		// Set environment variable for build tags
 		originalTags := os.Getenv("GO_BUILD_TAGS")
 		defer func() {
-			_ = os.Setenv("GO_BUILD_TAGS", originalTags)
+			if err := os.Setenv("GO_BUILD_TAGS", originalTags); err != nil {
+				ts.T().Logf("Failed to restore GO_BUILD_TAGS: %v", err)
+			}
 		}()
-		_ = os.Setenv("GO_BUILD_TAGS", "integration")
+		if err := os.Setenv("GO_BUILD_TAGS", "integration"); err != nil {
+			ts.T().Fatalf("Failed to set GO_BUILD_TAGS: %v", err)
+		}
 
 		// Mock successful go generate command with tags
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "./...", "-tags", "integration"}).Return(nil)
@@ -181,9 +189,13 @@ func (ts *GenerateTestSuite) TestGenerateClean() {
 		// Set custom patterns environment variable
 		originalPatterns := os.Getenv("GENERATED_PATTERNS")
 		defer func() {
-			_ = os.Setenv("GENERATED_PATTERNS", originalPatterns)
+			if err := os.Setenv("GENERATED_PATTERNS", originalPatterns); err != nil {
+				ts.T().Logf("Failed to restore GENERATED_PATTERNS: %v", err)
+			}
 		}()
-		_ = os.Setenv("GENERATED_PATTERNS", "*.custom.go,*_test_gen.go")
+		if err := os.Setenv("GENERATED_PATTERNS", "*.custom.go,*_test_gen.go"); err != nil {
+			ts.T().Fatalf("Failed to set GENERATED_PATTERNS: %v", err)
+		}
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
@@ -419,11 +431,19 @@ func (ts *GenerateTestSuite) TestGenerateIntegration() {
 		originalTags := os.Getenv("GO_BUILD_TAGS")
 		originalPatterns := os.Getenv("GENERATED_PATTERNS")
 		defer func() {
-			_ = os.Setenv("GO_BUILD_TAGS", originalTags)
-			_ = os.Setenv("GENERATED_PATTERNS", originalPatterns)
+			if err := os.Setenv("GO_BUILD_TAGS", originalTags); err != nil {
+				ts.T().Logf("Failed to restore GO_BUILD_TAGS: %v", err)
+			}
+			if err := os.Setenv("GENERATED_PATTERNS", originalPatterns); err != nil {
+				ts.T().Logf("Failed to restore GENERATED_PATTERNS: %v", err)
+			}
 		}()
-		_ = os.Setenv("GO_BUILD_TAGS", "test")
-		_ = os.Setenv("GENERATED_PATTERNS", "*.custom.go")
+		if err := os.Setenv("GO_BUILD_TAGS", "test"); err != nil {
+			ts.T().Fatalf("Failed to set GO_BUILD_TAGS: %v", err)
+		}
+		if err := os.Setenv("GENERATED_PATTERNS", "*.custom.go"); err != nil {
+			ts.T().Fatalf("Failed to set GENERATED_PATTERNS: %v", err)
+		}
 
 		// Create test files
 		ts.env.CreateFile("generate.go", "package main\n\n//go:generate echo test\n\nfunc main() {}\n")

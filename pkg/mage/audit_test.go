@@ -36,10 +36,7 @@ func (ts *AuditTestSuite) TestAuditShow() {
 	ts.Run("show audit events handles disabled audit gracefully", func() {
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -102,10 +99,7 @@ func (ts *AuditTestSuite) TestAuditShow() {
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -124,10 +118,7 @@ func (ts *AuditTestSuite) TestAuditStats() {
 	ts.Run("display audit statistics handles disabled audit gracefully", func() {
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -146,10 +137,7 @@ func (ts *AuditTestSuite) TestAuditExport() {
 	ts.Run("export audit events with default settings", func() {
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -176,10 +164,7 @@ func (ts *AuditTestSuite) TestAuditExport() {
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -198,10 +183,7 @@ func (ts *AuditTestSuite) TestAuditCleanup() {
 	ts.Run("cleanup old audit events", func() {
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -218,10 +200,7 @@ func (ts *AuditTestSuite) TestAuditEnable() {
 	ts.Run("enable audit logging", func() {
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -241,10 +220,7 @@ func (ts *AuditTestSuite) TestAuditEnable() {
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -261,10 +237,7 @@ func (ts *AuditTestSuite) TestAuditDisable() {
 	ts.Run("disable audit logging without existing config", func() {
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -283,10 +256,7 @@ func (ts *AuditTestSuite) TestAuditDisable() {
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -303,10 +273,7 @@ func (ts *AuditTestSuite) TestAuditReport() {
 	ts.Run("generate compliance report handles disabled audit gracefully", func() {
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -333,10 +300,7 @@ func (ts *AuditTestSuite) TestAuditReport() {
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -417,10 +381,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			version := ""
 			err := env.WithMockRunner(
 				func(r interface{}) error {
-					if err := SetRunner(r.(CommandRunner)); err != nil {
-						return err
-					}
-					return nil
+					return SetRunner(r.(CommandRunner))
 				},
 				func() interface{} { return GetRunner() },
 				func() error {
@@ -444,10 +405,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			version := ""
 			err := env.WithMockRunner(
 				func(r interface{}) error {
-					if err := SetRunner(r.(CommandRunner)); err != nil {
-						return err
-					}
-					return nil
+					return SetRunner(r.(CommandRunner))
 				},
 				func() interface{} { return GetRunner() },
 				func() error {
@@ -471,10 +429,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			version := ""
 			err := env.WithMockRunner(
 				func(r interface{}) error {
-					if err := SetRunner(r.(CommandRunner)); err != nil {
-						return err
-					}
-					return nil
+					return SetRunner(r.(CommandRunner))
 				},
 				func() interface{} { return GetRunner() },
 				func() error {
@@ -506,10 +461,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 		version := ""
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -555,10 +507,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -655,10 +604,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
-				if err := SetRunner(r.(CommandRunner)); err != nil {
-					return err
-				}
-				return nil
+				return SetRunner(r.(CommandRunner))
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
