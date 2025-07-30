@@ -62,7 +62,7 @@ func setupMockRunner(tb testing.TB) {
 
 func teardownMockRunner() {
 	if originalRunner != nil {
-		SetRunner(originalRunner)
+		_ = SetRunner(originalRunner) //nolint:errcheck // Test cleanup - error not critical
 	}
 }
 

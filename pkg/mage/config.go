@@ -201,7 +201,11 @@ func defaultConfig() *Config {
 	}
 
 	// Try to detect project info
-	module, _ := getModuleName()
+	module, err := getModuleName()
+	if err != nil {
+		// If we can't get module name, use empty string
+		module = ""
+	}
 	binary := filepath.Base(module)
 	if binary == "." || binary == "" {
 		binary = "app"
@@ -318,13 +322,21 @@ func applyEnterpriseEnvOverrides(cfg *EnterpriseConfiguration) {
 
 // BinaryName returns the configured binary name
 func BinaryName() string {
-	c, _ := GetConfig()
+	c, err := GetConfig()
+	if err != nil {
+		// Return default binary name if config loading fails
+		return "app"
+	}
 	return c.Project.Binary
 }
 
 // BuildTags returns the configured build tags as a string
 func BuildTags() string {
-	c, _ := GetConfig()
+	c, err := GetConfig()
+	if err != nil {
+		// Return empty string if config loading fails
+		return ""
+	}
 	if len(c.Build.Tags) == 0 {
 		return ""
 	}
@@ -333,19 +345,31 @@ func BuildTags() string {
 
 // IsVerbose returns whether verbose mode is enabled
 func IsVerbose() bool {
-	c, _ := GetConfig()
+	c, err := GetConfig()
+	if err != nil {
+		// Return false if config loading fails
+		return false
+	}
 	return c.Build.Verbose || c.Test.Verbose
 }
 
 // HasEnterpriseConfig returns whether enterprise configuration is enabled
 func HasEnterpriseConfig() bool {
-	c, _ := GetConfig()
+	c, err := GetConfig()
+	if err != nil {
+		// Return false if config loading fails
+		return false
+	}
 	return c.Enterprise != nil
 }
 
 // GetEnterpriseConfig returns the enterprise configuration if available
 func GetEnterpriseConfig() *EnterpriseConfiguration {
-	c, _ := GetConfig()
+	c, err := GetConfig()
+	if err != nil {
+		// Return nil if config loading fails
+		return nil
+	}
 	if c.Enterprise != nil {
 		return c.Enterprise
 	}

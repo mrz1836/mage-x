@@ -124,7 +124,7 @@ func deployProd() error {
 	// Confirm production deployment
 	fmt.Print("Are you sure you want to deploy to PRODUCTION? (yes/no): ")
 	var response string
-	fmt.Scanln(&response)
+	_, _ = fmt.Scanln(&response) // Ignore error - user input is optional
 
 	if response != "yes" {
 		fmt.Println("❌ Production deployment canceled")
@@ -136,7 +136,9 @@ func deployProd() error {
 	mg.Deps(t.CI)
 
 	// Build for production
-	os.Setenv("GO_BUILD_TAGS", "prod")
+	if err := os.Setenv("GO_BUILD_TAGS", "prod"); err != nil {
+		return fmt.Errorf("failed to set GO_BUILD_TAGS: %w", err)
+	}
 	var b Build
 	mg.Deps(b.All)
 
@@ -416,7 +418,9 @@ func CI() error {
 	start := time.Now()
 
 	// Set CI environment
-	os.Setenv("CI", "true")
+	if err := os.Setenv("CI", "true"); err != nil {
+		return fmt.Errorf("failed to set CI env var: %w", err)
+	}
 
 	// Run all checks in order
 	var l Lint
@@ -458,7 +462,8 @@ func Clean() error {
 
 	for _, pattern := range toRemove {
 		fmt.Printf("Removing %s\n", pattern)
-		sh.Run("rm", "-rf", pattern)
+		// Ignore errors for cleanup - files may not exist
+		_ = sh.Run("rm", "-rf", pattern)
 	}
 
 	fmt.Println("✅ Cleanup completed!")

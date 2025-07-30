@@ -36,7 +36,7 @@ func (ts *GitTestSuite) TestGitDiff() {
 		ts.env.Runner.On("RunCmdOutput", "git", []string{"status", "--porcelain"}).Return("", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Diff()
@@ -63,7 +63,7 @@ func (ts *GitTestSuite) TestGitTag() {
 		ts.env.Runner.On("RunCmd", "git", []string{"fetch", "--tags", "-f"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Tag()
@@ -86,7 +86,7 @@ func (ts *GitTestSuite) TestGitTag() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Tag()
@@ -114,7 +114,7 @@ func (ts *GitTestSuite) TestGitTagRemove() {
 		ts.env.Runner.On("RunCmd", "git", []string{"fetch", "--tags"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.TagRemove()
@@ -137,7 +137,7 @@ func (ts *GitTestSuite) TestGitTagRemove() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.TagRemove()
@@ -164,7 +164,7 @@ func (ts *GitTestSuite) TestGitTagUpdate() {
 		ts.env.Runner.On("RunCmd", "git", []string{"fetch", "--tags", "-f"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.TagUpdate()
@@ -187,7 +187,7 @@ func (ts *GitTestSuite) TestGitTagUpdate() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.TagUpdate()
@@ -206,7 +206,7 @@ func (ts *GitTestSuite) TestGitStatus() {
 		ts.env.Runner.On("RunCmd", "git", []string{"status"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Status()
@@ -224,7 +224,7 @@ func (ts *GitTestSuite) TestGitLog() {
 		ts.env.Runner.On("RunCmd", "git", []string{"log", "--oneline", "-10"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Log()
@@ -243,7 +243,7 @@ func (ts *GitTestSuite) TestGitBranch() {
 		ts.env.Runner.On("RunCmd", "git", []string{"branch", "-a"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Branch()
@@ -262,7 +262,7 @@ func (ts *GitTestSuite) TestGitPull() {
 		ts.env.Runner.On("RunCmd", "git", []string{"pull", "--rebase"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Pull()
@@ -281,7 +281,7 @@ func (ts *GitTestSuite) TestGitCommit() {
 		ts.env.Runner.On("RunCmd", "git", []string{"commit", "-m", "test commit"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Commit("test commit")
@@ -304,7 +304,7 @@ func (ts *GitTestSuite) TestGitCommit() {
 		ts.env.Runner.On("RunCmd", "git", []string{"commit", "-m", "env commit message"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Commit()
@@ -327,7 +327,7 @@ func (ts *GitTestSuite) TestGitCommit() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Commit()
@@ -346,7 +346,7 @@ func (ts *GitTestSuite) TestGitInit() {
 		ts.env.Runner.On("RunCmd", "git", []string{"init"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Init()
@@ -364,7 +364,7 @@ func (ts *GitTestSuite) TestGitAdd() {
 		ts.env.Runner.On("RunCmd", "git", []string{"add", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Add()
@@ -379,7 +379,7 @@ func (ts *GitTestSuite) TestGitAdd() {
 		ts.env.Runner.On("RunCmd", "git", []string{"add", "file1.go", "file2.go"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Add("file1.go", "file2.go")
@@ -397,7 +397,7 @@ func (ts *GitTestSuite) TestGitClone() {
 		ts.env.Runner.On("RunCmd", "git", []string{"clone"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Clone()
@@ -415,7 +415,7 @@ func (ts *GitTestSuite) TestGitPush() {
 		ts.env.Runner.On("RunCmd", "git", []string{"push", "origin", "main"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.Push("origin", "main")
@@ -433,7 +433,7 @@ func (ts *GitTestSuite) TestGitPullWithRemote() {
 		ts.env.Runner.On("RunCmd", "git", []string{"pull", "origin", "main"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.PullWithRemote("origin", "main")
@@ -451,7 +451,7 @@ func (ts *GitTestSuite) TestGitTagWithMessage() {
 		ts.env.Runner.On("RunCmd", "git", []string{"tag", "-a", "v1.0.0", "-m", "Release version 1.0.0"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.TagWithMessage("v1.0.0", "Release version 1.0.0")
@@ -469,7 +469,7 @@ func (ts *GitTestSuite) TestGitBranchWithName() {
 		ts.env.Runner.On("RunCmd", "git", []string{"branch", "feature-branch"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.BranchWithName("feature-branch")
@@ -487,7 +487,7 @@ func (ts *GitTestSuite) TestGitCloneRepo() {
 		ts.env.Runner.On("RunCmd", "git", []string{"clone", "https://github.com/user/repo.git", "local-dir"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.CloneRepo("https://github.com/user/repo.git", "local-dir")
@@ -505,7 +505,7 @@ func (ts *GitTestSuite) TestGitLogWithCount() {
 		ts.env.Runner.On("RunCmd", "git", []string{"log", "-5"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.git.LogWithCount(5)
@@ -537,7 +537,7 @@ func (ts *GitTestSuite) TestGitIntegration() {
 		ts.env.Runner.On("RunCmd", "git", []string{"fetch", "--tags", "-f"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				if err := ts.git.Commit(); err != nil {

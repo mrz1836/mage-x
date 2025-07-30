@@ -225,7 +225,7 @@ func (Metrics) Imports() error {
 	for imp := range imports {
 		if !strings.Contains(imp, ".") {
 			stdlib = append(stdlib, imp)
-		} else if module, _ := getModuleName(); strings.HasPrefix(imp, module) {
+		} else if module, err := getModuleName(); err == nil && strings.HasPrefix(imp, module) {
 			internal = append(internal, imp)
 		} else {
 			external = append(external, imp)

@@ -418,7 +418,7 @@ func BenchmarkMockBuild(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = mockBuild.Default()
+		_ = mockBuild.Default() //nolint:errcheck // Benchmark doesn't need error handling
 	}
 }
 
@@ -430,6 +430,6 @@ func BenchmarkRealNamespace(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// Note: This may fail in test environment, but measures interface overhead
-		_ = build.Default()
+		_ = build.Default() //nolint:errcheck // Benchmark doesn't need error handling
 	}
 }

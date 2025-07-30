@@ -97,7 +97,7 @@ func main() {
 		ts.mockBuildCommand("bin/module", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Default()
@@ -135,7 +135,7 @@ func main() {
 		})).Return(errors.New("build error"))
 
 		err := env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Default()
@@ -173,7 +173,7 @@ func main() {
 
 		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.All()
@@ -206,7 +206,7 @@ func main() {
 
 		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.All()
@@ -233,7 +233,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-linux-amd64", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Platform("linux/amd64")
@@ -245,7 +245,7 @@ func main() {
 
 	ts.Run("handles invalid platform format", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Platform("invalid-platform")
@@ -270,7 +270,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-windows-amd64.exe", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Platform("windows/amd64")
@@ -297,7 +297,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-linux-amd64", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Linux()
@@ -322,7 +322,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-darwin-arm64", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Darwin()
@@ -346,7 +346,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-windows-amd64.exe", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Windows()
@@ -376,7 +376,7 @@ CMD ["./app"]`)
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Docker()
@@ -393,7 +393,7 @@ CMD ["./app"]`)
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Docker()
@@ -417,7 +417,7 @@ func (ts *BuildTestSuite) TestBuildClean() {
 		ts.env.Runner.On("RunCmd", "go", []string{"clean", "-testcache"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Clean()
@@ -446,7 +446,7 @@ func main() {
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Install()
@@ -469,7 +469,7 @@ func main() {}`)
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.Generate()
@@ -491,7 +491,7 @@ func (ts *BuildTestSuite) TestBuildPreBuild() {
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.build.PreBuild()

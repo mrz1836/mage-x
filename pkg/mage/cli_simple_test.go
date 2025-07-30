@@ -46,7 +46,10 @@ func (ts *CLISimpleTestSuite) TestCLIBulk() {
 	ts.Run("handles missing operation", func() {
 		// Don't set OPERATION environment variable
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Bulk()
@@ -63,7 +66,10 @@ func (ts *CLISimpleTestSuite) TestCLIBulk() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Bulk()
@@ -83,7 +89,10 @@ func (ts *CLISimpleTestSuite) TestCLIQuery() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Query()
@@ -99,7 +108,10 @@ func (ts *CLISimpleTestSuite) TestCLIQuery() {
 func (ts *CLISimpleTestSuite) TestCLIDashboard() {
 	ts.Run("handles missing repository config", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Dashboard()
@@ -115,7 +127,10 @@ func (ts *CLISimpleTestSuite) TestCLIDashboard() {
 func (ts *CLISimpleTestSuite) TestCLIBatch() {
 	ts.Run("handles missing batch configuration", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Batch()
@@ -146,7 +161,10 @@ func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 		}()
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Monitor()
@@ -174,7 +192,10 @@ func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 		}()
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Monitor()
@@ -194,7 +215,10 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -213,7 +237,10 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 		ts.env.Runner.On("RunCmd", "git", []string{"status", "--porcelain"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -233,7 +260,10 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 		ts.env.Runner.On("RunCmd", "go", []string{"clean", "-cache"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -252,7 +282,10 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 		ts.env.Runner.On("RunCmd", "tar", []string{"-czf", "workspace-backup.tar.gz", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -273,7 +306,10 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 		ts.env.Runner.On("RunCmd", "tar", []string{"-xzf", "workspace-backup.tar.gz"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Workspace()
@@ -292,7 +328,10 @@ func (ts *CLISimpleTestSuite) TestCLIPipeline() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Pipeline()
@@ -316,7 +355,10 @@ func (ts *CLISimpleTestSuite) TestCLICompliance() {
 		ts.env.Runner.On("RunCmd", "govulncheck", []string{"./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Compliance()
@@ -332,7 +374,10 @@ func (ts *CLISimpleTestSuite) TestCLICompliance() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Compliance()
@@ -349,7 +394,10 @@ func (ts *CLISimpleTestSuite) TestCLICompliance() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Compliance()
@@ -408,7 +456,10 @@ func (ts *CLISimpleTestSuite) TestCLIUtilityMethods() {
 func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 	ts.Run("Default method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Default()
@@ -420,7 +471,10 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 
 	ts.Run("Help method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Help()
@@ -432,7 +486,10 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 
 	ts.Run("Version method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Version()
@@ -444,7 +501,10 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 
 	ts.Run("Completion method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Completion()
@@ -456,7 +516,10 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 
 	ts.Run("Config method", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Config()
@@ -471,7 +534,10 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 		ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/mrz1836/go-mage"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error {
+				//nolint:errcheck // SetRunner error is properly handled
+				return SetRunner(r.(CommandRunner))
+			},
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.cli.Update()

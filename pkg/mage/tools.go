@@ -273,7 +273,11 @@ func installTool(tool ToolDefinition) error {
 
 	// Special case for golangci-lint
 	if tool.Name == "golangci-lint" {
-		config, _ := GetConfig()
+		config, err := GetConfig()
+		if err != nil {
+			// Use default config if loading fails
+			config = defaultConfig()
+		}
 		return ensureGolangciLint(config)
 	}
 

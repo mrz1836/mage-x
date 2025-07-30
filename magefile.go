@@ -79,11 +79,15 @@ func InstallStdlib() error {
 		utils.Info("Installing stdlib for %s/%s...", p.OS, p.Arch)
 
 		// Set environment for the target platform
-		os.Setenv("GOOS", p.OS)
-		os.Setenv("GOARCH", p.Arch)
+		if err := os.Setenv("GOOS", p.OS); err != nil {
+			return fmt.Errorf("failed to set GOOS: %w", err)
+		}
+		if err := os.Setenv("GOARCH", p.Arch); err != nil {
+			return fmt.Errorf("failed to set GOARCH: %w", err)
+		}
 		defer func() {
-			os.Unsetenv("GOOS")
-			os.Unsetenv("GOARCH")
+			_ = os.Unsetenv("GOOS")   //nolint:errcheck // Cleanup, error not critical
+			_ = os.Unsetenv("GOARCH") //nolint:errcheck // Cleanup, error not critical
 		}()
 
 		// Install the standard library

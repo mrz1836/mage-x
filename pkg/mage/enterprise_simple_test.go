@@ -70,7 +70,7 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -84,7 +84,7 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 
 	ts.Run("Validate method handles missing config", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -109,7 +109,7 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -123,7 +123,7 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 
 	ts.Run("Export method handles missing config", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -148,7 +148,7 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace
@@ -162,7 +162,7 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 
 	ts.Run("Schema method generates schema", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				var ec EnterpriseConfigNamespace

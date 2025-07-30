@@ -49,7 +49,7 @@ func useAWSProvider() error {
 		return fmt.Errorf("failed to get AWS provider: %w", err)
 	}
 	defer func() {
-		_ = provider.Close() // Ignore error in defer cleanup
+		_ = provider.Close() //nolint:errcheck // Ignore error in defer cleanup
 	}()
 
 	// Check provider health
@@ -179,7 +179,7 @@ func useAzureProvider() error {
 		return fmt.Errorf("failed to get Azure provider: %w", err)
 	}
 	defer func() {
-		_ = provider.Close() // Ignore error in defer cleanup
+		_ = provider.Close() //nolint:errcheck // Ignore error in defer cleanup
 	}()
 
 	ctx := context.Background()
@@ -257,7 +257,7 @@ func multiCloudExample() error {
 			continue
 		}
 		defer func() {
-			_ = provider.Close() // Ignore error in defer cleanup
+			_ = provider.Close() //nolint:errcheck // Ignore error in defer cleanup
 		}()
 
 		// Create compute instance
