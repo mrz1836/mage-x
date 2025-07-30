@@ -7,11 +7,11 @@
 ## Architecture
 
 ### Namespace Architecture
-- **37 total namespaces**: Build, Test, Lint, Format, Deps, Git, Release, Docs, Deploy, Tools, Security, Generate, CLI, Update, Mod, Recipes, Metrics, Workflow, Database, Common, Operations, Version, Vault, Bench, Install, Audit, Analytics, VCS, Interactive, Vet, Init, Configure, YAML, Releases, Enterprise
+- **18 namespace interfaces**: Build, Test, Lint, Format, Deps, Git, Release, Docs, Deploy, Tools, Security, Generate, CLI, Update, Mod, Recipes, Metrics, Workflow
 - **Interface-based design**: Each namespace has a corresponding interface (e.g., `BuildNamespace`)
 - **Factory functions**: `NewBuildNamespace()`, `NewTestNamespace()`, etc.
 - **Registry pattern**: `DefaultNamespaceRegistry` for centralized access
-- **Backward compatibility**: Existing `Build{}`, `Test{}` types still work
+- **Flexible usage**: Both `Build{}` struct and interface-based approaches are supported
 
 ### Core Features
 - **Build**: Build operations for Go projects
@@ -29,11 +29,12 @@
 ```
 go-mage/
 ├── pkg/mage/                          # Core mage package
-│   ├── namespace_interfaces.go        # 37 namespace interfaces
+│   ├── namespace_interfaces.go        # 18 namespace interfaces
 │   ├── namespace_wrappers.go          # Interface implementations
 │   ├── minimal_runner.go             # Command runner implementation
 │   ├── build.go, test.go, lint.go... # Individual namespace implementations
-│   └── *.go.disabled                 # Temporarily disabled files
+│   ├── namespace_architecture_test.go # Architecture test
+│   └── ...                           # Additional files
 ├── pkg/common/                       # Shared utilities
 │   ├── env/                          # Environment management
 │   ├── fileops/                      # File operations
@@ -47,8 +48,6 @@ go-mage/
 │   ├── basic/                        # Basic usage examples
 │   ├── custom/                       # Custom implementations
 │   └── testing/                      # Testing patterns
-├── tests/                            # Test files
-│   └── namespace_architecture_test.go # Main architecture test
 ├── scripts/                          # Shell scripts
 │   ├── setup.sh                      # Setup script
 │   └── test-runner.sh                # Test runner
@@ -57,7 +56,7 @@ go-mage/
 
 ## Usage Patterns
 
-### Basic Usage (Backward Compatible)
+### Basic Usage
 ```go
 //go:build mage
 
@@ -72,7 +71,7 @@ func Test() error {
 }
 ```
 
-### Interface-Based Usage (New Pattern)
+### Interface-Based Usage
 ```go
 //go:build mage
 
@@ -129,18 +128,17 @@ var Default = CustomBuild{}.Default
 - Run architecture tests
 
 #### Best Practices
-- Always test with `go test ./tests/namespace_architecture_test.go -v`
+- Always test with `go test ./pkg/mage/namespace_architecture_test.go -v`
 - Verify compilation with `go build ./pkg/mage`
 - Use factory functions: `NewBuildNamespace()`, etc.
 - Maintain interface contracts
-- Preserve backward compatibility
 
 #### Dangerous Operations (Avoid)
 - Don't modify interface definitions without careful consideration
-- Don't break backward compatibility
+- Don't break existing public methods
 - Don't remove existing public methods
 - Don't modify the registry pattern without testing
-- Avoid touching disabled files
+- Test changes thoroughly
 
 #### Adding New Namespaces
 1. Add interface to `namespace_interfaces.go`
@@ -155,7 +153,7 @@ var Default = CustomBuild{}.Default
 
 ### Run Tests
 ```bash
-go test ./tests/namespace_architecture_test.go -v
+go test ./pkg/mage/namespace_architecture_test.go -v
 ```
 
 ### Check Compilation
@@ -186,7 +184,7 @@ The go-mage architecture supports:
 - **Flexibility**: Interface-based design allows custom implementations
 - **Testability**: Mock interfaces for unit testing  
 - **Maintainability**: Clean separation of concerns
-- **Backward Compatibility**: Existing code continues to work
+- **Dual Approach**: Both struct-based and interface-based usage patterns
 - **Extensibility**: Easy to add new namespaces and methods
 - **Production Ready**: Core functionality working with real tool execution
 
