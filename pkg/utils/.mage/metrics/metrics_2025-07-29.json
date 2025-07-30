@@ -1580,5 +1580,38 @@
     "tags": null,
     "metadata": null,
     "success": true
+  },
+  {
+    "name": "test_global",
+    "type": "timer",
+    "value": 83,
+    "unit": "nanoseconds",
+    "timestamp": "2025-07-29T20:48:47.991458-04:00",
+    "tags": {
+      "global": "true"
+    },
+    "metadata": null,
+    "duration": 83,
+    "success": true
+  },
+  {
+    "name": "global_counter",
+    "type": "counter",
+    "value": 1,
+    "unit": "count",
+    "timestamp": "2025-07-29T20:48:47.992865-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
+  },
+  {
+    "name": "global_gauge",
+    "type": "gauge",
+    "value": 50,
+    "unit": "percent",
+    "timestamp": "2025-07-29T20:48:47.99351-04:00",
+    "tags": null,
+    "metadata": null,
+    "success": true
   }
 ]
