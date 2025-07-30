@@ -759,29 +759,36 @@ func BenchmarkBuildCache_GetBuildResult(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	// Pre-populate cache
+	// Create a dummy binary file
+	binaryPath := filepath.Join(tempDir, "test-binary")
+	err = os.WriteFile(binaryPath, []byte("binary content"), 0o755)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// Pre-populate cache with fewer items for faster setup
 	buildResult := &BuildResult{
-		Binary:   "/path/to/binary",
+		Binary:   binaryPath,
 		Platform: "linux/amd64",
 		Success:  true,
 	}
 
-	hashes := make([]string, 100)
-	for i := 0; i < 100; i++ {
+	hashes := make([]string, 10)
+	for i := 0; i < 10; i++ {
 		hash := fmt.Sprintf("bench-get-hash-%d", i)
 		hashes[i] = hash
 		err := cache.StoreBuildResult(hash, buildResult)
 		if err != nil {
-			b.Fatal(err)
+			b.Fatalf("Failed to store result %d: %v", i, err)
 		}
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		hash := hashes[i%100]
+		hash := hashes[i%10]
 		_, found := cache.GetBuildResult(hash)
 		if !found {
-			b.Fatal("Expected to find cached result")
+			b.Fatalf("Expected to find cached result for hash: %s", hash)
 		}
 	}
 }

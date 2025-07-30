@@ -25,6 +25,11 @@ func initCacheManager() *cache.Manager {
 		// TODO: Add cache configuration to Config struct if needed
 		// For now, use default cache configuration
 
+		// Check if cache is disabled via environment
+		if os.Getenv("MAGE_CACHE_DISABLED") == "true" {
+			config.Enabled = false
+		}
+
 		cacheManager = cache.NewManager(config)
 		if err := cacheManager.Init(); err != nil {
 			utils.Warn("Failed to initialize cache: %v", err)
@@ -297,6 +302,11 @@ func (Build) Docker() error {
 		return fmt.Errorf("docker command not found")
 	}
 
+	// Check if Dockerfile exists
+	if _, err := os.Stat(cfg.Docker.Dockerfile); os.IsNotExist(err) {
+		return fmt.Errorf("Dockerfile not found")
+	}
+
 	tag := fmt.Sprintf("%s/%s:%s",
 		cfg.Docker.Registry,
 		cfg.Docker.Repository,
@@ -476,6 +486,11 @@ func buildFlags(cfg *Config) []string {
 	// Add trimpath
 	if cfg.Build.TrimPath {
 		flags = append(flags, "-trimpath")
+	}
+
+	// Add verbose flag
+	if cfg.Build.Verbose {
+		flags = append(flags, "-v")
 	}
 
 	// Add custom go flags

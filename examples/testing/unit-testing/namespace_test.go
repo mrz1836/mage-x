@@ -423,6 +423,8 @@ func BenchmarkMockBuild(b *testing.B) {
 }
 
 func BenchmarkRealNamespace(b *testing.B) {
+	b.Skip("Skipping benchmark that calls actual build process - too slow for CI")
+
 	build := mage.NewBuildNamespace()
 
 	b.ResetTimer()

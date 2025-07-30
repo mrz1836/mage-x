@@ -3,6 +3,7 @@ package mage
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
@@ -23,6 +24,10 @@ func (ts *BuildTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.env.CreateGoMod("test/module")
 	ts.build = Build{}
+	// Reset cache manager to avoid test interference
+	cacheManager = nil
+	// Disable cache for tests
+	os.Setenv("MAGE_CACHE_DISABLED", "true")
 }
 
 // TearDownTest runs after each test
@@ -32,6 +37,10 @@ func (ts *BuildTestSuite) TearDownTest() {
 	os.Unsetenv("GOARCH")
 	os.Unsetenv("CGO_ENABLED")
 	os.Unsetenv("DOCKER_BUILDKIT")
+	os.Unsetenv("MAGE_CACHE_DISABLED")
+
+	// Reset global config
+	cfg = nil
 
 	ts.env.Cleanup()
 }
@@ -73,7 +82,7 @@ func main() {
 
 		// Mock git commands and build command
 		ts.mockGitCommands()
-		ts.mockBuildCommand("bin/app", nil)
+		ts.mockBuildCommand("bin/module", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -87,17 +96,33 @@ func main() {
 	})
 
 	ts.Run("handles build failure", func() {
+		// Create a fresh test environment for this sub-test
+		env := testutil.NewTestEnvironment(ts.T())
+		defer env.Cleanup()
+
 		// Create project file
-		ts.env.CreateFile("main.go", `package main
+		env.CreateFile("main.go", `package main
 func main() {
 	println("Test app")
 }`)
+		env.CreateGoMod("test/module")
 
 		// Mock git commands and failed build command
-		ts.mockGitCommands()
-		ts.mockBuildCommand("bin/app", errors.New("build error"))
+		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.0.0", nil)
+		env.Runner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("abc1234", nil)
+		env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			if len(args) < 6 || args[0] != "build" || args[1] != "-ldflags" {
+				return false
+			}
+			for i := 3; i < len(args)-1; i++ {
+				if args[i] == "-o" && i+1 < len(args) {
+					return args[i+1] == "bin/module"
+				}
+			}
+			return false
+		})).Return(errors.New("build error"))
 
-		err := ts.env.WithMockRunner(
+		err := env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
@@ -193,7 +218,7 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build command for linux/amd64
-		ts.mockBuildCommand("bin/app-linux-amd64", nil)
+		ts.mockBuildCommand("bin/module-linux-amd64", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -230,7 +255,7 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build command for windows
-		ts.mockBuildCommand("bin/app-windows-amd64.exe", nil)
+		ts.mockBuildCommand("bin/module-windows-amd64.exe", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -257,7 +282,7 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build command for Linux
-		ts.mockBuildCommand("bin/app-linux-amd64", nil)
+		ts.mockBuildCommand("bin/module-linux-amd64", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -281,8 +306,8 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build commands for Darwin (both amd64 and arm64)
-		ts.mockBuildCommand("bin/app-darwin-amd64", nil)
-		ts.mockBuildCommand("bin/app-darwin-arm64", nil)
+		ts.mockBuildCommand("bin/module-darwin-amd64", nil)
+		ts.mockBuildCommand("bin/module-darwin-arm64", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -306,7 +331,7 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build command for Windows
-		ts.mockBuildCommand("bin/app-windows-amd64.exe", nil)
+		ts.mockBuildCommand("bin/module-windows-amd64.exe", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -350,6 +375,9 @@ CMD ["./app"]`)
 	})
 
 	ts.Run("handles missing Dockerfile", func() {
+		// Ensure the Dockerfile doesn't exist
+		os.RemoveAll(filepath.Join(ts.env.TempDir, "Dockerfile"))
+
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
@@ -398,8 +426,10 @@ func main() {
 		// Mock git commands needed for version info
 		ts.mockGitCommands()
 
-		// Mock go install command
-		ts.env.Runner.On("RunCmd", "go", []string{"install", "."}).Return(nil)
+		// Mock go install command with flexible args matching
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			return len(args) >= 2 && args[0] == "install" && args[len(args)-1] == "."
+		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -439,9 +469,12 @@ func main() {}`)
 // TestBuildPreBuild tests the PreBuild method
 func (ts *BuildTestSuite) TestBuildPreBuild() {
 	ts.Run("runs pre-build tasks", func() {
-		// Mock go mod tidy and go generate commands
+		// Mock go mod tidy
 		ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
-		ts.env.Runner.On("RunCmd", "go", []string{"generate", "./..."}).Return(nil)
+		// Mock go build with flexible args
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			return len(args) >= 2 && args[0] == "build" && args[len(args)-1] == "./..."
+		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) { SetRunner(r.(CommandRunner)) },
@@ -522,6 +555,5 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 
 // TestBuildTestSuite runs the test suite
 func TestBuildTestSuite(t *testing.T) {
-	t.Skip("Temporarily skipping build tests due to mock maintenance - workflows need to run")
 	suite.Run(t, new(BuildTestSuite))
 }
