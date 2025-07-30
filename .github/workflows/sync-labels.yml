@@ -31,9 +31,7 @@ on:
         default: false
         required: false
 
-# ————————————————————————————————————————————————————————————————
-# Permissions
-# ————————————————————————————————————————————————————————————————
+# Security: Restrictive default permissions with job-level overrides for least privilege access
 permissions:
   contents: read
 

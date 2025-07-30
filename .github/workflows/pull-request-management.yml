@@ -31,9 +31,7 @@ on:
   pull_request:
     types: [opened, reopened, ready_for_review, closed]
 
-# ————————————————————————————————————————————————————————————————
-# Permissions
-# ————————————————————————————————————————————————————————————————
+# Security: Restrictive default permissions with job-level overrides for least privilege access
 permissions:
   contents: read
 
@@ -534,8 +532,8 @@ jobs:
     needs: [load-env]
     runs-on: ubuntu-latest
     permissions:
-      actions: write
-      contents: read
+      actions: write # Required: Delete GitHub Actions caches for closed PRs
+      contents: read # Read repository content for cache management
     if: github.event.action == 'closed'
     outputs:
       caches-cleaned: ${{ steps.clean.outputs.caches-cleaned }}
@@ -637,10 +635,11 @@ jobs:
     needs: [load-env]
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Required: Delete merged PR branches from repository
     if: |
       github.event.action == 'closed' &&
-      github.event.pull_request.merged == true
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
     outputs:
       branch-deleted: ${{ steps.delete.outputs.branch-deleted }}
 
@@ -755,6 +754,7 @@ jobs:
           echo "**📋 PR:** #$PR_NUMBER - $PR_TITLE" >> $GITHUB_STEP_SUMMARY
           echo "**🎬 Action:** $PR_ACTION" >> $GITHUB_STEP_SUMMARY
           echo "**👤 Author:** @$PR_AUTHOR" >> $GITHUB_STEP_SUMMARY
+          echo "**🔗 Source:** ${{ github.event.pull_request.head.repo.full_name == github.repository && 'Internal' || 'Fork' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Show results based on action type

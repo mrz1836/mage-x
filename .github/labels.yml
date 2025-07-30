@@ -43,6 +43,9 @@
 - name: "idea"
   description: "Any idea, suggestion"
   color: cccccc
+- name: "npm"
+  description: "Used for referencing npm packages and dependencies"
+  color: 006b75
 - name: "performance"
   description: "Performance improvements or optimizations"
   color: 8bc34a
@@ -91,3 +94,18 @@
 - name: "work-in-progress"
   description: "Used for denoting a WIP, stops auto-merge"
   color: FBCA04
+- name: "coverage-override"
+  description: "Override coverage requirements for this PR"
+  color: ff8c00
+- name: "coverage-override-60"
+  description: "Override coverage threshold to 60% for this PR"
+  color: ff8c00
+- name: "coverage-override-70"
+  description: "Override coverage threshold to 70% for this PR"
+  color: ff8c00
+- name: "coverage-override-80"
+  description: "Override coverage threshold to 80% for this PR"
+  color: ff8c00
+- name: "coverage-override-90"
+  description: "Override coverage threshold to 90% for this PR"
+  color: ff8c00

@@ -30,12 +30,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
-# ————————————————————————————————————————————————————————————————
-# Permissions
-# ————————————————————————————————————————————————————————————————
+# Security: Restrictive default permissions with job-level overrides for least privilege access
 permissions:
   contents: read
-  pull-requests: read
 
 # ————————————————————————————————————————————————————————————————
 # Concurrency Control
@@ -86,9 +83,9 @@ jobs:
     needs: [load-env]
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write
-      contents: write
-      issues: write
+      pull-requests: write # Required: Update and merge Dependabot PRs
+      contents: write # Required: Merge approved Dependabot PRs
+      issues: write # Required: Comment on related dependency issues
     outputs:
       dependency-names: ${{ steps.metadata.outputs.dependency-names }}
       update-type: ${{ steps.metadata.outputs.update-type }}
