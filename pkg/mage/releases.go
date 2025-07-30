@@ -409,14 +409,14 @@ func buildWithGoreleaser(config *MultiChannelReleaseConfig) error {
 
 	defer func() {
 		if oldToken == "" {
-			os.Unsetenv("GITHUB_TOKEN")
+			_ = os.Unsetenv("GITHUB_TOKEN") // Ignore error in defer cleanup
 		} else {
-			os.Setenv("GITHUB_TOKEN", oldToken)
+			_ = os.Setenv("GITHUB_TOKEN", oldToken) // Ignore error in defer cleanup
 		}
 		if oldChannel == "" {
-			os.Unsetenv("RELEASE_CHANNEL")
+			_ = os.Unsetenv("RELEASE_CHANNEL") // Ignore error in defer cleanup
 		} else {
-			os.Setenv("RELEASE_CHANNEL", oldChannel)
+			_ = os.Setenv("RELEASE_CHANNEL", oldChannel) // Ignore error in defer cleanup
 		}
 	}()
 
@@ -519,9 +519,9 @@ func (e *buildEnvironment) restore() {
 
 func restoreEnv(key, value string) {
 	if value == "" {
-		os.Unsetenv(key)
+		_ = os.Unsetenv(key) // Ignore error - best effort cleanup
 	} else {
-		os.Setenv(key, value)
+		_ = os.Setenv(key, value) // Ignore error - best effort cleanup
 	}
 }
 

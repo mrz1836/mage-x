@@ -54,10 +54,10 @@ var (
 	mockRunner     *MockRunner   //nolint:gochecknoglobals // Test global for mocking
 )
 
-func setupMockRunner() {
+func setupMockRunner(tb testing.TB) {
 	mockRunner = &MockRunner{}
 	originalRunner = GetRunner()
-	SetRunner(mockRunner)
+	require.NoError(tb, SetRunner(mockRunner))
 }
 
 func teardownMockRunner() {
@@ -67,7 +67,7 @@ func teardownMockRunner() {
 }
 
 func TestCheck_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	check := Check{}
@@ -127,7 +127,7 @@ func TestCheck_Operations(t *testing.T) {
 }
 
 func TestCI_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	ci := CI{}
@@ -185,7 +185,7 @@ func TestCI_Operations(t *testing.T) {
 }
 
 func TestMonitor_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	monitor := Monitor{}
@@ -233,7 +233,7 @@ func TestMonitor_Operations(t *testing.T) {
 }
 
 func TestDatabase_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	db := Database{}
@@ -291,7 +291,7 @@ func TestDatabase_Operations(t *testing.T) {
 }
 
 func TestDeploy_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	deploy := Deploy{}
@@ -350,7 +350,7 @@ func TestDeploy_Operations(t *testing.T) {
 }
 
 func TestClean_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	clean := Clean{}
@@ -404,7 +404,7 @@ func TestClean_Operations(t *testing.T) {
 }
 
 func TestRun_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	run := Run{}
@@ -447,7 +447,7 @@ func TestRun_Operations(t *testing.T) {
 }
 
 func TestServe_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	serve := Serve{}
@@ -490,7 +490,7 @@ func TestServe_Operations(t *testing.T) {
 }
 
 func TestDockerOps_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	docker := DockerOps{}
@@ -561,7 +561,7 @@ func TestDockerOps_Operations(t *testing.T) {
 }
 
 func TestCommon_Operations(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	common := Common{}
@@ -630,7 +630,7 @@ func TestOperationStructs(t *testing.T) {
 
 // Benchmark tests for operations
 func BenchmarkCheck_All(b *testing.B) {
-	setupMockRunner()
+	setupMockRunner(b)
 	defer teardownMockRunner()
 
 	check := Check{}
@@ -643,7 +643,7 @@ func BenchmarkCheck_All(b *testing.B) {
 }
 
 func BenchmarkCI_Test(b *testing.B) {
-	setupMockRunner()
+	setupMockRunner(b)
 	defer teardownMockRunner()
 
 	ci := CI{}
@@ -656,7 +656,7 @@ func BenchmarkCI_Test(b *testing.B) {
 }
 
 func BenchmarkDocker_Build(b *testing.B) {
-	setupMockRunner()
+	setupMockRunner(b)
 	defer teardownMockRunner()
 
 	docker := DockerOps{}
@@ -670,7 +670,7 @@ func BenchmarkDocker_Build(b *testing.B) {
 
 // Test error propagation
 func TestOperations_ErrorHandling(t *testing.T) {
-	setupMockRunner()
+	setupMockRunner(t)
 	defer teardownMockRunner()
 
 	mockRunner.shouldError = true

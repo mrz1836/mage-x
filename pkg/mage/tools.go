@@ -58,7 +58,7 @@ func (Tools) Update() error {
 	// Update golangci-lint if using brew
 	if utils.IsMac() && utils.CommandExists("brew") {
 		utils.Info("Updating golangci-lint via brew...")
-		GetRunner().RunCmd("brew", "upgrade", "golangci-lint")
+		_ = GetRunner().RunCmd("brew", "upgrade", "golangci-lint") // Ignore error - best effort
 	}
 
 	// Update other tools

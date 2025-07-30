@@ -175,9 +175,9 @@ func (Test) CoverHTML() error {
 
 	// Try to open in browser
 	if utils.CommandExists("open") {
-		GetRunner().RunCmd("open", "coverage.html")
+		_ = GetRunner().RunCmd("open", "coverage.html") // Ignore error - best effort
 	} else if utils.CommandExists("xdg-open") {
-		GetRunner().RunCmd("xdg-open", "coverage.html")
+		_ = GetRunner().RunCmd("xdg-open", "coverage.html") // Ignore error - best effort
 	}
 
 	return nil

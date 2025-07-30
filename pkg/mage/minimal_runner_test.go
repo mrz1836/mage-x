@@ -211,7 +211,7 @@ func (ts *MinimalRunnerTestSuite) TestSetRunner() {
 	mockRunner := ts.env.Runner
 
 	// Set the mock runner
-	SetRunner(mockRunner)
+	require.NoError(ts.T(), SetRunner(mockRunner))
 
 	// Verify the runner was set
 	currentRunner := GetRunner()
@@ -219,7 +219,7 @@ func (ts *MinimalRunnerTestSuite) TestSetRunner() {
 	require.NotSame(ts.T(), originalRunner, currentRunner)
 
 	// Restore original runner
-	SetRunner(originalRunner)
+	require.NoError(ts.T(), SetRunner(originalRunner))
 	restoredRunner := GetRunner()
 	require.Same(ts.T(), originalRunner, restoredRunner)
 }
@@ -400,7 +400,7 @@ func (ts *MinimalRunnerTestSuite) TestMinimalRunnerIntegration() {
 
 		// Set a mock runner
 		mockRunner := ts.env.Runner
-		SetRunner(mockRunner)
+		require.NoError(ts.T(), SetRunner(mockRunner))
 
 		// Verify the mock is active
 		currentRunner := GetRunner()
@@ -419,7 +419,7 @@ func (ts *MinimalRunnerTestSuite) TestMinimalRunnerIntegration() {
 		require.Equal(ts.T(), "output", output)
 
 		// Restore original runner
-		SetRunner(runner1)
+		require.NoError(ts.T(), SetRunner(runner1))
 		restoredRunner := GetRunner()
 		require.Same(ts.T(), runner1, restoredRunner)
 	})

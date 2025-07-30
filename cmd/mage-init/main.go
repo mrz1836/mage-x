@@ -144,14 +144,18 @@ func runInteractiveMode(opts *InitOptions) error {
 	if opts.ProjectName == "" {
 		fmt.Print("Enter project name: ")
 		var name string
-		fmt.Scanln(&name)
+		if _, err := fmt.Scanln(&name); err != nil {
+			return fmt.Errorf("failed to read project name: %w", err)
+		}
 		opts.ProjectName = name
 	}
 
 	// Module path
 	fmt.Printf("Enter Go module path [%s]: ", opts.ModulePath)
 	var module string
-	fmt.Scanln(&module)
+	if _, err := fmt.Scanln(&module); err != nil {
+		return fmt.Errorf("failed to read module path: %w", err)
+	}
 	if module != "" {
 		opts.ModulePath = module
 	}
@@ -164,7 +168,9 @@ func runInteractiveMode(opts *InitOptions) error {
 	}
 	fmt.Printf("Select template [%s]: ", opts.Template)
 	var template string
-	fmt.Scanln(&template)
+	if _, err := fmt.Scanln(&template); err != nil {
+		return fmt.Errorf("failed to read template: %w", err)
+	}
 	if template != "" {
 		opts.Template = template
 	}
@@ -172,7 +178,9 @@ func runInteractiveMode(opts *InitOptions) error {
 	// Go version
 	fmt.Printf("Go version [%s]: ", opts.GoVersion)
 	var goVersion string
-	fmt.Scanln(&goVersion)
+	if _, err := fmt.Scanln(&goVersion); err != nil {
+		return fmt.Errorf("failed to read Go version: %w", err)
+	}
 	if goVersion != "" {
 		opts.GoVersion = goVersion
 	}

@@ -360,7 +360,9 @@ func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close() // Ignore error in defer cleanup
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -387,9 +389,15 @@ func bumpVersion(current, bumpType string) (string, error) {
 	}
 
 	var major, minor, patch int
-	fmt.Sscanf(parts[0], "%d", &major)
-	fmt.Sscanf(parts[1], "%d", &minor)
-	fmt.Sscanf(parts[2], "%d", &patch)
+	if _, err := fmt.Sscanf(parts[0], "%d", &major); err != nil {
+		return "", fmt.Errorf("invalid major version: %s", parts[0])
+	}
+	if _, err := fmt.Sscanf(parts[1], "%d", &minor); err != nil {
+		return "", fmt.Errorf("invalid minor version: %s", parts[1])
+	}
+	if _, err := fmt.Sscanf(parts[2], "%d", &patch); err != nil {
+		return "", fmt.Errorf("invalid patch version: %s", parts[2])
+	}
 
 	switch bumpType {
 	case "major":

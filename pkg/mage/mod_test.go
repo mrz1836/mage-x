@@ -219,7 +219,7 @@ func (ts *ModTestSuite) TestMod_Update_TidyError() {
 
 // TestMod_Clean tests the Clean function with FORCE environment variable
 func (ts *ModTestSuite) TestMod_Clean() {
-	os.Setenv("FORCE", "true")
+	require.NoError(ts.T(), os.Setenv("FORCE", "true"))
 	defer func() { _ = os.Unsetenv("FORCE") }()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"clean", "-modcache"}).Return(nil)
@@ -254,7 +254,7 @@ func (ts *ModTestSuite) TestMod_Clean_NoForce() {
 // TestMod_Clean_Error tests Clean function with command error
 func (ts *ModTestSuite) TestMod_Clean_Error() {
 	expectedError := require.New(ts.T())
-	os.Setenv("FORCE", "true")
+	require.NoError(ts.T(), os.Setenv("FORCE", "true"))
 	defer func() { _ = os.Unsetenv("FORCE") }()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"clean", "-modcache"}).Return(errors.New("clean failed"))
@@ -290,7 +290,7 @@ func (ts *ModTestSuite) TestMod_Graph() {
 // TestMod_Graph_WithGraphFile tests Graph function with GRAPH_FILE environment variable
 func (ts *ModTestSuite) TestMod_Graph_WithGraphFile() {
 	graphOutput := "test/module github.com/stretchr/testify@v1.9.0"
-	os.Setenv("GRAPH_FILE", "test-graph.txt")
+	require.NoError(ts.T(), os.Setenv("GRAPH_FILE", "test-graph.txt"))
 	defer func() { _ = os.Unsetenv("GRAPH_FILE") }()
 
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(graphOutput, nil)
@@ -325,7 +325,7 @@ func (ts *ModTestSuite) TestMod_Graph_Error() {
 
 // TestMod_Why tests the Why function with MODULE environment variable
 func (ts *ModTestSuite) TestMod_Why() {
-	os.Setenv("MODULE", "github.com/pkg/errors")
+	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/pkg/errors"))
 	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	whyOutput := "# github.com/pkg/errors\ntest/module\ngithub.com/pkg/errors"
@@ -361,7 +361,7 @@ func (ts *ModTestSuite) TestMod_Why_NoModule() {
 
 // TestMod_Why_IndirectDependency tests Why function for indirect dependency
 func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
-	os.Setenv("MODULE", "github.com/indirect/dep")
+	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/indirect/dep"))
 	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	whyOutput := "# github.com/indirect/dep\ntest/module\ngithub.com/some/other\ngithub.com/indirect/dep"
@@ -382,7 +382,7 @@ func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
 // TestMod_Why_Error tests Why function with error
 func (ts *ModTestSuite) TestMod_Why_Error() {
 	expectedError := require.New(ts.T())
-	os.Setenv("MODULE", "github.com/pkg/errors")
+	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/pkg/errors"))
 	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/pkg/errors"}).Return("", errors.New("why failed"))
@@ -437,7 +437,7 @@ func (ts *ModTestSuite) TestMod_Init() {
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
-	os.Setenv("MODULE", "github.com/example/project")
+	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/example/project"))
 	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "init", "github.com/example/project"}).Return(nil)
@@ -477,7 +477,7 @@ func (ts *ModTestSuite) TestMod_Init_WithGitRemote() {
 
 // TestMod_Init_GoModExists tests Init function when go.mod already exists
 func (ts *ModTestSuite) TestMod_Init_GoModExists() {
-	os.Setenv("MODULE", "github.com/example/project")
+	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/example/project"))
 	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	err := ts.env.WithMockRunner(
@@ -520,7 +520,7 @@ func (ts *ModTestSuite) TestMod_Init_InitError() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
 	expectedError := require.New(ts.T())
-	os.Setenv("MODULE", "github.com/example/project")
+	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/example/project"))
 	defer func() { _ = os.Unsetenv("MODULE") }()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "init", "github.com/example/project"}).Return(errors.New("init failed"))

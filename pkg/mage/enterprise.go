@@ -197,7 +197,7 @@ func (Enterprise) Deploy() error {
 		if err := step.Action(); err != nil {
 			deployment.Status = "failed"
 			deployment.Error = err.Error()
-			saveDeploymentRecord(deployment)
+			_ = saveDeploymentRecord(deployment) // Ignore error - best effort logging
 
 			utils.Error("❌ Deployment failed at step: %s", step.Name)
 			return fmt.Errorf("deployment failed: %w", err)
@@ -209,7 +209,7 @@ func (Enterprise) Deploy() error {
 	// Mark deployment as successful
 	deployment.Status = "success"
 	deployment.CompletedAt = time.Now()
-	saveDeploymentRecord(deployment)
+	_ = saveDeploymentRecord(deployment) // Ignore error - best effort logging
 
 	utils.Success("🎉 Deployment to %s completed successfully", target)
 	utils.Info("📊 Deployment ID: %s", deployment.ID)
@@ -331,7 +331,7 @@ func (Enterprise) Promote() error {
 		if err := step.Action(); err != nil {
 			promotion.Status = "failed"
 			promotion.Error = err.Error()
-			savePromotionRecord(promotion)
+			_ = savePromotionRecord(promotion) // Ignore error - best effort logging
 
 			utils.Error("❌ Promotion failed at step: %s", step.Name)
 			return fmt.Errorf("promotion failed: %w", err)
@@ -343,7 +343,7 @@ func (Enterprise) Promote() error {
 	// Mark promotion as successful
 	promotion.Status = "success"
 	promotion.CompletedAt = time.Now()
-	savePromotionRecord(promotion)
+	_ = savePromotionRecord(promotion) // Ignore error - best effort logging
 
 	utils.Success("🎉 Promotion completed successfully")
 	utils.Info("📊 Promotion ID: %s", promotion.ID)

@@ -52,8 +52,10 @@ func (ts *GitTestSuite) TestGitTag() {
 	ts.Run("successful tag creation", func() {
 		// Set version environment variable
 		originalVersion := os.Getenv("version")
-		defer os.Setenv("version", originalVersion)
-		os.Setenv("version", "1.2.3")
+		defer func() {
+			require.NoError(ts.T(), os.Setenv("version", originalVersion))
+		}()
+		require.NoError(ts.T(), os.Setenv("version", "1.2.3"))
 
 		// Mock successful git commands
 		ts.env.Runner.On("RunCmd", "git", []string{"tag", "-a", "v1.2.3", "-m", "Pending full release..."}).Return(nil)
@@ -101,8 +103,10 @@ func (ts *GitTestSuite) TestGitTagRemove() {
 	ts.Run("successful tag removal", func() {
 		// Set version environment variable
 		originalVersion := os.Getenv("version")
-		defer os.Setenv("version", originalVersion)
-		os.Setenv("version", "1.2.3")
+		defer func() {
+			require.NoError(ts.T(), os.Setenv("version", originalVersion))
+		}()
+		require.NoError(ts.T(), os.Setenv("version", "1.2.3"))
 
 		// Mock successful git commands
 		ts.env.Runner.On("RunCmd", "git", []string{"tag", "-d", "v1.2.3"}).Return(nil)
@@ -150,8 +154,10 @@ func (ts *GitTestSuite) TestGitTagUpdate() {
 	ts.Run("successful tag update", func() {
 		// Set version environment variable
 		originalVersion := os.Getenv("version")
-		defer os.Setenv("version", originalVersion)
-		os.Setenv("version", "1.2.3")
+		defer func() {
+			require.NoError(ts.T(), os.Setenv("version", originalVersion))
+		}()
+		require.NoError(ts.T(), os.Setenv("version", "1.2.3"))
 
 		// Mock successful git commands
 		ts.env.Runner.On("RunCmd", "git", []string{"push", "--force", "origin", "HEAD:refs/tags/v1.2.3"}).Return(nil)
@@ -288,8 +294,10 @@ func (ts *GitTestSuite) TestGitCommit() {
 	ts.Run("commit with environment variable message", func() {
 		// Set message environment variable
 		originalMessage := os.Getenv("message")
-		defer os.Setenv("message", originalMessage)
-		os.Setenv("message", "env commit message")
+		defer func() {
+			require.NoError(ts.T(), os.Setenv("message", originalMessage))
+		}()
+		require.NoError(ts.T(), os.Setenv("message", "env commit message"))
 
 		// Mock successful git add and commit
 		ts.env.Runner.On("RunCmd", "git", []string{"add", "-A"}).Return(nil)
@@ -515,11 +523,11 @@ func (ts *GitTestSuite) TestGitIntegration() {
 		originalVersion := os.Getenv("version")
 		originalMessage := os.Getenv("message")
 		defer func() {
-			os.Setenv("version", originalVersion)
-			os.Setenv("message", originalMessage)
+			require.NoError(ts.T(), os.Setenv("version", originalVersion))
+			require.NoError(ts.T(), os.Setenv("message", originalMessage))
 		}()
-		os.Setenv("version", "2.0.0")
-		os.Setenv("message", "Version 2.0.0 release")
+		require.NoError(ts.T(), os.Setenv("version", "2.0.0"))
+		require.NoError(ts.T(), os.Setenv("message", "Version 2.0.0 release"))
 
 		// Mock git operations using environment variables
 		ts.env.Runner.On("RunCmd", "git", []string{"add", "-A"}).Return(nil)

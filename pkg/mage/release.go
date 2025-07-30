@@ -38,9 +38,9 @@ func (Release) Default() error {
 	os.Setenv("GITHUB_TOKEN", token)
 	defer func() {
 		if oldToken == "" {
-			os.Unsetenv("GITHUB_TOKEN")
+			_ = os.Unsetenv("GITHUB_TOKEN") // Ignore error in defer cleanup
 		} else {
-			os.Setenv("GITHUB_TOKEN", oldToken)
+			_ = os.Setenv("GITHUB_TOKEN", oldToken) // Ignore error in defer cleanup
 		}
 	}()
 

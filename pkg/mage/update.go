@@ -91,7 +91,9 @@ func (Update) Install() error {
 	if err := os.MkdirAll(updateDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create update directory: %w", err)
 	}
-	defer os.RemoveAll(updateDir)
+	defer func() {
+		_ = os.RemoveAll(updateDir) // Ignore error in defer cleanup
+	}()
 
 	// Download update
 	if err := downloadUpdate(info, updateDir); err != nil {
@@ -311,7 +313,9 @@ func getLatestStableRelease(owner, repo string) (*GitHubRelease, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close() // Ignore error in defer cleanup
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -339,7 +343,9 @@ func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close() // Ignore error in defer cleanup
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -374,7 +380,9 @@ func getLatestEdgeRelease(owner, repo string) (*GitHubRelease, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close() // Ignore error in defer cleanup
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -411,7 +419,9 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close() // Ignore error in defer cleanup
+	}()
 
 	// Save to file
 	filename := filepath.Base(info.DownloadURL)
@@ -478,6 +488,6 @@ func saveUpdateRecord(info *UpdateInfo) {
 	}
 
 	// Ensure directory exists and save
-	fileOps.File.MkdirAll(filepath.Dir(historyPath), 0o755)
-	fileOps.JSON.WriteJSONIndent(historyPath, history, "", "  ")
+	_ = fileOps.File.MkdirAll(filepath.Dir(historyPath), 0o755)      // Ignore error - best effort
+	_ = fileOps.JSON.WriteJSONIndent(historyPath, history, "", "  ") // Ignore error - best effort
 }

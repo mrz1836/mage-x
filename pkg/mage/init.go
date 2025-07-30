@@ -274,7 +274,7 @@ func getInitProjectConfig() (*InitProjectConfig, error) {
 	if config.Name == "" {
 		pwd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to get current directory: %w", err)
+			return nil, fmt.Errorf("failed to get current directory: %w", err)
 		}
 		config.Name = filepath.Base(pwd)
 	}

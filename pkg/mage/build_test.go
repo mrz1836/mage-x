@@ -541,14 +541,14 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		originalRunner := GetRunner()
 		mockRunner := &testutil.MockRunner{}
 		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("abc1234", nil)
-		SetRunner(mockRunner)
+		require.NoError(ts.T(), SetRunner(mockRunner))
 
 		commit := getCommit()
 
 		require.Equal(ts.T(), "abc1234", commit)
 
 		// Restore original runner
-		SetRunner(originalRunner)
+		require.NoError(ts.T(), SetRunner(originalRunner))
 	})
 
 	ts.Run("getCommit handles git error", func() {
@@ -556,14 +556,14 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		originalRunner := GetRunner()
 		mockRunner := &testutil.MockRunner{}
 		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("", errors.New("git error"))
-		SetRunner(mockRunner)
+		require.NoError(ts.T(), SetRunner(mockRunner))
 
 		commit := getCommit()
 
 		require.Equal(ts.T(), "unknown", commit)
 
 		// Restore original runner
-		SetRunner(originalRunner)
+		require.NoError(ts.T(), SetRunner(originalRunner))
 	})
 }
 
