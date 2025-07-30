@@ -385,6 +385,9 @@ func TestNamespaceCommandValidation(t *testing.T) {
 	t.Run("BuildNamespace respects security", func(t *testing.T) {
 		build := NewBuildNamespace()
 		// The build will use the global secure runner which validates commands
-		_ = build.Default() // May fail due to missing tools, but won't execute dangerous commands
+		if err := build.Default(); err != nil {
+			// May fail due to missing tools, but won't execute dangerous commands
+			t.Logf("build failed as expected: %v", err)
+		}
 	})
 }

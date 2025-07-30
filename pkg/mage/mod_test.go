@@ -706,36 +706,56 @@ func (ts *ModTestSuite) TestGetModCache() {
 	originalGopath := os.Getenv("GOPATH")
 	defer func() {
 		if originalGomodcache != "" {
-			os.Setenv("GOMODCACHE", originalGomodcache)
+			if err := os.Setenv("GOMODCACHE", originalGomodcache); err != nil {
+				ts.T().Logf("Failed to restore GOMODCACHE: %v", err)
+			}
 		} else {
-			_ = os.Unsetenv("GOMODCACHE")
+			if err := os.Unsetenv("GOMODCACHE"); err != nil {
+				ts.T().Logf("Failed to unset GOMODCACHE: %v", err)
+			}
 		}
 		if originalGopath != "" {
-			os.Setenv("GOPATH", originalGopath)
+			if err := os.Setenv("GOPATH", originalGopath); err != nil {
+				ts.T().Logf("Failed to restore GOPATH: %v", err)
+			}
 		} else {
-			_ = os.Unsetenv("GOPATH")
+			if err := os.Unsetenv("GOPATH"); err != nil {
+				ts.T().Logf("Failed to unset GOPATH: %v", err)
+			}
 		}
 	}()
 
 	ts.Run("with GOMODCACHE", func() {
-		os.Setenv("GOMODCACHE", "/custom/modcache")
-		_ = os.Unsetenv("GOPATH")
+		if err := os.Setenv("GOMODCACHE", "/custom/modcache"); err != nil {
+			ts.T().Fatalf("Failed to set GOMODCACHE: %v", err)
+		}
+		if err := os.Unsetenv("GOPATH"); err != nil {
+			ts.T().Logf("Failed to unset GOPATH: %v", err)
+		}
 
 		result := getModCache()
 		require.Equal(ts.T(), "/custom/modcache", result)
 	})
 
 	ts.Run("with GOPATH", func() {
-		_ = os.Unsetenv("GOMODCACHE")
-		os.Setenv("GOPATH", "/custom/gopath")
+		if err := os.Unsetenv("GOMODCACHE"); err != nil {
+			ts.T().Logf("Failed to unset GOMODCACHE: %v", err)
+		}
+		if err := os.Setenv("GOPATH", "/custom/gopath"); err != nil {
+			ts.T().Fatalf("Failed to set GOPATH: %v", err)
+		}
 
 		result := getModCache()
 		require.Equal(ts.T(), "/custom/gopath/pkg/mod", result)
 	})
 
 	ts.Run("default location", func() {
-		_ = os.Unsetenv("GOMODCACHE")
-		_ = os.Unsetenv("GOPATH")
+		if err := os.Unsetenv("GOMODCACHE"); err != nil {
+			ts.T().Logf("Failed to unset GOMODCACHE: %v", err)
+		}
+		if err := os.Unsetenv("GOPATH"); err != nil {
+			ts.T().Logf("Failed to unset GOPATH: %v", err)
+		}
 
 		result := getModCache()
 		require.Contains(ts.T(), result, "go/pkg/mod")

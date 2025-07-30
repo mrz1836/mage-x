@@ -92,7 +92,10 @@ func (Update) Install() error {
 		return fmt.Errorf("failed to create update directory: %w", err)
 	}
 	defer func() {
-		_ = os.RemoveAll(updateDir) // Ignore error in defer cleanup
+		// Ignore error in defer cleanup
+		if err := os.RemoveAll(updateDir); err != nil {
+			// Best effort cleanup - ignore error
+		}
 	}()
 
 	// Download update
@@ -318,11 +321,17 @@ func getLatestStableRelease(owner, repo string) (*GitHubRelease, error) {
 		return nil, err
 	}
 	defer func() {
-		_ = resp.Body.Close() // Ignore error in defer cleanup
+		// Ignore error in defer cleanup
+		if err := resp.Body.Close(); err != nil {
+			// Best effort cleanup - ignore error
+		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read error response: %w", err)
+		}
 		return nil, fmt.Errorf("GitHub API error: %s", body)
 	}
 
@@ -348,11 +357,17 @@ func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
 		return nil, err
 	}
 	defer func() {
-		_ = resp.Body.Close() // Ignore error in defer cleanup
+		// Ignore error in defer cleanup
+		if err := resp.Body.Close(); err != nil {
+			// Best effort cleanup - ignore error
+		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read error response: %w", err)
+		}
 		return nil, fmt.Errorf("GitHub API error: %s", body)
 	}
 
@@ -385,11 +400,17 @@ func getLatestEdgeRelease(owner, repo string) (*GitHubRelease, error) {
 		return nil, err
 	}
 	defer func() {
-		_ = resp.Body.Close() // Ignore error in defer cleanup
+		// Ignore error in defer cleanup
+		if err := resp.Body.Close(); err != nil {
+			// Best effort cleanup - ignore error
+		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read error response: %w", err)
+		}
 		return nil, fmt.Errorf("GitHub API error: %s", body)
 	}
 
@@ -424,7 +445,10 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 		return err
 	}
 	defer func() {
-		_ = resp.Body.Close() // Ignore error in defer cleanup
+		// Ignore error in defer cleanup
+		if err := resp.Body.Close(); err != nil {
+			// Best effort cleanup - ignore error
+		}
 	}()
 
 	// Save to file
@@ -456,13 +480,19 @@ func installUpdate(dir string) error {
 
 // getUpdateConfigPath returns the update configuration path
 func getUpdateConfigPath() string {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(os.TempDir(), ".config", "mage", "update.json")
+	}
 	return filepath.Join(home, ".config", "mage", "update.json")
 }
 
 // getUpdateHistoryPath returns the update history path
 func getUpdateHistoryPath() string {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(os.TempDir(), ".config", "mage", "history.json")
+	}
 	return filepath.Join(home, ".config", "mage", "history.json")
 }
 

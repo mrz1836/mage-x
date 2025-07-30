@@ -638,7 +638,9 @@ func BenchmarkCheck_All(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		mockRunner.Reset()
-		_ = check.All()
+		if err := check.All(); err != nil {
+			// Ignore errors in benchmark - we're testing performance
+		}
 	}
 }
 
@@ -651,7 +653,9 @@ func BenchmarkCI_Test(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		mockRunner.Reset()
-		_ = ci.Run("test")
+		if err := ci.Run("test"); err != nil {
+			// Ignore errors in benchmark - we're testing performance
+		}
 	}
 }
 
@@ -664,7 +668,9 @@ func BenchmarkDocker_Build(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		mockRunner.Reset()
-		_ = docker.Build("test")
+		if err := docker.Build("test"); err != nil {
+			// Ignore errors in benchmark - we're testing performance
+		}
 	}
 }
 

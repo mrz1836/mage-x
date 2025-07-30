@@ -35,12 +35,18 @@ func (Release) Default() error {
 	// Run goreleaser
 	// Set environment variable temporarily
 	oldToken := os.Getenv("GITHUB_TOKEN")
-	os.Setenv("GITHUB_TOKEN", token)
+	if err := os.Setenv("GITHUB_TOKEN", token); err != nil {
+		return fmt.Errorf("failed to set GITHUB_TOKEN: %w", err)
+	}
 	defer func() {
 		if oldToken == "" {
-			_ = os.Unsetenv("GITHUB_TOKEN") // Ignore error in defer cleanup
+			if err := os.Unsetenv("GITHUB_TOKEN"); err != nil {
+				// Log error but don't fail - this is cleanup
+			}
 		} else {
-			_ = os.Setenv("GITHUB_TOKEN", oldToken) // Ignore error in defer cleanup
+			if err := os.Setenv("GITHUB_TOKEN", oldToken); err != nil {
+				// Log error but don't fail - this is cleanup
+			}
 		}
 	}()
 

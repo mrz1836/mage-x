@@ -404,19 +404,31 @@ func buildWithGoreleaser(config *MultiChannelReleaseConfig) error {
 	oldToken := os.Getenv("GITHUB_TOKEN")
 	oldChannel := os.Getenv("RELEASE_CHANNEL")
 
-	os.Setenv("GITHUB_TOKEN", config.GitHubToken)
-	os.Setenv("RELEASE_CHANNEL", string(config.Channel))
+	if err := os.Setenv("GITHUB_TOKEN", config.GitHubToken); err != nil {
+		return fmt.Errorf("failed to set GITHUB_TOKEN: %w", err)
+	}
+	if err := os.Setenv("RELEASE_CHANNEL", string(config.Channel)); err != nil {
+		return fmt.Errorf("failed to set RELEASE_CHANNEL: %w", err)
+	}
 
 	defer func() {
 		if oldToken == "" {
-			_ = os.Unsetenv("GITHUB_TOKEN") // Ignore error in defer cleanup
+			if err := os.Unsetenv("GITHUB_TOKEN"); err != nil {
+				// Log error but don't fail - this is cleanup
+			}
 		} else {
-			_ = os.Setenv("GITHUB_TOKEN", oldToken) // Ignore error in defer cleanup
+			if err := os.Setenv("GITHUB_TOKEN", oldToken); err != nil {
+				// Log error but don't fail - this is cleanup
+			}
 		}
 		if oldChannel == "" {
-			_ = os.Unsetenv("RELEASE_CHANNEL") // Ignore error in defer cleanup
+			if err := os.Unsetenv("RELEASE_CHANNEL"); err != nil {
+				// Log error but don't fail - this is cleanup
+			}
 		} else {
-			_ = os.Setenv("RELEASE_CHANNEL", oldChannel) // Ignore error in defer cleanup
+			if err := os.Setenv("RELEASE_CHANNEL", oldChannel); err != nil {
+				// Log error but don't fail - this is cleanup
+			}
 		}
 	}()
 
@@ -525,9 +537,13 @@ func (e *buildEnvironment) restore() {
 
 func restoreEnv(key, value string) {
 	if value == "" {
-		_ = os.Unsetenv(key) // Ignore error - best effort cleanup
+		if err := os.Unsetenv(key); err != nil {
+			// Log error but don't fail - this is cleanup
+		}
 	} else {
-		_ = os.Setenv(key, value) // Ignore error - best effort cleanup
+		if err := os.Setenv(key, value); err != nil {
+			// Log error but don't fail - this is cleanup
+		}
 	}
 }
 

@@ -593,7 +593,9 @@ func executeRecipeStep(step RecipeStep, context *RecipeContext) error {
 
 	// Set environment variables
 	for key, value := range step.Env {
-		os.Setenv(key, expandTemplate(value, context))
+		if err := os.Setenv(key, expandTemplate(value, context)); err != nil {
+			return fmt.Errorf("failed to set environment variable %s: %w", key, err)
+		}
 	}
 
 	// Handle special commands
