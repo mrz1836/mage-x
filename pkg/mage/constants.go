@@ -137,7 +137,7 @@ const (
 
 // Tool versions (defaults)
 const (
-	DefaultGolangciLintVersion = "v2.2.2"
+	DefaultGolangciLintVersion = "v2.3.0"
 	DefaultGofumptVersion      = "v0.5.0"
 	DefaultGoVulnCheckVersion  = "latest"
 	DefaultMockgenVersion      = "v1.6.0"
