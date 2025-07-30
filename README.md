@@ -59,7 +59,7 @@
           <img src="https://img.shields.io/badge/sponsor-mrz-181717.svg?logo=github&style=flat" alt="Sponsor">
         </a><br/>
         <a href="https://github.com/mrz1836/go-mage/stargazers">
-          <img src="https://img.shields.io/github/stars/mrz1836/go-mage?style=social" alt="Stars">
+          <img src="https://img.shields.io/github/stars/mrz1836/go-mage?style=social?v=1" alt="Stars">
         </a>
       </td>
     </tr>
@@ -555,7 +555,7 @@ Read more about our [code standards](.github/CODE_STANDARDS.md) and [contributio
 MAGE-X includes comprehensive AI assistant guidelines:
 
 - **[AGENTS.md](.github/AGENTS.md)** — Complete rules for coding style, workflows, and best practices
-- **[CLAUDE.md](docs/CLAUDE.md)** — Specific guidelines for Claude AI integration
+- **[CLAUDE.md](.github/CLAUDE.md)** — Guidelines for AI assistant integration
 - **[.cursorrules](.cursorrules)** — Machine-readable policies for Cursor and similar tools
 - **[sweep.yaml](.github/sweep.yaml)** — Configuration for Sweep AI code review
 

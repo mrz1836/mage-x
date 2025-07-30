@@ -1,269 +1,277 @@
-# CLAUDE.md - Quick Reference for Claude AI
+# CLAUDE.md - AI Assistant Guidelines for go-mage
 
-## 📋 Essential Context
+## Project Overview
 
-This is **MAGE-X** - a comprehensive build automation toolkit following the philosophy "Write Once, Mage Everywhere." For complete understanding, **read [AGENTS.md](AGENTS.md) first** - it contains the full architecture, security model, and development guidelines.
+**go-mage** is a comprehensive build automation framework built on top of Magefile, designed to provide a complete set of build tools, workflows, and development operations for Go projects. The project provides both a library of reusable build tasks and advanced tooling for enterprise-level development.
 
-## 🎯 Quick Start for Claude
+## Architecture
 
-### Project Understanding
-- **Architecture**: Security-first, layered design (Security → Utils → Mage → UX)
-- **Current Status**: Phase 3 complete (Interactive Experience), Phase 4 pending (Enterprise)
-- **Key Principle**: Every command execution must use the `CommandExecutor` interface
+### Namespace Architecture
+- **18 namespace interfaces**: Build, Test, Lint, Format, Deps, Git, Release, Docs, Deploy, Tools, Security, Generate, CLI, Update, Mod, Recipes, Metrics, Workflow
+- **Interface-based design**: Each namespace has a corresponding interface (e.g., `BuildNamespace`)
+- **Factory functions**: `NewBuildNamespace()`, `NewTestNamespace()`, etc.
+- **Registry pattern**: `DefaultNamespaceRegistry` for centralized access
+- **Flexible usage**: Both `Build{}` struct and interface-based approaches are supported
 
-### Core Patterns to Follow
+### Core Features
+- **Build**: Build operations for Go projects
+- **Test**: Comprehensive testing with linting and test suites  
+- **Tools**: Development tool installation (golangci-lint, gofumpt, govulncheck, mockgen, swag)
+- **Deps**: Dependency management
+- **Mod**: Go module management
+- **Metrics**: Code analysis and statistics
+- **Generate**: Code generation
+- **Lint**: Code quality checks
+- **Update**: Update checking
+- **Security**: Security scanning and validation
+- **Workflow**: Advanced workflow operations
 
-#### 1. Security-First Command Execution
+### Project Structure
+
+```
+go-mage/
+├── pkg/mage/                          # Core mage package
+│   ├── namespace_interfaces.go        # 18 namespace interfaces
+│   ├── namespace_wrappers.go          # Interface implementations
+│   ├── minimal_runner.go             # Command runner implementation
+│   ├── build.go, test.go, lint.go... # Individual namespace implementations
+│   ├── namespace_architecture_test.go # Architecture test
+│   └── ...                           # Additional files
+├── pkg/common/                       # Shared utilities
+│   ├── env/                          # Environment management
+│   ├── fileops/                      # File operations
+│   ├── paths/                        # Path utilities
+│   └── ...
+├── pkg/security/                     # Security utilities
+│   ├── command.go                    # Command executor interface
+│   └── validator.go                  # Input validation
+├── pkg/utils/                        # General utilities
+│   └── ...
+├── docs/                             # Comprehensive documentation
+│   ├── NAMESPACE_INTERFACES.md       # User guide
+│   ├── API_REFERENCE.md             # API documentation
+│   └── NAMESPACE_EXAMPLES.md        # Usage examples
+├── examples/                         # Extensive examples
+│   ├── basic/                        # Basic usage examples
+│   ├── custom/                       # Custom implementations
+│   └── testing/                      # Testing patterns
+├── scripts/                          # Shell scripts
+│   ├── setup.sh                      # Setup script
+│   └── test-runner.sh                # Test runner
+└── .github/CLAUDE.md                 # This file
+```
+
+## Usage Patterns
+
+### Basic Usage
 ```go
-// ✅ ALWAYS use this pattern
-func (namespace Namespace) Task() error {
-    ctx := context.Background()
-    
-    // Use secure executor from common.go
-    if err := executor.Execute(ctx, "command", "args"); err != nil {
-        return fmt.Errorf("operation failed: %w", err)
-    }
-    
-    return nil
-}
+//go:build mage
 
-// ❌ NEVER do this - security vulnerability!
-func (namespace Namespace) Task() error {
-    cmd := exec.Command("command", "args") // Direct execution forbidden!
-    return cmd.Run()
+package main
+
+import "github.com/mrz1836/go-mage/pkg/mage"
+
+var Default = mage.Build{}.Default
+
+func Test() error {
+    return mage.Test{}.Default()
 }
 ```
 
-#### 2. Consistent User Experience
+### Interface-Based Usage
 ```go
-// ✅ Use utils functions for all user interaction
+//go:build mage
+
+package main
+
+import "github.com/mrz1836/go-mage/pkg/mage"
+
+var Default = BuildDefault
+
+func BuildDefault() error {
+    build := mage.NewBuildNamespace()
+    return build.Default()
+}
+
+func TestDefault() error {
+    test := mage.NewTestNamespace()
+    return test.Default()
+}
+```
+
+### Custom Implementation
+```go
+//go:build mage
+
+package main
+
+import "github.com/mrz1836/go-mage/pkg/mage"
+
+type CustomBuild struct {
+    mage.BuildNamespace
+    // Custom fields
+}
+
+func (c CustomBuild) Default() error {
+    // Custom build logic
+    return nil
+}
+
+var Default = CustomBuild{}.Default
+```
+
+## Development Guidelines
+
+### For AI Assistants
+
+#### Safe Operations
+- Read any file in the project
+- Modify namespace implementations in `pkg/mage/`
+- Add new tests
+- Update documentation
+- Fix compilation issues
+- Add new namespace methods
+- Create examples
+- Run architecture tests
+
+#### Best Practices
+- Always test with `go test ./pkg/mage/namespace_architecture_test.go -v`
+- Verify compilation with `go build ./pkg/mage`
+- Use factory functions: `NewBuildNamespace()`, etc.
+- Maintain interface contracts
+- Follow existing code patterns
+- Use proper error handling with `fmt.Errorf`
+- Add comments for exported functions
+- Ensure cross-platform compatibility
+
+#### Security Considerations
+- The project includes security utilities in `pkg/security/`
+- Command execution should be validated when implementing new features
+- Input validation is available via security validators
+- Be mindful of path traversal and command injection risks
+
+#### Dangerous Operations (Avoid)
+- Don't modify interface definitions without careful consideration
+- Don't break existing public methods
+- Don't remove existing public methods
+- Don't modify the registry pattern without testing
+- Test changes thoroughly before committing
+
+#### Adding New Namespaces
+1. Add interface to `namespace_interfaces.go`
+2. Create implementation file (e.g., `mynew.go`)
+3. Add wrapper in `namespace_wrappers.go`
+4. Add factory function `NewMyNewNamespace()`
+5. Add to registry in `namespace_interfaces.go`
+6. Add tests
+7. Update documentation
+
+## Quick Commands
+
+### Run Tests
+```bash
+go test ./pkg/mage/namespace_architecture_test.go -v
+```
+
+### Check Compilation
+```bash
+go build ./pkg/mage
+```
+
+### Run Specific Namespace
+```bash
+# Through factory function
+go run -tags mage . build
+```
+
+### Clean Imports
+```bash
+goimports -w pkg/mage/*.go
+```
+
+### Run Core Package Tests
+```bash
+go test ./pkg/common/env ./pkg/common/fileops ./pkg/common/paths -v
+```
+
+### Run All Tests
+```bash
+go test ./... -v
+```
+
+### Run Tests with Race Detection
+```bash
+go test ./... -race
+```
+
+## Architecture Features
+
+The go-mage architecture supports:
+
+- **Flexibility**: Interface-based design allows custom implementations
+- **Testability**: Mock interfaces for unit testing  
+- **Maintainability**: Clean separation of concerns
+- **Dual Approach**: Both struct-based and interface-based usage patterns
+- **Extensibility**: Easy to add new namespaces and methods
+- **Production Ready**: Core functionality working with real tool execution
+- **Security**: Built-in security utilities for command validation
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+
+## Common Patterns
+
+### Error Handling
+```go
 func (namespace Namespace) Task() error {
-    utils.Header("🎯 Task Description")
-    utils.Info("Processing...")
-    
-    // ... do work ...
-    
-    utils.Success("Task completed successfully")
+    if err := someOperation(); err != nil {
+        return fmt.Errorf("task failed: %w", err)
+    }
     return nil
 }
 ```
 
-#### 3. Context-First Design
+### Configuration Access
 ```go
-// ✅ Always pass context as first parameter
-func ProcessData(ctx context.Context, data string) error {
-    // Check for cancellation
-    select {
-    case <-ctx.Done():
-        return ctx.Err()
-    default:
-    }
-    
-    // Continue processing...
-    return nil
-}
-```
-
-## 🏗️ Architecture Layers
-
-1. **Security Layer** (`pkg/security/`): Command validation, input sanitization
-2. **Utils Layer** (`pkg/utils/`): Logging, platform abstraction, configuration
-3. **Mage Layer** (`pkg/mage/`): 25+ task files with namespace organization
-4. **UX Layer**: Interactive mode, wizards, help system
-
-## 🔐 Security Requirements
-
-- **Always validate inputs** with `security.ValidateCommandArg()`
-- **Never use exec.Command directly** - use `executor` from common.go
-- **Filter sensitive env vars** automatically (already implemented)
-- **Implement timeout handling** via context
-- **Support dry-run mode** for testing
-
-## 🎨 New Task Template
-
-```go
-package mage
-
-import (
-    "context"
-    "fmt"
-    "github.com/magefile/mage/mg"
-    "github.com/mrz1836/go-mage/pkg/utils"
-)
-
-// NewTask namespace for new operations
-type NewTask mg.Namespace
-
-// Default performs the main operation
-func (NewTask) Default() error {
-    utils.Header("🎯 New Task Operation")
-    
-    ctx := context.Background()
-    
-    // Use secure executor
-    if err := executor.Execute(ctx, "command", "args"); err != nil {
-        return fmt.Errorf("new task failed: %w", err)
-    }
-    
-    utils.Success("New task completed successfully")
-    return nil
-}
-
-// Sub-task example
-func (NewTask) SubTask() error {
-    utils.Header("🔧 Sub Task Operation")
-    
-    ctx := context.Background()
-    
-    // Configuration access
+func (namespace Namespace) Task() error {
     cfg, err := LoadConfig()
     if err != nil {
         return fmt.Errorf("failed to load config: %w", err)
     }
     
     // Use configuration
-    if cfg.NewTask.Enabled {
-        if err := executor.Execute(ctx, "command", cfg.NewTask.Options...); err != nil {
-            return fmt.Errorf("sub task failed: %w", err)
-        }
+    if cfg.SomeOption {
+        // Do something
     }
     
-    utils.Success("Sub task completed successfully")
     return nil
 }
 ```
 
-## 🧪 Testing Pattern
-
+### Command Execution
 ```go
-func TestNewTask_Default(t *testing.T) {
-    // Setup mock executor
-    mockExecutor := security.NewMockExecutor()
-    mockExecutor.SetResponse("command args", "", nil)
-    
-    // Replace global executor for testing
-    originalExecutor := executor
-    executor = mockExecutor
-    defer func() { executor = originalExecutor }()
-    
-    // Test the task
-    task := NewTask{}
-    err := task.Default()
-    
-    // Verify results
-    assert.NoError(t, err)
-    assert.Len(t, mockExecutor.ExecuteCalls, 1)
-    assert.Equal(t, "command", mockExecutor.ExecuteCalls[0].Name)
-}
-```
-
-## 📊 Configuration Extension
-
-```go
-// 1. Define config struct
-type NewTaskConfig struct {
-    Enabled   bool     `yaml:"enabled"`
-    Timeout   string   `yaml:"timeout"`
-    Options   []string `yaml:"options"`
-}
-
-// 2. Add to main Config struct
-type Config struct {
-    // ... existing fields
-    NewTask NewTaskConfig `yaml:"new_task"`
-}
-
-// 3. Provide defaults
-func defaultNewTaskConfig() NewTaskConfig {
-    return NewTaskConfig{
-        Enabled: true,
-        Timeout: "5m",
-        Options: []string{},
+func (namespace Namespace) Task() error {
+    runner := GetRunner()
+    if err := runner.RunCmd("go", "build", "./..."); err != nil {
+        return fmt.Errorf("build failed: %w", err)
     }
-}
-
-// 4. Add environment overrides in applyEnvOverrides()
-if enabled := os.Getenv("NEW_TASK_ENABLED"); enabled != "" {
-    cfg.NewTask.Enabled = enabled == "true"
-}
-```
-
-## 🚨 Critical Don'ts
-
-- **Never use `exec.Command` directly** - always use `executor`
-- **Never ignore context cancellation** - check `ctx.Done()` in loops
-- **Never hardcode paths** - use `filepath.Join()` and validate with `security.ValidatePath()`
-- **Never log sensitive data** - environment filtering is automatic but be careful
-- **Never skip input validation** - use `security.ValidateCommandArg()`
-
-## 🎯 Common Scenarios
-
-### Adding Build Step
-```go
-func (Build) NewStep() error {
-    utils.Header("🔨 New Build Step")
-    
-    ctx := context.Background()
-    cfg, _ := LoadConfig()
-    
-    args := []string{"build", "-o", cfg.Build.Output}
-    if cfg.Build.Verbose {
-        args = append(args, "-v")
-    }
-    
-    if err := executor.Execute(ctx, "go", args...); err != nil {
-        return fmt.Errorf("build step failed: %w", err)
-    }
-    
-    utils.Success("Build step completed")
     return nil
 }
 ```
 
-### Adding Test Command
-```go
-func (Test) NewType() error {
-    utils.Header("🧪 New Test Type")
-    
-    ctx := context.Background()
-    cfg, _ := LoadConfig()
-    
-    args := []string{"test", "-run", "TestPattern"}
-    if cfg.Test.Verbose {
-        args = append(args, "-v")
-    }
-    
-    if err := executor.Execute(ctx, "go", args...); err != nil {
-        return fmt.Errorf("tests failed: %w", err)
-    }
-    
-    utils.Success("Tests completed")
-    return nil
-}
-```
+## Contributing
 
-## 🔗 Complete Documentation
+When contributing to go-mage:
 
-For comprehensive guidance, architectural details, and advanced patterns:
+1. Follow the existing code style
+2. Add tests for new functionality
+3. Update documentation as needed
+4. Ensure all tests pass
+5. Run linting before submitting
 
-→ **[Read AGENTS.md](AGENTS.md)** ← Complete documentation
+## Additional Resources
 
-This includes:
-- Full architecture overview
-- Security model details
-- Implementation phase status
-- AI agent specific guidelines
-- Code review checklist
-- Troubleshooting guide
-- Multi-repository management patterns
+- See examples in `examples/` directory for practical usage
+- Check `docs/` for detailed documentation
+- Review existing namespace implementations for patterns
+- Use the test files as references for testing approaches
 
-## 🎉 Remember
-
-MAGE-X is about **"Write Once, Mage Everywhere"** - focus on:
-- **Security first** - validate everything
-- **User experience** - friendly, helpful messages
-- **Consistency** - follow established patterns
-- **Testing** - comprehensive coverage
-- **Documentation** - clear, actionable guidance
-
-When in doubt, check existing code patterns in `pkg/mage/` or refer to the comprehensive [AGENTS.md](AGENTS.md) guide.
+The project provides a modern, flexible build automation system for Go projects with comprehensive testing demonstrating successful execution of build operations, tool management, dependency handling, and code analysis across the entire interface architecture.
