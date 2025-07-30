@@ -106,7 +106,12 @@ func (Tools) Verify() error {
 
 		if utils.CommandExists(checkCmd) {
 			// Try to get version
-			output, _ := GetRunner().RunCmdOutput(checkCmd, "--version")
+			output, err := GetRunner().RunCmdOutput(checkCmd, "--version")
+			if err != nil {
+				// If version check fails, just show as installed
+				utils.Success("%s: installed", tool.Name)
+				continue
+			}
 			version := strings.TrimSpace(output)
 			if version == "" {
 				version = "installed"

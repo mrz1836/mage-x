@@ -322,7 +322,9 @@ func (Test) CI() error {
 	utils.Header("Running CI Test Suite")
 
 	// Set CI environment
-	os.Setenv("CI", "true")
+	if err := os.Setenv("CI", "true"); err != nil {
+		return fmt.Errorf("failed to set CI environment: %w", err)
+	}
 
 	// Run tests with race detector and coverage
 	return Test{}.CoverRace()
@@ -395,7 +397,9 @@ func (Test) CINoRace() error {
 	utils.Header("Running CI Test Suite (No Race)")
 
 	// Set CI environment
-	os.Setenv("CI", "true")
+	if err := os.Setenv("CI", "true"); err != nil {
+		return fmt.Errorf("failed to set CI environment: %w", err)
+	}
 
 	// Run tests with coverage only (no race)
 	return Test{}.Cover()
@@ -460,7 +464,11 @@ func findFuzzPackages() ([]string, error) {
 			pkg = ""
 		}
 
-		module, _ := utils.GetModuleName()
+		module, err := utils.GetModuleName()
+		if err != nil {
+			// If we can't get module name, skip this package
+			continue
+		}
 		if module != "" && pkg != "" {
 			packageMap[filepath.Join(module, pkg)] = true
 		} else if module != "" {

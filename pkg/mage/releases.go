@@ -495,9 +495,15 @@ func withBuildEnvironment(goos, goarch string, fn func() error) error {
 	}
 
 	// Set build environment
-	os.Setenv("GOOS", goos)
-	os.Setenv("GOARCH", goarch)
-	os.Setenv("CGO_ENABLED", "0")
+	if err := os.Setenv("GOOS", goos); err != nil {
+		return fmt.Errorf("failed to set GOOS: %w", err)
+	}
+	if err := os.Setenv("GOARCH", goarch); err != nil {
+		return fmt.Errorf("failed to set GOARCH: %w", err)
+	}
+	if err := os.Setenv("CGO_ENABLED", "0"); err != nil {
+		return fmt.Errorf("failed to set CGO_ENABLED: %w", err)
+	}
 
 	// Restore environment on exit
 	defer env.restore()

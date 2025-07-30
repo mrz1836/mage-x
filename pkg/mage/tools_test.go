@@ -234,9 +234,13 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallError() {
 	// Temporarily modify PATH to ensure govulncheck is not found
 	originalPath := os.Getenv("PATH")
 	defer func() {
-		os.Setenv("PATH", originalPath)
+		if err := os.Setenv("PATH", originalPath); err != nil {
+			ts.T().Logf("Failed to restore PATH: %v", err)
+		}
 	}()
-	os.Setenv("PATH", "/nonexistent")
+	if err := os.Setenv("PATH", "/nonexistent"); err != nil {
+		ts.T().Fatalf("Failed to set PATH: %v", err)
+	}
 
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(errors.New("install failed"))
 

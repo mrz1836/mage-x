@@ -183,7 +183,11 @@ func (Update) History() error {
 	fmt.Println("-------------------   -------------   -------------   -------")
 
 	for _, record := range history {
-		date, _ := time.Parse(time.RFC3339, record["date"])
+		date, err := time.Parse(time.RFC3339, record["date"])
+		if err != nil {
+			// If date parsing fails, use current time as fallback
+			date = time.Now()
+		}
 		fmt.Printf("%-19s   %-13s   %-13s   %s\n",
 			date.Format("2006-01-02 15:04:05"),
 			record["from"],
