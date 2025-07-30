@@ -2,7 +2,34 @@ name: Fortress Benchmarks
 
 on:
   workflow_dispatch:
+    inputs:
+      benchmark_time:
+        description: 'Benchmark duration (e.g., 1s, 10s)'
+        required: false
+        default: '1s'
+        type: string
+      enable_profiling:
+        description: 'Enable CPU and memory profiling'
+        required: false
+        default: false
+        type: boolean
+      packages:
+        description: 'Packages to benchmark (default: ./pkg/mage)'
+        required: false
+        default: './pkg/mage'
+        type: string
   workflow_call:
+    inputs:
+      benchmark_time:
+        description: 'Benchmark duration'
+        required: false
+        default: '1s'
+        type: string
+      enable_profiling:
+        description: 'Enable profiling'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -10,6 +37,9 @@ permissions:
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
+    env:
+      BENCH_TIME: ${{ inputs.benchmark_time || '1s' }}
+      BENCH_PACKAGES: ${{ inputs.packages || './pkg/mage' }}
 
     steps:
       - name: Checkout code
@@ -30,22 +60,17 @@ jobs:
       - name: Run benchmarks
         run: |
           echo "## Running Go Benchmarks"
-          echo "Starting benchmark tests..."
-          mage testBench | tee benchmark-results.txt
-
-      - name: Parse benchmark results
-        run: |
-          echo "## Benchmark Results"
-          if [ -f benchmark-results.txt ]; then
-            echo "### Summary"
-            grep -E "^Benchmark" benchmark-results.txt || echo "No benchmark results found"
-            
-            echo ""
-            echo "### Memory Allocations"
-            grep -E "allocs/op" benchmark-results.txt || echo "No allocation data found"
-          else
-            echo "No benchmark results file found"
-          fi
+          echo "Benchmark time: $BENCH_TIME"
+          echo "Packages: $BENCH_PACKAGES"
+          echo ""
+          
+          # Run benchmarks on specific packages with shorter duration
+          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME $BENCH_PACKAGES | tee benchmark-results.txt
+          
+          # Show summary
+          echo ""
+          echo "### Summary"
+          grep -E "^Benchmark" benchmark-results.txt | head -20 || echo "No benchmark results found"
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
@@ -53,11 +78,14 @@ jobs:
         with:
           name: benchmark-results
           path: benchmark-results.txt
-          retention-days: 30
+          retention-days: 7
 
   benchmark-comparison:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    env:
+      BENCH_TIME: ${{ inputs.benchmark_time || '1s' }}
+      BENCH_PACKAGES: ${{ inputs.packages || './pkg/mage' }}
 
     steps:
       - name: Checkout PR branch
@@ -69,14 +97,14 @@ jobs:
           go-version: stable
           cache: true
 
-      - name: Install Mage
+      - name: Install tools
         run: |
           go install github.com/magefile/mage@latest
           go install golang.org/x/perf/cmd/benchstat@latest
 
       - name: Run benchmarks on PR branch
         run: |
-          mage testBench > pr-benchmarks.txt
+          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME $BENCH_PACKAGES > pr-benchmarks.txt
 
       - name: Checkout base branch
         uses: actions/checkout@v4
@@ -85,12 +113,13 @@ jobs:
 
       - name: Run benchmarks on base branch
         run: |
-          mage testBench > base-benchmarks.txt
+          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME $BENCH_PACKAGES > base-benchmarks.txt
 
       - name: Compare benchmarks
         run: |
           echo "## Benchmark Comparison"
           echo "Comparing PR branch against base branch (${{ github.base_ref }}):"
+          echo "Packages: $BENCH_PACKAGES"
           echo ""
           benchstat base-benchmarks.txt pr-benchmarks.txt || echo "No significant differences found"
 
@@ -102,11 +131,15 @@ jobs:
           path: |
             pr-benchmarks.txt
             base-benchmarks.txt
-          retention-days: 30
+          retention-days: 7
 
   profile-cpu:
     runs-on: ubuntu-latest
+    if: ${{ inputs.enable_profiling == true || inputs.enable_profiling == 'true' }}
     continue-on-error: true
+    env:
+      BENCH_TIME: ${{ inputs.benchmark_time || '1s' }}
+      BENCH_PACKAGES: ${{ inputs.packages || './pkg/mage' }}
 
     steps:
       - name: Checkout code
@@ -118,16 +151,17 @@ jobs:
           go-version: stable
           cache: true
 
-      - name: Install Mage and profiling tools
+      - name: Install profiling tools
         run: |
-          go install github.com/magefile/mage@latest
           go install github.com/google/pprof@latest
 
       - name: Run CPU profiling
         run: |
           echo "## CPU Profiling"
-          # Run benchmarks with CPU profiling
-          go test -bench=. -benchtime=10s -cpuprofile=cpu.prof ./... || echo "CPU profiling completed"
+          echo "Running benchmarks with CPU profiling on: $BENCH_PACKAGES"
+          
+          # Run benchmarks with CPU profiling on specific packages
+          go test -bench=. -benchtime=$BENCH_TIME -cpuprofile=cpu.prof $BENCH_PACKAGES || echo "CPU profiling completed"
 
           if [ -f cpu.prof ]; then
             echo "### Top CPU consumers:"
@@ -144,7 +178,11 @@ jobs:
 
   profile-memory:
     runs-on: ubuntu-latest
+    if: ${{ inputs.enable_profiling == true || inputs.enable_profiling == 'true' }}
     continue-on-error: true
+    env:
+      BENCH_TIME: ${{ inputs.benchmark_time || '1s' }}
+      BENCH_PACKAGES: ${{ inputs.packages || './pkg/mage' }}
 
     steps:
       - name: Checkout code
@@ -156,15 +194,13 @@ jobs:
           go-version: stable
           cache: true
 
-      - name: Install Mage
-        run: |
-          go install github.com/magefile/mage@latest
-
       - name: Run memory profiling
         run: |
           echo "## Memory Profiling"
-          # Run benchmarks with memory profiling
-          go test -bench=. -benchtime=10s -memprofile=mem.prof ./... || echo "Memory profiling completed"
+          echo "Running benchmarks with memory profiling on: $BENCH_PACKAGES"
+          
+          # Run benchmarks with memory profiling on specific packages
+          go test -bench=. -benchtime=$BENCH_TIME -memprofile=mem.prof $BENCH_PACKAGES || echo "Memory profiling completed"
 
           if [ -f mem.prof ]; then
             echo "### Top memory allocators:"
@@ -180,7 +216,7 @@ jobs:
           retention-days: 7
 
   summary:
-    needs: [benchmarks, benchmark-comparison, profile-cpu, profile-memory]
+    needs: [benchmarks]
     runs-on: ubuntu-latest
     if: always()
 
@@ -189,21 +225,29 @@ jobs:
         run: |
           echo "## Benchmark Suite Summary"
           echo ""
+          echo "### Configuration:"
+          echo "- Benchmark time: ${{ inputs.benchmark_time || '1s' }}"
+          echo "- Packages: ${{ inputs.packages || './pkg/mage' }}"
+          echo "- Profiling enabled: ${{ inputs.enable_profiling || false }}"
+          echo ""
           echo "### Job Results:"
           echo "- Benchmarks: ${{ needs.benchmarks.result }}"
-          echo "- Benchmark Comparison: ${{ needs.benchmark-comparison.result }}"
-          echo "- CPU Profiling: ${{ needs.profile-cpu.result }}"
-          echo "- Memory Profiling: ${{ needs.profile-memory.result }}"
+          
+          if [[ "${{ inputs.enable_profiling }}" == "true" ]]; then
+            echo "- CPU Profiling: Available as artifact"
+            echo "- Memory Profiling: Available as artifact"
+          fi
+          
           echo ""
-
           if [[ "${{ needs.benchmarks.result }}" == "success" ]]; then
             echo "✅ Benchmark suite completed successfully!"
           else
-            echo "⚠️ Some benchmark jobs did not complete successfully."
+            echo "⚠️ Benchmark job did not complete successfully."
           fi
-
+          
           echo ""
-          echo "### Notes:"
-          echo "- Benchmark results are available as artifacts"
-          echo "- CPU and memory profiles can be downloaded for detailed analysis"
-          echo "- Use 'go tool pprof' locally to analyze the profile files"
+          echo "### Performance Tips:"
+          echo "- Quick benchmarks use 1s duration by default"
+          echo "- Enable profiling only when investigating performance issues"
+          echo "- Target specific packages to reduce execution time"
+          echo "- Full benchmarks can be run manually with longer durations"
