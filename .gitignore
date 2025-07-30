@@ -53,3 +53,4 @@ mage_output_file.go
 test-results/
 
 tests/.mage-cache/
+/pkg/utils/.mage/metrics/

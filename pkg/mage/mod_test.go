@@ -220,7 +220,11 @@ func (ts *ModTestSuite) TestMod_Update_TidyError() {
 // TestMod_Clean tests the Clean function with FORCE environment variable
 func (ts *ModTestSuite) TestMod_Clean() {
 	require.NoError(ts.T(), os.Setenv("FORCE", "true"))
-	defer func() { _ = os.Unsetenv("FORCE") }()
+	defer func() {
+		if err := os.Unsetenv("FORCE"); err != nil {
+			ts.T().Logf("Failed to unset FORCE: %v", err)
+		}
+	}()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"clean", "-modcache"}).Return(nil)
 
@@ -237,7 +241,9 @@ func (ts *ModTestSuite) TestMod_Clean() {
 
 // TestMod_Clean_NoForce tests Clean function without FORCE environment variable
 func (ts *ModTestSuite) TestMod_Clean_NoForce() {
-	_ = os.Unsetenv("FORCE")
+	if err := os.Unsetenv("FORCE"); err != nil {
+		ts.T().Logf("Failed to unset FORCE: %v", err)
+	}
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
@@ -255,7 +261,11 @@ func (ts *ModTestSuite) TestMod_Clean_NoForce() {
 func (ts *ModTestSuite) TestMod_Clean_Error() {
 	expectedError := require.New(ts.T())
 	require.NoError(ts.T(), os.Setenv("FORCE", "true"))
-	defer func() { _ = os.Unsetenv("FORCE") }()
+	defer func() {
+		if err := os.Unsetenv("FORCE"); err != nil {
+			ts.T().Logf("Failed to unset FORCE: %v", err)
+		}
+	}()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"clean", "-modcache"}).Return(errors.New("clean failed"))
 
@@ -291,7 +301,11 @@ func (ts *ModTestSuite) TestMod_Graph() {
 func (ts *ModTestSuite) TestMod_Graph_WithGraphFile() {
 	graphOutput := "test/module github.com/stretchr/testify@v1.9.0"
 	require.NoError(ts.T(), os.Setenv("GRAPH_FILE", "test-graph.txt"))
-	defer func() { _ = os.Unsetenv("GRAPH_FILE") }()
+	defer func() {
+		if err := os.Unsetenv("GRAPH_FILE"); err != nil {
+			ts.T().Logf("Failed to unset GRAPH_FILE: %v", err)
+		}
+	}()
 
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(graphOutput, nil)
 
@@ -326,7 +340,11 @@ func (ts *ModTestSuite) TestMod_Graph_Error() {
 // TestMod_Why tests the Why function with MODULE environment variable
 func (ts *ModTestSuite) TestMod_Why() {
 	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/pkg/errors"))
-	defer func() { _ = os.Unsetenv("MODULE") }()
+	defer func() {
+		if err := os.Unsetenv("MODULE"); err != nil {
+			ts.T().Logf("Failed to unset MODULE: %v", err)
+		}
+	}()
 
 	whyOutput := "# github.com/pkg/errors\ntest/module\ngithub.com/pkg/errors"
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/pkg/errors"}).Return(whyOutput, nil)
@@ -345,7 +363,9 @@ func (ts *ModTestSuite) TestMod_Why() {
 
 // TestMod_Why_NoModule tests Why function without MODULE environment variable
 func (ts *ModTestSuite) TestMod_Why_NoModule() {
-	_ = os.Unsetenv("MODULE")
+	if err := os.Unsetenv("MODULE"); err != nil {
+		ts.T().Logf("Failed to unset MODULE: %v", err)
+	}
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
@@ -362,7 +382,11 @@ func (ts *ModTestSuite) TestMod_Why_NoModule() {
 // TestMod_Why_IndirectDependency tests Why function for indirect dependency
 func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
 	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/indirect/dep"))
-	defer func() { _ = os.Unsetenv("MODULE") }()
+	defer func() {
+		if err := os.Unsetenv("MODULE"); err != nil {
+			ts.T().Logf("Failed to unset MODULE: %v", err)
+		}
+	}()
 
 	whyOutput := "# github.com/indirect/dep\ntest/module\ngithub.com/some/other\ngithub.com/indirect/dep"
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/indirect/dep"}).Return(whyOutput, nil)
@@ -383,7 +407,11 @@ func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
 func (ts *ModTestSuite) TestMod_Why_Error() {
 	expectedError := require.New(ts.T())
 	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/pkg/errors"))
-	defer func() { _ = os.Unsetenv("MODULE") }()
+	defer func() {
+		if err := os.Unsetenv("MODULE"); err != nil {
+			ts.T().Logf("Failed to unset MODULE: %v", err)
+		}
+	}()
 
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/pkg/errors"}).Return("", errors.New("why failed"))
 
@@ -438,7 +466,11 @@ func (ts *ModTestSuite) TestMod_Init() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
 	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/example/project"))
-	defer func() { _ = os.Unsetenv("MODULE") }()
+	defer func() {
+		if err := os.Unsetenv("MODULE"); err != nil {
+			ts.T().Logf("Failed to unset MODULE: %v", err)
+		}
+	}()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "init", "github.com/example/project"}).Return(nil)
 
@@ -459,7 +491,9 @@ func (ts *ModTestSuite) TestMod_Init_WithGitRemote() {
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
-	_ = os.Unsetenv("MODULE")
+	if err := os.Unsetenv("MODULE"); err != nil {
+		ts.T().Logf("Failed to unset MODULE: %v", err)
+	}
 
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"remote", "get-url", "origin"}).Return("https://github.com/example/project.git", nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "init", "github.com/example/project"}).Return(nil)
@@ -478,7 +512,11 @@ func (ts *ModTestSuite) TestMod_Init_WithGitRemote() {
 // TestMod_Init_GoModExists tests Init function when go.mod already exists
 func (ts *ModTestSuite) TestMod_Init_GoModExists() {
 	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/example/project"))
-	defer func() { _ = os.Unsetenv("MODULE") }()
+	defer func() {
+		if err := os.Unsetenv("MODULE"); err != nil {
+			ts.T().Logf("Failed to unset MODULE: %v", err)
+		}
+	}()
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
@@ -498,7 +536,9 @@ func (ts *ModTestSuite) TestMod_Init_NoModule() {
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
-	_ = os.Unsetenv("MODULE")
+	if err := os.Unsetenv("MODULE"); err != nil {
+		ts.T().Logf("Failed to unset MODULE: %v", err)
+	}
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"remote", "get-url", "origin"}).Return("", errors.New("no remote"))
 
 	err := ts.env.WithMockRunner(
@@ -521,7 +561,11 @@ func (ts *ModTestSuite) TestMod_Init_InitError() {
 
 	expectedError := require.New(ts.T())
 	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/example/project"))
-	defer func() { _ = os.Unsetenv("MODULE") }()
+	defer func() {
+		if err := os.Unsetenv("MODULE"); err != nil {
+			ts.T().Logf("Failed to unset MODULE: %v", err)
+		}
+	}()
 
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "init", "github.com/example/project"}).Return(errors.New("init failed"))
 
