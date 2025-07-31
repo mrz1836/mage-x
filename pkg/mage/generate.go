@@ -247,9 +247,7 @@ func (Generate) Check() error {
 
 	// Copy current generated files
 	utils.Info("Backing up current generated files...")
-	if backupErr := backupGeneratedFiles(tempDir); backupErr != nil {
-		return fmt.Errorf("failed to backup files: %w", backupErr)
-	}
+	backupGeneratedFiles()
 
 	// Run generation
 	utils.Info("Running code generation...")
@@ -323,7 +321,7 @@ func checkForGenerateDirectives() (bool, []string) {
 
 // findInterfaces finds interfaces in the codebase
 func findInterfaces() []Interface {
-	var interfaces []Interface
+	interfaces := make([]Interface, 0)
 
 	// This is a simplified version - in reality, you'd use go/ast to parse
 	// For now, we'll look for common patterns
@@ -370,7 +368,7 @@ func checkForGRPCService() bool {
 }
 
 // backupGeneratedFiles backs up generated files for comparison
-func backupGeneratedFiles(tempDir string) error {
+func backupGeneratedFiles() {
 	patterns := []string{"*.pb.go", "*_gen.go", "*_generated.go"}
 
 	for _, pattern := range patterns {
@@ -384,8 +382,6 @@ func backupGeneratedFiles(tempDir string) error {
 			// Implementation would copy file preserving directory structure
 		}
 	}
-
-	return nil
 }
 
 // compareGeneratedFiles compares generated files with backup

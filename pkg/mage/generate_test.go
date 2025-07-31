@@ -388,8 +388,8 @@ func (ts *GenerateTestSuite) TestGenerateHelperFunctions() {
 
 	ts.Run("backupGeneratedFiles function", func() {
 		// Test backup function
-		err := backupGeneratedFiles("/tmp/test")
-		require.NoError(ts.T(), err)
+		backupGeneratedFiles()
+		// No error to check since function doesn't return error
 	})
 
 	ts.Run("compareGeneratedFiles function", func() {

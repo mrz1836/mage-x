@@ -64,7 +64,7 @@ func (ts *BuildTestSuite) mockGitCommands() {
 }
 
 // mockBuildCommand mocks a go build command with flexible ldflags matching
-func (ts *BuildTestSuite) mockBuildCommand(outputPath string, returnError error) {
+func (ts *BuildTestSuite) mockBuildCommand(outputPath string) {
 	ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 		// Check for go build command with variable structure
 		// Could be: ["build", "-ldflags", <flags>, "-o", <output>, "."]
@@ -80,7 +80,7 @@ func (ts *BuildTestSuite) mockBuildCommand(outputPath string, returnError error)
 			}
 		}
 		return false
-	})).Return(returnError)
+	})).Return(nil)
 }
 
 // TestBuildDefault tests the Default method
@@ -94,7 +94,7 @@ func main() {
 
 		// Mock git commands and build command
 		ts.mockGitCommands()
-		ts.mockBuildCommand("bin/module", nil)
+		ts.mockBuildCommand("bin/module")
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -167,9 +167,9 @@ func main() {
 
 		// Mock git commands and multi-platform build commands
 		ts.mockGitCommands()
-		ts.mockBuildCommand("dist/multi-app-linux-amd64", nil)
-		ts.mockBuildCommand("dist/multi-app-darwin-amd64", nil)
-		ts.mockBuildCommand("dist/multi-app-windows-amd64.exe", nil)
+		ts.mockBuildCommand("dist/multi-app-linux-amd64")
+		ts.mockBuildCommand("dist/multi-app-darwin-amd64")
+		ts.mockBuildCommand("dist/multi-app-windows-amd64.exe")
 
 		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
@@ -199,10 +199,10 @@ func main() {
 		// Mock git commands and build commands for default platforms
 		ts.mockGitCommands()
 		// When no platforms are configured, it builds for default platforms
-		ts.mockBuildCommand("bin/no-platform-app-windows-amd64.exe", nil)
-		ts.mockBuildCommand("bin/no-platform-app-darwin-arm64", nil)
-		ts.mockBuildCommand("bin/no-platform-app-darwin-amd64", nil)
-		ts.mockBuildCommand("bin/no-platform-app-linux-amd64", nil)
+		ts.mockBuildCommand("bin/no-platform-app-windows-amd64.exe")
+		ts.mockBuildCommand("bin/no-platform-app-darwin-arm64")
+		ts.mockBuildCommand("bin/no-platform-app-darwin-amd64")
+		ts.mockBuildCommand("bin/no-platform-app-linux-amd64")
 
 		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
@@ -230,7 +230,7 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build command for linux/amd64
-		ts.mockBuildCommand("bin/module-linux-amd64", nil)
+		ts.mockBuildCommand("bin/module-linux-amd64")
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -267,7 +267,7 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build command for windows
-		ts.mockBuildCommand("bin/module-windows-amd64.exe", nil)
+		ts.mockBuildCommand("bin/module-windows-amd64.exe")
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -294,7 +294,7 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build command for Linux
-		ts.mockBuildCommand("bin/module-linux-amd64", nil)
+		ts.mockBuildCommand("bin/module-linux-amd64")
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -318,8 +318,8 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build commands for Darwin (both amd64 and arm64)
-		ts.mockBuildCommand("bin/module-darwin-amd64", nil)
-		ts.mockBuildCommand("bin/module-darwin-arm64", nil)
+		ts.mockBuildCommand("bin/module-darwin-amd64")
+		ts.mockBuildCommand("bin/module-darwin-arm64")
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -343,7 +343,7 @@ func main() {
 		ts.mockGitCommands()
 
 		// Mock go build command for Windows
-		ts.mockBuildCommand("bin/module-windows-amd64.exe", nil)
+		ts.mockBuildCommand("bin/module-windows-amd64.exe")
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error

@@ -71,7 +71,7 @@ func (Init) Default() error {
 	}
 
 	// Install dependencies
-	if err := installDependencies(config); err != nil {
+	if err := installDependencies(); err != nil {
 		utils.Warn("Failed to install dependencies: %v", err)
 	}
 
@@ -173,22 +173,13 @@ func (Init) Upgrade() error {
 
 	utils.Info("Upgrading project: %s", module)
 
-	// Create minimal config for upgrade
-	config := &InitProjectConfig{
-		Module:    module,
-		Type:      GenericProject,
-		UseMage:   true,
-		UseDocker: false,
-		UseCI:     false,
-	}
-
 	// Add mage files
-	if err := addMageFiles(config); err != nil {
+	if err := addMageFiles(); err != nil {
 		return fmt.Errorf("failed to add mage files: %w", err)
 	}
 
 	// Update go.mod
-	if err := updateGoMod(config); err != nil {
+	if err := updateGoMod(); err != nil {
 		return fmt.Errorf("failed to update go.mod: %w", err)
 	}
 
@@ -318,7 +309,7 @@ func initializeProject(config *InitProjectConfig) error {
 		utils.Warn("Failed to initialize git repository: %v", err)
 	}
 
-	if err := installDependencies(fullConfig); err != nil {
+	if err := installDependencies(); err != nil {
 		utils.Warn("Failed to install dependencies: %v", err)
 	}
 
@@ -381,7 +372,7 @@ func initializeProjectFiles(config *InitProjectConfig) error {
 	}
 
 	// Create .gitignore
-	if err := createGitignore(config); err != nil {
+	if err := createGitignore(); err != nil {
 		return err
 	}
 
@@ -392,7 +383,7 @@ func initializeProjectFiles(config *InitProjectConfig) error {
 
 	// Create mage files
 	if config.UseMage {
-		if err := addMageFiles(config); err != nil {
+		if err := addMageFiles(); err != nil {
 			return err
 		}
 	}
@@ -406,7 +397,7 @@ func initializeProjectFiles(config *InitProjectConfig) error {
 
 	// Create CI files
 	if config.UseCI {
-		if err := createCIFiles(config); err != nil {
+		if err := createCIFiles(); err != nil {
 			return err
 		}
 	}
@@ -514,7 +505,7 @@ This project is licensed under the {{.License}} License - see the [LICENSE](LICE
 }
 
 // createGitignore creates the .gitignore file
-func createGitignore(config *InitProjectConfig) error {
+func createGitignore() error {
 	content := `# Binaries for programs and plugins
 *.exe
 *.exe~
@@ -603,7 +594,7 @@ SOFTWARE.
 }
 
 // addMageFiles adds mage build files to the project
-func addMageFiles(config *InitProjectConfig) error {
+func addMageFiles() error {
 	utils.Info("Adding MAGE-X build files...")
 
 	// Create magefile.go
@@ -839,7 +830,7 @@ volumes:
 }
 
 // createCIFiles creates GitHub Actions workflow
-func createCIFiles(config *InitProjectConfig) error {
+func createCIFiles() error {
 	workflow := `name: CI
 
 on:
@@ -901,7 +892,7 @@ func initializeGitRepo(config *InitProjectConfig) error {
 }
 
 // installDependencies installs project dependencies
-func installDependencies(config *InitProjectConfig) error {
+func installDependencies() error {
 	utils.Info("Installing dependencies...")
 
 	// Download dependencies
@@ -918,7 +909,7 @@ func installDependencies(config *InitProjectConfig) error {
 }
 
 // updateGoMod updates go.mod for project upgrades
-func updateGoMod(config *InitProjectConfig) error {
+func updateGoMod() error {
 	// Add mage dependency
 	if err := GetRunner().RunCmd("go", "get", "github.com/magefile/mage@latest"); err != nil {
 		return err

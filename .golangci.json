@@ -102,7 +102,6 @@
 			"lll",
 			"nestif",
 			"revive",
-			"unparam",
 			"unused",
 			"gocritic",
 			"forbidigo",

@@ -122,10 +122,7 @@ func (Releases) Promote() error {
 	}
 
 	// Get existing release
-	release, err := getExistingRelease(version)
-	if err != nil {
-		return fmt.Errorf("failed to get existing release: %w", err)
-	}
+	release := getExistingRelease(version)
 
 	// Update release properties
 	newConfig := &MultiChannelReleaseConfig{
@@ -138,7 +135,7 @@ func (Releases) Promote() error {
 	}
 
 	// Create promoted release
-	return promoteRelease(newConfig, release)
+	return promoteRelease(newConfig)
 }
 
 // Status shows release status across channels
@@ -152,11 +149,7 @@ func (Releases) Status() error {
 	fmt.Println("--------  --------------   --------------- ----------")
 
 	for _, channel := range channels {
-		info, err := getChannelInfo(channel)
-		if err != nil {
-			fmt.Printf("%-8s  %-14s   %-15s %s\n", channel, "ERROR", "N/A", "N/A")
-			continue
-		}
+		info := getChannelInfo()
 
 		releasedAt := info.ReleasedAt.Format("2006-01-02 15:04")
 		fmt.Printf("%-8s  %-14s   %-15s %d\n", channel, info.Version, releasedAt, info.Downloads)
@@ -628,28 +621,28 @@ func validateChannels(from, to string) error {
 	return nil
 }
 
-func getExistingRelease(version string) (*ReleaseInfo, error) {
+func getExistingRelease(version string) *ReleaseInfo {
 	// Placeholder implementation
 	return &ReleaseInfo{
 		Version: version,
 		Notes:   fmt.Sprintf("Release %s", version),
 		Assets:  []string{},
-	}, nil
+	}
 }
 
-func promoteRelease(config *MultiChannelReleaseConfig, release *ReleaseInfo) error {
+func promoteRelease(config *MultiChannelReleaseConfig) error {
 	// Placeholder implementation
 	utils.Info("Promoting release %s to %s channel", config.Version, config.Channel)
 	return nil
 }
 
-func getChannelInfo(channel ReleaseChannel) (*ChannelInfo, error) {
+func getChannelInfo() *ChannelInfo {
 	// Placeholder implementation
 	return &ChannelInfo{
 		Version:    "v1.0.0",
 		ReleasedAt: time.Now().Add(-24 * time.Hour),
 		Downloads:  1234,
-	}, nil
+	}
 }
 
 func cleanupChannel(channel ReleaseChannel, keep int) (int, error) {

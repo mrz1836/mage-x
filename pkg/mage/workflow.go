@@ -138,10 +138,7 @@ func (Workflow) Create() error {
 	templateType := utils.GetEnv("TEMPLATE", "basic")
 
 	// Create workflow from template
-	workflow, err := createWorkflowFromTemplate(workflowName, templateType)
-	if err != nil {
-		return fmt.Errorf("failed to create workflow: %w", err)
-	}
+	workflow := createWorkflowFromTemplate(workflowName, templateType)
 
 	// Save workflow definition
 	if err := saveWorkflowDefinition(workflow); err != nil {
@@ -489,7 +486,7 @@ func executeWorkflowStep(ctx context.Context, step WorkflowStep, execContext Exe
 func executeStepCommand(ctx context.Context, step WorkflowStep, execContext ExecutionContext) (string, error) {
 	switch step.Type {
 	case "shell", "command":
-		return executeShellCommand(ctx, step, execContext)
+		return executeShellCommand(ctx, step)
 	case "script":
 		return executeScriptCommand(ctx, step, execContext)
 	case "http":
@@ -501,7 +498,7 @@ func executeStepCommand(ctx context.Context, step WorkflowStep, execContext Exec
 	}
 }
 
-func executeShellCommand(ctx context.Context, step WorkflowStep, execContext ExecutionContext) (string, error) {
+func executeShellCommand(ctx context.Context, step WorkflowStep) (string, error) {
 	cmdCtx := ctx
 	// Set timeout if specified
 	if step.Timeout != "" {
@@ -658,7 +655,7 @@ func saveWorkflowDefinition(workflow WorkflowDefinition) error {
 	return fileOps.JSON.WriteJSONIndent(workflowPath, workflow, "", "  ")
 }
 
-func createWorkflowFromTemplate(name, templateType string) (WorkflowDefinition, error) {
+func createWorkflowFromTemplate(name, templateType string) WorkflowDefinition {
 	template := getWorkflowTemplate(templateType)
 
 	workflow := WorkflowDefinition{
@@ -678,7 +675,7 @@ func createWorkflowFromTemplate(name, templateType string) (WorkflowDefinition, 
 		LastUpdated: time.Now(),
 	}
 
-	return workflow, nil
+	return workflow
 }
 
 func getWorkflowTemplate(templateType string) WorkflowDefinition {

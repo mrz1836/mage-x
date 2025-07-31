@@ -146,9 +146,7 @@ func (Yaml) Init() error {
 	config := createDefaultConfig()
 
 	// Try to populate from existing project
-	if err := populateFromProject(config); err != nil {
-		utils.Warn("Failed to populate from existing project: %v", err)
-	}
+	populateFromProject(config)
 
 	// Write configuration
 	if err := writeConfig(config, "mage.yaml"); err != nil {
@@ -208,9 +206,7 @@ func (Yaml) Update() error {
 	updateFromEnv(config)
 
 	// Update from project changes
-	if err := populateFromProject(config); err != nil {
-		utils.Warn("Failed to update from project: %v", err)
-	}
+	populateFromProject(config)
 
 	// Write updated configuration
 	if err := writeConfig(config, "mage.yaml"); err != nil {
@@ -396,7 +392,7 @@ func createToolTemplate() *MageConfig {
 }
 
 // populateFromProject populates configuration from existing project
-func populateFromProject(config *MageConfig) error {
+func populateFromProject(config *MageConfig) {
 	// Get module name
 	if module, err := getModuleName(); err == nil {
 		config.Project.Module = module
@@ -436,8 +432,6 @@ func populateFromProject(config *MageConfig) error {
 	if utils.FileExists(".github/workflows") {
 		config.CI.Enabled = true
 	}
-
-	return nil
 }
 
 // updateFromEnv updates configuration from environment variables

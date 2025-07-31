@@ -204,10 +204,7 @@ func (Test) Fuzz() error {
 	}
 
 	// Find packages with fuzz tests
-	packages, err := findFuzzPackages()
-	if err != nil {
-		return err
-	}
+	packages := findFuzzPackages()
 
 	if len(packages) == 0 {
 		utils.Info("No fuzz tests found")
@@ -449,11 +446,11 @@ func buildTestArgs(cfg *Config, race, cover bool) []string {
 }
 
 // findFuzzPackages finds packages containing fuzz tests
-func findFuzzPackages() ([]string, error) {
+func findFuzzPackages() []string {
 	output, err := GetRunner().RunCmdOutput("grep", "-r", "-l", "^func Fuzz", "--include=*_test.go", ".")
 	if err != nil {
 		// grep returns error if no matches found
-		return nil, nil
+		return nil
 	}
 
 	files := strings.Split(strings.TrimSpace(output), "\n")
@@ -487,7 +484,7 @@ func findFuzzPackages() ([]string, error) {
 		packages = append(packages, pkg)
 	}
 
-	return packages, nil
+	return packages
 }
 
 // Additional methods for Test namespace required by tests

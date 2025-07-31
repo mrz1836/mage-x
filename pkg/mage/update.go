@@ -104,7 +104,7 @@ func (Update) Install() error {
 	}
 
 	// Install update
-	if err := installUpdate(updateDir); err != nil {
+	if err := installUpdate(); err != nil {
 		return fmt.Errorf("failed to install update: %w", err)
 	}
 
@@ -466,7 +466,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 }
 
 // installUpdate installs the downloaded update
-func installUpdate(dir string) error {
+func installUpdate() error {
 	// This is simplified - in reality would handle binary replacement
 	// For now, we use go install
 

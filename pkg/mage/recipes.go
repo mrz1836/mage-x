@@ -157,7 +157,7 @@ func (Recipes) Run() error {
 		}
 
 		// Check condition
-		if step.Condition != "" && !evaluateRecipeCondition(step.Condition, context) {
+		if step.Condition != "" && !evaluateRecipeCondition(step.Condition) {
 			utils.Info("   Skipping (condition not met)")
 			continue
 		}
@@ -565,7 +565,7 @@ func isDependencyAvailable(dep string) bool {
 }
 
 // evaluateRecipeCondition evaluates a recipe condition
-func evaluateRecipeCondition(condition string, context *RecipeContext) bool {
+func evaluateRecipeCondition(condition string) bool {
 	// Simple condition evaluation
 	switch condition {
 	case "git_available":
@@ -607,13 +607,13 @@ func executeRecipeStep(step RecipeStep, context *RecipeContext) error {
 	case "add-mage-files":
 		return addMageFilesForRecipe()
 	case "setup-cli-build":
-		return setupCLIBuild(context)
+		return setupCLIBuild()
 	case "create-api-structure":
 		return createAPIStructure()
 	case "create-dockerfile":
 		return createDockerfile(context)
 	case "create-ci-workflow":
-		return createCIWorkflow(context)
+		return createCIWorkflow()
 	default:
 		// Execute as regular command
 		return GetRunner().RunCmd(command, args...)
@@ -667,7 +667,7 @@ steps:
 
 // Special command implementations
 
-func setupCLIBuild(context *RecipeContext) error {
+func setupCLIBuild() error {
 	utils.Info("Setting up CLI build configuration...")
 	return nil
 }
@@ -711,7 +711,7 @@ CMD ["./%s"]
 	return os.WriteFile("Dockerfile", []byte(content), 0o644)
 }
 
-func createCIWorkflow(context *RecipeContext) error {
+func createCIWorkflow() error {
 	content := `name: CI
 
 on:

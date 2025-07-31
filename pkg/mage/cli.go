@@ -106,7 +106,7 @@ func (CLI) Query() error {
 	results := executeQuery(repoConfig.Repositories, query)
 
 	// Display results
-	displayQueryResults(results, query)
+	displayQueryResults(results)
 
 	// Save results if requested
 	if outputFile := utils.GetEnv("OUTPUT", ""); outputFile != "" {
@@ -738,7 +738,7 @@ func matchesQuery(repo Repository, query QueryFilter) bool {
 	return true
 }
 
-func displayQueryResults(results []Repository, query QueryFilter) {
+func displayQueryResults(results []Repository) {
 	utils.Info("🔍 Query Results: %d repositories found", len(results))
 
 	if len(results) == 0 {

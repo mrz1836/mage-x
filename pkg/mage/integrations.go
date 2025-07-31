@@ -952,17 +952,17 @@ func testIntegration(integration IntegrationConfig) IntegrationTestResult {
 	// Run tests based on integration type
 	switch integration.Type {
 	case "communication":
-		result.Tests = testCommunicationIntegration(integration)
+		result.Tests = testCommunicationIntegration()
 	case "issue_tracking":
-		result.Tests = testIssueTrackingIntegration(integration)
+		result.Tests = testIssueTrackingIntegration()
 	case "source_control":
-		result.Tests = testSourceControlIntegration(integration)
+		result.Tests = testSourceControlIntegration()
 	case "ci_cd":
-		result.Tests = testCICDIntegration(integration)
+		result.Tests = testCICDIntegration()
 	case "monitoring":
-		result.Tests = testMonitoringIntegration(integration)
+		result.Tests = testMonitoringIntegration()
 	case "cloud_provider":
-		result.Tests = testCloudProviderIntegration(integration)
+		result.Tests = testCloudProviderIntegration()
 	default:
 		result.Tests = []TestCase{
 			{
@@ -988,7 +988,7 @@ func testIntegration(integration IntegrationConfig) IntegrationTestResult {
 	return result
 }
 
-func testCommunicationIntegration(integration IntegrationConfig) []TestCase {
+func testCommunicationIntegration() []TestCase {
 	return []TestCase{
 		{
 			Name:        "Webhook Connectivity",
@@ -1005,7 +1005,7 @@ func testCommunicationIntegration(integration IntegrationConfig) []TestCase {
 	}
 }
 
-func testIssueTrackingIntegration(integration IntegrationConfig) []TestCase {
+func testIssueTrackingIntegration() []TestCase {
 	return []TestCase{
 		{
 			Name:        "API Authentication",
@@ -1022,7 +1022,7 @@ func testIssueTrackingIntegration(integration IntegrationConfig) []TestCase {
 	}
 }
 
-func testSourceControlIntegration(integration IntegrationConfig) []TestCase {
+func testSourceControlIntegration() []TestCase {
 	return []TestCase{
 		{
 			Name:        "Token Validation",
@@ -1039,7 +1039,7 @@ func testSourceControlIntegration(integration IntegrationConfig) []TestCase {
 	}
 }
 
-func testCICDIntegration(integration IntegrationConfig) []TestCase {
+func testCICDIntegration() []TestCase {
 	return []TestCase{
 		{
 			Name:        "Server Connectivity",
@@ -1056,7 +1056,7 @@ func testCICDIntegration(integration IntegrationConfig) []TestCase {
 	}
 }
 
-func testMonitoringIntegration(integration IntegrationConfig) []TestCase {
+func testMonitoringIntegration() []TestCase {
 	return []TestCase{
 		{
 			Name:        "Metrics Query",
@@ -1073,7 +1073,7 @@ func testMonitoringIntegration(integration IntegrationConfig) []TestCase {
 	}
 }
 
-func testCloudProviderIntegration(integration IntegrationConfig) []TestCase {
+func testCloudProviderIntegration() []TestCase {
 	return []TestCase{
 		{
 			Name:        "Credential Validation",

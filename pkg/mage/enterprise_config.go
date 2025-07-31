@@ -35,9 +35,7 @@ func (EnterpriseConfigNamespace) Init() error {
 
 	// Run interactive configuration wizard
 	if utils.GetEnv("INTERACTIVE", "true") == "true" {
-		if err := runEnterpriseConfigWizard(config); err != nil {
-			return fmt.Errorf("configuration wizard failed: %w", err)
-		}
+		runEnterpriseConfigWizard(config)
 	}
 
 	// Save enterprise configuration
@@ -920,7 +918,7 @@ func NewEnterpriseConfiguration() *EnterpriseConfiguration {
 	}
 }
 
-func runEnterpriseConfigWizard(config *EnterpriseConfiguration) error {
+func runEnterpriseConfigWizard(config *EnterpriseConfiguration) {
 	utils.Info("🧙 Starting Enterprise Configuration Wizard")
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -1016,7 +1014,6 @@ func runEnterpriseConfigWizard(config *EnterpriseConfiguration) error {
 	}
 
 	utils.Success("✅ Configuration wizard completed")
-	return nil
 }
 
 func saveEnterpriseConfiguration(config *EnterpriseConfiguration) error {
@@ -1061,12 +1058,12 @@ func loadEnterpriseConfiguration() (*EnterpriseConfiguration, error) {
 
 func initializeSubConfigurations(config *EnterpriseConfiguration) error {
 	// Initialize repository configuration
-	if err := initializeRepositoryConfiguration(config); err != nil {
+	if err := initializeRepositoryConfiguration(); err != nil {
 		return err
 	}
 
 	// Initialize workflow templates
-	if err := initializeWorkflowTemplates(config); err != nil {
+	if err := initializeWorkflowTemplates(); err != nil {
 		return err
 	}
 
@@ -1078,7 +1075,7 @@ func initializeSubConfigurations(config *EnterpriseConfiguration) error {
 	return nil
 }
 
-func initializeRepositoryConfiguration(config *EnterpriseConfiguration) error {
+func initializeRepositoryConfiguration() error {
 	repoConfig := RepositoryConfig{
 		Version:      "1.0.0",
 		Repositories: []Repository{},
@@ -1100,7 +1097,7 @@ func initializeRepositoryConfiguration(config *EnterpriseConfiguration) error {
 	return fileOps.File.WriteFile(configPath, data, 0o644)
 }
 
-func initializeWorkflowTemplates(config *EnterpriseConfiguration) error {
+func initializeWorkflowTemplates() error {
 	workflowsDir := filepath.Join(".mage", "workflows")
 	if err := os.MkdirAll(workflowsDir, 0o755); err != nil {
 		return err
