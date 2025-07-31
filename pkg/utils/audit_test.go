@@ -34,7 +34,7 @@ func TestAuditLogger_Basic(t *testing.T) {
 	}
 
 	t.Run("NewAuditLogger creates logger", func(t *testing.T) {
-		logger := NewAuditLogger(config)
+		logger := NewAuditLogger(&config)
 		assert.NotNil(t, logger)
 		assert.Equal(t, config, logger.config)
 		assert.True(t, logger.enabled)
@@ -45,7 +45,7 @@ func TestAuditLogger_Basic(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
 
-		logger := NewAuditLogger(disabledConfig)
+		logger := NewAuditLogger(&disabledConfig)
 		assert.NotNil(t, logger)
 		assert.False(t, logger.enabled)
 		assert.Nil(t, logger.db)
@@ -73,7 +73,7 @@ func TestAuditLogger_Basic(t *testing.T) {
 			invalidConfig.DatabasePath = filepath.Join(existingFile, "subdir", "audit.db")
 		}
 
-		logger := NewAuditLogger(invalidConfig)
+		logger := NewAuditLogger(&invalidConfig)
 		assert.False(t, logger.enabled) // Should be disabled on init failure
 	})
 }
@@ -87,7 +87,7 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 		ExcludeCommands: []string{"help", "version"},
 		SensitiveEnvs:   []string{"SECRET_KEY", "PASSWORD"},
 	}
-	logger := NewAuditLogger(config)
+	logger := NewAuditLogger(&config)
 	defer func() {
 		if err := logger.Close(); err != nil {
 			t.Logf("Warning: failed to close logger: %v", err)
@@ -113,7 +113,7 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 			},
 		}
 
-		err := logger.LogEvent(event)
+		err := logger.LogEvent(&event)
 		require.NoError(t, err)
 
 		// Verify event was stored
@@ -123,7 +123,7 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 			Limit:     10,
 		}
 
-		events, err := logger.GetEvents(filter)
+		events, err := logger.GetEvents(&filter)
 		require.NoError(t, err)
 		require.Len(t, events, 1)
 
@@ -148,7 +148,7 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 			Success:   true,
 		}
 
-		err := logger.LogEvent(event)
+		err := logger.LogEvent(&event)
 		require.NoError(t, err)
 
 		// Verify event was not stored
@@ -157,7 +157,7 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 			Limit:   10,
 		}
 
-		events, err := logger.GetEvents(filter)
+		events, err := logger.GetEvents(&filter)
 		require.NoError(t, err)
 		assert.Empty(t, events)
 	})
@@ -165,7 +165,7 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 	t.Run("LogEvent with disabled logger", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		disabledLogger := NewAuditLogger(disabledConfig)
+		disabledLogger := NewAuditLogger(&disabledConfig)
 
 		event := AuditEvent{
 			Timestamp: time.Now(),
@@ -174,14 +174,14 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 			Success:   true,
 		}
 
-		err := disabledLogger.LogEvent(event)
+		err := disabledLogger.LogEvent(&event)
 		assert.NoError(t, err) // Should not error, just no-op
 	})
 
 	t.Run("LogEvent without environment logging", func(t *testing.T) {
 		noEnvConfig := config
 		noEnvConfig.LogEnvironment = false
-		noEnvLogger := NewAuditLogger(noEnvConfig)
+		noEnvLogger := NewAuditLogger(&noEnvConfig)
 		defer func() {
 			if err := noEnvLogger.Close(); err != nil {
 				t.Logf("Warning: failed to close logger: %v", err)
@@ -198,7 +198,7 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 			Success: true,
 		}
 
-		err := noEnvLogger.LogEvent(event)
+		err := noEnvLogger.LogEvent(&event)
 		require.NoError(t, err)
 
 		// Verify environment was not logged
@@ -207,7 +207,7 @@ func TestAuditLogger_LogEvent(t *testing.T) {
 			Limit:   1,
 		}
 
-		events, err := noEnvLogger.GetEvents(filter)
+		events, err := noEnvLogger.GetEvents(&filter)
 		require.NoError(t, err)
 		require.Len(t, events, 1)
 
@@ -221,7 +221,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 		Enabled:      true,
 		DatabasePath: filepath.Join(tempDir, "test_audit.db"),
 	}
-	logger := NewAuditLogger(config)
+	logger := NewAuditLogger(&config)
 	defer func() {
 		if err := logger.Close(); err != nil {
 			t.Logf("Warning: failed to close logger: %v", err)
@@ -262,7 +262,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 	}
 
 	for _, event := range events {
-		err := logger.LogEvent(event)
+		err := logger.LogEvent(&event)
 		require.NoError(t, err)
 	}
 
@@ -272,7 +272,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 			EndTime:   baseTime.Add(time.Hour),
 		}
 
-		results, err := logger.GetEvents(filter)
+		results, err := logger.GetEvents(&filter)
 		require.NoError(t, err)
 		assert.Len(t, results, 3)
 	})
@@ -284,7 +284,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 			User:      "user1",
 		}
 
-		results, err := logger.GetEvents(filter)
+		results, err := logger.GetEvents(&filter)
 		require.NoError(t, err)
 		assert.Len(t, results, 2)
 
@@ -300,7 +300,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 			Command:   "build",
 		}
 
-		results, err := logger.GetEvents(filter)
+		results, err := logger.GetEvents(&filter)
 		require.NoError(t, err)
 		assert.Len(t, results, 1)
 		assert.Equal(t, "build", results[0].Command)
@@ -314,7 +314,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 			Success:   &success,
 		}
 
-		results, err := logger.GetEvents(filter)
+		results, err := logger.GetEvents(&filter)
 		require.NoError(t, err)
 		assert.Len(t, results, 1)
 		assert.False(t, results[0].Success)
@@ -328,7 +328,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 			Limit:     2,
 		}
 
-		results, err := logger.GetEvents(filter)
+		results, err := logger.GetEvents(&filter)
 		require.NoError(t, err)
 		assert.Len(t, results, 2)
 	})
@@ -339,7 +339,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 			EndTime:   baseTime.Add(25 * time.Minute),
 		}
 
-		results, err := logger.GetEvents(filter)
+		results, err := logger.GetEvents(&filter)
 		require.NoError(t, err)
 		assert.Len(t, results, 1)
 		assert.Equal(t, "deploy", results[0].Command)
@@ -348,10 +348,10 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 	t.Run("GetEvents with disabled logger", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		disabledLogger := NewAuditLogger(disabledConfig)
+		disabledLogger := NewAuditLogger(&disabledConfig)
 
 		filter := AuditFilter{}
-		_, err := disabledLogger.GetEvents(filter)
+		_, err := disabledLogger.GetEvents(&filter)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "audit logging is disabled")
 	})
@@ -363,7 +363,7 @@ func TestAuditLogger_GetStats(t *testing.T) {
 		Enabled:      true,
 		DatabasePath: filepath.Join(tempDir, "test_audit.db"),
 	}
-	logger := NewAuditLogger(config)
+	logger := NewAuditLogger(&config)
 	defer func() {
 		if err := logger.Close(); err != nil {
 			t.Logf("Warning: failed to close logger: %v", err)
@@ -380,7 +380,7 @@ func TestAuditLogger_GetStats(t *testing.T) {
 	}
 
 	for _, event := range events {
-		err := logger.LogEvent(event)
+		err := logger.LogEvent(&event)
 		require.NoError(t, err)
 	}
 
@@ -416,7 +416,7 @@ func TestAuditLogger_GetStats(t *testing.T) {
 	t.Run("GetStats with disabled logger", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		disabledLogger := NewAuditLogger(disabledConfig)
+		disabledLogger := NewAuditLogger(&disabledConfig)
 
 		_, err := disabledLogger.GetStats()
 		require.Error(t, err)
@@ -431,7 +431,7 @@ func TestAuditLogger_CleanupOldEvents(t *testing.T) {
 		DatabasePath:  filepath.Join(tempDir, "test_audit.db"),
 		RetentionDays: 7,
 	}
-	logger := NewAuditLogger(config)
+	logger := NewAuditLogger(&config)
 	defer func() {
 		if err := logger.Close(); err != nil {
 			t.Logf("Warning: failed to close logger: %v", err)
@@ -448,7 +448,7 @@ func TestAuditLogger_CleanupOldEvents(t *testing.T) {
 	}
 
 	for _, event := range events {
-		err := logger.LogEvent(event)
+		err := logger.LogEvent(&event)
 		require.NoError(t, err)
 	}
 
@@ -462,7 +462,7 @@ func TestAuditLogger_CleanupOldEvents(t *testing.T) {
 			EndTime:   time.Now().Add(time.Hour),
 		}
 
-		events, err := logger.GetEvents(filter)
+		events, err := logger.GetEvents(&filter)
 		require.NoError(t, err)
 		assert.Len(t, events, 1)
 		assert.Equal(t, "new_command", events[0].Command)
@@ -471,7 +471,7 @@ func TestAuditLogger_CleanupOldEvents(t *testing.T) {
 	t.Run("CleanupOldEvents with disabled logger", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		disabledLogger := NewAuditLogger(disabledConfig)
+		disabledLogger := NewAuditLogger(&disabledConfig)
 
 		err := disabledLogger.CleanupOldEvents()
 		assert.NoError(t, err) // Should be no-op
@@ -484,7 +484,7 @@ func TestAuditLogger_ExportEvents(t *testing.T) {
 		Enabled:      true,
 		DatabasePath: filepath.Join(tempDir, "test_audit.db"),
 	}
-	logger := NewAuditLogger(config)
+	logger := NewAuditLogger(&config)
 	defer func() {
 		if err := logger.Close(); err != nil {
 			t.Logf("Warning: failed to close logger: %v", err)
@@ -500,7 +500,7 @@ func TestAuditLogger_ExportEvents(t *testing.T) {
 		Success:   true,
 	}
 
-	err := logger.LogEvent(event)
+	err := logger.LogEvent(&event)
 	require.NoError(t, err)
 
 	t.Run("ExportEvents returns JSON", func(t *testing.T) {
@@ -508,7 +508,7 @@ func TestAuditLogger_ExportEvents(t *testing.T) {
 			Command: "export_test",
 		}
 
-		jsonData, err := logger.ExportEvents(filter)
+		jsonData, err := logger.ExportEvents(&filter)
 		require.NoError(t, err)
 		assert.NotEmpty(t, jsonData)
 
@@ -525,7 +525,7 @@ func TestAuditLogger_FilterSensitiveEnvs(t *testing.T) {
 		LogEnvironment: true,
 		SensitiveEnvs:  []string{"SECRET", "PASSWORD", "TOKEN"},
 	}
-	logger := NewAuditLogger(config)
+	logger := NewAuditLogger(&config)
 
 	t.Run("filterSensitiveEnvs redacts sensitive variables", func(t *testing.T) {
 		env := map[string]string{
@@ -548,7 +548,7 @@ func TestAuditLogger_FilterSensitiveEnvs(t *testing.T) {
 	t.Run("filterSensitiveEnvs with LogEnvironment disabled", func(t *testing.T) {
 		noLogConfig := config
 		noLogConfig.LogEnvironment = false
-		noLogLogger := NewAuditLogger(noLogConfig)
+		noLogLogger := NewAuditLogger(&noLogConfig)
 
 		env := map[string]string{
 			"PATH":   "/usr/bin",
@@ -595,12 +595,12 @@ func TestPackageLevelAuditFunctions(t *testing.T) {
 		}
 
 		assert.NotPanics(t, func() {
-			err := LogAuditEvent(event)
+			err := LogAuditEvent(&event)
 			_ = err // Expected - package function may return error
 		})
 
 		assert.NotPanics(t, func() {
-			_, err := GetAuditEvents(AuditFilter{Limit: 1})
+			_, err := GetAuditEvents(&AuditFilter{Limit: 1})
 			_ = err // Expected - package function may return error
 		})
 
@@ -615,7 +615,7 @@ func TestPackageLevelAuditFunctions(t *testing.T) {
 		})
 
 		assert.NotPanics(t, func() {
-			_, err := ExportAuditEvents(AuditFilter{Limit: 1})
+			_, err := ExportAuditEvents(&AuditFilter{Limit: 1})
 			_ = err // Expected - package function may return error
 		})
 	})
@@ -708,7 +708,7 @@ func BenchmarkAuditLogger_LogEvent(b *testing.B) {
 		Enabled:      true,
 		DatabasePath: filepath.Join(tempDir, "bench_audit.db"),
 	}
-	logger := NewAuditLogger(config)
+	logger := NewAuditLogger(&config)
 	defer func() {
 		if err := logger.Close(); err != nil {
 			b.Logf("Warning: failed to close logger: %v", err)
@@ -727,7 +727,7 @@ func BenchmarkAuditLogger_LogEvent(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := logger.LogEvent(event)
+		err := logger.LogEvent(&event)
 		if err != nil {
 			b.Logf("LogEvent error in benchmark: %v", err)
 		}
@@ -740,7 +740,7 @@ func BenchmarkAuditLogger_GetEvents(b *testing.B) {
 		Enabled:      true,
 		DatabasePath: filepath.Join(tempDir, "bench_audit.db"),
 	}
-	logger := NewAuditLogger(config)
+	logger := NewAuditLogger(&config)
 	defer func() {
 		if err := logger.Close(); err != nil {
 			b.Logf("Warning: failed to close logger: %v", err)
@@ -755,7 +755,7 @@ func BenchmarkAuditLogger_GetEvents(b *testing.B) {
 			Command:   "bench_command",
 			Success:   true,
 		}
-		if err := logger.LogEvent(event); err != nil {
+		if err := logger.LogEvent(&event); err != nil {
 			b.Fatalf("Failed to log event in benchmark setup: %v", err)
 		}
 	}
@@ -768,7 +768,7 @@ func BenchmarkAuditLogger_GetEvents(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := logger.GetEvents(filter); err != nil {
+		if _, err := logger.GetEvents(&filter); err != nil {
 			b.Logf("GetEvents error in benchmark: %v", err)
 		}
 	}

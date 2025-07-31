@@ -31,9 +31,9 @@ type azureServices struct {
 }
 
 // New creates a new Azure provider
-func New(config providers.ProviderConfig) (providers.Provider, error) {
+func New(config *providers.ProviderConfig) (providers.Provider, error) {
 	p := &Provider{
-		config: config,
+		config: *config,
 	}
 
 	if err := p.Initialize(config); err != nil {
@@ -49,7 +49,7 @@ func (p *Provider) Name() string {
 }
 
 // Initialize initializes the Azure provider
-func (p *Provider) Initialize(config providers.ProviderConfig) error {
+func (p *Provider) Initialize(config *providers.ProviderConfig) error {
 	// Extract subscription ID from credentials
 	if config.Credentials.Extra == nil {
 		return fmt.Errorf("azure subscription ID is required")
@@ -63,15 +63,15 @@ func (p *Provider) Initialize(config providers.ProviderConfig) error {
 
 	// Initialize Azure services
 	p.services = &azureServices{
-		compute:    &azureComputeService{config: config},
-		storage:    &azureStorageService{config: config},
-		network:    &azureNetworkService{config: config},
-		container:  &azureContainerService{config: config},
-		database:   &azureDatabaseService{config: config},
-		security:   &azureSecurityService{config: config},
-		monitoring: &azureMonitoringService{config: config},
-		serverless: &azureServerlessService{config: config},
-		ai:         &azureAIService{config: config},
+		compute:    &azureComputeService{config: *config},
+		storage:    &azureStorageService{config: *config},
+		network:    &azureNetworkService{config: *config},
+		container:  &azureContainerService{config: *config},
+		database:   &azureDatabaseService{config: *config},
+		security:   &azureSecurityService{config: *config},
+		monitoring: &azureMonitoringService{config: *config},
+		serverless: &azureServerlessService{config: *config},
+		ai:         &azureAIService{config: *config},
 	}
 
 	return nil

@@ -122,8 +122,8 @@ type ResourceMetrics struct {
 // MetricsStorage interface for metrics persistence
 type MetricsStorage interface {
 	Store(metric *Metric) error
-	Query(query MetricsQuery) ([]*Metric, error)
-	Aggregate(query MetricsQuery) (*AggregatedMetrics, error)
+	Query(query *MetricsQuery) ([]*Metric, error)
+	Aggregate(query *MetricsQuery) (*AggregatedMetrics, error)
 	Cleanup(retentionDays int) error
 }
 
@@ -231,17 +231,17 @@ func GetMetricsCollector() *MetricsCollector {
 			config.StoragePath = storagePath
 		}
 
-		globalMetricsCollector = NewMetricsCollector(config)
+		globalMetricsCollector = NewMetricsCollector(&config)
 	})
 
 	return globalMetricsCollector
 }
 
 // NewMetricsCollector creates a new metrics collector
-func NewMetricsCollector(config MetricsConfig) *MetricsCollector {
+func NewMetricsCollector(config *MetricsConfig) *MetricsCollector {
 	collector := &MetricsCollector{
 		metrics: make(map[string]*Metric),
-		config:  config,
+		config:  *config,
 	}
 
 	if config.Enabled {
@@ -377,7 +377,7 @@ func (mc *MetricsCollector) RecordGauge(name string, value float64, unit string,
 }
 
 // RecordBuildMetrics records comprehensive build metrics
-func (mc *MetricsCollector) RecordBuildMetrics(buildMetrics BuildMetrics) error {
+func (mc *MetricsCollector) RecordBuildMetrics(buildMetrics *BuildMetrics) error {
 	if !mc.config.Enabled {
 		return nil
 	}
@@ -493,7 +493,7 @@ func (mc *MetricsCollector) GetCurrentResourceMetrics() ResourceMetrics {
 }
 
 // QueryMetrics queries metrics based on criteria
-func (mc *MetricsCollector) QueryMetrics(query MetricsQuery) ([]*Metric, error) {
+func (mc *MetricsCollector) QueryMetrics(query *MetricsQuery) ([]*Metric, error) {
 	if !mc.config.Enabled || mc.storage == nil {
 		return nil, fmt.Errorf("metrics collection is disabled")
 	}
@@ -531,7 +531,7 @@ func (mc *MetricsCollector) GenerateReport(period string) (*PerformanceReport, e
 		OrderBy:   "timestamp",
 	}
 
-	metrics, err := mc.QueryMetrics(query)
+	metrics, err := mc.QueryMetrics(&query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query metrics: %w", err)
 	}
@@ -895,7 +895,7 @@ func RecordGauge(name string, value float64, unit string, tags map[string]string
 }
 
 // RecordBuildMetrics records build metrics using the global collector
-func RecordBuildMetrics(buildMetrics BuildMetrics) error {
+func RecordBuildMetrics(buildMetrics *BuildMetrics) error {
 	return GetMetricsCollector().RecordBuildMetrics(buildMetrics)
 }
 
@@ -963,7 +963,7 @@ func (js *JSONStorage) Store(metric *Metric) error {
 }
 
 // Query queries metrics from JSON storage
-func (js *JSONStorage) Query(query MetricsQuery) ([]*Metric, error) {
+func (js *JSONStorage) Query(query *MetricsQuery) ([]*Metric, error) {
 	js.mu.RLock()
 	defer js.mu.RUnlock()
 
@@ -1029,13 +1029,13 @@ func (js *JSONStorage) Query(query MetricsQuery) ([]*Metric, error) {
 }
 
 // isMetricInTimeRange checks if a metric timestamp falls within the query time range
-func isMetricInTimeRange(metric *Metric, query MetricsQuery) bool {
+func isMetricInTimeRange(metric *Metric, query *MetricsQuery) bool {
 	return (metric.Timestamp.After(query.StartTime) || metric.Timestamp.Equal(query.StartTime)) &&
 		(metric.Timestamp.Before(query.EndTime) || metric.Timestamp.Equal(query.EndTime))
 }
 
 // Aggregate aggregates metrics from JSON storage
-func (js *JSONStorage) Aggregate(query MetricsQuery) (*AggregatedMetrics, error) {
+func (js *JSONStorage) Aggregate(query *MetricsQuery) (*AggregatedMetrics, error) {
 	metrics, err := js.Query(query)
 	if err != nil {
 		return nil, err

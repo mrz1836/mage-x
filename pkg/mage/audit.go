@@ -66,7 +66,7 @@ func (Audit) Show() error {
 		}
 	}
 
-	events, err := auditLogger.GetEvents(filter)
+	events, err := auditLogger.GetEvents(&filter)
 	if err != nil {
 		return fmt.Errorf("failed to get audit events: %w", err)
 	}
@@ -178,7 +178,7 @@ func (Audit) Export() error {
 	}
 
 	// Export events
-	data, err := auditLogger.ExportEvents(filter)
+	data, err := auditLogger.ExportEvents(&filter)
 	if err != nil {
 		return fmt.Errorf("failed to export audit events: %w", err)
 	}
@@ -322,7 +322,7 @@ func (Audit) Report() error {
 		Limit:   10,
 	}
 
-	failedEvents, err := auditLogger.GetEvents(failedFilter)
+	failedEvents, err := auditLogger.GetEvents(&failedFilter)
 	if err == nil {
 		report.RecentFailures = failedEvents
 	}
@@ -399,7 +399,7 @@ func LogCommandExecution(command string, args []string, startTime time.Time, dur
 	}
 
 	// Log the event (errors are handled internally by the logger)
-	if err := auditLogger.LogEvent(event); err != nil {
+	if err := auditLogger.LogEvent(&event); err != nil {
 		// Log error but don't fail the operation
 		utils.Warn("Failed to log audit event: %v", err)
 	}

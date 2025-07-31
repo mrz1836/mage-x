@@ -45,7 +45,7 @@ func useAWSProvider() error {
 	}
 
 	// Get AWS provider instance
-	provider, err := providers.Get("aws", config)
+	provider, err := providers.Get("aws", &config)
 	if err != nil {
 		return fmt.Errorf("failed to get AWS provider: %w", err)
 	}
@@ -175,7 +175,7 @@ func useAzureProvider() error {
 	}
 
 	// Get Azure provider instance
-	provider, err := providers.Get("azure", config)
+	provider, err := providers.Get("azure", &config)
 	if err != nil {
 		return fmt.Errorf("failed to get Azure provider: %w", err)
 	}
@@ -252,7 +252,7 @@ func multiCloudExample() error {
 	for providerName, config := range providersConfig {
 		fmt.Printf("\nDeploying to %s...\n", providerName)
 
-		provider, err := providers.Get(providerName, config)
+		provider, err := providers.Get(providerName, &config)
 		if err != nil {
 			log.Printf("Failed to get %s provider: %v", providerName, err)
 			continue

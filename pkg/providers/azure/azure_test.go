@@ -34,7 +34,7 @@ func (ts *AzureProviderTestSuite) SetupTest() {
 	}
 
 	var err error
-	ts.provider, err = New(ts.config)
+	ts.provider, err = New(&ts.config)
 	ts.Require().NoError(err)
 }
 
@@ -76,7 +76,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 			},
 		}
 
-		provider, err := New(validConfig)
+		provider, err := New(&validConfig)
 		ts.Require().NoError(err)
 
 		err = provider.Validate()
@@ -96,7 +96,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 			},
 		}
 
-		provider, err := New(certConfig)
+		provider, err := New(&certConfig)
 		ts.Require().NoError(err)
 
 		err = provider.Validate()
@@ -114,7 +114,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 			},
 		}
 
-		_, err := New(invalidConfig)
+		_, err := New(&invalidConfig)
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "azure subscription ID is required")
 	})
@@ -131,7 +131,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 			},
 		}
 
-		provider, err := New(invalidConfig)
+		provider, err := New(&invalidConfig)
 		ts.Require().NoError(err) // Creation should succeed
 
 		err = provider.Validate()
@@ -151,7 +151,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 			},
 		}
 
-		provider, err := New(invalidConfig)
+		provider, err := New(&invalidConfig)
 		ts.Require().NoError(err) // Creation should succeed
 
 		err = provider.Validate()
@@ -257,7 +257,7 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 			},
 		}
 
-		provider, err := New(config)
+		provider, err := New(&config)
 		ts.Require().NoError(err)
 		ts.Require().Equal("azure", provider.Name())
 
@@ -282,7 +282,7 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 			},
 		}
 
-		provider, err := New(config)
+		provider, err := New(&config)
 		ts.Require().NoError(err)
 		ts.Require().Equal("azure", provider.Name())
 
@@ -303,7 +303,7 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 			},
 		}
 
-		provider, err := New(config)
+		provider, err := New(&config)
 		ts.Require().NoError(err)
 		ts.Require().Equal("azure", provider.Name())
 
@@ -366,7 +366,7 @@ func (ts *AzureProviderTestSuite) TestAzureRegions() {
 				},
 			}
 
-			provider, err := New(config)
+			provider, err := New(&config)
 			ts.Require().NoError(err)
 			ts.Require().Equal("azure", provider.Name())
 
@@ -393,7 +393,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 			},
 		}
 
-		provider, err := New(config)
+		provider, err := New(&config)
 		ts.Require().NoError(err)
 
 		azureProvider, ok := provider.(*Provider)
@@ -416,7 +416,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 			},
 		}
 
-		provider, err := New(config)
+		provider, err := New(&config)
 		ts.Require().NoError(err)
 
 		azureProvider, ok := provider.(*Provider)
@@ -443,7 +443,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 			},
 		}
 
-		provider, err := New(config)
+		provider, err := New(&config)
 		ts.Require().NoError(err)
 
 		azureProvider, ok := provider.(*Provider)
@@ -473,7 +473,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 			},
 		}
 
-		provider, err := New(config)
+		provider, err := New(&config)
 		ts.Require().NoError(err)
 
 		azureProvider, ok := provider.(*Provider)
@@ -498,7 +498,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 			},
 		}
 
-		provider, err := New(config)
+		provider, err := New(&config)
 		ts.Require().NoError(err) // Creation should succeed
 
 		err = provider.Validate()
@@ -518,7 +518,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 			},
 		}
 
-		_, err := New(config)
+		_, err := New(&config)
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "azure subscription ID is required")
 	})
@@ -534,7 +534,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 			},
 		}
 
-		_, err := New(config)
+		_, err := New(&config)
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "azure subscription ID is required")
 	})
@@ -550,7 +550,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 			},
 		}
 
-		_, err := New(config)
+		_, err := New(&config)
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "azure subscription ID is required")
 	})
@@ -577,7 +577,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderRegistration() {
 			},
 		}
 
-		provider, err := providers.Get("azure", config)
+		provider, err := providers.Get("azure", &config)
 		ts.Require().NoError(err)
 		ts.Require().NotNil(provider)
 		ts.Require().Equal("azure", provider.Name())
@@ -606,7 +606,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderComparison() {
 			},
 		}
 
-		azureProvider, err := providers.Get("azure", azureConfig)
+		azureProvider, err := providers.Get("azure", &azureConfig)
 		ts.Require().NoError(err)
 
 		// Test Azure provider unique characteristics

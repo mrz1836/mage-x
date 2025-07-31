@@ -20,8 +20,8 @@ type ProvidersTestSuite struct {
 func (ts *ProvidersTestSuite) TestRegistry() {
 	ts.Run("Register and Get provider factory", func() {
 		// Create a test provider factory
-		testFactory := func(config ProviderConfig) (Provider, error) {
-			p := &mockProvider{config: config}
+		testFactory := func(config *ProviderConfig) (Provider, error) {
+			p := &mockProvider{config: *config}
 			p.providerName = "test" // Set the name explicitly for this test
 			return p, nil
 		}
@@ -42,27 +42,27 @@ func (ts *ProvidersTestSuite) TestRegistry() {
 				SecretKey: "test-secret",
 			},
 		}
-		provider, err := Get("test", config)
+		provider, err := Get("test", &config)
 		ts.Require().NoError(err)
 		ts.Require().NotNil(provider)
 		ts.Require().Equal("test", provider.Name())
 	})
 
 	ts.Run("Get non-existent provider returns error", func() {
-		_, err := Get("nonexistent", ProviderConfig{})
+		_, err := Get("nonexistent", &ProviderConfig{})
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "provider nonexistent not found")
 	})
 
 	ts.Run("List returns all registered providers", func() {
 		// Register multiple test providers
-		Register("test1", func(config ProviderConfig) (Provider, error) {
-			p := &mockProvider{config: config}
+		Register("test1", func(config *ProviderConfig) (Provider, error) {
+			p := &mockProvider{config: *config}
 			p.providerName = "test1"
 			return p, nil
 		})
-		Register("test2", func(config ProviderConfig) (Provider, error) {
-			p := &mockProvider{config: config}
+		Register("test2", func(config *ProviderConfig) (Provider, error) {
+			p := &mockProvider{config: *config}
 			p.providerName = "test2"
 			return p, nil
 		})
@@ -201,13 +201,13 @@ func (ts *ProvidersTestSuite) TestProviderInterface() {
 	}
 
 	provider := &mockProvider{config: config}
-	err := provider.Initialize(config)
+	err := provider.Initialize(&config)
 	ts.Require().NoError(err)
 
 	ts.Run("Provider basic methods", func() {
 		ts.Require().Equal("mock", provider.Name())
 
-		err := provider.Initialize(config)
+		err := provider.Initialize(&config)
 		ts.Require().NoError(err)
 
 		err = provider.Validate()
@@ -244,7 +244,7 @@ func (ts *ProvidersTestSuite) TestProviderInterface() {
 func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 	ctx := context.Background()
 	provider := &mockProvider{}
-	err := provider.Initialize(ProviderConfig{})
+	err := provider.Initialize(&ProviderConfig{})
 	ts.Require().NoError(err)
 
 	ts.Run("ComputeService operations", func() {
@@ -600,8 +600,8 @@ func (p *mockProvider) Name() string {
 	return "mock"
 }
 
-func (p *mockProvider) Initialize(config ProviderConfig) error {
-	p.config = config
+func (p *mockProvider) Initialize(config *ProviderConfig) error {
+	p.config = *config
 	p.services = &mockServices{
 		compute:    &mockComputeService{},
 		storage:    &mockStorageService{},

@@ -458,7 +458,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 		dashboard := Dashboard{}
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			_ = newDashboardCommandHandler(dashboard)
+			_ = newDashboardCommandHandler(&dashboard)
 		}
 	})
 }

@@ -45,8 +45,8 @@ func (CLI) Bulk() error {
 
 	// If no targets specified, use all repositories
 	if len(targets) == 0 {
-		for _, repo := range repoConfig.Repositories {
-			targets = append(targets, repo.Name)
+		for i := range repoConfig.Repositories {
+			targets = append(targets, repoConfig.Repositories[i].Name)
 		}
 	}
 
@@ -60,17 +60,17 @@ func (CLI) Bulk() error {
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, getMaxConcurrency())
 
-	for i, repo := range filteredRepos {
+	for i := range filteredRepos {
 		wg.Add(1)
-		go func(index int, repository Repository) {
+		go func(index int) {
 			defer wg.Done()
 
 			// Acquire semaphore
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			results[index] = executeBulkOperation(&repository, operation)
-		}(i, repo)
+			results[index] = executeBulkOperation(&filteredRepos[index], operation)
+		}(i)
 	}
 
 	wg.Wait()
@@ -103,7 +103,7 @@ func (CLI) Query() error {
 	query := parseQueryParameters()
 
 	// Execute query
-	results := executeQuery(repoConfig.Repositories, query)
+	results := executeQuery(repoConfig.Repositories, &query)
 
 	// Display results
 	displayQueryResults(results)
@@ -131,14 +131,14 @@ func (CLI) Dashboard() error {
 	}
 
 	// Generate dashboard data
-	dashboard := generateDashboard(repoConfig)
+	dashboard := generateDashboard(&repoConfig)
 
 	// Display dashboard
-	displayDashboard(dashboard)
+	displayDashboard(&dashboard)
 
 	// Check for interactive mode
 	if utils.GetEnv("INTERACTIVE", "false") == "true" {
-		return runInteractiveDashboard(dashboard)
+		return runInteractiveDashboard(&dashboard)
 	}
 
 	return nil
@@ -165,7 +165,7 @@ func (CLI) Batch() error {
 	for i, operation := range batch.Operations {
 		utils.Info("🔄 Step %d/%d: %s", i+1, len(batch.Operations), operation.Name)
 
-		result := executeBatchOperation(operation)
+		result := executeBatchOperation(&operation)
 		results[i] = result
 
 		if !result.Success {
@@ -260,13 +260,13 @@ func (CLI) Pipeline() error {
 
 	switch operation {
 	case "status":
-		return showPipelineStatus(pipelineConfig)
+		return showPipelineStatus(&pipelineConfig)
 	case "trigger":
-		return triggerPipeline(pipelineConfig)
+		return triggerPipeline(&pipelineConfig)
 	case "history":
-		return showPipelineHistory(pipelineConfig)
+		return showPipelineHistory(&pipelineConfig)
 	case "optimize":
-		return optimizePipeline(pipelineConfig)
+		return optimizePipeline(&pipelineConfig)
 	default:
 		return fmt.Errorf("unknown pipeline operation: %s", operation)
 	}
@@ -541,10 +541,10 @@ func filterRepositories(repositories []Repository, targets []string) []Repositor
 	}
 
 	var filtered []Repository
-	for _, repo := range repositories {
+	for i := range repositories {
 		for _, target := range targets {
-			if repo.Name == target {
-				filtered = append(filtered, repo)
+			if repositories[i].Name == target {
+				filtered = append(filtered, repositories[i])
 				break
 			}
 		}
@@ -593,27 +593,27 @@ func executeBulkOperation(repo *Repository, operation string) BulkResult {
 	return result
 }
 
-func executeStatusOperation(_ *Repository) (string, string) {
+func executeStatusOperation(_ *Repository) (output string, errMsg string) {
 	// Implementation would check repository status
 	return "Repository is healthy", ""
 }
 
-func executeBuildOperation(_ *Repository) (string, string) {
+func executeBuildOperation(_ *Repository) (output string, errMsg string) {
 	// Implementation would build the repository
 	return "Build completed successfully", ""
 }
 
-func executeTestOperation(_ *Repository) (string, string) {
+func executeTestOperation(_ *Repository) (output string, errMsg string) {
 	// Implementation would run tests
 	return "All tests passed", ""
 }
 
-func executeLintOperation(_ *Repository) (string, string) {
+func executeLintOperation(_ *Repository) (output string, errMsg string) {
 	// Implementation would run linting
 	return "No linting issues found", ""
 }
 
-func executeUpdateOperation(_ *Repository) (string, string) {
+func executeUpdateOperation(_ *Repository) (output string, errMsg string) {
 	// Implementation would update dependencies
 	return "Dependencies updated", ""
 }
@@ -667,12 +667,12 @@ func parseQueryParameters() QueryFilter {
 	}
 }
 
-func executeQuery(repositories []Repository, query QueryFilter) []Repository {
+func executeQuery(repositories []Repository, query *QueryFilter) []Repository {
 	var results []Repository
 
-	for _, repo := range repositories {
-		if matchesQuery(repo, query) {
-			results = append(results, repo)
+	for i := range repositories {
+		if matchesQuery(repositories[i], query) {
+			results = append(results, repositories[i])
 		}
 	}
 
@@ -698,7 +698,7 @@ func executeQuery(repositories []Repository, query QueryFilter) []Repository {
 	return results
 }
 
-func matchesQuery(repo Repository, query QueryFilter) bool {
+func matchesQuery(repo Repository, query *QueryFilter) bool {
 	if query.Name != "" && !strings.Contains(strings.ToLower(repo.Name), strings.ToLower(query.Name)) {
 		return false
 	}
@@ -751,13 +751,13 @@ func displayQueryResults(results []Repository) {
 	utils.Info("\n%-20s %-10s %-12s %-8s %-15s", "NAME", "LANGUAGE", "FRAMEWORK", "STATUS", "LAST UPDATED")
 	utils.Info("%s", strings.Repeat("-", 75))
 
-	for _, repo := range results {
+	for i := range results {
 		utils.Info("%-20s %-10s %-12s %-8s %-15s",
-			truncateString(repo.Name, 20),
-			truncateString(repo.Language, 10),
-			truncateString(repo.Framework, 12),
-			truncateString(repo.Status, 8),
-			repo.LastUpdated.Format("2006-01-02"),
+			truncateString(results[i].Name, 20),
+			truncateString(results[i].Language, 10),
+			truncateString(results[i].Framework, 12),
+			truncateString(results[i].Status, 8),
+			results[i].LastUpdated.Format("2006-01-02"),
 		)
 	}
 }
@@ -767,7 +767,7 @@ func saveQueryResults(results []Repository, filename string) error {
 	return fileOps.JSON.WriteJSONIndent(filename, results, "", "  ")
 }
 
-func generateDashboard(config RepositoryConfig) Dashboard {
+func generateDashboard(config *RepositoryConfig) Dashboard {
 	// Generate dashboard data
 	dashboard := Dashboard{
 		Timestamp: time.Now(),
@@ -791,9 +791,9 @@ func generateDashboard(config RepositoryConfig) Dashboard {
 	warningCount := 0
 	errorCount := 0
 
-	for _, repo := range config.Repositories {
+	for i := range config.Repositories {
 		status := RepositoryStatus{
-			Repository:      repo,
+			Repository:      config.Repositories[i],
 			Health:          "healthy",
 			LastBuild:       time.Now().Add(-2 * time.Hour),
 			BuildStatus:     "success",
@@ -825,7 +825,7 @@ func generateDashboard(config RepositoryConfig) Dashboard {
 	return dashboard
 }
 
-func displayDashboard(dashboard Dashboard) {
+func displayDashboard(dashboard *Dashboard) {
 	// Display overview
 	utils.Info("📊 Enterprise Dashboard")
 	utils.Info("  Total Repositories: %d", dashboard.Overview.TotalRepositories)
@@ -862,7 +862,7 @@ func displayDashboard(dashboard Dashboard) {
 	}
 }
 
-func runInteractiveDashboard(dashboard Dashboard) error {
+func runInteractiveDashboard(dashboard *Dashboard) error {
 	utils.Info("🎮 Interactive Dashboard Mode (type 'help' for commands)")
 
 	handler := newDashboardCommandHandler(dashboard)
@@ -893,7 +893,7 @@ func runInteractiveDashboard(dashboard Dashboard) error {
 var errQuit = fmt.Errorf("quit")
 
 type dashboardCommand interface {
-	execute(dashboard Dashboard) error
+	execute(dashboard *Dashboard) error
 	description() string
 }
 
@@ -902,9 +902,9 @@ type dashboardCommandHandler struct {
 	commands  map[string]dashboardCommand
 }
 
-func newDashboardCommandHandler(dashboard Dashboard) *dashboardCommandHandler {
+func newDashboardCommandHandler(dashboard *Dashboard) *dashboardCommandHandler {
 	h := &dashboardCommandHandler{
-		dashboard: dashboard,
+		dashboard: *dashboard,
 		commands:  make(map[string]dashboardCommand),
 	}
 
@@ -925,14 +925,14 @@ func (h *dashboardCommandHandler) execute(commandStr string) error {
 	if !exists {
 		return fmt.Errorf("unknown command: %s (type 'help' for available commands)", commandStr)
 	}
-	return cmd.execute(h.dashboard)
+	return cmd.execute(&h.dashboard)
 }
 
 type helpCommand struct {
 	commands map[string]dashboardCommand
 }
 
-func (c *helpCommand) execute(_ Dashboard) error {
+func (c *helpCommand) execute(_ *Dashboard) error {
 	utils.Info("Available commands:")
 	for name, cmd := range c.commands {
 		if name != "exit" { // Skip duplicate quit command
@@ -946,7 +946,7 @@ func (c *helpCommand) description() string { return "Show this help" }
 
 type refreshCommand struct{}
 
-func (c *refreshCommand) execute(_ Dashboard) error {
+func (c *refreshCommand) execute(_ *Dashboard) error {
 	utils.Info("Refreshing dashboard...")
 	// Refresh functionality is a placeholder for future implementation.
 	// When implemented, this should reload dashboard data from configured sources.
@@ -958,10 +958,10 @@ func (c *refreshCommand) description() string { return "Refresh dashboard" }
 
 type reposCommand struct{}
 
-func (c *reposCommand) execute(dashboard Dashboard) error {
+func (c *reposCommand) execute(dashboard *Dashboard) error {
 	utils.Info("Repositories (%d total):", len(dashboard.Repositories))
-	for _, repo := range dashboard.Repositories {
-		utils.Info("  %s [%s] - %s", repo.Repository.Name, repo.Health, repo.BuildStatus)
+	for i := range dashboard.Repositories {
+		utils.Info("  %s [%s] - %s", dashboard.Repositories[i].Repository.Name, dashboard.Repositories[i].Health, dashboard.Repositories[i].BuildStatus)
 	}
 	return nil
 }
@@ -970,7 +970,7 @@ func (c *reposCommand) description() string { return "List repositories" }
 
 type alertsCommand struct{}
 
-func (c *alertsCommand) execute(dashboard Dashboard) error {
+func (c *alertsCommand) execute(dashboard *Dashboard) error {
 	if len(dashboard.Alerts) == 0 {
 		utils.Info("No alerts")
 		return nil
@@ -986,7 +986,7 @@ func (c *alertsCommand) description() string { return "Show alerts" }
 
 type metricsCommand struct{}
 
-func (c *metricsCommand) execute(dashboard Dashboard) error {
+func (c *metricsCommand) execute(dashboard *Dashboard) error {
 	utils.Info("Build Success: %.1f%%", dashboard.Metrics.BuildSuccess)
 	utils.Info("Test Coverage: %.1f%%", dashboard.Metrics.TestCoverage)
 	utils.Info("Response Time: %.1fms", dashboard.Metrics.ResponseTime)
@@ -998,7 +998,7 @@ func (c *metricsCommand) description() string { return "Show metrics" }
 
 type quitCommand struct{}
 
-func (c *quitCommand) execute(_ Dashboard) error {
+func (c *quitCommand) execute(_ *Dashboard) error {
 	return errQuit
 }
 
@@ -1014,11 +1014,11 @@ func loadBatchConfiguration(filename string) (BatchConfiguration, error) {
 	return config, nil
 }
 
-func executeBatchOperation(operation BatchOperation) BatchOperationResult {
+func executeBatchOperation(operation *BatchOperation) BatchOperationResult {
 	startTime := time.Now()
 
 	result := BatchOperationResult{
-		Operation: operation,
+		Operation: *operation,
 		Timestamp: startTime,
 	}
 
@@ -1059,8 +1059,8 @@ type batchStats struct {
 
 func calculateBatchStats(results []BatchOperationResult) batchStats {
 	stats := batchStats{total: len(results)}
-	for _, result := range results {
-		if result.Success {
+	for i := range results {
+		if results[i].Success {
 			stats.success++
 		} else {
 			stats.failed++
@@ -1080,8 +1080,8 @@ func displayBatchDetails(results []BatchOperationResult) {
 	formatter := newBatchResultFormatter()
 	formatter.printHeader()
 
-	for _, result := range results {
-		formatter.printResult(result)
+	for i := range results {
+		formatter.printResult(&results[i])
 	}
 }
 
@@ -1107,7 +1107,7 @@ func (f *batchResultFormatter) printHeader() {
 	utils.Info("%s", strings.Repeat("-", f.nameWidth+f.durationWidth+f.statusWidth+2))
 }
 
-func (f *batchResultFormatter) printResult(result BatchOperationResult) {
+func (f *batchResultFormatter) printResult(result *BatchOperationResult) {
 	status := f.formatStatus(result.Success)
 	name := truncateString(result.Operation.Name, f.nameWidth)
 	duration := result.Duration.Round(time.Millisecond).String()
@@ -1188,9 +1188,9 @@ func (m *RepositoryMonitor) Start(ctx context.Context) error {
 }
 
 func (m *RepositoryMonitor) checkRepositories() {
-	for _, repo := range m.config.Repositories {
+	for i := range m.config.Repositories {
 		result := MonitorResult{
-			Repository: repo.Name,
+			Repository: m.config.Repositories[i].Name,
 			Status:     "healthy",
 			Metrics: MetricsData{
 				BuildTime:       2 * time.Minute,
@@ -1259,7 +1259,7 @@ func loadPipelineConfiguration() (PipelineConfiguration, error) {
 	return config, nil
 }
 
-func showPipelineStatus(config PipelineConfiguration) error {
+func showPipelineStatus(config *PipelineConfiguration) error {
 	utils.Info("🔧 Pipeline Status: %s", config.Name)
 	utils.Info("  Stages: %d", len(config.Stages))
 	utils.Info("  Triggers: %d", len(config.Triggers))
@@ -1267,20 +1267,20 @@ func showPipelineStatus(config PipelineConfiguration) error {
 	return nil
 }
 
-func triggerPipeline(config PipelineConfiguration) error {
+func triggerPipeline(config *PipelineConfiguration) error {
 	utils.Info("🚀 Triggering pipeline: %s", config.Name)
 	utils.Success("✅ Pipeline triggered")
 	return nil
 }
 
-func showPipelineHistory(config PipelineConfiguration) error {
+func showPipelineHistory(config *PipelineConfiguration) error {
 	utils.Info("📊 Pipeline History: %s", config.Name)
 	utils.Info("  Recent runs: 5")
 	utils.Info("  Success rate: 95%%")
 	return nil
 }
 
-func optimizePipeline(config PipelineConfiguration) error {
+func optimizePipeline(config *PipelineConfiguration) error {
 	utils.Info("⚡ Optimizing pipeline: %s", config.Name)
 	utils.Success("✅ Pipeline optimized")
 	return nil

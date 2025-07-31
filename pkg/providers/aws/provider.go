@@ -36,9 +36,9 @@ type awsServices struct {
 }
 
 // New creates a new AWS provider
-func New(config providers.ProviderConfig) (providers.Provider, error) {
+func New(config *providers.ProviderConfig) (providers.Provider, error) {
 	p := &Provider{
-		config: config,
+		config: *config,
 		region: config.Region,
 	}
 
@@ -55,7 +55,7 @@ func (p *Provider) Name() string {
 }
 
 // Initialize initializes the AWS provider
-func (p *Provider) Initialize(config providers.ProviderConfig) error {
+func (p *Provider) Initialize(config *providers.ProviderConfig) error {
 	// Initialize AWS services
 	p.services = &awsServices{
 		compute:    newComputeService(config),
@@ -63,15 +63,15 @@ func (p *Provider) Initialize(config providers.ProviderConfig) error {
 		network:    newNetworkService(config),
 		container:  newContainerService(config),
 		database:   newDatabaseService(config),
-		security:   newSecurityService(config),
-		monitoring: newMonitoringService(config),
-		serverless: newServerlessService(config),
-		ai:         newAIService(config),
-		cost:       newCostService(config),
-		compliance: newComplianceService(config),
-		disaster:   newDisasterService(config),
-		edge:       newEdgeService(config),
-		quantum:    newQuantumService(config),
+		security:   newSecurityService(*config),
+		monitoring: newMonitoringService(*config),
+		serverless: newServerlessService(*config),
+		ai:         newAIService(*config),
+		cost:       newCostService(*config),
+		compliance: newComplianceService(*config),
+		disaster:   newDisasterService(*config),
+		edge:       newEdgeService(*config),
+		quantum:    newQuantumService(*config),
 	}
 
 	return nil
@@ -223,8 +223,8 @@ type computeService struct {
 	config providers.ProviderConfig
 }
 
-func newComputeService(config providers.ProviderConfig) *computeService {
-	return &computeService{config: config}
+func newComputeService(config *providers.ProviderConfig) *computeService {
+	return &computeService{config: *config}
 }
 
 func (s *computeService) CreateInstance(_ context.Context, req *providers.CreateInstanceRequest) (*providers.Instance, error) {
@@ -350,8 +350,8 @@ type storageService struct {
 	config providers.ProviderConfig
 }
 
-func newStorageService(config providers.ProviderConfig) *storageService {
-	return &storageService{config: config}
+func newStorageService(config *providers.ProviderConfig) *storageService {
+	return &storageService{config: *config}
 }
 
 func (s *storageService) CreateBucket(_ context.Context, req *providers.CreateBucketRequest) (*providers.Bucket, error) {
@@ -446,8 +446,8 @@ type networkService struct {
 	config providers.ProviderConfig
 }
 
-func newNetworkService(config providers.ProviderConfig) *networkService {
-	return &networkService{config: config}
+func newNetworkService(config *providers.ProviderConfig) *networkService {
+	return &networkService{config: *config}
 }
 
 func (s *networkService) CreateVPC(_ context.Context, req *providers.CreateVPCRequest) (*providers.VPC, error) {
@@ -592,8 +592,8 @@ type containerService struct {
 	config providers.ProviderConfig
 }
 
-func newContainerService(config providers.ProviderConfig) *containerService {
-	return &containerService{config: config}
+func newContainerService(config *providers.ProviderConfig) *containerService {
+	return &containerService{config: *config}
 }
 
 func (s *containerService) CreateCluster(_ context.Context, req *providers.CreateClusterRequest) (*providers.Cluster, error) {
@@ -721,8 +721,8 @@ type databaseService struct {
 	config providers.ProviderConfig
 }
 
-func newDatabaseService(config providers.ProviderConfig) *databaseService {
-	return &databaseService{config: config}
+func newDatabaseService(config *providers.ProviderConfig) *databaseService {
+	return &databaseService{config: *config}
 }
 
 func (s *databaseService) CreateDatabase(_ context.Context, req *providers.CreateDatabaseRequest) (*providers.Database, error) {

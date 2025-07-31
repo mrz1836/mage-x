@@ -32,7 +32,7 @@ func (ts *AWSProviderTestSuite) SetupTest() {
 	}
 
 	var err error
-	ts.provider, err = New(ts.config)
+	ts.provider, err = New(&ts.config)
 	ts.Require().NoError(err)
 }
 
@@ -75,7 +75,7 @@ func (ts *AWSProviderTestSuite) TestAWSProviderBasics() {
 			},
 		}
 
-		provider, err := New(invalidConfig)
+		provider, err := New(&invalidConfig)
 		ts.Require().NoError(err) // Creation should succeed
 
 		err = provider.Validate()
@@ -93,7 +93,7 @@ func (ts *AWSProviderTestSuite) TestAWSProviderBasics() {
 			},
 		}
 
-		provider, err := New(invalidConfig)
+		provider, err := New(&invalidConfig)
 		ts.Require().NoError(err) // Creation should succeed
 
 		err = provider.Validate()
@@ -660,7 +660,7 @@ func (ts *AWSProviderTestSuite) TestAWSProviderRegistration() {
 			},
 		}
 
-		provider, err := providers.Get("aws", config)
+		provider, err := providers.Get("aws", &config)
 		ts.Require().NoError(err)
 		ts.Require().NotNil(provider)
 		ts.Require().Equal("aws", provider.Name())

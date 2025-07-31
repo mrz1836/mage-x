@@ -33,7 +33,7 @@ func TestMetricsCollector_Basic(t *testing.T) {
 	}
 
 	t.Run("NewMetricsCollector creates collector", func(t *testing.T) {
-		collector := NewMetricsCollector(config)
+		collector := NewMetricsCollector(&config)
 		assert.NotNil(t, collector)
 		assert.Equal(t, config, collector.config)
 		assert.NotNil(t, collector.metrics)
@@ -43,7 +43,7 @@ func TestMetricsCollector_Basic(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
 
-		collector := NewMetricsCollector(disabledConfig)
+		collector := NewMetricsCollector(&disabledConfig)
 		assert.NotNil(t, collector)
 		assert.False(t, collector.config.Enabled)
 	})
@@ -55,7 +55,7 @@ func TestPerformanceTimer(t *testing.T) {
 		Enabled:     true,
 		StoragePath: filepath.Join(tempDir, "metrics"),
 	}
-	collector := NewMetricsCollector(config)
+	collector := NewMetricsCollector(&config)
 
 	t.Run("StartTimer creates timer", func(t *testing.T) {
 		tags := map[string]string{"operation": "test"}
@@ -107,7 +107,7 @@ func TestPerformanceTimer(t *testing.T) {
 	t.Run("disabled collector timer", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		disabledCollector := NewMetricsCollector(disabledConfig)
+		disabledCollector := NewMetricsCollector(&disabledConfig)
 
 		timer := disabledCollector.StartTimer("disabled_test", nil)
 		duration := timer.Stop()
@@ -124,7 +124,7 @@ func TestMetricsRecording(t *testing.T) {
 		Enabled:     true,
 		StoragePath: filepath.Join(tempDir, "metrics"),
 	}
-	collector := NewMetricsCollector(config)
+	collector := NewMetricsCollector(&config)
 
 	t.Run("RecordCounter", func(t *testing.T) {
 		tags := map[string]string{"component": "test"}
@@ -195,7 +195,7 @@ func TestMetricsRecording(t *testing.T) {
 			Tags:      map[string]string{"platform": "linux"},
 		}
 
-		err := collector.RecordBuildMetrics(buildMetrics)
+		err := collector.RecordBuildMetrics(&buildMetrics)
 		require.NoError(t, err)
 
 		// Check that multiple metrics were recorded
@@ -227,7 +227,7 @@ func TestMetricsRecording(t *testing.T) {
 	t.Run("disabled collector doesn't record", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		disabledCollector := NewMetricsCollector(disabledConfig)
+		disabledCollector := NewMetricsCollector(&disabledConfig)
 
 		err := disabledCollector.RecordCounter("disabled_counter", 1.0, nil)
 		require.NoError(t, err)
@@ -241,7 +241,7 @@ func TestResourceMetrics(t *testing.T) {
 		Enabled:     true,
 		StoragePath: filepath.Join(tempDir, "metrics"),
 	}
-	collector := NewMetricsCollector(config)
+	collector := NewMetricsCollector(&config)
 
 	t.Run("GetCurrentResourceMetrics", func(t *testing.T) {
 		metrics := collector.GetCurrentResourceMetrics()
@@ -262,7 +262,7 @@ func TestMetricsQuery(t *testing.T) {
 		Enabled:     true,
 		StoragePath: filepath.Join(tempDir, "metrics"),
 	}
-	collector := NewMetricsCollector(config)
+	collector := NewMetricsCollector(&config)
 
 	// Record some test metrics
 	now := time.Now()
@@ -283,14 +283,14 @@ func TestMetricsQuery(t *testing.T) {
 	t.Run("QueryMetrics with disabled collector", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		disabledCollector := NewMetricsCollector(disabledConfig)
+		disabledCollector := NewMetricsCollector(&disabledConfig)
 
 		query := MetricsQuery{
 			StartTime: now.Add(-time.Hour),
 			EndTime:   now.Add(time.Hour),
 		}
 
-		_, err := disabledCollector.QueryMetrics(query)
+		_, err := disabledCollector.QueryMetrics(&query)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "metrics collection is disabled")
 	})
@@ -306,7 +306,7 @@ func TestPerformanceReport(t *testing.T) {
 	t.Run("GenerateReport with disabled collector", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		disabledCollector := NewMetricsCollector(disabledConfig)
+		disabledCollector := NewMetricsCollector(&disabledConfig)
 
 		_, err := disabledCollector.GenerateReport("day")
 		require.Error(t, err)
@@ -315,7 +315,7 @@ func TestPerformanceReport(t *testing.T) {
 
 	t.Run("GenerateReport handles different periods", func(t *testing.T) {
 		// This collector has storage properly initialized, so test should work
-		storageCollector := NewMetricsCollector(MetricsConfig{
+		storageCollector := NewMetricsCollector(&MetricsConfig{
 			Enabled:     true,
 			StoragePath: filepath.Join(tempDir, "test_storage"),
 		})
@@ -338,12 +338,12 @@ func TestCleanup(t *testing.T) {
 		Enabled:     true,
 		StoragePath: filepath.Join(tempDir, "metrics"),
 	}
-	collector := NewMetricsCollector(config)
+	collector := NewMetricsCollector(&config)
 
 	t.Run("Cleanup with disabled collector", func(t *testing.T) {
 		disabledConfig := config
 		disabledConfig.Enabled = false
-		disabledCollector := NewMetricsCollector(disabledConfig)
+		disabledCollector := NewMetricsCollector(&disabledConfig)
 
 		err := disabledCollector.Cleanup()
 		require.NoError(t, err) // Should be no-op
@@ -420,7 +420,7 @@ func TestJSONStorage(t *testing.T) {
 			EndTime:   now.Add(time.Hour),
 		}
 
-		metrics, err := storage.Query(query)
+		metrics, err := storage.Query(&query)
 		require.NoError(t, err)
 		require.Len(t, metrics, 1)
 
@@ -468,7 +468,7 @@ func TestJSONStorage(t *testing.T) {
 			Names:     []string{"metric1"},
 		}
 
-		results, err := storage.Query(query)
+		results, err := storage.Query(&query)
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(results), 1)
 
@@ -479,7 +479,7 @@ func TestJSONStorage(t *testing.T) {
 			Tags:      map[string]string{"env": "test"},
 		}
 
-		results, err = storage.Query(query)
+		results, err = storage.Query(&query)
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(results), 1)
 	})
@@ -496,7 +496,7 @@ func TestJSONStorage(t *testing.T) {
 			Limit:     1,
 		}
 
-		results, err := storage.Query(query)
+		results, err := storage.Query(&query)
 		require.NoError(t, err)
 		assert.LessOrEqual(t, len(results), 1)
 	})
@@ -512,7 +512,7 @@ func TestJSONStorage(t *testing.T) {
 			EndTime:   time.Now().Add(time.Hour),
 		}
 
-		aggregated, err := storage.Aggregate(query)
+		aggregated, err := storage.Aggregate(&query)
 		require.NoError(t, err)
 		assert.NotNil(t, aggregated)
 		assert.GreaterOrEqual(t, aggregated.Count, int64(0))
@@ -635,7 +635,7 @@ func BenchmarkMetricsCollector_RecordCounter(b *testing.B) {
 		Enabled:     true,
 		StoragePath: filepath.Join(tempDir, "metrics"),
 	}
-	collector := NewMetricsCollector(config)
+	collector := NewMetricsCollector(&config)
 	tags := map[string]string{"bench": "true"}
 
 	b.ResetTimer()
@@ -653,7 +653,7 @@ func BenchmarkPerformanceTimer_StartStop(b *testing.B) {
 		Enabled:     true,
 		StoragePath: filepath.Join(tempDir, "metrics"),
 	}
-	collector := NewMetricsCollector(config)
+	collector := NewMetricsCollector(&config)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

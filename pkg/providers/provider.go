@@ -11,11 +11,11 @@ import (
 // Provider defines the interface for cloud/platform providers
 type Provider interface {
 	// Core provider methods
-	Name() string                           // Provider name (e.g., "aws", "azure", "gcp")
-	Initialize(config ProviderConfig) error // Initialize provider with configuration
-	Validate() error                        // Validate provider configuration
-	Health() (*HealthStatus, error)         // Check provider health
-	Close() error                           // Cleanup provider resources
+	Name() string                            // Provider name (e.g., "aws", "azure", "gcp")
+	Initialize(config *ProviderConfig) error // Initialize provider with configuration
+	Validate() error                         // Validate provider configuration
+	Health() (*HealthStatus, error)          // Check provider health
+	Close() error                            // Cleanup provider resources
 
 	// Service interfaces
 	Compute() ComputeService       // Compute/VM services
@@ -323,7 +323,7 @@ type Registry struct {
 }
 
 // ProviderFactory creates provider instances
-type ProviderFactory func(config ProviderConfig) (Provider, error)
+type ProviderFactory func(config *ProviderConfig) (Provider, error)
 
 // Global registry
 var globalRegistry = &Registry{ //nolint:gochecknoglobals // Required for provider registry singleton
@@ -342,7 +342,7 @@ func RegisterAllProviders() {
 }
 
 // Get returns a provider instance
-func Get(name string, config ProviderConfig) (Provider, error) {
+func Get(name string, config *ProviderConfig) (Provider, error) {
 	factory, ok := globalRegistry.providers[name]
 	if !ok {
 		return nil, fmt.Errorf("provider %s not found", name)

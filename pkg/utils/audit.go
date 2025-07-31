@@ -94,17 +94,17 @@ func GetAuditLogger() *AuditLogger {
 			config.DatabasePath = dbPath
 		}
 
-		globalAuditLogger = NewAuditLogger(config)
+		globalAuditLogger = NewAuditLogger(&config)
 	})
 
 	return globalAuditLogger
 }
 
 // NewAuditLogger creates a new audit logger with the given configuration
-func NewAuditLogger(config AuditConfig) *AuditLogger {
+func NewAuditLogger(config *AuditConfig) *AuditLogger {
 	logger := &AuditLogger{
 		enabled: config.Enabled,
-		config:  config,
+		config:  *config,
 	}
 
 	if config.Enabled {
@@ -167,7 +167,7 @@ func (a *AuditLogger) initDatabase() error {
 }
 
 // LogEvent logs an audit event
-func (a *AuditLogger) LogEvent(event AuditEvent) error {
+func (a *AuditLogger) LogEvent(event *AuditEvent) error {
 	if !a.enabled {
 		return nil
 	}
@@ -225,7 +225,7 @@ func (a *AuditLogger) LogEvent(event AuditEvent) error {
 }
 
 // GetEvents retrieves audit events with optional filtering
-func (a *AuditLogger) GetEvents(filter AuditFilter) ([]AuditEvent, error) {
+func (a *AuditLogger) GetEvents(filter *AuditFilter) ([]AuditEvent, error) {
 	if !a.enabled {
 		return nil, fmt.Errorf("audit logging is disabled")
 	}
@@ -464,7 +464,7 @@ func (a *AuditLogger) CleanupOldEvents() error {
 }
 
 // ExportEvents exports audit events to JSON
-func (a *AuditLogger) ExportEvents(filter AuditFilter) ([]byte, error) {
+func (a *AuditLogger) ExportEvents(filter *AuditFilter) ([]byte, error) {
 	events, err := a.GetEvents(filter)
 	if err != nil {
 		return nil, err
@@ -547,12 +547,12 @@ type CommandStats struct {
 // Package-level convenience functions
 
 // LogAuditEvent logs an audit event using the global logger
-func LogAuditEvent(event AuditEvent) error {
+func LogAuditEvent(event *AuditEvent) error {
 	return GetAuditLogger().LogEvent(event)
 }
 
 // GetAuditEvents retrieves audit events using the global logger
-func GetAuditEvents(filter AuditFilter) ([]AuditEvent, error) {
+func GetAuditEvents(filter *AuditFilter) ([]AuditEvent, error) {
 	return GetAuditLogger().GetEvents(filter)
 }
 
@@ -567,6 +567,6 @@ func CleanupAuditEvents() error {
 }
 
 // ExportAuditEvents exports audit events using the global logger
-func ExportAuditEvents(filter AuditFilter) ([]byte, error) {
+func ExportAuditEvents(filter *AuditFilter) ([]byte, error) {
 	return GetAuditLogger().ExportEvents(filter)
 }
