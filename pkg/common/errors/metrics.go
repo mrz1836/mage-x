@@ -300,7 +300,7 @@ func (m *DefaultErrorMetrics) GetCount(code ErrorCode) int64 {
 	return 0
 }
 
-func (m *DefaultErrorMetrics) GetCountBySeverity(severity Severity) int64 {
+func (m *DefaultErrorMetrics) GetCountBySeverity(_ Severity) int64 {
 	var count int64
 	for range m.counts {
 		// This would need severity information in the stat

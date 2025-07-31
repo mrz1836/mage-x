@@ -176,29 +176,34 @@ func (m *RealDefaultErrorMatcher) Not() ErrorMatcher {
 	return newMatcher
 }
 
-// Update DefaultErrorMatcher methods to use the real implementation
+// Match checks if the error matches any of the configured matchers.
 func (m *DefaultErrorMatcher) Match(err error) bool {
 	matcher := NewErrorMatcher()
 	matcher.matchers = append(matcher.matchers, m.matchers...)
 	return matcher.Match(err)
 }
 
+// MatchCode adds a matcher for the specified error code.
 func (m *DefaultErrorMatcher) MatchCode(code ErrorCode) ErrorMatcher {
 	return NewErrorMatcher().MatchCode(code)
 }
 
+// MatchSeverity adds a matcher for the specified severity level.
 func (m *DefaultErrorMatcher) MatchSeverity(severity Severity) ErrorMatcher {
 	return NewErrorMatcher().MatchSeverity(severity)
 }
 
+// MatchMessage adds a matcher for error messages matching the pattern.
 func (m *DefaultErrorMatcher) MatchMessage(pattern string) ErrorMatcher {
 	return NewErrorMatcher().MatchMessage(pattern)
 }
 
+// MatchType adds a matcher for errors of the specified type.
 func (m *DefaultErrorMatcher) MatchType(target error) ErrorMatcher {
 	return NewErrorMatcher().MatchType(target)
 }
 
+// MatchField adds a matcher for errors with specific field values.
 func (m *DefaultErrorMatcher) MatchField(key string, value interface{}) ErrorMatcher {
 	return NewErrorMatcher().MatchField(key, value)
 }

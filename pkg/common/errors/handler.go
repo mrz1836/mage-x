@@ -138,7 +138,7 @@ func (h *RealDefaultErrorHandler) handleFallback(err error) error {
 	return err
 }
 
-// Update DefaultErrorHandler methods to use the real implementation
+// Handle handles an error using the DefaultErrorHandler
 func (h *DefaultErrorHandler) Handle(err error) error {
 	handler := NewErrorHandler()
 	handler.codeHandlers = h.handlers
@@ -146,6 +146,7 @@ func (h *DefaultErrorHandler) Handle(err error) error {
 	return handler.Handle(err)
 }
 
+// HandleWithContext handles an error with context using the DefaultErrorHandler
 func (h *DefaultErrorHandler) HandleWithContext(ctx context.Context, err error) error {
 	handler := NewErrorHandler()
 	handler.codeHandlers = h.handlers
@@ -153,22 +154,26 @@ func (h *DefaultErrorHandler) HandleWithContext(ctx context.Context, err error) 
 	return handler.HandleWithContext(ctx, err)
 }
 
+// OnError sets a handler for a specific error code
 func (h *DefaultErrorHandler) OnError(code ErrorCode, handler func(MageError) error) ErrorHandler {
 	h.handlers[code] = handler
 	return h
 }
 
+// OnSeverity sets a handler for a specific error severity
 func (h *DefaultErrorHandler) OnSeverity(severity Severity, handler func(MageError) error) ErrorHandler {
 	h.severityHandlers[severity] = handler
 	return h
 }
 
+// SetDefault sets the default error handler
 func (h *DefaultErrorHandler) SetDefault(handler func(error) error) ErrorHandler {
 	realHandler := NewErrorHandler()
 	realHandler.SetDefault(handler)
 	return h
 }
 
+// SetFallback sets the fallback error handler
 func (h *DefaultErrorHandler) SetFallback(handler func(error) error) ErrorHandler {
 	realHandler := NewErrorHandler()
 	realHandler.SetFallback(handler)

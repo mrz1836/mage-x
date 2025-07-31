@@ -158,7 +158,7 @@ type MockValidator struct {
 	errorMsg   string
 }
 
-func (v *MockValidator) Validate(release *Release) error {
+func (v *MockValidator) Validate(_ *Release) error {
 	if v.shouldFail {
 		return fmt.Errorf("%s", v.errorMsg)
 	}
@@ -173,7 +173,7 @@ type MockHook struct {
 	shouldFail      bool
 }
 
-func (h *MockHook) OnPublish(release *Release) error {
+func (h *MockHook) OnPublish(_ *Release) error {
 	h.publishCalled = true
 	if h.shouldFail {
 		return fmt.Errorf("hook error")
@@ -181,7 +181,7 @@ func (h *MockHook) OnPublish(release *Release) error {
 	return nil
 }
 
-func (h *MockHook) OnPromote(release *Release, from Channel) error {
+func (h *MockHook) OnPromote(_ *Release, _ Channel) error {
 	h.promoteCalled = true
 	if h.shouldFail {
 		return fmt.Errorf("hook error")
@@ -189,7 +189,7 @@ func (h *MockHook) OnPromote(release *Release, from Channel) error {
 	return nil
 }
 
-func (h *MockHook) OnDeprecate(release *Release) error {
+func (h *MockHook) OnDeprecate(_ *Release) error {
 	h.deprecateCalled = true
 	if h.shouldFail {
 		return fmt.Errorf("hook error")
@@ -749,7 +749,7 @@ func TestManager_ListReleases(t *testing.T) {
 	t.Run("empty channel", func(t *testing.T) {
 		list, err := manager.ListReleases(Edge, false)
 		require.NoError(t, err)
-		assert.Len(t, list, 0)
+		assert.Empty(t, list)
 	})
 
 	t.Run("store error", func(t *testing.T) {
@@ -975,7 +975,7 @@ func TestManager_GetPromotionHistory(t *testing.T) {
 	t.Run("no history", func(t *testing.T) {
 		history, err := manager.GetPromotionHistory("1.0.0")
 		require.NoError(t, err)
-		assert.Len(t, history, 0)
+		assert.Empty(t, history)
 	})
 
 	t.Run("with history", func(t *testing.T) {

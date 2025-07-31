@@ -41,7 +41,7 @@ func TestDefaultErrorTransformer_RemoveTransformer(t *testing.T) {
 	// Remove remaining transformers
 	transformer.RemoveTransformer("test1")
 	transformer.RemoveTransformer("test3")
-	assert.Len(t, transformer.GetTransformers(), 0)
+	assert.Empty(t, transformer.GetTransformers())
 }
 
 func TestDefaultErrorTransformer_SetEnabled(t *testing.T) {
@@ -131,7 +131,7 @@ func TestDefaultErrorTransformer_ClearTransformers(t *testing.T) {
 	// Verify transformations work
 	transformed := transformer.Transform(mageErr)
 	var transformedMageErr MageError
-	require.True(t, errors.As(transformed, &transformedMageErr))
+	require.ErrorAs(t, transformed, &transformedMageErr)
 	assert.Equal(t, ErrUnknown, transformedMageErr.Code())
 	assert.Equal(t, SeverityWarning, transformedMageErr.Severity())
 
@@ -144,7 +144,7 @@ func TestDefaultErrorTransformer_ClearTransformers(t *testing.T) {
 	// Test that transformations no longer apply
 	clearedTransformed := transformer.Transform(mageErr)
 	var clearedMageErr MageError
-	require.True(t, errors.As(clearedTransformed, &clearedMageErr))
+	require.ErrorAs(t, clearedTransformed, &clearedMageErr)
 	assert.Equal(t, ErrNotFound, clearedMageErr.Code())       // Original code
 	assert.Equal(t, SeverityError, clearedMageErr.Severity()) // Original severity
 }
@@ -171,7 +171,7 @@ func TestTransformMageError(t *testing.T) {
 
 	// Verify the transformed error
 	var mageErr MageError
-	require.True(t, errors.As(transformed, &mageErr))
+	require.ErrorAs(t, transformed, &mageErr)
 	assert.Equal(t, ErrConfigInvalid, mageErr.Code())
 	assert.Equal(t, SeverityCritical, mageErr.Severity())
 	assert.Equal(t, "invalid input provided", mageErr.Error())
@@ -234,7 +234,7 @@ func TestSanitizeTransformer(t *testing.T) {
 	}
 
 	t.Run("nil error", func(t *testing.T) {
-		assert.Nil(t, SanitizeTransformer(nil))
+		assert.NoError(t, SanitizeTransformer(nil))
 	})
 
 	t.Run("sanitize MageError", func(t *testing.T) {
@@ -246,7 +246,7 @@ func TestSanitizeTransformer(t *testing.T) {
 
 		sanitized := SanitizeTransformer(mageErr)
 		var sanitizedMageErr MageError
-		require.True(t, errors.As(sanitized, &sanitizedMageErr))
+		require.ErrorAs(t, sanitized, &sanitizedMageErr)
 		assert.Equal(t, ErrUnauthorized, sanitizedMageErr.Code())
 		assert.Equal(t, SeverityError, sanitizedMageErr.Severity())
 		assert.Contains(t, sanitizedMageErr.Error(), "token=***")
@@ -263,7 +263,7 @@ func TestEnrichTransformer(t *testing.T) {
 	enricher := EnrichTransformer(additionalContext)
 
 	t.Run("nil error", func(t *testing.T) {
-		assert.Nil(t, enricher(nil))
+		assert.NoError(t, enricher(nil))
 	})
 
 	t.Run("enrich MageError", func(t *testing.T) {
@@ -276,7 +276,7 @@ func TestEnrichTransformer(t *testing.T) {
 
 		enriched := enricher(originalErr)
 		var mageErr MageError
-		require.True(t, errors.As(enriched, &mageErr))
+		require.ErrorAs(t, enriched, &mageErr)
 
 		// Check original properties are preserved
 		assert.Equal(t, ErrInternal, mageErr.Code())
@@ -352,7 +352,7 @@ func TestRetryableTransformer(t *testing.T) {
 	}
 
 	t.Run("nil error", func(t *testing.T) {
-		assert.Nil(t, retryable(nil))
+		assert.NoError(t, retryable(nil))
 	})
 
 	t.Run("retryable MageError", func(t *testing.T) {
@@ -364,7 +364,7 @@ func TestRetryableTransformer(t *testing.T) {
 
 		transformed := retryable(mageErr)
 		var transformedMageErr MageError
-		require.True(t, errors.As(transformed, &transformedMageErr))
+		require.ErrorAs(t, transformed, &transformedMageErr)
 
 		// Check retryable field is added
 		ctx := transformedMageErr.Context()
@@ -409,7 +409,7 @@ func TestNewConditionalTransformer(t *testing.T) {
 	})
 
 	t.Run("nil error", func(t *testing.T) {
-		assert.Nil(t, conditional(nil))
+		assert.NoError(t, conditional(nil))
 	})
 }
 
@@ -447,7 +447,7 @@ func TestNewChainTransformer(t *testing.T) {
 	})
 
 	t.Run("nil error", func(t *testing.T) {
-		assert.Nil(t, chain(nil))
+		assert.NoError(t, chain(nil))
 	})
 
 	t.Run("empty chain", func(t *testing.T) {
@@ -475,7 +475,7 @@ func TestNewSecurityTransformer(t *testing.T) {
 
 		transformed := transformer.Transform(notFoundErr)
 		var mageErr MageError
-		require.True(t, errors.As(transformed, &mageErr))
+		require.ErrorAs(t, transformed, &mageErr)
 		assert.Equal(t, ErrUnknown, mageErr.Code())
 	})
 
@@ -487,7 +487,7 @@ func TestNewSecurityTransformer(t *testing.T) {
 
 		transformed := transformer.Transform(permErr)
 		var mageErr MageError
-		require.True(t, errors.As(transformed, &mageErr))
+		require.ErrorAs(t, transformed, &mageErr)
 		assert.Equal(t, ErrUnknown, mageErr.Code())
 	})
 
@@ -500,7 +500,7 @@ func TestNewSecurityTransformer(t *testing.T) {
 
 		transformed := transformer.Transform(err)
 		var mageErr MageError
-		require.True(t, errors.As(transformed, &mageErr))
+		require.ErrorAs(t, transformed, &mageErr)
 		assert.Equal(t, SeverityWarning, mageErr.Severity())
 	})
 }
@@ -516,7 +516,7 @@ func TestNewDevelopmentTransformer(t *testing.T) {
 
 		transformed := transformer.Transform(err)
 		var mageErr MageError
-		require.True(t, errors.As(transformed, &mageErr))
+		require.ErrorAs(t, transformed, &mageErr)
 
 		ctx := mageErr.Context()
 		assert.NotNil(t, ctx.Fields)
@@ -532,7 +532,7 @@ func TestNewDevelopmentTransformer(t *testing.T) {
 
 		transformed := transformer.Transform(err)
 		var mageErr MageError
-		require.True(t, errors.As(transformed, &mageErr))
+		require.ErrorAs(t, transformed, &mageErr)
 
 		ctx := mageErr.Context()
 		assert.Equal(t, true, ctx.Fields["retryable"])
@@ -546,7 +546,7 @@ func TestNewDevelopmentTransformer(t *testing.T) {
 
 		transformed := transformer.Transform(err)
 		var mageErr MageError
-		require.True(t, errors.As(transformed, &mageErr))
+		require.ErrorAs(t, transformed, &mageErr)
 
 		ctx := mageErr.Context()
 		assert.Equal(t, true, ctx.Fields["retryable"])
@@ -571,7 +571,7 @@ func TestNewProductionTransformer(t *testing.T) {
 
 		transformed := transformer.Transform(err)
 		var mageErr MageError
-		require.True(t, errors.As(transformed, &mageErr))
+		require.ErrorAs(t, transformed, &mageErr)
 
 		ctx := mageErr.Context()
 		assert.Equal(t, "production", ctx.Fields["environment"])
@@ -587,7 +587,7 @@ func TestNewProductionTransformer(t *testing.T) {
 
 		transformed := transformer.Transform(err)
 		var mageErr MageError
-		require.True(t, errors.As(transformed, &mageErr))
+		require.ErrorAs(t, transformed, &mageErr)
 		assert.Equal(t, SeverityInfo, mageErr.Severity())
 	})
 }

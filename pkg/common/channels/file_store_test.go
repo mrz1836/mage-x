@@ -92,7 +92,7 @@ func TestFileStore_Release_Operations(t *testing.T) {
 		assert.Equal(t, validRelease.Channel, retrieved.Channel)
 		assert.Equal(t, validRelease.ReleasedBy, retrieved.ReleasedBy)
 		assert.Equal(t, validRelease.Changelog, retrieved.Changelog)
-		assert.Equal(t, len(validRelease.Artifacts), len(retrieved.Artifacts))
+		assert.Len(t, retrieved.Artifacts, len(validRelease.Artifacts))
 	})
 
 	t.Run("GetRelease non-existent", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestFileStore_ListReleases(t *testing.T) {
 	t.Run("empty channel", func(t *testing.T) {
 		releases, err := store.ListReleases(Edge)
 		require.NoError(t, err)
-		assert.Len(t, releases, 0)
+		assert.Empty(t, releases)
 	})
 
 	t.Run("channel with releases", func(t *testing.T) {
@@ -199,7 +199,7 @@ func TestFileStore_ListReleases(t *testing.T) {
 		// Should ignore the non-JSON file
 		releases, err := store.ListReleases(Beta)
 		require.NoError(t, err)
-		assert.Len(t, releases, 0)
+		assert.Empty(t, releases)
 	})
 
 	t.Run("handle corrupted files gracefully", func(t *testing.T) {
@@ -261,7 +261,7 @@ func TestFileStore_DeleteRelease(t *testing.T) {
 
 	t.Run("delete non-existent release", func(t *testing.T) {
 		err := store.DeleteRelease(Stable, "2.0.0")
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not found")
 	})
 }
@@ -416,7 +416,7 @@ func TestFileStore_PromotionHistory_Operations(t *testing.T) {
 	t.Run("GetPromotionHistory non-existent", func(t *testing.T) {
 		history, err := store.GetPromotionHistory("2.0.0")
 		require.NoError(t, err)
-		assert.Len(t, history, 0)
+		assert.Empty(t, history)
 	})
 
 	t.Run("version sanitization in promotion history", func(t *testing.T) {

@@ -54,7 +54,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 
 		err := b.Build()
 		var mageErr MageError
-		require.True(t, errors.As(err, &mageErr))
+		require.ErrorAs(t, err, &mageErr)
 		assert.Equal(t, ErrInternal, mageErr.Code())
 	})
 
@@ -64,7 +64,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 
 		err := b.Build()
 		var mageErr MageError
-		require.True(t, errors.As(err, &mageErr))
+		require.ErrorAs(t, err, &mageErr)
 		assert.Equal(t, SeverityCritical, mageErr.Severity())
 	})
 
@@ -78,7 +78,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 
 		err := b.Build()
 		var mageErr MageError
-		require.True(t, errors.As(err, &mageErr))
+		require.ErrorAs(t, err, &mageErr)
 		assert.Equal(t, "test-op", mageErr.Context().Operation)
 		assert.Equal(t, "test-resource", mageErr.Context().Resource)
 	})
@@ -90,7 +90,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 
 		err := b.Build()
 		var mageErr MageError
-		require.True(t, errors.As(err, &mageErr))
+		require.ErrorAs(t, err, &mageErr)
 		assert.Equal(t, "value1", mageErr.Context().Fields["key1"])
 	})
 
@@ -106,7 +106,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 
 		err := b.Build()
 		var mageErr MageError
-		require.True(t, errors.As(err, &mageErr))
+		require.ErrorAs(t, err, &mageErr)
 		assert.Equal(t, "value1", mageErr.Context().Fields["field1"])
 		assert.Equal(t, 123, mageErr.Context().Fields["field2"])
 		assert.Equal(t, true, mageErr.Context().Fields["field3"])
@@ -118,7 +118,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 		assert.NotNil(t, b)
 
 		err := b.Build()
-		assert.True(t, errors.Is(err, cause))
+		assert.ErrorIs(t, err, cause)
 	})
 
 	t.Run("WithOperation", func(t *testing.T) {
@@ -127,7 +127,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 
 		err := b.Build()
 		var mageErr MageError
-		require.True(t, errors.As(err, &mageErr))
+		require.ErrorAs(t, err, &mageErr)
 		assert.Equal(t, "TestOp", mageErr.Context().Operation)
 	})
 
@@ -137,7 +137,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 
 		err := b.Build()
 		var mageErr MageError
-		require.True(t, errors.As(err, &mageErr))
+		require.ErrorAs(t, err, &mageErr)
 		assert.Equal(t, "TestResource", mageErr.Context().Resource)
 	})
 
@@ -146,7 +146,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 		// we need to chain the calls
 		err := builder.WithStackTrace().Build()
 		var mageErr MageError
-		require.True(t, errors.As(err, &mageErr))
+		require.ErrorAs(t, err, &mageErr)
 		// Stack trace is captured but might be empty in the default implementation
 		stackTrace := mageErr.Context().StackTrace
 		_ = stackTrace // Stack trace might be empty in some environments
@@ -165,7 +165,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 		assert.NotNil(t, err)
 
 		var mageErr MageError
-		require.True(t, errors.As(err, &mageErr))
+		require.ErrorAs(t, err, &mageErr)
 		assert.Equal(t, "final test", mageErr.Error())
 		assert.Equal(t, ErrInternal, mageErr.Code())
 		assert.Equal(t, SeverityError, mageErr.Severity())
@@ -195,14 +195,14 @@ func TestDefaultErrorBuilder_ComplexScenario(t *testing.T) {
 		Build()
 
 	var mageErr MageError
-	require.True(t, errors.As(err, &mageErr))
+	require.ErrorAs(t, err, &mageErr)
 
 	// Verify all properties
 	// When a cause is set, it's included in the error message
 	assert.Contains(t, mageErr.Error(), "complex error: test")
 	assert.Equal(t, ErrInternal, mageErr.Code())
 	assert.Equal(t, SeverityCritical, mageErr.Severity())
-	assert.True(t, errors.Is(err, cause))
+	assert.ErrorIs(t, err, cause)
 
 	ctx := mageErr.Context()
 	assert.Equal(t, "ComplexOp", ctx.Operation)
@@ -225,7 +225,7 @@ func TestDefaultErrorBuilder_NilFields(t *testing.T) {
 
 	err := b.Build()
 	var mageErr MageError
-	require.True(t, errors.As(err, &mageErr))
+	require.ErrorAs(t, err, &mageErr)
 	assert.NotNil(t, mageErr.Context().Fields) // Should still have initialized fields map
 }
 
@@ -237,7 +237,7 @@ func TestDefaultErrorBuilder_EmptyBuild(t *testing.T) {
 	assert.NotNil(t, err)
 
 	var mageErr MageError
-	require.True(t, errors.As(err, &mageErr))
+	require.ErrorAs(t, err, &mageErr)
 	assert.Equal(t, ErrUnknown, mageErr.Code())        // Default code
 	assert.Equal(t, SeverityError, mageErr.Severity()) // Default severity
 	// Default error has empty message

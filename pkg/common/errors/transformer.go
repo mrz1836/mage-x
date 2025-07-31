@@ -395,16 +395,19 @@ type MockErrorTransformer struct {
 	Enabled                bool
 }
 
+// MockTransformCodeCall represents a call to TransformCode on MockErrorTransformer
 type MockTransformCodeCall struct {
 	From ErrorCode
 	To   ErrorCode
 }
 
+// MockTransformSeverityCall represents a call to TransformSeverity on MockErrorTransformer
 type MockTransformSeverityCall struct {
 	From Severity
 	To   Severity
 }
 
+// NewMockErrorTransformer creates a new MockErrorTransformer instance
 func NewMockErrorTransformer() *MockErrorTransformer {
 	return &MockErrorTransformer{
 		TransformCalls:         make([]error, 0),
@@ -416,6 +419,7 @@ func NewMockErrorTransformer() *MockErrorTransformer {
 	}
 }
 
+// Transform transforms an error using the MockErrorTransformer
 func (m *MockErrorTransformer) Transform(err error) error {
 	m.TransformCalls = append(m.TransformCalls, err)
 	if m.ShouldError {
@@ -427,6 +431,7 @@ func (m *MockErrorTransformer) Transform(err error) error {
 	return err
 }
 
+// TransformCode adds a code transformation rule to the MockErrorTransformer
 func (m *MockErrorTransformer) TransformCode(from, to ErrorCode) ErrorTransformer {
 	m.TransformCodeCalls = append(m.TransformCodeCalls, MockTransformCodeCall{
 		From: from,
@@ -435,6 +440,7 @@ func (m *MockErrorTransformer) TransformCode(from, to ErrorCode) ErrorTransforme
 	return m
 }
 
+// TransformSeverity adds a severity transformation rule to the MockErrorTransformer
 func (m *MockErrorTransformer) TransformSeverity(from, to Severity) ErrorTransformer {
 	m.TransformSeverityCalls = append(m.TransformSeverityCalls, MockTransformSeverityCall{
 		From: from,
@@ -443,11 +449,13 @@ func (m *MockErrorTransformer) TransformSeverity(from, to Severity) ErrorTransfo
 	return m
 }
 
+// AddTransformer adds a transformer function to the MockErrorTransformer
 func (m *MockErrorTransformer) AddTransformer(fn func(error) error) ErrorTransformer {
 	m.AddTransformerCalls = append(m.AddTransformerCalls, fn)
 	return m
 }
 
+// RemoveTransformer removes a transformer by name from the MockErrorTransformer
 func (m *MockErrorTransformer) RemoveTransformer(name string) ErrorTransformer {
 	m.RemoveTransformerCalls = append(m.RemoveTransformerCalls, name)
 	return m

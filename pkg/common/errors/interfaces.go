@@ -69,6 +69,7 @@ const (
 type Severity int
 
 const (
+	// SeverityDebug represents debug-level severity.
 	SeverityDebug Severity = iota
 	SeverityInfo
 	SeverityWarning
@@ -410,10 +411,13 @@ func NewMatcher() ErrorMatcher {
 	}
 }
 
-// Placeholder types for default implementations (defined in separate files)
+// Default implementations (defined in separate files)
 type (
+	// DefaultErrorBuilder provides default error building functionality.
 	DefaultErrorBuilder struct{}
-	DefaultChainError   struct{ errors []error }
+	// DefaultChainError provides default error chaining functionality.
+	DefaultChainError struct{ errors []error }
+	// DefaultErrorHandler provides default error handling functionality.
 	DefaultErrorHandler struct {
 		handlers         map[ErrorCode]func(MageError) error
 		severityHandlers map[Severity]func(MageError) error
@@ -421,8 +425,12 @@ type (
 )
 
 type (
+	// DefaultErrorRegistry provides default error registry functionality.
 	DefaultErrorRegistry struct{ definitions map[ErrorCode]ErrorDefinition }
+	// DefaultErrorRecovery provides default error recovery functionality.
 	DefaultErrorRecovery struct{}
-	DefaultErrorMetrics  struct{ counts map[ErrorCode]*ErrorStat }
-	DefaultErrorMatcher  struct{ matchers []func(error) bool }
+	// DefaultErrorMetrics provides default error metrics functionality.
+	DefaultErrorMetrics struct{ counts map[ErrorCode]*ErrorStat }
+	// DefaultErrorMatcher provides default error matching functionality.
+	DefaultErrorMatcher struct{ matchers []func(error) bool }
 )

@@ -39,7 +39,7 @@ func TestMageError_Wrapping(t *testing.T) {
 	baseErr := New("base error")
 	wrapped := Wrap(baseErr, "wrapped")
 	assert.Contains(t, wrapped.Error(), "wrapped", "Wrapped error should contain wrapper message")
-	assert.True(t, errors.Is(wrapped.Cause(), baseErr), "Cause() should return original error")
+	assert.ErrorIs(t, wrapped.Cause(), baseErr, "Cause() should return original error")
 
 	// Test formatted wrapping
 	wrapped = Wrapf(baseErr, "wrapped with %s", "context")
@@ -124,8 +124,8 @@ func TestErrorChain(t *testing.T) {
 
 	// Test empty chain
 	assert.Equal(t, 0, chain.Count(), "Empty chain should have count 0")
-	assert.Nil(t, chain.First(), "Empty chain First() should return nil")
-	assert.Nil(t, chain.Last(), "Empty chain Last() should return nil")
+	assert.NoError(t, chain.First(), "Empty chain First() should return nil")
+	assert.NoError(t, chain.Last(), "Empty chain Last() should return nil")
 
 	// Add errors
 	err1 := WithCode(ErrBuildFailed, "build failed")
@@ -138,8 +138,8 @@ func TestErrorChain(t *testing.T) {
 	assert.Equal(t, 3, chain.Count(), "Chain should have count 3")
 
 	// Test first/last
-	assert.True(t, errors.Is(chain.First(), err1), "First() should return first error")
-	assert.True(t, errors.Is(chain.Last(), err3), "Last() should return last error")
+	assert.ErrorIs(t, chain.First(), err1, "First() should return first error")
+	assert.ErrorIs(t, chain.Last(), err3, "Last() should return last error")
 
 	// Test HasError
 	assert.True(t, chain.HasError(ErrBuildFailed), "HasError should find ErrBuildFailed")
@@ -152,7 +152,7 @@ func TestErrorChain(t *testing.T) {
 
 	// Test ForEach
 	count := 0
-	forEachErr := chain.ForEach(func(err error) error {
+	forEachErr := chain.ForEach(func(_ error) error {
 		count++
 		return nil
 	})
@@ -175,7 +175,7 @@ func TestErrorHandler(t *testing.T) {
 
 	// Test code handler
 	handled := false
-	handler.OnError(ErrBuildFailed, func(err MageError) error {
+	handler.OnError(ErrBuildFailed, func(_ MageError) error {
 		handled = true
 		return nil
 	})
@@ -188,7 +188,7 @@ func TestErrorHandler(t *testing.T) {
 
 	// Test severity handler
 	severityHandled := false
-	handler.OnSeverity(SeverityCritical, func(err MageError) error {
+	handler.OnSeverity(SeverityCritical, func(_ MageError) error {
 		severityHandled = true
 		return nil
 	})
@@ -204,7 +204,7 @@ func TestErrorHandler(t *testing.T) {
 
 	// Test default handler
 	defaultHandled := false
-	handler.SetDefault(func(err error) error {
+	handler.SetDefault(func(_ error) error {
 		defaultHandled = true
 		return nil
 	})
@@ -222,7 +222,7 @@ func TestErrorHandler(t *testing.T) {
 	contextErr := New("context error")
 
 	result = handler.HandleWithContext(ctx, contextErr)
-	assert.Nil(t, result, "HandleWithContext should not return an error when handled by default handler")
+	assert.NoError(t, result, "HandleWithContext should not return an error when handled by default handler")
 }
 
 func TestErrorRegistry(t *testing.T) {
@@ -411,13 +411,13 @@ func TestHelperFunctions(t *testing.T) {
 	combined := Combine(err1, nil, err2)
 
 	var chain ErrorChain
-	if assert.True(t, errors.As(combined, &chain), "Combine should return ErrorChain for multiple errors") {
+	if assert.ErrorAs(t, combined, &chain, "Combine should return ErrorChain for multiple errors") {
 		assert.Equal(t, 2, chain.Count(), "Combined errors should have 2 errors")
 	}
 
 	// Test FirstError
 	first := FirstError(nil, nil, err1, err2)
-	assert.True(t, errors.Is(first, err1), "FirstError should return first non-nil error")
+	assert.ErrorIs(t, first, err1, "FirstError should return first non-nil error")
 
 	// Test SafeExecute
 	executed := false

@@ -340,10 +340,12 @@ type MockErrorLogger struct {
 	Enabled                  bool
 }
 
+// MockLogErrorWithContextCall represents a call to LogErrorWithContext on MockErrorLogger
 type MockLogErrorWithContextCall struct {
 	Error error
 }
 
+// NewMockErrorLogger creates a new MockErrorLogger instance
 func NewMockErrorLogger() *MockErrorLogger {
 	return &MockErrorLogger{
 		LogErrorCalls:            make([]error, 0),
@@ -356,25 +358,29 @@ func NewMockErrorLogger() *MockErrorLogger {
 	}
 }
 
+// LogError logs an error using the MockErrorLogger
 func (m *MockErrorLogger) LogError(err error) {
 	m.LogErrorCalls = append(m.LogErrorCalls, err)
 }
 
-func (m *MockErrorLogger) LogErrorWithContext(ctx context.Context, err error) {
+func (m *MockErrorLogger) LogErrorWithContext(_ context.Context, err error) {
 	m.LogErrorWithContextCalls = append(m.LogErrorWithContextCalls, MockLogErrorWithContextCall{
 		Error: err,
 	})
 }
 
+// LogMageError logs a MageError using the MockErrorLogger
 func (m *MockErrorLogger) LogMageError(err MageError) {
 	m.LogMageErrorCalls = append(m.LogMageErrorCalls, err)
 }
 
+// SetLogLevel sets the log level for the MockErrorLogger
 func (m *MockErrorLogger) SetLogLevel(severity Severity) {
 	m.SetLogLevelCalls = append(m.SetLogLevelCalls, severity)
 	m.LogLevel = severity
 }
 
+// SetFormatter sets the formatter for the MockErrorLogger
 func (m *MockErrorLogger) SetFormatter(formatter ErrorFormatter) {
 	m.SetFormatterCalls = append(m.SetFormatterCalls, formatter)
 }

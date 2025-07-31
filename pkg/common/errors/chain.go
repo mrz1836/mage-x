@@ -186,7 +186,7 @@ func (c *RealDefaultChainError) ToSlice() []error {
 	return c.Errors()
 }
 
-// Update DefaultChainError methods to use the real implementation
+// Add adds an error to the chain
 func (c *DefaultChainError) Add(err error) ErrorChain {
 	var chain ErrorChain = NewErrorChain()
 	for _, e := range c.errors {
@@ -195,6 +195,7 @@ func (c *DefaultChainError) Add(err error) ErrorChain {
 	return chain.Add(err)
 }
 
+// AddWithContext adds an error with context to the chain
 func (c *DefaultChainError) AddWithContext(err error, ctx ErrorContext) ErrorChain {
 	var chain ErrorChain = NewErrorChain()
 	for _, e := range c.errors {
@@ -211,10 +212,12 @@ func (c *DefaultChainError) Error() string {
 	return chain.Error()
 }
 
+// Errors returns all errors in the chain
 func (c *DefaultChainError) Errors() []error {
 	return c.errors
 }
 
+// First returns the first error in the chain
 func (c *DefaultChainError) First() error {
 	if len(c.errors) == 0 {
 		return nil
@@ -222,6 +225,7 @@ func (c *DefaultChainError) First() error {
 	return c.errors[0]
 }
 
+// Last returns the last error in the chain
 func (c *DefaultChainError) Last() error {
 	if len(c.errors) == 0 {
 		return nil
@@ -229,30 +233,34 @@ func (c *DefaultChainError) Last() error {
 	return c.errors[len(c.errors)-1]
 }
 
+// Count returns the number of errors in the chain
 func (c *DefaultChainError) Count() int {
 	return len(c.errors)
 }
 
+// HasError checks if the chain contains an error with the given code
 func (c *DefaultChainError) HasError(code ErrorCode) bool {
 	for _, err := range c.errors {
 		var mageErr MageError
-		if errors.As(err, &mageErr) {
+		if errors.As(err, &mageErr) && mageErr.Code() == code {
 			return true
 		}
 	}
 	return false
 }
 
+// FindByCode finds the first error in the chain with the given code
 func (c *DefaultChainError) FindByCode(code ErrorCode) MageError {
 	for _, err := range c.errors {
 		var mageErr MageError
-		if errors.As(err, &mageErr) {
+		if errors.As(err, &mageErr) && mageErr.Code() == code {
 			return mageErr
 		}
 	}
 	return nil
 }
 
+// ForEach executes a function for each error in the chain
 func (c *DefaultChainError) ForEach(fn func(error) error) error {
 	for _, err := range c.errors {
 		if e := fn(err); e != nil {
@@ -262,6 +270,7 @@ func (c *DefaultChainError) ForEach(fn func(error) error) error {
 	return nil
 }
 
+// Filter returns errors that match the given predicate
 func (c *DefaultChainError) Filter(predicate func(error) bool) []error {
 	result := make([]error, 0)
 	for _, err := range c.errors {

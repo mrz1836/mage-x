@@ -38,7 +38,7 @@ func TestErrorChain_AddWithContext(t *testing.T) {
 
 	// Check first error
 	var mageErr1 MageError
-	require.True(t, errors.As(errs[0], &mageErr1))
+	require.ErrorAs(t, errs[0], &mageErr1)
 	assert.Contains(t, mageErr1.Error(), "first error")
 	errCtx1 := mageErr1.Context()
 	assert.Equal(t, "Op1", errCtx1.Operation)
@@ -47,7 +47,7 @@ func TestErrorChain_AddWithContext(t *testing.T) {
 
 	// Check second error
 	var mageErr2 MageError
-	require.True(t, errors.As(errs[1], &mageErr2))
+	require.ErrorAs(t, errs[1], &mageErr2)
 	assert.Contains(t, mageErr2.Error(), "second error")
 	errCtx2 := mageErr2.Context()
 	assert.Equal(t, "Op2", errCtx2.Operation)
@@ -141,7 +141,7 @@ func TestChainError_Methods(t *testing.T) {
 	require.Len(t, errs, 1)
 
 	var mageErr MageError
-	require.True(t, errors.As(errs[0], &mageErr))
+	require.ErrorAs(t, errs[0], &mageErr)
 
 	t.Run("Error", func(t *testing.T) {
 		assert.Contains(t, mageErr.Error(), "base error")
