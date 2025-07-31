@@ -631,8 +631,8 @@ func displayBulkResults(results []BulkResult) {
 	utils.Info("  Failed: %d", len(results)-successCount)
 
 	// Display detailed results
-	fmt.Printf("\n%-20s %-10s %-12s %-8s\n", "REPOSITORY", "OPERATION", "DURATION", "STATUS")
-	fmt.Printf("%s\n", strings.Repeat("-", 55))
+	utils.Info("\n%-20s %-10s %-12s %-8s", "REPOSITORY", "OPERATION", "DURATION", "STATUS")
+	utils.Info("%s", strings.Repeat("-", 55))
 
 	for _, result := range results {
 		status := "✅"
@@ -640,7 +640,7 @@ func displayBulkResults(results []BulkResult) {
 			status = "❌"
 		}
 
-		fmt.Printf("%-20s %-10s %-12s %-8s\n",
+		utils.Info("%-20s %-10s %-12s %-8s",
 			truncateString(result.Repository, 20),
 			truncateString(result.Operation, 10),
 			result.Duration.Round(time.Millisecond).String(),
@@ -747,11 +747,11 @@ func displayQueryResults(results []Repository) {
 	}
 
 	// Display results
-	fmt.Printf("\n%-20s %-10s %-12s %-8s %-15s\n", "NAME", "LANGUAGE", "FRAMEWORK", "STATUS", "LAST UPDATED")
-	fmt.Printf("%s\n", strings.Repeat("-", 75))
+	utils.Info("\n%-20s %-10s %-12s %-8s %-15s", "NAME", "LANGUAGE", "FRAMEWORK", "STATUS", "LAST UPDATED")
+	utils.Info("%s", strings.Repeat("-", 75))
 
 	for _, repo := range results {
-		fmt.Printf("%-20s %-10s %-12s %-8s %-15s\n",
+		utils.Info("%-20s %-10s %-12s %-8s %-15s",
 			truncateString(repo.Name, 20),
 			truncateString(repo.Language, 10),
 			truncateString(repo.Framework, 12),
@@ -826,26 +826,26 @@ func generateDashboard(config RepositoryConfig) Dashboard {
 
 func displayDashboard(dashboard Dashboard) {
 	// Display overview
-	fmt.Printf("📊 Enterprise Dashboard\n")
-	fmt.Printf("  Total Repositories: %d\n", dashboard.Overview.TotalRepositories)
-	fmt.Printf("  Healthy: %d | Warning: %d | Error: %d\n",
+	utils.Info("📊 Enterprise Dashboard")
+	utils.Info("  Total Repositories: %d", dashboard.Overview.TotalRepositories)
+	utils.Info("  Healthy: %d | Warning: %d | Error: %d",
 		dashboard.Overview.HealthyRepos,
 		dashboard.Overview.WarningRepos,
 		dashboard.Overview.ErrorRepos)
-	fmt.Printf("  Overall Health: %.1f%%\n", dashboard.Overview.OverallHealth)
+	utils.Info("  Overall Health: %.1f%%", dashboard.Overview.OverallHealth)
 
 	// Display key metrics
-	fmt.Printf("\n📈 Key Metrics:\n")
-	fmt.Printf("  Build Success Rate: %.1f%%\n", dashboard.Metrics.BuildSuccess)
-	fmt.Printf("  Test Coverage: %.1f%%\n", dashboard.Metrics.TestCoverage)
-	fmt.Printf("  Response Time: %.1fms\n", dashboard.Metrics.ResponseTime)
-	fmt.Printf("  Dependency Score: %.1f%%\n", dashboard.Metrics.DependencyScore)
+	utils.Info("\n📈 Key Metrics:")
+	utils.Info("  Build Success Rate: %.1f%%", dashboard.Metrics.BuildSuccess)
+	utils.Info("  Test Coverage: %.1f%%", dashboard.Metrics.TestCoverage)
+	utils.Info("  Response Time: %.1fms", dashboard.Metrics.ResponseTime)
+	utils.Info("  Dependency Score: %.1f%%", dashboard.Metrics.DependencyScore)
 
 	// Display recent activity
 	if len(dashboard.RecentActivity) > 0 {
-		fmt.Printf("\n🔄 Recent Activity:\n")
+		utils.Info("\n🔄 Recent Activity:")
 		for _, activity := range dashboard.RecentActivity {
-			fmt.Printf("  %s - %s: %s\n",
+			utils.Info("  %s - %s: %s",
 				activity.Timestamp.Format("15:04"),
 				activity.Repository,
 				activity.Description)
@@ -854,9 +854,9 @@ func displayDashboard(dashboard Dashboard) {
 
 	// Display alerts
 	if len(dashboard.Alerts) > 0 {
-		fmt.Printf("\n⚠️  Alerts:\n")
+		utils.Info("\n⚠️  Alerts:")
 		for _, alert := range dashboard.Alerts {
-			fmt.Printf("  %s [%s]: %s\n", alert.Level, alert.Repository, alert.Title)
+			utils.Info("  %s [%s]: %s", alert.Level, alert.Repository, alert.Title)
 		}
 	}
 }
@@ -868,7 +868,7 @@ func runInteractiveDashboard(dashboard Dashboard) error {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
-		fmt.Print("> ")
+		utils.Info("> ")
 		if !scanner.Scan() {
 			break
 		}
@@ -882,7 +882,7 @@ func runInteractiveDashboard(dashboard Dashboard) error {
 			if errors.Is(err, errQuit) {
 				return nil
 			}
-			fmt.Printf("Error: %v\n", err)
+			utils.Error("Error: %v", err)
 		}
 	}
 
@@ -932,10 +932,10 @@ type helpCommand struct {
 }
 
 func (c *helpCommand) execute(dashboard Dashboard) error {
-	fmt.Println("Available commands:")
+	utils.Info("Available commands:")
 	for name, cmd := range c.commands {
 		if name != "exit" { // Skip duplicate quit command
-			fmt.Printf("  %-8s - %s\n", name, cmd.description())
+			utils.Info("  %-8s - %s", name, cmd.description())
 		}
 	}
 	return nil
@@ -946,7 +946,7 @@ func (c *helpCommand) description() string { return "Show this help" }
 type refreshCommand struct{}
 
 func (c *refreshCommand) execute(dashboard Dashboard) error {
-	fmt.Println("Refreshing dashboard...")
+	utils.Info("Refreshing dashboard...")
 	// TODO: Implement actual refresh logic
 	return nil
 }
@@ -956,9 +956,9 @@ func (c *refreshCommand) description() string { return "Refresh dashboard" }
 type reposCommand struct{}
 
 func (c *reposCommand) execute(dashboard Dashboard) error {
-	fmt.Printf("Repositories (%d total):\n", len(dashboard.Repositories))
+	utils.Info("Repositories (%d total):", len(dashboard.Repositories))
 	for _, repo := range dashboard.Repositories {
-		fmt.Printf("  %s [%s] - %s\n", repo.Repository.Name, repo.Health, repo.BuildStatus)
+		utils.Info("  %s [%s] - %s", repo.Repository.Name, repo.Health, repo.BuildStatus)
 	}
 	return nil
 }
@@ -969,12 +969,12 @@ type alertsCommand struct{}
 
 func (c *alertsCommand) execute(dashboard Dashboard) error {
 	if len(dashboard.Alerts) == 0 {
-		fmt.Println("No alerts")
+		utils.Info("No alerts")
 		return nil
 	}
 
 	for _, alert := range dashboard.Alerts {
-		fmt.Printf("  %s [%s]: %s\n", alert.Level, alert.Repository, alert.Title)
+		utils.Info("  %s [%s]: %s", alert.Level, alert.Repository, alert.Title)
 	}
 	return nil
 }
@@ -984,10 +984,10 @@ func (c *alertsCommand) description() string { return "Show alerts" }
 type metricsCommand struct{}
 
 func (c *metricsCommand) execute(dashboard Dashboard) error {
-	fmt.Printf("Build Success: %.1f%%\n", dashboard.Metrics.BuildSuccess)
-	fmt.Printf("Test Coverage: %.1f%%\n", dashboard.Metrics.TestCoverage)
-	fmt.Printf("Response Time: %.1fms\n", dashboard.Metrics.ResponseTime)
-	fmt.Printf("Dependency Score: %.1f%%\n", dashboard.Metrics.DependencyScore)
+	utils.Info("Build Success: %.1f%%", dashboard.Metrics.BuildSuccess)
+	utils.Info("Test Coverage: %.1f%%", dashboard.Metrics.TestCoverage)
+	utils.Info("Response Time: %.1fms", dashboard.Metrics.ResponseTime)
+	utils.Info("Dependency Score: %.1f%%", dashboard.Metrics.DependencyScore)
 	return nil
 }
 
@@ -1096,11 +1096,11 @@ func newBatchResultFormatter() *batchResultFormatter {
 }
 
 func (f *batchResultFormatter) printHeader() {
-	fmt.Printf("\n%-*s %-*s %-*s\n",
+	utils.Info("\n%-*s %-*s %-*s",
 		f.nameWidth, "OPERATION",
 		f.durationWidth, "DURATION",
 		f.statusWidth, "STATUS")
-	fmt.Printf("%s\n", strings.Repeat("-", f.nameWidth+f.durationWidth+f.statusWidth+2))
+	utils.Info("%s", strings.Repeat("-", f.nameWidth+f.durationWidth+f.statusWidth+2))
 }
 
 func (f *batchResultFormatter) printResult(result BatchOperationResult) {
@@ -1108,7 +1108,7 @@ func (f *batchResultFormatter) printResult(result BatchOperationResult) {
 	name := truncateString(result.Operation.Name, f.nameWidth)
 	duration := result.Duration.Round(time.Millisecond).String()
 
-	fmt.Printf("%-*s %-*s %-*s\n",
+	utils.Info("%-*s %-*s %-*s",
 		f.nameWidth, name,
 		f.durationWidth, duration,
 		f.statusWidth, status)

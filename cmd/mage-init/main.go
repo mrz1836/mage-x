@@ -10,6 +10,7 @@ import (
 
 	"github.com/mrz1836/go-mage/pkg/common/config"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 const (
@@ -137,8 +138,8 @@ func validateOptions(opts *InitOptions) error {
 
 // runInteractiveMode runs the interactive project initialization
 func runInteractiveMode(opts *InitOptions) error {
-	fmt.Println("\n🎯 Interactive Project Setup")
-	fmt.Println("=============================")
+	utils.Info("\n🎯 Interactive Project Setup")
+	utils.Info("=============================")
 
 	// Project name
 	if opts.ProjectName == "" {
@@ -161,7 +162,7 @@ func runInteractiveMode(opts *InitOptions) error {
 	}
 
 	// Template selection
-	fmt.Println("\nAvailable templates:")
+	utils.Info("\nAvailable templates:")
 	templates := getAvailableTemplates()
 	for name, template := range templates {
 		fmt.Printf("  %s - %s\n", name, template.Description)
@@ -352,7 +353,7 @@ func createMageConfig(projectPath string, opts *InitOptions) error {
 
 // showHelpMessage displays the help message
 func showHelpMessage() {
-	fmt.Println(`
+	utils.Info(`
 mage-init - Initialize a new mage project
 
 USAGE:
@@ -395,8 +396,8 @@ EXAMPLES:
 
 // listAvailableTemplates displays all available templates
 func listAvailableTemplates() {
-	fmt.Println("\n📋 Available Project Templates")
-	fmt.Println("===============================")
+	utils.Info("\n📋 Available Project Templates")
+	utils.Info("===============================")
 
 	templates := getAvailableTemplates()
 	for name, template := range templates {

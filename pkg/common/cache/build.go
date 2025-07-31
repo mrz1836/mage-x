@@ -475,7 +475,7 @@ func (c *BuildCache) Cleanup() error {
 		return err
 	}
 
-	fmt.Printf("Cache cleanup completed: removed %d expired entries\n", removed)
+	utils.Info("Cache cleanup completed: removed %d expired entries", removed)
 	return nil
 }
 

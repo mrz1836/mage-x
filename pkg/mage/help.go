@@ -40,7 +40,7 @@ type HelpOption struct {
 func (Help) Default() error {
 	utils.Header("📖 MAGE-X Help System")
 
-	fmt.Println(`🎯 MAGE-X: Write Once, Mage Everywhere
+	utils.Info(`🎯 MAGE-X: Write Once, Mage Everywhere
 
 MAGE-X is a comprehensive Go build automation toolkit that provides
 enterprise-grade development tools with a friendly user experience.
@@ -94,7 +94,7 @@ func (Help) Commands() error {
 
 	// Display commands by namespace
 	for _, ns := range sortedNamespaces {
-		fmt.Printf("\n%s Commands:\n", strings.ToUpper(ns[:1])+ns[1:])
+		utils.Info("\n%s Commands:", strings.ToUpper(ns[:1])+ns[1:])
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 
@@ -115,10 +115,10 @@ func (Help) Commands() error {
 		}
 	}
 
-	fmt.Println("\nUsage:")
-	fmt.Println("  mage COMMAND [OPTIONS]")
-	fmt.Println("  mage NAMESPACE:COMMAND [OPTIONS]")
-	fmt.Println("  mage help:command COMMAND_NAME")
+	utils.Info("\nUsage:")
+	utils.Info("  mage COMMAND [OPTIONS]")
+	utils.Info("  mage NAMESPACE:COMMAND [OPTIONS]")
+	utils.Info("  mage help:command COMMAND_NAME")
 
 	return nil
 }
@@ -137,16 +137,16 @@ func (Help) Command() error {
 
 	utils.Header("📖 Command Help: " + cmd.Name)
 
-	fmt.Printf("Description: %s\n", cmd.Description)
+	utils.Info("Description: %s", cmd.Description)
 
 	if cmd.Namespace != "" {
-		fmt.Printf("Namespace: %s\n", cmd.Namespace)
+		utils.Info("Namespace: %s", cmd.Namespace)
 	}
 
-	fmt.Printf("Usage: %s\n", cmd.Usage)
+	utils.Info("Usage: %s", cmd.Usage)
 
 	if len(cmd.Options) > 0 {
-		fmt.Println("\nOptions:")
+		utils.Info("\nOptions:")
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 		for _, opt := range cmd.Options {
 			required := ""
@@ -167,16 +167,16 @@ func (Help) Command() error {
 	}
 
 	if len(cmd.Examples) > 0 {
-		fmt.Println("\nExamples:")
+		utils.Info("\nExamples:")
 		for _, example := range cmd.Examples {
-			fmt.Printf("  %s\n", example)
+			utils.Info("  %s", example)
 		}
 	}
 
 	if len(cmd.SeeAlso) > 0 {
-		fmt.Println("\nSee Also:")
+		utils.Info("\nSee Also:")
 		for _, related := range cmd.SeeAlso {
-			fmt.Printf("  mage help:command %s\n", related)
+			utils.Info("  mage help:command %s", related)
 		}
 	}
 
@@ -261,17 +261,17 @@ func (Help) Examples() error {
 	}
 
 	for _, category := range examples {
-		fmt.Printf("\n%s:\n", category.Category)
+		utils.Info("\n%s:", category.Category)
 		for _, example := range category.Examples {
-			fmt.Printf("  %s\n", example)
+			utils.Info("  %s", example)
 		}
 	}
 
-	fmt.Println("\nTips:")
-	fmt.Println("  • Use environment variables to pass parameters")
-	fmt.Println("  • Add VERBOSE=true for detailed output")
-	fmt.Println("  • Use interactive mode for guided assistance")
-	fmt.Println("  • Check mage.yaml for project-specific configuration")
+	utils.Info("\nTips:")
+	utils.Info("  • Use environment variables to pass parameters")
+	utils.Info("  • Add VERBOSE=true for detailed output")
+	utils.Info("  • Use interactive mode for guided assistance")
+	utils.Info("  • Check mage.yaml for project-specific configuration")
 
 	return nil
 }
@@ -280,7 +280,7 @@ func (Help) Examples() error {
 func (Help) GettingStarted() error {
 	utils.Header("🚀 Getting Started with MAGE-X")
 
-	fmt.Println(`Welcome to MAGE-X! This guide will help you get started with the most
+	utils.Info(`Welcome to MAGE-X! This guide will help you get started with the most
 powerful Go build automation toolkit.
 
 🎯 What is MAGE-X?
@@ -399,7 +399,7 @@ func (Help) Topics() error {
 		{"completions", "Shell completions", "mage help:completions"},
 	}
 
-	fmt.Println("\nAvailable Help Topics:")
+	utils.Info("\nAvailable Help Topics:")
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	for _, topic := range topics {
@@ -411,9 +411,9 @@ func (Help) Topics() error {
 		return fmt.Errorf("failed to flush topic help: %w", err)
 	}
 
-	fmt.Println("\nUsage:")
-	fmt.Println("  mage help:TOPIC")
-	fmt.Println("  mage help:command COMMAND_NAME")
+	utils.Info("\nUsage:")
+	utils.Info("  mage help:TOPIC")
+	utils.Info("  mage help:command COMMAND_NAME")
 
 	return nil
 }

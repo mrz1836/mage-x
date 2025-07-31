@@ -213,8 +213,8 @@ func (Release) Changelog() error {
 	if strings.TrimSpace(output) == "" {
 		utils.Info("No changes since last release")
 	} else {
-		fmt.Println("\nChangelog:")
-		fmt.Println(output)
+		utils.Info("\nChangelog:")
+		utils.Info("%s", output)
 	}
 
 	return nil

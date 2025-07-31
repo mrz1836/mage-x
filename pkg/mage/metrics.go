@@ -39,12 +39,12 @@ func (Metrics) LOC() error {
 	// Display table
 	date := time.Now().Format("2006-01-02")
 
-	fmt.Println()
-	fmt.Println("| Type       | Total Lines | Date        |")
-	fmt.Println("|------------|-------------|-------------|")
+	utils.Info("")
+	utils.Info("| Type       | Total Lines | Date        |")
+	utils.Info("|------------|-------------|-------------|")
 	fmt.Printf("| Test Files | %-11d | %s |\n", testCount, date)
 	fmt.Printf("| Go Files   | %-11d | %s |\n", goCount, date)
-	fmt.Println()
+	utils.Info("")
 
 	total := testCount + goCount
 	utils.Success("Total lines of code: %d", total)

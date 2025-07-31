@@ -9,6 +9,7 @@ import (
 	"github.com/mrz1836/go-mage/pkg/common/errors"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/common/paths"
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // Manager handles release channel operations
@@ -163,7 +164,7 @@ func (m *Manager) PublishRelease(release *Release) error {
 	for _, hook := range m.hooks {
 		if err := hook.OnPublish(release); err != nil {
 			// Log error but don't fail the publish
-			fmt.Printf("Warning: hook failed: %v\n", err)
+			utils.Warn("hook failed: %v", err)
 		}
 	}
 
@@ -260,14 +261,14 @@ func (m *Manager) PromoteRelease(request *PromotionRequest) error {
 	*request.ApprovedAt = time.Now()
 	if err := m.store.SavePromotionRequest(request); err != nil {
 		// Log error but don't fail the promotion
-		fmt.Printf("Warning: failed to save promotion request: %v\n", err)
+		utils.Warn("failed to save promotion request: %v", err)
 	}
 
 	// Run hooks
 	for _, hook := range m.hooks {
 		if err := hook.OnPromote(promotedRelease, request.FromChannel); err != nil {
 			// Log error but don't fail
-			fmt.Printf("Warning: hook failed: %v\n", err)
+			utils.Warn("hook failed: %v", err)
 		}
 	}
 
@@ -351,7 +352,7 @@ func (m *Manager) DeprecateRelease(channel Channel, version string) error {
 	for _, hook := range m.hooks {
 		if err := hook.OnDeprecate(release); err != nil {
 			// Log error but don't fail
-			fmt.Printf("Warning: hook failed: %v\n", err)
+			utils.Warn("hook failed: %v", err)
 		}
 	}
 
@@ -379,7 +380,7 @@ func (m *Manager) CleanupExpiredReleases() error {
 					cleanupErrors = append(cleanupErrors,
 						fmt.Errorf("failed to delete %s/%s: %w", channel, release.Version, err))
 				} else {
-					fmt.Printf("Cleaned up expired release: %s/%s\n", channel, release.Version)
+					utils.Info("Cleaned up expired release: %s/%s", channel, release.Version)
 				}
 			}
 		}

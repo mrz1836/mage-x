@@ -1447,21 +1447,21 @@ func displayValidationResults(results *ValidationResults) {
 	if len(results.Errors) > 0 {
 		utils.Error("🚨 Validation Errors:")
 		for _, err := range results.Errors {
-			fmt.Printf("  - %s: %s (%s)\n", err.Field, err.Message, err.Code)
+			utils.Error("  - %s: %s (%s)", err.Field, err.Message, err.Code)
 		}
 	}
 
 	if len(results.Warnings) > 0 {
 		utils.Warn("⚠️  Validation Warnings:")
 		for _, warn := range results.Warnings {
-			fmt.Printf("  - %s: %s (%s)\n", warn.Field, warn.Message, warn.Code)
+			utils.Warn("  - %s: %s (%s)", warn.Field, warn.Message, warn.Code)
 		}
 	}
 
 	if len(results.Info) > 0 {
 		utils.Info("ℹ️  Validation Info:")
 		for _, info := range results.Info {
-			fmt.Printf("  - %s: %s (%s)\n", info.Field, info.Message, info.Code)
+			utils.Info("  - %s: %s (%s)", info.Field, info.Message, info.Code)
 		}
 	}
 }
@@ -1487,9 +1487,9 @@ func runInteractiveConfigUpdate(config *EnterpriseConfiguration) error {
 		"notifications",
 	}
 
-	fmt.Println("Available sections:")
+	utils.Info("Available sections:")
 	for i, section := range sections {
-		fmt.Printf("  %d. %s\n", i+1, section)
+		utils.Info("  %d. %s", i+1, section)
 	}
 
 	fmt.Print("Select section to update (1-13): ")

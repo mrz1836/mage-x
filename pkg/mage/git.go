@@ -23,7 +23,7 @@ func (Git) Diff() error {
 	if err != nil {
 		utils.Error("Uncommitted changes detected in working directory")
 		if output != "" {
-			fmt.Println(output)
+			utils.Info("%s", output)
 		}
 		return fmt.Errorf("uncommitted changes in working directory")
 	}
@@ -36,7 +36,7 @@ func (Git) Diff() error {
 
 	if strings.TrimSpace(output) != "" {
 		utils.Error("Uncommitted changes detected:")
-		fmt.Println(output)
+		utils.Info("%s", output)
 		return fmt.Errorf("uncommitted changes found")
 	}
 

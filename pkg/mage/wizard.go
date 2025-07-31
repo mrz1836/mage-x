@@ -136,7 +136,7 @@ func NewEnterpriseWizard() *EnterpriseWizard {
 func (w *EnterpriseWizard) Run() error {
 	utils.Info("🚀 Starting Enterprise Setup Wizard")
 	utils.Info("📋 This wizard will guide you through setting up MAGE-X for enterprise use")
-	fmt.Println()
+	utils.Info("")
 
 	// Execute steps in order
 	for i, step := range w.Steps {
@@ -157,7 +157,7 @@ func (w *EnterpriseWizard) Run() error {
 			utils.Success("✅ %s completed", step.GetName())
 		}
 
-		fmt.Println()
+		utils.Info("")
 	}
 
 	// Display summary
@@ -191,10 +191,10 @@ type WelcomeStep struct{}
 
 func (s *WelcomeStep) Execute(ctx *WizardContext) error {
 	utils.Info("👋 Welcome to MAGE-X Enterprise Setup!")
-	fmt.Println()
-	fmt.Println("This wizard will help you configure MAGE-X for enterprise use.")
-	fmt.Println("You can press Enter to use default values or type 'skip' to skip optional steps.")
-	fmt.Println()
+	utils.Info("")
+	utils.Info("This wizard will help you configure MAGE-X for enterprise use.")
+	utils.Info("You can press Enter to use default values or type 'skip' to skip optional steps.")
+	utils.Info("")
 
 	fmt.Print("Press Enter to continue...")
 	ctx.Scanner.Scan()
@@ -1435,20 +1435,20 @@ type SummaryStep struct{}
 func (s *SummaryStep) Execute(ctx *WizardContext) error {
 	utils.Info("📋 Configuration Summary")
 
-	fmt.Println()
-	fmt.Println("🏢 Organization:")
+	utils.Info("")
+	utils.Info("🏢 Organization:")
 	fmt.Printf("  Name: %s\n", ctx.Config.Organization.Name)
 	fmt.Printf("  Domain: %s\n", ctx.Config.Organization.Domain)
 	fmt.Printf("  Region: %s\n", ctx.Config.Organization.Region)
 
-	fmt.Println()
-	fmt.Println("🔒 Security:")
+	utils.Info("")
+	utils.Info("🔒 Security:")
 	fmt.Printf("  Level: %s\n", ctx.Config.Security.Level)
 	fmt.Printf("  MFA Enabled: %t\n", ctx.Config.Security.Authentication.MFA.Enabled)
 	fmt.Printf("  Scanning Enabled: %t\n", ctx.Config.Security.Scanning.Enabled)
 
-	fmt.Println()
-	fmt.Println("🔌 Integrations:")
+	utils.Info("")
+	utils.Info("🔌 Integrations:")
 	fmt.Printf("  Enabled: %t\n", ctx.Config.Integrations.Enabled)
 	if ctx.Config.Integrations.Enabled {
 		fmt.Printf("  Configured: %d\n", len(ctx.Config.Integrations.Providers))
@@ -1457,39 +1457,39 @@ func (s *SummaryStep) Execute(ctx *WizardContext) error {
 		}
 	}
 
-	fmt.Println()
-	fmt.Println("🔄 Workflows:")
+	utils.Info("")
+	utils.Info("🔄 Workflows:")
 	fmt.Printf("  Enabled: %t\n", ctx.Config.Workflows.Enabled)
 	if ctx.Config.Workflows.Enabled {
 		fmt.Printf("  Directory: %s\n", ctx.Config.Workflows.Directory)
 		fmt.Printf("  Scheduler: %t\n", ctx.Config.Workflows.Scheduler.Enabled)
 	}
 
-	fmt.Println()
-	fmt.Println("📊 Analytics:")
+	utils.Info("")
+	utils.Info("📊 Analytics:")
 	fmt.Printf("  Enabled: %t\n", ctx.Config.Analytics.Enabled)
 	if ctx.Config.Analytics.Enabled {
 		fmt.Printf("  Collectors: %d\n", len(ctx.Config.Analytics.Collectors))
 		fmt.Printf("  Reporting: %t\n", ctx.Config.Analytics.Reporting.Enabled)
 	}
 
-	fmt.Println()
-	fmt.Println("🚀 Deployment:")
+	utils.Info("")
+	utils.Info("🚀 Deployment:")
 	fmt.Printf("  Enabled: %t\n", ctx.Config.Deployment.Enabled)
 	if ctx.Config.Deployment.Enabled {
 		fmt.Printf("  Environments: %d\n", len(ctx.Config.Deployment.Environments))
 		fmt.Printf("  Approval Required: %t\n", ctx.Config.Deployment.Approval.Enabled)
 	}
 
-	fmt.Println()
-	fmt.Println("⚖️ Compliance:")
+	utils.Info("")
+	utils.Info("⚖️ Compliance:")
 	fmt.Printf("  Enabled: %t\n", ctx.Config.Compliance.Enabled)
 	if ctx.Config.Compliance.Enabled {
 		fmt.Printf("  Standards: %s\n", strings.Join(ctx.Config.Compliance.Standards, ", "))
 		fmt.Printf("  Validation: %t\n", ctx.Config.Compliance.Validation.Enabled)
 	}
 
-	fmt.Println()
+	utils.Info("")
 	fmt.Print("Does this configuration look correct? (y/n): ")
 	ctx.Scanner.Scan()
 	input := strings.ToLower(strings.TrimSpace(ctx.Scanner.Text()))

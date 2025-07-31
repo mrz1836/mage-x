@@ -8,19 +8,20 @@ import (
 	"os"
 
 	"github.com/mrz1836/go-mage/pkg/mage"
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // CI runs the complete CI pipeline with all quality checks
 func CI() error {
-	fmt.Println("🚀 Starting CI Pipeline...")
+	utils.Info("🚀 Starting CI Pipeline...")
 
 	// Step 1: Format check
-	fmt.Println("📝 Step 1: Checking code formatting...")
+	utils.Info("📝 Step 1: Checking code formatting...")
 	format := mage.NewFormatNamespace()
 	if err := format.Check(); err != nil {
 		return fmt.Errorf("formatting check failed: %w", err)
 	}
-	fmt.Println("✅ Code formatting is correct")
+	utils.Info("✅ Code formatting is correct")
 
 	// Step 2: Linting
 	fmt.Println("🔍 Step 2: Running linters...")
@@ -154,7 +155,7 @@ func Deploy() error {
 		fmt.Println("🐳 Building Docker image...")
 		build := mage.NewBuildNamespace()
 		if err := build.Docker(); err != nil {
-			return fmt.Errorf("Docker build failed: %w", err)
+			return fmt.Errorf("docker build failed: %w", err)
 		}
 	}
 

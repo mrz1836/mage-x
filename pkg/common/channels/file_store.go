@@ -8,6 +8,7 @@ import (
 
 	"github.com/mrz1836/go-mage/pkg/common/errors"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // FileStore implements Store interface using filesystem
@@ -111,14 +112,14 @@ func (s *FileStore) listReleasesUnlocked(channel Channel) ([]*Release, error) {
 		data, err := s.fileOps.ReadFile(path)
 		if err != nil {
 			// Log error but continue
-			fmt.Printf("Warning: failed to read release file %s: %v\n", path, err)
+			utils.Warn("failed to read release file %s: %v", path, err)
 			continue
 		}
 
 		var release Release
 		if err := json.Unmarshal(data, &release); err != nil {
 			// Log error but continue
-			fmt.Printf("Warning: failed to unmarshal release %s: %v\n", path, err)
+			utils.Warn("failed to unmarshal release %s: %v", path, err)
 			continue
 		}
 
@@ -157,7 +158,7 @@ func (s *FileStore) SaveRelease(release *Release) error {
 	// Also save to index for faster lookups
 	if err := s.updateChannelIndex(release.Channel); err != nil {
 		// Log error but don't fail the save
-		fmt.Printf("Warning: failed to update channel index: %v\n", err)
+		utils.Warn("failed to update channel index: %v", err)
 	}
 
 	return nil
@@ -181,7 +182,7 @@ func (s *FileStore) DeleteRelease(channel Channel, version string) error {
 	// Update index
 	if err := s.updateChannelIndex(channel); err != nil {
 		// Log error but don't fail
-		fmt.Printf("Warning: failed to update channel index: %v\n", err)
+		utils.Warn("failed to update channel index: %v", err)
 	}
 
 	return nil

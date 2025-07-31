@@ -10,21 +10,22 @@ import (
 	"github.com/mrz1836/go-mage/pkg/providers"
 	_ "github.com/mrz1836/go-mage/pkg/providers/aws"   // Register AWS provider
 	_ "github.com/mrz1836/go-mage/pkg/providers/azure" // Register Azure provider
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 func main() {
 	// Example 1: Using AWS provider
-	fmt.Println("=== AWS Provider Example ===")
+	utils.Info("=== AWS Provider Example ===")
 	if err := useAWSProvider(); err != nil {
 		log.Printf("AWS provider error: %v", err)
 	}
 
-	fmt.Println("\n=== Azure Provider Example ===")
+	utils.Info("\n=== Azure Provider Example ===")
 	if err := useAzureProvider(); err != nil {
 		log.Printf("Azure provider error: %v", err)
 	}
 
-	fmt.Println("\n=== Multi-Cloud Example ===")
+	utils.Info("\n=== Multi-Cloud Example ===")
 	if err := multiCloudExample(); err != nil {
 		log.Printf("Multi-cloud error: %v", err)
 	}
@@ -152,7 +153,7 @@ func useAWSProvider() error {
 		return fmt.Errorf("failed to put metric: %w", err)
 	}
 
-	fmt.Println("Successfully put metric")
+	utils.Info("Successfully put metric")
 
 	return nil
 }
@@ -325,7 +326,7 @@ func multiCloudExample() error {
 		fmt.Printf("✓ Created monitoring alert on %s: %s\n", providerName, alert.ID)
 	}
 
-	fmt.Println("\nMulti-cloud deployment completed!")
+	utils.Info("\nMulti-cloud deployment completed!")
 	return nil
 }
 

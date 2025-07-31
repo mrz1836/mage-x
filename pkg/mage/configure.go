@@ -60,27 +60,27 @@ func (Configure) Show() error {
 	}
 
 	// Display build configuration
-	fmt.Printf("\n🏗️  Build Configuration:\n")
-	fmt.Printf("  Output: %s\n", config.Build.Output)
-	fmt.Printf("  Parallel: %d\n", config.Build.Parallel)
-	fmt.Printf("  Platforms: %s\n", strings.Join(config.Build.Platforms, ", "))
-	fmt.Printf("  Trim Path: %v\n", config.Build.TrimPath)
+	utils.Info("\n🏗️  Build Configuration:")
+	utils.Info("  Output: %s", config.Build.Output)
+	utils.Info("  Parallel: %d", config.Build.Parallel)
+	utils.Info("  Platforms: %s", strings.Join(config.Build.Platforms, ", "))
+	utils.Info("  Trim Path: %v", config.Build.TrimPath)
 
 	// Display test configuration
-	fmt.Printf("\n🧪 Test Configuration:\n")
-	fmt.Printf("  Parallel: %v\n", config.Test.Parallel)
-	fmt.Printf("  Timeout: %s\n", config.Test.Timeout)
-	fmt.Printf("  Cover Mode: %s\n", config.Test.CoverMode)
-	fmt.Printf("  Race Detection: %v\n", config.Test.Race)
+	utils.Info("\n🧪 Test Configuration:")
+	utils.Info("  Parallel: %v", config.Test.Parallel)
+	utils.Info("  Timeout: %s", config.Test.Timeout)
+	utils.Info("  Cover Mode: %s", config.Test.CoverMode)
+	utils.Info("  Race Detection: %v", config.Test.Race)
 
 	// Display enterprise configuration if available
 	if config.Enterprise != nil {
-		fmt.Printf("\n🏢 Enterprise Configuration:\n")
-		fmt.Printf("  Organization: %s\n", config.Enterprise.Organization.Name)
-		fmt.Printf("  Domain: %s\n", config.Enterprise.Organization.Domain)
-		fmt.Printf("  Security Level: %s\n", config.Enterprise.Security.Level)
-		fmt.Printf("  Analytics: %v\n", config.Enterprise.Analytics.Enabled)
-		fmt.Printf("  Integrations: %d configured\n", len(config.Enterprise.Integrations.Providers))
+		utils.Info("\n🏢 Enterprise Configuration:")
+		utils.Info("  Organization: %s", config.Enterprise.Organization.Name)
+		utils.Info("  Domain: %s", config.Enterprise.Organization.Domain)
+		utils.Info("  Security Level: %s", config.Enterprise.Security.Level)
+		utils.Info("  Analytics: %v", config.Enterprise.Analytics.Enabled)
+		utils.Info("  Integrations: %d configured", len(config.Enterprise.Integrations.Providers))
 	}
 
 	return nil
@@ -164,7 +164,7 @@ func (Configure) Export() error {
 
 	if output == "" {
 		// Print to stdout
-		fmt.Print(string(data))
+		utils.Info("%s", string(data))
 	} else {
 		// Save to file
 		if !strings.HasSuffix(output, ext) {
@@ -261,7 +261,7 @@ func (Configure) Schema() error {
 
 	if output == "" {
 		// Print to stdout
-		fmt.Print(schema)
+		utils.Info("%s", schema)
 	} else {
 		fileOps := fileops.New()
 		if err := fileOps.File.WriteFile(output, []byte(schema), 0o644); err != nil {
@@ -309,7 +309,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 	var name string
 	if _, err := fmt.Scanln(&name); err != nil && err.Error() != "unexpected newline" {
 		// Handle scan errors other than empty input
-		fmt.Printf("Error reading input: %v\n", err)
+		utils.Error("Error reading input: %v", err)
 	}
 	if name != "" {
 		w.Config.Project.Name = name
@@ -319,7 +319,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 	var binary string
 	if _, err := fmt.Scanln(&binary); err != nil && err.Error() != "unexpected newline" {
 		// Handle scan errors other than empty input
-		fmt.Printf("Error reading input: %v\n", err)
+		utils.Error("Error reading input: %v", err)
 	}
 	if binary != "" {
 		w.Config.Project.Binary = binary
@@ -329,7 +329,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 	var module string
 	if _, err := fmt.Scanln(&module); err != nil && err.Error() != "unexpected newline" {
 		// Handle scan errors other than empty input
-		fmt.Printf("Error reading input: %v\n", err)
+		utils.Error("Error reading input: %v", err)
 	}
 	if module != "" {
 		w.Config.Project.Module = module
@@ -345,7 +345,7 @@ func (w *ConfigurationWizard) updateBuildConfig() error {
 	var output string
 	if _, err := fmt.Scanln(&output); err != nil && err.Error() != "unexpected newline" {
 		// Handle scan errors other than empty input
-		fmt.Printf("Error reading input: %v\n", err)
+		utils.Error("Error reading input: %v", err)
 	}
 	if output != "" {
 		w.Config.Build.Output = output
@@ -371,7 +371,7 @@ func (w *ConfigurationWizard) updateTestConfig() error {
 	var timeout string
 	if _, err := fmt.Scanln(&timeout); err != nil && err.Error() != "unexpected newline" {
 		// Handle scan errors other than empty input
-		fmt.Printf("Error reading input: %v\n", err)
+		utils.Error("Error reading input: %v", err)
 	}
 	if timeout != "" {
 		w.Config.Test.Timeout = timeout
@@ -381,7 +381,7 @@ func (w *ConfigurationWizard) updateTestConfig() error {
 	var race string
 	if _, err := fmt.Scanln(&race); err != nil && err.Error() != "unexpected newline" {
 		// Handle scan errors other than empty input
-		fmt.Printf("Error reading input: %v\n", err)
+		utils.Error("Error reading input: %v", err)
 	}
 	if race != "" {
 		w.Config.Test.Race = strings.EqualFold(race, "true") || race == "y"

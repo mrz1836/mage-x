@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // Manager coordinates different cache types and provides unified cache operations
@@ -253,7 +254,7 @@ func (m *Manager) WarmCache(operations []string) error {
 
 	// This would trigger common operations to populate cache
 	// Implementation depends on specific warming strategies
-	fmt.Printf("Warming cache for operations: %v\n", operations)
+	utils.Info("Warming cache for operations: %v", operations)
 	return nil
 }
 
@@ -326,7 +327,7 @@ func (m *Manager) generateTimestampBasedHash(sourceFiles, configFiles []string, 
 // performSizeBasedCleanup removes old cache entries to free space
 func (m *Manager) performSizeBasedCleanup(bytesToFree int64) error {
 	// Implementation would remove oldest cache entries until target size is reached
-	fmt.Printf("Performing size-based cleanup: freeing %d bytes\n", bytesToFree)
+	utils.Info("Performing size-based cleanup: freeing %d bytes", bytesToFree)
 
 	// This is a simplified implementation - in practice, you'd:
 	// 1. Collect all cache entries with their timestamps

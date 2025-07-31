@@ -149,7 +149,7 @@ func (Deps) List() error {
 	utils.Header("Dependencies")
 
 	// Direct dependencies
-	fmt.Println("\nDirect dependencies:")
+	utils.Info("\nDirect dependencies:")
 	if err := GetRunner().RunCmd("go", "list", "-m", "-f", "{{if not .Indirect}}{{.Path}} {{.Version}}{{end}}", "all"); err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (Deps) List() error {
 	output, err := GetRunner().RunCmdOutput("go", "list", "-m", "-f", "{{if .Indirect}}1{{end}}", "all")
 	if err == nil {
 		count := strings.Count(output, "1")
-		fmt.Printf("\n(%d indirect dependencies)\n", count)
+		utils.Info("\n(%d indirect dependencies)", count)
 	}
 
 	return nil
@@ -187,11 +187,11 @@ func (Deps) Outdated() error {
 	if len(outdated) == 0 {
 		utils.Success("All dependencies are up to date!")
 	} else {
-		fmt.Printf("Found %d outdated dependencies:\n\n", len(outdated))
+		utils.Info("Found %d outdated dependencies:\n", len(outdated))
 		for _, dep := range outdated {
-			fmt.Printf("  %s\n", dep)
+			utils.Info("  %s", dep)
 		}
-		fmt.Println("\nRun 'mage deps:update' to update all dependencies")
+		utils.Info("\nRun 'mage deps:update' to update all dependencies")
 	}
 
 	return nil

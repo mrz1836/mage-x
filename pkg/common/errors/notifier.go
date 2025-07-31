@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // DefaultErrorNotifier implements the ErrorNotifier interface
@@ -404,7 +406,7 @@ func (c *ConsoleChannel) Send(ctx context.Context, notification ErrorNotificatio
 	}
 
 	formatted := c.formatter.Format(notification.Error)
-	fmt.Printf("[NOTIFICATION] %s: %s\n", notification.Timestamp.Format("15:04:05"), formatted)
+	utils.Info("[NOTIFICATION] %s: %s", notification.Timestamp.Format("15:04:05"), formatted)
 
 	return nil
 }

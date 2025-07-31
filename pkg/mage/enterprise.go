@@ -93,11 +93,11 @@ func (Enterprise) Config() error {
 	}
 
 	// Display configuration
-	fmt.Printf("Enterprise Configuration:\n")
-	fmt.Printf("  Organization:     %s\n", config.Organization)
-	fmt.Printf("  Environment:      %s\n", config.Environment)
-	fmt.Printf("  Compliance Mode:  %v\n", config.ComplianceMode)
-	fmt.Printf("  Audit Enabled:    %v\n", config.AuditEnabled)
+	utils.Info("Enterprise Configuration:")
+	utils.Info("  Organization:     %s", config.Organization)
+	utils.Info("  Environment:      %s", config.Environment)
+	utils.Info("  Compliance Mode:  %v", config.ComplianceMode)
+	utils.Info("  Audit Enabled:    %v", config.AuditEnabled)
 	fmt.Printf("  Metrics Enabled:  %v\n", config.MetricsEnabled)
 	fmt.Printf("  Security Level:   %s\n", config.SecurityLevel)
 	fmt.Printf("  Region:           %s\n", config.Region)

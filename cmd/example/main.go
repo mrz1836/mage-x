@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "github.com/mrz1836/go-mage/pkg/utils"
 
 func main() {
-	fmt.Println("go-mage example")
+	utils.Info("go-mage example")
 }

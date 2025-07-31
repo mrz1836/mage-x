@@ -55,7 +55,7 @@ func (Mod) Tidy() error {
 	output, err := GetRunner().RunCmdOutput("git", "status", "--porcelain", "go.mod", "go.sum")
 	if err == nil && strings.TrimSpace(output) != "" {
 		utils.Info("Module files were updated:")
-		fmt.Println(output)
+		utils.Info("%s", output)
 	} else {
 		utils.Success("Module files are already tidy")
 	}
@@ -196,8 +196,8 @@ func (Mod) Why() error {
 		return fmt.Errorf("failed to analyze module: %w", err)
 	}
 
-	fmt.Println("\nDependency path:")
-	fmt.Println(output)
+	utils.Info("\nDependency path:")
+	utils.Info("%s", output)
 
 	// Also check if it's a direct dependency
 	directDeps, err := GetRunner().RunCmdOutput("go", "list", "-m", "-f", "{{.Require}}", "all")

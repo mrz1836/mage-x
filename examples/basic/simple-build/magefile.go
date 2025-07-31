@@ -7,39 +7,40 @@ import (
 	"fmt"
 
 	"github.com/mrz1836/go-mage/pkg/mage"
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // Build compiles the application using the new namespace interface
 func Build() error {
-	fmt.Println("🔨 Building application...")
+	utils.Info("🔨 Building application...")
 	build := mage.NewBuildNamespace()
 	return build.Default()
 }
 
 // Test runs the test suite using the new namespace interface
 func Test() error {
-	fmt.Println("🧪 Running tests...")
+	utils.Info("🧪 Running tests...")
 	test := mage.NewTestNamespace()
 	return test.Unit()
 }
 
 // Lint runs code analysis using the new namespace interface
 func Lint() error {
-	fmt.Println("🔍 Running linter...")
+	utils.Info("🔍 Running linter...")
 	lint := mage.NewLintNamespace()
 	return lint.Default()
 }
 
 // Format formats the code using the new namespace interface
 func Format() error {
-	fmt.Println("📝 Formatting code...")
+	utils.Info("📝 Formatting code...")
 	format := mage.NewFormatNamespace()
 	return format.Default()
 }
 
 // Clean removes build artifacts using the new namespace interface
 func Clean() error {
-	fmt.Println("🧹 Cleaning build artifacts...")
+	utils.Info("🧹 Cleaning build artifacts...")
 	build := mage.NewBuildNamespace()
 	return build.Clean()
 }

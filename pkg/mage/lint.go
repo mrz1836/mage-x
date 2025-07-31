@@ -301,7 +301,7 @@ func (Lint) Version() error {
 	fmt.Printf("Configured golangci-lint version: %s\n", config.Lint.GolangciVersion)
 
 	if utils.CommandExists("golangci-lint") {
-		fmt.Println("\nInstalled version:")
+		utils.Info("\nInstalled version:")
 		return GetRunner().RunCmd("golangci-lint", "--version")
 	}
 

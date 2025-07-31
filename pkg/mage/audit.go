@@ -77,11 +77,11 @@ func (Audit) Show() error {
 	}
 
 	utils.Info("Found %d audit events", len(events))
-	fmt.Println()
+	utils.Info("")
 
 	// Display events in a table format
-	fmt.Printf("%-20s %-12s %-20s %-15s %-8s %-10s\n", "TIMESTAMP", "USER", "COMMAND", "DURATION", "SUCCESS", "EXIT CODE")
-	fmt.Println(strings.Repeat("-", 95))
+	utils.Info("%-20s %-12s %-20s %-15s %-8s %-10s", "TIMESTAMP", "USER", "COMMAND", "DURATION", "SUCCESS", "EXIT CODE")
+	utils.Info("%s", strings.Repeat("-", 95))
 
 	for _, event := range events {
 		status := "✅"
@@ -89,7 +89,7 @@ func (Audit) Show() error {
 			status = "❌"
 		}
 
-		fmt.Printf("%-20s %-12s %-20s %-15s %-8s %-10d\n",
+		utils.Info("%-20s %-12s %-20s %-15s %-8s %-10d",
 			event.Timestamp.Format("2006-01-02 15:04:05"),
 			event.User,
 			truncateString(event.Command, 20),
@@ -119,28 +119,28 @@ func (Audit) Stats() error {
 	}
 
 	utils.Info("Audit Statistics:")
-	fmt.Printf("  Total Events: %d\n", stats.TotalEvents)
-	fmt.Printf("  Successful:   %d (%.1f%%)\n", stats.SuccessfulEvents, float64(stats.SuccessfulEvents)/float64(stats.TotalEvents)*100)
-	fmt.Printf("  Failed:       %d (%.1f%%)\n", stats.FailedEvents, float64(stats.FailedEvents)/float64(stats.TotalEvents)*100)
-	fmt.Printf("  Date Range:   %s to %s\n", stats.EarliestEvent.Format("2006-01-02"), stats.LatestEvent.Format("2006-01-02"))
+	utils.Info("  Total Events: %d", stats.TotalEvents)
+	utils.Info("  Successful:   %d (%.1f%%)", stats.SuccessfulEvents, float64(stats.SuccessfulEvents)/float64(stats.TotalEvents)*100)
+	utils.Info("  Failed:       %d (%.1f%%)", stats.FailedEvents, float64(stats.FailedEvents)/float64(stats.TotalEvents)*100)
+	utils.Info("  Date Range:   %s to %s", stats.EarliestEvent.Format("2006-01-02"), stats.LatestEvent.Format("2006-01-02"))
 
 	if len(stats.TopUsers) > 0 {
-		fmt.Println("\nTop Users:")
+		utils.Info("\nTop Users:")
 		for i, user := range stats.TopUsers {
 			if i >= 5 { // Show top 5
 				break
 			}
-			fmt.Printf("  %d. %s (%d events)\n", i+1, user.User, user.Count)
+			utils.Info("  %d. %s (%d events)", i+1, user.User, user.Count)
 		}
 	}
 
 	if len(stats.TopCommands) > 0 {
-		fmt.Println("\nTop Commands:")
+		utils.Info("\nTop Commands:")
 		for i, cmd := range stats.TopCommands {
 			if i >= 5 { // Show top 5
 				break
 			}
-			fmt.Printf("  %d. %s (%d times)\n", i+1, cmd.Command, cmd.Count)
+			utils.Info("  %d. %s (%d times)", i+1, cmd.Command, cmd.Count)
 		}
 	}
 
@@ -338,11 +338,11 @@ func (Audit) Report() error {
 	utils.Success("Compliance report generated: %s", outputFile)
 
 	// Display summary
-	fmt.Printf("\nCompliance Report Summary:\n")
-	fmt.Printf("  Report Period: %s\n", report.ReportPeriod)
-	fmt.Printf("  Total Events: %d\n", report.TotalEvents)
-	fmt.Printf("  Success Rate: %.1f%%\n", report.SuccessRate)
-	fmt.Printf("  Recent Failures: %d\n", len(report.RecentFailures))
+	utils.Info("\nCompliance Report Summary:")
+	utils.Info("  Report Period: %s", report.ReportPeriod)
+	utils.Info("  Total Events: %d", report.TotalEvents)
+	utils.Info("  Success Rate: %.1f%%", report.SuccessRate)
+	utils.Info("  Recent Failures: %d", len(report.RecentFailures))
 
 	return nil
 }
@@ -400,7 +400,7 @@ func LogCommandExecution(command string, args []string, startTime time.Time, dur
 	// Log the event (errors are handled internally by the logger)
 	if err := auditLogger.LogEvent(event); err != nil {
 		// Log error but don't fail the operation
-		fmt.Printf("Warning: Failed to log audit event: %v\n", err)
+		utils.Warn("Failed to log audit event: %v", err)
 	}
 }
 

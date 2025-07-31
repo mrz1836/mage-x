@@ -65,7 +65,7 @@ func (Recipes) List() error {
 		categories[recipe.Category] = append(categories[recipe.Category], recipe)
 	}
 
-	fmt.Println("\n🎯 Recipe Categories:")
+	utils.Info("\n🎯 Recipe Categories:")
 
 	for category, categoryRecipes := range categories {
 		fmt.Printf("\n%s:\n", strings.ToUpper(category[:1])+category[1:])
@@ -74,11 +74,11 @@ func (Recipes) List() error {
 		}
 	}
 
-	fmt.Println("\nUsage:")
-	fmt.Println("  mage recipes:show <name>     # Show recipe details")
-	fmt.Println("  mage recipes:run <name>      # Run a recipe")
-	fmt.Println("  mage recipes:create <name>   # Create custom recipe")
-	fmt.Println("  mage recipes:search <term>   # Search recipes")
+	utils.Info("\nUsage:")
+	utils.Info("  mage recipes:show <name>     # Show recipe details")
+	utils.Info("  mage recipes:run <name>      # Run a recipe")
+	utils.Info("  mage recipes:create <name>   # Create custom recipe")
+	utils.Info("  mage recipes:search <term>   # Search recipes")
 
 	return nil
 }
@@ -105,7 +105,7 @@ func (Recipes) Show() error {
 		fmt.Printf("Dependencies: %s\n", strings.Join(recipe.Dependencies, ", "))
 	}
 
-	fmt.Println("\nSteps:")
+	utils.Info("\nSteps:")
 	for i, step := range recipe.Steps {
 		fmt.Printf("  %d. %s\n", i+1, step.Name)
 		if step.Description != "" {
@@ -117,7 +117,7 @@ func (Recipes) Show() error {
 	}
 
 	if len(recipe.Variables) > 0 {
-		fmt.Println("\nVariables:")
+		utils.Info("\nVariables:")
 		for key, value := range recipe.Variables {
 			fmt.Printf("  %s = %s\n", key, value)
 		}

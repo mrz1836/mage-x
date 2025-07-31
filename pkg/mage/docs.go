@@ -235,7 +235,7 @@ func (Docs) Check() error {
 	if len(issues) > 0 {
 		utils.Error("Documentation issues found:")
 		for _, issue := range issues {
-			fmt.Printf("  - %s\n", issue)
+			utils.Info("  - %s", issue)
 		}
 		return fmt.Errorf("documentation check failed")
 	}

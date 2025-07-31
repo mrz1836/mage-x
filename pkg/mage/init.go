@@ -207,21 +207,21 @@ func (Init) Templates() error {
 		{GenericProject, "Generic", "Basic Go project structure", []string{"testing", "basic"}},
 	}
 
-	fmt.Println("\n🎯 Available Templates:")
-	fmt.Println("Type          Name          Description")
-	fmt.Println("----------    ----------    -----------")
+	utils.Info("\n🎯 Available Templates:")
+	utils.Info("Type          Name          Description")
+	utils.Info("----------    ----------    -----------")
 
 	for _, tmpl := range templates {
 		fmt.Printf("%-12s  %-12s  %s\n", tmpl.Type, tmpl.Name, tmpl.Description)
 	}
 
-	fmt.Println("\nUsage:")
-	fmt.Println("  mage init:library      # Create library project")
-	fmt.Println("  mage init:cli          # Create CLI project")
-	fmt.Println("  mage init:webapi       # Create web API project")
-	fmt.Println("  mage init:microservice # Create microservice project")
-	fmt.Println("  mage init:tool         # Create tool project")
-	fmt.Println("  mage init:default      # Interactive setup")
+	utils.Info("\nUsage:")
+	utils.Info("  mage init:library      # Create library project")
+	utils.Info("  mage init:cli          # Create CLI project")
+	utils.Info("  mage init:webapi       # Create web API project")
+	utils.Info("  mage init:microservice # Create microservice project")
+	utils.Info("  mage init:tool         # Create tool project")
+	utils.Info("  mage init:default      # Interactive setup")
 
 	return nil
 }

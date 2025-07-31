@@ -101,8 +101,8 @@ func (Version) Check(args ...string) error {
 		utils.Success("\n🎉 New version available: %s", latest.TagName)
 		utils.Info("GitHubRelease: %s", latest.Name)
 		if latest.Body != "" {
-			fmt.Println("\nGitHubRelease Notes:")
-			fmt.Println(formatReleaseNotes(latest.Body))
+			utils.Info("\nGitHubRelease Notes:")
+			utils.Info("%s", formatReleaseNotes(latest.Body))
 		}
 		utils.Info("\nUpdate with: go install %s@%s", module, latest.TagName)
 	} else {
@@ -255,7 +255,7 @@ func (Version) Changelog() error {
 	if strings.TrimSpace(output) == "" {
 		utils.Info("No changes found")
 	} else {
-		fmt.Println(output)
+		utils.Info("%s", output)
 	}
 
 	// Show commit count

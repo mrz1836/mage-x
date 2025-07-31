@@ -140,8 +140,8 @@ func (Tools) List() error {
 		return err
 	}
 
-	fmt.Println("Configured tools:")
-	fmt.Println()
+	utils.Info("Configured tools:")
+	utils.Info("")
 
 	// Standard tools
 	fmt.Printf("  golangci-lint: %s\n", config.Tools.GolangciLint)
@@ -152,7 +152,7 @@ func (Tools) List() error {
 
 	// Custom tools
 	if len(config.Tools.Custom) > 0 {
-		fmt.Println("\nCustom tools:")
+		utils.Info("\nCustom tools:")
 		for name, version := range config.Tools.Custom {
 			fmt.Printf("  %s: %s\n", name, version)
 		}

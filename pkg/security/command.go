@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // CommandExecutor defines the interface for executing commands
@@ -69,7 +71,7 @@ func (e *SecureExecutor) Execute(ctx context.Context, name string, args ...strin
 
 	// Log what we're doing (dry run mode)
 	if e.DryRun {
-		fmt.Printf("[DRY RUN] Would execute: %s %s\n", name, strings.Join(args, " "))
+		utils.Info("[DRY RUN] Would execute: %s %s", name, strings.Join(args, " "))
 		success = true
 		return nil
 	}
@@ -187,7 +189,7 @@ func (e *SecureExecutor) ExecuteWithEnv(ctx context.Context, env []string, name 
 
 	// Log what we're doing (dry run mode)
 	if e.DryRun {
-		fmt.Printf("[DRY RUN] Would execute with env: %s %s\n", name, strings.Join(args, " "))
+		utils.Info("[DRY RUN] Would execute with env: %s %s", name, strings.Join(args, " "))
 		success = true
 		return nil
 	}

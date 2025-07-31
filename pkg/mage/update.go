@@ -59,8 +59,8 @@ func (Update) Check() error {
 	if info.UpdateAvailable {
 		utils.Success("\n🎉 Update available!")
 		if info.ReleaseNotes != "" {
-			fmt.Println("\nRelease Notes:")
-			fmt.Println(info.ReleaseNotes)
+			utils.Info("\nRelease Notes:")
+			utils.Info("%s", info.ReleaseNotes)
 		}
 		utils.Info("\nRun 'mage update:install' to update")
 	} else {
@@ -183,9 +183,9 @@ func (Update) History() error {
 		return nil
 	}
 
-	fmt.Println("\nUpdate History:")
-	fmt.Println("Date                  From Version    To Version      Channel")
-	fmt.Println("-------------------   -------------   -------------   -------")
+	utils.Info("\nUpdate History:")
+	utils.Info("Date                  From Version    To Version      Channel")
+	utils.Info("-------------------   -------------   -------------   -------")
 
 	for _, record := range history {
 		date, err := time.Parse(time.RFC3339, record["date"])
