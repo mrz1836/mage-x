@@ -125,7 +125,7 @@ func (env *TestEnvironment) CreateProjectStructure() {
 	}
 
 	for _, dir := range dirs {
-		err := os.MkdirAll(dir, 0o755)
+		err := os.MkdirAll(dir, 0o750)
 		if err != nil {
 			env.t.Fatalf("Error: %v", err)
 		}
@@ -151,7 +151,7 @@ func main() {
 func (env *TestEnvironment) CreateFile(path, content string) {
 	dir := filepath.Dir(path)
 	if dir != "." {
-		err := os.MkdirAll(dir, 0o755)
+		err := os.MkdirAll(dir, 0o750)
 		if err != nil {
 			env.t.Fatalf("Error: %v", err)
 		}

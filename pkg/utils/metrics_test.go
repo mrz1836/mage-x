@@ -529,7 +529,7 @@ func TestJSONStorage(t *testing.T) {
 		oldFilename := "metrics_" + oldDate.Format("2006-01-02") + ".json"
 		oldFilePath := filepath.Join(testStoragePath, oldFilename)
 
-		err = os.WriteFile(oldFilePath, []byte("[]"), 0o644)
+		err = os.WriteFile(oldFilePath, []byte("[]"), 0o600)
 		require.NoError(t, err)
 
 		// Cleanup with 5 day retention

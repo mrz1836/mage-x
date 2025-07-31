@@ -247,7 +247,7 @@ func (Recipes) Create() error {
 
 	// Create recipes directory
 	recipesDir := ".mage/recipes"
-	if err := os.MkdirAll(recipesDir, 0o755); err != nil {
+	if err := os.MkdirAll(recipesDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create recipes directory: %w", err)
 	}
 
@@ -683,7 +683,7 @@ func createAPIStructure() error {
 	}
 
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return err
 		}
 	}
@@ -708,7 +708,7 @@ COPY --from=builder /app/%s .
 CMD ["./%s"]
 `, context.ProjectName, context.ProjectName, context.ProjectName)
 
-	return os.WriteFile("Dockerfile", []byte(content), 0o644)
+	return os.WriteFile("Dockerfile", []byte(content), 0o600)
 }
 
 func createCIWorkflow() error {
@@ -745,7 +745,7 @@ jobs:
       run: mage build
 `
 
-	return os.WriteFile(".github/workflows/ci.yml", []byte(content), 0o644)
+	return os.WriteFile(".github/workflows/ci.yml", []byte(content), 0o600)
 }
 
 // Recipe-specific implementations that don't conflict with init.go functions
@@ -781,7 +781,7 @@ bin/
 .DS_Store
 Thumbs.db
 `
-	return os.WriteFile(".gitignore", []byte(content), 0o644)
+	return os.WriteFile(".gitignore", []byte(content), 0o600)
 }
 
 func createReadmeForRecipe(context *RecipeContext) error {
@@ -822,7 +822,7 @@ mage test
 MIT License
 `, context.ProjectName, context.ModulePath, context.ProjectName)
 
-	return os.WriteFile("README.md", []byte(content), 0o644)
+	return os.WriteFile("README.md", []byte(content), 0o600)
 }
 
 func addMageFilesForRecipe() error {
@@ -855,5 +855,5 @@ func Clean() error {
 	return mage.Build{}.Clean()
 }
 `
-	return os.WriteFile("magefile.go", []byte(content), 0o644)
+	return os.WriteFile("magefile.go", []byte(content), 0o600)
 }

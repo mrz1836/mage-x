@@ -173,32 +173,44 @@ func (l *Logger) SetOutput(w io.Writer) {
 }
 
 // Debug logs a debug message
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func (l *Logger) Debug(format string, args ...interface{}) {
 	l.log(LogLevelDebug, format, args...)
 }
 
 // Info logs an informational message
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func (l *Logger) Info(format string, args ...interface{}) {
 	l.log(LogLevelInfo, format, args...)
 }
 
 // Warn logs a warning message
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func (l *Logger) Warn(format string, args ...interface{}) {
 	l.log(LogLevelWarn, format, args...)
 }
 
 // Error logs an error message
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func (l *Logger) Error(format string, args ...interface{}) {
 	l.log(LogLevelError, format, args...)
 }
 
 // Success logs a success message with emoji
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func (l *Logger) Success(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	l.logWithEmoji(LogLevelInfo, emojiSuccess, msg)
 }
 
 // Fail logs a failure message with emoji
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func (l *Logger) Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	l.logWithEmoji(LogLevelError, emojiError, msg)
@@ -308,6 +320,8 @@ func (l *Logger) GetDayContext() string {
 }
 
 // log is the internal logging function
+//
+//nolint:goprintffuncname // Internal function with printf-style formatting
 func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -568,31 +582,43 @@ func formatDuration(d time.Duration) string {
 // Package-level convenience functions that use the default logger
 
 // Debug logs a debug message using the default logger
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Debug(format string, args ...interface{}) {
 	DefaultLogger.Debug(format, args...)
 }
 
 // Info logs an informational message using the default logger
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Info(format string, args ...interface{}) {
 	DefaultLogger.Info(format, args...)
 }
 
 // Warn logs a warning message using the default logger
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Warn(format string, args ...interface{}) {
 	DefaultLogger.Warn(format, args...)
 }
 
 // Error logs an error message using the default logger
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Error(format string, args ...interface{}) {
 	DefaultLogger.Error(format, args...)
 }
 
 // Success logs a success message using the default logger
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Success(format string, args ...interface{}) {
 	DefaultLogger.Success(format, args...)
 }
 
 // Fail logs a failure message using the default logger
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Fail(format string, args ...interface{}) {
 	DefaultLogger.Fail(format, args...)
 }

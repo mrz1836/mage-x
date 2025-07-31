@@ -47,7 +47,7 @@ func Clean() error {
 
 // All runs the complete build pipeline
 func All() error {
-	fmt.Println("🚀 Running complete build pipeline...")
+	utils.Info("🚀 Running complete build pipeline...")
 
 	// Format first
 	if err := Format(); err != nil {
@@ -69,20 +69,20 @@ func All() error {
 		return fmt.Errorf("build failed: %w", err)
 	}
 
-	fmt.Println("✅ All tasks completed successfully!")
+	utils.Info("✅ All tasks completed successfully!")
 	return nil
 }
 
 // Install builds and installs the binary
 func Install() error {
-	fmt.Println("📦 Installing application...")
+	utils.Info("📦 Installing application...")
 	build := mage.NewBuildNamespace()
 	return build.Install()
 }
 
 // PreBuild runs pre-build tasks
 func PreBuild() error {
-	fmt.Println("🔧 Running pre-build tasks...")
+	utils.Info("🔧 Running pre-build tasks...")
 	build := mage.NewBuildNamespace()
 	return build.PreBuild()
 }

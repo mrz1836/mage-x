@@ -730,7 +730,7 @@ _mage "$@"
 	completionFile := filepath.Join(os.Getenv("HOME"), ".zsh", "completions", "_mage")
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(filepath.Dir(completionFile), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(completionFile), 0o750); err != nil {
 		return fmt.Errorf("failed to create completion directory: %w", err)
 	}
 
@@ -776,7 +776,7 @@ complete -c mage -n '__fish_seen_subcommand_from init' -a 'library cli webapi mi
 	completionFile := filepath.Join(configDir, "mage.fish")
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
+	if err := os.MkdirAll(configDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create completion directory: %w", err)
 	}
 

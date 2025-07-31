@@ -13,6 +13,7 @@ import (
 
 	// Import tasks from MAGE-X
 	"github.com/mrz1836/go-mage/pkg/mage"
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // Re-export types
@@ -74,7 +75,7 @@ func (Custom) Deploy(env string) error {
 
 // deployDev deploys to development environment
 func deployDev() error {
-	fmt.Println("📦 Deploying to development server...")
+	utils.Info("📦 Deploying to development server...")
 
 	// Example: Copy binary to dev server
 	if err := sh.Run("scp", "bin/myapp", "dev-user@dev-server:/opt/myapp/myapp-new"); err != nil {
@@ -86,13 +87,13 @@ func deployDev() error {
 		return err
 	}
 
-	fmt.Println("✅ Development deployment completed!")
+	utils.Info("✅ Development deployment completed!")
 	return nil
 }
 
 // deployStaging deploys to staging environment
 func deployStaging() error {
-	fmt.Println("📦 Deploying to staging server...")
+	utils.Info("📦 Deploying to staging server...")
 
 	// Run tests first
 	var t Test
@@ -113,13 +114,13 @@ func deployStaging() error {
 		return err
 	}
 
-	fmt.Println("✅ Staging deployment completed!")
+	utils.Info("✅ Staging deployment completed!")
 	return nil
 }
 
 // deployProd deploys to production environment
 func deployProd() error {
-	fmt.Println("🚨 Production deployment starting...")
+	utils.Info("🚨 Production deployment starting...")
 
 	// Confirm production deployment
 	fmt.Print("Are you sure you want to deploy to PRODUCTION? (yes/no): ")
@@ -130,7 +131,7 @@ func deployProd() error {
 	}
 
 	if response != "yes" {
-		fmt.Println("❌ Production deployment canceled")
+		utils.Info("❌ Production deployment canceled")
 		return nil
 	}
 
@@ -165,7 +166,7 @@ type DB mg.Namespace
 
 // Migrate runs database migrations
 func (DB) Migrate() error {
-	fmt.Println("🗄️  Running database migrations...")
+	utils.Info("🗄️  Running database migrations...")
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -181,7 +182,7 @@ func (DB) Migrate() error {
 
 // Rollback rolls back the last migration
 func (DB) Rollback() error {
-	fmt.Println("⏪ Rolling back last migration...")
+	utils.Info("⏪ Rolling back last migration...")
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -199,16 +200,16 @@ func (DB) Seed() error {
 	// Ensure migrations are run first
 	mg.Deps(DB{}.Migrate)
 
-	fmt.Println("🌱 Seeding database...")
+	utils.Info("🌱 Seeding database...")
 	return sh.Run("go", "run", "cmd/seed/main.go")
 }
 
 // Reset drops, recreates, and seeds the database
 func (DB) Reset() error {
-	fmt.Println("🔄 Resetting database...")
+	utils.Info("🔄 Resetting database...")
 
 	// Drop all tables
-	fmt.Println("💥 Dropping all tables...")
+	utils.Info("💥 Dropping all tables...")
 	if err := sh.Run("go", "run", "cmd/dbutil/main.go", "drop"); err != nil {
 		return err
 	}
@@ -223,7 +224,7 @@ func (DB) Reset() error {
 		return err
 	}
 
-	fmt.Println("✅ Database reset completed!")
+	utils.Info("✅ Database reset completed!")
 	return nil
 }
 
@@ -232,7 +233,7 @@ type Docker mg.Namespace
 
 // Build builds the Docker image
 func (Docker) Build() error {
-	fmt.Println("🐳 Building Docker image...")
+	utils.Info("🐳 Building Docker image...")
 
 	// Get version from git or use "latest"
 	version, err := sh.Output("git", "describe", "--tags", "--always", "--dirty")
@@ -251,7 +252,7 @@ func (Docker) Run() error {
 	// Build image first
 	mg.Deps(Docker{}.Build)
 
-	fmt.Println("🏃 Running Docker container...")
+	utils.Info("🏃 Running Docker container...")
 
 	return sh.Run("docker", "run",
 		"--rm",

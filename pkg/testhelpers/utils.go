@@ -336,16 +336,21 @@ func NewGolden(t *testing.T, dir string) *Golden {
 func (g *Golden) Check(name string, actual []byte) {
 	g.t.Helper()
 
+	// Validate name to prevent directory traversal
+	if strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
+		g.t.Fatalf("Invalid golden file name: %s", name)
+	}
+
 	goldenPath := filepath.Join(g.dir, name+".golden")
 
 	if g.update {
 		// Update golden file
 		dir := filepath.Dir(goldenPath)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			g.t.Fatalf("Failed to create golden directory: %v", err)
 		}
 
-		if err := os.WriteFile(goldenPath, actual, 0o644); err != nil {
+		if err := os.WriteFile(goldenPath, actual, 0o600); err != nil {
 			g.t.Fatalf("Failed to update golden file: %v", err)
 		}
 
@@ -354,7 +359,7 @@ func (g *Golden) Check(name string, actual []byte) {
 	}
 
 	// Read golden file
-	expected, err := os.ReadFile(goldenPath)
+	expected, err := os.ReadFile(goldenPath) // #nosec G304 -- controlled test golden file path
 	if err != nil {
 		g.t.Fatalf("Failed to read golden file: %v", err)
 	}

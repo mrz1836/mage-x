@@ -60,7 +60,7 @@ func (ts *CommonTestSuite) TestGetVersion() {
 
 		// Create VERSION file
 		versionPath := filepath.Join(env.TempDir, "VERSION")
-		err := os.WriteFile(versionPath, []byte("2.0.0\n"), 0o644)
+		err := os.WriteFile(versionPath, []byte("2.0.0\n"), 0o600)
 		require.NoError(ts.T(), err)
 
 		// Change to temp directory
@@ -163,15 +163,15 @@ func (ts *CommonTestSuite) TestGetDirSize() {
 	ts.Run("calculate directory size", func() {
 		// Create test files
 		testDir := filepath.Join(ts.env.TempDir, "testdir")
-		err := os.MkdirAll(testDir, 0o755)
+		err := os.MkdirAll(testDir, 0o750)
 		require.NoError(ts.T(), err)
 
 		// Create files with known sizes
 		file1 := filepath.Join(testDir, "file1.txt")
 		file2 := filepath.Join(testDir, "file2.txt")
-		err = os.WriteFile(file1, []byte("hello"), 0o644) // 5 bytes
+		err = os.WriteFile(file1, []byte("hello"), 0o600) // 5 bytes
 		require.NoError(ts.T(), err)
-		err = os.WriteFile(file2, []byte("world123"), 0o644) // 8 bytes
+		err = os.WriteFile(file2, []byte("world123"), 0o600) // 8 bytes
 		require.NoError(ts.T(), err)
 
 		size, err := getDirSize(testDir)
@@ -181,7 +181,7 @@ func (ts *CommonTestSuite) TestGetDirSize() {
 
 	ts.Run("empty directory", func() {
 		emptyDir := filepath.Join(ts.env.TempDir, "empty")
-		err := os.MkdirAll(emptyDir, 0o755)
+		err := os.MkdirAll(emptyDir, 0o750)
 		require.NoError(ts.T(), err)
 
 		size, err := getDirSize(emptyDir)
@@ -198,7 +198,7 @@ func (ts *CommonTestSuite) TestGetDirSize() {
 	ts.Run("nested directories", func() {
 		// Create nested structure
 		nestedDir := filepath.Join(ts.env.TempDir, "nested", "deep", "structure")
-		err := os.MkdirAll(nestedDir, 0o755)
+		err := os.MkdirAll(nestedDir, 0o750)
 		require.NoError(ts.T(), err)
 
 		// Add files at different levels
@@ -206,11 +206,11 @@ func (ts *CommonTestSuite) TestGetDirSize() {
 		file2 := filepath.Join(ts.env.TempDir, "nested", "deep", "middle.txt")
 		file3 := filepath.Join(nestedDir, "bottom.txt")
 
-		err = os.WriteFile(file1, []byte("top"), 0o644) // 3 bytes
+		err = os.WriteFile(file1, []byte("top"), 0o600) // 3 bytes
 		require.NoError(ts.T(), err)
-		err = os.WriteFile(file2, []byte("middle"), 0o644) // 6 bytes
+		err = os.WriteFile(file2, []byte("middle"), 0o600) // 6 bytes
 		require.NoError(ts.T(), err)
-		err = os.WriteFile(file3, []byte("bottom"), 0o644) // 6 bytes
+		err = os.WriteFile(file3, []byte("bottom"), 0o600) // 6 bytes
 		require.NoError(ts.T(), err)
 
 		size, err := getDirSize(filepath.Join(ts.env.TempDir, "nested"))

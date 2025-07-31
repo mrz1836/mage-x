@@ -60,7 +60,7 @@ func TestDefaultConfigLoader(t *testing.T) {
   port: 5432
 debug: true`
 
-		err := os.WriteFile(configPath, []byte(yamlContent), 0o644)
+		err := os.WriteFile(configPath, []byte(yamlContent), 0o600)
 		require.NoError(t, err, "Failed to write config file")
 
 		var config TestConfig
@@ -82,7 +82,7 @@ debug: true`
   "debug": false
 }`
 
-		err := os.WriteFile(configPath, []byte(jsonContent), 0o644)
+		err := os.WriteFile(configPath, []byte(jsonContent), 0o600)
 		require.NoError(t, err, "Failed to write config file")
 
 		var config TestConfig
@@ -103,7 +103,7 @@ debug: true`
   port: 9999
 debug: true`
 
-		err := os.WriteFile(config2Path, []byte(yamlContent), 0o644)
+		err := os.WriteFile(config2Path, []byte(yamlContent), 0o600)
 		require.NoError(t, err, "Failed to write config file")
 
 		var config TestConfig
@@ -160,7 +160,7 @@ debug: true`
 		configPath := filepath.Join(tmpDir, "invalid.yaml")
 		invalidContent := `invalid: yaml: content:`
 
-		err := os.WriteFile(configPath, []byte(invalidContent), 0o644)
+		err := os.WriteFile(configPath, []byte(invalidContent), 0o600)
 		require.NoError(t, err)
 
 		var config TestConfig
@@ -363,7 +363,7 @@ func TestFileConfigSource(t *testing.T) {
 nested:
   key: nestedvalue`
 
-	err = os.WriteFile(configPath, []byte(configContent), 0o644)
+	err = os.WriteFile(configPath, []byte(configContent), 0o600)
 	require.NoError(t, err, "Failed to write config file")
 
 	source := NewFileConfigSource(configPath, FormatYAML, 100)
@@ -443,7 +443,7 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
     - production
     - stable`
 
-		err := os.WriteFile(configPath, []byte(configContent), 0o644)
+		err := os.WriteFile(configPath, []byte(configContent), 0o600)
 		require.NoError(suite.T(), err, "Failed to write config file")
 
 		var testConfig TestConfig
@@ -478,7 +478,7 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
   name: file-value
   port: 8080`
 
-		err := os.WriteFile(configPath, []byte(configContent), 0o644)
+		err := os.WriteFile(configPath, []byte(configContent), 0o600)
 		require.NoError(suite.T(), err)
 
 		var testConfig TestConfig
@@ -681,7 +681,7 @@ settings:
   retries: 3
   debug: true
 `
-	err = os.WriteFile(configPath, []byte(configContent), 0o644)
+	err = os.WriteFile(configPath, []byte(configContent), 0o600)
 	require.NoError(b, err)
 
 	loader := NewDefaultConfigLoader()

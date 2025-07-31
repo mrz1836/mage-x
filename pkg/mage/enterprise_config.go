@@ -26,7 +26,7 @@ func (EnterpriseConfigNamespace) Init() error {
 
 	// Create enterprise configuration directory
 	enterpriseDir := ".mage/enterprise"
-	if err := os.MkdirAll(enterpriseDir, 0o755); err != nil {
+	if err := os.MkdirAll(enterpriseDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create enterprise directory: %w", err)
 	}
 
@@ -1022,7 +1022,7 @@ func saveEnterpriseConfiguration(config *EnterpriseConfiguration) error {
 
 	// Save main configuration
 	configPath := filepath.Join(".mage", "enterprise", "config.yaml")
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o750); err != nil {
 		return err
 	}
 
@@ -1099,7 +1099,7 @@ func initializeRepositoryConfiguration() error {
 
 func initializeWorkflowTemplates() error {
 	workflowsDir := filepath.Join(".mage", "workflows")
-	if err := os.MkdirAll(workflowsDir, 0o755); err != nil {
+	if err := os.MkdirAll(workflowsDir, 0o750); err != nil {
 		return err
 	}
 
@@ -1284,7 +1284,7 @@ func createSecurityWorkflowTemplate() WorkflowDefinition {
 
 func initializeIntegrationConfigurations(config *EnterpriseConfiguration) error {
 	integrationsDir := filepath.Join(".mage", "integrations")
-	if err := os.MkdirAll(integrationsDir, 0o755); err != nil {
+	if err := os.MkdirAll(integrationsDir, 0o750); err != nil {
 		return err
 	}
 
@@ -1673,7 +1673,7 @@ func exportConfiguration(config *EnterpriseConfiguration, format, outputFile str
 		return err
 	}
 
-	return os.WriteFile(outputFile, data, 0o644)
+	return os.WriteFile(outputFile, data, 0o600)
 }
 
 func importConfiguration(inputFile string) (*EnterpriseConfiguration, error) {

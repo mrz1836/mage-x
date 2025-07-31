@@ -189,11 +189,11 @@ func TestFileStore_ListReleases(t *testing.T) {
 	t.Run("ignore non-json files", func(t *testing.T) {
 		// Create a non-JSON file in the channel directory
 		channelDir := filepath.Join(tempDir, "releases", "beta")
-		err := os.MkdirAll(channelDir, 0o755)
+		err := os.MkdirAll(channelDir, 0o750)
 		require.NoError(t, err)
 
 		nonJSONFile := filepath.Join(channelDir, "README.txt")
-		err = os.WriteFile(nonJSONFile, []byte("This is not a release"), 0o644)
+		err = os.WriteFile(nonJSONFile, []byte("This is not a release"), 0o600)
 		require.NoError(t, err)
 
 		// Should ignore the non-JSON file
@@ -217,7 +217,7 @@ func TestFileStore_ListReleases(t *testing.T) {
 		// Create a corrupted JSON file
 		channelDir := filepath.Join(tempDir, "releases", "nightly")
 		corruptedFile := filepath.Join(channelDir, "corrupted.json")
-		err = os.WriteFile(corruptedFile, []byte("invalid json content"), 0o644)
+		err = os.WriteFile(corruptedFile, []byte("invalid json content"), 0o600)
 		require.NoError(t, err)
 
 		// Should handle corrupted file gracefully and return valid releases
@@ -466,7 +466,7 @@ func TestFileStore_IndexUpdates(t *testing.T) {
 		assert.FileExists(t, indexPath)
 
 		// Read and verify index content
-		data, err := os.ReadFile(indexPath)
+		data, err := os.ReadFile(indexPath) // #nosec G304 -- controlled test path
 		require.NoError(t, err)
 
 		indexContent := string(data)
@@ -493,7 +493,7 @@ func TestFileStore_IndexUpdates(t *testing.T) {
 
 		// Index should be updated
 		indexPath := filepath.Join(tempDir, "channels", "stable-index.json")
-		data, err := os.ReadFile(indexPath)
+		data, err := os.ReadFile(indexPath) // #nosec G304 -- controlled test path
 		require.NoError(t, err)
 
 		indexContent := string(data)

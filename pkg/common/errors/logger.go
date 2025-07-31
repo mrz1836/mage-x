@@ -8,6 +8,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -287,8 +289,14 @@ type FileRotatingLogger struct {
 }
 
 // NewFileRotatingLogger creates a new file-based logger with rotation
-func NewFileRotatingLogger(filepath string, maxSize int64, maxFiles int) (*FileRotatingLogger, error) {
-	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+func NewFileRotatingLogger(logPath string, maxSize int64, maxFiles int) (*FileRotatingLogger, error) {
+	// Validate and clean the file path to prevent directory traversal
+	cleanPath := filepath.Clean(logPath)
+	if strings.Contains(cleanPath, "..") {
+		return nil, fmt.Errorf("invalid file path: path traversal detected")
+	}
+
+	file, err := os.OpenFile(cleanPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
@@ -313,7 +321,7 @@ func NewFileRotatingLogger(filepath string, maxSize int64, maxFiles int) (*FileR
 			}
 			return nil
 		}(),
-		filepath:    filepath,
+		filepath:    cleanPath,
 		maxSize:     maxSize,
 		maxFiles:    maxFiles,
 		currentSize: info.Size(),

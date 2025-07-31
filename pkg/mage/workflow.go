@@ -587,7 +587,7 @@ func generateExecutionID() string {
 
 func saveWorkflowExecution(execution WorkflowExecution) error {
 	executionsDir := getExecutionsDirectory()
-	if err := os.MkdirAll(executionsDir, 0o755); err != nil {
+	if err := os.MkdirAll(executionsDir, 0o750); err != nil {
 		return err
 	}
 

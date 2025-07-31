@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_LoadFrom() {
 	ts.Run("load JSON file", func() {
 		jsonFile := filepath.Join(ts.tempDir, "config.json")
 		jsonContent := `{"name": "test", "value": 42}`
-		err := os.WriteFile(jsonFile, []byte(jsonContent), 0o644)
+		err := os.WriteFile(jsonFile, []byte(jsonContent), 0o600)
 		require.NoError(ts.T(), err)
 
 		var result map[string]interface{}
@@ -51,7 +52,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_LoadFrom() {
 		yamlFile := filepath.Join(ts.tempDir, "config.yaml")
 		yamlContent := `name: test
 value: 42`
-		err := os.WriteFile(yamlFile, []byte(yamlContent), 0o644)
+		err := os.WriteFile(yamlFile, []byte(yamlContent), 0o600)
 		require.NoError(ts.T(), err)
 
 		var result map[string]interface{}
@@ -65,7 +66,7 @@ value: 42`
 		ymlFile := filepath.Join(ts.tempDir, "config.yml")
 		ymlContent := `name: test
 value: 42`
-		err := os.WriteFile(ymlFile, []byte(ymlContent), 0o644)
+		err := os.WriteFile(ymlFile, []byte(ymlContent), 0o600)
 		require.NoError(ts.T(), err)
 
 		var result map[string]interface{}
@@ -79,7 +80,7 @@ value: 42`
 		configFile := filepath.Join(ts.tempDir, "config")
 		yamlContent := `name: test
 value: 42`
-		err := os.WriteFile(configFile, []byte(yamlContent), 0o644)
+		err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
 		require.NoError(ts.T(), err)
 
 		var result map[string]interface{}
@@ -103,12 +104,12 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Load() {
 	ts.Run("load from first available path", func() {
 		jsonFile := filepath.Join(ts.tempDir, "config.json")
 		jsonContent := `{"name": "first", "value": 1}`
-		err := os.WriteFile(jsonFile, []byte(jsonContent), 0o644)
+		err := os.WriteFile(jsonFile, []byte(jsonContent), 0o600)
 		require.NoError(ts.T(), err)
 
 		jsonFile2 := filepath.Join(ts.tempDir, "config2.json")
 		jsonContent2 := `{"name": "second", "value": 2}`
-		err = os.WriteFile(jsonFile2, []byte(jsonContent2), 0o644)
+		err = os.WriteFile(jsonFile2, []byte(jsonContent2), 0o600)
 		require.NoError(ts.T(), err)
 
 		paths := []string{
@@ -152,7 +153,10 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Save() {
 
 		// Verify file exists and content is correct
 		require.FileExists(ts.T(), jsonFile)
-		content, err := os.ReadFile(jsonFile)
+		// Validate path is within temp directory (security check)
+		cleanPath := filepath.Clean(jsonFile)
+		require.True(ts.T(), strings.HasPrefix(cleanPath, ts.tempDir), "path should be within temp directory")
+		content, err := os.ReadFile(cleanPath)
 		require.NoError(ts.T(), err)
 		require.Contains(ts.T(), string(content), `"name": "test"`)
 		require.Contains(ts.T(), string(content), `"value": 42`)
@@ -165,7 +169,10 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Save() {
 
 		// Verify file exists
 		require.FileExists(ts.T(), yamlFile)
-		content, err := os.ReadFile(yamlFile)
+		// Validate path is within temp directory (security check)
+		cleanPath := filepath.Clean(yamlFile)
+		require.True(ts.T(), strings.HasPrefix(cleanPath, ts.tempDir), "path should be within temp directory")
+		content, err := os.ReadFile(cleanPath)
 		require.NoError(ts.T(), err)
 		require.Contains(ts.T(), string(content), "name: test")
 		require.Contains(ts.T(), string(content), "value: 42")
@@ -617,7 +624,7 @@ func (ts *DefaultConfigTestSuite) TestFileConfigSource_Methods() {
 
 	ts.Run("IsAvailable - file exists", func() {
 		// Create the file
-		err := os.WriteFile(path, []byte(`{"test": true}`), 0o644)
+		err := os.WriteFile(path, []byte(`{"test": true}`), 0o600)
 		require.NoError(ts.T(), err)
 
 		available := source.IsAvailable()
@@ -627,7 +634,7 @@ func (ts *DefaultConfigTestSuite) TestFileConfigSource_Methods() {
 	ts.Run("Load - successful", func() {
 		// Create a valid JSON file
 		jsonContent := `{"name": "test", "value": 42}`
-		err := os.WriteFile(path, []byte(jsonContent), 0o644)
+		err := os.WriteFile(path, []byte(jsonContent), 0o600)
 		require.NoError(ts.T(), err)
 
 		var result map[string]interface{}

@@ -66,7 +66,7 @@ func TestAuditLogger_Basic(t *testing.T) {
 			existingFile := filepath.Join(tempDir, "existing_file")
 
 			// Create a regular file
-			err := os.WriteFile(existingFile, []byte("test"), 0o644)
+			err := os.WriteFile(existingFile, []byte("test"), 0o600)
 			require.NoError(t, err)
 
 			// Try to create database under this file (should fail)

@@ -921,7 +921,7 @@ func loadIntegrationConfigurations() ([]IntegrationConfig, error) {
 
 func saveIntegrationConfig(config IntegrationConfig) error {
 	integrationsDir := getIntegrationsDirectory()
-	if err := os.MkdirAll(integrationsDir, 0o755); err != nil {
+	if err := os.MkdirAll(integrationsDir, 0o750); err != nil {
 		return err
 	}
 

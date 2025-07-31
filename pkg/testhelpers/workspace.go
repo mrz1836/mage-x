@@ -57,7 +57,7 @@ func (tw *TempWorkspace) Dir(name string) string {
 	}
 
 	dir := filepath.Join(tw.rootDir, name)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		tw.t.Fatalf("Failed to create directory %s: %v", name, err)
 	}
 
@@ -67,6 +67,12 @@ func (tw *TempWorkspace) Dir(name string) string {
 
 // Path returns the full path for a relative path in the workspace
 func (tw *TempWorkspace) Path(parts ...string) string {
+	// Validate parts to prevent directory traversal
+	for _, part := range parts {
+		if strings.Contains(part, "..") {
+			tw.t.Fatalf("Path part contains directory traversal: %s", part)
+		}
+	}
 	allParts := append([]string{tw.rootDir}, parts...)
 	return filepath.Join(allParts...)
 }
@@ -78,11 +84,11 @@ func (tw *TempWorkspace) WriteFile(path string, content []byte) string {
 	fullPath := tw.Path(path)
 	dir := filepath.Dir(fullPath)
 
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		tw.t.Fatalf("Failed to create directory: %v", err)
 	}
 
-	if err := os.WriteFile(fullPath, content, 0o644); err != nil {
+	if err := os.WriteFile(fullPath, content, 0o600); err != nil {
 		tw.t.Fatalf("Failed to write file: %v", err)
 	}
 
@@ -99,7 +105,7 @@ func (tw *TempWorkspace) ReadFile(path string) []byte {
 	tw.t.Helper()
 
 	fullPath := tw.Path(path)
-	data, err := os.ReadFile(fullPath)
+	data, err := os.ReadFile(fullPath) // #nosec G304 -- controlled test workspace path
 	if err != nil {
 		tw.t.Fatalf("Failed to read file: %v", err)
 	}
@@ -120,12 +126,12 @@ func (tw *TempWorkspace) CopyFile(src, dst string) {
 	dstPath := tw.Path(dst)
 
 	// Create destination directory
-	if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dstPath), 0o750); err != nil {
 		tw.t.Fatalf("Failed to create destination directory: %v", err)
 	}
 
 	// Open source file
-	srcFile, err := os.Open(srcPath)
+	srcFile, err := os.Open(srcPath) // #nosec G304 -- controlled test workspace source path
 	if err != nil {
 		tw.t.Fatalf("Failed to open source file: %v", err)
 	}
@@ -136,7 +142,7 @@ func (tw *TempWorkspace) CopyFile(src, dst string) {
 	}()
 
 	// Create destination file
-	dstFile, err := os.Create(dstPath)
+	dstFile, err := os.Create(dstPath) // #nosec G304 -- controlled test workspace destination path
 	if err != nil {
 		tw.t.Fatalf("Failed to create destination file: %v", err)
 	}
@@ -179,7 +185,7 @@ func (tw *TempWorkspace) CopyDir(src, dst string) {
 		}
 
 		// Copy file
-		srcFile, err := os.Open(path)
+		srcFile, err := os.Open(path) // #nosec G304 -- controlled test workspace path
 		if err != nil {
 			return err
 		}
@@ -189,7 +195,7 @@ func (tw *TempWorkspace) CopyDir(src, dst string) {
 			}
 		}()
 
-		dstFile, err := os.Create(destPath)
+		dstFile, err := os.Create(destPath) // #nosec G304 -- controlled test workspace destination path
 		if err != nil {
 			return err
 		}
@@ -215,7 +221,7 @@ func (tw *TempWorkspace) Move(src, dst string) {
 	dstPath := tw.Path(dst)
 
 	// Create destination directory if needed
-	if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dstPath), 0o750); err != nil {
 		tw.t.Fatalf("Failed to create destination directory: %v", err)
 	}
 
@@ -273,7 +279,7 @@ func (tw *TempWorkspace) Symlink(target, link string) {
 	linkPath := tw.Path(link)
 
 	// Create link directory if needed
-	if err := os.MkdirAll(filepath.Dir(linkPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(linkPath), 0o750); err != nil {
 		tw.t.Fatalf("Failed to create link directory: %v", err)
 	}
 

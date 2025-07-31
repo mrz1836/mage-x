@@ -99,7 +99,7 @@ func (Generate) Mocks() error {
 		outputFile := fmt.Sprintf("mocks/mock_%s.go", strings.ToLower(iface.Name))
 
 		// Create mocks directory if needed
-		if err := os.MkdirAll("mocks", 0o755); err != nil {
+		if err := os.MkdirAll("mocks", 0o750); err != nil {
 			return fmt.Errorf("failed to create mocks directory: %w", err)
 		}
 

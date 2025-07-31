@@ -122,7 +122,7 @@ func NewAuditLogger(config AuditConfig) *AuditLogger {
 func (a *AuditLogger) initDatabase() error {
 	// Ensure directory exists
 	dbDir := filepath.Dir(a.config.DatabasePath)
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	if err := os.MkdirAll(dbDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create audit database directory: %w", err)
 	}
 

@@ -77,7 +77,7 @@ test:
 lint:
   timeout: 5m
 `
-	if err := os.WriteFile(".mage.yaml", []byte(configYAML), 0o644); err != nil {
+	if err := os.WriteFile(".mage.yaml", []byte(configYAML), 0o600); err != nil {
 		b.Fatalf("Failed to write config file: %v", err)
 	}
 
@@ -294,10 +294,10 @@ func BenchmarkBuildOperations(b *testing.B) {
 	}
 
 	// Create a simple project
-	if err := os.WriteFile("go.mod", []byte("module bench\n\ngo 1.24\n"), 0o644); err != nil {
+	if err := os.WriteFile("go.mod", []byte("module bench\n\ngo 1.24\n"), 0o600); err != nil {
 		b.Fatalf("Failed to write go.mod: %v", err)
 	}
-	if err := os.WriteFile("main.go", []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
+	if err := os.WriteFile("main.go", []byte("package main\nfunc main() {}\n"), 0o600); err != nil {
 		b.Fatalf("Failed to write main.go: %v", err)
 	}
 

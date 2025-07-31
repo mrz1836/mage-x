@@ -551,11 +551,11 @@ func (tf *TestFixtures) CreateBinaryFile(path string, size int) {
 	fullPath := tf.env.AbsPath(path)
 	dir := filepath.Dir(fullPath)
 
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		tf.t.Fatalf("Failed to create directory: %v", err)
 	}
 
-	if err := os.WriteFile(fullPath, data, 0o644); err != nil {
+	if err := os.WriteFile(fullPath, data, 0o600); err != nil {
 		tf.t.Fatalf("Failed to write binary file: %v", err)
 	}
 }

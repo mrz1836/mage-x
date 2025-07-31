@@ -89,7 +89,7 @@ func (Update) Install() error {
 
 	// Create update directory
 	updateDir := filepath.Join(os.TempDir(), "mage-update")
-	if err := os.MkdirAll(updateDir, 0o755); err != nil {
+	if err := os.MkdirAll(updateDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create update directory: %w", err)
 	}
 	defer func() {
@@ -142,11 +142,11 @@ func (Update) Auto() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o750); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	if err := os.WriteFile(configPath, configData, 0o644); err != nil {
+	if err := os.WriteFile(configPath, configData, 0o600); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 

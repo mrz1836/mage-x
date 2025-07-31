@@ -325,7 +325,7 @@ func TestGolden(t *testing.T) {
 		g.Check("updated", []byte("new content"))
 
 		// Verify file was written
-		content, err := os.ReadFile(tempDir + "/updated.golden")
+		content, err := os.ReadFile(tempDir + "/updated.golden") // #nosec G304 -- controlled test path
 		require.NoError(t, err)
 		require.Equal(t, "new content", string(content))
 	})
@@ -340,7 +340,7 @@ func TestGolden(t *testing.T) {
 		g.CheckString("string_test", "string content")
 
 		// Verify file was written
-		content, err := os.ReadFile(tempDir + "/string_test.golden")
+		content, err := os.ReadFile(tempDir + "/string_test.golden") // #nosec G304 -- controlled test path
 		require.NoError(t, err)
 		require.Equal(t, "string content", string(content))
 	})
@@ -348,7 +348,7 @@ func TestGolden(t *testing.T) {
 	t.Run("check without update", func(t *testing.T) {
 		// Create a golden file
 		goldenPath := tempDir + "/test.golden"
-		require.NoError(t, os.WriteFile(goldenPath, []byte("expected content"), 0o644))
+		require.NoError(t, os.WriteFile(goldenPath, []byte("expected content"), 0o600))
 
 		g := &Golden{
 			t:      t,

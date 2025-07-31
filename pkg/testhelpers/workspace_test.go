@@ -63,7 +63,7 @@ func TestTempWorkspace_WriteFile(t *testing.T) {
 	// Write simple file
 	path1 := tw.WriteFile("test.txt", []byte("content"))
 	require.FileExists(t, path1)
-	content, err := os.ReadFile(path1)
+	content, err := os.ReadFile(path1) // #nosec G304 -- controlled test workspace path
 	require.NoError(t, err)
 	require.Equal(t, "content", string(content))
 
