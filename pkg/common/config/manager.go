@@ -84,7 +84,7 @@ func (m *DefaultConfigManager) Reload(dest interface{}) error {
 }
 
 // Watch watches for configuration changes (basic implementation)
-func (m *DefaultConfigManager) Watch(callback func(interface{})) error {
+func (m *DefaultConfigManager) Watch(_ func(interface{})) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

@@ -20,7 +20,7 @@ type ConfigTestSuite struct {
 
 func (suite *ConfigTestSuite) SetupSuite() {
 	tmpDir, err := os.MkdirTemp("", "config-suite-test-*")
-	require.NoError(suite.T(), err, "Failed to create temp dir")
+	suite.Require().NoError(err, "Failed to create temp dir")
 	suite.tmpDir = tmpDir
 }
 
@@ -444,23 +444,23 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
     - stable`
 
 		err := os.WriteFile(configPath, []byte(configContent), 0o600)
-		require.NoError(suite.T(), err, "Failed to write config file")
+		suite.Require().NoError(err, "Failed to write config file")
 
 		var testConfig TestConfig
 		foundPath, err := config.LoadFromPaths(&testConfig, "myapp", suite.tmpDir)
-		require.NoError(suite.T(), err, "Failed to load config")
+		suite.Require().NoError(err, "Failed to load config")
 
-		assert.Equal(suite.T(), configPath, foundPath, "Should find config at expected path")
-		assert.Equal(suite.T(), "testapp", testConfig.App.Name, "App name should match")
-		assert.Equal(suite.T(), 8080, testConfig.App.Port, "App port should match")
-		assert.True(suite.T(), testConfig.App.Enabled, "App should be enabled")
-		assert.ElementsMatch(suite.T(), []string{"production", "stable"}, testConfig.App.Tags, "Tags should match")
+		suite.Equal(configPath, foundPath, "Should find config at expected path")
+		suite.Equal("testapp", testConfig.App.Name, "App name should match")
+		suite.Equal(8080, testConfig.App.Port, "App port should match")
+		suite.True(testConfig.App.Enabled, "App should be enabled")
+		suite.ElementsMatch([]string{"production", "stable"}, testConfig.App.Tags, "Tags should match")
 	})
 
 	suite.Run("LoadWithEnvOverrides", func() {
 		// Set environment variables
-		require.NoError(suite.T(), os.Setenv("MYAPP_APP_NAME", "env-override"))
-		require.NoError(suite.T(), os.Setenv("MYAPP_APP_PORT", "9090"))
+		suite.Require().NoError(os.Setenv("MYAPP_APP_NAME", "env-override"))
+		suite.Require().NoError(os.Setenv("MYAPP_APP_PORT", "9090"))
 		defer func() {
 			if err := os.Unsetenv("MYAPP_APP_NAME"); err != nil {
 				suite.T().Logf("Failed to unset MYAPP_APP_NAME: %v", err)
@@ -479,13 +479,13 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
   port: 8080`
 
 		err := os.WriteFile(configPath, []byte(configContent), 0o600)
-		require.NoError(suite.T(), err)
+		suite.Require().NoError(err)
 
 		var testConfig TestConfig
 		foundPath, err := config.LoadWithEnvOverrides(&testConfig, "myapp-env", "MYAPP", suite.tmpDir)
-		require.NoError(suite.T(), err, "Failed to load config with env overrides")
+		suite.Require().NoError(err, "Failed to load config with env overrides")
 
-		assert.Equal(suite.T(), configPath, foundPath)
+		suite.Equal(configPath, foundPath)
 		// These assertions depend on whether env override is implemented
 		// If implemented, values should come from env vars
 		// assert.Equal(suite.T(), "env-override", testConfig.App.Name)

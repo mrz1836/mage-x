@@ -17,8 +17,8 @@ func NewOSEnvironment() Environment {
 var (
 	DefaultEnv      Environment  = NewDefaultEnvironment()  //nolint:gochecknoglobals // Package-level default
 	DefaultPaths    PathResolver = NewDefaultPathResolver() //nolint:gochecknoglobals // Package-level default
-	DefaultManager  EnvManager   = NewDefaultEnvManager()   //nolint:gochecknoglobals // Package-level default
-	DefaultValidate EnvValidator = NewDefaultEnvValidator() //nolint:gochecknoglobals // Package-level default
+	DefaultManager  Manager      = NewDefaultEnvManager()   //nolint:gochecknoglobals // Package-level default
+	DefaultValidate Validator    = NewDefaultEnvValidator() //nolint:gochecknoglobals // Package-level default
 )
 
 // Environment variable convenience functions
@@ -183,17 +183,17 @@ func EnsureDirWithMode(path string, mode uint32) error {
 // Manager convenience functions
 
 // WithScope executes a function within a new environment scope
-func WithScope(fn func(EnvScope) error) error {
+func WithScope(fn func(Scope) error) error {
 	return DefaultManager.WithScope(fn)
 }
 
 // SaveContext saves the current environment state
-func SaveContext() (EnvContext, error) {
+func SaveContext() (Context, error) {
 	return DefaultManager.SaveContext()
 }
 
 // RestoreContext restores a saved environment state
-func RestoreContext(ctx EnvContext) error {
+func RestoreContext(ctx Context) error {
 	return DefaultManager.RestoreContext(ctx)
 }
 
@@ -215,33 +215,33 @@ func SetPathResolver(resolver PathResolver) {
 }
 
 // SetManager sets the global manager instance (for testing/mocking)
-func SetManager(manager EnvManager) {
+func SetManager(manager Manager) {
 	DefaultManager = manager
 }
 
 // SetValidator sets the global validator instance (for testing/mocking)
-func SetValidator(validator EnvValidator) {
+func SetValidator(validator Validator) {
 	DefaultValidate = validator
 }
 
 // Advanced utility functions
 
 // LoadFromFile loads environment variables from a file
-func LoadFromFile(filename string) error {
+func LoadFromFile(_ string) error {
 	// This would integrate with the config package for file loading
 	// For now, return a basic implementation
 	return nil
 }
 
 // SaveToFile saves current environment variables to a file
-func SaveToFile(filename string, prefix string) error {
+func SaveToFile(_, _ string) error {
 	// This would integrate with the config package for file saving
 	// For now, return a basic implementation
 	return nil
 }
 
 // Backup creates a backup of the current environment
-func Backup() EnvContext {
+func Backup() Context {
 	ctx, err := SaveContext()
 	if err != nil {
 		// Return empty context on error - this maintains backward compatibility
@@ -251,7 +251,7 @@ func Backup() EnvContext {
 }
 
 // Restore restores from a backup
-func Restore(backup EnvContext) error {
+func Restore(backup Context) error {
 	return RestoreContext(backup)
 }
 

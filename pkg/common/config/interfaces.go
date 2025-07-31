@@ -163,9 +163,26 @@ const (
 type ConfigFormat string
 
 const (
+	// FormatYAML represents YAML configuration format
 	FormatYAML ConfigFormat = "yaml"
+	// FormatJSON represents JSON configuration format
 	FormatJSON ConfigFormat = "json"
+	// FormatTOML represents TOML configuration format
 	FormatTOML ConfigFormat = "toml"
-	FormatINI  ConfigFormat = "ini"
-	FormatEnv  ConfigFormat = "env"
+	// FormatINI represents INI configuration format
+	FormatINI ConfigFormat = "ini"
+	// FormatEnv represents environment variable configuration format
+	FormatEnv ConfigFormat = "env"
+)
+
+// Type aliases to avoid stuttering while maintaining backwards compatibility.
+type (
+	// Source represents a configuration source.
+	Source = ConfigSource
+	// Manager manages multiple configuration sources.
+	Manager = ConfigManager
+	// Options holds configuration loading options.
+	Options = ConfigOptions
+	// Format represents supported configuration formats.
+	Format = ConfigFormat
 )

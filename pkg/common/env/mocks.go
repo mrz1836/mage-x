@@ -326,9 +326,9 @@ func (m *MockPathResolver) GetCallCount(method string) int {
 	return m.calls[method]
 }
 
-// MockEnvManager is a mock implementation of EnvManager interface
+// MockEnvManager is a mock implementation of Manager interface
 type MockEnvManager struct {
-	scopes []EnvScope
+	scopes []Scope
 	calls  map[string]int
 	mu     sync.RWMutex
 }
@@ -336,13 +336,13 @@ type MockEnvManager struct {
 // NewMockEnvManager creates a new mock environment manager
 func NewMockEnvManager() *MockEnvManager {
 	return &MockEnvManager{
-		scopes: make([]EnvScope, 0),
+		scopes: make([]Scope, 0),
 		calls:  make(map[string]int),
 	}
 }
 
-// PushScope implements EnvManager.PushScope
-func (m *MockEnvManager) PushScope() EnvScope {
+// PushScope implements Manager.PushScope
+func (m *MockEnvManager) PushScope() Scope {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls["PushScope"]++
@@ -365,22 +365,22 @@ func (m *MockEnvManager) PopScope() error {
 	return nil
 }
 
-// WithScope implements EnvManager.WithScope
-func (m *MockEnvManager) WithScope(fn func(EnvScope) error) error {
+// WithScope implements Manager.WithScope
+func (m *MockEnvManager) WithScope(fn func(Scope) error) error {
 	m.calls["WithScope"]++
 	scope := m.PushScope()
 	defer m.PopScope()
 	return fn(scope)
 }
 
-// SaveContext implements EnvManager.SaveContext
-func (m *MockEnvManager) SaveContext() (EnvContext, error) {
+// SaveContext implements Manager.SaveContext
+func (m *MockEnvManager) SaveContext() (Context, error) {
 	m.calls["SaveContext"]++
 	return NewMockEnvContext(), nil
 }
 
-// RestoreContext implements EnvManager.RestoreContext
-func (m *MockEnvManager) RestoreContext(ctx EnvContext) error {
+// RestoreContext implements Manager.RestoreContext
+func (m *MockEnvManager) RestoreContext(ctx Context) error {
 	m.calls["RestoreContext"]++
 	return nil
 }
@@ -391,8 +391,8 @@ func (m *MockEnvManager) Isolate(vars map[string]string, fn func() error) error 
 	return fn()
 }
 
-// Fork implements EnvManager.Fork
-func (m *MockEnvManager) Fork() EnvManager {
+// Fork implements Manager.Fork
+func (m *MockEnvManager) Fork() Manager {
 	m.calls["Fork"]++
 	return NewMockEnvManager()
 }
@@ -404,10 +404,10 @@ func (m *MockEnvManager) GetCallCount(method string) int {
 	return m.calls[method]
 }
 
-// MockEnvScope is a mock implementation of EnvScope interface
+// MockEnvScope is a mock implementation of Scope interface
 type MockEnvScope struct {
 	*MockEnvironment
-	changes map[string]EnvChange
+	changes map[string]Change
 	calls   map[string]int
 	mu      sync.RWMutex
 }
@@ -416,7 +416,7 @@ type MockEnvScope struct {
 func NewMockEnvScope() *MockEnvScope {
 	return &MockEnvScope{
 		MockEnvironment: NewMockEnvironment(),
-		changes:         make(map[string]EnvChange),
+		changes:         make(map[string]Change),
 		calls:           make(map[string]int),
 	}
 }
@@ -426,7 +426,7 @@ func (m *MockEnvScope) Commit() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls["Commit"]++
-	m.changes = make(map[string]EnvChange)
+	m.changes = make(map[string]Change)
 	return nil
 }
 
@@ -435,17 +435,17 @@ func (m *MockEnvScope) Rollback() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls["Rollback"]++
-	m.changes = make(map[string]EnvChange)
+	m.changes = make(map[string]Change)
 	return nil
 }
 
-// Changes implements EnvScope.Changes
-func (m *MockEnvScope) Changes() map[string]EnvChange {
+// Changes implements Scope.Changes
+func (m *MockEnvScope) Changes() map[string]Change {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	m.calls["Changes"]++
 
-	result := make(map[string]EnvChange)
+	result := make(map[string]Change)
 	for k, v := range m.changes {
 		result[k] = v
 	}
@@ -460,7 +460,7 @@ func (m *MockEnvScope) HasChanges() bool {
 	return len(m.changes) > 0
 }
 
-// MockEnvContext is a mock implementation of EnvContext interface
+// MockEnvContext is a mock implementation of Context interface
 type MockEnvContext struct {
 	timestamp time.Time
 	variables map[string]string
@@ -504,14 +504,14 @@ func (m *MockEnvContext) Count() int {
 	return len(m.variables)
 }
 
-// Diff implements EnvContext.Diff
-func (m *MockEnvContext) Diff(other EnvContext) map[string]EnvChange {
+// Diff implements Context.Diff
+func (m *MockEnvContext) Diff(other Context) map[string]Change {
 	m.calls["Diff"]++
-	return make(map[string]EnvChange)
+	return make(map[string]Change)
 }
 
-// Merge implements EnvContext.Merge
-func (m *MockEnvContext) Merge(other EnvContext) EnvContext {
+// Merge implements Context.Merge
+func (m *MockEnvContext) Merge(other Context) Context {
 	m.calls["Merge"]++
 	return NewMockEnvContext()
 }
@@ -522,7 +522,7 @@ func (m *MockEnvContext) Export() map[string]string {
 	return m.Variables()
 }
 
-// MockEnvValidator is a mock implementation of EnvValidator interface
+// MockEnvValidator is a mock implementation of Validator interface
 type MockEnvValidator struct {
 	rules map[string][]ValidationRule
 	calls map[string]int
@@ -571,32 +571,32 @@ func (m *MockEnvValidator) Validate(key, value string) error {
 	return nil
 }
 
-// Required implements EnvValidator.Required
-func (m *MockEnvValidator) Required(keys ...string) EnvValidator {
+// Required implements Validator.Required
+func (m *MockEnvValidator) Required(keys ...string) Validator {
 	m.calls["Required"]++
 	return m
 }
 
-// NotEmpty implements EnvValidator.NotEmpty
-func (m *MockEnvValidator) NotEmpty(keys ...string) EnvValidator {
+// NotEmpty implements Validator.NotEmpty
+func (m *MockEnvValidator) NotEmpty(keys ...string) Validator {
 	m.calls["NotEmpty"]++
 	return m
 }
 
-// Pattern implements EnvValidator.Pattern
-func (m *MockEnvValidator) Pattern(key, pattern string) EnvValidator {
+// Pattern implements Validator.Pattern
+func (m *MockEnvValidator) Pattern(key, pattern string) Validator {
 	m.calls["Pattern"]++
 	return m
 }
 
-// Range implements EnvValidator.Range
-func (m *MockEnvValidator) Range(key string, min, max interface{}) EnvValidator {
+// Range implements Validator.Range
+func (m *MockEnvValidator) Range(key string, min, max interface{}) Validator {
 	m.calls["Range"]++
 	return m
 }
 
-// OneOf implements EnvValidator.OneOf
-func (m *MockEnvValidator) OneOf(key string, values ...string) EnvValidator {
+// OneOf implements Validator.OneOf
+func (m *MockEnvValidator) OneOf(key string, values ...string) Validator {
 	m.calls["OneOf"]++
 	return m
 }

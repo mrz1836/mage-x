@@ -14,13 +14,13 @@ import (
 
 // DefaultEnvironment implements Environment using os package
 type DefaultEnvironment struct {
-	options EnvOptions
+	options Options
 }
 
 // NewDefaultEnvironment creates a new default environment
 func NewDefaultEnvironment() *DefaultEnvironment {
 	return &DefaultEnvironment{
-		options: EnvOptions{
+		options: Options{
 			CaseSensitive:  runtime.GOOS != "windows",
 			AllowOverwrite: true,
 			AutoTrim:       true,
@@ -30,7 +30,7 @@ func NewDefaultEnvironment() *DefaultEnvironment {
 }
 
 // NewDefaultEnvironmentWithOptions creates a new default environment with options
-func NewDefaultEnvironmentWithOptions(options EnvOptions) *DefaultEnvironment {
+func NewDefaultEnvironmentWithOptions(options Options) *DefaultEnvironment {
 	return &DefaultEnvironment{options: options}
 }
 

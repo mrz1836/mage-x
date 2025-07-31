@@ -310,7 +310,7 @@ func (e *EnvConfigSource) Name() string {
 }
 
 // Load loads configuration data from environment variables
-func (e *EnvConfigSource) Load(dest interface{}) error {
+func (e *EnvConfigSource) Load(_ interface{}) error {
 	// This is a simplified implementation
 	// In a real implementation, this would use reflection to map env vars to struct fields
 	return fmt.Errorf("environment configuration loading not implemented yet")

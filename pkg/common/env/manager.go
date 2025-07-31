@@ -11,23 +11,23 @@ import (
 	"time"
 )
 
-// DefaultEnvManager implements EnvManager
+// DefaultEnvManager implements Manager
 type DefaultEnvManager struct {
 	mu      sync.RWMutex
-	scopes  []EnvScope
+	scopes  []Scope
 	baseEnv Environment
 }
 
 // NewDefaultEnvManager creates a new environment manager
 func NewDefaultEnvManager() *DefaultEnvManager {
 	return &DefaultEnvManager{
-		scopes:  make([]EnvScope, 0),
+		scopes:  make([]Scope, 0),
 		baseEnv: NewDefaultEnvironment(),
 	}
 }
 
 // PushScope creates and pushes a new environment scope
-func (m *DefaultEnvManager) PushScope() EnvScope {
+func (m *DefaultEnvManager) PushScope() Scope {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -51,7 +51,7 @@ func (m *DefaultEnvManager) PopScope() error {
 }
 
 // WithScope executes a function within a new scope
-func (m *DefaultEnvManager) WithScope(fn func(EnvScope) error) error {
+func (m *DefaultEnvManager) WithScope(fn func(Scope) error) error {
 	scope := m.PushScope()
 	defer func() {
 		if err := m.PopScope(); err != nil {
@@ -65,7 +65,7 @@ func (m *DefaultEnvManager) WithScope(fn func(EnvScope) error) error {
 }
 
 // SaveContext saves the current environment state
-func (m *DefaultEnvManager) SaveContext() (EnvContext, error) {
+func (m *DefaultEnvManager) SaveContext() (Context, error) {
 	vars := m.baseEnv.GetAll()
 	return &DefaultEnvContext{
 		timestamp: time.Now(),
@@ -74,7 +74,7 @@ func (m *DefaultEnvManager) SaveContext() (EnvContext, error) {
 }
 
 // RestoreContext restores a saved environment state
-func (m *DefaultEnvManager) RestoreContext(ctx EnvContext) error {
+func (m *DefaultEnvManager) RestoreContext(ctx Context) error {
 	// Clear current environment
 	current := m.baseEnv.GetAll()
 	for key := range current {
@@ -113,15 +113,15 @@ func (m *DefaultEnvManager) Isolate(vars map[string]string, fn func() error) err
 }
 
 // Fork creates a new manager with the same base environment
-func (m *DefaultEnvManager) Fork() EnvManager {
+func (m *DefaultEnvManager) Fork() Manager {
 	return NewDefaultEnvManager()
 }
 
-// DefaultEnvScope implements EnvScope
+// DefaultEnvScope implements Scope
 type DefaultEnvScope struct {
 	Environment
 	mu       sync.RWMutex
-	changes  map[string]EnvChange
+	changes  map[string]Change
 	original map[string]string
 	baseEnv  Environment
 }
@@ -130,7 +130,7 @@ type DefaultEnvScope struct {
 func NewDefaultEnvScope(baseEnv Environment) *DefaultEnvScope {
 	return &DefaultEnvScope{
 		Environment: baseEnv,
-		changes:     make(map[string]EnvChange),
+		changes:     make(map[string]Change),
 		original:    baseEnv.GetAll(),
 		baseEnv:     baseEnv,
 	}
@@ -154,7 +154,7 @@ func (s *DefaultEnvScope) Set(key, value string) error {
 		action = ActionModify
 	}
 
-	s.changes[key] = EnvChange{
+	s.changes[key] = Change{
 		Key:      key,
 		OldValue: oldValue,
 		NewValue: value,
@@ -175,7 +175,7 @@ func (s *DefaultEnvScope) Unset(key string) error {
 		return err
 	}
 
-	s.changes[key] = EnvChange{
+	s.changes[key] = Change{
 		Key:      key,
 		OldValue: oldValue,
 		NewValue: "",
@@ -192,7 +192,7 @@ func (s *DefaultEnvScope) Commit() error {
 
 	// Changes are already applied to the base environment
 	// Clear the changes to mark them as committed
-	s.changes = make(map[string]EnvChange)
+	s.changes = make(map[string]Change)
 	return nil
 }
 
@@ -224,16 +224,16 @@ func (s *DefaultEnvScope) Rollback() error {
 		}
 	}
 
-	s.changes = make(map[string]EnvChange)
+	s.changes = make(map[string]Change)
 	return nil
 }
 
 // Changes returns all changes made in this scope
-func (s *DefaultEnvScope) Changes() map[string]EnvChange {
+func (s *DefaultEnvScope) Changes() map[string]Change {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	result := make(map[string]EnvChange)
+	result := make(map[string]Change)
 	for k, v := range s.changes {
 		result[k] = v
 	}
@@ -248,7 +248,7 @@ func (s *DefaultEnvScope) HasChanges() bool {
 	return len(s.changes) > 0
 }
 
-// DefaultEnvContext implements EnvContext
+// DefaultEnvContext implements Context
 type DefaultEnvContext struct {
 	timestamp time.Time
 	variables map[string]string
@@ -274,21 +274,21 @@ func (c *DefaultEnvContext) Count() int {
 }
 
 // Diff compares this context with another
-func (c *DefaultEnvContext) Diff(other EnvContext) map[string]EnvChange {
+func (c *DefaultEnvContext) Diff(other Context) map[string]Change {
 	otherVars := other.Variables()
-	changes := make(map[string]EnvChange)
+	changes := make(map[string]Change)
 
 	// Check for additions and modifications
 	for key, value := range c.variables {
 		if otherValue, exists := otherVars[key]; !exists {
-			changes[key] = EnvChange{
+			changes[key] = Change{
 				Key:      key,
 				OldValue: "",
 				NewValue: value,
 				Action:   ActionSet,
 			}
 		} else if otherValue != value {
-			changes[key] = EnvChange{
+			changes[key] = Change{
 				Key:      key,
 				OldValue: otherValue,
 				NewValue: value,
@@ -300,7 +300,7 @@ func (c *DefaultEnvContext) Diff(other EnvContext) map[string]EnvChange {
 	// Check for deletions
 	for key, value := range otherVars {
 		if _, exists := c.variables[key]; !exists {
-			changes[key] = EnvChange{
+			changes[key] = Change{
 				Key:      key,
 				OldValue: value,
 				NewValue: "",
@@ -313,7 +313,7 @@ func (c *DefaultEnvContext) Diff(other EnvContext) map[string]EnvChange {
 }
 
 // Merge merges this context with another
-func (c *DefaultEnvContext) Merge(other EnvContext) EnvContext {
+func (c *DefaultEnvContext) Merge(other Context) Context {
 	merged := make(map[string]string)
 
 	// Start with this context
@@ -337,7 +337,7 @@ func (c *DefaultEnvContext) Export() map[string]string {
 	return c.Variables()
 }
 
-// DefaultEnvValidator implements EnvValidator
+// DefaultEnvValidator implements Validator
 type DefaultEnvValidator struct {
 	mu    sync.RWMutex
 	rules map[string][]ValidationRule
@@ -417,7 +417,7 @@ func (v *DefaultEnvValidator) Validate(key, value string) error {
 }
 
 // Required adds required validation for keys
-func (v *DefaultEnvValidator) Required(keys ...string) EnvValidator {
+func (v *DefaultEnvValidator) Required(keys ...string) Validator {
 	for _, key := range keys {
 		if err := v.AddRule(key, &RequiredRule{}); err != nil {
 			// Log error but continue with other keys
@@ -428,7 +428,7 @@ func (v *DefaultEnvValidator) Required(keys ...string) EnvValidator {
 }
 
 // NotEmpty adds not-empty validation for keys
-func (v *DefaultEnvValidator) NotEmpty(keys ...string) EnvValidator {
+func (v *DefaultEnvValidator) NotEmpty(keys ...string) Validator {
 	for _, key := range keys {
 		if err := v.AddRule(key, &NotEmptyRule{}); err != nil {
 			// Log error but continue with other keys
@@ -439,7 +439,7 @@ func (v *DefaultEnvValidator) NotEmpty(keys ...string) EnvValidator {
 }
 
 // Pattern adds pattern validation for a key
-func (v *DefaultEnvValidator) Pattern(key, pattern string) EnvValidator {
+func (v *DefaultEnvValidator) Pattern(key, pattern string) Validator {
 	if err := v.AddRule(key, &PatternRule{Pattern: pattern}); err != nil {
 		// Log error but continue
 		log.Printf("failed to add pattern rule for key %s with pattern %s: %v", key, pattern, err)
@@ -448,7 +448,7 @@ func (v *DefaultEnvValidator) Pattern(key, pattern string) EnvValidator {
 }
 
 // Range adds range validation for a key
-func (v *DefaultEnvValidator) Range(key string, minValue, maxValue interface{}) EnvValidator {
+func (v *DefaultEnvValidator) Range(key string, minValue, maxValue interface{}) Validator {
 	if err := v.AddRule(key, &RangeRule{Min: minValue, Max: maxValue}); err != nil {
 		// Log error but continue
 		log.Printf("failed to add range rule for key %s with range %v-%v: %v", key, minValue, maxValue, err)
@@ -457,7 +457,7 @@ func (v *DefaultEnvValidator) Range(key string, minValue, maxValue interface{}) 
 }
 
 // OneOf adds one-of validation for a key
-func (v *DefaultEnvValidator) OneOf(key string, values ...string) EnvValidator {
+func (v *DefaultEnvValidator) OneOf(key string, values ...string) Validator {
 	if err := v.AddRule(key, &OneOfRule{Values: values}); err != nil {
 		// Log error but continue
 		log.Printf("failed to add one-of rule for key %s with values %v: %v", key, values, err)
@@ -470,6 +470,7 @@ func (v *DefaultEnvValidator) OneOf(key string, values ...string) EnvValidator {
 // RequiredRule validates that a value is present
 type RequiredRule struct{}
 
+// Validate validates that a value is present
 func (r *RequiredRule) Validate(value string) error {
 	if value == "" {
 		return fmt.Errorf("value is required")
@@ -477,6 +478,7 @@ func (r *RequiredRule) Validate(value string) error {
 	return nil
 }
 
+// Description returns the description of the required rule
 func (r *RequiredRule) Description() string {
 	return "required"
 }
@@ -484,6 +486,7 @@ func (r *RequiredRule) Description() string {
 // NotEmptyRule validates that a value is not empty
 type NotEmptyRule struct{}
 
+// Validate validates that a value is not empty
 func (r *NotEmptyRule) Validate(value string) error {
 	if strings.TrimSpace(value) == "" {
 		return fmt.Errorf("value cannot be empty")
@@ -491,6 +494,7 @@ func (r *NotEmptyRule) Validate(value string) error {
 	return nil
 }
 
+// Description returns the description of the not empty rule
 func (r *NotEmptyRule) Description() string {
 	return "not-empty"
 }
@@ -501,6 +505,7 @@ type PatternRule struct {
 	regex   *regexp.Regexp
 }
 
+// Validate validates that a value matches a regex pattern
 func (r *PatternRule) Validate(value string) error {
 	if r.regex == nil {
 		var err error
@@ -517,6 +522,7 @@ func (r *PatternRule) Validate(value string) error {
 	return nil
 }
 
+// Description returns the description of the pattern rule
 func (r *PatternRule) Description() string {
 	return fmt.Sprintf("pattern: %s", r.Pattern)
 }
@@ -527,6 +533,7 @@ type RangeRule struct {
 	Max interface{}
 }
 
+// Validate validates that a numeric value is within range
 func (r *RangeRule) Validate(value string) error {
 	if value == "" {
 		return nil // Allow empty values, use Required rule to enforce non-empty
@@ -557,6 +564,7 @@ func (r *RangeRule) Validate(value string) error {
 	return fmt.Errorf("value is not numeric")
 }
 
+// Description returns the description of the range rule
 func (r *RangeRule) Description() string {
 	return fmt.Sprintf("range: %v-%v", r.Min, r.Max)
 }
@@ -566,6 +574,7 @@ type OneOfRule struct {
 	Values []string
 }
 
+// Validate validates that a value is one of the allowed values
 func (r *OneOfRule) Validate(value string) error {
 	for _, allowed := range r.Values {
 		if value == allowed {
@@ -577,6 +586,7 @@ func (r *OneOfRule) Validate(value string) error {
 	return fmt.Errorf("value must be one of: %v", r.Values)
 }
 
+// Description returns the description of the one-of rule
 func (r *OneOfRule) Description() string {
 	return fmt.Sprintf("one-of: %v", r.Values)
 }

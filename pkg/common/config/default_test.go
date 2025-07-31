@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -25,10 +24,10 @@ func (ts *DefaultConfigTestSuite) SetupTest() {
 // TestNewDefaultConfigLoader tests creating a new default config loader
 func (ts *DefaultConfigTestSuite) TestNewDefaultConfigLoader() {
 	loader := NewDefaultConfigLoader()
-	require.NotNil(ts.T(), loader)
-	require.NotNil(ts.T(), loader.fileOps)
-	require.NotNil(ts.T(), loader.jsonOps)
-	require.NotNil(ts.T(), loader.yamlOps)
+	ts.Require().NotNil(loader)
+	ts.Require().NotNil(loader.fileOps)
+	ts.Require().NotNil(loader.jsonOps)
+	ts.Require().NotNil(loader.yamlOps)
 }
 
 // TestDefaultConfigLoader_LoadFrom tests loading from specific files
@@ -39,13 +38,13 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_LoadFrom() {
 		jsonFile := filepath.Join(ts.tempDir, "config.json")
 		jsonContent := `{"name": "test", "value": 42}`
 		err := os.WriteFile(jsonFile, []byte(jsonContent), 0o600)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		var result map[string]interface{}
 		err = loader.LoadFrom(jsonFile, &result)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test", result["name"])
-		require.Equal(ts.T(), float64(42), result["value"])
+		ts.Require().NoError(err)
+		ts.Require().Equal("test", result["name"])
+		ts.Require().InDelta(float64(42), result["value"], 0.001)
 	})
 
 	ts.Run("load YAML file", func() {
@@ -53,13 +52,13 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_LoadFrom() {
 		yamlContent := `name: test
 value: 42`
 		err := os.WriteFile(yamlFile, []byte(yamlContent), 0o600)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		var result map[string]interface{}
 		err = loader.LoadFrom(yamlFile, &result)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test", result["name"])
-		require.Equal(ts.T(), 42, result["value"])
+		ts.Require().NoError(err)
+		ts.Require().Equal("test", result["name"])
+		ts.Require().Equal(42, result["value"])
 	})
 
 	ts.Run("load YML file", func() {
@@ -67,13 +66,13 @@ value: 42`
 		ymlContent := `name: test
 value: 42`
 		err := os.WriteFile(ymlFile, []byte(ymlContent), 0o600)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		var result map[string]interface{}
 		err = loader.LoadFrom(ymlFile, &result)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test", result["name"])
-		require.Equal(ts.T(), 42, result["value"])
+		ts.Require().NoError(err)
+		ts.Require().Equal("test", result["name"])
+		ts.Require().Equal(42, result["value"])
 	})
 
 	ts.Run("load file with no extension - tries YAML then JSON", func() {
@@ -81,19 +80,19 @@ value: 42`
 		yamlContent := `name: test
 value: 42`
 		err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		var result map[string]interface{}
 		err = loader.LoadFrom(configFile, &result)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test", result["name"])
+		ts.Require().NoError(err)
+		ts.Require().Equal("test", result["name"])
 	})
 
 	ts.Run("file does not exist", func() {
 		var result map[string]interface{}
 		err := loader.LoadFrom("nonexistent.json", &result)
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "does not exist")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "does not exist")
 	})
 }
 
@@ -105,12 +104,12 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Load() {
 		jsonFile := filepath.Join(ts.tempDir, "config.json")
 		jsonContent := `{"name": "first", "value": 1}`
 		err := os.WriteFile(jsonFile, []byte(jsonContent), 0o600)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		jsonFile2 := filepath.Join(ts.tempDir, "config2.json")
 		jsonContent2 := `{"name": "second", "value": 2}`
 		err = os.WriteFile(jsonFile2, []byte(jsonContent2), 0o600)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		paths := []string{
 			filepath.Join(ts.tempDir, "nonexistent.json"),
@@ -120,9 +119,9 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Load() {
 
 		var result map[string]interface{}
 		loadedPath, err := loader.Load(paths, &result)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), jsonFile, loadedPath)
-		require.Equal(ts.T(), "first", result["name"])
+		ts.Require().NoError(err)
+		ts.Require().JSONEq(jsonFile, loadedPath)
+		ts.Require().Equal("first", result["name"])
 	})
 
 	ts.Run("no valid configuration file found", func() {
@@ -133,8 +132,8 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Load() {
 
 		var result map[string]interface{}
 		_, err := loader.Load(paths, &result)
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "no valid configuration file found")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "no valid configuration file found")
 	})
 }
 
@@ -149,56 +148,56 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Save() {
 	ts.Run("save as JSON", func() {
 		jsonFile := filepath.Join(ts.tempDir, "output.json")
 		err := loader.Save(jsonFile, data, "json")
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		// Verify file exists and content is correct
-		require.FileExists(ts.T(), jsonFile)
+		ts.Require().FileExists(jsonFile)
 		// Validate path is within temp directory (security check)
 		cleanPath := filepath.Clean(jsonFile)
-		require.True(ts.T(), strings.HasPrefix(cleanPath, ts.tempDir), "path should be within temp directory")
+		ts.Require().True(strings.HasPrefix(cleanPath, ts.tempDir), "path should be within temp directory")
 		content, err := os.ReadFile(cleanPath)
-		require.NoError(ts.T(), err)
-		require.Contains(ts.T(), string(content), `"name": "test"`)
-		require.Contains(ts.T(), string(content), `"value": 42`)
+		ts.Require().NoError(err)
+		ts.Require().Contains(string(content), `"name": "test"`)
+		ts.Require().Contains(string(content), `"value": 42`)
 	})
 
 	ts.Run("save as YAML", func() {
 		yamlFile := filepath.Join(ts.tempDir, "output.yaml")
 		err := loader.Save(yamlFile, data, "yaml")
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		// Verify file exists
-		require.FileExists(ts.T(), yamlFile)
+		ts.Require().FileExists(yamlFile)
 		// Validate path is within temp directory (security check)
 		cleanPath := filepath.Clean(yamlFile)
-		require.True(ts.T(), strings.HasPrefix(cleanPath, ts.tempDir), "path should be within temp directory")
+		ts.Require().True(strings.HasPrefix(cleanPath, ts.tempDir), "path should be within temp directory")
 		content, err := os.ReadFile(cleanPath)
-		require.NoError(ts.T(), err)
-		require.Contains(ts.T(), string(content), "name: test")
-		require.Contains(ts.T(), string(content), "value: 42")
+		ts.Require().NoError(err)
+		ts.Require().Contains(string(content), "name: test")
+		ts.Require().Contains(string(content), "value: 42")
 	})
 
 	ts.Run("save as YML", func() {
 		ymlFile := filepath.Join(ts.tempDir, "output.yml")
 		err := loader.Save(ymlFile, data, "yml")
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
-		require.FileExists(ts.T(), ymlFile)
+		ts.Require().FileExists(ymlFile)
 	})
 
 	ts.Run("save in nested directory", func() {
 		nestedFile := filepath.Join(ts.tempDir, "nested", "dir", "config.json")
 		err := loader.Save(nestedFile, data, "json")
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
-		require.FileExists(ts.T(), nestedFile)
+		ts.Require().FileExists(nestedFile)
 	})
 
 	ts.Run("unsupported format", func() {
 		xmlFile := filepath.Join(ts.tempDir, "output.xml")
 		err := loader.Save(xmlFile, data, "xml")
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "unsupported format")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "unsupported format")
 	})
 }
 
@@ -209,13 +208,13 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Validate() {
 	ts.Run("valid data", func() {
 		data := map[string]interface{}{"key": "value"}
 		err := loader.Validate(data)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("nil data", func() {
 		err := loader.Validate(nil)
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "configuration data is nil")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "configuration data is nil")
 	})
 }
 
@@ -223,16 +222,16 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Validate() {
 func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_GetSupportedFormats() {
 	loader := NewDefaultConfigLoader()
 	formats := loader.GetSupportedFormats()
-	require.Contains(ts.T(), formats, "yaml")
-	require.Contains(ts.T(), formats, "yml")
-	require.Contains(ts.T(), formats, "json")
-	require.Len(ts.T(), formats, 3)
+	ts.Require().Contains(formats, "yaml")
+	ts.Require().Contains(formats, "yml")
+	ts.Require().Contains(formats, "json")
+	ts.Require().Len(formats, 3)
 }
 
 // TestNewDefaultEnvProvider tests creating a new environment provider
 func (ts *DefaultConfigTestSuite) TestNewDefaultEnvProvider() {
 	provider := NewDefaultEnvProvider()
-	require.NotNil(ts.T(), provider)
+	ts.Require().NotNil(provider)
 }
 
 // TestDefaultEnvProvider_BasicOperations tests basic env operations
@@ -250,18 +249,18 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_BasicOperations() {
 
 	ts.Run("Set and Get", func() {
 		err := provider.Set(testKey, testValue)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		value := provider.Get(testKey)
-		require.Equal(ts.T(), testValue, value)
+		ts.Require().Equal(testValue, value)
 	})
 
 	ts.Run("GetWithDefault - existing", func() {
 		err := provider.Set(testKey, testValue)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		value := provider.GetWithDefault(testKey, "default")
-		require.Equal(ts.T(), testValue, value)
+		ts.Require().Equal(testValue, value)
 	})
 
 	ts.Run("GetWithDefault - missing", func() {
@@ -269,16 +268,16 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_BasicOperations() {
 			ts.T().Logf("Failed to unset %s: %v", testKey, err)
 		}
 		value := provider.GetWithDefault(testKey, "default")
-		require.Equal(ts.T(), "default", value)
+		ts.Require().Equal("default", value)
 	})
 
 	ts.Run("LookupEnv - existing", func() {
 		err := provider.Set(testKey, testValue)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		value, found := provider.LookupEnv(testKey)
-		require.True(ts.T(), found)
-		require.Equal(ts.T(), testValue, value)
+		ts.Require().True(found)
+		ts.Require().Equal(testValue, value)
 	})
 
 	ts.Run("LookupEnv - missing", func() {
@@ -286,19 +285,19 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_BasicOperations() {
 			ts.T().Logf("Failed to unset %s: %v", testKey, err)
 		}
 		value, found := provider.LookupEnv(testKey)
-		require.False(ts.T(), found)
-		require.Empty(ts.T(), value)
+		ts.Require().False(found)
+		ts.Require().Empty(value)
 	})
 
 	ts.Run("Unset", func() {
 		err := provider.Set(testKey, testValue)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		err = provider.Unset(testKey)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		value := provider.Get(testKey)
-		require.Empty(ts.T(), value)
+		ts.Require().Empty(value)
 	})
 }
 
@@ -316,11 +315,11 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetAll() {
 	}()
 
 	err := provider.Set(testKey, testValue)
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 
 	allVars := provider.GetAll()
-	require.Contains(ts.T(), allVars, testKey)
-	require.Equal(ts.T(), testValue, allVars[testKey])
+	ts.Require().Contains(allVars, testKey)
+	ts.Require().Equal(testValue, allVars[testKey])
 }
 
 // TestDefaultEnvProvider_GetBool tests getting boolean environment variables
@@ -369,7 +368,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetBool() {
 			}
 
 			result := provider.GetBool(testKey, tc.defaultValue)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }
@@ -412,7 +411,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetInt() {
 			}
 
 			result := provider.GetInt(testKey, tc.defaultValue)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }
@@ -454,7 +453,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetInt64() {
 			}
 
 			result := provider.GetInt64(testKey, tc.defaultValue)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }
@@ -497,7 +496,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetFloat64() {
 			}
 
 			result := provider.GetFloat64(testKey, tc.defaultValue)
-			require.InDelta(ts.T(), tc.expected, result, 0.00001)
+			ts.Require().InDelta(tc.expected, result, 0.00001)
 		})
 	}
 }
@@ -541,7 +540,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetDuration() {
 			}
 
 			result := provider.GetDuration(testKey, tc.defaultValue)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }
@@ -585,7 +584,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultEnvProvider_GetStringSlice() {
 			}
 
 			result := provider.GetStringSlice(testKey, tc.defaultValue)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }
@@ -595,11 +594,11 @@ func (ts *DefaultConfigTestSuite) TestNewFileConfigSource() {
 	path := filepath.Join(ts.tempDir, "config.json")
 	source := NewFileConfigSource(path, FormatJSON, 100)
 
-	require.NotNil(ts.T(), source)
-	require.Equal(ts.T(), path, source.path)
-	require.Equal(ts.T(), FormatJSON, source.format)
-	require.Equal(ts.T(), 100, source.priority)
-	require.NotNil(ts.T(), source.loader)
+	ts.Require().NotNil(source)
+	ts.Require().Equal(path, source.path)
+	ts.Require().Equal(FormatJSON, source.format)
+	ts.Require().Equal(100, source.priority)
+	ts.Require().NotNil(source.loader)
 }
 
 // TestFileConfigSource_Methods tests file config source methods
@@ -609,39 +608,39 @@ func (ts *DefaultConfigTestSuite) TestFileConfigSource_Methods() {
 
 	ts.Run("Name", func() {
 		name := source.Name()
-		require.Equal(ts.T(), "file:"+path, name)
+		ts.Require().Equal("file:"+path, name)
 	})
 
 	ts.Run("Priority", func() {
 		priority := source.Priority()
-		require.Equal(ts.T(), 100, priority)
+		ts.Require().Equal(100, priority)
 	})
 
 	ts.Run("IsAvailable - file does not exist", func() {
 		available := source.IsAvailable()
-		require.False(ts.T(), available)
+		ts.Require().False(available)
 	})
 
 	ts.Run("IsAvailable - file exists", func() {
 		// Create the file
 		err := os.WriteFile(path, []byte(`{"test": true}`), 0o600)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		available := source.IsAvailable()
-		require.True(ts.T(), available)
+		ts.Require().True(available)
 	})
 
 	ts.Run("Load - successful", func() {
 		// Create a valid JSON file
 		jsonContent := `{"name": "test", "value": 42}`
 		err := os.WriteFile(path, []byte(jsonContent), 0o600)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		var result map[string]interface{}
 		err = source.Load(&result)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test", result["name"])
-		require.Equal(ts.T(), float64(42), result["value"])
+		ts.Require().NoError(err)
+		ts.Require().Equal("test", result["name"])
+		ts.Require().InDelta(float64(42), result["value"], 0.001)
 	})
 }
 
@@ -649,10 +648,10 @@ func (ts *DefaultConfigTestSuite) TestFileConfigSource_Methods() {
 func (ts *DefaultConfigTestSuite) TestNewEnvConfigSource() {
 	source := NewEnvConfigSource("APP_", 200)
 
-	require.NotNil(ts.T(), source)
-	require.Equal(ts.T(), "APP_", source.prefix)
-	require.Equal(ts.T(), 200, source.priority)
-	require.NotNil(ts.T(), source.envOps)
+	ts.Require().NotNil(source)
+	ts.Require().Equal("APP_", source.prefix)
+	ts.Require().Equal(200, source.priority)
+	ts.Require().NotNil(source.envOps)
 }
 
 // TestEnvConfigSource_Methods tests environment config source methods
@@ -661,24 +660,24 @@ func (ts *DefaultConfigTestSuite) TestEnvConfigSource_Methods() {
 
 	ts.Run("Name", func() {
 		name := source.Name()
-		require.Equal(ts.T(), "env:APP_", name)
+		ts.Require().Equal("env:APP_", name)
 	})
 
 	ts.Run("Priority", func() {
 		priority := source.Priority()
-		require.Equal(ts.T(), 200, priority)
+		ts.Require().Equal(200, priority)
 	})
 
 	ts.Run("IsAvailable", func() {
 		available := source.IsAvailable()
-		require.True(ts.T(), available)
+		ts.Require().True(available)
 	})
 
 	ts.Run("Load - not implemented", func() {
 		var result map[string]interface{}
 		err := source.Load(&result)
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "not implemented yet")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "not implemented yet")
 	})
 }
 

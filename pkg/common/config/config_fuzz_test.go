@@ -402,7 +402,7 @@ func FuzzPathExpansion(f *testing.F) {
 
 		// If path was empty, expanded should also be empty
 		if path == "" {
-			assert.Equal(t, "", expanded, "Empty path should expand to empty")
+			assert.Empty(t, expanded, "Empty path should expand to empty")
 		}
 
 		// Check that dangerous patterns don't cause execution (they should be left as-is)
@@ -510,7 +510,7 @@ func FuzzConfigManager(f *testing.F) {
 }
 
 // Helper function to write file
-func writeFile(path string, data []byte) error {
+func writeFile(_ string, _ []byte) error {
 	// This is a simple implementation for testing
 	// In real code, use the fileops package
 	return nil // Stubbed for testing

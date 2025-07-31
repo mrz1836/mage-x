@@ -62,48 +62,48 @@ type PathResolver interface {
 	EnsureDirWithMode(path string, mode uint32) error
 }
 
-// EnvManager manages environment variable scopes and contexts
-type EnvManager interface {
+// Manager manages environment variable scopes and contexts
+type Manager interface {
 	// Scope management
-	PushScope() EnvScope
+	PushScope() Scope
 	PopScope() error
-	WithScope(fn func(EnvScope) error) error
+	WithScope(fn func(Scope) error) error
 
 	// Context operations
-	SaveContext() (EnvContext, error)
-	RestoreContext(ctx EnvContext) error
+	SaveContext() (Context, error)
+	RestoreContext(ctx Context) error
 
 	// Isolation
 	Isolate(vars map[string]string, fn func() error) error
-	Fork() EnvManager
+	Fork() Manager
 }
 
-// EnvScope represents a scoped environment context
-type EnvScope interface {
+// Scope represents a scoped environment context
+type Scope interface {
 	Environment
 
 	// Scope-specific operations
 	Commit() error
 	Rollback() error
-	Changes() map[string]EnvChange
+	Changes() map[string]Change
 	HasChanges() bool
 }
 
-// EnvContext represents a saved environment state
-type EnvContext interface {
+// Context represents a saved environment state
+type Context interface {
 	// Metadata
 	Timestamp() time.Time
 	Variables() map[string]string
 	Count() int
 
 	// Operations
-	Diff(other EnvContext) map[string]EnvChange
-	Merge(other EnvContext) EnvContext
+	Diff(other Context) map[string]Change
+	Merge(other Context) Context
 	Export() map[string]string
 }
 
-// EnvValidator provides environment variable validation
-type EnvValidator interface {
+// Validator provides environment variable validation
+type Validator interface {
 	// Validation rules
 	AddRule(key string, rule ValidationRule) error
 	RemoveRule(key string) error
@@ -111,17 +111,17 @@ type EnvValidator interface {
 	Validate(key, value string) error
 
 	// Built-in validators
-	Required(keys ...string) EnvValidator
-	NotEmpty(keys ...string) EnvValidator
-	Pattern(key, pattern string) EnvValidator
-	Range(key string, minValue, maxValue interface{}) EnvValidator
-	OneOf(key string, values ...string) EnvValidator
+	Required(keys ...string) Validator
+	NotEmpty(keys ...string) Validator
+	Pattern(key, pattern string) Validator
+	Range(key string, minValue, maxValue interface{}) Validator
+	OneOf(key string, values ...string) Validator
 }
 
 // Supporting types
 
-// EnvChange represents a change to an environment variable
-type EnvChange struct {
+// Change represents a change to an environment variable
+type Change struct {
 	Key      string
 	OldValue string
 	NewValue string
@@ -132,8 +132,11 @@ type EnvChange struct {
 type ChangeAction int
 
 const (
+	// ActionSet represents setting a new environment variable
 	ActionSet ChangeAction = iota
+	// ActionUnset represents unsetting an environment variable
 	ActionUnset
+	// ActionModify represents modifying an existing environment variable
 	ActionModify
 )
 
@@ -166,8 +169,8 @@ type PathOptions struct {
 	ResolveEnvVars bool
 }
 
-// EnvOptions contains options for environment operations
-type EnvOptions struct {
+// Options contains options for environment operations
+type Options struct {
 	// CaseSensitive determines if variable names are case sensitive
 	CaseSensitive bool
 

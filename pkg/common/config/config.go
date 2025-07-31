@@ -125,7 +125,7 @@ func (c *Config) detectFormat(path string) ConfigFormat {
 }
 
 // applyEnvOverrides applies environment variable overrides to configuration
-func (c *Config) applyEnvOverrides(dest interface{}, envPrefix string) error {
+func (c *Config) applyEnvOverrides(_ interface{}, _ string) error {
 	// This is a simplified implementation
 	// In a real implementation, this would use reflection to map env vars to struct fields
 	// For now, we'll return nil (no error)
@@ -150,7 +150,7 @@ func GetCommonConfigPaths(appName string) []string {
 	}
 }
 
-// Package-level convenience instance
+// GetDefault returns a new default configuration instance
 func GetDefault() *Config {
 	return New()
 }

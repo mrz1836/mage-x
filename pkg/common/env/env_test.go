@@ -93,9 +93,9 @@ func TestDefaultEnvironment_TypedGetters(t *testing.T) {
 
 	// Test GetStringSlice
 	require.NoError(t, env.Set("TEST_SLICE", "one,two,three"))
-	expected_slice := []string{"one", "two", "three"}
-	if got := env.GetStringSlice("TEST_SLICE", nil); !equalStringSlices(got, expected_slice) {
-		t.Errorf("GetStringSlice() = %v, want %v", got, expected_slice)
+	expectedSlice := []string{"one", "two", "three"}
+	if got := env.GetStringSlice("TEST_SLICE", nil); !equalStringSlices(got, expectedSlice) {
+		t.Errorf("GetStringSlice() = %v, want %v", got, expectedSlice)
 	}
 }
 
@@ -453,7 +453,7 @@ func TestEnvContext_Operations(t *testing.T) {
 
 func TestEnvOptions(t *testing.T) {
 	// Test with auto-trim enabled
-	options := EnvOptions{
+	options := Options{
 		AutoTrim:       true,
 		AllowOverwrite: true,
 	}
@@ -541,11 +541,8 @@ func BenchmarkEnvManager_WithScope(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := manager.WithScope(func(scope EnvScope) error {
-			if err := scope.Set("BENCH_SCOPE_VAR", "value"); err != nil {
-				return err
-			}
-			return nil
+		if err := manager.WithScope(func(scope Scope) error {
+			return scope.Set("BENCH_SCOPE_VAR", "value")
 		}); err != nil {
 			b.Fatalf("WithScope failed: %v", err)
 		}
