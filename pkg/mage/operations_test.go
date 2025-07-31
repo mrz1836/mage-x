@@ -11,7 +11,6 @@ import (
 type MockRunner struct {
 	commands    [][]string
 	shouldError bool
-	errorMsg    string
 }
 
 func (m *MockRunner) RunCmd(cmd string, args ...string) error {

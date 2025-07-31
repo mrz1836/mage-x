@@ -297,12 +297,6 @@ func RetryableTransformer(retryablePatterns []string) func(error) error {
 	}
 }
 
-// ConditionalTransformer applies transformations based on conditions
-type ConditionalTransformer struct {
-	condition   func(error) bool
-	transformer func(error) error
-}
-
 // NewConditionalTransformer creates a transformer that only applies when condition is met
 func NewConditionalTransformer(condition func(error) bool, transformer func(error) error) func(error) error {
 	return func(err error) error {
@@ -311,11 +305,6 @@ func NewConditionalTransformer(condition func(error) bool, transformer func(erro
 		}
 		return transformer(err)
 	}
-}
-
-// ChainTransformer combines multiple transformers into a single chain
-type ChainTransformer struct {
-	transformers []func(error) error
 }
 
 // NewChainTransformer creates a new chain transformer

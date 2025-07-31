@@ -12,10 +12,9 @@ import (
 
 // DefaultEnvManager implements EnvManager
 type DefaultEnvManager struct {
-	mu        sync.RWMutex
-	scopes    []EnvScope
-	baseEnv   Environment
-	validator EnvValidator
+	mu      sync.RWMutex
+	scopes  []EnvScope
+	baseEnv Environment
 }
 
 // NewDefaultEnvManager creates a new environment manager

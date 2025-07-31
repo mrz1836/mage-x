@@ -110,18 +110,6 @@ func testUpdateNamespace(t *testing.T) {
 	}
 }
 
-func testRecipesNamespace(t *testing.T) {
-	ns := NewRecipesNamespace()
-	if ns == nil {
-		t.Fatal("NewRecipesNamespace returned nil")
-	}
-
-	// Test that it implements the interface
-	if err := ns.Default(); err != nil {
-		t.Logf("Recipes.Default() returned error: %v (expected for test environment)", err)
-	}
-}
-
 func testMetricsNamespace(t *testing.T) {
 	ns := NewMetricsNamespace()
 	if ns == nil {

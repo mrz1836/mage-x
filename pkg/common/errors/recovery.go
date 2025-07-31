@@ -2,7 +2,6 @@ package errors
 
 import (
 	"context"
-	"math"
 	"math/rand"
 	"time"
 )
@@ -229,19 +228,4 @@ func RetryWithExponentialBackoff(fn func() error, maxRetries int) error {
 // RetryWithLinearBackoff is a convenience function for linear backoff retry
 func RetryWithLinearBackoff(fn func() error, delay time.Duration, maxRetries int) error {
 	return DefaultRecovery.RecoverWithBackoff(fn, LinearBackoff(delay, delay, maxRetries))
-}
-
-// calculateBackoffDelay calculates the delay for a given attempt
-func calculateBackoffDelay(attempt int, config BackoffConfig) time.Duration {
-	if attempt == 0 {
-		return config.InitialDelay
-	}
-
-	delay := float64(config.InitialDelay) * math.Pow(config.Multiplier, float64(attempt))
-
-	if time.Duration(delay) > config.MaxDelay {
-		return config.MaxDelay
-	}
-
-	return time.Duration(delay)
 }
