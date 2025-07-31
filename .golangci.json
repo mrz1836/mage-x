@@ -61,6 +61,7 @@
 			"goconst",
 			"gocritic",
 			"gocyclo",
+			"godox",
 			"gomoddirectives",
 			"goprintffuncname",
 			"gosec",
@@ -92,7 +93,6 @@
 			"whitespace"
 		],
 		"disable": [
-			"godox",
 			"godot",
 			"exhaustive",
 			"gocognit",
@@ -100,9 +100,7 @@
 			"goconst",
 			"lll",
 			"nestif",
-			"revive",
-			"gocritic",
-			"testifylint"
+			"gocritic"
 		],
 		"settings": {
 			"depguard": {
