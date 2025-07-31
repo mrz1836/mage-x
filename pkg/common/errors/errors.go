@@ -123,7 +123,7 @@ func NewBuildError(message string, cause error) MageError {
 }
 
 // NewConfigError creates a new configuration error
-func NewConfigError(message string, configFile string) MageError {
+func NewConfigError(message, configFile string) MageError {
 	return NewBuilder().
 		WithCode(ErrConfigInvalid).
 		WithMessage(message).
@@ -133,7 +133,7 @@ func NewConfigError(message string, configFile string) MageError {
 }
 
 // NewFileError creates a new file operation error
-func NewFileError(code ErrorCode, message string, path string) MageError {
+func NewFileError(code ErrorCode, message, path string) MageError {
 	return NewBuilder().
 		WithCode(code).
 		WithMessage(message).
@@ -210,9 +210,9 @@ func IsCritical(err error) bool {
 // Error aggregation helpers
 
 // Combine combines multiple errors into an error chain
-func Combine(errors ...error) error {
+func Combine(errs ...error) error {
 	chain := NewChain()
-	for _, err := range errors {
+	for _, err := range errs {
 		if err != nil {
 			chain = chain.Add(err)
 		}
@@ -228,8 +228,8 @@ func Combine(errors ...error) error {
 }
 
 // FirstError returns the first non-nil error
-func FirstError(errors ...error) error {
-	for _, err := range errors {
+func FirstError(errs ...error) error {
+	for _, err := range errs {
 		if err != nil {
 			return err
 		}
@@ -268,20 +268,30 @@ func Recover() error {
 	return nil
 }
 
-// RecoverTo recovers from panics and stores in the provided error pointer
-func RecoverTo(errPtr *error) {
+// RecoverTo recovers from panics and returns an error
+func RecoverTo() error {
 	if r := recover(); r != nil {
 		if err, ok := r.(error); ok {
-			*errPtr = Wrap(err, "panic recovered")
-		} else {
-			*errPtr = Newf("panic recovered: %v", r)
+			return Wrap(err, "panic recovered")
 		}
+		return Newf("panic recovered: %v", r)
 	}
+	return nil
 }
 
 // SafeExecute executes a function and recovers from panics
 func SafeExecute(fn func() error) (err error) {
-	defer RecoverTo(&err)
+	defer func() {
+		if r := recover(); r != nil {
+			if err == nil {
+				if recoveredErr, ok := r.(error); ok {
+					err = Wrap(recoveredErr, "panic recovered")
+				} else {
+					err = Newf("panic recovered: %v", r)
+				}
+			}
+		}
+	}()
 	return fn()
 }
 

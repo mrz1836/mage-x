@@ -299,7 +299,7 @@ func createRelease(config *MultiChannelReleaseConfig) error {
 // generateVersion generates a version number based on channel
 func generateVersion(channel ReleaseChannel) string {
 	baseVersion := getVersion()
-	if baseVersion == "dev" {
+	if baseVersion == versionDev {
 		baseVersion = "0.1.0"
 	}
 

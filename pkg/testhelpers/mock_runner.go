@@ -196,7 +196,7 @@ func (m *MockRunner) SetError(cmd string, args []string, err error) {
 }
 
 // SetOutputForCommand sets output for any invocation of a command
-func (m *MockRunner) SetOutputForCommand(cmd string, output string) {
+func (m *MockRunner) SetOutputForCommand(cmd, output string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

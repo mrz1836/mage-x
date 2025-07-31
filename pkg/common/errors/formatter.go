@@ -130,21 +130,7 @@ func (f *DefaultErrorFormatter) formatMageError(err MageError, opts FormatOption
 	// Context
 	if opts.IncludeContext {
 		ctx := err.Context()
-		if ctx.Operation != "" {
-			sb.WriteString(fmt.Sprintf("\n%s  Operation: %s", indent, ctx.Operation))
-		}
-		if ctx.Resource != "" {
-			sb.WriteString(fmt.Sprintf("\n%s  Resource: %s", indent, ctx.Resource))
-		}
-		if ctx.User != "" {
-			sb.WriteString(fmt.Sprintf("\n%s  User: %s", indent, ctx.User))
-		}
-		if ctx.RequestID != "" {
-			sb.WriteString(fmt.Sprintf("\n%s  RequestID: %s", indent, ctx.RequestID))
-		}
-		if ctx.Environment != "" {
-			sb.WriteString(fmt.Sprintf("\n%s  Environment: %s", indent, ctx.Environment))
-		}
+		f.formatContext(&sb, &ctx, indent)
 	}
 
 	// Fields
@@ -194,6 +180,25 @@ func (f *DefaultErrorFormatter) formatGenericError(err error, opts FormatOptions
 	}
 
 	return fmt.Sprintf("%s%v", indent, err)
+}
+
+// formatContext formats context information with guard clauses to reduce nesting
+func (f *DefaultErrorFormatter) formatContext(sb *strings.Builder, ctx *ErrorContext, indent string) {
+	if ctx.Operation != "" {
+		fmt.Fprintf(sb, "\n%s  Operation: %s", indent, ctx.Operation)
+	}
+	if ctx.Resource != "" {
+		fmt.Fprintf(sb, "\n%s  Resource: %s", indent, ctx.Resource)
+	}
+	if ctx.User != "" {
+		fmt.Fprintf(sb, "\n%s  User: %s", indent, ctx.User)
+	}
+	if ctx.RequestID != "" {
+		fmt.Fprintf(sb, "\n%s  RequestID: %s", indent, ctx.RequestID)
+	}
+	if ctx.Environment != "" {
+		fmt.Fprintf(sb, "\n%s  Environment: %s", indent, ctx.Environment)
+	}
 }
 
 // formatFields formats context fields

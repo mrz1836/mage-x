@@ -106,12 +106,14 @@ func (e *DefaultMageError) WithSeverity(severity Severity) MageError {
 }
 
 // WithContext sets the error context
-func (e *DefaultMageError) WithContext(ctx ErrorContext) MageError {
+func (e *DefaultMageError) WithContext(ctx *ErrorContext) MageError {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	newErr := e.clone()
-	newErr.context = ctx
+	if ctx != nil {
+		newErr.context = *ctx
+	}
 	if newErr.context.Fields == nil {
 		newErr.context.Fields = make(map[string]interface{})
 	}

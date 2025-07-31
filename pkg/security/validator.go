@@ -12,13 +12,13 @@ import (
 
 var (
 	// Version regex for semantic versioning
-	versionRegex = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[a-zA-Z0-9\-\.]+)?(\+[a-zA-Z0-9\-\.]+)?$`)
+	versionRegex = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[a-zA-Z0-9\-.]+)?(\+[a-zA-Z0-9\-.]+)?$`)
 
 	// Git ref regex (branch names, tags)
-	gitRefRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_\.\/]+$`)
+	gitRefRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_./]+$`)
 
 	// Safe filename regex
-	safeFilenameRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_\.]+$`)
+	safeFilenameRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_.]+$`)
 )
 
 // ValidateVersion validates a semantic version string

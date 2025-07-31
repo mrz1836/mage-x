@@ -346,6 +346,8 @@ func createProjectStructure(config *InitProjectConfig) error {
 		dirs = append(dirs, "examples")
 	case CLIProject, ToolProject:
 		dirs = append(dirs, "completions")
+	case GenericProject:
+		// No additional directories for generic projects
 	}
 
 	// Create directories
@@ -438,7 +440,7 @@ func createMainFile(config *InitProjectConfig) error {
 		content = getMainWebAPITemplate(config)
 	case MicroserviceProject:
 		content = getMainMicroserviceTemplate(config)
-	default:
+	case LibraryProject, GenericProject:
 		content = getMainGenericTemplate(config)
 	}
 

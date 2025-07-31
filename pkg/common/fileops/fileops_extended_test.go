@@ -204,44 +204,44 @@ func TestFileOps_Extended(t *testing.T) {
 
 	t.Run("LoadConfig", func(t *testing.T) {
 		// Create test config files
-		yamlFile := filepath.Join(tmpDir, "config.yaml")
-		jsonFile := filepath.Join(tmpDir, "config.json")
-		unknownFile := filepath.Join(tmpDir, "config.conf")
+		configYAML := filepath.Join(tmpDir, "config.yaml")
+		configJSON := filepath.Join(tmpDir, "config.json")
+		configUnknown := filepath.Join(tmpDir, "config.conf")
 
 		config := map[string]string{"key": "yaml-value"}
-		err := ops.YAML.WriteYAML(yamlFile, config)
+		err := ops.YAML.WriteYAML(configYAML, config)
 		require.NoError(t, err)
 
 		config = map[string]string{"key": "json-value"}
-		err = ops.JSON.WriteJSON(jsonFile, config)
+		err = ops.JSON.WriteJSON(configJSON, config)
 		require.NoError(t, err)
 
 		// Write YAML content to unknown extension file
 		unknownConfig := map[string]string{"key": "unknown-value"}
 		yamlData, err := yaml.Marshal(unknownConfig)
 		require.NoError(t, err)
-		err = ops.File.WriteFile(unknownFile, yamlData, 0o644)
+		err = ops.File.WriteFile(configUnknown, yamlData, 0o644)
 		require.NoError(t, err)
 
 		// Test loading YAML
 		var loaded map[string]string
-		path, err := ops.LoadConfig([]string{yamlFile}, &loaded)
+		path, err := ops.LoadConfig([]string{configYAML}, &loaded)
 		require.NoError(t, err)
-		assert.YAMLEq(t, yamlFile, path)
+		assert.Equal(t, configYAML, path) //nolint:testifylint // path comparison, not content comparison
 		assert.Equal(t, "yaml-value", loaded["key"])
 
 		// Test loading JSON
 		loaded = map[string]string{}
-		path, err = ops.LoadConfig([]string{jsonFile}, &loaded)
+		path, err = ops.LoadConfig([]string{configJSON}, &loaded)
 		require.NoError(t, err)
-		assert.JSONEq(t, jsonFile, path)
+		assert.Equal(t, configJSON, path) //nolint:testifylint // path comparison, not content comparison
 		assert.Equal(t, "json-value", loaded["key"])
 
 		// Test loading unknown extension (tries YAML first)
 		loaded = map[string]string{}
-		path, err = ops.LoadConfig([]string{unknownFile}, &loaded)
+		path, err = ops.LoadConfig([]string{configUnknown}, &loaded)
 		require.NoError(t, err)
-		assert.Equal(t, unknownFile, path)
+		assert.Equal(t, configUnknown, path)
 		assert.Equal(t, "unknown-value", loaded["key"])
 
 		// Test non-existent files
@@ -302,8 +302,8 @@ func TestFileOps_Extended(t *testing.T) {
 		// Create multiple backup files
 		for i := 0; i < 5; i++ {
 			filename := fmt.Sprintf("backup-%d.bak", i)
-			filepath := filepath.Join(tmpDir, filename)
-			err := ops.File.WriteFile(filepath, []byte("backup"), 0o644)
+			filePath := filepath.Join(tmpDir, filename)
+			err := ops.File.WriteFile(filePath, []byte("backup"), 0o644)
 			require.NoError(t, err)
 		}
 

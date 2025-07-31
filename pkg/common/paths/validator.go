@@ -543,7 +543,7 @@ func (r *ExtensionRule) Validate(path string) error {
 		if !strings.HasPrefix(allowedExt, ".") {
 			allowedExt = "." + allowedExt
 		}
-		if strings.ToLower(allowedExt) == ext {
+		if strings.EqualFold(allowedExt, ext) {
 			return nil
 		}
 	}

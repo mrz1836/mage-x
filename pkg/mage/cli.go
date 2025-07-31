@@ -69,7 +69,7 @@ func (CLI) Bulk() error {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			results[index] = executeBulkOperation(repository, operation)
+			results[index] = executeBulkOperation(&repository, operation)
 		}(i, repo)
 	}
 
@@ -514,7 +514,7 @@ func loadRepositoryConfig() (RepositoryConfig, error) {
 			},
 		}
 
-		if err := saveRepositoryConfig(defaultConfig, configFile); err != nil {
+		if err := saveRepositoryConfig(&defaultConfig, configFile); err != nil {
 			return RepositoryConfig{}, err
 		}
 
@@ -530,9 +530,9 @@ func loadRepositoryConfig() (RepositoryConfig, error) {
 	return config, nil
 }
 
-func saveRepositoryConfig(config RepositoryConfig, filename string) error {
+func saveRepositoryConfig(config *RepositoryConfig, filename string) error {
 	fileOps := fileops.New()
-	return fileOps.SaveConfig(filename, config, "json")
+	return fileOps.SaveConfig(filename, *config, "json")
 }
 
 func filterRepositories(repositories []Repository, targets []string) []Repository {
@@ -562,7 +562,7 @@ func getMaxConcurrency() int {
 	return 5
 }
 
-func executeBulkOperation(repo Repository, operation string) BulkResult {
+func executeBulkOperation(repo *Repository, operation string) BulkResult {
 	startTime := time.Now()
 
 	result := BulkResult{
@@ -593,27 +593,27 @@ func executeBulkOperation(repo Repository, operation string) BulkResult {
 	return result
 }
 
-func executeStatusOperation(_ Repository) (string, string) {
+func executeStatusOperation(_ *Repository) (string, string) {
 	// Implementation would check repository status
 	return "Repository is healthy", ""
 }
 
-func executeBuildOperation(_ Repository) (string, string) {
+func executeBuildOperation(_ *Repository) (string, string) {
 	// Implementation would build the repository
 	return "Build completed successfully", ""
 }
 
-func executeTestOperation(_ Repository) (string, string) {
+func executeTestOperation(_ *Repository) (string, string) {
 	// Implementation would run tests
 	return "All tests passed", ""
 }
 
-func executeLintOperation(_ Repository) (string, string) {
+func executeLintOperation(_ *Repository) (string, string) {
 	// Implementation would run linting
 	return "No linting issues found", ""
 }
 
-func executeUpdateOperation(_ Repository) (string, string) {
+func executeUpdateOperation(_ *Repository) (string, string) {
 	// Implementation would update dependencies
 	return "Dependencies updated", ""
 }

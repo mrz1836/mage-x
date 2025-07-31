@@ -34,7 +34,7 @@ func (c *RealDefaultChainError) Add(err error) ErrorChain {
 }
 
 // AddWithContext adds an error with context to the chain
-func (c *RealDefaultChainError) AddWithContext(err error, ctx ErrorContext) ErrorChain {
+func (c *RealDefaultChainError) AddWithContext(err error, ctx *ErrorContext) ErrorChain {
 	if err == nil {
 		return c
 	}
@@ -196,7 +196,7 @@ func (c *DefaultChainError) Add(err error) ErrorChain {
 }
 
 // AddWithContext adds an error with context to the chain
-func (c *DefaultChainError) AddWithContext(err error, ctx ErrorContext) ErrorChain {
+func (c *DefaultChainError) AddWithContext(err error, ctx *ErrorContext) ErrorChain {
 	var chain ErrorChain = NewErrorChain()
 	for _, e := range c.errors {
 		chain = chain.Add(e)

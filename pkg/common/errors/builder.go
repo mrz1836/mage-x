@@ -47,8 +47,10 @@ func (b *RealDefaultErrorBuilder) WithSeverity(severity Severity) ErrorBuilder {
 }
 
 // WithContext sets the error context
-func (b *RealDefaultErrorBuilder) WithContext(ctx ErrorContext) ErrorBuilder {
-	b.err.context = ctx
+func (b *RealDefaultErrorBuilder) WithContext(ctx *ErrorContext) ErrorBuilder {
+	if ctx != nil {
+		b.err.context = *ctx
+	}
 	if b.err.context.Fields == nil {
 		b.err.context.Fields = make(map[string]interface{})
 	}
@@ -141,7 +143,7 @@ func (b *DefaultErrorBuilder) WithSeverity(severity Severity) ErrorBuilder {
 }
 
 // WithContext adds context information to the error builder
-func (b *DefaultErrorBuilder) WithContext(ctx ErrorContext) ErrorBuilder {
+func (b *DefaultErrorBuilder) WithContext(ctx *ErrorContext) ErrorBuilder {
 	return NewErrorBuilder().WithContext(ctx)
 }
 

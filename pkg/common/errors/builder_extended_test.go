@@ -21,7 +21,7 @@ func TestRealDefaultErrorBuilder_WithContext(t *testing.T) {
 		Version:     "1.0.0",
 	}
 
-	builder.WithContext(ctx)
+	builder.WithContext(&ctx)
 	err := builder.Build()
 
 	mageErr, ok := err.(*DefaultMageError)
@@ -73,7 +73,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 			Operation: "test-op",
 			Resource:  "test-resource",
 		}
-		b := builder.WithContext(ctx)
+		b := builder.WithContext(&ctx)
 		assert.NotNil(t, b)
 
 		err := b.Build()

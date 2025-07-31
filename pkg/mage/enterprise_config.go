@@ -17,6 +17,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	responseYes = "yes"
+)
+
 // EnterpriseConfigNamespace namespace for enterprise configuration management
 type EnterpriseConfigNamespace mg.Namespace
 
@@ -34,7 +38,7 @@ func (EnterpriseConfigNamespace) Init() error {
 	config := NewEnterpriseConfiguration()
 
 	// Run interactive configuration wizard
-	if utils.GetEnv("INTERACTIVE", "true") == "true" {
+	if utils.GetEnv("INTERACTIVE", approvalTrue) == approvalTrue {
 		runEnterpriseConfigWizard(config)
 	}
 
@@ -1025,7 +1029,7 @@ func runEnterpriseConfigWizard(config *EnterpriseConfiguration) {
 
 	fmt.Print("Enable MFA (y/n) [n]: ")
 	if scanner.Scan() {
-		if mfa := strings.TrimSpace(scanner.Text()); mfa == "y" || mfa == "yes" {
+		if mfa := strings.TrimSpace(scanner.Text()); mfa == "y" || mfa == responseYes {
 			config.Security.Authentication.MFA.Enabled = true
 		}
 	}
@@ -1035,7 +1039,7 @@ func runEnterpriseConfigWizard(config *EnterpriseConfiguration) {
 
 	fmt.Print("Enable Slack integration (y/n) [n]: ")
 	if scanner.Scan() {
-		if slack := strings.TrimSpace(scanner.Text()); slack == "y" || slack == "yes" {
+		if slack := strings.TrimSpace(scanner.Text()); slack == "y" || slack == responseYes {
 			config.Integrations.Providers["slack"] = IntegrationProvider{
 				Type:        "communication",
 				Enabled:     true,
@@ -1048,7 +1052,7 @@ func runEnterpriseConfigWizard(config *EnterpriseConfiguration) {
 
 	fmt.Print("Enable GitHub integration (y/n) [n]: ")
 	if scanner.Scan() {
-		if github := strings.TrimSpace(scanner.Text()); github == "y" || github == "yes" {
+		if github := strings.TrimSpace(scanner.Text()); github == "y" || github == responseYes {
 			config.Integrations.Providers["github"] = IntegrationProvider{
 				Type:        "source_control",
 				Enabled:     true,
@@ -1654,7 +1658,7 @@ func updateSecuritySection(config *EnterpriseConfiguration) error {
 	fmt.Printf("Enable MFA [%t]: ", config.Security.Authentication.MFA.Enabled)
 	if scanner.Scan() {
 		if mfa := strings.TrimSpace(scanner.Text()); mfa != "" {
-			config.Security.Authentication.MFA.Enabled = mfa == "true" || mfa == "y" || mfa == "yes"
+			config.Security.Authentication.MFA.Enabled = mfa == approvalTrue || mfa == "y" || mfa == responseYes
 		}
 	}
 

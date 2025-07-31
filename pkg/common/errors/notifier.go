@@ -89,11 +89,11 @@ func (n *DefaultErrorNotifier) NotifyWithContext(ctx context.Context, err error)
 	}
 
 	// Send to all enabled channels
-	var errors []error
+	var errs []error
 	for _, channel := range n.channels {
 		if channel.IsEnabled() {
-			if err := channel.Send(ctx, notification); err != nil {
-				errors = append(errors, fmt.Errorf("failed to send notification via %s: %w", channel.Name(), err))
+			if err := channel.Send(ctx, &notification); err != nil {
+				errs = append(errs, fmt.Errorf("failed to send notification via %s: %w", channel.Name(), err))
 			}
 		}
 	}
@@ -101,8 +101,8 @@ func (n *DefaultErrorNotifier) NotifyWithContext(ctx context.Context, err error)
 	// Update rate limiting counters
 	n.updateRateLimit(errorKey)
 
-	if len(errors) > 0 {
-		return fmt.Errorf("notification errors: %v", errors)
+	if len(errs) > 0 {
+		return fmt.Errorf("notification errors: %v", errs)
 	}
 
 	return nil
@@ -177,19 +177,20 @@ func (n *DefaultErrorNotifier) isRateLimited(errorKey string) bool {
 	now := time.Now()
 
 	// Check if we're within the rate limit window
-	if lastTime, exists := n.lastNotified[errorKey]; exists {
-		if now.Sub(lastTime) < n.rateLimit {
-			// Check if we've exceeded the count limit
-			if count, countExists := n.notifyCount[errorKey]; countExists && count >= n.rateLimitCount {
-				return true
-			}
-		} else {
-			// Reset count for new window
-			n.notifyCount[errorKey] = 0
-		}
+	lastTime, exists := n.lastNotified[errorKey]
+	if !exists {
+		return false
 	}
 
-	return false
+	if now.Sub(lastTime) >= n.rateLimit {
+		// Reset count for new window
+		n.notifyCount[errorKey] = 0
+		return false
+	}
+
+	// Check if we've exceeded the count limit within the time window
+	count, countExists := n.notifyCount[errorKey]
+	return countExists && count >= n.rateLimitCount
 }
 
 // updateRateLimit updates the rate limiting counters
@@ -235,8 +236,8 @@ func (e *EmailChannel) Name() string {
 }
 
 // Send sends an error notification via email.
-func (e *EmailChannel) Send(_ context.Context, notification ErrorNotification) error {
-	if !e.enabled {
+func (e *EmailChannel) Send(_ context.Context, notification *ErrorNotification) error {
+	if !e.enabled || notification == nil {
 		return nil
 	}
 
@@ -264,7 +265,10 @@ func (e *EmailChannel) SetEnabled(enabled bool) {
 	e.enabled = enabled
 }
 
-func (e *EmailChannel) formatEmailBody(notification ErrorNotification) string {
+func (e *EmailChannel) formatEmailBody(notification *ErrorNotification) string {
+	if notification == nil {
+		return "Empty notification"
+	}
 	return fmt.Sprintf(`
 Error Details:
 - Code: %s
@@ -286,7 +290,7 @@ Stack Trace:
 		notification.Timestamp.Format(time.RFC3339),
 		notification.Environment,
 		notification.Service,
-		formatErrorContext(notification.Error.Context()),
+		func() string { ctx := notification.Error.Context(); return formatErrorContext(&ctx) }(),
 		notification.Error.Error(), // Use Error() since StackTrace might not exist
 	)
 }
@@ -325,8 +329,8 @@ func (w *WebhookChannel) Name() string {
 }
 
 // Send sends an error notification via webhook.
-func (w *WebhookChannel) Send(ctx context.Context, notification ErrorNotification) error {
-	if !w.enabled {
+func (w *WebhookChannel) Send(ctx context.Context, notification *ErrorNotification) error {
+	if !w.enabled || notification == nil {
 		return nil
 	}
 
@@ -410,8 +414,8 @@ func (c *ConsoleChannel) Name() string {
 }
 
 // Send sends an error notification to the console.
-func (c *ConsoleChannel) Send(_ context.Context, notification ErrorNotification) error {
-	if !c.enabled {
+func (c *ConsoleChannel) Send(_ context.Context, notification *ErrorNotification) error {
+	if !c.enabled || notification == nil {
 		return nil
 	}
 
@@ -433,13 +437,13 @@ func (c *ConsoleChannel) SetEnabled(enabled bool) {
 
 // Helper functions
 
-func formatErrorContext(context ErrorContext) string {
-	if len(context.Fields) == 0 {
+func formatErrorContext(errCtx *ErrorContext) string {
+	if errCtx == nil || len(errCtx.Fields) == 0 {
 		return "No additional context"
 	}
 
-	lines := make([]string, 0, len(context.Fields))
-	for key, value := range context.Fields {
+	lines := make([]string, 0, len(errCtx.Fields))
+	for key, value := range errCtx.Fields {
 		lines = append(lines, fmt.Sprintf("  %s: %v", key, value))
 	}
 

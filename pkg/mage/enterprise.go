@@ -15,6 +15,12 @@ import (
 	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
+const (
+	approvalTrue  = "true"
+	statusFailed  = "failed"
+	statusUnknown = "unknown"
+)
+
 // Enterprise namespace for enterprise-specific operations
 type Enterprise mg.Namespace
 
@@ -152,7 +158,7 @@ func (Enterprise) Deploy() error {
 
 		// Check for approval
 		approved := utils.GetEnv("DEPLOYMENT_APPROVED", "false")
-		if approved != "true" {
+		if approved != approvalTrue {
 			return fmt.Errorf("deployment to %s requires approval (set DEPLOYMENT_APPROVED=true)", target)
 		}
 
@@ -195,7 +201,7 @@ func (Enterprise) Deploy() error {
 		utils.Info("🔄 Step %d/%d: %s", i+1, len(steps), step.Name)
 
 		if err := step.Action(); err != nil {
-			deployment.Status = "failed"
+			deployment.Status = statusFailed
 			deployment.Error = err.Error()
 			_ = saveDeploymentRecord(deployment) //nolint:errcheck // Ignore error - best effort logging
 
@@ -329,7 +335,7 @@ func (Enterprise) Promote() error {
 		utils.Info("🔄 Step %d/%d: %s", i+1, len(steps), step.Name)
 
 		if err := step.Action(); err != nil {
-			promotion.Status = "failed"
+			promotion.Status = statusFailed
 			promotion.Error = err.Error()
 			_ = savePromotionRecord(promotion) //nolint:errcheck // Ignore error - best effort logging
 
@@ -368,9 +374,9 @@ func (Enterprise) Status() error {
 
 		switch status {
 		case "healthy":
-			statusIcon = "✅"
+			statusIcon = EmojiSuccess
 		case "unhealthy":
-			statusIcon = "❌"
+			statusIcon = EmojiError
 		case "warning":
 			statusIcon = "⚠️"
 		}
@@ -392,9 +398,9 @@ func (Enterprise) Status() error {
 				statusIcon := "❓"
 				switch deployment.Status {
 				case "success":
-					statusIcon = "✅"
-				case "failed":
-					statusIcon = "❌"
+					statusIcon = EmojiSuccess
+				case statusFailed:
+					statusIcon = EmojiError
 				case "in_progress":
 					statusIcon = "🔄"
 				}
@@ -479,7 +485,7 @@ func (Enterprise) Restore() error {
 
 	// Confirm restoration
 	confirmed := utils.GetEnv("RESTORE_CONFIRMED", "false")
-	if confirmed != "true" {
+	if confirmed != approvalTrue {
 		return fmt.Errorf("restoration requires confirmation (set RESTORE_CONFIRMED=true)")
 	}
 
@@ -933,7 +939,7 @@ func getCurrentUser() string {
 	if user := utils.GetEnv("USER", ""); user != "" {
 		return user
 	}
-	return "unknown"
+	return statusUnknown
 }
 
 // Deployment step implementations (placeholders)

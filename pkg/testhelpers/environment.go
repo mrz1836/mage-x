@@ -94,7 +94,7 @@ func (te *TestEnvironment) WorkDir() string {
 }
 
 // WriteFile writes a file in the test environment
-func (te *TestEnvironment) WriteFile(path string, content string) {
+func (te *TestEnvironment) WriteFile(path, content string) {
 	te.t.Helper()
 
 	fullPath := te.AbsPath(path)
@@ -233,7 +233,7 @@ func (te *TestEnvironment) CaptureOutput(fn func()) string {
 }
 
 // CaptureError captures both stdout and stderr during function execution
-func (te *TestEnvironment) CaptureError(fn func()) (string, string) {
+func (te *TestEnvironment) CaptureError(fn func()) (stdout, stderr string) {
 	te.t.Helper()
 
 	// Save original stdout and stderr
@@ -273,17 +273,17 @@ func (te *TestEnvironment) CaptureError(fn func()) (string, string) {
 	os.Stderr = origStderr
 
 	// Read outputs
-	stdout, readErr := io.ReadAll(rOut)
+	stdoutBytes, readErr := io.ReadAll(rOut)
 	if readErr != nil {
 		te.t.Fatalf("Failed to read stdout: %v", readErr)
 	}
 
-	stderr, readErr := io.ReadAll(rErr)
+	stderrBytes, readErr := io.ReadAll(rErr)
 	if readErr != nil {
 		te.t.Fatalf("Failed to read stderr: %v", readErr)
 	}
 
-	return string(stdout), string(stderr)
+	return string(stdoutBytes), string(stderrBytes)
 }
 
 // AssertFileContains asserts that a file contains expected content

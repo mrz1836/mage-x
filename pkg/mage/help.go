@@ -145,25 +145,20 @@ func (Help) Command() error {
 
 	utils.Info("Usage: %s", cmd.Usage)
 
-	if len(cmd.Options) > 0 {
-		utils.Info("\nOptions:")
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		for _, opt := range cmd.Options {
-			required := ""
-			if opt.Required {
-				required = " (required)"
-			}
-			defaultVal := ""
-			if opt.Default != "" {
-				defaultVal = fmt.Sprintf(" [default: %s]", opt.Default)
-			}
-			if _, err := fmt.Fprintf(w, "  %s\t%s%s%s\n", opt.Name, opt.Description, required, defaultVal); err != nil {
-				return fmt.Errorf("failed to write option help: %w", err)
-			}
+	if len(cmd.Options) == 0 {
+		return nil
+	}
+
+	utils.Info("\nOptions:")
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	for _, opt := range cmd.Options {
+		optionLine := formatOption(opt)
+		if _, err := fmt.Fprintf(w, "  %s\t%s\n", opt.Name, optionLine); err != nil {
+			return fmt.Errorf("failed to write option help: %w", err)
 		}
-		if err := w.Flush(); err != nil {
-			return fmt.Errorf("failed to flush option help: %w", err)
-		}
+	}
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("failed to flush option help: %w", err)
 	}
 
 	if len(cmd.Examples) > 0 {
@@ -181,6 +176,21 @@ func (Help) Command() error {
 	}
 
 	return nil
+}
+
+// formatOption formats an option with its description, required marker, and default value
+func formatOption(opt HelpOption) string {
+	description := opt.Description
+
+	if opt.Required {
+		description += " (required)"
+	}
+
+	if opt.Default != "" {
+		description += fmt.Sprintf(" [default: %s]", opt.Default)
+	}
+
+	return description
 }
 
 // Examples shows usage examples

@@ -508,15 +508,15 @@ func BenchmarkErrorFormatting(b *testing.B) {
 }
 
 func BenchmarkErrorChain(b *testing.B) {
-	errors := make([]error, 10)
-	for i := range errors {
-		errors[i] = Newf("error %d", i)
+	errs := make([]error, 10)
+	for i := range errs {
+		errs[i] = Newf("error %d", i)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		chain := NewChain()
-		for _, err := range errors {
+		for _, err := range errs {
 			chain = chain.Add(err)
 		}
 		_ = chain.Count()

@@ -232,9 +232,7 @@ func (Bench) Trace() error {
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", trace}
 
 	benchTime := utils.GetEnv("BENCH_TIME", "10s")
-	args = append(args, "-benchtime", benchTime)
-
-	args = append(args, "./...")
+	args = append(args, "-benchtime", benchTime, "./...")
 
 	utils.Info("Trace will be saved to: %s", trace)
 
@@ -291,7 +289,7 @@ func (Bench) Regression() error {
 
 	// Ask about updating baseline
 	utils.Info("\nUpdate baseline with current results? (set UPDATE_BASELINE=true)")
-	if os.Getenv("UPDATE_BASELINE") == "true" {
+	if os.Getenv("UPDATE_BASELINE") == approvalTrue {
 		if err := os.Rename("bench-current.txt", baseline); err != nil {
 			return fmt.Errorf("failed to update baseline: %w", err)
 		}

@@ -161,9 +161,9 @@ func (m *configManagerImpl) Save(config *MageConfig, path string) error {
 	case ".json":
 		format = "json"
 	case ".yaml", ".yml":
-		format = "yaml"
+		format = string(FormatYAML)
 	default:
-		format = "yaml"
+		format = string(FormatYAML)
 	}
 
 	return loader.Save(path, config, format)

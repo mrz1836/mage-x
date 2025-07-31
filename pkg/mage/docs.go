@@ -14,6 +14,10 @@ import (
 	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
+const (
+	versionDev = "dev"
+)
+
 // Docs namespace for documentation-related tasks
 type Docs mg.Namespace
 
@@ -77,9 +81,9 @@ func (Docs) GoDocs() error {
 
 	// Get latest version
 	version := getVersion()
-	if version == "dev" {
+	if version == versionDev {
 		utils.Warn("No version tag found, using latest")
-		version = "latest"
+		version = DefaultGoVulnCheckVersion
 	}
 
 	// Construct pkg.go.dev URL
@@ -169,7 +173,7 @@ func (Docs) Serve() error {
 			if err := GetRunner().RunCmd("xdg-open", url); err != nil {
 				utils.Warn("Failed to open browser: %v", err)
 			}
-		case "windows":
+		case OSWindows:
 			if err := GetRunner().RunCmd("cmd", "/c", "start", url); err != nil {
 				utils.Warn("Failed to open browser: %v", err)
 			}

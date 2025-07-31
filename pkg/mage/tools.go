@@ -73,7 +73,7 @@ func (Tools) Update() error {
 		utils.Info("Updating %s...", tool.Name)
 
 		version := tool.Version
-		if version == "latest" || version == "" {
+		if version == DefaultGoVulnCheckVersion || version == "" {
 			version = "@latest"
 		} else if !strings.HasPrefix(version, "@") {
 			version = "@" + version
@@ -271,7 +271,7 @@ func installTool(tool ToolDefinition) error {
 	utils.Info("Installing %s...", tool.Name)
 
 	// Special case for golangci-lint
-	if tool.Name == "golangci-lint" {
+	if tool.Name == CmdGolangciLint {
 		config, err := GetConfig()
 		if err != nil {
 			// Use default config if loading fails

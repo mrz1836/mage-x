@@ -19,18 +19,18 @@ type FileOpsTestSuite struct {
 	ops    *FileOps
 }
 
-func (suite *FileOpsTestSuite) SetupSuite() {
+func (s *FileOpsTestSuite) SetupSuite() {
 	// Create temporary directory for all tests
 	tmpDir, err := os.MkdirTemp("", "fileops-test-*")
-	suite.Require().NoError(err, "Failed to create temp dir")
-	suite.tmpDir = tmpDir
-	suite.ops = New()
+	s.Require().NoError(err, "Failed to create temp dir")
+	s.tmpDir = tmpDir
+	s.ops = New()
 }
 
-func (suite *FileOpsTestSuite) TearDownSuite() {
+func (s *FileOpsTestSuite) TearDownSuite() {
 	// Clean up temp directory
-	if err := os.RemoveAll(suite.tmpDir); err != nil {
-		suite.T().Logf("Failed to remove temp dir %s: %v", suite.tmpDir, err)
+	if err := os.RemoveAll(s.tmpDir); err != nil {
+		s.T().Logf("Failed to remove temp dir %s: %v", s.tmpDir, err)
 	}
 }
 
@@ -371,7 +371,7 @@ func TestSafeFileOperator(t *testing.T) {
 	})
 }
 
-func (suite *FileOpsTestSuite) TestFileOpsFacade() {
+func (s *FileOpsTestSuite) TestFileOpsFacade() {
 	type TestConfig struct {
 		Database struct {
 			Host string `yaml:"host" json:"host"`
@@ -387,80 +387,80 @@ func (suite *FileOpsTestSuite) TestFileOpsFacade() {
 	testConfig.Debug = true
 	testConfig.Features = []string{"feature1", "feature2"}
 
-	suite.Run("SaveConfig and LoadConfig YAML", func() {
-		configPath := filepath.Join(suite.tmpDir, "config.yaml")
+	s.Run("SaveConfig and LoadConfig YAML", func() {
+		configPath := filepath.Join(s.tmpDir, "config.yaml")
 
 		// Save config
-		err := suite.ops.SaveConfig(configPath, testConfig, "yaml")
-		suite.Require().NoError(err, "Failed to save config")
+		err := s.ops.SaveConfig(configPath, testConfig, "yaml")
+		s.Require().NoError(err, "Failed to save config")
 
 		// Load config
 		var result TestConfig
-		foundPath, err := suite.ops.LoadConfig([]string{configPath}, &result)
-		suite.Require().NoError(err, "Failed to load config")
+		foundPath, err := s.ops.LoadConfig([]string{configPath}, &result)
+		s.Require().NoError(err, "Failed to load config")
 
-		suite.Equal(configPath, foundPath, "Should find config at expected path")
-		suite.Equal(testConfig.Database.Host, result.Database.Host, "Database host should match")
-		suite.Equal(testConfig.Database.Port, result.Database.Port, "Database port should match")
-		suite.Equal(testConfig.Debug, result.Debug, "Debug flag should match")
-		suite.ElementsMatch(testConfig.Features, result.Features, "Features should match")
+		s.Equal(configPath, foundPath, "Should find config at expected path")
+		s.Equal(testConfig.Database.Host, result.Database.Host, "Database host should match")
+		s.Equal(testConfig.Database.Port, result.Database.Port, "Database port should match")
+		s.Equal(testConfig.Debug, result.Debug, "Debug flag should match")
+		s.ElementsMatch(testConfig.Features, result.Features, "Features should match")
 	})
 
-	suite.Run("SaveConfig and LoadConfig JSON", func() {
-		configPath := filepath.Join(suite.tmpDir, "config.json")
+	s.Run("SaveConfig and LoadConfig JSON", func() {
+		configPath := filepath.Join(s.tmpDir, "config.json")
 
 		// Save config
-		err := suite.ops.SaveConfig(configPath, testConfig, "json")
-		suite.Require().NoError(err, "Failed to save config")
+		err := s.ops.SaveConfig(configPath, testConfig, "json")
+		s.Require().NoError(err, "Failed to save config")
 
 		// Load config
 		var result TestConfig
-		foundPath, err := suite.ops.LoadConfig([]string{configPath}, &result)
-		suite.Require().NoError(err, "Failed to load config")
+		foundPath, err := s.ops.LoadConfig([]string{configPath}, &result)
+		s.Require().NoError(err, "Failed to load config")
 
-		suite.Equal(configPath, foundPath, "Should find config at expected path")
-		suite.Equal(testConfig, result, "Loaded config should match saved config")
+		s.Equal(configPath, foundPath, "Should find config at expected path")
+		s.Equal(testConfig, result, "Loaded config should match saved config")
 	})
 
-	suite.Run("LoadConfig with fallback", func() {
+	s.Run("LoadConfig with fallback", func() {
 		// Create only the second config file
-		configPath1 := filepath.Join(suite.tmpDir, "nonexistent.yaml")
-		configPath2 := filepath.Join(suite.tmpDir, "fallback.yaml")
+		configPath1 := filepath.Join(s.tmpDir, "nonexistent.yaml")
+		configPath2 := filepath.Join(s.tmpDir, "fallback.yaml")
 
-		err := suite.ops.SaveConfig(configPath2, testConfig, "yaml")
-		suite.Require().NoError(err, "Failed to save fallback config")
+		err := s.ops.SaveConfig(configPath2, testConfig, "yaml")
+		s.Require().NoError(err, "Failed to save fallback config")
 
 		// Load with fallback
 		var result TestConfig
-		foundPath, err := suite.ops.LoadConfig([]string{configPath1, configPath2}, &result)
-		suite.Require().NoError(err, "Failed to load config with fallback")
+		foundPath, err := s.ops.LoadConfig([]string{configPath1, configPath2}, &result)
+		s.Require().NoError(err, "Failed to load config with fallback")
 
-		suite.Equal(configPath2, foundPath, "Should find config at fallback path")
-		suite.Equal(testConfig.Database.Host, result.Database.Host, "Config should be loaded correctly")
+		s.Equal(configPath2, foundPath, "Should find config at fallback path")
+		s.Equal(testConfig.Database.Host, result.Database.Host, "Config should be loaded correctly")
 	})
 
-	suite.Run("LoadConfig all missing", func() {
+	s.Run("LoadConfig all missing", func() {
 		// Try to load from non-existent files
 		paths := []string{
-			filepath.Join(suite.tmpDir, "missing1.yaml"),
-			filepath.Join(suite.tmpDir, "missing2.yaml"),
+			filepath.Join(s.tmpDir, "missing1.yaml"),
+			filepath.Join(s.tmpDir, "missing2.yaml"),
 		}
 
 		var result TestConfig
-		foundPath, err := suite.ops.LoadConfig(paths, &result)
-		suite.Require().Error(err, "Should error when all config files are missing")
-		suite.Empty(foundPath, "Should return empty path when no config found")
+		foundPath, err := s.ops.LoadConfig(paths, &result)
+		s.Require().Error(err, "Should error when all config files are missing")
+		s.Empty(foundPath, "Should return empty path when no config found")
 	})
 
-	suite.Run("SaveConfig invalid format", func() {
-		configPath := filepath.Join(suite.tmpDir, "config.invalid")
+	s.Run("SaveConfig invalid format", func() {
+		configPath := filepath.Join(s.tmpDir, "config.invalid")
 
-		err := suite.ops.SaveConfig(configPath, testConfig, "invalid")
+		err := s.ops.SaveConfig(configPath, testConfig, "invalid")
 		// SaveConfig defaults to YAML for unknown formats, so no error
-		suite.Require().NoError(err, "Should default to YAML for unknown formats")
+		s.Require().NoError(err, "Should default to YAML for unknown formats")
 
 		// Verify YAML file was created
-		suite.True(suite.ops.File.Exists(configPath), "File should exist")
+		s.True(s.ops.File.Exists(configPath), "File should exist")
 	})
 }
 

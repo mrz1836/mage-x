@@ -18,15 +18,15 @@ type ConfigTestSuite struct {
 	tmpDir string
 }
 
-func (suite *ConfigTestSuite) SetupSuite() {
+func (s *ConfigTestSuite) SetupSuite() {
 	tmpDir, err := os.MkdirTemp("", "config-suite-test-*")
-	suite.Require().NoError(err, "Failed to create temp dir")
-	suite.tmpDir = tmpDir
+	s.Require().NoError(err, "Failed to create temp dir")
+	s.tmpDir = tmpDir
 }
 
-func (suite *ConfigTestSuite) TearDownSuite() {
-	if err := os.RemoveAll(suite.tmpDir); err != nil {
-		suite.T().Logf("Failed to remove temp dir: %v", err)
+func (s *ConfigTestSuite) TearDownSuite() {
+	if err := os.RemoveAll(s.tmpDir); err != nil {
+		s.T().Logf("Failed to remove temp dir: %v", err)
 	}
 }
 
@@ -420,7 +420,7 @@ nested:
 	})
 }
 
-func (suite *ConfigTestSuite) TestConfigFacade() {
+func (s *ConfigTestSuite) TestConfigFacade() {
 	config := New()
 
 	type TestConfig struct {
@@ -432,9 +432,9 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
 		} `yaml:"app" json:"app"`
 	}
 
-	suite.Run("LoadFromPaths", func() {
+	s.Run("LoadFromPaths", func() {
 		// Create config file
-		configPath := filepath.Join(suite.tmpDir, "myapp.yaml")
+		configPath := filepath.Join(s.tmpDir, "myapp.yaml")
 		configContent := `app:
   name: testapp
   port: 8080
@@ -444,56 +444,56 @@ func (suite *ConfigTestSuite) TestConfigFacade() {
     - stable`
 
 		err := os.WriteFile(configPath, []byte(configContent), 0o600)
-		suite.Require().NoError(err, "Failed to write config file")
+		s.Require().NoError(err, "Failed to write config file")
 
 		var testConfig TestConfig
-		foundPath, err := config.LoadFromPaths(&testConfig, "myapp", suite.tmpDir)
-		suite.Require().NoError(err, "Failed to load config")
+		foundPath, err := config.LoadFromPaths(&testConfig, "myapp", s.tmpDir)
+		s.Require().NoError(err, "Failed to load config")
 
-		suite.Equal(configPath, foundPath, "Should find config at expected path")
-		suite.Equal("testapp", testConfig.App.Name, "App name should match")
-		suite.Equal(8080, testConfig.App.Port, "App port should match")
-		suite.True(testConfig.App.Enabled, "App should be enabled")
-		suite.ElementsMatch([]string{"production", "stable"}, testConfig.App.Tags, "Tags should match")
+		s.Equal(configPath, foundPath, "Should find config at expected path")
+		s.Equal("testapp", testConfig.App.Name, "App name should match")
+		s.Equal(8080, testConfig.App.Port, "App port should match")
+		s.True(testConfig.App.Enabled, "App should be enabled")
+		s.ElementsMatch([]string{"production", "stable"}, testConfig.App.Tags, "Tags should match")
 	})
 
-	suite.Run("LoadWithEnvOverrides", func() {
+	s.Run("LoadWithEnvOverrides", func() {
 		// Set environment variables
-		suite.Require().NoError(os.Setenv("MYAPP_APP_NAME", "env-override"))
-		suite.Require().NoError(os.Setenv("MYAPP_APP_PORT", "9090"))
+		s.Require().NoError(os.Setenv("MYAPP_APP_NAME", "env-override"))
+		s.Require().NoError(os.Setenv("MYAPP_APP_PORT", "9090"))
 		defer func() {
 			if err := os.Unsetenv("MYAPP_APP_NAME"); err != nil {
-				suite.T().Logf("Failed to unset MYAPP_APP_NAME: %v", err)
+				s.T().Logf("Failed to unset MYAPP_APP_NAME: %v", err)
 			}
 		}()
 		defer func() {
 			if err := os.Unsetenv("MYAPP_APP_PORT"); err != nil {
-				suite.T().Logf("Failed to unset MYAPP_APP_PORT: %v", err)
+				s.T().Logf("Failed to unset MYAPP_APP_PORT: %v", err)
 			}
 		}()
 
 		// Create config file
-		configPath := filepath.Join(suite.tmpDir, "myapp-env.yaml")
+		configPath := filepath.Join(s.tmpDir, "myapp-env.yaml")
 		configContent := `app:
   name: file-value
   port: 8080`
 
 		err := os.WriteFile(configPath, []byte(configContent), 0o600)
-		suite.Require().NoError(err)
+		s.Require().NoError(err)
 
 		var testConfig TestConfig
-		foundPath, err := config.LoadWithEnvOverrides(&testConfig, "myapp-env", "MYAPP", suite.tmpDir)
-		suite.Require().NoError(err, "Failed to load config with env overrides")
+		foundPath, err := config.LoadWithEnvOverrides(&testConfig, "myapp-env", "MYAPP", s.tmpDir)
+		s.Require().NoError(err, "Failed to load config with env overrides")
 
-		suite.Equal(configPath, foundPath)
+		s.Equal(configPath, foundPath)
 		// These assertions depend on whether env override is implemented
 		// If implemented, values should come from env vars
-		// assert.Equal(suite.T(), "env-override", testConfig.App.Name)
-		// assert.Equal(suite.T(), 9090, testConfig.App.Port)
+		// assert.Equal(s.T(), "env-override", testConfig.App.Name)
+		// assert.Equal(s.T(), 9090, testConfig.App.Port)
 	})
 
-	suite.Run("SetupManager", func() {
-		config.SetupManager("testapp", "TEST", suite.tmpDir)
+	s.Run("SetupManager", func() {
+		config.SetupManager("testapp", "TEST", s.tmpDir)
 		// Manager setup verification would require checking internal state
 		// or using the manager to load config
 	})
@@ -554,12 +554,16 @@ func TestPackageLevelFunctions(t *testing.T) {
 
 	for _, tc := range testCases {
 		require.NoError(t, os.Setenv(tc.key, tc.value))
-		defer func(key string) {
-			if err := os.Unsetenv(key); err != nil {
-				t.Logf("Failed to unset %s: %v", key, err)
-			}
-		}(tc.key)
 	}
+
+	// Clean up environment variables at the end
+	defer func() {
+		for _, tc := range testCases {
+			if err := os.Unsetenv(tc.key); err != nil {
+				t.Logf("Failed to unset %s: %v", tc.key, err)
+			}
+		}
+	}()
 
 	t.Run("GetString", func(t *testing.T) {
 		result := GetString("TEST_PKG_STRING", "default")

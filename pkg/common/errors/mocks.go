@@ -107,7 +107,7 @@ func (m *MockMageError) WithSeverity(severity Severity) MageError {
 	return newErr
 }
 
-func (m *MockMageError) WithContext(ctx ErrorContext) MageError {
+func (m *MockMageError) WithContext(ctx *ErrorContext) MageError {
 	m.mu.Lock()
 	m.calls["WithContext"]++
 	m.mu.Unlock()
@@ -116,9 +116,14 @@ func (m *MockMageError) WithContext(ctx ErrorContext) MageError {
 		message:  m.message,
 		code:     m.code,
 		severity: m.severity,
-		context:  ctx,
-		cause:    m.cause,
-		calls:    make(map[string]int),
+		context: func() ErrorContext {
+			if ctx != nil {
+				return *ctx
+			}
+			return ErrorContext{}
+		}(),
+		cause: m.cause,
+		calls: make(map[string]int),
 	}
 	return newErr
 }
@@ -133,7 +138,7 @@ func (m *MockMageError) WithField(key string, value interface{}) MageError {
 	newContext.Fields[key] = value
 	m.mu.Unlock()
 
-	return m.WithContext(newContext)
+	return m.WithContext(&newContext)
 }
 
 func (m *MockMageError) WithFields(fields map[string]interface{}) MageError {
@@ -148,7 +153,7 @@ func (m *MockMageError) WithFields(fields map[string]interface{}) MageError {
 	}
 	m.mu.Unlock()
 
-	return m.WithContext(newContext)
+	return m.WithContext(&newContext)
 }
 
 func (m *MockMageError) WithCause(cause error) MageError {
@@ -174,7 +179,7 @@ func (m *MockMageError) WithOperation(operation string) MageError {
 	newContext.Operation = operation
 	m.mu.Unlock()
 
-	return m.WithContext(newContext)
+	return m.WithContext(&newContext)
 }
 
 func (m *MockMageError) WithResource(resource string) MageError {
@@ -184,7 +189,7 @@ func (m *MockMageError) WithResource(resource string) MageError {
 	newContext.Resource = resource
 	m.mu.Unlock()
 
-	return m.WithContext(newContext)
+	return m.WithContext(&newContext)
 }
 
 func (m *MockMageError) Format(includeStack bool) string {
@@ -262,10 +267,12 @@ func (b *MockErrorBuilder) WithSeverity(severity Severity) ErrorBuilder {
 	return b
 }
 
-func (b *MockErrorBuilder) WithContext(ctx ErrorContext) ErrorBuilder {
+func (b *MockErrorBuilder) WithContext(ctx *ErrorContext) ErrorBuilder {
 	b.mu.Lock()
 	b.calls["WithContext"]++
-	b.err.context = ctx
+	if ctx != nil {
+		b.err.context = *ctx
+	}
 	b.mu.Unlock()
 	return b
 }
@@ -423,7 +430,7 @@ func (c *MockErrorChain) Add(err error) ErrorChain {
 	return c
 }
 
-func (c *MockErrorChain) AddWithContext(err error, ctx ErrorContext) ErrorChain {
+func (c *MockErrorChain) AddWithContext(err error, ctx *ErrorContext) ErrorChain {
 	c.mu.Lock()
 	c.calls["AddWithContext"]++
 	c.errors = append(c.errors, err)

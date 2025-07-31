@@ -217,12 +217,12 @@ func TestDefaultPathResolver_Operations(t *testing.T) {
 	// Test path expansion
 	testPath := "~/test"
 	expanded := resolver.Expand(testPath)
-	if runtime.GOOS != "windows" && strings.HasPrefix(expanded, "~/") {
+	if runtime.GOOS != osWindows && strings.HasPrefix(expanded, "~/") {
 		t.Error("Expand() should resolve tilde")
 	}
 
 	// Test absolute path checking
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == osWindows {
 		if !resolver.IsAbsolute("C:\\test") {
 			t.Error("IsAbsolute() should return true for Windows absolute path")
 		}

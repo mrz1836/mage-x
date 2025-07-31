@@ -106,7 +106,7 @@ func (m *Manager) GetBuildCache() *BuildCache {
 }
 
 // GenerateBuildHash creates a hash for build operations
-func (m *Manager) GenerateBuildHash(platform, ldflags string, sourceFiles []string, configFiles []string) (string, error) {
+func (m *Manager) GenerateBuildHash(platform, ldflags string, sourceFiles, configFiles []string) (string, error) {
 	strategy := m.config.Strategies.Build
 
 	switch strategy {
@@ -122,8 +122,10 @@ func (m *Manager) GenerateBuildHash(platform, ldflags string, sourceFiles []stri
 }
 
 // GenerateTestHash creates a hash for test operations
-func (m *Manager) GenerateTestHash(pkg string, testFiles []string, buildFlags []string) (string, error) {
-	allFiles := append(testFiles, "go.mod", "go.sum")
+func (m *Manager) GenerateTestHash(pkg string, testFiles, buildFlags []string) (string, error) {
+	allFiles := make([]string, 0, len(testFiles)+2)
+	allFiles = append(allFiles, testFiles...)
+	allFiles = append(allFiles, "go.mod", "go.sum")
 
 	// Add build flags to hash
 	flagsStr := strings.Join(buildFlags, "|")
@@ -145,8 +147,10 @@ func (m *Manager) GenerateTestHash(pkg string, testFiles []string, buildFlags []
 }
 
 // GenerateLintHash creates a hash for lint operations
-func (m *Manager) GenerateLintHash(files []string, configFiles []string, lintConfig string) (string, error) {
-	allFiles := append(files, configFiles...)
+func (m *Manager) GenerateLintHash(files, configFiles []string, lintConfig string) (string, error) {
+	allFiles := make([]string, 0, len(files)+len(configFiles))
+	allFiles = append(allFiles, files...)
+	allFiles = append(allFiles, configFiles...)
 
 	fileHash, err := m.buildCache.GenerateFileHash(allFiles)
 	if err != nil {
@@ -260,7 +264,9 @@ func (m *Manager) WarmCache(operations []string) error {
 
 // generateFileBasedHash creates hash based on file modification times and sizes
 func (m *Manager) generateFileBasedHash(sourceFiles, configFiles []string, platform, ldflags string) (string, error) {
-	allFiles := append(sourceFiles, configFiles...)
+	allFiles := make([]string, 0, len(sourceFiles)+len(configFiles)+2)
+	allFiles = append(allFiles, sourceFiles...)
+	allFiles = append(allFiles, configFiles...)
 	allFiles = append(allFiles, "go.mod", "go.sum")
 
 	fileHash, err := m.buildCache.GenerateFileHash(allFiles)
@@ -279,7 +285,9 @@ func (m *Manager) generateFileBasedHash(sourceFiles, configFiles []string, platf
 // generateContentBasedHash creates hash based on actual file contents
 func (m *Manager) generateContentBasedHash(sourceFiles, configFiles []string, platform, ldflags string) (string, error) {
 	// This is more expensive but more accurate for content changes
-	allFiles := append(sourceFiles, configFiles...)
+	allFiles := make([]string, 0, len(sourceFiles)+len(configFiles)+2)
+	allFiles = append(allFiles, sourceFiles...)
+	allFiles = append(allFiles, configFiles...)
 	allFiles = append(allFiles, "go.mod", "go.sum")
 
 	contentHash := ""
@@ -302,7 +310,9 @@ func (m *Manager) generateContentBasedHash(sourceFiles, configFiles []string, pl
 
 // generateTimestampBasedHash creates hash based on timestamps (fastest but least accurate)
 func (m *Manager) generateTimestampBasedHash(sourceFiles, configFiles []string, platform, ldflags string) (string, error) {
-	allFiles := append(sourceFiles, configFiles...)
+	allFiles := make([]string, 0, len(sourceFiles)+len(configFiles)+2)
+	allFiles = append(allFiles, sourceFiles...)
+	allFiles = append(allFiles, configFiles...)
 	allFiles = append(allFiles, "go.mod", "go.sum")
 
 	var latestTime time.Time

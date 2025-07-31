@@ -48,7 +48,7 @@ func initCacheManager() *cache.Manager {
 }
 
 // Default builds the application for the current platform
-func (Build) Default() error {
+func (b Build) Default() error {
 	utils.Header("Building Application")
 
 	cfg, err := GetConfig()
@@ -128,26 +128,10 @@ func (Build) Default() error {
 		}
 	}
 
+	// Try to use cached build result
 	if buildHash != "" && cm != nil {
-		// Check cache first
-		if buildResult, found := cm.GetBuildCache().GetBuildResult(buildHash); found {
-			if buildResult.Success && utils.FileExists(buildResult.Binary) {
-				utils.Success("Build cache hit! Using cached binary %s (built in %s)",
-					buildResult.Binary,
-					utils.FormatDuration(buildResult.Metrics.CompileTime))
-
-				// Copy cached binary to expected output location if different
-				if buildResult.Binary != outputPath {
-					if err := utils.CopyFile(buildResult.Binary, outputPath); err != nil {
-						utils.Warn("Failed to copy cached binary: %v", err)
-						// Fall through to rebuild
-					} else {
-						return nil
-					}
-				} else {
-					return nil
-				}
-			}
+		if b.tryUseCachedBuild(buildHash, outputPath, *cm) {
+			return nil
 		}
 	}
 
@@ -188,6 +172,34 @@ func (Build) Default() error {
 
 	utils.Success("Built %s in %s", outputPath, utils.FormatDuration(buildDuration))
 	return nil
+}
+
+// tryUseCachedBuild attempts to use a cached build result and returns whether cache was used
+func (b Build) tryUseCachedBuild(buildHash, outputPath string, cm cache.Manager) bool {
+	buildResult, found := cm.GetBuildCache().GetBuildResult(buildHash)
+	if !found {
+		return false // No cached result
+	}
+
+	if !buildResult.Success || !utils.FileExists(buildResult.Binary) {
+		return false // Invalid cached result
+	}
+
+	utils.Success("Build cache hit! Using cached binary %s (built in %s)",
+		buildResult.Binary,
+		utils.FormatDuration(buildResult.Metrics.CompileTime))
+
+	// Copy cached binary to expected output location if different
+	if buildResult.Binary == outputPath {
+		return true // Cache used successfully
+	}
+
+	if err := utils.CopyFile(buildResult.Binary, outputPath); err != nil {
+		utils.Warn("Failed to copy cached binary: %v", err)
+		return false // Fall through to rebuild
+	}
+
+	return true // Cache used successfully
 }
 
 // All builds for all configured platforms

@@ -181,7 +181,8 @@ func (r *Release) Validate() error {
 		return fmt.Errorf("release must have at least one artifact")
 	}
 
-	for i, artifact := range r.Artifacts {
+	for i := range r.Artifacts {
+		artifact := &r.Artifacts[i]
 		if artifact.Name == "" {
 			return fmt.Errorf("artifact %d: name is required", i)
 		}
@@ -208,9 +209,10 @@ func (r *Release) IsExpired(retentionDays int) bool {
 
 // GetArtifact returns the artifact for a specific platform and architecture
 func (r *Release) GetArtifact(platform, arch string) *Artifact {
-	for _, artifact := range r.Artifacts {
+	for i := range r.Artifacts {
+		artifact := &r.Artifacts[i]
 		if artifact.Platform == platform && artifact.Arch == arch {
-			return &artifact
+			return artifact
 		}
 	}
 	return nil

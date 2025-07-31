@@ -112,26 +112,37 @@ func (pm *DefaultPathMatcher) addPatternUnsafe(pattern string) error {
 
 	// Check if it's a regex pattern (starts with ^ or contains regex special chars)
 	if pm.isRegexPattern(pattern) {
-		flags := ""
-		if !pm.caseSensitive {
-			flags = "(?i)"
-		}
-
-		regex, err := regexp.Compile(flags + pattern)
-		if err != nil {
-			return fmt.Errorf("invalid regex pattern %q: %w", pattern, err)
-		}
-
-		pm.compiledRegex = append(pm.compiledRegex, regex)
-	} else {
-		// Treat as glob pattern
-		if !pm.caseSensitive {
-			pattern = strings.ToLower(pattern)
-		}
-		pm.patterns = append(pm.patterns, pattern)
+		return pm.addRegexPattern(pattern)
 	}
 
+	// Treat as glob pattern
+	pm.addGlobPattern(pattern)
+
 	return nil
+}
+
+// addRegexPattern compiles and adds a regex pattern
+func (pm *DefaultPathMatcher) addRegexPattern(pattern string) error {
+	flags := ""
+	if !pm.caseSensitive {
+		flags = "(?i)"
+	}
+
+	regex, err := regexp.Compile(flags + pattern)
+	if err != nil {
+		return fmt.Errorf("invalid regex pattern %q: %w", pattern, err)
+	}
+
+	pm.compiledRegex = append(pm.compiledRegex, regex)
+	return nil
+}
+
+// addGlobPattern processes and adds a glob pattern
+func (pm *DefaultPathMatcher) addGlobPattern(pattern string) {
+	if !pm.caseSensitive {
+		pattern = strings.ToLower(pattern)
+	}
+	pm.patterns = append(pm.patterns, pattern)
 }
 
 // RemovePattern removes a pattern from the matcher

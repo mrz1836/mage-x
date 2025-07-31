@@ -115,7 +115,7 @@ func (Mod) Clean() error {
 	utils.Info("Module cache location: %s", getModCache())
 
 	// Check if FORCE is set
-	if os.Getenv("FORCE") != "true" {
+	if os.Getenv("FORCE") != approvalTrue {
 		utils.Error("Set FORCE=true to confirm module cache deletion")
 		return fmt.Errorf("operation canceled")
 	}
@@ -158,7 +158,7 @@ func (Mod) Graph() error {
 	module, err := utils.GetModuleName()
 	if err != nil {
 		utils.Debug("Failed to get module name: %v", err)
-		module = "unknown"
+		module = statusUnknown
 	}
 	if directDeps, ok := deps[module]; ok {
 		utils.Info("\nDirect dependencies (%d):", len(directDeps))

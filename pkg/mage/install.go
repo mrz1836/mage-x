@@ -12,6 +12,11 @@ import (
 	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
+const (
+	defaultBinaryName = "app"
+	windowsExeExt     = ".exe"
+)
+
 // Install namespace for installation tasks
 type Install mg.Namespace
 
@@ -37,7 +42,7 @@ func (Install) Uninstall() error {
 			parts := strings.Split(module, "/")
 			binaryName = parts[len(parts)-1]
 		} else {
-			binaryName = "app"
+			binaryName = defaultBinaryName
 		}
 	}
 
@@ -49,8 +54,8 @@ func (Install) Uninstall() error {
 
 	// Determine install path
 	installPath := filepath.Join(gopath, "bin", binaryName)
-	if runtime.GOOS == "windows" && !strings.HasSuffix(installPath, ".exe") {
-		installPath += ".exe"
+	if runtime.GOOS == OSWindows && !strings.HasSuffix(installPath, ".exe") {
+		installPath += windowsExeExt
 	}
 
 	// Remove the binary
@@ -83,7 +88,7 @@ func (Install) Default() error {
 			parts := strings.Split(module, "/")
 			binaryName = parts[len(parts)-1]
 		} else {
-			binaryName = "app"
+			binaryName = defaultBinaryName
 		}
 	}
 
@@ -95,8 +100,8 @@ func (Install) Default() error {
 
 	// Determine install path
 	installPath := filepath.Join(gopath, "bin", binaryName)
-	if runtime.GOOS == "windows" && !strings.HasSuffix(installPath, ".exe") {
-		installPath += ".exe"
+	if runtime.GOOS == OSWindows && !strings.HasSuffix(installPath, ".exe") {
+		installPath += windowsExeExt
 	}
 
 	utils.Info("Installing to: %s", installPath)
@@ -152,13 +157,13 @@ func (Install) Go() error {
 
 	// Get version
 	version := utils.GetEnv("VERSION", getVersion())
-	if version == "dev" || version == "" {
-		version = "latest"
+	if version == versionDev || version == "" {
+		version = DefaultGoVulnCheckVersion
 	}
 
 	// Build install command
 	var pkg string
-	if version != "latest" {
+	if version != DefaultGoVulnCheckVersion {
 		pkg = fmt.Sprintf("%s@%s", module, version)
 	} else {
 		pkg = fmt.Sprintf("%s@latest", module)
@@ -246,7 +251,7 @@ func (Install) Tools() error {
 func (Install) SystemWide() error {
 	utils.Header("Installing System-Wide")
 
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == OSWindows {
 		return fmt.Errorf("system-wide installation not supported on Windows")
 	}
 
@@ -262,7 +267,7 @@ func (Install) SystemWide() error {
 			parts := strings.Split(module, "/")
 			binaryName = parts[len(parts)-1]
 		} else {
-			binaryName = "app"
+			binaryName = defaultBinaryName
 		}
 	}
 

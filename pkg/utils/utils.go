@@ -256,7 +256,7 @@ func IsLinux() bool {
 }
 
 // GetShell returns the appropriate shell command
-func GetShell() (string, []string) {
+func GetShell() (shell string, args []string) {
 	if IsWindows() {
 		return "cmd", []string{"/c"}
 	}

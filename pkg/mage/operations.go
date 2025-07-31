@@ -578,7 +578,7 @@ func (s Serve) HealthCheck(_ ...interface{}) error {
 func (d DockerOps) Build(tag string) error {
 	runner := GetRunner()
 	if tag == "" {
-		tag = "app"
+		tag = defaultBinaryName
 	}
 	return runner.RunCmd("docker", "build", "-t", tag, ".")
 }
@@ -587,7 +587,7 @@ func (d DockerOps) Build(tag string) error {
 func (d DockerOps) Push(tag string) error {
 	runner := GetRunner()
 	if tag == "" {
-		tag = "app"
+		tag = defaultBinaryName
 	}
 	return runner.RunCmd("docker", "push", tag)
 }

@@ -106,7 +106,7 @@ type MageError interface {
 	Unwrap() error
 	WithCode(code ErrorCode) MageError
 	WithSeverity(severity Severity) MageError
-	WithContext(ctx ErrorContext) MageError
+	WithContext(ctx *ErrorContext) MageError
 	WithField(key string, value interface{}) MageError
 	WithFields(fields map[string]interface{}) MageError
 	WithCause(cause error) MageError
@@ -122,7 +122,7 @@ type ErrorBuilder interface {
 	WithMessage(format string, args ...interface{}) ErrorBuilder
 	WithCode(code ErrorCode) ErrorBuilder
 	WithSeverity(severity Severity) ErrorBuilder
-	WithContext(ctx ErrorContext) ErrorBuilder
+	WithContext(ctx *ErrorContext) ErrorBuilder
 	WithField(key string, value interface{}) ErrorBuilder
 	WithFields(fields map[string]interface{}) ErrorBuilder
 	WithCause(cause error) ErrorBuilder
@@ -136,7 +136,7 @@ type ErrorBuilder interface {
 type ErrorChain interface {
 	error
 	Add(err error) ErrorChain
-	AddWithContext(err error, ctx ErrorContext) ErrorChain
+	AddWithContext(err error, ctx *ErrorContext) ErrorChain
 	Errors() []error
 	First() error
 	Last() error
@@ -266,7 +266,7 @@ type ErrorNotifier interface {
 // NotificationChannel represents a notification channel
 type NotificationChannel interface {
 	Name() string
-	Send(ctx context.Context, notification ErrorNotification) error
+	Send(ctx context.Context, notification *ErrorNotification) error
 	IsEnabled() bool
 	SetEnabled(enabled bool)
 }

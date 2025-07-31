@@ -16,6 +16,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	osWindows = "windows"
+)
+
 func TestGetEnv(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -458,7 +462,7 @@ func TestPlatformFunctions(t *testing.T) {
 		currentOS := runtime.GOOS
 
 		switch currentOS {
-		case "windows":
+		case osWindows:
 			assert.True(t, IsWindows())
 			assert.False(t, IsMac())
 			assert.False(t, IsLinux())
@@ -475,7 +479,7 @@ func TestPlatformFunctions(t *testing.T) {
 
 	t.Run("GetShell", func(t *testing.T) {
 		shell, args := GetShell()
-		if runtime.GOOS == "windows" {
+		if runtime.GOOS == osWindows {
 			assert.Equal(t, "cmd", shell)
 			assert.Equal(t, []string{"/c"}, args)
 		} else {

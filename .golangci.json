@@ -94,13 +94,9 @@
 		],
 		"disable": [
 			"godot",
-			"exhaustive",
 			"gocognit",
 			"gocyclo",
-			"goconst",
-			"lll",
-			"nestif",
-			"gocritic"
+			"lll"
 		],
 		"settings": {
 			"depguard": {
@@ -246,9 +242,6 @@
 					},
 					{
 						"name": "increment-decrement"
-					},
-					{
-						"name": "var-naming"
 					},
 					{
 						"name": "var-declaration"

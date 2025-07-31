@@ -227,23 +227,33 @@ func (l *Logger) Header(text string) {
 
 	line := strings.Repeat("=", 60)
 	if l.useColor {
-		if _, err := fmt.Fprintf(l.output, "\n%s%s%s\n", colorBold+colorBlue, line, colorReset); err != nil {
-			// Continue if write fails
-			log.Printf("failed to write separator header: %v", err)
-		}
-		if _, err := fmt.Fprintf(l.output, "%s%s %s %s%s\n", colorBold+colorBlue, "===", text, "===", colorReset); err != nil {
-			// Continue if write fails
-			log.Printf("failed to write separator text: %v", err)
-		}
-		if _, err := fmt.Fprintf(l.output, "%s%s%s\n\n", colorBold+colorBlue, line, colorReset); err != nil {
-			// Continue if write fails
-			log.Printf("failed to write separator footer: %v", err)
-		}
+		l.writeColoredHeader(line, text)
 	} else {
-		if _, err := fmt.Fprintf(l.output, "\n%s\n=== %s ===\n%s\n\n", line, text, line); err != nil {
-			// Continue if write fails
-			log.Printf("failed to write plain separator: %v", err)
-		}
+		l.writePlainHeader(line, text)
+	}
+}
+
+// writeColoredHeader writes a colored header line
+func (l *Logger) writeColoredHeader(line, text string) {
+	if _, err := fmt.Fprintf(l.output, "\n%s%s%s\n", colorBold+colorBlue, line, colorReset); err != nil {
+		// Continue if write fails
+		log.Printf("failed to write separator header: %v", err)
+	}
+	if _, err := fmt.Fprintf(l.output, "%s%s %s %s%s\n", colorBold+colorBlue, "===", text, "===", colorReset); err != nil {
+		// Continue if write fails
+		log.Printf("failed to write separator text: %v", err)
+	}
+	if _, err := fmt.Fprintf(l.output, "%s%s%s\n\n", colorBold+colorBlue, line, colorReset); err != nil {
+		// Continue if write fails
+		log.Printf("failed to write separator footer: %v", err)
+	}
+}
+
+// writePlainHeader writes a plain header line
+func (l *Logger) writePlainHeader(line, text string) {
+	if _, err := fmt.Fprintf(l.output, "\n%s\n=== %s ===\n%s\n\n", line, text, line); err != nil {
+		// Continue if write fails
+		log.Printf("failed to write plain separator: %v", err)
 	}
 }
 
@@ -314,9 +324,10 @@ func (l *Logger) GetDayContext() string {
 		return "monday"
 	case time.Friday:
 		return "friday"
-	default:
+	case time.Sunday, time.Tuesday, time.Wednesday, time.Thursday, time.Saturday:
 		return ""
 	}
+	return "" // This should never be reached, but needed for compilation
 }
 
 // log is the internal logging function
@@ -400,7 +411,7 @@ func (l *Logger) logWithEmoji(level LogLevel, emoji, msg string) {
 		color = colorYellow
 	case LogLevelError:
 		color = colorRed
-	default:
+	case LogLevelDebug:
 		color = colorReset
 	}
 

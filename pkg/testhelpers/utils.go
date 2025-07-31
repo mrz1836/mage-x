@@ -30,7 +30,7 @@ func RunCommand(t *testing.T, name string, args ...string) (string, error) {
 }
 
 // RunCommandWithInput runs a command with stdin input
-func RunCommandWithInput(t *testing.T, input string, name string, args ...string) (string, error) {
+func RunCommandWithInput(t *testing.T, input, name string, args ...string) (string, error) {
 	t.Helper()
 
 	cmd := exec.CommandContext(context.Background(), name, args...)

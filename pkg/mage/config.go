@@ -209,7 +209,7 @@ func defaultConfig() *Config {
 	}
 	binary := filepath.Base(module)
 	if binary == "." || binary == "" {
-		binary = "app"
+		binary = defaultBinaryName
 	}
 
 	return &Config{
@@ -276,13 +276,13 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Verbose override
-	if v := os.Getenv("VERBOSE"); v == "true" || v == "1" {
+	if v := os.Getenv("VERBOSE"); v == approvalTrue || v == "1" {
 		c.Build.Verbose = true
 		c.Test.Verbose = true
 	}
 
 	// Test race override
-	if v := os.Getenv("TEST_RACE"); v == "true" || v == "1" {
+	if v := os.Getenv("TEST_RACE"); v == approvalTrue || v == "1" {
 		c.Test.Race = true
 	}
 

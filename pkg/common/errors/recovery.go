@@ -92,31 +92,43 @@ func (r *RealDefaultErrorRecovery) RecoverWithBackoff(fn func() error, config Ba
 		}
 
 		// Don't delay after the last attempt
-		if i < config.MaxRetries {
-			// Add jitter to prevent thundering herd using crypto/rand
-			maxJitter := int64(float64(delay) * 0.1)
-			actualDelay := delay
-			if maxJitter > 0 {
-				jitterBig, err := rand.Int(rand.Reader, big.NewInt(maxJitter))
-				if err != nil {
-					// Fallback to no jitter if crypto/rand fails
-					jitterBig = big.NewInt(0)
-				}
-				jitter := time.Duration(jitterBig.Int64())
-				actualDelay = delay + jitter
-			}
-
-			time.Sleep(actualDelay)
-
-			// Calculate next delay with backoff
-			delay = time.Duration(float64(delay) * config.Multiplier)
-			if delay > config.MaxDelay {
-				delay = config.MaxDelay
-			}
+		if i >= config.MaxRetries {
+			break
 		}
+
+		// Sleep with jitter and update delay for next iteration
+		r.sleepWithJitter(delay)
+		delay = r.calculateNextDelay(delay, config.Multiplier, config.MaxDelay)
 	}
 
 	return Wrapf(lastErr, "failed after %d retries with backoff", config.MaxRetries+1)
+}
+
+// sleepWithJitter adds jitter to delay and sleeps
+func (r *RealDefaultErrorRecovery) sleepWithJitter(delay time.Duration) {
+	maxJitter := int64(float64(delay) * 0.1)
+	actualDelay := delay
+
+	if maxJitter > 0 {
+		jitterBig, err := rand.Int(rand.Reader, big.NewInt(maxJitter))
+		if err != nil {
+			// Fallback to no jitter if crypto/rand fails
+			jitterBig = big.NewInt(0)
+		}
+		jitter := time.Duration(jitterBig.Int64())
+		actualDelay = delay + jitter
+	}
+
+	time.Sleep(actualDelay)
+}
+
+// calculateNextDelay calculates the next delay with backoff
+func (r *RealDefaultErrorRecovery) calculateNextDelay(currentDelay time.Duration, multiplier float64, maxDelay time.Duration) time.Duration {
+	nextDelay := time.Duration(float64(currentDelay) * multiplier)
+	if nextDelay > maxDelay {
+		return maxDelay
+	}
+	return nextDelay
 }
 
 // RecoverWithContext executes a function with panic recovery and context
@@ -172,7 +184,7 @@ func (r *DefaultErrorRecovery) RecoverWithContext(ctx context.Context, fn func()
 // Helper functions for backoff strategies
 
 // LinearBackoff creates a linear backoff configuration
-func LinearBackoff(initialDelay time.Duration, increment time.Duration, maxRetries int) BackoffConfig {
+func LinearBackoff(initialDelay, increment time.Duration, maxRetries int) BackoffConfig {
 	return BackoffConfig{
 		InitialDelay: initialDelay,
 		MaxDelay:     initialDelay + (increment * time.Duration(maxRetries)),
@@ -203,16 +215,12 @@ func FibonacciBackoff(initialDelay time.Duration, maxRetries int) BackoffConfig 
 
 // RetryIfRetryable returns a retry predicate that checks if error is retryable
 func RetryIfRetryable() func(error) bool {
-	return func(err error) bool {
-		return IsRetryable(err)
-	}
+	return IsRetryable
 }
 
 // RetryIfTimeout returns a retry predicate that checks for timeout errors
 func RetryIfTimeout() func(error) bool {
-	return func(err error) bool {
-		return IsTimeout(err)
-	}
+	return IsTimeout
 }
 
 // RetryIfNotCritical returns a retry predicate that excludes critical errors

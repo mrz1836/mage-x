@@ -983,40 +983,41 @@ func (js *JSONStorage) Query(query MetricsQuery) ([]*Metric, error) {
 	}
 
 	// Filter metrics based on query
-	var filteredMetrics []*Metric
+	filteredMetrics := make([]*Metric, 0, len(allMetrics))
 	for _, metric := range allMetrics {
-		if (metric.Timestamp.After(query.StartTime) || metric.Timestamp.Equal(query.StartTime)) &&
-			(metric.Timestamp.Before(query.EndTime) || metric.Timestamp.Equal(query.EndTime)) {
-			// Check names filter
-			if len(query.Names) > 0 {
-				found := false
-				for _, name := range query.Names {
-					if metric.Name == name {
-						found = true
-						break
-					}
-				}
-				if !found {
-					continue
-				}
-			}
-
-			// Check tags filter
-			if len(query.Tags) > 0 {
-				match := true
-				for key, value := range query.Tags {
-					if metric.Tags[key] != value {
-						match = false
-						break
-					}
-				}
-				if !match {
-					continue
-				}
-			}
-
-			filteredMetrics = append(filteredMetrics, metric)
+		if !isMetricInTimeRange(metric, query) {
+			continue
 		}
+
+		// Check names filter
+		if len(query.Names) > 0 {
+			found := false
+			for _, name := range query.Names {
+				if metric.Name == name {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		// Check tags filter
+		if len(query.Tags) > 0 {
+			match := true
+			for key, value := range query.Tags {
+				if metric.Tags[key] != value {
+					match = false
+					break
+				}
+			}
+			if !match {
+				continue
+			}
+		}
+
+		filteredMetrics = append(filteredMetrics, metric)
 	}
 
 	// Apply limit
@@ -1025,6 +1026,12 @@ func (js *JSONStorage) Query(query MetricsQuery) ([]*Metric, error) {
 	}
 
 	return filteredMetrics, nil
+}
+
+// isMetricInTimeRange checks if a metric timestamp falls within the query time range
+func isMetricInTimeRange(metric *Metric, query MetricsQuery) bool {
+	return (metric.Timestamp.After(query.StartTime) || metric.Timestamp.Equal(query.StartTime)) &&
+		(metric.Timestamp.Before(query.EndTime) || metric.Timestamp.Equal(query.EndTime))
 }
 
 // Aggregate aggregates metrics from JSON storage
@@ -1079,21 +1086,30 @@ func (js *JSONStorage) Cleanup(retentionDays int) error {
 			continue
 		}
 
-		// Parse date from filename
-		if strings.HasPrefix(entry.Name(), "metrics_") && strings.HasSuffix(entry.Name(), ".json") {
-			dateStr := strings.TrimPrefix(entry.Name(), "metrics_")
-			dateStr = strings.TrimSuffix(dateStr, ".json")
-
-			if date, err := time.Parse("2006-01-02", dateStr); err == nil {
-				if date.Before(cutoffDate) {
-					filePath := filepath.Join(js.storagePath, entry.Name())
-					if err := os.Remove(filePath); err != nil {
-						Error("Failed to remove old metric file %s: %v", filePath, err)
-					}
-				}
+		if shouldRemoveMetricFile(entry.Name(), cutoffDate) {
+			filePath := filepath.Join(js.storagePath, entry.Name())
+			if err := os.Remove(filePath); err != nil {
+				Error("Failed to remove old metric file %s: %v", filePath, err)
 			}
 		}
 	}
 
 	return nil
+}
+
+// shouldRemoveMetricFile checks if a metric file should be removed based on its date
+func shouldRemoveMetricFile(filename string, cutoffDate time.Time) bool {
+	if !strings.HasPrefix(filename, "metrics_") || !strings.HasSuffix(filename, ".json") {
+		return false
+	}
+
+	dateStr := strings.TrimPrefix(filename, "metrics_")
+	dateStr = strings.TrimSuffix(dateStr, ".json")
+
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return false
+	}
+
+	return date.Before(cutoffDate)
 }

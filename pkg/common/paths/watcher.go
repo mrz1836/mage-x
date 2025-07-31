@@ -16,7 +16,7 @@ import (
 type DefaultPathWatcher struct {
 	mu           sync.RWMutex
 	watchedPaths map[string]EventMask
-	events       chan PathEvent
+	events       chan *PathEvent
 	errors       chan error
 	bufferSize   int
 	recursive    bool
@@ -33,7 +33,7 @@ func NewPathWatcher() PathWatcher {
 
 	return &DefaultPathWatcher{
 		watchedPaths: make(map[string]EventMask),
-		events:       make(chan PathEvent, 1000),
+		events:       make(chan *PathEvent, 1000),
 		errors:       make(chan error, 100),
 		bufferSize:   1000,
 		recursive:    true,
@@ -90,7 +90,7 @@ func (w *DefaultPathWatcher) UnwatchPath(path PathBuilder) error {
 }
 
 // Events returns the channel for receiving path events
-func (w *DefaultPathWatcher) Events() <-chan PathEvent {
+func (w *DefaultPathWatcher) Events() <-chan *PathEvent {
 	return w.events
 }
 
@@ -229,7 +229,7 @@ func (w *DefaultPathWatcher) checkFileForChanges(path string, info fs.FileInfo, 
 		// New file
 		w.lastSeen[path] = modTime
 		if eventMask&EventCreate != 0 {
-			w.emitEvent(PathEvent{
+			w.emitEvent(&PathEvent{
 				Path:   path,
 				Op:     EventCreate,
 				Time:   time.Now(),
@@ -241,7 +241,7 @@ func (w *DefaultPathWatcher) checkFileForChanges(path string, info fs.FileInfo, 
 		// Modified file
 		w.lastSeen[path] = modTime
 		if eventMask&EventWrite != 0 {
-			w.emitEvent(PathEvent{
+			w.emitEvent(&PathEvent{
 				Path:   path,
 				Op:     EventWrite,
 				Time:   time.Now(),
@@ -253,7 +253,7 @@ func (w *DefaultPathWatcher) checkFileForChanges(path string, info fs.FileInfo, 
 }
 
 // emitEvent sends an event to the events channel
-func (w *DefaultPathWatcher) emitEvent(event PathEvent) {
+func (w *DefaultPathWatcher) emitEvent(event *PathEvent) {
 	select {
 	case w.events <- event:
 	default:
@@ -274,7 +274,7 @@ type MockPathWatcher struct {
 	SetDebounceCalls   []time.Duration
 	ShouldError        bool
 	WatchedPathsList   []string
-	MockEvents         chan PathEvent
+	MockEvents         chan *PathEvent
 	MockErrors         chan error
 }
 
@@ -300,7 +300,7 @@ func NewMockPathWatcher() *MockPathWatcher {
 		UnwatchCalls:     make([]string, 0),
 		UnwatchPathCalls: make([]PathBuilder, 0),
 		IsWatchingCalls:  make([]string, 0),
-		MockEvents:       make(chan PathEvent, 100),
+		MockEvents:       make(chan *PathEvent, 100),
 		MockErrors:       make(chan error, 100),
 	}
 }
@@ -342,7 +342,7 @@ func (m *MockPathWatcher) UnwatchPath(path PathBuilder) error {
 }
 
 // Events returns the events channel from the mock watcher
-func (m *MockPathWatcher) Events() <-chan PathEvent {
+func (m *MockPathWatcher) Events() <-chan *PathEvent {
 	return m.MockEvents
 }
 

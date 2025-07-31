@@ -509,7 +509,7 @@ func FuzzValidateEnvVar(f *testing.F) {
 			assert.NotEmpty(t, name, "ValidateEnvVar accepted empty name")
 
 			// Should start with letter or underscore
-			if len(name) > 0 {
+			if name != "" {
 				firstChar := name[0]
 				assert.True(t, (firstChar >= 'a' && firstChar <= 'z') ||
 					(firstChar >= 'A' && firstChar <= 'Z') || firstChar == '_',

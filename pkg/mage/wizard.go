@@ -14,6 +14,10 @@ import (
 	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
+const (
+	skipValue = "skip"
+)
+
 // Wizard namespace for interactive configuration wizards
 type Wizard mg.Namespace
 
@@ -191,7 +195,7 @@ func (w *EnterpriseWizard) askToContinue() bool {
 	fmt.Print("Continue with the next step? (y/N): ")
 	w.Context.Scanner.Scan()
 	response := strings.ToLower(strings.TrimSpace(w.Context.Scanner.Text()))
-	return response == "y" || response == "yes"
+	return response == "y" || response == responseYes
 }
 
 // Wizard Steps
@@ -298,7 +302,7 @@ func (s *OrganizationStep) promptString(ctx *WizardContext, prompt, defaultValue
 			input = defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -332,7 +336,7 @@ func (s *OrganizationStep) promptChoice(ctx *WizardContext, prompt string, choic
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -432,7 +436,7 @@ func (s *SecurityStep) promptChoice(ctx *WizardContext, prompt string, choices [
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -459,11 +463,11 @@ func (s *SecurityStep) promptBool(ctx *WizardContext, prompt string, defaultValu
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
-		if input == "y" || input == "yes" {
+		if input == "y" || input == responseYes {
 			return true
 		}
 
@@ -502,7 +506,7 @@ func (s *SecurityStep) promptMultiChoice(ctx *WizardContext, prompt string, choi
 			return defaultValues
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValues
 		}
 
@@ -617,11 +621,11 @@ func (s *IntegrationsStep) promptBool(ctx *WizardContext, prompt string, default
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
-		if input == "y" || input == "yes" {
+		if input == "y" || input == responseYes {
 			return true
 		}
 
@@ -652,7 +656,7 @@ func (s *IntegrationsStep) promptChoice(ctx *WizardContext, prompt string, choic
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -765,11 +769,11 @@ func (s *WorkflowsStep) promptBool(ctx *WizardContext, prompt string, defaultVal
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
-		if input == "y" || input == "yes" {
+		if input == "y" || input == responseYes {
 			return true
 		}
 
@@ -791,7 +795,7 @@ func (s *WorkflowsStep) promptString(ctx *WizardContext, prompt, defaultValue st
 			input = defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -825,7 +829,7 @@ func (s *WorkflowsStep) promptChoice(ctx *WizardContext, prompt string, choices 
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -847,7 +851,7 @@ func (s *WorkflowsStep) promptInt(ctx *WizardContext, prompt string, defaultValu
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -963,11 +967,11 @@ func (s *AnalyticsStep) promptBool(ctx *WizardContext, prompt string, defaultVal
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
-		if input == "y" || input == "yes" {
+		if input == "y" || input == responseYes {
 			return true
 		}
 
@@ -998,7 +1002,7 @@ func (s *AnalyticsStep) promptChoice(ctx *WizardContext, prompt string, choices 
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -1020,7 +1024,7 @@ func (s *AnalyticsStep) promptString(ctx *WizardContext, prompt, defaultValue st
 			input = defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -1062,7 +1066,7 @@ func (s *AnalyticsStep) promptMultiChoice(ctx *WizardContext, prompt string, cho
 			return defaultValues
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValues
 		}
 
@@ -1188,11 +1192,11 @@ func (s *DeploymentStep) promptBool(ctx *WizardContext, prompt string, defaultVa
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
-		if input == "y" || input == "yes" {
+		if input == "y" || input == responseYes {
 			return true
 		}
 
@@ -1214,7 +1218,7 @@ func (s *DeploymentStep) promptString(ctx *WizardContext, prompt, defaultValue s
 			input = defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -1248,7 +1252,7 @@ func (s *DeploymentStep) promptChoice(ctx *WizardContext, prompt string, choices
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -1287,7 +1291,7 @@ func (s *DeploymentStep) promptMultiChoice(ctx *WizardContext, prompt string, ch
 			return defaultValues
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValues
 		}
 
@@ -1393,11 +1397,11 @@ func (s *ComplianceStep) promptBool(ctx *WizardContext, prompt string, defaultVa
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
-		if input == "y" || input == "yes" {
+		if input == "y" || input == responseYes {
 			return true
 		}
 
@@ -1428,7 +1432,7 @@ func (s *ComplianceStep) promptChoice(ctx *WizardContext, prompt string, choices
 			return defaultValue
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValue
 		}
 
@@ -1467,7 +1471,7 @@ func (s *ComplianceStep) promptMultiChoice(ctx *WizardContext, prompt string, ch
 			return defaultValues
 		}
 
-		if input == "skip" {
+		if input == skipValue {
 			return defaultValues
 		}
 

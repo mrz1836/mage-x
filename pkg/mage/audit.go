@@ -83,7 +83,8 @@ func (Audit) Show() error {
 	utils.Info("%-20s %-12s %-20s %-15s %-8s %-10s", "TIMESTAMP", "USER", "COMMAND", "DURATION", "SUCCESS", "EXIT CODE")
 	utils.Info("%s", strings.Repeat("-", 95))
 
-	for _, event := range events {
+	for i := range events {
+		event := &events[i]
 		status := "✅"
 		if !event.Success {
 			status = "❌"

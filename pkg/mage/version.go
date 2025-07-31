@@ -202,7 +202,7 @@ func (Version) Bump(_ ...string) error {
 	utils.Success("Created tag: %s", newVersion)
 
 	// Ask to push
-	if os.Getenv("PUSH") == "true" {
+	if os.Getenv("PUSH") == approvalTrue {
 		utils.Info("Pushing tag to remote...")
 		if err := GetRunner().RunCmd("git", "push", "origin", newVersion); err != nil {
 			return fmt.Errorf("failed to push tag: %w", err)
@@ -277,7 +277,7 @@ func (Version) Changelog() error {
 
 // getVersionInfo returns the current version
 func getVersionInfo() string {
-	if version != "dev" {
+	if version != versionDev {
 		return version
 	}
 
@@ -291,7 +291,7 @@ func getVersionInfo() string {
 
 // getCommitInfo returns the current commit
 func getCommitInfo() string {
-	if commit != "unknown" {
+	if commit != statusUnknown {
 		return commit
 	}
 
@@ -300,12 +300,12 @@ func getCommitInfo() string {
 		return strings.TrimSpace(sha)
 	}
 
-	return "unknown"
+	return statusUnknown
 }
 
 // getBuildDate returns the build date
 func getBuildDate() string {
-	if buildDate != "unknown" {
+	if buildDate != statusUnknown {
 		return buildDate
 	}
 
@@ -353,7 +353,7 @@ func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}

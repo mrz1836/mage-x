@@ -108,7 +108,7 @@ type PathWatcher interface {
 	UnwatchPath(path PathBuilder) error
 
 	// Event handling
-	Events() <-chan PathEvent
+	Events() <-chan *PathEvent
 	Errors() <-chan error
 	Close() error
 

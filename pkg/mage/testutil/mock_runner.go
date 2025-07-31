@@ -37,7 +37,7 @@ func NewMockRunner() (*MockRunner, *MockBuilder) {
 }
 
 // ExpectGitCommand sets up expectations for git commands
-func (b *MockBuilder) ExpectGitCommand(subcommand string, output string, err error) *MockBuilder {
+func (b *MockBuilder) ExpectGitCommand(subcommand, output string, err error) *MockBuilder {
 	b.runner.On("RunCmdOutput", "git", mock.MatchedBy(func(args []string) bool {
 		return len(args) > 0 && args[0] == subcommand
 	})).Return(output, err).Maybe()

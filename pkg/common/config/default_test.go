@@ -101,26 +101,26 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Load() {
 	loader := NewDefaultConfigLoader()
 
 	ts.Run("load from first available path", func() {
-		jsonFile := filepath.Join(ts.tempDir, "config.json")
-		jsonContent := `{"name": "first", "value": 1}`
-		err := os.WriteFile(jsonFile, []byte(jsonContent), 0o600)
+		configFile1 := filepath.Join(ts.tempDir, "config.json")
+		configContent1 := `{"name": "first", "value": 1}`
+		err := os.WriteFile(configFile1, []byte(configContent1), 0o600)
 		ts.Require().NoError(err)
 
-		jsonFile2 := filepath.Join(ts.tempDir, "config2.json")
-		jsonContent2 := `{"name": "second", "value": 2}`
-		err = os.WriteFile(jsonFile2, []byte(jsonContent2), 0o600)
+		configFile2 := filepath.Join(ts.tempDir, "config2.json")
+		configContent2 := `{"name": "second", "value": 2}`
+		err = os.WriteFile(configFile2, []byte(configContent2), 0o600)
 		ts.Require().NoError(err)
 
 		paths := []string{
 			filepath.Join(ts.tempDir, "nonexistent.json"),
-			jsonFile,
-			jsonFile2,
+			configFile1,
+			configFile2,
 		}
 
 		var result map[string]interface{}
 		loadedPath, err := loader.Load(paths, &result)
 		ts.Require().NoError(err)
-		ts.Require().JSONEq(jsonFile, loadedPath)
+		ts.Require().Equal(configFile1, loadedPath)
 		ts.Require().Equal("first", result["name"])
 	})
 

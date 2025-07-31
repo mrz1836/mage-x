@@ -34,22 +34,32 @@ func (h *RealDefaultErrorHandler) Handle(err error) error {
 
 	// Try to handle as MageError
 	var mageErr MageError
-	if errors.As(err, &mageErr) {
-		// Check code-specific handler
-		if handler, exists := h.codeHandlers[mageErr.Code()]; exists {
-			if handlerErr := handler(mageErr); handlerErr != nil {
+	if !errors.As(err, &mageErr) {
+		// Not a MageError, use default handler if available
+		if h.defaultHandler != nil {
+			if handlerErr := h.defaultHandler(err); handlerErr != nil {
 				return h.handleFallback(handlerErr)
 			}
 			return nil
 		}
+		// No default handler, use fallback
+		return h.handleFallback(err)
+	}
 
-		// Check severity-specific handler
-		if handler, exists := h.severityHandlers[mageErr.Severity()]; exists {
-			if handlerErr := handler(mageErr); handlerErr != nil {
-				return h.handleFallback(handlerErr)
-			}
-			return nil
+	// Check code-specific handler first
+	if handler, exists := h.codeHandlers[mageErr.Code()]; exists {
+		if handlerErr := handler(mageErr); handlerErr != nil {
+			return h.handleFallback(handlerErr)
 		}
+		return nil
+	}
+
+	// Check severity-specific handler
+	if handler, exists := h.severityHandlers[mageErr.Severity()]; exists {
+		if handlerErr := handler(mageErr); handlerErr != nil {
+			return h.handleFallback(handlerErr)
+		}
+		return nil
 	}
 
 	// Use default handler

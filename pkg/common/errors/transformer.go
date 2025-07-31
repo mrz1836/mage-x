@@ -220,10 +220,10 @@ func SanitizeTransformer(err error) error {
 	sanitized := message
 	for _, p := range patterns {
 		// Simple string replacement (in production, use regex)
-		if strings.Contains(sanitized, p.pattern[:strings.Index(p.pattern, "=")]) {
+		if idx := strings.Index(p.pattern, "="); idx != -1 && strings.Contains(sanitized, p.pattern[:idx]) {
 			parts := strings.Split(sanitized, " ")
 			for i, part := range parts {
-				if strings.Contains(part, p.pattern[:strings.Index(p.pattern, "=")]) {
+				if idx := strings.Index(p.pattern, "="); idx != -1 && strings.Contains(part, p.pattern[:idx]) {
 					parts[i] = p.replacement
 				}
 			}

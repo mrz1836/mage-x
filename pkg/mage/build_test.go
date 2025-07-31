@@ -68,7 +68,7 @@ func (ts *BuildTestSuite) mockBuildCommand(outputPath string) {
 		// Check for go build command with variable structure
 		// Could be: ["build", "-ldflags", <flags>, "-o", <output>, "."]
 		// Or: ["build", "-ldflags", <flags>, "-trimpath", "-o", <output>, "."]
-		if len(args) < 6 || args[0] != "build" || args[1] != "-ldflags" {
+		if len(args) < 6 || args[0] != CmdGoBuild || args[1] != "-ldflags" {
 			return false
 		}
 
@@ -122,7 +122,7 @@ func main() {
 		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.0.0", nil)
 		env.Runner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("abc1234", nil)
 		env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-			if len(args) < 6 || args[0] != "build" || args[1] != "-ldflags" {
+			if len(args) < 6 || args[0] != CmdGoBuild || args[1] != "-ldflags" {
 				return false
 			}
 			for i := 3; i < len(args)-1; i++ {

@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -305,7 +306,7 @@ func TestProviderFileOperations(t *testing.T) {
 		t.Errorf("Failed to read file: %v", err)
 	}
 
-	if string(readData) != string(testData) {
+	if !bytes.Equal(readData, testData) {
 		t.Errorf("Expected %s, got %s", string(testData), string(readData))
 	}
 

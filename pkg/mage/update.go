@@ -126,7 +126,7 @@ func (Update) Install() error {
 func (Update) Auto() error {
 	utils.Header("Configuring Automatic Updates")
 
-	enabled := utils.GetEnv("ENABLED", "true") == "true"
+	enabled := utils.GetEnv("ENABLED", approvalTrue) == approvalTrue
 	interval := utils.GetEnv("INTERVAL", "24h")
 	channel := getUpdateChannel()
 
@@ -317,7 +317,7 @@ func getLatestStableRelease(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +354,7 @@ func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -398,7 +398,7 @@ func getLatestEdgeRelease(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +444,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	utils.Info("Downloading update...")
 
 	// Download binary
-	req, err := http.NewRequestWithContext(context.Background(), "GET", info.DownloadURL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", info.DownloadURL, http.NoBody)
 	if err != nil {
 		return err
 	}

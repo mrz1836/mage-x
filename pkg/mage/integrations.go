@@ -996,8 +996,8 @@ func testIntegration(integration IntegrationConfig) IntegrationTestResult {
 	result.Status = "passed"
 
 	for _, test := range result.Tests {
-		if test.Status == "failed" {
-			result.Status = "failed"
+		if test.Status == statusFailed {
+			result.Status = statusFailed
 			break
 		}
 	}

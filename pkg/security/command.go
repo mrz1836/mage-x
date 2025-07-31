@@ -204,7 +204,8 @@ func (e *SecureExecutor) ExecuteWithEnv(ctx context.Context, env []string, name 
 
 	// Merge provided environment with filtered base environment
 	baseEnv := e.filterEnvironment(os.Environ())
-	cmd.Env = append(baseEnv, env...)
+	envVars := append(baseEnv, env...)
+	cmd.Env = envVars
 
 	// Connect output
 	cmd.Stdout = os.Stdout
@@ -475,53 +476,56 @@ func (m *MockExecutor) SetResponse(command string, output string, err error) {
 func (e *SecureExecutor) logAuditEvent(command string, args []string, startTime time.Time, duration time.Duration, exitCode int, success bool) {
 	// Skip audit logging if not available (to avoid import cycles)
 	// This will be handled by the audit package when imported
-	if auditLogger := getAuditLogger(); auditLogger != nil {
-		// Get current user
-		currentUser := "unknown"
-		if usr, err := user.Current(); err == nil {
-			currentUser = usr.Username
-		}
+	auditLogger := getAuditLogger()
+	if auditLogger == nil {
+		return
+	}
 
-		// Get current working directory
-		workingDir := e.WorkingDir
-		if workingDir == "" {
-			var err error
-			workingDir, err = os.Getwd()
-			if err != nil {
-				workingDir = "."
-			}
-		}
+	// Get current user
+	currentUser := "unknown"
+	if usr, err := user.Current(); err == nil {
+		currentUser = usr.Username
+	}
 
-		// Create filtered environment map
-		env := make(map[string]string)
-		for _, envVar := range []string{"MAGE_VERBOSE", "MAGE_AUDIT_ENABLED", "GO_VERSION", "GOOS", "GOARCH"} {
-			if value := os.Getenv(envVar); value != "" {
-				env[envVar] = value
-			}
+	// Get current working directory
+	workingDir := e.WorkingDir
+	if workingDir == "" {
+		var err error
+		workingDir, err = os.Getwd()
+		if err != nil {
+			workingDir = "."
 		}
+	}
 
-		// Create audit event
-		event := AuditEvent{
-			Timestamp:   startTime,
-			User:        currentUser,
-			Command:     command,
-			Args:        args,
-			WorkingDir:  workingDir,
-			Duration:    duration,
-			ExitCode:    exitCode,
-			Success:     success,
-			Environment: env,
-			Metadata: map[string]string{
-				"executor_type": "SecureExecutor",
-				"dry_run":       fmt.Sprintf("%v", e.DryRun),
-			},
+	// Create filtered environment map
+	env := make(map[string]string)
+	for _, envVar := range []string{"MAGE_VERBOSE", "MAGE_AUDIT_ENABLED", "GO_VERSION", "GOOS", "GOARCH"} {
+		if value := os.Getenv(envVar); value != "" {
+			env[envVar] = value
 		}
+	}
 
-		// Log the event (ignore errors to avoid breaking command execution)
-		if err := auditLogger.LogEvent(event); err != nil {
-			// Audit logging failure should not break command execution
-			log.Printf("failed to log audit event: %v", err)
-		}
+	// Create audit event
+	event := AuditEvent{
+		Timestamp:   startTime,
+		User:        currentUser,
+		Command:     command,
+		Args:        args,
+		WorkingDir:  workingDir,
+		Duration:    duration,
+		ExitCode:    exitCode,
+		Success:     success,
+		Environment: env,
+		Metadata: map[string]string{
+			"executor_type": "SecureExecutor",
+			"dry_run":       fmt.Sprintf("%v", e.DryRun),
+		},
+	}
+
+	// Log the event (ignore errors to avoid breaking command execution)
+	if err := auditLogger.LogEvent(event); err != nil {
+		// Audit logging failure should not break command execution
+		log.Printf("failed to log audit event: %v", err)
 	}
 }
 

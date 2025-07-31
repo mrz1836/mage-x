@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+const (
+	osWindows = "windows"
+)
+
 // DefaultEnvironment implements Environment using os package
 type DefaultEnvironment struct {
 	options Options
@@ -21,7 +25,7 @@ type DefaultEnvironment struct {
 func NewDefaultEnvironment() *DefaultEnvironment {
 	return &DefaultEnvironment{
 		options: Options{
-			CaseSensitive:  runtime.GOOS != "windows",
+			CaseSensitive:  runtime.GOOS != osWindows,
 			AllowOverwrite: true,
 			AutoTrim:       true,
 			ExpandVars:     false,
@@ -323,7 +327,7 @@ func (p *DefaultPathResolver) ConfigDir(appName string) string {
 	}
 
 	switch runtime.GOOS {
-	case "windows":
+	case osWindows:
 		if appData := os.Getenv("APPDATA"); appData != "" {
 			return filepath.Join(appData, appName)
 		}
@@ -347,7 +351,7 @@ func (p *DefaultPathResolver) DataDir(appName string) string {
 	}
 
 	switch runtime.GOOS {
-	case "windows":
+	case osWindows:
 		return p.ConfigDir(appName) // Same as config on Windows
 	case "darwin":
 		return filepath.Join(home, "Library", "Application Support", appName)
@@ -368,7 +372,7 @@ func (p *DefaultPathResolver) CacheDir(appName string) string {
 	}
 
 	switch runtime.GOOS {
-	case "windows":
+	case osWindows:
 		if temp := os.Getenv("TEMP"); temp != "" {
 			return filepath.Join(temp, appName)
 		}
@@ -432,7 +436,7 @@ func (p *DefaultPathResolver) GOCACHE() string {
 
 	// Default cache location varies by OS
 	switch runtime.GOOS {
-	case "windows":
+	case osWindows:
 		if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
 			return filepath.Join(localAppData, "go-build")
 		}

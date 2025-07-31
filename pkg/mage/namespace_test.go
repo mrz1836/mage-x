@@ -109,7 +109,7 @@ func TestTestNamespace_Default(t *testing.T) {
 			name: "successful test run",
 			setupMock: func(m *MockCommandRunner) {
 				// Lint check with flexible args (handles variable number of arguments)
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "golangci-lint" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 				// Test run with flexible args (up to 7 args total)
 				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "go" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 			},
@@ -118,14 +118,14 @@ func TestTestNamespace_Default(t *testing.T) {
 		{
 			name: "lint failure",
 			setupMock: func(m *MockCommandRunner) {
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "golangci-lint" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("lint failed")).Maybe()
+				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("lint failed")).Maybe()
 			},
 			wantErr: true,
 		},
 		{
 			name: "test failure",
 			setupMock: func(m *MockCommandRunner) {
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "golangci-lint" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "go" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("tests failed")).Maybe()
 			},
 			wantErr: true,
@@ -171,14 +171,14 @@ func TestLintNamespace_Default(t *testing.T) {
 			name: "successful lint",
 			setupMock: func(m *MockCommandRunner) {
 				// Lint calls with 5 args: golangci-lint run ./pkg/... --timeout 5m
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "golangci-lint" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 			},
 			wantErr: false,
 		},
 		{
 			name: "lint with errors",
 			setupMock: func(m *MockCommandRunner) {
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "golangci-lint" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("lint errors found")).Maybe()
+				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("lint errors found")).Maybe()
 			},
 			wantErr: true,
 		},
@@ -205,7 +205,7 @@ func TestLintNamespace_Default(t *testing.T) {
 func TestLintNamespace_Fix(t *testing.T) {
 	withMockRunner(t, func(mockRunner *MockCommandRunner) {
 		// Fix calls with 6 args: golangci-lint run --fix ./pkg/... --timeout 5m
-		mockRunner.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "golangci-lint" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+		mockRunner.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 
 		lint := NewLintNamespace()
 		err := lint.Fix()

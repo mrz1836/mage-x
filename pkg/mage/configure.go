@@ -13,6 +13,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	errUnexpectedNewline = "unexpected newline"
+)
+
 // Configure namespace for configuration management
 type Configure mg.Namespace
 
@@ -119,7 +123,7 @@ func (Configure) Enterprise() error {
 		// Ask if user wants to update
 		fmt.Print("Would you like to update the existing configuration? (y/N): ")
 		var response string
-		if _, err := fmt.Scanln(&response); err != nil && err.Error() != "unexpected newline" {
+		if _, err := fmt.Scanln(&response); err != nil && err.Error() != errUnexpectedNewline {
 			return fmt.Errorf("failed to read response: %w", err)
 		}
 
@@ -309,7 +313,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 
 	fmt.Printf("Project Name [%s]: ", w.Config.Project.Name)
 	var name string
-	if _, err := fmt.Scanln(&name); err != nil && err.Error() != "unexpected newline" {
+	if _, err := fmt.Scanln(&name); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
 	}
@@ -319,7 +323,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 
 	fmt.Printf("Binary Name [%s]: ", w.Config.Project.Binary)
 	var binary string
-	if _, err := fmt.Scanln(&binary); err != nil && err.Error() != "unexpected newline" {
+	if _, err := fmt.Scanln(&binary); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
 	}
@@ -329,7 +333,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 
 	fmt.Printf("Module Path [%s]: ", w.Config.Project.Module)
 	var module string
-	if _, err := fmt.Scanln(&module); err != nil && err.Error() != "unexpected newline" {
+	if _, err := fmt.Scanln(&module); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
 	}
@@ -345,7 +349,7 @@ func (w *ConfigurationWizard) updateBuildConfig() error {
 
 	fmt.Printf("Output Directory [%s]: ", w.Config.Build.Output)
 	var output string
-	if _, err := fmt.Scanln(&output); err != nil && err.Error() != "unexpected newline" {
+	if _, err := fmt.Scanln(&output); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
 	}
@@ -371,7 +375,7 @@ func (w *ConfigurationWizard) updateTestConfig() error {
 
 	fmt.Printf("Test Timeout [%s]: ", w.Config.Test.Timeout)
 	var timeout string
-	if _, err := fmt.Scanln(&timeout); err != nil && err.Error() != "unexpected newline" {
+	if _, err := fmt.Scanln(&timeout); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
 	}
@@ -381,7 +385,7 @@ func (w *ConfigurationWizard) updateTestConfig() error {
 
 	fmt.Printf("Enable Race Detection [%v]: ", w.Config.Test.Race)
 	var race string
-	if _, err := fmt.Scanln(&race); err != nil && err.Error() != "unexpected newline" {
+	if _, err := fmt.Scanln(&race); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
 	}
