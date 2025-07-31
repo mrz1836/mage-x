@@ -3,6 +3,8 @@ package utils
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"sync"
 	"time"
 )
@@ -96,7 +98,10 @@ func (s *Spinner) Stop() {
 	close(s.stopCh)
 
 	// Clear the spinner line
-	fmt.Print("\r\033[K")
+	if _, err := fmt.Fprint(os.Stdout, "\r\033[K"); err != nil {
+		// Continue if write fails
+		log.Printf("failed to clear spinner line: %v", err)
+	}
 }
 
 // Pause temporarily pauses the spinner
@@ -151,7 +156,10 @@ func (s *Spinner) animate() {
 
 		case <-s.pauseCh:
 			// Clear the spinner line when pausing
-			fmt.Print("\r\033[K")
+			if _, err := fmt.Fprint(os.Stdout, "\r\033[K"); err != nil {
+				// Continue if write fails
+				log.Printf("failed to clear spinner line: %v", err)
+			}
 
 			// Wait for resume
 			<-s.resumeCh
@@ -164,7 +172,10 @@ func (s *Spinner) animate() {
 			s.mu.Unlock()
 
 			// Use carriage return to overwrite the line
-			fmt.Printf("\r%s %s", frame, msg)
+			if _, err := fmt.Fprintf(os.Stdout, "\r%s %s", frame, msg); err != nil {
+				// Continue if write fails
+				log.Printf("failed to write spinner frame: %v", err)
+			}
 		}
 	}
 }
@@ -261,7 +272,10 @@ func (m *MultiSpinner) Stop() {
 
 	// Clear all spinner lines
 	for range m.spinners {
-		fmt.Print("\033[1A\033[K")
+		if _, err := fmt.Fprint(os.Stdout, "\033[1A\033[K"); err != nil {
+			// Continue if write fails
+			log.Printf("failed to clear multiline spinner: %v", err)
+		}
 	}
 }
 
@@ -291,7 +305,10 @@ func (m *MultiSpinner) render() {
 
 	// Move cursor to beginning of spinner area
 	for i := 0; i < len(m.spinners); i++ {
-		fmt.Print("\033[1A")
+		if _, err := fmt.Fprint(os.Stdout, "\033[1A"); err != nil {
+			// Continue if write fails
+			log.Printf("failed to move cursor up: %v", err)
+		}
 	}
 
 	// Render each spinner
@@ -311,7 +328,10 @@ func (m *MultiSpinner) render() {
 		}
 
 		// Clear line and print status
-		fmt.Printf("\033[K  %s %s: %s\n", icon, spinner.name, spinner.message)
+		if _, err := fmt.Fprintf(os.Stdout, "\033[K  %s %s: %s\n", icon, spinner.name, spinner.message); err != nil {
+			// Continue if write fails
+			log.Printf("failed to write multiline spinner status: %v", err)
+		}
 	}
 }
 
@@ -416,7 +436,10 @@ func (p *ProgressTree) Render() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	fmt.Println()
+	if _, err := fmt.Fprintln(os.Stdout, ""); err != nil {
+		// Continue if write fails
+		log.Printf("failed to write newline: %v", err)
+	}
 	p.renderer.renderNode(p.root, "", true)
 }
 
@@ -511,7 +534,10 @@ func (r *treeRenderer) renderNode(node *ProgressNode, prefix string, isLast bool
 		line += fmt.Sprintf(" [%d/%d] %.0f%%", node.progress, node.total, percent)
 	}
 
-	fmt.Println(line)
+	if _, err := fmt.Fprintln(os.Stdout, line); err != nil {
+		// Continue if write fails
+		log.Printf("failed to write fancy line: %v", err)
+	}
 
 	// Render children
 	childPrefix := prefix

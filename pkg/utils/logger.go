@@ -485,7 +485,10 @@ func (p *Progress) Finish() {
 
 	p.current = p.total
 	p.render()
-	fmt.Println() // New line after progress
+	if _, err := fmt.Fprintln(os.Stdout, ""); err != nil {
+		// Continue if write fails
+		log.Printf("failed to write progress newline: %v", err)
+	}
 }
 
 // render draws the progress bar
@@ -539,7 +542,10 @@ func (p *Progress) render() {
 	}
 
 	// Clear line and print progress
-	fmt.Printf("\r%-30s %s%s%s", p.message, bar.String(), status, emoji)
+	if _, err := fmt.Fprintf(os.Stdout, "\r%-30s %s%s%s", p.message, bar.String(), status, emoji); err != nil {
+		// Continue if write fails
+		log.Printf("failed to write progress bar: %v", err)
+	}
 }
 
 // formatDuration formats a duration in a human-readable way
