@@ -2,7 +2,8 @@ package errors
 
 import (
 	"context"
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 	"time"
 )
 
@@ -92,9 +93,18 @@ func (r *RealDefaultErrorRecovery) RecoverWithBackoff(fn func() error, config Ba
 
 		// Don't delay after the last attempt
 		if i < config.MaxRetries {
-			// Add jitter to prevent thundering herd
-			jitter := time.Duration(rand.Float64() * float64(delay) * 0.1)
-			actualDelay := delay + jitter
+			// Add jitter to prevent thundering herd using crypto/rand
+			maxJitter := int64(float64(delay) * 0.1)
+			actualDelay := delay
+			if maxJitter > 0 {
+				jitterBig, err := rand.Int(rand.Reader, big.NewInt(maxJitter))
+				if err != nil {
+					// Fallback to no jitter if crypto/rand fails
+					jitterBig = big.NewInt(0)
+				}
+				jitter := time.Duration(jitterBig.Int64())
+				actualDelay = delay + jitter
+			}
 
 			time.Sleep(actualDelay)
 

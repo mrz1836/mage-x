@@ -469,9 +469,17 @@ func (mc *MetricsCollector) GetCurrentResourceMetrics() ResourceMetrics {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
+	// Safely convert uint64 to int64, handling potential overflow
+	var memUsage int64
+	if m.Alloc <= uint64(0x7FFFFFFFFFFFFFFF) { // Max int64 value
+		memUsage = int64(m.Alloc)
+	} else {
+		memUsage = 0x7FFFFFFFFFFFFFFF // Use max int64 if overflow would occur
+	}
+
 	return ResourceMetrics{
 		CPUUsage:    getCPUUsage(),
-		MemoryUsage: int64(m.Alloc),
+		MemoryUsage: memUsage,
 		DiskUsage:   getDiskUsage(),
 		NetworkIO:   getNetworkIO(),
 		FileHandles: getFileHandles(),
@@ -909,7 +917,7 @@ type JSONStorage struct {
 
 // NewJSONStorage creates a new JSON storage instance
 func NewJSONStorage(storagePath string) (*JSONStorage, error) {
-	if err := os.MkdirAll(storagePath, 0o755); err != nil {
+	if err := os.MkdirAll(storagePath, 0o750); err != nil {
 		return nil, fmt.Errorf("failed to create storage directory: %w", err)
 	}
 
@@ -929,7 +937,7 @@ func (js *JSONStorage) Store(metric *Metric) error {
 
 	// Read existing metrics
 	var metrics []*Metric
-	if data, err := os.ReadFile(filePath); err == nil {
+	if data, err := os.ReadFile(filePath); err == nil { //nolint:gosec // controlled metrics storage path
 		if err := json.Unmarshal(data, &metrics); err != nil {
 			// Log error but continue with empty metrics slice
 			// In a production system, you might want to use a proper logger here
@@ -946,7 +954,7 @@ func (js *JSONStorage) Store(metric *Metric) error {
 		return fmt.Errorf("failed to marshal metrics: %w", err)
 	}
 
-	return os.WriteFile(filePath, data, 0o644)
+	return os.WriteFile(filePath, data, 0o600)
 }
 
 // Query queries metrics from JSON storage
@@ -961,7 +969,7 @@ func (js *JSONStorage) Query(query MetricsQuery) ([]*Metric, error) {
 		filename := fmt.Sprintf("metrics_%s.json", d.Format("2006-01-02"))
 		filePath := filepath.Join(js.storagePath, filename)
 
-		if data, err := os.ReadFile(filePath); err == nil {
+		if data, err := os.ReadFile(filePath); err == nil { //nolint:gosec // controlled metrics storage path
 			var metrics []*Metric
 			if err := json.Unmarshal(data, &metrics); err == nil {
 				allMetrics = append(allMetrics, metrics...)

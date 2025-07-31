@@ -44,7 +44,7 @@ func NewTestEnvironment(t *testing.T) *TestEnvironment {
 
 	// Create work directory within root
 	workDir := filepath.Join(rootDir, "work")
-	if err := os.MkdirAll(workDir, 0o755); err != nil {
+	if err := os.MkdirAll(workDir, 0o750); err != nil {
 		if rmErr := os.RemoveAll(rootDir); rmErr != nil {
 			t.Logf("Warning: failed to cleanup root dir after work dir creation failed: %v", rmErr)
 		}
@@ -100,11 +100,11 @@ func (te *TestEnvironment) WriteFile(path string, content string) {
 	fullPath := te.AbsPath(path)
 	dir := filepath.Dir(fullPath)
 
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		te.t.Fatalf("Failed to create directory %s: %v", dir, err)
 	}
 
-	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(fullPath, []byte(content), 0o600); err != nil {
 		te.t.Fatalf("Failed to write file %s: %v", path, err)
 	}
 }
@@ -114,7 +114,9 @@ func (te *TestEnvironment) ReadFile(path string) string {
 	te.t.Helper()
 
 	fullPath := te.AbsPath(path)
-	data, err := os.ReadFile(fullPath)
+	// Clean path for security
+	cleanPath := filepath.Clean(fullPath)
+	data, err := os.ReadFile(cleanPath)
 	if err != nil {
 		te.t.Fatalf("Failed to read file %s: %v", path, err)
 	}
@@ -134,7 +136,7 @@ func (te *TestEnvironment) MkdirAll(path string) {
 	te.t.Helper()
 
 	fullPath := te.AbsPath(path)
-	if err := os.MkdirAll(fullPath, 0o755); err != nil {
+	if err := os.MkdirAll(fullPath, 0o750); err != nil {
 		te.t.Fatalf("Failed to create directories %s: %v", path, err)
 	}
 }

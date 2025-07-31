@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -21,7 +22,13 @@ func NewDefaultFileOperator() *DefaultFileOperator {
 
 // ReadFile reads the entire file and returns its contents
 func (d *DefaultFileOperator) ReadFile(path string) ([]byte, error) {
-	return os.ReadFile(path)
+	// Validate and clean the file path to prevent directory traversal
+	cleanPath := filepath.Clean(path)
+	if strings.Contains(cleanPath, "..") {
+		return nil, fmt.Errorf("invalid file path: path traversal detected")
+	}
+
+	return os.ReadFile(cleanPath)
 }
 
 // WriteFile writes data to a file with the specified permissions
@@ -71,7 +78,14 @@ func (d *DefaultFileOperator) Chmod(path string, mode os.FileMode) error {
 
 // Copy copies a file from src to dst
 func (d *DefaultFileOperator) Copy(src, dst string) error {
-	sourceFile, err := os.Open(src)
+	// Validate and clean file paths to prevent directory traversal
+	cleanSrc := filepath.Clean(src)
+	cleanDst := filepath.Clean(dst)
+	if strings.Contains(cleanSrc, "..") || strings.Contains(cleanDst, "..") {
+		return fmt.Errorf("invalid file path: path traversal detected")
+	}
+
+	sourceFile, err := os.Open(cleanSrc)
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
@@ -82,7 +96,7 @@ func (d *DefaultFileOperator) Copy(src, dst string) error {
 		}
 	}()
 
-	destFile, err := os.Create(dst)
+	destFile, err := os.Create(cleanDst)
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}

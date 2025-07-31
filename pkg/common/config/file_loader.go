@@ -40,7 +40,13 @@ func (f *FileConfigLoader) Load(paths []string, dest interface{}) (string, error
 
 // LoadFrom loads configuration from a specific file
 func (f *FileConfigLoader) LoadFrom(path string, dest interface{}) error {
-	data, err := os.ReadFile(path)
+	// Clean and validate the path
+	cleanPath := filepath.Clean(path)
+	if !filepath.IsAbs(cleanPath) {
+		return fmt.Errorf("config file path must be absolute: %s", path)
+	}
+
+	data, err := os.ReadFile(cleanPath)
 	if err != nil {
 		return fmt.Errorf("failed to read config file %s: %w", path, err)
 	}
@@ -83,11 +89,11 @@ func (f *FileConfigLoader) Save(path string, data interface{}, format string) er
 
 	// Ensure directory exists
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	return os.WriteFile(path, content, 0o644)
+	return os.WriteFile(path, content, 0o600)
 }
 
 // Validate validates configuration data

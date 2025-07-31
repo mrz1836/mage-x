@@ -328,7 +328,13 @@ func (r *ReadableRule) Name() string        { return "readable" }
 func (r *ReadableRule) Description() string { return "path must be readable" }
 
 func (r *ReadableRule) Validate(path string) error {
-	file, err := os.Open(path)
+	// Clean path to prevent directory traversal
+	cleanPath := filepath.Clean(path)
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("invalid path: path traversal detected")
+	}
+
+	file, err := os.Open(cleanPath)
 	if err != nil {
 		return fmt.Errorf("path is not readable: %w", err)
 	}
@@ -349,21 +355,27 @@ func (r *WritableRule) Name() string        { return "writable" }
 func (r *WritableRule) Description() string { return "path must be writable" }
 
 func (r *WritableRule) Validate(path string) error {
+	// Clean path to prevent directory traversal
+	cleanPath := filepath.Clean(path)
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("invalid path: path traversal detected")
+	}
+
 	// Check if path exists
-	info, err := os.Stat(path)
+	info, err := os.Stat(cleanPath)
 	if err != nil {
 		// Path doesn't exist, check if parent directory is writable
-		parentDir := filepath.Dir(path)
+		parentDir := filepath.Dir(cleanPath)
 		return r.checkDirWritable(parentDir)
 	}
 
 	// Path exists, check if it's writable
 	if info.IsDir() {
-		return r.checkDirWritable(path)
+		return r.checkDirWritable(cleanPath)
 	}
 
 	// It's a file, try to open for writing
-	file, err := os.OpenFile(path, os.O_WRONLY, 0)
+	file, err := os.OpenFile(cleanPath, os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("path is not writable: %w", err)
 	}
