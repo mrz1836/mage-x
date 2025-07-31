@@ -276,10 +276,12 @@ func (Configure) Schema() error {
 
 // Supporting types and functions
 
+// ConfigurationWizard provides interactive configuration updates
 type ConfigurationWizard struct {
 	Config *Config
 }
 
+// Run executes the configuration wizard
 func (w *ConfigurationWizard) Run() error {
 	utils.Info("🧙 Configuration Update Wizard")
 

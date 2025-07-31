@@ -42,7 +42,7 @@ func (s *securityService) CreatePolicy(_ context.Context, req *providers.CreateP
 	}, nil
 }
 
-func (s *securityService) AttachPolicy(_ context.Context, roleID, policyID string) error {
+func (s *securityService) AttachPolicy(_ context.Context, _, _ string) error {
 	// Attach policy to role
 	return nil
 }
@@ -72,17 +72,17 @@ func (s *securityService) GetSecret(_ context.Context, id string) (*providers.Se
 	}, nil
 }
 
-func (s *securityService) RotateSecret(_ context.Context, id string) error {
+func (s *securityService) RotateSecret(_ context.Context, _ string) error {
 	// Rotate secret
 	return nil
 }
 
-func (s *securityService) EnableAuditLogging(_ context.Context, config *providers.AuditConfig) error {
+func (s *securityService) EnableAuditLogging(_ context.Context, _ *providers.AuditConfig) error {
 	// Enable CloudTrail
 	return nil
 }
 
-func (s *securityService) GetComplianceReport(ctx context.Context, standard string) (*providers.ComplianceReport, error) {
+func (s *securityService) GetComplianceReport(_ context.Context, standard string) (*providers.ComplianceReport, error) {
 	// Get AWS Config compliance report
 	return &providers.ComplianceReport{
 		Standard:    standard,
@@ -103,7 +103,7 @@ func (s *securityService) GetComplianceReport(ctx context.Context, standard stri
 	}, nil
 }
 
-func (s *securityService) CreateKMSKey(ctx context.Context, req *providers.CreateKeyRequest) (*providers.KMSKey, error) {
+func (s *securityService) CreateKMSKey(_ context.Context, req *providers.CreateKeyRequest) (*providers.KMSKey, error) {
 	// Create KMS key
 	return &providers.KMSKey{
 		ID:           fmt.Sprintf("arn:aws:kms:%s:123456789012:key/%s", s.config.Region, generateID()),
@@ -115,7 +115,7 @@ func (s *securityService) CreateKMSKey(ctx context.Context, req *providers.Creat
 	}, nil
 }
 
-func (s *securityService) Encrypt(ctx context.Context, keyID string, data []byte) ([]byte, error) {
+func (s *securityService) Encrypt(_ context.Context, _ string, data []byte) ([]byte, error) {
 	// KMS encrypt
 	// Simulate encryption
 	encrypted := make([]byte, len(data))
@@ -125,7 +125,7 @@ func (s *securityService) Encrypt(ctx context.Context, keyID string, data []byte
 	return encrypted, nil
 }
 
-func (s *securityService) Decrypt(ctx context.Context, keyID string, data []byte) ([]byte, error) {
+func (s *securityService) Decrypt(_ context.Context, _ string, data []byte) ([]byte, error) {
 	// KMS decrypt
 	// Simulate decryption
 	decrypted := make([]byte, len(data))
@@ -144,12 +144,12 @@ func newMonitoringService(config providers.ProviderConfig) *monitoringService {
 	return &monitoringService{config: config}
 }
 
-func (s *monitoringService) PutMetric(ctx context.Context, metric *providers.Metric) error {
+func (s *monitoringService) PutMetric(_ context.Context, _ *providers.Metric) error {
 	// Put CloudWatch metric
 	return nil
 }
 
-func (s *monitoringService) GetMetrics(ctx context.Context, query *providers.MetricQuery) ([]*providers.MetricData, error) {
+func (s *monitoringService) GetMetrics(_ context.Context, _ *providers.MetricQuery) ([]*providers.MetricData, error) {
 	// Get CloudWatch metrics
 	return []*providers.MetricData{
 		{
@@ -161,7 +161,7 @@ func (s *monitoringService) GetMetrics(ctx context.Context, query *providers.Met
 	}, nil
 }
 
-func (s *monitoringService) CreateDashboard(ctx context.Context, req *providers.CreateDashboardRequest) (*providers.Dashboard, error) {
+func (s *monitoringService) CreateDashboard(_ context.Context, req *providers.CreateDashboardRequest) (*providers.Dashboard, error) {
 	// Create CloudWatch dashboard
 	return &providers.Dashboard{
 		ID:          generateID(),
@@ -173,17 +173,17 @@ func (s *monitoringService) CreateDashboard(ctx context.Context, req *providers.
 	}, nil
 }
 
-func (s *monitoringService) CreateLogGroup(ctx context.Context, name string) error {
+func (s *monitoringService) CreateLogGroup(_ context.Context, _ string) error {
 	// Create CloudWatch log group
 	return nil
 }
 
-func (s *monitoringService) PutLogs(ctx context.Context, group string, logs []*providers.LogEntry) error {
+func (s *monitoringService) PutLogs(_ context.Context, _ string, _ []*providers.LogEntry) error {
 	// Put CloudWatch logs
 	return nil
 }
 
-func (s *monitoringService) QueryLogs(ctx context.Context, query *providers.LogQuery) ([]*providers.LogEntry, error) {
+func (s *monitoringService) QueryLogs(_ context.Context, _ *providers.LogQuery) ([]*providers.LogEntry, error) {
 	// Query CloudWatch logs
 	return []*providers.LogEntry{
 		{
@@ -201,7 +201,7 @@ func (s *monitoringService) QueryLogs(ctx context.Context, query *providers.LogQ
 	}, nil
 }
 
-func (s *monitoringService) CreateAlert(ctx context.Context, req *providers.CreateAlertRequest) (*providers.Alert, error) {
+func (s *monitoringService) CreateAlert(_ context.Context, req *providers.CreateAlertRequest) (*providers.Alert, error) {
 	// Create CloudWatch alarm
 	return &providers.Alert{
 		ID:          fmt.Sprintf("alarm-%s", generateID()),
@@ -215,12 +215,12 @@ func (s *monitoringService) CreateAlert(ctx context.Context, req *providers.Crea
 	}, nil
 }
 
-func (s *monitoringService) UpdateAlert(ctx context.Context, id string, req *providers.UpdateAlertRequest) error {
+func (s *monitoringService) UpdateAlert(_ context.Context, _ string, _ *providers.UpdateAlertRequest) error {
 	// Update CloudWatch alarm
 	return nil
 }
 
-func (s *monitoringService) ListAlerts(ctx context.Context) ([]*providers.Alert, error) {
+func (s *monitoringService) ListAlerts(_ context.Context) ([]*providers.Alert, error) {
 	// List CloudWatch alarms
 	return []*providers.Alert{
 		{
@@ -234,12 +234,12 @@ func (s *monitoringService) ListAlerts(ctx context.Context) ([]*providers.Alert,
 	}, nil
 }
 
-func (s *monitoringService) PutTrace(ctx context.Context, trace *providers.Trace) error {
+func (s *monitoringService) PutTrace(_ context.Context, _ *providers.Trace) error {
 	// Put X-Ray trace
 	return nil
 }
 
-func (s *monitoringService) GetTrace(ctx context.Context, id string) (*providers.Trace, error) {
+func (s *monitoringService) GetTrace(_ context.Context, id string) (*providers.Trace, error) {
 	// Get X-Ray trace
 	return &providers.Trace{
 		ID:            id,
@@ -251,7 +251,7 @@ func (s *monitoringService) GetTrace(ctx context.Context, id string) (*providers
 	}, nil
 }
 
-func (s *monitoringService) QueryTraces(ctx context.Context, query *providers.TraceQuery) ([]*providers.Trace, error) {
+func (s *monitoringService) QueryTraces(_ context.Context, query *providers.TraceQuery) ([]*providers.Trace, error) {
 	// Query X-Ray traces
 	return []*providers.Trace{
 		{
@@ -274,7 +274,7 @@ func newServerlessService(config providers.ProviderConfig) *serverlessService {
 	return &serverlessService{config: config}
 }
 
-func (s *serverlessService) CreateFunction(ctx context.Context, req *providers.CreateFunctionRequest) (*providers.Function, error) {
+func (s *serverlessService) CreateFunction(_ context.Context, req *providers.CreateFunctionRequest) (*providers.Function, error) {
 	// Create Lambda function
 	return &providers.Function{
 		ID:           fmt.Sprintf("arn:aws:lambda:%s:123456789012:function:%s", s.config.Region, req.Name),
@@ -290,27 +290,27 @@ func (s *serverlessService) CreateFunction(ctx context.Context, req *providers.C
 	}, nil
 }
 
-func (s *serverlessService) UpdateFunction(ctx context.Context, id string, req *providers.UpdateFunctionRequest) error {
+func (s *serverlessService) UpdateFunction(_ context.Context, _ string, _ *providers.UpdateFunctionRequest) error {
 	// Update Lambda function
 	return nil
 }
 
-func (s *serverlessService) InvokeFunction(ctx context.Context, id string, payload []byte) ([]byte, error) {
+func (s *serverlessService) InvokeFunction(_ context.Context, _ string, _ []byte) ([]byte, error) {
 	// Invoke Lambda function
 	return []byte(`{"statusCode": 200, "body": "Hello from Lambda!"}`), nil
 }
 
-func (s *serverlessService) DeleteFunction(ctx context.Context, id string) error {
+func (s *serverlessService) DeleteFunction(_ context.Context, _ string) error {
 	// Delete Lambda function
 	return nil
 }
 
-func (s *serverlessService) CreateEventTrigger(ctx context.Context, functionID string, trigger *providers.EventTrigger) error {
+func (s *serverlessService) CreateEventTrigger(_ context.Context, _ string, _ *providers.EventTrigger) error {
 	// Create Lambda event source mapping
 	return nil
 }
 
-func (s *serverlessService) CreateAPIGateway(ctx context.Context, req *providers.CreateAPIGatewayRequest) (*providers.APIGateway, error) {
+func (s *serverlessService) CreateAPIGateway(_ context.Context, req *providers.CreateAPIGatewayRequest) (*providers.APIGateway, error) {
 	// Create API Gateway
 	return &providers.APIGateway{
 		ID:          fmt.Sprintf("api-%s", generateID()),
@@ -322,7 +322,7 @@ func (s *serverlessService) CreateAPIGateway(ctx context.Context, req *providers
 	}, nil
 }
 
-func (s *serverlessService) CreateWorkflow(ctx context.Context, req *providers.CreateWorkflowRequest) (*providers.Workflow, error) {
+func (s *serverlessService) CreateWorkflow(_ context.Context, req *providers.CreateWorkflowRequest) (*providers.Workflow, error) {
 	// Create Step Functions state machine
 	return &providers.Workflow{
 		ID:          fmt.Sprintf("arn:aws:states:%s:123456789012:stateMachine:%s", s.config.Region, req.Name),
@@ -334,7 +334,7 @@ func (s *serverlessService) CreateWorkflow(ctx context.Context, req *providers.C
 	}, nil
 }
 
-func (s *serverlessService) ExecuteWorkflow(ctx context.Context, id string, input map[string]interface{}) (*providers.WorkflowExecution, error) {
+func (s *serverlessService) ExecuteWorkflow(_ context.Context, id string, input map[string]interface{}) (*providers.WorkflowExecution, error) {
 	// Execute Step Functions state machine
 	return &providers.WorkflowExecution{
 		ID:         fmt.Sprintf("exec-%s", generateID()),
@@ -354,7 +354,7 @@ func newAIService(config providers.ProviderConfig) *aiService {
 	return &aiService{config: config}
 }
 
-func (s *aiService) CreateModel(ctx context.Context, req *providers.CreateModelRequest) (*providers.AIModel, error) {
+func (s *aiService) CreateModel(_ context.Context, req *providers.CreateModelRequest) (*providers.AIModel, error) {
 	// Create SageMaker model
 	return &providers.AIModel{
 		ID:        fmt.Sprintf("arn:aws:sagemaker:%s:123456789012:model/%s", s.config.Region, req.Name),
@@ -368,7 +368,7 @@ func (s *aiService) CreateModel(ctx context.Context, req *providers.CreateModelR
 	}, nil
 }
 
-func (s *aiService) TrainModel(ctx context.Context, id string, dataset *providers.Dataset) (*providers.TrainingJob, error) {
+func (s *aiService) TrainModel(_ context.Context, id string, dataset *providers.Dataset) (*providers.TrainingJob, error) {
 	// Start SageMaker training job
 	return &providers.TrainingJob{
 		ID:        fmt.Sprintf("training-%s", generateID()),
@@ -383,7 +383,7 @@ func (s *aiService) TrainModel(ctx context.Context, id string, dataset *provider
 	}, nil
 }
 
-func (s *aiService) DeployModel(ctx context.Context, id string, config *providers.DeploymentConfig) (*providers.ModelEndpoint, error) {
+func (s *aiService) DeployModel(_ context.Context, id string, _ *providers.DeploymentConfig) (*providers.ModelEndpoint, error) {
 	// Deploy SageMaker endpoint
 	return &providers.ModelEndpoint{
 		ID:        fmt.Sprintf("endpoint-%s", generateID()),
@@ -394,7 +394,7 @@ func (s *aiService) DeployModel(ctx context.Context, id string, config *provider
 	}, nil
 }
 
-func (s *aiService) Predict(ctx context.Context, endpointID string, data interface{}) (interface{}, error) {
+func (s *aiService) Predict(_ context.Context, _ string, _ interface{}) (interface{}, error) {
 	// SageMaker inference
 	return map[string]interface{}{
 		"prediction": 0.87,
@@ -403,7 +403,7 @@ func (s *aiService) Predict(ctx context.Context, endpointID string, data interfa
 	}, nil
 }
 
-func (s *aiService) CreateDataset(ctx context.Context, req *providers.CreateDatasetRequest) (*providers.Dataset, error) {
+func (s *aiService) CreateDataset(_ context.Context, req *providers.CreateDatasetRequest) (*providers.Dataset, error) {
 	// Create SageMaker dataset
 	return &providers.Dataset{
 		ID:        fmt.Sprintf("dataset-%s", generateID()),
@@ -416,12 +416,12 @@ func (s *aiService) CreateDataset(ctx context.Context, req *providers.CreateData
 	}, nil
 }
 
-func (s *aiService) PreprocessData(ctx context.Context, datasetID string, pipeline *providers.Pipeline) error {
+func (s *aiService) PreprocessData(_ context.Context, _ string, _ *providers.Pipeline) error {
 	// Run SageMaker processing job
 	return nil
 }
 
-func (s *aiService) CreateNeuralNetwork(ctx context.Context, architecture *providers.NetworkArchitecture) (*providers.NeuralNetwork, error) {
+func (s *aiService) CreateNeuralNetwork(_ context.Context, architecture *providers.NetworkArchitecture) (*providers.NeuralNetwork, error) {
 	// Create neural network in SageMaker
 	return &providers.NeuralNetwork{
 		ID:           fmt.Sprintf("nn-%s", generateID()),
@@ -432,7 +432,7 @@ func (s *aiService) CreateNeuralNetwork(ctx context.Context, architecture *provi
 	}, nil
 }
 
-func (s *aiService) FineTuneModel(ctx context.Context, modelID string, dataset *providers.Dataset) (*providers.AIModel, error) {
+func (s *aiService) FineTuneModel(_ context.Context, modelID string, _ *providers.Dataset) (*providers.AIModel, error) {
 	// Fine-tune model in SageMaker
 	return &providers.AIModel{
 		ID:        fmt.Sprintf("model-%s-finetuned", modelID),
@@ -446,7 +446,7 @@ func (s *aiService) FineTuneModel(ctx context.Context, modelID string, dataset *
 	}, nil
 }
 
-func (s *aiService) ExplainPrediction(ctx context.Context, modelID string, input interface{}) (*providers.Explanation, error) {
+func (s *aiService) ExplainPrediction(_ context.Context, _ string, _ interface{}) (*providers.Explanation, error) {
 	// SageMaker Clarify
 	return &providers.Explanation{
 		Prediction: "positive",
@@ -473,7 +473,7 @@ func newCostService(config providers.ProviderConfig) *costService {
 	return &costService{config: config}
 }
 
-func (s *costService) GetCurrentSpend(ctx context.Context) (*providers.SpendSummary, error) {
+func (s *costService) GetCurrentSpend(_ context.Context) (*providers.SpendSummary, error) {
 	// Get Cost Explorer data
 	return &providers.SpendSummary{
 		Total: 1234.56,
@@ -492,7 +492,7 @@ func (s *costService) GetCurrentSpend(ctx context.Context) (*providers.SpendSumm
 	}, nil
 }
 
-func (s *costService) GetForecast(ctx context.Context, period time.Duration) (*providers.CostForecast, error) {
+func (s *costService) GetForecast(_ context.Context, period time.Duration) (*providers.CostForecast, error) {
 	// Get cost forecast
 	return &providers.CostForecast{
 		Period:     period,
@@ -505,7 +505,7 @@ func (s *costService) GetForecast(ctx context.Context, period time.Duration) (*p
 	}, nil
 }
 
-func (s *costService) SetBudget(ctx context.Context, req *providers.SetBudgetRequest) (*providers.Budget, error) {
+func (s *costService) SetBudget(_ context.Context, req *providers.SetBudgetRequest) (*providers.Budget, error) {
 	// Create AWS Budget
 	return &providers.Budget{
 		ID:           fmt.Sprintf("budget-%s", generateID()),
@@ -518,7 +518,7 @@ func (s *costService) SetBudget(ctx context.Context, req *providers.SetBudgetReq
 	}, nil
 }
 
-func (s *costService) GetRecommendations(ctx context.Context) ([]*providers.CostRecommendation, error) {
+func (s *costService) GetRecommendations(_ context.Context) ([]*providers.CostRecommendation, error) {
 	// Get cost optimization recommendations
 	return []*providers.CostRecommendation{
 		{
@@ -542,7 +542,7 @@ func (s *costService) GetRecommendations(ctx context.Context) ([]*providers.Cost
 	}, nil
 }
 
-func (s *costService) EnableCostAlerts(ctx context.Context, config *providers.AlertConfig) error {
+func (s *costService) EnableCostAlerts(_ context.Context, _ *providers.AlertConfig) error {
 	// Enable cost alerts
 	return nil
 }
@@ -556,7 +556,7 @@ func newComplianceService(config providers.ProviderConfig) *complianceService {
 	return &complianceService{config: config}
 }
 
-func (s *complianceService) RunComplianceCheck(ctx context.Context, standard string) (*providers.ComplianceResult, error) {
+func (s *complianceService) RunComplianceCheck(_ context.Context, standard string) (*providers.ComplianceResult, error) {
 	// Run compliance check
 	return &providers.ComplianceResult{
 		Standard: standard,
@@ -576,7 +576,7 @@ func (s *complianceService) RunComplianceCheck(ctx context.Context, standard str
 	}, nil
 }
 
-func (s *complianceService) GetComplianceStatus(ctx context.Context) (*providers.ComplianceStatus, error) {
+func (s *complianceService) GetComplianceStatus(_ context.Context) (*providers.ComplianceStatus, error) {
 	// Get overall compliance status
 	return &providers.ComplianceStatus{
 		Standards: map[string]float64{
@@ -590,12 +590,12 @@ func (s *complianceService) GetComplianceStatus(ctx context.Context) (*providers
 	}, nil
 }
 
-func (s *complianceService) RemediateIssue(ctx context.Context, issueID string) error {
+func (s *complianceService) RemediateIssue(_ context.Context, _ string) error {
 	// Auto-remediate compliance issue
 	return nil
 }
 
-func (s *complianceService) GenerateComplianceReport(ctx context.Context, req *providers.ReportRequest) (*providers.Report, error) {
+func (s *complianceService) GenerateComplianceReport(_ context.Context, req *providers.ReportRequest) (*providers.Report, error) {
 	// Generate compliance report
 	return &providers.Report{
 		ID:          fmt.Sprintf("report-%s", generateID()),
@@ -607,7 +607,7 @@ func (s *complianceService) GenerateComplianceReport(ctx context.Context, req *p
 	}, nil
 }
 
-func (s *complianceService) EnableContinuousCompliance(ctx context.Context, standards []string) error {
+func (s *complianceService) EnableContinuousCompliance(_ context.Context, _ []string) error {
 	// Enable continuous compliance monitoring
 	return nil
 }
@@ -621,7 +621,7 @@ func newDisasterService(config providers.ProviderConfig) *disasterService {
 	return &disasterService{config: config}
 }
 
-func (s *disasterService) CreateBackupPlan(ctx context.Context, req *providers.CreateBackupPlanRequest) (*providers.BackupPlan, error) {
+func (s *disasterService) CreateBackupPlan(_ context.Context, req *providers.CreateBackupPlanRequest) (*providers.BackupPlan, error) {
 	// Create AWS Backup plan
 	return &providers.BackupPlan{
 		ID:         fmt.Sprintf("backup-plan-%s", generateID()),
@@ -634,7 +634,7 @@ func (s *disasterService) CreateBackupPlan(ctx context.Context, req *providers.C
 	}, nil
 }
 
-func (s *disasterService) TestFailover(ctx context.Context, planID string) (*providers.FailoverTest, error) {
+func (s *disasterService) TestFailover(_ context.Context, planID string) (*providers.FailoverTest, error) {
 	// Test disaster recovery failover
 	return &providers.FailoverTest{
 		ID:        fmt.Sprintf("test-%s", generateID()),
@@ -647,7 +647,7 @@ func (s *disasterService) TestFailover(ctx context.Context, planID string) (*pro
 	}, nil
 }
 
-func (s *disasterService) InitiateFailover(ctx context.Context, planID string) (*providers.Failover, error) {
+func (s *disasterService) InitiateFailover(_ context.Context, planID string) (*providers.Failover, error) {
 	// Initiate actual failover
 	return &providers.Failover{
 		ID:           fmt.Sprintf("failover-%s", generateID()),
@@ -659,12 +659,12 @@ func (s *disasterService) InitiateFailover(ctx context.Context, planID string) (
 	}, nil
 }
 
-func (s *disasterService) GetRPO(ctx context.Context) (time.Duration, error) {
+func (s *disasterService) GetRPO(_ context.Context) (time.Duration, error) {
 	// Get Recovery Point Objective
 	return 15 * time.Minute, nil
 }
 
-func (s *disasterService) GetRTO(ctx context.Context) (time.Duration, error) {
+func (s *disasterService) GetRTO(_ context.Context) (time.Duration, error) {
 	// Get Recovery Time Objective
 	return 30 * time.Minute, nil
 }
@@ -678,7 +678,7 @@ func newEdgeService(config providers.ProviderConfig) *edgeService {
 	return &edgeService{config: config}
 }
 
-func (s *edgeService) DeployToEdge(ctx context.Context, req *providers.EdgeDeployRequest) (*providers.EdgeDeployment, error) {
+func (s *edgeService) DeployToEdge(_ context.Context, req *providers.EdgeDeployRequest) (*providers.EdgeDeployment, error) {
 	// Deploy to CloudFront edge locations
 	return &providers.EdgeDeployment{
 		ID:          fmt.Sprintf("edge-%s", generateID()),
@@ -700,7 +700,7 @@ func (s *edgeService) DeployToEdge(ctx context.Context, req *providers.EdgeDeplo
 	}, nil
 }
 
-func (s *edgeService) ListEdgeLocations(ctx context.Context) ([]*providers.EdgeLocation, error) {
+func (s *edgeService) ListEdgeLocations(_ context.Context) ([]*providers.EdgeLocation, error) {
 	// List CloudFront edge locations
 	return []*providers.EdgeLocation{
 		{
@@ -724,12 +724,12 @@ func (s *edgeService) ListEdgeLocations(ctx context.Context) ([]*providers.EdgeL
 	}, nil
 }
 
-func (s *edgeService) UpdateEdgeConfig(ctx context.Context, locationID string, config *providers.EdgeConfig) error {
+func (s *edgeService) UpdateEdgeConfig(_ context.Context, _ string, _ *providers.EdgeConfig) error {
 	// Update edge configuration
 	return nil
 }
 
-func (s *edgeService) GetEdgeMetrics(ctx context.Context, locationID string) (*providers.EdgeMetrics, error) {
+func (s *edgeService) GetEdgeMetrics(_ context.Context, locationID string) (*providers.EdgeMetrics, error) {
 	// Get CloudFront metrics
 	return &providers.EdgeMetrics{
 		LocationID:   locationID,
@@ -750,7 +750,7 @@ func newQuantumService(config providers.ProviderConfig) *quantumService {
 	return &quantumService{config: config}
 }
 
-func (s *quantumService) CreateQuantumCircuit(ctx context.Context, req *providers.CreateCircuitRequest) (*providers.QuantumCircuit, error) {
+func (s *quantumService) CreateQuantumCircuit(_ context.Context, req *providers.CreateCircuitRequest) (*providers.QuantumCircuit, error) {
 	// Create Braket quantum circuit
 	return &providers.QuantumCircuit{
 		ID:        fmt.Sprintf("circuit-%s", generateID()),
@@ -762,7 +762,7 @@ func (s *quantumService) CreateQuantumCircuit(ctx context.Context, req *provider
 	}, nil
 }
 
-func (s *quantumService) RunQuantumJob(ctx context.Context, circuitID string, shots int) (*providers.QuantumResult, error) {
+func (s *quantumService) RunQuantumJob(_ context.Context, circuitID string, shots int) (*providers.QuantumResult, error) {
 	// Run quantum job on Braket
 	return &providers.QuantumResult{
 		ID:        fmt.Sprintf("job-%s", generateID()),
@@ -780,7 +780,7 @@ func (s *quantumService) RunQuantumJob(ctx context.Context, circuitID string, sh
 	}, nil
 }
 
-func (s *quantumService) GetQuantumState(ctx context.Context, jobID string) (*providers.QuantumState, error) {
+func (s *quantumService) GetQuantumState(_ context.Context, _ string) (*providers.QuantumState, error) {
 	// Get quantum state vector
 	return &providers.QuantumState{
 		StateVector: []complex128{
@@ -794,7 +794,7 @@ func (s *quantumService) GetQuantumState(ctx context.Context, jobID string) (*pr
 	}, nil
 }
 
-func (s *quantumService) OptimizeWithQuantum(ctx context.Context, problem *providers.OptimizationProblem) (*providers.Solution, error) {
+func (s *quantumService) OptimizeWithQuantum(_ context.Context, _ *providers.OptimizationProblem) (*providers.Solution, error) {
 	// Use quantum annealing for optimization
 	return &providers.Solution{
 		Values: map[string]float64{

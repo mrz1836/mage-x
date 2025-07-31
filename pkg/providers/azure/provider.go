@@ -172,7 +172,7 @@ func (p *Provider) Quantum() providers.QuantumService { return nil }
 
 type azureComputeService struct{ config providers.ProviderConfig }
 
-func (s *azureComputeService) CreateInstance(ctx context.Context, req *providers.CreateInstanceRequest) (*providers.Instance, error) {
+func (s *azureComputeService) CreateInstance(_ context.Context, req *providers.CreateInstanceRequest) (*providers.Instance, error) {
 	return &providers.Instance{
 		ID:        fmt.Sprintf("/subscriptions/%s/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/%s", "sub-id", req.Name),
 		Name:      req.Name,
@@ -185,22 +185,22 @@ func (s *azureComputeService) CreateInstance(ctx context.Context, req *providers
 	}, nil
 }
 
-func (s *azureComputeService) GetInstance(ctx context.Context, id string) (*providers.Instance, error) {
+func (s *azureComputeService) GetInstance(_ context.Context, id string) (*providers.Instance, error) {
 	return &providers.Instance{ID: id, Name: "azure-vm-1", Type: "Standard_D2s_v3", State: "Running"}, nil
 }
 
-func (s *azureComputeService) ListInstances(ctx context.Context, filter *providers.InstanceFilter) ([]*providers.Instance, error) {
+func (s *azureComputeService) ListInstances(_ context.Context, _ *providers.InstanceFilter) ([]*providers.Instance, error) {
 	return []*providers.Instance{{ID: "vm-1", Name: "web-vm", Type: "Standard_B2s", State: "Running"}}, nil
 }
 
-func (s *azureComputeService) UpdateInstance(ctx context.Context, id string, req *providers.UpdateInstanceRequest) error {
+func (s *azureComputeService) UpdateInstance(_ context.Context, _ string, _ *providers.UpdateInstanceRequest) error {
 	return nil
 }
-func (s *azureComputeService) DeleteInstance(ctx context.Context, id string) error  { return nil }
-func (s *azureComputeService) StartInstance(ctx context.Context, id string) error   { return nil }
-func (s *azureComputeService) StopInstance(ctx context.Context, id string) error    { return nil }
-func (s *azureComputeService) RestartInstance(ctx context.Context, id string) error { return nil }
-func (s *azureComputeService) ResizeInstance(ctx context.Context, id string, size string) error {
+func (s *azureComputeService) DeleteInstance(_ context.Context, _ string) error  { return nil }
+func (s *azureComputeService) StartInstance(_ context.Context, _ string) error   { return nil }
+func (s *azureComputeService) StopInstance(_ context.Context, _ string) error    { return nil }
+func (s *azureComputeService) RestartInstance(_ context.Context, _ string) error { return nil }
+func (s *azureComputeService) ResizeInstance(_ context.Context, _ string, _ string) error {
 	return nil
 }
 
@@ -224,7 +224,7 @@ func (s *azureComputeService) CloneInstance(ctx context.Context, _ string, req *
 
 type azureStorageService struct{ config providers.ProviderConfig }
 
-func (s *azureStorageService) CreateBucket(ctx context.Context, req *providers.CreateBucketRequest) (*providers.Bucket, error) {
+func (s *azureStorageService) CreateBucket(_ context.Context, req *providers.CreateBucketRequest) (*providers.Bucket, error) {
 	return &providers.Bucket{
 		Name:         req.Name,
 		Region:       req.Region,
@@ -236,323 +236,323 @@ func (s *azureStorageService) CreateBucket(ctx context.Context, req *providers.C
 	}, nil
 }
 
-func (s *azureStorageService) GetBucket(ctx context.Context, name string) (*providers.Bucket, error) {
+func (s *azureStorageService) GetBucket(_ context.Context, name string) (*providers.Bucket, error) {
 	return &providers.Bucket{Name: name, Region: s.config.Region}, nil
 }
 
-func (s *azureStorageService) ListBuckets(ctx context.Context) ([]*providers.Bucket, error) {
+func (s *azureStorageService) ListBuckets(_ context.Context) ([]*providers.Bucket, error) {
 	return []*providers.Bucket{{Name: "container1"}}, nil
 }
 
-func (s *azureStorageService) DeleteBucket(ctx context.Context, name string) error { return nil }
+func (s *azureStorageService) DeleteBucket(_ context.Context, _ string) error { return nil }
 
-func (s *azureStorageService) PutObject(ctx context.Context, bucket, key string, reader io.Reader, opts *providers.PutOptions) error {
+func (s *azureStorageService) PutObject(_ context.Context, _, _ string, _ io.Reader, _ *providers.PutOptions) error {
 	return nil
 }
 
-func (s *azureStorageService) GetObject(ctx context.Context, bucket, key string) (io.ReadCloser, error) {
+func (s *azureStorageService) GetObject(_ context.Context, _, _ string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (s *azureStorageService) DeleteObject(ctx context.Context, bucket, key string) error { return nil }
+func (s *azureStorageService) DeleteObject(_ context.Context, _, _ string) error { return nil }
 
-func (s *azureStorageService) ListObjects(ctx context.Context, bucket string, prefix string) ([]*providers.Object, error) {
+func (s *azureStorageService) ListObjects(_ context.Context, _ string, prefix string) ([]*providers.Object, error) {
 	return []*providers.Object{{Key: prefix + "file.txt"}}, nil
 }
 
-func (s *azureStorageService) MultipartUpload(ctx context.Context, bucket, key string, reader io.Reader) error {
+func (s *azureStorageService) MultipartUpload(_ context.Context, _, _ string, _ io.Reader) error {
 	return nil
 }
 
-func (s *azureStorageService) GeneratePresignedURL(ctx context.Context, bucket, key string, expiry time.Duration) (string, error) {
+func (s *azureStorageService) GeneratePresignedURL(_ context.Context, bucket, key string, _ time.Duration) (string, error) {
 	return fmt.Sprintf("https://%s.blob.core.windows.net/%s", bucket, key), nil
 }
 
-func (s *azureStorageService) SetObjectACL(ctx context.Context, bucket, key string, acl *providers.ACL) error {
+func (s *azureStorageService) SetObjectACL(_ context.Context, _, _ string, _ *providers.ACL) error {
 	return nil
 }
 
 // Minimal implementations for other services
 type azureNetworkService struct{ config providers.ProviderConfig }
 
-func (s *azureNetworkService) CreateVPC(ctx context.Context, req *providers.CreateVPCRequest) (*providers.VPC, error) {
+func (s *azureNetworkService) CreateVPC(_ context.Context, req *providers.CreateVPCRequest) (*providers.VPC, error) {
 	return &providers.VPC{ID: fmt.Sprintf("vnet-%s", req.Name), Name: req.Name, CIDR: req.CIDR, Region: req.Region, State: "Succeeded", Tags: req.Tags}, nil
 }
 
-func (s *azureNetworkService) GetVPC(ctx context.Context, id string) (*providers.VPC, error) {
+func (s *azureNetworkService) GetVPC(_ context.Context, id string) (*providers.VPC, error) {
 	return &providers.VPC{ID: id, Name: "azure-vnet", State: "Succeeded"}, nil
 }
 
-func (s *azureNetworkService) ListVPCs(ctx context.Context) ([]*providers.VPC, error) {
+func (s *azureNetworkService) ListVPCs(_ context.Context) ([]*providers.VPC, error) {
 	return []*providers.VPC{{ID: "vnet-1", Name: "default"}}, nil
 }
-func (s *azureNetworkService) DeleteVPC(ctx context.Context, id string) error { return nil }
-func (s *azureNetworkService) CreateSubnet(ctx context.Context, vpcID string, req *providers.CreateSubnetRequest) (*providers.Subnet, error) {
+func (s *azureNetworkService) DeleteVPC(_ context.Context, _ string) error { return nil }
+func (s *azureNetworkService) CreateSubnet(_ context.Context, vpcID string, req *providers.CreateSubnetRequest) (*providers.Subnet, error) {
 	return &providers.Subnet{ID: fmt.Sprintf("subnet-%s", req.Name), Name: req.Name, VPCID: vpcID, CIDR: req.CIDR, Zone: req.Zone, State: "Succeeded", Public: req.Public}, nil
 }
 
-func (s *azureNetworkService) GetSubnet(ctx context.Context, id string) (*providers.Subnet, error) {
+func (s *azureNetworkService) GetSubnet(_ context.Context, id string) (*providers.Subnet, error) {
 	return &providers.Subnet{ID: id, Name: "azure-subnet", State: "Succeeded"}, nil
 }
 
-func (s *azureNetworkService) ListSubnets(ctx context.Context, vpcID string) ([]*providers.Subnet, error) {
+func (s *azureNetworkService) ListSubnets(_ context.Context, vpcID string) ([]*providers.Subnet, error) {
 	return []*providers.Subnet{{ID: "subnet-1", VPCID: vpcID}}, nil
 }
-func (s *azureNetworkService) DeleteSubnet(ctx context.Context, id string) error { return nil }
-func (s *azureNetworkService) CreateSecurityGroup(ctx context.Context, req *providers.CreateSecurityGroupRequest) (*providers.SecurityGroup, error) {
+func (s *azureNetworkService) DeleteSubnet(_ context.Context, _ string) error { return nil }
+func (s *azureNetworkService) CreateSecurityGroup(_ context.Context, req *providers.CreateSecurityGroupRequest) (*providers.SecurityGroup, error) {
 	return &providers.SecurityGroup{ID: fmt.Sprintf("nsg-%s", req.Name), Name: req.Name, Description: req.Description, VPCID: req.VPCID, Rules: req.Rules}, nil
 }
 
-func (s *azureNetworkService) UpdateSecurityRules(ctx context.Context, groupID string, rules []*providers.SecurityRule) error {
+func (s *azureNetworkService) UpdateSecurityRules(_ context.Context, _ string, _ []*providers.SecurityRule) error {
 	return nil
 }
 
-func (s *azureNetworkService) CreateLoadBalancer(ctx context.Context, req *providers.CreateLoadBalancerRequest) (*providers.LoadBalancer, error) {
+func (s *azureNetworkService) CreateLoadBalancer(_ context.Context, req *providers.CreateLoadBalancerRequest) (*providers.LoadBalancer, error) {
 	return &providers.LoadBalancer{ID: fmt.Sprintf("lb-%s", req.Name), Name: req.Name, Type: req.Type, State: "Succeeded", DNSName: fmt.Sprintf("%s.%s.cloudapp.azure.com", req.Name, s.config.Region), Listeners: req.Listeners}, nil
 }
 
-func (s *azureNetworkService) UpdateLoadBalancer(ctx context.Context, id string, req *providers.UpdateLoadBalancerRequest) error {
+func (s *azureNetworkService) UpdateLoadBalancer(_ context.Context, _ string, _ *providers.UpdateLoadBalancerRequest) error {
 	return nil
 }
 
 type azureContainerService struct{ config providers.ProviderConfig }
 
-func (s *azureContainerService) CreateCluster(ctx context.Context, req *providers.CreateClusterRequest) (*providers.Cluster, error) {
+func (s *azureContainerService) CreateCluster(_ context.Context, req *providers.CreateClusterRequest) (*providers.Cluster, error) {
 	return &providers.Cluster{ID: fmt.Sprintf("aks-%s", req.Name), Name: req.Name, Type: req.Type, Version: req.Version, State: "Creating", Region: req.Region, NodeCount: req.NodeCount, CreatedAt: time.Now()}, nil
 }
 
-func (s *azureContainerService) GetCluster(ctx context.Context, id string) (*providers.Cluster, error) {
+func (s *azureContainerService) GetCluster(_ context.Context, id string) (*providers.Cluster, error) {
 	return &providers.Cluster{ID: id, Name: "aks-cluster", State: "Succeeded"}, nil
 }
 
-func (s *azureContainerService) ListClusters(ctx context.Context) ([]*providers.Cluster, error) {
+func (s *azureContainerService) ListClusters(_ context.Context) ([]*providers.Cluster, error) {
 	return []*providers.Cluster{{ID: "cluster-1", Name: "production"}}, nil
 }
 
-func (s *azureContainerService) UpdateCluster(ctx context.Context, id string, req *providers.UpdateClusterRequest) error {
+func (s *azureContainerService) UpdateCluster(_ context.Context, _ string, _ *providers.UpdateClusterRequest) error {
 	return nil
 }
-func (s *azureContainerService) DeleteCluster(ctx context.Context, id string) error { return nil }
-func (s *azureContainerService) DeployContainer(ctx context.Context, clusterID string, req *providers.DeployRequest) (*providers.Deployment, error) {
+func (s *azureContainerService) DeleteCluster(_ context.Context, _ string) error { return nil }
+func (s *azureContainerService) DeployContainer(_ context.Context, clusterID string, req *providers.DeployRequest) (*providers.Deployment, error) {
 	return &providers.Deployment{ID: fmt.Sprintf("deploy-%s", req.Name), Name: req.Name, ClusterID: clusterID, Image: req.Image, Replicas: req.Replicas, State: "Running", CreatedAt: time.Now(), UpdatedAt: time.Now()}, nil
 }
 
-func (s *azureContainerService) GetDeployment(ctx context.Context, id string) (*providers.Deployment, error) {
+func (s *azureContainerService) GetDeployment(_ context.Context, id string) (*providers.Deployment, error) {
 	return &providers.Deployment{ID: id, Name: "azure-deployment", State: "Running"}, nil
 }
 
-func (s *azureContainerService) UpdateDeployment(ctx context.Context, id string, req *providers.UpdateDeploymentRequest) error {
+func (s *azureContainerService) UpdateDeployment(_ context.Context, _ string, _ *providers.UpdateDeploymentRequest) error {
 	return nil
 }
 
-func (s *azureContainerService) ScaleDeployment(ctx context.Context, id string, replicas int) error {
+func (s *azureContainerService) ScaleDeployment(_ context.Context, _ string, _ int) error {
 	return nil
 }
-func (s *azureContainerService) DeleteDeployment(ctx context.Context, id string) error { return nil }
-func (s *azureContainerService) EnableServiceMesh(ctx context.Context, clusterID string, config *providers.ServiceMeshConfig) error {
+func (s *azureContainerService) DeleteDeployment(_ context.Context, _ string) error { return nil }
+func (s *azureContainerService) EnableServiceMesh(_ context.Context, _ string, _ *providers.ServiceMeshConfig) error {
 	return nil
 }
 
-func (s *azureContainerService) ConfigureTrafficPolicy(ctx context.Context, policy *providers.TrafficPolicy) error {
+func (s *azureContainerService) ConfigureTrafficPolicy(_ context.Context, _ *providers.TrafficPolicy) error {
 	return nil
 }
 
 type azureDatabaseService struct{ config providers.ProviderConfig }
 
-func (s *azureDatabaseService) CreateDatabase(ctx context.Context, req *providers.CreateDatabaseRequest) (*providers.Database, error) {
+func (s *azureDatabaseService) CreateDatabase(_ context.Context, req *providers.CreateDatabaseRequest) (*providers.Database, error) {
 	return &providers.Database{ID: fmt.Sprintf("sql-%s", req.Name), Name: req.Name, Engine: req.Engine, Version: req.Version, State: "Creating", Size: req.Size, Storage: req.Storage, MultiAZ: req.MultiAZ, CreatedAt: time.Now()}, nil
 }
 
-func (s *azureDatabaseService) GetDatabase(ctx context.Context, id string) (*providers.Database, error) {
+func (s *azureDatabaseService) GetDatabase(_ context.Context, id string) (*providers.Database, error) {
 	return &providers.Database{ID: id, Name: "azure-sql", State: "Online"}, nil
 }
 
-func (s *azureDatabaseService) ListDatabases(ctx context.Context) ([]*providers.Database, error) {
+func (s *azureDatabaseService) ListDatabases(_ context.Context) ([]*providers.Database, error) {
 	return []*providers.Database{{ID: "db-1", Name: "production"}}, nil
 }
 
-func (s *azureDatabaseService) UpdateDatabase(ctx context.Context, id string, req *providers.UpdateDatabaseRequest) error {
+func (s *azureDatabaseService) UpdateDatabase(_ context.Context, _ string, _ *providers.UpdateDatabaseRequest) error {
 	return nil
 }
-func (s *azureDatabaseService) DeleteDatabase(ctx context.Context, id string) error { return nil }
-func (s *azureDatabaseService) CreateBackup(ctx context.Context, dbID string, name string) (*providers.Backup, error) {
+func (s *azureDatabaseService) DeleteDatabase(_ context.Context, _ string) error { return nil }
+func (s *azureDatabaseService) CreateBackup(_ context.Context, dbID string, name string) (*providers.Backup, error) {
 	return &providers.Backup{ID: fmt.Sprintf("backup-%s", name), DatabaseID: dbID, Name: name, State: "InProgress", CreatedAt: time.Now()}, nil
 }
 
-func (s *azureDatabaseService) RestoreBackup(ctx context.Context, backupID string, targetDB string) error {
+func (s *azureDatabaseService) RestoreBackup(_ context.Context, _ string, _ string) error {
 	return nil
 }
 
-func (s *azureDatabaseService) ListBackups(ctx context.Context, dbID string) ([]*providers.Backup, error) {
+func (s *azureDatabaseService) ListBackups(_ context.Context, dbID string) ([]*providers.Backup, error) {
 	return []*providers.Backup{{ID: "backup-1", DatabaseID: dbID}}, nil
 }
 
-func (s *azureDatabaseService) ScaleDatabase(ctx context.Context, dbID string, req *providers.ScaleRequest) error {
+func (s *azureDatabaseService) ScaleDatabase(_ context.Context, _ string, _ *providers.ScaleRequest) error {
 	return nil
 }
 
-func (s *azureDatabaseService) EnableReadReplica(ctx context.Context, dbID string, region string) (*providers.Database, error) {
+func (s *azureDatabaseService) EnableReadReplica(_ context.Context, dbID string, _ string) (*providers.Database, error) {
 	return &providers.Database{ID: "replica-" + dbID, Name: "replica"}, nil
 }
 
-func (s *azureDatabaseService) EnableMultiMaster(ctx context.Context, dbID string, regions []string) error {
+func (s *azureDatabaseService) EnableMultiMaster(_ context.Context, _ string, _ []string) error {
 	return nil
 }
 
 // Minimal service implementations to satisfy interfaces
 type azureSecurityService struct{ config providers.ProviderConfig }
 
-func (s *azureSecurityService) CreateRole(ctx context.Context, req *providers.CreateRoleRequest) (*providers.Role, error) {
+func (s *azureSecurityService) CreateRole(_ context.Context, req *providers.CreateRoleRequest) (*providers.Role, error) {
 	return &providers.Role{ID: "role-123", Name: req.Name}, nil
 }
 
-func (s *azureSecurityService) CreatePolicy(ctx context.Context, req *providers.CreatePolicyRequest) (*providers.Policy, error) {
+func (s *azureSecurityService) CreatePolicy(_ context.Context, req *providers.CreatePolicyRequest) (*providers.Policy, error) {
 	return &providers.Policy{ID: "policy-123", Name: req.Name}, nil
 }
 
-func (s *azureSecurityService) AttachPolicy(ctx context.Context, roleID, policyID string) error {
+func (s *azureSecurityService) AttachPolicy(_ context.Context, _, _ string) error {
 	return nil
 }
 
-func (s *azureSecurityService) CreateSecret(ctx context.Context, req *providers.CreateSecretRequest) (*providers.Secret, error) {
+func (s *azureSecurityService) CreateSecret(_ context.Context, req *providers.CreateSecretRequest) (*providers.Secret, error) {
 	return &providers.Secret{ID: "secret-123", Name: req.Name}, nil
 }
 
-func (s *azureSecurityService) GetSecret(ctx context.Context, id string) (*providers.Secret, error) {
+func (s *azureSecurityService) GetSecret(_ context.Context, id string) (*providers.Secret, error) {
 	return &providers.Secret{ID: id}, nil
 }
-func (s *azureSecurityService) RotateSecret(ctx context.Context, id string) error { return nil }
-func (s *azureSecurityService) EnableAuditLogging(ctx context.Context, config *providers.AuditConfig) error {
+func (s *azureSecurityService) RotateSecret(_ context.Context, _ string) error { return nil }
+func (s *azureSecurityService) EnableAuditLogging(_ context.Context, _ *providers.AuditConfig) error {
 	return nil
 }
 
-func (s *azureSecurityService) GetComplianceReport(ctx context.Context, standard string) (*providers.ComplianceReport, error) {
+func (s *azureSecurityService) GetComplianceReport(_ context.Context, standard string) (*providers.ComplianceReport, error) {
 	return &providers.ComplianceReport{Standard: standard}, nil
 }
 
-func (s *azureSecurityService) CreateKMSKey(ctx context.Context, req *providers.CreateKeyRequest) (*providers.KMSKey, error) {
+func (s *azureSecurityService) CreateKMSKey(_ context.Context, req *providers.CreateKeyRequest) (*providers.KMSKey, error) {
 	return &providers.KMSKey{ID: "key-123", Name: req.Name}, nil
 }
 
-func (s *azureSecurityService) Encrypt(ctx context.Context, keyID string, data []byte) ([]byte, error) {
+func (s *azureSecurityService) Encrypt(_ context.Context, _ string, data []byte) ([]byte, error) {
 	return data, nil
 }
 
-func (s *azureSecurityService) Decrypt(ctx context.Context, keyID string, data []byte) ([]byte, error) {
+func (s *azureSecurityService) Decrypt(_ context.Context, _ string, data []byte) ([]byte, error) {
 	return data, nil
 }
 
 type azureMonitoringService struct{ config providers.ProviderConfig }
 
-func (s *azureMonitoringService) PutMetric(ctx context.Context, metric *providers.Metric) error {
+func (s *azureMonitoringService) PutMetric(_ context.Context, _ *providers.Metric) error {
 	return nil
 }
 
-func (s *azureMonitoringService) GetMetrics(ctx context.Context, query *providers.MetricQuery) ([]*providers.MetricData, error) {
+func (s *azureMonitoringService) GetMetrics(_ context.Context, _ *providers.MetricQuery) ([]*providers.MetricData, error) {
 	return []*providers.MetricData{}, nil
 }
 
-func (s *azureMonitoringService) CreateDashboard(ctx context.Context, req *providers.CreateDashboardRequest) (*providers.Dashboard, error) {
+func (s *azureMonitoringService) CreateDashboard(_ context.Context, req *providers.CreateDashboardRequest) (*providers.Dashboard, error) {
 	return &providers.Dashboard{ID: "dash-123", Name: req.Name}, nil
 }
-func (s *azureMonitoringService) CreateLogGroup(ctx context.Context, name string) error { return nil }
-func (s *azureMonitoringService) PutLogs(ctx context.Context, group string, logs []*providers.LogEntry) error {
+func (s *azureMonitoringService) CreateLogGroup(_ context.Context, _ string) error { return nil }
+func (s *azureMonitoringService) PutLogs(_ context.Context, _ string, _ []*providers.LogEntry) error {
 	return nil
 }
 
-func (s *azureMonitoringService) QueryLogs(ctx context.Context, query *providers.LogQuery) ([]*providers.LogEntry, error) {
+func (s *azureMonitoringService) QueryLogs(_ context.Context, _ *providers.LogQuery) ([]*providers.LogEntry, error) {
 	return []*providers.LogEntry{}, nil
 }
 
-func (s *azureMonitoringService) CreateAlert(ctx context.Context, req *providers.CreateAlertRequest) (*providers.Alert, error) {
+func (s *azureMonitoringService) CreateAlert(_ context.Context, req *providers.CreateAlertRequest) (*providers.Alert, error) {
 	return &providers.Alert{ID: "alert-123", Name: req.Name}, nil
 }
 
-func (s *azureMonitoringService) UpdateAlert(ctx context.Context, id string, req *providers.UpdateAlertRequest) error {
+func (s *azureMonitoringService) UpdateAlert(_ context.Context, _ string, _ *providers.UpdateAlertRequest) error {
 	return nil
 }
 
-func (s *azureMonitoringService) ListAlerts(ctx context.Context) ([]*providers.Alert, error) {
+func (s *azureMonitoringService) ListAlerts(_ context.Context) ([]*providers.Alert, error) {
 	return []*providers.Alert{}, nil
 }
 
-func (s *azureMonitoringService) PutTrace(ctx context.Context, trace *providers.Trace) error {
+func (s *azureMonitoringService) PutTrace(_ context.Context, _ *providers.Trace) error {
 	return nil
 }
 
-func (s *azureMonitoringService) GetTrace(ctx context.Context, id string) (*providers.Trace, error) {
+func (s *azureMonitoringService) GetTrace(_ context.Context, id string) (*providers.Trace, error) {
 	return &providers.Trace{ID: id}, nil
 }
 
-func (s *azureMonitoringService) QueryTraces(ctx context.Context, query *providers.TraceQuery) ([]*providers.Trace, error) {
+func (s *azureMonitoringService) QueryTraces(_ context.Context, _ *providers.TraceQuery) ([]*providers.Trace, error) {
 	return []*providers.Trace{}, nil
 }
 
 type azureServerlessService struct{ config providers.ProviderConfig }
 
-func (s *azureServerlessService) CreateFunction(ctx context.Context, req *providers.CreateFunctionRequest) (*providers.Function, error) {
+func (s *azureServerlessService) CreateFunction(_ context.Context, req *providers.CreateFunctionRequest) (*providers.Function, error) {
 	return &providers.Function{ID: "func-123", Name: req.Name}, nil
 }
 
-func (s *azureServerlessService) UpdateFunction(ctx context.Context, id string, req *providers.UpdateFunctionRequest) error {
+func (s *azureServerlessService) UpdateFunction(_ context.Context, _ string, _ *providers.UpdateFunctionRequest) error {
 	return nil
 }
 
-func (s *azureServerlessService) InvokeFunction(ctx context.Context, id string, payload []byte) ([]byte, error) {
+func (s *azureServerlessService) InvokeFunction(_ context.Context, _ string, _ []byte) ([]byte, error) {
 	return []byte("result"), nil
 }
-func (s *azureServerlessService) DeleteFunction(ctx context.Context, id string) error { return nil }
-func (s *azureServerlessService) CreateEventTrigger(ctx context.Context, functionID string, trigger *providers.EventTrigger) error {
+func (s *azureServerlessService) DeleteFunction(_ context.Context, _ string) error { return nil }
+func (s *azureServerlessService) CreateEventTrigger(_ context.Context, _ string, _ *providers.EventTrigger) error {
 	return nil
 }
 
-func (s *azureServerlessService) CreateAPIGateway(ctx context.Context, req *providers.CreateAPIGatewayRequest) (*providers.APIGateway, error) {
+func (s *azureServerlessService) CreateAPIGateway(_ context.Context, req *providers.CreateAPIGatewayRequest) (*providers.APIGateway, error) {
 	return &providers.APIGateway{ID: "api-123", Name: req.Name}, nil
 }
 
-func (s *azureServerlessService) CreateWorkflow(ctx context.Context, req *providers.CreateWorkflowRequest) (*providers.Workflow, error) {
+func (s *azureServerlessService) CreateWorkflow(_ context.Context, req *providers.CreateWorkflowRequest) (*providers.Workflow, error) {
 	return &providers.Workflow{ID: "wf-123", Name: req.Name}, nil
 }
 
-func (s *azureServerlessService) ExecuteWorkflow(ctx context.Context, id string, input map[string]interface{}) (*providers.WorkflowExecution, error) {
+func (s *azureServerlessService) ExecuteWorkflow(_ context.Context, id string, _ map[string]interface{}) (*providers.WorkflowExecution, error) {
 	return &providers.WorkflowExecution{ID: "exec-123", WorkflowID: id}, nil
 }
 
 type azureAIService struct{ config providers.ProviderConfig }
 
-func (s *azureAIService) CreateModel(ctx context.Context, req *providers.CreateModelRequest) (*providers.AIModel, error) {
+func (s *azureAIService) CreateModel(_ context.Context, req *providers.CreateModelRequest) (*providers.AIModel, error) {
 	return &providers.AIModel{ID: "model-123", Name: req.Name}, nil
 }
 
-func (s *azureAIService) TrainModel(ctx context.Context, id string, dataset *providers.Dataset) (*providers.TrainingJob, error) {
+func (s *azureAIService) TrainModel(_ context.Context, id string, _ *providers.Dataset) (*providers.TrainingJob, error) {
 	return &providers.TrainingJob{ID: "job-123", ModelID: id}, nil
 }
 
-func (s *azureAIService) DeployModel(ctx context.Context, id string, config *providers.DeploymentConfig) (*providers.ModelEndpoint, error) {
+func (s *azureAIService) DeployModel(_ context.Context, id string, _ *providers.DeploymentConfig) (*providers.ModelEndpoint, error) {
 	return &providers.ModelEndpoint{ID: "endpoint-123", ModelID: id}, nil
 }
 
-func (s *azureAIService) Predict(ctx context.Context, endpointID string, data interface{}) (interface{}, error) {
+func (s *azureAIService) Predict(_ context.Context, _ string, _ interface{}) (interface{}, error) {
 	return "prediction", nil
 }
 
-func (s *azureAIService) CreateDataset(ctx context.Context, req *providers.CreateDatasetRequest) (*providers.Dataset, error) {
+func (s *azureAIService) CreateDataset(_ context.Context, req *providers.CreateDatasetRequest) (*providers.Dataset, error) {
 	return &providers.Dataset{ID: "dataset-123", Name: req.Name}, nil
 }
 
-func (s *azureAIService) PreprocessData(ctx context.Context, datasetID string, pipeline *providers.Pipeline) error {
+func (s *azureAIService) PreprocessData(_ context.Context, _ string, _ *providers.Pipeline) error {
 	return nil
 }
 
-func (s *azureAIService) CreateNeuralNetwork(ctx context.Context, architecture *providers.NetworkArchitecture) (*providers.NeuralNetwork, error) {
+func (s *azureAIService) CreateNeuralNetwork(_ context.Context, _ *providers.NetworkArchitecture) (*providers.NeuralNetwork, error) {
 	return &providers.NeuralNetwork{ID: "nn-123"}, nil
 }
 
-func (s *azureAIService) FineTuneModel(ctx context.Context, modelID string, dataset *providers.Dataset) (*providers.AIModel, error) {
+func (s *azureAIService) FineTuneModel(_ context.Context, modelID string, _ *providers.Dataset) (*providers.AIModel, error) {
 	return &providers.AIModel{ID: modelID + "-tuned"}, nil
 }
 
-func (s *azureAIService) ExplainPrediction(ctx context.Context, modelID string, input interface{}) (*providers.Explanation, error) {
+func (s *azureAIService) ExplainPrediction(_ context.Context, _ string, _ interface{}) (*providers.Explanation, error) {
 	return &providers.Explanation{Prediction: "explained"}, nil
 }
 

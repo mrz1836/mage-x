@@ -20,9 +20,12 @@ type Releases mg.Namespace
 type ReleaseChannel string
 
 const (
+	// StableRelease represents the stable release channel
 	StableRelease ReleaseChannel = "stable"
-	BetaRelease   ReleaseChannel = "beta"
-	EdgeRelease   ReleaseChannel = "edge"
+	// BetaRelease represents the beta release channel
+	BetaRelease ReleaseChannel = "beta"
+	// EdgeRelease represents the edge release channel
+	EdgeRelease ReleaseChannel = "edge"
 )
 
 // MultiChannelReleaseConfig contains release configuration for multi-channel releases
@@ -652,23 +655,24 @@ func getChannelInfo() *ChannelInfo {
 	}
 }
 
-func cleanupChannel(channel ReleaseChannel, keep int) (int, error) {
+func cleanupChannel(_ ReleaseChannel, _ int) (int, error) {
 	// Placeholder implementation
 	return 0, nil
 }
 
-func getPreviousRelease(channel ReleaseChannel) string {
+func getPreviousRelease(_ ReleaseChannel) string {
 	// Placeholder implementation
 	return ""
 }
 
-// Helper types
+// ReleaseInfo contains release information
 type ReleaseInfo struct {
 	Version string
 	Notes   string
 	Assets  []string
 }
 
+// ChannelInfo contains release channel information
 type ChannelInfo struct {
 	Version    string
 	ReleasedAt time.Time

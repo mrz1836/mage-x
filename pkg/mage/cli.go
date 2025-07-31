@@ -440,6 +440,7 @@ type BatchOperation struct {
 	Required    bool              `json:"required"`
 }
 
+// BatchOperationResult represents the result of a batch operation
 type BatchOperationResult struct {
 	Operation BatchOperation `json:"operation"`
 	Success   bool           `json:"success"`
@@ -1170,6 +1171,7 @@ func NewRepositoryMonitor(config RepositoryConfig, interval time.Duration) *Repo
 	}
 }
 
+// Start begins monitoring the repository for changes
 func (m *RepositoryMonitor) Start(ctx context.Context) error {
 	ticker := time.NewTicker(m.interval)
 	defer ticker.Stop()

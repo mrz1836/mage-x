@@ -163,7 +163,7 @@ func (m *MockDeployer) Scale(_ context.Context, _ DeployTarget, _ int) error {
 	return nil
 }
 
-func (m *MockDeployer) Logs(ctx context.Context, target DeployTarget, opts LogOptions) ([]string, error) {
+func (m *MockDeployer) Logs(_ context.Context, _ DeployTarget, _ LogOptions) ([]string, error) {
 	m.logsCalled = true
 	if m.shouldError {
 		return nil, assert.AnError

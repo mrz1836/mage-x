@@ -400,11 +400,13 @@ func (c Clean) Dependencies() error {
 	return runner.RunCmd("go", "clean", "-modcache")
 }
 
+// Deps cleans the Go module cache
 func (c Clean) Deps() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "clean", "-modcache")
 }
 
+// Full performs a complete clean including build cache, test cache, and mod cache
 func (c Clean) Full() error {
 	runner := GetRunner()
 	// Full clean includes build cache, test cache, and mod cache
@@ -417,123 +419,145 @@ func (c Clean) Full() error {
 	return runner.RunCmd("go", "clean", "-modcache")
 }
 
+// Generated removes generated files and directories
 func (c Clean) Generated() error {
 	runner := GetRunner()
 	return runner.RunCmd("rm", "-rf", "generated/")
 }
 
+// Docker cleans Docker system resources
 func (c Clean) Docker() error {
 	runner := GetRunner()
 	return runner.RunCmd("docker", "system", "prune", "-f")
 }
 
+// Dist removes the distribution directory
 func (c Clean) Dist() error {
 	runner := GetRunner()
 	return runner.RunCmd("rm", "-rf", "dist/")
 }
 
+// Logs removes log files and directories
 func (c Clean) Logs() error {
 	runner := GetRunner()
 	return runner.RunCmd("rm", "-rf", "logs/")
 }
 
+// Temp removes temporary mage files
 func (c Clean) Temp() error {
 	runner := GetRunner()
 	return runner.RunCmd("rm", "-rf", "/tmp/mage-*")
 }
 
-// Run operations
+// Dev runs the application in development mode
 func (r Run) Dev() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running in dev mode")
 }
 
+// Prod runs the application in production mode
 func (r Run) Prod() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running in prod mode")
 }
 
+// Watch runs the application with file watching enabled
 func (r Run) Watch() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running with watch")
 }
 
+// Debug runs the application in debug mode
 func (r Run) Debug(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running in debug mode")
 }
 
+// Profile runs the application with profiling enabled
 func (r Run) Profile(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running with profiling")
 }
 
+// Benchmark runs the application benchmark tests
 func (r Run) Benchmark(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running benchmarks")
 }
 
+// Server runs the application server
 func (r Run) Server(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running server")
 }
 
+// Migrations runs database migrations
 func (r Run) Migrations(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running migrations")
 }
 
+// Seeds runs database seed operations
 func (r Run) Seeds(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running seeds")
 }
 
+// Worker runs background worker processes
 func (r Run) Worker(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running worker")
 }
 
-// Serve operations
+// HTTP serves the application over HTTP
 func (s Serve) HTTP(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving HTTP")
 }
 
+// HTTPS serves the application over HTTPS
 func (s Serve) HTTPS(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving HTTPS")
 }
 
+// Docs serves documentation
 func (s Serve) Docs(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving docs")
 }
 
+// API serves the API endpoints
 func (s Serve) API(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving API")
 }
 
+// GRPC serves the gRPC server
 func (s Serve) GRPC(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving gRPC")
 }
 
+// Metrics serves application metrics
 func (s Serve) Metrics(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving metrics")
 }
 
+// Static serves static files
 func (s Serve) Static(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving static files")
 }
 
+// Proxy serves as a reverse proxy
 func (s Serve) Proxy(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving proxy")
 }
 
+// Websocket serves WebSocket connections
 func (s Serve) Websocket() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving websocket")
@@ -544,12 +568,13 @@ func (s Serve) WebSocket(_ ...interface{}) error {
 	return s.Websocket()
 }
 
-func (s Serve) HealthCheck(args ...interface{}) error {
+// HealthCheck serves health check endpoints
+func (s Serve) HealthCheck(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving health check")
 }
 
-// Docker operations
+// Build builds a Docker image with the specified tag
 func (d DockerOps) Build(tag string) error {
 	runner := GetRunner()
 	if tag == "" {
@@ -558,6 +583,7 @@ func (d DockerOps) Build(tag string) error {
 	return runner.RunCmd("docker", "build", "-t", tag, ".")
 }
 
+// Push pushes a Docker image to the registry
 func (d DockerOps) Push(tag string) error {
 	runner := GetRunner()
 	if tag == "" {
@@ -566,12 +592,14 @@ func (d DockerOps) Push(tag string) error {
 	return runner.RunCmd("docker", "push", tag)
 }
 
+// Run runs a Docker container from the specified image
 func (d DockerOps) Run(image string, args ...string) error {
 	runner := GetRunner()
 	cmdArgs := append([]string{"run", image}, args...)
 	return runner.RunCmd("docker", cmdArgs...)
 }
 
+// Stop stops a running Docker container
 func (d DockerOps) Stop(container string) error {
 	runner := GetRunner()
 	if container == "" {
@@ -580,6 +608,7 @@ func (d DockerOps) Stop(container string) error {
 	return runner.RunCmd("docker", "stop", container)
 }
 
+// Logs retrieves logs from a Docker container
 func (d DockerOps) Logs(container string) error {
 	runner := GetRunner()
 	if container == "" {
@@ -588,32 +617,37 @@ func (d DockerOps) Logs(container string) error {
 	return runner.RunCmd("docker", "logs", container)
 }
 
+// Clean removes unused Docker resources
 func (d DockerOps) Clean() error {
 	runner := GetRunner()
 	return runner.RunCmd("docker", "system", "prune", "-f")
 }
 
+// Compose runs docker-compose with the given command
 func (d DockerOps) Compose(command string) error {
 	runner := GetRunner()
 	return runner.RunCmd("docker-compose", command)
 }
 
+// Tag tags a Docker image from source to target
 func (d DockerOps) Tag(source, target string) error {
 	runner := GetRunner()
 	return runner.RunCmd("docker", "tag", source, target)
 }
 
+// Pull pulls a Docker image
 func (d DockerOps) Pull(image string) error {
 	runner := GetRunner()
 	return runner.RunCmd("docker", "pull", image)
 }
 
-// Common operations
+// Version displays version information for common operations
 func (c Common) Version() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Getting version")
 }
 
+// Duration displays duration information for common operations
 func (c Common) Duration() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Getting duration")

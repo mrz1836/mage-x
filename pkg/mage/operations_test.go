@@ -679,25 +679,25 @@ func TestOperations_ErrorHandling(t *testing.T) {
 
 	t.Run("Check operations error handling", func(t *testing.T) {
 		check := Check{}
-		assert.Error(t, check.All())
-		assert.Error(t, check.Format())
-		assert.Error(t, check.Security())
+		require.Error(t, check.All())
+		require.Error(t, check.Format())
+		require.Error(t, check.Security())
 		assert.Error(t, check.Tidy())
 	})
 
 	t.Run("CI operations error handling", func(t *testing.T) {
 		ci := CI{}
-		assert.Error(t, ci.Run("test"))
-		assert.Error(t, ci.Validate())
-		assert.Error(t, ci.Status("main"))
+		require.Error(t, ci.Run("test"))
+		require.Error(t, ci.Validate())
+		require.Error(t, ci.Status("main"))
 		assert.Error(t, ci.Cache("clear"))
 	})
 
 	t.Run("Docker operations error handling", func(t *testing.T) {
 		docker := DockerOps{}
-		assert.Error(t, docker.Build("test"))
-		assert.Error(t, docker.Run("test"))
-		assert.Error(t, docker.Push("test"))
+		require.Error(t, docker.Build("test"))
+		require.Error(t, docker.Run("test"))
+		require.Error(t, docker.Push("test"))
 		assert.Error(t, docker.Stop("test"))
 	})
 }

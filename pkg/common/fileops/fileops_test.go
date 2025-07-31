@@ -448,7 +448,7 @@ func (suite *FileOpsTestSuite) TestFileOpsFacade() {
 
 		var result TestConfig
 		foundPath, err := suite.ops.LoadConfig(paths, &result)
-		suite.Error(err, "Should error when all config files are missing")
+		suite.Require().Error(err, "Should error when all config files are missing")
 		suite.Empty(foundPath, "Should return empty path when no config found")
 	})
 

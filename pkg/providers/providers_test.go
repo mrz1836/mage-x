@@ -677,22 +677,22 @@ func (s *mockComputeService) GetInstance(_ context.Context, id string) (*Instanc
 	return &Instance{ID: id, Name: "test-instance", State: "running"}, nil
 }
 
-func (s *mockComputeService) ListInstances(_ context.Context, filter *InstanceFilter) ([]*Instance, error) {
+func (s *mockComputeService) ListInstances(_ context.Context, _ *InstanceFilter) ([]*Instance, error) {
 	return []*Instance{{ID: "i-123", Name: "instance1", State: "running"}}, nil
 }
 
-func (s *mockComputeService) UpdateInstance(_ context.Context, id string, req *UpdateInstanceRequest) error {
+func (s *mockComputeService) UpdateInstance(_ context.Context, _ string, _ *UpdateInstanceRequest) error {
 	return nil
 }
 
-func (s *mockComputeService) DeleteInstance(_ context.Context, id string) error { return nil }
-func (s *mockComputeService) StartInstance(_ context.Context, id string) error  { return nil }
-func (s *mockComputeService) StopInstance(_ context.Context, id string) error   { return nil }
-func (s *mockComputeService) RestartInstance(_ context.Context, id string) error {
+func (s *mockComputeService) DeleteInstance(_ context.Context, _ string) error { return nil }
+func (s *mockComputeService) StartInstance(_ context.Context, _ string) error  { return nil }
+func (s *mockComputeService) StopInstance(_ context.Context, _ string) error   { return nil }
+func (s *mockComputeService) RestartInstance(_ context.Context, _ string) error {
 	return nil
 }
 
-func (s *mockComputeService) ResizeInstance(_ context.Context, id string, size string) error {
+func (s *mockComputeService) ResizeInstance(_ context.Context, _ string, _ string) error {
 	return nil
 }
 
@@ -716,7 +716,7 @@ func (s *mockComputeService) CloneInstance(ctx context.Context, _ string, req *C
 
 type mockStorageService struct{}
 
-func (s *mockStorageService) CreateBucket(ctx context.Context, req *CreateBucketRequest) (*Bucket, error) {
+func (s *mockStorageService) CreateBucket(_ context.Context, req *CreateBucketRequest) (*Bucket, error) {
 	return &Bucket{
 		Name:         req.Name,
 		Region:       req.Region,
@@ -728,43 +728,43 @@ func (s *mockStorageService) CreateBucket(ctx context.Context, req *CreateBucket
 	}, nil
 }
 
-func (s *mockStorageService) GetBucket(ctx context.Context, name string) (*Bucket, error) {
+func (s *mockStorageService) GetBucket(_ context.Context, name string) (*Bucket, error) {
 	return &Bucket{Name: name, Region: "us-east-1", CreatedAt: time.Now()}, nil
 }
 
-func (s *mockStorageService) ListBuckets(ctx context.Context) ([]*Bucket, error) {
+func (s *mockStorageService) ListBuckets(_ context.Context) ([]*Bucket, error) {
 	return []*Bucket{{Name: "bucket1"}, {Name: "bucket2"}}, nil
 }
 
-func (s *mockStorageService) DeleteBucket(ctx context.Context, name string) error { return nil }
-func (s *mockStorageService) PutObject(ctx context.Context, bucket, key string, reader io.Reader, opts *PutOptions) error {
+func (s *mockStorageService) DeleteBucket(_ context.Context, _ string) error { return nil }
+func (s *mockStorageService) PutObject(_ context.Context, _, _ string, _ io.Reader, _ *PutOptions) error {
 	return nil
 }
 
-func (s *mockStorageService) GetObject(ctx context.Context, bucket, key string) (io.ReadCloser, error) {
+func (s *mockStorageService) GetObject(_ context.Context, _, _ string) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader("mock content")), nil
 }
 
-func (s *mockStorageService) DeleteObject(ctx context.Context, bucket, key string) error { return nil }
-func (s *mockStorageService) ListObjects(ctx context.Context, bucket string, prefix string) ([]*Object, error) {
+func (s *mockStorageService) DeleteObject(_ context.Context, _, _ string) error { return nil }
+func (s *mockStorageService) ListObjects(_ context.Context, _ string, prefix string) ([]*Object, error) {
 	return []*Object{{Key: prefix + "file.txt", Size: 1024}}, nil
 }
 
-func (s *mockStorageService) MultipartUpload(ctx context.Context, bucket, key string, reader io.Reader) error {
+func (s *mockStorageService) MultipartUpload(_ context.Context, _, _ string, _ io.Reader) error {
 	return nil
 }
 
-func (s *mockStorageService) GeneratePresignedURL(ctx context.Context, bucket, key string, expiry time.Duration) (string, error) {
+func (s *mockStorageService) GeneratePresignedURL(_ context.Context, bucket, key string, expiry time.Duration) (string, error) {
 	return fmt.Sprintf("https://%s.example.com/%s?expires=%d", bucket, key, time.Now().Add(expiry).Unix()), nil
 }
 
-func (s *mockStorageService) SetObjectACL(ctx context.Context, bucket, key string, acl *ACL) error {
+func (s *mockStorageService) SetObjectACL(_ context.Context, _, _ string, _ *ACL) error {
 	return nil
 }
 
 type mockNetworkService struct{}
 
-func (s *mockNetworkService) CreateVPC(ctx context.Context, req *CreateVPCRequest) (*VPC, error) {
+func (s *mockNetworkService) CreateVPC(_ context.Context, req *CreateVPCRequest) (*VPC, error) {
 	return &VPC{
 		ID:     fmt.Sprintf("vpc-%d", time.Now().UnixNano()),
 		Name:   req.Name,
@@ -775,16 +775,16 @@ func (s *mockNetworkService) CreateVPC(ctx context.Context, req *CreateVPCReques
 	}, nil
 }
 
-func (s *mockNetworkService) GetVPC(ctx context.Context, id string) (*VPC, error) {
+func (s *mockNetworkService) GetVPC(_ context.Context, id string) (*VPC, error) {
 	return &VPC{ID: id, Name: "test-vpc", State: "available"}, nil
 }
 
-func (s *mockNetworkService) ListVPCs(ctx context.Context) ([]*VPC, error) {
+func (s *mockNetworkService) ListVPCs(_ context.Context) ([]*VPC, error) {
 	return []*VPC{{ID: "vpc-123", Name: "default"}}, nil
 }
 
-func (s *mockNetworkService) DeleteVPC(ctx context.Context, id string) error { return nil }
-func (s *mockNetworkService) CreateSubnet(ctx context.Context, vpcID string, req *CreateSubnetRequest) (*Subnet, error) {
+func (s *mockNetworkService) DeleteVPC(_ context.Context, _ string) error { return nil }
+func (s *mockNetworkService) CreateSubnet(_ context.Context, vpcID string, req *CreateSubnetRequest) (*Subnet, error) {
 	return &Subnet{
 		ID:     fmt.Sprintf("subnet-%d", time.Now().UnixNano()),
 		Name:   req.Name,
@@ -796,16 +796,16 @@ func (s *mockNetworkService) CreateSubnet(ctx context.Context, vpcID string, req
 	}, nil
 }
 
-func (s *mockNetworkService) GetSubnet(ctx context.Context, id string) (*Subnet, error) {
+func (s *mockNetworkService) GetSubnet(_ context.Context, id string) (*Subnet, error) {
 	return &Subnet{ID: id, Name: "test-subnet", State: "available"}, nil
 }
 
-func (s *mockNetworkService) ListSubnets(ctx context.Context, vpcID string) ([]*Subnet, error) {
+func (s *mockNetworkService) ListSubnets(_ context.Context, vpcID string) ([]*Subnet, error) {
 	return []*Subnet{{ID: "subnet-123", VPCID: vpcID}}, nil
 }
 
-func (s *mockNetworkService) DeleteSubnet(ctx context.Context, id string) error { return nil }
-func (s *mockNetworkService) CreateSecurityGroup(ctx context.Context, req *CreateSecurityGroupRequest) (*SecurityGroup, error) {
+func (s *mockNetworkService) DeleteSubnet(_ context.Context, _ string) error { return nil }
+func (s *mockNetworkService) CreateSecurityGroup(_ context.Context, req *CreateSecurityGroupRequest) (*SecurityGroup, error) {
 	return &SecurityGroup{
 		ID:          fmt.Sprintf("sg-%d", time.Now().UnixNano()),
 		Name:        req.Name,
@@ -815,11 +815,11 @@ func (s *mockNetworkService) CreateSecurityGroup(ctx context.Context, req *Creat
 	}, nil
 }
 
-func (s *mockNetworkService) UpdateSecurityRules(ctx context.Context, groupID string, rules []*SecurityRule) error {
+func (s *mockNetworkService) UpdateSecurityRules(_ context.Context, _ string, _ []*SecurityRule) error {
 	return nil
 }
 
-func (s *mockNetworkService) CreateLoadBalancer(ctx context.Context, req *CreateLoadBalancerRequest) (*LoadBalancer, error) {
+func (s *mockNetworkService) CreateLoadBalancer(_ context.Context, req *CreateLoadBalancerRequest) (*LoadBalancer, error) {
 	return &LoadBalancer{
 		ID:        fmt.Sprintf("lb-%d", time.Now().UnixNano()),
 		Name:      req.Name,
@@ -830,13 +830,13 @@ func (s *mockNetworkService) CreateLoadBalancer(ctx context.Context, req *Create
 	}, nil
 }
 
-func (s *mockNetworkService) UpdateLoadBalancer(ctx context.Context, id string, req *UpdateLoadBalancerRequest) error {
+func (s *mockNetworkService) UpdateLoadBalancer(_ context.Context, _ string, _ *UpdateLoadBalancerRequest) error {
 	return nil
 }
 
 type mockContainerService struct{}
 
-func (s *mockContainerService) CreateCluster(ctx context.Context, req *CreateClusterRequest) (*Cluster, error) {
+func (s *mockContainerService) CreateCluster(_ context.Context, req *CreateClusterRequest) (*Cluster, error) {
 	return &Cluster{
 		ID:        fmt.Sprintf("cluster-%d", time.Now().UnixNano()),
 		Name:      req.Name,
@@ -849,20 +849,20 @@ func (s *mockContainerService) CreateCluster(ctx context.Context, req *CreateClu
 	}, nil
 }
 
-func (s *mockContainerService) GetCluster(ctx context.Context, id string) (*Cluster, error) {
+func (s *mockContainerService) GetCluster(_ context.Context, id string) (*Cluster, error) {
 	return &Cluster{ID: id, Name: "test-cluster", State: "ACTIVE"}, nil
 }
 
-func (s *mockContainerService) ListClusters(ctx context.Context) ([]*Cluster, error) {
+func (s *mockContainerService) ListClusters(_ context.Context) ([]*Cluster, error) {
 	return []*Cluster{{ID: "cluster-123", Name: "production"}}, nil
 }
 
-func (s *mockContainerService) UpdateCluster(ctx context.Context, id string, req *UpdateClusterRequest) error {
+func (s *mockContainerService) UpdateCluster(_ context.Context, _ string, _ *UpdateClusterRequest) error {
 	return nil
 }
 
-func (s *mockContainerService) DeleteCluster(ctx context.Context, id string) error { return nil }
-func (s *mockContainerService) DeployContainer(ctx context.Context, clusterID string, req *DeployRequest) (*Deployment, error) {
+func (s *mockContainerService) DeleteCluster(_ context.Context, _ string) error { return nil }
+func (s *mockContainerService) DeployContainer(_ context.Context, clusterID string, req *DeployRequest) (*Deployment, error) {
 	return &Deployment{
 		ID:        fmt.Sprintf("deploy-%d", time.Now().UnixNano()),
 		Name:      req.Name,
@@ -875,30 +875,30 @@ func (s *mockContainerService) DeployContainer(ctx context.Context, clusterID st
 	}, nil
 }
 
-func (s *mockContainerService) GetDeployment(ctx context.Context, id string) (*Deployment, error) {
+func (s *mockContainerService) GetDeployment(_ context.Context, id string) (*Deployment, error) {
 	return &Deployment{ID: id, Name: "test-deployment", State: "RUNNING"}, nil
 }
 
-func (s *mockContainerService) UpdateDeployment(ctx context.Context, id string, req *UpdateDeploymentRequest) error {
+func (s *mockContainerService) UpdateDeployment(_ context.Context, _ string, _ *UpdateDeploymentRequest) error {
 	return nil
 }
 
-func (s *mockContainerService) ScaleDeployment(ctx context.Context, id string, replicas int) error {
+func (s *mockContainerService) ScaleDeployment(_ context.Context, _ string, _ int) error {
 	return nil
 }
 
-func (s *mockContainerService) DeleteDeployment(ctx context.Context, id string) error { return nil }
-func (s *mockContainerService) EnableServiceMesh(ctx context.Context, clusterID string, config *ServiceMeshConfig) error {
+func (s *mockContainerService) DeleteDeployment(_ context.Context, _ string) error { return nil }
+func (s *mockContainerService) EnableServiceMesh(_ context.Context, _ string, _ *ServiceMeshConfig) error {
 	return nil
 }
 
-func (s *mockContainerService) ConfigureTrafficPolicy(ctx context.Context, policy *TrafficPolicy) error {
+func (s *mockContainerService) ConfigureTrafficPolicy(_ context.Context, _ *TrafficPolicy) error {
 	return nil
 }
 
 type mockDatabaseService struct{}
 
-func (s *mockDatabaseService) CreateDatabase(ctx context.Context, req *CreateDatabaseRequest) (*Database, error) {
+func (s *mockDatabaseService) CreateDatabase(_ context.Context, req *CreateDatabaseRequest) (*Database, error) {
 	return &Database{
 		ID:        fmt.Sprintf("db-%d", time.Now().UnixNano()),
 		Name:      req.Name,
@@ -912,20 +912,20 @@ func (s *mockDatabaseService) CreateDatabase(ctx context.Context, req *CreateDat
 	}, nil
 }
 
-func (s *mockDatabaseService) GetDatabase(ctx context.Context, id string) (*Database, error) {
+func (s *mockDatabaseService) GetDatabase(_ context.Context, id string) (*Database, error) {
 	return &Database{ID: id, Name: "test-db", State: "available"}, nil
 }
 
-func (s *mockDatabaseService) ListDatabases(ctx context.Context) ([]*Database, error) {
+func (s *mockDatabaseService) ListDatabases(_ context.Context) ([]*Database, error) {
 	return []*Database{{ID: "db-123", Name: "production"}}, nil
 }
 
-func (s *mockDatabaseService) UpdateDatabase(ctx context.Context, id string, req *UpdateDatabaseRequest) error {
+func (s *mockDatabaseService) UpdateDatabase(_ context.Context, _ string, _ *UpdateDatabaseRequest) error {
 	return nil
 }
 
-func (s *mockDatabaseService) DeleteDatabase(ctx context.Context, id string) error { return nil }
-func (s *mockDatabaseService) CreateBackup(ctx context.Context, dbID string, name string) (*Backup, error) {
+func (s *mockDatabaseService) DeleteDatabase(_ context.Context, _ string) error { return nil }
+func (s *mockDatabaseService) CreateBackup(_ context.Context, dbID string, name string) (*Backup, error) {
 	return &Backup{
 		ID:         fmt.Sprintf("backup-%d", time.Now().UnixNano()),
 		DatabaseID: dbID,
@@ -935,274 +935,274 @@ func (s *mockDatabaseService) CreateBackup(ctx context.Context, dbID string, nam
 	}, nil
 }
 
-func (s *mockDatabaseService) RestoreBackup(ctx context.Context, backupID string, targetDB string) error {
+func (s *mockDatabaseService) RestoreBackup(_ context.Context, _ string, _ string) error {
 	return nil
 }
 
-func (s *mockDatabaseService) ListBackups(ctx context.Context, dbID string) ([]*Backup, error) {
+func (s *mockDatabaseService) ListBackups(_ context.Context, dbID string) ([]*Backup, error) {
 	return []*Backup{{ID: "backup-123", DatabaseID: dbID}}, nil
 }
 
-func (s *mockDatabaseService) ScaleDatabase(ctx context.Context, dbID string, req *ScaleRequest) error {
+func (s *mockDatabaseService) ScaleDatabase(_ context.Context, _ string, _ *ScaleRequest) error {
 	return nil
 }
 
-func (s *mockDatabaseService) EnableReadReplica(ctx context.Context, dbID string, region string) (*Database, error) {
+func (s *mockDatabaseService) EnableReadReplica(_ context.Context, dbID string, _ string) (*Database, error) {
 	return &Database{ID: "replica-" + dbID, Name: "replica"}, nil
 }
 
-func (s *mockDatabaseService) EnableMultiMaster(ctx context.Context, dbID string, regions []string) error {
+func (s *mockDatabaseService) EnableMultiMaster(_ context.Context, _ string, _ []string) error {
 	return nil
 }
 
 // Minimal implementations for other services to satisfy interfaces
 type mockSecurityService struct{}
 
-func (s *mockSecurityService) CreateRole(ctx context.Context, req *CreateRoleRequest) (*Role, error) {
+func (s *mockSecurityService) CreateRole(_ context.Context, req *CreateRoleRequest) (*Role, error) {
 	return &Role{ID: "role-123", Name: req.Name}, nil
 }
 
-func (s *mockSecurityService) CreatePolicy(ctx context.Context, req *CreatePolicyRequest) (*Policy, error) {
+func (s *mockSecurityService) CreatePolicy(_ context.Context, req *CreatePolicyRequest) (*Policy, error) {
 	return &Policy{ID: "policy-123", Name: req.Name}, nil
 }
 
-func (s *mockSecurityService) AttachPolicy(ctx context.Context, roleID, policyID string) error {
+func (s *mockSecurityService) AttachPolicy(_ context.Context, _, _ string) error {
 	return nil
 }
 
-func (s *mockSecurityService) CreateSecret(ctx context.Context, req *CreateSecretRequest) (*Secret, error) {
+func (s *mockSecurityService) CreateSecret(_ context.Context, req *CreateSecretRequest) (*Secret, error) {
 	return &Secret{ID: "secret-123", Name: req.Name}, nil
 }
 
-func (s *mockSecurityService) GetSecret(ctx context.Context, id string) (*Secret, error) {
+func (s *mockSecurityService) GetSecret(_ context.Context, id string) (*Secret, error) {
 	return &Secret{ID: id}, nil
 }
-func (s *mockSecurityService) RotateSecret(ctx context.Context, id string) error { return nil }
-func (s *mockSecurityService) EnableAuditLogging(ctx context.Context, config *AuditConfig) error {
+func (s *mockSecurityService) RotateSecret(_ context.Context, _ string) error { return nil }
+func (s *mockSecurityService) EnableAuditLogging(_ context.Context, _ *AuditConfig) error {
 	return nil
 }
 
-func (s *mockSecurityService) GetComplianceReport(ctx context.Context, standard string) (*ComplianceReport, error) {
+func (s *mockSecurityService) GetComplianceReport(_ context.Context, standard string) (*ComplianceReport, error) {
 	return &ComplianceReport{Standard: standard}, nil
 }
 
-func (s *mockSecurityService) CreateKMSKey(ctx context.Context, req *CreateKeyRequest) (*KMSKey, error) {
+func (s *mockSecurityService) CreateKMSKey(_ context.Context, req *CreateKeyRequest) (*KMSKey, error) {
 	return &KMSKey{ID: "key-123", Name: req.Name}, nil
 }
 
-func (s *mockSecurityService) Encrypt(ctx context.Context, keyID string, data []byte) ([]byte, error) {
+func (s *mockSecurityService) Encrypt(_ context.Context, _ string, data []byte) ([]byte, error) {
 	return data, nil
 }
 
-func (s *mockSecurityService) Decrypt(ctx context.Context, keyID string, data []byte) ([]byte, error) {
+func (s *mockSecurityService) Decrypt(_ context.Context, _ string, data []byte) ([]byte, error) {
 	return data, nil
 }
 
 type mockMonitoringService struct{}
 
-func (s *mockMonitoringService) PutMetric(ctx context.Context, metric *Metric) error { return nil }
-func (s *mockMonitoringService) GetMetrics(ctx context.Context, query *MetricQuery) ([]*MetricData, error) {
+func (s *mockMonitoringService) PutMetric(_ context.Context, _ *Metric) error { return nil }
+func (s *mockMonitoringService) GetMetrics(_ context.Context, _ *MetricQuery) ([]*MetricData, error) {
 	return []*MetricData{}, nil
 }
 
-func (s *mockMonitoringService) CreateDashboard(ctx context.Context, req *CreateDashboardRequest) (*Dashboard, error) {
+func (s *mockMonitoringService) CreateDashboard(_ context.Context, req *CreateDashboardRequest) (*Dashboard, error) {
 	return &Dashboard{ID: "dash-123", Name: req.Name}, nil
 }
-func (s *mockMonitoringService) CreateLogGroup(ctx context.Context, name string) error { return nil }
-func (s *mockMonitoringService) PutLogs(ctx context.Context, group string, logs []*LogEntry) error {
+func (s *mockMonitoringService) CreateLogGroup(_ context.Context, _ string) error { return nil }
+func (s *mockMonitoringService) PutLogs(_ context.Context, _ string, _ []*LogEntry) error {
 	return nil
 }
 
-func (s *mockMonitoringService) QueryLogs(ctx context.Context, query *LogQuery) ([]*LogEntry, error) {
+func (s *mockMonitoringService) QueryLogs(_ context.Context, _ *LogQuery) ([]*LogEntry, error) {
 	return []*LogEntry{}, nil
 }
 
-func (s *mockMonitoringService) CreateAlert(ctx context.Context, req *CreateAlertRequest) (*Alert, error) {
+func (s *mockMonitoringService) CreateAlert(_ context.Context, req *CreateAlertRequest) (*Alert, error) {
 	return &Alert{ID: "alert-123", Name: req.Name}, nil
 }
 
-func (s *mockMonitoringService) UpdateAlert(ctx context.Context, id string, req *UpdateAlertRequest) error {
+func (s *mockMonitoringService) UpdateAlert(_ context.Context, _ string, _ *UpdateAlertRequest) error {
 	return nil
 }
 
-func (s *mockMonitoringService) ListAlerts(ctx context.Context) ([]*Alert, error) {
+func (s *mockMonitoringService) ListAlerts(_ context.Context) ([]*Alert, error) {
 	return []*Alert{}, nil
 }
-func (s *mockMonitoringService) PutTrace(ctx context.Context, trace *Trace) error { return nil }
-func (s *mockMonitoringService) GetTrace(ctx context.Context, id string) (*Trace, error) {
+func (s *mockMonitoringService) PutTrace(_ context.Context, _ *Trace) error { return nil }
+func (s *mockMonitoringService) GetTrace(_ context.Context, id string) (*Trace, error) {
 	return &Trace{ID: id}, nil
 }
 
-func (s *mockMonitoringService) QueryTraces(ctx context.Context, query *TraceQuery) ([]*Trace, error) {
+func (s *mockMonitoringService) QueryTraces(_ context.Context, _ *TraceQuery) ([]*Trace, error) {
 	return []*Trace{}, nil
 }
 
 type mockServerlessService struct{}
 
-func (s *mockServerlessService) CreateFunction(ctx context.Context, req *CreateFunctionRequest) (*Function, error) {
+func (s *mockServerlessService) CreateFunction(_ context.Context, req *CreateFunctionRequest) (*Function, error) {
 	return &Function{ID: "func-123", Name: req.Name}, nil
 }
 
-func (s *mockServerlessService) UpdateFunction(ctx context.Context, id string, req *UpdateFunctionRequest) error {
+func (s *mockServerlessService) UpdateFunction(_ context.Context, _ string, _ *UpdateFunctionRequest) error {
 	return nil
 }
 
-func (s *mockServerlessService) InvokeFunction(ctx context.Context, id string, payload []byte) ([]byte, error) {
+func (s *mockServerlessService) InvokeFunction(_ context.Context, _ string, _ []byte) ([]byte, error) {
 	return []byte("result"), nil
 }
-func (s *mockServerlessService) DeleteFunction(ctx context.Context, id string) error { return nil }
-func (s *mockServerlessService) CreateEventTrigger(ctx context.Context, functionID string, trigger *EventTrigger) error {
+func (s *mockServerlessService) DeleteFunction(_ context.Context, _ string) error { return nil }
+func (s *mockServerlessService) CreateEventTrigger(_ context.Context, _ string, _ *EventTrigger) error {
 	return nil
 }
 
-func (s *mockServerlessService) CreateAPIGateway(ctx context.Context, req *CreateAPIGatewayRequest) (*APIGateway, error) {
+func (s *mockServerlessService) CreateAPIGateway(_ context.Context, req *CreateAPIGatewayRequest) (*APIGateway, error) {
 	return &APIGateway{ID: "api-123", Name: req.Name}, nil
 }
 
-func (s *mockServerlessService) CreateWorkflow(ctx context.Context, req *CreateWorkflowRequest) (*Workflow, error) {
+func (s *mockServerlessService) CreateWorkflow(_ context.Context, req *CreateWorkflowRequest) (*Workflow, error) {
 	return &Workflow{ID: "wf-123", Name: req.Name}, nil
 }
 
-func (s *mockServerlessService) ExecuteWorkflow(ctx context.Context, id string, input map[string]interface{}) (*WorkflowExecution, error) {
+func (s *mockServerlessService) ExecuteWorkflow(_ context.Context, id string, _ map[string]interface{}) (*WorkflowExecution, error) {
 	return &WorkflowExecution{ID: "exec-123", WorkflowID: id}, nil
 }
 
 type mockAIService struct{}
 
-func (s *mockAIService) CreateModel(ctx context.Context, req *CreateModelRequest) (*AIModel, error) {
+func (s *mockAIService) CreateModel(_ context.Context, req *CreateModelRequest) (*AIModel, error) {
 	return &AIModel{ID: "model-123", Name: req.Name}, nil
 }
 
-func (s *mockAIService) TrainModel(ctx context.Context, id string, dataset *Dataset) (*TrainingJob, error) {
+func (s *mockAIService) TrainModel(_ context.Context, id string, _ *Dataset) (*TrainingJob, error) {
 	return &TrainingJob{ID: "job-123", ModelID: id}, nil
 }
 
-func (s *mockAIService) DeployModel(ctx context.Context, id string, config *DeploymentConfig) (*ModelEndpoint, error) {
+func (s *mockAIService) DeployModel(_ context.Context, id string, _ *DeploymentConfig) (*ModelEndpoint, error) {
 	return &ModelEndpoint{ID: "endpoint-123", ModelID: id}, nil
 }
 
-func (s *mockAIService) Predict(ctx context.Context, endpointID string, data interface{}) (interface{}, error) {
+func (s *mockAIService) Predict(_ context.Context, _ string, _ interface{}) (interface{}, error) {
 	return "prediction", nil
 }
 
-func (s *mockAIService) CreateDataset(ctx context.Context, req *CreateDatasetRequest) (*Dataset, error) {
+func (s *mockAIService) CreateDataset(_ context.Context, req *CreateDatasetRequest) (*Dataset, error) {
 	return &Dataset{ID: "dataset-123", Name: req.Name}, nil
 }
 
-func (s *mockAIService) PreprocessData(ctx context.Context, datasetID string, pipeline *Pipeline) error {
+func (s *mockAIService) PreprocessData(_ context.Context, _ string, _ *Pipeline) error {
 	return nil
 }
 
-func (s *mockAIService) CreateNeuralNetwork(ctx context.Context, architecture *NetworkArchitecture) (*NeuralNetwork, error) {
+func (s *mockAIService) CreateNeuralNetwork(_ context.Context, _ *NetworkArchitecture) (*NeuralNetwork, error) {
 	return &NeuralNetwork{ID: "nn-123"}, nil
 }
 
-func (s *mockAIService) FineTuneModel(ctx context.Context, modelID string, dataset *Dataset) (*AIModel, error) {
+func (s *mockAIService) FineTuneModel(_ context.Context, modelID string, _ *Dataset) (*AIModel, error) {
 	return &AIModel{ID: modelID + "-tuned"}, nil
 }
 
-func (s *mockAIService) ExplainPrediction(ctx context.Context, modelID string, input interface{}) (*Explanation, error) {
+func (s *mockAIService) ExplainPrediction(_ context.Context, _ string, _ interface{}) (*Explanation, error) {
 	return &Explanation{Prediction: "explained"}, nil
 }
 
 type mockCostService struct{}
 
-func (s *mockCostService) GetCurrentSpend(ctx context.Context) (*SpendSummary, error) {
+func (s *mockCostService) GetCurrentSpend(_ context.Context) (*SpendSummary, error) {
 	return &SpendSummary{Total: 1000.0}, nil
 }
 
-func (s *mockCostService) GetForecast(ctx context.Context, period time.Duration) (*CostForecast, error) {
+func (s *mockCostService) GetForecast(_ context.Context, _ time.Duration) (*CostForecast, error) {
 	return &CostForecast{Predicted: 1200.0}, nil
 }
 
-func (s *mockCostService) SetBudget(ctx context.Context, req *SetBudgetRequest) (*Budget, error) {
+func (s *mockCostService) SetBudget(_ context.Context, req *SetBudgetRequest) (*Budget, error) {
 	return &Budget{ID: "budget-123", Name: req.Name}, nil
 }
 
-func (s *mockCostService) GetRecommendations(ctx context.Context) ([]*CostRecommendation, error) {
+func (s *mockCostService) GetRecommendations(_ context.Context) ([]*CostRecommendation, error) {
 	return []*CostRecommendation{}, nil
 }
 
-func (s *mockCostService) EnableCostAlerts(ctx context.Context, config *AlertConfig) error {
+func (s *mockCostService) EnableCostAlerts(_ context.Context, _ *AlertConfig) error {
 	return nil
 }
 
 type mockComplianceService struct{}
 
-func (s *mockComplianceService) RunComplianceCheck(ctx context.Context, standard string) (*ComplianceResult, error) {
+func (s *mockComplianceService) RunComplianceCheck(_ context.Context, standard string) (*ComplianceResult, error) {
 	return &ComplianceResult{Standard: standard}, nil
 }
 
-func (s *mockComplianceService) GetComplianceStatus(ctx context.Context) (*ComplianceStatus, error) {
+func (s *mockComplianceService) GetComplianceStatus(_ context.Context) (*ComplianceStatus, error) {
 	return &ComplianceStatus{Overall: 0.95}, nil
 }
 
-func (s *mockComplianceService) RemediateIssue(ctx context.Context, issueID string) error {
+func (s *mockComplianceService) RemediateIssue(_ context.Context, _ string) error {
 	return nil
 }
 
-func (s *mockComplianceService) GenerateComplianceReport(ctx context.Context, req *ReportRequest) (*Report, error) {
+func (s *mockComplianceService) GenerateComplianceReport(_ context.Context, req *ReportRequest) (*Report, error) {
 	return &Report{ID: "report-123", Type: req.Type}, nil
 }
 
-func (s *mockComplianceService) EnableContinuousCompliance(ctx context.Context, standards []string) error {
+func (s *mockComplianceService) EnableContinuousCompliance(_ context.Context, _ []string) error {
 	return nil
 }
 
 type mockDisasterService struct{}
 
-func (s *mockDisasterService) CreateBackupPlan(ctx context.Context, req *CreateBackupPlanRequest) (*BackupPlan, error) {
+func (s *mockDisasterService) CreateBackupPlan(_ context.Context, req *CreateBackupPlanRequest) (*BackupPlan, error) {
 	return &BackupPlan{ID: "plan-123", Name: req.Name}, nil
 }
 
-func (s *mockDisasterService) TestFailover(ctx context.Context, planID string) (*FailoverTest, error) {
+func (s *mockDisasterService) TestFailover(_ context.Context, planID string) (*FailoverTest, error) {
 	return &FailoverTest{ID: "test-123", PlanID: planID}, nil
 }
 
-func (s *mockDisasterService) InitiateFailover(ctx context.Context, planID string) (*Failover, error) {
+func (s *mockDisasterService) InitiateFailover(_ context.Context, planID string) (*Failover, error) {
 	return &Failover{ID: "failover-123", PlanID: planID}, nil
 }
 
-func (s *mockDisasterService) GetRPO(ctx context.Context) (time.Duration, error) {
+func (s *mockDisasterService) GetRPO(_ context.Context) (time.Duration, error) {
 	return 15 * time.Minute, nil
 }
 
-func (s *mockDisasterService) GetRTO(ctx context.Context) (time.Duration, error) {
+func (s *mockDisasterService) GetRTO(_ context.Context) (time.Duration, error) {
 	return 30 * time.Minute, nil
 }
 
 type mockEdgeService struct{}
 
-func (s *mockEdgeService) DeployToEdge(ctx context.Context, req *EdgeDeployRequest) (*EdgeDeployment, error) {
+func (s *mockEdgeService) DeployToEdge(_ context.Context, req *EdgeDeployRequest) (*EdgeDeployment, error) {
 	return &EdgeDeployment{ID: "edge-123", Name: req.Name}, nil
 }
 
-func (s *mockEdgeService) ListEdgeLocations(ctx context.Context) ([]*EdgeLocation, error) {
+func (s *mockEdgeService) ListEdgeLocations(_ context.Context) ([]*EdgeLocation, error) {
 	return []*EdgeLocation{}, nil
 }
 
-func (s *mockEdgeService) UpdateEdgeConfig(ctx context.Context, locationID string, config *EdgeConfig) error {
+func (s *mockEdgeService) UpdateEdgeConfig(_ context.Context, _ string, _ *EdgeConfig) error {
 	return nil
 }
 
-func (s *mockEdgeService) GetEdgeMetrics(ctx context.Context, locationID string) (*EdgeMetrics, error) {
+func (s *mockEdgeService) GetEdgeMetrics(_ context.Context, locationID string) (*EdgeMetrics, error) {
 	return &EdgeMetrics{LocationID: locationID}, nil
 }
 
 type mockQuantumService struct{}
 
-func (s *mockQuantumService) CreateQuantumCircuit(ctx context.Context, req *CreateCircuitRequest) (*QuantumCircuit, error) {
+func (s *mockQuantumService) CreateQuantumCircuit(_ context.Context, req *CreateCircuitRequest) (*QuantumCircuit, error) {
 	return &QuantumCircuit{ID: "circuit-123", Name: req.Name}, nil
 }
 
-func (s *mockQuantumService) RunQuantumJob(ctx context.Context, circuitID string, shots int) (*QuantumResult, error) {
+func (s *mockQuantumService) RunQuantumJob(_ context.Context, circuitID string, _ int) (*QuantumResult, error) {
 	return &QuantumResult{ID: "result-123", CircuitID: circuitID}, nil
 }
 
-func (s *mockQuantumService) GetQuantumState(ctx context.Context, jobID string) (*QuantumState, error) {
+func (s *mockQuantumService) GetQuantumState(_ context.Context, _ string) (*QuantumState, error) {
 	return &QuantumState{}, nil
 }
 
-func (s *mockQuantumService) OptimizeWithQuantum(ctx context.Context, problem *OptimizationProblem) (*Solution, error) {
+func (s *mockQuantumService) OptimizeWithQuantum(_ context.Context, _ *OptimizationProblem) (*Solution, error) {
 	return &Solution{}, nil
 }

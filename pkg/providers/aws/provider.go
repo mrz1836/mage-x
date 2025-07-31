@@ -564,7 +564,7 @@ func (s *networkService) CreateSecurityGroup(_ context.Context, req *providers.C
 	}, nil
 }
 
-func (s *networkService) UpdateSecurityRules(_ context.Context, groupID string, rules []*providers.SecurityRule) error {
+func (s *networkService) UpdateSecurityRules(_ context.Context, _ string, _ []*providers.SecurityRule) error {
 	// Update security group rules
 	return nil
 }
@@ -582,7 +582,7 @@ func (s *networkService) CreateLoadBalancer(_ context.Context, req *providers.Cr
 	}, nil
 }
 
-func (s *networkService) UpdateLoadBalancer(_ context.Context, id string, req *providers.UpdateLoadBalancerRequest) error {
+func (s *networkService) UpdateLoadBalancer(_ context.Context, _ string, _ *providers.UpdateLoadBalancerRequest) error {
 	// Update load balancer
 	return nil
 }
@@ -653,12 +653,12 @@ func (s *containerService) ListClusters(_ context.Context) ([]*providers.Cluster
 	}, nil
 }
 
-func (s *containerService) UpdateCluster(_ context.Context, id string, req *providers.UpdateClusterRequest) error {
+func (s *containerService) UpdateCluster(_ context.Context, _ string, _ *providers.UpdateClusterRequest) error {
 	// Update ECS/EKS cluster
 	return nil
 }
 
-func (s *containerService) DeleteCluster(_ context.Context, id string) error {
+func (s *containerService) DeleteCluster(_ context.Context, _ string) error {
 	// Delete ECS/EKS cluster
 	return nil
 }
@@ -691,27 +691,27 @@ func (s *containerService) GetDeployment(_ context.Context, id string) (*provide
 	}, nil
 }
 
-func (s *containerService) UpdateDeployment(_ context.Context, id string, req *providers.UpdateDeploymentRequest) error {
+func (s *containerService) UpdateDeployment(_ context.Context, _ string, _ *providers.UpdateDeploymentRequest) error {
 	// Update deployment
 	return nil
 }
 
-func (s *containerService) ScaleDeployment(_ context.Context, id string, replicas int) error {
+func (s *containerService) ScaleDeployment(_ context.Context, _ string, _ int) error {
 	// Scale deployment
 	return nil
 }
 
-func (s *containerService) DeleteDeployment(_ context.Context, id string) error {
+func (s *containerService) DeleteDeployment(_ context.Context, _ string) error {
 	// Delete deployment
 	return nil
 }
 
-func (s *containerService) EnableServiceMesh(_ context.Context, clusterID string, config *providers.ServiceMeshConfig) error {
+func (s *containerService) EnableServiceMesh(_ context.Context, _ string, _ *providers.ServiceMeshConfig) error {
 	// Enable App Mesh
 	return nil
 }
 
-func (s *containerService) ConfigureTrafficPolicy(_ context.Context, policy *providers.TrafficPolicy) error {
+func (s *containerService) ConfigureTrafficPolicy(_ context.Context, _ *providers.TrafficPolicy) error {
 	// Configure App Mesh traffic policy
 	return nil
 }
@@ -785,12 +785,12 @@ func (s *databaseService) ListDatabases(_ context.Context) ([]*providers.Databas
 	}, nil
 }
 
-func (s *databaseService) UpdateDatabase(_ context.Context, id string, req *providers.UpdateDatabaseRequest) error {
+func (s *databaseService) UpdateDatabase(_ context.Context, _ string, _ *providers.UpdateDatabaseRequest) error {
 	// Update RDS instance
 	return nil
 }
 
-func (s *databaseService) DeleteDatabase(_ context.Context, id string) error {
+func (s *databaseService) DeleteDatabase(_ context.Context, _ string) error {
 	// Delete RDS instance
 	return nil
 }
@@ -808,7 +808,7 @@ func (s *databaseService) CreateBackup(_ context.Context, dbID string, name stri
 	}, nil
 }
 
-func (s *databaseService) RestoreBackup(_ context.Context, backupID string, targetDB string) error {
+func (s *databaseService) RestoreBackup(_ context.Context, _ string, _ string) error {
 	// Restore from RDS snapshot
 	return nil
 }

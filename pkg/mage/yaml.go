@@ -13,8 +13,8 @@ import (
 // Yaml namespace for mage.yaml configuration management
 type Yaml mg.Namespace
 
-// MageConfig represents the complete mage.yaml configuration
-type MageConfig struct {
+// YamlConfig represents the complete mage.yaml configuration
+type YamlConfig struct {
 	Version string            `yaml:"version"`
 	Project ProjectYamlConfig `yaml:"project"`
 	Build   BuildYamlConfig   `yaml:"build"`
@@ -223,7 +223,7 @@ func (Yaml) Template() error {
 
 	projectType := utils.GetEnv("PROJECT_TYPE", "library")
 
-	var config *MageConfig
+	var config *YamlConfig
 
 	switch projectType {
 	case "library":
@@ -255,8 +255,8 @@ func (Yaml) Template() error {
 // Helper functions
 
 // createDefaultConfig creates a default configuration
-func createDefaultConfig() *MageConfig {
-	return &MageConfig{
+func createDefaultConfig() *YamlConfig {
+	return &YamlConfig{
 		Version: "1.0",
 		Project: ProjectYamlConfig{
 			Name:        "my-project",
@@ -340,7 +340,7 @@ func createDefaultConfig() *MageConfig {
 }
 
 // createLibraryTemplate creates a library project template
-func createLibraryTemplate() *MageConfig {
+func createLibraryTemplate() *YamlConfig {
 	config := createDefaultConfig()
 	config.Project.Description = "A Go library built with MAGE-X"
 	config.Build.Platforms = []string{"linux/amd64", "darwin/amd64", "windows/amd64"}
@@ -350,7 +350,7 @@ func createLibraryTemplate() *MageConfig {
 }
 
 // createCLITemplate creates a CLI project template
-func createCLITemplate() *MageConfig {
+func createCLITemplate() *YamlConfig {
 	config := createDefaultConfig()
 	config.Project.Description = "A CLI application built with MAGE-X"
 	config.Build.Platforms = []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64", "windows/amd64"}
@@ -360,7 +360,7 @@ func createCLITemplate() *MageConfig {
 }
 
 // createWebAPITemplate creates a web API project template
-func createWebAPITemplate() *MageConfig {
+func createWebAPITemplate() *YamlConfig {
 	config := createDefaultConfig()
 	config.Project.Description = "A web API built with MAGE-X"
 	config.Build.Tags = []string{"netgo"}
@@ -371,7 +371,7 @@ func createWebAPITemplate() *MageConfig {
 }
 
 // createMicroserviceTemplate creates a microservice project template
-func createMicroserviceTemplate() *MageConfig {
+func createMicroserviceTemplate() *YamlConfig {
 	config := createDefaultConfig()
 	config.Project.Description = "A microservice built with MAGE-X"
 	config.Build.Tags = []string{"netgo"}
@@ -382,7 +382,7 @@ func createMicroserviceTemplate() *MageConfig {
 }
 
 // createToolTemplate creates a tool project template
-func createToolTemplate() *MageConfig {
+func createToolTemplate() *YamlConfig {
 	config := createDefaultConfig()
 	config.Project.Description = "A developer tool built with MAGE-X"
 	config.Build.Platforms = []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64", "windows/amd64"}
@@ -392,7 +392,7 @@ func createToolTemplate() *MageConfig {
 }
 
 // populateFromProject populates configuration from existing project
-func populateFromProject(config *MageConfig) {
+func populateFromProject(config *YamlConfig) {
 	// Get module name
 	if module, err := getModuleName(); err == nil {
 		config.Project.Module = module
@@ -441,7 +441,7 @@ func populateFromProject(config *MageConfig) {
 }
 
 // updateFromEnv updates configuration from environment variables
-func updateFromEnv(config *MageConfig) {
+func updateFromEnv(config *YamlConfig) {
 	// Update from environment variables
 	if name := utils.GetEnv("PROJECT_NAME", ""); name != "" {
 		config.Project.Name = name
@@ -479,9 +479,9 @@ func updateFromEnv(config *MageConfig) {
 }
 
 // loadConfig loads configuration from file
-func loadConfig(filename string) (*MageConfig, error) {
+func loadConfig(filename string) (*YamlConfig, error) {
 	fileOps := fileops.New()
-	var config MageConfig
+	var config YamlConfig
 	if err := fileOps.YAML.ReadYAML(filename, &config); err != nil {
 		return nil, err
 	}
@@ -490,13 +490,13 @@ func loadConfig(filename string) (*MageConfig, error) {
 }
 
 // writeConfig writes configuration to file
-func writeConfig(config *MageConfig, filename string) error {
+func writeConfig(config *YamlConfig, filename string) error {
 	fileOps := fileops.New()
 	return fileOps.SaveConfig(filename, config, "yaml")
 }
 
 // validateConfig validates the configuration
-func validateConfig(config *MageConfig) error {
+func validateConfig(config *YamlConfig) error {
 	if config.Project.Name == "" {
 		return fmt.Errorf("project.name is required")
 	}
@@ -521,7 +521,7 @@ func validateConfig(config *MageConfig) error {
 }
 
 // displayConfig displays the configuration
-func displayConfig(config *MageConfig) {
+func displayConfig(config *YamlConfig) {
 	fmt.Printf("📦 Project: %s\n", config.Project.Name)
 	fmt.Printf("📝 Description: %s\n", config.Project.Description)
 	fmt.Printf("🏗️  Module: %s\n", config.Project.Module)

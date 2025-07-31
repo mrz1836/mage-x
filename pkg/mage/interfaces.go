@@ -216,11 +216,16 @@ type Platform struct {
 type PackageFormat string
 
 const (
+	// PackageFormatTarGz represents tar.gz package format
 	PackageFormatTarGz PackageFormat = "tar.gz"
-	PackageFormatZip   PackageFormat = "zip"
-	PackageFormatDeb   PackageFormat = "deb"
-	PackageFormatRPM   PackageFormat = "rpm"
-	PackageFormatDMG   PackageFormat = "dmg"
+	// PackageFormatZip represents zip package format
+	PackageFormatZip PackageFormat = "zip"
+	// PackageFormatDeb represents deb package format
+	PackageFormatDeb PackageFormat = "deb"
+	// PackageFormatRPM represents rpm package format
+	PackageFormatRPM PackageFormat = "rpm"
+	// PackageFormatDMG represents dmg package format
+	PackageFormatDMG PackageFormat = "dmg"
 )
 
 // TestOptions contains test configuration
@@ -262,7 +267,7 @@ type TestFailure struct {
 	Output  string
 }
 
-// BenchmarkOptions contains benchmark configuration
+// IBenchmarkOptions contains benchmark configuration
 type IBenchmarkOptions struct {
 	Pattern    string
 	Count      int
@@ -272,7 +277,7 @@ type IBenchmarkOptions struct {
 	OutputFile string
 }
 
-// BenchmarkResults contains benchmark execution results
+// IBenchmarkResults contains benchmark execution results
 type IBenchmarkResults struct {
 	Benchmarks []IBenchmarkResult
 	Duration   time.Duration
@@ -447,8 +452,11 @@ type ChangeEntry struct {
 type ArchiveFormat string
 
 const (
+	// ArchiveFormatTarGz represents tar.gz archive format
 	ArchiveFormatTarGz ArchiveFormat = "tar.gz"
-	ArchiveFormatZip   ArchiveFormat = "zip"
+	// ArchiveFormatZip represents zip archive format
+	ArchiveFormatZip ArchiveFormat = "zip"
+	// ArchiveFormatTarXz represents tar.xz archive format
 	ArchiveFormatTarXz ArchiveFormat = "tar.xz"
 )
 
@@ -482,7 +490,7 @@ type SecuritySummary struct {
 	Info     int
 }
 
-// Vulnerability represents a security vulnerability
+// IVulnerability represents a security vulnerability
 type IVulnerability struct {
 	ID          string
 	Title       string
@@ -502,7 +510,7 @@ type DependencyReport struct {
 	Outdated        []IOutdatedDependency
 }
 
-// Dependency represents a project dependency
+// IDependency represents a project dependency
 type IDependency struct {
 	Name    string
 	Version string
@@ -511,7 +519,7 @@ type IDependency struct {
 	License string
 }
 
-// OutdatedDependency represents an outdated dependency
+// IOutdatedDependency represents an outdated dependency
 type IOutdatedDependency struct {
 	IDependency
 	LatestVersion string
@@ -586,7 +594,7 @@ type PolicyFinding struct {
 	Remediation string
 }
 
-// ComplianceSummary contains compliance summary
+// IComplianceSummary contains compliance summary
 type IComplianceSummary struct {
 	Total   int
 	Passed  int
@@ -631,7 +639,7 @@ type LintSummary struct {
 	Info        int
 }
 
-// LintIssue represents a linting issue
+// ILintIssue represents a linting issue
 type ILintIssue struct {
 	File       string
 	Line       int
@@ -643,7 +651,7 @@ type ILintIssue struct {
 	Fixable    bool
 }
 
-// LintSummary contains linting summary
+// ILintSummary contains linting summary
 type ILintSummary struct {
 	Total    int
 	Errors   int

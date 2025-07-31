@@ -276,6 +276,7 @@ func (Generate) Check() error {
 
 // Helper types and functions
 
+// Interface represents a Go interface for code generation
 type Interface struct {
 	Name    string
 	Package string
@@ -387,20 +388,18 @@ func backupGeneratedFiles() {
 	patterns := []string{"*.pb.go", "*_gen.go", "*_generated.go"}
 
 	for _, pattern := range patterns {
-		files, err := filepath.Glob(pattern)
+		_, err := filepath.Glob(pattern)
 		if err != nil {
 			continue
 		}
 
-		for range files {
-			// Copy file to temp directory
-			// Implementation would copy file preserving directory structure
-		}
+		// Copy files matching pattern to temp directory preserving directory structure
+		// Implementation pending
 	}
 }
 
 // compareGeneratedFiles compares generated files with backup
-func compareGeneratedFiles(tempDir string) ([]string, error) {
+func compareGeneratedFiles(_ string) ([]string, error) {
 	var different []string
 
 	// Implementation would compare files in tempDir with current files

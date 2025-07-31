@@ -195,6 +195,7 @@ func (EnterpriseConfigNamespace) Schema() error {
 
 // Enhanced Enterprise Configuration Types
 
+// ECConfigMetadata contains metadata for enterprise configuration
 type ECConfigMetadata struct {
 	Version     string            `yaml:"version" json:"version"`
 	Name        string            `yaml:"name" json:"name"`
@@ -205,6 +206,7 @@ type ECConfigMetadata struct {
 	Labels      map[string]string `yaml:"labels" json:"labels"`
 }
 
+// EnterpriseConfiguration represents complete enterprise settings
 type EnterpriseConfiguration struct {
 	Metadata      ECConfigMetadata    `yaml:"metadata" json:"metadata"`
 	Organization  OrganizationConfig  `yaml:"organization" json:"organization"`
@@ -222,6 +224,7 @@ type EnterpriseConfiguration struct {
 	Notifications NotificationsConfig `yaml:"notifications" json:"notifications"`
 }
 
+// ECECConfigMetadata contains enhanced configuration metadata
 type ECECConfigMetadata struct {
 	Version     string            `yaml:"version" json:"version"`
 	CreatedAt   time.Time         `yaml:"created_at" json:"created_at"`
@@ -233,6 +236,7 @@ type ECECConfigMetadata struct {
 	Labels      map[string]string `yaml:"labels" json:"labels"`
 }
 
+// OrganizationConfig holds organization-specific settings
 type OrganizationConfig struct {
 	Name        string            `yaml:"name" json:"name"`
 	Domain      string            `yaml:"domain" json:"domain"`
@@ -245,6 +249,7 @@ type OrganizationConfig struct {
 	Departments []Department      `yaml:"departments" json:"departments"`
 }
 
+// ContactInfo represents contact information
 type ContactInfo struct {
 	Name  string `yaml:"name" json:"name"`
 	Email string `yaml:"email" json:"email"`
@@ -252,6 +257,7 @@ type ContactInfo struct {
 	Phone string `yaml:"phone" json:"phone"`
 }
 
+// Department represents an organizational department
 type Department struct {
 	Name        string   `yaml:"name" json:"name"`
 	Description string   `yaml:"description" json:"description"`
@@ -259,6 +265,7 @@ type Department struct {
 	Members     []string `yaml:"members" json:"members"`
 }
 
+// SecurityConfig contains security-related settings
 type SecurityConfig struct {
 	Level          string               `yaml:"level" json:"level"`
 	Encryption     EncryptionConfig     `yaml:"encryption" json:"encryption"`
@@ -270,12 +277,14 @@ type SecurityConfig struct {
 	Secrets        SecretsConfig        `yaml:"secrets" json:"secrets"`
 }
 
+// EncryptionConfig holds encryption settings
 type EncryptionConfig struct {
 	Algorithm string            `yaml:"algorithm" json:"algorithm"`
 	KeySize   int               `yaml:"key_size" json:"key_size"`
 	Settings  map[string]string `yaml:"settings" json:"settings"`
 }
 
+// AuthenticationConfig contains authentication settings
 type AuthenticationConfig struct {
 	Methods     []string          `yaml:"methods" json:"methods"`
 	TokenExpiry string            `yaml:"token_expiry" json:"token_expiry"`
@@ -283,18 +292,21 @@ type AuthenticationConfig struct {
 	Settings    map[string]string `yaml:"settings" json:"settings"`
 }
 
+// MFAConfig holds multi-factor authentication settings
 type MFAConfig struct {
 	Enabled  bool     `yaml:"enabled" json:"enabled"`
 	Methods  []string `yaml:"methods" json:"methods"`
 	Required bool     `yaml:"required" json:"required"`
 }
 
+// AuthorizationConfig contains authorization settings
 type AuthorizationConfig struct {
 	Model    string            `yaml:"model" json:"model"`
 	Rules    []AuthRule        `yaml:"rules" json:"rules"`
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// AuthRule represents an authorization rule
 type AuthRule struct {
 	Resource   string   `yaml:"resource" json:"resource"`
 	Actions    []string `yaml:"actions" json:"actions"`
@@ -302,6 +314,7 @@ type AuthRule struct {
 	Effect     string   `yaml:"effect" json:"effect"`
 }
 
+// ComplianceSettings holds compliance-related configuration
 type ComplianceSettings struct {
 	Standards []string          `yaml:"standards" json:"standards"`
 	Auditing  bool              `yaml:"auditing" json:"auditing"`
@@ -309,6 +322,7 @@ type ComplianceSettings struct {
 	Settings  map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ScanningConfig contains security scanning settings
 type ScanningConfig struct {
 	Enabled    bool              `yaml:"enabled" json:"enabled"`
 	Frequency  string            `yaml:"frequency" json:"frequency"`
@@ -317,6 +331,7 @@ type ScanningConfig struct {
 	Settings   map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ScanThresholds defines security scan thresholds
 type ScanThresholds struct {
 	Critical int `yaml:"critical" json:"critical"`
 	High     int `yaml:"high" json:"high"`
@@ -324,6 +339,7 @@ type ScanThresholds struct {
 	Low      int `yaml:"low" json:"low"`
 }
 
+// ECSecurityPolicy defines enterprise security policies
 type ECSecurityPolicy struct {
 	ID          string            `yaml:"id" json:"id"`
 	Name        string            `yaml:"name" json:"name"`
@@ -335,6 +351,7 @@ type ECSecurityPolicy struct {
 	Settings    map[string]string `yaml:"settings" json:"settings"`
 }
 
+// SecretsConfig contains secrets management settings
 type SecretsConfig struct {
 	Provider string            `yaml:"provider" json:"provider"`
 	Vault    string            `yaml:"vault" json:"vault"`
@@ -342,6 +359,7 @@ type SecretsConfig struct {
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// IntegrationsConfig contains integration configuration settings
 type IntegrationsConfig struct {
 	Enabled      bool                           `yaml:"enabled" json:"enabled"`
 	Providers    map[string]IntegrationProvider `yaml:"providers" json:"providers"`
@@ -349,6 +367,7 @@ type IntegrationsConfig struct {
 	SyncSettings SyncSettings                   `yaml:"sync_settings" json:"sync_settings"`
 }
 
+// IntegrationProvider represents a third-party integration provider
 type IntegrationProvider struct {
 	Type        string            `yaml:"type" json:"type"`
 	Enabled     bool              `yaml:"enabled" json:"enabled"`
@@ -357,12 +376,14 @@ type IntegrationProvider struct {
 	Endpoints   map[string]string `yaml:"endpoints" json:"endpoints"`
 }
 
+// WebhooksConfig contains webhook configuration settings
 type WebhooksConfig struct {
 	Enabled   bool                       `yaml:"enabled" json:"enabled"`
 	Endpoints map[string]WebhookEndpoint `yaml:"endpoints" json:"endpoints"`
 	Security  WebhookSecurity            `yaml:"security" json:"security"`
 }
 
+// WebhookEndpoint represents a webhook endpoint configuration
 type WebhookEndpoint struct {
 	URL     string            `yaml:"url" json:"url"`
 	Events  []string          `yaml:"events" json:"events"`
@@ -370,12 +391,14 @@ type WebhookEndpoint struct {
 	Timeout string            `yaml:"timeout" json:"timeout"`
 }
 
+// WebhookSecurity contains webhook security settings
 type WebhookSecurity struct {
 	SigningKey string   `yaml:"signing_key" json:"signing_key"`
 	Algorithm  string   `yaml:"algorithm" json:"algorithm"`
 	Headers    []string `yaml:"headers" json:"headers"`
 }
 
+// SyncSettings contains synchronization configuration
 type SyncSettings struct {
 	Frequency string            `yaml:"frequency" json:"frequency"`
 	Batch     int               `yaml:"batch" json:"batch"`
@@ -383,12 +406,14 @@ type SyncSettings struct {
 	Settings  map[string]string `yaml:"settings" json:"settings"`
 }
 
+// RetryConfig contains retry mechanism settings
 type RetryConfig struct {
 	MaxAttempts int    `yaml:"max_attempts" json:"max_attempts"`
 	Backoff     string `yaml:"backoff" json:"backoff"`
 	Timeout     string `yaml:"timeout" json:"timeout"`
 }
 
+// WorkflowsConfig contains workflow configuration settings
 type WorkflowsConfig struct {
 	Enabled   bool                              `yaml:"enabled" json:"enabled"`
 	Directory string                            `yaml:"directory" json:"directory"`
@@ -397,6 +422,7 @@ type WorkflowsConfig struct {
 	Execution ExecutionConfig                   `yaml:"execution" json:"execution"`
 }
 
+// ConfigWorkflowTemplate represents a workflow template configuration
 type ConfigWorkflowTemplate struct {
 	Name        string            `yaml:"name" json:"name"`
 	Description string            `yaml:"description" json:"description"`
@@ -404,12 +430,14 @@ type ConfigWorkflowTemplate struct {
 	Variables   map[string]string `yaml:"variables" json:"variables"`
 }
 
+// SchedulerConfig contains scheduler configuration settings
 type SchedulerConfig struct {
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
 	Engine   string            `yaml:"engine" json:"engine"`
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ExecutionConfig contains execution configuration settings
 type ExecutionConfig struct {
 	Timeout     string            `yaml:"timeout" json:"timeout"`
 	Parallelism int               `yaml:"parallelism" json:"parallelism"`
@@ -417,6 +445,7 @@ type ExecutionConfig struct {
 	Settings    map[string]string `yaml:"settings" json:"settings"`
 }
 
+// AnalyticsConfig contains analytics configuration settings
 type AnalyticsConfig struct {
 	Enabled    bool                       `yaml:"enabled" json:"enabled"`
 	Collectors map[string]CollectorConfig `yaml:"collectors" json:"collectors"`
@@ -424,12 +453,14 @@ type AnalyticsConfig struct {
 	Reporting  ReportingConfig            `yaml:"reporting" json:"reporting"`
 }
 
+// CollectorConfig contains collector configuration settings
 type CollectorConfig struct {
 	Type     string            `yaml:"type" json:"type"`
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// StorageConfig contains storage configuration settings
 type StorageConfig struct {
 	Type       string            `yaml:"type" json:"type"`
 	Retention  string            `yaml:"retention" json:"retention"`
@@ -437,6 +468,7 @@ type StorageConfig struct {
 	Settings   map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ReportingConfig contains reporting configuration settings
 type ReportingConfig struct {
 	Enabled   bool              `yaml:"enabled" json:"enabled"`
 	Frequency string            `yaml:"frequency" json:"frequency"`
@@ -444,6 +476,7 @@ type ReportingConfig struct {
 	Settings  map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ECECAuditConfig contains enterprise audit configuration settings
 type ECECAuditConfig struct {
 	Enabled    bool              `yaml:"enabled" json:"enabled"`
 	Level      string            `yaml:"level" json:"level"`
@@ -453,6 +486,7 @@ type ECECAuditConfig struct {
 	Settings   map[string]string `yaml:"settings" json:"settings"`
 }
 
+// CLIConfig contains CLI configuration settings
 type CLIConfig struct {
 	Interactive bool              `yaml:"interactive" json:"interactive"`
 	Colors      bool              `yaml:"colors" json:"colors"`
@@ -463,12 +497,14 @@ type CLIConfig struct {
 	Dashboard   ECDashboardConfig `yaml:"dashboard" json:"dashboard"`
 }
 
+// CompletionConfig contains shell completion configuration settings
 type CompletionConfig struct {
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
 	Shell    string            `yaml:"shell" json:"shell"`
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ECDashboardConfig contains enterprise dashboard configuration settings
 type ECDashboardConfig struct {
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
 	Refresh  string            `yaml:"refresh" json:"refresh"`
@@ -476,12 +512,14 @@ type ECDashboardConfig struct {
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// RepositoriesConfig contains repository management configuration settings
 type RepositoriesConfig struct {
 	Discovery  DiscoveryConfig                 `yaml:"discovery" json:"discovery"`
 	Management ManagementConfig                `yaml:"management" json:"management"`
 	Templates  map[string]ECRepositoryTemplate `yaml:"templates" json:"templates"`
 }
 
+// DiscoveryConfig contains repository discovery configuration settings
 type DiscoveryConfig struct {
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
 	Sources  []string          `yaml:"sources" json:"sources"`
@@ -489,12 +527,14 @@ type DiscoveryConfig struct {
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ManagementConfig contains repository management configuration settings
 type ManagementConfig struct {
 	Sync     SyncSettings      `yaml:"sync" json:"sync"`
 	Backup   BackupConfig      `yaml:"backup" json:"backup"`
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ECRepositoryTemplate contains enterprise repository template settings
 type ECRepositoryTemplate struct {
 	Name        string            `yaml:"name" json:"name"`
 	Description string            `yaml:"description" json:"description"`
@@ -503,6 +543,7 @@ type ECRepositoryTemplate struct {
 	Settings    map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ComplianceConfig contains compliance configuration settings
 type ComplianceConfig struct {
 	Enabled    bool                          `yaml:"enabled" json:"enabled"`
 	Standards  []string                      `yaml:"standards" json:"standards"`
@@ -511,6 +552,7 @@ type ComplianceConfig struct {
 	Validation ValidationConfig              `yaml:"validation" json:"validation"`
 }
 
+// ECCompliancePolicy contains enterprise compliance policy settings
 type ECCompliancePolicy struct {
 	Name        string             `yaml:"name" json:"name"`
 	Description string             `yaml:"description" json:"description"`
@@ -518,6 +560,7 @@ type ECCompliancePolicy struct {
 	Settings    map[string]string  `yaml:"settings" json:"settings"`
 }
 
+// ECComplianceRule contains enterprise compliance rule settings
 type ECComplianceRule struct {
 	ID          string            `yaml:"id" json:"id"`
 	Description string            `yaml:"description" json:"description"`
@@ -525,12 +568,14 @@ type ECComplianceRule struct {
 	Settings    map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ValidationConfig contains validation configuration settings
 type ValidationConfig struct {
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
 	Rules    []string          `yaml:"rules" json:"rules"`
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ECMonitoringConfig contains enterprise monitoring configuration settings
 type ECMonitoringConfig struct {
 	Enabled    bool                     `yaml:"enabled" json:"enabled"`
 	Metrics    ECMetricsConfig          `yaml:"metrics" json:"metrics"`
@@ -538,6 +583,7 @@ type ECMonitoringConfig struct {
 	Dashboards map[string]DashboardSpec `yaml:"dashboards" json:"dashboards"`
 }
 
+// ECMetricsConfig contains enterprise metrics configuration settings
 type ECMetricsConfig struct {
 	Enabled    bool              `yaml:"enabled" json:"enabled"`
 	Collectors []string          `yaml:"collectors" json:"collectors"`
@@ -545,6 +591,7 @@ type ECMetricsConfig struct {
 	Settings   map[string]string `yaml:"settings" json:"settings"`
 }
 
+// AlertingConfig contains alerting configuration settings
 type AlertingConfig struct {
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
 	Rules    []ECAlertRule     `yaml:"rules" json:"rules"`
@@ -552,6 +599,7 @@ type AlertingConfig struct {
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ECAlertRule contains enterprise alert rule settings
 type ECAlertRule struct {
 	Name        string            `yaml:"name" json:"name"`
 	Description string            `yaml:"description" json:"description"`
@@ -560,6 +608,7 @@ type ECAlertRule struct {
 	Settings    map[string]string `yaml:"settings" json:"settings"`
 }
 
+// DashboardSpec contains dashboard specification settings
 type DashboardSpec struct {
 	Title       string            `yaml:"title" json:"title"`
 	Description string            `yaml:"description" json:"description"`
@@ -567,6 +616,7 @@ type DashboardSpec struct {
 	Settings    map[string]string `yaml:"settings" json:"settings"`
 }
 
+// DashboardPanel contains dashboard panel settings
 type DashboardPanel struct {
 	Title    string            `yaml:"title" json:"title"`
 	Type     string            `yaml:"type" json:"type"`
@@ -574,6 +624,7 @@ type DashboardPanel struct {
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// DeploymentConfig contains deployment configuration settings
 type DeploymentConfig struct {
 	Enabled      bool                   `yaml:"enabled" json:"enabled"`
 	Environments map[string]Environment `yaml:"environments" json:"environments"`
@@ -581,6 +632,7 @@ type DeploymentConfig struct {
 	Approval     ApprovalConfig         `yaml:"approval" json:"approval"`
 }
 
+// Environment contains environment configuration settings
 type Environment struct {
 	Name        string            `yaml:"name" json:"name"`
 	Description string            `yaml:"description" json:"description"`
@@ -588,12 +640,14 @@ type Environment struct {
 	Settings    map[string]string `yaml:"settings" json:"settings"`
 }
 
+// PipelineConfig contains pipeline configuration settings
 type PipelineConfig struct {
 	Stages   []PipelineStage   `yaml:"stages" json:"stages"`
 	Triggers []PipelineTrigger `yaml:"triggers" json:"triggers"`
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// PipelineStage contains pipeline stage settings
 type PipelineStage struct {
 	Name         string            `yaml:"name" json:"name"`
 	Description  string            `yaml:"description" json:"description"`
@@ -602,18 +656,21 @@ type PipelineStage struct {
 	Settings     map[string]string `yaml:"settings" json:"settings"`
 }
 
+// PipelineTrigger contains pipeline trigger settings
 type PipelineTrigger struct {
 	Type       string            `yaml:"type" json:"type"`
 	Conditions []string          `yaml:"conditions" json:"conditions"`
 	Settings   map[string]string `yaml:"settings" json:"settings"`
 }
 
+// ApprovalConfig contains approval configuration settings
 type ApprovalConfig struct {
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
 	Required []string          `yaml:"required" json:"required"`
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// BackupConfig contains backup configuration settings
 type BackupConfig struct {
 	Enabled    bool              `yaml:"enabled" json:"enabled"`
 	Schedule   string            `yaml:"schedule" json:"schedule"`
@@ -623,6 +680,7 @@ type BackupConfig struct {
 	Settings   map[string]string `yaml:"settings" json:"settings"`
 }
 
+// NotificationsConfig contains notifications configuration settings
 type NotificationsConfig struct {
 	Enabled  bool                           `yaml:"enabled" json:"enabled"`
 	Channels map[string]NotificationChannel `yaml:"channels" json:"channels"`
@@ -630,12 +688,14 @@ type NotificationsConfig struct {
 	Settings map[string]string              `yaml:"settings" json:"settings"`
 }
 
+// NotificationChannel contains notification channel settings
 type NotificationChannel struct {
 	Type     string            `yaml:"type" json:"type"`
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
 	Settings map[string]string `yaml:"settings" json:"settings"`
 }
 
+// NotificationRule contains notification rule settings
 type NotificationRule struct {
 	Name        string            `yaml:"name" json:"name"`
 	Description string            `yaml:"description" json:"description"`
@@ -646,6 +706,7 @@ type NotificationRule struct {
 
 // Validation Types
 
+// ValidationResults contains validation results
 type ValidationResults struct {
 	Valid    bool                `json:"valid" yaml:"valid"`
 	Errors   []ValidationError   `json:"errors" yaml:"errors"`
@@ -653,18 +714,21 @@ type ValidationResults struct {
 	Info     []ValidationInfo    `json:"info" yaml:"info"`
 }
 
+// ValidationError contains validation error details
 type ValidationError struct {
 	Field   string `json:"field" yaml:"field"`
 	Message string `json:"message" yaml:"message"`
 	Code    string `json:"code" yaml:"code"`
 }
 
+// ValidationWarning contains validation warning details
 type ValidationWarning struct {
 	Field   string `json:"field" yaml:"field"`
 	Message string `json:"message" yaml:"message"`
 	Code    string `json:"code" yaml:"code"`
 }
 
+// ValidationInfo contains validation information details
 type ValidationInfo struct {
 	Field   string `json:"field" yaml:"field"`
 	Message string `json:"message" yaml:"message"`
@@ -673,10 +737,12 @@ type ValidationInfo struct {
 
 // Configuration Validator
 
+// ConfigurationValidator validates enterprise configuration
 type ConfigurationValidator struct {
 	rules []ECValidationRule
 }
 
+// ECValidationRule defines the interface for enterprise configuration validation rules
 type ECValidationRule interface {
 	Validate(config *EnterpriseConfiguration) []ValidationError
 }
@@ -1331,6 +1397,7 @@ func NewConfigurationValidator() *ConfigurationValidator {
 	}
 }
 
+// Validate validates an enterprise configuration using all registered rules
 func (v *ConfigurationValidator) Validate(config *EnterpriseConfiguration) *ValidationResults {
 	results := &ValidationResults{
 		Valid:    true,
@@ -1351,14 +1418,17 @@ func (v *ConfigurationValidator) Validate(config *EnterpriseConfiguration) *Vali
 	return results
 }
 
+// HasErrors returns true if there are any validation errors
 func (vr *ValidationResults) HasErrors() bool {
 	return len(vr.Errors) > 0
 }
 
 // Validation Rules
 
+// ECOrganizationValidationRule validates organization configuration settings
 type ECOrganizationValidationRule struct{}
 
+// Validate validates organization configuration settings
 func (r *ECOrganizationValidationRule) Validate(config *EnterpriseConfiguration) []ValidationError {
 	var errors []ValidationError
 
@@ -1381,8 +1451,10 @@ func (r *ECOrganizationValidationRule) Validate(config *EnterpriseConfiguration)
 	return errors
 }
 
+// ECSecurityValidationRule validates security configuration settings
 type ECSecurityValidationRule struct{}
 
+// Validate validates security configuration settings
 func (r *ECSecurityValidationRule) Validate(config *EnterpriseConfiguration) []ValidationError {
 	var errors []ValidationError
 
@@ -1398,8 +1470,10 @@ func (r *ECSecurityValidationRule) Validate(config *EnterpriseConfiguration) []V
 	return errors
 }
 
+// ECIntegrationsValidationRule validates integrations configuration settings
 type ECIntegrationsValidationRule struct{}
 
+// Validate validates integrations configuration settings
 func (r *ECIntegrationsValidationRule) Validate(config *EnterpriseConfiguration) []ValidationError {
 	var errors []ValidationError
 
@@ -1417,8 +1491,10 @@ func (r *ECIntegrationsValidationRule) Validate(config *EnterpriseConfiguration)
 	return errors
 }
 
+// ECWorkflowsValidationRule validates workflows configuration settings
 type ECWorkflowsValidationRule struct{}
 
+// Validate validates workflows configuration settings
 func (r *ECWorkflowsValidationRule) Validate(config *EnterpriseConfiguration) []ValidationError {
 	var errors []ValidationError
 

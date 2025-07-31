@@ -67,12 +67,14 @@ func (Wizard) Deployment() error {
 
 // Wizard Types and Interfaces
 
+// InteractiveWizard defines the interface for interactive setup wizards
 type InteractiveWizard interface {
 	Run() error
 	GetName() string
 	GetDescription() string
 }
 
+// WizardStep defines the interface for individual wizard steps
 type WizardStep interface {
 	Execute(context *WizardContext) error
 	GetName() string
@@ -81,6 +83,7 @@ type WizardStep interface {
 	GetDependencies() []string
 }
 
+// WizardContext holds the state and data for wizard execution
 type WizardContext struct {
 	Data      map[string]interface{}
 	Scanner   *bufio.Scanner
@@ -89,6 +92,7 @@ type WizardContext struct {
 	Errors    []error
 }
 
+// BaseWizard provides common wizard functionality
 type BaseWizard struct {
 	Name        string
 	Description string
@@ -98,10 +102,12 @@ type BaseWizard struct {
 
 // Enterprise Setup Wizard
 
+// EnterpriseWizard handles enterprise configuration setup
 type EnterpriseWizard struct {
 	BaseWizard
 }
 
+// NewEnterpriseWizard creates a new enterprise configuration wizard
 func NewEnterpriseWizard() *EnterpriseWizard {
 	wizard := &EnterpriseWizard{
 		BaseWizard: BaseWizard{
@@ -133,6 +139,7 @@ func NewEnterpriseWizard() *EnterpriseWizard {
 	return wizard
 }
 
+// Run executes the enterprise wizard setup process
 func (w *EnterpriseWizard) Run() error {
 	utils.Info("🚀 Starting Enterprise Setup Wizard")
 	utils.Info("📋 This wizard will guide you through setting up MAGE-X for enterprise use")
@@ -170,10 +177,12 @@ func (w *EnterpriseWizard) Run() error {
 	return nil
 }
 
+// GetName returns the wizard name
 func (w *EnterpriseWizard) GetName() string {
 	return w.Name
 }
 
+// GetDescription returns the wizard description
 func (w *EnterpriseWizard) GetDescription() string {
 	return w.Description
 }
@@ -187,8 +196,10 @@ func (w *EnterpriseWizard) askToContinue() bool {
 
 // Wizard Steps
 
+// WelcomeStep handles the welcome/introduction step
 type WelcomeStep struct{}
 
+// Execute runs the welcome step
 func (s *WelcomeStep) Execute(ctx *WizardContext) error {
 	utils.Info("👋 Welcome to MAGE-X Enterprise Setup!")
 	utils.Info("")
@@ -202,24 +213,30 @@ func (s *WelcomeStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the step name
 func (s *WelcomeStep) GetName() string {
 	return "Welcome"
 }
 
+// GetDescription returns the step description
 func (s *WelcomeStep) GetDescription() string {
 	return "Welcome and introduction"
 }
 
+// IsRequired indicates if this step is required
 func (s *WelcomeStep) IsRequired() bool {
 	return false
 }
 
+// GetDependencies returns step dependencies
 func (s *WelcomeStep) GetDependencies() []string {
 	return []string{}
 }
 
+// OrganizationStep handles organization configuration
 type OrganizationStep struct{}
 
+// Execute runs the organization configuration step
 func (s *OrganizationStep) Execute(ctx *WizardContext) error {
 	utils.Info("🏢 Organization Configuration")
 
@@ -251,18 +268,22 @@ func (s *OrganizationStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the step name
 func (s *OrganizationStep) GetName() string {
 	return "Organization Configuration"
 }
 
+// GetDescription returns the step description
 func (s *OrganizationStep) GetDescription() string {
 	return "Configure organization settings"
 }
 
+// IsRequired indicates if this step is required
 func (s *OrganizationStep) IsRequired() bool {
 	return true
 }
 
+// GetDependencies returns step dependencies
 func (s *OrganizationStep) GetDependencies() []string {
 	return []string{}
 }
@@ -323,8 +344,10 @@ func (s *OrganizationStep) promptChoice(ctx *WizardContext, prompt string, choic
 	}
 }
 
+// SecurityStep handles security configuration
 type SecurityStep struct{}
 
+// Execute runs the security configuration step
 func (s *SecurityStep) Execute(ctx *WizardContext) error {
 	utils.Info("🔒 Security Configuration")
 
@@ -370,18 +393,22 @@ func (s *SecurityStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the step name
 func (s *SecurityStep) GetName() string {
 	return "Security Configuration"
 }
 
+// GetDescription returns the step description
 func (s *SecurityStep) GetDescription() string {
 	return "Configure security settings"
 }
 
+// IsRequired indicates if this step is required
 func (s *SecurityStep) IsRequired() bool {
 	return true
 }
 
+// GetDependencies returns step dependencies
 func (s *SecurityStep) GetDependencies() []string {
 	return []string{}
 }
@@ -495,8 +522,10 @@ func (s *SecurityStep) promptMultiChoice(ctx *WizardContext, prompt string, choi
 	}
 }
 
+// IntegrationsStep handles third-party integrations configuration
 type IntegrationsStep struct{}
 
+// Execute runs the integrations configuration step
 func (s *IntegrationsStep) Execute(ctx *WizardContext) error {
 	utils.Info("🔌 Integration Configuration")
 
@@ -553,18 +582,22 @@ func (s *IntegrationsStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the step name
 func (s *IntegrationsStep) GetName() string {
 	return "Integration Configuration"
 }
 
+// GetDescription returns the step description
 func (s *IntegrationsStep) GetDescription() string {
 	return "Configure enterprise integrations"
 }
 
+// IsRequired indicates if this step is required
 func (s *IntegrationsStep) IsRequired() bool {
 	return false
 }
 
+// GetDependencies returns step dependencies
 func (s *IntegrationsStep) GetDependencies() []string {
 	return []string{}
 }
@@ -653,8 +686,10 @@ func (s *IntegrationsStep) getIntegrationType(name string) string {
 	return "other"
 }
 
+// WorkflowsStep handles workflow configuration
 type WorkflowsStep struct{}
 
+// Execute runs the workflows configuration step
 func (s *WorkflowsStep) Execute(ctx *WizardContext) error {
 	utils.Info("🔄 Workflow Configuration")
 
@@ -695,18 +730,22 @@ func (s *WorkflowsStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the step name
 func (s *WorkflowsStep) GetName() string {
 	return "Workflow Configuration"
 }
 
+// GetDescription returns the step description
 func (s *WorkflowsStep) GetDescription() string {
 	return "Configure workflow settings"
 }
 
+// IsRequired indicates if this step is required
 func (s *WorkflowsStep) IsRequired() bool {
 	return false
 }
 
+// GetDependencies returns step dependencies
 func (s *WorkflowsStep) GetDependencies() []string {
 	return []string{}
 }
@@ -823,8 +862,10 @@ func (s *WorkflowsStep) promptInt(ctx *WizardContext, prompt string, defaultValu
 	}
 }
 
+// AnalyticsStep handles analytics and monitoring configuration
 type AnalyticsStep struct{}
 
+// Execute runs the analytics configuration step
 func (s *AnalyticsStep) Execute(ctx *WizardContext) error {
 	utils.Info("📊 Analytics Configuration")
 
@@ -887,18 +928,22 @@ func (s *AnalyticsStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the step name
 func (s *AnalyticsStep) GetName() string {
 	return "Analytics Configuration"
 }
 
+// GetDescription returns the step description
 func (s *AnalyticsStep) GetDescription() string {
 	return "Configure analytics and reporting"
 }
 
+// IsRequired indicates if this step is required
 func (s *AnalyticsStep) IsRequired() bool {
 	return false
 }
 
+// GetDependencies returns step dependencies
 func (s *AnalyticsStep) GetDependencies() []string {
 	return []string{}
 }
@@ -1037,8 +1082,10 @@ func (s *AnalyticsStep) promptMultiChoice(ctx *WizardContext, prompt string, cho
 	}
 }
 
+// DeploymentStep handles deployment configuration
 type DeploymentStep struct{}
 
+// Execute runs the deployment configuration step
 func (s *DeploymentStep) Execute(ctx *WizardContext) error {
 	utils.Info("🚀 Deployment Configuration")
 
@@ -1106,18 +1153,22 @@ func (s *DeploymentStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the step name
 func (s *DeploymentStep) GetName() string {
 	return "Deployment Configuration"
 }
 
+// GetDescription returns the step description
 func (s *DeploymentStep) GetDescription() string {
 	return "Configure deployment settings"
 }
 
+// IsRequired indicates if this step is required
 func (s *DeploymentStep) IsRequired() bool {
 	return false
 }
 
+// GetDependencies returns step dependencies
 func (s *DeploymentStep) GetDependencies() []string {
 	return []string{}
 }
@@ -1256,8 +1307,10 @@ func (s *DeploymentStep) promptMultiChoice(ctx *WizardContext, prompt string, ch
 	}
 }
 
+// ComplianceStep handles compliance configuration
 type ComplianceStep struct{}
 
+// Execute runs the compliance configuration step
 func (s *ComplianceStep) Execute(ctx *WizardContext) error {
 	utils.Info("⚖️ Compliance Configuration")
 
@@ -1305,18 +1358,22 @@ func (s *ComplianceStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the step name
 func (s *ComplianceStep) GetName() string {
 	return "Compliance Configuration"
 }
 
+// GetDescription returns the step description
 func (s *ComplianceStep) GetDescription() string {
 	return "Configure compliance and governance"
 }
 
+// IsRequired indicates if this step is required
 func (s *ComplianceStep) IsRequired() bool {
 	return false
 }
 
+// GetDependencies returns step dependencies
 func (s *ComplianceStep) GetDependencies() []string {
 	return []string{}
 }
@@ -1430,8 +1487,10 @@ func (s *ComplianceStep) promptMultiChoice(ctx *WizardContext, prompt string, ch
 	}
 }
 
+// SummaryStep provides configuration summary and confirmation
 type SummaryStep struct{}
 
+// Execute runs the summary and confirmation step
 func (s *SummaryStep) Execute(ctx *WizardContext) error {
 	utils.Info("📋 Configuration Summary")
 
@@ -1501,24 +1560,30 @@ func (s *SummaryStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the step name
 func (s *SummaryStep) GetName() string {
 	return "Configuration Summary"
 }
 
+// GetDescription returns the step description
 func (s *SummaryStep) GetDescription() string {
 	return "Review and confirm configuration"
 }
 
+// IsRequired indicates if this step is required
 func (s *SummaryStep) IsRequired() bool {
 	return true
 }
 
+// GetDependencies returns step dependencies
 func (s *SummaryStep) GetDependencies() []string {
 	return []string{}
 }
 
+// FinalizationStep handles the final step of the wizard process
 type FinalizationStep struct{}
 
+// Execute performs the finalization step of the wizard
 func (s *FinalizationStep) Execute(ctx *WizardContext) error {
 	utils.Info("💾 Finalizing Configuration")
 
@@ -1541,28 +1606,34 @@ func (s *FinalizationStep) Execute(ctx *WizardContext) error {
 	return nil
 }
 
+// GetName returns the name of the finalization step
 func (s *FinalizationStep) GetName() string {
 	return "Finalization"
 }
 
+// GetDescription returns the description of the finalization step
 func (s *FinalizationStep) GetDescription() string {
 	return "Save and finalize configuration"
 }
 
+// IsRequired returns whether the finalization step is required
 func (s *FinalizationStep) IsRequired() bool {
 	return true
 }
 
+// GetDependencies returns the dependencies for the finalization step
 func (s *FinalizationStep) GetDependencies() []string {
 	return []string{}
 }
 
 // Specialized Wizards
 
+// ProjectWizard handles project-specific configuration wizards
 type ProjectWizard struct {
 	BaseWizard
 }
 
+// NewProjectWizard creates a new project configuration wizard
 func NewProjectWizard() *ProjectWizard {
 	return &ProjectWizard{
 		BaseWizard: BaseWizard{
@@ -1575,24 +1646,29 @@ func NewProjectWizard() *ProjectWizard {
 	}
 }
 
+// Run executes the project configuration wizard
 func (w *ProjectWizard) Run() error {
 	utils.Info("📁 Project Configuration Wizard")
 	// Implementation for project wizard
 	return nil
 }
 
+// GetName returns the name of the project wizard
 func (w *ProjectWizard) GetName() string {
 	return w.Name
 }
 
+// GetDescription returns the description of the project wizard
 func (w *ProjectWizard) GetDescription() string {
 	return w.Description
 }
 
+// IntegrationWizard handles integration configuration wizards
 type IntegrationWizard struct {
 	BaseWizard
 }
 
+// NewIntegrationWizard creates a new integration configuration wizard
 func NewIntegrationWizard() *IntegrationWizard {
 	return &IntegrationWizard{
 		BaseWizard: BaseWizard{
@@ -1605,24 +1681,29 @@ func NewIntegrationWizard() *IntegrationWizard {
 	}
 }
 
+// Run executes the integration configuration wizard
 func (w *IntegrationWizard) Run() error {
 	utils.Info("🔌 Integration Setup Wizard")
 	// Implementation for integration wizard
 	return nil
 }
 
+// GetName returns the name of the integration wizard
 func (w *IntegrationWizard) GetName() string {
 	return w.Name
 }
 
+// GetDescription returns the description of the integration wizard
 func (w *IntegrationWizard) GetDescription() string {
 	return w.Description
 }
 
+// SecurityWizard handles security configuration wizards
 type SecurityWizard struct {
 	BaseWizard
 }
 
+// NewSecurityWizard creates a new security configuration wizard
 func NewSecurityWizard() *SecurityWizard {
 	return &SecurityWizard{
 		BaseWizard: BaseWizard{
@@ -1635,24 +1716,29 @@ func NewSecurityWizard() *SecurityWizard {
 	}
 }
 
+// Run executes the security configuration wizard
 func (w *SecurityWizard) Run() error {
 	utils.Info("🔒 Security Configuration Wizard")
 	// Implementation for security wizard
 	return nil
 }
 
+// GetName returns the name of the security wizard
 func (w *SecurityWizard) GetName() string {
 	return w.Name
 }
 
+// GetDescription returns the description of the security wizard
 func (w *SecurityWizard) GetDescription() string {
 	return w.Description
 }
 
+// WorkflowWizard provides workflow configuration wizard functionality
 type WorkflowWizard struct {
 	BaseWizard
 }
 
+// NewWorkflowWizard creates a new WorkflowWizard instance
 func NewWorkflowWizard() *WorkflowWizard {
 	return &WorkflowWizard{
 		BaseWizard: BaseWizard{
@@ -1665,24 +1751,29 @@ func NewWorkflowWizard() *WorkflowWizard {
 	}
 }
 
+// Run executes the workflow configuration wizard
 func (w *WorkflowWizard) Run() error {
 	utils.Info("🔄 Workflow Configuration Wizard")
 	// Implementation for workflow wizard
 	return nil
 }
 
+// GetName returns the name of the workflow wizard
 func (w *WorkflowWizard) GetName() string {
 	return w.Name
 }
 
+// GetDescription returns the description of the workflow wizard
 func (w *WorkflowWizard) GetDescription() string {
 	return w.Description
 }
 
+// DeploymentWizard provides deployment configuration wizard functionality
 type DeploymentWizard struct {
 	BaseWizard
 }
 
+// NewDeploymentWizard creates a new DeploymentWizard instance
 func NewDeploymentWizard() *DeploymentWizard {
 	return &DeploymentWizard{
 		BaseWizard: BaseWizard{
@@ -1695,16 +1786,19 @@ func NewDeploymentWizard() *DeploymentWizard {
 	}
 }
 
+// Run executes the deployment configuration wizard
 func (w *DeploymentWizard) Run() error {
 	utils.Info("🚀 Deployment Configuration Wizard")
 	// Implementation for deployment wizard
 	return nil
 }
 
+// GetName returns the name of the deployment wizard
 func (w *DeploymentWizard) GetName() string {
 	return w.Name
 }
 
+// GetDescription returns the description of the deployment wizard
 func (w *DeploymentWizard) GetDescription() string {
 	return w.Description
 }

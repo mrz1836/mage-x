@@ -7,6 +7,7 @@ import (
 	"github.com/mrz1836/go-mage/pkg/security"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // MockCommandRunner for testing
@@ -363,7 +364,7 @@ func TestSecureCommandRunner_ValidatesCommands(t *testing.T) {
 
 	// Test that dangerous commands are rejected
 	err := runner.RunCmd("echo", "$(whoami)")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "command validation failed")
 
 	// Test that safe commands work
