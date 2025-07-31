@@ -44,7 +44,7 @@ func (Docs) Citation() error {
 
 	// Update version line
 	versionRegex := regexp.MustCompile(`(?m)^version: ".*"$`)
-	newContent := versionRegex.ReplaceAllString(string(content), fmt.Sprintf(`version: "%s"`, version))
+	newContent := versionRegex.ReplaceAllString(string(content), fmt.Sprintf(`version: %q`, version))
 
 	// Check if replacement was made
 	if string(content) == newContent {

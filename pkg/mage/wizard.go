@@ -479,7 +479,7 @@ func (s *SecurityStep) promptBool(ctx *WizardContext, prompt string, defaultValu
 	}
 }
 
-func (s *SecurityStep) promptMultiChoice(ctx *WizardContext, prompt string, choices []string, defaultValues []string) []string {
+func (s *SecurityStep) promptMultiChoice(ctx *WizardContext, prompt string, choices, defaultValues []string) []string {
 	fmt.Printf("%s (select multiple by entering numbers separated by commas):\n", prompt)
 	for i, choice := range choices {
 		marker := " "
@@ -1039,7 +1039,7 @@ func (s *AnalyticsStep) promptString(ctx *WizardContext, prompt, defaultValue st
 	}
 }
 
-func (s *AnalyticsStep) promptMultiChoice(ctx *WizardContext, prompt string, choices []string, defaultValues []string) []string {
+func (s *AnalyticsStep) promptMultiChoice(ctx *WizardContext, prompt string, choices, defaultValues []string) []string {
 	fmt.Printf("%s (select multiple by entering numbers separated by commas):\n", prompt)
 	for i, choice := range choices {
 		marker := " "
@@ -1264,7 +1264,7 @@ func (s *DeploymentStep) promptChoice(ctx *WizardContext, prompt string, choices
 	}
 }
 
-func (s *DeploymentStep) promptMultiChoice(ctx *WizardContext, prompt string, choices []string, defaultValues []string) []string {
+func (s *DeploymentStep) promptMultiChoice(ctx *WizardContext, prompt string, choices, defaultValues []string) []string {
 	fmt.Printf("%s (select multiple by entering numbers separated by commas):\n", prompt)
 	for i, choice := range choices {
 		marker := " "
@@ -1444,7 +1444,7 @@ func (s *ComplianceStep) promptChoice(ctx *WizardContext, prompt string, choices
 	}
 }
 
-func (s *ComplianceStep) promptMultiChoice(ctx *WizardContext, prompt string, choices []string, defaultValues []string) []string {
+func (s *ComplianceStep) promptMultiChoice(ctx *WizardContext, prompt string, choices, defaultValues []string) []string {
 	fmt.Printf("%s (select multiple by entering numbers separated by commas):\n", prompt)
 	for i, choice := range choices {
 		marker := " "

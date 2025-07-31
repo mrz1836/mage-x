@@ -22,7 +22,7 @@ type MockBuilder struct {
 	shouldError        bool
 }
 
-func (m *MockBuilder) Build(_ context.Context, _ BuildOptions) error {
+func (m *MockBuilder) Build(_ context.Context, _ *BuildOptions) error {
 	m.buildCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -79,7 +79,7 @@ func (m *MockTester) RunTests(_ context.Context, _ TestOptions) (*TestResults, e
 	return &TestResults{Passed: 10, Failed: 0, Duration: time.Second}, nil
 }
 
-func (m *MockTester) RunBenchmarks(_ context.Context, _ IBenchmarkOptions) (*IBenchmarkResults, error) {
+func (m *MockTester) RunBenchmarks(_ context.Context, _ *IBenchmarkOptions) (*IBenchmarkResults, error) {
 	m.runBenchmarksCalled = true
 	if m.shouldError {
 		return nil, assert.AnError
@@ -123,7 +123,7 @@ type MockDeployer struct {
 	shouldError        bool
 }
 
-func (m *MockDeployer) Deploy(_ context.Context, _ DeployTarget, _ DeployOptions) error {
+func (m *MockDeployer) Deploy(_ context.Context, _ DeployTarget, _ *DeployOptions) error {
 	m.deployCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -178,7 +178,7 @@ func TestBuilder_Interface(t *testing.T) {
 
 	t.Run("Build", func(t *testing.T) {
 		opts := BuildOptions{Verbose: true}
-		err := builder.Build(ctx, opts)
+		err := builder.Build(ctx, &opts)
 		require.NoError(t, err)
 		assert.True(t, builder.buildCalled)
 	})
@@ -210,7 +210,7 @@ func TestBuilder_Interface(t *testing.T) {
 
 	t.Run("Error handling", func(t *testing.T) {
 		errorBuilder := &MockBuilder{shouldError: true}
-		err := errorBuilder.Build(ctx, BuildOptions{})
+		err := errorBuilder.Build(ctx, &BuildOptions{})
 		assert.Error(t, err)
 	})
 }
@@ -232,7 +232,7 @@ func TestTester_Interface(t *testing.T) {
 
 	t.Run("RunBenchmarks", func(t *testing.T) {
 		opts := IBenchmarkOptions{}
-		results, err := tester.RunBenchmarks(ctx, opts)
+		results, err := tester.RunBenchmarks(ctx, &opts)
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		assert.True(t, tester.runBenchmarksCalled)
@@ -280,7 +280,7 @@ func TestDeployer_Interface(t *testing.T) {
 	t.Run("Deploy", func(t *testing.T) {
 		target := DeployTarget{Environment: "staging"}
 		opts := DeployOptions{}
-		err := deployer.Deploy(ctx, target, opts)
+		err := deployer.Deploy(ctx, target, &opts)
 		require.NoError(t, err)
 		assert.True(t, deployer.deployCalled)
 	})
@@ -328,7 +328,7 @@ func TestDeployer_Interface(t *testing.T) {
 
 	t.Run("Error handling", func(t *testing.T) {
 		errorDeployer := &MockDeployer{shouldError: true}
-		err := errorDeployer.Deploy(ctx, DeployTarget{}, DeployOptions{})
+		err := errorDeployer.Deploy(ctx, DeployTarget{}, &DeployOptions{})
 		assert.Error(t, err)
 	})
 }
@@ -524,7 +524,7 @@ func BenchmarkBuilder_Build(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := builder.Build(ctx, opts); err != nil {
+		if err := builder.Build(ctx, &opts); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -551,7 +551,7 @@ func BenchmarkDeployer_Deploy(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := deployer.Deploy(ctx, target, opts); err != nil {
+		if err := deployer.Deploy(ctx, target, &opts); err != nil {
 			b.Fatal(err)
 		}
 	}

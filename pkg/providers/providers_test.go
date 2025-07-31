@@ -692,11 +692,11 @@ func (s *mockComputeService) RestartInstance(_ context.Context, _ string) error 
 	return nil
 }
 
-func (s *mockComputeService) ResizeInstance(_ context.Context, _ string, _ string) error {
+func (s *mockComputeService) ResizeInstance(_ context.Context, _, _ string) error {
 	return nil
 }
 
-func (s *mockComputeService) SnapshotInstance(_ context.Context, id string, name string) (*Snapshot, error) {
+func (s *mockComputeService) SnapshotInstance(_ context.Context, id, name string) (*Snapshot, error) {
 	return &Snapshot{
 		ID:         fmt.Sprintf("snap-%d", time.Now().UnixNano()),
 		Name:       name,
@@ -746,7 +746,7 @@ func (s *mockStorageService) GetObject(_ context.Context, _, _ string) (io.ReadC
 }
 
 func (s *mockStorageService) DeleteObject(_ context.Context, _, _ string) error { return nil }
-func (s *mockStorageService) ListObjects(_ context.Context, _ string, prefix string) ([]*Object, error) {
+func (s *mockStorageService) ListObjects(_ context.Context, _, prefix string) ([]*Object, error) {
 	return []*Object{{Key: prefix + "file.txt", Size: 1024}}, nil
 }
 
@@ -925,7 +925,7 @@ func (s *mockDatabaseService) UpdateDatabase(_ context.Context, _ string, _ *Upd
 }
 
 func (s *mockDatabaseService) DeleteDatabase(_ context.Context, _ string) error { return nil }
-func (s *mockDatabaseService) CreateBackup(_ context.Context, dbID string, name string) (*Backup, error) {
+func (s *mockDatabaseService) CreateBackup(_ context.Context, dbID, name string) (*Backup, error) {
 	return &Backup{
 		ID:         fmt.Sprintf("backup-%d", time.Now().UnixNano()),
 		DatabaseID: dbID,
@@ -935,7 +935,7 @@ func (s *mockDatabaseService) CreateBackup(_ context.Context, dbID string, name 
 	}, nil
 }
 
-func (s *mockDatabaseService) RestoreBackup(_ context.Context, _ string, _ string) error {
+func (s *mockDatabaseService) RestoreBackup(_ context.Context, _, _ string) error {
 	return nil
 }
 
@@ -947,7 +947,7 @@ func (s *mockDatabaseService) ScaleDatabase(_ context.Context, _ string, _ *Scal
 	return nil
 }
 
-func (s *mockDatabaseService) EnableReadReplica(_ context.Context, dbID string, _ string) (*Database, error) {
+func (s *mockDatabaseService) EnableReadReplica(_ context.Context, dbID, _ string) (*Database, error) {
 	return &Database{ID: "replica-" + dbID, Name: "replica"}, nil
 }
 

@@ -55,7 +55,7 @@ func (Workflow) Execute() error {
 		execution.Error = err.Error()
 		execution.EndTime = time.Now()
 
-		if saveErr := saveWorkflowExecution(execution); saveErr != nil {
+		if saveErr := saveWorkflowExecution(&execution); saveErr != nil {
 			utils.Warn("Failed to save workflow execution: %v", saveErr)
 		}
 
@@ -67,7 +67,7 @@ func (Workflow) Execute() error {
 	execution.EndTime = time.Now()
 
 	// Save execution results
-	if err := saveWorkflowExecution(execution); err != nil {
+	if err := saveWorkflowExecution(&execution); err != nil {
 		utils.Warn("Failed to save workflow execution: %v", err)
 	}
 
@@ -102,7 +102,8 @@ func (Workflow) List() error {
 	fmt.Printf("%-20s %-30s %-10s %-15s\n", "NAME", "DESCRIPTION", "STEPS", "LAST UPDATED")
 	fmt.Printf("%s\n", strings.Repeat("-", 80))
 
-	for _, workflow := range workflows {
+	for i := range workflows {
+		workflow := &workflows[i]
 		fmt.Printf("%-20s %-30s %-10d %-15s\n",
 			truncateString(workflow.Name, 20),
 			truncateString(workflow.Description, 30),
@@ -141,7 +142,7 @@ func (Workflow) Create() error {
 	workflow := createWorkflowFromTemplate(workflowName, templateType)
 
 	// Save workflow definition
-	if err := saveWorkflowDefinition(workflow); err != nil {
+	if err := saveWorkflowDefinition(&workflow); err != nil {
 		return fmt.Errorf("failed to save workflow: %w", err)
 	}
 
@@ -224,7 +225,8 @@ func (Workflow) History() error {
 	fmt.Printf("%-20s %-15s %-10s %-12s %-15s\n", "EXECUTION ID", "WORKFLOW", "STATUS", "DURATION", "STARTED")
 	fmt.Printf("%s\n", strings.Repeat("-", 80))
 
-	for _, execution := range executions {
+	for i := range executions {
+		execution := &executions[i]
 		duration := ""
 		if !execution.EndTime.IsZero() {
 			duration = execution.EndTime.Sub(execution.StartTime).Round(time.Second).String()
@@ -399,15 +401,16 @@ func executeWorkflowSteps(execution *WorkflowExecution) error {
 		var wg sync.WaitGroup
 		errors := make([]error, len(group))
 
-		for i, step := range group {
+		for i := range group {
 			wg.Add(1)
 			go func(stepIndex int, workflowStep WorkflowStep) {
 				defer wg.Done()
 
-				result := executeWorkflowStep(ctx, workflowStep, execution.Context)
+				result := executeWorkflowStep(ctx, &workflowStep, execution.Context)
 
 				// Find the step in the original workflow to get its index
-				for j, originalStep := range execution.Workflow.Steps {
+				for j := range execution.Workflow.Steps {
+					originalStep := &execution.Workflow.Steps[j]
 					if originalStep.Name == workflowStep.Name {
 						execution.Results[j] = result
 						break
@@ -417,7 +420,7 @@ func executeWorkflowSteps(execution *WorkflowExecution) error {
 				if result.Status == "failed" && !workflowStep.ContinueOnError {
 					errors[stepIndex] = fmt.Errorf("step '%s' failed: %s", workflowStep.Name, result.Error)
 				}
-			}(i, step)
+			}(i, group[i])
 		}
 
 		wg.Wait()
@@ -433,11 +436,11 @@ func executeWorkflowSteps(execution *WorkflowExecution) error {
 	return nil
 }
 
-func executeWorkflowStep(ctx context.Context, step WorkflowStep, execContext ExecutionContext) StepResult {
+func executeWorkflowStep(ctx context.Context, step *WorkflowStep, execContext ExecutionContext) StepResult {
 	startTime := time.Now()
 
 	result := StepResult{
-		Step:      step,
+		Step:      *step,
 		StartTime: startTime,
 		Status:    "running",
 	}
@@ -494,7 +497,7 @@ func executeWorkflowStep(ctx context.Context, step WorkflowStep, execContext Exe
 	return result
 }
 
-func executeStepCommand(ctx context.Context, step WorkflowStep, execContext ExecutionContext) (string, error) {
+func executeStepCommand(ctx context.Context, step *WorkflowStep, execContext ExecutionContext) (string, error) {
 	switch step.Type {
 	case "shell", "command":
 		return executeShellCommand(ctx, step)
@@ -509,7 +512,7 @@ func executeStepCommand(ctx context.Context, step WorkflowStep, execContext Exec
 	}
 }
 
-func executeShellCommand(ctx context.Context, step WorkflowStep) (string, error) {
+func executeShellCommand(ctx context.Context, step *WorkflowStep) (string, error) {
 	cmdCtx := ctx
 	// Set timeout if specified
 	if step.Timeout != "" {
@@ -526,17 +529,17 @@ func executeShellCommand(ctx context.Context, step WorkflowStep) (string, error)
 	return output, nil
 }
 
-func executeScriptCommand(_ context.Context, _ WorkflowStep, _ ExecutionContext) (string, error) {
+func executeScriptCommand(_ context.Context, _ *WorkflowStep, _ ExecutionContext) (string, error) {
 	// Implementation would execute script files
 	return "Script executed successfully", nil
 }
 
-func executeHTTPCommand(_ context.Context, _ WorkflowStep, _ ExecutionContext) (string, error) {
+func executeHTTPCommand(_ context.Context, _ *WorkflowStep, _ ExecutionContext) (string, error) {
 	// Implementation would make HTTP requests
 	return "HTTP request completed", nil
 }
 
-func executeNotificationCommand(_ context.Context, _ WorkflowStep, _ ExecutionContext) (string, error) {
+func executeNotificationCommand(_ context.Context, _ *WorkflowStep, _ ExecutionContext) (string, error) {
 	// Implementation would send notifications
 	return "Notification sent", nil
 }
@@ -572,16 +575,17 @@ func groupStepsByDependencies(steps []WorkflowStep) [][]WorkflowStep {
 	var groups [][]WorkflowStep
 	var currentGroup []WorkflowStep
 
-	for _, step := range steps {
+	for i := range steps {
+		step := &steps[i]
 		if step.Parallel && len(currentGroup) > 0 {
 			// Add to current group
-			currentGroup = append(currentGroup, step)
+			currentGroup = append(currentGroup, *step)
 		} else {
 			// Start new group
 			if len(currentGroup) > 0 {
 				groups = append(groups, currentGroup)
 			}
-			currentGroup = []WorkflowStep{step}
+			currentGroup = []WorkflowStep{*step}
 		}
 	}
 
@@ -596,7 +600,7 @@ func generateExecutionID() string {
 	return fmt.Sprintf("exec-%d", time.Now().Unix())
 }
 
-func saveWorkflowExecution(execution WorkflowExecution) error {
+func saveWorkflowExecution(execution *WorkflowExecution) error {
 	executionsDir := getExecutionsDirectory()
 	if err := os.MkdirAll(executionsDir, 0o750); err != nil {
 		return err
@@ -652,7 +656,7 @@ func discoverWorkflows(dir string) ([]WorkflowDefinition, error) {
 	return workflows, nil
 }
 
-func saveWorkflowDefinition(workflow WorkflowDefinition) error {
+func saveWorkflowDefinition(workflow *WorkflowDefinition) error {
 	workflowsDir := getWorkflowsDirectory()
 	fileOps := fileops.New()
 	if err := fileOps.File.MkdirAll(workflowsDir, 0o755); err != nil {
@@ -832,7 +836,8 @@ func showExecutionStatus(executionID string) error {
 	fmt.Printf("%-20s %-10s %-12s\n", "STEP", "STATUS", "DURATION")
 	fmt.Printf("%s\n", strings.Repeat("-", 45))
 
-	for _, result := range execution.Results {
+	for i := range execution.Results {
+		result := &execution.Results[i]
 		fmt.Printf("%-20s %-10s %-12s\n",
 			truncateString(result.Step.Name, 20),
 			result.Status,
@@ -860,7 +865,8 @@ func validateAllWorkflows() error {
 	valid := 0
 	invalid := 0
 
-	for _, workflow := range workflows {
+	for i := range workflows {
+		workflow := &workflows[i]
 		if validateWorkflowDefinition(workflow) {
 			utils.Success("✅ %s - Valid", workflow.Name)
 			valid++
@@ -885,7 +891,7 @@ func validateWorkflow(name string) error {
 		return err
 	}
 
-	if validateWorkflowDefinition(workflow) {
+	if validateWorkflowDefinition(&workflow) {
 		utils.Success("✅ Workflow '%s' is valid", name)
 		return nil
 	}
@@ -893,7 +899,7 @@ func validateWorkflow(name string) error {
 	return fmt.Errorf("workflow '%s' is invalid", name)
 }
 
-func validateWorkflowDefinition(workflow WorkflowDefinition) bool {
+func validateWorkflowDefinition(workflow *WorkflowDefinition) bool {
 	// Basic validation
 	if workflow.Name == "" {
 		return false
@@ -904,7 +910,8 @@ func validateWorkflowDefinition(workflow WorkflowDefinition) bool {
 	}
 
 	// Validate steps
-	for _, step := range workflow.Steps {
+	for i := range workflow.Steps {
+		step := &workflow.Steps[i]
 		if step.Name == "" || step.Type == "" {
 			return false
 		}

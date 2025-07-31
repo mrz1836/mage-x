@@ -214,7 +214,7 @@ func (CLI) Monitor() error {
 	utils.Info("🔄 Starting monitoring (interval: %v, duration: %v)", interval, duration)
 
 	// Start monitoring
-	monitor := NewRepositoryMonitor(repoConfig, interval)
+	monitor := NewRepositoryMonitor(&repoConfig, interval)
 
 	ctx, cancel := context.WithTimeout(context.Background(), duration)
 	defer cancel()
@@ -452,7 +452,7 @@ type BatchOperationResult struct {
 
 // RepositoryMonitor handles continuous monitoring of repository health and metrics
 type RepositoryMonitor struct {
-	config   RepositoryConfig
+	config   *RepositoryConfig
 	interval time.Duration
 	results  chan MonitorResult
 }
@@ -593,27 +593,27 @@ func executeBulkOperation(repo *Repository, operation string) BulkResult {
 	return result
 }
 
-func executeStatusOperation(_ *Repository) (output string, errMsg string) {
+func executeStatusOperation(_ *Repository) (output, errMsg string) {
 	// Implementation would check repository status
 	return "Repository is healthy", ""
 }
 
-func executeBuildOperation(_ *Repository) (output string, errMsg string) {
+func executeBuildOperation(_ *Repository) (output, errMsg string) {
 	// Implementation would build the repository
 	return "Build completed successfully", ""
 }
 
-func executeTestOperation(_ *Repository) (output string, errMsg string) {
+func executeTestOperation(_ *Repository) (output, errMsg string) {
 	// Implementation would run tests
 	return "All tests passed", ""
 }
 
-func executeLintOperation(_ *Repository) (output string, errMsg string) {
+func executeLintOperation(_ *Repository) (output, errMsg string) {
 	// Implementation would run linting
 	return "No linting issues found", ""
 }
 
-func executeUpdateOperation(_ *Repository) (output string, errMsg string) {
+func executeUpdateOperation(_ *Repository) (output, errMsg string) {
 	// Implementation would update dependencies
 	return "Dependencies updated", ""
 }
@@ -671,7 +671,7 @@ func executeQuery(repositories []Repository, query *QueryFilter) []Repository {
 	var results []Repository
 
 	for i := range repositories {
-		if matchesQuery(repositories[i], query) {
+		if matchesQuery(&repositories[i], query) {
 			results = append(results, repositories[i])
 		}
 	}
@@ -698,7 +698,7 @@ func executeQuery(repositories []Repository, query *QueryFilter) []Repository {
 	return results
 }
 
-func matchesQuery(repo Repository, query *QueryFilter) bool {
+func matchesQuery(repo *Repository, query *QueryFilter) bool {
 	if query.Name != "" && !strings.Contains(strings.ToLower(repo.Name), strings.ToLower(query.Name)) {
 		return false
 	}
@@ -1163,7 +1163,7 @@ func parseMonitoringDuration() time.Duration {
 }
 
 // NewRepositoryMonitor creates a new repository monitor with the given configuration and check interval
-func NewRepositoryMonitor(config RepositoryConfig, interval time.Duration) *RepositoryMonitor {
+func NewRepositoryMonitor(config *RepositoryConfig, interval time.Duration) *RepositoryMonitor {
 	return &RepositoryMonitor{
 		config:   config,
 		interval: interval,

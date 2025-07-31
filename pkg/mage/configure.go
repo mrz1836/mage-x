@@ -420,14 +420,14 @@ func validateConfiguration(cfg *Config) error {
 
 	// Validate enterprise configuration if present
 	if cfg.Enterprise != nil {
-		return validateEnterpriseConfiguration(*cfg.Enterprise)
+		return validateEnterpriseConfiguration(cfg.Enterprise)
 	}
 
 	return nil
 }
 
 // validateEnterpriseConfiguration validates enterprise configuration settings
-func validateEnterpriseConfiguration(cfg EnterpriseConfiguration) error {
+func validateEnterpriseConfiguration(cfg *EnterpriseConfiguration) error {
 	if cfg.Organization.Name == "" {
 		return fmt.Errorf("enterprise organization name is required")
 	}

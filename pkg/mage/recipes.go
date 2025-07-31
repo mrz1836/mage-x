@@ -61,15 +61,17 @@ func (Recipes) List() error {
 
 	// Group by category
 	categories := make(map[string][]Recipe)
-	for _, recipe := range recipes {
-		categories[recipe.Category] = append(categories[recipe.Category], recipe)
+	for i := range recipes {
+		recipe := &recipes[i]
+		categories[recipe.Category] = append(categories[recipe.Category], *recipe)
 	}
 
 	utils.Info("\n🎯 Recipe Categories:")
 
 	for category, categoryRecipes := range categories {
 		fmt.Printf("\n%s:\n", strings.ToUpper(category[:1])+category[1:])
-		for _, recipe := range categoryRecipes {
+		for i := range categoryRecipes {
+			recipe := &categoryRecipes[i]
 			fmt.Printf("  %-20s - %s\n", recipe.Name, recipe.Description)
 		}
 	}
@@ -141,7 +143,7 @@ func (Recipes) Run() error {
 	utils.Header("🚀 Running Recipe: " + recipe.Name)
 
 	// Create context
-	context := createRecipeContext(recipe)
+	context := createRecipeContext(&recipe)
 
 	// Check dependencies
 	if err := checkDependencies(recipe.Dependencies); err != nil {
@@ -163,7 +165,7 @@ func (Recipes) Run() error {
 		}
 
 		// Execute step
-		if err := executeRecipeStep(step, context); err != nil {
+		if err := executeRecipeStep(&step, context); err != nil {
 			if step.Optional {
 				utils.Warn("   Optional step failed: %v", err)
 				continue
@@ -191,11 +193,12 @@ func (Recipes) Search() error {
 	searchTerm = strings.ToLower(searchTerm)
 
 	var matches []Recipe
-	for _, recipe := range recipes {
+	for i := range recipes {
+		recipe := &recipes[i]
 		if strings.Contains(strings.ToLower(recipe.Name), searchTerm) ||
 			strings.Contains(strings.ToLower(recipe.Description), searchTerm) ||
 			containsTag(recipe.Tags, searchTerm) {
-			matches = append(matches, recipe)
+			matches = append(matches, *recipe)
 		}
 	}
 
@@ -206,7 +209,8 @@ func (Recipes) Search() error {
 
 	utils.Info("Found %d recipes matching '%s':", len(matches), searchTerm)
 
-	for _, recipe := range matches {
+	for i := range matches {
+		recipe := &matches[i]
 		fmt.Printf("\n📦 %s (%s)\n", recipe.Name, recipe.Category)
 		fmt.Printf("   %s\n", recipe.Description)
 		if len(recipe.Tags) > 0 {
@@ -253,7 +257,7 @@ func (Recipes) Create() error {
 
 	// Save recipe as YAML
 	recipeFile := filepath.Join(recipesDir, recipeName+".yaml")
-	if err := saveRecipeAsYAML(recipe, recipeFile); err != nil {
+	if err := saveRecipeAsYAML(&recipe, recipeFile); err != nil {
 		return fmt.Errorf("failed to save recipe: %w", err)
 	}
 
@@ -468,9 +472,10 @@ func getBuiltinRecipes() []Recipe {
 func getRecipe(name string) (Recipe, error) {
 	recipes := getBuiltinRecipes()
 
-	for _, recipe := range recipes {
+	for i := range recipes {
+		recipe := &recipes[i]
 		if recipe.Name == name {
-			return recipe, nil
+			return *recipe, nil
 		}
 	}
 
@@ -485,7 +490,7 @@ func getRecipe(name string) (Recipe, error) {
 
 // loadCustomRecipe loads a custom recipe from file
 func loadCustomRecipe(name string) (Recipe, error) {
-	recipeFile := filepath.Join(".mage/recipes", name+".yaml")
+	recipeFile := filepath.Join(".mage", "recipes", name+".yaml")
 
 	if !utils.FileExists(recipeFile) {
 		return Recipe{}, fmt.Errorf("custom recipe file not found: %s", recipeFile)
@@ -502,7 +507,7 @@ func loadCustomRecipe(name string) (Recipe, error) {
 }
 
 // createRecipeContext creates execution context for a recipe
-func createRecipeContext(recipe Recipe) *RecipeContext {
+func createRecipeContext(recipe *Recipe) *RecipeContext {
 	context := &RecipeContext{
 		Variables: make(map[string]string),
 	}
@@ -582,7 +587,7 @@ func evaluateRecipeCondition(condition string) bool {
 }
 
 // executeRecipeStep executes a single recipe step
-func executeRecipeStep(step RecipeStep, context *RecipeContext) error {
+func executeRecipeStep(step *RecipeStep, context *RecipeContext) error {
 	// Expand templates in command and args
 	command := expandTemplate(step.Command, context)
 
@@ -646,7 +651,7 @@ func containsTag(tags []string, term string) bool {
 }
 
 // saveRecipeAsYAML saves a recipe as YAML (simplified)
-func saveRecipeAsYAML(recipe Recipe, filename string) error {
+func saveRecipeAsYAML(recipe *Recipe, filename string) error {
 	// In a real implementation, this would use yaml.Marshal
 	content := fmt.Sprintf(`name: %s
 description: %s

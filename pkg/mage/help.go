@@ -78,11 +78,11 @@ func (Help) Commands() error {
 
 	// Group by namespace
 	namespaces := make(map[string][]HelpCommand)
-	for _, cmd := range commands {
-		if cmd.Namespace == "" {
-			cmd.Namespace = "core"
+	for i := range commands {
+		if commands[i].Namespace == "" {
+			commands[i].Namespace = "core"
 		}
-		namespaces[cmd.Namespace] = append(namespaces[cmd.Namespace], cmd)
+		namespaces[commands[i].Namespace] = append(namespaces[commands[i].Namespace], commands[i])
 	}
 
 	// Sort namespaces
@@ -104,8 +104,8 @@ func (Help) Commands() error {
 			return nsCommands[i].Name < nsCommands[j].Name
 		})
 
-		for _, cmd := range nsCommands {
-			if _, err := fmt.Fprintf(w, "  %s\t%s\n", cmd.Name, cmd.Description); err != nil {
+		for i := range nsCommands {
+			if _, err := fmt.Fprintf(w, "  %s\t%s\n", nsCommands[i].Name, nsCommands[i].Description); err != nil {
 				return fmt.Errorf("failed to write command help: %w", err)
 			}
 		}
@@ -618,9 +618,9 @@ func getAllCommands() []HelpCommand {
 func getCommandHelp(name string) (HelpCommand, error) {
 	commands := getAllCommands()
 
-	for _, cmd := range commands {
-		if cmd.Name == name || cmd.Namespace+":"+cmd.Name == name {
-			return cmd, nil
+	for i := range commands {
+		if commands[i].Name == name || commands[i].Namespace+":"+commands[i].Name == name {
+			return commands[i], nil
 		}
 	}
 

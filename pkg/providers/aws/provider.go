@@ -63,15 +63,15 @@ func (p *Provider) Initialize(config *providers.ProviderConfig) error {
 		network:    newNetworkService(config),
 		container:  newContainerService(config),
 		database:   newDatabaseService(config),
-		security:   newSecurityService(*config),
-		monitoring: newMonitoringService(*config),
-		serverless: newServerlessService(*config),
-		ai:         newAIService(*config),
-		cost:       newCostService(*config),
-		compliance: newComplianceService(*config),
-		disaster:   newDisasterService(*config),
-		edge:       newEdgeService(*config),
-		quantum:    newQuantumService(*config),
+		security:   newSecurityService(config),
+		monitoring: newMonitoringService(config),
+		serverless: newServerlessService(config),
+		ai:         newAIService(config),
+		cost:       newCostService(config),
+		compliance: newComplianceService(config),
+		disaster:   newDisasterService(config),
+		edge:       newEdgeService(config),
+		quantum:    newQuantumService(config),
 	}
 
 	return nil
@@ -318,12 +318,12 @@ func (s *computeService) RestartInstance(ctx context.Context, id string) error {
 	// Wait and start
 }
 
-func (s *computeService) ResizeInstance(_ context.Context, _ string, _ string) error {
+func (s *computeService) ResizeInstance(_ context.Context, _, _ string) error {
 	// Resize EC2 instance
 	return nil
 }
 
-func (s *computeService) SnapshotInstance(_ context.Context, id string, name string) (*providers.Snapshot, error) {
+func (s *computeService) SnapshotInstance(_ context.Context, id, name string) (*providers.Snapshot, error) {
 	// Create EBS snapshot
 	return &providers.Snapshot{
 		ID:         fmt.Sprintf("snap-%s", generateID()),
@@ -407,7 +407,7 @@ func (s *storageService) DeleteObject(_ context.Context, _, _ string) error {
 	return nil
 }
 
-func (s *storageService) ListObjects(_ context.Context, _ string, prefix string) ([]*providers.Object, error) {
+func (s *storageService) ListObjects(_ context.Context, _, prefix string) ([]*providers.Object, error) {
 	// List S3 objects
 	return []*providers.Object{
 		{
@@ -795,7 +795,7 @@ func (s *databaseService) DeleteDatabase(_ context.Context, _ string) error {
 	return nil
 }
 
-func (s *databaseService) CreateBackup(_ context.Context, dbID string, name string) (*providers.Backup, error) {
+func (s *databaseService) CreateBackup(_ context.Context, dbID, name string) (*providers.Backup, error) {
 	// Create RDS snapshot
 	return &providers.Backup{
 		ID:         fmt.Sprintf("snap-%s", generateID()),
@@ -808,7 +808,7 @@ func (s *databaseService) CreateBackup(_ context.Context, dbID string, name stri
 	}, nil
 }
 
-func (s *databaseService) RestoreBackup(_ context.Context, _ string, _ string) error {
+func (s *databaseService) RestoreBackup(_ context.Context, _, _ string) error {
 	// Restore from RDS snapshot
 	return nil
 }
@@ -832,7 +832,7 @@ func (s *databaseService) ScaleDatabase(_ context.Context, _ string, _ *provider
 	return nil
 }
 
-func (s *databaseService) EnableReadReplica(ctx context.Context, dbID string, _ string) (*providers.Database, error) {
+func (s *databaseService) EnableReadReplica(ctx context.Context, dbID, _ string) (*providers.Database, error) {
 	// Create RDS read replica
 	return s.CreateDatabase(ctx, &providers.CreateDatabaseRequest{
 		Name:    "replica-" + dbID,

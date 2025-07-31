@@ -1188,7 +1188,8 @@ func initializeWorkflowTemplates() error {
 		},
 	}
 
-	for _, template := range templates {
+	for i := range templates {
+		template := &templates[i]
 		templatePath := filepath.Join(workflowsDir, fmt.Sprintf("%s.json", template.name))
 		data, err := json.MarshalIndent(template.workflow, "", "  ")
 		if err != nil {

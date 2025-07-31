@@ -68,7 +68,7 @@ func (Enterprise) Init() error {
 
 	// Save configuration
 	configPath := filepath.Join(enterpriseDir, "config.json")
-	if err := saveEnterpriseConfig(config, configPath); err != nil {
+	if err := saveEnterpriseConfig(&config, configPath); err != nil {
 		return fmt.Errorf("failed to save enterprise config: %w", err)
 	}
 
@@ -78,7 +78,7 @@ func (Enterprise) Init() error {
 	}
 
 	// Create environment-specific configurations
-	if err := createEnvironmentConfigs(enterpriseDir, config); err != nil {
+	if err := createEnvironmentConfigs(enterpriseDir, &config); err != nil {
 		return fmt.Errorf("failed to create environment configs: %w", err)
 	}
 
@@ -166,7 +166,7 @@ func (Enterprise) Deploy() error {
 	}
 
 	// Pre-deployment checks
-	if err := runPreDeploymentChecks(config, env); err != nil {
+	if err := runPreDeploymentChecks(&config, &env); err != nil {
 		return fmt.Errorf("pre-deployment checks failed: %w", err)
 	}
 
@@ -182,7 +182,7 @@ func (Enterprise) Deploy() error {
 	}
 
 	// Save deployment record
-	if err := saveDeploymentRecord(deployment); err != nil {
+	if err := saveDeploymentRecord(&deployment); err != nil {
 		utils.Warn("Failed to save deployment record: %v", err)
 	}
 
@@ -203,7 +203,7 @@ func (Enterprise) Deploy() error {
 		if err := step.Action(); err != nil {
 			deployment.Status = statusFailed
 			deployment.Error = err.Error()
-			_ = saveDeploymentRecord(deployment) //nolint:errcheck // Ignore error - best effort logging
+			_ = saveDeploymentRecord(&deployment) //nolint:errcheck // Ignore error - best effort logging
 
 			utils.Error("❌ Deployment failed at step: %s", step.Name)
 			return fmt.Errorf("deployment failed: %w", err)
@@ -215,7 +215,7 @@ func (Enterprise) Deploy() error {
 	// Mark deployment as successful
 	deployment.Status = "success"
 	deployment.CompletedAt = time.Now()
-	_ = saveDeploymentRecord(deployment) //nolint:errcheck // Ignore error - best effort logging
+	_ = saveDeploymentRecord(&deployment) //nolint:errcheck // Ignore error - best effort logging
 
 	utils.Success("🎉 Deployment to %s completed successfully", target)
 	utils.Info("📊 Deployment ID: %s", deployment.ID)
@@ -300,7 +300,7 @@ func (Enterprise) Promote() error {
 	utils.Info("🚀 Promoting from %s to %s", sourceEnv, targetEnv)
 
 	// Check promotion requirements
-	if err := validatePromotion(source, target); err != nil {
+	if err := validatePromotion(&source, &target); err != nil {
 		return fmt.Errorf("promotion validation failed: %w", err)
 	}
 
@@ -316,7 +316,7 @@ func (Enterprise) Promote() error {
 	}
 
 	// Save promotion record
-	if err := savePromotionRecord(promotion); err != nil {
+	if err := savePromotionRecord(&promotion); err != nil {
 		utils.Warn("Failed to save promotion record: %v", err)
 	}
 
@@ -328,7 +328,7 @@ func (Enterprise) Promote() error {
 		{Name: "Database Promotion", Action: promoteDatabase},
 		{Name: "Service Promotion", Action: promoteService},
 		{Name: "Smoke Tests", Action: runSmokeTests},
-		{Name: "Final Validation", Action: func() error { return validatePromotion(EnvironmentConfig{}, EnvironmentConfig{}) }},
+		{Name: "Final Validation", Action: func() error { env := EnvironmentConfig{}; return validatePromotion(&env, &env) }},
 	}
 
 	for i, step := range steps {
@@ -337,7 +337,7 @@ func (Enterprise) Promote() error {
 		if err := step.Action(); err != nil {
 			promotion.Status = statusFailed
 			promotion.Error = err.Error()
-			_ = savePromotionRecord(promotion) //nolint:errcheck // Ignore error - best effort logging
+			_ = savePromotionRecord(&promotion) //nolint:errcheck // Ignore error - best effort logging
 
 			utils.Error("❌ Promotion failed at step: %s", step.Name)
 			return fmt.Errorf("promotion failed: %w", err)
@@ -349,7 +349,7 @@ func (Enterprise) Promote() error {
 	// Mark promotion as successful
 	promotion.Status = "success"
 	promotion.CompletedAt = time.Now()
-	_ = savePromotionRecord(promotion) //nolint:errcheck // Ignore error - best effort logging
+	_ = savePromotionRecord(&promotion) //nolint:errcheck // Ignore error - best effort logging
 
 	utils.Success("🎉 Promotion completed successfully")
 	utils.Info("📊 Promotion ID: %s", promotion.ID)
@@ -369,7 +369,7 @@ func (Enterprise) Status() error {
 	// Display environment status
 	fmt.Printf("Environment Status:\n")
 	for name, env := range config.Environments {
-		status := checkEnvironmentStatus(env)
+		status := checkEnvironmentStatus(&env)
 		statusIcon := "❓"
 
 		switch status {
@@ -394,7 +394,8 @@ func (Enterprise) Status() error {
 
 		if len(deployments) > 0 {
 			fmt.Printf("  %s:\n", envName)
-			for _, deployment := range deployments {
+			for i := range deployments {
+				deployment := &deployments[i]
 				statusIcon := "❓"
 				switch deployment.Status {
 				case "success":
@@ -469,7 +470,7 @@ func (Enterprise) Restore() error {
 	}
 
 	// Load backup
-	backupFile := filepath.Join(".mage/enterprise/backups", fmt.Sprintf("backup-%s.json", backupID))
+	backupFile := filepath.Join(".mage", "enterprise", "backups", fmt.Sprintf("backup-%s.json", backupID))
 	fileOps := fileops.New()
 	data, err := fileOps.File.ReadFile(backupFile)
 	if err != nil {
@@ -500,7 +501,7 @@ func (Enterprise) Restore() error {
 			User:      getCurrentUser(),
 		}
 
-		preRestoreFile := filepath.Join(".mage/enterprise/backups", fmt.Sprintf("pre-restore-%s.json", preRestoreBackup.ID))
+		preRestoreFile := filepath.Join(".mage", "enterprise", "backups", fmt.Sprintf("pre-restore-%s.json", preRestoreBackup.ID))
 		if data, err := json.MarshalIndent(preRestoreBackup, "", "  "); err == nil {
 			fileOps := fileops.New()
 			if err := fileOps.File.WriteFile(preRestoreFile, data, 0o644); err != nil {
@@ -512,7 +513,7 @@ func (Enterprise) Restore() error {
 
 	// Restore configuration
 	configPath := ".mage/enterprise/config.json"
-	if err := saveEnterpriseConfig(backup.Config, configPath); err != nil {
+	if err := saveEnterpriseConfig(&backup.Config, configPath); err != nil {
 		return fmt.Errorf("failed to restore config: %w", err)
 	}
 
@@ -760,7 +761,7 @@ func loadEnterpriseConfig() (EnterpriseConfig, error) {
 	return config, nil
 }
 
-func saveEnterpriseConfig(config EnterpriseConfig, path string) error {
+func saveEnterpriseConfig(config *EnterpriseConfig, path string) error {
 	config.UpdatedAt = time.Now()
 
 	data, err := json.MarshalIndent(config, "", "  ")
@@ -810,7 +811,7 @@ func createDefaultPolicies(enterpriseDir string) error {
 	return fileOps.File.WriteFile(filepath.Join(policiesDir, "security.json"), data, 0o644)
 }
 
-func createEnvironmentConfigs(enterpriseDir string, config EnterpriseConfig) error {
+func createEnvironmentConfigs(enterpriseDir string, config *EnterpriseConfig) error {
 	configsDir := filepath.Join(enterpriseDir, "configs")
 
 	for name, env := range config.Environments {
@@ -838,12 +839,12 @@ func createEnvironmentConfigs(enterpriseDir string, config EnterpriseConfig) err
 	return nil
 }
 
-func runPreDeploymentChecks(_ EnterpriseConfig, _ EnvironmentConfig) error {
+func runPreDeploymentChecks(_ *EnterpriseConfig, _ *EnvironmentConfig) error {
 	// Implementation for pre-deployment checks
 	return nil
 }
 
-func saveDeploymentRecord(deployment DeploymentRecord) error {
+func saveDeploymentRecord(deployment *DeploymentRecord) error {
 	fileOps := fileops.New()
 	recordsDir := ".mage/enterprise/deployments"
 	if err := fileOps.File.MkdirAll(recordsDir, 0o755); err != nil {
@@ -859,7 +860,7 @@ func saveDeploymentRecord(deployment DeploymentRecord) error {
 	return fileOps.File.WriteFile(filename, data, 0o644)
 }
 
-func savePromotionRecord(promotion PromotionRecord) error {
+func savePromotionRecord(promotion *PromotionRecord) error {
 	fileOps := fileops.New()
 	recordsDir := ".mage/enterprise/promotions"
 	if err := fileOps.File.MkdirAll(recordsDir, 0o755); err != nil {
@@ -918,7 +919,7 @@ func getDeploymentHistory(environment string, limit int) ([]DeploymentRecord, er
 	return deployments, nil
 }
 
-func checkEnvironmentStatus(_ EnvironmentConfig) string {
+func checkEnvironmentStatus(_ *EnvironmentConfig) string {
 	// Implementation for environment health check
 	return "healthy"
 }
@@ -958,10 +959,10 @@ func rollbackConfiguration() error { return nil }
 func restoreTraffic() error        { return nil }
 
 // Promotion step implementations (placeholders)
-func validatePromotion(_, _ EnvironmentConfig) error { return nil }
-func validateSourceEnvironment() error               { return nil }
-func prepareTargetEnvironment() error                { return nil }
-func syncConfiguration() error                       { return nil }
-func promoteDatabase() error                         { return nil }
-func promoteService() error                          { return nil }
-func runSmokeTests() error                           { return nil }
+func validatePromotion(_, _ *EnvironmentConfig) error { return nil }
+func validateSourceEnvironment() error                { return nil }
+func prepareTargetEnvironment() error                 { return nil }
+func syncConfiguration() error                        { return nil }
+func promoteDatabase() error                          { return nil }
+func promoteService() error                           { return nil }
+func runSmokeTests() error                            { return nil }

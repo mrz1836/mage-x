@@ -284,9 +284,8 @@ type Interface struct {
 }
 
 // checkForGenerateDirectives checks for //go:generate directives
-func checkForGenerateDirectives() (bool, []string) {
-	var files []string
-	hasGenerate := false
+func checkForGenerateDirectives() (hasGenerate bool, files []string) {
+	hasGenerate = false
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {

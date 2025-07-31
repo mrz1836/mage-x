@@ -46,9 +46,7 @@ func TestLintAll(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.All()
-				},
+				lint.All,
 			)
 
 			if tt.expectErr {
@@ -108,9 +106,7 @@ func main() {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.Go()
-				},
+				lint.Go,
 			)
 
 			if tt.expectErr {
@@ -168,9 +164,7 @@ CMD ["./app"]`)
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.Docker()
-				},
+				lint.Docker,
 			)
 
 			if tt.expectErr {
@@ -230,9 +224,7 @@ settings:
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.YAML()
-				},
+				lint.YAML,
 			)
 
 			if tt.expectErr {
@@ -300,9 +292,7 @@ go install
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.Markdown()
-				},
+				lint.Markdown,
 			)
 
 			if tt.expectErr {
@@ -361,9 +351,7 @@ echo "Build complete!"`)
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.Shell()
-				},
+				lint.Shell,
 			)
 
 			if tt.expectErr {
@@ -423,9 +411,7 @@ func TestLintJSON(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.JSON()
-				},
+				lint.JSON,
 			)
 
 			if tt.expectErr {
@@ -484,9 +470,7 @@ func TestLintSQL(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.SQL()
-				},
+				lint.SQL,
 			)
 
 			if tt.expectErr {
@@ -552,9 +536,7 @@ func TestLintConfig(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.Config()
-				},
+				lint.Config,
 			)
 
 			if tt.expectErr {
@@ -605,9 +587,7 @@ func TestLintFix(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return lint.Fix()
-				},
+				lint.Fix,
 			)
 
 			if tt.expectErr {

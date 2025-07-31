@@ -14,8 +14,8 @@ type securityService struct {
 	config providers.ProviderConfig
 }
 
-func newSecurityService(config providers.ProviderConfig) *securityService {
-	return &securityService{config: config}
+func newSecurityService(config *providers.ProviderConfig) *securityService {
+	return &securityService{config: *config}
 }
 
 func (s *securityService) CreateRole(_ context.Context, req *providers.CreateRoleRequest) (*providers.Role, error) {
@@ -140,8 +140,8 @@ type monitoringService struct {
 	config providers.ProviderConfig
 }
 
-func newMonitoringService(config providers.ProviderConfig) *monitoringService {
-	return &monitoringService{config: config}
+func newMonitoringService(config *providers.ProviderConfig) *monitoringService {
+	return &monitoringService{config: *config}
 }
 
 func (s *monitoringService) PutMetric(_ context.Context, _ *providers.Metric) error {
@@ -270,8 +270,8 @@ type serverlessService struct {
 	config providers.ProviderConfig
 }
 
-func newServerlessService(config providers.ProviderConfig) *serverlessService {
-	return &serverlessService{config: config}
+func newServerlessService(config *providers.ProviderConfig) *serverlessService {
+	return &serverlessService{config: *config}
 }
 
 func (s *serverlessService) CreateFunction(_ context.Context, req *providers.CreateFunctionRequest) (*providers.Function, error) {
@@ -350,8 +350,8 @@ type aiService struct {
 	config providers.ProviderConfig
 }
 
-func newAIService(config providers.ProviderConfig) *aiService {
-	return &aiService{config: config}
+func newAIService(config *providers.ProviderConfig) *aiService {
+	return &aiService{config: *config}
 }
 
 func (s *aiService) CreateModel(_ context.Context, req *providers.CreateModelRequest) (*providers.AIModel, error) {
@@ -469,8 +469,8 @@ type costService struct {
 	config providers.ProviderConfig
 }
 
-func newCostService(config providers.ProviderConfig) *costService {
-	return &costService{config: config}
+func newCostService(config *providers.ProviderConfig) *costService {
+	return &costService{config: *config}
 }
 
 func (s *costService) GetCurrentSpend(_ context.Context) (*providers.SpendSummary, error) {
@@ -552,8 +552,8 @@ type complianceService struct {
 	config providers.ProviderConfig
 }
 
-func newComplianceService(config providers.ProviderConfig) *complianceService {
-	return &complianceService{config: config}
+func newComplianceService(config *providers.ProviderConfig) *complianceService {
+	return &complianceService{config: *config}
 }
 
 func (s *complianceService) RunComplianceCheck(_ context.Context, standard string) (*providers.ComplianceResult, error) {
@@ -617,8 +617,8 @@ type disasterService struct {
 	config providers.ProviderConfig
 }
 
-func newDisasterService(config providers.ProviderConfig) *disasterService {
-	return &disasterService{config: config}
+func newDisasterService(config *providers.ProviderConfig) *disasterService {
+	return &disasterService{config: *config}
 }
 
 func (s *disasterService) CreateBackupPlan(_ context.Context, req *providers.CreateBackupPlanRequest) (*providers.BackupPlan, error) {
@@ -674,8 +674,8 @@ type edgeService struct {
 	config providers.ProviderConfig
 }
 
-func newEdgeService(config providers.ProviderConfig) *edgeService {
-	return &edgeService{config: config}
+func newEdgeService(config *providers.ProviderConfig) *edgeService {
+	return &edgeService{config: *config}
 }
 
 func (s *edgeService) DeployToEdge(_ context.Context, req *providers.EdgeDeployRequest) (*providers.EdgeDeployment, error) {
@@ -746,8 +746,8 @@ type quantumService struct {
 	config providers.ProviderConfig
 }
 
-func newQuantumService(config providers.ProviderConfig) *quantumService {
-	return &quantumService{config: config}
+func newQuantumService(config *providers.ProviderConfig) *quantumService {
+	return &quantumService{config: *config}
 }
 
 func (s *quantumService) CreateQuantumCircuit(_ context.Context, req *providers.CreateCircuitRequest) (*providers.QuantumCircuit, error) {

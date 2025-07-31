@@ -294,7 +294,8 @@ func (Install) SystemWide() error {
 	}
 
 	// Install to /usr/local/bin
-	installPath := filepath.Join("/usr/local/bin", binaryName)
+	usrLocalBin := string(os.PathSeparator) + filepath.Join("usr", "local", "bin")
+	installPath := filepath.Join(usrLocalBin, binaryName)
 
 	utils.Info("Installing to %s (requires sudo)...", installPath)
 

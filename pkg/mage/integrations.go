@@ -79,7 +79,8 @@ func (Integrations) Test() error {
 
 	// Test each integration
 	results := make([]IntegrationTestResult, len(integrations))
-	for i, integration := range integrations {
+	for i := range integrations {
+		integration := &integrations[i]
 		utils.Info("Testing %s integration...", integration.Name)
 		results[i] = testIntegration(integration)
 	}
@@ -157,7 +158,8 @@ func (Integrations) Status() error {
 	fmt.Printf("%-15s %-10s %-15s %-20s\n", "INTEGRATION", "STATUS", "LAST SYNC", "HEALTH")
 	fmt.Printf("%s\n", strings.Repeat("-", 65))
 
-	for _, integration := range integrations {
+	for i := range integrations {
+		integration := &integrations[i]
 		status := checkIntegrationStatus(integration)
 		fmt.Printf("%-15s %-10s %-15s %-20s\n",
 			integration.Name,
@@ -459,12 +461,12 @@ func setupSlackIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save Slack configuration: %w", err)
 	}
 
 	// Test the integration
-	if err := testSlackIntegration(config); err != nil {
+	if err := testSlackIntegration(&config); err != nil {
 		utils.Warn("Slack integration test failed: %v", err)
 	} else {
 		utils.Success("✅ Slack integration test passed")
@@ -510,7 +512,7 @@ func setupJiraIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save Jira configuration: %w", err)
 	}
 
@@ -551,7 +553,7 @@ func setupGitHubIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save GitHub configuration: %w", err)
 	}
 
@@ -591,7 +593,7 @@ func setupGitLabIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save GitLab configuration: %w", err)
 	}
 
@@ -632,7 +634,7 @@ func setupJenkinsIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save Jenkins configuration: %w", err)
 	}
 
@@ -669,7 +671,7 @@ func setupDockerIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save Docker configuration: %w", err)
 	}
 
@@ -683,7 +685,7 @@ func setupKubernetesIntegration() error {
 	// Get Kubernetes configuration
 	kubeconfig := utils.GetEnv("KUBECONFIG", "")
 	namespace := utils.GetEnv("K8S_NAMESPACE", "default")
-	context := utils.GetEnv("K8S_CONTEXT", "")
+	kubeContext := utils.GetEnv("K8S_CONTEXT", "")
 
 	if kubeconfig == "" {
 		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
@@ -696,14 +698,14 @@ func setupKubernetesIntegration() error {
 		Settings: map[string]interface{}{
 			"kubeconfig": kubeconfig,
 			"namespace":  namespace,
-			"context":    context,
+			"context":    kubeContext,
 		},
 		Created: time.Now(),
 		Updated: time.Now(),
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save Kubernetes configuration: %w", err)
 	}
 
@@ -744,7 +746,7 @@ func setupPrometheusIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save Prometheus configuration: %w", err)
 	}
 
@@ -784,7 +786,7 @@ func setupGrafanaIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save Grafana configuration: %w", err)
 	}
 
@@ -820,7 +822,7 @@ func setupAWSIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save AWS configuration: %w", err)
 	}
 
@@ -856,7 +858,7 @@ func setupAzureIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save Azure configuration: %w", err)
 	}
 
@@ -892,7 +894,7 @@ func setupGCPIntegration() error {
 	}
 
 	// Save configuration
-	if err := saveIntegrationConfig(config); err != nil {
+	if err := saveIntegrationConfig(&config); err != nil {
 		return fmt.Errorf("failed to save GCP configuration: %w", err)
 	}
 
@@ -936,7 +938,7 @@ func loadIntegrationConfigurations() ([]IntegrationConfig, error) {
 	return integrations, nil
 }
 
-func saveIntegrationConfig(config IntegrationConfig) error {
+func saveIntegrationConfig(config *IntegrationConfig) error {
 	integrationsDir := getIntegrationsDirectory()
 	if err := os.MkdirAll(integrationsDir, 0o750); err != nil {
 		return err
@@ -956,11 +958,11 @@ func getIntegrationsDirectory() string {
 	return filepath.Join(".mage", "integrations")
 }
 
-func testIntegration(integration IntegrationConfig) IntegrationTestResult {
+func testIntegration(integration *IntegrationConfig) IntegrationTestResult {
 	startTime := time.Now()
 
 	result := IntegrationTestResult{
-		Integration: integration,
+		Integration: *integration,
 		Status:      "running",
 		Tests:       []TestCase{},
 		Timestamp:   startTime,
@@ -1107,7 +1109,7 @@ func testCloudProviderIntegration() []TestCase {
 	}
 }
 
-func testSlackIntegration(integration IntegrationConfig) error {
+func testSlackIntegration(integration *IntegrationConfig) error {
 	// Send test message to Slack
 	webhookURL := integration.Credentials["webhook_url"]
 
@@ -1155,7 +1157,8 @@ func displayTestResults(results []IntegrationTestResult) {
 	passed := 0
 	failed := 0
 
-	for _, result := range results {
+	for i := range results {
+		result := &results[i]
 		if result.Status == "passed" {
 			passed++
 		} else {
@@ -1171,7 +1174,8 @@ func displayTestResults(results []IntegrationTestResult) {
 	fmt.Printf("\n%-15s %-10s %-10s %-12s\n", "INTEGRATION", "STATUS", "TESTS", "DURATION")
 	fmt.Printf("%s\n", strings.Repeat("-", 50))
 
-	for _, result := range results {
+	for i := range results {
+		result := &results[i]
 		status := "✅"
 		if result.Status == "failed" {
 			status = "❌"
@@ -1196,7 +1200,7 @@ func saveTestResults(results []IntegrationTestResult, filename string) error {
 	return fileOps.File.WriteFile(filename, data, 0o644)
 }
 
-func checkIntegrationStatus(integration IntegrationConfig) IntegrationStatus {
+func checkIntegrationStatus(integration *IntegrationConfig) IntegrationStatus {
 	return IntegrationStatus{
 		Name:     integration.Name,
 		Status:   "active",

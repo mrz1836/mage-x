@@ -204,8 +204,9 @@ func (e *SecureExecutor) ExecuteWithEnv(ctx context.Context, env []string, name 
 
 	// Merge provided environment with filtered base environment
 	baseEnv := e.filterEnvironment(os.Environ())
-	envVars := append(baseEnv, env...)
-	cmd.Env = envVars
+	cmd.Env = make([]string, 0, len(baseEnv)+len(env))
+	cmd.Env = append(cmd.Env, baseEnv...)
+	cmd.Env = append(cmd.Env, env...)
 
 	// Connect output
 	cmd.Stdout = os.Stdout
@@ -465,7 +466,7 @@ func (m *MockExecutor) ExecuteWithEnv(_ context.Context, env []string, name stri
 }
 
 // SetResponse sets a mocked response for a command
-func (m *MockExecutor) SetResponse(command string, output string, err error) {
+func (m *MockExecutor) SetResponse(command, output string, err error) {
 	m.Responses[command] = CommandResponse{
 		Output: output,
 		Error:  err,

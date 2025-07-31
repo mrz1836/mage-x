@@ -11,7 +11,7 @@ import (
 // Builder interface for customizable build operations
 type Builder interface {
 	// Build builds the application with the given options
-	Build(ctx context.Context, opts BuildOptions) error
+	Build(ctx context.Context, opts *BuildOptions) error
 
 	// CrossCompile builds for multiple platforms
 	CrossCompile(ctx context.Context, platforms []Platform) error
@@ -32,7 +32,7 @@ type Tester interface {
 	RunTests(ctx context.Context, opts TestOptions) (*TestResults, error)
 
 	// RunBenchmarks executes benchmark tests
-	RunBenchmarks(ctx context.Context, opts IBenchmarkOptions) (*IBenchmarkResults, error)
+	RunBenchmarks(ctx context.Context, opts *IBenchmarkOptions) (*IBenchmarkResults, error)
 
 	// GenerateCoverage creates test coverage reports
 	GenerateCoverage(ctx context.Context, opts CoverageOptions) (*CoverageReport, error)
@@ -47,7 +47,7 @@ type Tester interface {
 // Deployer interface for multi-platform deployments
 type Deployer interface {
 	// Deploy deploys the application to a target environment
-	Deploy(ctx context.Context, target DeployTarget, opts DeployOptions) error
+	Deploy(ctx context.Context, target DeployTarget, opts *DeployOptions) error
 
 	// Rollback rolls back to a previous deployment version
 	Rollback(ctx context.Context, target DeployTarget, version string) error

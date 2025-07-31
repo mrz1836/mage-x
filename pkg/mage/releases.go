@@ -483,7 +483,7 @@ func buildForPlatform(binaryName, platform string) (string, error) {
 	return outputPath, nil
 }
 
-func parsePlatform(platform string) (string, string, error) {
+func parsePlatform(platform string) (goos, arch string, err error) {
 	parts := strings.Split(platform, "/")
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("invalid platform format: %s", platform)
@@ -596,8 +596,7 @@ func createGitHubReleaseWithCLI(config *MultiChannelReleaseConfig) error {
 	}
 
 	// Add title and notes
-	args = append(args, "--title", config.Version)
-	args = append(args, "--notes", config.Notes)
+	args = append(args, "--title", config.Version, "--notes", config.Notes)
 
 	// Add assets
 	args = append(args, config.Assets...)

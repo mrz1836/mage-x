@@ -282,15 +282,18 @@ func RecoverTo() error {
 // SafeExecute executes a function and recovers from panics
 func SafeExecute(fn func() error) (err error) {
 	defer func() {
-		if r := recover(); r != nil {
-			if err == nil {
-				if recoveredErr, ok := r.(error); ok {
-					err = Wrap(recoveredErr, "panic recovered")
-				} else {
-					err = Newf("panic recovered: %v", r)
-				}
-			}
+		r := recover()
+		if r == nil {
+			return
 		}
+		if err != nil {
+			return
+		}
+		if recoveredErr, ok := r.(error); ok {
+			err = Wrap(recoveredErr, "panic recovered")
+			return
+		}
+		err = Newf("panic recovered: %v", r)
 	}()
 	return fn()
 }

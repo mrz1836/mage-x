@@ -57,8 +57,7 @@ func (Test) Short() error {
 	}
 
 	args := buildTestArgs(config, false, false)
-	args = append(args, "-short")
-	args = append(args, "./...")
+	args = append(args, "-short", "./...")
 
 	if err := GetRunner().RunCmd("go", args...); err != nil {
 		return fmt.Errorf("short tests failed: %w", err)
@@ -99,8 +98,7 @@ func (Test) Cover() error {
 	}
 
 	args := buildTestArgs(config, false, true)
-	args = append(args, "-coverprofile=coverage.txt")
-	args = append(args, "-covermode="+config.Test.CoverMode)
+	args = append(args, "-coverprofile=coverage.txt", "-covermode="+config.Test.CoverMode)
 
 	if len(config.Test.CoverPkg) > 0 {
 		args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
@@ -129,8 +127,7 @@ func (Test) CoverRace() error {
 	}
 
 	args := buildTestArgs(config, true, true)
-	args = append(args, "-coverprofile=coverage.txt")
-	args = append(args, "-covermode=atomic") // atomic is required with race
+	args = append(args, "-coverprofile=coverage.txt", "-covermode=atomic") // atomic is required with race
 
 	if len(config.Test.CoverPkg) > 0 {
 		args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
@@ -292,7 +289,9 @@ func (Test) Integration() error {
 	}
 
 	// Set integration test tag
-	tags := append(config.Test.Tags, "integration")
+	tags := make([]string, len(config.Test.Tags)+1)
+	copy(tags, config.Test.Tags)
+	tags[len(config.Test.Tags)] = "integration"
 
 	args := []string{"test"}
 	args = append(args, "-tags", strings.Join(tags, ","))
@@ -301,13 +300,8 @@ func (Test) Integration() error {
 		args = append(args, "-v")
 	}
 
-	// Longer timeout for integration tests
-	args = append(args, "-timeout", "30m")
-
-	// Don't run short tests
-	args = append(args, "-run", "Integration")
-
-	args = append(args, "./...")
+	// Longer timeout for integration tests and don't run short tests
+	args = append(args, "-timeout", "30m", "-run", "Integration", "./...")
 
 	start := time.Now()
 	if err := GetRunner().RunCmd("go", args...); err != nil {
@@ -380,9 +374,7 @@ func (Test) NoLint() error {
 
 	// Force parallel execution
 	parallel := getCPUCount()
-	args = append(args, "-p", fmt.Sprintf("%d", parallel))
-
-	args = append(args, "./...")
+	args = append(args, "-p", fmt.Sprintf("%d", parallel), "./...")
 
 	start := time.Now()
 	if err := GetRunner().RunCmd("go", args...); err != nil {

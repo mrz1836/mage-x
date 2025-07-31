@@ -200,11 +200,11 @@ func (s *azureComputeService) DeleteInstance(_ context.Context, _ string) error 
 func (s *azureComputeService) StartInstance(_ context.Context, _ string) error   { return nil }
 func (s *azureComputeService) StopInstance(_ context.Context, _ string) error    { return nil }
 func (s *azureComputeService) RestartInstance(_ context.Context, _ string) error { return nil }
-func (s *azureComputeService) ResizeInstance(_ context.Context, _ string, _ string) error {
+func (s *azureComputeService) ResizeInstance(_ context.Context, _, _ string) error {
 	return nil
 }
 
-func (s *azureComputeService) SnapshotInstance(_ context.Context, id string, name string) (*providers.Snapshot, error) {
+func (s *azureComputeService) SnapshotInstance(_ context.Context, id, name string) (*providers.Snapshot, error) {
 	return &providers.Snapshot{
 		ID:         fmt.Sprintf("snap-%s", name),
 		Name:       name,
@@ -256,7 +256,7 @@ func (s *azureStorageService) GetObject(_ context.Context, _, _ string) (io.Read
 
 func (s *azureStorageService) DeleteObject(_ context.Context, _, _ string) error { return nil }
 
-func (s *azureStorageService) ListObjects(_ context.Context, _ string, prefix string) ([]*providers.Object, error) {
+func (s *azureStorageService) ListObjects(_ context.Context, _, prefix string) ([]*providers.Object, error) {
 	return []*providers.Object{{Key: prefix + "file.txt"}}, nil
 }
 
@@ -375,11 +375,11 @@ func (s *azureDatabaseService) UpdateDatabase(_ context.Context, _ string, _ *pr
 	return nil
 }
 func (s *azureDatabaseService) DeleteDatabase(_ context.Context, _ string) error { return nil }
-func (s *azureDatabaseService) CreateBackup(_ context.Context, dbID string, name string) (*providers.Backup, error) {
+func (s *azureDatabaseService) CreateBackup(_ context.Context, dbID, name string) (*providers.Backup, error) {
 	return &providers.Backup{ID: fmt.Sprintf("backup-%s", name), DatabaseID: dbID, Name: name, State: "InProgress", CreatedAt: time.Now()}, nil
 }
 
-func (s *azureDatabaseService) RestoreBackup(_ context.Context, _ string, _ string) error {
+func (s *azureDatabaseService) RestoreBackup(_ context.Context, _, _ string) error {
 	return nil
 }
 
@@ -391,7 +391,7 @@ func (s *azureDatabaseService) ScaleDatabase(_ context.Context, _ string, _ *pro
 	return nil
 }
 
-func (s *azureDatabaseService) EnableReadReplica(_ context.Context, dbID string, _ string) (*providers.Database, error) {
+func (s *azureDatabaseService) EnableReadReplica(_ context.Context, dbID, _ string) (*providers.Database, error) {
 	return &providers.Database{ID: "replica-" + dbID, Name: "replica"}, nil
 }
 

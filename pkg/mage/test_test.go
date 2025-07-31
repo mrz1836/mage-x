@@ -46,9 +46,7 @@ func TestTestRun(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return test.Run()
-				},
+				test.Run,
 			)
 
 			if tt.expectErr {
@@ -163,9 +161,7 @@ func TestTestRace(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return test.Race()
-				},
+				test.Race,
 			)
 
 			if tt.expectErr {
@@ -280,9 +276,7 @@ func TestTestVet(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return test.Vet()
-				},
+				test.Vet,
 			)
 
 			if tt.expectErr {
@@ -333,9 +327,7 @@ func TestTestLint(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return test.Lint()
-				},
+				test.Lint,
 			)
 
 			if tt.expectErr {
@@ -390,9 +382,7 @@ func TestTestClean(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return test.Clean()
-				},
+				test.Clean,
 			)
 
 			if tt.expectErr {
@@ -443,9 +433,7 @@ func TestTestUnit(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return test.Unit()
-				},
+				test.Unit,
 			)
 
 			if tt.expectErr {
@@ -496,9 +484,7 @@ func TestTestIntegration(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return test.Integration()
-				},
+				test.Integration,
 			)
 
 			if tt.expectErr {
@@ -553,9 +539,7 @@ func TestTestAll(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				func() error {
-					return test.All()
-				},
+				test.All,
 			)
 
 			if tt.expectErr {
