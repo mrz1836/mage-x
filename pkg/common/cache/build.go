@@ -106,8 +106,8 @@ type ModuleInfo struct {
 	Time    time.Time `json:"time"`
 }
 
-// CacheStats provides cache statistics
-type CacheStats struct {
+// Stats provides cache statistics
+type Stats struct {
 	Hits        int64     `json:"hits"`
 	Misses      int64     `json:"misses"`
 	HitRate     float64   `json:"hit_rate"`
@@ -410,12 +410,12 @@ func (c *BuildCache) GenerateFileHash(filePaths []string) (string, error) {
 }
 
 // GetStats returns cache statistics
-func (c *BuildCache) GetStats() (*CacheStats, error) {
+func (c *BuildCache) GetStats() (*Stats, error) {
 	if !c.enabled {
-		return &CacheStats{}, nil
+		return &Stats{}, nil
 	}
 
-	stats := &CacheStats{
+	stats := &Stats{
 		LastCleanup: time.Now(),
 	}
 

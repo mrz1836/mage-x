@@ -219,9 +219,9 @@ func (m *Manager) Cleanup() error {
 }
 
 // GetStats returns comprehensive cache statistics
-func (m *Manager) GetStats() (*CacheStats, error) {
+func (m *Manager) GetStats() (*Stats, error) {
 	if !m.config.Enabled {
-		return &CacheStats{}, nil
+		return &Stats{}, nil
 	}
 
 	return m.buildCache.GetStats()

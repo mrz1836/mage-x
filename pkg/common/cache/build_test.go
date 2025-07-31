@@ -46,7 +46,7 @@ func TestBuildCache_Init(t *testing.T) {
 		expectedDirs := []string{"builds", "tests", "lint", "deps", "tools", "meta"}
 		for _, dir := range expectedDirs {
 			dirPath := filepath.Join(tempDir, dir)
-			assert.DirExists(t, dirPath, fmt.Sprintf("Directory %s should exist", dir))
+			assert.DirExists(t, dirPath, "Directory %s should exist", dir)
 		}
 	})
 
@@ -56,13 +56,13 @@ func TestBuildCache_Init(t *testing.T) {
 		cache.SetOptions(false, 0, 0)
 
 		err := cache.Init()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// No directories should be created when disabled
 		expectedDirs := []string{"builds", "tests", "lint", "deps", "tools", "meta"}
 		for _, dir := range expectedDirs {
 			dirPath := filepath.Join(tempDir, dir)
-			assert.NoDirExists(t, dirPath, fmt.Sprintf("Directory %s should not exist when disabled", dir))
+			assert.NoDirExists(t, dirPath, "Directory %s should not exist when disabled", dir)
 		}
 	})
 
@@ -70,7 +70,7 @@ func TestBuildCache_Init(t *testing.T) {
 		cache := NewBuildCache("/invalid/readonly/path")
 
 		err := cache.Init()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to create cache directory")
 	})
 }
@@ -134,7 +134,7 @@ func TestBuildCache_BuildResult(t *testing.T) {
 
 		// Store should succeed but do nothing
 		err = cache.StoreBuildResult("disabled-hash", buildResult)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Get should return false
 		_, found := cache.GetBuildResult("disabled-hash")
@@ -189,7 +189,7 @@ func TestBuildCache_TestResult(t *testing.T) {
 		assert.Equal(t, testResult.Package, retrieved.Package)
 		assert.Equal(t, testResult.Success, retrieved.Success)
 		assert.Equal(t, testResult.Output, retrieved.Output)
-		assert.Equal(t, testResult.Coverage, retrieved.Coverage)
+		assert.InEpsilon(t, testResult.Coverage, retrieved.Coverage, 0.001)
 		assert.Equal(t, testResult.Duration, retrieved.Duration)
 		assert.Equal(t, testResult.Metrics, retrieved.Metrics)
 	})
@@ -203,7 +203,7 @@ func TestBuildCache_TestResult(t *testing.T) {
 		cache.SetOptions(false, 0, 0)
 
 		err = cache.StoreTestResult("disabled-test-hash", testResult)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		_, found := cache.GetTestResult("disabled-test-hash")
 		assert.False(t, found)
@@ -440,7 +440,7 @@ func TestBuildCache_GetStats(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, stats)
 
-		assert.True(t, stats.TotalSize > 0)
+		assert.Positive(t, stats.TotalSize)
 		assert.Equal(t, 3, stats.EntryCount)
 		assert.False(t, stats.LastCleanup.IsZero())
 	})
@@ -483,7 +483,7 @@ func TestBuildCache_Cleanup(t *testing.T) {
 
 		// Cleanup should remove expired entries
 		err = cache.Cleanup()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify entries were removed
 		for i := 0; i < 3; i++ {
@@ -496,7 +496,7 @@ func TestBuildCache_Cleanup(t *testing.T) {
 	t.Run("disabled cache", func(t *testing.T) {
 		cache.SetOptions(false, 0, 0)
 		err = cache.Cleanup()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
@@ -528,7 +528,7 @@ func TestBuildCache_Clear(t *testing.T) {
 
 		// Clear cache
 		err = cache.Clear()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// After clear, the cache directory is gone, so need to reinit to use it
 		err = cache.Init()
@@ -583,7 +583,7 @@ func TestBuildCache_removeCacheEntry(t *testing.T) {
 
 	// Remove it using the private method
 	err = cache.removeCacheEntry(testFile)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify file is gone
 	assert.NoFileExists(t, testFile)
@@ -688,7 +688,7 @@ func TestBuildCache_JSONMarshaling(t *testing.T) {
 
 		assert.Equal(t, result.Hash, unmarshaled.Hash)
 		assert.Equal(t, result.Package, unmarshaled.Package)
-		assert.Equal(t, result.Coverage, unmarshaled.Coverage)
+		assert.InEpsilon(t, result.Coverage, unmarshaled.Coverage, 0.001)
 		// Skip timestamp comparison due to JSON precision issues
 	})
 

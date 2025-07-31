@@ -118,7 +118,7 @@ func TestManager_Init(t *testing.T) {
 		manager := NewManager(config)
 		err := manager.Init()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to create cache directory")
 	})
 }
@@ -487,7 +487,7 @@ func TestManager_Clear(t *testing.T) {
 		require.NoError(t, err)
 
 		err = manager.Clear()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Cache directory should not exist after clear
 		assert.NoFileExists(t, testFile)
@@ -500,7 +500,7 @@ func TestManager_Clear(t *testing.T) {
 
 		manager := NewManager(config)
 		err := manager.Clear()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
@@ -541,13 +541,13 @@ func TestManager_WarmCache(t *testing.T) {
 
 	operations := []string{"build", "test", "lint"}
 	err = manager.WarmCache(operations)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test with disabled manager
 	config.Enabled = false
 	manager = NewManager(config)
 	err = manager.WarmCache(operations)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestManager_HashGenerationMethods(t *testing.T) {
