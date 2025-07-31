@@ -101,7 +101,7 @@ func (s *FileStore) listReleasesUnlocked(channel Channel) ([]*Release, error) {
 		return nil, errors.Wrap(err, "failed to read channel directory")
 	}
 
-	var releases []*Release
+	releases := make([]*Release, 0, len(entries))
 	for _, entry := range entries {
 		if entry.IsDir() || !hasJSONExtension(entry.Name()) {
 			continue
@@ -316,7 +316,7 @@ func (s *FileStore) updateChannelIndex(channel Channel) error {
 		Deprecated  bool   `json:"deprecated"`
 	}
 
-	var index []indexEntry
+	index := make([]indexEntry, 0, len(releases))
 	for _, release := range releases {
 		index = append(index, indexEntry{
 			Version:     release.Version,

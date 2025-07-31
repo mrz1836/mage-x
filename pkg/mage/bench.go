@@ -78,21 +78,21 @@ func (Bench) Compare() error {
 	}
 
 	// Get benchmark files
-	old := utils.GetEnv("BENCH_OLD", "old.txt")
-	new := utils.GetEnv("BENCH_NEW", "new.txt")
+	oldBenchFile := utils.GetEnv("BENCH_OLD", "old.txt")
+	newBenchFile := utils.GetEnv("BENCH_NEW", "new.txt")
 
 	// Check if files exist
-	if !utils.FileExists(old) {
-		return fmt.Errorf("old benchmark file not found: %s", old)
+	if !utils.FileExists(oldBenchFile) {
+		return fmt.Errorf("old benchmark file not found: %s", oldBenchFile)
 	}
-	if !utils.FileExists(new) {
-		return fmt.Errorf("new benchmark file not found: %s", new)
+	if !utils.FileExists(newBenchFile) {
+		return fmt.Errorf("new benchmark file not found: %s", newBenchFile)
 	}
 
-	utils.Info("Comparing %s vs %s", old, new)
+	utils.Info("Comparing %s vs %s", oldBenchFile, newBenchFile)
 
 	// Run benchstat
-	return GetRunner().RunCmd("benchstat", old, new)
+	return GetRunner().RunCmd("benchstat", oldBenchFile, newBenchFile)
 }
 
 // Save saves current benchmark results

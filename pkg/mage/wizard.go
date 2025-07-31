@@ -798,7 +798,7 @@ func (s *WorkflowsStep) promptChoice(ctx *WizardContext, prompt string, choices 
 	}
 }
 
-func (s *WorkflowsStep) promptInt(ctx *WizardContext, prompt string, defaultValue, min, max int) int {
+func (s *WorkflowsStep) promptInt(ctx *WizardContext, prompt string, defaultValue, minValue, maxValue int) int {
 	for {
 		fmt.Printf("%s [%d]: ", prompt, defaultValue)
 		ctx.Scanner.Scan()
@@ -813,10 +813,10 @@ func (s *WorkflowsStep) promptInt(ctx *WizardContext, prompt string, defaultValu
 		}
 
 		if value, err := strconv.Atoi(input); err == nil {
-			if value >= min && value <= max {
+			if value >= minValue && value <= maxValue {
 				return value
 			}
-			utils.Error("Value must be between %d and %d", min, max)
+			utils.Error("Value must be between %d and %d", minValue, maxValue)
 		} else {
 			utils.Error("Please enter a valid number")
 		}

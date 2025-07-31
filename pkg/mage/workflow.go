@@ -614,10 +614,8 @@ func getExecutionsDirectory() string {
 }
 
 func discoverWorkflows(dir string) ([]WorkflowDefinition, error) {
-	var workflows []WorkflowDefinition
-
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return workflows, nil
+		return []WorkflowDefinition{}, nil
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -625,6 +623,7 @@ func discoverWorkflows(dir string) ([]WorkflowDefinition, error) {
 		return nil, err
 	}
 
+	workflows := make([]WorkflowDefinition, 0, len(entries))
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
@@ -965,8 +964,7 @@ func getWorkflowHistory(workflowName string, limit int) ([]WorkflowExecution, er
 		return nil, err
 	}
 
-	var executions []WorkflowExecution
-
+	executions := make([]WorkflowExecution, 0, len(entries))
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue

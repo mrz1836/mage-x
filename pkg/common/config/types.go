@@ -156,7 +156,7 @@ func (m *configManagerImpl) Save(config *MageConfig, path string) error {
 
 	// Detect format from file extension
 	ext := strings.ToLower(filepath.Ext(path))
-	format := "yaml"
+	var format string
 	switch ext {
 	case ".json":
 		format = "json"

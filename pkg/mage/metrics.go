@@ -273,7 +273,12 @@ func countLines(pattern string, excludeDirs []string) (int, error) {
 
 		// Check if file matches pattern
 		matched, err := filepath.Match(pattern, filepath.Base(path))
-		if err != nil || !matched {
+		if err != nil {
+			// Log error but continue to check other files
+			utils.Debug("line count: failed to match pattern for %s: %v", path, err)
+			return nil
+		}
+		if !matched {
 			return nil
 		}
 
@@ -281,6 +286,8 @@ func countLines(pattern string, excludeDirs []string) (int, error) {
 		fileOps := fileops.New()
 		content, err := fileOps.File.ReadFile(path)
 		if err != nil {
+			// Log error but continue to count other files
+			utils.Debug("line count: failed to read file %s: %v", path, err)
 			return nil
 		}
 
@@ -327,6 +334,8 @@ func countGoLines(excludeDirs []string) (int, error) {
 		fileOps := fileops.New()
 		content, err := fileOps.File.ReadFile(path)
 		if err != nil {
+			// Log error but continue to count other files
+			utils.Debug("line count: failed to read file %s: %v", path, err)
 			return nil
 		}
 

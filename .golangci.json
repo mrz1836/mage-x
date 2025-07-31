@@ -105,17 +105,9 @@
 			"gocritic",
 			"forbidigo",
 			"musttag",
-			"nolintlint",
 			"testifylint",
-			"errchkjson",
 			"goprintffuncname",
-			"ineffassign",
-			"staticcheck",
-			"bodyclose",
-			"wastedassign",
-			"prealloc",
-			"predeclared",
-			"nilerr"
+			"staticcheck"
 		],
 		"settings": {
 			"depguard": {

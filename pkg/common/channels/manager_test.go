@@ -60,7 +60,7 @@ func (m *MockStore) ListReleases(channel Channel) ([]*Release, error) {
 		return []*Release{}, nil
 	}
 
-	var releases []*Release
+	releases := make([]*Release, 0, len(channelReleases))
 	for _, release := range channelReleases {
 		releases = append(releases, release)
 	}

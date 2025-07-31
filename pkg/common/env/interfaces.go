@@ -114,7 +114,7 @@ type EnvValidator interface {
 	Required(keys ...string) EnvValidator
 	NotEmpty(keys ...string) EnvValidator
 	Pattern(key, pattern string) EnvValidator
-	Range(key string, min, max interface{}) EnvValidator
+	Range(key string, minValue, maxValue interface{}) EnvValidator
 	OneOf(key string, values ...string) EnvValidator
 }
 

@@ -479,7 +479,7 @@ func findFuzzPackages() []string {
 		}
 	}
 
-	var packages []string
+	packages := make([]string, 0, len(packageMap))
 	for pkg := range packageMap {
 		packages = append(packages, pkg)
 	}

@@ -393,7 +393,9 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 		"version": "1.0.0",
 	}
 	
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 // APIHandler handles API requests
@@ -407,7 +409,9 @@ func APIHandler(w http.ResponseWriter, r *http.Request) {
 		handleAPIPost(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed"}); err != nil {
+			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -418,7 +422,9 @@ func handleAPIGet(w http.ResponseWriter, r *http.Request) {
 		"method":  r.Method,
 	}
 	
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func handleAPIPost(w http.ResponseWriter, r *http.Request) {
@@ -426,7 +432,9 @@ func handleAPIPost(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid JSON"})
+		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": "Invalid JSON"}); encErr != nil {
+			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
+		}
 		return
 	}
 	
@@ -435,7 +443,9 @@ func handleAPIPost(w http.ResponseWriter, r *http.Request) {
 		"data":    requestData,
 	}
 	
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 `
 }

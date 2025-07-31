@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
 // DefaultPathWatcher implements the PathWatcher interface
@@ -192,7 +194,9 @@ func (w *DefaultPathWatcher) checkForChanges() {
 	for watchPath, eventMask := range watchedPaths {
 		err := filepath.Walk(watchPath, func(path string, info fs.FileInfo, err error) error {
 			if err != nil {
-				return nil // Continue walking
+				// Log error but continue walking to check other files
+				utils.Debug("path watcher: skipping path %s due to error: %v", path, err)
+				return nil
 			}
 
 			// Skip if not recursive and not in the root directory

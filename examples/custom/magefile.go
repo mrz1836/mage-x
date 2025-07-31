@@ -124,7 +124,10 @@ func deployProd() error {
 	// Confirm production deployment
 	fmt.Print("Are you sure you want to deploy to PRODUCTION? (yes/no): ")
 	var response string
-	_, _ = fmt.Scanln(&response) // Ignore error - user input is optional
+	if _, err := fmt.Scanln(&response); err != nil {
+		// Continue with empty response if user input fails
+		response = ""
+	}
 
 	if response != "yes" {
 		fmt.Println("❌ Production deployment canceled")
@@ -448,6 +451,11 @@ func Clean() error {
 	var b Build
 	mg.Deps(b.Clean)
 
+	return cleanupArtifacts()
+}
+
+// cleanupArtifacts performs additional cleanup of build artifacts
+func cleanupArtifacts() error {
 	// Clean additional project files
 	toRemove := []string{
 		"tmp/",
@@ -463,7 +471,9 @@ func Clean() error {
 	for _, pattern := range toRemove {
 		fmt.Printf("Removing %s\n", pattern)
 		// Ignore errors for cleanup - files may not exist
-		_ = sh.Run("rm", "-rf", pattern)
+		if err := sh.Run("rm", "-rf", pattern); err != nil {
+			fmt.Printf("Warning: failed to remove %s: %v\n", pattern, err)
+		}
 	}
 
 	fmt.Println("✅ Cleanup completed!")

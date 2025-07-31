@@ -440,8 +440,8 @@ func (v *DefaultEnvValidator) Pattern(key, pattern string) EnvValidator {
 }
 
 // Range adds range validation for a key
-func (v *DefaultEnvValidator) Range(key string, min, max interface{}) EnvValidator {
-	if err := v.AddRule(key, &RangeRule{Min: min, Max: max}); err != nil {
+func (v *DefaultEnvValidator) Range(key string, minValue, maxValue interface{}) EnvValidator {
+	if err := v.AddRule(key, &RangeRule{Min: minValue, Max: maxValue}); err != nil {
 		// Log error but continue
 	}
 	return v

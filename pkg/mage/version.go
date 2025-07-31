@@ -40,7 +40,7 @@ type VersionReleaseAsset struct {
 
 var (
 	// Version info that can be set at build time
-	version   = "dev"     //nolint:gochecknoglobals // Build-time variables
+	version   = "dev"
 	commit    = "unknown" //nolint:gochecknoglobals // Build-time variables
 	buildDate = "unknown" //nolint:gochecknoglobals // Build-time variables
 )

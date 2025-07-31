@@ -520,7 +520,7 @@ func (p *Progress) render() {
 	}
 
 	// Add emoji based on completion
-	emoji := ""
+	var emoji string
 	if p.current >= p.total {
 		emoji = " ✓"
 	} else if p.current > 0 {

@@ -424,7 +424,7 @@ func formatErrorContext(context ErrorContext) string {
 		return "No additional context"
 	}
 
-	var lines []string
+	lines := make([]string, 0, len(context.Fields))
 	for key, value := range context.Fields {
 		lines = append(lines, fmt.Sprintf("  %s: %v", key, value))
 	}

@@ -193,8 +193,8 @@ func (l *LoggingTest) withLogging(operation string, fn func() error) error {
 
 // Global logger setup
 var (
-	buildLogger = log.New(os.Stdout, "[BUILD] ", log.LstdFlags|log.Lshortfile)
-	testLogger  = log.New(os.Stdout, "[TEST]  ", log.LstdFlags|log.Lshortfile)
+	buildLogger = log.New(os.Stdout, "[BUILD] ", log.LstdFlags|log.Lshortfile) //nolint:gochecknoglobals // Example code demonstrating global loggers
+	testLogger  = log.New(os.Stdout, "[TEST]  ", log.LstdFlags|log.Lshortfile) //nolint:gochecknoglobals // Example code demonstrating global loggers
 )
 
 // Build with comprehensive logging
@@ -245,8 +245,8 @@ func CI() error {
 
 	// Create loggers for different operations
 	lintLogger := log.New(os.Stdout, "[LINT]  ", log.LstdFlags)
-	buildLogger := log.New(os.Stdout, "[BUILD] ", log.LstdFlags)
-	testLogger := log.New(os.Stdout, "[TEST]  ", log.LstdFlags)
+	localBuildLogger := log.New(os.Stdout, "[BUILD] ", log.LstdFlags)
+	localTestLogger := log.New(os.Stdout, "[TEST]  ", log.LstdFlags)
 
 	// Lint with logging
 	lintLogger.Println("🔍 Starting linting operation...")
@@ -259,14 +259,14 @@ func CI() error {
 
 	// Test with logging middleware
 	baseTest := mage.NewTestNamespace()
-	loggingTest := NewLoggingTest(baseTest, testLogger)
+	loggingTest := NewLoggingTest(baseTest, localTestLogger)
 	if err := loggingTest.Coverage(); err != nil {
 		return fmt.Errorf("tests failed: %w", err)
 	}
 
 	// Build with logging middleware
 	baseBuild := mage.NewBuildNamespace()
-	loggingBuild := NewLoggingBuild(baseBuild, buildLogger)
+	loggingBuild := NewLoggingBuild(baseBuild, localBuildLogger)
 	if err := loggingBuild.Default(); err != nil {
 		return fmt.Errorf("build failed: %w", err)
 	}

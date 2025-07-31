@@ -895,7 +895,7 @@ func loadIntegrationConfigurations() ([]IntegrationConfig, error) {
 		return nil, err
 	}
 
-	var integrations []IntegrationConfig
+	integrations := make([]IntegrationConfig, 0, len(entries))
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue

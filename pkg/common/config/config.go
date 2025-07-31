@@ -80,7 +80,8 @@ func (c *Config) buildConfigPaths(baseName string, searchDirs ...string) []strin
 	}
 
 	extensions := []string{".yaml", ".yml", ".json"}
-	var paths []string
+	// Preallocate: len(searchDirs) * (len(extensions) + 1) paths
+	paths := make([]string, 0, len(searchDirs)*(len(extensions)+1))
 
 	for _, dir := range searchDirs {
 		// Expand environment variables in directory paths

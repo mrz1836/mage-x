@@ -86,7 +86,7 @@ func (Help) Commands() error {
 	}
 
 	// Sort namespaces
-	var sortedNamespaces []string
+	sortedNamespaces := make([]string, 0, len(namespaces))
 	for ns := range namespaces {
 		sortedNamespaces = append(sortedNamespaces, ns)
 	}

@@ -117,7 +117,7 @@ var (
 	// loadedConfig holds the loaded configuration
 	loadedConfig *Config //nolint:gochecknoglobals // Required for singleton configuration
 	// errLoadConfig stores any error encountered during config loading
-	errLoadConfig error //nolint:gochecknoglobals // Required for singleton error handling
+	errLoadConfig error
 	// cfg is a backward compatibility variable for tests
 	cfg *Config //nolint:gochecknoglobals // Backward compatibility for tests
 )

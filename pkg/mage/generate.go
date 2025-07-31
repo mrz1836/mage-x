@@ -288,7 +288,12 @@ func checkForGenerateDirectives() (bool, []string) {
 	hasGenerate := false
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+		if err != nil {
+			// Log error but continue walking to find other generate directives
+			utils.Debug("generate check: skipping path %s due to error: %v", path, err)
+			return nil
+		}
+		if info.IsDir() {
 			return nil
 		}
 
@@ -301,6 +306,8 @@ func checkForGenerateDirectives() (bool, []string) {
 			fileOps := fileops.New()
 			content, err := fileOps.File.ReadFile(path)
 			if err != nil {
+				// Log error but continue to check other files
+				utils.Debug("generate check: failed to read file %s: %v", path, err)
 				return nil
 			}
 
@@ -326,7 +333,12 @@ func findInterfaces() []Interface {
 	// This is a simplified version - in reality, you'd use go/ast to parse
 	// For now, we'll look for common patterns
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+		if err != nil {
+			// Log error but continue walking to find other interfaces
+			utils.Debug("interface search: skipping path %s due to error: %v", path, err)
+			return nil
+		}
+		if info.IsDir() {
 			return nil
 		}
 

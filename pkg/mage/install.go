@@ -157,7 +157,7 @@ func (Install) Go() error {
 	}
 
 	// Build install command
-	pkg := module
+	var pkg string
 	if version != "latest" {
 		pkg = fmt.Sprintf("%s@%s", module, version)
 	} else {

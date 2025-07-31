@@ -420,7 +420,9 @@ func (c *BuildCache) GetStats() (*CacheStats, error) {
 	// Calculate cache size and entry count
 	err := filepath.WalkDir(c.cacheDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // Continue on errors
+			// Log error but continue walking to gather partial stats
+			utils.Debug("cache stats: skipping path %s due to error: %v", path, err)
+			return nil
 		}
 		if !d.IsDir() {
 			info, err := d.Info()
@@ -452,7 +454,9 @@ func (c *BuildCache) Cleanup() error {
 	removed := 0
 	err := filepath.WalkDir(c.cacheDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // Continue on errors
+			// Log error but continue cleanup to remove what we can
+			utils.Debug("cache cleanup: skipping path %s due to error: %v", path, err)
+			return nil
 		}
 
 		if !d.IsDir() && strings.HasSuffix(path, ".json") {

@@ -66,7 +66,7 @@ func (Build) Default() error {
 	outputPath := filepath.Join(cfg.Build.Output, binary)
 
 	// Check if we have a cmd directory with main packages
-	packagePath := ""
+	var packagePath string
 	if utils.DirExists("cmd/mage-init") {
 		packagePath = "./cmd/mage-init"
 	} else if utils.DirExists("cmd/example") {
@@ -242,10 +242,6 @@ func (b Build) Platform(platform string) error {
 		utils.GetBinaryExt(p))
 
 	outputPath := filepath.Join(cfg.Build.Output, binary)
-
-	env := os.Environ()
-	env = append(env, fmt.Sprintf("GOOS=%s", p.OS))
-	env = append(env, fmt.Sprintf("GOARCH=%s", p.Arch))
 
 	args := []string{"build"}
 	args = append(args, buildFlags(cfg)...)

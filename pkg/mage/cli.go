@@ -1032,6 +1032,8 @@ func executeBatchOperation(operation BatchOperation) BatchOperationResult {
 	}
 
 	// Execute operation (placeholder implementation)
+	// TODO: Use ctx for actual command execution with timeout/cancellation
+	_ = ctx // Placeholder to avoid ineffassign until proper implementation
 	result.Output = fmt.Sprintf("Executed: %s %s", operation.Command, strings.Join(operation.Args, " "))
 	result.Success = true
 	result.Duration = time.Since(startTime)

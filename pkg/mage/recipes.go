@@ -586,7 +586,7 @@ func executeRecipeStep(step RecipeStep, context *RecipeContext) error {
 	// Expand templates in command and args
 	command := expandTemplate(step.Command, context)
 
-	var args []string
+	args := make([]string, 0, len(step.Args))
 	for _, arg := range step.Args {
 		args = append(args, expandTemplate(arg, context))
 	}
