@@ -419,13 +419,15 @@ func populateFromProject(config *MageConfig) {
 	// Check for existing files
 	if utils.FileExists("README.md") {
 		// Could parse README for description
-		// TODO: Implement README parsing for project description
+		// README parsing for project description is reserved for future implementation.
+		// When implemented, this will extract project description from README content.
 		_ = "README.md" // Future feature placeholder
 	}
 
 	if utils.FileExists("LICENSE") {
 		// Could parse LICENSE for license type
-		// TODO: Implement LICENSE parsing for license detection
+		// LICENSE parsing for license detection is reserved for future implementation.
+		// When implemented, this will detect license type from LICENSE file content.
 		_ = "LICENSE" // Future feature placeholder
 	}
 

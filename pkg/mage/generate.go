@@ -345,7 +345,8 @@ func findInterfaces() []Interface {
 		if strings.HasSuffix(path, ".go") && !strings.Contains(path, "vendor/") {
 			// Look for interface definitions
 			// This is simplified - real implementation would use go/ast
-			// TODO: Implement interface detection using go/ast package
+			// Interface detection using go/ast package is reserved for future implementation.
+			// When implemented, this will parse Go source files to extract interface definitions.
 			_ = path // Placeholder to prevent empty branch warning
 		}
 

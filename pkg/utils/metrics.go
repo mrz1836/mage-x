@@ -70,11 +70,16 @@ type Metric struct {
 type MetricType string
 
 const (
-	MetricTypeCounter   MetricType = "counter"
-	MetricTypeGauge     MetricType = "gauge"
+	// MetricTypeCounter represents a monotonically increasing counter metric
+	MetricTypeCounter MetricType = "counter"
+	// MetricTypeGauge represents a gauge metric that can go up or down
+	MetricTypeGauge MetricType = "gauge"
+	// MetricTypeHistogram represents a histogram metric for distribution of values
 	MetricTypeHistogram MetricType = "histogram"
-	MetricTypeTimer     MetricType = "timer"
-	MetricTypeSummary   MetricType = "summary"
+	// MetricTypeTimer represents a timer metric for measuring durations
+	MetricTypeTimer MetricType = "timer"
+	// MetricTypeSummary represents a summary metric with quantiles
+	MetricTypeSummary MetricType = "summary"
 )
 
 // PerformanceTimer tracks execution time and performance metrics
@@ -805,7 +810,7 @@ func (mc *MetricsCollector) generateRecommendations(report *PerformanceReport) [
 	return recommendations
 }
 
-func (mc *MetricsCollector) generateComparisons(metrics []*Metric, period string) map[string]PerformanceComparison {
+func (mc *MetricsCollector) generateComparisons(_ []*Metric, period string) map[string]PerformanceComparison {
 	comparisons := make(map[string]PerformanceComparison)
 
 	// This would compare current period with previous period
@@ -909,7 +914,7 @@ func GetCurrentResourceMetrics() ResourceMetrics {
 	return GetMetricsCollector().GetCurrentResourceMetrics()
 }
 
-// Simple JSON storage implementation
+// JSONStorage provides simple JSON-based storage implementation for metrics
 type JSONStorage struct {
 	storagePath string
 	mu          sync.RWMutex

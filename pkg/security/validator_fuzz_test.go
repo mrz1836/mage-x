@@ -405,7 +405,7 @@ func FuzzValidateEmail(f *testing.F) {
 			assert.Contains(t, parts[1], ".", "Email domain should contain at least one dot")
 
 			// Should not be just whitespace
-			assert.NotEqual(t, strings.TrimSpace(email), "", "Email is just whitespace")
+			assert.NotEmpty(t, strings.TrimSpace(email), "Email is just whitespace")
 		}
 	})
 }

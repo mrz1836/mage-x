@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -31,19 +30,19 @@ func (ts *EnterpriseSimpleTestSuite) TestNewEnterpriseConfiguration() {
 	ts.Run("creates default enterprise configuration", func() {
 		config := NewEnterpriseConfiguration()
 
-		require.NotNil(ts.T(), config)
-		require.NotNil(ts.T(), config.Organization)
-		require.NotNil(ts.T(), config.Security)
-		require.NotNil(ts.T(), config.Workflows)
-		require.NotNil(ts.T(), config.Analytics)
-		require.NotNil(ts.T(), config.Audit)
-		require.NotNil(ts.T(), config.CLI)
-		require.NotNil(ts.T(), config.Repositories)
-		require.NotNil(ts.T(), config.Compliance)
-		require.NotNil(ts.T(), config.Monitoring)
-		require.NotNil(ts.T(), config.Deployment)
-		require.NotNil(ts.T(), config.Backup)
-		require.NotNil(ts.T(), config.Notifications)
+		ts.Require().NotNil(config)
+		ts.Require().NotNil(config.Organization)
+		ts.Require().NotNil(config.Security)
+		ts.Require().NotNil(config.Workflows)
+		ts.Require().NotNil(config.Analytics)
+		ts.Require().NotNil(config.Audit)
+		ts.Require().NotNil(config.CLI)
+		ts.Require().NotNil(config.Repositories)
+		ts.Require().NotNil(config.Compliance)
+		ts.Require().NotNil(config.Monitoring)
+		ts.Require().NotNil(config.Deployment)
+		ts.Require().NotNil(config.Backup)
+		ts.Require().NotNil(config.Notifications)
 	})
 }
 
@@ -51,7 +50,7 @@ func (ts *EnterpriseSimpleTestSuite) TestNewEnterpriseConfiguration() {
 func (ts *EnterpriseSimpleTestSuite) TestNewConfigurationValidator() {
 	ts.Run("creates configuration validator", func() {
 		validator := NewConfigurationValidator()
-		require.NotNil(ts.T(), validator)
+		ts.Require().NotNil(validator)
 	})
 }
 
@@ -78,8 +77,8 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists(".mage"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists(".mage"))
 	})
 
 	ts.Run("Validate method handles missing config", func() {
@@ -92,8 +91,8 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "failed to load enterprise configuration")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "failed to load enterprise configuration")
 	})
 
 	ts.Run("Update method handles missing config", func() {
@@ -117,8 +116,8 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "failed to load current configuration")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "failed to load current configuration")
 	})
 
 	ts.Run("Export method handles missing config", func() {
@@ -131,8 +130,8 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "failed to load enterprise configuration")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "failed to load enterprise configuration")
 	})
 
 	ts.Run("Import method handles missing import file", func() {
@@ -156,8 +155,8 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "import file not found")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "import file not found")
 	})
 
 	ts.Run("Schema method generates schema", func() {
@@ -170,8 +169,8 @@ func (ts *EnterpriseSimpleTestSuite) TestEnterpriseConfigNamespace() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists("enterprise-config-schema.json"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists("enterprise-config-schema.json"))
 	})
 }
 
@@ -180,25 +179,25 @@ func (ts *EnterpriseSimpleTestSuite) TestConfigBasicMethods() {
 	ts.Run("BinaryName with default config", func() {
 		TestResetConfig() // Reset global config
 		name := BinaryName()
-		require.Equal(ts.T(), "app", name) // default value
+		ts.Require().Equal("app", name) // default value
 	})
 
 	ts.Run("IsVerbose with default config", func() {
 		TestResetConfig() // Reset global config
 		verbose := IsVerbose()
-		require.False(ts.T(), verbose)
+		ts.Require().False(verbose)
 	})
 
 	ts.Run("HasEnterpriseConfig with no config", func() {
 		TestResetConfig() // Reset global config
 		hasEnterprise := HasEnterpriseConfig()
-		require.False(ts.T(), hasEnterprise)
+		ts.Require().False(hasEnterprise)
 	})
 
 	ts.Run("GetEnterpriseConfig with no config", func() {
 		TestResetConfig() // Reset global config
 		enterpriseConfig := GetEnterpriseConfig()
-		require.Nil(ts.T(), enterpriseConfig)
+		ts.Require().Nil(enterpriseConfig)
 	})
 }
 
@@ -214,8 +213,8 @@ func (ts *EnterpriseSimpleTestSuite) TestConfigSaveMethods() {
 
 		err := SaveConfig(config)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists(".mage.yaml"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists(".mage.yaml"))
 	})
 
 	ts.Run("SaveEnterpriseConfig saves enterprise config", func() {
@@ -224,9 +223,9 @@ func (ts *EnterpriseSimpleTestSuite) TestConfigSaveMethods() {
 
 		err := SaveEnterpriseConfig(enterpriseConfig)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists(".mage"))
-		require.True(ts.T(), ts.env.FileExists(".mage/enterprise.yaml"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists(".mage"))
+		ts.Require().True(ts.env.FileExists(".mage/enterprise.yaml"))
 	})
 
 	ts.Run("SetupEnterpriseConfig creates new config", func() {
@@ -243,9 +242,9 @@ func (ts *EnterpriseSimpleTestSuite) TestConfigSaveMethods() {
 
 		err := SetupEnterpriseConfig()
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists(".mage"))
-		require.True(ts.T(), ts.env.FileExists(".mage/enterprise.yaml"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists(".mage"))
+		ts.Require().True(ts.env.FileExists(".mage/enterprise.yaml"))
 	})
 }
 

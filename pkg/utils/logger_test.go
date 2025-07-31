@@ -293,12 +293,12 @@ func TestLogger_Context(t *testing.T) {
 		// Test with known context
 		message := logger.GetContextualMessage("morning")
 		if message != "" {
-			assert.True(t, len(message) > 0)
+			assert.NotEmpty(t, message)
 		}
 
 		// Test with unknown context
 		message = logger.GetContextualMessage("unknown")
-		assert.Equal(t, "", message)
+		assert.Empty(t, message)
 	})
 }
 

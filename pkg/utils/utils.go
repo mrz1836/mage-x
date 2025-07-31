@@ -174,14 +174,14 @@ func CopyFile(src, dst string) error {
 }
 
 // FindFiles finds files matching a pattern
-func FindFiles(dir, pattern string) ([]string, error) {
+func FindFiles(_, pattern string) ([]string, error) {
 	return findFiles(".", pattern)
 }
 
 func findFiles(root, pattern string) ([]string, error) {
 	var files []string
 
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(root, func(path string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

@@ -231,7 +231,7 @@ func TestSecureExecutor_FilterEnvironment(t *testing.T) {
 			}
 
 			// Check total count
-			assert.Equal(t, len(tt.expected), len(result))
+			assert.Len(t, result, len(tt.expected))
 		})
 	}
 }
@@ -264,7 +264,7 @@ func TestSecureExecutor_Execute(t *testing.T) {
 			command: "echo",
 			args:    []string{"test"},
 			wantErr: false,
-			check: func(t *testing.T, e *SecureExecutor, err error) {
+			check: func(t *testing.T, _ *SecureExecutor, err error) {
 				assert.NoError(t, err)
 				// In dry run, command should not actually execute
 			},
@@ -287,7 +287,7 @@ func TestSecureExecutor_Execute(t *testing.T) {
 				return []string{"2"}
 			}(),
 			wantErr: true,
-			check: func(t *testing.T, e *SecureExecutor, err error) {
+			check: func(t *testing.T, _ *SecureExecutor, err error) {
 				assert.Error(t, err)
 				// The error might be different on various platforms
 				errMsg := err.Error()
@@ -311,7 +311,7 @@ func TestSecureExecutor_Execute(t *testing.T) {
 		},
 		{
 			name: "invalid command",
-			setup: func(e *SecureExecutor) {
+			setup: func(_ *SecureExecutor) {
 				// No special setup needed
 			},
 			command: "nonexistentcommand12345",
@@ -320,13 +320,13 @@ func TestSecureExecutor_Execute(t *testing.T) {
 		},
 		{
 			name: "command with dangerous args rejected",
-			setup: func(e *SecureExecutor) {
+			setup: func(_ *SecureExecutor) {
 				// No special setup needed
 			},
 			command: "echo",
 			args:    []string{"$(rm -rf /)"},
 			wantErr: true,
-			check: func(t *testing.T, e *SecureExecutor, err error) {
+			check: func(t *testing.T, _ *SecureExecutor, err error) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "command validation failed")
 			},

@@ -42,7 +42,7 @@ func (ts *ModTestSuite) TestMod_Download() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Download_DownloadError tests Download function with download error
@@ -75,7 +75,7 @@ func (ts *ModTestSuite) TestMod_Download_VerifyFails() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Tidy tests the Tidy function
@@ -91,7 +91,7 @@ func (ts *ModTestSuite) TestMod_Tidy() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Tidy_WithChanges tests Tidy function when files are changed
@@ -107,7 +107,7 @@ func (ts *ModTestSuite) TestMod_Tidy_WithChanges() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Tidy_Error tests Tidy function with error
@@ -142,7 +142,7 @@ func (ts *ModTestSuite) TestMod_Update() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Update_NoUpdates tests Update function when no updates are available
@@ -158,7 +158,7 @@ func (ts *ModTestSuite) TestMod_Update_NoUpdates() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Update_ListError tests Update function with list error
@@ -219,7 +219,7 @@ func (ts *ModTestSuite) TestMod_Update_TidyError() {
 
 // TestMod_Clean tests the Clean function with FORCE environment variable
 func (ts *ModTestSuite) TestMod_Clean() {
-	require.NoError(ts.T(), os.Setenv("FORCE", "true"))
+	ts.Require().NoError(os.Setenv("FORCE", "true"))
 	defer func() {
 		if err := os.Unsetenv("FORCE"); err != nil {
 			ts.T().Logf("Failed to unset FORCE: %v", err)
@@ -236,7 +236,7 @@ func (ts *ModTestSuite) TestMod_Clean() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Clean_NoForce tests Clean function without FORCE environment variable
@@ -253,14 +253,14 @@ func (ts *ModTestSuite) TestMod_Clean_NoForce() {
 		},
 	)
 
-	require.Error(ts.T(), err)
-	require.Contains(ts.T(), err.Error(), "operation canceled")
+	ts.Require().Error(err)
+	ts.Require().Contains(err.Error(), "operation canceled")
 }
 
 // TestMod_Clean_Error tests Clean function with command error
 func (ts *ModTestSuite) TestMod_Clean_Error() {
 	expectedError := require.New(ts.T())
-	require.NoError(ts.T(), os.Setenv("FORCE", "true"))
+	ts.Require().NoError(os.Setenv("FORCE", "true"))
 	defer func() {
 		if err := os.Unsetenv("FORCE"); err != nil {
 			ts.T().Logf("Failed to unset FORCE: %v", err)
@@ -294,13 +294,13 @@ func (ts *ModTestSuite) TestMod_Graph() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Graph_WithGraphFile tests Graph function with GRAPH_FILE environment variable
 func (ts *ModTestSuite) TestMod_Graph_WithGraphFile() {
 	graphOutput := "test/module github.com/stretchr/testify@v1.9.0"
-	require.NoError(ts.T(), os.Setenv("GRAPH_FILE", "test-graph.txt"))
+	ts.Require().NoError(os.Setenv("GRAPH_FILE", "test-graph.txt"))
 	defer func() {
 		if err := os.Unsetenv("GRAPH_FILE"); err != nil {
 			ts.T().Logf("Failed to unset GRAPH_FILE: %v", err)
@@ -317,7 +317,7 @@ func (ts *ModTestSuite) TestMod_Graph_WithGraphFile() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Graph_Error tests Graph function with error
@@ -339,7 +339,7 @@ func (ts *ModTestSuite) TestMod_Graph_Error() {
 
 // TestMod_Why tests the Why function with MODULE environment variable
 func (ts *ModTestSuite) TestMod_Why() {
-	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/pkg/errors"))
+	ts.Require().NoError(os.Setenv("MODULE", "github.com/pkg/errors"))
 	defer func() {
 		if err := os.Unsetenv("MODULE"); err != nil {
 			ts.T().Logf("Failed to unset MODULE: %v", err)
@@ -358,7 +358,7 @@ func (ts *ModTestSuite) TestMod_Why() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Why_NoModule tests Why function without MODULE environment variable
@@ -375,13 +375,13 @@ func (ts *ModTestSuite) TestMod_Why_NoModule() {
 		},
 	)
 
-	require.Error(ts.T(), err)
-	require.Contains(ts.T(), err.Error(), "MODULE environment variable is required")
+	ts.Require().Error(err)
+	ts.Require().Contains(err.Error(), "MODULE environment variable is required")
 }
 
 // TestMod_Why_IndirectDependency tests Why function for indirect dependency
 func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
-	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/indirect/dep"))
+	ts.Require().NoError(os.Setenv("MODULE", "github.com/indirect/dep"))
 	defer func() {
 		if err := os.Unsetenv("MODULE"); err != nil {
 			ts.T().Logf("Failed to unset MODULE: %v", err)
@@ -400,13 +400,13 @@ func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Why_Error tests Why function with error
 func (ts *ModTestSuite) TestMod_Why_Error() {
 	expectedError := require.New(ts.T())
-	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/pkg/errors"))
+	ts.Require().NoError(os.Setenv("MODULE", "github.com/pkg/errors"))
 	defer func() {
 		if err := os.Unsetenv("MODULE"); err != nil {
 			ts.T().Logf("Failed to unset MODULE: %v", err)
@@ -439,7 +439,7 @@ func (ts *ModTestSuite) TestMod_Vendor() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Vendor_Error tests Vendor function with error
@@ -465,7 +465,7 @@ func (ts *ModTestSuite) TestMod_Init() {
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
-	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/example/project"))
+	ts.Require().NoError(os.Setenv("MODULE", "github.com/example/project"))
 	defer func() {
 		if err := os.Unsetenv("MODULE"); err != nil {
 			ts.T().Logf("Failed to unset MODULE: %v", err)
@@ -482,7 +482,7 @@ func (ts *ModTestSuite) TestMod_Init() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Init_WithGitRemote tests Init function inferring module name from git remote
@@ -506,12 +506,12 @@ func (ts *ModTestSuite) TestMod_Init_WithGitRemote() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Init_GoModExists tests Init function when go.mod already exists
 func (ts *ModTestSuite) TestMod_Init_GoModExists() {
-	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/example/project"))
+	ts.Require().NoError(os.Setenv("MODULE", "github.com/example/project"))
 	defer func() {
 		if err := os.Unsetenv("MODULE"); err != nil {
 			ts.T().Logf("Failed to unset MODULE: %v", err)
@@ -526,8 +526,8 @@ func (ts *ModTestSuite) TestMod_Init_GoModExists() {
 		},
 	)
 
-	require.Error(ts.T(), err)
-	require.Contains(ts.T(), err.Error(), "go.mod already exists")
+	ts.Require().Error(err)
+	ts.Require().Contains(err.Error(), "go.mod already exists")
 }
 
 // TestMod_Init_NoModule tests Init function without MODULE or git remote
@@ -549,8 +549,8 @@ func (ts *ModTestSuite) TestMod_Init_NoModule() {
 		},
 	)
 
-	require.Error(ts.T(), err)
-	require.Contains(ts.T(), err.Error(), "MODULE environment variable is required")
+	ts.Require().Error(err)
+	ts.Require().Contains(err.Error(), "MODULE environment variable is required")
 }
 
 // TestMod_Init_InitError tests Init function with init command error
@@ -560,7 +560,7 @@ func (ts *ModTestSuite) TestMod_Init_InitError() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
 	expectedError := require.New(ts.T())
-	require.NoError(ts.T(), os.Setenv("MODULE", "github.com/example/project"))
+	ts.Require().NoError(os.Setenv("MODULE", "github.com/example/project"))
 	defer func() {
 		if err := os.Unsetenv("MODULE"); err != nil {
 			ts.T().Logf("Failed to unset MODULE: %v", err)
@@ -593,7 +593,7 @@ func (ts *ModTestSuite) TestMod_Verify() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Edit tests the Edit function
@@ -608,7 +608,7 @@ func (ts *ModTestSuite) TestMod_Edit() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_Get tests the Get function
@@ -623,7 +623,7 @@ func (ts *ModTestSuite) TestMod_Get() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_List tests the List function
@@ -638,7 +638,7 @@ func (ts *ModTestSuite) TestMod_List() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestMod_List_WithPattern tests the List function with patterns
@@ -653,7 +653,7 @@ func (ts *ModTestSuite) TestMod_List_WithPattern() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // Helper function tests
@@ -695,7 +695,7 @@ func (ts *ModTestSuite) TestGitURLToModulePath() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			result := gitURLToModulePath(tc.input)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }
@@ -734,7 +734,7 @@ func (ts *ModTestSuite) TestGetModCache() {
 		}
 
 		result := getModCache()
-		require.Equal(ts.T(), "/custom/modcache", result)
+		ts.Require().Equal("/custom/modcache", result)
 	})
 
 	ts.Run("with GOPATH", func() {
@@ -746,7 +746,7 @@ func (ts *ModTestSuite) TestGetModCache() {
 		}
 
 		result := getModCache()
-		require.Equal(ts.T(), "/custom/gopath/pkg/mod", result)
+		ts.Require().Equal("/custom/gopath/pkg/mod", result)
 	})
 
 	ts.Run("default location", func() {
@@ -758,7 +758,7 @@ func (ts *ModTestSuite) TestGetModCache() {
 		}
 
 		result := getModCache()
-		require.Contains(ts.T(), result, "go/pkg/mod")
+		ts.Require().Contains(result, "go/pkg/mod")
 	})
 }
 

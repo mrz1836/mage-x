@@ -42,7 +42,7 @@ func (ts *DepsTestSuite) TestDeps_Default() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Download tests the Download function
@@ -59,7 +59,7 @@ func (ts *DepsTestSuite) TestDeps_Download() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Download_Error tests Download function with error
@@ -95,7 +95,7 @@ func (ts *DepsTestSuite) TestDeps_Tidy() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Tidy_Error tests Tidy function with error
@@ -137,7 +137,7 @@ func (ts *DepsTestSuite) TestDeps_Update() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Update_ListError tests Update function with list error
@@ -195,7 +195,7 @@ func (ts *DepsTestSuite) TestDeps_Clean() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Clean_Error tests Clean function with error
@@ -231,7 +231,7 @@ func (ts *DepsTestSuite) TestDeps_Graph() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Why tests the Why function
@@ -248,7 +248,7 @@ func (ts *DepsTestSuite) TestDeps_Why() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Why_EmptyDep tests Why function with empty dependency
@@ -263,8 +263,8 @@ func (ts *DepsTestSuite) TestDeps_Why_EmptyDep() {
 		},
 	)
 
-	require.Error(ts.T(), err)
-	require.Contains(ts.T(), err.Error(), "dependency name required")
+	ts.Require().Error(err)
+	ts.Require().Contains(err.Error(), "dependency name required")
 }
 
 // TestDeps_Verify tests the Verify function
@@ -281,7 +281,7 @@ func (ts *DepsTestSuite) TestDeps_Verify() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Verify_Error tests Verify function with error
@@ -318,7 +318,7 @@ func (ts *DepsTestSuite) TestDeps_List() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Outdated tests the Outdated function
@@ -335,7 +335,7 @@ func (ts *DepsTestSuite) TestDeps_Outdated() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Outdated_WithUpdates tests Outdated function with available updates
@@ -352,7 +352,7 @@ func (ts *DepsTestSuite) TestDeps_Outdated_WithUpdates() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Outdated_Error tests Outdated function with error
@@ -388,7 +388,7 @@ func (ts *DepsTestSuite) TestDeps_Vendor() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Vendor_Error tests Vendor function with error
@@ -428,7 +428,7 @@ func (ts *DepsTestSuite) TestDeps_Init() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Init_EmptyModule tests Init function with empty module name
@@ -443,8 +443,8 @@ func (ts *DepsTestSuite) TestDeps_Init_EmptyModule() {
 		},
 	)
 
-	require.Error(ts.T(), err)
-	require.Contains(ts.T(), err.Error(), "module name required")
+	ts.Require().Error(err)
+	ts.Require().Contains(err.Error(), "module name required")
 }
 
 // TestDeps_Init_GoModExists tests Init function when go.mod already exists
@@ -460,8 +460,8 @@ func (ts *DepsTestSuite) TestDeps_Init_GoModExists() {
 		},
 	)
 
-	require.Error(ts.T(), err)
-	require.Contains(ts.T(), err.Error(), "go.mod already exists")
+	ts.Require().Error(err)
+	ts.Require().Contains(err.Error(), "go.mod already exists")
 }
 
 // TestDeps_Init_Error tests Init function with command error
@@ -501,7 +501,7 @@ func (ts *DepsTestSuite) TestDeps_Audit() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Licenses tests the Licenses function
@@ -518,7 +518,7 @@ func (ts *DepsTestSuite) TestDeps_Licenses() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDeps_Check tests the Check function
@@ -535,7 +535,7 @@ func (ts *DepsTestSuite) TestDeps_Check() {
 		},
 	)
 
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TestDepsTestSuite runs the test suite

@@ -153,8 +153,8 @@ type FormatNamespace interface {
 	// Yaml formats YAML files
 	Yaml() error
 
-	// Json formats JSON files
-	Json() error
+	// JSON formats JSON files
+	JSON() error
 
 	// Markdown formats Markdown files
 	Markdown() error

@@ -1,11 +1,9 @@
 package mage
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -42,7 +40,7 @@ func (ts *FormatTestSuite) TestFormatGofmt() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("files need formatting", func() {
@@ -58,7 +56,7 @@ func (ts *FormatTestSuite) TestFormatGofmt() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -76,7 +74,7 @@ func (ts *FormatTestSuite) TestFormatCheck() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -95,7 +93,7 @@ func (ts *FormatTestSuite) TestFormatInstallTools() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -113,7 +111,7 @@ func (ts *FormatTestSuite) TestFormatAll() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -131,7 +129,7 @@ func (ts *FormatTestSuite) TestFormatGo() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -149,7 +147,7 @@ func (ts *FormatTestSuite) TestFormatYAML() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -167,7 +165,7 @@ func (ts *FormatTestSuite) TestFormatYaml() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -185,7 +183,7 @@ func (ts *FormatTestSuite) TestFormatJSON() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -199,11 +197,11 @@ func (ts *FormatTestSuite) TestFormatJson() {
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
-				return ts.format.Json()
+				return ts.format.JSON()
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -221,7 +219,7 @@ func (ts *FormatTestSuite) TestFormatMarkdown() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -239,7 +237,7 @@ func (ts *FormatTestSuite) TestFormatSQL() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -257,7 +255,7 @@ func (ts *FormatTestSuite) TestFormatDockerfile() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -275,7 +273,7 @@ func (ts *FormatTestSuite) TestFormatShell() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -293,7 +291,7 @@ func (ts *FormatTestSuite) TestFormatFix() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -307,12 +305,12 @@ func (ts *FormatTestSuite) TestFormatHelperFunctions() {
 		ts.env.CreateFile("vendor/dep.go", "package dep")
 
 		files, err := findGoFiles()
-		require.NoError(ts.T(), err)
-		require.GreaterOrEqual(ts.T(), len(files), 2) // At least main.go and util.go
+		ts.Require().NoError(err)
+		ts.Require().GreaterOrEqual(len(files), 2) // At least main.go and util.go
 
 		// Check that .pb.go files are excluded
 		for _, file := range files {
-			require.False(ts.T(), strings.Contains(file, ".pb.go"))
+			ts.Require().NotContains(file, ".pb.go")
 		}
 	})
 
@@ -320,7 +318,7 @@ func (ts *FormatTestSuite) TestFormatHelperFunctions() {
 		input := []string{"", "file1.go", "", "file2.go", ""}
 		result := filterEmpty(input)
 		expected := []string{"file1.go", "file2.go"}
-		require.Equal(ts.T(), expected, result)
+		ts.Require().Equal(expected, result)
 	})
 }
 

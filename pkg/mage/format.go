@@ -295,11 +295,6 @@ func (Format) JSON() error {
 	return runner.RunCmd("echo", "Formatting JSON files")
 }
 
-// Json formats JSON files (alias for interface compatibility)
-func (Format) Json() error {
-	return Format{}.JSON()
-}
-
 // Markdown formats Markdown files
 func (Format) Markdown() error {
 	runner := GetRunner()

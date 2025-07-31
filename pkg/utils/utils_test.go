@@ -722,9 +722,9 @@ func TestFileSystemOperations(t *testing.T) {
 		// Note: This test may be sensitive to the current working directory
 		// We'll test the basic functionality but the actual implementation
 		// might need adjustment for proper directory handling
-		files, err := FindFiles(tempDir, "*.go")
+		_, err := FindFiles(tempDir, "*.go")
 		require.NoError(t, err)
-		assert.True(t, len(files) >= 0) // Basic sanity check
+		// File search should complete successfully
 	})
 }
 
@@ -739,7 +739,7 @@ func TestGoCommands(t *testing.T) {
 		version, err := GetGoVersion()
 		require.NoError(t, err)
 		assert.NotEmpty(t, version)
-		assert.True(t, strings.Contains(version, "."))
+		assert.Contains(t, version, ".")
 	})
 
 	t.Run("GetModuleName", func(t *testing.T) {
@@ -760,7 +760,8 @@ func TestGoCommands(t *testing.T) {
 			// This might fail if we're not in a Go module/package
 			t.Logf("GoList failed (expected in some contexts): %v", err)
 		} else {
-			assert.True(t, len(packages) >= 0)
+			// Packages list should be valid
+			t.Logf("Found %d packages", len(packages))
 		}
 	})
 }

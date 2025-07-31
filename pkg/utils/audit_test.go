@@ -352,7 +352,7 @@ func TestAuditLogger_GetEvents(t *testing.T) {
 
 		filter := AuditFilter{}
 		_, err := disabledLogger.GetEvents(filter)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "audit logging is disabled")
 	})
 }
@@ -397,7 +397,7 @@ func TestAuditLogger_GetStats(t *testing.T) {
 		assert.Equal(t, 1, stats.FailedEvents)
 
 		// Check top users
-		assert.True(t, len(stats.TopUsers) > 0)
+		assert.NotEmpty(t, stats.TopUsers)
 		totalUserEvents := 0
 		for _, userStat := range stats.TopUsers {
 			totalUserEvents += userStat.Count
@@ -405,7 +405,7 @@ func TestAuditLogger_GetStats(t *testing.T) {
 		assert.Equal(t, 4, totalUserEvents)
 
 		// Check top commands
-		assert.True(t, len(stats.TopCommands) > 0)
+		assert.NotEmpty(t, stats.TopCommands)
 		totalCommandEvents := 0
 		for _, cmdStat := range stats.TopCommands {
 			totalCommandEvents += cmdStat.Count

@@ -4,6 +4,7 @@
 package security
 
 import (
+	"fmt"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -428,7 +429,7 @@ func FuzzFilterEnvironment(f *testing.F) {
 				for _, prefix := range sensitivePrefix {
 					if strings.HasPrefix(varName, prefix) &&
 						(len(varName) == len(prefix) || varName[len(prefix)] == '_') {
-						assert.Fail(t, "Sensitive variable was not filtered: %s", envVar)
+						assert.Fail(t, fmt.Sprintf("Sensitive variable was not filtered: %s", envVar))
 					}
 				}
 			}

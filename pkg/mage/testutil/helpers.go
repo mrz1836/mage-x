@@ -1,3 +1,4 @@
+// Package testutil provides testing utilities and helpers for mage operations.
 package testutil
 
 import (
@@ -185,7 +186,7 @@ type StandardMocks struct {
 	env *TestEnvironment
 }
 
-// NewStandardMocks creates standard mock configurations
+// StandardMocks creates standard mock configurations
 func (env *TestEnvironment) StandardMocks() *StandardMocks {
 	return &StandardMocks{env: env}
 }

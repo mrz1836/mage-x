@@ -8,7 +8,6 @@ import (
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
 	"github.com/mrz1836/go-mage/pkg/utils"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -49,7 +48,7 @@ func (ts *AuditTestSuite) TestAuditShow() {
 		)
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
-			require.Contains(ts.T(), err.Error(), "audit")
+			ts.Require().Contains(err.Error(), "audit")
 		}
 	})
 
@@ -116,7 +115,7 @@ func (ts *AuditTestSuite) TestAuditShow() {
 		)
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
-			require.Contains(ts.T(), err.Error(), "audit")
+			ts.Require().Contains(err.Error(), "audit")
 		}
 	})
 }
@@ -139,7 +138,7 @@ func (ts *AuditTestSuite) TestAuditStats() {
 		)
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
-			require.Contains(ts.T(), err.Error(), "audit")
+			ts.Require().Contains(err.Error(), "audit")
 		}
 	})
 }
@@ -162,7 +161,7 @@ func (ts *AuditTestSuite) TestAuditExport() {
 		)
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
-			require.Contains(ts.T(), err.Error(), "audit")
+			ts.Require().Contains(err.Error(), "audit")
 		}
 	})
 
@@ -193,7 +192,7 @@ func (ts *AuditTestSuite) TestAuditExport() {
 		)
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
-			require.Contains(ts.T(), err.Error(), "audit")
+			ts.Require().Contains(err.Error(), "audit")
 		}
 	})
 }
@@ -215,7 +214,7 @@ func (ts *AuditTestSuite) TestAuditCleanup() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -236,10 +235,10 @@ func (ts *AuditTestSuite) TestAuditEnable() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		// Check that .mage directory was created
-		require.True(ts.T(), ts.env.FileExists(".mage"))
+		ts.Require().True(ts.env.FileExists(".mage"))
 	})
 
 	ts.Run("enable audit logging with existing config", func() {
@@ -260,7 +259,7 @@ func (ts *AuditTestSuite) TestAuditEnable() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -282,7 +281,7 @@ func (ts *AuditTestSuite) TestAuditDisable() {
 		)
 		// May fail if directory doesn't exist, which is acceptable
 		if err != nil {
-			require.Contains(ts.T(), err.Error(), "no such file or directory")
+			ts.Require().Contains(err.Error(), "no such file or directory")
 		}
 	})
 
@@ -304,7 +303,7 @@ func (ts *AuditTestSuite) TestAuditDisable() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -326,7 +325,7 @@ func (ts *AuditTestSuite) TestAuditReport() {
 		)
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
-			require.Contains(ts.T(), err.Error(), "audit")
+			ts.Require().Contains(err.Error(), "audit")
 		}
 	})
 
@@ -357,7 +356,7 @@ func (ts *AuditTestSuite) TestAuditReport() {
 		)
 		// The audit system may be disabled, which is acceptable
 		if err != nil {
-			require.Contains(ts.T(), err.Error(), "audit")
+			ts.Require().Contains(err.Error(), "audit")
 		}
 	})
 }
@@ -375,8 +374,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 		// Test with failed command
 		LogCommandExecution("failed-test", []string{}, startTime, duration, 1, false)
 
-		// These should complete without panics
-		require.True(ts.T(), true)
+		// Test completed - logging functions should execute without panics
 	})
 
 	ts.Run("getFilteredEnvironment function", func() {
@@ -407,14 +405,14 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 		}
 
 		env := getFilteredEnvironment()
-		require.Contains(ts.T(), env, "GO_VERSION")
-		require.Equal(ts.T(), "1.24.0", env["GO_VERSION"])
-		require.Contains(ts.T(), env, "GOPATH")
-		require.Contains(ts.T(), env, "MAGE_VERBOSE")
+		ts.Require().Contains(env, "GO_VERSION")
+		ts.Require().Equal("1.24.0", env["GO_VERSION"])
+		ts.Require().Contains(env, "GOPATH")
+		ts.Require().Contains(env, "MAGE_VERBOSE")
 
 		// Should not contain non-relevant environment variables
-		require.NotContains(ts.T(), env, "HOME")
-		require.NotContains(ts.T(), env, "PATH")
+		ts.Require().NotContains(env, "HOME")
+		ts.Require().NotContains(env, "PATH")
 	})
 
 	ts.Run("getGoVersion function", func() {
@@ -442,8 +440,8 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 				},
 			)
 
-			require.NoError(ts.T(), err)
-			require.Equal(ts.T(), "1.24.0", version)
+			ts.Require().NoError(err)
+			ts.Require().Equal("1.24.0", version)
 		})
 
 		ts.Run("failed go version detection", func() {
@@ -470,8 +468,8 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 				},
 			)
 
-			require.NoError(ts.T(), err)
-			require.Equal(ts.T(), "unknown", version)
+			ts.Require().NoError(err)
+			ts.Require().Equal("unknown", version)
 		})
 
 		ts.Run("malformed go version output", func() {
@@ -498,20 +496,20 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 				},
 			)
 
-			require.NoError(ts.T(), err)
-			require.Equal(ts.T(), "unknown", version)
+			ts.Require().NoError(err)
+			ts.Require().Equal("unknown", version)
 		})
 	})
 
 	ts.Run("truncateString helper function", func() {
 		// Test string truncation helper used in Show method
 		result := truncateString("This is a very long string that should be truncated", 10)
-		require.LessOrEqual(ts.T(), len(result), 13) // Account for ellipsis
+		ts.Require().LessOrEqual(len(result), 13) // Account for ellipsis
 
 		// Test short string (no truncation needed)
 		shortString := "short"
 		result = truncateString(shortString, 10)
-		require.Equal(ts.T(), shortString, result)
+		ts.Require().Equal(shortString, result)
 	})
 
 	ts.Run("getVersion helper function", func() {
@@ -534,8 +532,8 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.NotEmpty(ts.T(), version)
+		ts.Require().NoError(err)
+		ts.Require().NotEmpty(version)
 	})
 }
 
@@ -554,11 +552,11 @@ func (ts *AuditTestSuite) TestAuditComplianceReportStructure() {
 			RecentFailures:   []utils.AuditEvent{},
 		}
 
-		require.NotZero(ts.T(), report.GeneratedAt)
-		require.Equal(ts.T(), 100, report.TotalEvents)
-		require.Equal(ts.T(), 95, report.SuccessfulEvents)
-		require.Equal(ts.T(), 5, report.FailedEvents)
-		require.Equal(ts.T(), 95.0, report.SuccessRate)
+		ts.Require().NotZero(report.GeneratedAt)
+		ts.Require().Equal(100, report.TotalEvents)
+		ts.Require().Equal(95, report.SuccessfulEvents)
+		ts.Require().Equal(5, report.FailedEvents)
+		ts.Require().InDelta(95.0, report.SuccessRate, 0.001)
 	})
 }
 
@@ -611,7 +609,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("audit with various environment configurations", func() {
@@ -685,7 +683,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 

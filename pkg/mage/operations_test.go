@@ -272,7 +272,7 @@ func TestDatabase_Operations(t *testing.T) {
 		require.GreaterOrEqual(t, len(commands), 1)
 
 		// Should run multiple commands for reset
-		assert.True(t, len(commands) >= 1)
+		assert.GreaterOrEqual(t, len(commands), 1)
 	})
 
 	t.Run("Backup", func(t *testing.T) {
@@ -363,7 +363,7 @@ func TestClean_Operations(t *testing.T) {
 		require.GreaterOrEqual(t, len(commands), 1)
 
 		// Should run multiple cleanup commands
-		assert.True(t, len(commands) >= 1)
+		assert.GreaterOrEqual(t, len(commands), 1)
 	})
 
 	t.Run("Build", func(t *testing.T) {
@@ -474,7 +474,7 @@ func TestServe_Operations(t *testing.T) {
 		assert.Contains(t, lastCmd[1], "Serving")
 		assert.Contains(t, lastCmd[1], "HTTPS")
 		// Should have HTTPS configuration
-		assert.True(t, len(lastCmd) >= 2)
+		assert.GreaterOrEqual(t, len(lastCmd), 2)
 	})
 
 	t.Run("Static", func(t *testing.T) {
@@ -484,7 +484,7 @@ func TestServe_Operations(t *testing.T) {
 
 		lastCmd := mockRunner.GetLastCommand()
 		require.NotNil(t, lastCmd)
-		assert.True(t, len(lastCmd) >= 1)
+		assert.GreaterOrEqual(t, len(lastCmd), 1)
 	})
 }
 

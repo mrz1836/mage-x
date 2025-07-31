@@ -21,12 +21,18 @@ type Init mg.Namespace
 type ProjectType string
 
 const (
-	LibraryProject      ProjectType = "library"
-	CLIProject          ProjectType = "cli"
-	WebAPIProject       ProjectType = "webapi"
+	// LibraryProject represents a reusable Go library project
+	LibraryProject ProjectType = "library"
+	// CLIProject represents a command-line interface application
+	CLIProject ProjectType = "cli"
+	// WebAPIProject represents a web API service
+	WebAPIProject ProjectType = "webapi"
+	// MicroserviceProject represents a microservice architecture project
 	MicroserviceProject ProjectType = "microservice"
-	ToolProject         ProjectType = "tool"
-	GenericProject      ProjectType = "generic"
+	// ToolProject represents a utility or tool project
+	ToolProject ProjectType = "tool"
+	// GenericProject represents a generic Go project
+	GenericProject ProjectType = "generic"
 )
 
 // InitProjectConfig contains project initialization configuration

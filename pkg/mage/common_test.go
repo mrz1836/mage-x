@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -42,12 +41,12 @@ func (ts *CommonTestSuite) TestGetVersion() {
 			func() interface{} { return GetRunner() },
 			func() error {
 				version := getVersion()
-				require.Equal(ts.T(), "v1.2.3", version)
+				ts.Require().Equal("v1.2.3", version)
 				return nil
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("version from VERSION file", func() {
@@ -61,18 +60,18 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		// Create VERSION file
 		versionPath := filepath.Join(env.TempDir, "VERSION")
 		err := os.WriteFile(versionPath, []byte("2.0.0\n"), 0o600)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		// Change to temp directory
 		oldDir, err := os.Getwd()
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 		defer func() {
 			if chdirErr := os.Chdir(oldDir); chdirErr != nil {
 				ts.T().Logf("Failed to restore working directory: %v", chdirErr)
 			}
 		}()
 		err = os.Chdir(env.TempDir)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		err = env.WithMockRunner(
 			func(r interface{}) error {
@@ -81,12 +80,12 @@ func (ts *CommonTestSuite) TestGetVersion() {
 			func() interface{} { return GetRunner() },
 			func() error {
 				version := getVersion()
-				require.Equal(ts.T(), "2.0.0", version)
+				ts.Require().Equal("2.0.0", version)
 				return nil
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("version from config", func() {
@@ -112,12 +111,12 @@ func (ts *CommonTestSuite) TestGetVersion() {
 			func() interface{} { return GetRunner() },
 			func() error {
 				version := getVersion()
-				require.Equal(ts.T(), "3.0.0", version)
+				ts.Require().Equal("3.0.0", version)
 				return nil
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("default dev version", func() {
@@ -138,12 +137,12 @@ func (ts *CommonTestSuite) TestGetVersion() {
 			func() interface{} { return GetRunner() },
 			func() error {
 				version := getVersion()
-				require.Equal(ts.T(), "dev", version)
+				ts.Require().Equal("dev", version)
 				return nil
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -151,10 +150,10 @@ func (ts *CommonTestSuite) TestGetVersion() {
 func (ts *CommonTestSuite) TestGetModuleName() {
 	ts.Run("successful module name retrieval", func() {
 		name, err := getModuleName()
-		require.NoError(ts.T(), err)
-		require.NotEmpty(ts.T(), name)
+		ts.Require().NoError(err)
+		ts.Require().NotEmpty(name)
 		// Should contain the test module name
-		require.Contains(ts.T(), name, "test/module")
+		ts.Require().Contains(name, "test/module")
 	})
 }
 
@@ -164,42 +163,42 @@ func (ts *CommonTestSuite) TestGetDirSize() {
 		// Create test files
 		testDir := filepath.Join(ts.env.TempDir, "testdir")
 		err := os.MkdirAll(testDir, 0o750)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		// Create files with known sizes
 		file1 := filepath.Join(testDir, "file1.txt")
 		file2 := filepath.Join(testDir, "file2.txt")
 		err = os.WriteFile(file1, []byte("hello"), 0o600) // 5 bytes
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 		err = os.WriteFile(file2, []byte("world123"), 0o600) // 8 bytes
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		size, err := getDirSize(testDir)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), int64(13), size) // 5 + 8 bytes
+		ts.Require().NoError(err)
+		ts.Require().Equal(int64(13), size) // 5 + 8 bytes
 	})
 
 	ts.Run("empty directory", func() {
 		emptyDir := filepath.Join(ts.env.TempDir, "empty")
 		err := os.MkdirAll(emptyDir, 0o750)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		size, err := getDirSize(emptyDir)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), int64(0), size)
+		ts.Require().NoError(err)
+		ts.Require().Equal(int64(0), size)
 	})
 
 	ts.Run("nonexistent directory", func() {
 		size, err := getDirSize("/nonexistent/path")
-		require.Error(ts.T(), err)
-		require.Equal(ts.T(), int64(0), size)
+		ts.Require().Error(err)
+		ts.Require().Equal(int64(0), size)
 	})
 
 	ts.Run("nested directories", func() {
 		// Create nested structure
 		nestedDir := filepath.Join(ts.env.TempDir, "nested", "deep", "structure")
 		err := os.MkdirAll(nestedDir, 0o750)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		// Add files at different levels
 		file1 := filepath.Join(ts.env.TempDir, "nested", "top.txt")
@@ -207,23 +206,23 @@ func (ts *CommonTestSuite) TestGetDirSize() {
 		file3 := filepath.Join(nestedDir, "bottom.txt")
 
 		err = os.WriteFile(file1, []byte("top"), 0o600) // 3 bytes
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 		err = os.WriteFile(file2, []byte("middle"), 0o600) // 6 bytes
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 		err = os.WriteFile(file3, []byte("bottom"), 0o600) // 6 bytes
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		size, err := getDirSize(filepath.Join(ts.env.TempDir, "nested"))
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), int64(15), size) // 3 + 6 + 6 bytes
+		ts.Require().NoError(err)
+		ts.Require().Equal(int64(15), size) // 3 + 6 + 6 bytes
 	})
 }
 
 // TestGetCPUCount tests the getCPUCount function
 func (ts *CommonTestSuite) TestGetCPUCount() {
 	count := getCPUCount()
-	require.Greater(ts.T(), count, 0)
-	require.Equal(ts.T(), runtime.NumCPU(), count)
+	ts.Require().Positive(count)
+	ts.Require().Equal(runtime.NumCPU(), count)
 }
 
 // TestIsNewer tests the isNewer version comparison function
@@ -305,7 +304,7 @@ func (ts *CommonTestSuite) TestIsNewer() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			result := isNewer(tc.versionA, tc.versionB)
-			require.Equal(ts.T(), tc.expected, result,
+			ts.Require().Equal(tc.expected, result,
 				"isNewer(%q, %q) expected %v, got %v", tc.versionA, tc.versionB, tc.expected, result)
 		})
 	}
@@ -358,7 +357,7 @@ func (ts *CommonTestSuite) TestFormatReleaseNotes() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			result := formatReleaseNotes(tc.input)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }
@@ -425,7 +424,7 @@ func (ts *CommonTestSuite) TestFormatDuration() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			result := formatDuration(tc.duration)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }

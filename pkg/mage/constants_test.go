@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -29,15 +28,15 @@ func (ts *ConstantsTestSuite) TearDownTest() {
 // TestGoToolchainCommands tests Go toolchain command constants
 func (ts *ConstantsTestSuite) TestGoToolchainCommands() {
 	// Verify Go toolchain commands
-	require.Equal(ts.T(), "go", CmdGo)
-	require.Equal(ts.T(), "build", CmdGoBuild)
-	require.Equal(ts.T(), "test", CmdGoTest)
-	require.Equal(ts.T(), "mod", CmdGoMod)
-	require.Equal(ts.T(), "generate", CmdGoGenerate)
-	require.Equal(ts.T(), "install", CmdGoInstall)
-	require.Equal(ts.T(), "get", CmdGoGet)
-	require.Equal(ts.T(), "list", CmdGoList)
-	require.Equal(ts.T(), "vet", CmdGoVet)
+	ts.Require().Equal("go", CmdGo)
+	ts.Require().Equal("build", CmdGoBuild)
+	ts.Require().Equal("test", CmdGoTest)
+	ts.Require().Equal("mod", CmdGoMod)
+	ts.Require().Equal("generate", CmdGoGenerate)
+	ts.Require().Equal("install", CmdGoInstall)
+	ts.Require().Equal("get", CmdGoGet)
+	ts.Require().Equal("list", CmdGoList)
+	ts.Require().Equal("vet", CmdGoVet)
 
 	// Ensure none are empty
 	goCommands := []string{
@@ -45,24 +44,24 @@ func (ts *ConstantsTestSuite) TestGoToolchainCommands() {
 		CmdGoInstall, CmdGoGet, CmdGoList, CmdGoVet,
 	}
 	for _, cmd := range goCommands {
-		require.NotEmpty(ts.T(), cmd, "Go command should not be empty")
+		ts.Require().NotEmpty(cmd, "Go command should not be empty")
 	}
 }
 
 // TestExternalToolCommands tests external tool command constants
 func (ts *ConstantsTestSuite) TestExternalToolCommands() {
 	// Verify external tool commands
-	require.Equal(ts.T(), "git", CmdGit)
-	require.Equal(ts.T(), "docker", CmdDocker)
-	require.Equal(ts.T(), "golangci-lint", CmdGolangciLint)
-	require.Equal(ts.T(), "gofumpt", CmdGofumpt)
-	require.Equal(ts.T(), "golangci-lint", LintTool) // Should match CmdGolangciLint
-	require.Equal(ts.T(), "govulncheck", CmdGoVulnCheck)
-	require.Equal(ts.T(), "mockgen", CmdMockgen)
-	require.Equal(ts.T(), "swag", CmdSwag)
+	ts.Require().Equal("git", CmdGit)
+	ts.Require().Equal("docker", CmdDocker)
+	ts.Require().Equal("golangci-lint", CmdGolangciLint)
+	ts.Require().Equal("gofumpt", CmdGofumpt)
+	ts.Require().Equal("golangci-lint", LintTool) // Should match CmdGolangciLint
+	ts.Require().Equal("govulncheck", CmdGoVulnCheck)
+	ts.Require().Equal("mockgen", CmdMockgen)
+	ts.Require().Equal("swag", CmdSwag)
 
 	// Verify LintTool matches CmdGolangciLint
-	require.Equal(ts.T(), CmdGolangciLint, LintTool)
+	ts.Require().Equal(CmdGolangciLint, LintTool)
 
 	// Ensure none are empty
 	externalCommands := []string{
@@ -70,22 +69,22 @@ func (ts *ConstantsTestSuite) TestExternalToolCommands() {
 		LintTool, CmdGoVulnCheck, CmdMockgen, CmdSwag,
 	}
 	for _, cmd := range externalCommands {
-		require.NotEmpty(ts.T(), cmd, "External command should not be empty")
+		ts.Require().NotEmpty(cmd, "External command should not be empty")
 	}
 }
 
 // TestShellCommands tests shell command constants
 func (ts *ConstantsTestSuite) TestShellCommands() {
 	// Verify shell commands
-	require.Equal(ts.T(), "find", CmdFind)
-	require.Equal(ts.T(), "wc", CmdWC)
-	require.Equal(ts.T(), "rm", CmdRM)
-	require.Equal(ts.T(), "mkdir", CmdMkdir)
+	ts.Require().Equal("find", CmdFind)
+	ts.Require().Equal("wc", CmdWC)
+	ts.Require().Equal("rm", CmdRM)
+	ts.Require().Equal("mkdir", CmdMkdir)
 
 	// Ensure none are empty
 	shellCommands := []string{CmdFind, CmdWC, CmdRM, CmdMkdir}
 	for _, cmd := range shellCommands {
-		require.NotEmpty(ts.T(), cmd, "Shell command should not be empty")
+		ts.Require().NotEmpty(cmd, "Shell command should not be empty")
 	}
 }
 
@@ -112,16 +111,16 @@ func (ts *ConstantsTestSuite) TestGoFlags() {
 	}
 
 	for name, flag := range goFlags {
-		require.True(ts.T(), strings.HasPrefix(flag, "-"),
+		ts.Require().True(strings.HasPrefix(flag, "-"),
 			"Go flag %s (%s) should start with hyphen", name, flag)
-		require.NotEmpty(ts.T(), flag, "Go flag %s should not be empty", name)
+		ts.Require().NotEmpty(flag, "Go flag %s should not be empty", name)
 	}
 
 	// Test specific flag values
-	require.Equal(ts.T(), "-o", FlagOutput)
-	require.Equal(ts.T(), "-v", FlagVerbose)
-	require.Equal(ts.T(), "-race", FlagRace)
-	require.Equal(ts.T(), "-cover", FlagCover)
+	ts.Require().Equal("-o", FlagOutput)
+	ts.Require().Equal("-v", FlagVerbose)
+	ts.Require().Equal("-race", FlagRace)
+	ts.Require().Equal("-cover", FlagCover)
 }
 
 // TestGitFlags tests Git flag constants
@@ -129,27 +128,27 @@ func (ts *ConstantsTestSuite) TestGitFlags() {
 	// Verify Git flags start with double hyphen
 	gitFlags := []string{FlagTags2, FlagAbbrev, FlagNoVerify}
 	for _, flag := range gitFlags {
-		require.True(ts.T(), strings.HasPrefix(flag, "--"),
+		ts.Require().True(strings.HasPrefix(flag, "--"),
 			"Git flag (%s) should start with double hyphen", flag)
-		require.NotEmpty(ts.T(), flag, "Git flag should not be empty")
+		ts.Require().NotEmpty(flag, "Git flag should not be empty")
 	}
 
 	// Test specific values
-	require.Equal(ts.T(), "--tags", FlagTags2)
-	require.Equal(ts.T(), "--abbrev=0", FlagAbbrev)
-	require.Equal(ts.T(), "--no-verify", FlagNoVerify)
+	ts.Require().Equal("--tags", FlagTags2)
+	ts.Require().Equal("--abbrev=0", FlagAbbrev)
+	ts.Require().Equal("--no-verify", FlagNoVerify)
 }
 
 // TestCommonArgs tests common argument constants
 func (ts *ConstantsTestSuite) TestCommonArgs() {
-	require.Equal(ts.T(), "./...", ArgAll)
-	require.Equal(ts.T(), ".", ArgCurrent)
-	require.Equal(ts.T(), "none", ArgNone)
+	ts.Require().Equal("./...", ArgAll)
+	ts.Require().Equal(".", ArgCurrent)
+	ts.Require().Equal("none", ArgNone)
 
 	// Ensure none are empty
 	args := []string{ArgAll, ArgCurrent, ArgNone}
 	for _, arg := range args {
-		require.NotEmpty(ts.T(), arg, "Common arg should not be empty")
+		ts.Require().NotEmpty(arg, "Common arg should not be empty")
 	}
 }
 
@@ -169,28 +168,28 @@ func (ts *ConstantsTestSuite) TestFileAndDirectoryNames() {
 	}
 
 	for name, fileName := range fileNames {
-		require.NotEmpty(ts.T(), fileName, "File name %s should not be empty", name)
+		ts.Require().NotEmpty(fileName, "File name %s should not be empty", name)
 	}
 
 	// Test specific file name values
-	require.Equal(ts.T(), "go.mod", FileGoMod)
-	require.Equal(ts.T(), "go.sum", FileGoSum)
-	require.Equal(ts.T(), ".mage.yaml", FileMageYAML)
-	require.Equal(ts.T(), ".mage.yml", FileMageYML)
-	require.Equal(ts.T(), "VERSION", FileVersion)
+	ts.Require().Equal("go.mod", FileGoMod)
+	ts.Require().Equal("go.sum", FileGoSum)
+	ts.Require().YAMLEq(".mage.yaml", FileMageYAML)
+	ts.Require().YAMLEq(".mage.yml", FileMageYML)
+	ts.Require().Equal("VERSION", FileVersion)
 
 	// Test directory names
 	dirNames := []string{DirBin, DirBuild, DirDist, DirVendor, DirTestdata, DirCmd, DirPkg, DirInternal}
 	for _, dirName := range dirNames {
-		require.NotEmpty(ts.T(), dirName, "Directory name should not be empty")
-		require.False(ts.T(), strings.HasPrefix(dirName, "/"),
+		ts.Require().NotEmpty(dirName, "Directory name should not be empty")
+		ts.Require().False(strings.HasPrefix(dirName, "/"),
 			"Directory name (%s) should be relative", dirName)
 	}
 
 	// Test specific directory values
-	require.Equal(ts.T(), "bin", DirBin)
-	require.Equal(ts.T(), "pkg", DirPkg)
-	require.Equal(ts.T(), "cmd", DirCmd)
+	ts.Require().Equal("bin", DirBin)
+	ts.Require().Equal("pkg", DirPkg)
+	ts.Require().Equal("cmd", DirCmd)
 }
 
 // TestEnvironmentVariables tests environment variable constants
@@ -212,16 +211,16 @@ func (ts *ConstantsTestSuite) TestEnvironmentVariables() {
 	}
 
 	for name, envVar := range envVars {
-		require.NotEmpty(ts.T(), envVar, "Environment variable %s should not be empty", name)
-		require.True(ts.T(), strings.ToUpper(envVar) == envVar,
+		ts.Require().NotEmpty(envVar, "Environment variable %s should not be empty", name)
+		ts.Require().Equal(strings.ToUpper(envVar), envVar,
 			"Environment variable %s (%s) should be uppercase", name, envVar)
 	}
 
 	// Test specific values
-	require.Equal(ts.T(), "GOOS", EnvGOOS)
-	require.Equal(ts.T(), "GOARCH", EnvGOARCH)
-	require.Equal(ts.T(), "CGO_ENABLED", EnvCGOEnabled)
-	require.Equal(ts.T(), "GITHUB_TOKEN", EnvGitHubToken)
+	ts.Require().Equal("GOOS", EnvGOOS)
+	ts.Require().Equal("GOARCH", EnvGOARCH)
+	ts.Require().Equal("CGO_ENABLED", EnvCGOEnabled)
+	ts.Require().Equal("GITHUB_TOKEN", EnvGitHubToken)
 }
 
 // TestPlatformConstants tests platform-related constants
@@ -229,25 +228,25 @@ func (ts *ConstantsTestSuite) TestPlatformConstants() {
 	// Test OS constants
 	operatingSystems := []string{OSLinux, OSDarwin, OSWindows}
 	for _, os := range operatingSystems {
-		require.NotEmpty(ts.T(), os, "OS constant should not be empty")
-		require.True(ts.T(), strings.ToLower(os) == os,
+		ts.Require().NotEmpty(os, "OS constant should not be empty")
+		ts.Require().Equal(strings.ToLower(os), os,
 			"OS constant (%s) should be lowercase", os)
 	}
 
-	require.Equal(ts.T(), "linux", OSLinux)
-	require.Equal(ts.T(), "darwin", OSDarwin)
-	require.Equal(ts.T(), "windows", OSWindows)
+	ts.Require().Equal("linux", OSLinux)
+	ts.Require().Equal("darwin", OSDarwin)
+	ts.Require().Equal("windows", OSWindows)
 
 	// Test architecture constants
 	architectures := []string{ArchAMD64, ArchARM64, Arch386, ArchARM}
 	for _, arch := range architectures {
-		require.NotEmpty(ts.T(), arch, "Architecture constant should not be empty")
+		ts.Require().NotEmpty(arch, "Architecture constant should not be empty")
 	}
 
-	require.Equal(ts.T(), "amd64", ArchAMD64)
-	require.Equal(ts.T(), "arm64", ArchARM64)
-	require.Equal(ts.T(), "386", Arch386)
-	require.Equal(ts.T(), "arm", ArchARM)
+	ts.Require().Equal("amd64", ArchAMD64)
+	ts.Require().Equal("arm64", ArchARM64)
+	ts.Require().Equal("386", Arch386)
+	ts.Require().Equal("arm", ArchARM)
 }
 
 // TestTimeoutConstants tests timeout and duration constants
@@ -260,15 +259,15 @@ func (ts *ConstantsTestSuite) TestTimeoutConstants() {
 	}
 
 	for name, timeout := range timeouts {
-		require.NotEmpty(ts.T(), timeout, "Timeout %s should not be empty", name)
-		require.True(ts.T(), strings.HasSuffix(timeout, "m") || strings.HasSuffix(timeout, "s"),
+		ts.Require().NotEmpty(timeout, "Timeout %s should not be empty", name)
+		ts.Require().True(strings.HasSuffix(timeout, "m") || strings.HasSuffix(timeout, "s"),
 			"Timeout %s (%s) should end with 'm' or 's'", name, timeout)
 	}
 
-	require.Equal(ts.T(), "10m", DefaultTimeout)
-	require.Equal(ts.T(), "10s", DefaultBenchTime)
-	require.Equal(ts.T(), "1m", ShortTimeout)
-	require.Equal(ts.T(), "30m", LongTimeout)
+	ts.Require().Equal("10m", DefaultTimeout)
+	ts.Require().Equal("10s", DefaultBenchTime)
+	ts.Require().Equal("1m", ShortTimeout)
+	ts.Require().Equal("30m", LongTimeout)
 }
 
 // TestCoverageModes tests coverage mode constants
@@ -281,29 +280,29 @@ func (ts *ConstantsTestSuite) TestCoverageModes() {
 	}
 
 	for _, mode := range coverageModes {
-		require.NotEmpty(ts.T(), mode, "Coverage mode should not be empty")
-		require.True(ts.T(), validModes[mode],
+		ts.Require().NotEmpty(mode, "Coverage mode should not be empty")
+		ts.Require().True(validModes[mode],
 			"Coverage mode (%s) should be valid Go coverage mode", mode)
 	}
 
-	require.Equal(ts.T(), "set", CoverModeSet)
-	require.Equal(ts.T(), "count", CoverModeCount)
-	require.Equal(ts.T(), "atomic", CoverModeAtomic)
+	ts.Require().Equal("set", CoverModeSet)
+	ts.Require().Equal("count", CoverModeCount)
+	ts.Require().Equal("atomic", CoverModeAtomic)
 }
 
 // TestReleaseChannels tests release channel constants
 func (ts *ConstantsTestSuite) TestReleaseChannels() {
 	channels := []string{ChannelStable, ChannelBeta, ChannelEdge, ChannelNightly}
 	for _, channel := range channels {
-		require.NotEmpty(ts.T(), channel, "Release channel should not be empty")
-		require.True(ts.T(), strings.ToLower(channel) == channel,
+		ts.Require().NotEmpty(channel, "Release channel should not be empty")
+		ts.Require().Equal(strings.ToLower(channel), channel,
 			"Release channel (%s) should be lowercase", channel)
 	}
 
-	require.Equal(ts.T(), "stable", ChannelStable)
-	require.Equal(ts.T(), "beta", ChannelBeta)
-	require.Equal(ts.T(), "edge", ChannelEdge)
-	require.Equal(ts.T(), "nightly", ChannelNightly)
+	ts.Require().Equal("stable", ChannelStable)
+	ts.Require().Equal("beta", ChannelBeta)
+	ts.Require().Equal("edge", ChannelEdge)
+	ts.Require().Equal("nightly", ChannelNightly)
 }
 
 // TestToolVersions tests default tool version constants
@@ -317,15 +316,15 @@ func (ts *ConstantsTestSuite) TestToolVersions() {
 	}
 
 	for name, version := range toolVersions {
-		require.NotEmpty(ts.T(), version, "Tool version %s should not be empty", name)
+		ts.Require().NotEmpty(version, "Tool version %s should not be empty", name)
 		if version != "latest" {
-			require.True(ts.T(), strings.HasPrefix(version, "v"),
+			ts.Require().True(strings.HasPrefix(version, "v"),
 				"Tool version %s (%s) should start with 'v' or be 'latest'", name, version)
 		}
 	}
 
-	require.Equal(ts.T(), "latest", DefaultGoVulnCheckVersion)
-	require.True(ts.T(), strings.HasPrefix(DefaultGolangciLintVersion, "v"))
+	ts.Require().Equal("latest", DefaultGoVulnCheckVersion)
+	ts.Require().True(strings.HasPrefix(DefaultGolangciLintVersion, "v"))
 }
 
 // TestErrorMessages tests error message constants
@@ -336,14 +335,14 @@ func (ts *ConstantsTestSuite) TestErrorMessages() {
 	}
 
 	for _, msg := range errorMessages {
-		require.NotEmpty(ts.T(), msg, "Error message should not be empty")
-		require.False(ts.T(), strings.HasSuffix(msg, "."),
+		ts.Require().NotEmpty(msg, "Error message should not be empty")
+		ts.Require().False(strings.HasSuffix(msg, "."),
 			"Error message (%s) should not end with period", msg)
 	}
 
-	require.Equal(ts.T(), "no go.mod file found", ErrNoGoMod)
-	require.Equal(ts.T(), "not a git repository", ErrNoGitRepo)
-	require.Equal(ts.T(), "build failed", ErrBuildFailed)
+	ts.Require().Equal("no go.mod file found", ErrNoGoMod)
+	ts.Require().Equal("not a git repository", ErrNoGitRepo)
+	ts.Require().Equal("build failed", ErrBuildFailed)
 }
 
 // TestSuccessMessages tests success message constants
@@ -354,16 +353,16 @@ func (ts *ConstantsTestSuite) TestSuccessMessages() {
 	}
 
 	for _, msg := range successMessages {
-		require.NotEmpty(ts.T(), msg, "Success message should not be empty")
-		require.True(ts.T(), strings.Contains(strings.ToLower(msg), "success") ||
+		ts.Require().NotEmpty(msg, "Success message should not be empty")
+		ts.Require().True(strings.Contains(strings.ToLower(msg), "success") ||
 			strings.Contains(strings.ToLower(msg), "passed") ||
 			strings.Contains(strings.ToLower(msg), "completed") ||
 			strings.Contains(strings.ToLower(msg), "no") && strings.Contains(strings.ToLower(msg), "issues"),
 			"Success message (%s) should indicate success", msg)
 	}
 
-	require.Contains(ts.T(), MsgBuildSuccess, "successfully")
-	require.Contains(ts.T(), MsgTestSuccess, "passed")
+	ts.Require().Contains(MsgBuildSuccess, "successfully")
+	ts.Require().Contains(MsgTestSuccess, "passed")
 }
 
 // TestInfoMessages tests info message constants
@@ -374,9 +373,9 @@ func (ts *ConstantsTestSuite) TestInfoMessages() {
 	}
 
 	for _, msg := range infoMessages {
-		require.NotEmpty(ts.T(), msg, "Info message should not be empty")
+		ts.Require().NotEmpty(msg, "Info message should not be empty")
 		// Info messages should be present tense action words
-		require.True(ts.T(), strings.Contains(strings.ToLower(msg), "running") ||
+		ts.Require().True(strings.Contains(strings.ToLower(msg), "running") ||
 			strings.Contains(strings.ToLower(msg), "building") ||
 			strings.Contains(strings.ToLower(msg), "installing") ||
 			strings.Contains(strings.ToLower(msg), "cleaning") ||
@@ -408,17 +407,17 @@ func (ts *ConstantsTestSuite) TestEmojiConstants() {
 	}
 
 	for name, emoji := range emojis {
-		require.NotEmpty(ts.T(), emoji, "Emoji %s should not be empty", name)
+		ts.Require().NotEmpty(emoji, "Emoji %s should not be empty", name)
 		// Each emoji should be non-empty and contain valid Unicode
-		require.True(ts.T(), len([]rune(emoji)) >= 1,
+		ts.Require().GreaterOrEqual(len([]rune(emoji)), 1,
 			"Emoji %s (%s) should contain at least one Unicode character", name, emoji)
 	}
 
 	// Test specific emoji values
-	require.Equal(ts.T(), "🔨", EmojiBuild)
-	require.Equal(ts.T(), "🧪", EmojiTest)
-	require.Equal(ts.T(), "✅", EmojiSuccess)
-	require.Equal(ts.T(), "❌", EmojiError)
+	ts.Require().Equal("🔨", EmojiBuild)
+	ts.Require().Equal("🧪", EmojiTest)
+	ts.Require().Equal("✅", EmojiSuccess)
+	ts.Require().Equal("❌", EmojiError)
 }
 
 // TestFormatStrings tests format string constants
@@ -434,21 +433,21 @@ func (ts *ConstantsTestSuite) TestFormatStrings() {
 	}
 
 	for name, format := range formatStrings {
-		require.NotEmpty(ts.T(), format, "Format string %s should not be empty", name)
-		require.Contains(ts.T(), format, "%",
+		ts.Require().NotEmpty(format, "Format string %s should not be empty", name)
+		ts.Require().Contains(format, "%",
 			"Format string %s (%s) should contain format specifier", name, format)
 	}
 
 	// Test specific format string values
-	require.Equal(ts.T(), "%s/%s", FmtPlatform)
-	require.Equal(ts.T(), "Building for %s", FmtBuildTag)
-	require.Equal(ts.T(), "Version: %s", FmtVersion)
-	require.Equal(ts.T(), "Coverage: %.1f%%", FmtCoverage)
+	ts.Require().Equal("%s/%s", FmtPlatform)
+	ts.Require().Equal("Building for %s", FmtBuildTag)
+	ts.Require().Equal("Version: %s", FmtVersion)
+	ts.Require().Equal("Coverage: %.1f%%", FmtCoverage)
 
 	// Verify format strings have correct number of placeholders
-	require.Equal(ts.T(), 2, strings.Count(FmtPlatform, "%s"))
-	require.Equal(ts.T(), 1, strings.Count(FmtBuildTag, "%s"))
-	require.Equal(ts.T(), 2, strings.Count(FmtInstallTool, "%s"))
+	ts.Require().Equal(2, strings.Count(FmtPlatform, "%s"))
+	ts.Require().Equal(1, strings.Count(FmtBuildTag, "%s"))
+	ts.Require().Equal(2, strings.Count(FmtInstallTool, "%s"))
 }
 
 // TestConstantsTestSuite runs the test suite

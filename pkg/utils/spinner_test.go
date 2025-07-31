@@ -180,7 +180,7 @@ func TestSpinnerStyles(t *testing.T) {
 			spinner := NewSpinnerWithStyle("Test", style)
 			expectedFrames := spinnerFrames[style]
 			assert.Equal(t, expectedFrames, spinner.frames)
-			assert.True(t, len(spinner.frames) > 0)
+			assert.NotEmpty(t, spinner.frames)
 		})
 	}
 }
@@ -190,7 +190,7 @@ func TestMultiSpinner(t *testing.T) {
 		ms := NewMultiSpinner()
 		assert.NotNil(t, ms)
 		assert.NotNil(t, ms.spinners)
-		assert.Equal(t, 0, len(ms.spinners))
+		assert.Empty(t, ms.spinners)
 		assert.False(t, ms.active)
 	})
 
@@ -198,7 +198,7 @@ func TestMultiSpinner(t *testing.T) {
 		ms := NewMultiSpinner()
 
 		ms.AddTask("task1", "First task")
-		assert.Equal(t, 1, len(ms.spinners))
+		assert.Len(t, ms.spinners, 1)
 
 		task := ms.spinners["task1"]
 		require.NotNil(t, task)
@@ -311,7 +311,7 @@ func TestProgressTree(t *testing.T) {
 
 		tree.AddTask("Root", "Child Task", 100)
 
-		assert.Equal(t, 1, len(tree.root.children))
+		assert.Len(t, tree.root.children, 1)
 		child := tree.root.children[0]
 		assert.Equal(t, "Child Task", child.name)
 		assert.Equal(t, 100, child.total)
@@ -324,7 +324,7 @@ func TestProgressTree(t *testing.T) {
 
 		tree.AddTask("NonExistent", "Child Task", 50)
 
-		assert.Equal(t, 1, len(tree.root.children))
+		assert.Len(t, tree.root.children, 1)
 		child := tree.root.children[0]
 		assert.Equal(t, "Child Task", child.name)
 		assert.Equal(t, tree.root, child.parent)

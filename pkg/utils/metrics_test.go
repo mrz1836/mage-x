@@ -74,11 +74,11 @@ func TestPerformanceTimer(t *testing.T) {
 
 		duration := timer.Stop()
 
-		assert.True(t, duration > 0)
-		assert.True(t, duration >= 10*time.Millisecond)
+		assert.Positive(t, duration)
+		assert.GreaterOrEqual(t, duration, 10*time.Millisecond)
 
 		// Check that metric was recorded
-		assert.True(t, len(collector.metrics) > 0)
+		assert.NotEmpty(t, collector.metrics)
 	})
 
 	t.Run("StopWithError records error metric", func(t *testing.T) {
@@ -88,7 +88,7 @@ func TestPerformanceTimer(t *testing.T) {
 		testErr := assert.AnError
 		duration := timer.StopWithError(testErr)
 
-		assert.True(t, duration > 0)
+		assert.Positive(t, duration)
 
 		// Find the recorded metric
 		var errorMetric *Metric
@@ -113,8 +113,8 @@ func TestPerformanceTimer(t *testing.T) {
 		duration := timer.Stop()
 
 		// Should work but not record metrics
-		assert.True(t, duration >= 0)
-		assert.Equal(t, 0, len(disabledCollector.metrics))
+		assert.GreaterOrEqual(t, duration, time.Duration(0))
+		assert.Empty(t, disabledCollector.metrics)
 	})
 }
 
@@ -142,7 +142,7 @@ func TestMetricsRecording(t *testing.T) {
 
 		require.NotNil(t, counterMetric)
 		assert.Equal(t, MetricTypeCounter, counterMetric.Type)
-		assert.Equal(t, 42.0, counterMetric.Value)
+		assert.InDelta(t, 42.0, counterMetric.Value, 0.001)
 		assert.Equal(t, "count", counterMetric.Unit)
 		assert.Equal(t, tags, counterMetric.Tags)
 		assert.True(t, counterMetric.Success)
@@ -164,7 +164,7 @@ func TestMetricsRecording(t *testing.T) {
 
 		require.NotNil(t, gaugeMetric)
 		assert.Equal(t, MetricTypeGauge, gaugeMetric.Type)
-		assert.Equal(t, 1024.0, gaugeMetric.Value)
+		assert.InDelta(t, 1024.0, gaugeMetric.Value, 0.001)
 		assert.Equal(t, "bytes", gaugeMetric.Unit)
 		assert.Equal(t, tags, gaugeMetric.Tags)
 	})
@@ -231,7 +231,7 @@ func TestMetricsRecording(t *testing.T) {
 
 		err := disabledCollector.RecordCounter("disabled_counter", 1.0, nil)
 		assert.NoError(t, err)
-		assert.Equal(t, 0, len(disabledCollector.metrics))
+		assert.Empty(t, disabledCollector.metrics)
 	})
 }
 
@@ -247,12 +247,12 @@ func TestResourceMetrics(t *testing.T) {
 		metrics := collector.GetCurrentResourceMetrics()
 
 		// Basic sanity checks - these values depend on the system
-		assert.True(t, metrics.MemoryUsage >= 0)
-		assert.True(t, metrics.Goroutines > 0) // There should be at least 1 goroutine running
-		assert.True(t, metrics.CPUUsage >= 0)
-		assert.True(t, metrics.DiskUsage >= 0)
-		assert.True(t, metrics.NetworkIO >= 0)
-		assert.True(t, metrics.FileHandles >= 0)
+		assert.GreaterOrEqual(t, metrics.MemoryUsage, int64(0))
+		assert.Positive(t, metrics.Goroutines) // There should be at least 1 goroutine running
+		assert.GreaterOrEqual(t, metrics.CPUUsage, float64(0))
+		assert.GreaterOrEqual(t, metrics.DiskUsage, int64(0))
+		assert.GreaterOrEqual(t, metrics.NetworkIO, int64(0))
+		assert.GreaterOrEqual(t, metrics.FileHandles, int(0))
 	})
 }
 
@@ -470,7 +470,7 @@ func TestJSONStorage(t *testing.T) {
 
 		results, err := storage.Query(query)
 		require.NoError(t, err)
-		assert.True(t, len(results) >= 1)
+		assert.GreaterOrEqual(t, len(results), 1)
 
 		// Query with tags filter
 		query = MetricsQuery{
@@ -481,7 +481,7 @@ func TestJSONStorage(t *testing.T) {
 
 		results, err = storage.Query(query)
 		require.NoError(t, err)
-		assert.True(t, len(results) >= 1)
+		assert.GreaterOrEqual(t, len(results), 1)
 	})
 
 	t.Run("Query with limit", func(t *testing.T) {
@@ -498,7 +498,7 @@ func TestJSONStorage(t *testing.T) {
 
 		results, err := storage.Query(query)
 		require.NoError(t, err)
-		assert.True(t, len(results) <= 1)
+		assert.LessOrEqual(t, len(results), 1)
 	})
 
 	t.Run("Aggregate metrics", func(t *testing.T) {
@@ -515,7 +515,7 @@ func TestJSONStorage(t *testing.T) {
 		aggregated, err := storage.Aggregate(query)
 		require.NoError(t, err)
 		assert.NotNil(t, aggregated)
-		assert.True(t, aggregated.Count >= 0)
+		assert.GreaterOrEqual(t, aggregated.Count, int64(0))
 	})
 
 	t.Run("Cleanup old files", func(t *testing.T) {
@@ -592,18 +592,18 @@ func TestHelperFunctions(t *testing.T) {
 		assert.InDelta(t, 9.5, p95, 0.1) // 95th percentile should be around 9.5
 
 		// Edge cases
-		assert.Equal(t, 0.0, percentile([]float64{}, 50))
-		assert.Equal(t, 1.0, percentile([]float64{1.0}, 50))
+		assert.InDelta(t, 0.0, percentile([]float64{}, 50), 0.001)
+		assert.InDelta(t, 1.0, percentile([]float64{1.0}, 50), 0.001)
 	})
 
 	t.Run("average calculation", func(t *testing.T) {
 		values := []float64{1.0, 2.0, 3.0, 4.0, 5.0}
 		avg := average(values)
-		assert.Equal(t, 3.0, avg)
+		assert.InDelta(t, 3.0, avg, 0.001)
 
 		// Edge cases
-		assert.Equal(t, 0.0, average([]float64{}))
-		assert.Equal(t, 5.0, average([]float64{5.0}))
+		assert.InDelta(t, 0.0, average([]float64{}), 0.001)
+		assert.InDelta(t, 5.0, average([]float64{5.0}), 0.001)
 	})
 
 	t.Run("filterMetrics", func(t *testing.T) {
@@ -624,7 +624,7 @@ func TestHelperFunctions(t *testing.T) {
 		assert.Equal(t, "test_count", testMetrics[0].Name)
 
 		noMatch := filterMetrics(metrics, "none_")
-		assert.Len(t, noMatch, 0)
+		assert.Empty(t, noMatch)
 	})
 }
 

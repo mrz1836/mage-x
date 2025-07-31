@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -42,7 +41,7 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("generate directives found", func() {
@@ -60,7 +59,7 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("generate with build tags", func() {
@@ -89,7 +88,7 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -107,7 +106,7 @@ func (ts *GenerateTestSuite) TestGenerateAll() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("generate all with build tags", func() {
@@ -133,7 +132,7 @@ func (ts *GenerateTestSuite) TestGenerateAll() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -151,7 +150,7 @@ func (ts *GenerateTestSuite) TestGenerateMocks() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -166,7 +165,7 @@ func (ts *GenerateTestSuite) TestGenerateClean() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("clean generated files", func() {
@@ -182,7 +181,7 @@ func (ts *GenerateTestSuite) TestGenerateClean() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("clean with custom patterns", func() {
@@ -205,7 +204,7 @@ func (ts *GenerateTestSuite) TestGenerateClean() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -223,7 +222,7 @@ func (ts *GenerateTestSuite) TestGenerateCode() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -241,7 +240,7 @@ func (ts *GenerateTestSuite) TestGenerateDocs() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -259,7 +258,7 @@ func (ts *GenerateTestSuite) TestGenerateSwagger() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -277,7 +276,7 @@ func (ts *GenerateTestSuite) TestGenerateOpenAPI() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -295,7 +294,7 @@ func (ts *GenerateTestSuite) TestGenerateGraphQL() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -313,7 +312,7 @@ func (ts *GenerateTestSuite) TestGenerateSQL() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -331,7 +330,7 @@ func (ts *GenerateTestSuite) TestGenerateWire() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -349,7 +348,7 @@ func (ts *GenerateTestSuite) TestGenerateConfig() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -362,8 +361,8 @@ func (ts *GenerateTestSuite) TestGenerateHelperFunctions() {
 
 		hasGenerate, files := checkForGenerateDirectives()
 
-		require.True(ts.T(), hasGenerate)
-		require.GreaterOrEqual(ts.T(), len(files), 1)
+		ts.Require().True(hasGenerate)
+		ts.Require().GreaterOrEqual(len(files), 1)
 	})
 
 	ts.Run("findInterfaces function", func() {
@@ -371,19 +370,19 @@ func (ts *GenerateTestSuite) TestGenerateHelperFunctions() {
 		interfaces := findInterfaces()
 
 		// Should return empty slice since it's a simplified implementation
-		require.Equal(ts.T(), 0, len(interfaces))
+		ts.Require().Empty(interfaces)
 	})
 
 	ts.Run("checkForGRPCService function", func() {
 		// Test without any proto files
 		hasService := checkForGRPCService()
-		require.False(ts.T(), hasService)
+		ts.Require().False(hasService)
 
 		// Create a proto file with service
 		ts.env.CreateFile("test.proto", "syntax = \"proto3\";\n\nservice TestService {\n  rpc Test() returns ();\n}\n")
 
 		hasService = checkForGRPCService()
-		require.True(ts.T(), hasService)
+		ts.Require().True(hasService)
 	})
 
 	ts.Run("backupGeneratedFiles function", func() {
@@ -395,8 +394,8 @@ func (ts *GenerateTestSuite) TestGenerateHelperFunctions() {
 	ts.Run("compareGeneratedFiles function", func() {
 		// Test compare function
 		different, err := compareGeneratedFiles("/tmp/test")
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), 0, len(different))
+		ts.Require().NoError(err)
+		ts.Require().Empty(different)
 	})
 }
 
@@ -423,7 +422,7 @@ func (ts *GenerateTestSuite) TestGenerateIntegration() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("generation with environment variables", func() {
@@ -465,7 +464,7 @@ func (ts *GenerateTestSuite) TestGenerateIntegration() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 

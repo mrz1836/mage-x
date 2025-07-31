@@ -8,7 +8,6 @@ import (
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -104,7 +103,7 @@ func main() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("handles build failure", func() {
@@ -142,8 +141,8 @@ func main() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "build failed")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "build failed")
 	})
 }
 
@@ -180,7 +179,7 @@ func main() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("handles no platforms configured", func() {
@@ -213,7 +212,7 @@ func main() {
 			},
 		)
 
-		require.NoError(ts.T(), err) // Should handle gracefully
+		ts.Require().NoError(err) // Should handle gracefully
 	})
 }
 
@@ -240,7 +239,7 @@ func main() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("handles invalid platform format", func() {
@@ -252,8 +251,8 @@ func main() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "invalid platform format")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "invalid platform format")
 	})
 
 	ts.Run("builds for windows platform with .exe extension", func() {
@@ -277,7 +276,7 @@ func main() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -304,7 +303,7 @@ func main() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Darwin method", func() {
@@ -329,7 +328,7 @@ func main() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Windows method", func() {
@@ -353,7 +352,7 @@ func main() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -383,7 +382,7 @@ CMD ["./app"]`)
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("handles missing Dockerfile", func() {
@@ -400,8 +399,8 @@ CMD ["./app"]`)
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "Dockerfile not found")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "Dockerfile not found")
 	})
 }
 
@@ -424,7 +423,7 @@ func (ts *BuildTestSuite) TestBuildClean() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -453,7 +452,7 @@ func main() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -476,7 +475,7 @@ func main() {}`)
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -498,7 +497,7 @@ func (ts *BuildTestSuite) TestBuildPreBuild() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -516,11 +515,11 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 
 		flags := buildFlags(config)
 
-		require.Contains(ts.T(), flags, "-tags")
-		require.Contains(ts.T(), flags, "integration,e2e")
-		require.Contains(ts.T(), flags, "-ldflags")
-		require.Contains(ts.T(), flags, "-trimpath")
-		require.Contains(ts.T(), flags, "-v")
+		ts.Require().Contains(flags, "-tags")
+		ts.Require().Contains(flags, "integration,e2e")
+		ts.Require().Contains(flags, "-ldflags")
+		ts.Require().Contains(flags, "-trimpath")
+		ts.Require().Contains(flags, "-v")
 	})
 
 	ts.Run("buildFlags with minimal config", func() {
@@ -530,10 +529,10 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 
 		flags := buildFlags(config)
 
-		require.Contains(ts.T(), flags, "-ldflags")
-		require.NotContains(ts.T(), flags, "-tags")
-		require.NotContains(ts.T(), flags, "-trimpath")
-		require.NotContains(ts.T(), flags, "-v")
+		ts.Require().Contains(flags, "-ldflags")
+		ts.Require().NotContains(flags, "-tags")
+		ts.Require().NotContains(flags, "-trimpath")
+		ts.Require().NotContains(flags, "-v")
 	})
 
 	ts.Run("getCommit returns commit hash", func() {
@@ -541,14 +540,14 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		originalRunner := GetRunner()
 		mockRunner := &testutil.MockRunner{}
 		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("abc1234", nil)
-		require.NoError(ts.T(), SetRunner(mockRunner))
+		ts.Require().NoError(SetRunner(mockRunner))
 
 		commit := getCommit()
 
-		require.Equal(ts.T(), "abc1234", commit)
+		ts.Require().Equal("abc1234", commit)
 
 		// Restore original runner
-		require.NoError(ts.T(), SetRunner(originalRunner))
+		ts.Require().NoError(SetRunner(originalRunner))
 	})
 
 	ts.Run("getCommit handles git error", func() {
@@ -556,14 +555,14 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		originalRunner := GetRunner()
 		mockRunner := &testutil.MockRunner{}
 		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("", errors.New("git error"))
-		require.NoError(ts.T(), SetRunner(mockRunner))
+		ts.Require().NoError(SetRunner(mockRunner))
 
 		commit := getCommit()
 
-		require.Equal(ts.T(), "unknown", commit)
+		ts.Require().Equal("unknown", commit)
 
 		// Restore original runner
-		require.NoError(ts.T(), SetRunner(originalRunner))
+		ts.Require().NoError(SetRunner(originalRunner))
 	})
 }
 

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -43,7 +42,7 @@ func (ts *GitTestSuite) TestGitDiff() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -53,9 +52,9 @@ func (ts *GitTestSuite) TestGitTag() {
 		// Set version environment variable
 		originalVersion := os.Getenv("version")
 		defer func() {
-			require.NoError(ts.T(), os.Setenv("version", originalVersion))
+			ts.Require().NoError(os.Setenv("version", originalVersion))
 		}()
-		require.NoError(ts.T(), os.Setenv("version", "1.2.3"))
+		ts.Require().NoError(os.Setenv("version", "1.2.3"))
 
 		// Mock successful git commands
 		ts.env.Runner.On("RunCmd", "git", []string{"tag", "-a", "v1.2.3", "-m", "Pending full release..."}).Return(nil)
@@ -70,7 +69,7 @@ func (ts *GitTestSuite) TestGitTag() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("missing version environment variable", func() {
@@ -93,8 +92,8 @@ func (ts *GitTestSuite) TestGitTag() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "version variable is required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "version variable is required")
 	})
 }
 
@@ -104,9 +103,9 @@ func (ts *GitTestSuite) TestGitTagRemove() {
 		// Set version environment variable
 		originalVersion := os.Getenv("version")
 		defer func() {
-			require.NoError(ts.T(), os.Setenv("version", originalVersion))
+			ts.Require().NoError(os.Setenv("version", originalVersion))
 		}()
-		require.NoError(ts.T(), os.Setenv("version", "1.2.3"))
+		ts.Require().NoError(os.Setenv("version", "1.2.3"))
 
 		// Mock successful git commands
 		ts.env.Runner.On("RunCmd", "git", []string{"tag", "-d", "v1.2.3"}).Return(nil)
@@ -121,7 +120,7 @@ func (ts *GitTestSuite) TestGitTagRemove() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("missing version environment variable", func() {
@@ -144,8 +143,8 @@ func (ts *GitTestSuite) TestGitTagRemove() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "version variable is required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "version variable is required")
 	})
 }
 
@@ -155,9 +154,9 @@ func (ts *GitTestSuite) TestGitTagUpdate() {
 		// Set version environment variable
 		originalVersion := os.Getenv("version")
 		defer func() {
-			require.NoError(ts.T(), os.Setenv("version", originalVersion))
+			ts.Require().NoError(os.Setenv("version", originalVersion))
 		}()
-		require.NoError(ts.T(), os.Setenv("version", "1.2.3"))
+		ts.Require().NoError(os.Setenv("version", "1.2.3"))
 
 		// Mock successful git commands
 		ts.env.Runner.On("RunCmd", "git", []string{"push", "--force", "origin", "HEAD:refs/tags/v1.2.3"}).Return(nil)
@@ -171,7 +170,7 @@ func (ts *GitTestSuite) TestGitTagUpdate() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("missing version environment variable", func() {
@@ -194,8 +193,8 @@ func (ts *GitTestSuite) TestGitTagUpdate() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "version variable is required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "version variable is required")
 	})
 }
 
@@ -213,7 +212,7 @@ func (ts *GitTestSuite) TestGitStatus() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -231,7 +230,7 @@ func (ts *GitTestSuite) TestGitLog() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -250,7 +249,7 @@ func (ts *GitTestSuite) TestGitBranch() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -269,7 +268,7 @@ func (ts *GitTestSuite) TestGitPull() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -288,16 +287,16 @@ func (ts *GitTestSuite) TestGitCommit() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("commit with environment variable message", func() {
 		// Set message environment variable
 		originalMessage := os.Getenv("message")
 		defer func() {
-			require.NoError(ts.T(), os.Setenv("message", originalMessage))
+			ts.Require().NoError(os.Setenv("message", originalMessage))
 		}()
-		require.NoError(ts.T(), os.Setenv("message", "env commit message"))
+		ts.Require().NoError(os.Setenv("message", "env commit message"))
 
 		// Mock successful git add and commit
 		ts.env.Runner.On("RunCmd", "git", []string{"add", "-A"}).Return(nil)
@@ -311,7 +310,7 @@ func (ts *GitTestSuite) TestGitCommit() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("missing commit message", func() {
@@ -334,8 +333,8 @@ func (ts *GitTestSuite) TestGitCommit() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "message parameter or environment variable is required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "message parameter or environment variable is required")
 	})
 }
 
@@ -353,7 +352,7 @@ func (ts *GitTestSuite) TestGitInit() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -371,7 +370,7 @@ func (ts *GitTestSuite) TestGitAdd() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("add specific files", func() {
@@ -386,7 +385,7 @@ func (ts *GitTestSuite) TestGitAdd() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -404,7 +403,7 @@ func (ts *GitTestSuite) TestGitClone() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -422,7 +421,7 @@ func (ts *GitTestSuite) TestGitPush() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -440,7 +439,7 @@ func (ts *GitTestSuite) TestGitPullWithRemote() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -458,7 +457,7 @@ func (ts *GitTestSuite) TestGitTagWithMessage() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -476,7 +475,7 @@ func (ts *GitTestSuite) TestGitBranchWithName() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -494,7 +493,7 @@ func (ts *GitTestSuite) TestGitCloneRepo() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -512,7 +511,7 @@ func (ts *GitTestSuite) TestGitLogWithCount() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -523,11 +522,11 @@ func (ts *GitTestSuite) TestGitIntegration() {
 		originalVersion := os.Getenv("version")
 		originalMessage := os.Getenv("message")
 		defer func() {
-			require.NoError(ts.T(), os.Setenv("version", originalVersion))
-			require.NoError(ts.T(), os.Setenv("message", originalMessage))
+			ts.Require().NoError(os.Setenv("version", originalVersion))
+			ts.Require().NoError(os.Setenv("message", originalMessage))
 		}()
-		require.NoError(ts.T(), os.Setenv("version", "2.0.0"))
-		require.NoError(ts.T(), os.Setenv("message", "Version 2.0.0 release"))
+		ts.Require().NoError(os.Setenv("version", "2.0.0"))
+		ts.Require().NoError(os.Setenv("message", "Version 2.0.0 release"))
 
 		// Mock git operations using environment variables
 		ts.env.Runner.On("RunCmd", "git", []string{"add", "-A"}).Return(nil)
@@ -547,7 +546,7 @@ func (ts *GitTestSuite) TestGitIntegration() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 

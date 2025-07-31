@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -29,15 +28,15 @@ func (ts *MinimalRunnerTestSuite) TearDownTest() {
 // TestNewSecureCommandRunner tests creating a new secure command runner
 func (ts *MinimalRunnerTestSuite) TestNewSecureCommandRunner() {
 	runner := NewSecureCommandRunner()
-	require.NotNil(ts.T(), runner)
+	ts.Require().NotNil(runner)
 
 	// Verify it implements CommandRunner interface
 	_ = runner
 
 	// Verify it's a SecureCommandRunner
 	secureRunner, ok := runner.(*SecureCommandRunner)
-	require.True(ts.T(), ok)
-	require.NotNil(ts.T(), secureRunner.executor)
+	ts.Require().True(ok)
+	ts.Require().NotNil(secureRunner.executor)
 }
 
 // TestSecureCommandRunner_RunCmd tests the RunCmd method
@@ -54,7 +53,7 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmd() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("command execution failure", func() {
@@ -70,8 +69,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmd() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Equal(ts.T(), expectedError, err)
+		ts.Require().Error(err)
+		ts.Require().Equal(expectedError, err)
 	})
 
 	ts.Run("command with multiple arguments", func() {
@@ -86,7 +85,7 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmd() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("command with no arguments", func() {
@@ -102,7 +101,7 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmd() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -124,8 +123,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmdOutput() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), expectedOutput, output)
+		ts.Require().NoError(err)
+		ts.Require().Equal(expectedOutput, output)
 	})
 
 	ts.Run("command output with trailing whitespace", func() {
@@ -146,8 +145,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmdOutput() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), rawOutput, output) // Test should reflect mock's exact return
+		ts.Require().NoError(err)
+		ts.Require().Equal(rawOutput, output) // Test should reflect mock's exact return
 	})
 
 	ts.Run("command output failure", func() {
@@ -166,9 +165,9 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmdOutput() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Equal(ts.T(), expectedError, err)
-		require.Empty(ts.T(), output)
+		ts.Require().Error(err)
+		ts.Require().Equal(expectedError, err)
+		ts.Require().Empty(output)
 	})
 
 	ts.Run("empty command output", func() {
@@ -186,42 +185,42 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmdOutput() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.Empty(ts.T(), output)
+		ts.Require().NoError(err)
+		ts.Require().Empty(output)
 	})
 }
 
 // TestGetRunner tests the GetRunner function
 func (ts *MinimalRunnerTestSuite) TestGetRunner() {
 	runner := GetRunner()
-	require.NotNil(ts.T(), runner)
+	ts.Require().NotNil(runner)
 
 	// Should return the same instance (singleton pattern)
 	runner2 := GetRunner()
-	require.Same(ts.T(), runner, runner2)
+	ts.Require().Same(runner, runner2)
 }
 
 // TestSetRunner tests the SetRunner function
 func (ts *MinimalRunnerTestSuite) TestSetRunner() {
 	// Get original runner
 	originalRunner := GetRunner()
-	require.NotNil(ts.T(), originalRunner)
+	ts.Require().NotNil(originalRunner)
 
 	// Create a custom mock runner
 	mockRunner := ts.env.Runner
 
 	// Set the mock runner
-	require.NoError(ts.T(), SetRunner(mockRunner))
+	ts.Require().NoError(SetRunner(mockRunner))
 
 	// Verify the runner was set
 	currentRunner := GetRunner()
-	require.Same(ts.T(), mockRunner, currentRunner)
-	require.NotSame(ts.T(), originalRunner, currentRunner)
+	ts.Require().Same(mockRunner, currentRunner)
+	ts.Require().NotSame(originalRunner, currentRunner)
 
 	// Restore original runner
-	require.NoError(ts.T(), SetRunner(originalRunner))
+	ts.Require().NoError(SetRunner(originalRunner))
 	restoredRunner := GetRunner()
-	require.Same(ts.T(), originalRunner, restoredRunner)
+	ts.Require().Same(originalRunner, restoredRunner)
 }
 
 // TestTruncateString tests the truncateString helper function
@@ -285,7 +284,7 @@ func (ts *MinimalRunnerTestSuite) TestTruncateString() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			result := truncateString(tc.input, tc.maxLen)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }
@@ -387,7 +386,7 @@ func (ts *MinimalRunnerTestSuite) TestFormatBytes() {
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			result := formatBytes(tc.bytes)
-			require.Equal(ts.T(), tc.expected, result)
+			ts.Require().Equal(tc.expected, result)
 		})
 	}
 }
@@ -400,11 +399,11 @@ func (ts *MinimalRunnerTestSuite) TestMinimalRunnerIntegration() {
 
 		// Set a mock runner
 		mockRunner := ts.env.Runner
-		require.NoError(ts.T(), SetRunner(mockRunner))
+		ts.Require().NoError(SetRunner(mockRunner))
 
 		// Verify the mock is active
 		currentRunner := GetRunner()
-		require.Same(ts.T(), mockRunner, currentRunner)
+		ts.Require().Same(mockRunner, currentRunner)
 
 		// Set up mock expectations
 		mockRunner.On("RunCmd", "test1", []string(nil)).Return(nil)
@@ -412,16 +411,16 @@ func (ts *MinimalRunnerTestSuite) TestMinimalRunnerIntegration() {
 
 		// Execute commands through the runner
 		err := currentRunner.RunCmd("test1")
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		output, err := currentRunner.RunCmdOutput("test2")
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "output", output)
+		ts.Require().NoError(err)
+		ts.Require().Equal("output", output)
 
 		// Restore original runner
-		require.NoError(ts.T(), SetRunner(runner1))
+		ts.Require().NoError(SetRunner(runner1))
 		restoredRunner := GetRunner()
-		require.Same(ts.T(), runner1, restoredRunner)
+		ts.Require().Same(runner1, restoredRunner)
 	})
 
 	ts.Run("error handling chain", func() {
@@ -436,8 +435,8 @@ func (ts *MinimalRunnerTestSuite) TestMinimalRunnerIntegration() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "execution failed")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "execution failed")
 	})
 }
 

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -56,8 +55,8 @@ func (ts *CLISimpleTestSuite) TestCLIBulk() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "OPERATION environment variable is required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "OPERATION environment variable is required")
 	})
 
 	ts.Run("handles missing repository config", func() {
@@ -76,8 +75,8 @@ func (ts *CLISimpleTestSuite) TestCLIBulk() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "failed to load repository config")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "failed to load repository config")
 	})
 }
 
@@ -99,8 +98,8 @@ func (ts *CLISimpleTestSuite) TestCLIQuery() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "failed to load repository config")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "failed to load repository config")
 	})
 }
 
@@ -118,8 +117,8 @@ func (ts *CLISimpleTestSuite) TestCLIDashboard() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "failed to load repository config")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "failed to load repository config")
 	})
 }
 
@@ -137,8 +136,8 @@ func (ts *CLISimpleTestSuite) TestCLIBatch() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "batch configuration not found")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "batch configuration not found")
 	})
 }
 
@@ -171,8 +170,8 @@ func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "invalid monitoring interval")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "invalid monitoring interval")
 	})
 
 	ts.Run("handles empty repository config", func() {
@@ -203,7 +202,7 @@ func (ts *CLISimpleTestSuite) TestCLIMonitor() {
 		)
 
 		// Should succeed but with empty config (no repositories to monitor)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -225,7 +224,7 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("syncs workspace", func() {
@@ -247,7 +246,7 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("cleans workspace", func() {
@@ -270,7 +269,7 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("backups workspace", func() {
@@ -292,7 +291,7 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("restores workspace", func() {
@@ -316,7 +315,7 @@ func (ts *CLISimpleTestSuite) TestCLIWorkspace() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -338,8 +337,8 @@ func (ts *CLISimpleTestSuite) TestCLIPipeline() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "pipeline configuration not found")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "pipeline configuration not found")
 	})
 }
 
@@ -365,7 +364,7 @@ func (ts *CLISimpleTestSuite) TestCLICompliance() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("generates compliance report", func() {
@@ -384,8 +383,8 @@ func (ts *CLISimpleTestSuite) TestCLICompliance() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists("compliance-report.json"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists("compliance-report.json"))
 	})
 
 	ts.Run("exports compliance data", func() {
@@ -404,8 +403,8 @@ func (ts *CLISimpleTestSuite) TestCLICompliance() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists("compliance-export.json"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists("compliance-export.json"))
 	})
 }
 
@@ -413,21 +412,21 @@ func (ts *CLISimpleTestSuite) TestCLICompliance() {
 func (ts *CLISimpleTestSuite) TestCLIUtilityMethods() {
 	ts.Run("parseStringSlice", func() {
 		result := parseStringSlice("item1,item2,item3")
-		require.Equal(ts.T(), []string{"item1", "item2", "item3"}, result)
+		ts.Require().Equal([]string{"item1", "item2", "item3"}, result)
 
 		result = parseStringSlice("")
-		require.Equal(ts.T(), []string{}, result)
+		ts.Require().Equal([]string{}, result)
 	})
 
 	ts.Run("parseInt", func() {
 		result := parseInt("123")
-		require.Equal(ts.T(), 123, result)
+		ts.Require().Equal(123, result)
 
 		result = parseInt("invalid")
-		require.Equal(ts.T(), 0, result)
+		ts.Require().Equal(0, result)
 
 		result = parseInt("")
-		require.Equal(ts.T(), 0, result)
+		ts.Require().Equal(0, result)
 	})
 
 	ts.Run("getMaxConcurrency", func() {
@@ -442,13 +441,13 @@ func (ts *CLISimpleTestSuite) TestCLIUtilityMethods() {
 			ts.T().Fatalf("Failed to set MAX_CONCURRENT: %v", err)
 		}
 		result := getMaxConcurrency()
-		require.Equal(ts.T(), 8, result)
+		ts.Require().Equal(8, result)
 
 		if err := os.Setenv("MAX_CONCURRENT", "invalid"); err != nil {
 			ts.T().Fatalf("Failed to set MAX_CONCURRENT: %v", err)
 		}
 		result = getMaxConcurrency()
-		require.Equal(ts.T(), 4, result) // default value
+		ts.Require().Equal(4, result) // default value
 	})
 }
 
@@ -466,7 +465,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Help method", func() {
@@ -481,7 +480,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Version method", func() {
@@ -496,7 +495,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Completion method", func() {
@@ -511,7 +510,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Config method", func() {
@@ -526,7 +525,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Update method", func() {
@@ -544,7 +543,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 

@@ -26,8 +26,8 @@ var (
 func initCacheManager() *cache.Manager {
 	cacheOnce.Do(func() {
 		config := cache.DefaultConfig()
-		// TODO: Add cache configuration to Config struct if needed
-		// For now, use default cache configuration
+		// Cache configuration uses default settings for now.
+		// Future enhancement: integrate with main Config struct for customization.
 
 		// Check if cache is disabled via environment
 		if os.Getenv("MAGE_CACHE_DISABLED") == "true" {

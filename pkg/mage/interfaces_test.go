@@ -22,7 +22,7 @@ type MockBuilder struct {
 	shouldError        bool
 }
 
-func (m *MockBuilder) Build(ctx context.Context, opts BuildOptions) error {
+func (m *MockBuilder) Build(_ context.Context, opts BuildOptions) error {
 	m.buildCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -30,7 +30,7 @@ func (m *MockBuilder) Build(ctx context.Context, opts BuildOptions) error {
 	return nil
 }
 
-func (m *MockBuilder) CrossCompile(ctx context.Context, platforms []Platform) error {
+func (m *MockBuilder) CrossCompile(_ context.Context, platforms []Platform) error {
 	m.crossCompileCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -38,7 +38,7 @@ func (m *MockBuilder) CrossCompile(ctx context.Context, platforms []Platform) er
 	return nil
 }
 
-func (m *MockBuilder) Package(ctx context.Context, format PackageFormat) error {
+func (m *MockBuilder) Package(_ context.Context, format PackageFormat) error {
 	m.packageCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -46,7 +46,7 @@ func (m *MockBuilder) Package(ctx context.Context, format PackageFormat) error {
 	return nil
 }
 
-func (m *MockBuilder) Clean(ctx context.Context) error {
+func (m *MockBuilder) Clean(_ context.Context) error {
 	m.cleanCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -54,7 +54,7 @@ func (m *MockBuilder) Clean(ctx context.Context) error {
 	return nil
 }
 
-func (m *MockBuilder) Install(ctx context.Context, target string) error {
+func (m *MockBuilder) Install(_ context.Context, target string) error {
 	m.installCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -71,7 +71,7 @@ type MockTester struct {
 	shouldError          bool
 }
 
-func (m *MockTester) RunTests(ctx context.Context, opts TestOptions) (*TestResults, error) {
+func (m *MockTester) RunTests(_ context.Context, opts TestOptions) (*TestResults, error) {
 	m.runTestsCalled = true
 	if m.shouldError {
 		return nil, assert.AnError
@@ -79,7 +79,7 @@ func (m *MockTester) RunTests(ctx context.Context, opts TestOptions) (*TestResul
 	return &TestResults{Passed: 10, Failed: 0, Duration: time.Second}, nil
 }
 
-func (m *MockTester) RunBenchmarks(ctx context.Context, opts IBenchmarkOptions) (*IBenchmarkResults, error) {
+func (m *MockTester) RunBenchmarks(_ context.Context, opts IBenchmarkOptions) (*IBenchmarkResults, error) {
 	m.runBenchmarksCalled = true
 	if m.shouldError {
 		return nil, assert.AnError
@@ -244,7 +244,7 @@ func TestTester_Interface(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, report)
 		assert.True(t, tester.generateCovCalled)
-		assert.Equal(t, 85.5, report.Overall.Percentage)
+		assert.InDelta(t, 85.5, report.Overall.Percentage, 0.001)
 	})
 
 	t.Run("RunUnit", func(t *testing.T) {
@@ -476,7 +476,7 @@ func TestCoverageReport(t *testing.T) {
 			},
 		}
 
-		assert.Equal(t, 92.5, report.Overall.Percentage)
+		assert.InDelta(t, 92.5, report.Overall.Percentage, 0.001)
 		assert.Equal(t, 925, report.Overall.Covered)
 		assert.Equal(t, 1000, report.Overall.Lines)
 	})

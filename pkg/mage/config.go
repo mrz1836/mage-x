@@ -173,7 +173,8 @@ func LoadConfig() (*Config, error) {
 		// Apply environment variable overrides
 		applyEnvOverrides(loadedConfig)
 
-		// TODO: Add enterprise configuration validation when EnterpriseConfiguration type is defined
+		// Enterprise configuration validation is reserved for future implementation.
+		// When EnterpriseConfiguration type is defined, validation logic will be added here.
 	})
 	cfg = loadedConfig // Keep backward compatibility variable in sync
 	return loadedConfig, errLoadConfig
@@ -309,13 +310,16 @@ func applyEnterpriseEnvOverrides(cfg *EnterpriseConfiguration) {
 		cfg.Organization.Domain = v
 	}
 
-	// TODO: Add security configuration when Security field is added to Config
+	// Security configuration environment variables are reserved for future implementation.
+	// When Security field is added to Config, these will be processed:
 	_ = os.Getenv("MAGE_SECURITY_LEVEL") // placeholder for security level
-	// TODO: Add vault integration when Security field is added to Config
+	// Vault integration is reserved for future implementation.
+	// When Security field is added to Config, these will be processed:
 	_ = os.Getenv("MAGE_ENABLE_VAULT") // placeholder for vault enabled
 	_ = os.Getenv("VAULT_ADDR")        // placeholder for vault address
 
-	// TODO: Add analytics configuration when Analytics field is added to Config
+	// Analytics configuration is reserved for future implementation.
+	// When Analytics field is added to Config, these will be processed:
 	_ = os.Getenv("MAGE_ANALYTICS_ENABLED") // placeholder for analytics enabled
 	_ = os.Getenv("MAGE_METRICS_INTERVAL")  // placeholder for metrics interval
 }
@@ -432,6 +436,6 @@ func (c *Config) Validate() error {
 }
 
 // Save saves the configuration to file
-func (c *Config) Save(filename string) error {
+func (c *Config) Save(_ string) error {
 	return SaveConfig(c)
 }

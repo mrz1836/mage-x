@@ -320,7 +320,7 @@ func (Release) Upload(tag string, assets ...string) error {
 }
 
 // List lists releases
-func (Release) List(limit ...int) error {
+func (Release) List(_ ...int) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Listing releases")
 }

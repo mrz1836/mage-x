@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -82,7 +81,7 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("benchmark with custom time", func() {
@@ -110,7 +109,7 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("benchmark with count", func() {
@@ -138,7 +137,7 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("benchmark with CPU and memory profiling", func() {
@@ -174,7 +173,7 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -199,7 +198,7 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("benchmark comparison with custom files", func() {
@@ -240,16 +239,16 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("missing old benchmark file", func() {
 		// Ensure old.txt doesn't exist
 		if err := os.Remove("old.txt"); err != nil && !os.IsNotExist(err) {
-			require.NoError(ts.T(), err)
+			ts.Require().NoError(err)
 		}
 		if err := os.Remove("new.txt"); err != nil && !os.IsNotExist(err) {
-			require.NoError(ts.T(), err)
+			ts.Require().NoError(err)
 		}
 
 		// Mock benchstat installation but don't create old.txt file
@@ -265,14 +264,14 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "old benchmark file not found")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "old benchmark file not found")
 	})
 
 	ts.Run("missing new benchmark file", func() {
 		// Ensure new.txt doesn't exist, but old.txt does
 		if err := os.Remove("new.txt"); err != nil && !os.IsNotExist(err) {
-			require.NoError(ts.T(), err)
+			ts.Require().NoError(err)
 		}
 		ts.env.CreateFile("old.txt", "BenchmarkTest 1000 1000000 ns/op")
 
@@ -289,8 +288,8 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 			},
 		)
 
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "new benchmark file not found")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "new benchmark file not found")
 	})
 }
 
@@ -310,7 +309,7 @@ func (ts *BenchTestSuite) TestBenchSave() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("benchmark save with custom filename", func() {
@@ -338,8 +337,8 @@ func (ts *BenchTestSuite) TestBenchSave() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists("custom-bench.txt"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists("custom-bench.txt"))
 	})
 
 	ts.Run("benchmark save with directory creation", func() {
@@ -367,9 +366,9 @@ func (ts *BenchTestSuite) TestBenchSave() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists("benchmarks"))
-		require.True(ts.T(), ts.env.FileExists("benchmarks/results.txt"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists("benchmarks"))
+		ts.Require().True(ts.env.FileExists("benchmarks/results.txt"))
 	})
 }
 
@@ -391,7 +390,7 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("CPU profiling with custom profile name", func() {
@@ -421,7 +420,7 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -443,7 +442,7 @@ func (ts *BenchTestSuite) TestBenchMem() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("memory profiling with custom profile name", func() {
@@ -473,7 +472,7 @@ func (ts *BenchTestSuite) TestBenchMem() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -493,7 +492,7 @@ func (ts *BenchTestSuite) TestBenchProfile() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -513,7 +512,7 @@ func (ts *BenchTestSuite) TestBenchTrace() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("tracing with custom trace file", func() {
@@ -541,7 +540,7 @@ func (ts *BenchTestSuite) TestBenchTrace() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -561,8 +560,8 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists("bench-baseline.txt"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists("bench-baseline.txt"))
 	})
 
 	ts.Run("regression check with existing baseline", func() {
@@ -584,8 +583,8 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), ts.env.FileExists("bench-current.txt"))
+		ts.Require().NoError(err)
+		ts.Require().True(ts.env.FileExists("bench-current.txt"))
 	})
 
 	ts.Run("regression check with baseline update", func() {
@@ -618,9 +617,9 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 			},
 		)
 
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 		// baseline should be updated with new content
-		require.True(ts.T(), ts.env.FileExists("bench-baseline.txt"))
+		ts.Require().True(ts.env.FileExists("bench-baseline.txt"))
 	})
 }
 

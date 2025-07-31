@@ -418,7 +418,7 @@ func NewMockExecutor() *MockExecutor {
 }
 
 // Execute records the call and returns a mocked response
-func (m *MockExecutor) Execute(ctx context.Context, name string, args ...string) error {
+func (m *MockExecutor) Execute(_ context.Context, name string, args ...string) error {
 	m.ExecuteCalls = append(m.ExecuteCalls, CommandCall{
 		Name: name,
 		Args: args,
@@ -433,7 +433,7 @@ func (m *MockExecutor) Execute(ctx context.Context, name string, args ...string)
 }
 
 // ExecuteOutput records the call and returns a mocked response
-func (m *MockExecutor) ExecuteOutput(ctx context.Context, name string, args ...string) (string, error) {
+func (m *MockExecutor) ExecuteOutput(_ context.Context, name string, args ...string) (string, error) {
 	m.ExecuteOutputCalls = append(m.ExecuteOutputCalls, CommandCall{
 		Name: name,
 		Args: args,
@@ -448,7 +448,7 @@ func (m *MockExecutor) ExecuteOutput(ctx context.Context, name string, args ...s
 }
 
 // ExecuteWithEnv records the call and returns a mocked response
-func (m *MockExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
+func (m *MockExecutor) ExecuteWithEnv(_ context.Context, env []string, name string, args ...string) error {
 	m.ExecuteCalls = append(m.ExecuteCalls, CommandCall{
 		Name: name,
 		Args: args,
