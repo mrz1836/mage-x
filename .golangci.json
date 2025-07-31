@@ -94,7 +94,6 @@
 		"disable": [
 			"godox",
 			"godot",
-			"gosec",
 			"exhaustive",
 			"gocognit",
 			"gocyclo",
@@ -103,8 +102,7 @@
 			"nestif",
 			"revive",
 			"gocritic",
-			"testifylint",
-			"goprintffuncname"
+			"testifylint"
 		],
 		"settings": {
 			"depguard": {
@@ -366,6 +364,12 @@
 					"goconst",
 					"gocognit",
 					"gochecknoglobals"
+				]
+			},
+			{
+				"path": "pkg/utils/logger\\.go",
+				"linters": [
+					"goprintffuncname"
 				]
 			},
 			{

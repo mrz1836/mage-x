@@ -97,7 +97,7 @@ const (
 	EnvNoColor     = "NO_COLOR"
 	EnvForceColor  = "FORCE_COLOR"
 	EnvCI          = "CI"
-	EnvGitHubToken = "GITHUB_TOKEN"
+	EnvGitHubToken = "GITHUB_TOKEN" //nolint:gosec // G101: This is an environment variable name, not a hardcoded credential
 )
 
 // Platform constants
