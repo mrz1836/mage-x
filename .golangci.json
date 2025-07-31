@@ -103,7 +103,6 @@
 			"nestif",
 			"revive",
 			"gocritic",
-			"forbidigo",
 			"testifylint",
 			"goprintffuncname"
 		],
@@ -114,6 +113,23 @@
 				"packages": [
 					"github.com/sirupsen/logrus"
 				]
+			},
+			"forbidigo": {
+				"forbid": [
+					{
+						"pattern": "^fmt\\.Println$",
+						"msg": "Use utils.Info() instead of fmt.Println()"
+					},
+					{
+						"pattern": "^print$",
+						"msg": "Use utils.Info() instead of print()"
+					},
+					{
+						"pattern": "^println$",
+						"msg": "Use utils.Info() instead of println()"
+					}
+				],
+				"exclude-godoc-examples": true
 			},
 			"dogsled": {
 				"max-blank-identifiers": 2
