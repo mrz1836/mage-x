@@ -28,7 +28,7 @@ func TestDefaultPathWatcher_BasicOperations(t *testing.T) {
 
 	// Test Watch
 	err = watcher.Watch(tempDir.String(), EventAll)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test IsWatching
 	assert.True(t, watcher.IsWatching(tempDir.String()))
@@ -235,7 +235,7 @@ func TestMockPathWatcher(t *testing.T) {
 
 	// Test Watch
 	err := mock.Watch("/test/path", EventAll)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, mock.WatchCalls, MockWatchCall{
 		Path:   "/test/path",
 		Events: EventAll,
@@ -292,9 +292,9 @@ func TestEventMask_Bitwise(t *testing.T) {
 	mask := EventCreate | EventWrite
 
 	// Test bitwise operations
-	assert.True(t, mask&EventCreate != 0)
-	assert.True(t, mask&EventWrite != 0)
-	assert.False(t, mask&EventRemove != 0)
+	assert.NotEqual(t, 0, mask&EventCreate)
+	assert.NotEqual(t, 0, mask&EventWrite)
+	assert.Equal(t, EventMask(0), mask&EventRemove)
 }
 
 func TestDefaultPathWatcher_ConcurrentAccess(t *testing.T) {

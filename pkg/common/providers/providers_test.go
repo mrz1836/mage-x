@@ -147,9 +147,9 @@ func TestAzureProvider(t *testing.T) {
 	}
 
 	// Test Azure-specific environment variables
-	subscriptionId := env.GetWithDefault("AZURE_SUBSCRIPTION_ID", "")
-	if subscriptionId != "" {
-		t.Logf("Azure subscription ID found: %s", subscriptionId)
+	subscriptionID := env.GetWithDefault("AZURE_SUBSCRIPTION_ID", "")
+	if subscriptionID != "" {
+		t.Logf("Azure subscription ID found: %s", subscriptionID)
 	}
 }
 
@@ -171,8 +171,8 @@ func TestGCPProvider(t *testing.T) {
 	}
 
 	// Test GCP-specific environment variables
-	projectId := env.GetWithDefault("GOOGLE_CLOUD_PROJECT", "default-project")
-	if projectId == "" {
+	projectID := env.GetWithDefault("GOOGLE_CLOUD_PROJECT", "default-project")
+	if projectID == "" {
 		t.Error("GCP project should have a default value")
 	}
 }

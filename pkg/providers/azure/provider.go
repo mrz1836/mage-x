@@ -126,16 +126,32 @@ func (p *Provider) Close() error {
 	return nil
 }
 
-// Service accessors
-func (p *Provider) Compute() providers.ComputeService       { return p.services.compute }
-func (p *Provider) Storage() providers.StorageService       { return p.services.storage }
-func (p *Provider) Network() providers.NetworkService       { return p.services.network }
-func (p *Provider) Container() providers.ContainerService   { return p.services.container }
-func (p *Provider) Database() providers.DatabaseService     { return p.services.database }
-func (p *Provider) Security() providers.SecurityService     { return p.services.security }
+// Compute returns the compute service for Azure VMs and related resources
+func (p *Provider) Compute() providers.ComputeService { return p.services.compute }
+
+// Storage returns the storage service for Azure Storage accounts and blobs
+func (p *Provider) Storage() providers.StorageService { return p.services.storage }
+
+// Network returns the network service for Azure VNets and networking resources
+func (p *Provider) Network() providers.NetworkService { return p.services.network }
+
+// Container returns the container service for Azure Container Instances
+func (p *Provider) Container() providers.ContainerService { return p.services.container }
+
+// Database returns the database service for Azure SQL and CosmosDB
+func (p *Provider) Database() providers.DatabaseService { return p.services.database }
+
+// Security returns the security service for Azure security features
+func (p *Provider) Security() providers.SecurityService { return p.services.security }
+
+// Monitoring returns the monitoring service for Azure Monitor
 func (p *Provider) Monitoring() providers.MonitoringService { return p.services.monitoring }
+
+// Serverless returns the serverless service for Azure Functions
 func (p *Provider) Serverless() providers.ServerlessService { return p.services.serverless }
-func (p *Provider) AI() providers.AIService                 { return p.services.ai }
+
+// AI returns the AI service for Azure Cognitive Services
+func (p *Provider) AI() providers.AIService { return p.services.ai }
 
 // The following services are placeholders for now
 func (p *Provider) Cost() providers.CostService                 { return nil }
@@ -180,7 +196,7 @@ func (s *azureComputeService) ResizeInstance(ctx context.Context, id string, siz
 	return nil
 }
 
-func (s *azureComputeService) SnapshotInstance(ctx context.Context, id string, name string) (*providers.Snapshot, error) {
+func (s *azureComputeService) SnapshotInstance(_ context.Context, id string, name string) (*providers.Snapshot, error) {
 	return &providers.Snapshot{
 		ID:         fmt.Sprintf("snap-%s", name),
 		Name:       name,
@@ -190,7 +206,7 @@ func (s *azureComputeService) SnapshotInstance(ctx context.Context, id string, n
 	}, nil
 }
 
-func (s *azureComputeService) CloneInstance(ctx context.Context, id string, req *providers.CloneRequest) (*providers.Instance, error) {
+func (s *azureComputeService) CloneInstance(ctx context.Context, _ string, req *providers.CloneRequest) (*providers.Instance, error) {
 	return s.CreateInstance(ctx, &providers.CreateInstanceRequest{
 		Name: req.Name,
 		Type: req.Type,

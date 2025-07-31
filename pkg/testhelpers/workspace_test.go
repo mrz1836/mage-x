@@ -228,7 +228,7 @@ func TestTempWorkspace_Symlink(t *testing.T) {
 	// Verify symlink
 	info, err := os.Lstat(tw.Path("link.txt"))
 	require.NoError(t, err)
-	require.True(t, info.Mode()&os.ModeSymlink != 0)
+	require.NotEqual(t, 0, info.Mode()&os.ModeSymlink)
 
 	// Read through symlink
 	content := tw.ReadTextFile("link.txt")
@@ -468,7 +468,7 @@ func TestTempWorkspace_EdgeCases(t *testing.T) {
 	// Empty file
 	tw.WriteFile("empty.txt", []byte{})
 	require.True(t, tw.Exists("empty.txt"))
-	require.Len(t, tw.ReadFile("empty.txt"), 0)
+	require.Empty(t, tw.ReadFile("empty.txt"))
 
 	// File with special characters
 	tw.WriteTextFile("special-!@#$%.txt", "special")

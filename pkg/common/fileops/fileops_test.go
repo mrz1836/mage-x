@@ -22,7 +22,7 @@ type FileOpsTestSuite struct {
 func (suite *FileOpsTestSuite) SetupSuite() {
 	// Create temporary directory for all tests
 	tmpDir, err := os.MkdirTemp("", "fileops-test-*")
-	require.NoError(suite.T(), err, "Failed to create temp dir")
+	suite.Require().NoError(err, "Failed to create temp dir")
 	suite.tmpDir = tmpDir
 	suite.ops = New()
 }
@@ -392,18 +392,18 @@ func (suite *FileOpsTestSuite) TestFileOpsFacade() {
 
 		// Save config
 		err := suite.ops.SaveConfig(configPath, testConfig, "yaml")
-		require.NoError(suite.T(), err, "Failed to save config")
+		suite.Require().NoError(err, "Failed to save config")
 
 		// Load config
 		var result TestConfig
 		foundPath, err := suite.ops.LoadConfig([]string{configPath}, &result)
-		require.NoError(suite.T(), err, "Failed to load config")
+		suite.Require().NoError(err, "Failed to load config")
 
-		assert.Equal(suite.T(), configPath, foundPath, "Should find config at expected path")
-		assert.Equal(suite.T(), testConfig.Database.Host, result.Database.Host, "Database host should match")
-		assert.Equal(suite.T(), testConfig.Database.Port, result.Database.Port, "Database port should match")
-		assert.Equal(suite.T(), testConfig.Debug, result.Debug, "Debug flag should match")
-		assert.ElementsMatch(suite.T(), testConfig.Features, result.Features, "Features should match")
+		suite.Equal(configPath, foundPath, "Should find config at expected path")
+		suite.Equal(testConfig.Database.Host, result.Database.Host, "Database host should match")
+		suite.Equal(testConfig.Database.Port, result.Database.Port, "Database port should match")
+		suite.Equal(testConfig.Debug, result.Debug, "Debug flag should match")
+		suite.ElementsMatch(testConfig.Features, result.Features, "Features should match")
 	})
 
 	suite.Run("SaveConfig and LoadConfig JSON", func() {
@@ -411,15 +411,15 @@ func (suite *FileOpsTestSuite) TestFileOpsFacade() {
 
 		// Save config
 		err := suite.ops.SaveConfig(configPath, testConfig, "json")
-		require.NoError(suite.T(), err, "Failed to save config")
+		suite.Require().NoError(err, "Failed to save config")
 
 		// Load config
 		var result TestConfig
 		foundPath, err := suite.ops.LoadConfig([]string{configPath}, &result)
-		require.NoError(suite.T(), err, "Failed to load config")
+		suite.Require().NoError(err, "Failed to load config")
 
-		assert.Equal(suite.T(), configPath, foundPath, "Should find config at expected path")
-		assert.Equal(suite.T(), testConfig, result, "Loaded config should match saved config")
+		suite.Equal(configPath, foundPath, "Should find config at expected path")
+		suite.Equal(testConfig, result, "Loaded config should match saved config")
 	})
 
 	suite.Run("LoadConfig with fallback", func() {
@@ -428,15 +428,15 @@ func (suite *FileOpsTestSuite) TestFileOpsFacade() {
 		configPath2 := filepath.Join(suite.tmpDir, "fallback.yaml")
 
 		err := suite.ops.SaveConfig(configPath2, testConfig, "yaml")
-		require.NoError(suite.T(), err, "Failed to save fallback config")
+		suite.Require().NoError(err, "Failed to save fallback config")
 
 		// Load with fallback
 		var result TestConfig
 		foundPath, err := suite.ops.LoadConfig([]string{configPath1, configPath2}, &result)
-		require.NoError(suite.T(), err, "Failed to load config with fallback")
+		suite.Require().NoError(err, "Failed to load config with fallback")
 
-		assert.Equal(suite.T(), configPath2, foundPath, "Should find config at fallback path")
-		assert.Equal(suite.T(), testConfig.Database.Host, result.Database.Host, "Config should be loaded correctly")
+		suite.Equal(configPath2, foundPath, "Should find config at fallback path")
+		suite.Equal(testConfig.Database.Host, result.Database.Host, "Config should be loaded correctly")
 	})
 
 	suite.Run("LoadConfig all missing", func() {
@@ -448,8 +448,8 @@ func (suite *FileOpsTestSuite) TestFileOpsFacade() {
 
 		var result TestConfig
 		foundPath, err := suite.ops.LoadConfig(paths, &result)
-		assert.Error(suite.T(), err, "Should error when all config files are missing")
-		assert.Empty(suite.T(), foundPath, "Should return empty path when no config found")
+		suite.Error(err, "Should error when all config files are missing")
+		suite.Empty(foundPath, "Should return empty path when no config found")
 	})
 
 	suite.Run("SaveConfig invalid format", func() {
@@ -457,10 +457,10 @@ func (suite *FileOpsTestSuite) TestFileOpsFacade() {
 
 		err := suite.ops.SaveConfig(configPath, testConfig, "invalid")
 		// SaveConfig defaults to YAML for unknown formats, so no error
-		assert.NoError(suite.T(), err, "Should default to YAML for unknown formats")
+		suite.NoError(err, "Should default to YAML for unknown formats")
 
 		// Verify YAML file was created
-		assert.True(suite.T(), suite.ops.File.Exists(configPath), "File should exist")
+		suite.True(suite.ops.File.Exists(configPath), "File should exist")
 	})
 }
 

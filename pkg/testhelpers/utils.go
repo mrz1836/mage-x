@@ -215,13 +215,13 @@ func Retry(t *testing.T, fn func() error, attempts int, delay time.Duration) err
 
 	var lastErr error
 	for i := 0; i < attempts; i++ {
-		if err := fn(); err == nil {
+		err := fn()
+		if err == nil {
 			return nil
-		} else {
-			lastErr = err
-			if i < attempts-1 {
-				time.Sleep(delay)
-			}
+		}
+		lastErr = err
+		if i < attempts-1 {
+			time.Sleep(delay)
 		}
 	}
 
@@ -432,7 +432,7 @@ func RunTestCases(t *testing.T, cases []TestCase, fn func(tc TestCase)) {
 	t.Helper()
 
 	for _, tc := range cases {
-		t.Run(tc.Name, func(t *testing.T) {
+		t.Run(tc.Name, func(_ *testing.T) {
 			fn(tc)
 		})
 	}

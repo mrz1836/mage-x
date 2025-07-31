@@ -250,7 +250,7 @@ func TestTestFixtures_CreateJSONFile(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, "value", loaded["string"])
-	require.Equal(t, float64(42), loaded["number"]) // JSON numbers are float64
+	require.InDelta(t, float64(42), loaded["number"], 0.001) // JSON numbers are float64
 	require.Equal(t, true, loaded["bool"])
 }
 
@@ -479,7 +479,7 @@ func TestTestFixtures_ComplexScenario(t *testing.T) {
 
 	// Count files
 	fileCount := 0
-	err := filepath.Walk(env.AbsPath("tree"), func(path string, info os.FileInfo, walkErr error) error {
+	err := filepath.Walk(env.AbsPath("tree"), func(_ string, info os.FileInfo, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -496,18 +496,18 @@ func TestTestFixtures_EdgeCases(t *testing.T) {
 	env := NewTestEnvironment(t)
 	tf := NewTestFixtures(t, env)
 
-	t.Run("empty project name", func(t *testing.T) {
+	t.Run("empty project name", func(_ *testing.T) {
 		// Should still work with empty name
 		tf.CreateGoProject("")
 		env.AssertFileExists("go.mod")
 	})
 
-	t.Run("special characters in name", func(t *testing.T) {
+	t.Run("special characters in name", func(_ *testing.T) {
 		tf.CreatePythonProject("test-app_2023")
 		env.AssertDirExists("test-app_2023")
 	})
 
-	t.Run("very deep file tree", func(t *testing.T) {
+	t.Run("very deep file tree", func(_ *testing.T) {
 		tf.CreateFileTree(5, 2)
 		// Check deep file
 		deepFile := "tree/dir_0_0/dir_1_0/dir_2_0/dir_3_0/file_4_0.txt"

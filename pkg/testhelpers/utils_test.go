@@ -50,8 +50,7 @@ func TestRequireCommand(t *testing.T) {
 	t.Run("existing command", func(t *testing.T) {
 		// This should not skip
 		RequireCommand(t, "echo")
-		// If we get here, the test didn't skip
-		require.True(t, true)
+		// If we get here, the test didn't skip (command exists)
 	})
 
 	// We can't easily test the skip case without actually skipping
@@ -476,11 +475,11 @@ func TestRunTestCases(t *testing.T) {
 		case "case1":
 			require.Equal(t, "input1", tc.Input)
 			require.Equal(t, "want1", tc.Want)
-			require.Nil(t, tc.Error)
+			require.NoError(t, tc.Error)
 		case "case2":
 			require.Equal(t, "input2", tc.Input)
 			require.Equal(t, "want2", tc.Want)
-			require.NotNil(t, tc.Error)
+			require.Error(t, tc.Error)
 		case "case3":
 			require.Equal(t, 42, tc.Input)
 			require.Equal(t, 84, tc.Want)

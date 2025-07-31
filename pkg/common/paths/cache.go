@@ -442,11 +442,13 @@ type MockPathCache struct {
 	Storage       map[string]PathBuilder
 }
 
+// MockSetCall represents a call to the Set method in MockPathCache
 type MockSetCall struct {
 	Key   string
 	Value PathBuilder
 }
 
+// NewMockPathCache creates a new mock path cache for testing
 func NewMockPathCache() *MockPathCache {
 	return &MockPathCache{
 		GetCalls:    make([]string, 0),
@@ -456,6 +458,7 @@ func NewMockPathCache() *MockPathCache {
 	}
 }
 
+// Get retrieves a path from the mock cache
 func (m *MockPathCache) Get(key string) (PathBuilder, bool) {
 	m.GetCalls = append(m.GetCalls, key)
 	if m.ShouldError {
@@ -466,6 +469,7 @@ func (m *MockPathCache) Get(key string) (PathBuilder, bool) {
 	return value, exists
 }
 
+// Set stores a path in the mock cache
 func (m *MockPathCache) Set(key string, path PathBuilder) error {
 	m.SetCalls = append(m.SetCalls, MockSetCall{Key: key, Value: path})
 	if m.ShouldError {
@@ -475,6 +479,7 @@ func (m *MockPathCache) Set(key string, path PathBuilder) error {
 	return nil
 }
 
+// Delete removes a path from the mock cache
 func (m *MockPathCache) Delete(key string) error {
 	m.DeleteCalls = append(m.DeleteCalls, key)
 	if m.ShouldError {
@@ -489,6 +494,7 @@ func (m *MockPathCache) Delete(key string) error {
 	return fmt.Errorf("key not found: %s", key)
 }
 
+// Clear removes all paths from the mock cache
 func (m *MockPathCache) Clear() error {
 	m.ClearCalls++
 	if m.ShouldError {
@@ -498,10 +504,12 @@ func (m *MockPathCache) Clear() error {
 	return nil
 }
 
+// Stats returns mock cache statistics
 func (m *MockPathCache) Stats() CacheStats {
 	return m.StatsReturns
 }
 
+// Keys returns all keys in the mock cache
 func (m *MockPathCache) Keys() []string {
 	if len(m.KeysReturns) > 0 {
 		return m.KeysReturns
@@ -514,6 +522,7 @@ func (m *MockPathCache) Keys() []string {
 	return keys
 }
 
+// Size returns the number of items in the mock cache
 func (m *MockPathCache) Size() int {
 	if m.SizeReturns > 0 {
 		return m.SizeReturns
@@ -521,44 +530,51 @@ func (m *MockPathCache) Size() int {
 	return len(m.Storage)
 }
 
+// Contains checks if a key exists in the mock cache
 func (m *MockPathCache) Contains(key string) bool {
 	m.ContainsCalls = append(m.ContainsCalls, key)
 	_, exists := m.Storage[key]
 	return exists
 }
 
+// Expire removes expired items from the mock cache
 func (m *MockPathCache) Expire() int {
 	m.ExpireCalls++
 	return 0
 }
 
-// Additional interface methods for MockPathCache
-func (m *MockPathCache) SetMaxSize(size int) PathCache {
+// SetMaxSize sets the maximum size of the mock cache
+func (m *MockPathCache) SetMaxSize(_ int) PathCache {
 	return m
 }
 
-func (m *MockPathCache) SetTTL(ttl time.Duration) PathCache {
+// SetTTL sets the time-to-live for the mock cache
+func (m *MockPathCache) SetTTL(_ time.Duration) PathCache {
 	return m
 }
 
-func (m *MockPathCache) SetEvictionPolicy(policy EvictionPolicy) PathCache {
+// SetEvictionPolicy sets the eviction policy for the mock cache
+func (m *MockPathCache) SetEvictionPolicy(_ EvictionPolicy) PathCache {
 	return m
 }
 
-func (m *MockPathCache) Validate(key string) error {
+// Validate validates a key in the mock cache
+func (m *MockPathCache) Validate(_ string) error {
 	if m.ShouldError {
 		return fmt.Errorf("mock validation error")
 	}
 	return nil
 }
 
-func (m *MockPathCache) Refresh(key string) error {
+// Refresh refreshes a specific key in the mock cache
+func (m *MockPathCache) Refresh(_ string) error {
 	if m.ShouldError {
 		return fmt.Errorf("mock refresh error")
 	}
 	return nil
 }
 
+// RefreshAll refreshes all items in the mock cache
 func (m *MockPathCache) RefreshAll() error {
 	if m.ShouldError {
 		return fmt.Errorf("mock refresh all error")

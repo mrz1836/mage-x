@@ -278,11 +278,13 @@ type MockPathWatcher struct {
 	MockErrors         chan error
 }
 
+// MockWatchCall represents a call to the Watch method in MockPathWatcher
 type MockWatchCall struct {
 	Path   string
 	Events EventMask
 }
 
+// MockWatchPathCall represents a call to the WatchPath method in MockPathWatcher
 type MockWatchPathCall struct {
 	Path   PathBuilder
 	Events EventMask
@@ -290,6 +292,7 @@ type MockWatchPathCall struct {
 
 // MockPathBuilderForWatcher is a simple interface for testing
 
+// NewMockPathWatcher creates a new mock path watcher for testing
 func NewMockPathWatcher() *MockPathWatcher {
 	return &MockPathWatcher{
 		WatchCalls:       make([]MockWatchCall, 0),
@@ -302,6 +305,7 @@ func NewMockPathWatcher() *MockPathWatcher {
 	}
 }
 
+// Watch starts watching a path for events in the mock watcher
 func (m *MockPathWatcher) Watch(path string, events EventMask) error {
 	m.WatchCalls = append(m.WatchCalls, MockWatchCall{Path: path, Events: events})
 	if m.ShouldError {
@@ -310,6 +314,7 @@ func (m *MockPathWatcher) Watch(path string, events EventMask) error {
 	return nil
 }
 
+// WatchPath starts watching a PathBuilder for events in the mock watcher
 func (m *MockPathWatcher) WatchPath(path PathBuilder, events EventMask) error {
 	m.WatchPathCalls = append(m.WatchPathCalls, MockWatchPathCall{Path: path, Events: events})
 	if m.ShouldError {
@@ -318,6 +323,7 @@ func (m *MockPathWatcher) WatchPath(path PathBuilder, events EventMask) error {
 	return nil
 }
 
+// Unwatch stops watching a path in the mock watcher
 func (m *MockPathWatcher) Unwatch(path string) error {
 	m.UnwatchCalls = append(m.UnwatchCalls, path)
 	if m.ShouldError {
@@ -326,6 +332,7 @@ func (m *MockPathWatcher) Unwatch(path string) error {
 	return nil
 }
 
+// UnwatchPath stops watching a PathBuilder in the mock watcher
 func (m *MockPathWatcher) UnwatchPath(path PathBuilder) error {
 	m.UnwatchPathCalls = append(m.UnwatchPathCalls, path)
 	if m.ShouldError {
@@ -334,14 +341,17 @@ func (m *MockPathWatcher) UnwatchPath(path PathBuilder) error {
 	return nil
 }
 
+// Events returns the events channel from the mock watcher
 func (m *MockPathWatcher) Events() <-chan PathEvent {
 	return m.MockEvents
 }
 
+// Errors returns the errors channel from the mock watcher
 func (m *MockPathWatcher) Errors() <-chan error {
 	return m.MockErrors
 }
 
+// Close closes the mock watcher and its channels
 func (m *MockPathWatcher) Close() error {
 	if m.ShouldError {
 		return errors.New("mock error")
@@ -351,21 +361,25 @@ func (m *MockPathWatcher) Close() error {
 	return nil
 }
 
+// SetBufferSize sets the buffer size for the mock watcher
 func (m *MockPathWatcher) SetBufferSize(size int) PathWatcher {
 	m.SetBufferSizeCalls = append(m.SetBufferSizeCalls, size)
 	return m
 }
 
+// SetRecursive sets recursive watching for the mock watcher
 func (m *MockPathWatcher) SetRecursive(recursive bool) PathWatcher {
 	m.SetRecursiveCalls = append(m.SetRecursiveCalls, recursive)
 	return m
 }
 
+// SetDebounce sets the debounce duration for the mock watcher
 func (m *MockPathWatcher) SetDebounce(duration time.Duration) PathWatcher {
 	m.SetDebounceCalls = append(m.SetDebounceCalls, duration)
 	return m
 }
 
+// IsWatching checks if a path is being watched by the mock watcher
 func (m *MockPathWatcher) IsWatching(path string) bool {
 	m.IsWatchingCalls = append(m.IsWatchingCalls, path)
 	for _, watched := range m.WatchedPathsList {
@@ -376,6 +390,7 @@ func (m *MockPathWatcher) IsWatching(path string) bool {
 	return false
 }
 
+// WatchedPaths returns all paths being watched by the mock watcher
 func (m *MockPathWatcher) WatchedPaths() []string {
 	m.WatchedPathsCalls++
 	return m.WatchedPathsList

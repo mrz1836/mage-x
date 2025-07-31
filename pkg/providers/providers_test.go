@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -32,7 +31,7 @@ func (ts *ProvidersTestSuite) TestRegistry() {
 
 		// Verify provider is registered
 		providers := List()
-		require.Contains(ts.T(), providers, "test")
+		ts.Require().Contains(providers, "test")
 
 		// Get provider instance
 		config := ProviderConfig{
@@ -44,15 +43,15 @@ func (ts *ProvidersTestSuite) TestRegistry() {
 			},
 		}
 		provider, err := Get("test", config)
-		require.NoError(ts.T(), err)
-		require.NotNil(ts.T(), provider)
-		require.Equal(ts.T(), "test", provider.Name())
+		ts.Require().NoError(err)
+		ts.Require().NotNil(provider)
+		ts.Require().Equal("test", provider.Name())
 	})
 
 	ts.Run("Get non-existent provider returns error", func() {
 		_, err := Get("nonexistent", ProviderConfig{})
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "provider nonexistent not found")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "provider nonexistent not found")
 	})
 
 	ts.Run("List returns all registered providers", func() {
@@ -69,8 +68,8 @@ func (ts *ProvidersTestSuite) TestRegistry() {
 		})
 
 		providers := List()
-		require.Contains(ts.T(), providers, "test1")
-		require.Contains(ts.T(), providers, "test2")
+		ts.Require().Contains(providers, "test1")
+		ts.Require().Contains(providers, "test2")
 	})
 }
 
@@ -104,18 +103,18 @@ func (ts *ProvidersTestSuite) TestProviderConfig() {
 			},
 		}
 
-		require.Equal(ts.T(), "oauth", config.Credentials.Type)
-		require.Equal(ts.T(), "oauth-token", config.Credentials.Token)
-		require.Equal(ts.T(), "us-west-2", config.Region)
-		require.Equal(ts.T(), "https://custom.endpoint.com", config.Endpoint)
-		require.Equal(ts.T(), 30*time.Second, config.Timeout)
-		require.Equal(ts.T(), 3, config.MaxRetries)
-		require.True(ts.T(), config.EnableCache)
-		require.Equal(ts.T(), "sub-123", config.Credentials.Extra["subscription_id"])
-		require.Equal(ts.T(), "test-agent", config.CustomHeaders["User-Agent"])
-		require.Equal(ts.T(), "http://proxy.example.com:8080", config.ProxyURL)
-		require.NotNil(ts.T(), config.TLSConfig)
-		require.Equal(ts.T(), "/path/to/ca.pem", config.TLSConfig.CAPath)
+		ts.Require().Equal("oauth", config.Credentials.Type)
+		ts.Require().Equal("oauth-token", config.Credentials.Token)
+		ts.Require().Equal("us-west-2", config.Region)
+		ts.Require().Equal("https://custom.endpoint.com", config.Endpoint)
+		ts.Require().Equal(30*time.Second, config.Timeout)
+		ts.Require().Equal(3, config.MaxRetries)
+		ts.Require().True(config.EnableCache)
+		ts.Require().Equal("sub-123", config.Credentials.Extra["subscription_id"])
+		ts.Require().Equal("test-agent", config.CustomHeaders["User-Agent"])
+		ts.Require().Equal("http://proxy.example.com:8080", config.ProxyURL)
+		ts.Require().NotNil(config.TLSConfig)
+		ts.Require().Equal("/path/to/ca.pem", config.TLSConfig.CAPath)
 	})
 
 	ts.Run("Credentials with different authentication types", func() {
@@ -125,17 +124,17 @@ func (ts *ProvidersTestSuite) TestProviderConfig() {
 			AccessKey: "access-key",
 			SecretKey: "secret-key",
 		}
-		require.Equal(ts.T(), "key", keyAuth.Type)
-		require.Equal(ts.T(), "access-key", keyAuth.AccessKey)
-		require.Equal(ts.T(), "secret-key", keyAuth.SecretKey)
+		ts.Require().Equal("key", keyAuth.Type)
+		ts.Require().Equal("access-key", keyAuth.AccessKey)
+		ts.Require().Equal("secret-key", keyAuth.SecretKey)
 
 		// Test token-based authentication
 		tokenAuth := Credentials{
 			Type:  "token",
 			Token: "bearer-token-123",
 		}
-		require.Equal(ts.T(), "token", tokenAuth.Type)
-		require.Equal(ts.T(), "bearer-token-123", tokenAuth.Token)
+		ts.Require().Equal("token", tokenAuth.Type)
+		ts.Require().Equal("bearer-token-123", tokenAuth.Token)
 
 		// Test certificate-based authentication
 		certAuth := Credentials{
@@ -143,9 +142,9 @@ func (ts *ProvidersTestSuite) TestProviderConfig() {
 			CertPath: "/path/to/cert.pem",
 			KeyPath:  "/path/to/key.pem",
 		}
-		require.Equal(ts.T(), "cert", certAuth.Type)
-		require.Equal(ts.T(), "/path/to/cert.pem", certAuth.CertPath)
-		require.Equal(ts.T(), "/path/to/key.pem", certAuth.KeyPath)
+		ts.Require().Equal("cert", certAuth.Type)
+		ts.Require().Equal("/path/to/cert.pem", certAuth.CertPath)
+		ts.Require().Equal("/path/to/key.pem", certAuth.KeyPath)
 	})
 }
 
@@ -170,20 +169,20 @@ func (ts *ProvidersTestSuite) TestHealthStatus() {
 			},
 		}
 
-		require.True(ts.T(), health.Healthy)
-		require.Equal(ts.T(), "operational", health.Status)
-		require.Equal(ts.T(), 25*time.Millisecond, health.Latency)
-		require.Len(ts.T(), health.Services, 2)
+		ts.Require().True(health.Healthy)
+		ts.Require().Equal("operational", health.Status)
+		ts.Require().Equal(25*time.Millisecond, health.Latency)
+		ts.Require().Len(health.Services, 2)
 
 		computeHealth := health.Services["compute"]
-		require.True(ts.T(), computeHealth.Available)
-		require.Equal(ts.T(), 15*time.Millisecond, computeHealth.ResponseTime)
-		require.Empty(ts.T(), computeHealth.Error)
+		ts.Require().True(computeHealth.Available)
+		ts.Require().Equal(15*time.Millisecond, computeHealth.ResponseTime)
+		ts.Require().Empty(computeHealth.Error)
 
 		storageHealth := health.Services["storage"]
-		require.False(ts.T(), storageHealth.Available)
-		require.Equal(ts.T(), 100*time.Millisecond, storageHealth.ResponseTime)
-		require.Equal(ts.T(), "connection timeout", storageHealth.Error)
+		ts.Require().False(storageHealth.Available)
+		ts.Require().Equal(100*time.Millisecond, storageHealth.ResponseTime)
+		ts.Require().Equal("connection timeout", storageHealth.Error)
 	})
 }
 
@@ -203,41 +202,41 @@ func (ts *ProvidersTestSuite) TestProviderInterface() {
 
 	provider := &mockProvider{config: config}
 	err := provider.Initialize(config)
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 
 	ts.Run("Provider basic methods", func() {
-		require.Equal(ts.T(), "mock", provider.Name())
+		ts.Require().Equal("mock", provider.Name())
 
 		err := provider.Initialize(config)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		err = provider.Validate()
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		health, err := provider.Health()
-		require.NoError(ts.T(), err)
-		require.NotNil(ts.T(), health)
-		require.True(ts.T(), health.Healthy)
+		ts.Require().NoError(err)
+		ts.Require().NotNil(health)
+		ts.Require().True(health.Healthy)
 
 		err = provider.Close()
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Provider service accessors", func() {
-		require.NotNil(ts.T(), provider.Compute())
-		require.NotNil(ts.T(), provider.Storage())
-		require.NotNil(ts.T(), provider.Network())
-		require.NotNil(ts.T(), provider.Container())
-		require.NotNil(ts.T(), provider.Database())
-		require.NotNil(ts.T(), provider.Security())
-		require.NotNil(ts.T(), provider.Monitoring())
-		require.NotNil(ts.T(), provider.Serverless())
-		require.NotNil(ts.T(), provider.AI())
-		require.NotNil(ts.T(), provider.Cost())
-		require.NotNil(ts.T(), provider.Compliance())
-		require.NotNil(ts.T(), provider.Disaster())
-		require.NotNil(ts.T(), provider.Edge())
-		require.NotNil(ts.T(), provider.Quantum())
+		ts.Require().NotNil(provider.Compute())
+		ts.Require().NotNil(provider.Storage())
+		ts.Require().NotNil(provider.Network())
+		ts.Require().NotNil(provider.Container())
+		ts.Require().NotNil(provider.Database())
+		ts.Require().NotNil(provider.Security())
+		ts.Require().NotNil(provider.Monitoring())
+		ts.Require().NotNil(provider.Serverless())
+		ts.Require().NotNil(provider.AI())
+		ts.Require().NotNil(provider.Cost())
+		ts.Require().NotNil(provider.Compliance())
+		ts.Require().NotNil(provider.Disaster())
+		ts.Require().NotNil(provider.Edge())
+		ts.Require().NotNil(provider.Quantum())
 	})
 }
 
@@ -246,7 +245,7 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 	ctx := context.Background()
 	provider := &mockProvider{}
 	err := provider.Initialize(ProviderConfig{})
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 
 	ts.Run("ComputeService operations", func() {
 		compute := provider.Compute()
@@ -261,15 +260,15 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			Tags:   map[string]string{"env": "test"},
 		}
 		instance, err := compute.CreateInstance(ctx, req)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-instance", instance.Name)
-		require.Equal(ts.T(), "medium", instance.Type)
-		require.Equal(ts.T(), "us-east-1", instance.Region)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-instance", instance.Name)
+		ts.Require().Equal("medium", instance.Type)
+		ts.Require().Equal("us-east-1", instance.Region)
 
 		// Test instance retrieval
 		retrievedInstance, err := compute.GetInstance(ctx, instance.ID)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), instance.ID, retrievedInstance.ID)
+		ts.Require().NoError(err)
+		ts.Require().Equal(instance.ID, retrievedInstance.ID)
 
 		// Test instance listing
 		filter := &InstanceFilter{
@@ -277,26 +276,26 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			Regions: []string{"us-east-1"},
 		}
 		instances, err := compute.ListInstances(ctx, filter)
-		require.NoError(ts.T(), err)
-		require.NotEmpty(ts.T(), instances)
+		ts.Require().NoError(err)
+		ts.Require().NotEmpty(instances)
 
 		// Test instance lifecycle operations
-		require.NoError(ts.T(), compute.StartInstance(ctx, instance.ID))
-		require.NoError(ts.T(), compute.StopInstance(ctx, instance.ID))
-		require.NoError(ts.T(), compute.RestartInstance(ctx, instance.ID))
+		ts.Require().NoError(compute.StartInstance(ctx, instance.ID))
+		ts.Require().NoError(compute.StopInstance(ctx, instance.ID))
+		ts.Require().NoError(compute.RestartInstance(ctx, instance.ID))
 
 		// Test advanced operations
-		require.NoError(ts.T(), compute.ResizeInstance(ctx, instance.ID, "large"))
+		ts.Require().NoError(compute.ResizeInstance(ctx, instance.ID, "large"))
 
 		snapshot, err := compute.SnapshotInstance(ctx, instance.ID, "test-snapshot")
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-snapshot", snapshot.Name)
-		require.Equal(ts.T(), instance.ID, snapshot.InstanceID)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-snapshot", snapshot.Name)
+		ts.Require().Equal(instance.ID, snapshot.InstanceID)
 
 		cloneReq := &CloneRequest{Name: "cloned-instance", Zone: "us-east-1b"}
 		clonedInstance, err := compute.CloneInstance(ctx, instance.ID, cloneReq)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "cloned-instance", clonedInstance.Name)
+		ts.Require().NoError(err)
+		ts.Require().Equal("cloned-instance", clonedInstance.Name)
 	})
 
 	ts.Run("StorageService operations", func() {
@@ -312,19 +311,19 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			Tags:         map[string]string{"project": "test"},
 		}
 		bucket, err := storage.CreateBucket(ctx, bucketReq)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-bucket", bucket.Name)
-		require.True(ts.T(), bucket.Versioning)
-		require.True(ts.T(), bucket.Encryption)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-bucket", bucket.Name)
+		ts.Require().True(bucket.Versioning)
+		ts.Require().True(bucket.Encryption)
 
 		// Test bucket operations
 		retrievedBucket, err := storage.GetBucket(ctx, bucket.Name)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), bucket.Name, retrievedBucket.Name)
+		ts.Require().NoError(err)
+		ts.Require().Equal(bucket.Name, retrievedBucket.Name)
 
 		buckets, err := storage.ListBuckets(ctx)
-		require.NoError(ts.T(), err)
-		require.NotEmpty(ts.T(), buckets)
+		ts.Require().NoError(err)
+		ts.Require().NotEmpty(buckets)
 
 		// Test object operations
 		opts := &PutOptions{
@@ -332,20 +331,20 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			Metadata:    map[string]string{"uploaded-by": "test"},
 		}
 		err = storage.PutObject(ctx, bucket.Name, "test-file.txt", strings.NewReader("test content"), opts)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		objects, err := storage.ListObjects(ctx, bucket.Name, "test-")
-		require.NoError(ts.T(), err)
-		require.NotEmpty(ts.T(), objects)
+		ts.Require().NoError(err)
+		ts.Require().NotEmpty(objects)
 
 		// Test advanced operations
 		err = storage.MultipartUpload(ctx, bucket.Name, "large-file.txt", strings.NewReader("large content"))
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		url, err := storage.GeneratePresignedURL(ctx, bucket.Name, "test-file.txt", time.Hour)
-		require.NoError(ts.T(), err)
-		require.Contains(ts.T(), url, bucket.Name)
-		require.Contains(ts.T(), url, "test-file.txt")
+		ts.Require().NoError(err)
+		ts.Require().Contains(url, bucket.Name)
+		ts.Require().Contains(url, "test-file.txt")
 	})
 
 	ts.Run("NetworkService operations", func() {
@@ -360,9 +359,9 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			Tags:      map[string]string{"env": "test"},
 		}
 		vpc, err := network.CreateVPC(ctx, vpcReq)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-vpc", vpc.Name)
-		require.Equal(ts.T(), "10.0.0.0/16", vpc.CIDR)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-vpc", vpc.Name)
+		ts.Require().Equal("10.0.0.0/16", vpc.CIDR)
 
 		// Test subnet creation
 		subnetReq := &CreateSubnetRequest{
@@ -372,10 +371,10 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			Public: true,
 		}
 		subnet, err := network.CreateSubnet(ctx, vpc.ID, subnetReq)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-subnet", subnet.Name)
-		require.Equal(ts.T(), vpc.ID, subnet.VPCID)
-		require.True(ts.T(), subnet.Public)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-subnet", subnet.Name)
+		ts.Require().Equal(vpc.ID, subnet.VPCID)
+		ts.Require().True(subnet.Public)
 
 		// Test security group creation
 		sgReq := &CreateSecurityGroupRequest{
@@ -393,10 +392,10 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			},
 		}
 		sg, err := network.CreateSecurityGroup(ctx, sgReq)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-sg", sg.Name)
-		require.Equal(ts.T(), vpc.ID, sg.VPCID)
-		require.Len(ts.T(), sg.Rules, 1)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-sg", sg.Name)
+		ts.Require().Equal(vpc.ID, sg.VPCID)
+		ts.Require().Len(sg.Rules, 1)
 
 		// Test load balancer creation
 		lbReq := &CreateLoadBalancerRequest{
@@ -408,10 +407,10 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			},
 		}
 		lb, err := network.CreateLoadBalancer(ctx, lbReq)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-lb", lb.Name)
-		require.Equal(ts.T(), "application", lb.Type)
-		require.Len(ts.T(), lb.Listeners, 1)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-lb", lb.Name)
+		ts.Require().Equal("application", lb.Type)
+		ts.Require().Len(lb.Listeners, 1)
 	})
 
 	ts.Run("ContainerService operations", func() {
@@ -427,10 +426,10 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			NodeType:  "medium",
 		}
 		cluster, err := container.CreateCluster(ctx, clusterReq)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-cluster", cluster.Name)
-		require.Equal(ts.T(), "kubernetes", cluster.Type)
-		require.Equal(ts.T(), 3, cluster.NodeCount)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-cluster", cluster.Name)
+		ts.Require().Equal("kubernetes", cluster.Type)
+		ts.Require().Equal(3, cluster.NodeCount)
 
 		// Test deployment
 		deployReq := &DeployRequest{
@@ -443,14 +442,14 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			Ports: []int{80, 443},
 		}
 		deployment, err := container.DeployContainer(ctx, cluster.ID, deployReq)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-app", deployment.Name)
-		require.Equal(ts.T(), "nginx:latest", deployment.Image)
-		require.Equal(ts.T(), 2, deployment.Replicas)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-app", deployment.Name)
+		ts.Require().Equal("nginx:latest", deployment.Image)
+		ts.Require().Equal(2, deployment.Replicas)
 
 		// Test scaling
 		err = container.ScaleDeployment(ctx, deployment.ID, 5)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("DatabaseService operations", func() {
@@ -469,25 +468,25 @@ func (ts *ProvidersTestSuite) TestServiceInterfaces() {
 			Backup:   true,
 		}
 		db, err := database.CreateDatabase(ctx, dbReq)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-db", db.Name)
-		require.Equal(ts.T(), "postgres", db.Engine)
-		require.True(ts.T(), db.MultiAZ)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-db", db.Name)
+		ts.Require().Equal("postgres", db.Engine)
+		ts.Require().True(db.MultiAZ)
 
 		// Test backup operations
 		backup, err := database.CreateBackup(ctx, db.ID, "test-backup")
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "test-backup", backup.Name)
-		require.Equal(ts.T(), db.ID, backup.DatabaseID)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-backup", backup.Name)
+		ts.Require().Equal(db.ID, backup.DatabaseID)
 
 		backups, err := database.ListBackups(ctx, db.ID)
-		require.NoError(ts.T(), err)
-		require.NotEmpty(ts.T(), backups)
+		ts.Require().NoError(err)
+		ts.Require().NotEmpty(backups)
 
 		// Test scaling
 		scaleReq := &ScaleRequest{Size: "large", Storage: 200}
 		err = database.ScaleDatabase(ctx, db.ID, scaleReq)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -508,11 +507,11 @@ func (ts *ProvidersTestSuite) TestDataTypes() {
 			Metadata:  map[string]interface{}{"monitoring": true},
 		}
 
-		require.Equal(ts.T(), "i-123456789", instance.ID)
-		require.Equal(ts.T(), "web-server", instance.Name)
-		require.Equal(ts.T(), "running", instance.State)
-		require.Contains(ts.T(), instance.Tags, "env")
-		require.Equal(ts.T(), "prod", instance.Tags["env"])
+		ts.Require().Equal("i-123456789", instance.ID)
+		ts.Require().Equal("web-server", instance.Name)
+		ts.Require().Equal("running", instance.State)
+		ts.Require().Contains(instance.Tags, "env")
+		ts.Require().Equal("prod", instance.Tags["env"])
 	})
 
 	ts.Run("Complex nested structures", func() {
@@ -539,10 +538,10 @@ func (ts *ProvidersTestSuite) TestDataTypes() {
 			UpdatedAt: time.Now(),
 		}
 
-		require.Equal(ts.T(), cluster.ID, deployment.ClusterID)
-		require.Equal(ts.T(), "kubernetes", cluster.Type)
-		require.Equal(ts.T(), 5, cluster.NodeCount)
-		require.Equal(ts.T(), 3, deployment.Replicas)
+		ts.Require().Equal(cluster.ID, deployment.ClusterID)
+		ts.Require().Equal("kubernetes", cluster.Type)
+		ts.Require().Equal(5, cluster.NodeCount)
+		ts.Require().Equal(3, deployment.Replicas)
 	})
 
 	ts.Run("Health check configurations", func() {
@@ -556,11 +555,11 @@ func (ts *ProvidersTestSuite) TestDataTypes() {
 			UnhealthyThreshold: 3,
 		}
 
-		require.Equal(ts.T(), "HTTP", healthCheck.Protocol)
-		require.Equal(ts.T(), 8080, healthCheck.Port)
-		require.Equal(ts.T(), "/health", healthCheck.Path)
-		require.Equal(ts.T(), 30*time.Second, healthCheck.Interval)
-		require.Equal(ts.T(), 2, healthCheck.HealthyThreshold)
+		ts.Require().Equal("HTTP", healthCheck.Protocol)
+		ts.Require().Equal(8080, healthCheck.Port)
+		ts.Require().Equal("/health", healthCheck.Path)
+		ts.Require().Equal(30*time.Second, healthCheck.Interval)
+		ts.Require().Equal(2, healthCheck.HealthyThreshold)
 	})
 }
 
@@ -707,7 +706,7 @@ func (s *mockComputeService) SnapshotInstance(ctx context.Context, id string, na
 	}, nil
 }
 
-func (s *mockComputeService) CloneInstance(ctx context.Context, id string, req *CloneRequest) (*Instance, error) {
+func (s *mockComputeService) CloneInstance(ctx context.Context, _ string, req *CloneRequest) (*Instance, error) {
 	return s.CreateInstance(ctx, &CreateInstanceRequest{
 		Name: req.Name,
 		Type: req.Type,

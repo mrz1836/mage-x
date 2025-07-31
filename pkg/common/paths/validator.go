@@ -250,9 +250,13 @@ func (pv *DefaultPathValidator) ForbidPattern(pattern string) PathValidator {
 // AbsolutePathRule validates that a path is absolute
 type AbsolutePathRule struct{}
 
-func (r *AbsolutePathRule) Name() string        { return "absolute-path" }
+// Name returns the rule name
+func (r *AbsolutePathRule) Name() string { return "absolute-path" }
+
+// Description returns the rule description
 func (r *AbsolutePathRule) Description() string { return "path must be absolute" }
 
+// Validate checks if the given path is absolute
 func (r *AbsolutePathRule) Validate(path string) error {
 	if !filepath.IsAbs(path) {
 		return fmt.Errorf("path must be absolute")
@@ -260,6 +264,7 @@ func (r *AbsolutePathRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates a PathBuilder instance
 func (r *AbsolutePathRule) ValidatePath(path PathBuilder) error {
 	return r.Validate(path.String())
 }
@@ -267,9 +272,13 @@ func (r *AbsolutePathRule) ValidatePath(path PathBuilder) error {
 // RelativePathRule validates that a path is relative
 type RelativePathRule struct{}
 
-func (r *RelativePathRule) Name() string        { return "relative-path" }
+// Name returns the name of the RelativePathRule
+func (r *RelativePathRule) Name() string { return "relative-path" }
+
+// Description returns the description of the RelativePathRule
 func (r *RelativePathRule) Description() string { return "path must be relative" }
 
+// Validate validates that the given path is relative
 func (r *RelativePathRule) Validate(path string) error {
 	if filepath.IsAbs(path) {
 		return fmt.Errorf("path must be relative")
@@ -277,6 +286,7 @@ func (r *RelativePathRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder represents a relative path
 func (r *RelativePathRule) ValidatePath(path PathBuilder) error {
 	return r.Validate(path.String())
 }
@@ -284,9 +294,13 @@ func (r *RelativePathRule) ValidatePath(path PathBuilder) error {
 // ExistsRule validates that a path exists
 type ExistsRule struct{}
 
-func (r *ExistsRule) Name() string        { return "exists" }
+// Name returns the name of the ExistsRule
+func (r *ExistsRule) Name() string { return "exists" }
+
+// Description returns the description of the ExistsRule
 func (r *ExistsRule) Description() string { return "path must exist" }
 
+// Validate validates that the given path exists
 func (r *ExistsRule) Validate(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return fmt.Errorf("path does not exist")
@@ -294,6 +308,7 @@ func (r *ExistsRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder exists
 func (r *ExistsRule) ValidatePath(path PathBuilder) error {
 	if !path.Exists() {
 		return fmt.Errorf("path does not exist")
@@ -304,9 +319,13 @@ func (r *ExistsRule) ValidatePath(path PathBuilder) error {
 // NotExistsRule validates that a path does not exist
 type NotExistsRule struct{}
 
-func (r *NotExistsRule) Name() string        { return "not-exists" }
+// Name returns the name of the NotExistsRule
+func (r *NotExistsRule) Name() string { return "not-exists" }
+
+// Description returns the description of the NotExistsRule
 func (r *NotExistsRule) Description() string { return "path must not exist" }
 
+// Validate validates that the given path does not exist
 func (r *NotExistsRule) Validate(path string) error {
 	if _, err := os.Stat(path); err == nil {
 		return fmt.Errorf("path already exists")
@@ -314,6 +333,7 @@ func (r *NotExistsRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder does not exist
 func (r *NotExistsRule) ValidatePath(path PathBuilder) error {
 	if path.Exists() {
 		return fmt.Errorf("path already exists")
@@ -324,9 +344,13 @@ func (r *NotExistsRule) ValidatePath(path PathBuilder) error {
 // ReadableRule validates that a path is readable
 type ReadableRule struct{}
 
-func (r *ReadableRule) Name() string        { return "readable" }
+// Name returns the name of the ReadableRule
+func (r *ReadableRule) Name() string { return "readable" }
+
+// Description returns the description of the ReadableRule
 func (r *ReadableRule) Description() string { return "path must be readable" }
 
+// Validate validates that the given path is readable
 func (r *ReadableRule) Validate(path string) error {
 	// Clean path to prevent directory traversal
 	cleanPath := filepath.Clean(path)

@@ -167,7 +167,7 @@ func (f *FileOps) ensureDir(path string) error {
 	return nil
 }
 
-// Package-level convenience instance
+// GetDefault returns a new FileOps instance with default configuration.
 func GetDefault() *FileOps {
 	return New()
 }

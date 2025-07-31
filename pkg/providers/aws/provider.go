@@ -227,7 +227,7 @@ func newComputeService(config providers.ProviderConfig) *computeService {
 	return &computeService{config: config}
 }
 
-func (s *computeService) CreateInstance(ctx context.Context, req *providers.CreateInstanceRequest) (*providers.Instance, error) {
+func (s *computeService) CreateInstance(_ context.Context, req *providers.CreateInstanceRequest) (*providers.Instance, error) {
 	// AWS EC2 instance creation
 	instance := &providers.Instance{
 		ID:        fmt.Sprintf("i-%s", generateID()),
@@ -251,7 +251,7 @@ func (s *computeService) CreateInstance(ctx context.Context, req *providers.Crea
 	return instance, nil
 }
 
-func (s *computeService) GetInstance(ctx context.Context, id string) (*providers.Instance, error) {
+func (s *computeService) GetInstance(_ context.Context, id string) (*providers.Instance, error) {
 	// Get EC2 instance
 	return &providers.Instance{
 		ID:        id,
@@ -265,7 +265,7 @@ func (s *computeService) GetInstance(ctx context.Context, id string) (*providers
 	}, nil
 }
 
-func (s *computeService) ListInstances(ctx context.Context, filter *providers.InstanceFilter) ([]*providers.Instance, error) {
+func (s *computeService) ListInstances(_ context.Context, filter *providers.InstanceFilter) ([]*providers.Instance, error) {
 	// List EC2 instances
 	instances := []*providers.Instance{
 		{
@@ -292,22 +292,22 @@ func (s *computeService) ListInstances(ctx context.Context, filter *providers.In
 	return instances, nil
 }
 
-func (s *computeService) UpdateInstance(ctx context.Context, id string, req *providers.UpdateInstanceRequest) error {
+func (s *computeService) UpdateInstance(_ context.Context, id string, req *providers.UpdateInstanceRequest) error {
 	// Update EC2 instance
 	return nil
 }
 
-func (s *computeService) DeleteInstance(ctx context.Context, id string) error {
+func (s *computeService) DeleteInstance(_ context.Context, id string) error {
 	// Terminate EC2 instance
 	return nil
 }
 
-func (s *computeService) StartInstance(ctx context.Context, id string) error {
+func (s *computeService) StartInstance(_ context.Context, id string) error {
 	// Start EC2 instance
 	return nil
 }
 
-func (s *computeService) StopInstance(ctx context.Context, id string) error {
+func (s *computeService) StopInstance(_ context.Context, id string) error {
 	// Stop EC2 instance
 	return nil
 }
@@ -318,12 +318,12 @@ func (s *computeService) RestartInstance(ctx context.Context, id string) error {
 	// Wait and start
 }
 
-func (s *computeService) ResizeInstance(ctx context.Context, id string, size string) error {
+func (s *computeService) ResizeInstance(_ context.Context, _ string, _ string) error {
 	// Resize EC2 instance
 	return nil
 }
 
-func (s *computeService) SnapshotInstance(ctx context.Context, id string, name string) (*providers.Snapshot, error) {
+func (s *computeService) SnapshotInstance(_ context.Context, id string, name string) (*providers.Snapshot, error) {
 	// Create EBS snapshot
 	return &providers.Snapshot{
 		ID:         fmt.Sprintf("snap-%s", generateID()),
@@ -335,7 +335,7 @@ func (s *computeService) SnapshotInstance(ctx context.Context, id string, name s
 	}, nil
 }
 
-func (s *computeService) CloneInstance(ctx context.Context, id string, req *providers.CloneRequest) (*providers.Instance, error) {
+func (s *computeService) CloneInstance(ctx context.Context, _ string, req *providers.CloneRequest) (*providers.Instance, error) {
 	// Create AMI and launch new instance
 	return s.CreateInstance(ctx, &providers.CreateInstanceRequest{
 		Name:   req.Name,
@@ -354,7 +354,7 @@ func newStorageService(config providers.ProviderConfig) *storageService {
 	return &storageService{config: config}
 }
 
-func (s *storageService) CreateBucket(ctx context.Context, req *providers.CreateBucketRequest) (*providers.Bucket, error) {
+func (s *storageService) CreateBucket(_ context.Context, req *providers.CreateBucketRequest) (*providers.Bucket, error) {
 	// Create S3 bucket
 	return &providers.Bucket{
 		Name:         req.Name,
@@ -367,7 +367,7 @@ func (s *storageService) CreateBucket(ctx context.Context, req *providers.Create
 	}, nil
 }
 
-func (s *storageService) GetBucket(ctx context.Context, name string) (*providers.Bucket, error) {
+func (s *storageService) GetBucket(_ context.Context, name string) (*providers.Bucket, error) {
 	// Get S3 bucket
 	return &providers.Bucket{
 		Name:       name,
@@ -378,7 +378,7 @@ func (s *storageService) GetBucket(ctx context.Context, name string) (*providers
 	}, nil
 }
 
-func (s *storageService) ListBuckets(ctx context.Context) ([]*providers.Bucket, error) {
+func (s *storageService) ListBuckets(_ context.Context) ([]*providers.Bucket, error) {
 	// List S3 buckets
 	return []*providers.Bucket{
 		{Name: "my-app-assets", Region: "us-east-1", CreatedAt: time.Now().Add(-90 * 24 * time.Hour)},
@@ -387,27 +387,27 @@ func (s *storageService) ListBuckets(ctx context.Context) ([]*providers.Bucket, 
 	}, nil
 }
 
-func (s *storageService) DeleteBucket(ctx context.Context, name string) error {
+func (s *storageService) DeleteBucket(_ context.Context, name string) error {
 	// Delete S3 bucket
 	return nil
 }
 
-func (s *storageService) PutObject(ctx context.Context, bucket, key string, reader io.Reader, opts *providers.PutOptions) error {
+func (s *storageService) PutObject(_ context.Context, bucket, key string, reader io.Reader, opts *providers.PutOptions) error {
 	// Upload to S3
 	return nil
 }
 
-func (s *storageService) GetObject(ctx context.Context, bucket, key string) (io.ReadCloser, error) {
+func (s *storageService) GetObject(_ context.Context, bucket, key string) (io.ReadCloser, error) {
 	// Download from S3
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (s *storageService) DeleteObject(ctx context.Context, bucket, key string) error {
+func (s *storageService) DeleteObject(_ context.Context, bucket, key string) error {
 	// Delete S3 object
 	return nil
 }
 
-func (s *storageService) ListObjects(ctx context.Context, bucket string, prefix string) ([]*providers.Object, error) {
+func (s *storageService) ListObjects(_ context.Context, bucket string, prefix string) ([]*providers.Object, error) {
 	// List S3 objects
 	return []*providers.Object{
 		{
@@ -425,18 +425,18 @@ func (s *storageService) ListObjects(ctx context.Context, bucket string, prefix 
 	}, nil
 }
 
-func (s *storageService) MultipartUpload(ctx context.Context, bucket, key string, reader io.Reader) error {
+func (s *storageService) MultipartUpload(_ context.Context, bucket, key string, reader io.Reader) error {
 	// S3 multipart upload
 	return nil
 }
 
-func (s *storageService) GeneratePresignedURL(ctx context.Context, bucket, key string, expiry time.Duration) (string, error) {
+func (s *storageService) GeneratePresignedURL(_ context.Context, bucket, key string, expiry time.Duration) (string, error) {
 	// Generate S3 presigned URL
 	return fmt.Sprintf("https://%s.s3.amazonaws.com/%s?token=xxx&expires=%d",
 		bucket, key, time.Now().Add(expiry).Unix()), nil
 }
 
-func (s *storageService) SetObjectACL(ctx context.Context, bucket, key string, acl *providers.ACL) error {
+func (s *storageService) SetObjectACL(_ context.Context, bucket, key string, acl *providers.ACL) error {
 	// Set S3 object ACL
 	return nil
 }
@@ -450,7 +450,7 @@ func newNetworkService(config providers.ProviderConfig) *networkService {
 	return &networkService{config: config}
 }
 
-func (s *networkService) CreateVPC(ctx context.Context, req *providers.CreateVPCRequest) (*providers.VPC, error) {
+func (s *networkService) CreateVPC(_ context.Context, req *providers.CreateVPCRequest) (*providers.VPC, error) {
 	// Create VPC
 	return &providers.VPC{
 		ID:     fmt.Sprintf("vpc-%s", generateID()),
@@ -462,7 +462,7 @@ func (s *networkService) CreateVPC(ctx context.Context, req *providers.CreateVPC
 	}, nil
 }
 
-func (s *networkService) GetVPC(ctx context.Context, id string) (*providers.VPC, error) {
+func (s *networkService) GetVPC(_ context.Context, id string) (*providers.VPC, error) {
 	// Get VPC
 	return &providers.VPC{
 		ID:     id,
@@ -473,7 +473,7 @@ func (s *networkService) GetVPC(ctx context.Context, id string) (*providers.VPC,
 	}, nil
 }
 
-func (s *networkService) ListVPCs(ctx context.Context) ([]*providers.VPC, error) {
+func (s *networkService) ListVPCs(_ context.Context) ([]*providers.VPC, error) {
 	// List VPCs
 	return []*providers.VPC{
 		{
@@ -493,12 +493,12 @@ func (s *networkService) ListVPCs(ctx context.Context) ([]*providers.VPC, error)
 	}, nil
 }
 
-func (s *networkService) DeleteVPC(ctx context.Context, id string) error {
+func (s *networkService) DeleteVPC(_ context.Context, id string) error {
 	// Delete VPC
 	return nil
 }
 
-func (s *networkService) CreateSubnet(ctx context.Context, vpcID string, req *providers.CreateSubnetRequest) (*providers.Subnet, error) {
+func (s *networkService) CreateSubnet(_ context.Context, vpcID string, req *providers.CreateSubnetRequest) (*providers.Subnet, error) {
 	// Create subnet
 	return &providers.Subnet{
 		ID:     fmt.Sprintf("subnet-%s", generateID()),
@@ -511,7 +511,7 @@ func (s *networkService) CreateSubnet(ctx context.Context, vpcID string, req *pr
 	}, nil
 }
 
-func (s *networkService) GetSubnet(ctx context.Context, id string) (*providers.Subnet, error) {
+func (s *networkService) GetSubnet(_ context.Context, id string) (*providers.Subnet, error) {
 	// Get subnet
 	return &providers.Subnet{
 		ID:     id,
@@ -524,7 +524,7 @@ func (s *networkService) GetSubnet(ctx context.Context, id string) (*providers.S
 	}, nil
 }
 
-func (s *networkService) ListSubnets(ctx context.Context, vpcID string) ([]*providers.Subnet, error) {
+func (s *networkService) ListSubnets(_ context.Context, vpcID string) ([]*providers.Subnet, error) {
 	// List subnets
 	return []*providers.Subnet{
 		{
@@ -548,12 +548,12 @@ func (s *networkService) ListSubnets(ctx context.Context, vpcID string) ([]*prov
 	}, nil
 }
 
-func (s *networkService) DeleteSubnet(ctx context.Context, id string) error {
+func (s *networkService) DeleteSubnet(_ context.Context, id string) error {
 	// Delete subnet
 	return nil
 }
 
-func (s *networkService) CreateSecurityGroup(ctx context.Context, req *providers.CreateSecurityGroupRequest) (*providers.SecurityGroup, error) {
+func (s *networkService) CreateSecurityGroup(_ context.Context, req *providers.CreateSecurityGroupRequest) (*providers.SecurityGroup, error) {
 	// Create security group
 	return &providers.SecurityGroup{
 		ID:          fmt.Sprintf("sg-%s", generateID()),
@@ -564,12 +564,12 @@ func (s *networkService) CreateSecurityGroup(ctx context.Context, req *providers
 	}, nil
 }
 
-func (s *networkService) UpdateSecurityRules(ctx context.Context, groupID string, rules []*providers.SecurityRule) error {
+func (s *networkService) UpdateSecurityRules(_ context.Context, groupID string, rules []*providers.SecurityRule) error {
 	// Update security group rules
 	return nil
 }
 
-func (s *networkService) CreateLoadBalancer(ctx context.Context, req *providers.CreateLoadBalancerRequest) (*providers.LoadBalancer, error) {
+func (s *networkService) CreateLoadBalancer(_ context.Context, req *providers.CreateLoadBalancerRequest) (*providers.LoadBalancer, error) {
 	// Create ALB/NLB
 	return &providers.LoadBalancer{
 		ID:           fmt.Sprintf("lb-%s", generateID()),
@@ -582,7 +582,7 @@ func (s *networkService) CreateLoadBalancer(ctx context.Context, req *providers.
 	}, nil
 }
 
-func (s *networkService) UpdateLoadBalancer(ctx context.Context, id string, req *providers.UpdateLoadBalancerRequest) error {
+func (s *networkService) UpdateLoadBalancer(_ context.Context, id string, req *providers.UpdateLoadBalancerRequest) error {
 	// Update load balancer
 	return nil
 }
@@ -596,7 +596,7 @@ func newContainerService(config providers.ProviderConfig) *containerService {
 	return &containerService{config: config}
 }
 
-func (s *containerService) CreateCluster(ctx context.Context, req *providers.CreateClusterRequest) (*providers.Cluster, error) {
+func (s *containerService) CreateCluster(_ context.Context, req *providers.CreateClusterRequest) (*providers.Cluster, error) {
 	// Create ECS/EKS cluster
 	clusterType := "ECS"
 	if req.Type == "kubernetes" {
@@ -615,7 +615,7 @@ func (s *containerService) CreateCluster(ctx context.Context, req *providers.Cre
 	}, nil
 }
 
-func (s *containerService) GetCluster(ctx context.Context, id string) (*providers.Cluster, error) {
+func (s *containerService) GetCluster(_ context.Context, id string) (*providers.Cluster, error) {
 	// Get ECS/EKS cluster
 	return &providers.Cluster{
 		ID:        id,
@@ -630,7 +630,7 @@ func (s *containerService) GetCluster(ctx context.Context, id string) (*provider
 	}, nil
 }
 
-func (s *containerService) ListClusters(ctx context.Context) ([]*providers.Cluster, error) {
+func (s *containerService) ListClusters(_ context.Context) ([]*providers.Cluster, error) {
 	// List ECS/EKS clusters
 	return []*providers.Cluster{
 		{
@@ -653,17 +653,17 @@ func (s *containerService) ListClusters(ctx context.Context) ([]*providers.Clust
 	}, nil
 }
 
-func (s *containerService) UpdateCluster(ctx context.Context, id string, req *providers.UpdateClusterRequest) error {
+func (s *containerService) UpdateCluster(_ context.Context, id string, req *providers.UpdateClusterRequest) error {
 	// Update ECS/EKS cluster
 	return nil
 }
 
-func (s *containerService) DeleteCluster(ctx context.Context, id string) error {
+func (s *containerService) DeleteCluster(_ context.Context, id string) error {
 	// Delete ECS/EKS cluster
 	return nil
 }
 
-func (s *containerService) DeployContainer(ctx context.Context, clusterID string, req *providers.DeployRequest) (*providers.Deployment, error) {
+func (s *containerService) DeployContainer(_ context.Context, clusterID string, req *providers.DeployRequest) (*providers.Deployment, error) {
 	// Deploy to ECS/EKS
 	return &providers.Deployment{
 		ID:        fmt.Sprintf("deployment-%s", generateID()),
@@ -677,7 +677,7 @@ func (s *containerService) DeployContainer(ctx context.Context, clusterID string
 	}, nil
 }
 
-func (s *containerService) GetDeployment(ctx context.Context, id string) (*providers.Deployment, error) {
+func (s *containerService) GetDeployment(_ context.Context, id string) (*providers.Deployment, error) {
 	// Get deployment
 	return &providers.Deployment{
 		ID:        id,
@@ -691,27 +691,27 @@ func (s *containerService) GetDeployment(ctx context.Context, id string) (*provi
 	}, nil
 }
 
-func (s *containerService) UpdateDeployment(ctx context.Context, id string, req *providers.UpdateDeploymentRequest) error {
+func (s *containerService) UpdateDeployment(_ context.Context, id string, req *providers.UpdateDeploymentRequest) error {
 	// Update deployment
 	return nil
 }
 
-func (s *containerService) ScaleDeployment(ctx context.Context, id string, replicas int) error {
+func (s *containerService) ScaleDeployment(_ context.Context, id string, replicas int) error {
 	// Scale deployment
 	return nil
 }
 
-func (s *containerService) DeleteDeployment(ctx context.Context, id string) error {
+func (s *containerService) DeleteDeployment(_ context.Context, id string) error {
 	// Delete deployment
 	return nil
 }
 
-func (s *containerService) EnableServiceMesh(ctx context.Context, clusterID string, config *providers.ServiceMeshConfig) error {
+func (s *containerService) EnableServiceMesh(_ context.Context, clusterID string, config *providers.ServiceMeshConfig) error {
 	// Enable App Mesh
 	return nil
 }
 
-func (s *containerService) ConfigureTrafficPolicy(ctx context.Context, policy *providers.TrafficPolicy) error {
+func (s *containerService) ConfigureTrafficPolicy(_ context.Context, policy *providers.TrafficPolicy) error {
 	// Configure App Mesh traffic policy
 	return nil
 }
@@ -725,7 +725,7 @@ func newDatabaseService(config providers.ProviderConfig) *databaseService {
 	return &databaseService{config: config}
 }
 
-func (s *databaseService) CreateDatabase(ctx context.Context, req *providers.CreateDatabaseRequest) (*providers.Database, error) {
+func (s *databaseService) CreateDatabase(_ context.Context, req *providers.CreateDatabaseRequest) (*providers.Database, error) {
 	// Create RDS instance
 	return &providers.Database{
 		ID:        fmt.Sprintf("db-%s", generateID()),
@@ -742,7 +742,7 @@ func (s *databaseService) CreateDatabase(ctx context.Context, req *providers.Cre
 	}, nil
 }
 
-func (s *databaseService) GetDatabase(ctx context.Context, id string) (*providers.Database, error) {
+func (s *databaseService) GetDatabase(_ context.Context, id string) (*providers.Database, error) {
 	// Get RDS instance
 	return &providers.Database{
 		ID:        id,
@@ -759,7 +759,7 @@ func (s *databaseService) GetDatabase(ctx context.Context, id string) (*provider
 	}, nil
 }
 
-func (s *databaseService) ListDatabases(ctx context.Context) ([]*providers.Database, error) {
+func (s *databaseService) ListDatabases(_ context.Context) ([]*providers.Database, error) {
 	// List RDS instances
 	return []*providers.Database{
 		{
@@ -785,17 +785,17 @@ func (s *databaseService) ListDatabases(ctx context.Context) ([]*providers.Datab
 	}, nil
 }
 
-func (s *databaseService) UpdateDatabase(ctx context.Context, id string, req *providers.UpdateDatabaseRequest) error {
+func (s *databaseService) UpdateDatabase(_ context.Context, id string, req *providers.UpdateDatabaseRequest) error {
 	// Update RDS instance
 	return nil
 }
 
-func (s *databaseService) DeleteDatabase(ctx context.Context, id string) error {
+func (s *databaseService) DeleteDatabase(_ context.Context, id string) error {
 	// Delete RDS instance
 	return nil
 }
 
-func (s *databaseService) CreateBackup(ctx context.Context, dbID string, name string) (*providers.Backup, error) {
+func (s *databaseService) CreateBackup(_ context.Context, dbID string, name string) (*providers.Backup, error) {
 	// Create RDS snapshot
 	return &providers.Backup{
 		ID:         fmt.Sprintf("snap-%s", generateID()),
@@ -808,12 +808,12 @@ func (s *databaseService) CreateBackup(ctx context.Context, dbID string, name st
 	}, nil
 }
 
-func (s *databaseService) RestoreBackup(ctx context.Context, backupID string, targetDB string) error {
+func (s *databaseService) RestoreBackup(_ context.Context, backupID string, targetDB string) error {
 	// Restore from RDS snapshot
 	return nil
 }
 
-func (s *databaseService) ListBackups(ctx context.Context, dbID string) ([]*providers.Backup, error) {
+func (s *databaseService) ListBackups(_ context.Context, dbID string) ([]*providers.Backup, error) {
 	// List RDS snapshots
 	return []*providers.Backup{
 		{
@@ -827,12 +827,12 @@ func (s *databaseService) ListBackups(ctx context.Context, dbID string) ([]*prov
 	}, nil
 }
 
-func (s *databaseService) ScaleDatabase(ctx context.Context, dbID string, req *providers.ScaleRequest) error {
+func (s *databaseService) ScaleDatabase(_ context.Context, dbID string, req *providers.ScaleRequest) error {
 	// Scale RDS instance
 	return nil
 }
 
-func (s *databaseService) EnableReadReplica(ctx context.Context, dbID string, region string) (*providers.Database, error) {
+func (s *databaseService) EnableReadReplica(ctx context.Context, dbID string, _ string) (*providers.Database, error) {
 	// Create RDS read replica
 	return s.CreateDatabase(ctx, &providers.CreateDatabaseRequest{
 		Name:    "replica-" + dbID,
@@ -843,7 +843,7 @@ func (s *databaseService) EnableReadReplica(ctx context.Context, dbID string, re
 	})
 }
 
-func (s *databaseService) EnableMultiMaster(ctx context.Context, dbID string, regions []string) error {
+func (s *databaseService) EnableMultiMaster(_ context.Context, dbID string, regions []string) error {
 	// Enable Aurora multi-master
 	return nil
 }

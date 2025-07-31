@@ -194,10 +194,15 @@ type PathEvent struct {
 type EventMask uint32
 
 const (
+	// EventCreate represents a file creation event
 	EventCreate EventMask = 1 << iota
+	// EventWrite represents a file write event
 	EventWrite
+	// EventRemove represents a file removal event
 	EventRemove
+	// EventRename represents a file rename event
 	EventRename
+	// EventChmod represents a file permission change event
 	EventChmod
 	EventAll = EventCreate | EventWrite | EventRemove | EventRename | EventChmod
 )
@@ -240,10 +245,15 @@ type CacheStats struct {
 type EvictionPolicy int
 
 const (
+	// EvictLRU represents Least Recently Used eviction policy
 	EvictLRU EvictionPolicy = iota
+	// EvictLFU represents Least Frequently Used eviction policy
 	EvictLFU
+	// EvictFIFO represents First In First Out eviction policy
 	EvictFIFO
+	// EvictRandom represents random eviction policy
 	EvictRandom
+	// EvictTTL represents Time To Live eviction policy
 	EvictTTL
 )
 

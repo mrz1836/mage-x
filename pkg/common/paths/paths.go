@@ -77,12 +77,12 @@ func Ext(path string) string {
 	return NewPathBuilder(path).Ext()
 }
 
-// Dir returns the directory component
+// DirOf returns the directory component of the given path.
 func DirOf(path string) PathBuilder {
 	return NewPathBuilder(path).Dir()
 }
 
-// Join joins path elements
+// JoinPaths joins multiple path elements into a single path.
 func JoinPaths(elements ...string) PathBuilder {
 	return Join(elements...)
 }
@@ -246,7 +246,7 @@ func FindFiles(rootPath, pattern string) ([]PathBuilder, error) {
 	}
 
 	var result []PathBuilder
-	err := root.Walk(func(path PathBuilder, info fs.FileInfo, err error) error {
+	err := root.Walk(func(path PathBuilder, _ fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -273,7 +273,7 @@ func FindDirectories(rootPath, pattern string) ([]PathBuilder, error) {
 	}
 
 	var result []PathBuilder
-	err := root.Walk(func(path PathBuilder, info fs.FileInfo, err error) error {
+	err := root.Walk(func(path PathBuilder, _ fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

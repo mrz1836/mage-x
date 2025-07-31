@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/mrz1836/go-mage/pkg/providers"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -36,7 +35,7 @@ func (ts *AzureProviderTestSuite) SetupTest() {
 
 	var err error
 	ts.provider, err = New(ts.config)
-	require.NoError(ts.T(), err)
+	ts.Require().NoError(err)
 }
 
 // TearDownTest runs after each test
@@ -51,17 +50,17 @@ func (ts *AzureProviderTestSuite) TearDownTest() {
 // TestAzureProviderBasics tests basic Azure provider functionality
 func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 	ts.Run("Provider name", func() {
-		require.Equal(ts.T(), "azure", ts.provider.Name())
+		ts.Require().Equal("azure", ts.provider.Name())
 	})
 
 	ts.Run("Provider initialization", func() {
 		azureProvider, ok := ts.provider.(*Provider)
-		require.True(ts.T(), ok)
-		require.Equal(ts.T(), "12345678-1234-1234-1234-123456789012", azureProvider.subscription)
-		require.NotNil(ts.T(), azureProvider.services)
-		require.NotNil(ts.T(), azureProvider.services.compute)
-		require.NotNil(ts.T(), azureProvider.services.storage)
-		require.NotNil(ts.T(), azureProvider.services.network)
+		ts.Require().True(ok)
+		ts.Require().Equal("12345678-1234-1234-1234-123456789012", azureProvider.subscription)
+		ts.Require().NotNil(azureProvider.services)
+		ts.Require().NotNil(azureProvider.services.compute)
+		ts.Require().NotNil(azureProvider.services.storage)
+		ts.Require().NotNil(azureProvider.services.network)
 	})
 
 	ts.Run("Provider validation with valid key credentials", func() {
@@ -78,10 +77,10 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 		}
 
 		provider, err := New(validConfig)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		err = provider.Validate()
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Provider validation with valid certificate credentials", func() {
@@ -98,10 +97,10 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 		}
 
 		provider, err := New(certConfig)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		err = provider.Validate()
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("Provider validation with missing subscription ID", func() {
@@ -116,8 +115,8 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 		}
 
 		_, err := New(invalidConfig)
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "azure subscription ID is required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "azure subscription ID is required")
 	})
 
 	ts.Run("Provider validation with missing key credentials", func() {
@@ -133,11 +132,11 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 		}
 
 		provider, err := New(invalidConfig)
-		require.NoError(ts.T(), err) // Creation should succeed
+		ts.Require().NoError(err) // Creation should succeed
 
 		err = provider.Validate()
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "azure client ID and client secret are required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "azure client ID and client secret are required")
 	})
 
 	ts.Run("Provider validation with missing certificate paths", func() {
@@ -153,34 +152,34 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 		}
 
 		provider, err := New(invalidConfig)
-		require.NoError(ts.T(), err) // Creation should succeed
+		ts.Require().NoError(err) // Creation should succeed
 
 		err = provider.Validate()
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "azure certificate and key paths are required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "azure certificate and key paths are required")
 	})
 
 	ts.Run("Provider health check", func() {
 		health, err := ts.provider.Health()
-		require.NoError(ts.T(), err)
-		require.NotNil(ts.T(), health)
-		require.True(ts.T(), health.Healthy)
-		require.Equal(ts.T(), "healthy", health.Status)
-		require.NotEmpty(ts.T(), health.Services)
+		ts.Require().NoError(err)
+		ts.Require().NotNil(health)
+		ts.Require().True(health.Healthy)
+		ts.Require().Equal("healthy", health.Status)
+		ts.Require().NotEmpty(health.Services)
 
 		// Check specific service health
-		require.Contains(ts.T(), health.Services, "compute")
-		require.Contains(ts.T(), health.Services, "storage")
-		require.Contains(ts.T(), health.Services, "network")
+		ts.Require().Contains(health.Services, "compute")
+		ts.Require().Contains(health.Services, "storage")
+		ts.Require().Contains(health.Services, "network")
 
 		computeHealth := health.Services["compute"]
-		require.True(ts.T(), computeHealth.Available)
-		require.Greater(ts.T(), computeHealth.ResponseTime, time.Duration(0))
+		ts.Require().True(computeHealth.Available)
+		ts.Require().Greater(computeHealth.ResponseTime, time.Duration(0))
 	})
 
 	ts.Run("Provider close", func() {
 		err := ts.provider.Close()
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -188,57 +187,57 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 func (ts *AzureProviderTestSuite) TestAzureServiceAccessors() {
 	ts.Run("Core service accessors return non-nil services", func() {
 		// Test core implemented services
-		require.NotNil(ts.T(), ts.provider.Compute())
-		require.NotNil(ts.T(), ts.provider.Storage())
-		require.NotNil(ts.T(), ts.provider.Network())
-		require.NotNil(ts.T(), ts.provider.Container())
-		require.NotNil(ts.T(), ts.provider.Database())
-		require.NotNil(ts.T(), ts.provider.Security())
-		require.NotNil(ts.T(), ts.provider.Monitoring())
-		require.NotNil(ts.T(), ts.provider.Serverless())
-		require.NotNil(ts.T(), ts.provider.AI())
+		ts.Require().NotNil(ts.provider.Compute())
+		ts.Require().NotNil(ts.provider.Storage())
+		ts.Require().NotNil(ts.provider.Network())
+		ts.Require().NotNil(ts.provider.Container())
+		ts.Require().NotNil(ts.provider.Database())
+		ts.Require().NotNil(ts.provider.Security())
+		ts.Require().NotNil(ts.provider.Monitoring())
+		ts.Require().NotNil(ts.provider.Serverless())
+		ts.Require().NotNil(ts.provider.AI())
 	})
 
 	ts.Run("Placeholder services return nil", func() {
 		// Test placeholder services that are not yet implemented
-		require.Nil(ts.T(), ts.provider.Cost())
-		require.Nil(ts.T(), ts.provider.Compliance())
-		require.Nil(ts.T(), ts.provider.Disaster())
-		require.Nil(ts.T(), ts.provider.Edge())
-		require.Nil(ts.T(), ts.provider.Quantum())
+		ts.Require().Nil(ts.provider.Cost())
+		ts.Require().Nil(ts.provider.Compliance())
+		ts.Require().Nil(ts.provider.Disaster())
+		ts.Require().Nil(ts.provider.Edge())
+		ts.Require().Nil(ts.provider.Quantum())
 	})
 
 	ts.Run("Service types are correct", func() {
 		// Verify we get the correct Azure-specific service implementations
 		azureProvider, ok := ts.provider.(*Provider)
-		require.True(ts.T(), ok)
+		ts.Require().True(ok)
 
 		_, ok = azureProvider.services.compute.(*azureComputeService)
-		require.True(ts.T(), ok, "Compute service should be Azure-specific implementation")
+		ts.Require().True(ok, "Compute service should be Azure-specific implementation")
 
 		_, ok = azureProvider.services.storage.(*azureStorageService)
-		require.True(ts.T(), ok, "Storage service should be Azure-specific implementation")
+		ts.Require().True(ok, "Storage service should be Azure-specific implementation")
 
 		_, ok = azureProvider.services.network.(*azureNetworkService)
-		require.True(ts.T(), ok, "Network service should be Azure-specific implementation")
+		ts.Require().True(ok, "Network service should be Azure-specific implementation")
 
 		_, ok = azureProvider.services.container.(*azureContainerService)
-		require.True(ts.T(), ok, "Container service should be Azure-specific implementation")
+		ts.Require().True(ok, "Container service should be Azure-specific implementation")
 
 		_, ok = azureProvider.services.database.(*azureDatabaseService)
-		require.True(ts.T(), ok, "Database service should be Azure-specific implementation")
+		ts.Require().True(ok, "Database service should be Azure-specific implementation")
 
 		_, ok = azureProvider.services.security.(*azureSecurityService)
-		require.True(ts.T(), ok, "Security service should be Azure-specific implementation")
+		ts.Require().True(ok, "Security service should be Azure-specific implementation")
 
 		_, ok = azureProvider.services.monitoring.(*azureMonitoringService)
-		require.True(ts.T(), ok, "Monitoring service should be Azure-specific implementation")
+		ts.Require().True(ok, "Monitoring service should be Azure-specific implementation")
 
 		_, ok = azureProvider.services.serverless.(*azureServerlessService)
-		require.True(ts.T(), ok, "Serverless service should be Azure-specific implementation")
+		ts.Require().True(ok, "Serverless service should be Azure-specific implementation")
 
 		_, ok = azureProvider.services.ai.(*azureAIService)
-		require.True(ts.T(), ok, "AI service should be Azure-specific implementation")
+		ts.Require().True(ok, "AI service should be Azure-specific implementation")
 	})
 }
 
@@ -259,13 +258,13 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 		}
 
 		provider, err := New(config)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "azure", provider.Name())
+		ts.Require().NoError(err)
+		ts.Require().Equal("azure", provider.Name())
 
 		azureProvider, ok := provider.(*Provider)
-		require.True(ts.T(), ok)
-		require.Equal(ts.T(), "12345678-1234-1234-1234-123456789012", azureProvider.subscription)
-		require.Equal(ts.T(), config, azureProvider.config)
+		ts.Require().True(ok)
+		ts.Require().Equal("12345678-1234-1234-1234-123456789012", azureProvider.subscription)
+		ts.Require().Equal(config, azureProvider.config)
 	})
 
 	ts.Run("Certificate-based authentication", func() {
@@ -284,12 +283,12 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 		}
 
 		provider, err := New(config)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "azure", provider.Name())
+		ts.Require().NoError(err)
+		ts.Require().Equal("azure", provider.Name())
 
 		azureProvider, ok := provider.(*Provider)
-		require.True(ts.T(), ok)
-		require.Equal(ts.T(), "98765432-4321-4321-4321-210987654321", azureProvider.subscription)
+		ts.Require().True(ok)
+		ts.Require().Equal("98765432-4321-4321-4321-210987654321", azureProvider.subscription)
 	})
 
 	ts.Run("OAuth token authentication", func() {
@@ -305,12 +304,12 @@ func (ts *AzureProviderTestSuite) TestAzureCredentialTypes() {
 		}
 
 		provider, err := New(config)
-		require.NoError(ts.T(), err)
-		require.Equal(ts.T(), "azure", provider.Name())
+		ts.Require().NoError(err)
+		ts.Require().Equal("azure", provider.Name())
 
 		azureProvider, ok := provider.(*Provider)
-		require.True(ts.T(), ok)
-		require.Equal(ts.T(), "11111111-2222-3333-4444-555555555555", azureProvider.subscription)
+		ts.Require().True(ok)
+		ts.Require().Equal("11111111-2222-3333-4444-555555555555", azureProvider.subscription)
 	})
 }
 
@@ -368,12 +367,12 @@ func (ts *AzureProviderTestSuite) TestAzureRegions() {
 			}
 
 			provider, err := New(config)
-			require.NoError(ts.T(), err)
-			require.Equal(ts.T(), "azure", provider.Name())
+			ts.Require().NoError(err)
+			ts.Require().Equal("azure", provider.Name())
 
 			azureProvider, ok := provider.(*Provider)
-			require.True(ts.T(), ok)
-			require.Equal(ts.T(), region, azureProvider.config.Region)
+			ts.Require().True(ok)
+			ts.Require().Equal(region, azureProvider.config.Region)
 		})
 	}
 }
@@ -395,11 +394,11 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 		}
 
 		provider, err := New(config)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		azureProvider, ok := provider.(*Provider)
-		require.True(ts.T(), ok)
-		require.Equal(ts.T(), "https://management.usgovcloudapi.net", azureProvider.config.Endpoint)
+		ts.Require().True(ok)
+		ts.Require().Equal("https://management.usgovcloudapi.net", azureProvider.config.Endpoint)
 	})
 
 	ts.Run("Custom timeout and retry configuration", func() {
@@ -418,12 +417,12 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 		}
 
 		provider, err := New(config)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		azureProvider, ok := provider.(*Provider)
-		require.True(ts.T(), ok)
-		require.Equal(ts.T(), 60*time.Second, azureProvider.config.Timeout)
-		require.Equal(ts.T(), 5, azureProvider.config.MaxRetries)
+		ts.Require().True(ok)
+		ts.Require().Equal(60*time.Second, azureProvider.config.Timeout)
+		ts.Require().Equal(5, azureProvider.config.MaxRetries)
 	})
 
 	ts.Run("Custom headers and proxy configuration", func() {
@@ -445,13 +444,13 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 		}
 
 		provider, err := New(config)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		azureProvider, ok := provider.(*Provider)
-		require.True(ts.T(), ok)
-		require.Equal(ts.T(), "MyApp/1.0 AzureGoSDK", azureProvider.config.CustomHeaders["User-Agent"])
-		require.Equal(ts.T(), "custom-value", azureProvider.config.CustomHeaders["X-Custom-Header"])
-		require.Equal(ts.T(), "http://corporate-proxy.company.com:8080", azureProvider.config.ProxyURL)
+		ts.Require().True(ok)
+		ts.Require().Equal("MyApp/1.0 AzureGoSDK", azureProvider.config.CustomHeaders["User-Agent"])
+		ts.Require().Equal("custom-value", azureProvider.config.CustomHeaders["X-Custom-Header"])
+		ts.Require().Equal("http://corporate-proxy.company.com:8080", azureProvider.config.ProxyURL)
 	})
 
 	ts.Run("TLS configuration", func() {
@@ -475,14 +474,14 @@ func (ts *AzureProviderTestSuite) TestAzureProviderConfiguration() {
 		}
 
 		provider, err := New(config)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		azureProvider, ok := provider.(*Provider)
-		require.True(ts.T(), ok)
-		require.NotNil(ts.T(), azureProvider.config.TLSConfig)
-		require.False(ts.T(), azureProvider.config.TLSConfig.InsecureSkipVerify)
-		require.Equal(ts.T(), "/etc/ssl/certs/azure-ca.pem", azureProvider.config.TLSConfig.CAPath)
-		require.Equal(ts.T(), "1.3", azureProvider.config.TLSConfig.MinVersion)
+		ts.Require().True(ok)
+		ts.Require().NotNil(azureProvider.config.TLSConfig)
+		ts.Require().False(azureProvider.config.TLSConfig.InsecureSkipVerify)
+		ts.Require().Equal("/etc/ssl/certs/azure-ca.pem", azureProvider.config.TLSConfig.CAPath)
+		ts.Require().Equal("1.3", azureProvider.config.TLSConfig.MinVersion)
 	})
 }
 
@@ -500,10 +499,10 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 		}
 
 		provider, err := New(config)
-		require.NoError(ts.T(), err) // Creation should succeed
+		ts.Require().NoError(err) // Creation should succeed
 
 		err = provider.Validate()
-		require.NoError(ts.T(), err) // Validation should pass for unknown types (handled gracefully)
+		ts.Require().NoError(err) // Validation should pass for unknown types (handled gracefully)
 	})
 
 	ts.Run("Empty subscription ID", func() {
@@ -520,8 +519,8 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 		}
 
 		_, err := New(config)
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "azure subscription ID is required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "azure subscription ID is required")
 	})
 
 	ts.Run("Missing subscription ID from Extra", func() {
@@ -536,8 +535,8 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 		}
 
 		_, err := New(config)
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "azure subscription ID is required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "azure subscription ID is required")
 	})
 
 	ts.Run("Nil Extra map", func() {
@@ -552,8 +551,8 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 		}
 
 		_, err := New(config)
-		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "azure subscription ID is required")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "azure subscription ID is required")
 	})
 }
 
@@ -562,7 +561,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderRegistration() {
 	ts.Run("Azure provider is registered", func() {
 		// The init() function should have registered the Azure provider
 		providerNames := providers.List()
-		require.Contains(ts.T(), providerNames, "azure")
+		ts.Require().Contains(providerNames, "azure")
 	})
 
 	ts.Run("Get Azure provider from registry", func() {
@@ -579,15 +578,15 @@ func (ts *AzureProviderTestSuite) TestAzureProviderRegistration() {
 		}
 
 		provider, err := providers.Get("azure", config)
-		require.NoError(ts.T(), err)
-		require.NotNil(ts.T(), provider)
-		require.Equal(ts.T(), "azure", provider.Name())
+		ts.Require().NoError(err)
+		ts.Require().NotNil(provider)
+		ts.Require().Equal("azure", provider.Name())
 
 		// Verify it's the correct type
 		azureProvider, ok := provider.(*Provider)
-		require.True(ts.T(), ok)
-		require.Equal(ts.T(), "registry-test-subscription-id", azureProvider.subscription)
-		require.Equal(ts.T(), "westus2", azureProvider.config.Region)
+		ts.Require().True(ok)
+		ts.Require().Equal("registry-test-subscription-id", azureProvider.subscription)
+		ts.Require().Equal("westus2", azureProvider.config.Region)
 	})
 }
 
@@ -608,26 +607,26 @@ func (ts *AzureProviderTestSuite) TestAzureProviderComparison() {
 		}
 
 		azureProvider, err := providers.Get("azure", azureConfig)
-		require.NoError(ts.T(), err)
+		ts.Require().NoError(err)
 
 		// Test Azure provider unique characteristics
-		require.Equal(ts.T(), "azure", azureProvider.Name())
+		ts.Require().Equal("azure", azureProvider.Name())
 
 		// Test Azure health status contains Azure-specific services
 		azureHealth, err := azureProvider.Health()
-		require.NoError(ts.T(), err)
-		require.True(ts.T(), azureHealth.Healthy)
+		ts.Require().NoError(err)
+		ts.Require().True(azureHealth.Healthy)
 
 		// Azure uses service names like compute, storage, network, aks, sql, keyvault, etc.
-		require.Contains(ts.T(), azureHealth.Services, "compute")
-		require.Contains(ts.T(), azureHealth.Services, "storage")
-		require.Contains(ts.T(), azureHealth.Services, "network")
-		require.Contains(ts.T(), azureHealth.Services, "aks")
-		require.Contains(ts.T(), azureHealth.Services, "sql")
-		require.Contains(ts.T(), azureHealth.Services, "keyvault")
-		require.Contains(ts.T(), azureHealth.Services, "monitor")
-		require.Contains(ts.T(), azureHealth.Services, "functions")
-		require.Contains(ts.T(), azureHealth.Services, "cognitive")
+		ts.Require().Contains(azureHealth.Services, "compute")
+		ts.Require().Contains(azureHealth.Services, "storage")
+		ts.Require().Contains(azureHealth.Services, "network")
+		ts.Require().Contains(azureHealth.Services, "aks")
+		ts.Require().Contains(azureHealth.Services, "sql")
+		ts.Require().Contains(azureHealth.Services, "keyvault")
+		ts.Require().Contains(azureHealth.Services, "monitor")
+		ts.Require().Contains(azureHealth.Services, "functions")
+		ts.Require().Contains(azureHealth.Services, "cognitive")
 	})
 }
 

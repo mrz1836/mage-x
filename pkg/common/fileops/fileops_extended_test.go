@@ -227,14 +227,14 @@ func TestFileOps_Extended(t *testing.T) {
 		var loaded map[string]string
 		path, err := ops.LoadConfig([]string{yamlFile}, &loaded)
 		assert.NoError(t, err)
-		assert.Equal(t, yamlFile, path)
+		assert.YAMLEq(t, yamlFile, path)
 		assert.Equal(t, "yaml-value", loaded["key"])
 
 		// Test loading JSON
 		loaded = map[string]string{}
 		path, err = ops.LoadConfig([]string{jsonFile}, &loaded)
 		assert.NoError(t, err)
-		assert.Equal(t, jsonFile, path)
+		assert.JSONEq(t, jsonFile, path)
 		assert.Equal(t, "json-value", loaded["key"])
 
 		// Test loading unknown extension (tries YAML first)

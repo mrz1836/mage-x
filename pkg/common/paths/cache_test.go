@@ -207,11 +207,11 @@ func TestDefaultPathCache_Validate(t *testing.T) {
 
 	// Test valid key
 	err := cache.Validate("validkey")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test empty key
 	err = cache.Validate("")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Test very long key
 	longKey := make([]byte, 1001)
@@ -283,7 +283,7 @@ func TestDefaultPathCache_EvictionPolicies(t *testing.T) {
 
 			// Verify eviction happened
 			stats := cache.Stats()
-			assert.Greater(t, stats.Evictions, int64(0))
+			assert.Positive(t, stats.Evictions)
 		})
 	}
 }
@@ -331,7 +331,7 @@ func TestMockPathCache(t *testing.T) {
 	// Test Set
 	pb := NewPathBuilder("/test")
 	err := mock.Set("key1", pb)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, mock.SetCalls, 1)
 
 	// Test Get
@@ -342,12 +342,12 @@ func TestMockPathCache(t *testing.T) {
 
 	// Test Delete
 	err = mock.Delete("key1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, mock.DeleteCalls, 1)
 
 	// Test Clear
 	err = mock.Clear()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, mock.ClearCalls)
 
 	// Test with error

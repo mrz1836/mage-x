@@ -298,8 +298,8 @@ func IntersectionSets(sets ...PathSet) PathSet {
 	return result
 }
 
-// PathsToSet converts a slice of paths to a PathSet
-func PathsToSet(paths []string) PathSet {
+// ToSet converts a slice of paths to a PathSet
+func ToSet(paths []string) PathSet {
 	return NewPathSetFromPaths(paths)
 }
 
