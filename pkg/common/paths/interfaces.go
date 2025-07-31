@@ -204,6 +204,7 @@ const (
 	EventRename
 	// EventChmod represents a file permission change event
 	EventChmod
+	// EventAll represents all file system events combined
 	EventAll = EventCreate | EventWrite | EventRemove | EventRename | EventChmod
 )
 

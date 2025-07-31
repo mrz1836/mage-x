@@ -5,6 +5,7 @@ import (
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLintAll(t *testing.T) {
@@ -51,9 +52,9 @@ func TestLintAll(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -113,9 +114,9 @@ func main() {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -173,9 +174,9 @@ CMD ["./app"]`)
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -235,9 +236,9 @@ settings:
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -305,9 +306,9 @@ go install
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -366,9 +367,9 @@ echo "Build complete!"`)
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -428,9 +429,9 @@ func TestLintJSON(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -489,9 +490,9 @@ func TestLintSQL(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -557,9 +558,9 @@ func TestLintConfig(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -610,9 +611,9 @@ func TestLintFix(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})

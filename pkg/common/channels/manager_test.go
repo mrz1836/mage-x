@@ -235,7 +235,7 @@ func TestManager_Initialize(t *testing.T) {
 		manager := NewManager(store, fileops.New().File)
 
 		err := manager.Initialize()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to save channel config")
 	})
 
@@ -305,7 +305,7 @@ func TestManager_PublishRelease(t *testing.T) {
 		release.Channel = Channel("invalid")
 
 		err := manager.PublishRelease(&release)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid channel")
 	})
 
@@ -314,7 +314,7 @@ func TestManager_PublishRelease(t *testing.T) {
 		release.Version = "" // Invalid
 
 		err := manager.PublishRelease(&release)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid release")
 	})
 
@@ -328,7 +328,7 @@ func TestManager_PublishRelease(t *testing.T) {
 		release := *validRelease
 
 		err := manager.PublishRelease(&release)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation failed")
 		assert.Contains(t, err.Error(), "custom validation failed")
 	})
@@ -348,7 +348,7 @@ func TestManager_PublishRelease(t *testing.T) {
 		// Second publish with same version should fail
 		release2 := *validRelease
 		err = manager.PublishRelease(&release2)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "already exists")
 	})
 
@@ -365,7 +365,7 @@ func TestManager_PublishRelease(t *testing.T) {
 		release.Version = "1.1.0" // Different version
 
 		err = manager.PublishRelease(&release)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to save release")
 	})
 
@@ -473,7 +473,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 		}
 
 		err := manager.PromoteRelease(request)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid channel")
 	})
 
@@ -487,7 +487,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 		}
 
 		err := manager.PromoteRelease(request)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "cannot promote from")
 	})
 
@@ -501,7 +501,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 		}
 
 		err := manager.PromoteRelease(request)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not found")
 	})
 
@@ -552,7 +552,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 		}
 
 		err = manager.PromoteRelease(request2)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "already exists")
 	})
 
@@ -585,7 +585,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 		}
 
 		err = manager.PromoteRelease(request)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "test results required")
 	})
 
@@ -621,7 +621,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 		}
 
 		err = manager.PromoteRelease(request)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "required test not passed")
 	})
 }
@@ -698,7 +698,7 @@ func TestManager_GetLatestRelease(t *testing.T) {
 		store.SetError(true)
 
 		_, err := manager.GetLatestRelease(Stable)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to list releases")
 
 		store.SetError(false)
@@ -756,7 +756,7 @@ func TestManager_ListReleases(t *testing.T) {
 		store.SetError(true)
 
 		_, err := manager.ListReleases(Stable, false)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to list releases")
 
 		store.SetError(false)
@@ -791,14 +791,14 @@ func TestManager_DeprecateRelease(t *testing.T) {
 
 	t.Run("release not found", func(t *testing.T) {
 		err := manager.DeprecateRelease(Stable, "2.0.0")
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not found")
 	})
 
 	t.Run("already deprecated", func(t *testing.T) {
 		// Release should already be deprecated from previous test
 		err := manager.DeprecateRelease(Stable, "1.0.0")
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "already deprecated")
 	})
 
@@ -882,7 +882,7 @@ func TestManager_CleanupExpiredReleases(t *testing.T) {
 		store.SetError(true)
 
 		err = manager.CleanupExpiredReleases()
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		store.SetError(false)
 	})
@@ -939,7 +939,7 @@ func TestManager_GetChannelStats(t *testing.T) {
 		store.SetError(true)
 
 		_, err := manager.GetChannelStats(Stable)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to list releases")
 
 		store.SetError(false)
@@ -1000,7 +1000,7 @@ func TestManager_GetPromotionHistory(t *testing.T) {
 		store.SetError(true)
 
 		_, err := manager.GetPromotionHistory("1.0.0")
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		store.SetError(false)
 	})

@@ -419,7 +419,7 @@ func TestAuditLogger_GetStats(t *testing.T) {
 		disabledLogger := NewAuditLogger(disabledConfig)
 
 		_, err := disabledLogger.GetStats()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "audit logging is disabled")
 	})
 }

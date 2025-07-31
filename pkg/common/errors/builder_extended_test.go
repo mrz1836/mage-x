@@ -118,7 +118,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 		assert.NotNil(t, b)
 
 		err := b.Build()
-		assert.ErrorIs(t, err, cause)
+		require.ErrorIs(t, err, cause)
 	})
 
 	t.Run("WithOperation", func(t *testing.T) {
@@ -202,7 +202,7 @@ func TestDefaultErrorBuilder_ComplexScenario(t *testing.T) {
 	assert.Contains(t, mageErr.Error(), "complex error: test")
 	assert.Equal(t, ErrInternal, mageErr.Code())
 	assert.Equal(t, SeverityCritical, mageErr.Severity())
-	assert.ErrorIs(t, err, cause)
+	require.ErrorIs(t, err, cause)
 
 	ctx := mageErr.Context()
 	assert.Equal(t, "ComplexOp", ctx.Operation)

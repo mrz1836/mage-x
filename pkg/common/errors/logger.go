@@ -363,6 +363,7 @@ func (m *MockErrorLogger) LogError(err error) {
 	m.LogErrorCalls = append(m.LogErrorCalls, err)
 }
 
+// LogErrorWithContext logs an error with context using the MockErrorLogger.
 func (m *MockErrorLogger) LogErrorWithContext(_ context.Context, err error) {
 	m.LogErrorWithContextCalls = append(m.LogErrorWithContextCalls, MockLogErrorWithContextCall{
 		Error: err,

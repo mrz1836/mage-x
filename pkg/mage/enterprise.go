@@ -518,6 +518,7 @@ func (Enterprise) Restore() error {
 
 // Supporting types and functions
 
+// EnterpriseConfig holds the configuration for enterprise features.
 type EnterpriseConfig struct {
 	Organization   string                       `json:"organization"`
 	Environment    string                       `json:"environment"`
@@ -537,6 +538,7 @@ type EnterpriseConfig struct {
 	UpdatedAt      time.Time                    `json:"updated_at"`
 }
 
+// EnvironmentConfig defines the configuration for a specific environment.
 type EnvironmentConfig struct {
 	Description          string            `json:"description"`
 	Endpoint             string            `json:"endpoint"`
@@ -548,6 +550,7 @@ type EnvironmentConfig struct {
 	NotificationChannels []string          `json:"notification_channels"`
 }
 
+// PolicyConfig defines a policy configuration with rules and metadata.
 type PolicyConfig struct {
 	Name     string            `json:"name"`
 	Category string            `json:"category"`
@@ -556,11 +559,13 @@ type PolicyConfig struct {
 	Metadata map[string]string `json:"metadata"`
 }
 
+// NotificationConfig defines notification settings and channels.
 type NotificationConfig struct {
 	Enabled  bool              `json:"enabled"`
 	Channels map[string]string `json:"channels"`
 }
 
+// DeploymentRecord tracks deployment history and status.
 type DeploymentRecord struct {
 	ID          string            `json:"id"`
 	Environment string            `json:"environment"`
@@ -573,6 +578,7 @@ type DeploymentRecord struct {
 	Error       string            `json:"error,omitempty"`
 }
 
+// PromotionRecord tracks environment promotion history.
 type PromotionRecord struct {
 	ID          string    `json:"id"`
 	Source      string    `json:"source"`
@@ -585,6 +591,7 @@ type PromotionRecord struct {
 	Error       string    `json:"error,omitempty"`
 }
 
+// ConfigBackup represents a backup of enterprise configuration.
 type ConfigBackup struct {
 	ID        string           `json:"id"`
 	Timestamp time.Time        `json:"timestamp"`
@@ -593,11 +600,13 @@ type ConfigBackup struct {
 	User      string           `json:"user"`
 }
 
+// EnterpriseDeploymentStep represents a single step in enterprise deployment.
 type EnterpriseDeploymentStep struct {
 	Name   string
 	Action func() error
 }
 
+// PromotionStep represents a single step in environment promotion.
 type PromotionStep struct {
 	Name   string
 	Action func() error
@@ -823,7 +832,7 @@ func createEnvironmentConfigs(enterpriseDir string, config EnterpriseConfig) err
 	return nil
 }
 
-func runPreDeploymentChecks(config EnterpriseConfig, env EnvironmentConfig) error {
+func runPreDeploymentChecks(_ EnterpriseConfig, _ EnvironmentConfig) error {
 	// Implementation for pre-deployment checks
 	return nil
 }
@@ -903,7 +912,7 @@ func getDeploymentHistory(environment string, limit int) ([]DeploymentRecord, er
 	return deployments, nil
 }
 
-func checkEnvironmentStatus(env EnvironmentConfig) string {
+func checkEnvironmentStatus(_ EnvironmentConfig) string {
 	// Implementation for environment health check
 	return "healthy"
 }
@@ -943,10 +952,10 @@ func rollbackConfiguration() error { return nil }
 func restoreTraffic() error        { return nil }
 
 // Promotion step implementations (placeholders)
-func validatePromotion(source, target EnvironmentConfig) error { return nil }
-func validateSourceEnvironment() error                         { return nil }
-func prepareTargetEnvironment() error                          { return nil }
-func syncConfiguration() error                                 { return nil }
-func promoteDatabase() error                                   { return nil }
-func promoteService() error                                    { return nil }
-func runSmokeTests() error                                     { return nil }
+func validatePromotion(_, _ EnvironmentConfig) error { return nil }
+func validateSourceEnvironment() error               { return nil }
+func prepareTargetEnvironment() error                { return nil }
+func syncConfiguration() error                       { return nil }
+func promoteDatabase() error                         { return nil }
+func promoteService() error                          { return nil }
+func runSmokeTests() error                           { return nil }

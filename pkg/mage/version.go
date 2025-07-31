@@ -67,7 +67,7 @@ func (Version) Show() error {
 }
 
 // Check checks for available updates
-func (Version) Check(args ...string) error {
+func (Version) Check(_ ...string) error {
 	utils.Header("Checking for Updates")
 
 	current := getVersionInfo()
@@ -162,7 +162,7 @@ func (Version) Update() error {
 }
 
 // Bump bumps the version number
-func (Version) Bump(args ...string) error {
+func (Version) Bump(_ ...string) error {
 	utils.Header("Bumping Version")
 
 	// Get bump type from environment
@@ -426,34 +426,34 @@ func bumpVersion(current, bumpType string) (string, error) {
 // Additional methods for Version namespace required by tests
 
 // Tag creates a version tag
-func (Version) Tag(args ...string) error {
+func (Version) Tag(_ ...string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Creating version tag")
 }
 
 // Next shows next version
-func (Version) Next(currentVer, bumpType string) (string, error) {
+func (Version) Next(_, _ string) (string, error) {
 	return "v1.0.1", nil
 }
 
 // Compare compares versions
-func (Version) Compare(ver1, ver2 string) error {
+func (Version) Compare(_, _ string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Comparing versions")
 }
 
 // Validate validates version format
-func (Version) Validate(version string) error {
+func (Version) Validate(_ string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Validating version")
 }
 
 // Parse parses a version string
-func (Version) Parse(version string) ([]int, error) {
+func (Version) Parse(_ string) ([]int, error) {
 	return []int{1, 0, 0}, nil
 }
 
 // Format formats a version
-func (Version) Format(parts []int) string {
+func (Version) Format(_ []int) string {
 	return "v1.0.0"
 }

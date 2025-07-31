@@ -34,7 +34,7 @@ func TestDefaultPathCache_Delete(t *testing.T) {
 	require.NoError(t, err)
 
 	err = cache.Delete("key1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify it's gone
 	_, exists := cache.Get("key1")
@@ -231,7 +231,7 @@ func TestDefaultPathCache_Refresh(t *testing.T) {
 
 	// Refresh existing key
 	err = cache.Refresh("key1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Try to refresh non-existent key
 	err = cache.Refresh("nonexistent")
@@ -249,7 +249,7 @@ func TestDefaultPathCache_RefreshAll(t *testing.T) {
 
 	// Refresh all
 	err = cache.RefreshAll()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestDefaultPathCache_EvictionPolicies(t *testing.T) {
@@ -275,7 +275,7 @@ func TestDefaultPathCache_EvictionPolicies(t *testing.T) {
 			// Add more items than max size to trigger eviction
 			for i := 0; i < 5; i++ {
 				err := cache.Set(string(rune('a'+i)), NewPathBuilder("/path"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			// Should have exactly max size items

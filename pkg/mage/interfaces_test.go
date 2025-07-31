@@ -22,7 +22,7 @@ type MockBuilder struct {
 	shouldError        bool
 }
 
-func (m *MockBuilder) Build(_ context.Context, opts BuildOptions) error {
+func (m *MockBuilder) Build(_ context.Context, _ BuildOptions) error {
 	m.buildCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -30,7 +30,7 @@ func (m *MockBuilder) Build(_ context.Context, opts BuildOptions) error {
 	return nil
 }
 
-func (m *MockBuilder) CrossCompile(_ context.Context, platforms []Platform) error {
+func (m *MockBuilder) CrossCompile(_ context.Context, _ []Platform) error {
 	m.crossCompileCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -38,7 +38,7 @@ func (m *MockBuilder) CrossCompile(_ context.Context, platforms []Platform) erro
 	return nil
 }
 
-func (m *MockBuilder) Package(_ context.Context, format PackageFormat) error {
+func (m *MockBuilder) Package(_ context.Context, _ PackageFormat) error {
 	m.packageCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -54,7 +54,7 @@ func (m *MockBuilder) Clean(_ context.Context) error {
 	return nil
 }
 
-func (m *MockBuilder) Install(_ context.Context, target string) error {
+func (m *MockBuilder) Install(_ context.Context, _ string) error {
 	m.installCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -71,7 +71,7 @@ type MockTester struct {
 	shouldError          bool
 }
 
-func (m *MockTester) RunTests(_ context.Context, opts TestOptions) (*TestResults, error) {
+func (m *MockTester) RunTests(_ context.Context, _ TestOptions) (*TestResults, error) {
 	m.runTestsCalled = true
 	if m.shouldError {
 		return nil, assert.AnError
@@ -79,7 +79,7 @@ func (m *MockTester) RunTests(_ context.Context, opts TestOptions) (*TestResults
 	return &TestResults{Passed: 10, Failed: 0, Duration: time.Second}, nil
 }
 
-func (m *MockTester) RunBenchmarks(_ context.Context, opts IBenchmarkOptions) (*IBenchmarkResults, error) {
+func (m *MockTester) RunBenchmarks(_ context.Context, _ IBenchmarkOptions) (*IBenchmarkResults, error) {
 	m.runBenchmarksCalled = true
 	if m.shouldError {
 		return nil, assert.AnError
@@ -87,7 +87,7 @@ func (m *MockTester) RunBenchmarks(_ context.Context, opts IBenchmarkOptions) (*
 	return &IBenchmarkResults{}, nil
 }
 
-func (m *MockTester) GenerateCoverage(ctx context.Context, opts CoverageOptions) (*CoverageReport, error) {
+func (m *MockTester) GenerateCoverage(_ context.Context, _ CoverageOptions) (*CoverageReport, error) {
 	m.generateCovCalled = true
 	if m.shouldError {
 		return nil, assert.AnError
@@ -97,7 +97,7 @@ func (m *MockTester) GenerateCoverage(ctx context.Context, opts CoverageOptions)
 	}, nil
 }
 
-func (m *MockTester) RunUnit(ctx context.Context, opts TestOptions) (*TestResults, error) {
+func (m *MockTester) RunUnit(_ context.Context, _ TestOptions) (*TestResults, error) {
 	m.runUnitCalled = true
 	if m.shouldError {
 		return nil, assert.AnError
@@ -105,7 +105,7 @@ func (m *MockTester) RunUnit(ctx context.Context, opts TestOptions) (*TestResult
 	return &TestResults{Passed: 5, Failed: 0, Duration: time.Millisecond * 500}, nil
 }
 
-func (m *MockTester) RunIntegration(ctx context.Context, opts TestOptions) (*TestResults, error) {
+func (m *MockTester) RunIntegration(_ context.Context, _ TestOptions) (*TestResults, error) {
 	m.runIntegrationCalled = true
 	if m.shouldError {
 		return nil, assert.AnError
@@ -123,7 +123,7 @@ type MockDeployer struct {
 	shouldError        bool
 }
 
-func (m *MockDeployer) Deploy(ctx context.Context, target DeployTarget, opts DeployOptions) error {
+func (m *MockDeployer) Deploy(_ context.Context, _ DeployTarget, _ DeployOptions) error {
 	m.deployCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -131,7 +131,7 @@ func (m *MockDeployer) Deploy(ctx context.Context, target DeployTarget, opts Dep
 	return nil
 }
 
-func (m *MockDeployer) Validate(ctx context.Context, target DeployTarget) error {
+func (m *MockDeployer) Validate(_ context.Context, _ DeployTarget) error {
 	m.validateCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -139,7 +139,7 @@ func (m *MockDeployer) Validate(ctx context.Context, target DeployTarget) error 
 	return nil
 }
 
-func (m *MockDeployer) Rollback(ctx context.Context, target DeployTarget, version string) error {
+func (m *MockDeployer) Rollback(_ context.Context, _ DeployTarget, _ string) error {
 	m.rollbackCalled = true
 	if m.shouldError {
 		return assert.AnError
@@ -147,7 +147,7 @@ func (m *MockDeployer) Rollback(ctx context.Context, target DeployTarget, versio
 	return nil
 }
 
-func (m *MockDeployer) Status(ctx context.Context, target DeployTarget) (*DeployStatus, error) {
+func (m *MockDeployer) Status(_ context.Context, _ DeployTarget) (*DeployStatus, error) {
 	m.getStatusCalled = true
 	if m.shouldError {
 		return nil, assert.AnError
@@ -155,7 +155,7 @@ func (m *MockDeployer) Status(ctx context.Context, target DeployTarget) (*Deploy
 	return &DeployStatus{Version: "1.0.0", State: "running"}, nil
 }
 
-func (m *MockDeployer) Scale(ctx context.Context, target DeployTarget, replicas int) error {
+func (m *MockDeployer) Scale(_ context.Context, _ DeployTarget, _ int) error {
 	m.scaleServiceCalled = true
 	if m.shouldError {
 		return assert.AnError

@@ -413,9 +413,9 @@ func TestPlatformFunctions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				platform, err := ParsePlatform(tt.input)
 				if tt.expectErr {
-					assert.Error(t, err)
+					require.Error(t, err)
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.Equal(t, tt.expected, platform)
 				}
 			})
@@ -508,7 +508,7 @@ func TestParallel(t *testing.T) {
 		}
 
 		err := Parallel(fns...)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, int32(3), atomic.LoadInt32(&count))
 	})
 
@@ -521,7 +521,7 @@ func TestParallel(t *testing.T) {
 		}
 
 		err := Parallel(fns...)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "parallel execution failed")
 	})
 
@@ -535,13 +535,13 @@ func TestParallel(t *testing.T) {
 		}
 
 		err := Parallel(fns...)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "parallel execution failed")
 	})
 
 	t.Run("empty function list", func(t *testing.T) {
 		err := Parallel()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
@@ -686,7 +686,7 @@ func TestFileSystemOperations(t *testing.T) {
 		// Test cleaning non-existent directory
 		nonExistentDir := filepath.Join(tempDir, "nonexistent")
 		err = CleanDir(nonExistentDir)
-		assert.NoError(t, err)                    // Should not error
+		require.NoError(t, err)                   // Should not error
 		assert.True(t, DirExists(nonExistentDir)) // Should create it
 	})
 
@@ -780,18 +780,18 @@ func TestCommandExecution(t *testing.T) {
 
 	t.Run("RunCmdOutput failure", func(t *testing.T) {
 		_, err := RunCmdOutput("nonexistent-command-12345")
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("RunCmd success", func(t *testing.T) {
 		err := RunCmd("echo", "test")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("RunCmdV", func(t *testing.T) {
 		// Test verbose command - mainly checking it doesn't crash
 		err := RunCmdV("echo", "verbose test")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("RunCmdPipe", func(t *testing.T) {
@@ -800,7 +800,7 @@ func TestCommandExecution(t *testing.T) {
 		cmd2 := exec.CommandContext(context.Background(), "cat")
 
 		err := RunCmdPipe(cmd1, cmd2)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 

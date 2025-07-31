@@ -39,7 +39,7 @@ func TestMageError_Wrapping(t *testing.T) {
 	baseErr := New("base error")
 	wrapped := Wrap(baseErr, "wrapped")
 	assert.Contains(t, wrapped.Error(), "wrapped", "Wrapped error should contain wrapper message")
-	assert.ErrorIs(t, wrapped.Cause(), baseErr, "Cause() should return original error")
+	require.ErrorIs(t, wrapped.Cause(), baseErr, "Cause() should return original error")
 
 	// Test formatted wrapping
 	wrapped = Wrapf(baseErr, "wrapped with %s", "context")
@@ -138,8 +138,8 @@ func TestErrorChain(t *testing.T) {
 	assert.Equal(t, 3, chain.Count(), "Chain should have count 3")
 
 	// Test first/last
-	assert.ErrorIs(t, chain.First(), err1, "First() should return first error")
-	assert.ErrorIs(t, chain.Last(), err3, "Last() should return last error")
+	require.ErrorIs(t, chain.First(), err1, "First() should return first error")
+	require.ErrorIs(t, chain.Last(), err3, "Last() should return last error")
 
 	// Test HasError
 	assert.True(t, chain.HasError(ErrBuildFailed), "HasError should find ErrBuildFailed")
@@ -234,7 +234,7 @@ func TestErrorRegistry(t *testing.T) {
 
 	// Test duplicate registration
 	err = registry.Register("CUSTOM_ERROR", "Duplicate")
-	assert.Error(t, err, "Duplicate registration should fail")
+	require.Error(t, err, "Duplicate registration should fail")
 
 	// Test Get
 	def, exists := registry.Get("CUSTOM_ERROR")
@@ -271,13 +271,13 @@ func TestErrorRecovery(t *testing.T) {
 	err := recovery.Recover(func() error {
 		return nil
 	})
-	assert.NoError(t, err, "Recover should return nil for successful execution")
+	require.NoError(t, err, "Recover should return nil for successful execution")
 
 	// Test panic recovery
 	err = recovery.Recover(func() error {
 		panic("test panic")
 	})
-	assert.Error(t, err, "Recover should return error for panic")
+	require.Error(t, err, "Recover should return error for panic")
 	assert.Contains(t, err.Error(), "panic recovered", "Recovered error should mention panic")
 
 	// Test retry
@@ -289,7 +289,7 @@ func TestErrorRecovery(t *testing.T) {
 		}
 		return nil
 	}, 5, 10*time.Millisecond)
-	assert.NoError(t, err, "RecoverWithRetry should succeed after retries")
+	require.NoError(t, err, "RecoverWithRetry should succeed after retries")
 	assert.Equal(t, 3, attempts, "Should make exactly 3 attempts")
 
 	// Test backoff
@@ -306,7 +306,7 @@ func TestErrorRecovery(t *testing.T) {
 		Multiplier:   2.0,
 		MaxRetries:   3,
 	})
-	assert.NoError(t, err, "RecoverWithBackoff should succeed")
+	require.NoError(t, err, "RecoverWithBackoff should succeed")
 
 	// Test context cancellation
 	ctx, cancel := context.WithCancel(context.Background())
@@ -317,7 +317,7 @@ func TestErrorRecovery(t *testing.T) {
 		return nil
 	})
 
-	assert.Error(t, err, "RecoverWithContext should return cancellation error")
+	require.Error(t, err, "RecoverWithContext should return cancellation error")
 	assert.Contains(t, err.Error(), "canceled", "Error should mention cancellation")
 }
 
@@ -417,7 +417,7 @@ func TestHelperFunctions(t *testing.T) {
 
 	// Test FirstError
 	first := FirstError(nil, nil, err1, err2)
-	assert.ErrorIs(t, first, err1, "FirstError should return first non-nil error")
+	require.ErrorIs(t, first, err1, "FirstError should return first non-nil error")
 
 	// Test SafeExecute
 	executed := false
@@ -425,7 +425,7 @@ func TestHelperFunctions(t *testing.T) {
 		executed = true
 		return nil
 	})
-	assert.NoError(t, safeErr, "SafeExecute should execute successfully")
+	require.NoError(t, safeErr, "SafeExecute should execute successfully")
 	assert.True(t, executed, "SafeExecute should execute function")
 
 	// Test SafeExecute with panic

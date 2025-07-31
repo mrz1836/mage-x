@@ -457,7 +457,7 @@ func (suite *FileOpsTestSuite) TestFileOpsFacade() {
 
 		err := suite.ops.SaveConfig(configPath, testConfig, "invalid")
 		// SaveConfig defaults to YAML for unknown formats, so no error
-		suite.NoError(err, "Should default to YAML for unknown formats")
+		suite.Require().NoError(err, "Should default to YAML for unknown formats")
 
 		// Verify YAML file was created
 		suite.True(suite.ops.File.Exists(configPath), "File should exist")

@@ -592,27 +592,27 @@ func executeBulkOperation(repo Repository, operation string) BulkResult {
 	return result
 }
 
-func executeStatusOperation(repo Repository) (string, string) {
+func executeStatusOperation(_ Repository) (string, string) {
 	// Implementation would check repository status
 	return "Repository is healthy", ""
 }
 
-func executeBuildOperation(repo Repository) (string, string) {
+func executeBuildOperation(_ Repository) (string, string) {
 	// Implementation would build the repository
 	return "Build completed successfully", ""
 }
 
-func executeTestOperation(repo Repository) (string, string) {
+func executeTestOperation(_ Repository) (string, string) {
 	// Implementation would run tests
 	return "All tests passed", ""
 }
 
-func executeLintOperation(repo Repository) (string, string) {
+func executeLintOperation(_ Repository) (string, string) {
 	// Implementation would run linting
 	return "No linting issues found", ""
 }
 
-func executeUpdateOperation(repo Repository) (string, string) {
+func executeUpdateOperation(_ Repository) (string, string) {
 	// Implementation would update dependencies
 	return "Dependencies updated", ""
 }
@@ -931,7 +931,7 @@ type helpCommand struct {
 	commands map[string]dashboardCommand
 }
 
-func (c *helpCommand) execute(dashboard Dashboard) error {
+func (c *helpCommand) execute(_ Dashboard) error {
 	utils.Info("Available commands:")
 	for name, cmd := range c.commands {
 		if name != "exit" { // Skip duplicate quit command
@@ -945,7 +945,7 @@ func (c *helpCommand) description() string { return "Show this help" }
 
 type refreshCommand struct{}
 
-func (c *refreshCommand) execute(dashboard Dashboard) error {
+func (c *refreshCommand) execute(_ Dashboard) error {
 	utils.Info("Refreshing dashboard...")
 	// Refresh functionality is a placeholder for future implementation.
 	// When implemented, this should reload dashboard data from configured sources.
@@ -997,7 +997,7 @@ func (c *metricsCommand) description() string { return "Show metrics" }
 
 type quitCommand struct{}
 
-func (c *quitCommand) execute(dashboard Dashboard) error {
+func (c *quitCommand) execute(_ Dashboard) error {
 	return errQuit
 }
 
@@ -1131,19 +1131,19 @@ func saveBatchResults(results []BatchOperationResult, filename string) error {
 
 func parseMonitoringInterval() (time.Duration, error) {
 	if interval := utils.GetEnv("MONITOR_INTERVAL", ""); interval != "" {
-		if d, err := time.ParseDuration(interval); err != nil {
+		d, err := time.ParseDuration(interval)
+		if err != nil {
 			return 0, fmt.Errorf("invalid monitoring interval '%s': %w", interval, err)
-		} else {
-			return d, nil
 		}
+		return d, nil
 	}
 	// Also check INTERVAL for backward compatibility with tests
 	if interval := utils.GetEnv("INTERVAL", ""); interval != "" {
-		if d, err := time.ParseDuration(interval); err != nil {
+		d, err := time.ParseDuration(interval)
+		if err != nil {
 			return 0, fmt.Errorf("invalid monitoring interval '%s': %w", interval, err)
-		} else {
-			return d, nil
 		}
+		return d, nil
 	}
 	return 30 * time.Second, nil
 }

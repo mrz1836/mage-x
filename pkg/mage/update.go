@@ -26,9 +26,12 @@ type Update mg.Namespace
 type UpdateChannel string
 
 const (
+	// StableChannel represents the stable release channel.
 	StableChannel UpdateChannel = "stable"
-	BetaChannel   UpdateChannel = "beta"
-	EdgeChannel   UpdateChannel = "edge"
+	// BetaChannel represents the beta release channel.
+	BetaChannel UpdateChannel = "beta"
+	// EdgeChannel represents the edge release channel.
+	EdgeChannel UpdateChannel = "edge"
 )
 
 // UpdateInfo contains update information

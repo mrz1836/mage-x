@@ -125,7 +125,7 @@ func TestSecureExecutor_ValidateCommand(t *testing.T) {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -265,7 +265,7 @@ func TestSecureExecutor_Execute(t *testing.T) {
 			args:    []string{"test"},
 			wantErr: false,
 			check: func(t *testing.T, _ *SecureExecutor, err error) {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				// In dry run, command should not actually execute
 			},
 		},
@@ -288,7 +288,7 @@ func TestSecureExecutor_Execute(t *testing.T) {
 			}(),
 			wantErr: true,
 			check: func(t *testing.T, _ *SecureExecutor, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				// The error might be different on various platforms
 				errMsg := err.Error()
 				assert.True(t,
@@ -327,7 +327,7 @@ func TestSecureExecutor_Execute(t *testing.T) {
 			args:    []string{"$(rm -rf /)"},
 			wantErr: true,
 			check: func(t *testing.T, _ *SecureExecutor, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "command validation failed")
 			},
 		},
@@ -344,9 +344,9 @@ func TestSecureExecutor_Execute(t *testing.T) {
 			err := executor.Execute(ctx, tt.command, tt.args...)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			if tt.check != nil {
@@ -403,9 +403,9 @@ func TestSecureExecutor_ExecuteOutput(t *testing.T) {
 			output, err := executor.ExecuteOutput(ctx, tt.command, tt.args...)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			if tt.wantOutput != "" {
@@ -422,12 +422,12 @@ func TestSecureExecutor_ExecuteWithEnv(t *testing.T) {
 	// Test that custom env vars are added
 	customEnv := []string{"CUSTOM_VAR=test123"}
 	err := executor.ExecuteWithEnv(ctx, customEnv, "sh", "-c", "echo $CUSTOM_VAR")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test that sensitive vars in custom env are still included (user's responsibility)
 	sensitiveEnv := []string{"API_KEY=secret"}
 	err = executor.ExecuteWithEnv(ctx, sensitiveEnv, "echo", "test")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestValidateCommandArg(t *testing.T) {
@@ -458,9 +458,9 @@ func TestValidateCommandArg(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateCommandArg(tt.arg)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -502,7 +502,7 @@ func TestValidatePath(t *testing.T) {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errMsg)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -518,26 +518,26 @@ func TestMockExecutor(t *testing.T) {
 
 	// Test successful command
 	err := mock.Execute(ctx, "echo", "hello")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, mock.ExecuteCalls, 1)
 	assert.Equal(t, "echo", mock.ExecuteCalls[0].Name)
 	assert.Equal(t, []string{"hello"}, mock.ExecuteCalls[0].Args)
 
 	// Test command with output
 	output, err := mock.ExecuteOutput(ctx, "echo", "hello")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "hello", output)
 	assert.Len(t, mock.ExecuteOutputCalls, 1)
 
 	// Test failing command
 	output, err = mock.ExecuteOutput(ctx, "failing-command")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, "command failed", err.Error())
 	assert.Empty(t, output)
 
 	// Test command with environment
 	err = mock.ExecuteWithEnv(ctx, []string{"TEST=1"}, "echo", "test")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, mock.ExecuteCalls, 2) // First Execute + ExecuteWithEnv
 	assert.Equal(t, []string{"TEST=1"}, mock.ExecuteCalls[1].Env)
 }
@@ -570,7 +570,7 @@ func TestSecureExecutor_ContextCancellation(t *testing.T) {
 
 	// Wait for the command to finish
 	err := <-done
-	assert.Error(t, err)
+	require.Error(t, err)
 	// Context cancellation can result in different error messages on different platforms
 	errMsg := err.Error()
 	assert.True(t,
@@ -590,7 +590,7 @@ func TestSecureExecutor_AuditLogging(t *testing.T) {
 
 	// Execute a command - audit logging should be attempted
 	err := executor.Execute(ctx, "echo", "test")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Even if audit logger is nil, the command should still execute
 	// This ensures that audit logging doesn't break command execution

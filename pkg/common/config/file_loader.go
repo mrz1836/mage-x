@@ -16,7 +16,7 @@ type FileConfigLoader struct {
 }
 
 // NewFileLoader creates a new file-based configuration loader
-func NewFileLoader(defaultPath string) ConfigLoader {
+func NewFileLoader(defaultPath string) Loader {
 	return &FileConfigLoader{
 		defaultPath: defaultPath,
 	}

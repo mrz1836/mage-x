@@ -1068,11 +1068,7 @@ func initializeSubConfigurations(config *EnterpriseConfiguration) error {
 	}
 
 	// Initialize integration configurations
-	if err := initializeIntegrationConfigurations(config); err != nil {
-		return err
-	}
-
-	return nil
+	return initializeIntegrationConfigurations(config)
 }
 
 func initializeRepositoryConfiguration() error {

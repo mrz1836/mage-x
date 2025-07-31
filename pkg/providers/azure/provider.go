@@ -153,12 +153,20 @@ func (p *Provider) Serverless() providers.ServerlessService { return p.services.
 // AI returns the AI service for Azure Cognitive Services
 func (p *Provider) AI() providers.AIService { return p.services.ai }
 
-// The following services are placeholders for now
-func (p *Provider) Cost() providers.CostService                 { return nil }
-func (p *Provider) Compliance() providers.ComplianceService     { return nil }
+// Cost returns the cost service for Azure billing and cost management.
+func (p *Provider) Cost() providers.CostService { return nil }
+
+// Compliance returns the compliance service for Azure Policy and compliance.
+func (p *Provider) Compliance() providers.ComplianceService { return nil }
+
+// Disaster returns the disaster recovery service for Azure Site Recovery.
 func (p *Provider) Disaster() providers.DisasterRecoveryService { return nil }
-func (p *Provider) Edge() providers.EdgeService                 { return nil }
-func (p *Provider) Quantum() providers.QuantumService           { return nil }
+
+// Edge returns the edge computing service for Azure IoT Edge.
+func (p *Provider) Edge() providers.EdgeService { return nil }
+
+// Quantum returns the quantum computing service for Azure Quantum.
+func (p *Provider) Quantum() providers.QuantumService { return nil }
 
 // Service implementations
 

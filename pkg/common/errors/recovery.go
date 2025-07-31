@@ -139,27 +139,31 @@ func (r *RealDefaultErrorRecovery) RecoverWithContext(ctx context.Context, fn fu
 	}
 }
 
-// Update DefaultErrorRecovery methods to use the real implementation
+// Recover executes a function and recovers from panics, converting them to errors.
 func (r *DefaultErrorRecovery) Recover(fn func() error) error {
 	recovery := NewErrorRecovery()
 	return recovery.Recover(fn)
 }
 
+// RecoverWithFallback executes a function with panic recovery and calls fallback on error.
 func (r *DefaultErrorRecovery) RecoverWithFallback(fn func() error, fallback func(error) error) error {
 	recovery := NewErrorRecovery()
 	return recovery.RecoverWithFallback(fn, fallback)
 }
 
+// RecoverWithRetry executes a function with panic recovery and retries on failure.
 func (r *DefaultErrorRecovery) RecoverWithRetry(fn func() error, retries int, delay time.Duration) error {
 	recovery := NewErrorRecovery()
 	return recovery.RecoverWithRetry(fn, retries, delay)
 }
 
+// RecoverWithBackoff executes a function with panic recovery and exponential backoff retries.
 func (r *DefaultErrorRecovery) RecoverWithBackoff(fn func() error, config BackoffConfig) error {
 	recovery := NewErrorRecovery()
 	return recovery.RecoverWithBackoff(fn, config)
 }
 
+// RecoverWithContext executes a function with panic recovery and context support.
 func (r *DefaultErrorRecovery) RecoverWithContext(ctx context.Context, fn func() error) error {
 	recovery := NewErrorRecovery()
 	return recovery.RecoverWithContext(ctx, fn)

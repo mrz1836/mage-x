@@ -40,7 +40,7 @@ func TestDefaultFileOperator_Extended(t *testing.T) {
 
 		// Remove all
 		err = ops.RemoveAll(filepath.Join(tmpDir, "nested"))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify removed
 		assert.False(t, ops.Exists(filepath.Join(tmpDir, "nested")))
@@ -52,7 +52,7 @@ func TestDefaultFileOperator_Extended(t *testing.T) {
 		require.NoError(t, err)
 
 		info, err := ops.Stat(testFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, info)
 		assert.Equal(t, "stat_test.txt", info.Name())
 		assert.False(t, info.IsDir())
@@ -65,7 +65,7 @@ func TestDefaultFileOperator_Extended(t *testing.T) {
 
 		// Change permissions
 		err = ops.Chmod(testFile, 0o600)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify permissions changed
 		info, err := ops.Stat(testFile)
@@ -88,7 +88,7 @@ func TestDefaultFileOperator_Extended(t *testing.T) {
 
 		// Read directory
 		entries, err := ops.ReadDir(testDir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, entries, 3)
 	})
 }
@@ -116,7 +116,7 @@ func TestDefaultJSONOperator_Extended(t *testing.T) {
 		}
 
 		err := jsonOp.WriteJSONIndent(testFile, data, "", "  ")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify the file was written with proper indentation
 		content, err := fileOp.ReadFile(testFile)
@@ -147,7 +147,7 @@ nested:
 `
 		var result map[string]interface{}
 		err := yamlOp.Unmarshal([]byte(yamlData), &result)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "test", result["name"])
 		assert.Equal(t, 123, result["value"])
 	})
@@ -171,7 +171,7 @@ func TestFileOps_Extended(t *testing.T) {
 		}
 
 		err := ops.WriteJSONSafe(testFile, data)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify file was written
 		assert.True(t, ops.File.Exists(testFile))
@@ -190,7 +190,7 @@ func TestFileOps_Extended(t *testing.T) {
 		}
 
 		err := ops.WriteYAMLSafe(testFile, data)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify file was written
 		assert.True(t, ops.File.Exists(testFile))
@@ -226,27 +226,27 @@ func TestFileOps_Extended(t *testing.T) {
 		// Test loading YAML
 		var loaded map[string]string
 		path, err := ops.LoadConfig([]string{yamlFile}, &loaded)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.YAMLEq(t, yamlFile, path)
 		assert.Equal(t, "yaml-value", loaded["key"])
 
 		// Test loading JSON
 		loaded = map[string]string{}
 		path, err = ops.LoadConfig([]string{jsonFile}, &loaded)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.JSONEq(t, jsonFile, path)
 		assert.Equal(t, "json-value", loaded["key"])
 
 		// Test loading unknown extension (tries YAML first)
 		loaded = map[string]string{}
 		path, err = ops.LoadConfig([]string{unknownFile}, &loaded)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, unknownFile, path)
 		assert.Equal(t, "unknown-value", loaded["key"])
 
 		// Test non-existent files
 		_, err = ops.LoadConfig([]string{"/nonexistent1", "/nonexistent2"}, &loaded)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no valid config file found")
 	})
 
@@ -260,7 +260,7 @@ func TestFileOps_Extended(t *testing.T) {
 
 		// Copy file
 		err = ops.CopyFile(srcFile, dstFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify destination exists and has same content
 		assert.True(t, ops.File.Exists(dstFile))
@@ -270,7 +270,7 @@ func TestFileOps_Extended(t *testing.T) {
 
 		// Test copying non-existent file
 		err = ops.CopyFile("/nonexistent", dstFile)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("BackupFile", func(t *testing.T) {
@@ -282,7 +282,7 @@ func TestFileOps_Extended(t *testing.T) {
 
 		// Create backup
 		err = ops.BackupFile(originalFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Backup should exist at originalFile.bak
 		backupPath := originalFile + ".bak"
@@ -295,7 +295,7 @@ func TestFileOps_Extended(t *testing.T) {
 
 		// Test backup of non-existent file
 		err = ops.BackupFile("/nonexistent")
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("CleanupBackups", func(t *testing.T) {
@@ -309,7 +309,7 @@ func TestFileOps_Extended(t *testing.T) {
 
 		// Clean up backup files matching pattern
 		err := ops.CleanupBackups(tmpDir, "*.bak")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify all backup files are removed
 		entries, err := ops.File.ReadDir(tmpDir)
@@ -352,7 +352,7 @@ func TestFileOps_ErrorHandling(t *testing.T) {
 		// Channel cannot be marshaled to JSON
 		invalidData := make(chan int)
 		err := ops.WriteJSONSafe("/tmp/test.json", invalidData)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to marshal JSON")
 	})
 
@@ -360,7 +360,7 @@ func TestFileOps_ErrorHandling(t *testing.T) {
 		// Create data that will fail during write (invalid path)
 		validData := map[string]string{"key": "value"}
 		err := ops.WriteYAMLSafe("/invalid\x00path/test.yaml", validData)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("LoadConfig with invalid JSON/YAML", func(t *testing.T) {
@@ -379,6 +379,6 @@ func TestFileOps_ErrorHandling(t *testing.T) {
 
 		var result map[string]string
 		_, err = ops.LoadConfig([]string{invalidFile}, &result)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }

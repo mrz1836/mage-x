@@ -58,7 +58,7 @@ func TestDefaultPathWatcher_WatchPath(t *testing.T) {
 
 	// Test WatchPath with PathBuilder
 	err = watcher.WatchPath(tempDir, EventCreate|EventWrite)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.True(t, watcher.IsWatching(tempDir.String()))
 }
@@ -85,14 +85,14 @@ func TestDefaultPathWatcher_Unwatch(t *testing.T) {
 	require.NoError(t, err)
 
 	err = watcher.Unwatch(tempDir.String())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Should no longer be watching
 	assert.False(t, watcher.IsWatching(tempDir.String()))
 
 	// Try to unwatch non-watched path
 	err = watcher.Unwatch("/nonexistent")
-	assert.NoError(t, err) // The implementation returns nil for non-watched paths
+	require.NoError(t, err) // The implementation returns nil for non-watched paths
 }
 
 func TestDefaultPathWatcher_UnwatchPath(t *testing.T) {
@@ -117,7 +117,7 @@ func TestDefaultPathWatcher_UnwatchPath(t *testing.T) {
 	require.NoError(t, err)
 
 	err = watcher.UnwatchPath(tempDir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.False(t, watcher.IsWatching(tempDir.String()))
 }
@@ -165,14 +165,14 @@ func TestDefaultPathWatcher_Close(t *testing.T) {
 
 	// Close should not error
 	err := watcher.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Create a new watcher for the double close test
 	// since the cancel function in the current implementation
 	// closes the done channel which can't be closed twice
 	watcher2 := NewPathWatcher()
 	err = watcher2.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestDefaultPathWatcher_EventGeneration(t *testing.T) {
@@ -194,7 +194,7 @@ func TestDefaultPathWatcher_ErrorHandling(t *testing.T) {
 
 	// For coverage, just test valid scenarios
 	err := watcher.Watch("/tmp", EventAll)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestDefaultPathWatcher_RecursiveWatching(t *testing.T) {
@@ -223,7 +223,7 @@ func TestDefaultPathWatcher_RecursiveWatching(t *testing.T) {
 
 	// Watch parent directory
 	err = watcher.Watch(tempDir.String(), EventAll)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// The implementation would normally watch subdirectories too
 	// This is mainly for coverage

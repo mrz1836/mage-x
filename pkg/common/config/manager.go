@@ -9,7 +9,7 @@ import (
 // DefaultConfigManager implements ConfigManager
 type DefaultConfigManager struct {
 	mu        sync.RWMutex
-	sources   []ConfigSource
+	sources   []Source
 	validator Validator
 	watching  bool
 	stopWatch chan bool
@@ -18,13 +18,13 @@ type DefaultConfigManager struct {
 // NewDefaultConfigManager creates a new default config manager
 func NewDefaultConfigManager() *DefaultConfigManager {
 	return &DefaultConfigManager{
-		sources:   make([]ConfigSource, 0),
+		sources:   make([]Source, 0),
 		stopWatch: make(chan bool, 1),
 	}
 }
 
 // AddSource adds a configuration source
-func (m *DefaultConfigManager) AddSource(source ConfigSource) {
+func (m *DefaultConfigManager) AddSource(source Source) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -39,7 +39,7 @@ func (m *DefaultConfigManager) AddSource(source ConfigSource) {
 // LoadConfig loads configuration from all sources in priority order
 func (m *DefaultConfigManager) LoadConfig(dest interface{}) error {
 	m.mu.RLock()
-	sources := make([]ConfigSource, len(m.sources))
+	sources := make([]Source, len(m.sources))
 	copy(sources, m.sources)
 	m.mu.RUnlock()
 
@@ -120,11 +120,11 @@ func (m *DefaultConfigManager) StopWatching() {
 }
 
 // GetActiveSources returns list of currently active sources
-func (m *DefaultConfigManager) GetActiveSources() []ConfigSource {
+func (m *DefaultConfigManager) GetActiveSources() []Source {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	active := make([]ConfigSource, 0)
+	active := make([]Source, 0)
 	for _, source := range m.sources {
 		if source.IsAvailable() {
 			active = append(active, source)

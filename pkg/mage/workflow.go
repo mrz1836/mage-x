@@ -244,6 +244,7 @@ func (Workflow) History() error {
 
 // Supporting types
 
+// WorkflowDefinition defines the structure and metadata for a workflow
 type WorkflowDefinition struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
@@ -255,6 +256,7 @@ type WorkflowDefinition struct {
 	LastUpdated time.Time              `json:"last_updated"`
 }
 
+// WorkflowStep represents a single step in a workflow execution
 type WorkflowStep struct {
 	Name            string                 `json:"name" yaml:"name"`
 	Type            string                 `json:"type" yaml:"type"`
@@ -271,6 +273,7 @@ type WorkflowStep struct {
 	Dependencies    []string               `json:"dependencies" yaml:"dependencies"`
 }
 
+// WorkflowSettings contains global settings and configuration for a workflow
 type WorkflowSettings struct {
 	Timeout          string            `json:"timeout"`
 	MaxRetries       int               `json:"max_retries"`
@@ -279,6 +282,7 @@ type WorkflowSettings struct {
 	Environment      map[string]string `json:"environment"`
 }
 
+// WorkflowTrigger defines conditions that can initiate workflow execution
 type WorkflowTrigger struct {
 	Type       string            `json:"type"`
 	Schedule   string            `json:"schedule"`
@@ -286,12 +290,14 @@ type WorkflowTrigger struct {
 	Conditions map[string]string `json:"conditions"`
 }
 
+// StepCondition defines a condition that must be met for a step to execute
 type StepCondition struct {
 	Type  string `json:"type" yaml:"type"`
 	Field string `json:"field" yaml:"field"`
 	Value string `json:"value" yaml:"value"`
 }
 
+// WorkflowExecution tracks the runtime state and results of a workflow execution
 type WorkflowExecution struct {
 	ID        string             `json:"id"`
 	Workflow  WorkflowDefinition `json:"workflow"`
@@ -303,6 +309,7 @@ type WorkflowExecution struct {
 	Context   ExecutionContext   `json:"context"`
 }
 
+// StepResult contains the execution results and metadata for a workflow step
 type StepResult struct {
 	Step       WorkflowStep  `json:"step"`
 	Status     string        `json:"status"`
@@ -314,12 +321,14 @@ type StepResult struct {
 	RetryCount int           `json:"retry_count"`
 }
 
+// ExecutionContext provides runtime context and variables for workflow execution
 type ExecutionContext struct {
 	Variables   map[string]interface{} `json:"variables"`
 	Environment map[string]string      `json:"environment"`
 	Metadata    map[string]string      `json:"metadata"`
 }
 
+// WorkflowTemplate defines a reusable workflow template with parameters
 type WorkflowTemplate struct {
 	Name        string              `json:"name"`
 	Description string              `json:"description"`
@@ -328,6 +337,7 @@ type WorkflowTemplate struct {
 	Parameters  []TemplateParameter `json:"parameters"`
 }
 
+// TemplateParameter defines a configurable parameter for workflow templates
 type TemplateParameter struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"`
@@ -336,6 +346,7 @@ type TemplateParameter struct {
 	Required    bool   `json:"required"`
 }
 
+// ScheduledWorkflow represents a workflow scheduled for periodic execution
 type ScheduledWorkflow struct {
 	ID           string    `json:"id"`
 	WorkflowName string    `json:"workflow_name"`
@@ -515,17 +526,17 @@ func executeShellCommand(ctx context.Context, step WorkflowStep) (string, error)
 	return output, nil
 }
 
-func executeScriptCommand(ctx context.Context, step WorkflowStep, execContext ExecutionContext) (string, error) {
+func executeScriptCommand(_ context.Context, _ WorkflowStep, _ ExecutionContext) (string, error) {
 	// Implementation would execute script files
 	return "Script executed successfully", nil
 }
 
-func executeHTTPCommand(ctx context.Context, step WorkflowStep, execContext ExecutionContext) (string, error) {
+func executeHTTPCommand(_ context.Context, _ WorkflowStep, _ ExecutionContext) (string, error) {
 	// Implementation would make HTTP requests
 	return "HTTP request completed", nil
 }
 
-func executeNotificationCommand(ctx context.Context, step WorkflowStep, execContext ExecutionContext) (string, error) {
+func executeNotificationCommand(_ context.Context, _ WorkflowStep, _ ExecutionContext) (string, error) {
 	// Implementation would send notifications
 	return "Notification sent", nil
 }

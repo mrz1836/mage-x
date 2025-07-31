@@ -297,27 +297,31 @@ func extractTags(code ErrorCode) []string {
 	return tags
 }
 
-// Update DefaultErrorRegistry methods to use the real implementation
+// Register registers an error code with description.
 func (r *DefaultErrorRegistry) Register(code ErrorCode, description string) error {
 	registry := NewErrorRegistry()
 	return registry.Register(code, description)
 }
 
+// RegisterWithSeverity registers an error code with description and severity.
 func (r *DefaultErrorRegistry) RegisterWithSeverity(code ErrorCode, description string, severity Severity) error {
 	registry := NewErrorRegistry()
 	return registry.RegisterWithSeverity(code, description, severity)
 }
 
+// Unregister removes an error code from registry.
 func (r *DefaultErrorRegistry) Unregister(code ErrorCode) error {
 	delete(r.definitions, code)
 	return nil
 }
 
+// Get retrieves an error definition by code.
 func (r *DefaultErrorRegistry) Get(code ErrorCode) (ErrorDefinition, bool) {
 	def, exists := r.definitions[code]
 	return def, exists
 }
 
+// List returns all registered error definitions.
 func (r *DefaultErrorRegistry) List() []ErrorDefinition {
 	result := make([]ErrorDefinition, 0, len(r.definitions))
 	for _, def := range r.definitions {
@@ -326,6 +330,7 @@ func (r *DefaultErrorRegistry) List() []ErrorDefinition {
 	return result
 }
 
+// ListByPrefix returns error definitions with codes matching the prefix.
 func (r *DefaultErrorRegistry) ListByPrefix(prefix string) []ErrorDefinition {
 	result := make([]ErrorDefinition, 0)
 	for code, def := range r.definitions {
@@ -336,6 +341,7 @@ func (r *DefaultErrorRegistry) ListByPrefix(prefix string) []ErrorDefinition {
 	return result
 }
 
+// ListBySeverity returns error definitions with matching severity.
 func (r *DefaultErrorRegistry) ListBySeverity(severity Severity) []ErrorDefinition {
 	result := make([]ErrorDefinition, 0)
 	for _, def := range r.definitions {
@@ -346,11 +352,13 @@ func (r *DefaultErrorRegistry) ListBySeverity(severity Severity) []ErrorDefiniti
 	return result
 }
 
+// Contains checks if an error code is registered.
 func (r *DefaultErrorRegistry) Contains(code ErrorCode) bool {
 	_, exists := r.definitions[code]
 	return exists
 }
 
+// Clear removes all registered error definitions.
 func (r *DefaultErrorRegistry) Clear() error {
 	r.definitions = make(map[ErrorCode]ErrorDefinition)
 	return nil

@@ -368,6 +368,7 @@ func (r *ReadableRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder path is readable
 func (r *ReadableRule) ValidatePath(path PathBuilder) error {
 	return r.Validate(path.String())
 }
@@ -375,9 +376,13 @@ func (r *ReadableRule) ValidatePath(path PathBuilder) error {
 // WritableRule validates that a path is writable
 type WritableRule struct{}
 
-func (r *WritableRule) Name() string        { return "writable" }
+// Name returns the name of the WritableRule
+func (r *WritableRule) Name() string { return "writable" }
+
+// Description returns the description of the WritableRule
 func (r *WritableRule) Description() string { return "path must be writable" }
 
+// Validate validates that the given path is writable
 func (r *WritableRule) Validate(path string) error {
 	// Clean path to prevent directory traversal
 	cleanPath := filepath.Clean(path)
@@ -424,6 +429,7 @@ func (r *WritableRule) checkDirWritable(dir string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder path is writable
 func (r *WritableRule) ValidatePath(path PathBuilder) error {
 	return r.Validate(path.String())
 }
@@ -431,9 +437,13 @@ func (r *WritableRule) ValidatePath(path PathBuilder) error {
 // ExecutableRule validates that a path is executable
 type ExecutableRule struct{}
 
-func (r *ExecutableRule) Name() string        { return "executable" }
+// Name returns the name of the ExecutableRule
+func (r *ExecutableRule) Name() string { return "executable" }
+
+// Description returns the description of the ExecutableRule
 func (r *ExecutableRule) Description() string { return "path must be executable" }
 
+// Validate validates that the given path is executable
 func (r *ExecutableRule) Validate(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -447,6 +457,7 @@ func (r *ExecutableRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder path is executable
 func (r *ExecutableRule) ValidatePath(path PathBuilder) error {
 	return r.Validate(path.String())
 }
@@ -454,9 +465,13 @@ func (r *ExecutableRule) ValidatePath(path PathBuilder) error {
 // DirectoryRule validates that a path is a directory
 type DirectoryRule struct{}
 
-func (r *DirectoryRule) Name() string        { return "directory" }
+// Name returns the name of the DirectoryRule
+func (r *DirectoryRule) Name() string { return "directory" }
+
+// Description returns the description of the DirectoryRule
 func (r *DirectoryRule) Description() string { return "path must be a directory" }
 
+// Validate validates that the given path is a directory
 func (r *DirectoryRule) Validate(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -470,6 +485,7 @@ func (r *DirectoryRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder path is a directory
 func (r *DirectoryRule) ValidatePath(path PathBuilder) error {
 	if !path.IsDir() {
 		return fmt.Errorf("path is not a directory")
@@ -480,9 +496,13 @@ func (r *DirectoryRule) ValidatePath(path PathBuilder) error {
 // FileRule validates that a path is a file
 type FileRule struct{}
 
-func (r *FileRule) Name() string        { return "file" }
+// Name returns the name of the FileRule
+func (r *FileRule) Name() string { return "file" }
+
+// Description returns the description of the FileRule
 func (r *FileRule) Description() string { return "path must be a file" }
 
+// Validate validates that the given path is a file
 func (r *FileRule) Validate(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -496,6 +516,7 @@ func (r *FileRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder path is a file
 func (r *FileRule) ValidatePath(path PathBuilder) error {
 	if !path.IsFile() {
 		return fmt.Errorf("path is not a file")
@@ -508,9 +529,13 @@ type ExtensionRule struct {
 	Extensions []string
 }
 
-func (r *ExtensionRule) Name() string        { return "extension" }
+// Name returns the name of the ExtensionRule
+func (r *ExtensionRule) Name() string { return "extension" }
+
+// Description returns the description of the ExtensionRule
 func (r *ExtensionRule) Description() string { return "path must have allowed extension" }
 
+// Validate validates that the given path has an allowed extension
 func (r *ExtensionRule) Validate(path string) error {
 	ext := strings.ToLower(filepath.Ext(path))
 
@@ -526,6 +551,7 @@ func (r *ExtensionRule) Validate(path string) error {
 	return fmt.Errorf("path must have one of these extensions: %v", r.Extensions)
 }
 
+// ValidatePath validates that the given PathBuilder path has an allowed extension
 func (r *ExtensionRule) ValidatePath(path PathBuilder) error {
 	return r.Validate(path.String())
 }
@@ -535,9 +561,13 @@ type MaxLengthRule struct {
 	MaxLength int
 }
 
-func (r *MaxLengthRule) Name() string        { return "max-length" }
+// Name returns the name of the MaxLengthRule
+func (r *MaxLengthRule) Name() string { return "max-length" }
+
+// Description returns the description of the MaxLengthRule
 func (r *MaxLengthRule) Description() string { return "path must not exceed maximum length" }
 
+// Validate validates that the given path does not exceed maximum length
 func (r *MaxLengthRule) Validate(path string) error {
 	if len(path) > r.MaxLength {
 		return fmt.Errorf("path length %d exceeds maximum %d", len(path), r.MaxLength)
@@ -545,6 +575,7 @@ func (r *MaxLengthRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder path does not exceed maximum length
 func (r *MaxLengthRule) ValidatePath(path PathBuilder) error {
 	return r.Validate(path.String())
 }
@@ -555,6 +586,7 @@ type PatternRule struct {
 	Required bool // true = must match, false = must not match
 }
 
+// Name returns the name of the pattern rule.
 func (r *PatternRule) Name() string {
 	if r.Required {
 		return "require-pattern"
@@ -562,6 +594,7 @@ func (r *PatternRule) Name() string {
 	return "forbid-pattern"
 }
 
+// Description returns the description of the pattern rule.
 func (r *PatternRule) Description() string {
 	if r.Required {
 		return "path must match pattern"
@@ -569,6 +602,7 @@ func (r *PatternRule) Description() string {
 	return "path must not match pattern"
 }
 
+// Validate validates that the given path matches or does not match the pattern
 func (r *PatternRule) Validate(path string) error {
 	matched, err := regexp.MatchString(r.Pattern, path)
 	if err != nil {
@@ -586,6 +620,7 @@ func (r *PatternRule) Validate(path string) error {
 	return nil
 }
 
+// ValidatePath validates that the given PathBuilder path matches or does not match the pattern
 func (r *PatternRule) ValidatePath(path PathBuilder) error {
 	return r.Validate(path.String())
 }

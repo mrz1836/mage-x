@@ -810,7 +810,7 @@ func (mc *MetricsCollector) generateRecommendations(report *PerformanceReport) [
 	return recommendations
 }
 
-func (mc *MetricsCollector) generateComparisons(_ []*Metric, period string) map[string]PerformanceComparison {
+func (mc *MetricsCollector) generateComparisons(_ []*Metric, _ string) map[string]PerformanceComparison {
 	comparisons := make(map[string]PerformanceComparison)
 
 	// This would compare current period with previous period

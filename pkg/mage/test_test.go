@@ -5,6 +5,7 @@ import (
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTestRun(t *testing.T) {
@@ -51,9 +52,9 @@ func TestTestRun(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -115,9 +116,9 @@ func TestTestRunWithCoverage(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -168,9 +169,9 @@ func TestTestRace(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -232,9 +233,9 @@ func TestTestBench(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -285,9 +286,9 @@ func TestTestVet(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -338,9 +339,9 @@ func TestTestLint(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -395,9 +396,9 @@ func TestTestClean(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -448,9 +449,9 @@ func TestTestUnit(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -501,9 +502,9 @@ func TestTestIntegration(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})
@@ -558,9 +559,9 @@ func TestTestAll(t *testing.T) {
 			)
 
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			env.Runner.AssertExpectations(t)
 		})

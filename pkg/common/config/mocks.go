@@ -518,7 +518,7 @@ func (m *MockConfigManager) EXPECT() *MockConfigManagerMockRecorder {
 }
 
 // AddSource mocks base method.
-func (m *MockConfigManager) AddSource(source ConfigSource) {
+func (m *MockConfigManager) AddSource(source Source) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddSource", source)
 }
@@ -530,10 +530,10 @@ func (mr *MockConfigManagerMockRecorder) AddSource(source any) *gomock.Call {
 }
 
 // GetActiveSources mocks base method.
-func (m *MockConfigManager) GetActiveSources() []ConfigSource {
+func (m *MockConfigManager) GetActiveSources() []Source {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetActiveSources")
-	ret0, _ := ret[0].([]ConfigSource)
+	ret0, _ := ret[0].([]Source)
 	return ret0
 }
 

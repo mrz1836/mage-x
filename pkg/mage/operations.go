@@ -38,68 +38,79 @@ type Docker = DockerOps
 // Common provides common operations
 type Common struct{}
 
-// Check operations
+// All runs all available checks
 func (c Check) All() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running all checks")
 }
 
+// Format checks code formatting
 func (c Check) Format() error {
 	runner := GetRunner()
 	return runner.RunCmd("gofmt", "-l", ".")
 }
 
+// Imports checks import formatting
 func (c Check) Imports() error {
 	runner := GetRunner()
 	return runner.RunCmd("goimports", "-l", ".")
 }
 
+// License checks license headers in the codebase.
 func (c Check) License() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Checking license headers")
 }
 
+// Security runs security checks using gosec.
 func (c Check) Security() error {
 	runner := GetRunner()
 	return runner.RunCmd("gosec", "./...")
 }
 
+// Dependencies verifies go module dependencies.
 func (c Check) Dependencies() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "mod", "verify")
 }
 
+// Tidy runs go mod tidy to clean up dependencies.
 func (c Check) Tidy() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "mod", "tidy")
 }
 
+// Generate runs go generate on all packages.
 func (c Check) Generate() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "generate", "./...")
 }
 
+// Spelling checks for spelling errors using misspell.
 func (c Check) Spelling() error {
 	runner := GetRunner()
 	return runner.RunCmd("misspell", ".")
 }
 
+// Documentation checks documentation coverage.
 func (c Check) Documentation() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Checking documentation")
 }
 
+// Deps verifies go module dependencies (alias for Dependencies).
 func (c Check) Deps() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "mod", "verify")
 }
 
+// Docs checks documentation coverage (alias for Documentation).
 func (c Check) Docs() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Checking documentation")
 }
 
-// CI operations
+// Setup sets up CI for the specified provider.
 func (ci CI) Setup(provider string) error {
 	runner := GetRunner()
 	switch provider {
@@ -110,11 +121,13 @@ func (ci CI) Setup(provider string) error {
 	}
 }
 
+// Validate validates CI configuration.
 func (ci CI) Validate() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Validating CI configuration")
 }
 
+// Run executes CI jobs.
 func (ci CI) Run(job string) error {
 	runner := GetRunner()
 	if job == "" {
@@ -123,225 +136,265 @@ func (ci CI) Run(job string) error {
 	return runner.RunCmd("echo", "Running CI job:", job)
 }
 
+// Status checks CI status for a branch.
 func (ci CI) Status(branch string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Checking CI status for branch:", branch)
 }
 
+// Logs fetches CI logs for a build.
 func (ci CI) Logs(buildID string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Fetching CI logs for build:", buildID)
 }
 
+// Trigger triggers CI for a branch and workflow.
 func (ci CI) Trigger(branch, workflow string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Triggering CI for branch:", branch, "workflow:", workflow)
 }
 
-func (ci CI) Secrets(action, key, value string) error {
+// Secrets manages CI secrets.
+func (ci CI) Secrets(action, key, _ string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Managing CI secrets:", action, key)
 }
 
+// Cache manages CI cache.
 func (ci CI) Cache(action string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Managing CI cache:", action)
 }
 
-func (ci CI) Matrix(config map[string][]string) error {
+// Matrix sets up CI matrix configuration.
+func (ci CI) Matrix(_ map[string][]string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Setting up CI matrix")
 }
 
+// Artifacts manages CI artifacts.
 func (ci CI) Artifacts(action, buildID string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Managing CI artifacts:", action, buildID)
 }
 
+// Environments manages CI environments.
 func (ci CI) Environments(action, environment string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Managing CI environments:", action, environment)
 }
 
-// Monitor operations
+// Start starts monitoring services.
 func (m Monitor) Start() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Starting monitoring")
 }
 
+// Stop stops monitoring services.
 func (m Monitor) Stop() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Stopping monitoring")
 }
 
+// Status checks monitoring status.
 func (m Monitor) Status() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Checking monitoring status")
 }
 
+// Logs views logs for a service.
 func (m Monitor) Logs(service string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Viewing logs for service:", service)
 }
 
+// Metrics fetches metrics for a time range.
 func (m Monitor) Metrics(timeRange string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Fetching metrics for time range:", timeRange)
 }
 
+// Alerts checks active alerts.
 func (m Monitor) Alerts() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Checking active alerts")
 }
 
+// Health checks health of an endpoint.
 func (m Monitor) Health(endpoint string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Checking health of endpoint:", endpoint)
 }
 
+// Dashboard starts monitoring dashboard on specified port.
 func (m Monitor) Dashboard(port int) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Starting dashboard on port:", fmt.Sprintf("%d", port))
 }
 
+// Trace views a trace by ID.
 func (m Monitor) Trace(traceID string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Viewing trace:", traceID)
 }
 
+// Profile profiles application for specified type and duration.
 func (m Monitor) Profile(profileType, duration string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Profiling:", profileType, "for", duration)
 }
 
+// Export exports metrics in specified format for time range.
 func (m Monitor) Export(format, timeRange string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Exporting metrics as", format, "for", timeRange)
 }
 
-// Database operations
+// Migrate runs database migrations in the specified direction.
 func (db Database) Migrate(direction string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running database migration:", direction)
 }
 
+// Seed seeds the database with test data.
 func (db Database) Seed(seedName string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Seeding database:", seedName)
 }
 
+// Reset resets the database to a clean state.
 func (db Database) Reset() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Resetting database")
 }
 
+// Backup creates a backup of the database.
 func (db Database) Backup(backupFile string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Creating database backup:", backupFile)
 }
 
+// Restore restores the database from a backup file.
 func (db Database) Restore(backupFile string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Restoring database from:", backupFile)
 }
 
+// Status checks the database status.
 func (db Database) Status() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Checking database status")
 }
 
+// Create creates a new database with the given name.
 func (db Database) Create(dbName string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Creating database:", dbName)
 }
 
+// Drop drops a database with the given name.
 func (db Database) Drop(dbName string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Dropping database:", dbName)
 }
 
+// Console opens a database console.
 func (db Database) Console() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Opening database console")
 }
 
+// Query executes a database query.
 func (db Database) Query(query string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Executing query:", query)
 }
 
-// Deploy operations
+// Local deploys the application locally.
 func (d Deploy) Local() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Deploying locally")
 }
 
+// Staging deploys the application to staging environment.
 func (d Deploy) Staging() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Deploying to staging")
 }
 
+// Production deploys the application to production environment.
 func (d Deploy) Production() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Deploying to production")
 }
 
+// Kubernetes deploys the application to a Kubernetes namespace.
 func (d Deploy) Kubernetes(namespace string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Deploying to Kubernetes namespace:", namespace)
 }
 
+// AWS deploys the application to AWS service.
 func (d Deploy) AWS(service string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Deploying to AWS service:", service)
 }
 
+// GCP deploys the application to GCP service.
 func (d Deploy) GCP(service string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Deploying to GCP service:", service)
 }
 
+// Azure deploys the application to Azure service.
 func (d Deploy) Azure(service string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Deploying to Azure service:", service)
 }
 
+// Heroku deploys the application to Heroku app.
 func (d Deploy) Heroku(app string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Deploying to Heroku app:", app)
 }
 
+// Rollback rolls back deployment to a previous version.
 func (d Deploy) Rollback(environment, version string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Rolling back", environment, "to version:", version)
 }
 
+// Status checks the deployment status for an environment.
 func (d Deploy) Status(environment string) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Checking deployment status for:", environment)
 }
 
-// Clean operations
+// All cleans all build artifacts and caches.
 func (c Clean) All() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Cleaning all")
 }
 
+// Build cleans build artifacts.
 func (c Clean) Build() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "clean")
 }
 
+// Test cleans test cache.
 func (c Clean) Test() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "clean", "-testcache")
 }
 
+// Cache cleans build cache.
 func (c Clean) Cache() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "clean", "-cache")
 }
 
+// Dependencies cleans module cache.
 func (c Clean) Dependencies() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "clean", "-modcache")
@@ -405,78 +458,78 @@ func (r Run) Watch() error {
 	return runner.RunCmd("echo", "Running with watch")
 }
 
-func (r Run) Debug(args ...interface{}) error {
+func (r Run) Debug(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running in debug mode")
 }
 
-func (r Run) Profile(args ...interface{}) error {
+func (r Run) Profile(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running with profiling")
 }
 
-func (r Run) Benchmark(args ...interface{}) error {
+func (r Run) Benchmark(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running benchmarks")
 }
 
-func (r Run) Server(args ...interface{}) error {
+func (r Run) Server(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running server")
 }
 
-func (r Run) Migrations(args ...interface{}) error {
+func (r Run) Migrations(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running migrations")
 }
 
-func (r Run) Seeds(args ...interface{}) error {
+func (r Run) Seeds(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running seeds")
 }
 
-func (r Run) Worker(args ...interface{}) error {
+func (r Run) Worker(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running worker")
 }
 
 // Serve operations
-func (s Serve) HTTP(args ...interface{}) error {
+func (s Serve) HTTP(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving HTTP")
 }
 
-func (s Serve) HTTPS(args ...interface{}) error {
+func (s Serve) HTTPS(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving HTTPS")
 }
 
-func (s Serve) Docs(args ...interface{}) error {
+func (s Serve) Docs(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving docs")
 }
 
-func (s Serve) API(args ...interface{}) error {
+func (s Serve) API(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving API")
 }
 
-func (s Serve) GRPC(args ...interface{}) error {
+func (s Serve) GRPC(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving gRPC")
 }
 
-func (s Serve) Metrics(args ...interface{}) error {
+func (s Serve) Metrics(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving metrics")
 }
 
-func (s Serve) Static(args ...interface{}) error {
+func (s Serve) Static(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving static files")
 }
 
-func (s Serve) Proxy(args ...interface{}) error {
+func (s Serve) Proxy(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving proxy")
 }
@@ -487,7 +540,7 @@ func (s Serve) Websocket() error {
 }
 
 // WebSocket is an alias for Websocket to match test expectations
-func (s Serve) WebSocket(args ...interface{}) error {
+func (s Serve) WebSocket(_ ...interface{}) error {
 	return s.Websocket()
 }
 

@@ -282,17 +282,19 @@ type MetricsSummary struct {
 	TopErrors   []ErrorStat
 }
 
-// Update DefaultErrorMetrics methods to use the real implementation
+// RecordError records an error occurrence in the metrics.
 func (m *DefaultErrorMetrics) RecordError(err error) {
 	metrics := NewErrorMetrics()
 	metrics.RecordError(err)
 }
 
+// RecordMageError records a MageError occurrence in the metrics.
 func (m *DefaultErrorMetrics) RecordMageError(err MageError) {
 	metrics := NewErrorMetrics()
 	metrics.RecordMageError(err)
 }
 
+// GetCount returns the count of occurrences for a specific error code.
 func (m *DefaultErrorMetrics) GetCount(code ErrorCode) int64 {
 	if stat, exists := m.counts[code]; exists {
 		return stat.Count
@@ -300,6 +302,7 @@ func (m *DefaultErrorMetrics) GetCount(code ErrorCode) int64 {
 	return 0
 }
 
+// GetCountBySeverity returns the count of errors for a specific severity level.
 func (m *DefaultErrorMetrics) GetCountBySeverity(_ Severity) int64 {
 	var count int64
 	for range m.counts {
@@ -309,6 +312,7 @@ func (m *DefaultErrorMetrics) GetCountBySeverity(_ Severity) int64 {
 	return count
 }
 
+// GetRate returns the error rate for a specific error code over the given duration.
 func (m *DefaultErrorMetrics) GetRate(code ErrorCode, duration time.Duration) float64 {
 	if stat, exists := m.counts[code]; exists {
 		if stat.Count == 0 {
@@ -323,6 +327,7 @@ func (m *DefaultErrorMetrics) GetRate(code ErrorCode, duration time.Duration) fl
 	return 0
 }
 
+// GetTopErrors returns the top errors sorted by occurrence count.
 func (m *DefaultErrorMetrics) GetTopErrors(limit int) []ErrorStat {
 	stats := make([]ErrorStat, 0, len(m.counts))
 	for _, stat := range m.counts {
@@ -340,6 +345,7 @@ func (m *DefaultErrorMetrics) GetTopErrors(limit int) []ErrorStat {
 	return stats
 }
 
+// Reset clears all error metrics data.
 func (m *DefaultErrorMetrics) Reset() error {
 	m.counts = make(map[ErrorCode]*ErrorStat)
 	return nil

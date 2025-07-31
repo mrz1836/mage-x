@@ -251,6 +251,7 @@ func (Integrations) Import() error {
 
 // Supporting types
 
+// IntegrationConfig defines configuration for a single enterprise integration
 type IntegrationConfig struct {
 	Name        string                 `json:"name"`
 	Type        string                 `json:"type"`
@@ -264,6 +265,7 @@ type IntegrationConfig struct {
 	Updated     time.Time              `json:"updated"`
 }
 
+// WebhookConfig defines webhook configuration for integration events
 type WebhookConfig struct {
 	ID            string            `json:"id"`
 	URL           string            `json:"url"`
@@ -277,6 +279,7 @@ type WebhookConfig struct {
 	LastTriggered time.Time         `json:"last_triggered"`
 }
 
+// IntegrationTestResult contains the results of integration testing
 type IntegrationTestResult struct {
 	Integration IntegrationConfig `json:"integration"`
 	Status      string            `json:"status"`
@@ -286,6 +289,7 @@ type IntegrationTestResult struct {
 	Timestamp   time.Time         `json:"timestamp"`
 }
 
+// TestCase represents a single test case for integration validation
 type TestCase struct {
 	Name        string        `json:"name"`
 	Status      string        `json:"status"`
@@ -294,6 +298,7 @@ type TestCase struct {
 	Error       string        `json:"error,omitempty"`
 }
 
+// IntegrationStatus provides current status and health information for an integration
 type IntegrationStatus struct {
 	Name     string                 `json:"name"`
 	Status   string                 `json:"status"`
@@ -302,6 +307,7 @@ type IntegrationStatus struct {
 	Metrics  map[string]interface{} `json:"metrics"`
 }
 
+// NotificationPayload contains data for sending notifications through integrations
 type NotificationPayload struct {
 	Channel   string                 `json:"channel"`
 	Message   string                 `json:"message"`
@@ -310,6 +316,7 @@ type NotificationPayload struct {
 	Metadata  map[string]interface{} `json:"metadata"`
 }
 
+// SlackConfig contains configuration for Slack integration
 type SlackConfig struct {
 	WebhookURL string `json:"webhook_url"`
 	Channel    string `json:"channel"`
@@ -317,6 +324,7 @@ type SlackConfig struct {
 	IconEmoji  string `json:"icon_emoji"`
 }
 
+// JiraConfig contains configuration for Jira integration
 type JiraConfig struct {
 	URL       string `json:"url"`
 	Username  string `json:"username"`
@@ -325,6 +333,7 @@ type JiraConfig struct {
 	IssueType string `json:"issue_type"`
 }
 
+// GitHubConfig contains configuration for GitHub integration
 type GitHubConfig struct {
 	Token        string `json:"token"`
 	Organization string `json:"organization"`
@@ -332,6 +341,7 @@ type GitHubConfig struct {
 	Branch       string `json:"branch"`
 }
 
+// GitLabConfig contains configuration for GitLab integration
 type GitLabConfig struct {
 	URL       string `json:"url"`
 	Token     string `json:"token"`
@@ -339,6 +349,7 @@ type GitLabConfig struct {
 	ProjectID string `json:"project_id"`
 }
 
+// JenkinsConfig contains configuration for Jenkins integration
 type JenkinsConfig struct {
 	URL      string `json:"url"`
 	Username string `json:"username"`
@@ -346,24 +357,28 @@ type JenkinsConfig struct {
 	JobName  string `json:"job_name"`
 }
 
+// KubernetesConfig contains configuration for Kubernetes integration
 type KubernetesConfig struct {
 	Kubeconfig string `json:"kubeconfig"`
 	Namespace  string `json:"namespace"`
 	Context    string `json:"context"`
 }
 
+// PrometheusConfig contains configuration for Prometheus integration
 type PrometheusConfig struct {
 	URL      string `json:"url"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
+// GrafanaConfig contains configuration for Grafana integration
 type GrafanaConfig struct {
 	URL   string `json:"url"`
 	Token string `json:"token"`
 	OrgID string `json:"org_id"`
 }
 
+// AWSConfig contains configuration for AWS integration
 type AWSConfig struct {
 	AccessKeyID     string `json:"access_key_id"`
 	SecretAccessKey string `json:"secret_access_key"`
@@ -371,6 +386,7 @@ type AWSConfig struct {
 	S3Bucket        string `json:"s3_bucket"`
 }
 
+// AzureConfig contains configuration for Azure integration
 type AzureConfig struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
@@ -378,6 +394,7 @@ type AzureConfig struct {
 	Subscription string `json:"subscription"`
 }
 
+// GCPConfig contains configuration for Google Cloud Platform integration
 type GCPConfig struct {
 	ProjectID      string `json:"project_id"`
 	ServiceAccount string `json:"service_account"`

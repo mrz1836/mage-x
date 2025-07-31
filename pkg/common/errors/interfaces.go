@@ -71,10 +71,15 @@ type Severity int
 const (
 	// SeverityDebug represents debug-level severity.
 	SeverityDebug Severity = iota
+	// SeverityInfo represents informational-level severity.
 	SeverityInfo
+	// SeverityWarning represents warning-level severity.
 	SeverityWarning
+	// SeverityError represents error-level severity.
 	SeverityError
+	// SeverityCritical represents critical-level severity.
 	SeverityCritical
+	// SeverityFatal represents fatal-level severity.
 	SeverityFatal
 )
 

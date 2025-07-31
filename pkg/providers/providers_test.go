@@ -660,7 +660,7 @@ func (p *mockProvider) Quantum() QuantumService           { return p.services.qu
 
 type mockComputeService struct{}
 
-func (s *mockComputeService) CreateInstance(ctx context.Context, req *CreateInstanceRequest) (*Instance, error) {
+func (s *mockComputeService) CreateInstance(_ context.Context, req *CreateInstanceRequest) (*Instance, error) {
 	return &Instance{
 		ID:        fmt.Sprintf("i-%d", time.Now().UnixNano()),
 		Name:      req.Name,
@@ -673,30 +673,30 @@ func (s *mockComputeService) CreateInstance(ctx context.Context, req *CreateInst
 	}, nil
 }
 
-func (s *mockComputeService) GetInstance(ctx context.Context, id string) (*Instance, error) {
+func (s *mockComputeService) GetInstance(_ context.Context, id string) (*Instance, error) {
 	return &Instance{ID: id, Name: "test-instance", State: "running"}, nil
 }
 
-func (s *mockComputeService) ListInstances(ctx context.Context, filter *InstanceFilter) ([]*Instance, error) {
+func (s *mockComputeService) ListInstances(_ context.Context, filter *InstanceFilter) ([]*Instance, error) {
 	return []*Instance{{ID: "i-123", Name: "instance1", State: "running"}}, nil
 }
 
-func (s *mockComputeService) UpdateInstance(ctx context.Context, id string, req *UpdateInstanceRequest) error {
+func (s *mockComputeService) UpdateInstance(_ context.Context, id string, req *UpdateInstanceRequest) error {
 	return nil
 }
 
-func (s *mockComputeService) DeleteInstance(ctx context.Context, id string) error { return nil }
-func (s *mockComputeService) StartInstance(ctx context.Context, id string) error  { return nil }
-func (s *mockComputeService) StopInstance(ctx context.Context, id string) error   { return nil }
-func (s *mockComputeService) RestartInstance(ctx context.Context, id string) error {
+func (s *mockComputeService) DeleteInstance(_ context.Context, id string) error { return nil }
+func (s *mockComputeService) StartInstance(_ context.Context, id string) error  { return nil }
+func (s *mockComputeService) StopInstance(_ context.Context, id string) error   { return nil }
+func (s *mockComputeService) RestartInstance(_ context.Context, id string) error {
 	return nil
 }
 
-func (s *mockComputeService) ResizeInstance(ctx context.Context, id string, size string) error {
+func (s *mockComputeService) ResizeInstance(_ context.Context, id string, size string) error {
 	return nil
 }
 
-func (s *mockComputeService) SnapshotInstance(ctx context.Context, id string, name string) (*Snapshot, error) {
+func (s *mockComputeService) SnapshotInstance(_ context.Context, id string, name string) (*Snapshot, error) {
 	return &Snapshot{
 		ID:         fmt.Sprintf("snap-%d", time.Now().UnixNano()),
 		Name:       name,

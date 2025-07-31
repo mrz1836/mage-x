@@ -9,9 +9,9 @@ import (
 
 // Config provides a facade for configuration management
 type Config struct {
-	Loader  ConfigLoader
+	Loader  Loader
 	Env     TypedEnvProvider
-	Manager ConfigManager
+	Manager Manager
 }
 
 // New creates a new Config with default implementations
@@ -24,7 +24,7 @@ func New() *Config {
 }
 
 // NewWithOptions creates a new Config with custom implementations
-func NewWithOptions(loader ConfigLoader, env TypedEnvProvider, manager ConfigManager) *Config {
+func NewWithOptions(loader Loader, env TypedEnvProvider, manager Manager) *Config {
 	return &Config{
 		Loader:  loader,
 		Env:     env,
@@ -108,7 +108,7 @@ func (c *Config) expandPath(path string) string {
 }
 
 // detectFormat detects configuration format from file extension
-func (c *Config) detectFormat(path string) ConfigFormat {
+func (c *Config) detectFormat(path string) Format {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
 	case ".yaml", ".yml":

@@ -18,7 +18,7 @@ func newSecurityService(config providers.ProviderConfig) *securityService {
 	return &securityService{config: config}
 }
 
-func (s *securityService) CreateRole(ctx context.Context, req *providers.CreateRoleRequest) (*providers.Role, error) {
+func (s *securityService) CreateRole(_ context.Context, req *providers.CreateRoleRequest) (*providers.Role, error) {
 	// Create IAM role
 	return &providers.Role{
 		ID:          fmt.Sprintf("arn:aws:iam::123456789012:role/%s", req.Name),
@@ -30,7 +30,7 @@ func (s *securityService) CreateRole(ctx context.Context, req *providers.CreateR
 	}, nil
 }
 
-func (s *securityService) CreatePolicy(ctx context.Context, req *providers.CreatePolicyRequest) (*providers.Policy, error) {
+func (s *securityService) CreatePolicy(_ context.Context, req *providers.CreatePolicyRequest) (*providers.Policy, error) {
 	// Create IAM policy
 	return &providers.Policy{
 		ID:          fmt.Sprintf("arn:aws:iam::123456789012:policy/%s", req.Name),
@@ -42,12 +42,12 @@ func (s *securityService) CreatePolicy(ctx context.Context, req *providers.Creat
 	}, nil
 }
 
-func (s *securityService) AttachPolicy(ctx context.Context, roleID, policyID string) error {
+func (s *securityService) AttachPolicy(_ context.Context, roleID, policyID string) error {
 	// Attach policy to role
 	return nil
 }
 
-func (s *securityService) CreateSecret(ctx context.Context, req *providers.CreateSecretRequest) (*providers.Secret, error) {
+func (s *securityService) CreateSecret(_ context.Context, req *providers.CreateSecretRequest) (*providers.Secret, error) {
 	// Create Secrets Manager secret
 	return &providers.Secret{
 		ID:           fmt.Sprintf("arn:aws:secretsmanager:%s:123456789012:secret:%s", s.config.Region, req.Name),
@@ -60,7 +60,7 @@ func (s *securityService) CreateSecret(ctx context.Context, req *providers.Creat
 	}, nil
 }
 
-func (s *securityService) GetSecret(ctx context.Context, id string) (*providers.Secret, error) {
+func (s *securityService) GetSecret(_ context.Context, id string) (*providers.Secret, error) {
 	// Get secret from Secrets Manager
 	return &providers.Secret{
 		ID:          id,
@@ -72,12 +72,12 @@ func (s *securityService) GetSecret(ctx context.Context, id string) (*providers.
 	}, nil
 }
 
-func (s *securityService) RotateSecret(ctx context.Context, id string) error {
+func (s *securityService) RotateSecret(_ context.Context, id string) error {
 	// Rotate secret
 	return nil
 }
 
-func (s *securityService) EnableAuditLogging(ctx context.Context, config *providers.AuditConfig) error {
+func (s *securityService) EnableAuditLogging(_ context.Context, config *providers.AuditConfig) error {
 	// Enable CloudTrail
 	return nil
 }

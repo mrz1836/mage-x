@@ -281,6 +281,7 @@ func (c *DefaultChainError) Filter(predicate func(error) bool) []error {
 	return result
 }
 
+// ToSlice returns all errors in the chain as a slice.
 func (c *DefaultChainError) ToSlice() []error {
 	return c.Errors()
 }

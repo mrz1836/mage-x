@@ -132,7 +132,7 @@ key: value`,
 				// If we can round-trip, that's good
 				var roundTrip map[string]interface{}
 				decodeErr := yaml.Unmarshal(buf.Bytes(), &roundTrip)
-				assert.NoError(t, decodeErr, "Failed to decode round-tripped YAML")
+				require.NoError(t, decodeErr, "Failed to decode round-tripped YAML")
 			}
 		}
 
@@ -264,7 +264,7 @@ func FuzzJSONParsing(f *testing.F) {
 				// If we can round-trip, verify it's equivalent
 				var roundTrip map[string]interface{}
 				decodeErr := json.Unmarshal(encoded, &roundTrip)
-				assert.NoError(t, decodeErr, "Failed to decode round-tripped JSON")
+				require.NoError(t, decodeErr, "Failed to decode round-tripped JSON")
 			}
 		}
 
@@ -462,7 +462,7 @@ func FuzzConfigManager(f *testing.F) {
 		require.NoError(t, err, "Failed to write temp file")
 
 		// Add source (should not panic)
-		var configFormat ConfigFormat
+		var configFormat Format
 		switch format {
 		case "yaml", "yml":
 			configFormat = FormatYAML

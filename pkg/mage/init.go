@@ -890,11 +890,7 @@ func initializeGitRepo(config *InitProjectConfig) error {
 
 	// Initial commit
 	message := fmt.Sprintf("Initial commit: %s", config.Description)
-	if err := GetRunner().RunCmd("git", "commit", "-m", message); err != nil {
-		return err
-	}
-
-	return nil
+	return GetRunner().RunCmd("git", "commit", "-m", message)
 }
 
 // installDependencies installs project dependencies
@@ -907,11 +903,7 @@ func installDependencies() error {
 	}
 
 	// Tidy up
-	if err := GetRunner().RunCmd("go", "mod", "tidy"); err != nil {
-		return err
-	}
-
-	return nil
+	return GetRunner().RunCmd("go", "mod", "tidy")
 }
 
 // updateGoMod updates go.mod for project upgrades
@@ -927,11 +919,7 @@ func updateGoMod() error {
 	}
 
 	// Tidy up
-	if err := GetRunner().RunCmd("go", "mod", "tidy"); err != nil {
-		return err
-	}
-
-	return nil
+	return GetRunner().RunCmd("go", "mod", "tidy")
 }
 
 // showCompletionMessage shows project creation completion message

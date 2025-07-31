@@ -246,7 +246,7 @@ func (Test) Fuzz() error {
 }
 
 // Bench runs benchmarks
-func (Test) Bench(params ...string) error {
+func (Test) Bench(_ ...string) error {
 	utils.Header("Running Benchmarks")
 
 	config, err := GetConfig()
@@ -494,7 +494,7 @@ func (Test) Run() error {
 }
 
 // Coverage generates test coverage
-func (Test) Coverage(args ...string) error {
+func (Test) Coverage(_ ...string) error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "test", "-cover", "./...")
 }

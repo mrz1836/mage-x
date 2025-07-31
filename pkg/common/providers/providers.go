@@ -12,7 +12,7 @@ import (
 
 // Provider defines the interface for cloud/platform providers
 type Provider interface {
-	Config() config.Loader
+	Config() config.MageLoader
 	Environment() env.Environment
 	FileOperator() fileops.FileOperator
 	PathBuilder() paths.PathBuilder
@@ -21,7 +21,7 @@ type Provider interface {
 // providerImpl implements the Provider interface
 type providerImpl struct {
 	name         string
-	configLoader config.Loader
+	configLoader config.MageLoader
 	environment  env.Environment
 	fileOperator fileops.FileOperator
 	pathBuilder  paths.PathBuilder
@@ -48,7 +48,7 @@ func NewProvider(providerType string) (Provider, error) {
 }
 
 // Config returns the configuration loader
-func (p *providerImpl) Config() config.Loader {
+func (p *providerImpl) Config() config.MageLoader {
 	return p.configLoader
 }
 

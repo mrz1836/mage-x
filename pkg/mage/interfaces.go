@@ -179,7 +179,7 @@ type CommandRunner interface {
 	RunCmdOutput(name string, args ...string) (string, error)
 }
 
-// Enhanced CommandRunner with context support
+// ContextCommandRunner provides enhanced CommandRunner with context support
 type ContextCommandRunner interface {
 	CommandRunner // Embed existing interface for backward compatibility
 

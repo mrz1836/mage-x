@@ -265,7 +265,7 @@ func (s *computeService) GetInstance(_ context.Context, id string) (*providers.I
 	}, nil
 }
 
-func (s *computeService) ListInstances(_ context.Context, filter *providers.InstanceFilter) ([]*providers.Instance, error) {
+func (s *computeService) ListInstances(_ context.Context, _ *providers.InstanceFilter) ([]*providers.Instance, error) {
 	// List EC2 instances
 	instances := []*providers.Instance{
 		{
@@ -292,22 +292,22 @@ func (s *computeService) ListInstances(_ context.Context, filter *providers.Inst
 	return instances, nil
 }
 
-func (s *computeService) UpdateInstance(_ context.Context, id string, req *providers.UpdateInstanceRequest) error {
+func (s *computeService) UpdateInstance(_ context.Context, _ string, _ *providers.UpdateInstanceRequest) error {
 	// Update EC2 instance
 	return nil
 }
 
-func (s *computeService) DeleteInstance(_ context.Context, id string) error {
+func (s *computeService) DeleteInstance(_ context.Context, _ string) error {
 	// Terminate EC2 instance
 	return nil
 }
 
-func (s *computeService) StartInstance(_ context.Context, id string) error {
+func (s *computeService) StartInstance(_ context.Context, _ string) error {
 	// Start EC2 instance
 	return nil
 }
 
-func (s *computeService) StopInstance(_ context.Context, id string) error {
+func (s *computeService) StopInstance(_ context.Context, _ string) error {
 	// Stop EC2 instance
 	return nil
 }
@@ -387,27 +387,27 @@ func (s *storageService) ListBuckets(_ context.Context) ([]*providers.Bucket, er
 	}, nil
 }
 
-func (s *storageService) DeleteBucket(_ context.Context, name string) error {
+func (s *storageService) DeleteBucket(_ context.Context, _ string) error {
 	// Delete S3 bucket
 	return nil
 }
 
-func (s *storageService) PutObject(_ context.Context, bucket, key string, reader io.Reader, opts *providers.PutOptions) error {
+func (s *storageService) PutObject(_ context.Context, _, _ string, _ io.Reader, _ *providers.PutOptions) error {
 	// Upload to S3
 	return nil
 }
 
-func (s *storageService) GetObject(_ context.Context, bucket, key string) (io.ReadCloser, error) {
+func (s *storageService) GetObject(_ context.Context, _, _ string) (io.ReadCloser, error) {
 	// Download from S3
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (s *storageService) DeleteObject(_ context.Context, bucket, key string) error {
+func (s *storageService) DeleteObject(_ context.Context, _, _ string) error {
 	// Delete S3 object
 	return nil
 }
 
-func (s *storageService) ListObjects(_ context.Context, bucket string, prefix string) ([]*providers.Object, error) {
+func (s *storageService) ListObjects(_ context.Context, _ string, prefix string) ([]*providers.Object, error) {
 	// List S3 objects
 	return []*providers.Object{
 		{
@@ -425,7 +425,7 @@ func (s *storageService) ListObjects(_ context.Context, bucket string, prefix st
 	}, nil
 }
 
-func (s *storageService) MultipartUpload(_ context.Context, bucket, key string, reader io.Reader) error {
+func (s *storageService) MultipartUpload(_ context.Context, _, _ string, _ io.Reader) error {
 	// S3 multipart upload
 	return nil
 }
@@ -436,7 +436,7 @@ func (s *storageService) GeneratePresignedURL(_ context.Context, bucket, key str
 		bucket, key, time.Now().Add(expiry).Unix()), nil
 }
 
-func (s *storageService) SetObjectACL(_ context.Context, bucket, key string, acl *providers.ACL) error {
+func (s *storageService) SetObjectACL(_ context.Context, _, _ string, _ *providers.ACL) error {
 	// Set S3 object ACL
 	return nil
 }
@@ -493,7 +493,7 @@ func (s *networkService) ListVPCs(_ context.Context) ([]*providers.VPC, error) {
 	}, nil
 }
 
-func (s *networkService) DeleteVPC(_ context.Context, id string) error {
+func (s *networkService) DeleteVPC(_ context.Context, _ string) error {
 	// Delete VPC
 	return nil
 }
@@ -548,7 +548,7 @@ func (s *networkService) ListSubnets(_ context.Context, vpcID string) ([]*provid
 	}, nil
 }
 
-func (s *networkService) DeleteSubnet(_ context.Context, id string) error {
+func (s *networkService) DeleteSubnet(_ context.Context, _ string) error {
 	// Delete subnet
 	return nil
 }
@@ -827,7 +827,7 @@ func (s *databaseService) ListBackups(_ context.Context, dbID string) ([]*provid
 	}, nil
 }
 
-func (s *databaseService) ScaleDatabase(_ context.Context, dbID string, req *providers.ScaleRequest) error {
+func (s *databaseService) ScaleDatabase(_ context.Context, _ string, _ *providers.ScaleRequest) error {
 	// Scale RDS instance
 	return nil
 }
@@ -843,7 +843,7 @@ func (s *databaseService) EnableReadReplica(ctx context.Context, dbID string, _ 
 	})
 }
 
-func (s *databaseService) EnableMultiMaster(_ context.Context, dbID string, regions []string) error {
+func (s *databaseService) EnableMultiMaster(_ context.Context, _ string, _ []string) error {
 	// Enable Aurora multi-master
 	return nil
 }

@@ -110,8 +110,8 @@ type MageConfigManager interface {
 	Merge(configs ...*MageConfig) *MageConfig
 }
 
-// Loader provides a simple interface for loading configuration
-type Loader interface {
+// MageLoader provides a simple interface for loading mage configuration
+type MageLoader interface {
 	Load() (*MageConfig, error)
 	LoadFromPath(path string) (*MageConfig, error)
 	Save(config *MageConfig) error
@@ -125,8 +125,8 @@ func NewManager() MageConfigManager {
 	return &configManagerImpl{}
 }
 
-// NewLoader creates a new Loader instance
-func NewLoader() Loader {
+// NewLoader creates a new MageLoader instance
+func NewLoader() MageLoader {
 	return &loaderImpl{}
 }
 

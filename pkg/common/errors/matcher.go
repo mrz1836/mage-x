@@ -208,14 +208,17 @@ func (m *DefaultErrorMatcher) MatchField(key string, value interface{}) ErrorMat
 	return NewErrorMatcher().MatchField(key, value)
 }
 
+// MatchAny returns a matcher that matches if any of the provided matchers match.
 func (m *DefaultErrorMatcher) MatchAny(matchers ...ErrorMatcher) ErrorMatcher {
 	return NewErrorMatcher().MatchAny(matchers...)
 }
 
+// MatchAll returns a matcher that matches if all of the provided matchers match.
 func (m *DefaultErrorMatcher) MatchAll(matchers ...ErrorMatcher) ErrorMatcher {
 	return NewErrorMatcher().MatchAll(matchers...)
 }
 
+// Not returns a matcher that matches if this matcher does not match.
 func (m *DefaultErrorMatcher) Not() ErrorMatcher {
 	return NewErrorMatcher().Not()
 }

@@ -252,13 +252,13 @@ func (d *DefaultEnvProvider) GetStringSlice(key string, defaultValue []string) [
 // FileConfigSource implements ConfigSource for file-based configuration
 type FileConfigSource struct {
 	path     string
-	format   ConfigFormat
+	format   Format
 	priority int
-	loader   ConfigLoader
+	loader   Loader
 }
 
 // NewFileConfigSource creates a new file configuration source
-func NewFileConfigSource(path string, format ConfigFormat, priority int) *FileConfigSource {
+func NewFileConfigSource(path string, format Format, priority int) *FileConfigSource {
 	return &FileConfigSource{
 		path:     path,
 		format:   format,

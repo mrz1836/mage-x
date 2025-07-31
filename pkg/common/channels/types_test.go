@@ -120,7 +120,7 @@ func TestRelease_Validate(t *testing.T) {
 		}
 
 		err := release.Validate()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("missing version", func(t *testing.T) {
@@ -130,7 +130,7 @@ func TestRelease_Validate(t *testing.T) {
 		}
 
 		err := release.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "version is required")
 	})
 
@@ -142,7 +142,7 @@ func TestRelease_Validate(t *testing.T) {
 		}
 
 		err := release.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid channel")
 	})
 
@@ -153,7 +153,7 @@ func TestRelease_Validate(t *testing.T) {
 		}
 
 		err := release.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "at least one artifact")
 	})
 
@@ -168,7 +168,7 @@ func TestRelease_Validate(t *testing.T) {
 		}
 
 		err := release.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "name is required")
 	})
 
@@ -183,7 +183,7 @@ func TestRelease_Validate(t *testing.T) {
 		}
 
 		err := release.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "URL is required")
 	})
 
@@ -198,7 +198,7 @@ func TestRelease_Validate(t *testing.T) {
 		}
 
 		err := release.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "checksum is required")
 	})
 
@@ -214,7 +214,7 @@ func TestRelease_Validate(t *testing.T) {
 		}
 
 		err := release.Validate()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 

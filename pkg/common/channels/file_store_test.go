@@ -44,7 +44,7 @@ func TestNewFileStore(t *testing.T) {
 		fileOps := fileops.New()
 
 		_, err := NewFileStore(invalidDir, fileOps.File)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to create directory")
 	})
 }
@@ -108,7 +108,7 @@ func TestFileStore_Release_Operations(t *testing.T) {
 		}
 
 		err := store.SaveRelease(invalidRelease)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid release")
 	})
 

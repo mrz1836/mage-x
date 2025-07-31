@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// ConfigLoader provides an interface for loading and saving configurations
-type ConfigLoader interface {
+// Loader provides an interface for loading and saving configurations
+type Loader interface {
 	// Load loads configuration from multiple file paths with fallback
 	Load(paths []string, dest interface{}) (string, error)
 
@@ -67,8 +67,8 @@ type TypedEnvProvider interface {
 	GetStringSlice(key string, defaultValue []string) []string
 }
 
-// ConfigSource represents a configuration source
-type ConfigSource interface {
+// Source represents a configuration source
+type Source interface {
 	// Name returns the name of the configuration source
 	Name() string
 
@@ -82,10 +82,10 @@ type ConfigSource interface {
 	Priority() int
 }
 
-// ConfigManager manages multiple configuration sources
-type ConfigManager interface {
+// Manager manages multiple configuration sources
+type Manager interface {
 	// AddSource adds a configuration source
-	AddSource(source ConfigSource)
+	AddSource(source Source)
 
 	// LoadConfig loads configuration from all sources in priority order
 	LoadConfig(dest interface{}) error
@@ -100,7 +100,7 @@ type ConfigManager interface {
 	StopWatching()
 
 	// GetActiveSources returns list of currently active sources
-	GetActiveSources() []ConfigSource
+	GetActiveSources() []Source
 }
 
 // Validator provides configuration validation capabilities
@@ -118,8 +118,8 @@ type Validator interface {
 	SetValidationRules(rules map[string]interface{})
 }
 
-// ConfigOptions holds configuration loading options
-type ConfigOptions struct {
+// Options holds configuration loading options
+type Options struct {
 	// Paths to search for configuration files
 	Paths []string
 
@@ -159,30 +159,18 @@ const (
 	MergeAppend
 )
 
-// ConfigFormat represents supported configuration formats
-type ConfigFormat string
+// Format represents supported configuration formats
+type Format string
 
 const (
 	// FormatYAML represents YAML configuration format
-	FormatYAML ConfigFormat = "yaml"
+	FormatYAML Format = "yaml"
 	// FormatJSON represents JSON configuration format
-	FormatJSON ConfigFormat = "json"
+	FormatJSON Format = "json"
 	// FormatTOML represents TOML configuration format
-	FormatTOML ConfigFormat = "toml"
+	FormatTOML Format = "toml"
 	// FormatINI represents INI configuration format
-	FormatINI ConfigFormat = "ini"
+	FormatINI Format = "ini"
 	// FormatEnv represents environment variable configuration format
-	FormatEnv ConfigFormat = "env"
-)
-
-// Type aliases to avoid stuttering while maintaining backwards compatibility.
-type (
-	// Source represents a configuration source.
-	Source = ConfigSource
-	// Manager manages multiple configuration sources.
-	Manager = ConfigManager
-	// Options holds configuration loading options.
-	Options = ConfigOptions
-	// Format represents supported configuration formats.
-	Format = ConfigFormat
+	FormatEnv Format = "env"
 )

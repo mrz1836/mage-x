@@ -230,7 +230,7 @@ func TestMetricsRecording(t *testing.T) {
 		disabledCollector := NewMetricsCollector(disabledConfig)
 
 		err := disabledCollector.RecordCounter("disabled_counter", 1.0, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Empty(t, disabledCollector.metrics)
 	})
 }
@@ -291,7 +291,7 @@ func TestMetricsQuery(t *testing.T) {
 		}
 
 		_, err := disabledCollector.QueryMetrics(query)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "metrics collection is disabled")
 	})
 }
@@ -309,7 +309,7 @@ func TestPerformanceReport(t *testing.T) {
 		disabledCollector := NewMetricsCollector(disabledConfig)
 
 		_, err := disabledCollector.GenerateReport("day")
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "metrics collection is disabled")
 	})
 
@@ -326,7 +326,7 @@ func TestPerformanceReport(t *testing.T) {
 			t.Run(period, func(t *testing.T) {
 				_, err := storageCollector.GenerateReport(period)
 				// Should work since storage is properly initialized
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			})
 		}
 	})
@@ -346,13 +346,13 @@ func TestCleanup(t *testing.T) {
 		disabledCollector := NewMetricsCollector(disabledConfig)
 
 		err := disabledCollector.Cleanup()
-		assert.NoError(t, err) // Should be no-op
+		require.NoError(t, err) // Should be no-op
 	})
 
 	t.Run("Cleanup with no storage", func(t *testing.T) {
 		// Collector with enabled config but no storage initialized
 		err := collector.Cleanup()
-		assert.NoError(t, err) // Should handle nil storage gracefully
+		require.NoError(t, err) // Should handle nil storage gracefully
 	})
 }
 
@@ -427,7 +427,7 @@ func TestJSONStorage(t *testing.T) {
 		retrieved := metrics[0]
 		assert.Equal(t, metric.Name, retrieved.Name)
 		assert.Equal(t, metric.Type, retrieved.Type)
-		assert.Equal(t, metric.Value, retrieved.Value)
+		assert.InEpsilon(t, metric.Value, retrieved.Value, 0.001)
 		assert.Equal(t, metric.Tags, retrieved.Tags)
 	})
 

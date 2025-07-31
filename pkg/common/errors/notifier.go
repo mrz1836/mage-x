@@ -229,11 +229,13 @@ func NewEmailChannel(name, smtpHost string, smtpPort int, smtpUser, smtpPass, fr
 	}
 }
 
+// Name returns the name of the email channel.
 func (e *EmailChannel) Name() string {
 	return e.name
 }
 
-func (e *EmailChannel) Send(ctx context.Context, notification ErrorNotification) error {
+// Send sends an error notification via email.
+func (e *EmailChannel) Send(_ context.Context, notification ErrorNotification) error {
 	if !e.enabled {
 		return nil
 	}
@@ -252,10 +254,12 @@ func (e *EmailChannel) Send(ctx context.Context, notification ErrorNotification)
 	return smtp.SendMail(addr, auth, e.from, e.to, []byte(msg))
 }
 
+// IsEnabled returns whether the email channel is enabled.
 func (e *EmailChannel) IsEnabled() bool {
 	return e.enabled
 }
 
+// SetEnabled sets the enabled state of the email channel.
 func (e *EmailChannel) SetEnabled(enabled bool) {
 	e.enabled = enabled
 }
@@ -315,10 +319,12 @@ func NewWebhookChannel(name, url string, headers map[string]string) *WebhookChan
 	}
 }
 
+// Name returns the name of the webhook channel.
 func (w *WebhookChannel) Name() string {
 	return w.name
 }
 
+// Send sends an error notification via webhook.
 func (w *WebhookChannel) Send(ctx context.Context, notification ErrorNotification) error {
 	if !w.enabled {
 		return nil
@@ -372,10 +378,12 @@ func (w *WebhookChannel) Send(ctx context.Context, notification ErrorNotificatio
 	return nil
 }
 
+// IsEnabled returns whether the webhook channel is enabled.
 func (w *WebhookChannel) IsEnabled() bool {
 	return w.enabled
 }
 
+// SetEnabled sets the enabled state of the webhook channel.
 func (w *WebhookChannel) SetEnabled(enabled bool) {
 	w.enabled = enabled
 }
@@ -396,11 +404,13 @@ func NewConsoleChannel(name string) *ConsoleChannel {
 	}
 }
 
+// Name returns the name of the console channel.
 func (c *ConsoleChannel) Name() string {
 	return c.name
 }
 
-func (c *ConsoleChannel) Send(ctx context.Context, notification ErrorNotification) error {
+// Send sends an error notification to the console.
+func (c *ConsoleChannel) Send(_ context.Context, notification ErrorNotification) error {
 	if !c.enabled {
 		return nil
 	}
@@ -411,10 +421,12 @@ func (c *ConsoleChannel) Send(ctx context.Context, notification ErrorNotificatio
 	return nil
 }
 
+// IsEnabled returns whether the console channel is enabled.
 func (c *ConsoleChannel) IsEnabled() bool {
 	return c.enabled
 }
 
+// SetEnabled sets the enabled state of the console channel.
 func (c *ConsoleChannel) SetEnabled(enabled bool) {
 	c.enabled = enabled
 }
@@ -457,15 +469,18 @@ type MockErrorNotifier struct {
 	Channels               map[string]NotificationChannel
 }
 
+// MockNotifyWithContextCall represents a call to NotifyWithContext for testing.
 type MockNotifyWithContextCall struct {
 	Error error
 }
 
+// MockSetRateLimitCall represents a call to SetRateLimit for testing.
 type MockSetRateLimitCall struct {
 	Duration time.Duration
 	Count    int
 }
 
+// NewMockErrorNotifier creates a new mock error notifier for testing.
 func NewMockErrorNotifier() *MockErrorNotifier {
 	return &MockErrorNotifier{
 		NotifyCalls:            make([]error, 0),
@@ -480,6 +495,7 @@ func NewMockErrorNotifier() *MockErrorNotifier {
 	}
 }
 
+// Notify records a call to Notify and returns an error if configured to do so.
 func (m *MockErrorNotifier) Notify(err error) error {
 	m.NotifyCalls = append(m.NotifyCalls, err)
 	if m.ShouldError {
@@ -488,7 +504,8 @@ func (m *MockErrorNotifier) Notify(err error) error {
 	return nil
 }
 
-func (m *MockErrorNotifier) NotifyWithContext(ctx context.Context, err error) error {
+// NotifyWithContext records a call to NotifyWithContext and returns an error if configured to do so.
+func (m *MockErrorNotifier) NotifyWithContext(_ context.Context, err error) error {
 	m.NotifyWithContextCalls = append(m.NotifyWithContextCalls, MockNotifyWithContextCall{
 		Error: err,
 	})
@@ -498,11 +515,13 @@ func (m *MockErrorNotifier) NotifyWithContext(ctx context.Context, err error) er
 	return nil
 }
 
+// SetThreshold records a call to SetThreshold and sets the threshold.
 func (m *MockErrorNotifier) SetThreshold(severity Severity) {
 	m.SetThresholdCalls = append(m.SetThresholdCalls, severity)
 	m.Threshold = severity
 }
 
+// SetRateLimit records a call to SetRateLimit.
 func (m *MockErrorNotifier) SetRateLimit(duration time.Duration, count int) {
 	m.SetRateLimitCalls = append(m.SetRateLimitCalls, MockSetRateLimitCall{
 		Duration: duration,
@@ -510,6 +529,7 @@ func (m *MockErrorNotifier) SetRateLimit(duration time.Duration, count int) {
 	})
 }
 
+// AddChannel records a call to AddChannel and adds the channel to the mock.
 func (m *MockErrorNotifier) AddChannel(channel NotificationChannel) error {
 	m.AddChannelCalls = append(m.AddChannelCalls, channel)
 	if m.ShouldError {
@@ -519,6 +539,7 @@ func (m *MockErrorNotifier) AddChannel(channel NotificationChannel) error {
 	return nil
 }
 
+// RemoveChannel records a call to RemoveChannel and removes the channel from the mock.
 func (m *MockErrorNotifier) RemoveChannel(name string) error {
 	m.RemoveChannelCalls = append(m.RemoveChannelCalls, name)
 	if m.ShouldError {
