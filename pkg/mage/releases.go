@@ -3,6 +3,7 @@ package mage
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -408,19 +409,23 @@ func buildWithGoreleaser(config *MultiChannelReleaseConfig) error {
 		if oldToken == "" {
 			if err := os.Unsetenv("GITHUB_TOKEN"); err != nil {
 				// Log error but don't fail - this is cleanup
+				log.Printf("failed to unset GITHUB_TOKEN during cleanup: %v", err)
 			}
 		} else {
 			if err := os.Setenv("GITHUB_TOKEN", oldToken); err != nil {
 				// Log error but don't fail - this is cleanup
+				log.Printf("failed to restore GITHUB_TOKEN during cleanup: %v", err)
 			}
 		}
 		if oldChannel == "" {
 			if err := os.Unsetenv("RELEASE_CHANNEL"); err != nil {
 				// Log error but don't fail - this is cleanup
+				log.Printf("failed to unset RELEASE_CHANNEL during cleanup: %v", err)
 			}
 		} else {
 			if err := os.Setenv("RELEASE_CHANNEL", oldChannel); err != nil {
 				// Log error but don't fail - this is cleanup
+				log.Printf("failed to restore RELEASE_CHANNEL during cleanup: %v", err)
 			}
 		}
 	}()
@@ -532,10 +537,12 @@ func restoreEnv(key, value string) {
 	if value == "" {
 		if err := os.Unsetenv(key); err != nil {
 			// Log error but don't fail - this is cleanup
+			log.Printf("failed to unset environment variable %s during cleanup: %v", key, err)
 		}
 	} else {
 		if err := os.Setenv(key, value); err != nil {
 			// Log error but don't fail - this is cleanup
+			log.Printf("failed to set environment variable %s during cleanup: %v", key, err)
 		}
 	}
 }

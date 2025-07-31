@@ -179,9 +179,7 @@ func (m *RealDefaultErrorMatcher) Not() ErrorMatcher {
 // Update DefaultErrorMatcher methods to use the real implementation
 func (m *DefaultErrorMatcher) Match(err error) bool {
 	matcher := NewErrorMatcher()
-	for _, fn := range m.matchers {
-		matcher.matchers = append(matcher.matchers, fn)
-	}
+	matcher.matchers = append(matcher.matchers, m.matchers...)
 	return matcher.Match(err)
 }
 

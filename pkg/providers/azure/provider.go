@@ -52,13 +52,13 @@ func (p *Provider) Name() string {
 func (p *Provider) Initialize(config providers.ProviderConfig) error {
 	// Extract subscription ID from credentials
 	if config.Credentials.Extra == nil {
-		return fmt.Errorf("Azure subscription ID is required")
+		return fmt.Errorf("azure subscription ID is required")
 	}
 
 	if subID, ok := config.Credentials.Extra["subscription_id"]; ok && subID != "" {
 		p.subscription = subID
 	} else {
-		return fmt.Errorf("Azure subscription ID is required")
+		return fmt.Errorf("azure subscription ID is required")
 	}
 
 	// Initialize Azure services
@@ -80,13 +80,14 @@ func (p *Provider) Initialize(config providers.ProviderConfig) error {
 // Validate validates the provider configuration
 func (p *Provider) Validate() error {
 	// Validate Azure credentials
-	if p.config.Credentials.Type == "cert" {
+	switch p.config.Credentials.Type {
+	case "cert":
 		if p.config.Credentials.CertPath == "" || p.config.Credentials.KeyPath == "" {
-			return fmt.Errorf("Azure certificate and key paths are required")
+			return fmt.Errorf("azure certificate and key paths are required")
 		}
-	} else if p.config.Credentials.Type == "key" {
+	case "key":
 		if p.config.Credentials.AccessKey == "" || p.config.Credentials.SecretKey == "" {
-			return fmt.Errorf("Azure client ID and client secret are required")
+			return fmt.Errorf("azure client ID and client secret are required")
 		}
 	}
 

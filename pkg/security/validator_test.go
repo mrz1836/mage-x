@@ -383,39 +383,39 @@ func TestValidateCommandArg_RandomInputs(t *testing.T) {
 func BenchmarkValidateCommandArg_Safe(b *testing.B) {
 	arg := "this is a safe argument with no dangerous patterns"
 	b.ResetTimer()
+	var result error
 	for i := 0; i < b.N; i++ {
-		if err := ValidateCommandArg(arg); err != nil {
-			// Expected for dangerous inputs, ignore for benchmarking
-		}
+		result = ValidateCommandArg(arg)
 	}
+	_ = result // Prevent optimization
 }
 
 func BenchmarkValidateCommandArg_Dangerous(b *testing.B) {
 	arg := "$(whoami) && rm -rf /"
 	b.ResetTimer()
+	var result error
 	for i := 0; i < b.N; i++ {
-		if err := ValidateCommandArg(arg); err != nil {
-			// Expected for dangerous inputs, ignore for benchmarking
-		}
+		result = ValidateCommandArg(arg)
 	}
+	_ = result // Prevent optimization
 }
 
 func BenchmarkValidatePath_Safe(b *testing.B) {
 	path := "path/to/safe/file.txt"
 	b.ResetTimer()
+	var result error
 	for i := 0; i < b.N; i++ {
-		if err := ValidatePath(path); err != nil {
-			// Expected for dangerous paths, ignore for benchmarking
-		}
+		result = ValidatePath(path)
 	}
+	_ = result // Prevent optimization
 }
 
 func BenchmarkValidatePath_Dangerous(b *testing.B) {
 	path := "../../../etc/passwd"
 	b.ResetTimer()
+	var result error
 	for i := 0; i < b.N; i++ {
-		if err := ValidatePath(path); err != nil {
-			// Expected for dangerous paths, ignore for benchmarking
-		}
+		result = ValidatePath(path)
 	}
+	_ = result // Prevent optimization
 }

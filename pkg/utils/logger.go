@@ -4,6 +4,7 @@ package utils
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"runtime"
 	"strings"
@@ -216,16 +217,20 @@ func (l *Logger) Header(text string) {
 	if l.useColor {
 		if _, err := fmt.Fprintf(l.output, "\n%s%s%s\n", colorBold+colorBlue, line, colorReset); err != nil {
 			// Continue if write fails
+			log.Printf("failed to write separator header: %v", err)
 		}
 		if _, err := fmt.Fprintf(l.output, "%s%s %s %s%s\n", colorBold+colorBlue, "===", text, "===", colorReset); err != nil {
 			// Continue if write fails
+			log.Printf("failed to write separator text: %v", err)
 		}
 		if _, err := fmt.Fprintf(l.output, "%s%s%s\n\n", colorBold+colorBlue, line, colorReset); err != nil {
 			// Continue if write fails
+			log.Printf("failed to write separator footer: %v", err)
 		}
 	} else {
 		if _, err := fmt.Fprintf(l.output, "\n%s\n=== %s ===\n%s\n\n", line, text, line); err != nil {
 			// Continue if write fails
+			log.Printf("failed to write plain separator: %v", err)
 		}
 	}
 }
@@ -344,10 +349,12 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	if l.useColor {
 		if _, err := fmt.Fprintf(l.output, "%s%s [%s]%s %s\n", color, timestamp, levelStr, colorReset, msg); err != nil {
 			// Continue if write fails
+			log.Printf("failed to write colored log message: %v", err)
 		}
 	} else {
 		if _, err := fmt.Fprintf(l.output, "%s [%s] %s\n", timestamp, levelStr, msg); err != nil {
 			// Continue if write fails
+			log.Printf("failed to write plain log message: %v", err)
 		}
 	}
 }
@@ -386,10 +393,12 @@ func (l *Logger) logWithEmoji(level LogLevel, emoji, msg string) {
 	if l.useColor {
 		if _, err := fmt.Fprintf(l.output, "%s %s%s%s\n", emoji, color, msg, colorReset); err != nil {
 			// Continue if write fails
+			log.Printf("failed to write colored emoji message: %v", err)
 		}
 	} else {
 		if _, err := fmt.Fprintf(l.output, "%s %s\n", emoji, msg); err != nil {
 			// Continue if write fails
+			log.Printf("failed to write plain emoji message: %v", err)
 		}
 	}
 }

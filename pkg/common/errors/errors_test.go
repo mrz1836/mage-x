@@ -216,7 +216,9 @@ func TestErrorHandler(t *testing.T) {
 	assert.True(t, defaultHandled, "Default handler should have been called")
 
 	// Test context handler
-	ctx := context.WithValue(context.Background(), "requestID", "12345")
+	type contextKey string
+	const requestIDKey contextKey = "requestID"
+	ctx := context.WithValue(context.Background(), requestIDKey, "12345")
 	contextErr := New("context error")
 
 	result = handler.HandleWithContext(ctx, contextErr)

@@ -130,7 +130,7 @@ func TestAssertTrue(t *testing.T) {
 	t.Run("true value", func(t *testing.T) {
 		// This should pass without error
 		AssertTrue(t, true)
-		AssertTrue(t, 1 == 1, "math works")
+		AssertTrue(t, len("test") == 4, "string length works")
 	})
 }
 

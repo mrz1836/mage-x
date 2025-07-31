@@ -596,37 +596,27 @@ func TestPackageLevelAuditFunctions(t *testing.T) {
 
 		assert.NotPanics(t, func() {
 			err := LogAuditEvent(event)
-			if err != nil {
-				// Expected - package function may return error
-			}
+			_ = err // Expected - package function may return error
 		})
 
 		assert.NotPanics(t, func() {
 			_, err := GetAuditEvents(AuditFilter{Limit: 1})
-			if err != nil {
-				// Expected - package function may return error
-			}
+			_ = err // Expected - package function may return error
 		})
 
 		assert.NotPanics(t, func() {
 			_, err := GetAuditStats()
-			if err != nil {
-				// Expected - package function may return error
-			}
+			_ = err // Expected - package function may return error
 		})
 
 		assert.NotPanics(t, func() {
 			err := CleanupAuditEvents()
-			if err != nil {
-				// Expected - package function may return error
-			}
+			_ = err // Expected - package function may return error
 		})
 
 		assert.NotPanics(t, func() {
 			_, err := ExportAuditEvents(AuditFilter{Limit: 1})
-			if err != nil {
-				// Expected - package function may return error
-			}
+			_ = err // Expected - package function may return error
 		})
 	})
 

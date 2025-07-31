@@ -378,9 +378,8 @@ func TestDefaultPathCache_ConcurrentAccess(t *testing.T) {
 	go func() {
 		for i := 0; i < 100; i++ {
 			// Ignore errors in concurrent test for performance
-			if err := cache.Set(string(rune('a'+i%26)), NewPathBuilder("/path")); err != nil {
-				// Error expected in concurrent test, ignore
-			}
+			err := cache.Set(string(rune('a'+i%26)), NewPathBuilder("/path"))
+			_ = err // Expected in concurrent test
 		}
 		done <- true
 	}()
@@ -397,9 +396,8 @@ func TestDefaultPathCache_ConcurrentAccess(t *testing.T) {
 	go func() {
 		for i := 0; i < 100; i++ {
 			// Ignore errors in concurrent test for performance
-			if err := cache.Delete(string(rune('a' + i%26))); err != nil {
-				// Error expected in concurrent test, ignore
-			}
+			err := cache.Delete(string(rune('a' + i%26)))
+			_ = err // Expected in concurrent test
 		}
 		done <- true
 	}()

@@ -256,19 +256,19 @@ type WorkflowDefinition struct {
 }
 
 type WorkflowStep struct {
-	Name            string                 `json:"name"`
-	Type            string                 `json:"type"`
-	Command         string                 `json:"command"`
-	Args            []string               `json:"args"`
-	Environment     map[string]string      `json:"environment"`
-	WorkingDir      string                 `json:"working_dir"`
-	Timeout         string                 `json:"timeout"`
-	RetryCount      int                    `json:"retry_count"`
-	ContinueOnError bool                   `json:"continue_on_error"`
-	Conditions      []StepCondition        `json:"conditions"`
-	Variables       map[string]interface{} `json:"variables"`
-	Parallel        bool                   `json:"parallel"`
-	Dependencies    []string               `json:"dependencies"`
+	Name            string                 `json:"name" yaml:"name"`
+	Type            string                 `json:"type" yaml:"type"`
+	Command         string                 `json:"command" yaml:"command"`
+	Args            []string               `json:"args" yaml:"args"`
+	Environment     map[string]string      `json:"environment" yaml:"environment"`
+	WorkingDir      string                 `json:"working_dir" yaml:"working_dir"`
+	Timeout         string                 `json:"timeout" yaml:"timeout"`
+	RetryCount      int                    `json:"retry_count" yaml:"retry_count"`
+	ContinueOnError bool                   `json:"continue_on_error" yaml:"continue_on_error"`
+	Conditions      []StepCondition        `json:"conditions" yaml:"conditions"`
+	Variables       map[string]interface{} `json:"variables" yaml:"variables"`
+	Parallel        bool                   `json:"parallel" yaml:"parallel"`
+	Dependencies    []string               `json:"dependencies" yaml:"dependencies"`
 }
 
 type WorkflowSettings struct {
@@ -287,9 +287,9 @@ type WorkflowTrigger struct {
 }
 
 type StepCondition struct {
-	Type  string `json:"type"`
-	Field string `json:"field"`
-	Value string `json:"value"`
+	Type  string `json:"type" yaml:"type"`
+	Field string `json:"field" yaml:"field"`
+	Value string `json:"value" yaml:"value"`
 }
 
 type WorkflowExecution struct {

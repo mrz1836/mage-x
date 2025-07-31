@@ -1,8 +1,10 @@
 package env
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -410,7 +412,16 @@ func (p *DefaultPathResolver) GOROOT() string {
 	if goroot := os.Getenv("GOROOT"); goroot != "" {
 		return goroot
 	}
-	return runtime.GOROOT()
+	// Use 'go env GOROOT' instead of deprecated runtime.GOROOT
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "go", "env", "GOROOT")
+	output, err := cmd.Output()
+	if err == nil {
+		return strings.TrimSpace(string(output))
+	}
+	// Fallback to empty string if go command fails
+	return ""
 }
 
 // GOCACHE returns the Go build cache directory

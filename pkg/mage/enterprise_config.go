@@ -647,28 +647,28 @@ type NotificationRule struct {
 // Validation Types
 
 type ValidationResults struct {
-	Valid    bool                `json:"valid"`
-	Errors   []ValidationError   `json:"errors"`
-	Warnings []ValidationWarning `json:"warnings"`
-	Info     []ValidationInfo    `json:"info"`
+	Valid    bool                `json:"valid" yaml:"valid"`
+	Errors   []ValidationError   `json:"errors" yaml:"errors"`
+	Warnings []ValidationWarning `json:"warnings" yaml:"warnings"`
+	Info     []ValidationInfo    `json:"info" yaml:"info"`
 }
 
 type ValidationError struct {
-	Field   string `json:"field"`
-	Message string `json:"message"`
-	Code    string `json:"code"`
+	Field   string `json:"field" yaml:"field"`
+	Message string `json:"message" yaml:"message"`
+	Code    string `json:"code" yaml:"code"`
 }
 
 type ValidationWarning struct {
-	Field   string `json:"field"`
-	Message string `json:"message"`
-	Code    string `json:"code"`
+	Field   string `json:"field" yaml:"field"`
+	Message string `json:"message" yaml:"message"`
+	Code    string `json:"code" yaml:"code"`
 }
 
 type ValidationInfo struct {
-	Field   string `json:"field"`
-	Message string `json:"message"`
-	Code    string `json:"code"`
+	Field   string `json:"field" yaml:"field"`
+	Message string `json:"message" yaml:"message"`
+	Code    string `json:"code" yaml:"code"`
 }
 
 // Configuration Validator

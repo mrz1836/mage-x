@@ -555,13 +555,13 @@ type ISecurityPolicy struct {
 
 // IPolicyRule represents a policy rule for interfaces
 type IPolicyRule struct {
-	Type        string
-	Pattern     string
-	Action      string
-	Severity    string
-	Description string
-	Message     string
-	Remediation string
+	Type        string `json:"type" yaml:"type"`
+	Pattern     string `json:"pattern" yaml:"pattern"`
+	Action      string `json:"action" yaml:"action"`
+	Severity    string `json:"severity" yaml:"severity"`
+	Description string `json:"description" yaml:"description"`
+	Message     string `json:"message" yaml:"message"`
+	Remediation string `json:"remediation" yaml:"remediation"`
 }
 
 // IComplianceReport contains compliance check results for interfaces

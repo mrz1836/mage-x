@@ -554,16 +554,12 @@ func TestPackageLevelMetricsFunctions(t *testing.T) {
 
 		assert.NotPanics(t, func() {
 			err := RecordCounter("global_counter", 1.0, nil)
-			if err != nil {
-				// Expected - package function may return error
-			}
+			_ = err // Expected - package function may return error
 		})
 
 		assert.NotPanics(t, func() {
 			err := RecordGauge("global_gauge", 50.0, "percent", nil)
-			if err != nil {
-				// Expected - package function may return error
-			}
+			_ = err // Expected - package function may return error
 		})
 
 		assert.NotPanics(t, func() {
@@ -572,9 +568,7 @@ func TestPackageLevelMetricsFunctions(t *testing.T) {
 
 		assert.NotPanics(t, func() {
 			err := CleanupMetrics()
-			if err != nil {
-				// Expected - package function may return error
-			}
+			_ = err // Expected - package function may return error
 		})
 	})
 

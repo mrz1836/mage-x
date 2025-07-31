@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -156,6 +157,7 @@ func (a *AuditLogger) initDatabase() error {
 	if _, err := db.ExecContext(context.Background(), createTableSQL); err != nil {
 		if closeErr := db.Close(); closeErr != nil {
 			// Log close error but return original error
+			log.Printf("failed to close database during error handling: %v", closeErr)
 		}
 		return fmt.Errorf("failed to create audit table: %w", err)
 	}
@@ -279,6 +281,7 @@ func (a *AuditLogger) GetEvents(filter AuditFilter) ([]AuditEvent, error) {
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
 			// Log close error but don't fail the operation
+			log.Printf("failed to close database rows: %v", closeErr)
 		}
 	}()
 
@@ -309,12 +312,15 @@ func (a *AuditLogger) GetEvents(filter AuditFilter) ([]AuditEvent, error) {
 		event.Duration = time.Duration(durationNs)
 		if unmarshalErr := json.Unmarshal([]byte(argsJSON), &event.Args); unmarshalErr != nil {
 			// Continue with empty args on unmarshal error
+			log.Printf("failed to unmarshal args JSON: %v", unmarshalErr)
 		}
 		if unmarshalErr := json.Unmarshal([]byte(envJSON), &event.Environment); unmarshalErr != nil {
 			// Continue with empty environment on unmarshal error
+			log.Printf("failed to unmarshal environment JSON: %v", unmarshalErr)
 		}
 		if unmarshalErr := json.Unmarshal([]byte(metadataJSON), &event.Metadata); unmarshalErr != nil {
 			// Continue with empty metadata on unmarshal error
+			log.Printf("failed to unmarshal metadata JSON: %v", unmarshalErr)
 		}
 
 		events = append(events, event)
@@ -376,6 +382,7 @@ func (a *AuditLogger) GetStats() (AuditStats, error) {
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
 			// Log error but don't fail the operation
+			log.Printf("failed to close rows for top users query: %v", closeErr)
 		}
 	}()
 
@@ -407,6 +414,7 @@ func (a *AuditLogger) GetStats() (AuditStats, error) {
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
 			// Log error but don't fail the operation
+			log.Printf("failed to close rows for top commands query: %v", closeErr)
 		}
 	}()
 

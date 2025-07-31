@@ -3,6 +3,7 @@ package mage
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -42,10 +43,12 @@ func (Release) Default() error {
 		if oldToken == "" {
 			if err := os.Unsetenv("GITHUB_TOKEN"); err != nil {
 				// Log error but don't fail - this is cleanup
+				log.Printf("failed to unset GITHUB_TOKEN during cleanup: %v", err)
 			}
 		} else {
 			if err := os.Setenv("GITHUB_TOKEN", oldToken); err != nil {
 				// Log error but don't fail - this is cleanup
+				log.Printf("failed to restore GITHUB_TOKEN during cleanup: %v", err)
 			}
 		}
 	}()

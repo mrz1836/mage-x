@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -95,6 +96,7 @@ func (Update) Install() error {
 		// Ignore error in defer cleanup
 		if err := os.RemoveAll(updateDir); err != nil {
 			// Best effort cleanup - ignore error
+			log.Printf("failed to clean up update directory %s: %v", updateDir, err)
 		}
 	}()
 
@@ -324,6 +326,7 @@ func getLatestStableRelease(owner, repo string) (*GitHubRelease, error) {
 		// Ignore error in defer cleanup
 		if err := resp.Body.Close(); err != nil {
 			// Best effort cleanup - ignore error
+			log.Printf("failed to close response body: %v", err)
 		}
 	}()
 
@@ -360,6 +363,7 @@ func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
 		// Ignore error in defer cleanup
 		if err := resp.Body.Close(); err != nil {
 			// Best effort cleanup - ignore error
+			log.Printf("failed to close response body: %v", err)
 		}
 	}()
 
@@ -403,6 +407,7 @@ func getLatestEdgeRelease(owner, repo string) (*GitHubRelease, error) {
 		// Ignore error in defer cleanup
 		if err := resp.Body.Close(); err != nil {
 			// Best effort cleanup - ignore error
+			log.Printf("failed to close response body: %v", err)
 		}
 	}()
 
@@ -448,6 +453,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 		// Ignore error in defer cleanup
 		if closeErr := resp.Body.Close(); closeErr != nil {
 			// Best effort cleanup - ignore error
+			log.Printf("failed to close response body: %v", closeErr)
 		}
 	}()
 
@@ -524,8 +530,10 @@ func saveUpdateRecord(info *UpdateInfo) {
 	// Ensure directory exists and save
 	if err := fileOps.File.MkdirAll(filepath.Dir(historyPath), 0o755); err != nil {
 		// Best effort - ignore error in cleanup
+		log.Printf("failed to create history directory: %v", err)
 	}
 	if err := fileOps.JSON.WriteJSONIndent(historyPath, history, "", "  "); err != nil {
 		// Best effort - ignore error in cleanup
+		log.Printf("failed to write update history: %v", err)
 	}
 }

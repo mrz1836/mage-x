@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"runtime"
@@ -363,6 +364,7 @@ func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			// Ignore error in defer cleanup
+			log.Printf("failed to close response body: %v", err)
 		}
 	}()
 

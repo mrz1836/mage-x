@@ -3,6 +3,7 @@ package security
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -198,6 +199,7 @@ func ValidatePort(port int) error {
 	if port < 1024 {
 		// This is just a warning, not an error
 		// The caller can decide what to do with privileged ports
+		log.Printf("warning: port %d is a privileged port (< 1024)", port)
 	}
 
 	return nil

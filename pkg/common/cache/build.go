@@ -393,7 +393,9 @@ func (c *BuildCache) GenerateFileHash(filePaths []string) (string, error) {
 		if err != nil {
 			continue
 		}
-		h.Write([]byte(fmt.Sprintf("%d-%d", info.ModTime().Unix(), info.Size())))
+		if _, err := fmt.Fprintf(h, "%d-%d", info.ModTime().Unix(), info.Size()); err != nil {
+			continue // Skip if we can't write to hash
+		}
 
 		// For small files, include content hash
 		if info.Size() < 1024*1024 { // 1MB limit

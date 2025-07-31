@@ -3,6 +3,7 @@ package paths
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -505,6 +506,7 @@ func (pb *DefaultPathBuilder) copyFile(src, dst string, srcInfo fs.FileInfo) err
 	defer func() {
 		if closeErr := srcFile.Close(); closeErr != nil {
 			// Log the error but don't fail the operation
+			log.Printf("failed to close source file %s: %v", src, closeErr)
 		}
 	}()
 
@@ -523,6 +525,7 @@ func (pb *DefaultPathBuilder) copyFile(src, dst string, srcInfo fs.FileInfo) err
 	defer func() {
 		if closeErr := dstFile.Close(); closeErr != nil {
 			// Log the error but don't fail the operation
+			log.Printf("failed to close destination file %s: %v", dst, closeErr)
 		}
 	}()
 

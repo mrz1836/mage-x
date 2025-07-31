@@ -2,6 +2,7 @@ package paths
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -131,7 +132,7 @@ func (pv *DefaultPathValidator) IsValidPath(path PathBuilder) bool {
 func (pv *DefaultPathValidator) RequireAbsolute() PathValidator {
 	if err := pv.AddRule(&AbsolutePathRule{}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add absolute path rule: %v", err)
 	}
 	return pv
 }
@@ -140,7 +141,7 @@ func (pv *DefaultPathValidator) RequireAbsolute() PathValidator {
 func (pv *DefaultPathValidator) RequireRelative() PathValidator {
 	if err := pv.AddRule(&RelativePathRule{}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add relative path rule: %v", err)
 	}
 	return pv
 }
@@ -149,7 +150,7 @@ func (pv *DefaultPathValidator) RequireRelative() PathValidator {
 func (pv *DefaultPathValidator) RequireExists() PathValidator {
 	if err := pv.AddRule(&ExistsRule{}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add exists rule: %v", err)
 	}
 	return pv
 }
@@ -158,7 +159,7 @@ func (pv *DefaultPathValidator) RequireExists() PathValidator {
 func (pv *DefaultPathValidator) RequireNotExists() PathValidator {
 	if err := pv.AddRule(&NotExistsRule{}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add not exists rule: %v", err)
 	}
 	return pv
 }
@@ -167,7 +168,7 @@ func (pv *DefaultPathValidator) RequireNotExists() PathValidator {
 func (pv *DefaultPathValidator) RequireReadable() PathValidator {
 	if err := pv.AddRule(&ReadableRule{}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add readable rule: %v", err)
 	}
 	return pv
 }
@@ -176,7 +177,7 @@ func (pv *DefaultPathValidator) RequireReadable() PathValidator {
 func (pv *DefaultPathValidator) RequireWritable() PathValidator {
 	if err := pv.AddRule(&WritableRule{}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add writable rule: %v", err)
 	}
 	return pv
 }
@@ -185,7 +186,7 @@ func (pv *DefaultPathValidator) RequireWritable() PathValidator {
 func (pv *DefaultPathValidator) RequireExecutable() PathValidator {
 	if err := pv.AddRule(&ExecutableRule{}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add executable rule: %v", err)
 	}
 	return pv
 }
@@ -194,7 +195,7 @@ func (pv *DefaultPathValidator) RequireExecutable() PathValidator {
 func (pv *DefaultPathValidator) RequireDirectory() PathValidator {
 	if err := pv.AddRule(&DirectoryRule{}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add directory rule: %v", err)
 	}
 	return pv
 }
@@ -203,7 +204,7 @@ func (pv *DefaultPathValidator) RequireDirectory() PathValidator {
 func (pv *DefaultPathValidator) RequireFile() PathValidator {
 	if err := pv.AddRule(&FileRule{}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add file rule: %v", err)
 	}
 	return pv
 }
@@ -212,7 +213,7 @@ func (pv *DefaultPathValidator) RequireFile() PathValidator {
 func (pv *DefaultPathValidator) RequireExtension(exts ...string) PathValidator {
 	if err := pv.AddRule(&ExtensionRule{Extensions: exts}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add extension rule: %v", err)
 	}
 	return pv
 }
@@ -221,7 +222,7 @@ func (pv *DefaultPathValidator) RequireExtension(exts ...string) PathValidator {
 func (pv *DefaultPathValidator) RequireMaxLength(length int) PathValidator {
 	if err := pv.AddRule(&MaxLengthRule{MaxLength: length}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add max length rule: %v", err)
 	}
 	return pv
 }
@@ -230,7 +231,7 @@ func (pv *DefaultPathValidator) RequireMaxLength(length int) PathValidator {
 func (pv *DefaultPathValidator) RequirePattern(pattern string) PathValidator {
 	if err := pv.AddRule(&PatternRule{Pattern: pattern, Required: true}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add required pattern rule: %v", err)
 	}
 	return pv
 }
@@ -239,7 +240,7 @@ func (pv *DefaultPathValidator) RequirePattern(pattern string) PathValidator {
 func (pv *DefaultPathValidator) ForbidPattern(pattern string) PathValidator {
 	if err := pv.AddRule(&PatternRule{Pattern: pattern, Required: false}); err != nil {
 		// This shouldn't fail for built-in rules, but we continue anyway
-		// In production code, consider logging this error
+		log.Printf("failed to add forbidden pattern rule: %v", err)
 	}
 	return pv
 }

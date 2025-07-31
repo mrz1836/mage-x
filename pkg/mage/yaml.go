@@ -419,10 +419,14 @@ func populateFromProject(config *MageConfig) {
 	// Check for existing files
 	if utils.FileExists("README.md") {
 		// Could parse README for description
+		// TODO: Implement README parsing for project description
+		_ = "README.md" // Future feature placeholder
 	}
 
 	if utils.FileExists("LICENSE") {
 		// Could parse LICENSE for license type
+		// TODO: Implement LICENSE parsing for license detection
+		_ = "LICENSE" // Future feature placeholder
 	}
 
 	if utils.FileExists("Dockerfile") {

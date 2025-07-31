@@ -117,7 +117,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 
 		_, err := New(invalidConfig)
 		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "Azure subscription ID is required")
+		require.Contains(ts.T(), err.Error(), "azure subscription ID is required")
 	})
 
 	ts.Run("Provider validation with missing key credentials", func() {
@@ -137,7 +137,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 
 		err = provider.Validate()
 		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "Azure client ID and client secret are required")
+		require.Contains(ts.T(), err.Error(), "azure client ID and client secret are required")
 	})
 
 	ts.Run("Provider validation with missing certificate paths", func() {
@@ -157,7 +157,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderBasics() {
 
 		err = provider.Validate()
 		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "Azure certificate and key paths are required")
+		require.Contains(ts.T(), err.Error(), "azure certificate and key paths are required")
 	})
 
 	ts.Run("Provider health check", func() {
@@ -521,7 +521,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 
 		_, err := New(config)
 		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "Azure subscription ID is required")
+		require.Contains(ts.T(), err.Error(), "azure subscription ID is required")
 	})
 
 	ts.Run("Missing subscription ID from Extra", func() {
@@ -537,7 +537,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 
 		_, err := New(config)
 		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "Azure subscription ID is required")
+		require.Contains(ts.T(), err.Error(), "azure subscription ID is required")
 	})
 
 	ts.Run("Nil Extra map", func() {
@@ -553,7 +553,7 @@ func (ts *AzureProviderTestSuite) TestAzureProviderErrors() {
 
 		_, err := New(config)
 		require.Error(ts.T(), err)
-		require.Contains(ts.T(), err.Error(), "Azure subscription ID is required")
+		require.Contains(ts.T(), err.Error(), "azure subscription ID is required")
 	})
 }
 

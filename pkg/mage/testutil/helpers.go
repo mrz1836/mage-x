@@ -57,6 +57,7 @@ func NewTestEnvironment(t TestingInterface) *TestEnvironment {
 func (env *TestEnvironment) Cleanup() {
 	if err := os.Chdir(env.OrigDir); err != nil {
 		// Log error but don't fail cleanup
+		fmt.Fprintf(os.Stderr, "failed to restore original directory %s: %v\n", env.OrigDir, err)
 	}
 }
 
@@ -74,6 +75,7 @@ func (env *TestEnvironment) WithMockRunner(setter RunnerSetter, getter RunnerGet
 	defer func() {
 		if err := setter(originalRunner); err != nil {
 			// Log error but don't fail cleanup
+			fmt.Fprintf(os.Stderr, "failed to restore original runner: %v\n", err)
 		}
 	}()
 

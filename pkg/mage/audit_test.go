@@ -580,9 +580,8 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 			func() interface{} { return GetRunner() },
 			func() error {
 				// Enable audit logging (may fail if directory doesn't exist)
-				if err := ts.audit.Enable(); err != nil {
-					// Error expected and acceptable - audit may be disabled
-				}
+				err := ts.audit.Enable()
+				_ = err // Error expected and acceptable - audit may be disabled
 
 				// Log some command executions (these should not fail)
 				startTime := time.Now()
@@ -591,28 +590,22 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 				LogCommandExecution("test", []string{"-v"}, startTime, duration, 1, false)
 
 				// These operations may fail if audit is disabled, which is acceptable
-				if err := ts.audit.Show(); err != nil {
-					// Error expected and acceptable - audit may be disabled
-				}
-				if err := ts.audit.Stats(); err != nil {
-					// Error expected and acceptable - audit may be disabled
-				}
-				if err := ts.audit.Export(); err != nil {
-					// Error expected and acceptable - audit may be disabled
-				}
-				if err := ts.audit.Report(); err != nil {
-					// Error expected and acceptable - audit may be disabled
-				}
+				err = ts.audit.Show()
+				_ = err // Error expected and acceptable - audit may be disabled
+				err = ts.audit.Stats()
+				_ = err // Error expected and acceptable - audit may be disabled
+				err = ts.audit.Export()
+				_ = err // Error expected and acceptable - audit may be disabled
+				err = ts.audit.Report()
+				_ = err // Error expected and acceptable - audit may be disabled
 
 				// Cleanup should work regardless
-				if err := ts.audit.Cleanup(); err != nil {
-					// Error expected and acceptable - cleanup is best-effort
-				}
+				err = ts.audit.Cleanup()
+				_ = err // Error expected and acceptable - cleanup is best-effort
 
 				// Disable audit logging (may fail if file doesn't exist)
-				if err := ts.audit.Disable(); err != nil {
-					// Error expected and acceptable - audit may already be disabled
-				}
+				err = ts.audit.Disable()
+				_ = err // Error expected and acceptable - audit may already be disabled
 
 				return nil
 			},
@@ -682,15 +675,12 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 			func() error {
 				// Test all methods with environment variables set
 				// These may fail if audit is disabled, which is acceptable
-				if err := ts.audit.Show(); err != nil {
-					// Error expected and acceptable - audit may be disabled
-				}
-				if err := ts.audit.Export(); err != nil {
-					// Error expected and acceptable - audit may be disabled
-				}
-				if err := ts.audit.Report(); err != nil {
-					// Error expected and acceptable - audit may be disabled
-				}
+				err := ts.audit.Show()
+				_ = err // Error expected and acceptable - audit may be disabled
+				err = ts.audit.Export()
+				_ = err // Error expected and acceptable - audit may be disabled
+				err = ts.audit.Report()
+				_ = err // Error expected and acceptable - audit may be disabled
 				return nil
 			},
 		)

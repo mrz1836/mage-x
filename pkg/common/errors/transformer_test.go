@@ -707,8 +707,7 @@ func TestTransformerConcurrency(t *testing.T) {
 		transformer.SetEnabled(true)
 		err := errors.New("final test")
 		result := transformer.Transform(err)
-		if result == nil {
-			// This is acceptable for the test
-		}
+		// Result can be nil and that's acceptable for this test
+		_ = result
 	})
 }

@@ -141,7 +141,7 @@ func (pm *DefaultPathMatcher) RemovePattern(pattern string) error {
 
 	// Remove from glob patterns
 	for i, p := range pm.patterns {
-		if p == pattern || (!pm.caseSensitive && strings.ToLower(p) == strings.ToLower(pattern)) {
+		if p == pattern || (!pm.caseSensitive && strings.EqualFold(p, pattern)) {
 			pm.patterns = append(pm.patterns[:i], pm.patterns[i+1:]...)
 			return nil
 		}

@@ -358,9 +358,10 @@ func (ts *ToolsTestSuite) TestGetRequiredTools() {
 	// Check custom tools - find them by name since order is not deterministic
 	var gotestsum, gci *ToolDefinition
 	for i := 5; i < 7; i++ {
-		if tools[i].Name == "gotestsum" {
+		switch tools[i].Name {
+		case "gotestsum":
 			gotestsum = &tools[i]
-		} else if tools[i].Name == "gci" {
+		case "gci":
 			gci = &tools[i]
 		}
 	}

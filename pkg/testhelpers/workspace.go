@@ -461,18 +461,27 @@ func (sw *SandboxedWorkspace) AllowPath(path string) {
 // isAllowed checks if a path is allowed
 func (sw *SandboxedWorkspace) isAllowed(path string) bool {
 	// Always allow paths within the workspace
-	if filepath.HasPrefix(path, sw.rootDir) {
+	if isWithinPath(path, sw.rootDir) {
 		return true
 	}
 
 	// Check allowed paths
 	for allowed := range sw.allowedPaths {
-		if filepath.HasPrefix(path, allowed) {
+		if isWithinPath(path, allowed) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// isWithinPath checks if a path is within another path
+func isWithinPath(path, parent string) bool {
+	rel, err := filepath.Rel(parent, path)
+	if err != nil {
+		return false
+	}
+	return !strings.HasPrefix(rel, "..") && rel != ".."
 }
 
 // WriteFile overrides to check permissions

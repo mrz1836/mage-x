@@ -104,10 +104,8 @@
 			"revive",
 			"gocritic",
 			"forbidigo",
-			"musttag",
 			"testifylint",
-			"goprintffuncname",
-			"staticcheck"
+			"goprintffuncname"
 		],
 		"settings": {
 			"depguard": {

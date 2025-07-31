@@ -327,9 +327,8 @@ func TestDefaultPathWatcher_ConcurrentAccess(t *testing.T) {
 	// Concurrent watches
 	go func() {
 		for i := 0; i < 10; i++ {
-			if err := watcher.Watch(tempDir1.String(), EventAll); err != nil {
-				// Ignore errors in concurrent test
-			}
+			err := watcher.Watch(tempDir1.String(), EventAll)
+			_ = err // Expected in concurrent test
 			watcher.IsWatching(tempDir1.String())
 		}
 		done <- true
@@ -338,12 +337,10 @@ func TestDefaultPathWatcher_ConcurrentAccess(t *testing.T) {
 	// Concurrent unwatches
 	go func() {
 		for i := 0; i < 10; i++ {
-			if err := watcher.Watch(tempDir2.String(), EventAll); err != nil {
-				// Ignore errors in concurrent test
-			}
-			if err := watcher.Unwatch(tempDir2.String()); err != nil {
-				// Ignore errors in concurrent test
-			}
+			err := watcher.Watch(tempDir2.String(), EventAll)
+			_ = err // Expected in concurrent test
+			err = watcher.Unwatch(tempDir2.String())
+			_ = err // Expected in concurrent test
 		}
 		done <- true
 	}()

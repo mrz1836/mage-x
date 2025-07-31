@@ -113,7 +113,8 @@ func (Metrics) Complexity() error {
 
 	if err := GetRunner().RunCmd("gocyclo", "-over", "10", "."); err != nil {
 		// gocyclo returns error if it finds complex functions
-		// This is expected behavior
+		// This is expected behavior, we continue to show results
+		utils.Debug("%s", "gocyclo found complex functions (expected): "+err.Error())
 	}
 
 	utils.Info("\nTop 10 most complex functions:")

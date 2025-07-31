@@ -32,7 +32,7 @@ func (ts *MinimalRunnerTestSuite) TestNewSecureCommandRunner() {
 	require.NotNil(ts.T(), runner)
 
 	// Verify it implements CommandRunner interface
-	var _ CommandRunner = runner
+	_ = runner
 
 	// Verify it's a SecureCommandRunner
 	secureRunner, ok := runner.(*SecureCommandRunner)
