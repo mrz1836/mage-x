@@ -28,7 +28,7 @@ var (
 	ErrBuildFailedError   = errors.New("build failed")
 	ErrBuildErrors        = errors.New("build errors")
 	ErrDockerNotFound     = errors.New("docker command not found")
-	ErrDockerfileNotFound = errors.New("Dockerfile not found")
+	ErrDockerfileNotFound = errors.New("dockerfile not found")
 )
 
 // initCacheManager initializes the cache manager if not already done
@@ -299,17 +299,17 @@ func (b Build) All() error {
 	}
 
 	start := time.Now()
-	errors := make(chan error, len(cfg.Build.Platforms))
+	buildErrs := make(chan error, len(cfg.Build.Platforms))
 
 	for _, platform := range cfg.Build.Platforms {
 		go func(p string) {
-			errors <- b.Platform(p)
+			buildErrs <- b.Platform(p)
 		}(platform)
 	}
 
 	var buildErrors []string
 	for range cfg.Build.Platforms {
-		if err := <-errors; err != nil {
+		if err := <-buildErrs; err != nil {
 			buildErrors = append(buildErrors, err.Error())
 		}
 	}

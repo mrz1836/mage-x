@@ -167,7 +167,7 @@ func TestAdd(t *testing.T) {
 `), 0o644))
 
 	// Override config
-	cfg = &Config{
+	TestSetConfig(&Config{
 		Project: ProjectConfig{
 			Name:   "test",
 			Module: "test",
@@ -182,7 +182,7 @@ func TestAdd(t *testing.T) {
 		Lint: LintConfig{
 			Timeout: "1m",
 		},
-	}
+	})
 
 	// Test workflow: Format -> Lint -> Test -> Build
 	t.Run("format", func(t *testing.T) {
@@ -325,7 +325,7 @@ func main() {
 `), 0o644))
 
 	// Setup config with caching enabled
-	cfg = &Config{
+	TestSetConfig(&Config{
 		Project: ProjectConfig{
 			Name:   "cache-test",
 			Binary: "cache-app",
@@ -334,7 +334,7 @@ func main() {
 		Build: BuildConfig{
 			Output: "bin",
 		},
-	}
+	})
 
 	build := Build{}
 
@@ -429,7 +429,7 @@ func TestErrorHandling(t *testing.T) {
 		require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0o644))
 		// No main.go file
 
-		cfg = &Config{
+		TestSetConfig(&Config{
 			Project: ProjectConfig{
 				Binary: "test",
 				Module: "test",
@@ -437,7 +437,7 @@ func TestErrorHandling(t *testing.T) {
 			Build: BuildConfig{
 				Output: "bin",
 			},
-		}
+		})
 
 		build := Build{}
 		err := build.Default()

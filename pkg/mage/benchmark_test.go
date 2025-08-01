@@ -327,7 +327,7 @@ func BenchmarkBuildOperations(b *testing.B) {
 		b.Fatalf("Failed to write main.go: %v", err)
 	}
 
-	cfg = &Config{
+	TestSetConfig(&Config{
 		Project: ProjectConfig{
 			Binary: "bench",
 			Module: "bench",
@@ -335,7 +335,7 @@ func BenchmarkBuildOperations(b *testing.B) {
 		Build: BuildConfig{
 			Output: "bin",
 		},
-	}
+	})
 
 	b.Run("buildFlags", func(b *testing.B) {
 		config, _ := GetConfig() //nolint:errcheck // Benchmark ignores errors

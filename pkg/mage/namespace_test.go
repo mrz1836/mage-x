@@ -16,6 +16,7 @@ var (
 	errBuildFailed     = errors.New("build failed")
 	errTestsFailed     = errors.New("tests failed")
 	errLintErrorsFound = errors.New("lint errors found")
+	errNotFound        = errors.New("not found")
 )
 
 // MockCommandRunner for testing
@@ -198,6 +199,8 @@ func TestLintNamespace_Default(t *testing.T) {
 			setupMock: func(m *MockCommandRunner) {
 				// Lint calls with 5 args: golangci-lint run ./pkg/... --timeout 5m
 				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+				// Also mock the go vet call with 4 args total: go vet pkg1 pkg2
+				m.On("RunCmd", "go", "vet", mock.Anything, mock.Anything).Return(nil).Maybe()
 			},
 			wantErr: false,
 		},
@@ -205,6 +208,8 @@ func TestLintNamespace_Default(t *testing.T) {
 			name: "lint with errors",
 			setupMock: func(m *MockCommandRunner) {
 				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errLintErrorsFound).Maybe()
+				// Also mock the go vet call (which won't be reached due to early error, but good for completeness)
+				m.On("RunCmd", "go", "vet", mock.Anything, mock.Anything).Return(nil).Maybe()
 			},
 			wantErr: true,
 		},
@@ -232,6 +237,18 @@ func TestLintNamespace_Fix(t *testing.T) {
 	withMockRunner(t, func(mockRunner *MockCommandRunner) {
 		// Fix calls with 6 args: golangci-lint run --fix ./pkg/... --timeout 5m
 		mockRunner.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+
+		// Mock gofmt -l call to check for files needing formatting
+		mockRunner.On("RunCmdOutput", "gofmt", "-l", mock.Anything).Return("", nil).Maybe()
+
+		// Mock gofumpt command existence check
+		mockRunner.On("RunCmdOutput", "which", "gofumpt").Return("", errNotFound).Maybe()
+
+		// Mock gofumpt execution (in case it exists on the system)
+		mockRunner.On("RunCmd", "gofumpt", "-w", "-extra", ".").Return(nil).Maybe()
+
+		// Mock go fmt call for formatting
+		mockRunner.On("RunCmd", "go", "fmt", mock.Anything).Return(nil).Maybe()
 
 		lint := NewLintNamespace()
 		err := lint.Fix()

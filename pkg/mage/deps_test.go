@@ -2,9 +2,11 @@ package mage
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -331,7 +333,7 @@ func (ts *DepsTestSuite) TestDeps_List() {
 
 // TestDeps_Outdated tests the Outdated function
 func (ts *DepsTestSuite) TestDeps_Outdated() {
-	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} -> {{.Update.Version}}{{end}}", "all"}).Return("", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} → {{.Update.Version}}{{end}}", "all"}).Return("", nil)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error {
@@ -348,7 +350,7 @@ func (ts *DepsTestSuite) TestDeps_Outdated() {
 
 // TestDeps_Outdated_WithUpdates tests Outdated function with available updates
 func (ts *DepsTestSuite) TestDeps_Outdated_WithUpdates() {
-	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} -> {{.Update.Version}}{{end}}", "all"}).Return("github.com/pkg/errors v0.9.0 -> v0.9.1\ngithub.com/stretchr/testify v1.8.0 -> v1.9.0", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} → {{.Update.Version}}{{end}}", "all"}).Return("github.com/pkg/errors v0.9.0 → v0.9.1\ngithub.com/stretchr/testify v1.8.0 → v1.9.0", nil)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error {
@@ -366,7 +368,7 @@ func (ts *DepsTestSuite) TestDeps_Outdated_WithUpdates() {
 // TestDeps_Outdated_Error tests Outdated function with error
 func (ts *DepsTestSuite) TestDeps_Outdated_Error() {
 	expectedError := require.New(ts.T())
-	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} -> {{.Update.Version}}{{end}}", "all"}).Return("", errOutdatedCheckFailed)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} → {{.Update.Version}}{{end}}", "all"}).Return("", errOutdatedCheckFailed)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error {
@@ -497,7 +499,14 @@ func (ts *DepsTestSuite) TestDeps_Init_Error() {
 
 // TestDeps_Audit tests the Audit function
 func (ts *DepsTestSuite) TestDeps_Audit() {
-	ts.env.Builder.ExpectGoCommand("list", nil)
+	// Mock that govulncheck is not installed
+	ts.env.Runner.On("RunCmdOutput", "which", []string{"govulncheck"}).Return("", errCommandNotFound)
+	// Mock installing govulncheck
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	// Mock the govulncheck run (could be either from PATH or full path)
+	ts.env.Runner.On("RunCmd", mock.MatchedBy(func(cmd string) bool {
+		return strings.Contains(cmd, "govulncheck")
+	}), []string{"-show", "verbose", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error {

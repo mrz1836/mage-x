@@ -104,11 +104,11 @@ func (ts *CommonTestSuite) TestGetVersion() {
 
 		// Set global config for test
 		TestResetConfig()
-		cfg = &Config{
+		TestSetConfig(&Config{
 			Project: ProjectConfig{
 				Version: "3.0.0",
 			},
-		}
+		})
 
 		err := env.WithMockRunner(
 			func(r interface{}) error {

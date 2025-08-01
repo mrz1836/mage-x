@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
-	"gopkg.in/yaml.v3"
 )
 
 // Config represents the mage configuration
@@ -112,15 +111,17 @@ type ReleaseConfig struct {
 	Formats     []string `yaml:"formats"`
 }
 
+// Deprecated: These variables are maintained for backward compatibility only.
+// New code should use ConfigProvider interface instead.
 var (
 	// configOnce ensures configuration is loaded only once
-	configOnce sync.Once //nolint:gochecknoglobals // Required for singleton initialization
+	configOnce sync.Once //nolint:gochecknoglobals,unused // Deprecated: maintained for backward compatibility
 	// loadedConfig holds the loaded configuration
-	loadedConfig *Config //nolint:gochecknoglobals // Required for singleton configuration
+	loadedConfig *Config //nolint:gochecknoglobals,unused // Deprecated: maintained for backward compatibility
 	// errLoadConfig stores any error encountered during config loading
-	errLoadConfig error
+	errLoadConfig error //nolint:unused // Deprecated: maintained for backward compatibility
 	// cfg is a backward compatibility variable for tests
-	cfg *Config //nolint:gochecknoglobals // Backward compatibility for tests
+	cfg *Config //nolint:gochecknoglobals // Deprecated: maintained for backward compatibility
 )
 
 // Static errors for err113 compliance
@@ -129,75 +130,43 @@ var (
 )
 
 // LoadConfig loads the configuration from file or returns defaults
+// Deprecated: Use GetConfig() instead, which uses the ConfigProvider pattern
 func LoadConfig() (*Config, error) {
-	// Check if cfg is already set by tests
+	// Maintain backward compatibility by checking deprecated cfg variable first
 	if cfg != nil {
 		return cfg, nil
 	}
 
-	configOnce.Do(func() {
-		loadedConfig = defaultConfig()
-		configFile := ".mage.yaml"
-
-		// Try multiple config file names
-		configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
-
-		for _, cf := range configFiles {
-			if _, err := os.Stat(cf); err == nil {
-				configFile = cf
-				break
-			}
-		}
-
-		// Check for enterprise configuration file
-		enterpriseConfigFile := ".mage.enterprise.yaml"
-		fileOps := fileops.New()
-		if fileOps.File.Exists(enterpriseConfigFile) {
-			// Load enterprise configuration
-			var enterpriseConfig EnterpriseConfiguration
-			if err := fileOps.YAML.ReadYAML(enterpriseConfigFile, &enterpriseConfig); err == nil {
-				loadedConfig.Enterprise = &enterpriseConfig
-			}
-		}
-
-		if !fileOps.File.Exists(configFile) {
-			// Config file doesn't exist, use defaults
-			return
-		}
-
-		data, err := fileOps.File.ReadFile(configFile)
-		if err != nil {
-			errLoadConfig = fmt.Errorf("failed to read config: %w", err)
-			return
-		}
-
-		if err := yaml.Unmarshal(data, loadedConfig); err != nil {
-			errLoadConfig = fmt.Errorf("failed to parse config: %w", err)
-			return
-		}
-
-		// Apply environment variable overrides
-		applyEnvOverrides(loadedConfig)
-
-		// Enterprise configuration validation is reserved for future implementation.
-		// When EnterpriseConfiguration type is defined, validation logic will be added here.
-	})
-	cfg = loadedConfig // Keep backward compatibility variable in sync
-	return loadedConfig, errLoadConfig
+	// Use the config provider pattern
+	return GetConfigProvider().GetConfig()
 }
 
-// GetConfig is an alias for LoadConfig for backward compatibility
+// GetConfig returns the current configuration using the active ConfigProvider
 func GetConfig() (*Config, error) {
-	return LoadConfig()
+	return GetConfigProvider().GetConfig()
 }
 
 // TestResetConfig resets the config for testing purposes only
 // This should only be used in tests
 func TestResetConfig() {
+	// Reset the config provider
+	GetConfigProvider().ResetConfig()
+
+	// Reset deprecated variables for backward compatibility
 	configOnce = sync.Once{}
 	loadedConfig = nil
 	errLoadConfig = nil
 	cfg = nil
+}
+
+// TestSetConfig sets a config for testing purposes only
+// This should only be used in tests
+func TestSetConfig(config *Config) {
+	// Set via the config provider
+	GetConfigProvider().SetConfig(config)
+
+	// Also set deprecated cfg variable for backward compatibility
+	cfg = config
 }
 
 // defaultConfig returns the default configuration

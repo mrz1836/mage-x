@@ -407,7 +407,7 @@ CMD ["./app"]`)
 		)
 
 		ts.Require().Error(err)
-		ts.Require().Contains(err.Error(), "Dockerfile not found")
+		ts.Require().Contains(err.Error(), "dockerfile not found")
 	})
 }
 
