@@ -142,6 +142,10 @@ const (
 	DefaultGoVulnCheckVersion  = "latest"
 	DefaultMockgenVersion      = "v1.6.0"
 	DefaultSwagVersion         = "v1.16.2"
+
+	// Version constants for consistency
+	VersionLatest   = "latest"
+	VersionAtLatest = "@latest"
 )
 
 // Error messages

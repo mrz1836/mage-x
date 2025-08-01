@@ -169,7 +169,7 @@ func (Lint) Fumpt() error {
 		utils.Info("Installing gofumpt...")
 		version := config.Tools.Fumpt
 		if version == "" || version == DefaultGoVulnCheckVersion {
-			version = "@latest"
+			version = VersionAtLatest
 		} else if !strings.HasPrefix(version, "@") {
 			version = "@" + version
 		}

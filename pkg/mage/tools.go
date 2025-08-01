@@ -80,7 +80,7 @@ func (Tools) Update() error {
 
 		version := tool.Version
 		if version == DefaultGoVulnCheckVersion || version == "" {
-			version = "@latest"
+			version = VersionAtLatest
 		} else if !strings.HasPrefix(version, "@") {
 			version = "@" + version
 		}
@@ -181,8 +181,8 @@ func (Tools) VulnCheck() error {
 		utils.Info("Installing govulncheck...")
 
 		version := config.Tools.GoVulnCheck
-		if version == "" || version == "latest" {
-			version = "@latest"
+		if version == "" || version == VersionLatest {
+			version = VersionAtLatest
 		} else if !strings.HasPrefix(version, "@") {
 			version = "@" + version
 		}
@@ -250,7 +250,7 @@ func getRequiredTools(cfg *Config) []ToolDefinition {
 		// Parse module@version format
 		parts := strings.Split(module, "@")
 		modulePath := parts[0]
-		version := "latest"
+		version := VersionLatest
 		if len(parts) > 1 {
 			version = parts[1]
 		}
@@ -289,8 +289,8 @@ func installTool(tool ToolDefinition) error {
 	// Install via go install
 	if tool.Module != "" {
 		version := tool.Version
-		if version == "" || version == "latest" {
-			version = "@latest"
+		if version == "" || version == VersionLatest {
+			version = VersionAtLatest
 		} else if !strings.HasPrefix(version, "@") {
 			version = "@" + version
 		}
@@ -306,9 +306,8 @@ func installTool(tool ToolDefinition) error {
 
 // Check checks tool versions
 func (Tools) Check() error {
-	utils.Header("Checking Tool Versions")
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Checking tool versions")
+	// Delegate to Verify which does the actual checking
+	return Tools{}.Verify()
 }
 
 // Clean removes tool installations
