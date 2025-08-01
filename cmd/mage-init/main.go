@@ -382,16 +382,16 @@ TEMPLATES:
 
 EXAMPLES:
     # Initialize in current directory
-    mage-init -name myproject
+    mage-init -name my-project
 
     # Initialize with specific template
-    mage-init -name myproject -template advanced
+    mage-init -name my-project -template advanced
 
     # Initialize interactively
     mage-init -interactive
 
     # Initialize with custom module path
-    mage-init -name myproject -module github.com/user/myproject`)
+    mage-init -name my-project -module github.com/user/my-project`)
 }
 
 // listAvailableTemplates displays all available templates

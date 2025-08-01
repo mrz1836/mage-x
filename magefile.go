@@ -25,6 +25,7 @@ type (
 	Metrics = mage.Metrics
 	Version = mage.Version
 	Install = mage.Install
+	Audit   = mage.Audit
 )
 
 // Default target
@@ -374,4 +375,10 @@ func LintVet() error {
 func LintFumpt() error {
 	var l Lint
 	return l.Fumpt()
+}
+
+// AuditShow displays audit events with optional filtering
+func AuditShow() error {
+	var a Audit
+	return a.Show()
 }

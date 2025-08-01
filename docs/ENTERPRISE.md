@@ -132,7 +132,7 @@ mage auditRetention --days=90 --archive-after=30d
   "timestamp": "2024-01-01T12:00:00Z",
   "user": "john@company.com",
   "action": "build",
-  "target": "myproject",
+  "target": "my-project",
   "command": "mage build",
   "duration": 45.2,
   "status": "success",
@@ -982,7 +982,7 @@ err = mage.EnableAudit()
 err = mage.LogAuditEvent(mage.AuditEvent{
     User:     "john@company.com",
     Action:   "build",
-    Target:   "myproject",
+    Target:   "my-project",
     Status:   "success",
     Duration: 45.2,
     Metadata: map[string]interface{}{

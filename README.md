@@ -127,7 +127,7 @@ Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminate
 * **Interactive Wizards**: Guided setup for new projects, releases, and complex operations
 * **Recipe Library**: Common patterns and best practices built right in
 
-> **Tip:** Run `mage interactive` after installation to explore features with the guided wizard.
+> **Tip:** Run `mage -l` to see all available commands.
 
 <br/>
 
@@ -164,9 +164,6 @@ var Default = func() error {
 ### 3. Start Building
 
 ```bash
-# Interactive mode (recommended for first use)
-mage interactive
-
 # Or dive right in
 mage buildDefault   # Build your project
 mage testDefault    # Run tests with linting
@@ -176,14 +173,11 @@ mage releaseDefault # Create a release
 ### 4. Advanced Setup (Optional)
 
 ```bash
-# Interactive project initialization
-mage initCLI --name=myapp --module=github.com/user/myapp
-
 # Create configuration file
-mage yamlInit
+go mod download
 
-# Explore available recipes
-mage recipesList
+# Install dependencies
+mage depsDownload
 ```
 
 <br/>
@@ -227,18 +221,11 @@ Available enterprise-focused functionality:
 ```bash
 # Basic audit logging
 mage auditShow
-
-# Enterprise configuration
-mage configureEnterprise
-
-# Workflow management
-mage workflowShow
 ```
 
 **Currently Available:**
 - **Basic Audit Logging**: Track build and deployment activities
 - **Configuration Management**: Centralized project configuration
-- **Workflow Templates**: Basic workflow definitions and execution
 - **Integration Framework**: Foundation for external tool integration
 
 **Note:** Advanced enterprise features like comprehensive analytics, team management, and security scanning are under development. The current implementation provides a solid foundation with basic enterprise capabilities.
@@ -253,10 +240,10 @@ Create `.mage.yaml` in your project root:
 
 ```yaml
 project:
-  name: myproject
+  name: my-project
   binary: myapp
   version: v1.0.0
-  module: github.com/user/myproject
+  module: github.com/user/my-project
 
 build:
   output: bin
@@ -296,7 +283,7 @@ release:
     - edge
   github:
     owner: mrz
-    repo: myproject
+    repo: my-project
 ```
 
 ### Environment Variable Overrides
@@ -437,7 +424,6 @@ mage versionCheck       # Check version information
 ```bash
 # Release Operations
 mage releaseDefault     # Create a new release (default)
-mage releaseDefault     # Create default release
 ```
 
 #### 🎯 Default Targets
@@ -465,31 +451,9 @@ mage -h <command>
 mage -version
 ```
 
-### Recipe System
+### Available Commands
 
-MAGE-X includes a comprehensive recipe system for common development patterns:
-
-```bash
-# List all available recipes
-mage recipesList
-
-# Show recipe details
-mage recipesShow fresh-start
-
-# Run a recipe
-RECIPE=fresh-start mage recipesRun
-
-# Search for recipes
-TERM=docker mage recipesSearch
-```
-
-**Available Recipes:**
-- `fresh-start` - Clean project setup with best practices
-- `ci-setup` - GitHub Actions CI/CD configuration
-- `docker-setup` - Docker and containerization setup
-- `security-hardening` - Security best practices implementation
-- `performance-optimization` - Performance tuning and optimization
-- `documentation-boost` - Documentation generation and maintenance
+Use `mage -l` to see all available commands. The most commonly used commands are documented above in their respective sections.
 
 <br/>
 
@@ -513,10 +477,9 @@ mage testBench
 ### Example Projects
 
 - **[Basic Project](examples/basic)** - Minimal MAGE-X setup
-- **[CLI Application](examples/cli/)** - Command-line tool with sub-commands
-- **[Library](examples/library/)** - Reusable Go library
-- **[Web API](examples/webapi/)** - REST API with Docker
-- **[Microservice](examples/microservice/)** - Cloud-native microservice
+- **[Custom Tasks](examples/custom)** - Custom namespaces and deployment workflows
+- **[Provider Pattern](examples/provider-pattern)** - Cloud provider integration examples
+- **[Unit Testing](examples/testing)** - Testing with namespace interfaces and mocks
 
 <br/>
 
@@ -602,8 +565,8 @@ mage testDefault
 # Run linter
 mage lintDefault
 
-# Start interactive mode to explore features
-mage interactive
+# See all available commands
+mage -l
 ```
 
 [![Stars](https://img.shields.io/github/stars/mrz1836/mage-x?label=Please%20like%20us&style=social)](https://github.com/mrz1836/mage-x/stargazers)
