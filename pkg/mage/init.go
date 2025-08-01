@@ -196,7 +196,7 @@ func (Init) Upgrade() error {
 	}
 
 	utils.Success("✅ Project upgraded to MAGE-X!")
-	utils.Info("Run 'mage -l' to see available commands")
+	utils.Info("Run 'mage help' to see available commands with beautiful formatting")
 
 	return nil
 }
@@ -480,8 +480,8 @@ This project uses [MAGE-X](https://github.com/mrz1836/mage-x) for build automati
 # Install mage
 go install github.com/magefile/mage@latest
 
-# See available commands
-mage -l
+# See available commands (beautiful format)
+mage help
 
 # Run tests
 mage test
@@ -941,7 +941,7 @@ func showCompletionMessage(config *InitProjectConfig) {
 
 	fmt.Printf("\n🚀 Next Steps:\n")
 	fmt.Printf("  1. cd %s\n", config.Name)
-	fmt.Printf("  2. mage -l          # List available commands\n")
+	fmt.Printf("  2. mage help        # List available commands (beautiful format)\n")
 	fmt.Printf("  3. mage test        # Run tests\n")
 	fmt.Printf("  4. mage build       # Build project\n")
 

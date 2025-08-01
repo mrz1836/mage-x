@@ -330,9 +330,46 @@ func (Format) Yaml() error {
 	return formatter.YAML()
 }
 
+// formatJSONFile formats a single JSON file using prettier or python3
+func formatJSONFile(file string) bool {
+	utils.Info("Formatting %s", file)
+
+	// Use prettier if available, otherwise python
+	if utils.CommandExists("prettier") {
+		if err := GetRunner().RunCmd("prettier", "--write", file); err != nil {
+			utils.Warn("Failed to format %s with prettier: %v", file, err)
+			return false
+		}
+		return true
+	}
+
+	if utils.CommandExists("python3") {
+		// Read, format, and write back
+		if err := GetRunner().RunCmd("python3", "-m", "json.tool", file, file+".tmp"); err != nil {
+			utils.Warn("Failed to format %s: %v", file, err)
+			return false
+		}
+		// Move temp file to original
+		if err := os.Rename(file+".tmp", file); err != nil {
+			utils.Warn("Failed to replace %s: %v", file, err)
+			return false
+		}
+		return true
+	}
+
+	// This should not happen since we check availability upfront
+	return false
+}
+
 // JSON formats JSON files
 func (Format) JSON() error {
 	utils.Header("Formatting JSON Files")
+
+	// Check if formatter is available
+	if !utils.CommandExists("prettier") && !utils.CommandExists("python3") {
+		utils.Warn("No JSON formatter available, install prettier or python3")
+		return nil
+	}
 
 	// Find JSON files
 	jsonFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.json", "-not", "-path", "./vendor/*")
@@ -350,31 +387,7 @@ func (Format) JSON() error {
 	formatted := 0
 
 	for _, file := range files {
-		if file != "" {
-			utils.Info("Formatting %s", file)
-
-			// Use prettier if available, otherwise python
-			if utils.CommandExists("prettier") {
-				if err := GetRunner().RunCmd("prettier", "--write", file); err != nil {
-					utils.Warn("Failed to format %s with prettier: %v", file, err)
-					continue
-				}
-			} else if utils.CommandExists("python3") {
-				// Read, format, and write back
-				if err := GetRunner().RunCmd("python3", "-m", "json.tool", file, file+".tmp"); err != nil {
-					utils.Warn("Failed to format %s: %v", file, err)
-					continue
-				}
-				// Move temp file to original
-				if err := os.Rename(file+".tmp", file); err != nil {
-					utils.Warn("Failed to replace %s: %v", file, err)
-					continue
-				}
-			} else {
-				utils.Warn("No JSON formatter available, install prettier or python3")
-				break
-			}
-
+		if file != "" && formatJSONFile(file) {
 			formatted++
 		}
 	}

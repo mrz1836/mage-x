@@ -16,14 +16,13 @@ import (
 const (
 	version = "1.0.0"
 	banner  = `
-    __  __                   ___       _ __
-   / / / /___ _____ ____     /   |   __(_) /_
-  / /_/ / __ '/ __ '/ _ \   / /| |  / / / __/
- / __  / /_/ / /_/ /  __/  / ___ | / / / /_
-/_/ /_/\__,_/\__, /\___/  /_/  |_|/_/_/\__/
-            /____/
-
-Mage Project Initialization Tool v%s
+    __  __   ___   ___________      _  __
+   /  |/  /  / _ | / ___/ __/_____ | |/_/
+  / /|_/ /  / __ |/ (_ / _/ /___/ />  <  
+ /_/  /_/  /_/ |_|\___/___/     /_/|_|  
+                                        
+🪄 MAGE-X Project Initialization Tool v%s
+   Write Once, Mage Everywhere
 `
 )
 
@@ -578,7 +577,8 @@ mage clean
 To see all available mage targets:
 
 ` + "```bash" + `
-mage -l
+mage help  # Beautiful categorized list
+mage -l    # Plain text list
 ` + "```" + `
 
 To run a specific target:

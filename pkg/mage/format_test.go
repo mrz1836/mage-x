@@ -101,8 +101,17 @@ func (ts *FormatTestSuite) TestFormatInstallTools() {
 // TestFormatAll tests the All method
 func (ts *FormatTestSuite) TestFormatAll() {
 	ts.Run("successful all formatting", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting all files"}).Return(nil)
+		// Mock the Default() method commands: Gofmt, Fumpt, Imports
+		// Gofmt commands
+		ts.env.Runner.On("RunCmdOutput", "gofmt", []string{"-l", "."}).Return("", nil)
+
+		// Fumpt commands (ensureGofumpt + run gofumpt)
+		ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@latest"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "gofumpt", []string{"-w", "-extra", "."}).Return(nil)
+
+		// Imports commands (ensureGoimports + run goimports)
+		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -137,8 +146,10 @@ func (ts *FormatTestSuite) TestFormatGo() {
 // TestFormatYAML tests the YAML method
 func (ts *FormatTestSuite) TestFormatYAML() {
 	ts.Run("successful YAML formatting", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting YAML files"}).Return(nil)
+		// Mock finding YAML files
+		ts.env.Runner.On("RunCmdOutput", "find", []string{".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*"}).Return("config.yml\ndata.yaml", nil)
+		// Mock prettier formatting
+		ts.env.Runner.On("RunCmd", "prettier", []string{"--write", "**/*.{yml,yaml}"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -155,8 +166,10 @@ func (ts *FormatTestSuite) TestFormatYAML() {
 // TestFormatYaml tests the Yaml method (alias)
 func (ts *FormatTestSuite) TestFormatYaml() {
 	ts.Run("successful Yaml formatting (alias)", func() {
-		// Mock successful echo command (called through YAML method)
-		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting YAML files"}).Return(nil)
+		// Mock finding YAML files (called through YAML method)
+		ts.env.Runner.On("RunCmdOutput", "find", []string{".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*"}).Return("config.yml\ndata.yaml", nil)
+		// Mock prettier formatting
+		ts.env.Runner.On("RunCmd", "prettier", []string{"--write", "**/*.{yml,yaml}"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -173,8 +186,11 @@ func (ts *FormatTestSuite) TestFormatYaml() {
 // TestFormatJSON tests the JSON method
 func (ts *FormatTestSuite) TestFormatJSON() {
 	ts.Run("successful JSON formatting", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting JSON files"}).Return(nil)
+		// Mock finding JSON files
+		ts.env.Runner.On("RunCmdOutput", "find", []string{".", "-name", "*.json", "-not", "-path", "./vendor/*"}).Return("package.json\nconfig.json", nil)
+		// Mock python3 formatting for each file (fallback when prettier not available)
+		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "package.json", "package.json.tmp"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "config.json", "config.json.tmp"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -191,8 +207,11 @@ func (ts *FormatTestSuite) TestFormatJSON() {
 // TestFormatJson tests the Json method (alias)
 func (ts *FormatTestSuite) TestFormatJson() {
 	ts.Run("successful Json formatting (alias)", func() {
-		// Mock successful echo command (called through JSON method)
-		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting JSON files"}).Return(nil)
+		// Mock finding JSON files (called through JSON method)
+		ts.env.Runner.On("RunCmdOutput", "find", []string{".", "-name", "*.json", "-not", "-path", "./vendor/*"}).Return("package.json\nconfig.json", nil)
+		// Mock python3 formatting for each file (fallback when prettier not available)
+		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "package.json", "package.json.tmp"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "config.json", "config.json.tmp"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -209,8 +228,10 @@ func (ts *FormatTestSuite) TestFormatJson() {
 // TestFormatMarkdown tests the Markdown method
 func (ts *FormatTestSuite) TestFormatMarkdown() {
 	ts.Run("successful Markdown formatting", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting Markdown files"}).Return(nil)
+		// Mock finding Markdown files
+		ts.env.Runner.On("RunCmdOutput", "find", []string{".", "-name", "*.md", "-not", "-path", "./vendor/*"}).Return("README.md\nDOCS.md", nil)
+		// Mock prettier formatting
+		ts.env.Runner.On("RunCmd", "prettier", []string{"--write", "**/*.md"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -227,8 +248,10 @@ func (ts *FormatTestSuite) TestFormatMarkdown() {
 // TestFormatSQL tests the SQL method
 func (ts *FormatTestSuite) TestFormatSQL() {
 	ts.Run("successful SQL formatting", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting SQL files"}).Return(nil)
+		// Mock finding SQL files
+		ts.env.Runner.On("RunCmdOutput", "find", []string{".", "-name", "*.sql"}).Return("schema.sql\nqueries.sql", nil)
+		// Mock sqlfluff formatting
+		ts.env.Runner.On("RunCmd", "sqlfluff", []string{"format", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -245,8 +268,8 @@ func (ts *FormatTestSuite) TestFormatSQL() {
 // TestFormatDockerfile tests the Dockerfile method
 func (ts *FormatTestSuite) TestFormatDockerfile() {
 	ts.Run("successful Dockerfile formatting", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting Dockerfile"}).Return(nil)
+		// Mock dockerfile_lint command (if available)
+		ts.env.Runner.On("RunCmd", "dockerfile_lint", []string{"Dockerfile"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -263,8 +286,10 @@ func (ts *FormatTestSuite) TestFormatDockerfile() {
 // TestFormatShell tests the Shell method
 func (ts *FormatTestSuite) TestFormatShell() {
 	ts.Run("successful Shell formatting", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Formatting shell scripts"}).Return(nil)
+		// Mock finding shell script files
+		ts.env.Runner.On("RunCmdOutput", "find", []string{".", "-name", "*.sh", "-o", "-name", "*.bash"}).Return("script.sh\nbuild.bash", nil)
+		// Mock shfmt formatting
+		ts.env.Runner.On("RunCmd", "shfmt", []string{"-i", "2", "-w", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -281,8 +306,25 @@ func (ts *FormatTestSuite) TestFormatShell() {
 // TestFormatFix tests the Fix method
 func (ts *FormatTestSuite) TestFormatFix() {
 	ts.Run("successful formatting fix", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Fixing formatting issues"}).Return(nil)
+		// Mock all formatter commands called by Fix method
+		// Gofmt commands
+		ts.env.Runner.On("RunCmdOutput", "gofmt", []string{"-l", "."}).Return("", nil)
+
+		// Fumpt commands (ensureGofumpt + run gofumpt)
+		ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@latest"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "gofumpt", []string{"-w", "-extra", "."}).Return(nil)
+
+		// Imports commands (ensureGoimports + run goimports)
+		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(nil)
+
+		// JSON formatting commands
+		ts.env.Runner.On("RunCmdOutput", "find", []string{".", "-name", "*.json", "-not", "-path", "./vendor/*"}).Return("package.json", nil)
+		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "package.json", "package.json.tmp"}).Return(nil)
+
+		// YAML formatting commands
+		ts.env.Runner.On("RunCmdOutput", "find", []string{".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*"}).Return("config.yml", nil)
+		ts.env.Runner.On("RunCmd", "prettier", []string{"--write", "**/*.{yml,yaml}"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error

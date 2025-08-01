@@ -63,8 +63,8 @@ var Default = Test
 # Install mage
 go install github.com/magefile/mage@latest
 
-# List available tasks
-mage -l
+# List available tasks (beautiful format)
+mage help
 
 # Run tests
 mage test
@@ -202,7 +202,8 @@ mage versionShow    # Display version info
 
 For a complete list of available commands, run:
 ```bash
-mage -l
+mage help  # Beautiful categorized list with emojis
+mage -l    # Plain text list
 ```
 
 **Core Commands:**

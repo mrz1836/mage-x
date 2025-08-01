@@ -827,8 +827,8 @@ This project uses [MAGE-X](https://github.com/mrz1836/mage-x) for build automati
 # Install mage
 go install github.com/magefile/mage@latest
 
-# See available commands
-mage -l
+# See available commands (beautiful format)
+mage help
 
 # Build and test
 mage build

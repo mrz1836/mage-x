@@ -39,7 +39,7 @@ mage test
 echo "✅ Setup complete! You can now use MAGE-X."
 echo ""
 echo "Try these commands:"
-echo "  mage -l          # List all available tasks"
+echo "  mage help        # List all available tasks (beautiful format)"
 echo "  mage build       # Build the project"
 echo "  mage test        # Run tests"
 echo "  mage lint        # Run linter"

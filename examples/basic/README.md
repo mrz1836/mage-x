@@ -13,8 +13,8 @@ go get github.com/mrz1836/mage-x
 
 3. Run tasks:
 ```bash
-# List all available tasks
-mage -l
+# List all available tasks (beautiful format)
+mage help
 
 # Build (default)
 mage

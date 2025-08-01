@@ -155,8 +155,8 @@ tools:
 ## Try It Out
 
 ```bash
-# See all available tasks
-mage -l
+# See all available tasks (beautiful format)
+mage help
 
 # Run setup
 mage setup

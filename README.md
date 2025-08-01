@@ -127,7 +127,7 @@ Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminate
 * **Guided Setup**: Project initialization and configuration management
 * **Recipe Library**: Common patterns and best practices built right in
 
-> **Tip:** Run `mage -l` to see all available commands.
+> **Tip:** Run `mage help` to see all available commands with beautiful formatting (or `mage -l` for plain list).
 
 <br/>
 
@@ -450,7 +450,10 @@ mage lintDefault        # Run linter
 Discover available commands using these built-in help features:
 
 ```bash
-# List all available targets
+# Beautiful command listing with categories and emojis
+mage help
+
+# Plain list of all available targets
 mage -l
 
 # Get help for a specific command (if available)
@@ -462,7 +465,7 @@ mage -version
 
 ### Available Commands
 
-Use `mage -l` to see all available commands. The most commonly used commands are documented above in their respective sections.
+Use `mage help` to see all available commands with beautiful formatting, or `mage -l` for a plain list. The most commonly used commands are documented above in their respective sections.
 
 <br/>
 
@@ -574,8 +577,8 @@ mage testDefault
 # Run linter
 mage lintDefault
 
-# See all available commands
-mage -l
+# See all available commands (beautiful format)
+mage help
 ```
 
 [![Stars](https://img.shields.io/github/stars/mrz1836/mage-x?label=Please%20like%20us&style=social)](https://github.com/mrz1836/mage-x/stargazers)

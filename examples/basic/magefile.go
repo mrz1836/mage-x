@@ -20,7 +20,7 @@ func Default() error {
 // This is the simplest possible magefile.go
 // It imports all tasks from MAGE-X and sets Build as the default
 
-// Run "mage -l" to see all available tasks:
+// Run "mage help" to see all available tasks with beautiful formatting:
 // - build, build:all, build:linux, build:darwin, build:windows, etc.
 // - test, test:unit, test:race, test:cover, etc.
 // - lint, lint:fix, lint:fmt, etc.

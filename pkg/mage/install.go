@@ -426,7 +426,7 @@ if command -v golangci-lint >/dev/null 2>&1; then
 fi
 `
 
-	if err := os.WriteFile(preCommitPath, []byte(preCommitContent), 0o755); err != nil {
+	if err := os.WriteFile(preCommitPath, []byte(preCommitContent), 0o700); err != nil { //nolint:gosec // Git hooks need to be executable
 		return fmt.Errorf("failed to write pre-commit hook: %w", err)
 	}
 

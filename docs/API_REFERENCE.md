@@ -547,7 +547,8 @@ The following mage targets are available through the exposed wrapper functions i
 
 | Command | Description |
 |---------|-------------|
-| `mage -l` | List all available targets |
+| `mage help` | List all available targets with beautiful formatting |
+| `mage -l` | List all available targets (plain text) |
 | `mage -h <target>` | Get help for specific target (if available) |
 | `mage -version` | Show mage version |
 
