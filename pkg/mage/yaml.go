@@ -2,12 +2,22 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errMageYamlExists            = errors.New("mage.yaml already exists")
+	errProjectNameRequired       = errors.New("project.name is required")
+	errProjectModuleRequired     = errors.New("project.module is required")
+	errBuildOutputRequired       = errors.New("build.output_dir is required")
+	errYamlInvalidPlatformFormat = errors.New("invalid platform format")
 )
 
 // Yaml namespace for mage.yaml configuration management
@@ -139,7 +149,7 @@ func (Yaml) Init() error {
 
 	// Check if mage.yaml already exists
 	if utils.FileExists("mage.yaml") {
-		return fmt.Errorf("mage.yaml already exists")
+		return errMageYamlExists
 	}
 
 	// Create default configuration
@@ -498,22 +508,22 @@ func writeConfig(config *YamlConfig, filename string) error {
 // validateConfig validates the configuration
 func validateConfig(config *YamlConfig) error {
 	if config.Project.Name == "" {
-		return fmt.Errorf("project.name is required")
+		return errProjectNameRequired
 	}
 
 	if config.Project.Module == "" {
-		return fmt.Errorf("project.module is required")
+		return errProjectModuleRequired
 	}
 
 	if config.Build.OutputDir == "" {
-		return fmt.Errorf("build.output_dir is required")
+		return errBuildOutputRequired
 	}
 
 	// Validate platforms
 	for _, platform := range config.Build.Platforms {
 		parts := strings.Split(platform, "/")
 		if len(parts) != 2 {
-			return fmt.Errorf("invalid platform format: %s", platform)
+			return fmt.Errorf("%w: %s", errYamlInvalidPlatformFormat, platform)
 		}
 	}
 

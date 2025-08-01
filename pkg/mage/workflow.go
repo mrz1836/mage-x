@@ -20,9 +20,16 @@ import (
 
 // Static errors to satisfy err113 linter
 var (
-	errWorkflowEnvRequired      = errors.New("WORKFLOW environment variable is required")
-	errWorkflowNameEnvRequired  = errors.New("WORKFLOW_NAME environment variable is required")
-	errUnknownScheduleOperation = errors.New("unknown schedule operation")
+	errWorkflowEnvRequired       = errors.New("WORKFLOW environment variable is required")
+	errWorkflowNameEnvRequired   = errors.New("WORKFLOW_NAME environment variable is required")
+	errUnknownScheduleOperation  = errors.New("unknown schedule operation")
+	errUnknownTemplateOperation  = errors.New("unknown template operation")
+	errWorkflowNotFound          = errors.New("workflow not found")
+	errUnsupportedStepType       = errors.New("unsupported step type")
+	errExecutionNotFound         = errors.New("execution not found")
+	errWorkflowsFailedValidation = errors.New("workflows failed validation")
+	errWorkflowInvalid           = errors.New("workflow is invalid")
+	errWorkflowStepFailed        = errors.New("workflow step failed")
 )
 
 // Workflow namespace for enterprise workflow operations
@@ -208,7 +215,7 @@ func (Workflow) Template() error {
 	case "delete":
 		return deleteWorkflowTemplate()
 	default:
-		return fmt.Errorf("unknown template operation: %s", operation)
+		return fmt.Errorf("%w: %s", errUnknownTemplateOperation, operation)
 	}
 }
 
@@ -373,7 +380,7 @@ func loadWorkflowDefinition(name string) (WorkflowDefinition, error) {
 	workflowPath := getWorkflowPath(name)
 
 	if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
-		return WorkflowDefinition{}, fmt.Errorf("workflow '%s' not found", name)
+		return WorkflowDefinition{}, fmt.Errorf("%w: %s", errWorkflowNotFound, name)
 	}
 
 	fileOps := fileops.New()
@@ -426,7 +433,7 @@ func executeWorkflowSteps(execution *WorkflowExecution) error {
 				}
 
 				if result.Status == "failed" && !workflowStep.ContinueOnError {
-					errors[stepIndex] = fmt.Errorf("step '%s' failed: %s", workflowStep.Name, result.Error)
+					errors[stepIndex] = fmt.Errorf("%w: step '%s' failed: %s", errWorkflowStepFailed, workflowStep.Name, result.Error)
 				}
 			}(i, group[i])
 		}
@@ -516,7 +523,7 @@ func executeStepCommand(ctx context.Context, step *WorkflowStep, execContext Exe
 	case "notification":
 		return executeNotificationCommand(ctx, step, execContext)
 	default:
-		return "", fmt.Errorf("unsupported step type: %s", step.Type)
+		return "", fmt.Errorf("%w: %s", errUnsupportedStepType, step.Type)
 	}
 }
 
@@ -814,7 +821,7 @@ func showExecutionStatus(executionID string) error {
 	executionPath := filepath.Join(getExecutionsDirectory(), fmt.Sprintf("%s.json", executionID))
 
 	if _, err := os.Stat(executionPath); os.IsNotExist(err) {
-		return fmt.Errorf("execution '%s' not found", executionID)
+		return fmt.Errorf("%w: %s", errExecutionNotFound, executionID)
 	}
 
 	fileOps := fileops.New()
@@ -887,7 +894,7 @@ func validateAllWorkflows() error {
 	utils.Info("📊 Validation Summary: %d valid, %d invalid", valid, invalid)
 
 	if invalid > 0 {
-		return fmt.Errorf("%d workflows failed validation", invalid)
+		return fmt.Errorf("%w: %d", errWorkflowsFailedValidation, invalid)
 	}
 
 	return nil
@@ -904,7 +911,7 @@ func validateWorkflow(name string) error {
 		return nil
 	}
 
-	return fmt.Errorf("workflow '%s' is invalid", name)
+	return fmt.Errorf("%w: %s", errWorkflowInvalid, name)
 }
 
 func validateWorkflowDefinition(workflow *WorkflowDefinition) bool {

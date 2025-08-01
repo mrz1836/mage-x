@@ -9,6 +9,13 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// Static test errors to satisfy err113 linter
+var (
+	errListFailed          = errors.New("list failed")
+	errTidyFailed          = errors.New("tidy failed")
+	errOutdatedCheckFailed = errors.New("outdated check failed")
+)
+
 // DepsTestSuite defines the test suite for deps functions
 type DepsTestSuite struct {
 	suite.Suite
@@ -144,7 +151,7 @@ func (ts *DepsTestSuite) TestDeps_Update() {
 // TestDeps_Update_ListError tests Update function with list error
 func (ts *DepsTestSuite) TestDeps_Update_ListError() {
 	expectedError := require.New(ts.T())
-	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", errors.New("list failed"))
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", errListFailed)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error {
@@ -166,7 +173,7 @@ func (ts *DepsTestSuite) TestDeps_Update_TidyError() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/stretchr/testify", nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.0 v1.9.0", nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(errors.New("tidy failed"))
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(errTidyFailed)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error {
@@ -359,7 +366,7 @@ func (ts *DepsTestSuite) TestDeps_Outdated_WithUpdates() {
 // TestDeps_Outdated_Error tests Outdated function with error
 func (ts *DepsTestSuite) TestDeps_Outdated_Error() {
 	expectedError := require.New(ts.T())
-	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} -> {{.Update.Version}}{{end}}", "all"}).Return("", errors.New("outdated check failed"))
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-u", "-f", "{{if and (not .Indirect) .Update}}{{.Path}} {{.Version}} -> {{.Update.Version}}{{end}}", "all"}).Return("", errOutdatedCheckFailed)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error {

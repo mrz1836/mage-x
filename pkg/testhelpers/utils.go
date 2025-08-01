@@ -3,6 +3,7 @@ package testhelpers
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errSimple     = errors.New("simple error")
+	errWithFormat = errors.New("error with formatting")
+	errInner      = errors.New("inner error")
 )
 
 // RunCommand runs a command and returns output
@@ -413,9 +421,9 @@ func (dp *DataProvider) Bools() []bool {
 func (dp *DataProvider) Errors() []error {
 	return []error{
 		nil,
-		fmt.Errorf("simple error"),
-		fmt.Errorf("error with %s", "formatting"),
-		fmt.Errorf("wrapped: %w", fmt.Errorf("inner error")),
+		errSimple,
+		errWithFormat,
+		fmt.Errorf("wrapped: %w", errInner),
 	}
 }
 

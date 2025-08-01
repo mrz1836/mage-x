@@ -240,7 +240,7 @@ func TestSanitizeTransformer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := fmt.Errorf("%s", tt.input)
+			err := fmt.Errorf("%w: %s", errTestGeneric, tt.input)
 			sanitized := SanitizeTransformer(err)
 			assert.Contains(t, sanitized.Error(), tt.expected)
 		})
@@ -356,7 +356,7 @@ func TestRetryableTransformer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := fmt.Errorf("%s", tt.error)
+			err := fmt.Errorf("%w: %s", errTestGeneric, tt.error)
 			transformed := retryable(err)
 
 			// For standard errors, it should return unchanged
@@ -446,7 +446,7 @@ func TestNewChainTransformer(t *testing.T) {
 		if err == nil {
 			return nil
 		}
-		return fmt.Errorf("%s", err.Error())
+		return fmt.Errorf("%w", err)
 	}
 
 	chain := NewChainTransformer(prefixTransformer, suffixTransformer, upperTransformer)

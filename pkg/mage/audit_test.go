@@ -11,6 +11,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// Static test errors to satisfy err113 linter
+var (
+	errCommandFailed = errors.New("command failed")
+)
+
 // AuditTestSuite defines the test suite for Audit functions
 type AuditTestSuite struct {
 	suite.Suite
@@ -455,7 +460,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			defer env.Cleanup()
 
 			// Mock failed go version command
-			env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("", errors.New("command failed"))
+			env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("", errCommandFailed)
 
 			version := ""
 			err := env.WithMockRunner(

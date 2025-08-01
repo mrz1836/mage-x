@@ -3,6 +3,7 @@ package mage
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -12,6 +13,17 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errConfigRejected        = errors.New("configuration rejected by user")
+	errValueEmpty            = errors.New("value cannot be empty")
+	errDomainEmpty           = errors.New("domain cannot be empty")
+	errInvalidDomainFormat   = errors.New("invalid domain format")
+	errDurationEmpty         = errors.New("duration cannot be empty")
+	errInvalidDurationFormat = errors.New("invalid duration format (e.g., 30m, 1h, 2h30m)")
+	errWizardCanceled        = errors.New("wizard canceled by user")
 )
 
 const (
@@ -162,7 +174,7 @@ func (w *EnterpriseWizard) Run() error {
 			}
 
 			if !w.askToContinue() {
-				return fmt.Errorf("wizard canceled by user")
+				return errWizardCanceled
 			}
 		} else {
 			utils.Success("✅ %s completed", step.GetName())
@@ -1558,7 +1570,7 @@ func (s *SummaryStep) Execute(ctx *WizardContext) error {
 	input := strings.ToLower(strings.TrimSpace(ctx.Scanner.Text()))
 
 	if input != "y" && input != "yes" {
-		return fmt.Errorf("configuration rejected by user")
+		return errConfigRejected
 	}
 
 	return nil
@@ -1811,20 +1823,20 @@ func (w *DeploymentWizard) GetDescription() string {
 
 func validateNonEmpty(value string) error {
 	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("value cannot be empty")
+		return errValueEmpty
 	}
 	return nil
 }
 
 func validateDomain(value string) error {
 	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("domain cannot be empty")
+		return errDomainEmpty
 	}
 
 	// Simple domain validation
 	domainRegex := regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$`)
 	if !domainRegex.MatchString(value) {
-		return fmt.Errorf("invalid domain format")
+		return errInvalidDomainFormat
 	}
 
 	return nil
@@ -1849,12 +1861,12 @@ func validateTimezone(value string) error {
 
 func validateDuration(value string) error {
 	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("duration cannot be empty")
+		return errDurationEmpty
 	}
 
 	_, err := time.ParseDuration(value)
 	if err != nil {
-		return fmt.Errorf("invalid duration format (e.g., 30m, 1h, 2h30m)")
+		return errInvalidDurationFormat
 	}
 
 	return nil

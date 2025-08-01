@@ -12,6 +12,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Static test errors to satisfy err113 linter
+var (
+	errTestError   = errors.New("error")
+	errNotYet      = errors.New("not yet")
+	errAlwaysFails = errors.New("always fails")
+	errError2      = errors.New("error2")
+)
+
 func TestRunCommand(t *testing.T) {
 	t.Run("successful command", func(t *testing.T) {
 		output, err := RunCommand(t, "echo", "hello world")
@@ -154,7 +162,7 @@ func TestAssertNotNil(t *testing.T) {
 	t.Run("non-nil value", func(t *testing.T) {
 		// This should pass without error
 		AssertNotNil(t, "not nil")
-		AssertNotNil(t, errors.New("error"))
+		AssertNotNil(t, errTestError)
 	})
 }
 
@@ -219,7 +227,7 @@ func TestRetry(t *testing.T) {
 		err := Retry(t, func() error {
 			attempts++
 			if attempts < 3 {
-				return errors.New("not yet")
+				return errNotYet
 			}
 			return nil
 		}, 5, 10*time.Millisecond)
@@ -232,7 +240,7 @@ func TestRetry(t *testing.T) {
 		attempts := 0
 		err := Retry(t, func() error {
 			attempts++
-			return errors.New("always fails")
+			return errAlwaysFails
 		}, 3, 10*time.Millisecond)
 
 		require.Error(t, err)
@@ -463,7 +471,7 @@ func TestRunTestCases(t *testing.T) {
 
 	cases := []TestCase{
 		{Name: "case1", Input: "input1", Want: "want1"},
-		{Name: "case2", Input: "input2", Want: "want2", Error: errors.New("error2")},
+		{Name: "case2", Input: "input2", Want: "want2", Error: errError2},
 		{Name: "case3", Input: 42, Want: 84},
 	}
 

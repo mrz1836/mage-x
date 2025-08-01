@@ -10,6 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Static test errors to satisfy err113 linter
+var (
+	errNotGitRepo      = errors.New("not a git repo")
+	errBuildFailed     = errors.New("build failed")
+	errLintFailed      = errors.New("lint failed")
+	errTestsFailed     = errors.New("tests failed")
+	errLintErrorsFound = errors.New("lint errors found")
+)
+
 // MockCommandRunner for testing
 type MockCommandRunner struct {
 	mock.Mock
@@ -66,11 +75,11 @@ func TestBuildNamespace_Default(t *testing.T) {
 			name: "build failure",
 			setupMock: func(m *MockCommandRunner) {
 				// Mock version detection
-				m.On("RunCmdOutput", "git", "describe", "--tags", "--abbrev=0").Return("", errors.New("not a git repo")).Maybe()
+				m.On("RunCmdOutput", "git", "describe", "--tags", "--abbrev=0").Return("", errNotGitRepo).Maybe()
 				// Mock commit hash detection
-				m.On("RunCmdOutput", "git", "rev-parse", "--short", "HEAD").Return("", errors.New("not a git repo")).Maybe()
+				m.On("RunCmdOutput", "git", "rev-parse", "--short", "HEAD").Return("", errNotGitRepo).Maybe()
 				// Mock build failure (with variable number of args)
-				m.On("RunCmd", "go", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(errors.New("build failed")).Maybe()
+				m.On("RunCmd", "go", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(errBuildFailed).Maybe()
 			},
 			wantErr: true,
 		},
@@ -118,7 +127,7 @@ func TestTestNamespace_Default(t *testing.T) {
 		{
 			name: "lint failure",
 			setupMock: func(m *MockCommandRunner) {
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("lint failed")).Maybe()
+				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errLintFailed).Maybe()
 			},
 			wantErr: true,
 		},
@@ -126,7 +135,7 @@ func TestTestNamespace_Default(t *testing.T) {
 			name: "test failure",
 			setupMock: func(m *MockCommandRunner) {
 				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "go" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("tests failed")).Maybe()
+				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "go" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errTestsFailed).Maybe()
 			},
 			wantErr: true,
 		},
@@ -178,7 +187,7 @@ func TestLintNamespace_Default(t *testing.T) {
 		{
 			name: "lint with errors",
 			setupMock: func(m *MockCommandRunner) {
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("lint errors found")).Maybe()
+				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errLintErrorsFound).Maybe()
 			},
 			wantErr: true,
 		},

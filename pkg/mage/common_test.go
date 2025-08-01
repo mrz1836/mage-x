@@ -1,7 +1,7 @@
 package mage
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,6 +10,11 @@ import (
 
 	"github.com/mrz1836/go-mage/pkg/mage/testutil"
 	"github.com/stretchr/testify/suite"
+)
+
+// Static test errors to satisfy err113 linter
+var (
+	errNotGitRepository = errors.New("not a git repository")
 )
 
 // CommonTestSuite defines the test suite for common functions
@@ -56,7 +61,7 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		defer env.Cleanup()
 
 		// Mock git command to fail
-		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", fmt.Errorf("not a git repository"))
+		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", errNotGitRepository)
 
 		// Create VERSION file
 		versionPath := filepath.Join(env.TempDir, "VERSION")
@@ -95,7 +100,7 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		defer env.Cleanup()
 
 		// Mock git and file system to fail
-		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", fmt.Errorf("not a git repository"))
+		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", errNotGitRepository)
 
 		// Set global config for test
 		TestResetConfig()
@@ -126,7 +131,7 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		defer env.Cleanup()
 
 		// Mock git to fail
-		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", fmt.Errorf("not a git repository"))
+		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", errNotGitRepository)
 
 		// Reset config for test
 		TestResetConfig()

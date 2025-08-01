@@ -8,6 +8,13 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// Static test errors to satisfy err113 linter
+var (
+	errMinimalCommandFailed       = errors.New("command failed")
+	errMinimalCommandOutputFailed = errors.New("command output failed")
+	errMinimalExecutionFailed     = errors.New("execution failed")
+)
+
 // MinimalRunnerTestSuite defines the test suite for minimal runner functions
 type MinimalRunnerTestSuite struct {
 	suite.Suite
@@ -58,7 +65,7 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmd() {
 	})
 
 	ts.Run("command execution failure", func() {
-		expectedError := errors.New("command failed")
+		expectedError := errMinimalCommandFailed
 		ts.env.Runner.On("RunCmd", "false", []string(nil)).Return(expectedError)
 
 		err := ts.env.WithMockRunner(
@@ -151,7 +158,7 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmdOutput() {
 	})
 
 	ts.Run("command output failure", func() {
-		expectedError := errors.New("command output failed")
+		expectedError := errMinimalCommandOutputFailed
 		ts.env.Runner.On("RunCmdOutput", "false", []string(nil)).Return("", expectedError)
 
 		var output string
@@ -425,7 +432,7 @@ func (ts *MinimalRunnerTestSuite) TestMinimalRunnerIntegration() {
 	})
 
 	ts.Run("error handling chain", func() {
-		ts.env.Runner.On("RunCmd", "failing-command", []string(nil)).Return(errors.New("execution failed"))
+		ts.env.Runner.On("RunCmd", "failing-command", []string(nil)).Return(errMinimalExecutionFailed)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error

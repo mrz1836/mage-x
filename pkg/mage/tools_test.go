@@ -11,6 +11,12 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// Static test errors to satisfy err113 linter
+var (
+	errToolsInstallFailed = errors.New("install failed")
+	errVulnerabilityFound = errors.New("vulnerability found")
+)
+
 // ToolsTestSuite defines the test suite for tools functions
 type ToolsTestSuite struct {
 	suite.Suite
@@ -243,7 +249,7 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallError() {
 		ts.T().Fatalf("Failed to set PATH: %v", err)
 	}
 
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(errors.New("install failed"))
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(errToolsInstallFailed)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -263,7 +269,7 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_CheckError() {
 	ts.setupConfig()
 	// Expect installation first, then failure on check
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(errors.New("vulnerability found"))
+	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(errVulnerabilityFound)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -469,7 +475,7 @@ func (ts *ToolsTestSuite) TestInstallTool_InstallError() {
 		Check:  "mockgen",
 	}
 
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "go.uber.org/mock/mockgen@latest"}).Return(errors.New("install failed"))
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "go.uber.org/mock/mockgen@latest"}).Return(errToolsInstallFailed)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error

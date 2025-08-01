@@ -22,7 +22,9 @@ import (
 
 // Static errors to satisfy err113 linter
 var (
-	errNoReleasesFound = errors.New("no releases found")
+	errNoReleasesFound       = errors.New("no releases found")
+	errUpdateVersionRequired = errors.New("VERSION environment variable is required")
+	errNoBetaReleasesFound   = errors.New("no beta releases found")
 )
 
 // Update namespace for auto-update functionality
@@ -219,7 +221,7 @@ func (Update) Rollback() error {
 
 	version := utils.GetEnv("VERSION", "")
 	if version == "" {
-		return fmt.Errorf("VERSION environment variable is required")
+		return errUpdateVersionRequired
 	}
 
 	utils.Info("Rolling back to version %s", version)
@@ -272,7 +274,7 @@ func checkForUpdates(channel UpdateChannel) (*UpdateInfo, error) {
 	// Parse module to get owner/repo
 	parts := strings.Split(module, "/")
 	if len(parts) < 3 {
-		return nil, fmt.Errorf("cannot parse GitHub info from module: %s", module)
+		return nil, fmt.Errorf("%w: %s", errCannotParseGitHubInfo, module)
 	}
 
 	owner := parts[1]
@@ -344,7 +346,7 @@ func getLatestStableRelease(owner, repo string) (*GitHubRelease, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to read error response: %w", err)
 		}
-		return nil, fmt.Errorf("GitHub API error: %s", body)
+		return nil, fmt.Errorf("%w: %s", errGitHubAPIError, body)
 	}
 
 	var release GitHubRelease
@@ -381,7 +383,7 @@ func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to read error response: %w", err)
 		}
-		return nil, fmt.Errorf("GitHub API error: %s", body)
+		return nil, fmt.Errorf("%w: %s", errGitHubAPIError, body)
 	}
 
 	var releases []GitHubRelease
@@ -396,7 +398,7 @@ func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("no beta releases found")
+	return nil, errNoBetaReleasesFound
 }
 
 // getLatestEdgeRelease gets the latest edge release (any release including pre-release)
@@ -425,7 +427,7 @@ func getLatestEdgeRelease(owner, repo string) (*GitHubRelease, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to read error response: %w", err)
 		}
-		return nil, fmt.Errorf("GitHub API error: %s", body)
+		return nil, fmt.Errorf("%w: %s", errGitHubAPIError, body)
 	}
 
 	var releases []GitHubRelease

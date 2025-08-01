@@ -11,6 +11,12 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// Static test errors to satisfy err113 linter
+var (
+	errBuildError = errors.New("build error")
+	errGitError   = errors.New("git error")
+)
+
 // BuildTestSuite defines the test suite for Build namespace methods
 type BuildTestSuite struct {
 	suite.Suite
@@ -132,7 +138,7 @@ func main() {
 				}
 			}
 			return false
-		})).Return(errors.New("build error"))
+		})).Return(errBuildError)
 
 		err := env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -555,7 +561,7 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		// Mock git command to return error
 		originalRunner := GetRunner()
 		mockRunner := &testutil.MockRunner{}
-		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("", errors.New("git error"))
+		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("", errGitError)
 		ts.Require().NoError(SetRunner(mockRunner))
 
 		commit := getCommit()
