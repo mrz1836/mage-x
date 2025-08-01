@@ -58,7 +58,7 @@ examples/
 //go:build mage
 package main
 
-import "github.com/mrz1836/go-mage/pkg/mage"
+import "github.com/mrz1836/mage-x/pkg/mage"
 
 func Build() error {
     build := mage.NewBuildNamespace()
@@ -79,7 +79,7 @@ package main
 
 import (
     "fmt"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 func CI() error {
@@ -111,7 +111,7 @@ package main
 import (
     "fmt"
     "time"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 type LoggingBuild struct {

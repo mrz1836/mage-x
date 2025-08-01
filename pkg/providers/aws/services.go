@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/providers"
+	"github.com/mrz1836/mage-x/pkg/providers"
 )
 
 // securityService implements AWS IAM/Security operations

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/magefile/mage/mg"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Static errors to satisfy err113 linter

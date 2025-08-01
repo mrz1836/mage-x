@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"gopkg.in/yaml.v3"
 )
 

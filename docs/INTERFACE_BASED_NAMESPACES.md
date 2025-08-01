@@ -59,7 +59,7 @@ Existing magefiles continue to work without modification:
 package main
 
 import (
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Build namespace
@@ -77,7 +77,7 @@ type Test mage.Test
 package main
 
 import (
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Use the interface-based implementation
@@ -104,10 +104,10 @@ package main
 
 import (
     "time"
-    "github.com/mrz1836/go-mage/pkg/mage"
-    "github.com/mrz1836/go-mage/pkg/common/config"
-    "github.com/mrz1836/go-mage/pkg/common/env"
-    "github.com/mrz1836/go-mage/pkg/common/fileops"
+    "github.com/mrz1836/mage-x/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/common/config"
+    "github.com/mrz1836/mage-x/pkg/common/env"
+    "github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // customBuildImpl adds caching and notifications
@@ -171,10 +171,10 @@ package main
 
 import (
     "testing"
-    "github.com/mrz1836/go-mage/pkg/mage"
-    "github.com/mrz1836/go-mage/pkg/common/config"
-    "github.com/mrz1836/go-mage/pkg/common/env"
-    "github.com/mrz1836/go-mage/pkg/common/fileops"
+    "github.com/mrz1836/mage-x/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/common/config"
+    "github.com/mrz1836/mage-x/pkg/common/env"
+    "github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 func TestBuildDefault(t *testing.T) {
@@ -365,14 +365,14 @@ type MageError interface {
 ### Step 1: Update Imports
 ```go
 // Old
-import "github.com/mrz1836/go-mage/pkg/utils"
+import "github.com/mrz1836/mage-x/pkg/utils"
 
 // New - also import common packages
 import (
-    "github.com/mrz1836/go-mage/pkg/utils"
-    "github.com/mrz1836/go-mage/pkg/common/config"
-    "github.com/mrz1836/go-mage/pkg/common/env"
-    "github.com/mrz1836/go-mage/pkg/common/errors"
+    "github.com/mrz1836/mage-x/pkg/utils"
+    "github.com/mrz1836/mage-x/pkg/common/config"
+    "github.com/mrz1836/mage-x/pkg/common/env"
+    "github.com/mrz1836/mage-x/pkg/common/errors"
 )
 ```
 

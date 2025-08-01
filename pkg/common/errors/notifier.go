@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Static errors to comply with err113 linter

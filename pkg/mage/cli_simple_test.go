@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -531,7 +531,7 @@ func (ts *CLISimpleTestSuite) TestCLIBasicMethods() {
 
 	ts.Run("Update method", func() {
 		// Mock update operations
-		ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/mrz1836/go-mage"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/mrz1836/mage-x"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {

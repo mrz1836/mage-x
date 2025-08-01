@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // DefaultPathBuilder implements PathBuilder using standard library

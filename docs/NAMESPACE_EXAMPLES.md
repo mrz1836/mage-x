@@ -23,7 +23,7 @@ package main
 
 import (
     "fmt"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Build compiles the application
@@ -61,7 +61,7 @@ package main
 
 import (
     "fmt"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // BuildAll builds for all supported platforms
@@ -115,7 +115,7 @@ package main
 
 import (
     "fmt"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // CI runs the complete CI pipeline
@@ -175,7 +175,7 @@ package main
 import (
     "fmt"
     "log"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Pipeline represents a build pipeline
@@ -256,7 +256,7 @@ package main
 import (
     "fmt"
     "os"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // setupNamespaces configures namespaces based on environment
@@ -375,7 +375,7 @@ import (
     "fmt"
     "log"
     "time"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // LoggingBuild wraps any BuildNamespace with logging
@@ -448,7 +448,7 @@ import (
     "fmt"
     "os"
     "time"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // BuildMetrics tracks build performance
@@ -538,7 +538,7 @@ package main
 
 import (
     "testing"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // MockBuild for testing
@@ -630,8 +630,8 @@ package main
 
 import (
     "testing"
-    "github.com/mrz1836/go-mage/pkg/mage"
-    "github.com/mrz1836/go-mage/pkg/testhelpers"
+    "github.com/mrz1836/mage-x/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 func TestBuildIntegration(t *testing.T) {
@@ -709,7 +709,7 @@ package main
 import (
     "fmt"
     "path/filepath"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Microservice represents a single service
@@ -840,7 +840,7 @@ import (
     "os"
     "path/filepath"
     "strings"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Package represents a Go package in the monorepo
@@ -976,7 +976,7 @@ func TestAffected() error {
 package main
 
 import (
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Old style functions (keep existing)
@@ -1039,7 +1039,7 @@ package main
 
 import (
     "os"
-    "github.com/mrz1836/go-mage/pkg/mage"
+    "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Global registry for consistent namespace access

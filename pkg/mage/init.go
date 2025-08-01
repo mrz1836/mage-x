@@ -11,8 +11,8 @@ import (
 	"text/template"
 
 	"github.com/magefile/mage/mg"
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Static errors for init operations
@@ -427,7 +427,7 @@ go %s
 
 require (
 	github.com/magefile/mage v1.15.0
-	github.com/mrz1836/go-mage v1.0.0
+	github.com/mrz1836/mage-x v1.0.0
 )
 `, config.Module, strings.TrimPrefix(config.GoVersion, "go"))
 
@@ -474,7 +474,7 @@ go install {{.Module}}@latest
 
 ## Development
 
-This project uses [MAGE-X](https://github.com/mrz1836/go-mage) for build automation.
+This project uses [MAGE-X](https://github.com/mrz1836/mage-x) for build automation.
 
 ` + "```bash" + `
 # Install mage
@@ -618,7 +618,7 @@ func addMageFiles() error {
 package main
 
 import (
-	"github.com/mrz1836/go-mage/pkg/mage"
+	"github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Build builds the application
@@ -922,7 +922,7 @@ func updateGoMod() error {
 	}
 
 	// Add mage-tools dependency
-	if err := GetRunner().RunCmd("go", "get", "github.com/mrz1836/go-mage@latest"); err != nil {
+	if err := GetRunner().RunCmd("go", "get", "github.com/mrz1836/mage-x@latest"); err != nil {
 		return err
 	}
 

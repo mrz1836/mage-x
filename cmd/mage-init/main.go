@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mrz1836/go-mage/pkg/common/config"
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/common/config"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 const (

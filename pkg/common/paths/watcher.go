@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Error definitions for watcher operations

@@ -10,8 +10,8 @@ import (
 	"text/template"
 
 	"github.com/magefile/mage/mg"
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Static errors for recipe operations
@@ -821,7 +821,7 @@ go install %s@latest
 
 ## Development
 
-This project uses [MAGE-X](https://github.com/mrz1836/go-mage) for build automation.
+This project uses [MAGE-X](https://github.com/mrz1836/mage-x) for build automation.
 
 `+"```bash"+`
 # Install mage
@@ -850,7 +850,7 @@ func addMageFilesForRecipe() error {
 package main
 
 import (
-	"github.com/mrz1836/go-mage/pkg/mage"
+	"github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Build builds the application

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mrz1836/go-mage/pkg/common/env"
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/common/env"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // TestEnvironment provides an isolated environment for testing

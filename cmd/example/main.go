@@ -1,7 +1,7 @@
 package main
 
-import "github.com/mrz1836/go-mage/pkg/utils"
+import "github.com/mrz1836/mage-x/pkg/utils"
 
 func main() {
-	utils.Info("go-mage example")
+	utils.Info("mage-x example")
 }

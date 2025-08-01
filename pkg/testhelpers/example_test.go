@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mrz1836/go-mage/pkg/testhelpers"
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 func ExampleTestEnvironment() {

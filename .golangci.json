@@ -21,7 +21,7 @@
 				"sections": [
 					"standard",
 					"default",
-					"prefix(github.com/mrz1836/go-mage)"
+					"prefix(github.com/mrz1836/mage-x)"
 				]
 			},
 			"gofmt": {
@@ -32,7 +32,7 @@
 			},
 			"goimports": {
 				"local-prefixes": [
-					"github.com/mrz1836/go-mage"
+					"github.com/mrz1836/mage-x"
 				]
 			}
 		}
@@ -183,10 +183,10 @@
 				"settings": {
 					"printf": {
 						"funcs": [
-							"(github.com/mrz1836/go-mage/pkg/utils.Logger).Infof",
-							"(github.com/mrz1836/go-mage/pkg/utils.Logger).Warnf",
-							"(github.com/mrz1836/go-mage/pkg/utils.Logger).Errorf",
-							"(github.com/mrz1836/go-mage/pkg/utils.Logger).Fatalf"
+							"(github.com/mrz1836/mage-x/pkg/utils.Logger).Infof",
+							"(github.com/mrz1836/mage-x/pkg/utils.Logger).Warnf",
+							"(github.com/mrz1836/mage-x/pkg/utils.Logger).Errorf",
+							"(github.com/mrz1836/mage-x/pkg/utils.Logger).Fatalf"
 						]
 					}
 				}

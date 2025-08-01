@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/providers"
+	"github.com/mrz1836/mage-x/pkg/providers"
 	"github.com/stretchr/testify/suite"
 )
 

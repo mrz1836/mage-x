@@ -511,7 +511,7 @@ package mage
 import (
     "context"
     "github.com/magefile/mage/mg"
-    "github.com/mrz1836/go-mage/pkg/utils"
+    "github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // NewTask namespace for new task operations
@@ -740,8 +740,8 @@ mage yaml:show
 - [Semantic Versioning](https://semver.org) - Version management standards
 
 ### Community
-- [GitHub Issues](https://github.com/mrz1836/go-mage/issues) - Bug reports and feature requests
-- [GitHub Discussions](https://github.com/mrz1836/go-mage/discussions) - Community discussion
+- [GitHub Issues](https://github.com/mrz1836/mage-x/issues) - Bug reports and feature requests
+- [GitHub Discussions](https://github.com/mrz1836/mage-x/discussions) - Community discussion
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute to the project
 
 <br/>

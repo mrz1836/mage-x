@@ -123,14 +123,14 @@ mage workflowExecute     # Execute workflows
 ## 🔗 External Resources
 
 - [Official Website](https://mage-x.com)
-- [GitHub Repository](https://github.com/mrz1836/go-mage)
+- [GitHub Repository](https://github.com/mrz1836/mage-x)
 - [Community Discord](https://discord.gg/mage-x)
 - [Enterprise Support](mailto:enterprise@mage-x.com)
 
 ## 🤝 Community and Support
 
-- **GitHub Issues**: [Report bugs and request features](https://github.com/mrz1836/go-mage/issues)
-- **Discussions**: [Join community discussions](https://github.com/mrz1836/go-mage/discussions)
+- **GitHub Issues**: [Report bugs and request features](https://github.com/mrz1836/mage-x/issues)
+- **Discussions**: [Join community discussions](https://github.com/mrz1836/mage-x/discussions)
 - **Discord**: [Real-time community chat](https://discord.gg/mage-x)
 - **Documentation**: [Comprehensive guides and references](https://docs.mage-x.com)
 

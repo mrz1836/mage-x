@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	mageErrors "github.com/mrz1836/go-mage/pkg/common/errors"
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // Test-specific static errors

@@ -1,6 +1,6 @@
 # 🔐 Security Policy
 
-Security is a priority. We maintain a proactive stance to identify and fix vulnerabilities in **go-mage**.
+Security is a priority. We maintain a proactive stance to identify and fix vulnerabilities in **mage-x**.
 
 <br/>
 
@@ -17,7 +17,7 @@ Security is a priority. We maintain a proactive stance to identify and fix vulne
 If you’ve found a security issue, **please don’t open a public issue or PR**.
 
 Instead, send a private email to:
-📧 [go-mage@mrz1818.com](mailto:go-mage@mrz1818.com)
+📧 [mage-x@mrz1818.com](mailto:mage-x@mrz1818.com)
 
 Include the following:
 
@@ -73,6 +73,6 @@ To proactively protect this repository, we use several automated GitHub workflow
 - **[OpenSSF Scorecard](./workflows/scorecard.yml)**: Periodically evaluates the repository against OpenSSF Scorecard checks, providing insights and recommendations for improving supply chain security and best practices.
 - **[OSSAR Scan](./workflows/ossar.yml)**: Runs the Open Source Static Analysis Runner to detect vulnerabilities using a suite of community tools.
 
-These workflows help us identify, remediate, and prevent security issues as early as possible in the development lifecycle. For more details, see the workflow files in the [`.github/workflows/`](https://github.com/mrz1836/go-mage/tree/master/.github/workflows) directory.
+These workflows help us identify, remediate, and prevent security issues as early as possible in the development lifecycle. For more details, see the workflow files in the [`.github/workflows/`](https://github.com/mrz1836/mage-x/tree/master/.github/workflows) directory.
 
 <br/>

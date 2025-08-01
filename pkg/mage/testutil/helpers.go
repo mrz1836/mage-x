@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // TestingInterface covers common functionality of *testing.T and *testing.B

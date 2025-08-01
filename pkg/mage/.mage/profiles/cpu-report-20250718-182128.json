@@ -11,7 +11,7 @@
       "percent": 45.5
     },
     {
-      "function": "github.com/mrz1836/go-mage/pkg/mage.Build",
+      "function": "github.com/mrz1836/mage-x/pkg/mage.Build",
       "file": "build.go",
       "line": 25,
       "samples": 80,
@@ -35,7 +35,7 @@
         "percent": 45.5
       },
       {
-        "name": "github.com/mrz1836/go-mage/pkg/mage.Build",
+        "name": "github.com/mrz1836/mage-x/pkg/mage.Build",
         "samples": 80,
         "percent": 36.4
       },

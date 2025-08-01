@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 func TestNewFileStore(t *testing.T) {

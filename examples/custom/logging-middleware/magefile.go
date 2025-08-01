@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/mage"
+	"github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // LoggingBuild wraps any BuildNamespace with comprehensive logging

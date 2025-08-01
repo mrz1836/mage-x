@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mrz1836/go-mage/pkg/security"
+	"github.com/mrz1836/mage-x/pkg/security"
 )
 
 // Static errors to satisfy err113 linter

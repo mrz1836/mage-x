@@ -1,6 +1,6 @@
 # 🛟 Support Guide
 
-Need help with **go-mage**? You're in the right place. Here’s how to get support, report issues, and stay aligned with project guidelines.
+Need help with **mage-x**? You're in the right place. Here’s how to get support, report issues, and stay aligned with project guidelines.
 
 <br/>
 
@@ -8,8 +8,8 @@ Need help with **go-mage**? You're in the right place. Here’s how to get suppo
 
 Before asking, check the existing threads:
 
-* 🔍 Search [Issues](https://github.com/mrz1836/go-mage/issues) or [Pull Requests](https://github.com/mrz1836/go-mage/pulls?q=is%3Apr+is%3Aopen+is%3Aclosed)
-* 🆕 Can’t find what you need? Start a [new issue](https://github.com/mrz1836/go-mage/issues/new?template=question.yml).
+* 🔍 Search [Issues](https://github.com/mrz1836/mage-x/issues) or [Pull Requests](https://github.com/mrz1836/mage-x/pulls?q=is%3Apr+is%3Aopen+is%3Aclosed)
+* 🆕 Can’t find what you need? Start a [new issue](https://github.com/mrz1836/mage-x/issues/new?template=question.yml).
 
 <br/>
 
@@ -17,7 +17,7 @@ Before asking, check the existing threads:
 
 Found a bug?
 
-1. Check the [issue tracker](https://github.com/mrz1836/go-mage/issues) to avoid duplicates.
+1. Check the [issue tracker](https://github.com/mrz1836/mage-x/issues) to avoid duplicates.
 2. If it’s new, open an issue with:
 
 	* Clear steps to reproduce
@@ -46,7 +46,7 @@ Everything from commit rules to contributor expectations is in [AGENTS.md](./AGE
 ## 📬 Private Contact
 
 For sensitive or non-public concerns, reach out to:
-📧 [go-mage@mrz1818.com](mailto:go-mage@mrz1818.com)
+📧 [mage-x@mrz1818.com](mailto:mage-x@mrz1818.com)
 
 <br/>
 

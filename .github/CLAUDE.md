@@ -1,8 +1,8 @@
-# CLAUDE.md - AI Assistant Guidelines for go-mage
+# CLAUDE.md - AI Assistant Guidelines for mage-x
 
 ## Project Overview
 
-**go-mage** is a comprehensive build automation framework built on top of Magefile, designed to provide a complete set of build tools, workflows, and development operations for Go projects. The project provides both a library of reusable build tasks and advanced tooling for enterprise-level development.
+**mage-x** is a comprehensive build automation framework built on top of Magefile, designed to provide a complete set of build tools, workflows, and development operations for Go projects. The project provides both a library of reusable build tasks and advanced tooling for enterprise-level development.
 
 ## Architecture
 
@@ -29,7 +29,7 @@
 ### Project Structure
 
 ```
-go-mage/
+mage-x/
 ├── pkg/mage/                          # Core mage package
 │   ├── namespace_interfaces.go        # 18 namespace interfaces
 │   ├── namespace_wrappers.go          # Interface implementations
@@ -69,7 +69,7 @@ go-mage/
 
 package main
 
-import "github.com/mrz1836/go-mage/pkg/mage"
+import "github.com/mrz1836/mage-x/pkg/mage"
 
 var Default = mage.Build{}.Default
 
@@ -84,7 +84,7 @@ func Test() error {
 
 package main
 
-import "github.com/mrz1836/go-mage/pkg/mage"
+import "github.com/mrz1836/mage-x/pkg/mage"
 
 var Default = BuildDefault
 
@@ -105,7 +105,7 @@ func TestDefault() error {
 
 package main
 
-import "github.com/mrz1836/go-mage/pkg/mage"
+import "github.com/mrz1836/mage-x/pkg/mage"
 
 type CustomBuild struct {
     mage.BuildNamespace
@@ -206,7 +206,7 @@ go test ./... -race
 
 ## Architecture Features
 
-The go-mage architecture supports:
+The mage-x architecture supports:
 
 - **Flexibility**: Interface-based design allows custom implementations
 - **Testability**: Mock interfaces for unit testing  
@@ -259,7 +259,7 @@ func (namespace Namespace) Task() error {
 
 ## Contributing
 
-When contributing to go-mage:
+When contributing to mage-x:
 
 1. Follow the existing code style
 2. Add tests for new functionality

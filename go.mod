@@ -1,4 +1,4 @@
-module github.com/mrz1836/go-mage
+module github.com/mrz1836/mage-x
 
 go 1.24
 

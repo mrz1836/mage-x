@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/mage/testutil"
+	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 	"github.com/stretchr/testify/suite"
 )
 

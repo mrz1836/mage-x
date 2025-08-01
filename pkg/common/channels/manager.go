@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	mageErrors "github.com/mrz1836/go-mage/pkg/common/errors"
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
-	"github.com/mrz1836/go-mage/pkg/common/paths"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/common/paths"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Sentinel errors

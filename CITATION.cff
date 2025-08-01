@@ -1,10 +1,10 @@
 cff-version: 1.2.0
-message: "If you find go-mage useful in your software or research, please cite this project using the following citation metadata. A citation helps support future development and encourages best practices in software reuse."
-title: "go-mage"
+message: "If you find mage-x useful in your software or research, please cite this project using the following citation metadata. A citation helps support future development and encourages best practices in software reuse."
+title: "mage-x"
 version: "1.0.0"
-url: "https://github.com/mrz1836/go-mage"
-repository: "https://github.com/mrz1836/go-mage"
-repository-code: "https://github.com/mrz1836/go-mage"
+url: "https://github.com/mrz1836/mage-x"
+repository: "https://github.com/mrz1836/mage-x"
+repository-code: "https://github.com/mrz1836/mage-x"
 date-released: 2021-04-24
 license: "Apache-2.0"
 type: software
@@ -14,7 +14,7 @@ authors:
     name: "mrz1836"
 keywords:
   - go
-  - go-mage
+  - mage-x
   - mage
   - make
   - makefile

@@ -8,7 +8,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/providers"
+	"github.com/mrz1836/mage-x/pkg/providers"
 )
 
 // Static errors for err113 compliance

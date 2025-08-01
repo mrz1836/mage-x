@@ -11,8 +11,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/magefile/mage/mg"
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Static errors for help operations
@@ -73,7 +73,7 @@ For interactive help:
   mage interactive:help
 
 Documentation:
-  https://github.com/mrz1836/go-mage`)
+  https://github.com/mrz1836/mage-x`)
 
 	return nil
 }
@@ -312,7 +312,7 @@ build configuration once and use it across all your projects.
 
 First, install MAGE-X in your Go project:
 
-  go get github.com/mrz1836/go-mage
+  go get github.com/mrz1836/mage-x
   go install github.com/magefile/mage@latest
 
 🏗️ Step 2: Initialize Your Project
@@ -373,7 +373,7 @@ Run a recipe:
 - mage help:command COMMAND_NAME
 - mage interactive:help
 - mage help:examples
-- GitHub: https://github.com/mrz1836/go-mage
+- GitHub: https://github.com/mrz1836/mage-x
 
 Happy coding with MAGE-X! 🎉`)
 

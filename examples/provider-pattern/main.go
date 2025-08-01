@@ -7,10 +7,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/providers"
-	_ "github.com/mrz1836/go-mage/pkg/providers/aws"   // Register AWS provider
-	_ "github.com/mrz1836/go-mage/pkg/providers/azure" // Register Azure provider
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/providers"
+	_ "github.com/mrz1836/mage-x/pkg/providers/aws"   // Register AWS provider
+	_ "github.com/mrz1836/mage-x/pkg/providers/azure" // Register Azure provider
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 func main() {

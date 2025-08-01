@@ -13,7 +13,7 @@ cd MAGE-X
 git init
 
 # Initialize go module (replace with your username/org)
-go mod init github.com/mrz1836/go-mage
+go mod init github.com/mrz1836/mage-x
 ```
 
 ### 2. Create the directory structure
@@ -51,7 +51,7 @@ Create `magefile.go` in the root:
 package main
 
 import (
-    _ "github.com/mrz1836/go-mage/pkg/mage"
+    _ "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 var Default = Test
@@ -75,7 +75,7 @@ mage test
 ### 1. Add to your project
 
 ```bash
-go get github.com/mrz1836/go-mage
+go get github.com/mrz1836/mage-x
 ```
 
 ### 2. Create magefile.go
@@ -87,7 +87,7 @@ go get github.com/mrz1836/go-mage
 package main
 
 import (
-    _ "github.com/mrz1836/go-mage/pkg/mage"
+    _ "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 var Default = Build

@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mrz1836/go-mage/pkg/common/config"
-	"github.com/mrz1836/go-mage/pkg/common/env"
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
-	"github.com/mrz1836/go-mage/pkg/common/paths"
+	"github.com/mrz1836/mage-x/pkg/common/config"
+	"github.com/mrz1836/mage-x/pkg/common/env"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/common/paths"
 )
 
 // Error definitions for provider operations

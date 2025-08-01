@@ -12,8 +12,8 @@ import (
 	"github.com/magefile/mage/sh"
 
 	// Import tasks from MAGE-X
-	"github.com/mrz1836/go-mage/pkg/mage"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/mage"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Re-export types

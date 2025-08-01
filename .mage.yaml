@@ -2,8 +2,8 @@
 # Copy this to your project root and customize as needed
 
 project:
-  name: go-mage
-  binary: go-mage
+  name: mage-x
+  binary: mage-x
   version: v1.0.0
   description: "My awesome Go project"
 

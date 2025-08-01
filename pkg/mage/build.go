@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/magefile/mage/mg"
-	"github.com/mrz1836/go-mage/pkg/common/cache"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/common/cache"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Build namespace for build-related tasks

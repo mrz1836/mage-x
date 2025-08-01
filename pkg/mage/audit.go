@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/magefile/mage/mg"
-	"github.com/mrz1836/go-mage/pkg/common/fileops"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Audit namespace for audit logging and compliance operations

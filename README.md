@@ -13,22 +13,22 @@
   <tbody>
     <tr>
       <td valign="top" align="left">
-        <a href="https://github.com/mrz1836/go-mage/releases">
-          <img src="https://img.shields.io/github/release-pre/mrz1836/go-mage?logo=github&style=flat&v=1" alt="Latest Release">
+        <a href="https://github.com/mrz1836/mage-x/releases">
+          <img src="https://img.shields.io/github/release-pre/mrz1836/mage-x?logo=github&style=flat&v=1" alt="Latest Release">
         </a><br/>
-        <a href="https://github.com/mrz1836/go-mage/actions">
-          <img src="https://img.shields.io/github/actions/workflow/status/mrz1836/go-mage/fortress.yml?branch=main&logo=github&style=flat" alt="Build Status">
+        <a href="https://github.com/mrz1836/mage-x/actions">
+          <img src="https://img.shields.io/github/actions/workflow/status/mrz1836/mage-x/fortress.yml?branch=main&logo=github&style=flat" alt="Build Status">
         </a><br/>
-        <a href="https://github.com/mrz1836/go-mage/commits/main">
-          <img src="https://img.shields.io/github/last-commit/mrz1836/go-mage?style=flat&logo=clockify&logoColor=white" alt="Last commit">
+        <a href="https://github.com/mrz1836/mage-x/commits/main">
+          <img src="https://img.shields.io/github/last-commit/mrz1836/mage-x?style=flat&logo=clockify&logoColor=white" alt="Last commit">
         </a>
       </td>
       <td valign="top" align="left">
-        <a href="https://goreportcard.com/report/github.com/mrz1836/go-mage">
-          <img src="https://goreportcard.com/badge/github.com/mrz1836/go-mage?style=flat&v=1" alt="Go Report Card">
+        <a href="https://goreportcard.com/report/github.com/mrz1836/mage-x">
+          <img src="https://goreportcard.com/badge/github.com/mrz1836/mage-x?style=flat&v=1" alt="Go Report Card">
         </a><br/>
-        <a href="https://codecov.io/gh/mrz1836/go-mage">
-          <img src="https://codecov.io/gh/mrz1836/go-mage/branch/main/graph/badge.svg?style=flat" alt="Code Coverage">
+        <a href="https://codecov.io/gh/mrz1836/mage-x">
+          <img src="https://codecov.io/gh/mrz1836/mage-x/branch/main/graph/badge.svg?style=flat" alt="Code Coverage">
         </a><br/>
         <a href="https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck">
           <img src="https://img.shields.io/badge/security-govulncheck-blue?style=flat&logo=springsecurity&logoColor=white" alt="Security Scanning">
@@ -39,10 +39,10 @@
       </td>
       <td valign="top" align="left">
         <a href="https://golang.org/">
-          <img src="https://img.shields.io/github/go-mod/go-version/mrz1836/go-mage?style=flat" alt="Go version">
+          <img src="https://img.shields.io/github/go-mod/go-version/mrz1836/mage-x?style=flat" alt="Go version">
         </a><br/>
-        <a href="https://pkg.go.dev/github.com/mrz1836/go-mage">
-          <img src="https://pkg.go.dev/badge/github.com/mrz1836/go-mage.svg?style=flat" alt="Go docs">
+        <a href="https://pkg.go.dev/github.com/mrz1836/mage-x">
+          <img src="https://pkg.go.dev/badge/github.com/mrz1836/mage-x.svg?style=flat" alt="Go docs">
         </a><br/>
         <a href=".github/AGENTS.md">
           <img src="https://img.shields.io/badge/AGENTS.md-found-40b814?style=flat&logo=openai" alt="AI Agent Rules">
@@ -52,14 +52,14 @@
         </a>
       </td>
       <td valign="top" align="left">
-        <a href="https://github.com/mrz1836/go-mage/graphs/contributors">
-          <img src="https://img.shields.io/github/contributors/mrz1836/go-mage?style=flat&logo=contentful&logoColor=white" alt="Contributors">
+        <a href="https://github.com/mrz1836/mage-x/graphs/contributors">
+          <img src="https://img.shields.io/github/contributors/mrz1836/mage-x?style=flat&logo=contentful&logoColor=white" alt="Contributors">
         </a><br/>
         <a href="https://github.com/sponsors/mrz">
           <img src="https://img.shields.io/badge/sponsor-mrz-181717.svg?logo=github&style=flat" alt="Sponsor">
         </a><br/>
-        <a href="https://github.com/mrz1836/go-mage/stargazers">
-          <img src="https://img.shields.io/github/stars/mrz1836/go-mage?style=social?v=1" alt="Stars">
+        <a href="https://github.com/mrz1836/mage-x/stargazers">
+          <img src="https://img.shields.io/github/stars/mrz1836/mage-x?style=social?v=1" alt="Stars">
         </a>
       </td>
     </tr>
@@ -140,7 +140,7 @@ Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminate
 go install github.com/magefile/mage@latest
 
 # Add MAGE-X to your project
-go get github.com/mrz1836/go-mage
+go get github.com/mrz1836/mage-x
 ```
 
 ### 2. Create Your Magefile
@@ -152,7 +152,7 @@ package main
 
 import (
     // Import all MAGE-X tasks
-    _ "github.com/mrz1836/go-mage/pkg/mage"
+    _ "github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // Default task - just run `mage`
@@ -590,8 +590,8 @@ All kinds of contributions are welcome! :raised_hands:
 
 ```bash
 # Clone the repository
-git clone https://github.com/mrz1836/go-mage.git
-cd go-mage
+git clone https://github.com/mrz1836/mage-x.git
+cd mage-x
 
 # Install dependencies
 go mod download
@@ -606,13 +606,13 @@ mage lintDefault
 mage interactive
 ```
 
-[![Stars](https://img.shields.io/github/stars/mrz1836/go-mage?label=Please%20like%20us&style=social)](https://github.com/mrz1836/go-mage/stargazers)
+[![Stars](https://img.shields.io/github/stars/mrz1836/mage-x?label=Please%20like%20us&style=social)](https://github.com/mrz1836/mage-x/stargazers)
 
 <br/>
 
 ## 📝 License
 
-[![License](https://img.shields.io/github/license/mrz1836/go-mage.svg?style=flat&v=1)](LICENSE)
+[![License](https://img.shields.io/github/license/mrz1836/mage-x.svg?style=flat&v=1)](LICENSE)
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

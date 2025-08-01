@@ -6,7 +6,7 @@ This is the simplest possible example of using MAGE-X.
 
 1. Add MAGE-X to your project:
 ```bash
-go get github.com/mrz1836/go-mage
+go get github.com/mrz1836/mage-x
 ```
 
 2. Create a `magefile.go` (see the example in this directory)

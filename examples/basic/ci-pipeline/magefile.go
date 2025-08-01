@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mrz1836/go-mage/pkg/mage"
-	"github.com/mrz1836/go-mage/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/mage"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // CI runs the complete CI pipeline with all quality checks

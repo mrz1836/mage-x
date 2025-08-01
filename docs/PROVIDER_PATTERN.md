@@ -89,8 +89,8 @@ Each service interface defines operations for a specific cloud service category:
 
 ```go
 import (
-    "github.com/mrz1836/go-mage/pkg/providers"
-    _ "github.com/mrz1836/go-mage/pkg/providers/aws"
+    "github.com/mrz1836/mage-x/pkg/providers"
+    _ "github.com/mrz1836/mage-x/pkg/providers/aws"
 )
 
 // Configure provider
@@ -198,7 +198,7 @@ To create a custom provider:
 ```go
 package custom
 
-import "github.com/mrz1836/go-mage/pkg/providers"
+import "github.com/mrz1836/mage-x/pkg/providers"
 
 type CustomProvider struct {
     config providers.ProviderConfig

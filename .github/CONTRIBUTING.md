@@ -1,6 +1,6 @@
-# 🤝 Contributing to go-mage
+# 🤝 Contributing to mage-x
 
-Thank you for your interest in contributing to go-mage! This document provides guidelines to help you contribute effectively while maintaining code quality and consistency.
+Thank you for your interest in contributing to mage-x! This document provides guidelines to help you contribute effectively while maintaining code quality and consistency.
 
 ## 📋 Quick Reference
 
@@ -19,8 +19,8 @@ Thank you for your interest in contributing to go-mage! This document provides g
    ```
 3. **Development setup**:
    ```bash
-   git clone https://github.com/mrz1836/go-mage.git
-   cd go-mage
+   git clone https://github.com/mrz1836/mage-x.git
+   cd mage-x
    go mod download
    ```
 4. **Make changes following guidelines** (see sections below)
@@ -33,7 +33,7 @@ More info on [pull requests](http://help.github.com/pull-requests/).
 
 ## 🔄 Code Duplication Prevention
 
-**Important**: go-mage follows strict anti-duplication practices. Before writing new code, always check for existing utilities and patterns.
+**Important**: mage-x follows strict anti-duplication practices. Before writing new code, always check for existing utilities and patterns.
 
 ### Shared Utilities
 
@@ -368,4 +368,4 @@ For detailed workflows, commit standards, branch naming, PR templates, and more�
 
 <br/>
 
-Thank you for contributing to go-mage! Let's build something great. 💪 🎉
+Thank you for contributing to mage-x! Let's build something great. 💪 🎉
