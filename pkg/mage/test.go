@@ -569,6 +569,16 @@ func getUnitTestPackages() ([]string, error) {
 			continue
 		}
 
+		// Skip lines that are not valid package names (e.g., download progress messages)
+		if strings.HasPrefix(pkg, "go: ") || strings.Contains(pkg, ":") {
+			continue
+		}
+
+		// Additional validation: package names should look like paths
+		if !strings.Contains(pkg, "/") || strings.ContainsAny(pkg, " \t\n\r") {
+			continue
+		}
+
 		shouldExclude := false
 		for _, pattern := range excludePatterns {
 			if strings.Contains(pkg, pattern) {
