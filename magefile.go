@@ -417,7 +417,7 @@ func Help() error {
 			commands: []CommandInfo{
 				{"buildDefault", "Build the project for current platform", []string{"mage buildDefault", "mage build"}},
 				{"testDefault", "Run the default test suite", []string{"mage testDefault", "mage test"}},
-				{"lintDefault", "Run code quality checks", []string{"mage lintDefault", "mage lint"}},
+				{"lintDefault", "Run essential linters (golangci-lint + go vet)", []string{"mage lintDefault", "mage lint"}},
 				{"releaseDefault", "Create a new release", []string{"mage releaseDefault", "mage release"}},
 			},
 		},
@@ -453,7 +453,7 @@ func Help() error {
 			description: "Code Quality & Linting",
 			commands: []CommandInfo{
 				{"lintAll", "Run all linting checks", []string{"mage lintAll"}},
-				{"lintFix", "Automatically fix linting issues", []string{"mage lintFix"}},
+				{"lintFix", "Auto-fix linting issues + apply formatting", []string{"mage lintFix"}},
 				{"lintVet", "Run go vet static analysis", []string{"mage lintVet"}},
 				{"lintFumpt", "Run gofumpt code formatting", []string{"mage lintFumpt"}},
 				{"lintVersion", "Show linter version", []string{"mage lintVersion"}},
@@ -593,7 +593,7 @@ func List() error {
 			commands: []CommandInfo{
 				{"buildDefault", "Build the project for current platform", []string{"mage buildDefault", "mage build"}},
 				{"testDefault", "Run the default test suite", []string{"mage testDefault", "mage test"}},
-				{"lintDefault", "Run code quality checks", []string{"mage lintDefault", "mage lint"}},
+				{"lintDefault", "Run essential linters (golangci-lint + go vet)", []string{"mage lintDefault", "mage lint"}},
 				{"releaseDefault", "Create a new release", []string{"mage releaseDefault", "mage release"}},
 			},
 		},
@@ -629,7 +629,7 @@ func List() error {
 			description: "Code Quality & Linting",
 			commands: []CommandInfo{
 				{"lintAll", "Run all linting checks", []string{"mage lintAll"}},
-				{"lintFix", "Automatically fix linting issues", []string{"mage lintFix"}},
+				{"lintFix", "Auto-fix linting issues + apply formatting", []string{"mage lintFix"}},
 				{"lintVet", "Run go vet static analysis", []string{"mage lintVet"}},
 				{"lintFumpt", "Run gofumpt code formatting", []string{"mage lintFumpt"}},
 				{"lintVersion", "Show linter version", []string{"mage lintVersion"}},

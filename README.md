@@ -353,7 +353,7 @@ mage testUnit           # Run unit tests only (no linting)
 mage testRace           # Run tests with race detector
 mage testCover          # Run tests with coverage analysis
 mage testBench          # Run benchmark tests
-mage testBenchShort	    # Run short benchmark tests
+mage testBenchShort     # Run short benchmark tests
 mage testFuzz           # Run fuzz tests
 mage testFuzzShort      # Run quick fuzz tests (5s)
 mage testIntegration    # Run integration tests
@@ -362,9 +362,9 @@ mage testIntegration    # Run integration tests
 #### 🔍 Code Quality & Linting
 ```bash
 # Linting and Code Quality
-mage lintDefault        # Run default linter (default)
-mage lintAll            # Run all linting checks
-mage lintFix            # Automatically fix linting issues
+mage lintDefault        # Run essential linters (golangci-lint + go vet)
+mage lintAll            # Run all linting checks (golangci-lint + go vet + go fmt)
+mage lintFix            # Auto-fix linting issues + apply formatting
 ```
 
 #### 📊 Metrics & Analysis

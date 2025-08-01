@@ -21,16 +21,20 @@ var (
 // Lint namespace for linting and formatting tasks
 type Lint mg.Namespace
 
-// Default runs the default linter (golangci-lint)
+// Default runs the default linter (golangci-lint + go vet)
 func (Lint) Default() error {
-	utils.Header("Running Linter")
+	utils.Header("Running Default Linters")
 
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	// Ensure golangci-lint is installed
+	linter := Lint{}
+	totalStart := time.Now()
+
+	// Run golangci-lint
+	utils.Info("Running golangci-lint...")
 	if err := ensureGolangciLint(config); err != nil {
 		return err
 	}
@@ -50,27 +54,36 @@ func (Lint) Default() error {
 		args = append(args, "--verbose")
 	}
 
-	// Skip adding deprecated flags - these are now handled in .golangci.json
-
 	start := time.Now()
 	if err := GetRunner().RunCmd("golangci-lint", args...); err != nil {
-		return fmt.Errorf("linting failed: %w", err)
+		return fmt.Errorf("golangci-lint failed: %w", err)
+	}
+	utils.Success("golangci-lint passed in %s", utils.FormatDuration(time.Since(start)))
+
+	// Run go vet
+	utils.Info("Running go vet...")
+	if err := linter.Vet(); err != nil {
+		return fmt.Errorf("go vet failed: %w", err)
 	}
 
-	utils.Success("Linting passed in %s", utils.FormatDuration(time.Since(start)))
+	utils.Success("Default linting passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
-// Fix runs golangci-lint with auto-fix
+// Fix runs golangci-lint with auto-fix and applies code formatting
 func (Lint) Fix() error {
-	utils.Header("Running Linter with Auto-Fix")
+	utils.Header("Running Linter with Auto-Fix and Formatting")
 
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	// Ensure golangci-lint is installed
+	linter := Lint{}
+	totalStart := time.Now()
+
+	// Run golangci-lint with auto-fix
+	utils.Info("Running golangci-lint --fix...")
 	if err := ensureGolangciLint(config); err != nil {
 		return err
 	}
@@ -86,11 +99,18 @@ func (Lint) Fix() error {
 		args = append(args, "--timeout", config.Lint.Timeout)
 	}
 
+	start := time.Now()
 	if err := GetRunner().RunCmd("golangci-lint", args...); err != nil {
-		return fmt.Errorf("lint fix failed: %w", err)
+		return fmt.Errorf("golangci-lint fix failed: %w", err)
+	}
+	utils.Success("golangci-lint fixes applied in %s", utils.FormatDuration(time.Since(start)))
+
+	// Apply code formatting - prefer gofumpt, fallback to go fmt
+	if err := applyCodeFormatting(linter); err != nil {
+		return fmt.Errorf("formatting failed: %w", err)
 	}
 
-	utils.Success("Lint issues fixed")
+	utils.Success("All lint issues fixed and code formatted in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -316,6 +336,33 @@ func (Lint) Version() error {
 }
 
 // Helper functions
+
+// applyCodeFormatting applies the best available code formatting
+func applyCodeFormatting(linter Lint) error {
+	if utils.CommandExists("gofumpt") {
+		utils.Info("Running gofumpt for stricter formatting...")
+		start := time.Now()
+		if err := linter.Fumpt(); err != nil {
+			utils.Warn("gofumpt failed, falling back to go fmt: %v", err)
+			return applyGoFmt(linter)
+		}
+		utils.Success("gofumpt formatting applied in %s", utils.FormatDuration(time.Since(start)))
+		return nil
+	}
+
+	return applyGoFmt(linter)
+}
+
+// applyGoFmt applies basic go fmt formatting
+func applyGoFmt(linter Lint) error {
+	utils.Info("Running go fmt for basic formatting...")
+	start := time.Now()
+	if err := linter.Fmt(); err != nil {
+		return err
+	}
+	utils.Success("go fmt formatting applied in %s", utils.FormatDuration(time.Since(start)))
+	return nil
+}
 
 // ensureGolangciLint ensures golangci-lint is installed
 func ensureGolangciLint(cfg *Config) error {

@@ -48,8 +48,8 @@ func (Metrics) LOC() error {
 	utils.Info("")
 	utils.Info("| Type       | Total Lines | Date        |")
 	utils.Info("|------------|-------------|-------------|")
-	fmt.Printf("| Test Files | %-11d | %s |\n", testCount, date)
-	fmt.Printf("| Go Files   | %-11d | %s |\n", goCount, date)
+	utils.Info("| Test Files | %-11d | %s |", testCount, date)
+	utils.Info("| Go Files   | %-11d | %s |", goCount, date)
 	utils.Info("")
 
 	total := testCount + goCount

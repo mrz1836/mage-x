@@ -482,10 +482,10 @@ The following mage targets are available through the exposed wrapper functions i
 
 | Target | Description | Equivalent Command |
 |--------|-------------|-------------------|
-| `mage lint` | Run default linter | `golangci-lint run` |
-| `mage lintDefault` | Same as above | `golangci-lint run` |
-| `mage lintAll` | Run all linting checks | `golangci-lint run --enable-all` |
-| `mage lintFix` | Automatically fix linting issues | `golangci-lint run --fix` |
+| `mage lint` | Run essential linters | `golangci-lint run && go vet` |
+| `mage lintDefault` | Same as above | `golangci-lint run && go vet` |
+| `mage lintAll` | Run all linting checks | `golangci-lint run && go vet && go fmt` |
+| `mage lintFix` | Auto-fix linting issues + formatting | `golangci-lint run --fix && gofumpt/go fmt` |
 
 ### Documentation Targets
 
