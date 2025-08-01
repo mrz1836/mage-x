@@ -173,10 +173,19 @@ mage releaseDefault # Create a release
 ### 4. Advanced Setup (Optional)
 
 ```bash
-# Create configuration file
-go mod download
+# Create a configuration file (.mage.yaml)
+cat > .mage.yaml << EOF
+project:
+  name: my-project
+  version: v1.0.0
+build:
+  output: bin
+  platforms:
+    - linux/amd64
+    - darwin/amd64
+EOF
 
-# Install dependencies
+# Download dependencies
 mage depsDownload
 ```
 

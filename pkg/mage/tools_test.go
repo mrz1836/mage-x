@@ -470,12 +470,12 @@ func (ts *ToolsTestSuite) TestInstallTool_GolangciLint() {
 func (ts *ToolsTestSuite) TestInstallTool_InstallError() {
 	expectedError := require.New(ts.T())
 	tool := ToolDefinition{
-		Name:   "mockgen",
-		Module: "go.uber.org/mock/mockgen",
-		Check:  "mockgen",
+		Name:   "nonexistent-tool",
+		Module: "example.com/nonexistent/tool",
+		Check:  "nonexistent-tool",
 	}
 
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "go.uber.org/mock/mockgen@latest"}).Return(errToolsInstallFailed)
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "example.com/nonexistent/tool@latest"}).Return(errToolsInstallFailed)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error

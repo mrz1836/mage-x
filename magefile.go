@@ -37,10 +37,16 @@ func BuildDefault() error {
 	return b.Default()
 }
 
-// TestDefault runs the default test suite
+// TestDefault runs the default test suite (unit tests only)
 func TestDefault() error {
 	var t Test
 	return t.Default()
+}
+
+// TestFull runs the full test suite with linting
+func TestFull() error {
+	var t Test
+	return t.Full()
 }
 
 // LintDefault runs the default linter

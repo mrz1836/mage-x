@@ -21,8 +21,18 @@ var (
 // Test namespace for test-related tasks
 type Test mg.Namespace
 
-// Default runs the default test suite with linting
+// Default runs the default test suite (unit tests only)
 func (Test) Default() error {
+	utils.Header("Running Default Test Suite")
+
+	// Run unit tests only - no linting
+	return Test{}.Unit()
+}
+
+// Full runs the complete test suite with linting
+func (Test) Full() error {
+	utils.Header("Running Full Test Suite (Lint + Tests)")
+
 	// Run lint first
 	if err := (Lint{}).Default(); err != nil {
 		return err
@@ -42,7 +52,17 @@ func (Test) Unit() error {
 	}
 
 	args := buildTestArgs(config, false, false)
-	args = append(args, "./...")
+
+	// Add -short flag to exclude long-running tests
+	args = append(args, "-short")
+
+	// Get packages but exclude heavy integration packages
+	packages, err := getUnitTestPackages()
+	if err != nil {
+		return fmt.Errorf("failed to get unit test packages: %w", err)
+	}
+
+	args = append(args, packages...)
 
 	start := time.Now()
 	if err := GetRunner().RunCmd("go", args...); err != nil {
@@ -525,4 +545,50 @@ func (Test) Clean() error {
 func (Test) All() error {
 	runner := GetRunner()
 	return runner.RunCmd("go", "test", "./...")
+}
+
+// getUnitTestPackages returns packages suitable for unit testing,
+// excluding heavy integration packages that take too long
+func getUnitTestPackages() ([]string, error) {
+	// Get all packages
+	output, err := GetRunner().RunCmdOutput("go", "list", "./...")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list packages: %w", err)
+	}
+
+	packages := strings.Split(strings.TrimSpace(output), "\n")
+	var unitPackages []string
+
+	// Packages to exclude from unit tests (heavy integration packages)
+	excludePatterns := []string{
+		"/pkg/mage", // Main mage package with heavy integration tests
+	}
+
+	for _, pkg := range packages {
+		if pkg == "" {
+			continue
+		}
+
+		shouldExclude := false
+		for _, pattern := range excludePatterns {
+			if strings.Contains(pkg, pattern) {
+				// Only exclude the main /pkg/mage package, not subpackages
+				if strings.HasSuffix(pkg, "/pkg/mage") {
+					shouldExclude = true
+					utils.Info("Excluding heavy package from unit tests: %s", pkg)
+					break
+				}
+			}
+		}
+
+		if !shouldExclude {
+			unitPackages = append(unitPackages, pkg)
+		}
+	}
+
+	if len(unitPackages) == 0 {
+		return []string{"./..."}, nil // Fallback to all packages if none found
+	}
+
+	return unitPackages, nil
 }
