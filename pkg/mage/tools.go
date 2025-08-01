@@ -1,11 +1,17 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errToolsMissing = errors.New("some tools are missing. Run 'mage tools:install' to install them")
 )
 
 // Tools namespace for tool management tasks
@@ -126,7 +132,7 @@ func (Tools) Verify() error {
 	}
 
 	if !allGood {
-		return fmt.Errorf("some tools are missing. Run 'mage tools:install' to install them")
+		return errToolsMissing
 	}
 
 	utils.Success("All tools verified")

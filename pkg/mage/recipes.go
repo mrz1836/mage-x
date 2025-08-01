@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,18 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for recipe operations
+var (
+	errRecipeShowRequired         = errors.New("RECIPE environment variable is required. Usage: RECIPE=<name> mage recipes:show")
+	errRecipeRunRequired          = errors.New("RECIPE environment variable is required. Usage: RECIPE=<name> mage recipes:run")
+	errTermSearchRequired         = errors.New("TERM environment variable is required. Usage: TERM=<search> mage recipes:search")
+	errRecipeCreateRequired       = errors.New("RECIPE environment variable is required. Usage: RECIPE=<name> mage recipes:create")
+	errSourceInstallRequired      = errors.New("SOURCE environment variable is required. Usage: SOURCE=<url|file> mage recipes:install")
+	errRecipeNotFound             = errors.New("recipe not found")
+	errCustomRecipeFileNotFound   = errors.New("custom recipe file not found")
+	errRequiredDependencyNotFound = errors.New("required dependency not found")
 )
 
 // Recipes namespace for common development patterns
@@ -89,7 +102,7 @@ func (Recipes) List() error {
 func (Recipes) Show() error {
 	recipeName := utils.GetEnv("RECIPE", "")
 	if recipeName == "" {
-		return fmt.Errorf("RECIPE environment variable is required. Usage: RECIPE=<name> mage recipes:show")
+		return errRecipeShowRequired
 	}
 
 	recipe, err := getRecipe(recipeName)
@@ -132,7 +145,7 @@ func (Recipes) Show() error {
 func (Recipes) Run() error {
 	recipeName := utils.GetEnv("RECIPE", "")
 	if recipeName == "" {
-		return fmt.Errorf("RECIPE environment variable is required. Usage: RECIPE=<name> mage recipes:run")
+		return errRecipeRunRequired
 	}
 
 	recipe, err := getRecipe(recipeName)
@@ -184,7 +197,7 @@ func (Recipes) Run() error {
 func (Recipes) Search() error {
 	searchTerm := utils.GetEnv("TERM", "")
 	if searchTerm == "" {
-		return fmt.Errorf("TERM environment variable is required. Usage: TERM=<search> mage recipes:search")
+		return errTermSearchRequired
 	}
 
 	utils.Header("🔍 Recipe Search Results")
@@ -225,7 +238,7 @@ func (Recipes) Search() error {
 func (Recipes) Create() error {
 	recipeName := utils.GetEnv("RECIPE", "")
 	if recipeName == "" {
-		return fmt.Errorf("RECIPE environment variable is required. Usage: RECIPE=<name> mage recipes:create")
+		return errRecipeCreateRequired
 	}
 
 	utils.Header("📝 Creating Custom Recipe: " + recipeName)
@@ -272,7 +285,7 @@ func (Recipes) Create() error {
 func (Recipes) Install() error {
 	source := utils.GetEnv("SOURCE", "")
 	if source == "" {
-		return fmt.Errorf("SOURCE environment variable is required. Usage: SOURCE=<url|file> mage recipes:install")
+		return errSourceInstallRequired
 	}
 
 	utils.Header("📥 Installing Recipe")
@@ -485,7 +498,7 @@ func getRecipe(name string) (Recipe, error) {
 		return customRecipe, nil
 	}
 
-	return Recipe{}, fmt.Errorf("recipe not found: %s", name)
+	return Recipe{}, fmt.Errorf("%w: %s", errRecipeNotFound, name)
 }
 
 // loadCustomRecipe loads a custom recipe from file
@@ -493,7 +506,7 @@ func loadCustomRecipe(name string) (Recipe, error) {
 	recipeFile := filepath.Join(".mage", "recipes", name+".yaml")
 
 	if !utils.FileExists(recipeFile) {
-		return Recipe{}, fmt.Errorf("custom recipe file not found: %s", recipeFile)
+		return Recipe{}, fmt.Errorf("%w: %s", errCustomRecipeFileNotFound, recipeFile)
 	}
 
 	// In a real implementation, this would parse YAML
@@ -547,7 +560,7 @@ func createRecipeContext(recipe *Recipe) *RecipeContext {
 func checkDependencies(deps []string) error {
 	for _, dep := range deps {
 		if !isDependencyAvailable(dep) {
-			return fmt.Errorf("required dependency not found: %s", dep)
+			return fmt.Errorf("%w: %s", errRequiredDependencyNotFound, dep)
 		}
 	}
 	return nil

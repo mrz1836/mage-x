@@ -21,6 +21,18 @@ import (
 // CLI namespace for advanced CLI operations
 type CLI mg.Namespace
 
+// Static errors for err113 compliance
+var (
+	ErrOperationEnvRequired       = errors.New("OPERATION environment variable is required")
+	ErrBatchExecutionStopped      = errors.New("batch execution stopped due to failure")
+	ErrUnknownWorkspaceOperation  = errors.New("unknown workspace operation")
+	ErrUnknownPipelineOperation   = errors.New("unknown pipeline operation")
+	ErrUnknownComplianceOperation = errors.New("unknown compliance operation")
+	ErrUnknownCommand             = errors.New("unknown command")
+	ErrPipelineConfigNotFound     = errors.New("pipeline configuration not found")
+	errQuit                       = errors.New("quit")
+)
+
 // Bulk executes commands across multiple repositories
 func (CLI) Bulk() error {
 	utils.Header("🚀 Bulk Repository Operations")
@@ -34,7 +46,7 @@ func (CLI) Bulk() error {
 	// Get operation from environment
 	operation := utils.GetEnv("OPERATION", "")
 	if operation == "" {
-		return fmt.Errorf("OPERATION environment variable is required")
+		return ErrOperationEnvRequired
 	}
 
 	// Get target repositories
@@ -173,7 +185,7 @@ func (CLI) Batch() error {
 
 			// Check if we should continue on failure
 			if !batch.ContinueOnFailure {
-				return fmt.Errorf("batch execution stopped due to failure")
+				return ErrBatchExecutionStopped
 			}
 		} else {
 			utils.Success("✅ Operation completed: %s", operation.Name)
@@ -241,7 +253,7 @@ func (CLI) Workspace() error {
 	case "restore":
 		return restoreWorkspace()
 	default:
-		return fmt.Errorf("unknown workspace operation: %s", operation)
+		return fmt.Errorf("%w: %s", ErrUnknownWorkspaceOperation, operation)
 	}
 }
 
@@ -268,7 +280,7 @@ func (CLI) Pipeline() error {
 	case "optimize":
 		return optimizePipeline(&pipelineConfig)
 	default:
-		return fmt.Errorf("unknown pipeline operation: %s", operation)
+		return fmt.Errorf("%w: %s", ErrUnknownPipelineOperation, operation)
 	}
 }
 
@@ -289,7 +301,7 @@ func (CLI) Compliance() error {
 	case "export":
 		return exportComplianceData()
 	default:
-		return fmt.Errorf("unknown compliance operation: %s", operation)
+		return fmt.Errorf("%w: %s", ErrUnknownComplianceOperation, operation)
 	}
 }
 
@@ -890,8 +902,6 @@ func runInteractiveDashboard(dashboard *Dashboard) error {
 	return nil
 }
 
-var errQuit = fmt.Errorf("quit")
-
 type dashboardCommand interface {
 	execute(dashboard *Dashboard) error
 	description() string
@@ -923,7 +933,7 @@ func newDashboardCommandHandler(dashboard *Dashboard) *dashboardCommandHandler {
 func (h *dashboardCommandHandler) execute(commandStr string) error {
 	cmd, exists := h.commands[commandStr]
 	if !exists {
-		return fmt.Errorf("unknown command: %s (type 'help' for available commands)", commandStr)
+		return fmt.Errorf("%w: %s (type 'help' for available commands)", ErrUnknownCommand, commandStr)
 	}
 	return cmd.execute(&h.dashboard)
 }
@@ -1247,7 +1257,7 @@ func loadPipelineConfiguration() (PipelineConfiguration, error) {
 	configFile := utils.GetEnv("PIPELINE_CONFIG", ".mage/pipeline.json")
 
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		return PipelineConfiguration{}, fmt.Errorf("pipeline configuration not found: %s", configFile)
+		return PipelineConfiguration{}, fmt.Errorf("%w: %s", ErrPipelineConfigNotFound, configFile)
 	}
 
 	fileOps := fileops.New()

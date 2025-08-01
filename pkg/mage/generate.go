@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,12 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for err113 compliance
+var (
+	ErrProtocNotFound          = errors.New("protoc not found. Please install protocol buffer compiler")
+	ErrGeneratedFilesNeedRegen = errors.New("generated files need to be regenerated")
 )
 
 // Generate namespace for code generation tasks
@@ -125,7 +132,7 @@ func (Generate) Proto() error {
 
 	// Check if protoc is installed
 	if !utils.CommandExists("protoc") {
-		return fmt.Errorf("protoc not found. Please install protocol buffer compiler")
+		return ErrProtocNotFound
 	}
 
 	// Check for protoc-gen-go
@@ -267,7 +274,7 @@ func (Generate) Check() error {
 		for _, file := range different {
 			fmt.Printf("  - %s\n", file)
 		}
-		return fmt.Errorf("generated files need to be regenerated")
+		return ErrGeneratedFilesNeedRegen
 	}
 
 	utils.Success("All generated files are up to date")

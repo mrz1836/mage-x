@@ -14,6 +14,7 @@ import (
 // AuditTestSuite defines the test suite for Audit functions
 type AuditTestSuite struct {
 	suite.Suite
+
 	env   *testutil.TestEnvironment
 	audit Audit
 }
@@ -33,91 +34,95 @@ func (ts *AuditTestSuite) TearDownTest() {
 // TestAuditShow tests the Show method
 func (ts *AuditTestSuite) TestAuditShow() {
 	ts.Run("show audit events handles disabled audit gracefully", func() {
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
-				setErr := SetRunner(r.(CommandRunner)) //nolint:errcheck // Error is checked on next line
-				if setErr != nil {
-					return setErr
-				}
-				return nil
-			},
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.audit.Show()
-			},
-		)
-		// The audit system may be disabled, which is acceptable
-		if err != nil {
-			ts.Require().Contains(err.Error(), "audit")
-		}
+		ts.testAuditShowBasic()
 	})
 
 	ts.Run("show audit events with environment filters", func() {
-		// Set environment variables for filtering
-		originalStartTime := os.Getenv("START_TIME")
-		originalEndTime := os.Getenv("END_TIME")
-		originalUser := os.Getenv("USER")
-		originalCommand := os.Getenv("COMMAND")
-		originalSuccess := os.Getenv("SUCCESS")
-		originalLimit := os.Getenv("LIMIT")
-		defer func() {
-			if err := os.Setenv("START_TIME", originalStartTime); err != nil {
-				ts.T().Logf("Failed to restore START_TIME: %v", err)
-			}
-			if err := os.Setenv("END_TIME", originalEndTime); err != nil {
-				ts.T().Logf("Failed to restore END_TIME: %v", err)
-			}
-			if err := os.Setenv("USER", originalUser); err != nil {
-				ts.T().Logf("Failed to restore USER: %v", err)
-			}
-			if err := os.Setenv("COMMAND", originalCommand); err != nil {
-				ts.T().Logf("Failed to restore COMMAND: %v", err)
-			}
-			if err := os.Setenv("SUCCESS", originalSuccess); err != nil {
-				ts.T().Logf("Failed to restore SUCCESS: %v", err)
-			}
-			if err := os.Setenv("LIMIT", originalLimit); err != nil {
-				ts.T().Logf("Failed to restore LIMIT: %v", err)
-			}
-		}()
-
-		if err := os.Setenv("START_TIME", "2023-01-01"); err != nil {
-			ts.T().Fatalf("Failed to set START_TIME: %v", err)
-		}
-		if err := os.Setenv("END_TIME", "2023-12-31"); err != nil {
-			ts.T().Fatalf("Failed to set END_TIME: %v", err)
-		}
-		if err := os.Setenv("USER", "testuser"); err != nil {
-			ts.T().Fatalf("Failed to set USER: %v", err)
-		}
-		if err := os.Setenv("COMMAND", "test:run"); err != nil {
-			ts.T().Fatalf("Failed to set COMMAND: %v", err)
-		}
-		if err := os.Setenv("SUCCESS", "true"); err != nil {
-			ts.T().Fatalf("Failed to set SUCCESS: %v", err)
-		}
-		if err := os.Setenv("LIMIT", "10"); err != nil {
-			ts.T().Fatalf("Failed to set LIMIT: %v", err)
-		}
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
-				setErr := SetRunner(r.(CommandRunner)) //nolint:errcheck // Error is checked on next line
-				if setErr != nil {
-					return setErr
-				}
-				return nil
-			},
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.audit.Show()
-			},
-		)
-		// The audit system may be disabled, which is acceptable
-		if err != nil {
-			ts.Require().Contains(err.Error(), "audit")
-		}
+		ts.testAuditShowWithFilters()
 	})
+}
+
+// testAuditShowBasic tests basic audit show functionality
+func (ts *AuditTestSuite) testAuditShowBasic() {
+	err := ts.runAuditCommand(func() error {
+		return ts.audit.Show()
+	})
+	ts.checkAuditError(err)
+}
+
+// testAuditShowWithFilters tests audit show with environment filters
+func (ts *AuditTestSuite) testAuditShowWithFilters() {
+	originalValues := ts.backupEnvironmentVariables()
+	defer ts.restoreEnvironmentVariables(originalValues)
+
+	ts.setFilterEnvironmentVariables()
+
+	err := ts.runAuditCommand(func() error {
+		return ts.audit.Show()
+	})
+	ts.checkAuditError(err)
+}
+
+// runAuditCommand runs an audit command with mock runner setup
+func (ts *AuditTestSuite) runAuditCommand(cmd func() error) error {
+	return ts.env.WithMockRunner(
+		func(r interface{}) error {
+			setErr := SetRunner(r.(CommandRunner)) //nolint:errcheck // Error is checked on next line
+			if setErr != nil {
+				return setErr
+			}
+			return nil
+		},
+		func() interface{} { return GetRunner() },
+		cmd,
+	)
+}
+
+// checkAuditError checks if an audit error is acceptable
+func (ts *AuditTestSuite) checkAuditError(err error) {
+	// The audit system may be disabled, which is acceptable
+	if err != nil {
+		ts.Require().Contains(err.Error(), "audit")
+	}
+}
+
+// backupEnvironmentVariables backs up current environment variables
+func (ts *AuditTestSuite) backupEnvironmentVariables() map[string]string {
+	return map[string]string{
+		"START_TIME": os.Getenv("START_TIME"),
+		"END_TIME":   os.Getenv("END_TIME"),
+		"USER":       os.Getenv("USER"),
+		"COMMAND":    os.Getenv("COMMAND"),
+		"SUCCESS":    os.Getenv("SUCCESS"),
+		"LIMIT":      os.Getenv("LIMIT"),
+	}
+}
+
+// restoreEnvironmentVariables restores environment variables from backup
+func (ts *AuditTestSuite) restoreEnvironmentVariables(backup map[string]string) {
+	for key, value := range backup {
+		if err := os.Setenv(key, value); err != nil {
+			ts.T().Logf("Failed to restore %s: %v", key, err)
+		}
+	}
+}
+
+// setFilterEnvironmentVariables sets environment variables for filtering
+func (ts *AuditTestSuite) setFilterEnvironmentVariables() {
+	envVars := map[string]string{
+		"START_TIME": "2023-01-01",
+		"END_TIME":   "2023-12-31",
+		"USER":       "testuser",
+		"COMMAND":    "test:run",
+		"SUCCESS":    "true",
+		"LIMIT":      "10",
+	}
+
+	for key, value := range envVars {
+		if err := os.Setenv(key, value); err != nil {
+			ts.T().Fatalf("Failed to set %s: %v", key, err)
+		}
+	}
 }
 
 // TestAuditStats tests the Stats method

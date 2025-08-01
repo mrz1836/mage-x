@@ -3,11 +3,20 @@ package azure
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/mrz1836/go-mage/pkg/providers"
+)
+
+// Static errors for err113 compliance
+var (
+	ErrAzureSubscriptionRequired      = errors.New("azure subscription ID is required")
+	ErrAzureCertificateKeyRequired    = errors.New("azure certificate and key paths are required")
+	ErrAzureClientCredentialsRequired = errors.New("azure client ID and client secret are required")
+	ErrNotImplemented                 = errors.New("not implemented")
 )
 
 // Provider implements the Azure provider
@@ -52,13 +61,13 @@ func (p *Provider) Name() string {
 func (p *Provider) Initialize(config *providers.ProviderConfig) error {
 	// Extract subscription ID from credentials
 	if config.Credentials.Extra == nil {
-		return fmt.Errorf("azure subscription ID is required")
+		return ErrAzureSubscriptionRequired
 	}
 
 	if subID, ok := config.Credentials.Extra["subscription_id"]; ok && subID != "" {
 		p.subscription = subID
 	} else {
-		return fmt.Errorf("azure subscription ID is required")
+		return ErrAzureSubscriptionRequired
 	}
 
 	// Initialize Azure services
@@ -83,11 +92,11 @@ func (p *Provider) Validate() error {
 	switch p.config.Credentials.Type {
 	case "cert":
 		if p.config.Credentials.CertPath == "" || p.config.Credentials.KeyPath == "" {
-			return fmt.Errorf("azure certificate and key paths are required")
+			return ErrAzureCertificateKeyRequired
 		}
 	case "key":
 		if p.config.Credentials.AccessKey == "" || p.config.Credentials.SecretKey == "" {
-			return fmt.Errorf("azure client ID and client secret are required")
+			return ErrAzureClientCredentialsRequired
 		}
 	}
 
@@ -251,7 +260,7 @@ func (s *azureStorageService) PutObject(_ context.Context, _, _ string, _ io.Rea
 }
 
 func (s *azureStorageService) GetObject(_ context.Context, _, _ string) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("not implemented")
+	return nil, ErrNotImplemented
 }
 
 func (s *azureStorageService) DeleteObject(_ context.Context, _, _ string) error { return nil }

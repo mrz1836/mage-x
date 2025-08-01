@@ -2,12 +2,22 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+)
+
+// Static errors to comply with err113 linter
+var (
+	errNoConfigFileFound  = errors.New("no configuration file found in paths")
+	errConfigPathNotAbs   = errors.New("config file path must be absolute")
+	errUnsupportedFileExt = errors.New("unsupported file format")
+	errUnsupportedFormat  = errors.New("unsupported format")
+	errConfigDataNil      = errors.New("configuration data is nil")
 )
 
 // FileConfigLoader implements ConfigLoader for file-based configurations
@@ -35,7 +45,7 @@ func (f *FileConfigLoader) Load(paths []string, dest interface{}) (string, error
 		}
 	}
 
-	return "", fmt.Errorf("no configuration file found in paths: %v", paths)
+	return "", fmt.Errorf("%w: %v", errNoConfigFileFound, paths)
 }
 
 // LoadFrom loads configuration from a specific file
@@ -43,7 +53,7 @@ func (f *FileConfigLoader) LoadFrom(path string, dest interface{}) error {
 	// Clean and validate the path
 	cleanPath := filepath.Clean(path)
 	if !filepath.IsAbs(cleanPath) {
-		return fmt.Errorf("config file path must be absolute: %s", path)
+		return fmt.Errorf("%w: %s", errConfigPathNotAbs, path)
 	}
 
 	data, err := os.ReadFile(cleanPath)
@@ -65,7 +75,7 @@ func (f *FileConfigLoader) LoadFrom(path string, dest interface{}) error {
 		if err := yaml.Unmarshal(data, dest); err == nil {
 			return nil
 		}
-		return fmt.Errorf("unsupported file format: %s", ext)
+		return fmt.Errorf("%w: %s", errUnsupportedFileExt, ext)
 	}
 }
 
@@ -80,7 +90,7 @@ func (f *FileConfigLoader) Save(path string, data interface{}, format string) er
 	case "yaml", "yml":
 		content, err = yaml.Marshal(data)
 	default:
-		return fmt.Errorf("unsupported format: %s", format)
+		return fmt.Errorf("%w: %s", errUnsupportedFormat, format)
 	}
 
 	if err != nil {
@@ -100,7 +110,7 @@ func (f *FileConfigLoader) Save(path string, data interface{}, format string) er
 func (f *FileConfigLoader) Validate(data interface{}) error {
 	// Basic validation - ensure data is not nil
 	if data == nil {
-		return fmt.Errorf("configuration data is nil")
+		return errConfigDataNil
 	}
 
 	// Additional validation can be added here based on specific requirements

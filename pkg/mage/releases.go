@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,16 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for releases operations
+var (
+	errReleasesVersionRequired     = errors.New("VERSION environment variable is required")
+	errGitHubTokenRequiredReleases = errors.New("GITHUB_TOKEN environment variable is required")
+	errReleaseAlreadyExists        = errors.New("release already exists")
+	errInvalidPlatformFormat       = errors.New("invalid platform format")
+	errInvalidFromChannel          = errors.New("invalid from channel")
+	errInvalidToChannel            = errors.New("invalid to channel")
 )
 
 // Releases namespace for multi-channel release management
@@ -115,7 +126,7 @@ func (Releases) Promote() error {
 	version := utils.GetEnv("VERSION", "")
 
 	if version == "" {
-		return fmt.Errorf("VERSION environment variable is required")
+		return errReleasesVersionRequired
 	}
 
 	utils.Info("Promoting %s from %s to %s", version, fromChannel, toChannel)
@@ -256,14 +267,14 @@ func createRelease(config *MultiChannelReleaseConfig) error {
 	}
 
 	if config.GitHubToken == "" {
-		return fmt.Errorf("GITHUB_TOKEN environment variable is required")
+		return errGitHubTokenRequiredReleases
 	}
 
 	utils.Info("Creating %s release: %s", config.Channel, config.Version)
 
 	// Check if release already exists
 	if releaseExists(config.Version) {
-		return fmt.Errorf("release %s already exists", config.Version)
+		return fmt.Errorf("%w: %s", errReleaseAlreadyExists, config.Version)
 	}
 
 	// Generate release notes
@@ -486,7 +497,7 @@ func buildForPlatform(binaryName, platform string) (string, error) {
 func parsePlatform(platform string) (goos, arch string, err error) {
 	parts := strings.Split(platform, "/")
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid platform format: %s", platform)
+		return "", "", fmt.Errorf("%w: %s", errInvalidPlatformFormat, platform)
 	}
 	return parts[0], parts[1], nil
 }
@@ -621,10 +632,10 @@ func validateChannels(from, to string) error {
 	}
 
 	if !fromValid {
-		return fmt.Errorf("invalid from channel: %s", from)
+		return fmt.Errorf("%w: %s", errInvalidFromChannel, from)
 	}
 	if !toValid {
-		return fmt.Errorf("invalid to channel: %s", to)
+		return fmt.Errorf("%w: %s", errInvalidToChannel, to)
 	}
 
 	return nil

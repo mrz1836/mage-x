@@ -1,11 +1,17 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+)
+
+// Error definitions for mage error operations
+var (
+	ErrUnknownSeverity = errors.New("unknown severity")
 )
 
 // DefaultMageError is the default implementation of MageError
@@ -220,7 +226,7 @@ func (e *DefaultMageError) Format(includeStack bool) string {
 
 // Is reports whether the target error is in the error chain
 func (e *DefaultMageError) Is(target error) bool {
-	if e == target {
+	if errors.Is(e.cause, target) {
 		return true
 	}
 
@@ -233,10 +239,10 @@ func (e *DefaultMageError) Is(target error) bool {
 
 	// Check the cause chain
 	if e.cause != nil {
-		if causeErr, ok := e.cause.(interface{ Is(error) bool }); ok {
+		if causeErr, ok := e.cause.(interface{ Is(target error) bool }); ok {
 			return causeErr.Is(target)
 		}
-		return e.cause == target
+		return errors.Is(e.cause, target)
 	}
 
 	return false
@@ -261,7 +267,7 @@ func (e *DefaultMageError) As(target interface{}) bool {
 
 	// Try the cause chain
 	if e.cause != nil {
-		if causeErr, ok := e.cause.(interface{ As(interface{}) bool }); ok {
+		if causeErr, ok := e.cause.(interface{ As(target interface{}) bool }); ok {
 			return causeErr.As(target)
 		}
 	}
@@ -347,7 +353,8 @@ func (s Severity) MarshalText() ([]byte, error) {
 	return []byte(s.String()), nil
 }
 
-// UnmarshalText implements encoding.TextUnmarshaler
+// UnmarshalText implements encoding.TextUnmarshaler for Severity.
+// It parses severity levels from their string representation.
 func (s *Severity) UnmarshalText(text []byte) error {
 	str := string(text)
 	switch strings.ToUpper(str) {
@@ -364,7 +371,7 @@ func (s *Severity) UnmarshalText(text []byte) error {
 	case "FATAL":
 		*s = SeverityFatal
 	default:
-		return fmt.Errorf("unknown severity: %s", str)
+		return fmt.Errorf("%w: %s", ErrUnknownSeverity, str)
 	}
 	return nil
 }

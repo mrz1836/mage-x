@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,13 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for release operations
+var (
+	errReleaseGitHubTokenRequired = errors.New("github_token or GITHUB_TOKEN environment variable is required")
+	errNoGoreleaserConfig         = errors.New("no goreleaser configuration file found")
+	errGoreleaserConfigExists     = errors.New("goreleaser configuration already exists")
 )
 
 // Release namespace for release-related tasks
@@ -25,7 +33,7 @@ func (Release) Default() error {
 	}
 
 	if token == "" {
-		return fmt.Errorf("github_token or GITHUB_TOKEN environment variable is required")
+		return errReleaseGitHubTokenRequired
 	}
 
 	// Ensure goreleaser is installed
@@ -144,7 +152,7 @@ func (Release) Check() error {
 	}
 
 	if !found {
-		return fmt.Errorf("no goreleaser configuration file found")
+		return errNoGoreleaserConfig
 	}
 
 	// Validate configuration
@@ -164,7 +172,7 @@ func (Release) Init() error {
 	configFiles := []string{".goreleaser.yml", ".goreleaser.yaml", "goreleaser.yml", "goreleaser.yaml"}
 	for _, file := range configFiles {
 		if utils.FileExists(file) {
-			return fmt.Errorf("goreleaser configuration already exists: %s", file)
+			return fmt.Errorf("%w: %s", errGoreleaserConfigExists, file)
 		}
 	}
 

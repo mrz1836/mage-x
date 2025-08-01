@@ -11,6 +11,7 @@ import (
 // CLISimpleTestSuite defines the test suite for CLI namespace methods
 type CLISimpleTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 	cli CLI
 }

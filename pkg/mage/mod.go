@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,14 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errOperationCanceled     = errors.New("operation canceled")
+	errModuleVarRequired     = errors.New("MODULE environment variable is required. Usage: MODULE=example.com/pkg mage mod:why")
+	errGoModExists           = errors.New("go.mod already exists")
+	errModuleInitVarRequired = errors.New("MODULE environment variable is required. Usage: MODULE=github.com/user/repo mage mod:init")
 )
 
 // Mod namespace for Go module management tasks
@@ -117,7 +126,7 @@ func (Mod) Clean() error {
 	// Check if FORCE is set
 	if os.Getenv("FORCE") != approvalTrue {
 		utils.Error("Set FORCE=true to confirm module cache deletion")
-		return fmt.Errorf("operation canceled")
+		return errOperationCanceled
 	}
 
 	// Clean module cache
@@ -184,7 +193,7 @@ func (Mod) Graph() error {
 func (Mod) Why() error {
 	module := os.Getenv("MODULE")
 	if module == "" {
-		return fmt.Errorf("MODULE environment variable is required. Usage: MODULE=example.com/pkg mage mod:why")
+		return errModuleVarRequired
 	}
 
 	utils.Header("Module Dependency Analysis")
@@ -244,7 +253,7 @@ func (Mod) Init() error {
 
 	// Check if go.mod already exists
 	if utils.FileExists("go.mod") {
-		return fmt.Errorf("go.mod already exists")
+		return errGoModExists
 	}
 
 	// Get module name
@@ -259,7 +268,7 @@ func (Mod) Init() error {
 	}
 
 	if moduleName == "" {
-		return fmt.Errorf("MODULE environment variable is required. Usage: MODULE=github.com/user/repo mage mod:init")
+		return errModuleInitVarRequired
 	}
 
 	// Initialize module

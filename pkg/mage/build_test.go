@@ -14,6 +14,7 @@ import (
 // BuildTestSuite defines the test suite for Build namespace methods
 type BuildTestSuite struct {
 	suite.Suite
+
 	env   *testutil.TestEnvironment
 	build Build
 }

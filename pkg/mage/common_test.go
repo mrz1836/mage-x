@@ -15,6 +15,7 @@ import (
 // CommonTestSuite defines the test suite for common functions
 type CommonTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 }
 

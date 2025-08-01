@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,11 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for linting operations
+var (
+	errVetFailed = errors.New("go vet found issues")
 )
 
 // Lint namespace for linting and formatting tasks
@@ -284,7 +290,7 @@ func (Lint) VetParallel() error {
 	}
 
 	if len(vetErrors) > 0 {
-		return fmt.Errorf("vet errors:\n%s", strings.Join(vetErrors, "\n"))
+		return fmt.Errorf("%w:\n%s", errVetFailed, strings.Join(vetErrors, "\n"))
 	}
 
 	utils.Success("Parallel vet passed in %s", utils.FormatDuration(time.Since(start)))

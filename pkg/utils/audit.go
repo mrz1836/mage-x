@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -13,6 +14,11 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
+)
+
+// Static errors for audit operations
+var (
+	errAuditLoggingDisabled = errors.New("audit logging is disabled")
 )
 
 // AuditEvent represents a single audit event
@@ -227,19 +233,42 @@ func (a *AuditLogger) LogEvent(event *AuditEvent) error {
 // GetEvents retrieves audit events with optional filtering
 func (a *AuditLogger) GetEvents(filter *AuditFilter) ([]AuditEvent, error) {
 	if !a.enabled {
-		return nil, fmt.Errorf("audit logging is disabled")
+		return nil, errAuditLoggingDisabled
 	}
 
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
-	query := `
+	query, args := a.buildEventsQuery(filter)
+
+	rows, err := a.db.QueryContext(context.Background(), query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query audit events: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			// Log close error but don't fail the operation
+			log.Printf("failed to close database rows: %v", closeErr)
+		}
+	}()
+
+	events, err := a.scanAuditEvents(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return events, nil
+}
+
+// buildEventsQuery constructs the SQL query and args for event filtering
+func (a *AuditLogger) buildEventsQuery(filter *AuditFilter) (query string, args []interface{}) {
+	query = `
 	SELECT id, timestamp, user, command, args, working_dir, 
 		   duration, exit_code, success, environment, metadata
 	FROM audit_events
 	WHERE 1=1`
 
-	args := []interface{}{}
+	args = []interface{}{}
 
 	// Add filters
 	if !filter.StartTime.IsZero() {
@@ -274,70 +303,78 @@ func (a *AuditLogger) GetEvents(filter *AuditFilter) ([]AuditEvent, error) {
 		args = append(args, filter.Limit)
 	}
 
-	rows, err := a.db.QueryContext(context.Background(), query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query audit events: %w", err)
-	}
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			// Log close error but don't fail the operation
-			log.Printf("failed to close database rows: %v", closeErr)
-		}
-	}()
+	return query, args
+}
 
+// scanAuditEvents processes database rows into AuditEvent structs
+func (a *AuditLogger) scanAuditEvents(rows *sql.Rows) ([]AuditEvent, error) {
 	var events []AuditEvent
 	for rows.Next() {
-		var event AuditEvent
-		var argsJSON, envJSON, metadataJSON string
-		var durationNs int64
-
-		scanErr := rows.Scan(
-			&event.ID,
-			&event.Timestamp,
-			&event.User,
-			&event.Command,
-			&argsJSON,
-			&event.WorkingDir,
-			&durationNs,
-			&event.ExitCode,
-			&event.Success,
-			&envJSON,
-			&metadataJSON,
-		)
-		if scanErr != nil {
-			return nil, fmt.Errorf("failed to scan audit event: %w", scanErr)
+		event, err := a.scanSingleAuditEvent(rows)
+		if err != nil {
+			return nil, err
 		}
-
-		// Deserialize JSON fields
-		event.Duration = time.Duration(durationNs)
-		if unmarshalErr := json.Unmarshal([]byte(argsJSON), &event.Args); unmarshalErr != nil {
-			// Continue with empty args on unmarshal error
-			log.Printf("failed to unmarshal args JSON: %v", unmarshalErr)
-		}
-		if unmarshalErr := json.Unmarshal([]byte(envJSON), &event.Environment); unmarshalErr != nil {
-			// Continue with empty environment on unmarshal error
-			log.Printf("failed to unmarshal environment JSON: %v", unmarshalErr)
-		}
-		if unmarshalErr := json.Unmarshal([]byte(metadataJSON), &event.Metadata); unmarshalErr != nil {
-			// Continue with empty metadata on unmarshal error
-			log.Printf("failed to unmarshal metadata JSON: %v", unmarshalErr)
-		}
-
 		events = append(events, event)
 	}
 
 	// Check for errors during iteration
-	if err = rows.Err(); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error during rows iteration: %w", err)
 	}
 
 	return events, nil
 }
 
+// scanSingleAuditEvent scans a single row into an AuditEvent
+func (a *AuditLogger) scanSingleAuditEvent(rows *sql.Rows) (AuditEvent, error) {
+	var event AuditEvent
+	var argsJSON, envJSON, metadataJSON string
+	var durationNs int64
+
+	scanErr := rows.Scan(
+		&event.ID,
+		&event.Timestamp,
+		&event.User,
+		&event.Command,
+		&argsJSON,
+		&event.WorkingDir,
+		&durationNs,
+		&event.ExitCode,
+		&event.Success,
+		&envJSON,
+		&metadataJSON,
+	)
+	if scanErr != nil {
+		return event, fmt.Errorf("failed to scan audit event: %w", scanErr)
+	}
+
+	// Deserialize JSON fields
+	event.Duration = time.Duration(durationNs)
+	a.unmarshalJSONFields(&event, argsJSON, envJSON, metadataJSON)
+
+	return event, nil
+}
+
+// unmarshalJSONFields deserializes JSON fields for an audit event
+func (a *AuditLogger) unmarshalJSONFields(event *AuditEvent, argsJSON, envJSON, metadataJSON string) {
+	if unmarshalErr := json.Unmarshal([]byte(argsJSON), &event.Args); unmarshalErr != nil {
+		// Continue with empty args on unmarshal error
+		log.Printf("failed to unmarshal args JSON: %v", unmarshalErr)
+	}
+	if unmarshalErr := json.Unmarshal([]byte(envJSON), &event.Environment); unmarshalErr != nil {
+		// Continue with empty environment on unmarshal error
+		log.Printf("failed to unmarshal environment JSON: %v", unmarshalErr)
+	}
+	if unmarshalErr := json.Unmarshal([]byte(metadataJSON), &event.Metadata); unmarshalErr != nil {
+		// Continue with empty metadata on unmarshal error
+		log.Printf("failed to unmarshal metadata JSON: %v", unmarshalErr)
+	}
+}
+
 // GetStats returns audit statistics
 func (a *AuditLogger) GetStats() (AuditStats, error) {
 	if !a.enabled {
-		return AuditStats{}, fmt.Errorf("audit logging is disabled")
+		return AuditStats{}, errAuditLoggingDisabled
 	}
 
 	a.mu.RLock()
@@ -345,30 +382,51 @@ func (a *AuditLogger) GetStats() (AuditStats, error) {
 
 	var stats AuditStats
 
+	if err := a.getBasicStats(&stats); err != nil {
+		return stats, err
+	}
+
+	if err := a.getTopUsers(&stats); err != nil {
+		return stats, err
+	}
+
+	if err := a.getTopCommands(&stats); err != nil {
+		return stats, err
+	}
+
+	return stats, nil
+}
+
+// getBasicStats retrieves basic statistics (counts and date range)
+func (a *AuditLogger) getBasicStats(stats *AuditStats) error {
 	// Total events
 	err := a.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM audit_events").Scan(&stats.TotalEvents)
 	if err != nil {
-		return stats, fmt.Errorf("failed to get total events: %w", err)
+		return fmt.Errorf("failed to get total events: %w", err)
 	}
 
 	// Success/failure counts
 	err = a.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM audit_events WHERE success = 1").Scan(&stats.SuccessfulEvents)
 	if err != nil {
-		return stats, fmt.Errorf("failed to get successful events: %w", err)
+		return fmt.Errorf("failed to get successful events: %w", err)
 	}
 
 	err = a.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM audit_events WHERE success = 0").Scan(&stats.FailedEvents)
 	if err != nil {
-		return stats, fmt.Errorf("failed to get failed events: %w", err)
+		return fmt.Errorf("failed to get failed events: %w", err)
 	}
 
 	// Date range
 	err = a.db.QueryRowContext(context.Background(), "SELECT MIN(timestamp), MAX(timestamp) FROM audit_events").Scan(&stats.EarliestEvent, &stats.LatestEvent)
 	if err != nil {
-		return stats, fmt.Errorf("failed to get date range: %w", err)
+		return fmt.Errorf("failed to get date range: %w", err)
 	}
 
-	// Top users
+	return nil
+}
+
+// getTopUsers retrieves top users statistics
+func (a *AuditLogger) getTopUsers(stats *AuditStats) error {
 	rows, err := a.db.QueryContext(context.Background(), `
 		SELECT user, COUNT(*) as count 
 		FROM audit_events 
@@ -377,7 +435,7 @@ func (a *AuditLogger) GetStats() (AuditStats, error) {
 		LIMIT 10
 	`)
 	if err != nil {
-		return stats, fmt.Errorf("failed to get top users: %w", err)
+		return fmt.Errorf("failed to get top users: %w", err)
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
@@ -397,11 +455,15 @@ func (a *AuditLogger) GetStats() (AuditStats, error) {
 
 	// Check for errors during iteration
 	if err = rows.Err(); err != nil {
-		return stats, fmt.Errorf("error during top users iteration: %w", err)
+		return fmt.Errorf("error during top users iteration: %w", err)
 	}
 
-	// Top commands
-	rows, err = a.db.QueryContext(context.Background(), `
+	return nil
+}
+
+// getTopCommands retrieves top commands statistics
+func (a *AuditLogger) getTopCommands(stats *AuditStats) error {
+	rows, err := a.db.QueryContext(context.Background(), `
 		SELECT command, COUNT(*) as count 
 		FROM audit_events 
 		GROUP BY command 
@@ -409,7 +471,7 @@ func (a *AuditLogger) GetStats() (AuditStats, error) {
 		LIMIT 10
 	`)
 	if err != nil {
-		return stats, fmt.Errorf("failed to get top commands: %w", err)
+		return fmt.Errorf("failed to get top commands: %w", err)
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
@@ -429,10 +491,10 @@ func (a *AuditLogger) GetStats() (AuditStats, error) {
 
 	// Check for errors during iteration
 	if err = rows.Err(); err != nil {
-		return stats, fmt.Errorf("error during top commands iteration: %w", err)
+		return fmt.Errorf("error during top commands iteration: %w", err)
 	}
 
-	return stats, nil
+	return nil
 }
 
 // CleanupOldEvents removes old audit events based on retention policy

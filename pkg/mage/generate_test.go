@@ -11,6 +11,7 @@ import (
 // GenerateTestSuite defines the test suite for Generate functions
 type GenerateTestSuite struct {
 	suite.Suite
+
 	env      *testutil.TestEnvironment
 	generate Generate
 }

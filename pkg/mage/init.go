@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,11 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for init operations
+var (
+	errNotGoProject = errors.New("this doesn't appear to be a Go project (no go.mod found)")
 )
 
 // Init namespace for project initialization tasks
@@ -168,7 +174,7 @@ func (Init) Upgrade() error {
 
 	// Check if this is a Go project
 	if !utils.FileExists("go.mod") {
-		return fmt.Errorf("this doesn't appear to be a Go project (no go.mod found)")
+		return errNotGoProject
 	}
 
 	// Get existing module name

@@ -2,12 +2,19 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errGoVetFailed        = errors.New("go vet failed")
+	errStrictChecksFailed = errors.New("strict checks failed")
 )
 
 // Vet namespace for go vet tasks
@@ -177,7 +184,7 @@ func (Vet) Parallel() error {
 		for _, err := range errors {
 			fmt.Printf("  - %v\n", err)
 		}
-		return fmt.Errorf("go vet failed")
+		return errGoVetFailed
 	}
 
 	utils.Success("go vet passed in %s", utils.FormatDuration(time.Since(start)))
@@ -245,7 +252,7 @@ func (Vet) Strict() error {
 	}
 
 	if failed > 0 {
-		return fmt.Errorf("%d strict checks failed", failed)
+		return fmt.Errorf("%w: %d", errStrictChecksFailed, failed)
 	}
 
 	utils.Success("\nAll strict checks passed!")

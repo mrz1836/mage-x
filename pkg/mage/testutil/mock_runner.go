@@ -1,10 +1,16 @@
 package testutil
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/stretchr/testify/mock"
+)
+
+// Static errors for testutil operations
+var (
+	errCommandFailed = errors.New("command failed")
 )
 
 // MockRunner provides enhanced mocking capabilities for command execution
@@ -73,7 +79,7 @@ func (b *MockBuilder) ExpectSuccess() *MockBuilder {
 
 // ExpectFailure sets up failing command execution expectations
 func (b *MockBuilder) ExpectFailure(message string) *MockBuilder {
-	return b.ExpectAnyCommand(fmt.Errorf("%s", message))
+	return b.ExpectAnyCommand(fmt.Errorf("%w: %s", errCommandFailed, message))
 }
 
 // Build returns the configured mock runner

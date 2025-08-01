@@ -97,7 +97,8 @@ func TestFileStore_Release_Operations(t *testing.T) {
 
 	t.Run("GetRelease non-existent", func(t *testing.T) {
 		release, err := store.GetRelease(Stable, "2.0.0")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrReleaseNotFound)
 		assert.Nil(t, release)
 	})
 
@@ -255,7 +256,8 @@ func TestFileStore_DeleteRelease(t *testing.T) {
 
 		// Verify release is no longer retrievable
 		retrieved, err := store.GetRelease(Stable, "1.0.0")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrReleaseNotFound)
 		assert.Nil(t, retrieved)
 	})
 
@@ -313,7 +315,8 @@ func TestFileStore_ChannelConfig_Operations(t *testing.T) {
 
 	t.Run("GetChannelConfig non-existent", func(t *testing.T) {
 		config, err := store.GetChannelConfig(LTS)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrConfigNotFound)
 		assert.Nil(t, config)
 	})
 }

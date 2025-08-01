@@ -9,6 +9,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Static test errors to satisfy err113 linter
+var (
+	errTestOriginal         = errors.New("original error")
+	errTestStandard         = errors.New("standard error")
+	errTestFileNotFound     = errors.New("file not found")
+	errTransformerTestError = errors.New("test error")
+	errTestAuthFailed       = errors.New("auth failed with password=secret123")
+	errTestDBConnFailed     = errors.New("database connection failed with password=prod123")
+	errTestCustom           = errors.New("custom error")
+	errTestFinal            = errors.New("final test")
+	errTestGeneric          = errors.New("test")
+)
+
 func TestDefaultErrorTransformer_RemoveTransformer(t *testing.T) {
 	transformer, ok := NewErrorTransformer().(*DefaultErrorTransformer)
 	require.True(t, ok, "NewErrorTransformer should return *DefaultErrorTransformer")
@@ -57,7 +70,7 @@ func TestDefaultErrorTransformer_SetEnabled(t *testing.T) {
 	})
 
 	// Test transformation when enabled
-	originalErr := errors.New("original error")
+	originalErr := errTestOriginal
 	transformedErr := transformer.Transform(originalErr)
 	assert.Contains(t, transformedErr.Error(), "transformed:")
 
@@ -227,7 +240,7 @@ func TestSanitizeTransformer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := errors.New(tt.input)
+			err := fmt.Errorf("%s", tt.input)
 			sanitized := SanitizeTransformer(err)
 			assert.Contains(t, sanitized.Error(), tt.expected)
 		})
@@ -293,7 +306,7 @@ func TestEnrichTransformer(t *testing.T) {
 	})
 
 	t.Run("enrich standard error", func(t *testing.T) {
-		err := errors.New("standard error")
+		err := errTestStandard
 		enriched := enricher(err)
 		// Standard errors should be returned unchanged
 		assert.Equal(t, err, enriched)
@@ -343,7 +356,7 @@ func TestRetryableTransformer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := errors.New(tt.error)
+			err := fmt.Errorf("%s", tt.error)
 			transformed := retryable(err)
 
 			// For standard errors, it should return unchanged
@@ -403,7 +416,7 @@ func TestNewConditionalTransformer(t *testing.T) {
 	})
 
 	t.Run("condition not met", func(t *testing.T) {
-		err := errors.New("file not found")
+		err := errTestFileNotFound
 		transformed := conditional(err)
 		assert.Equal(t, err, transformed)
 	})
@@ -433,13 +446,13 @@ func TestNewChainTransformer(t *testing.T) {
 		if err == nil {
 			return nil
 		}
-		return errors.New(err.Error())
+		return fmt.Errorf("%s", err.Error())
 	}
 
 	chain := NewChainTransformer(prefixTransformer, suffixTransformer, upperTransformer)
 
 	t.Run("chain transformation", func(t *testing.T) {
-		err := errors.New("original error")
+		err := errTestOriginal
 		transformed := chain(err)
 		assert.Contains(t, transformed.Error(), "[PREFIX]")
 		assert.Contains(t, transformed.Error(), "[SUFFIX]")
@@ -452,7 +465,7 @@ func TestNewChainTransformer(t *testing.T) {
 
 	t.Run("empty chain", func(t *testing.T) {
 		emptyChain := NewChainTransformer()
-		err := errors.New("test error")
+		err := errTransformerTestError
 		assert.Equal(t, err, emptyChain(err))
 	})
 }
@@ -461,7 +474,7 @@ func TestNewSecurityTransformer(t *testing.T) {
 	transformer := NewSecurityTransformer()
 
 	t.Run("sanitizes sensitive data", func(t *testing.T) {
-		err := errors.New("auth failed with password=secret123")
+		err := errTestAuthFailed
 		transformed := transformer.Transform(err)
 		assert.Contains(t, transformed.Error(), "password=***")
 		assert.NotContains(t, transformed.Error(), "secret123")
@@ -557,7 +570,7 @@ func TestNewProductionTransformer(t *testing.T) {
 	transformer := NewProductionTransformer()
 
 	t.Run("sanitizes sensitive data", func(t *testing.T) {
-		err := errors.New("database connection failed with password=prod123")
+		err := errTestDBConnFailed
 		transformed := transformer.Transform(err)
 		assert.Contains(t, transformed.Error(), "password=***")
 		assert.NotContains(t, transformed.Error(), "prod123")
@@ -595,7 +608,7 @@ func TestNewProductionTransformer(t *testing.T) {
 func TestMockErrorTransformer(t *testing.T) {
 	t.Run("Transform", func(t *testing.T) {
 		mock := NewMockErrorTransformer()
-		err := errors.New("test error")
+		err := errTransformerTestError
 
 		// Test normal transform
 		result := mock.Transform(err)
@@ -604,7 +617,7 @@ func TestMockErrorTransformer(t *testing.T) {
 		assert.Equal(t, err, mock.TransformCalls[0])
 
 		// Test with custom result
-		customErr := errors.New("custom error")
+		customErr := errTestCustom
 		mock.TransformResult = customErr
 		result = mock.Transform(err)
 		assert.Equal(t, customErr, result)
@@ -686,7 +699,7 @@ func TestTransformerConcurrency(t *testing.T) {
 			for j := 0; j < 100; j++ {
 				transformer.GetTransformers()
 				transformer.IsEnabled()
-				err := errors.New("test")
+				err := errTestGeneric
 				transformed := transformer.Transform(err)
 				if transformed == nil {
 					continue // Expected in concurrent test
@@ -705,7 +718,7 @@ func TestTransformerConcurrency(t *testing.T) {
 	assert.NotPanics(t, func() {
 		transformer.ClearTransformers()
 		transformer.SetEnabled(true)
-		err := errors.New("final test")
+		err := errTestFinal
 		result := transformer.Transform(err)
 		// Result can be nil and that's acceptable for this test
 		_ = result

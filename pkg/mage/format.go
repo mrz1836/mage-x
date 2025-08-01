@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,11 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for err113 compliance
+var (
+	ErrCodeNotFormatted = errors.New("code is not properly formatted")
 )
 
 // Format namespace for code formatting tasks
@@ -161,7 +167,7 @@ func (Format) Check() error {
 		for _, issue := range issues {
 			fmt.Printf("  - %s\n", issue)
 		}
-		return fmt.Errorf("code is not properly formatted")
+		return ErrCodeNotFormatted
 	}
 
 	utils.Success("All files are properly formatted")

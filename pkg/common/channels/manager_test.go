@@ -1,6 +1,7 @@
 package channels
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -8,9 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mrz1836/go-mage/pkg/common/errors"
+	mageErrors "github.com/mrz1836/go-mage/pkg/common/errors"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 )
+
+// Test-specific static errors
+var errMockHookFailed = errors.New("hook error")
 
 // MockStore implements Store interface for testing
 type MockStore struct {
@@ -34,17 +38,17 @@ func (m *MockStore) SetError(shouldError bool) {
 
 func (m *MockStore) GetRelease(channel Channel, version string) (*Release, error) {
 	if m.shouldError {
-		return nil, fmt.Errorf("mock error")
+		return nil, ErrMockOperation
 	}
 
 	channelReleases, exists := m.releases[channel.String()]
 	if !exists {
-		return nil, nil
+		return nil, ErrReleaseNotFound
 	}
 
 	release, exists := channelReleases[version]
 	if !exists {
-		return nil, nil
+		return nil, ErrReleaseNotFound
 	}
 
 	return release, nil
@@ -52,7 +56,7 @@ func (m *MockStore) GetRelease(channel Channel, version string) (*Release, error
 
 func (m *MockStore) ListReleases(channel Channel) ([]*Release, error) {
 	if m.shouldError {
-		return nil, fmt.Errorf("mock error")
+		return nil, ErrMockOperation
 	}
 
 	channelReleases, exists := m.releases[channel.String()]
@@ -70,7 +74,7 @@ func (m *MockStore) ListReleases(channel Channel) ([]*Release, error) {
 
 func (m *MockStore) SaveRelease(release *Release) error {
 	if m.shouldError {
-		return fmt.Errorf("mock error")
+		return ErrMockOperation
 	}
 
 	if err := release.Validate(); err != nil {
@@ -88,16 +92,16 @@ func (m *MockStore) SaveRelease(release *Release) error {
 
 func (m *MockStore) DeleteRelease(channel Channel, version string) error {
 	if m.shouldError {
-		return fmt.Errorf("mock error")
+		return ErrMockOperation
 	}
 
 	channelReleases, exists := m.releases[channel.String()]
 	if !exists {
-		return errors.WithCode(errors.ErrNotFound, "release not found")
+		return mageErrors.WithCode(mageErrors.ErrNotFound, "release not found")
 	}
 
 	if _, exists := channelReleases[version]; !exists {
-		return errors.WithCode(errors.ErrNotFound, "release not found")
+		return mageErrors.WithCode(mageErrors.ErrNotFound, "release not found")
 	}
 
 	delete(channelReleases, version)
@@ -106,12 +110,12 @@ func (m *MockStore) DeleteRelease(channel Channel, version string) error {
 
 func (m *MockStore) GetChannelConfig(channel Channel) (*ChannelConfig, error) {
 	if m.shouldError {
-		return nil, fmt.Errorf("mock error")
+		return nil, ErrMockOperation
 	}
 
 	config, exists := m.configs[channel]
 	if !exists {
-		return nil, nil
+		return nil, ErrConfigNotFound
 	}
 
 	return config, nil
@@ -119,7 +123,7 @@ func (m *MockStore) GetChannelConfig(channel Channel) (*ChannelConfig, error) {
 
 func (m *MockStore) SaveChannelConfig(config *ChannelConfig) error {
 	if m.shouldError {
-		return fmt.Errorf("mock error")
+		return ErrMockOperation
 	}
 
 	m.configs[config.Name] = config
@@ -128,7 +132,7 @@ func (m *MockStore) SaveChannelConfig(config *ChannelConfig) error {
 
 func (m *MockStore) GetPromotionHistory(version string) ([]*PromotionRequest, error) {
 	if m.shouldError {
-		return nil, fmt.Errorf("mock error")
+		return nil, ErrMockOperation
 	}
 
 	history, exists := m.promotions[version]
@@ -141,7 +145,7 @@ func (m *MockStore) GetPromotionHistory(version string) ([]*PromotionRequest, er
 
 func (m *MockStore) SavePromotionRequest(request *PromotionRequest) error {
 	if m.shouldError {
-		return fmt.Errorf("mock error")
+		return ErrMockOperation
 	}
 
 	if _, exists := m.promotions[request.Version]; !exists {
@@ -160,7 +164,7 @@ type MockValidator struct {
 
 func (v *MockValidator) Validate(_ *Release) error {
 	if v.shouldFail {
-		return fmt.Errorf("%s", v.errorMsg)
+		return fmt.Errorf("%w: %s", ErrMockOperation, v.errorMsg)
 	}
 	return nil
 }
@@ -176,7 +180,7 @@ type MockHook struct {
 func (h *MockHook) OnPublish(_ *Release) error {
 	h.publishCalled = true
 	if h.shouldFail {
-		return fmt.Errorf("hook error")
+		return errMockHookFailed
 	}
 	return nil
 }
@@ -184,7 +188,7 @@ func (h *MockHook) OnPublish(_ *Release) error {
 func (h *MockHook) OnPromote(_ *Release, _ Channel) error {
 	h.promoteCalled = true
 	if h.shouldFail {
-		return fmt.Errorf("hook error")
+		return errMockHookFailed
 	}
 	return nil
 }
@@ -192,7 +196,7 @@ func (h *MockHook) OnPromote(_ *Release, _ Channel) error {
 func (h *MockHook) OnDeprecate(_ *Release) error {
 	h.deprecateCalled = true
 	if h.shouldFail {
-		return fmt.Errorf("hook error")
+		return errMockHookFailed
 	}
 	return nil
 }
@@ -488,7 +492,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 
 		err := manager.PromoteRelease(request)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot promote from")
+		assert.Contains(t, err.Error(), "cannot promote between channels")
 	})
 
 	t.Run("source release not found", func(t *testing.T) {
@@ -632,7 +636,8 @@ func TestManager_GetLatestRelease(t *testing.T) {
 
 	t.Run("no releases", func(t *testing.T) {
 		latest, err := manager.GetLatestRelease(Stable)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNoReleasesFound)
 		assert.Nil(t, latest)
 	})
 
@@ -858,7 +863,8 @@ func TestManager_CleanupExpiredReleases(t *testing.T) {
 
 		// Check that expired release was removed
 		expired, err := store.GetRelease(Edge, "1.0.0")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrReleaseNotFound)
 		assert.Nil(t, expired)
 
 		// Check that non-expired release still exists

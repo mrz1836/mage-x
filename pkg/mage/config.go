@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -120,6 +121,11 @@ var (
 	errLoadConfig error
 	// cfg is a backward compatibility variable for tests
 	cfg *Config //nolint:gochecknoglobals // Backward compatibility for tests
+)
+
+// Static errors for err113 compliance
+var (
+	ErrEnterpriseConfigExists = errors.New("enterprise configuration already exists")
 )
 
 // LoadConfig loads the configuration from file or returns defaults
@@ -409,7 +415,7 @@ func SaveEnterpriseConfig(cfg *EnterpriseConfiguration) error {
 func SetupEnterpriseConfig() error {
 	// Check if enterprise config already exists
 	if HasEnterpriseConfig() {
-		return fmt.Errorf("enterprise configuration already exists")
+		return ErrEnterpriseConfigExists
 	}
 
 	// Run the enterprise setup wizard

@@ -11,6 +11,7 @@ import (
 // EnterpriseSimpleTestSuite defines the test suite for basic enterprise methods
 type EnterpriseSimpleTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 }
 

@@ -9,11 +9,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Static test errors to comply with err113 linter
+var (
+	errFirstError               = errors.New("first error")
+	errSecondError              = errors.New("second error")
+	errSingleError              = errors.New("single error")
+	errError1                   = errors.New("error 1")
+	errError2                   = errors.New("error 2")
+	errError3                   = errors.New("error 3")
+	errErrorWithContext         = errors.New("error with context")
+	errRegularError             = errors.New("regular error")
+	errContextError             = errors.New("context error")
+	errBaseError                = errors.New("base error")
+	errStandardError            = errors.New("standard error")
+	errDatabaseConnectionFailed = errors.New("database connection failed")
+	errInnerError               = errors.New("inner error")
+	errTestError                = errors.New("error")
+	errError1Chain              = errors.New("error1")
+	errError2Chain              = errors.New("error2")
+	errFormattedNumber          = errors.New("42")
+)
+
 func TestErrorChain_AddWithContext(t *testing.T) {
 	var chain ErrorChain = NewErrorChain()
 
 	// Add error with context
-	err1 := errors.New("first error")
+	err1 := errFirstError
 	ctx1 := ErrorContext{
 		Operation: "Op1",
 		Resource:  "Resource1",
@@ -22,7 +43,7 @@ func TestErrorChain_AddWithContext(t *testing.T) {
 	chain = chain.AddWithContext(err1, &ctx1)
 
 	// Add another error with different context
-	err2 := fmt.Errorf("second error")
+	err2 := errSecondError
 	ctx2 := ErrorContext{
 		Operation: "Op2",
 		Resource:  "Resource2",
@@ -63,15 +84,15 @@ func TestErrorChain_Error(t *testing.T) {
 
 	t.Run("single error", func(t *testing.T) {
 		var chain ErrorChain = NewErrorChain()
-		chain = chain.Add(errors.New("single error"))
+		chain = chain.Add(errSingleError)
 		assert.Equal(t, "single error", chain.Error())
 	})
 
 	t.Run("multiple errors", func(t *testing.T) {
 		var chain ErrorChain = NewErrorChain()
-		chain = chain.Add(errors.New("error 1"))
-		chain = chain.Add(errors.New("error 2"))
-		chain = chain.Add(errors.New("error 3"))
+		chain = chain.Add(errError1)
+		chain = chain.Add(errError2)
+		chain = chain.Add(errError3)
 
 		errStr := chain.Error()
 		assert.Contains(t, errStr, "3 errors occurred")
@@ -87,7 +108,7 @@ func TestErrorChain_Error(t *testing.T) {
 			Operation: "TestOp",
 			Resource:  "TestResource",
 		}
-		chain = chain.AddWithContext(errors.New("error with context"), &ctx)
+		chain = chain.AddWithContext(errErrorWithContext, &ctx)
 
 		errStr := chain.Error()
 		assert.Contains(t, errStr, "error with context")
@@ -99,14 +120,14 @@ func TestErrorChain_Error(t *testing.T) {
 		var chain ErrorChain = NewErrorChain()
 
 		// Add regular error
-		chain = chain.Add(errors.New("regular error"))
+		chain = chain.Add(errRegularError)
 
 		// Add error with context
 		ctx := ErrorContext{
 			Operation: "Op1",
 			Resource:  "Res1",
 		}
-		chain = chain.AddWithContext(errors.New("context error"), &ctx)
+		chain = chain.AddWithContext(errContextError, &ctx)
 
 		// Add MageError
 		mageErr := NewErrorBuilder().
@@ -129,7 +150,7 @@ func TestChainError_Methods(t *testing.T) {
 	// Test chain error by creating errors with context
 	var chain ErrorChain = NewErrorChain()
 
-	baseErr := errors.New("base error")
+	baseErr := errBaseError
 	ctx := ErrorContext{
 		Operation: "TestOp",
 		Resource:  "TestRes",
@@ -160,10 +181,10 @@ func TestErrorChain_ComplexScenario(t *testing.T) {
 	var chain ErrorChain = NewErrorChain()
 
 	// Add standard error
-	chain = chain.Add(errors.New("standard error"))
+	chain = chain.Add(errStandardError)
 
 	// Add formatted error
-	chain = chain.Add(fmt.Errorf("formatted error: %d", 42))
+	chain = chain.Add(fmt.Errorf("formatted error: %w", errFormattedNumber))
 
 	// Add error with context
 	ctx := ErrorContext{
@@ -173,7 +194,7 @@ func TestErrorChain_ComplexScenario(t *testing.T) {
 		RequestID:   "req-123",
 		Environment: "production",
 	}
-	chain = chain.AddWithContext(errors.New("database connection failed"), &ctx)
+	chain = chain.AddWithContext(errDatabaseConnectionFailed, &ctx)
 
 	// Add MageError
 	mageErr := NewErrorBuilder().
@@ -185,7 +206,7 @@ func TestErrorChain_ComplexScenario(t *testing.T) {
 	chain = chain.Add(mageErr)
 
 	// Add wrapped error
-	wrappedErr := fmt.Errorf("wrapped: %w", errors.New("inner error"))
+	wrappedErr := fmt.Errorf("wrapped: %w", errInnerError)
 	chain = chain.Add(wrappedErr)
 
 	// Verify chain properties
@@ -227,7 +248,7 @@ func TestErrorChain_EdgeCases(t *testing.T) {
 
 	t.Run("empty context", func(t *testing.T) {
 		var chain ErrorChain = NewErrorChain()
-		chain = chain.AddWithContext(errors.New("error"), &ErrorContext{})
+		chain = chain.AddWithContext(errTestError, &ErrorContext{})
 
 		errMsg := chain.Error()
 		assert.Contains(t, errMsg, "error")
@@ -240,11 +261,11 @@ func TestErrorChain_EdgeCases(t *testing.T) {
 
 		// Only operation
 		ctx1 := ErrorContext{Operation: "Op1"}
-		chain = chain.AddWithContext(errors.New("error1"), &ctx1)
+		chain = chain.AddWithContext(errError1Chain, &ctx1)
 
 		// Only resource
 		ctx2 := ErrorContext{Resource: "Res2"}
-		chain = chain.AddWithContext(errors.New("error2"), &ctx2)
+		chain = chain.AddWithContext(errError2Chain, &ctx2)
 
 		errStr := chain.Error()
 		// The current implementation doesn't include context in error string

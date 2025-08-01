@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,20 @@ const (
 	errUnexpectedNewline = "unexpected newline"
 )
 
+// Static errors for err113 compliance
+var (
+	ErrConfigFileExists            = errors.New("configuration file already exists")
+	ErrUnsupportedFormat           = errors.New("unsupported format")
+	ErrFileEnvRequired             = errors.New("FILE environment variable is required")
+	ErrImportFileNotFound          = errors.New("import file not found")
+	ErrUnsupportedFileFormat       = errors.New("unsupported file format")
+	ErrProjectNameRequired         = errors.New("project name is required")
+	ErrBinaryNameRequired          = errors.New("binary name is required")
+	ErrModulePathRequired          = errors.New("module path is required")
+	ErrEnterpriseOrgNameRequired   = errors.New("enterprise organization name is required")
+	ErrEnterpriseOrgDomainRequired = errors.New("enterprise organization domain is required")
+)
+
 // Configure namespace for configuration management
 type Configure mg.Namespace
 
@@ -28,7 +43,7 @@ func (Configure) Init() error {
 	configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
 	for _, cf := range configFiles {
 		if _, err := os.Stat(cf); err == nil {
-			return fmt.Errorf("configuration file %s already exists", cf)
+			return fmt.Errorf("%w: %s", ErrConfigFileExists, cf)
 		}
 	}
 
@@ -159,7 +174,7 @@ func (Configure) Export() error {
 		data, err = marshalJSON(config)
 		ext = ".json"
 	default:
-		return fmt.Errorf("unsupported format: %s", format)
+		return fmt.Errorf("%w: %s", ErrUnsupportedFormat, format)
 	}
 
 	if err != nil {
@@ -192,11 +207,11 @@ func (Configure) Import() error {
 
 	importFile := utils.GetEnv("FILE", "")
 	if importFile == "" {
-		return fmt.Errorf("FILE environment variable is required")
+		return ErrFileEnvRequired
 	}
 
 	if _, err := os.Stat(importFile); os.IsNotExist(err) {
-		return fmt.Errorf("import file not found: %s", importFile)
+		return fmt.Errorf("%w: %s", ErrImportFileNotFound, importFile)
 	}
 
 	// Read import file
@@ -216,7 +231,7 @@ func (Configure) Import() error {
 	case ".json":
 		err = unmarshalJSON(data, &cfg)
 	default:
-		return fmt.Errorf("unsupported file format: %s", ext)
+		return fmt.Errorf("%w: %s", ErrUnsupportedFileFormat, ext)
 	}
 
 	if err != nil {
@@ -407,15 +422,15 @@ func validateConfiguration(cfg *Config) error {
 	}
 
 	if cfg.Project.Name == "" {
-		return fmt.Errorf("project name is required")
+		return ErrProjectNameRequired
 	}
 
 	if cfg.Project.Binary == "" {
-		return fmt.Errorf("binary name is required")
+		return ErrBinaryNameRequired
 	}
 
 	if cfg.Project.Module == "" {
-		return fmt.Errorf("module path is required")
+		return ErrModulePathRequired
 	}
 
 	// Validate enterprise configuration if present
@@ -429,10 +444,10 @@ func validateConfiguration(cfg *Config) error {
 // validateEnterpriseConfiguration validates enterprise configuration settings
 func validateEnterpriseConfiguration(cfg *EnterpriseConfiguration) error {
 	if cfg.Organization.Name == "" {
-		return fmt.Errorf("enterprise organization name is required")
+		return ErrEnterpriseOrgNameRequired
 	}
 	if cfg.Organization.Domain == "" {
-		return fmt.Errorf("enterprise organization domain is required")
+		return ErrEnterpriseOrgDomainRequired
 	}
 	return nil
 }

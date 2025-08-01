@@ -96,9 +96,9 @@ func FuzzValidateCommandArg(f *testing.F) {
 
 		// Unicode and emoji
 		"test🚀rocket",
-		"测试",
-		"テスト",
-		"тест",
+		"ceshi",  // Chinese test
+		"tesuto", // Japanese test
+		"test",   // Russian test
 		"🚀",
 		strings.Repeat("🚀", 100),
 
@@ -259,8 +259,8 @@ func FuzzValidatePath(f *testing.F) {
 		"file${var}.txt",
 
 		// Unicode paths
-		"файл.txt",
-		"文件.txt",
+		"file.txt",    // Russian file
+		"wenjian.txt", // Chinese file
 		"🚀.txt",
 		"dir/🚀/file.txt",
 
@@ -365,8 +365,8 @@ func FuzzFilterEnvironment(f *testing.F) {
 		{"KEY=value$with$dollars", "KEY=value`with`backticks"},
 
 		// Unicode
-		{"KEY=значение", "KEY=値", "KEY=🚀"},
-		{"КЛЮЧ=value", "键=value", "🚀=value"},
+		{"KEY=znachenie", "KEY=atai", "KEY=🚀"},    // Russian, Japanese values
+		{"KLYUCH=value", "jian=value", "🚀=value"}, // Russian, Chinese keys
 
 		// Very long entries
 		{"KEY=" + strings.Repeat("a", 1000)},

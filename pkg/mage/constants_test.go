@@ -11,6 +11,7 @@ import (
 // ConstantsTestSuite defines the test suite for constants
 type ConstantsTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 }
 

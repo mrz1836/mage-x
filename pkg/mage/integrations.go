@@ -4,6 +4,7 @@ package mage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,6 +15,28 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for integration operations
+var (
+	errJiraCredentialsRequired      = errors.New("JIRA_URL, JIRA_USERNAME, JIRA_TOKEN, and JIRA_PROJECT environment variables are required")
+	errGitHubTokenRequired          = errors.New("GITHUB_TOKEN environment variable is required")
+	errGitLabTokenRequired          = errors.New("GITLAB_TOKEN environment variable is required")
+	errJenkinsCredentialsRequired   = errors.New("JENKINS_URL, JENKINS_USERNAME, and JENKINS_TOKEN environment variables are required")
+	errDockerCredentialsRequired    = errors.New("DOCKER_USERNAME and DOCKER_PASSWORD environment variables are required")
+	errPrometheusURLRequired        = errors.New("PROMETHEUS_URL environment variable is required")
+	errGrafanaCredentialsRequired   = errors.New("GRAFANA_URL and GRAFANA_TOKEN environment variables are required")
+	errAWSCredentialsRequired       = errors.New("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables are required")
+	errAzureCredentialsRequired     = errors.New("AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID environment variables are required")
+	errUnsupportedIntegrationType   = errors.New("unsupported integration type")
+	errUnknownSyncOperation         = errors.New("unknown sync operation")
+	errUnknownWebhookOperation      = errors.New("unknown webhook operation")
+	errChannelMessageRequired       = errors.New("CHANNEL and MESSAGE environment variables are required")
+	errIntegrationTypeRequired      = errors.New("INTEGRATION_TYPE environment variable is required")
+	errIntegrationTypeInputRequired = errors.New("INTEGRATION_TYPE and INPUT environment variables are required")
+	errSlackWebhookURLRequired      = errors.New("SLACK_WEBHOOK_URL environment variable is required")
+	errGCPProjectIDRequired         = errors.New("GCP_PROJECT_ID environment variable is required")
+	errSlackWebhookFailed           = errors.New("slack webhook request failed")
 )
 
 // Integrations namespace for enterprise integration operations
@@ -56,7 +79,7 @@ func (Integrations) Setup() error {
 	case "gcp":
 		return setupGCPIntegration()
 	default:
-		return fmt.Errorf("unsupported integration type: %s", integrationType)
+		return fmt.Errorf("%w: %s", errUnsupportedIntegrationType, integrationType)
 	}
 }
 
@@ -118,7 +141,7 @@ func (Integrations) Sync() error {
 	case "metrics":
 		return syncMetrics()
 	default:
-		return fmt.Errorf("unknown sync operation: %s", operation)
+		return fmt.Errorf("%w: %s", errUnknownSyncOperation, operation)
 	}
 }
 
@@ -132,7 +155,7 @@ func (Integrations) Notify() error {
 	level := utils.GetEnv("LEVEL", "info")
 
 	if channel == "" || message == "" {
-		return fmt.Errorf("CHANNEL and MESSAGE environment variables are required")
+		return errChannelMessageRequired
 	}
 
 	// Send notification
@@ -190,7 +213,7 @@ func (Integrations) Webhook() error {
 	case "test":
 		return testWebhook()
 	default:
-		return fmt.Errorf("unknown webhook operation: %s", operation)
+		return fmt.Errorf("%w: %s", errUnknownWebhookOperation, operation)
 	}
 }
 
@@ -204,7 +227,7 @@ func (Integrations) Export() error {
 	outputFile := utils.GetEnv("OUTPUT", "integration-export.json")
 
 	if integrationType == "" {
-		return fmt.Errorf("INTEGRATION_TYPE environment variable is required")
+		return errIntegrationTypeRequired
 	}
 
 	// Export data
@@ -232,7 +255,7 @@ func (Integrations) Import() error {
 	inputFile := utils.GetEnv("INPUT", "")
 
 	if integrationType == "" || inputFile == "" {
-		return fmt.Errorf("INTEGRATION_TYPE and INPUT environment variables are required")
+		return errIntegrationTypeInputRequired
 	}
 
 	// Load data
@@ -440,7 +463,7 @@ func setupSlackIntegration() error {
 	username := utils.GetEnv("SLACK_USERNAME", "MAGE-X")
 
 	if webhookURL == "" {
-		return fmt.Errorf("SLACK_WEBHOOK_URL environment variable is required")
+		return errSlackWebhookURLRequired
 	}
 
 	config := IntegrationConfig{
@@ -486,7 +509,7 @@ func setupJiraIntegration() error {
 	project := utils.GetEnv("JIRA_PROJECT", "")
 
 	if jiraURL == "" || username == "" || token == "" || project == "" {
-		return fmt.Errorf("JIRA_URL, JIRA_USERNAME, JIRA_TOKEN, and JIRA_PROJECT environment variables are required")
+		return errJiraCredentialsRequired
 	}
 
 	config := IntegrationConfig{
@@ -529,7 +552,7 @@ func setupGitHubIntegration() error {
 	repository := utils.GetEnv("GITHUB_REPOSITORY", "")
 
 	if token == "" {
-		return fmt.Errorf("GITHUB_TOKEN environment variable is required")
+		return errGitHubTokenRequired
 	}
 
 	config := IntegrationConfig{
@@ -570,7 +593,7 @@ func setupGitLabIntegration() error {
 	projectID := utils.GetEnv("GITLAB_PROJECT_ID", "")
 
 	if token == "" {
-		return fmt.Errorf("GITLAB_TOKEN environment variable is required")
+		return errGitLabTokenRequired
 	}
 
 	config := IntegrationConfig{
@@ -610,7 +633,7 @@ func setupJenkinsIntegration() error {
 	token := utils.GetEnv("JENKINS_TOKEN", "")
 
 	if jenkinsURL == "" || username == "" || token == "" {
-		return fmt.Errorf("JENKINS_URL, JENKINS_USERNAME, and JENKINS_TOKEN environment variables are required")
+		return errJenkinsCredentialsRequired
 	}
 
 	config := IntegrationConfig{
@@ -651,7 +674,7 @@ func setupDockerIntegration() error {
 	password := utils.GetEnv("DOCKER_PASSWORD", "")
 
 	if username == "" || password == "" {
-		return fmt.Errorf("DOCKER_USERNAME and DOCKER_PASSWORD environment variables are required")
+		return errDockerCredentialsRequired
 	}
 
 	config := IntegrationConfig{
@@ -722,7 +745,7 @@ func setupPrometheusIntegration() error {
 	password := utils.GetEnv("PROMETHEUS_PASSWORD", "")
 
 	if prometheusURL == "" {
-		return fmt.Errorf("PROMETHEUS_URL environment variable is required")
+		return errPrometheusURLRequired
 	}
 
 	config := IntegrationConfig{
@@ -763,7 +786,7 @@ func setupGrafanaIntegration() error {
 	orgID := utils.GetEnv("GRAFANA_ORG_ID", "1")
 
 	if grafanaURL == "" || token == "" {
-		return fmt.Errorf("GRAFANA_URL and GRAFANA_TOKEN environment variables are required")
+		return errGrafanaCredentialsRequired
 	}
 
 	config := IntegrationConfig{
@@ -803,7 +826,7 @@ func setupAWSIntegration() error {
 	region := utils.GetEnv("AWS_REGION", "us-east-1")
 
 	if accessKeyID == "" || secretAccessKey == "" {
-		return fmt.Errorf("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables are required")
+		return errAWSCredentialsRequired
 	}
 
 	config := IntegrationConfig{
@@ -839,7 +862,7 @@ func setupAzureIntegration() error {
 	tenantID := utils.GetEnv("AZURE_TENANT_ID", "")
 
 	if clientID == "" || clientSecret == "" || tenantID == "" {
-		return fmt.Errorf("AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID environment variables are required")
+		return errAzureCredentialsRequired
 	}
 
 	config := IntegrationConfig{
@@ -875,7 +898,7 @@ func setupGCPIntegration() error {
 	region := utils.GetEnv("GCP_REGION", "us-central1")
 
 	if projectID == "" {
-		return fmt.Errorf("GCP_PROJECT_ID environment variable is required")
+		return errGCPProjectIDRequired
 	}
 
 	config := IntegrationConfig{
@@ -1145,7 +1168,7 @@ func testSlackIntegration(integration *IntegrationConfig) error {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("slack webhook returned status %d", resp.StatusCode)
+		return fmt.Errorf("%w: status %d", errSlackWebhookFailed, resp.StatusCode)
 	}
 
 	return nil

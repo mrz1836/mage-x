@@ -10,6 +10,7 @@ import (
 // FormatTestSuite defines the test suite for Format functions
 type FormatTestSuite struct {
 	suite.Suite
+
 	env    *testutil.TestEnvironment
 	format Format
 }

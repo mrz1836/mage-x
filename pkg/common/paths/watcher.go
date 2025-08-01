@@ -12,6 +12,11 @@ import (
 	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
+// Error definitions for watcher operations
+var (
+	ErrWatcherMockError = errors.New("mock error")
+)
+
 // DefaultPathWatcher implements the PathWatcher interface
 type DefaultPathWatcher struct {
 	mu           sync.RWMutex
@@ -309,7 +314,7 @@ func NewMockPathWatcher() *MockPathWatcher {
 func (m *MockPathWatcher) Watch(path string, events EventMask) error {
 	m.WatchCalls = append(m.WatchCalls, MockWatchCall{Path: path, Events: events})
 	if m.ShouldError {
-		return errors.New("mock error")
+		return ErrWatcherMockError
 	}
 	return nil
 }
@@ -318,7 +323,7 @@ func (m *MockPathWatcher) Watch(path string, events EventMask) error {
 func (m *MockPathWatcher) WatchPath(path PathBuilder, events EventMask) error {
 	m.WatchPathCalls = append(m.WatchPathCalls, MockWatchPathCall{Path: path, Events: events})
 	if m.ShouldError {
-		return errors.New("mock error")
+		return ErrWatcherMockError
 	}
 	return nil
 }
@@ -327,7 +332,7 @@ func (m *MockPathWatcher) WatchPath(path PathBuilder, events EventMask) error {
 func (m *MockPathWatcher) Unwatch(path string) error {
 	m.UnwatchCalls = append(m.UnwatchCalls, path)
 	if m.ShouldError {
-		return errors.New("mock error")
+		return ErrWatcherMockError
 	}
 	return nil
 }
@@ -336,7 +341,7 @@ func (m *MockPathWatcher) Unwatch(path string) error {
 func (m *MockPathWatcher) UnwatchPath(path PathBuilder) error {
 	m.UnwatchPathCalls = append(m.UnwatchPathCalls, path)
 	if m.ShouldError {
-		return errors.New("mock error")
+		return ErrWatcherMockError
 	}
 	return nil
 }
@@ -354,7 +359,7 @@ func (m *MockPathWatcher) Errors() <-chan error {
 // Close closes the mock watcher and its channels
 func (m *MockPathWatcher) Close() error {
 	if m.ShouldError {
-		return errors.New("mock error")
+		return ErrWatcherMockError
 	}
 	close(m.MockEvents)
 	close(m.MockErrors)

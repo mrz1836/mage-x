@@ -11,6 +11,7 @@ import (
 // BenchTestSuite defines the test suite for Bench namespace methods
 type BenchTestSuite struct {
 	suite.Suite
+
 	env   *testutil.TestEnvironment
 	bench Bench
 }

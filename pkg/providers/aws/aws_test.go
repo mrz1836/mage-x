@@ -13,6 +13,7 @@ import (
 // AWSProviderTestSuite defines the test suite for AWS provider
 type AWSProviderTestSuite struct {
 	suite.Suite
+
 	provider providers.Provider
 	config   providers.ProviderConfig
 }

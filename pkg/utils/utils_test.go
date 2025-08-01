@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,6 +15,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+// Static test errors to comply with err113 linter
+var (
+	errTestError = errors.New("test error")
+	errError1    = errors.New("error 1")
+	errError2    = errors.New("error 2")
 )
 
 const (
@@ -517,7 +525,7 @@ func TestParallel(t *testing.T) {
 	})
 
 	t.Run("one function fails", func(t *testing.T) {
-		testErr := fmt.Errorf("test error")
+		testErr := errTestError
 		fns := []func() error{
 			func() error { return nil },
 			func() error { return testErr },
@@ -530,8 +538,8 @@ func TestParallel(t *testing.T) {
 	})
 
 	t.Run("multiple functions fail", func(t *testing.T) {
-		err1 := fmt.Errorf("error 1")
-		err2 := fmt.Errorf("error 2")
+		err1 := errError1
+		err2 := errError2
 		fns := []func() error{
 			func() error { return err1 },
 			func() error { return err2 },

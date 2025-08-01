@@ -3,6 +3,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,13 @@ import (
 	"time"
 
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
+)
+
+// Static errors for utils operations
+var (
+	errInvalidPlatformFormat = errors.New("invalid platform format")
+	errParseGoVersion        = errors.New("unable to parse go version")
+	errParallelExecution     = errors.New("parallel execution failed")
 )
 
 // --- cmd.go ---
@@ -227,7 +235,7 @@ func GetCurrentPlatform() Platform {
 func ParsePlatform(s string) (Platform, error) {
 	parts := strings.Split(s, "/")
 	if len(parts) != 2 {
-		return Platform{}, fmt.Errorf("invalid platform format: %s", s)
+		return Platform{}, fmt.Errorf("%w: %s", errInvalidPlatformFormat, s)
 	}
 	return Platform{OS: parts[0], Arch: parts[1]}, nil
 }
@@ -312,7 +320,7 @@ func GetGoVersion() (string, error) {
 		return strings.TrimPrefix(parts[2], "go"), nil
 	}
 
-	return "", fmt.Errorf("unable to parse go version from: %s", output)
+	return "", fmt.Errorf("%w from: %s", errParseGoVersion, output)
 }
 
 // Parallel runs functions in parallel
@@ -338,7 +346,7 @@ func Parallel(fns ...func() error) error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("parallel execution failed: %v", errs)
+		return fmt.Errorf("%w: %v", errParallelExecution, errs)
 	}
 
 	return nil

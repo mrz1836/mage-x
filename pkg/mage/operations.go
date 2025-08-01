@@ -1,6 +1,14 @@
 package mage
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errUnsupportedCIProvider = errors.New("unsupported CI provider")
+)
 
 // Basic operation structs that provide the core functionality
 // These are the main struct types that tests expect to exist
@@ -117,7 +125,7 @@ func (ci CI) Setup(provider string) error {
 	case "github", "gitlab", "jenkins", "circleci":
 		return runner.RunCmd("echo", "Setting up CI for", provider)
 	default:
-		return fmt.Errorf("unsupported CI provider: %s", provider)
+		return fmt.Errorf("%w: %s", errUnsupportedCIProvider, provider)
 	}
 }
 

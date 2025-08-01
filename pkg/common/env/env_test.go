@@ -1,6 +1,7 @@
 package env
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -10,6 +11,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
+
+// Test-specific static errors
+var errUnexpectedValue = errors.New("unexpected value")
 
 func TestDefaultEnvironment(t *testing.T) {
 	env := NewDefaultEnvironment()
@@ -347,7 +351,7 @@ func TestDefaultEnvManager_Isolation(t *testing.T) {
 	}, func() error {
 		// Inside isolation, should see isolated value
 		if got := manager.baseEnv.Get(testKey); got != isolatedValue {
-			return fmt.Errorf("expected %v, got %v", isolatedValue, got)
+			return fmt.Errorf("%w: expected %v, got %v", errUnexpectedValue, isolatedValue, got)
 		}
 		return nil
 	})

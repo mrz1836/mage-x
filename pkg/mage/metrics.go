@@ -3,6 +3,7 @@ package mage
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,11 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for metrics operations
+var (
+	errQualityChecksFailed = errors.New("quality checks failed")
 )
 
 // Metrics namespace for code metrics and analysis tasks
@@ -195,7 +201,7 @@ func (Metrics) Quality() error {
 	}
 
 	if failed > 0 {
-		return fmt.Errorf("%d quality checks failed", failed)
+		return fmt.Errorf("%w: %d checks", errQualityChecksFailed, failed)
 	}
 
 	utils.Success("\nAll quality checks passed!")

@@ -378,7 +378,7 @@ func FuzzPathExpansion(f *testing.F) {
 		"config<input.yaml",
 
 		// Unicode
-		"配置.yaml",
+		"config-unicode.yaml",
 		"конфиг.yaml",
 		"🚀.yaml",
 		"$HOME/🚀/config.yaml",

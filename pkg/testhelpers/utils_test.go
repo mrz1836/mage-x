@@ -400,7 +400,7 @@ func TestDataProvider(t *testing.T) {
 		hasLong := false
 
 		for _, s := range strs {
-			if strings.Contains(s, "你好") {
+			if strings.Contains(s, "nihao") { // Chinese hello
 				hasUnicode = true
 			}
 			if strings.Contains(s, "\n") {

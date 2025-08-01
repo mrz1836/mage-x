@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,14 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for documentation tasks
+var (
+	errVersionRequired          = errors.New("version variable is required. Use: version=X.Y.Z mage docs:citation")
+	errCitationFileNotFound     = errors.New("CITATION.cff file not found")
+	errVersionLineNotFound      = errors.New("could not find version line to update")
+	errDocumentationCheckFailed = errors.New("documentation check failed")
 )
 
 const (
@@ -25,14 +34,14 @@ type Docs mg.Namespace
 func (Docs) Citation() error {
 	version := os.Getenv("version")
 	if version == "" {
-		return fmt.Errorf("version variable is required. Use: version=X.Y.Z mage docs:citation")
+		return errVersionRequired
 	}
 
 	utils.Header("Updating CITATION.cff Version")
 
 	// Check if CITATION.cff exists
 	if !utils.FileExists("CITATION.cff") {
-		return fmt.Errorf("CITATION.cff file not found")
+		return errCitationFileNotFound
 	}
 
 	// Read the file
@@ -49,7 +58,7 @@ func (Docs) Citation() error {
 	// Check if replacement was made
 	if string(content) == newContent {
 		utils.Warn("No version line found in CITATION.cff")
-		return fmt.Errorf("could not find version line to update")
+		return errVersionLineNotFound
 	}
 
 	// Write back
@@ -241,7 +250,7 @@ func (Docs) Check() error {
 		for _, issue := range issues {
 			utils.Info("  - %s", issue)
 		}
-		return fmt.Errorf("documentation check failed")
+		return errDocumentationCheckFailed
 	}
 
 	utils.Success("Documentation check passed")
@@ -286,7 +295,7 @@ func (Docs) Examples() error {
 		// Add to documentation
 		content.WriteString(fmt.Sprintf("## %s\n\n", name))
 		content.WriteString("```go\n")
-		content.WriteString(string(code))
+		content.Write(code)
 		content.WriteString("\n```\n\n")
 	}
 

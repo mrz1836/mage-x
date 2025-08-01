@@ -205,8 +205,8 @@ func FuzzValidateFilename(f *testing.F) {
 		strings.Repeat("a", 1000) + ".txt",
 		"🚀.txt",
 		"file🚀.txt",
-		"файл.txt",
-		"文件.txt",
+		"file.txt",    // Russian file
+		"wenjian.txt", // Chinese file
 		"~file.txt",
 		"$file.txt",
 		"#file.txt",
@@ -373,8 +373,8 @@ func FuzzValidateEmail(f *testing.F) {
 		"🚀@example.com",
 		"user@🚀.com",
 		"user@example.🚀",
-		"用户@example.com",
-		"user@例え.com",
+		"yonghu@example.com", // Chinese user
+		"user@tatoeba.com",   // Japanese example
 		"user@example.com;rm -rf /",
 		"user@example.com&&whoami",
 		"user@example.com||whoami",

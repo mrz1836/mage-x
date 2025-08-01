@@ -1,9 +1,19 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
+)
+
+// Static errors to comply with err113 linter
+var (
+	errConfigNil           = errors.New("config cannot be nil")
+	errProjectNameRequired = errors.New("project name is required")
+	errProjectVersionReq   = errors.New("project version is required")
+	errInvalidGoVersion    = errors.New("invalid Go version format")
+	errTestTimeoutNegative = errors.New("test timeout cannot be negative")
 )
 
 // MageConfig represents the main configuration structure
@@ -172,28 +182,28 @@ func (m *configManagerImpl) Save(config *MageConfig, path string) error {
 // Validate validates a configuration
 func (m *configManagerImpl) Validate(config *MageConfig) error {
 	if config == nil {
-		return fmt.Errorf("config cannot be nil")
+		return errConfigNil
 	}
 
 	// Validate project fields
 	if config.Project.Name == "" {
-		return fmt.Errorf("project name is required")
+		return errProjectNameRequired
 	}
 	if config.Project.Version == "" {
-		return fmt.Errorf("project version is required")
+		return errProjectVersionReq
 	}
 
 	// Validate build fields
 	if config.Build.GoVersion != "" {
 		// Simple Go version validation - should be like "1.24", "1.20", etc.
 		if len(config.Build.GoVersion) < 4 || config.Build.GoVersion[:2] != "1." {
-			return fmt.Errorf("invalid Go version format: %s", config.Build.GoVersion)
+			return fmt.Errorf("%w: %s", errInvalidGoVersion, config.Build.GoVersion)
 		}
 	}
 
 	// Validate test fields
 	if config.Test.Timeout < 0 {
-		return fmt.Errorf("test timeout cannot be negative: %d", config.Test.Timeout)
+		return fmt.Errorf("%w: %d", errTestTimeoutNegative, config.Test.Timeout)
 	}
 
 	return nil
@@ -229,114 +239,150 @@ func (m *configManagerImpl) Merge(configs ...*MageConfig) *MageConfig {
 		return m.GetDefaults()
 	}
 
-	// Start with a copy of the first config
-	result := &MageConfig{}
-	*result = *configs[0]
+	result := m.initializeMergeResult(configs[0])
 
-	// Deep copy slices and maps to avoid shared references
-	if configs[0].Project.Authors != nil {
-		result.Project.Authors = make([]string, len(configs[0].Project.Authors))
-		copy(result.Project.Authors, configs[0].Project.Authors)
-	}
-	if configs[0].Build.Tags != nil {
-		result.Build.Tags = make([]string, len(configs[0].Build.Tags))
-		copy(result.Build.Tags, configs[0].Build.Tags)
-	}
-	if configs[0].Test.Tags != nil {
-		result.Test.Tags = make([]string, len(configs[0].Test.Tags))
-		copy(result.Test.Tags, configs[0].Test.Tags)
-	}
-
-	// Merge subsequent configs
 	for i := 1; i < len(configs); i++ {
-		override := configs[i]
-
-		// Project fields
-		if override.Project.Name != "" {
-			result.Project.Name = override.Project.Name
-		}
-		if override.Project.Version != "" {
-			result.Project.Version = override.Project.Version
-		}
-		if override.Project.Description != "" {
-			result.Project.Description = override.Project.Description
-		}
-		if override.Project.License != "" {
-			result.Project.License = override.Project.License
-		}
-		if override.Project.Homepage != "" {
-			result.Project.Homepage = override.Project.Homepage
-		}
-		if override.Project.Repository != "" {
-			result.Project.Repository = override.Project.Repository
-		}
-		if override.Project.Authors != nil {
-			result.Project.Authors = make([]string, len(override.Project.Authors))
-			copy(result.Project.Authors, override.Project.Authors)
-		}
-
-		// Build fields
-		if override.Build.GoVersion != "" {
-			result.Build.GoVersion = override.Build.GoVersion
-		}
-		if override.Build.Platform != "" {
-			result.Build.Platform = override.Build.Platform
-		}
-		if override.Build.LDFlags != "" {
-			result.Build.LDFlags = override.Build.LDFlags
-		}
-		if override.Build.GCFlags != "" {
-			result.Build.GCFlags = override.Build.GCFlags
-		}
-		if override.Build.OutputDir != "" {
-			result.Build.OutputDir = override.Build.OutputDir
-		}
-		if override.Build.Binary != "" {
-			result.Build.Binary = override.Build.Binary
-		}
-		if override.Build.Tags != nil {
-			result.Build.Tags = make([]string, len(override.Build.Tags))
-			copy(result.Build.Tags, override.Build.Tags)
-		}
-		// CGOEnabled is a bool, so we need to check if it should be overridden
-		// For simplicity, we'll always override if the override config has any build settings
-		if override.Build.GoVersion != "" || override.Build.Platform != "" || override.Build.Tags != nil {
-			result.Build.CGOEnabled = override.Build.CGOEnabled
-		}
-
-		// Test fields
-		if override.Test.Timeout != 0 {
-			result.Test.Timeout = override.Test.Timeout
-		}
-		if override.Test.Parallel != 0 {
-			result.Test.Parallel = override.Test.Parallel
-		}
-		if override.Test.OutputDir != "" {
-			result.Test.OutputDir = override.Test.OutputDir
-		}
-		if override.Test.BenchTime != "" {
-			result.Test.BenchTime = override.Test.BenchTime
-		}
-		if override.Test.Tags != nil {
-			result.Test.Tags = make([]string, len(override.Test.Tags))
-			copy(result.Test.Tags, override.Test.Tags)
-		}
-		// Boolean fields - override if any test config is provided
-		if override.Test.Timeout != 0 || override.Test.Parallel != 0 || override.Test.Tags != nil {
-			result.Test.Coverage = override.Test.Coverage
-			result.Test.Verbose = override.Test.Verbose
-			result.Test.Race = override.Test.Race
-			result.Test.MemProfile = override.Test.MemProfile
-			result.Test.CPUProfile = override.Test.CPUProfile
-		}
-
-		// Analytics fields (simple override for now)
-		if override.Analytics.SampleRate != 0 || override.Analytics.RetentionDays != 0 {
-			result.Analytics = override.Analytics
-		}
+		m.mergeConfig(result, configs[i])
 	}
 
 	return result
+}
+
+// initializeMergeResult creates a deep copy of the base configuration
+func (m *configManagerImpl) initializeMergeResult(base *MageConfig) *MageConfig {
+	result := &MageConfig{}
+	*result = *base
+
+	m.deepCopySlices(result, base)
+	return result
+}
+
+// deepCopySlices creates deep copies of slices to avoid shared references
+func (m *configManagerImpl) deepCopySlices(result, base *MageConfig) {
+	if base.Project.Authors != nil {
+		result.Project.Authors = make([]string, len(base.Project.Authors))
+		copy(result.Project.Authors, base.Project.Authors)
+	}
+	if base.Build.Tags != nil {
+		result.Build.Tags = make([]string, len(base.Build.Tags))
+		copy(result.Build.Tags, base.Build.Tags)
+	}
+	if base.Test.Tags != nil {
+		result.Test.Tags = make([]string, len(base.Test.Tags))
+		copy(result.Test.Tags, base.Test.Tags)
+	}
+}
+
+// mergeConfig merges a single override configuration into the result
+func (m *configManagerImpl) mergeConfig(result, override *MageConfig) {
+	m.mergeProjectConfig(&result.Project, &override.Project)
+	m.mergeBuildConfig(&result.Build, &override.Build)
+	m.mergeTestConfig(&result.Test, &override.Test)
+	m.mergeAnalyticsConfig(&result.Analytics, &override.Analytics)
+}
+
+// mergeProjectConfig merges project configuration fields
+func (m *configManagerImpl) mergeProjectConfig(result, override *ProjectConfig) {
+	if override.Name != "" {
+		result.Name = override.Name
+	}
+	if override.Version != "" {
+		result.Version = override.Version
+	}
+	if override.Description != "" {
+		result.Description = override.Description
+	}
+	if override.License != "" {
+		result.License = override.License
+	}
+	if override.Homepage != "" {
+		result.Homepage = override.Homepage
+	}
+	if override.Repository != "" {
+		result.Repository = override.Repository
+	}
+	if override.Authors != nil {
+		result.Authors = make([]string, len(override.Authors))
+		copy(result.Authors, override.Authors)
+	}
+}
+
+// mergeBuildConfig merges build configuration fields
+func (m *configManagerImpl) mergeBuildConfig(result, override *BuildConfig) {
+	if override.GoVersion != "" {
+		result.GoVersion = override.GoVersion
+	}
+	if override.Platform != "" {
+		result.Platform = override.Platform
+	}
+	if override.LDFlags != "" {
+		result.LDFlags = override.LDFlags
+	}
+	if override.GCFlags != "" {
+		result.GCFlags = override.GCFlags
+	}
+	if override.OutputDir != "" {
+		result.OutputDir = override.OutputDir
+	}
+	if override.Binary != "" {
+		result.Binary = override.Binary
+	}
+	if override.Tags != nil {
+		result.Tags = make([]string, len(override.Tags))
+		copy(result.Tags, override.Tags)
+	}
+
+	// CGOEnabled is a bool, override if any build settings are provided
+	if m.hasBuildOverrides(override) {
+		result.CGOEnabled = override.CGOEnabled
+	}
+}
+
+// hasBuildOverrides checks if the override config has any build settings
+func (m *configManagerImpl) hasBuildOverrides(override *BuildConfig) bool {
+	return override.GoVersion != "" || override.Platform != "" || override.Tags != nil
+}
+
+// mergeTestConfig merges test configuration fields
+func (m *configManagerImpl) mergeTestConfig(result, override *TestConfig) {
+	if override.Timeout != 0 {
+		result.Timeout = override.Timeout
+	}
+	if override.Parallel != 0 {
+		result.Parallel = override.Parallel
+	}
+	if override.OutputDir != "" {
+		result.OutputDir = override.OutputDir
+	}
+	if override.BenchTime != "" {
+		result.BenchTime = override.BenchTime
+	}
+	if override.Tags != nil {
+		result.Tags = make([]string, len(override.Tags))
+		copy(result.Tags, override.Tags)
+	}
+
+	// Boolean fields - override if any test config is provided
+	if m.hasTestOverrides(override) {
+		result.Coverage = override.Coverage
+		result.Verbose = override.Verbose
+		result.Race = override.Race
+		result.MemProfile = override.MemProfile
+		result.CPUProfile = override.CPUProfile
+	}
+}
+
+// hasTestOverrides checks if the override config has any test settings
+func (m *configManagerImpl) hasTestOverrides(override *TestConfig) bool {
+	return override.Timeout != 0 || override.Parallel != 0 || override.Tags != nil
+}
+
+// mergeAnalyticsConfig merges analytics configuration fields
+func (m *configManagerImpl) mergeAnalyticsConfig(result, override *AnalyticsConfig) {
+	// Simple override for analytics configuration
+	if override.SampleRate != 0 || override.RetentionDays != 0 {
+		*result = *override
+	}
 }
 
 // loaderImpl implements Loader

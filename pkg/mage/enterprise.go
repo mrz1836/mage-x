@@ -3,6 +3,7 @@ package mage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,6 +20,18 @@ const (
 	approvalTrue  = "true"
 	statusFailed  = "failed"
 	statusUnknown = "unknown"
+)
+
+// Static errors for err113 compliance
+var (
+	ErrUnknownDeploymentTarget    = errors.New("unknown deployment target")
+	ErrNoDeploymentsFound         = errors.New("no deployments found for rollback")
+	ErrSourceEnvNotFound          = errors.New("source environment not found")
+	ErrTargetEnvNotFound          = errors.New("target environment not found")
+	ErrBackupIDRequired           = errors.New("BACKUP_ID environment variable is required")
+	ErrRestoreConfirmation        = errors.New("restoration requires confirmation (set RESTORE_CONFIRMED=true)")
+	ErrEnterpriseConfigMissing    = errors.New("enterprise config not found. Run 'mage enterprise:init' first")
+	ErrDeploymentApprovalRequired = errors.New("deployment requires approval (set DEPLOYMENT_APPROVED=true)")
 )
 
 // Enterprise namespace for enterprise-specific operations
@@ -146,7 +159,7 @@ func (Enterprise) Deploy() error {
 	// Validate target environment
 	env, exists := config.Environments[target]
 	if !exists {
-		return fmt.Errorf("unknown deployment target: %s", target)
+		return fmt.Errorf("%w: %s", ErrUnknownDeploymentTarget, target)
 	}
 
 	utils.Info("🎯 Deploying to %s environment", target)
@@ -159,7 +172,7 @@ func (Enterprise) Deploy() error {
 		// Check for approval
 		approved := utils.GetEnv("DEPLOYMENT_APPROVED", "false")
 		if approved != approvalTrue {
-			return fmt.Errorf("deployment to %s requires approval (set DEPLOYMENT_APPROVED=true)", target)
+			return fmt.Errorf("deployment to %s: %w", target, ErrDeploymentApprovalRequired)
 		}
 
 		utils.Info("✅ Deployment approved")
@@ -240,7 +253,7 @@ func (Enterprise) Rollback() error {
 		// Get latest deployment
 		deployments, err := getDeploymentHistory(target, 1)
 		if err != nil || len(deployments) == 0 {
-			return fmt.Errorf("no deployments found for rollback")
+			return ErrNoDeploymentsFound
 		}
 		deploymentID = deployments[0].ID
 	}
@@ -289,12 +302,12 @@ func (Enterprise) Promote() error {
 	// Validate environments
 	source, exists := config.Environments[sourceEnv]
 	if !exists {
-		return fmt.Errorf("source environment not found: %s", sourceEnv)
+		return fmt.Errorf("%w: %s", ErrSourceEnvNotFound, sourceEnv)
 	}
 
 	target, exists := config.Environments[targetEnv]
 	if !exists {
-		return fmt.Errorf("target environment not found: %s", targetEnv)
+		return fmt.Errorf("%w: %s", ErrTargetEnvNotFound, targetEnv)
 	}
 
 	utils.Info("🚀 Promoting from %s to %s", sourceEnv, targetEnv)
@@ -466,7 +479,7 @@ func (Enterprise) Restore() error {
 
 	backupID := utils.GetEnv("BACKUP_ID", "")
 	if backupID == "" {
-		return fmt.Errorf("BACKUP_ID environment variable is required")
+		return ErrBackupIDRequired
 	}
 
 	// Load backup
@@ -487,7 +500,7 @@ func (Enterprise) Restore() error {
 	// Confirm restoration
 	confirmed := utils.GetEnv("RESTORE_CONFIRMED", "false")
 	if confirmed != approvalTrue {
-		return fmt.Errorf("restoration requires confirmation (set RESTORE_CONFIRMED=true)")
+		return ErrRestoreConfirmation
 	}
 
 	// Save current config as backup before restore
@@ -745,7 +758,7 @@ func loadEnterpriseConfig() (EnterpriseConfig, error) {
 	configPath := ".mage/enterprise/config.json"
 
 	if !fileOps.File.Exists(configPath) {
-		return EnterpriseConfig{}, fmt.Errorf("enterprise config not found. Run 'mage enterprise:init' first")
+		return EnterpriseConfig{}, ErrEnterpriseConfigMissing
 	}
 
 	data, err := fileOps.File.ReadFile(configPath)

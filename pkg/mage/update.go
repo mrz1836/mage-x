@@ -4,6 +4,7 @@ package mage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -17,6 +18,11 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errNoReleasesFound = errors.New("no releases found")
 )
 
 // Update namespace for auto-update functionality
@@ -431,7 +437,7 @@ func getLatestEdgeRelease(owner, repo string) (*GitHubRelease, error) {
 		return &releases[0], nil
 	}
 
-	return nil, fmt.Errorf("no releases found")
+	return nil, errNoReleasesFound
 }
 
 // downloadUpdate downloads the update

@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,6 +21,14 @@ type Build mg.Namespace
 var (
 	cacheManager *cache.Manager //nolint:gochecknoglobals // Required for cache singleton
 	cacheOnce    sync.Once      //nolint:gochecknoglobals // Required for singleton initialization
+)
+
+// Static errors for err113 compliance
+var (
+	ErrBuildFailedError   = errors.New("build failed")
+	ErrBuildErrors        = errors.New("build errors")
+	ErrDockerNotFound     = errors.New("docker command not found")
+	ErrDockerfileNotFound = errors.New("Dockerfile not found")
 )
 
 // initCacheManager initializes the cache manager if not already done
@@ -56,31 +65,82 @@ func (b Build) Default() error {
 		return err
 	}
 
-	cm := initCacheManager()
+	buildCtx := b.createBuildContext(cfg)
+	buildHash := b.generateBuildHash(buildCtx)
 
+	// Try to use cached build result
+	if b.checkCachedBuild(buildHash, buildCtx.outputPath, buildCtx.cacheManager) {
+		return nil
+	}
+
+	// Perform actual build
+	return b.executeBuild(buildCtx, buildHash)
+}
+
+// buildContext holds all build-related configuration and state
+type buildContext struct {
+	cfg          *Config
+	cacheManager *cache.Manager
+	outputPath   string
+	packagePath  string
+	buildArgs    []string
+	ldflags      string
+	sourceFiles  []string
+	configFiles  []string
+	platform     string
+}
+
+// createBuildContext creates a build context with all configuration
+func (b Build) createBuildContext(cfg *Config) *buildContext {
+	cm := initCacheManager()
+	outputPath := b.determineBuildOutput(cfg)
+	packagePath := b.determinePackagePath(outputPath)
+	buildArgs := b.createBuildArgs(cfg, outputPath, packagePath)
+	ldflags := b.determineLDFlags(cfg)
+	sourceFiles := b.findSourceFiles()
+	configFiles := b.getConfigFiles()
+	platform := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
+
+	return &buildContext{
+		cfg:          cfg,
+		cacheManager: cm,
+		outputPath:   outputPath,
+		packagePath:  packagePath,
+		buildArgs:    buildArgs,
+		ldflags:      ldflags,
+		sourceFiles:  sourceFiles,
+		configFiles:  configFiles,
+		platform:     platform,
+	}
+}
+
+// determineBuildOutput determines the output path for the binary
+func (b Build) determineBuildOutput(cfg *Config) string {
 	binary := cfg.Project.Binary
 	if runtime.GOOS == "windows" {
 		binary += ".exe"
 	}
+	return filepath.Join(cfg.Build.Output, binary)
+}
 
-	outputPath := filepath.Join(cfg.Build.Output, binary)
-
-	// Check if we have a cmd directory with main packages
-	var packagePath string
+// determinePackagePath determines the package path to build
+func (b Build) determinePackagePath(_ string) string {
 	if utils.DirExists("cmd/mage-init") {
-		packagePath = "./cmd/mage-init"
-	} else if utils.DirExists("cmd/example") {
-		packagePath = "./cmd/example"
-	} else if utils.FileExists("main.go") {
-		packagePath = "."
-	} else {
-		// This is a library project, just verify compilation
-		utils.Info("No main package found, building library packages for verification")
-		outputPath = "/dev/null"
-		packagePath = "./..."
+		return "./cmd/mage-init"
 	}
+	if utils.DirExists("cmd/example") {
+		return "./cmd/example"
+	}
+	if utils.FileExists("main.go") {
+		return "."
+	}
+	// This is a library project, just verify compilation
+	utils.Info("No main package found, building library packages for verification")
+	return "./..."
+}
 
-	// Generate cache hash for this build
+// createBuildArgs creates the build arguments
+func (b Build) createBuildArgs(cfg *Config, outputPath, packagePath string) []string {
 	args := []string{"build"}
 	args = append(args, buildFlags(cfg)...)
 	args = append(args, "-o", outputPath)
@@ -90,57 +150,77 @@ func (b Build) Default() error {
 	}
 
 	args = append(args, packagePath)
+	return args
+}
 
+// determineLDFlags determines the linker flags to use
+func (b Build) determineLDFlags(cfg *Config) string {
 	ldflags := strings.Join(cfg.Build.LDFlags, " ")
-	if ldflags == "" {
-		// Use default ldflags for hash
-		defaultLDFlags := []string{
-			fmt.Sprintf("-X main.version=%s", getVersion()),
-			fmt.Sprintf("-X main.commit=%s", getCommit()),
-			fmt.Sprintf("-X main.date=%s", time.Now().Format(time.RFC3339)),
-		}
-		if !utils.GetEnvBool("DEBUG", false) {
-			defaultLDFlags = append(defaultLDFlags, "-s", "-w")
-		}
-		ldflags = strings.Join(defaultLDFlags, " ")
+	if ldflags != "" {
+		return ldflags
 	}
 
-	// Find source files for cache hash
+	// Use default ldflags
+	defaultLDFlags := []string{
+		fmt.Sprintf("-X main.version=%s", getVersion()),
+		fmt.Sprintf("-X main.commit=%s", getCommit()),
+		fmt.Sprintf("-X main.date=%s", time.Now().Format(time.RFC3339)),
+	}
+	if !utils.GetEnvBool("DEBUG", false) {
+		defaultLDFlags = append(defaultLDFlags, "-s", "-w")
+	}
+	return strings.Join(defaultLDFlags, " ")
+}
+
+// findSourceFiles finds source files for cache hash
+func (b Build) findSourceFiles() []string {
 	sourceFiles, err := findSourceFiles()
 	if err != nil {
 		utils.Warn("Failed to find source files for caching: %v", err)
-		sourceFiles = []string{"go.mod", "go.sum"}
+		return []string{"go.mod", "go.sum"}
 	}
+	return sourceFiles
+}
 
+// getConfigFiles gets configuration files for cache hash
+func (b Build) getConfigFiles() []string {
 	configFiles := []string{"go.mod", "go.sum"}
 	if utils.FileExists(".mage.yaml") {
 		configFiles = append(configFiles, ".mage.yaml")
 	}
+	return configFiles
+}
 
-	platform := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
-	var buildHash string
-	if cm != nil {
-		var hashErr error
-		buildHash, hashErr = cm.GenerateBuildHash(platform, ldflags, sourceFiles, configFiles)
-		if hashErr != nil {
-			utils.Warn("Failed to generate build hash: %v", hashErr)
-			// Continue without caching
-		}
+// generateBuildHash generates a build hash for caching
+func (b Build) generateBuildHash(ctx *buildContext) string {
+	if ctx.cacheManager == nil {
+		return ""
 	}
 
-	// Try to use cached build result
-	if buildHash != "" && cm != nil {
-		if b.tryUseCachedBuild(buildHash, outputPath, *cm) {
-			return nil
-		}
+	buildHash, err := ctx.cacheManager.GenerateBuildHash(
+		ctx.platform, ctx.ldflags, ctx.sourceFiles, ctx.configFiles)
+	if err != nil {
+		utils.Warn("Failed to generate build hash: %v", err)
+		return ""
 	}
+	return buildHash
+}
 
-	// Cache miss or disabled - perform actual build
+// checkCachedBuild attempts to use a cached build result
+func (b Build) checkCachedBuild(buildHash, outputPath string, cm *cache.Manager) bool {
+	if buildHash == "" || cm == nil {
+		return false
+	}
+	return b.tryUseCachedBuild(buildHash, outputPath, *cm)
+}
+
+// executeBuild performs the actual build and handles caching
+func (b Build) executeBuild(ctx *buildContext, buildHash string) error {
 	start := time.Now()
 	buildSuccess := true
 	buildError := ""
 
-	if err := GetRunner().RunCmd("go", args...); err != nil {
+	if err := GetRunner().RunCmd("go", ctx.buildArgs...); err != nil {
 		buildSuccess = false
 		buildError = err.Error()
 	}
@@ -148,30 +228,37 @@ func (b Build) Default() error {
 	buildDuration := time.Since(start)
 
 	// Store result in cache if caching is enabled
-	if buildHash != "" && cm != nil && cm.IsEnabled() {
-		buildResult := &cache.BuildResult{
-			Binary:     outputPath,
-			Platform:   platform,
-			BuildFlags: args,
-			Success:    buildSuccess,
-			Error:      buildError,
-			Metrics: cache.BuildMetrics{
-				CompileTime: buildDuration,
-				BinarySize:  getBinarySize(outputPath),
-			},
-		}
-
-		if err := cm.GetBuildCache().StoreBuildResult(buildHash, buildResult); err != nil {
-			utils.Warn("Failed to store build result in cache: %v", err)
-		}
-	}
+	b.storeBuildResult(ctx, buildHash, buildSuccess, buildError, buildDuration)
 
 	if !buildSuccess {
-		return fmt.Errorf("build failed: %s", buildError)
+		return fmt.Errorf("%w: %s", ErrBuildFailedError, buildError)
 	}
 
-	utils.Success("Built %s in %s", outputPath, utils.FormatDuration(buildDuration))
+	utils.Success("Built %s in %s", ctx.outputPath, utils.FormatDuration(buildDuration))
 	return nil
+}
+
+// storeBuildResult stores the build result in cache if enabled
+func (b Build) storeBuildResult(ctx *buildContext, buildHash string, success bool, buildError string, duration time.Duration) {
+	if buildHash == "" || ctx.cacheManager == nil || !ctx.cacheManager.IsEnabled() {
+		return
+	}
+
+	buildResult := &cache.BuildResult{
+		Binary:     ctx.outputPath,
+		Platform:   ctx.platform,
+		BuildFlags: ctx.buildArgs,
+		Success:    success,
+		Error:      buildError,
+		Metrics: cache.BuildMetrics{
+			CompileTime: duration,
+			BinarySize:  getBinarySize(ctx.outputPath),
+		},
+	}
+
+	if err := ctx.cacheManager.GetBuildCache().StoreBuildResult(buildHash, buildResult); err != nil {
+		utils.Warn("Failed to store build result in cache: %v", err)
+	}
 }
 
 // tryUseCachedBuild attempts to use a cached build result and returns whether cache was used
@@ -228,7 +315,7 @@ func (b Build) All() error {
 	}
 
 	if len(buildErrors) > 0 {
-		return fmt.Errorf("build errors:\n%s", strings.Join(buildErrors, "\n"))
+		return fmt.Errorf("%w:\n%s", ErrBuildErrors, strings.Join(buildErrors, "\n"))
 	}
 
 	utils.Success("Built all platforms in %s", utils.FormatDuration(time.Since(start)))
@@ -326,12 +413,12 @@ func (Build) Docker() error {
 	}
 
 	if !utils.CommandExists("docker") {
-		return fmt.Errorf("docker command not found")
+		return ErrDockerNotFound
 	}
 
 	// Check if Dockerfile exists
 	if _, err := os.Stat(cfg.Docker.Dockerfile); os.IsNotExist(err) {
-		return fmt.Errorf("Dockerfile not found")
+		return ErrDockerfileNotFound
 	}
 
 	tag := fmt.Sprintf("%s/%s:%s",

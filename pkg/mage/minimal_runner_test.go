@@ -11,6 +11,7 @@ import (
 // MinimalRunnerTestSuite defines the test suite for minimal runner functions
 type MinimalRunnerTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 }
 

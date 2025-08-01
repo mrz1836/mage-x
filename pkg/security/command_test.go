@@ -2,7 +2,6 @@ package security
 
 import (
 	"context"
-	"errors"
 	"os"
 	"runtime"
 	"strings"
@@ -514,7 +513,7 @@ func TestMockExecutor(t *testing.T) {
 
 	// Set up mock responses
 	mock.SetResponse("echo hello", "hello", nil)
-	mock.SetResponse("failing-command ", "", errors.New("command failed")) // Note the space after command name
+	mock.SetResponse("failing-command ", "", ErrCommandFailed) // Note the space after command name
 
 	// Test successful command
 	err := mock.Execute(ctx, "echo", "hello")

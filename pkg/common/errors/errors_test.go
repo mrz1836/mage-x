@@ -11,6 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Static test errors to comply with err113 linter
+var (
+	errGenericError = errors.New("generic error")
+)
+
 func TestMageError_Basic(t *testing.T) {
 	// Test basic error creation
 	err := New("test error")
@@ -209,7 +214,7 @@ func TestErrorHandler(t *testing.T) {
 		return nil
 	})
 
-	genericErr := fmt.Errorf("generic error")
+	genericErr := errGenericError
 	result = handler.Handle(genericErr)
 	require.NoError(t, result, "Handle should not return an error")
 
@@ -285,7 +290,7 @@ func TestErrorRecovery(t *testing.T) {
 	err = recovery.RecoverWithRetry(func() error {
 		attempts++
 		if attempts < 3 {
-			return fmt.Errorf("attempt %d failed", attempts)
+			return fmt.Errorf("attempt %d failed: %w", attempts, errGenericError)
 		}
 		return nil
 	}, 5, 10*time.Millisecond)
@@ -297,7 +302,7 @@ func TestErrorRecovery(t *testing.T) {
 	err = recovery.RecoverWithBackoff(func() error {
 		backoffAttempts++
 		if backoffAttempts < 2 {
-			return fmt.Errorf("backoff attempt %d", backoffAttempts)
+			return fmt.Errorf("backoff attempt %d: %w", backoffAttempts, errGenericError)
 		}
 		return nil
 	}, BackoffConfig{
@@ -327,7 +332,7 @@ func TestErrorMetrics(t *testing.T) {
 	// Record some errors
 	err1 := WithCode(ErrBuildFailed, "build failed")
 	err2 := WithCode(ErrTestFailed, "test failed")
-	err3 := fmt.Errorf("generic error")
+	err3 := errGenericError
 
 	metrics.RecordError(err1)
 	metrics.RecordError(err1)

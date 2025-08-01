@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,11 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errNoCoverageFile = errors.New("no coverage file found. Run 'mage test:cover' first")
 )
 
 // Test namespace for test-related tasks
@@ -160,7 +166,7 @@ func (Test) CoverReport() error {
 // CoverHTML generates HTML coverage report
 func (Test) CoverHTML() error {
 	if !utils.FileExists("coverage.txt") {
-		return fmt.Errorf("no coverage file found. Run 'mage test:cover' first")
+		return errNoCoverageFile
 	}
 
 	utils.Info("Generating HTML coverage report...")

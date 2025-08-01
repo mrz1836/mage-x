@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,12 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for install operations
+var (
+	errInstallationVerificationFailed = errors.New("installation verification failed")
+	errSystemWideNotSupportedWindows  = errors.New("system-wide installation not supported on Windows")
 )
 
 const (
@@ -139,7 +146,7 @@ func (Install) Default() error {
 			utils.Info("Add it with: export PATH=$PATH:%s/bin", gopath)
 		}
 	} else {
-		return fmt.Errorf("installation verification failed")
+		return errInstallationVerificationFailed
 	}
 
 	return nil
@@ -252,7 +259,7 @@ func (Install) SystemWide() error {
 	utils.Header("Installing System-Wide")
 
 	if runtime.GOOS == OSWindows {
-		return fmt.Errorf("system-wide installation not supported on Windows")
+		return errSystemWideNotSupportedWindows
 	}
 
 	config, err := GetConfig()

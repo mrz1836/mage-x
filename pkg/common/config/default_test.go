@@ -13,6 +13,7 @@ import (
 // DefaultConfigTestSuite defines the test suite for default config functions
 type DefaultConfigTestSuite struct {
 	suite.Suite
+
 	tempDir string
 }
 

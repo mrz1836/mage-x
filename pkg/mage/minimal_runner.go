@@ -2,10 +2,16 @@ package mage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/mrz1836/go-mage/pkg/security"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errRunnerNil = errors.New("runner cannot be nil")
 )
 
 // SecureCommandRunner provides a secure implementation of CommandRunner using SecureExecutor
@@ -44,7 +50,7 @@ func GetRunner() CommandRunner {
 // SetRunner allows setting a custom runner (mainly for testing)
 func SetRunner(r CommandRunner) error {
 	if r == nil {
-		return fmt.Errorf("runner cannot be nil")
+		return errRunnerNil
 	}
 	defaultRunner = r
 	return nil

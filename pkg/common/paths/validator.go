@@ -1,6 +1,7 @@
 package paths
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +9,24 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+)
+
+// Error definitions for validator operations
+var (
+	ErrRuleCannotBeNil       = errors.New("rule cannot be nil")
+	ErrRuleNotFound          = errors.New("rule not found")
+	ErrPathMustBeAbsolute    = errors.New("path must be absolute")
+	ErrPathMustBeRelative    = errors.New("path must be relative")
+	ErrPathDoesNotExist      = errors.New("path does not exist")
+	ErrPathAlreadyExists     = errors.New("path already exists")
+	ErrPathTraversalDetected = errors.New("invalid path: path traversal detected")
+	errPathNotExecutable     = errors.New("path is not executable")
+	errPathNotDirectory      = errors.New("path is not a directory")
+	errPathNotFile           = errors.New("path is not a file")
+	ErrInvalidExtensions     = errors.New("path must have one of the required extensions")
+	ErrPathTooLong           = errors.New("path exceeds maximum length")
+	ErrPatternMismatch       = errors.New("path does not match required pattern")
+	ErrForbiddenPattern      = errors.New("path matches forbidden pattern")
 )
 
 // DefaultPathValidator implements PathValidator
@@ -28,7 +47,7 @@ func NewPathValidator() *DefaultPathValidator {
 // AddRule adds a validation rule
 func (pv *DefaultPathValidator) AddRule(rule ValidationRule) error {
 	if rule == nil {
-		return fmt.Errorf("rule cannot be nil")
+		return ErrRuleCannotBeNil
 	}
 
 	pv.mu.Lock()
@@ -50,7 +69,7 @@ func (pv *DefaultPathValidator) RemoveRule(name string) error {
 		}
 	}
 
-	return fmt.Errorf("rule %q not found", name)
+	return fmt.Errorf("%w: %q", ErrRuleNotFound, name)
 }
 
 // ClearRules removes all validation rules
@@ -259,7 +278,7 @@ func (r *AbsolutePathRule) Description() string { return "path must be absolute"
 // Validate checks if the given path is absolute
 func (r *AbsolutePathRule) Validate(path string) error {
 	if !filepath.IsAbs(path) {
-		return fmt.Errorf("path must be absolute")
+		return ErrPathMustBeAbsolute
 	}
 	return nil
 }
@@ -281,7 +300,7 @@ func (r *RelativePathRule) Description() string { return "path must be relative"
 // Validate validates that the given path is relative
 func (r *RelativePathRule) Validate(path string) error {
 	if filepath.IsAbs(path) {
-		return fmt.Errorf("path must be relative")
+		return ErrPathMustBeRelative
 	}
 	return nil
 }
@@ -303,7 +322,7 @@ func (r *ExistsRule) Description() string { return "path must exist" }
 // Validate validates that the given path exists
 func (r *ExistsRule) Validate(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return fmt.Errorf("path does not exist")
+		return ErrPathDoesNotExist
 	}
 	return nil
 }
@@ -311,7 +330,7 @@ func (r *ExistsRule) Validate(path string) error {
 // ValidatePath validates that the given PathBuilder exists
 func (r *ExistsRule) ValidatePath(path PathBuilder) error {
 	if !path.Exists() {
-		return fmt.Errorf("path does not exist")
+		return ErrPathDoesNotExist
 	}
 	return nil
 }
@@ -328,7 +347,7 @@ func (r *NotExistsRule) Description() string { return "path must not exist" }
 // Validate validates that the given path does not exist
 func (r *NotExistsRule) Validate(path string) error {
 	if _, err := os.Stat(path); err == nil {
-		return fmt.Errorf("path already exists")
+		return ErrPathAlreadyExists
 	}
 	return nil
 }
@@ -336,7 +355,7 @@ func (r *NotExistsRule) Validate(path string) error {
 // ValidatePath validates that the given PathBuilder does not exist
 func (r *NotExistsRule) ValidatePath(path PathBuilder) error {
 	if path.Exists() {
-		return fmt.Errorf("path already exists")
+		return ErrPathAlreadyExists
 	}
 	return nil
 }
@@ -355,7 +374,7 @@ func (r *ReadableRule) Validate(path string) error {
 	// Clean path to prevent directory traversal
 	cleanPath := filepath.Clean(path)
 	if strings.Contains(cleanPath, "..") {
-		return fmt.Errorf("invalid path: path traversal detected")
+		return ErrPathTraversalDetected
 	}
 
 	file, err := os.Open(cleanPath)
@@ -387,7 +406,7 @@ func (r *WritableRule) Validate(path string) error {
 	// Clean path to prevent directory traversal
 	cleanPath := filepath.Clean(path)
 	if strings.Contains(cleanPath, "..") {
-		return fmt.Errorf("invalid path: path traversal detected")
+		return ErrPathTraversalDetected
 	}
 
 	// Check if path exists
@@ -451,7 +470,7 @@ func (r *ExecutableRule) Validate(path string) error {
 	}
 
 	if info.Mode()&0o111 == 0 {
-		return fmt.Errorf("path is not executable")
+		return errPathNotExecutable
 	}
 
 	return nil
@@ -479,7 +498,7 @@ func (r *DirectoryRule) Validate(path string) error {
 	}
 
 	if !info.IsDir() {
-		return fmt.Errorf("path is not a directory")
+		return errPathNotDirectory
 	}
 
 	return nil
@@ -488,7 +507,7 @@ func (r *DirectoryRule) Validate(path string) error {
 // ValidatePath validates that the given PathBuilder path is a directory
 func (r *DirectoryRule) ValidatePath(path PathBuilder) error {
 	if !path.IsDir() {
-		return fmt.Errorf("path is not a directory")
+		return errPathNotDirectory
 	}
 	return nil
 }
@@ -510,7 +529,7 @@ func (r *FileRule) Validate(path string) error {
 	}
 
 	if info.IsDir() {
-		return fmt.Errorf("path is not a file")
+		return errPathNotFile
 	}
 
 	return nil
@@ -519,7 +538,7 @@ func (r *FileRule) Validate(path string) error {
 // ValidatePath validates that the given PathBuilder path is a file
 func (r *FileRule) ValidatePath(path PathBuilder) error {
 	if !path.IsFile() {
-		return fmt.Errorf("path is not a file")
+		return errPathNotFile
 	}
 	return nil
 }
@@ -548,7 +567,7 @@ func (r *ExtensionRule) Validate(path string) error {
 		}
 	}
 
-	return fmt.Errorf("path must have one of these extensions: %v", r.Extensions)
+	return fmt.Errorf("%w: %v", ErrInvalidExtensions, r.Extensions)
 }
 
 // ValidatePath validates that the given PathBuilder path has an allowed extension
@@ -570,7 +589,7 @@ func (r *MaxLengthRule) Description() string { return "path must not exceed maxi
 // Validate validates that the given path does not exceed maximum length
 func (r *MaxLengthRule) Validate(path string) error {
 	if len(path) > r.MaxLength {
-		return fmt.Errorf("path length %d exceeds maximum %d", len(path), r.MaxLength)
+		return fmt.Errorf("%w: %d exceeds maximum %d", ErrPathTooLong, len(path), r.MaxLength)
 	}
 	return nil
 }
@@ -610,11 +629,11 @@ func (r *PatternRule) Validate(path string) error {
 	}
 
 	if r.Required && !matched {
-		return fmt.Errorf("path does not match required pattern %s", r.Pattern)
+		return fmt.Errorf("%w: %s", ErrPatternMismatch, r.Pattern)
 	}
 
 	if !r.Required && matched {
-		return fmt.Errorf("path matches forbidden pattern %s", r.Pattern)
+		return fmt.Errorf("%w: %s", ErrForbiddenPattern, r.Pattern)
 	}
 
 	return nil

@@ -3,9 +3,15 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
+)
+
+// Static errors for err113 compliance
+var (
+	ErrProviderNotFound = errors.New("provider not found")
 )
 
 // Provider defines the interface for cloud/platform providers
@@ -345,7 +351,7 @@ func RegisterAllProviders() {
 func Get(name string, config *ProviderConfig) (Provider, error) {
 	factory, ok := globalRegistry.providers[name]
 	if !ok {
-		return nil, fmt.Errorf("provider %s not found", name)
+		return nil, fmt.Errorf("%w: %s", ErrProviderNotFound, name)
 	}
 	return factory(config)
 }

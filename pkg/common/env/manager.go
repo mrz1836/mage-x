@@ -1,6 +1,7 @@
 package env
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -9,6 +10,18 @@ import (
 	"strings"
 	"sync"
 	"time"
+)
+
+// Static errors for environment manager operations
+var (
+	errNoScopesToPop            = errors.New("no scopes to pop")
+	errValueRequired            = errors.New("value is required")
+	errValueCannotBeEmpty       = errors.New("value cannot be empty")
+	errValueDoesNotMatchPattern = errors.New("value does not match pattern")
+	errValueLessThanMinimum     = errors.New("value is less than minimum")
+	errValueGreaterThanMaximum  = errors.New("value is greater than maximum")
+	errValueNotNumeric          = errors.New("value is not numeric")
+	errValueMustBeOneOf         = errors.New("value must be one of allowed values")
 )
 
 // DefaultEnvManager implements Manager
@@ -42,7 +55,7 @@ func (m *DefaultEnvManager) PopScope() error {
 	defer m.mu.Unlock()
 
 	if len(m.scopes) == 0 {
-		return fmt.Errorf("no scopes to pop")
+		return errNoScopesToPop
 	}
 
 	// Remove the last scope
@@ -120,6 +133,7 @@ func (m *DefaultEnvManager) Fork() Manager {
 // DefaultEnvScope implements Scope
 type DefaultEnvScope struct {
 	Environment
+
 	mu       sync.RWMutex
 	changes  map[string]Change
 	original map[string]string
@@ -473,7 +487,7 @@ type RequiredRule struct{}
 // Validate validates that a value is present
 func (r *RequiredRule) Validate(value string) error {
 	if value == "" {
-		return fmt.Errorf("value is required")
+		return errValueRequired
 	}
 	return nil
 }
@@ -489,7 +503,7 @@ type NotEmptyRule struct{}
 // Validate validates that a value is not empty
 func (r *NotEmptyRule) Validate(value string) error {
 	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("value cannot be empty")
+		return errValueCannotBeEmpty
 	}
 	return nil
 }
@@ -516,7 +530,7 @@ func (r *PatternRule) Validate(value string) error {
 	}
 
 	if !r.regex.MatchString(value) {
-		return fmt.Errorf("value does not match pattern %s", r.Pattern)
+		return fmt.Errorf("%w: %s", errValueDoesNotMatchPattern, r.Pattern)
 	}
 
 	return nil
@@ -542,10 +556,10 @@ func (r *RangeRule) Validate(value string) error {
 	// Try to parse as int
 	if intVal, err := strconv.Atoi(value); err == nil {
 		if minInt, ok := r.Min.(int); ok && intVal < minInt {
-			return fmt.Errorf("value %d is less than minimum %d", intVal, minInt)
+			return fmt.Errorf("%w: %d (minimum: %d)", errValueLessThanMinimum, intVal, minInt)
 		}
 		if maxInt, ok := r.Max.(int); ok && intVal > maxInt {
-			return fmt.Errorf("value %d is greater than maximum %d", intVal, maxInt)
+			return fmt.Errorf("%w: %d (maximum: %d)", errValueGreaterThanMaximum, intVal, maxInt)
 		}
 		return nil
 	}
@@ -553,15 +567,15 @@ func (r *RangeRule) Validate(value string) error {
 	// Try to parse as float
 	if floatVal, err := strconv.ParseFloat(value, 64); err == nil {
 		if minFloat, ok := r.Min.(float64); ok && floatVal < minFloat {
-			return fmt.Errorf("value %f is less than minimum %f", floatVal, minFloat)
+			return fmt.Errorf("%w: %f (minimum: %f)", errValueLessThanMinimum, floatVal, minFloat)
 		}
 		if maxFloat, ok := r.Max.(float64); ok && floatVal > maxFloat {
-			return fmt.Errorf("value %f is greater than maximum %f", floatVal, maxFloat)
+			return fmt.Errorf("%w: %f (maximum: %f)", errValueGreaterThanMaximum, floatVal, maxFloat)
 		}
 		return nil
 	}
 
-	return fmt.Errorf("value is not numeric")
+	return errValueNotNumeric
 }
 
 // Description returns the description of the range rule
@@ -583,7 +597,7 @@ func (r *OneOfRule) Validate(value string) error {
 	}
 
 	sort.Strings(r.Values) // For consistent error messages
-	return fmt.Errorf("value must be one of: %v", r.Values)
+	return fmt.Errorf("%w: %v", errValueMustBeOneOf, r.Values)
 }
 
 // Description returns the description of the one-of rule

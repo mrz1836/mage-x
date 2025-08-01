@@ -448,6 +448,7 @@ func (wb *WorkspaceBuilder) Build() *TempWorkspace {
 // SandboxedWorkspace provides an isolated workspace with restricted access
 type SandboxedWorkspace struct {
 	*TempWorkspace
+
 	allowedPaths map[string]bool
 }
 

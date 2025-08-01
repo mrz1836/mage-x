@@ -2,8 +2,19 @@
 package channels
 
 import (
+	"errors"
 	"fmt"
 	"time"
+)
+
+// Static errors for validation
+var (
+	ErrReleaseVersionRequired   = errors.New("release version is required")
+	ErrReleaseInvalidChannel    = errors.New("invalid channel")
+	ErrReleaseNoArtifacts       = errors.New("release must have at least one artifact")
+	ErrArtifactNameRequired     = errors.New("artifact name is required")
+	ErrArtifactURLRequired      = errors.New("artifact URL is required")
+	ErrArtifactChecksumRequired = errors.New("artifact checksum is required")
 )
 
 // Channel represents a release channel
@@ -170,27 +181,27 @@ func (c Channel) GetDefaultRetention() int {
 // Validate checks if the release is valid
 func (r *Release) Validate() error {
 	if r.Version == "" {
-		return fmt.Errorf("release version is required")
+		return ErrReleaseVersionRequired
 	}
 
 	if !r.Channel.IsValid() {
-		return fmt.Errorf("invalid channel: %s", r.Channel)
+		return fmt.Errorf("%w: %s", ErrReleaseInvalidChannel, r.Channel)
 	}
 
 	if len(r.Artifacts) == 0 {
-		return fmt.Errorf("release must have at least one artifact")
+		return ErrReleaseNoArtifacts
 	}
 
 	for i := range r.Artifacts {
 		artifact := &r.Artifacts[i]
 		if artifact.Name == "" {
-			return fmt.Errorf("artifact %d: name is required", i)
+			return fmt.Errorf("artifact %d: %w", i, ErrArtifactNameRequired)
 		}
 		if artifact.URL == "" {
-			return fmt.Errorf("artifact %d: URL is required", i)
+			return fmt.Errorf("artifact %d: %w", i, ErrArtifactURLRequired)
 		}
 		if artifact.Checksum == "" {
-			return fmt.Errorf("artifact %d: checksum is required", i)
+			return fmt.Errorf("artifact %d: %w", i, ErrArtifactChecksumRequired)
 		}
 	}
 

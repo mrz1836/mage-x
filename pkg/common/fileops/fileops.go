@@ -1,9 +1,16 @@
 package fileops
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+)
+
+// Static errors
+var (
+	ErrNoValidConfigFileFound = errors.New("no valid config file found in paths")
+	ErrFileDoesNotExist       = errors.New("file does not exist")
 )
 
 // FileOps provides a facade combining all file operations
@@ -98,7 +105,7 @@ func (f *FileOps) LoadConfig(paths []string, dest interface{}) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("no valid config file found in paths: %v", paths)
+	return "", fmt.Errorf("%w: %v", ErrNoValidConfigFileFound, paths)
 }
 
 // SaveConfig saves configuration to file in the specified format
@@ -130,7 +137,7 @@ func (f *FileOps) CopyFile(src, dst string) error {
 // BackupFile creates a backup of a file with timestamp
 func (f *FileOps) BackupFile(path string) error {
 	if !f.File.Exists(path) {
-		return fmt.Errorf("file does not exist: %s", path)
+		return fmt.Errorf("%w: %s", ErrFileDoesNotExist, path)
 	}
 
 	backupPath := path + ".bak"

@@ -17,6 +17,20 @@ import (
 	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
+// Static errors for err113 compliance
+var (
+	ErrCommandNotAllowed      = errors.New("command is not in allowed list")
+	ErrPathTraversal          = errors.New("path traversal detected")
+	ErrCommandPathTraversal   = errors.New("command name contains path traversal")
+	ErrInvalidUTF8            = errors.New("argument contains invalid UTF-8")
+	ErrDangerousPipePattern   = errors.New("potentially dangerous pattern '|' detected")
+	ErrDangerousPattern       = errors.New("potentially dangerous pattern detected")
+	ErrPathContainsNull       = errors.New("path contains null byte")
+	ErrPathContainsControl    = errors.New("path contains control character")
+	ErrAbsolutePathNotAllowed = errors.New("absolute paths not allowed outside of /tmp")
+	ErrCommandFailed          = errors.New("command failed")
+)
+
 // CommandExecutor defines the interface for executing commands
 type CommandExecutor interface {
 	// Execute runs a command with the given arguments
@@ -234,13 +248,13 @@ func (e *SecureExecutor) validateCommand(name string, args []string) error {
 	// Check if command is in allowed list (if list is not empty)
 	if len(e.AllowedCommands) > 0 {
 		if !e.AllowedCommands[name] {
-			return fmt.Errorf("command '%s' is not in allowed list", name)
+			return fmt.Errorf("%w: '%s'", ErrCommandNotAllowed, name)
 		}
 	}
 
 	// Validate command name doesn't contain path traversal
 	if strings.Contains(name, "..") {
-		return fmt.Errorf("command name contains path traversal")
+		return ErrCommandPathTraversal
 	}
 
 	// Validate arguments don't contain dangerous patterns
@@ -312,7 +326,7 @@ func (e *SecureExecutor) filterEnvironment(env []string) []string {
 func ValidateCommandArg(arg string) error {
 	// Check for valid UTF-8
 	if !utf8.ValidString(arg) {
-		return fmt.Errorf("argument contains invalid UTF-8")
+		return ErrInvalidUTF8
 	}
 
 	// Check for shell injection attempts
@@ -334,14 +348,14 @@ func ValidateCommandArg(arg string) error {
 		if !strings.ContainsAny(arg, "^$[]()+*?.{}\\") {
 			// Allow pipe in URLs
 			if !strings.HasPrefix(arg, "http://") && !strings.HasPrefix(arg, "https://") {
-				return fmt.Errorf("potentially dangerous pattern '|' detected")
+				return ErrDangerousPipePattern
 			}
 		}
 	}
 
 	for _, pattern := range dangerousPatterns {
 		if strings.Contains(arg, pattern) {
-			return fmt.Errorf("potentially dangerous pattern '%s' detected", pattern)
+			return fmt.Errorf("%w: '%s'", ErrDangerousPattern, pattern)
 		}
 	}
 
@@ -352,16 +366,16 @@ func ValidateCommandArg(arg string) error {
 func ValidatePath(path string) error {
 	// Check for control characters and dangerous patterns first
 	if strings.Contains(path, "\x00") {
-		return fmt.Errorf("path contains null byte")
+		return ErrPathContainsNull
 	}
 	if strings.Contains(path, "\n") || strings.Contains(path, "\r") {
-		return fmt.Errorf("path contains control character")
+		return ErrPathContainsControl
 	}
 
 	// Check for path traversal BEFORE cleaning (Unix and Windows styles)
 	if strings.Contains(path, "../") || strings.Contains(path, "..\\") ||
 		strings.HasSuffix(path, "..") || path == ".." {
-		return fmt.Errorf("path traversal detected")
+		return ErrPathTraversal
 	}
 
 	// Clean the path
@@ -370,18 +384,18 @@ func ValidatePath(path string) error {
 	// Check for Windows-style paths (which should be rejected on Unix systems)
 	if strings.Contains(path, ":") && len(path) > 1 && path[1] == ':' {
 		// This looks like a Windows drive path (C:, D:, etc.)
-		return fmt.Errorf("absolute paths not allowed outside of /tmp")
+		return ErrAbsolutePathNotAllowed
 	}
 
 	// Check for UNC paths
 	if strings.HasPrefix(path, "\\\\") {
-		return fmt.Errorf("absolute paths not allowed outside of /tmp")
+		return ErrAbsolutePathNotAllowed
 	}
 
 	// Check if path is absolute when it shouldn't be
 	if filepath.IsAbs(cleaned) && !strings.HasPrefix(cleaned, "/tmp") {
 		// Allow absolute paths only in /tmp for now
-		return fmt.Errorf("absolute paths not allowed outside of /tmp")
+		return ErrAbsolutePathNotAllowed
 	}
 
 	return nil

@@ -12,6 +12,7 @@ import (
 // DepsTestSuite defines the test suite for deps functions
 type DepsTestSuite struct {
 	suite.Suite
+
 	env  *testutil.TestEnvironment
 	deps Deps
 }

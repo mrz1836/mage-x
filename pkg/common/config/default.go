@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,22 @@ import (
 	"time"
 
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
+)
+
+// Static errors for configuration loading
+var (
+	errEnvConfigNotImplemented = errors.New("environment configuration loading not implemented yet")
+)
+
+var (
+	// ErrNoValidConfigFile is returned when no valid configuration file is found in any of the provided paths
+	ErrNoValidConfigFile = errors.New("no valid configuration file found in paths")
+	// ErrConfigFileNotExists is returned when a configuration file does not exist
+	ErrConfigFileNotExists = errors.New("configuration file does not exist")
+	// ErrUnsupportedFormat is returned when an unsupported format is encountered
+	ErrUnsupportedFormat = errors.New("unsupported format")
+	// ErrConfigDataNil is returned when configuration data is nil
+	ErrConfigDataNil = errors.New("configuration data is nil")
 )
 
 // DefaultConfigLoader implements ConfigLoader using fileops
@@ -42,13 +59,13 @@ func (d *DefaultConfigLoader) Load(paths []string, dest interface{}) (string, er
 		return path, nil
 	}
 
-	return "", fmt.Errorf("no valid configuration file found in paths: %v", paths)
+	return "", fmt.Errorf("%w: %v", ErrNoValidConfigFile, paths)
 }
 
 // LoadFrom loads configuration from a specific file
 func (d *DefaultConfigLoader) LoadFrom(path string, dest interface{}) error {
 	if !d.fileOps.Exists(path) {
-		return fmt.Errorf("configuration file does not exist: %s", path)
+		return fmt.Errorf("%w: %s", ErrConfigFileNotExists, path)
 	}
 
 	ext := strings.ToLower(filepath.Ext(path))
@@ -84,14 +101,14 @@ func (d *DefaultConfigLoader) Save(path string, data interface{}, format string)
 		}
 		return d.fileOps.WriteFile(path, jsonData, 0o644)
 	default:
-		return fmt.Errorf("unsupported format: %s", format)
+		return fmt.Errorf("%w: %s", ErrUnsupportedFormat, format)
 	}
 }
 
 // Validate validates configuration data (basic implementation)
 func (d *DefaultConfigLoader) Validate(data interface{}) error {
 	if data == nil {
-		return fmt.Errorf("configuration data is nil")
+		return ErrConfigDataNil
 	}
 	// Basic validation - can be extended with more sophisticated validation
 	return nil
@@ -313,7 +330,7 @@ func (e *EnvConfigSource) Name() string {
 func (e *EnvConfigSource) Load(_ interface{}) error {
 	// This is a simplified implementation
 	// In a real implementation, this would use reflection to map env vars to struct fields
-	return fmt.Errorf("environment configuration loading not implemented yet")
+	return errEnvConfigNotImplemented
 }
 
 // IsAvailable checks if the source is available

@@ -522,6 +522,7 @@ type IDependency struct {
 // IOutdatedDependency represents an outdated dependency
 type IOutdatedDependency struct {
 	IDependency
+
 	LatestVersion string
 	UpdateType    string
 }

@@ -2,13 +2,20 @@ package channels
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"sync"
 
-	"github.com/mrz1836/go-mage/pkg/common/errors"
+	mageErrors "github.com/mrz1836/go-mage/pkg/common/errors"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Sentinel errors
+var (
+	ErrReleaseNotFound = errors.New("release not found")
+	ErrConfigNotFound  = errors.New("config not found")
 )
 
 // FileStore implements Store interface using filesystem
@@ -50,7 +57,7 @@ func (s *FileStore) initialize() error {
 	for _, dir := range dirs {
 		path := filepath.Join(s.baseDir, dir)
 		if err := s.fileOps.MkdirAll(path, 0o755); err != nil {
-			return errors.Wrap(err, "failed to create directory")
+			return mageErrors.Wrap(err, "failed to create directory")
 		}
 	}
 
@@ -65,17 +72,17 @@ func (s *FileStore) GetRelease(channel Channel, version string) (*Release, error
 	path := s.getReleasePath(channel, version)
 
 	if !s.fileOps.Exists(path) {
-		return nil, nil
+		return nil, ErrReleaseNotFound
 	}
 
 	data, err := s.fileOps.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read release file")
+		return nil, mageErrors.Wrap(err, "failed to read release file")
 	}
 
 	var release Release
 	if err := json.Unmarshal(data, &release); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal release")
+		return nil, mageErrors.Wrap(err, "failed to unmarshal release")
 	}
 
 	return &release, nil
@@ -99,7 +106,7 @@ func (s *FileStore) listReleasesUnlocked(channel Channel) ([]*Release, error) {
 
 	entries, err := s.fileOps.ReadDir(channelDir)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read channel directory")
+		return nil, mageErrors.Wrap(err, "failed to read channel directory")
 	}
 
 	releases := make([]*Release, 0, len(entries))
@@ -135,7 +142,7 @@ func (s *FileStore) SaveRelease(release *Release) error {
 	defer s.mu.Unlock()
 
 	if err := release.Validate(); err != nil {
-		return errors.Wrap(err, "invalid release")
+		return mageErrors.Wrap(err, "invalid release")
 	}
 
 	path := s.getReleasePath(release.Channel, release.Version)
@@ -143,16 +150,16 @@ func (s *FileStore) SaveRelease(release *Release) error {
 	// Ensure directory exists
 	dir := filepath.Dir(path)
 	if err := s.fileOps.MkdirAll(dir, 0o755); err != nil {
-		return errors.Wrap(err, "failed to create release directory")
+		return mageErrors.Wrap(err, "failed to create release directory")
 	}
 
 	data, err := json.MarshalIndent(release, "", "  ")
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal release")
+		return mageErrors.Wrap(err, "failed to marshal release")
 	}
 
 	if err := s.fileOps.WriteFile(path, data, 0o644); err != nil {
-		return errors.Wrap(err, "failed to write release file")
+		return mageErrors.Wrap(err, "failed to write release file")
 	}
 
 	// Also save to index for faster lookups
@@ -172,11 +179,11 @@ func (s *FileStore) DeleteRelease(channel Channel, version string) error {
 	path := s.getReleasePath(channel, version)
 
 	if !s.fileOps.Exists(path) {
-		return errors.WithCode(errors.ErrNotFound, "release not found")
+		return ErrReleaseNotFound
 	}
 
 	if err := s.fileOps.Remove(path); err != nil {
-		return errors.Wrap(err, "failed to delete release file")
+		return mageErrors.Wrap(err, "failed to delete release file")
 	}
 
 	// Update index
@@ -196,17 +203,17 @@ func (s *FileStore) GetChannelConfig(channel Channel) (*ChannelConfig, error) {
 	path := filepath.Join(s.baseDir, "configs", fmt.Sprintf("%s.json", channel))
 
 	if !s.fileOps.Exists(path) {
-		return nil, nil
+		return nil, ErrConfigNotFound
 	}
 
 	data, err := s.fileOps.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read config file")
+		return nil, mageErrors.Wrap(err, "failed to read config file")
 	}
 
 	var config ChannelConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal config")
+		return nil, mageErrors.Wrap(err, "failed to unmarshal config")
 	}
 
 	return &config, nil
@@ -221,11 +228,11 @@ func (s *FileStore) SaveChannelConfig(config *ChannelConfig) error {
 
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal config")
+		return mageErrors.Wrap(err, "failed to marshal config")
 	}
 
 	if err := s.fileOps.WriteFile(path, data, 0o644); err != nil {
-		return errors.Wrap(err, "failed to write config file")
+		return mageErrors.Wrap(err, "failed to write config file")
 	}
 
 	return nil
@@ -251,12 +258,12 @@ func (s *FileStore) getPromotionHistoryUnlocked(version string) ([]*PromotionReq
 
 	data, err := s.fileOps.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read promotion history")
+		return nil, mageErrors.Wrap(err, "failed to read promotion history")
 	}
 
 	var history []*PromotionRequest
 	if err := json.Unmarshal(data, &history); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal promotion history")
+		return nil, mageErrors.Wrap(err, "failed to unmarshal promotion history")
 	}
 
 	return history, nil
@@ -282,11 +289,11 @@ func (s *FileStore) SavePromotionRequest(request *PromotionRequest) error {
 
 	data, err := json.MarshalIndent(history, "", "  ")
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal promotion history")
+		return mageErrors.Wrap(err, "failed to marshal promotion history")
 	}
 
 	if err := s.fileOps.WriteFile(path, data, 0o644); err != nil {
-		return errors.Wrap(err, "failed to write promotion history")
+		return mageErrors.Wrap(err, "failed to write promotion history")
 	}
 
 	return nil

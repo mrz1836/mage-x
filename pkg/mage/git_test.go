@@ -11,6 +11,7 @@ import (
 // GitTestSuite defines the test suite for Git functions
 type GitTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 	git Git
 }

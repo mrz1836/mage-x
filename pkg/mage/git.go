@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -9,6 +10,16 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/security"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for git operations
+var (
+	errUncommittedChanges          = errors.New("uncommitted changes in working directory")
+	errUncommittedChangesFound     = errors.New("uncommitted changes found")
+	errGitVersionRequired          = errors.New("version variable is required. Use: version=X.Y.Z mage git:tag")
+	errGitTagRemoveVersionRequired = errors.New("version variable is required. Use: version=X.Y.Z mage git:tagremove")
+	errGitTagUpdateVersionRequired = errors.New("version variable is required. Use: version=X.Y.Z mage git:tagupdate")
+	errGitCommitMessageRequired    = errors.New("message parameter or environment variable is required")
 )
 
 // Git namespace for git-related tasks
@@ -25,7 +36,7 @@ func (Git) Diff() error {
 		if output != "" {
 			utils.Info("%s", output)
 		}
-		return fmt.Errorf("uncommitted changes in working directory")
+		return errUncommittedChanges
 	}
 
 	// Check git status for untracked files
@@ -37,7 +48,7 @@ func (Git) Diff() error {
 	if strings.TrimSpace(output) != "" {
 		utils.Error("Uncommitted changes detected:")
 		utils.Info("%s", output)
-		return fmt.Errorf("uncommitted changes found")
+		return errUncommittedChangesFound
 	}
 
 	utils.Success("Working directory is clean")
@@ -48,7 +59,7 @@ func (Git) Diff() error {
 func (Git) Tag() error {
 	version := os.Getenv("version")
 	if version == "" {
-		return fmt.Errorf("version variable is required. Use: version=X.Y.Z mage git:tag")
+		return errGitVersionRequired
 	}
 
 	// Validate version format
@@ -83,7 +94,7 @@ func (Git) Tag() error {
 func (Git) TagRemove() error {
 	version := os.Getenv("version")
 	if version == "" {
-		return fmt.Errorf("version variable is required. Use: version=X.Y.Z mage git:tagremove")
+		return errGitTagRemoveVersionRequired
 	}
 
 	// Validate version format
@@ -118,7 +129,7 @@ func (Git) TagRemove() error {
 func (Git) TagUpdate() error {
 	version := os.Getenv("version")
 	if version == "" {
-		return fmt.Errorf("version variable is required. Use: version=X.Y.Z mage git:tagupdate")
+		return errGitTagUpdateVersionRequired
 	}
 
 	// Validate version format
@@ -199,7 +210,7 @@ func (Git) Commit(message ...string) error {
 	} else {
 		commitMessage = os.Getenv("message")
 		if commitMessage == "" {
-			return fmt.Errorf("message parameter or environment variable is required")
+			return errGitCommitMessageRequired
 		}
 	}
 

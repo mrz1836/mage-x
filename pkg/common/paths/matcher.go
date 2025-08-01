@@ -1,11 +1,18 @@
 package paths
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+)
+
+// Error definitions for matcher operations
+var (
+	ErrPatternEmpty    = errors.New("pattern cannot be empty")
+	ErrPatternNotFound = errors.New("pattern not found")
 )
 
 // DefaultPathMatcher implements PathMatcher
@@ -107,7 +114,7 @@ func (pm *DefaultPathMatcher) AddPattern(pattern string) error {
 // addPatternUnsafe adds a pattern without locking (internal use)
 func (pm *DefaultPathMatcher) addPatternUnsafe(pattern string) error {
 	if pattern == "" {
-		return fmt.Errorf("pattern cannot be empty")
+		return ErrPatternEmpty
 	}
 
 	// Check if it's a regex pattern (starts with ^ or contains regex special chars)
@@ -166,7 +173,7 @@ func (pm *DefaultPathMatcher) RemovePattern(pattern string) error {
 		}
 	}
 
-	return fmt.Errorf("pattern %q not found", pattern)
+	return fmt.Errorf("%w: %q", ErrPatternNotFound, pattern)
 }
 
 // ClearPatterns removes all patterns

@@ -3,11 +3,20 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/mrz1836/go-mage/pkg/providers"
+)
+
+// Static errors for err113 compliance
+var (
+	ErrAWSCredentialsRequired = errors.New("AWS access key and secret key are required")
+	ErrAWSRegionRequired      = errors.New("AWS region is required")
+	ErrAWSProviderNotHealthy  = errors.New("AWS provider is not healthy")
+	ErrNotImplemented         = errors.New("not implemented")
 )
 
 // Provider implements the AWS provider
@@ -80,11 +89,11 @@ func (p *Provider) Initialize(config *providers.ProviderConfig) error {
 // Validate validates the provider configuration
 func (p *Provider) Validate() error {
 	if p.config.Credentials.AccessKey == "" || p.config.Credentials.SecretKey == "" {
-		return fmt.Errorf("AWS access key and secret key are required")
+		return ErrAWSCredentialsRequired
 	}
 
 	if p.config.Region == "" {
-		return fmt.Errorf("AWS region is required")
+		return ErrAWSRegionRequired
 	}
 
 	// Test credentials by making a simple API call
@@ -94,7 +103,7 @@ func (p *Provider) Validate() error {
 	}
 
 	if !health.Healthy {
-		return fmt.Errorf("AWS provider is not healthy: %s", health.Status)
+		return fmt.Errorf("%w: %s", ErrAWSProviderNotHealthy, health.Status)
 	}
 
 	return nil
@@ -399,7 +408,7 @@ func (s *storageService) PutObject(_ context.Context, _, _ string, _ io.Reader, 
 
 func (s *storageService) GetObject(_ context.Context, _, _ string) (io.ReadCloser, error) {
 	// Download from S3
-	return nil, fmt.Errorf("not implemented")
+	return nil, ErrNotImplemented
 }
 
 func (s *storageService) DeleteObject(_ context.Context, _, _ string) error {

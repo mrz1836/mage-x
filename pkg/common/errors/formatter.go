@@ -93,78 +93,116 @@ func (f *DefaultErrorFormatter) formatMageError(err MageError, opts FormatOption
 		return f.indent("...(max depth reached)", depth)
 	}
 
-	var sb strings.Builder
-
 	if opts.CompactMode {
-		// Compact single-line format
-		sb.WriteString(fmt.Sprintf("[%s/%s] %s", err.Code(), err.Severity(), err.Error()))
-
-		if opts.IncludeFields && len(err.Context().Fields) > 0 {
-			fields := f.formatFields(err.Context().Fields, opts)
-			sb.WriteString(fmt.Sprintf(" {%s}", fields))
-		}
-
-		return sb.String()
+		return f.formatCompactError(err, opts)
 	}
 
-	// Full format
-	indent := f.getIndent(depth)
+	return f.formatFullError(err, opts, depth)
+}
 
-	// Header line
-	if opts.UseColor {
-		sb.WriteString(f.colorize(err.Severity(), fmt.Sprintf("%s[%s] %s",
-			indent, err.Code(), err.Error())))
-	} else {
-		sb.WriteString(fmt.Sprintf("%s[%s] %s", indent, err.Code(), err.Error()))
-	}
+// formatCompactError formats an error in compact single-line format
+func (f *DefaultErrorFormatter) formatCompactError(err MageError, opts FormatOptions) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("[%s/%s] %s", err.Code(), err.Severity(), err.Error()))
 
-	// Severity
-	sb.WriteString(fmt.Sprintf("\n%s  Severity: %s", indent, err.Severity()))
-
-	// Timestamp
-	if opts.IncludeTimestamp && !err.Context().Timestamp.IsZero() {
-		sb.WriteString(fmt.Sprintf("\n%s  Time: %s", indent,
-			err.Context().Timestamp.Format(opts.TimeFormat)))
-	}
-
-	// Context
-	if opts.IncludeContext {
-		ctx := err.Context()
-		f.formatContext(&sb, &ctx, indent)
-	}
-
-	// Fields
 	if opts.IncludeFields && len(err.Context().Fields) > 0 {
-		sb.WriteString(fmt.Sprintf("\n%s  Fields:", indent))
-		for k, v := range err.Context().Fields {
-			sb.WriteString(fmt.Sprintf("\n%s    %s: %v", indent, k, v))
-		}
-	}
-
-	// Cause
-	if opts.IncludeCause && err.Cause() != nil {
-		sb.WriteString(fmt.Sprintf("\n%s  Caused by:", indent))
-		var causeMageErr MageError
-		if errors.As(err.Cause(), &causeMageErr) {
-			sb.WriteString("\n")
-			sb.WriteString(f.formatMageError(causeMageErr, opts, depth+1))
-		} else {
-			sb.WriteString(fmt.Sprintf("\n%s    %v", indent, err.Cause()))
-		}
-	}
-
-	// Stack trace
-	if opts.IncludeStack && err.Context().StackTrace != "" {
-		sb.WriteString(fmt.Sprintf("\n%s  Stack trace:", indent))
-		stackLines := strings.Split(err.Context().StackTrace, "\n")
-		for _, line := range stackLines {
-			if strings.TrimSpace(line) != "" {
-				sb.WriteString(fmt.Sprintf("\n%s  %s", indent, line))
-			}
-		}
+		fields := f.formatFields(err.Context().Fields, opts)
+		sb.WriteString(fmt.Sprintf(" {%s}", fields))
 	}
 
 	return sb.String()
+}
+
+// formatFullError formats an error in full detailed format
+func (f *DefaultErrorFormatter) formatFullError(err MageError, opts FormatOptions, depth int) string {
+	var sb strings.Builder
+	indent := f.getIndent(depth)
+
+	f.writeErrorHeader(&sb, err, opts, indent)
+	f.writeErrorDetails(&sb, err, opts, indent, depth)
+
+	return sb.String()
+}
+
+// writeErrorHeader writes the error header line
+func (f *DefaultErrorFormatter) writeErrorHeader(sb *strings.Builder, err MageError, opts FormatOptions, indent string) {
+	headerText := fmt.Sprintf("%s[%s] %s", indent, err.Code(), err.Error())
+	if opts.UseColor {
+		sb.WriteString(f.colorize(err.Severity(), headerText))
+	} else {
+		sb.WriteString(headerText)
+	}
+
+	// Add severity on new line
+	fmt.Fprintf(sb, "\n%s  Severity: %s", indent, err.Severity())
+}
+
+// writeErrorDetails writes all the error details
+func (f *DefaultErrorFormatter) writeErrorDetails(sb *strings.Builder, err MageError, opts FormatOptions, indent string, depth int) {
+	f.writeTimestamp(sb, err, opts, indent)
+	f.writeContext(sb, err, opts, indent)
+	f.writeFields(sb, err, opts, indent)
+	f.writeCause(sb, err, opts, indent, depth)
+	f.writeStackTrace(sb, err, opts, indent)
+}
+
+// writeTimestamp writes the timestamp if enabled
+func (f *DefaultErrorFormatter) writeTimestamp(sb *strings.Builder, err MageError, opts FormatOptions, indent string) {
+	if opts.IncludeTimestamp && !err.Context().Timestamp.IsZero() {
+		fmt.Fprintf(sb, "\n%s  Time: %s", indent,
+			err.Context().Timestamp.Format(opts.TimeFormat))
+	}
+}
+
+// writeContext writes the context information if enabled
+func (f *DefaultErrorFormatter) writeContext(sb *strings.Builder, err MageError, opts FormatOptions, indent string) {
+	if opts.IncludeContext {
+		ctx := err.Context()
+		f.formatContext(sb, &ctx, indent)
+	}
+}
+
+// writeFields writes the context fields if enabled
+func (f *DefaultErrorFormatter) writeFields(sb *strings.Builder, err MageError, opts FormatOptions, indent string) {
+	if !opts.IncludeFields || len(err.Context().Fields) == 0 {
+		return
+	}
+
+	fmt.Fprintf(sb, "\n%s  Fields:", indent)
+	for k, v := range err.Context().Fields {
+		fmt.Fprintf(sb, "\n%s    %s: %v", indent, k, v)
+	}
+}
+
+// writeCause writes the error cause if enabled
+func (f *DefaultErrorFormatter) writeCause(sb *strings.Builder, err MageError, opts FormatOptions, indent string, depth int) {
+	if !opts.IncludeCause || err.Cause() == nil {
+		return
+	}
+
+	fmt.Fprintf(sb, "\n%s  Caused by:", indent)
+	var causeMageErr MageError
+	if errors.As(err.Cause(), &causeMageErr) {
+		sb.WriteString("\n")
+		sb.WriteString(f.formatMageError(causeMageErr, opts, depth+1))
+	} else {
+		fmt.Fprintf(sb, "\n%s    %v", indent, err.Cause())
+	}
+}
+
+// writeStackTrace writes the stack trace if enabled
+func (f *DefaultErrorFormatter) writeStackTrace(sb *strings.Builder, err MageError, opts FormatOptions, indent string) {
+	if !opts.IncludeStack || err.Context().StackTrace == "" {
+		return
+	}
+
+	fmt.Fprintf(sb, "\n%s  Stack trace:", indent)
+	stackLines := strings.Split(err.Context().StackTrace, "\n")
+	for _, line := range stackLines {
+		if strings.TrimSpace(line) != "" {
+			fmt.Fprintf(sb, "\n%s  %s", indent, line)
+		}
+	}
 }
 
 // formatGenericError formats a generic error

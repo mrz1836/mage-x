@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,13 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for help operations
+var (
+	errHelpCommandRequired = errors.New("COMMAND environment variable is required. Usage: COMMAND=<name> mage help:command")
+	errUnsupportedShell    = errors.New("unsupported shell (supported: bash, zsh, fish)")
+	errCommandNotFound     = errors.New("command not found")
 )
 
 // Help namespace for help system and documentation
@@ -127,7 +135,7 @@ func (Help) Commands() error {
 func (Help) Command() error {
 	commandName := utils.GetEnv("COMMAND", "")
 	if commandName == "" {
-		return fmt.Errorf("COMMAND environment variable is required. Usage: COMMAND=<name> mage help:command")
+		return errHelpCommandRequired
 	}
 
 	cmd, err := getCommandHelp(commandName)
@@ -386,7 +394,7 @@ func (Help) Completions() error {
 	case "fish":
 		return generateFishCompletions()
 	default:
-		return fmt.Errorf("unsupported shell: %s (supported: bash, zsh, fish)", shell)
+		return fmt.Errorf("%w: %s", errUnsupportedShell, shell)
 	}
 }
 
@@ -624,7 +632,7 @@ func getCommandHelp(name string) (HelpCommand, error) {
 		}
 	}
 
-	return HelpCommand{}, fmt.Errorf("command not found: %s", name)
+	return HelpCommand{}, fmt.Errorf("%w: %s", errCommandNotFound, name)
 }
 
 // generateBashCompletions generates bash completions

@@ -3,9 +3,22 @@ package paths
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
+)
+
+// Error definitions for cache operations
+var (
+	ErrKeyNotFound           = errors.New("key not found")
+	ErrCacheKeyEmpty         = errors.New("cache key cannot be empty")
+	ErrCacheKeyTooLong       = errors.New("cache key too long")
+	ErrKeyNotFoundForRefresh = errors.New("key not found for refresh")
+	ErrMockError             = errors.New("mock error")
+	ErrMockValidation        = errors.New("mock validation error")
+	ErrMockRefresh           = errors.New("mock refresh error")
+	ErrMockRefreshAll        = errors.New("mock refresh all error")
 )
 
 // DefaultPathCache implements the PathCache interface with LRU/TTL eviction
@@ -142,7 +155,7 @@ func (c *DefaultPathCache) Delete(key string) error {
 		return nil
 	}
 
-	return fmt.Errorf("key not found: %s", key)
+	return fmt.Errorf("%w: %s", ErrKeyNotFound, key)
 }
 
 // Clear removes all items from the cache
@@ -264,11 +277,11 @@ func (c *DefaultPathCache) SetEvictionPolicy(policy EvictionPolicy) PathCache {
 // Validate validates a cache key
 func (c *DefaultPathCache) Validate(key string) error {
 	if key == "" {
-		return fmt.Errorf("cache key cannot be empty")
+		return ErrCacheKeyEmpty
 	}
 
 	if len(key) > 1000 {
-		return fmt.Errorf("cache key too long: %d characters", len(key))
+		return fmt.Errorf("%w: %d characters", ErrCacheKeyTooLong, len(key))
 	}
 
 	return nil
@@ -281,7 +294,7 @@ func (c *DefaultPathCache) Refresh(key string) error {
 	c.mu.RUnlock()
 
 	if !exists {
-		return fmt.Errorf("key not found for refresh: %s", key)
+		return fmt.Errorf("%w: %s", ErrKeyNotFoundForRefresh, key)
 	}
 
 	// Update access time
@@ -314,59 +327,92 @@ func (c *DefaultPathCache) evict() {
 		return
 	}
 
-	var itemToEvict *cacheItem
-
-	switch c.policy {
-	case EvictLRU:
-		// Remove least recently used (back of list)
-		if element := c.lruList.Back(); element != nil {
-			if item, ok := element.Value.(*cacheItem); ok {
-				itemToEvict = item
-			}
-		}
-
-	case EvictLFU:
-		// Remove least frequently used
-		var minCount int64 = -1
-		for _, item := range c.items {
-			if minCount == -1 || item.accessCount < minCount {
-				minCount = item.accessCount
-				itemToEvict = item
-			}
-		}
-
-	case EvictFIFO:
-		// Remove oldest created item
-		var oldestTime time.Time
-		for _, item := range c.items {
-			if oldestTime.IsZero() || item.createdAt.Before(oldestTime) {
-				oldestTime = item.createdAt
-				itemToEvict = item
-			}
-		}
-
-	case EvictRandom:
-		// Remove random item (first one we encounter)
-		for _, item := range c.items {
-			itemToEvict = item
-			break
-		}
-
-	case EvictTTL:
-		// Remove oldest by access time
-		var oldestAccess time.Time
-		for _, item := range c.items {
-			if oldestAccess.IsZero() || item.accessAt.Before(oldestAccess) {
-				oldestAccess = item.accessAt
-				itemToEvict = item
-			}
-		}
-	}
-
+	itemToEvict := c.selectItemToEvict()
 	if itemToEvict != nil {
 		c.removeItem(itemToEvict)
 		c.stats.Evictions++
 	}
+}
+
+// selectItemToEvict selects the item to evict based on the policy
+func (c *DefaultPathCache) selectItemToEvict() *cacheItem {
+	switch c.policy {
+	case EvictLRU:
+		return c.selectLRUItem()
+	case EvictLFU:
+		return c.selectLFUItem()
+	case EvictFIFO:
+		return c.selectFIFOItem()
+	case EvictRandom:
+		return c.selectRandomItem()
+	case EvictTTL:
+		return c.selectTTLItem()
+	default:
+		return nil
+	}
+}
+
+// selectLRUItem selects the least recently used item
+func (c *DefaultPathCache) selectLRUItem() *cacheItem {
+	if element := c.lruList.Back(); element != nil {
+		if item, ok := element.Value.(*cacheItem); ok {
+			return item
+		}
+	}
+	return nil
+}
+
+// selectLFUItem selects the least frequently used item
+func (c *DefaultPathCache) selectLFUItem() *cacheItem {
+	var itemToEvict *cacheItem
+	var minCount int64 = -1
+
+	for _, item := range c.items {
+		if minCount == -1 || item.accessCount < minCount {
+			minCount = item.accessCount
+			itemToEvict = item
+		}
+	}
+
+	return itemToEvict
+}
+
+// selectFIFOItem selects the first in, first out item (oldest created)
+func (c *DefaultPathCache) selectFIFOItem() *cacheItem {
+	var itemToEvict *cacheItem
+	var oldestTime time.Time
+
+	for _, item := range c.items {
+		if oldestTime.IsZero() || item.createdAt.Before(oldestTime) {
+			oldestTime = item.createdAt
+			itemToEvict = item
+		}
+	}
+
+	return itemToEvict
+}
+
+// selectRandomItem selects a random item (first one encountered)
+func (c *DefaultPathCache) selectRandomItem() *cacheItem {
+	for _, item := range c.items {
+		return item
+	}
+	return nil
+}
+
+// selectTTLItem selects the item with the oldest access time
+func (c *DefaultPathCache) selectTTLItem() *cacheItem {
+	var itemToEvict *cacheItem
+	var oldestAccess time.Time
+
+	for _, item := range c.items {
+		if oldestAccess.IsZero() || item.accessAt.Before(oldestAccess) {
+			oldestAccess = item.accessAt
+			itemToEvict = item
+		}
+	}
+
+	return itemToEvict
 }
 
 // removeItem removes an item from both the map and LRU list
@@ -473,7 +519,7 @@ func (m *MockPathCache) Get(key string) (PathBuilder, bool) {
 func (m *MockPathCache) Set(key string, path PathBuilder) error {
 	m.SetCalls = append(m.SetCalls, MockSetCall{Key: key, Value: path})
 	if m.ShouldError {
-		return fmt.Errorf("mock error")
+		return ErrMockError
 	}
 	m.Storage[key] = path
 	return nil
@@ -483,7 +529,7 @@ func (m *MockPathCache) Set(key string, path PathBuilder) error {
 func (m *MockPathCache) Delete(key string) error {
 	m.DeleteCalls = append(m.DeleteCalls, key)
 	if m.ShouldError {
-		return fmt.Errorf("mock error")
+		return ErrMockError
 	}
 
 	_, exists := m.Storage[key]
@@ -491,14 +537,14 @@ func (m *MockPathCache) Delete(key string) error {
 		delete(m.Storage, key)
 		return nil
 	}
-	return fmt.Errorf("key not found: %s", key)
+	return fmt.Errorf("%w: %s", ErrKeyNotFound, key)
 }
 
 // Clear removes all paths from the mock cache
 func (m *MockPathCache) Clear() error {
 	m.ClearCalls++
 	if m.ShouldError {
-		return fmt.Errorf("mock error")
+		return ErrMockError
 	}
 	m.Storage = make(map[string]PathBuilder)
 	return nil
@@ -561,7 +607,7 @@ func (m *MockPathCache) SetEvictionPolicy(_ EvictionPolicy) PathCache {
 // Validate validates a key in the mock cache
 func (m *MockPathCache) Validate(_ string) error {
 	if m.ShouldError {
-		return fmt.Errorf("mock validation error")
+		return ErrMockValidation
 	}
 	return nil
 }
@@ -569,7 +615,7 @@ func (m *MockPathCache) Validate(_ string) error {
 // Refresh refreshes a specific key in the mock cache
 func (m *MockPathCache) Refresh(_ string) error {
 	if m.ShouldError {
-		return fmt.Errorf("mock refresh error")
+		return ErrMockRefresh
 	}
 	return nil
 }
@@ -577,7 +623,7 @@ func (m *MockPathCache) Refresh(_ string) error {
 // RefreshAll refreshes all items in the mock cache
 func (m *MockPathCache) RefreshAll() error {
 	if m.ShouldError {
-		return fmt.Errorf("mock refresh all error")
+		return ErrMockRefreshAll
 	}
 	return nil
 }

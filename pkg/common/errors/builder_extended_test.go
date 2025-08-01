@@ -2,11 +2,16 @@ package errors
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+// Static test errors to comply with err113 linter
+var (
+	errUnderlyingCause = errors.New("underlying cause")
+	errRootCause       = errors.New("root cause")
 )
 
 func TestRealDefaultErrorBuilder_WithContext(t *testing.T) {
@@ -113,7 +118,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 	})
 
 	t.Run("WithCause", func(t *testing.T) {
-		cause := errors.New("underlying cause")
+		cause := errUnderlyingCause
 		b := builder.WithCause(cause)
 		assert.NotNil(t, b)
 
@@ -176,7 +181,7 @@ func TestDefaultErrorBuilder_ComplexScenario(t *testing.T) {
 	// Test a complex scenario with all builder methods
 	builder := &DefaultErrorBuilder{}
 
-	cause := fmt.Errorf("root cause")
+	cause := errRootCause
 
 	err := builder.
 		WithMessage("complex error: %s", "test").

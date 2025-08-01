@@ -1,10 +1,17 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"sync"
+)
+
+// Static errors to comply with err113 linter
+var (
+	errCodeAlreadyRegistered = errors.New("error code already registered")
+	errCodeNotFound          = errors.New("error code not found")
 )
 
 // RealDefaultErrorRegistry is the actual implementation of ErrorRegistry
@@ -36,7 +43,7 @@ func (r *RealDefaultErrorRegistry) RegisterWithSeverity(code ErrorCode, descript
 	defer r.mu.Unlock()
 
 	if _, exists := r.definitions[code]; exists {
-		return fmt.Errorf("error code %s already registered", code)
+		return fmt.Errorf("error code %s: %w", code, errCodeAlreadyRegistered)
 	}
 
 	r.definitions[code] = ErrorDefinition{
@@ -57,7 +64,7 @@ func (r *RealDefaultErrorRegistry) Unregister(code ErrorCode) error {
 	defer r.mu.Unlock()
 
 	if _, exists := r.definitions[code]; !exists {
-		return fmt.Errorf("error code %s not found", code)
+		return fmt.Errorf("error code %s: %w", code, errCodeNotFound)
 	}
 
 	delete(r.definitions, code)

@@ -15,6 +15,7 @@ import (
 // ConfigTestSuite tests configuration functionality
 type ConfigTestSuite struct {
 	suite.Suite
+
 	tmpDir string
 }
 
@@ -171,182 +172,216 @@ debug: true`
 
 func TestDefaultEnvProvider(t *testing.T) {
 	env := NewDefaultEnvProvider()
-
 	testKey := "TEST_CONFIG_VAR"
 	testValue := "test_value"
 
-	// Clean up any existing value
-	if err := os.Unsetenv(testKey); err != nil {
-		t.Logf("Failed to unset %s: %v", testKey, err)
-	}
-	defer func() {
-		if err := os.Unsetenv(testKey); err != nil {
-			t.Logf("Failed to unset %s: %v", testKey, err)
-		}
-	}()
+	setupTestEnv(t, testKey)
+	defer cleanupTestEnv(t, testKey)
 
 	t.Run("Set and Get", func(t *testing.T) {
-		err := env.Set(testKey, testValue)
-		require.NoError(t, err, "Failed to set env var")
-
-		value := env.Get(testKey)
-		assert.Equal(t, testValue, value, "Get should return the set value")
+		testEnvSetAndGet(t, env, testKey, testValue)
 	})
 
 	t.Run("GetWithDefault", func(t *testing.T) {
-		// Test with existing value
-		value := env.GetWithDefault(testKey, "default")
-		assert.Equal(t, testValue, value, "Should return existing value")
-
-		// Test with non-existing value
-		value = env.GetWithDefault("NON_EXISTING_VAR", "default")
-		assert.Equal(t, "default", value, "Should return default for non-existing var")
+		testEnvGetWithDefault(t, env, testKey, testValue)
 	})
 
 	t.Run("LookupEnv", func(t *testing.T) {
-		value, found := env.LookupEnv(testKey)
-		assert.True(t, found, "Should find existing env var")
-		assert.Equal(t, testValue, value, "Should return correct value")
-
-		_, found = env.LookupEnv("NON_EXISTING_VAR")
-		assert.False(t, found, "Should not find non-existing env var")
+		testEnvLookup(t, env, testKey, testValue)
 	})
 
 	t.Run("GetBool", func(t *testing.T) {
-		testCases := []struct {
-			name     string
-			value    string
-			expected bool
-		}{
-			{"true lowercase", "true", true},
-			{"TRUE uppercase", "TRUE", true},
-			{"1 numeric", "1", true},
-			{"yes", "yes", true},
-			{"YES uppercase", "YES", true},
-			{"on", "on", true},
-			{"false lowercase", "false", false},
-			{"FALSE uppercase", "FALSE", false},
-			{"0 numeric", "0", false},
-			{"no", "no", false},
-			{"off", "off", false},
-			{"invalid value", "invalid", false},
-			{"empty string", "", false},
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				if err := env.Set("TEST_BOOL", tc.value); err != nil {
-					t.Fatalf("Failed to set TEST_BOOL: %v", err)
-				}
-				result := env.GetBool("TEST_BOOL", false)
-				assert.Equal(t, tc.expected, result, "Boolean parsing for '%s'", tc.value)
-			})
-		}
-
-		// Test default value
-		result := env.GetBool("NON_EXISTING_BOOL", true)
-		assert.True(t, result, "Should return default when var doesn't exist")
-
-		if err := os.Unsetenv("TEST_BOOL"); err != nil {
-			t.Logf("Failed to unset TEST_BOOL: %v", err)
-		}
+		testEnvGetBool(t, env)
 	})
 
 	t.Run("GetInt", func(t *testing.T) {
-		if err := env.Set("TEST_INT", "42"); err != nil {
-			t.Fatalf("Failed to set TEST_INT: %v", err)
-		}
-		result := env.GetInt("TEST_INT", 0)
-		assert.Equal(t, 42, result, "Should parse int correctly")
-
-		// Test negative number
-		if err := env.Set("TEST_INT", "-100"); err != nil {
-			t.Fatalf("Failed to set TEST_INT: %v", err)
-		}
-		result = env.GetInt("TEST_INT", 0)
-		assert.Equal(t, -100, result, "Should parse negative int correctly")
-
-		// Test default with invalid value
-		if err := env.Set("TEST_INT", "invalid"); err != nil {
-			t.Fatalf("Failed to set TEST_INT: %v", err)
-		}
-		result = env.GetInt("TEST_INT", 100)
-		assert.Equal(t, 100, result, "Should return default for invalid int")
-
-		// Test default with non-existing var
-		result = env.GetInt("NON_EXISTING_INT", 200)
-		assert.Equal(t, 200, result, "Should return default for non-existing var")
-
-		if err := os.Unsetenv("TEST_INT"); err != nil {
-			t.Logf("Failed to unset TEST_INT: %v", err)
-		}
+		testEnvGetInt(t, env)
 	})
 
 	t.Run("GetDuration", func(t *testing.T) {
-		testCases := []struct {
-			value    string
-			expected time.Duration
-		}{
-			{"5m", 5 * time.Minute},
-			{"30s", 30 * time.Second},
-			{"1h", time.Hour},
-			{"2h30m", 2*time.Hour + 30*time.Minute},
-			{"100ms", 100 * time.Millisecond},
-		}
-
-		for _, tc := range testCases {
-			if err := env.Set("TEST_DURATION", tc.value); err != nil {
-				t.Fatalf("Failed to set TEST_DURATION: %v", err)
-			}
-			result := env.GetDuration("TEST_DURATION", time.Second)
-			assert.Equal(t, tc.expected, result, "Should parse duration '%s' correctly", tc.value)
-		}
-
-		// Test invalid duration
-		if err := env.Set("TEST_DURATION", "invalid"); err != nil {
-			t.Fatalf("Failed to set TEST_DURATION: %v", err)
-		}
-		result := env.GetDuration("TEST_DURATION", 10*time.Second)
-		assert.Equal(t, 10*time.Second, result, "Should return default for invalid duration")
-
-		if err := os.Unsetenv("TEST_DURATION"); err != nil {
-			t.Logf("Failed to unset TEST_DURATION: %v", err)
-		}
+		testEnvGetDuration(t, env)
 	})
 
 	t.Run("GetStringSlice", func(t *testing.T) {
-		if err := env.Set("TEST_SLICE", "a,b,c"); err != nil {
-			t.Fatalf("Failed to set TEST_SLICE: %v", err)
-		}
-		result := env.GetStringSlice("TEST_SLICE", []string{"default"})
-		expected := []string{"a", "b", "c"}
-		assert.ElementsMatch(t, expected, result, "Should parse comma-separated list")
-
-		// Test with spaces (should be trimmed)
-		if err := env.Set("TEST_SLICE", "a, b, c"); err != nil {
-			t.Fatalf("Failed to set TEST_SLICE: %v", err)
-		}
-		result = env.GetStringSlice("TEST_SLICE", []string{"default"})
-		assert.Len(t, result, 3, "Should handle spaces correctly")
-		assert.Equal(t, "a", result[0])
-		assert.Equal(t, "b", result[1]) // Spaces are trimmed
-		assert.Equal(t, "c", result[2])
-
-		// Test empty string (returns default)
-		if err := env.Set("TEST_SLICE", ""); err != nil {
-			t.Fatalf("Failed to set TEST_SLICE: %v", err)
-		}
-		result = env.GetStringSlice("TEST_SLICE", []string{"default"})
-		assert.ElementsMatch(t, []string{"default"}, result, "Empty string returns default")
-
-		// Test non-existing var
-		result = env.GetStringSlice("NON_EXISTING_SLICE", []string{"def1", "def2"})
-		assert.ElementsMatch(t, []string{"def1", "def2"}, result, "Should return default for non-existing var")
-
-		if err := os.Unsetenv("TEST_SLICE"); err != nil {
-			t.Logf("Failed to unset TEST_SLICE: %v", err)
-		}
+		testEnvGetStringSlice(t, env)
 	})
+}
+
+// setupTestEnv sets up test environment
+func setupTestEnv(t *testing.T, testKey string) {
+	t.Helper()
+	if err := os.Unsetenv(testKey); err != nil {
+		t.Logf("Failed to unset %s: %v", testKey, err)
+	}
+}
+
+// cleanupTestEnv cleans up test environment
+func cleanupTestEnv(t *testing.T, testKey string) {
+	t.Helper()
+	if err := os.Unsetenv(testKey); err != nil {
+		t.Logf("Failed to unset %s: %v", testKey, err)
+	}
+}
+
+// testEnvSetAndGet tests basic set and get functionality
+func testEnvSetAndGet(t *testing.T, env EnvProvider, testKey, testValue string) {
+	t.Helper()
+	err := env.Set(testKey, testValue)
+	require.NoError(t, err, "Failed to set env var")
+
+	value := env.Get(testKey)
+	assert.Equal(t, testValue, value, "Get should return the set value")
+}
+
+// testEnvGetWithDefault tests GetWithDefault functionality
+func testEnvGetWithDefault(t *testing.T, env EnvProvider, testKey, testValue string) {
+	t.Helper()
+	// Test with existing value
+	value := env.GetWithDefault(testKey, "default")
+	assert.Equal(t, testValue, value, "Should return existing value")
+
+	// Test with non-existing value
+	value = env.GetWithDefault("NON_EXISTING_VAR", "default")
+	assert.Equal(t, "default", value, "Should return default for non-existing var")
+}
+
+// testEnvLookup tests LookupEnv functionality
+func testEnvLookup(t *testing.T, env EnvProvider, testKey, testValue string) {
+	t.Helper()
+	value, found := env.LookupEnv(testKey)
+	assert.True(t, found, "Should find existing env var")
+	assert.Equal(t, testValue, value, "Should return correct value")
+
+	_, found = env.LookupEnv("NON_EXISTING_VAR")
+	assert.False(t, found, "Should not find non-existing env var")
+}
+
+// testEnvGetBool tests boolean environment variable parsing
+func testEnvGetBool(t *testing.T, env TypedEnvProvider) {
+	t.Helper()
+	testCases := []struct {
+		name     string
+		value    string
+		expected bool
+	}{
+		{"true lowercase", "true", true},
+		{"TRUE uppercase", "TRUE", true},
+		{"1 numeric", "1", true},
+		{"yes", "yes", true},
+		{"YES uppercase", "YES", true},
+		{"on", "on", true},
+		{"false lowercase", "false", false},
+		{"FALSE uppercase", "FALSE", false},
+		{"0 numeric", "0", false},
+		{"no", "no", false},
+		{"off", "off", false},
+		{"invalid value", "invalid", false},
+		{"empty string", "", false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, env.Set("TEST_BOOL", tc.value))
+			result := env.GetBool("TEST_BOOL", false)
+			assert.Equal(t, tc.expected, result, "Boolean parsing for '%s'", tc.value)
+		})
+	}
+
+	// Test default value
+	result := env.GetBool("NON_EXISTING_BOOL", true)
+	assert.True(t, result, "Should return default when var doesn't exist")
+
+	cleanupEnvVar(t, "TEST_BOOL")
+}
+
+// testEnvGetInt tests integer environment variable parsing
+func testEnvGetInt(t *testing.T, env TypedEnvProvider) {
+	t.Helper()
+	// Test positive number
+	require.NoError(t, env.Set("TEST_INT", "42"))
+	result := env.GetInt("TEST_INT", 0)
+	assert.Equal(t, 42, result, "Should parse int correctly")
+
+	// Test negative number
+	require.NoError(t, env.Set("TEST_INT", "-100"))
+	result = env.GetInt("TEST_INT", 0)
+	assert.Equal(t, -100, result, "Should parse negative int correctly")
+
+	// Test default with invalid value
+	require.NoError(t, env.Set("TEST_INT", "invalid"))
+	result = env.GetInt("TEST_INT", 100)
+	assert.Equal(t, 100, result, "Should return default for invalid int")
+
+	// Test default with non-existing var
+	result = env.GetInt("NON_EXISTING_INT", 200)
+	assert.Equal(t, 200, result, "Should return default for non-existing var")
+
+	cleanupEnvVar(t, "TEST_INT")
+}
+
+// testEnvGetDuration tests duration environment variable parsing
+func testEnvGetDuration(t *testing.T, env TypedEnvProvider) {
+	t.Helper()
+	testCases := []struct {
+		value    string
+		expected time.Duration
+	}{
+		{"5m", 5 * time.Minute},
+		{"30s", 30 * time.Second},
+		{"1h", time.Hour},
+		{"2h30m", 2*time.Hour + 30*time.Minute},
+		{"100ms", 100 * time.Millisecond},
+	}
+
+	for _, tc := range testCases {
+		require.NoError(t, env.Set("TEST_DURATION", tc.value))
+		result := env.GetDuration("TEST_DURATION", time.Second)
+		assert.Equal(t, tc.expected, result, "Should parse duration '%s' correctly", tc.value)
+	}
+
+	// Test invalid duration
+	require.NoError(t, env.Set("TEST_DURATION", "invalid"))
+	result := env.GetDuration("TEST_DURATION", 10*time.Second)
+	assert.Equal(t, 10*time.Second, result, "Should return default for invalid duration")
+
+	cleanupEnvVar(t, "TEST_DURATION")
+}
+
+// testEnvGetStringSlice tests string slice environment variable parsing
+func testEnvGetStringSlice(t *testing.T, env TypedEnvProvider) {
+	t.Helper()
+	// Test basic comma-separated list
+	require.NoError(t, env.Set("TEST_SLICE", "a,b,c"))
+	result := env.GetStringSlice("TEST_SLICE", []string{"default"})
+	expected := []string{"a", "b", "c"}
+	assert.ElementsMatch(t, expected, result, "Should parse comma-separated list")
+
+	// Test with spaces (should be trimmed)
+	require.NoError(t, env.Set("TEST_SLICE", "a, b, c"))
+	result = env.GetStringSlice("TEST_SLICE", []string{"default"})
+	assert.Len(t, result, 3, "Should handle spaces correctly")
+	assert.Equal(t, "a", result[0])
+	assert.Equal(t, "b", result[1])
+	assert.Equal(t, "c", result[2])
+
+	// Test empty string (returns default)
+	require.NoError(t, env.Set("TEST_SLICE", ""))
+	result = env.GetStringSlice("TEST_SLICE", []string{"default"})
+	assert.ElementsMatch(t, []string{"default"}, result, "Empty string returns default")
+
+	// Test non-existing var
+	result = env.GetStringSlice("NON_EXISTING_SLICE", []string{"def1", "def2"})
+	assert.ElementsMatch(t, []string{"def1", "def2"}, result, "Should return default for non-existing var")
+
+	cleanupEnvVar(t, "TEST_SLICE")
+}
+
+// cleanupEnvVar cleans up an environment variable
+func cleanupEnvVar(t *testing.T, varName string) {
+	t.Helper()
+	if err := os.Unsetenv(varName); err != nil {
+		t.Logf("Failed to unset %s: %v", varName, err)
+	}
 }
 
 func TestFileConfigSource(t *testing.T) {

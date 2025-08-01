@@ -1,12 +1,20 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for dependency management
+var (
+	errDependencyNameRequired = errors.New("dependency name required: mage deps:why github.com/pkg/errors")
+	errModuleNameRequired     = errors.New("module name required: mage deps:init github.com/user/project")
+	errGoModAlreadyExists     = errors.New("go.mod already exists")
 )
 
 // Deps namespace for dependency management tasks
@@ -118,7 +126,7 @@ func (Deps) Graph() error {
 // Why shows why a dependency is needed
 func (Deps) Why(dep string) error {
 	if dep == "" {
-		return fmt.Errorf("dependency name required: mage deps:why github.com/pkg/errors")
+		return errDependencyNameRequired
 	}
 
 	utils.Header(fmt.Sprintf("Why %s?", dep))
@@ -212,13 +220,13 @@ func (Deps) Vendor() error {
 // Init initializes a new go module
 func (Deps) Init(module string) error {
 	if module == "" {
-		return fmt.Errorf("module name required: mage deps:init github.com/user/project")
+		return errModuleNameRequired
 	}
 
 	utils.Header("Initializing Go Module")
 
 	if utils.FileExists("go.mod") {
-		return fmt.Errorf("go.mod already exists")
+		return errGoModAlreadyExists
 	}
 
 	if err := GetRunner().RunCmd("go", "mod", "init", module); err != nil {

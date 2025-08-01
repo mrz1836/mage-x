@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,12 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors for err113 compliance
+var (
+	ErrOldBenchFileNotFound = errors.New("old benchmark file not found")
+	ErrNewBenchFileNotFound = errors.New("new benchmark file not found")
 )
 
 // Bench namespace for benchmark-related tasks
@@ -83,10 +90,10 @@ func (Bench) Compare() error {
 
 	// Check if files exist
 	if !utils.FileExists(oldBenchFile) {
-		return fmt.Errorf("old benchmark file not found: %s", oldBenchFile)
+		return fmt.Errorf("%w: %s", ErrOldBenchFileNotFound, oldBenchFile)
 	}
 	if !utils.FileExists(newBenchFile) {
-		return fmt.Errorf("new benchmark file not found: %s", newBenchFile)
+		return fmt.Errorf("%w: %s", ErrNewBenchFileNotFound, newBenchFile)
 	}
 
 	utils.Info("Comparing %s vs %s", oldBenchFile, newBenchFile)

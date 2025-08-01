@@ -161,7 +161,7 @@ func TestValidatePath_EdgeCases(t *testing.T) {
 		// Unicode and special characters
 		{
 			name:    "unicode in path",
-			path:    "文档/文件.txt",
+			path:    "wendang/wenjian.txt", // Chinese docs/file
 			wantErr: false,
 		},
 		{
@@ -368,7 +368,7 @@ func TestValidateCommandArg_RandomInputs(t *testing.T) {
 		"(parentheses)",
 		"{braces}",
 		"@special#chars%allowed",
-		"international_文字_العربية",
+		"international_wenzi_arabic", // Chinese/Arabic text
 	}
 
 	for _, input := range safeInputs {

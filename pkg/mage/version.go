@@ -4,6 +4,7 @@ package mage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,18 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Static errors to satisfy err113 linter
+var (
+	errCannotParseGitHubInfo     = errors.New("cannot parse GitHub info from module")
+	errInvalidBumpType           = errors.New("invalid BUMP type (must be major, minor, or patch)")
+	errVersionUncommittedChanges = errors.New("working directory has uncommitted changes")
+	errGitHubAPIError            = errors.New("GitHub API error")
+	errInvalidVersionFormat      = errors.New("invalid version format")
+	errInvalidMajorVersion       = errors.New("invalid major version")
+	errInvalidMinorVersion       = errors.New("invalid minor version")
+	errInvalidPatchVersion       = errors.New("invalid patch version")
 )
 
 // Version namespace for version management tasks
@@ -82,7 +95,7 @@ func (Version) Check(_ ...string) error {
 	// Parse module to get owner/repo
 	parts := strings.Split(module, "/")
 	if len(parts) < 3 {
-		return fmt.Errorf("cannot parse GitHub info from module: %s", module)
+		return fmt.Errorf("%w: %s", errCannotParseGitHubInfo, module)
 	}
 
 	owner := parts[1]
@@ -129,7 +142,7 @@ func (Version) Update() error {
 	// Parse module to get owner/repo
 	parts := strings.Split(module, "/")
 	if len(parts) < 3 {
-		return fmt.Errorf("cannot parse GitHub info from module: %s", module)
+		return fmt.Errorf("%w: %s", errCannotParseGitHubInfo, module)
 	}
 
 	owner := parts[1]
@@ -168,7 +181,7 @@ func (Version) Bump(_ ...string) error {
 	// Get bump type from environment
 	bumpType := utils.GetEnv("BUMP", "patch")
 	if bumpType != "major" && bumpType != "minor" && bumpType != "patch" {
-		return fmt.Errorf("invalid BUMP type: %s (must be major, minor, or patch)", bumpType)
+		return fmt.Errorf("%w: %s", errInvalidBumpType, bumpType)
 	}
 
 	// Get current version
@@ -188,7 +201,7 @@ func (Version) Bump(_ ...string) error {
 
 	// Check for uncommitted changes
 	if dirty := isGitDirty(); dirty {
-		return fmt.Errorf("working directory has uncommitted changes")
+		return errVersionUncommittedChanges
 	}
 
 	// Create and push tag
@@ -373,7 +386,7 @@ func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
 		if readErr != nil {
 			return nil, fmt.Errorf("GitHub API error: failed to read response body: %w", readErr)
 		}
-		return nil, fmt.Errorf("GitHub API error: %s", body)
+		return nil, fmt.Errorf("%w: %s", errGitHubAPIError, body)
 	}
 
 	var release GitHubRelease
@@ -392,18 +405,18 @@ func bumpVersion(current, bumpType string) (string, error) {
 	parts := strings.Split(current, ".")
 
 	if len(parts) != 3 {
-		return "", fmt.Errorf("invalid version format: %s", current)
+		return "", fmt.Errorf("%w: %s", errInvalidVersionFormat, current)
 	}
 
 	var major, minor, patch int
 	if _, err := fmt.Sscanf(parts[0], "%d", &major); err != nil {
-		return "", fmt.Errorf("invalid major version: %s", parts[0])
+		return "", fmt.Errorf("%w: %s", errInvalidMajorVersion, parts[0])
 	}
 	if _, err := fmt.Sscanf(parts[1], "%d", &minor); err != nil {
-		return "", fmt.Errorf("invalid minor version: %s", parts[1])
+		return "", fmt.Errorf("%w: %s", errInvalidMinorVersion, parts[1])
 	}
 	if _, err := fmt.Sscanf(parts[2], "%d", &patch); err != nil {
-		return "", fmt.Errorf("invalid patch version: %s", parts[2])
+		return "", fmt.Errorf("%w: %s", errInvalidPatchVersion, parts[2])
 	}
 
 	switch bumpType {

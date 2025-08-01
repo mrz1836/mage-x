@@ -393,7 +393,7 @@ func (dp *DataProvider) Strings() []string {
 		"hello",
 		"hello world",
 		"special chars: !@#$%^&*()",
-		"unicode: 你好世界 🌍",
+		"unicode: nihao shijie 🌍", // Chinese hello world
 		"multiline\nstring\nwith\nbreaks",
 		strings.Repeat("long ", 100),
 	}

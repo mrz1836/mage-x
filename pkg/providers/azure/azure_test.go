@@ -11,6 +11,7 @@ import (
 // AzureProviderTestSuite defines the test suite for Azure provider
 type AzureProviderTestSuite struct {
 	suite.Suite
+
 	provider providers.Provider
 	config   providers.ProviderConfig
 }

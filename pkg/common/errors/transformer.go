@@ -8,6 +8,12 @@ import (
 	"sync"
 )
 
+// Static errors to comply with err113 linter
+var (
+	errMockTransform = errors.New("mock transform error")
+	errSanitized     = errors.New("sanitized error")
+)
+
 // DefaultErrorTransformer implements the ErrorTransformer interface
 type DefaultErrorTransformer struct {
 	mu                 sync.RWMutex
@@ -240,7 +246,7 @@ func SanitizeTransformer(err error) error {
 		return builder.Build()
 	}
 
-	return fmt.Errorf("%s", sanitized)
+	return fmt.Errorf("%w: %s", errSanitized, sanitized)
 }
 
 // EnrichTransformer adds additional context to errors
@@ -423,7 +429,7 @@ func NewMockErrorTransformer() *MockErrorTransformer {
 func (m *MockErrorTransformer) Transform(err error) error {
 	m.TransformCalls = append(m.TransformCalls, err)
 	if m.ShouldError {
-		return fmt.Errorf("mock transform error")
+		return errMockTransform
 	}
 	if m.TransformResult != nil {
 		return m.TransformResult

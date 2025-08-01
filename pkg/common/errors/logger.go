@@ -14,6 +14,11 @@ import (
 	"time"
 )
 
+// Static errors for logger operations
+var (
+	errPathTraversalDetected = errors.New("invalid file path: path traversal detected")
+)
+
 // DefaultErrorLogger implements the ErrorLogger interface
 type DefaultErrorLogger struct {
 	mu        sync.RWMutex
@@ -207,6 +212,7 @@ type ErrorLoggerOptions struct {
 // StructuredErrorLogger provides structured logging capabilities
 type StructuredErrorLogger struct {
 	*DefaultErrorLogger
+
 	fields map[string]interface{}
 }
 
@@ -282,6 +288,7 @@ func (l *StructuredErrorLogger) LogMageErrorWithContext(ctx context.Context, err
 // FileRotatingLogger provides file-based logging with rotation
 type FileRotatingLogger struct {
 	*DefaultErrorLogger
+
 	filepath    string
 	maxSize     int64 // Maximum size in bytes
 	maxFiles    int   // Maximum number of files to keep
@@ -293,7 +300,7 @@ func NewFileRotatingLogger(logPath string, maxSize int64, maxFiles int) (*FileRo
 	// Validate and clean the file path to prevent directory traversal
 	cleanPath := filepath.Clean(logPath)
 	if strings.Contains(cleanPath, "..") {
-		return nil, fmt.Errorf("invalid file path: path traversal detected")
+		return nil, errPathTraversalDetected
 	}
 
 	file, err := os.OpenFile(cleanPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)

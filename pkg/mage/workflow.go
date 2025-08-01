@@ -4,6 +4,7 @@ package mage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,13 @@ import (
 	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
+// Static errors to satisfy err113 linter
+var (
+	errWorkflowEnvRequired      = errors.New("WORKFLOW environment variable is required")
+	errWorkflowNameEnvRequired  = errors.New("WORKFLOW_NAME environment variable is required")
+	errUnknownScheduleOperation = errors.New("unknown schedule operation")
+)
+
 // Workflow namespace for enterprise workflow operations
 type Workflow mg.Namespace
 
@@ -27,7 +35,7 @@ func (Workflow) Execute() error {
 	// Get workflow name
 	workflowName := utils.GetEnv("WORKFLOW", "")
 	if workflowName == "" {
-		return fmt.Errorf("WORKFLOW environment variable is required")
+		return errWorkflowEnvRequired
 	}
 
 	// Load workflow definition
@@ -133,7 +141,7 @@ func (Workflow) Create() error {
 
 	workflowName := utils.GetEnv("WORKFLOW_NAME", "")
 	if workflowName == "" {
-		return fmt.Errorf("WORKFLOW_NAME environment variable is required")
+		return errWorkflowNameEnvRequired
 	}
 
 	templateType := utils.GetEnv("TEMPLATE", "basic")
@@ -180,7 +188,7 @@ func (Workflow) Schedule() error {
 	case "update":
 		return updateScheduledWorkflow()
 	default:
-		return fmt.Errorf("unknown schedule operation: %s", operation)
+		return fmt.Errorf("%w: %s", errUnknownScheduleOperation, operation)
 	}
 }
 

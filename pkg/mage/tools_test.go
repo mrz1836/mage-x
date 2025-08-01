@@ -14,6 +14,7 @@ import (
 // ToolsTestSuite defines the test suite for tools functions
 type ToolsTestSuite struct {
 	suite.Suite
+
 	env   *testutil.TestEnvironment
 	tools Tools
 }

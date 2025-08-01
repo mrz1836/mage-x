@@ -1,9 +1,18 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
+)
+
+// Static errors to comply with err113 linter
+var (
+	errNoConfigSources            = errors.New("no configuration sources available")
+	errAlreadyWatching            = errors.New("already watching for configuration changes")
+	errConfigDataCannotNil        = errors.New("configuration data cannot be nil")
+	errFailedToLoadFromAnySources = errors.New("failed to load configuration from any source")
 )
 
 // DefaultConfigManager implements ConfigManager
@@ -63,9 +72,9 @@ func (m *DefaultConfigManager) LoadConfig(dest interface{}) error {
 
 	if !loaded {
 		if len(errors) > 0 {
-			return fmt.Errorf("failed to load configuration from any source: %v", errors)
+			return fmt.Errorf("%w: %v", errFailedToLoadFromAnySources, errors)
 		}
-		return fmt.Errorf("no configuration sources available")
+		return errNoConfigSources
 	}
 
 	// Validate if validator is set
@@ -89,7 +98,7 @@ func (m *DefaultConfigManager) Watch(_ func(interface{})) error {
 	defer m.mu.Unlock()
 
 	if m.watching {
-		return fmt.Errorf("already watching for configuration changes")
+		return errAlreadyWatching
 	}
 
 	m.watching = true
@@ -156,7 +165,7 @@ func NewBasicValidator() *BasicValidator {
 // Validate validates configuration data
 func (v *BasicValidator) Validate(data interface{}) error {
 	if data == nil {
-		return fmt.Errorf("configuration data cannot be nil")
+		return errConfigDataCannotNil
 	}
 
 	// Basic validation - can be extended with more sophisticated rules

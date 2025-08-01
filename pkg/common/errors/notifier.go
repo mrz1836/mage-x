@@ -15,6 +15,20 @@ import (
 	"github.com/mrz1836/go-mage/pkg/utils"
 )
 
+// Static errors to comply with err113 linter
+var (
+	errChannelNil           = errors.New("channel cannot be nil")
+	errNotificationErrors   = errors.New("notification errors")
+	errChannelNotFound      = errors.New("channel not found")
+	errCreateWebhookRequest = errors.New("failed to create webhook request")
+	errSendWebhook          = errors.New("failed to send webhook")
+	errWebhookBadStatus     = errors.New("webhook returned error status")
+	errMockNotify           = errors.New("mock notify error")
+	errMockNotifyContext    = errors.New("mock notify with context error")
+	errMockAddChannel       = errors.New("mock add channel error")
+	errMockRemoveChannel    = errors.New("mock remove channel error")
+)
+
 // DefaultErrorNotifier implements the ErrorNotifier interface
 type DefaultErrorNotifier struct {
 	mu             sync.RWMutex
@@ -102,7 +116,7 @@ func (n *DefaultErrorNotifier) NotifyWithContext(ctx context.Context, err error)
 	n.updateRateLimit(errorKey)
 
 	if len(errs) > 0 {
-		return fmt.Errorf("notification errors: %v", errs)
+		return fmt.Errorf("%w: %v", errNotificationErrors, errs)
 	}
 
 	return nil
@@ -131,7 +145,7 @@ func (n *DefaultErrorNotifier) AddChannel(channel NotificationChannel) error {
 	defer n.mu.Unlock()
 
 	if channel == nil {
-		return fmt.Errorf("channel cannot be nil")
+		return errChannelNil
 	}
 
 	n.channels[channel.Name()] = channel
@@ -144,7 +158,7 @@ func (n *DefaultErrorNotifier) RemoveChannel(name string) error {
 	defer n.mu.Unlock()
 
 	if _, exists := n.channels[name]; !exists {
-		return fmt.Errorf("channel %s not found", name)
+		return fmt.Errorf("channel %s: %w", name, errChannelNotFound)
 	}
 
 	delete(n.channels, name)
@@ -354,7 +368,7 @@ func (w *WebhookChannel) Send(ctx context.Context, notification *ErrorNotificati
 	// Create request
 	req, err := http.NewRequestWithContext(ctx, "POST", w.url, strings.NewReader(payload))
 	if err != nil {
-		return fmt.Errorf("failed to create webhook request: %w", err)
+		return fmt.Errorf("%w: %w", errCreateWebhookRequest, err)
 	}
 
 	// Set headers
@@ -366,7 +380,7 @@ func (w *WebhookChannel) Send(ctx context.Context, notification *ErrorNotificati
 	// Send request
 	resp, err := w.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send webhook: %w", err)
+		return fmt.Errorf("%w: %w", errSendWebhook, err)
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -376,7 +390,7 @@ func (w *WebhookChannel) Send(ctx context.Context, notification *ErrorNotificati
 	}()
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("webhook returned error status: %d", resp.StatusCode)
+		return fmt.Errorf("%w: %d", errWebhookBadStatus, resp.StatusCode)
 	}
 
 	return nil
@@ -503,7 +517,7 @@ func NewMockErrorNotifier() *MockErrorNotifier {
 func (m *MockErrorNotifier) Notify(err error) error {
 	m.NotifyCalls = append(m.NotifyCalls, err)
 	if m.ShouldError {
-		return fmt.Errorf("mock notify error")
+		return errMockNotify
 	}
 	return nil
 }
@@ -514,7 +528,7 @@ func (m *MockErrorNotifier) NotifyWithContext(_ context.Context, err error) erro
 		Error: err,
 	})
 	if m.ShouldError {
-		return fmt.Errorf("mock notify with context error")
+		return errMockNotifyContext
 	}
 	return nil
 }
@@ -537,7 +551,7 @@ func (m *MockErrorNotifier) SetRateLimit(duration time.Duration, count int) {
 func (m *MockErrorNotifier) AddChannel(channel NotificationChannel) error {
 	m.AddChannelCalls = append(m.AddChannelCalls, channel)
 	if m.ShouldError {
-		return fmt.Errorf("mock add channel error")
+		return errMockAddChannel
 	}
 	m.Channels[channel.Name()] = channel
 	return nil
@@ -547,7 +561,7 @@ func (m *MockErrorNotifier) AddChannel(channel NotificationChannel) error {
 func (m *MockErrorNotifier) RemoveChannel(name string) error {
 	m.RemoveChannelCalls = append(m.RemoveChannelCalls, name)
 	if m.ShouldError {
-		return fmt.Errorf("mock remove channel error")
+		return errMockRemoveChannel
 	}
 	delete(m.Channels, name)
 	return nil

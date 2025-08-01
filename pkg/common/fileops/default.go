@@ -2,6 +2,7 @@ package fileops
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -10,6 +11,11 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+)
+
+// Static errors
+var (
+	ErrPathTraversalDetected = errors.New("invalid file path: path traversal detected")
 )
 
 // DefaultFileOperator implements FileOperator using standard library
@@ -25,7 +31,7 @@ func (d *DefaultFileOperator) ReadFile(path string) ([]byte, error) {
 	// Validate and clean the file path to prevent directory traversal
 	cleanPath := filepath.Clean(path)
 	if strings.Contains(cleanPath, "..") {
-		return nil, fmt.Errorf("invalid file path: path traversal detected")
+		return nil, ErrPathTraversalDetected
 	}
 
 	return os.ReadFile(cleanPath)
@@ -82,7 +88,7 @@ func (d *DefaultFileOperator) Copy(src, dst string) error {
 	cleanSrc := filepath.Clean(src)
 	cleanDst := filepath.Clean(dst)
 	if strings.Contains(cleanSrc, "..") || strings.Contains(cleanDst, "..") {
-		return fmt.Errorf("invalid file path: path traversal detected")
+		return ErrPathTraversalDetected
 	}
 
 	sourceFile, err := os.Open(cleanSrc)

@@ -13,6 +13,7 @@ import (
 // ModTestSuite defines the test suite for mod functions
 type ModTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 	mod Mod
 }

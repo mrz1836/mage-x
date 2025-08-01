@@ -2,12 +2,18 @@
 package providers
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/mrz1836/go-mage/pkg/common/config"
 	"github.com/mrz1836/go-mage/pkg/common/env"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/common/paths"
+)
+
+// Error definitions for provider operations
+var (
+	ErrUnknownProviderType = errors.New("unknown provider type")
 )
 
 // Provider defines the interface for cloud/platform providers
@@ -43,7 +49,7 @@ func NewProvider(providerType string) (Provider, error) {
 	case "kubernetes":
 		return newKubernetesProvider(), nil
 	default:
-		return nil, fmt.Errorf("unknown provider type: %s", providerType)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownProviderType, providerType)
 	}
 }
 

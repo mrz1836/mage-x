@@ -15,6 +15,7 @@ import (
 // FileOpsTestSuite tests file operations
 type FileOpsTestSuite struct {
 	suite.Suite
+
 	tmpDir string
 	ops    *FileOps
 }

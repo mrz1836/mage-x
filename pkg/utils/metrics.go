@@ -3,6 +3,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+)
+
+// Static errors for metrics operations
+var (
+	errMetricsCollectionDisabled = errors.New("metrics collection is disabled")
 )
 
 // MetricsCollector handles collection and storage of performance metrics
@@ -495,7 +501,7 @@ func (mc *MetricsCollector) GetCurrentResourceMetrics() ResourceMetrics {
 // QueryMetrics queries metrics based on criteria
 func (mc *MetricsCollector) QueryMetrics(query *MetricsQuery) ([]*Metric, error) {
 	if !mc.config.Enabled || mc.storage == nil {
-		return nil, fmt.Errorf("metrics collection is disabled")
+		return nil, errMetricsCollectionDisabled
 	}
 
 	return mc.storage.Query(query)
@@ -504,7 +510,7 @@ func (mc *MetricsCollector) QueryMetrics(query *MetricsQuery) ([]*Metric, error)
 // GenerateReport generates a comprehensive performance report
 func (mc *MetricsCollector) GenerateReport(period string) (*PerformanceReport, error) {
 	if !mc.config.Enabled {
-		return nil, fmt.Errorf("metrics collection is disabled")
+		return nil, errMetricsCollectionDisabled
 	}
 
 	// Define time period
@@ -967,6 +973,20 @@ func (js *JSONStorage) Query(query *MetricsQuery) ([]*Metric, error) {
 	js.mu.RLock()
 	defer js.mu.RUnlock()
 
+	allMetrics := js.loadMetricsInDateRange(query)
+
+	filteredMetrics := js.filterMetrics(allMetrics, query)
+
+	// Apply limit
+	if query.Limit > 0 && len(filteredMetrics) > query.Limit {
+		filteredMetrics = filteredMetrics[:query.Limit]
+	}
+
+	return filteredMetrics, nil
+}
+
+// loadMetricsInDateRange loads all metrics within the specified date range
+func (js *JSONStorage) loadMetricsInDateRange(query *MetricsQuery) []*Metric {
 	var allMetrics []*Metric
 
 	// Read all metric files in the date range (inclusive of end date)
@@ -982,50 +1002,66 @@ func (js *JSONStorage) Query(query *MetricsQuery) ([]*Metric, error) {
 		}
 	}
 
-	// Filter metrics based on query
+	return allMetrics
+}
+
+// filterMetrics filters metrics based on query criteria
+func (js *JSONStorage) filterMetrics(allMetrics []*Metric, query *MetricsQuery) []*Metric {
 	filteredMetrics := make([]*Metric, 0, len(allMetrics))
+
 	for _, metric := range allMetrics {
-		if !isMetricInTimeRange(metric, query) {
+		if !js.matchesQuery(metric, query) {
 			continue
 		}
-
-		// Check names filter
-		if len(query.Names) > 0 {
-			found := false
-			for _, name := range query.Names {
-				if metric.Name == name {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-		}
-
-		// Check tags filter
-		if len(query.Tags) > 0 {
-			match := true
-			for key, value := range query.Tags {
-				if metric.Tags[key] != value {
-					match = false
-					break
-				}
-			}
-			if !match {
-				continue
-			}
-		}
-
 		filteredMetrics = append(filteredMetrics, metric)
 	}
 
-	// Apply limit
-	if query.Limit > 0 && len(filteredMetrics) > query.Limit {
-		filteredMetrics = filteredMetrics[:query.Limit]
+	return filteredMetrics
+}
+
+// matchesQuery checks if a metric matches all query criteria
+func (js *JSONStorage) matchesQuery(metric *Metric, query *MetricsQuery) bool {
+	if !isMetricInTimeRange(metric, query) {
+		return false
 	}
 
-	return filteredMetrics, nil
+	if !js.matchesNameFilter(metric, query.Names) {
+		return false
+	}
+
+	if !js.matchesTagsFilter(metric, query.Tags) {
+		return false
+	}
+
+	return true
+}
+
+// matchesNameFilter checks if metric matches the names filter
+func (js *JSONStorage) matchesNameFilter(metric *Metric, names []string) bool {
+	if len(names) == 0 {
+		return true
+	}
+
+	for _, name := range names {
+		if metric.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// matchesTagsFilter checks if metric matches the tags filter
+func (js *JSONStorage) matchesTagsFilter(metric *Metric, tags map[string]string) bool {
+	if len(tags) == 0 {
+		return true
+	}
+
+	for key, value := range tags {
+		if metric.Tags[key] != value {
+			return false
+		}
+	}
+	return true
 }
 
 // isMetricInTimeRange checks if a metric timestamp falls within the query time range

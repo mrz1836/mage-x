@@ -142,7 +142,20 @@ func BenchmarkFileOperations(b *testing.B) {
 	tempDir := b.TempDir()
 	fileOps := fileops.New()
 
-	// Create test data
+	testData := createBenchmarkTestData()
+	runWriteBenchmarks(b, tempDir, fileOps, testData)
+	runReadBenchmarks(b, tempDir, fileOps, testData)
+}
+
+// benchmarkTestData holds test data for benchmarks
+type benchmarkTestData struct {
+	small  []byte
+	medium []byte
+	large  []byte
+}
+
+// createBenchmarkTestData creates test data of different sizes
+func createBenchmarkTestData() benchmarkTestData {
 	smallData := []byte("small test data")
 	mediumData := make([]byte, 1024)     // 1KB
 	largeData := make([]byte, 1024*1024) // 1MB
@@ -154,80 +167,93 @@ func BenchmarkFileOperations(b *testing.B) {
 		largeData[i] = byte(i % 256)
 	}
 
+	return benchmarkTestData{
+		small:  smallData,
+		medium: mediumData,
+		large:  largeData,
+	}
+}
+
+// runWriteBenchmarks runs all write benchmarks
+func runWriteBenchmarks(b *testing.B, tempDir string, fileOps *fileops.FileOps, data benchmarkTestData) {
 	b.Run("WriteSmallFile", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			path := filepath.Join(tempDir, "small.txt")
-			if err := fileOps.File.WriteFile(path, smallData, 0o644); err != nil {
-				b.Logf("WriteFile error: %v", err)
-			}
-			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-				b.Logf("Remove error: %v", err)
-			}
-		}
+		benchmarkWriteFile(b, tempDir, fileOps, "small.txt", data.small)
 	})
 
 	b.Run("WriteMediumFile", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			path := filepath.Join(tempDir, "medium.txt")
-			if err := fileOps.File.WriteFile(path, mediumData, 0o644); err != nil {
-				b.Logf("WriteFile error: %v", err)
-			}
-			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-				b.Logf("Remove error: %v", err)
-			}
-		}
+		benchmarkWriteFile(b, tempDir, fileOps, "medium.txt", data.medium)
 	})
 
 	b.Run("WriteLargeFile", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			path := filepath.Join(tempDir, "large.txt")
-			if err := fileOps.File.WriteFile(path, largeData, 0o644); err != nil {
-				b.Logf("WriteFile error: %v", err)
-			}
-			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-				b.Logf("Remove error: %v", err)
-			}
-		}
+		benchmarkWriteFile(b, tempDir, fileOps, "large.txt", data.large)
 	})
+}
 
-	// Create files for reading
-	smallPath := filepath.Join(tempDir, "read_small.txt")
-	mediumPath := filepath.Join(tempDir, "read_medium.txt")
-	largePath := filepath.Join(tempDir, "read_large.txt")
+// benchmarkWriteFile benchmarks writing a file of specific size
+func benchmarkWriteFile(b *testing.B, tempDir string, fileOps *fileops.FileOps, filename string, data []byte) {
+	for i := 0; i < b.N; i++ {
+		path := filepath.Join(tempDir, filename)
+		if err := fileOps.File.WriteFile(path, data, 0o644); err != nil {
+			b.Logf("WriteFile error: %v", err)
+		}
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			b.Logf("Remove error: %v", err)
+		}
+	}
+}
 
-	if err := fileOps.File.WriteFile(smallPath, smallData, 0o644); err != nil {
-		b.Fatalf("Failed to write small file: %v", err)
-	}
-	if err := fileOps.File.WriteFile(mediumPath, mediumData, 0o644); err != nil {
-		b.Fatalf("Failed to write medium file: %v", err)
-	}
-	if err := fileOps.File.WriteFile(largePath, largeData, 0o644); err != nil {
-		b.Fatalf("Failed to write large file: %v", err)
-	}
+// runReadBenchmarks runs all read benchmarks
+func runReadBenchmarks(b *testing.B, tempDir string, fileOps *fileops.FileOps, data benchmarkTestData) {
+	readPaths := setupReadFiles(b, tempDir, fileOps, data)
 
 	b.Run("ReadSmallFile", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := fileOps.File.ReadFile(smallPath); err != nil {
-				b.Logf("ReadFile error: %v", err)
-			}
-		}
+		benchmarkReadFile(b, fileOps, readPaths.small)
 	})
 
 	b.Run("ReadMediumFile", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := fileOps.File.ReadFile(mediumPath); err != nil {
-				b.Logf("ReadFile error: %v", err)
-			}
-		}
+		benchmarkReadFile(b, fileOps, readPaths.medium)
 	})
 
 	b.Run("ReadLargeFile", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := fileOps.File.ReadFile(largePath); err != nil {
-				b.Logf("ReadFile error: %v", err)
-			}
-		}
+		benchmarkReadFile(b, fileOps, readPaths.large)
 	})
+}
+
+// readFilePaths holds paths to read test files
+type readFilePaths struct {
+	small  string
+	medium string
+	large  string
+}
+
+// setupReadFiles creates files for read benchmarks
+func setupReadFiles(b *testing.B, tempDir string, fileOps *fileops.FileOps, data benchmarkTestData) readFilePaths {
+	paths := readFilePaths{
+		small:  filepath.Join(tempDir, "read_small.txt"),
+		medium: filepath.Join(tempDir, "read_medium.txt"),
+		large:  filepath.Join(tempDir, "read_large.txt"),
+	}
+
+	if err := fileOps.File.WriteFile(paths.small, data.small, 0o644); err != nil {
+		b.Fatalf("Failed to write small file: %v", err)
+	}
+	if err := fileOps.File.WriteFile(paths.medium, data.medium, 0o644); err != nil {
+		b.Fatalf("Failed to write medium file: %v", err)
+	}
+	if err := fileOps.File.WriteFile(paths.large, data.large, 0o644); err != nil {
+		b.Fatalf("Failed to write large file: %v", err)
+	}
+
+	return paths
+}
+
+// benchmarkReadFile benchmarks reading a specific file
+func benchmarkReadFile(b *testing.B, fileOps *fileops.FileOps, path string) {
+	for i := 0; i < b.N; i++ {
+		if _, err := fileOps.File.ReadFile(path); err != nil {
+			b.Logf("ReadFile error: %v", err)
+		}
+	}
 }
 
 // BenchmarkStringOperations benchmarks string manipulation functions

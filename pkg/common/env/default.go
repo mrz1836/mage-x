@@ -2,6 +2,7 @@ package env
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+)
+
+// Static errors for environment operations
+var (
+	errOverwriteNotAllowed = errors.New("environment variable already exists and overwrite is not allowed")
+	errRequiredVarsNotSet  = errors.New("required environment variables not set")
 )
 
 const (
@@ -53,7 +60,7 @@ func (e *DefaultEnvironment) Get(key string) string {
 // Set sets an environment variable
 func (e *DefaultEnvironment) Set(key, value string) error {
 	if !e.options.AllowOverwrite && e.Exists(key) {
-		return fmt.Errorf("environment variable %s already exists and overwrite is not allowed", key)
+		return fmt.Errorf("%w: %s", errOverwriteNotAllowed, key)
 	}
 
 	if e.options.AutoTrim {
@@ -266,7 +273,7 @@ func (e *DefaultEnvironment) Required(keys ...string) error {
 	}
 
 	if len(missing) > 0 {
-		return fmt.Errorf("required environment variables not set: %v", missing)
+		return fmt.Errorf("%w: %v", errRequiredVarsNotSet, missing)
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -9,6 +10,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+)
+
+// Error definitions for test operations
+var (
+	ErrAccessKeyRequired = errors.New("access key required")
 )
 
 // ProvidersTestSuite defines the test suite for provider interfaces and registry
@@ -51,7 +57,7 @@ func (ts *ProvidersTestSuite) TestRegistry() {
 	ts.Run("Get non-existent provider returns error", func() {
 		_, err := Get("nonexistent", &ProviderConfig{})
 		ts.Require().Error(err)
-		ts.Require().Contains(err.Error(), "provider nonexistent not found")
+		ts.Require().Contains(err.Error(), "provider not found: nonexistent")
 	})
 
 	ts.Run("List returns all registered providers", func() {
@@ -623,7 +629,7 @@ func (p *mockProvider) Initialize(config *ProviderConfig) error {
 
 func (p *mockProvider) Validate() error {
 	if p.config.Credentials.AccessKey == "" {
-		return fmt.Errorf("access key required")
+		return ErrAccessKeyRequired
 	}
 	return nil
 }

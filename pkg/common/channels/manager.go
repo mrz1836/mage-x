@@ -1,15 +1,33 @@
 package channels
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/mrz1836/go-mage/pkg/common/errors"
+	mageErrors "github.com/mrz1836/go-mage/pkg/common/errors"
 	"github.com/mrz1836/go-mage/pkg/common/fileops"
 	"github.com/mrz1836/go-mage/pkg/common/paths"
 	"github.com/mrz1836/go-mage/pkg/utils"
+)
+
+// Sentinel errors
+var (
+	ErrNoReleasesFound          = errors.New("no releases found")
+	ErrInvalidChannel           = errors.New("invalid channel")
+	ErrVersionAlreadyExists     = errors.New("version already exists in channel")
+	ErrInvalidArgument          = errors.New("invalid argument")
+	ErrCannotPromote            = errors.New("cannot promote between channels")
+	ErrReleaseNotFoundInChannel = errors.New("release not found in channel")
+	ErrChannelConfigNotFound    = errors.New("channel config not found")
+	ErrTestResultsRequired      = errors.New("test results required for promotion")
+	ErrTestFailed               = errors.New("required test not passed")
+	ErrApprovalRequired         = errors.New("approval required for promotion")
+	ErrAlreadyDeprecated        = errors.New("release already deprecated")
+	ErrCleanupFailed            = errors.New("cleanup failed with errors")
+	ErrMockOperation            = errors.New("mock error")
 )
 
 // Manager handles release channel operations
@@ -112,7 +130,7 @@ func (m *Manager) Initialize() error {
 		// Only save if config doesn't exist
 		if existing, err := m.store.GetChannelConfig(config.Name); err != nil || existing == nil {
 			if err := m.store.SaveChannelConfig(config); err != nil {
-				return errors.Wrap(err, "failed to save channel config")
+				return mageErrors.Wrap(err, "failed to save channel config")
 			}
 			m.configs[config.Name] = config
 		} else {
@@ -131,25 +149,24 @@ func (m *Manager) PublishRelease(release *Release) error {
 
 	// Validate channel
 	if !release.Channel.IsValid() {
-		return errors.WithCodef(errors.ErrInvalidArgument, "invalid channel: %s", release.Channel)
+		return fmt.Errorf("%w: %s", ErrInvalidChannel, release.Channel)
 	}
 
 	// Validate release
 	if err := release.Validate(); err != nil {
-		return errors.Wrap(err, "invalid release")
+		return mageErrors.Wrap(err, "invalid release")
 	}
 
 	// Run custom validators
 	for _, validator := range m.validators {
 		if err := validator.Validate(release); err != nil {
-			return errors.Wrap(err, "validation failed")
+			return mageErrors.Wrap(err, "validation failed")
 		}
 	}
 
 	// Check if version already exists in channel
 	if existing, err := m.store.GetRelease(release.Channel, release.Version); err == nil && existing != nil {
-		return errors.WithCodef(errors.ErrAlreadyExists,
-			"version %s already exists in channel %s", release.Version, release.Channel)
+		return fmt.Errorf("%w: version %s in channel %s", ErrVersionAlreadyExists, release.Version, release.Channel)
 	}
 
 	// Set publication timestamp
@@ -157,7 +174,7 @@ func (m *Manager) PublishRelease(release *Release) error {
 
 	// Save release
 	if err := m.store.SaveRelease(release); err != nil {
-		return errors.Wrap(err, "failed to save release")
+		return mageErrors.Wrap(err, "failed to save release")
 	}
 
 	// Run hooks
@@ -176,68 +193,119 @@ func (m *Manager) PromoteRelease(request *PromotionRequest) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Validate channels
+	if err := m.validatePromotionRequest(request); err != nil {
+		return err
+	}
+
+	sourceRelease, err := m.getSourceRelease(request)
+	if err != nil {
+		return err
+	}
+
+	if err := m.checkTargetChannel(request); err != nil {
+		return err
+	}
+
+	if err := m.validateTargetConfig(request); err != nil {
+		return err
+	}
+
+	promotedRelease := m.createPromotedRelease(sourceRelease, request)
+
+	if err := m.store.SaveRelease(promotedRelease); err != nil {
+		return mageErrors.Wrap(err, "failed to save promoted release")
+	}
+
+	m.savePromotionRequest(request)
+	m.runPromotionHooks(promotedRelease, request.FromChannel)
+
+	return nil
+}
+
+// validatePromotionRequest validates the basic promotion request parameters
+func (m *Manager) validatePromotionRequest(request *PromotionRequest) error {
 	if !request.FromChannel.IsValid() || !request.ToChannel.IsValid() {
-		return errors.WithCode(errors.ErrInvalidArgument, "invalid channel")
+		return ErrInvalidChannel
 	}
 
-	// Check promotion path
 	if !request.FromChannel.CanPromoteTo(request.ToChannel) {
-		return errors.WithCodef(errors.ErrInvalidArgument,
-			"cannot promote from %s to %s", request.FromChannel, request.ToChannel)
+		return fmt.Errorf("%w: from %s to %s", ErrCannotPromote, request.FromChannel, request.ToChannel)
 	}
 
-	// Get source release
+	return nil
+}
+
+// getSourceRelease retrieves and validates the source release
+func (m *Manager) getSourceRelease(request *PromotionRequest) (*Release, error) {
 	sourceRelease, err := m.store.GetRelease(request.FromChannel, request.Version)
 	if err != nil {
-		return errors.Wrap(err, "failed to get source release")
+		return nil, mageErrors.Wrap(err, "failed to get source release")
 	}
 	if sourceRelease == nil {
-		return errors.WithCodef(errors.ErrNotFound,
-			"release %s not found in channel %s", request.Version, request.FromChannel)
+		return nil, fmt.Errorf("%w: release %s in channel %s", ErrReleaseNotFoundInChannel, request.Version, request.FromChannel)
 	}
+	return sourceRelease, nil
+}
 
-	// Check if already exists in target channel
+// checkTargetChannel validates the target channel doesn't already have the version
+func (m *Manager) checkTargetChannel(request *PromotionRequest) error {
 	if existing, err := m.store.GetRelease(request.ToChannel, request.Version); err == nil && existing != nil {
-		return errors.WithCodef(errors.ErrAlreadyExists,
-			"version %s already exists in channel %s", request.Version, request.ToChannel)
+		return fmt.Errorf("%w: version %s in channel %s", ErrVersionAlreadyExists, request.Version, request.ToChannel)
 	}
+	return nil
+}
 
-	// Get target channel config
+// validateTargetConfig gets and validates the target channel configuration
+func (m *Manager) validateTargetConfig(request *PromotionRequest) error {
 	targetConfig, exists := m.configs[request.ToChannel]
 	if !exists {
-		return errors.WithCodef(errors.ErrNotFound, "channel config not found: %s", request.ToChannel)
+		return fmt.Errorf("%w: %s", ErrChannelConfigNotFound, request.ToChannel)
 	}
 
-	// Check required tests
-	if len(targetConfig.RequiredTests) > 0 {
-		if len(request.TestResults) == 0 {
-			return errors.WithCode(errors.ErrInvalidArgument, "test results required for promotion")
-		}
+	if err := m.validateRequiredTests(targetConfig, request); err != nil {
+		return err
+	}
 
-		// Verify all required tests passed
-		testMap := make(map[string]bool)
-		for _, result := range request.TestResults {
-			if result.Status == "passed" || result.Status == "success" {
-				testMap[result.Name] = true
-			}
-		}
+	return m.validateApprovers(targetConfig, request)
+}
 
-		for _, required := range targetConfig.RequiredTests {
-			if !testMap[required] {
-				return errors.WithCodef(errors.ErrTestFailed,
-					"required test not passed: %s", required)
-			}
+// validateRequiredTests checks if all required tests have passed
+func (m *Manager) validateRequiredTests(config *ChannelConfig, request *PromotionRequest) error {
+	if len(config.RequiredTests) == 0 {
+		return nil
+	}
+
+	if len(request.TestResults) == 0 {
+		return ErrTestResultsRequired
+	}
+
+	testMap := make(map[string]bool)
+	for _, result := range request.TestResults {
+		if result.Status == "passed" || result.Status == "success" {
+			testMap[result.Name] = true
 		}
 	}
 
-	// Check approvers if required
-	if len(targetConfig.Approvers) > 0 && request.ApprovedBy == "" {
-		return errors.WithCode(errors.ErrUnauthorized, "approval required for promotion")
+	for _, required := range config.RequiredTests {
+		if !testMap[required] {
+			return fmt.Errorf("%w: %s", ErrTestFailed, required)
+		}
 	}
 
-	// Create promoted release
-	promotedRelease := &Release{
+	return nil
+}
+
+// validateApprovers checks if approval is required and provided
+func (m *Manager) validateApprovers(config *ChannelConfig, request *PromotionRequest) error {
+	if len(config.Approvers) > 0 && request.ApprovedBy == "" {
+		return ErrApprovalRequired
+	}
+	return nil
+}
+
+// createPromotedRelease creates a new release for the target channel
+func (m *Manager) createPromotedRelease(sourceRelease *Release, request *PromotionRequest) *Release {
+	return &Release{
 		Version:      sourceRelease.Version,
 		Channel:      request.ToChannel,
 		PublishedAt:  time.Now(),
@@ -250,29 +318,26 @@ func (m *Manager) PromoteRelease(request *PromotionRequest) error {
 		PromotedFrom: request.FromChannel,
 		PromotedAt:   &request.RequestedAt,
 	}
+}
 
-	// Save promoted release
-	if err := m.store.SaveRelease(promotedRelease); err != nil {
-		return errors.Wrap(err, "failed to save promoted release")
-	}
-
-	// Save promotion request
+// savePromotionRequest saves the promotion request with timestamp
+func (m *Manager) savePromotionRequest(request *PromotionRequest) {
 	request.ApprovedAt = &time.Time{}
 	*request.ApprovedAt = time.Now()
 	if err := m.store.SavePromotionRequest(request); err != nil {
 		// Log error but don't fail the promotion
 		utils.Warn("failed to save promotion request: %v", err)
 	}
+}
 
-	// Run hooks
+// runPromotionHooks executes promotion hooks
+func (m *Manager) runPromotionHooks(promotedRelease *Release, fromChannel Channel) {
 	for _, hook := range m.hooks {
-		if err := hook.OnPromote(promotedRelease, request.FromChannel); err != nil {
+		if err := hook.OnPromote(promotedRelease, fromChannel); err != nil {
 			// Log error but don't fail
 			utils.Warn("hook failed: %v", err)
 		}
 	}
-
-	return nil
 }
 
 // GetLatestRelease returns the latest release for a channel
@@ -282,11 +347,11 @@ func (m *Manager) GetLatestRelease(channel Channel) (*Release, error) {
 
 	releases, err := m.store.ListReleases(channel)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list releases")
+		return nil, mageErrors.Wrap(err, "failed to list releases")
 	}
 
 	if len(releases) == 0 {
-		return nil, nil
+		return nil, ErrNoReleasesFound
 	}
 
 	// Sort by published date descending
@@ -304,7 +369,7 @@ func (m *Manager) ListReleases(channel Channel, includeDeprecated bool) ([]*Rele
 
 	releases, err := m.store.ListReleases(channel)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list releases")
+		return nil, mageErrors.Wrap(err, "failed to list releases")
 	}
 
 	if includeDeprecated {
@@ -329,15 +394,14 @@ func (m *Manager) DeprecateRelease(channel Channel, version string) error {
 
 	release, err := m.store.GetRelease(channel, version)
 	if err != nil {
-		return errors.Wrap(err, "failed to get release")
+		return mageErrors.Wrap(err, "failed to get release")
 	}
 	if release == nil {
-		return errors.WithCodef(errors.ErrNotFound,
-			"release %s not found in channel %s", version, channel)
+		return fmt.Errorf("%w: release %s in channel %s", ErrReleaseNotFoundInChannel, version, channel)
 	}
 
 	if release.Deprecated {
-		return errors.WithCode(errors.ErrAlreadyExists, "release already deprecated")
+		return ErrAlreadyDeprecated
 	}
 
 	release.Deprecated = true
@@ -345,7 +409,7 @@ func (m *Manager) DeprecateRelease(channel Channel, version string) error {
 	release.DeprecatedAt = &now
 
 	if err := m.store.SaveRelease(release); err != nil {
-		return errors.Wrap(err, "failed to save release")
+		return mageErrors.Wrap(err, "failed to save release")
 	}
 
 	// Run hooks
@@ -387,11 +451,7 @@ func (m *Manager) CleanupExpiredReleases() error {
 	}
 
 	if len(cleanupErrors) > 0 {
-		chain := errors.NewChain()
-		for _, err := range cleanupErrors {
-			chain = chain.Add(err)
-		}
-		return chain
+		return fmt.Errorf("%w: %d errors, first: %w", ErrCleanupFailed, len(cleanupErrors), cleanupErrors[0])
 	}
 
 	return nil
@@ -404,7 +464,7 @@ func (m *Manager) GetChannelStats(channel Channel) (*ChannelStats, error) {
 
 	releases, err := m.store.ListReleases(channel)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list releases")
+		return nil, mageErrors.Wrap(err, "failed to list releases")
 	}
 
 	stats := &ChannelStats{

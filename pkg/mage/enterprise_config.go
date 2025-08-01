@@ -4,6 +4,7 @@ package mage
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,6 +20,17 @@ import (
 
 const (
 	responseYes = "yes"
+)
+
+// Static errors for err113 compliance
+var (
+	ErrConfigValidationFailed       = errors.New("configuration validation failed")
+	ErrInputEnvRequired             = errors.New("INPUT environment variable is required")
+	ErrImportedConfigInvalid        = errors.New("imported configuration is invalid")
+	ErrEnterpriseConfigNotFoundInit = errors.New("enterprise configuration not found. Run 'mage enterprise-config:init' first")
+	ErrInvalidSelection             = errors.New("invalid selection")
+	ErrUnknownSection               = errors.New("unknown section")
+	ErrUnsupportedConfigFormat      = errors.New("unsupported format")
 )
 
 // EnterpriseConfigNamespace namespace for enterprise configuration management
@@ -77,7 +89,7 @@ func (EnterpriseConfigNamespace) Validate() error {
 
 	// Check for errors
 	if results.HasErrors() {
-		return fmt.Errorf("configuration validation failed with %d errors", len(results.Errors))
+		return fmt.Errorf("%w with %d errors", ErrConfigValidationFailed, len(results.Errors))
 	}
 
 	utils.Success("✅ Enterprise configuration is valid")
@@ -134,7 +146,7 @@ func (EnterpriseConfigNamespace) Import() error {
 	// Get import parameters
 	inputFile := utils.GetEnv("INPUT", "")
 	if inputFile == "" {
-		return fmt.Errorf("INPUT environment variable is required")
+		return ErrInputEnvRequired
 	}
 
 	// Import configuration
@@ -148,7 +160,7 @@ func (EnterpriseConfigNamespace) Import() error {
 	results := validator.Validate(config)
 
 	if results.HasErrors() {
-		return fmt.Errorf("imported configuration is invalid: %d errors", len(results.Errors))
+		return fmt.Errorf("%w: %d errors", ErrImportedConfigInvalid, len(results.Errors))
 	}
 
 	// Save imported configuration
@@ -181,7 +193,7 @@ func (EnterpriseConfigNamespace) Schema() error {
 	case "json":
 		data, err = json.MarshalIndent(schema, "", "  ")
 	default:
-		return fmt.Errorf("unsupported format: %s", format)
+		return fmt.Errorf("%w: %s", ErrUnsupportedConfigFormat, format)
 	}
 
 	if err != nil {
@@ -992,98 +1004,121 @@ func runEnterpriseConfigWizard(config *EnterpriseConfiguration) {
 	utils.Info("🧙 Starting Enterprise Configuration Wizard")
 
 	scanner := bufio.NewScanner(os.Stdin)
+	wizard := &configWizard{scanner: scanner, config: config}
 
-	// Organization Configuration
+	wizard.configureOrganization()
+	wizard.configureSecurity()
+	wizard.configureIntegrations()
+	wizard.configureAnalytics()
+	wizard.configureAudit()
+
+	utils.Success("✅ Configuration wizard completed")
+}
+
+// configWizard handles the interactive configuration process
+type configWizard struct {
+	scanner *bufio.Scanner
+	config  *EnterpriseConfiguration
+}
+
+// configureOrganization handles organization configuration
+func (w *configWizard) configureOrganization() {
 	utils.Info("📋 Organization Configuration")
 
-	fmt.Print("Organization Name [MAGE-X Organization]: ")
-	if scanner.Scan() {
-		if name := strings.TrimSpace(scanner.Text()); name != "" {
-			config.Organization.Name = name
-		}
-	}
+	w.promptStringConfig("Organization Name [MAGE-X Organization]: ", func(value string) {
+		w.config.Organization.Name = value
+	})
 
-	fmt.Print("Organization Domain [example.com]: ")
-	if scanner.Scan() {
-		if domain := strings.TrimSpace(scanner.Text()); domain != "" {
-			config.Organization.Domain = domain
-		}
-	}
+	w.promptStringConfig("Organization Domain [example.com]: ", func(value string) {
+		w.config.Organization.Domain = value
+	})
 
-	fmt.Print("Region [us-east-1]: ")
-	if scanner.Scan() {
-		if region := strings.TrimSpace(scanner.Text()); region != "" {
-			config.Organization.Region = region
-		}
-	}
+	w.promptStringConfig("Region [us-east-1]: ", func(value string) {
+		w.config.Organization.Region = value
+	})
+}
 
-	// Security Configuration
+// configureSecurity handles security configuration
+func (w *configWizard) configureSecurity() {
 	utils.Info("🔒 Security Configuration")
 
-	fmt.Print("Security Level (minimal/standard/high/critical) [standard]: ")
-	if scanner.Scan() {
-		if level := strings.TrimSpace(scanner.Text()); level != "" {
-			config.Security.Level = level
-		}
-	}
+	w.promptStringConfig("Security Level (minimal/standard/high/critical) [standard]: ", func(value string) {
+		w.config.Security.Level = value
+	})
 
-	fmt.Print("Enable MFA (y/n) [n]: ")
-	if scanner.Scan() {
-		if mfa := strings.TrimSpace(scanner.Text()); mfa == "y" || mfa == responseYes {
-			config.Security.Authentication.MFA.Enabled = true
-		}
-	}
+	w.promptBoolConfig("Enable MFA (y/n) [n]: ", func(enabled bool) {
+		w.config.Security.Authentication.MFA.Enabled = enabled
+	})
+}
 
-	// Integrations Configuration
+// configureIntegrations handles integrations configuration
+func (w *configWizard) configureIntegrations() {
 	utils.Info("🔌 Integrations Configuration")
 
-	fmt.Print("Enable Slack integration (y/n) [n]: ")
-	if scanner.Scan() {
-		if slack := strings.TrimSpace(scanner.Text()); slack == "y" || slack == responseYes {
-			config.Integrations.Providers["slack"] = IntegrationProvider{
-				Type:        "communication",
-				Enabled:     true,
-				Settings:    make(map[string]string),
-				Credentials: make(map[string]string),
-				Endpoints:   make(map[string]string),
-			}
+	w.promptBoolConfig("Enable Slack integration (y/n) [n]: ", func(enabled bool) {
+		if enabled {
+			w.config.Integrations.Providers["slack"] = w.createIntegrationProvider("communication")
 		}
-	}
+	})
 
-	fmt.Print("Enable GitHub integration (y/n) [n]: ")
-	if scanner.Scan() {
-		if github := strings.TrimSpace(scanner.Text()); github == "y" || github == responseYes {
-			config.Integrations.Providers["github"] = IntegrationProvider{
-				Type:        "source_control",
-				Enabled:     true,
-				Settings:    make(map[string]string),
-				Credentials: make(map[string]string),
-				Endpoints:   make(map[string]string),
-			}
+	w.promptBoolConfig("Enable GitHub integration (y/n) [n]: ", func(enabled bool) {
+		if enabled {
+			w.config.Integrations.Providers["github"] = w.createIntegrationProvider("source_control")
 		}
-	}
+	})
+}
 
-	// Analytics Configuration
+// configureAnalytics handles analytics configuration
+func (w *configWizard) configureAnalytics() {
 	utils.Info("📊 Analytics Configuration")
 
 	fmt.Print("Enable Analytics (y/n) [y]: ")
-	if scanner.Scan() {
-		if analytics := strings.TrimSpace(scanner.Text()); analytics == "n" || analytics == "no" {
-			config.Analytics.Enabled = false
+	if w.scanner.Scan() {
+		if response := strings.TrimSpace(w.scanner.Text()); response == "n" || response == "no" {
+			w.config.Analytics.Enabled = false
 		}
 	}
+}
 
-	// Audit Configuration
+// configureAudit handles audit configuration
+func (w *configWizard) configureAudit() {
 	utils.Info("📝 Audit Configuration")
 
-	fmt.Print("Audit Level (debug/info/warn/error) [info]: ")
-	if scanner.Scan() {
-		if level := strings.TrimSpace(scanner.Text()); level != "" {
-			config.Audit.Level = level
+	w.promptStringConfig("Audit Level (debug/info/warn/error) [info]: ", func(value string) {
+		w.config.Audit.Level = value
+	})
+}
+
+// promptStringConfig prompts for a string configuration value
+func (w *configWizard) promptStringConfig(prompt string, setter func(string)) {
+	fmt.Print(prompt)
+	if w.scanner.Scan() {
+		if value := strings.TrimSpace(w.scanner.Text()); value != "" {
+			setter(value)
 		}
 	}
+}
 
-	utils.Success("✅ Configuration wizard completed")
+// promptBoolConfig prompts for a boolean configuration value
+func (w *configWizard) promptBoolConfig(prompt string, setter func(bool)) {
+	fmt.Print(prompt)
+	if w.scanner.Scan() {
+		response := strings.TrimSpace(w.scanner.Text())
+		if response == "y" || response == responseYes {
+			setter(true)
+		}
+	}
+}
+
+// createIntegrationProvider creates a new integration provider
+func (w *configWizard) createIntegrationProvider(providerType string) IntegrationProvider {
+	return IntegrationProvider{
+		Type:        providerType,
+		Enabled:     true,
+		Settings:    make(map[string]string),
+		Credentials: make(map[string]string),
+		Endpoints:   make(map[string]string),
+	}
 }
 
 func saveEnterpriseConfiguration(config *EnterpriseConfiguration) error {
@@ -1109,7 +1144,7 @@ func loadEnterpriseConfiguration() (*EnterpriseConfiguration, error) {
 	configPath := filepath.Join(".mage", "enterprise", "config.yaml")
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("enterprise configuration not found. Run 'mage enterprise-config:init' first")
+		return nil, ErrEnterpriseConfigNotFoundInit
 	}
 
 	fileOps := fileops.New()
@@ -1578,7 +1613,7 @@ func runInteractiveConfigUpdate(config *EnterpriseConfiguration) error {
 		}
 	}
 
-	return fmt.Errorf("invalid selection")
+	return ErrInvalidSelection
 }
 
 func updateConfigurationSection(config *EnterpriseConfiguration, section string) error {
@@ -1610,7 +1645,7 @@ func updateConfigurationSection(config *EnterpriseConfiguration, section string)
 	case "notifications":
 		return updateNotificationsSection(config)
 	default:
-		return fmt.Errorf("unknown section: %s", section)
+		return fmt.Errorf("%w: %s", ErrUnknownSection, section)
 	}
 }
 
@@ -1743,7 +1778,7 @@ func exportConfiguration(config *EnterpriseConfiguration, format, outputFile str
 	case "json":
 		data, err = json.MarshalIndent(config, "", "  ")
 	default:
-		return fmt.Errorf("unsupported format: %s", format)
+		return fmt.Errorf("%w: %s", ErrUnsupportedConfigFormat, format)
 	}
 
 	if err != nil {
