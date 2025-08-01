@@ -6,7 +6,7 @@ version: 2
 
 before:
   hooks:
-    - make test
+    - mage testDefault
 changelog:
   sort: asc
   filters:
@@ -20,13 +20,20 @@ changelog:
 # Builder
 # ---------------------------
 builds:
-  - env:
+  - id: mage-x
+    main: ./cmd/mage-init
+    binary: mage-init
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
-    skip: true
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
 
 # ---------------------------
 # Github Release

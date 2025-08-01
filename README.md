@@ -168,7 +168,7 @@ var Default = func() error {
 mage interactive
 
 # Or dive right in
-mage build          # Build your project
+mage buildDefault   # Build your project
 mage testDefault    # Run tests with linting
 mage releaseDefault # Create a release
 ```
@@ -340,7 +340,7 @@ MAGE-X provides a comprehensive set of commands organized by functionality. All 
 #### 📦 Build Commands
 ```bash
 # Core Build Operations
-mage build              # Build for current platform (default)
+mage buildDefault       # Build for current platform (default)
 mage buildDocker        # Build Docker containers
 mage buildClean         # Clean build artifacts
 mage buildGenerate      # Generate code before building
@@ -443,8 +443,8 @@ mage releaseDefault     # Create default release
 #### 🎯 Default Targets
 ```bash
 # Quick Access Commands
-mage                    # Run default build
-mage build              # Same as above
+mage                    # Run default build (buildDefault)
+mage buildDefault       # Explicit default build
 mage testDefault        # Run complete test suite
 mage lintDefault        # Run linter
 ```
