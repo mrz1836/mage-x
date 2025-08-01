@@ -274,8 +274,17 @@ func filterEmpty(s []string) []string {
 
 // All formats all files
 func (Format) All() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Formatting all files")
+	utils.Header("Formatting All Files")
+
+	formatter := Format{}
+
+	// Run all formatters
+	if err := formatter.Default(); err != nil {
+		return fmt.Errorf("formatting failed: %w", err)
+	}
+
+	utils.Success("All files formatted")
+	return nil
 }
 
 // Go formats Go files
@@ -286,47 +295,253 @@ func (Format) Go() error {
 
 // YAML formats YAML files
 func (Format) YAML() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Formatting YAML files")
+	utils.Header("Formatting YAML Files")
+
+	// Find YAML files
+	yamlFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*")
+	if err != nil {
+		return fmt.Errorf("failed to find YAML files: %w", err)
+	}
+
+	if yamlFiles == "" {
+		utils.Info("No YAML files found")
+		return nil
+	}
+
+	// Check if prettier is available for YAML formatting
+	if utils.CommandExists("prettier") {
+		utils.Info("Formatting YAML files with prettier...")
+		if err := GetRunner().RunCmd("prettier", "--write", "**/*.{yml,yaml}"); err != nil {
+			return fmt.Errorf("prettier formatting failed: %w", err)
+		}
+	} else {
+		utils.Info("prettier not found, install with: npm install -g prettier")
+		utils.Info("Skipping YAML formatting")
+		return nil
+	}
+
+	utils.Success("YAML files formatted")
+	return nil
 }
 
 // Yaml formats YAML files (alias for interface compatibility)
 func (Format) Yaml() error {
-	return Format{}.YAML()
+	formatter := Format{}
+	return formatter.YAML()
 }
 
 // JSON formats JSON files
 func (Format) JSON() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Formatting JSON files")
+	utils.Header("Formatting JSON Files")
+
+	// Find JSON files
+	jsonFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.json", "-not", "-path", "./vendor/*")
+	if err != nil {
+		return fmt.Errorf("failed to find JSON files: %w", err)
+	}
+
+	if jsonFiles == "" {
+		utils.Info("No JSON files found")
+		return nil
+	}
+
+	// Format JSON files using python's json.tool or prettier
+	files := strings.Split(strings.TrimSpace(jsonFiles), "\n")
+	formatted := 0
+
+	for _, file := range files {
+		if file != "" {
+			utils.Info("Formatting %s", file)
+
+			// Use prettier if available, otherwise python
+			if utils.CommandExists("prettier") {
+				if err := GetRunner().RunCmd("prettier", "--write", file); err != nil {
+					utils.Warn("Failed to format %s with prettier: %v", file, err)
+					continue
+				}
+			} else if utils.CommandExists("python3") {
+				// Read, format, and write back
+				if err := GetRunner().RunCmd("python3", "-m", "json.tool", file, file+".tmp"); err != nil {
+					utils.Warn("Failed to format %s: %v", file, err)
+					continue
+				}
+				// Move temp file to original
+				if err := os.Rename(file+".tmp", file); err != nil {
+					utils.Warn("Failed to replace %s: %v", file, err)
+					continue
+				}
+			} else {
+				utils.Warn("No JSON formatter available, install prettier or python3")
+				break
+			}
+
+			formatted++
+		}
+	}
+
+	if formatted > 0 {
+		utils.Success("Formatted %d JSON files", formatted)
+	} else {
+		utils.Info("No JSON files formatted")
+	}
+	return nil
 }
 
 // Markdown formats Markdown files
 func (Format) Markdown() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Formatting Markdown files")
+	utils.Header("Formatting Markdown Files")
+
+	// Find Markdown files
+	mdFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.md", "-not", "-path", "./vendor/*")
+	if err != nil {
+		return fmt.Errorf("failed to find Markdown files: %w", err)
+	}
+
+	if mdFiles == "" {
+		utils.Info("No Markdown files found")
+		return nil
+	}
+
+	// Check if prettier is available for Markdown formatting
+	if utils.CommandExists("prettier") {
+		utils.Info("Formatting Markdown files with prettier...")
+		if err := GetRunner().RunCmd("prettier", "--write", "**/*.md"); err != nil {
+			return fmt.Errorf("prettier formatting failed: %w", err)
+		}
+	} else {
+		utils.Info("prettier not found, install with: npm install -g prettier")
+		utils.Info("Skipping Markdown formatting")
+		return nil
+	}
+
+	utils.Success("Markdown files formatted")
+	return nil
 }
 
 // SQL formats SQL files
 func (Format) SQL() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Formatting SQL files")
+	utils.Header("Formatting SQL Files")
+
+	// Find SQL files
+	sqlFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.sql")
+	if err != nil {
+		return fmt.Errorf("failed to find SQL files: %w", err)
+	}
+
+	if sqlFiles == "" {
+		utils.Info("No SQL files found")
+		return nil
+	}
+
+	// Check if sqlfluff is available for SQL formatting
+	if utils.CommandExists("sqlfluff") {
+		utils.Info("Formatting SQL files with sqlfluff...")
+		if err := GetRunner().RunCmd("sqlfluff", "format", "."); err != nil {
+			return fmt.Errorf("sqlfluff formatting failed: %w", err)
+		}
+	} else {
+		utils.Info("sqlfluff not found, install with: pip install sqlfluff")
+		utils.Info("Skipping SQL formatting")
+		return nil
+	}
+
+	utils.Success("SQL files formatted")
+	return nil
 }
 
 // Dockerfile formats Dockerfile
 func (Format) Dockerfile() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Formatting Dockerfile")
+	utils.Header("Formatting Dockerfile")
+
+	// Check if Dockerfile exists
+	if !utils.FileExists("Dockerfile") {
+		utils.Info("No Dockerfile found")
+		return nil
+	}
+
+	// Check if dockerfile_lint is available
+	if utils.CommandExists("dockerfile_lint") {
+		utils.Info("Linting Dockerfile...")
+		if err := GetRunner().RunCmd("dockerfile_lint", "Dockerfile"); err != nil {
+			utils.Warn("Dockerfile linting failed: %v", err)
+		}
+	} else {
+		utils.Info("dockerfile_lint not found, install with: npm install -g dockerfile_lint")
+	}
+
+	// Basic formatting suggestions
+	utils.Info("Dockerfile formatting suggestions:")
+	utils.Info("  - Use multi-stage builds when possible")
+	utils.Info("  - Minimize layers by combining RUN commands")
+	utils.Info("  - Use .dockerignore to exclude unnecessary files")
+	utils.Info("  - Sort multi-line arguments alphabetically")
+
+	utils.Success("Dockerfile formatting guidance provided")
+	return nil
 }
 
 // Shell formats shell scripts
 func (Format) Shell() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Formatting shell scripts")
+	utils.Header("Formatting Shell Scripts")
+
+	// Find shell script files
+	shellFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.sh", "-o", "-name", "*.bash")
+	if err != nil {
+		return fmt.Errorf("failed to find shell script files: %w", err)
+	}
+
+	if shellFiles == "" {
+		utils.Info("No shell script files found")
+		return nil
+	}
+
+	// Check if shfmt is available for shell formatting
+	if utils.CommandExists("shfmt") {
+		utils.Info("Formatting shell scripts with shfmt...")
+		// Format with 2-space indentation and simplified output
+		if err := GetRunner().RunCmd("shfmt", "-i", "2", "-w", "."); err != nil {
+			return fmt.Errorf("shfmt formatting failed: %w", err)
+		}
+	} else {
+		utils.Info("shfmt not found, install with: go install mvdan.cc/sh/v3/cmd/shfmt@latest")
+		utils.Info("Skipping shell script formatting")
+		return nil
+	}
+
+	utils.Success("Shell scripts formatted")
+	return nil
 }
 
 // Fix fixes formatting issues
 func (Format) Fix() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Fixing formatting issues")
+	utils.Header("Fixing Formatting Issues")
+
+	formatter := Format{}
+
+	// Run all formatters to fix issues
+	utils.Info("Running Go formatters...")
+	if err := formatter.Gofmt(); err != nil {
+		utils.Warn("gofmt failed: %v", err)
+	}
+
+	if err := formatter.Fumpt(); err != nil {
+		utils.Warn("gofumpt failed: %v", err)
+	}
+
+	if err := formatter.Imports(); err != nil {
+		utils.Warn("goimports failed: %v", err)
+	}
+
+	// Run other formatters
+	utils.Info("Running other formatters...")
+	if err := formatter.JSON(); err != nil {
+		utils.Warn("JSON formatting failed: %v", err)
+	}
+
+	if err := formatter.YAML(); err != nil {
+		utils.Warn("YAML formatting failed: %v", err)
+	}
+
+	utils.Success("Formatting fixes completed")
+	return nil
 }

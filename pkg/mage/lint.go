@@ -363,26 +363,99 @@ func ensureGolangciLint(cfg *Config) error {
 
 // All runs all linters
 func (Lint) All() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running all linters")
+	utils.Header("Running All Linters")
+
+	linter := Lint{}
+
+	// Run each linter in sequence
+	if err := linter.Default(); err != nil {
+		return fmt.Errorf("default linter failed: %w", err)
+	}
+
+	if err := linter.Vet(); err != nil {
+		return fmt.Errorf("vet failed: %w", err)
+	}
+
+	if err := linter.Fmt(); err != nil {
+		return fmt.Errorf("fmt failed: %w", err)
+	}
+
+	utils.Success("All linters passed")
+	return nil
 }
 
 // Go runs Go-specific linters
 func (Lint) Go() error {
-	runner := GetRunner()
-	return runner.RunCmd("golangci-lint", "run")
+	utils.Header("Running Go Linters")
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	// Ensure golangci-lint is installed
+	if err := ensureGolangciLint(config); err != nil {
+		return err
+	}
+
+	if err := GetRunner().RunCmd("golangci-lint", "run"); err != nil {
+		return fmt.Errorf("go linting failed: %w", err)
+	}
+
+	utils.Success("Go linting passed")
+	return nil
 }
 
 // Docker runs Docker linters
 func (Lint) Docker() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running Docker linters")
+	utils.Header("Running Docker Linters")
+
+	// Check if Dockerfile exists
+	if !utils.FileExists("Dockerfile") {
+		utils.Warn("No Dockerfile found, skipping Docker linting")
+		return nil
+	}
+
+	// Check if hadolint is available
+	if !utils.CommandExists("hadolint") {
+		utils.Info("hadolint not found, install it for Docker linting: brew install hadolint")
+		return nil
+	}
+
+	if err := GetRunner().RunCmd("hadolint", "Dockerfile"); err != nil {
+		return fmt.Errorf("docker linting failed: %w", err)
+	}
+
+	utils.Success("Docker linting passed")
+	return nil
 }
 
 // YAML runs YAML linters
 func (Lint) YAML() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running YAML linters")
+	utils.Header("Running YAML Linters")
+
+	// Find YAML files
+	yamlFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.yml", "-o", "-name", "*.yaml")
+	if err != nil {
+		return fmt.Errorf("failed to find YAML files: %w", err)
+	}
+	if yamlFiles == "" {
+		utils.Info("No YAML files found")
+		return nil
+	}
+
+	// Check if yamllint is available
+	if !utils.CommandExists("yamllint") {
+		utils.Info("yamllint not found, install it for YAML linting: pip install yamllint")
+		return nil
+	}
+
+	if err := GetRunner().RunCmd("yamllint", "."); err != nil {
+		return fmt.Errorf("yaml linting failed: %w", err)
+	}
+
+	utils.Success("YAML linting passed")
+	return nil
 }
 
 // Yaml runs YAML linters (alias for interface compatibility)
@@ -392,42 +465,190 @@ func (Lint) Yaml() error {
 
 // Markdown runs Markdown linters
 func (Lint) Markdown() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running Markdown linters")
+	utils.Header("Running Markdown Linters")
+
+	// Find Markdown files
+	mdFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.md", "-not", "-path", "./vendor/*")
+	if err != nil {
+		return fmt.Errorf("failed to find Markdown files: %w", err)
+	}
+	if mdFiles == "" {
+		utils.Info("No Markdown files found")
+		return nil
+	}
+
+	// Check if markdownlint is available
+	if !utils.CommandExists("markdownlint") {
+		utils.Info("markdownlint not found, install it for Markdown linting: npm install -g markdownlint-cli")
+		return nil
+	}
+
+	if err := GetRunner().RunCmd("markdownlint", "*.md"); err != nil {
+		return fmt.Errorf("markdown linting failed: %w", err)
+	}
+
+	utils.Success("Markdown linting passed")
+	return nil
 }
 
 // Shell runs shell script linters
 func (Lint) Shell() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running shell linters")
+	utils.Header("Running Shell Script Linters")
+
+	// Find shell script files
+	shellFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.sh", "-o", "-name", "*.bash")
+	if err != nil {
+		return fmt.Errorf("failed to find shell script files: %w", err)
+	}
+	if shellFiles == "" {
+		utils.Info("No shell script files found")
+		return nil
+	}
+
+	// Check if shellcheck is available
+	if !utils.CommandExists("shellcheck") {
+		utils.Info("shellcheck not found, install it for shell linting: brew install shellcheck")
+		return nil
+	}
+
+	if err := GetRunner().RunCmd("shellcheck", "**/*.sh"); err != nil {
+		return fmt.Errorf("shell linting failed: %w", err)
+	}
+
+	utils.Success("Shell script linting passed")
+	return nil
 }
 
 // JSON runs JSON linters
 func (Lint) JSON() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running JSON linters")
+	utils.Header("Running JSON Linters")
+
+	// Find JSON files
+	jsonFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.json", "-not", "-path", "./vendor/*")
+	if err != nil {
+		return fmt.Errorf("failed to find JSON files: %w", err)
+	}
+	if jsonFiles == "" {
+		utils.Info("No JSON files found")
+		return nil
+	}
+
+	// Validate JSON syntax using built-in tools
+	files := strings.Split(strings.TrimSpace(jsonFiles), "\n")
+	for _, file := range files {
+		if file != "" {
+			if err := GetRunner().RunCmd("python3", "-m", "json.tool", file); err != nil {
+				return fmt.Errorf("json validation failed for %s: %w", file, err)
+			}
+		}
+	}
+
+	utils.Success("JSON linting passed")
+	return nil
 }
 
 // SQL runs SQL linters
 func (Lint) SQL() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running SQL linters")
+	utils.Header("Running SQL Linters")
+
+	// Find SQL files
+	sqlFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.sql")
+	if err != nil {
+		return fmt.Errorf("failed to find SQL files: %w", err)
+	}
+	if sqlFiles == "" {
+		utils.Info("No SQL files found")
+		return nil
+	}
+
+	// Check if sqlfluff is available
+	if !utils.CommandExists("sqlfluff") {
+		utils.Info("sqlfluff not found, install it for SQL linting: pip install sqlfluff")
+		return nil
+	}
+
+	if err := GetRunner().RunCmd("sqlfluff", "lint", "."); err != nil {
+		return fmt.Errorf("sql linting failed: %w", err)
+	}
+
+	utils.Success("SQL linting passed")
+	return nil
 }
 
 // Config runs configuration linters
 func (Lint) Config() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running config linters")
+	utils.Header("Running Configuration Linters")
+
+	// Check common config files
+	configFiles := []string{".golangci.json", ".golangci.yml", "config.yaml", "config.json"}
+	found := false
+
+	for _, file := range configFiles {
+		if utils.FileExists(file) {
+			found = true
+			utils.Info("Validating %s", file)
+			// Basic validation - check if file is readable
+			if strings.HasSuffix(file, ".json") {
+				if err := GetRunner().RunCmd("python3", "-m", "json.tool", file); err != nil {
+					return fmt.Errorf("config validation failed for %s: %w", file, err)
+				}
+			}
+		}
+	}
+
+	if !found {
+		utils.Info("No configuration files found to lint")
+		return nil
+	}
+
+	utils.Success("Configuration linting passed")
+	return nil
 }
 
 // CI runs linters for CI environment
 func (Lint) CI() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running CI linters")
+	utils.Header("Running CI Linters")
+
+	linter := Lint{}
+
+	// Run the essential linters for CI
+	if err := linter.Default(); err != nil {
+		return fmt.Errorf("default linter failed: %w", err)
+	}
+
+	if err := linter.Vet(); err != nil {
+		return fmt.Errorf("vet failed: %w", err)
+	}
+
+	// Check CI-specific files
+	ciFiles := []string{".github/workflows/*.yml", ".github/workflows/*.yaml", ".gitlab-ci.yml", ".travis.yml"}
+	for _, pattern := range ciFiles {
+		files, err := GetRunner().RunCmdOutput("ls", "-la", pattern)
+		if err == nil && files != "" {
+			utils.Info("Found CI configuration files")
+			break
+		}
+	}
+
+	utils.Success("CI linting passed")
+	return nil
 }
 
 // Fast runs fast linters only
 func (Lint) Fast() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Running fast linters only")
+	utils.Header("Running Fast Linters")
+
+	linter := Lint{}
+
+	// Run only the fastest linters
+	if err := linter.Fmt(); err != nil {
+		return fmt.Errorf("fmt failed: %w", err)
+	}
+
+	if err := linter.Vet(); err != nil {
+		return fmt.Errorf("vet failed: %w", err)
+	}
+
+	utils.Success("Fast linting passed")
+	return nil
 }

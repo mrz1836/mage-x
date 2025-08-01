@@ -221,7 +221,7 @@ func GitStatus() error {
 	return g.Status()
 }
 
-// GitCommit commits changes (interactive)
+// GitCommit commits changes
 func GitCommit() error {
 	var g Git
 	return g.Commit()
@@ -245,7 +245,7 @@ func VersionShow() error {
 	return v.Show()
 }
 
-// VersionBump bumps the version (interactive)
+// VersionBump bumps the version
 func VersionBump() error {
 	var v Version
 	return v.Bump()

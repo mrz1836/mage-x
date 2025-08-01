@@ -96,8 +96,8 @@ Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminate
 - **🎯 Zero-Configuration Excellence**  
   _Works out of the box with intelligent defaults. No complex setup, no YAML hell—just add one import, and you're ready to build, test, and ship._
 
-- **🎭 Interactive Experience**  
-  _Friendly CLI with guided wizards, auto-completion, and contextual help. Building software should be enjoyable, not a chore._
+- **🎭 Friendly CLI Experience**  
+  _Comprehensive CLI with help and intuitive commands. Building software should be enjoyable, not a chore._
 
 - **🚀 Multi-Channel Releases**  
   _Stable, beta, and edge release channels with automated versioning, GitHub integration, and asset distribution._
@@ -124,7 +124,7 @@ Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminate
 * **One-Command Setup**: From zero to a production-ready build system in under 30 seconds
 * **Intelligent Defaults**: No configuration required, but infinitely customizable when you need it
 * **Multi-Project Management**: Manage 30+ repositories with consistent tooling and workflows
-* **Interactive Wizards**: Guided setup for new projects, releases, and complex operations
+* **Guided Setup**: Project initialization and configuration management
 * **Recipe Library**: Common patterns and best practices built right in
 
 > **Tip:** Run `mage -l` to see all available commands.
@@ -205,11 +205,11 @@ mage depsDownload
 - **⚙️ Configuration Management**: Flexible mage.yaml with smart defaults
 - **📦 Asset Distribution**: Automated building and distribution of release assets
 
-### Interactive Features
-- **🎭 Interactive Mode**: Friendly CLI with guided operations
-- **🧙 Interactive Wizard**: Step-by-step setup for complex operations
-- **📖 Help System**: Comprehensive help with auto-completion
+### User Experience Features
+- **🎯 Command Discovery**: Comprehensive CLI with intuitive command structure
+- **📖 Help System**: Built-in documentation and usage examples
 - **🔄 Recipe System**: Common patterns and best practices library
+- **⚙️ Project Templates**: Ready-made configurations for different project types
 
 ### Enterprise Features
 - **📊 Audit Logging**: Comprehensive activity tracking and compliance reporting
@@ -416,7 +416,7 @@ mage docsCheck          # Validate documentation
 ```bash
 # Git Workflow
 mage gitStatus          # Show git repository status
-mage gitCommit          # Commit changes (interactive)
+mage gitCommit          # Commit changes
 mage gitTag             # Create and push a new tag
 mage gitPush            # Push changes to remote
 ```
@@ -425,7 +425,7 @@ mage gitPush            # Push changes to remote
 ```bash
 # Version Control
 mage versionShow        # Display current version information
-mage versionBump        # Bump the version (interactive)
+mage versionBump        # Bump the version
 mage versionCheck       # Check version information
 ```
 

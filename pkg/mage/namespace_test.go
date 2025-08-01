@@ -14,7 +14,6 @@ import (
 var (
 	errNotGitRepo      = errors.New("not a git repo")
 	errBuildFailed     = errors.New("build failed")
-	errLintFailed      = errors.New("lint failed")
 	errTestsFailed     = errors.New("tests failed")
 	errLintErrorsFound = errors.New("lint errors found")
 )

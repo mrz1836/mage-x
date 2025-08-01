@@ -350,8 +350,16 @@ func isInPath(dir string) bool {
 
 // Binary installs binary
 func (Install) Binary() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Installing binary")
+	utils.Header("Installing Binary")
+
+	installer := Install{}
+
+	// Use the default installation method
+	if err := installer.Default(); err != nil {
+		return fmt.Errorf("binary installation failed: %w", err)
+	}
+
+	return nil
 }
 
 // Deps installs dependencies
@@ -368,36 +376,203 @@ func (Install) Mage() error {
 
 // Docker installs Docker requirements
 func (Install) Docker() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Installing Docker requirements")
+	utils.Header("Installing Docker Requirements")
+
+	// Check if Docker is already installed
+	if utils.CommandExists("docker") {
+		utils.Info("Docker already installed")
+		return nil
+	}
+
+	// Provide installation instructions based on OS
+	switch runtime.GOOS {
+	case "darwin":
+		utils.Info("Install Docker Desktop for Mac: https://docs.docker.com/docker-for-mac/install/")
+		utils.Info("Or use Homebrew: brew install --cask docker")
+	case "linux":
+		utils.Info("Install Docker Engine: https://docs.docker.com/engine/install/")
+	case "windows":
+		utils.Info("Install Docker Desktop for Windows: https://docs.docker.com/docker-for-windows/install/")
+	default:
+		utils.Info("Please install Docker for your platform: https://docs.docker.com/get-docker/")
+	}
+
+	utils.Success("Docker installation guidance provided")
+	return nil
 }
 
 // GitHooks installs git hooks
 func (Install) GitHooks() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Installing git hooks")
+	utils.Header("Installing Git Hooks")
+
+	// Check if we're in a git repository
+	if !utils.FileExists(".git") {
+		utils.Warn("Not a git repository, skipping git hooks installation")
+		return nil
+	}
+
+	// Create hooks directory if it doesn't exist
+	hooksDir := ".git/hooks"
+	if err := utils.EnsureDir(hooksDir); err != nil {
+		return fmt.Errorf("failed to create hooks directory: %w", err)
+	}
+
+	// Install pre-commit hook
+	preCommitPath := filepath.Join(hooksDir, "pre-commit")
+	preCommitContent := `#!/bin/sh
+# Run linting before commit
+if command -v golangci-lint >/dev/null 2>&1; then
+    golangci-lint run
+fi
+`
+
+	if err := os.WriteFile(preCommitPath, []byte(preCommitContent), 0o755); err != nil {
+		return fmt.Errorf("failed to write pre-commit hook: %w", err)
+	}
+
+	utils.Success("Git hooks installed")
+	utils.Info("Pre-commit hook will run linting before commits")
+	return nil
 }
 
 // CI installs CI tools
 func (Install) CI() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Installing CI tools")
+	utils.Header("Installing CI Tools")
+
+	// Install common CI tools
+	tools := []struct {
+		name string
+		pkg  string
+		desc string
+	}{
+		{"golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint@latest", "CI linter"},
+		{"govulncheck", "golang.org/x/vuln/cmd/govulncheck@latest", "Vulnerability scanner"},
+		{"staticcheck", "honnef.co/go/tools/cmd/staticcheck@latest", "Static analyzer"},
+	}
+
+	installed := 0
+	for _, tool := range tools {
+		if utils.CommandExists(tool.name) {
+			utils.Info("✓ %s already installed", tool.name)
+			continue
+		}
+
+		utils.Info("Installing %s - %s", tool.name, tool.desc)
+		if err := GetRunner().RunCmd("go", "install", tool.pkg); err != nil {
+			utils.Warn("Failed to install %s: %v", tool.name, err)
+		} else {
+			installed++
+		}
+	}
+
+	if installed > 0 {
+		utils.Success("Installed %d CI tools", installed)
+	} else {
+		utils.Success("All CI tools already installed")
+	}
+	return nil
 }
 
 // Certs installs certificates
 func (Install) Certs() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Installing certificates")
+	utils.Header("Installing Certificates")
+
+	// Check if we need to install certificates
+	if !utils.CommandExists("openssl") {
+		utils.Warn("OpenSSL not found, cannot generate certificates")
+		utils.Info("Install OpenSSL for certificate management")
+		return nil
+	}
+
+	// Create certs directory
+	certsDir := "certs"
+	if err := utils.EnsureDir(certsDir); err != nil {
+		return fmt.Errorf("failed to create certs directory: %w", err)
+	}
+
+	// Generate self-signed certificate for development
+	certPath := filepath.Join(certsDir, "server.crt")
+	keyPath := filepath.Join(certsDir, "server.key")
+
+	if utils.FileExists(certPath) && utils.FileExists(keyPath) {
+		utils.Info("Certificates already exist")
+		return nil
+	}
+
+	utils.Info("Generating self-signed certificate for development...")
+	args := []string{
+		"req", "-x509", "-newkey", "rsa:4096", "-keyout", keyPath,
+		"-out", certPath, "-days", "365", "-nodes",
+		"-subj", "/C=US/ST=Development/L=Local/O=Dev/CN=localhost",
+	}
+
+	if err := GetRunner().RunCmd("openssl", args...); err != nil {
+		return fmt.Errorf("failed to generate certificates: %w", err)
+	}
+
+	utils.Success("Development certificates generated")
+	utils.Info("Certificate: %s", certPath)
+	utils.Info("Private key: %s", keyPath)
+	return nil
 }
 
 // Package installs package
 func (Install) Package() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Installing package")
+	utils.Header("Installing Package")
+
+	// Install dependencies first
+	utils.Info("Installing dependencies...")
+	if err := GetRunner().RunCmd("go", "mod", "download"); err != nil {
+		return fmt.Errorf("failed to download dependencies: %w", err)
+	}
+
+	// Verify dependencies
+	if err := GetRunner().RunCmd("go", "mod", "verify"); err != nil {
+		return fmt.Errorf("dependency verification failed: %w", err)
+	}
+
+	installer := Install{}
+
+	// Install the package
+	if err := installer.Default(); err != nil {
+		return fmt.Errorf("package installation failed: %w", err)
+	}
+
+	utils.Success("Package installed successfully")
+	return nil
 }
 
 // All installs all components
 func (Install) All() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Installing all components")
+	utils.Header("Installing All Components")
+
+	installer := Install{}
+
+	// Install dependencies
+	if err := installer.Deps(); err != nil {
+		utils.Warn("Failed to install dependencies: %v", err)
+	}
+
+	// Install development tools
+	if err := installer.Tools(); err != nil {
+		utils.Warn("Failed to install tools: %v", err)
+	}
+
+	// Install CI tools
+	if err := installer.CI(); err != nil {
+		utils.Warn("Failed to install CI tools: %v", err)
+	}
+
+	// Install git hooks
+	if err := installer.GitHooks(); err != nil {
+		utils.Warn("Failed to install git hooks: %v", err)
+	}
+
+	// Install the main binary
+	if err := installer.Default(); err != nil {
+		return fmt.Errorf("binary installation failed: %w", err)
+	}
+
+	utils.Success("All components installed")
+	return nil
 }
