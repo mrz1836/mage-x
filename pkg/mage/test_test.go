@@ -410,6 +410,11 @@ func TestTestUnit(t *testing.T) {
 		{
 			name: "successful unit tests",
 			setupMock: func() {
+				// Mock go list for package discovery
+				packageList := `github.com/test/project/pkg/utils
+github.com/test/project/pkg/common
+github.com/test/project/pkg/mage`
+				env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(packageList, nil).Once()
 				env.Builder.ExpectGoCommand("test", nil)
 			},
 			expectErr: false,
@@ -419,6 +424,11 @@ func TestTestUnit(t *testing.T) {
 			setupMock: func() {
 				// Reset expectations to avoid conflicts with previous test
 				env.Runner.ExpectedCalls = nil
+				// Mock go list for package discovery
+				packageList := `github.com/test/project/pkg/utils
+github.com/test/project/pkg/common
+github.com/test/project/pkg/mage`
+				env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(packageList, nil).Once()
 				env.Builder.ExpectGoCommand("test", assert.AnError)
 			},
 			expectErr: true,

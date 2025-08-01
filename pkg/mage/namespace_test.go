@@ -117,25 +117,43 @@ func TestTestNamespace_Default(t *testing.T) {
 		{
 			name: "successful test run",
 			setupMock: func(m *MockCommandRunner) {
+				// Mock go list call for getting packages
+				packageList := `github.com/mrz1836/mage-x/pkg/utils
+github.com/mrz1836/mage-x/pkg/common/cache
+github.com/mrz1836/mage-x/pkg/common/channels
+github.com/mrz1836/mage-x/pkg/mage
+github.com/mrz1836/mage-x/pkg/providers`
+				m.On("RunCmdOutput", "go", "list", "./...").Return(packageList, nil).Once()
+
 				// Lint check with flexible args (handles variable number of arguments)
 				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
-				// Test run with flexible args (up to 7 args total)
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "go" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+				// Test run with flexible args - match go test command with any arguments
+				m.On("RunCmd", "go", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil).Maybe()
 			},
 			wantErr: false,
 		},
 		{
-			name: "lint failure",
+			name: "go list failure",
 			setupMock: func(m *MockCommandRunner) {
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errLintFailed).Maybe()
+				// Mock go list call failure
+				m.On("RunCmdOutput", "go", "list", "./...").Return("", errTestsFailed).Once()
 			},
 			wantErr: true,
 		},
 		{
 			name: "test failure",
 			setupMock: func(m *MockCommandRunner) {
+				// Mock go list call for getting packages
+				packageList := `github.com/mrz1836/mage-x/pkg/utils
+github.com/mrz1836/mage-x/pkg/common/cache
+github.com/mrz1836/mage-x/pkg/common/channels
+github.com/mrz1836/mage-x/pkg/mage
+github.com/mrz1836/mage-x/pkg/providers`
+				m.On("RunCmdOutput", "go", "list", "./...").Return(packageList, nil).Once()
+
 				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == CmdGolangciLint }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
-				m.On("RunCmd", mock.MatchedBy(func(cmd string) bool { return cmd == "go" }), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errTestsFailed).Maybe()
+				// Test run with flexible args - match go test command with any arguments
+				m.On("RunCmd", "go", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(errTestsFailed).Maybe()
 			},
 			wantErr: true,
 		},
