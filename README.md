@@ -353,6 +353,7 @@ mage testUnit           # Run unit tests only (no linting)
 mage testRace           # Run tests with race detector
 mage testCover          # Run tests with coverage analysis
 mage testBench          # Run benchmark tests
+mage testBenchShort	    # Run short benchmark tests
 mage testFuzz           # Run fuzz tests
 mage testIntegration    # Run integration tests
 ```
@@ -483,7 +484,7 @@ mage testDefault
 mage testRace testCover testFuzz
 
 # Performance benchmarks
-mage testBench
+mage testBenchShort
 ```
 
 ### Example Projects

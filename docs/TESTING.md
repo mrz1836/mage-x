@@ -188,6 +188,9 @@ go test -bench=BenchmarkBuildFlags ./pkg/mage
 
 # Run with custom time
 BENCH_TIME=30s mage testBench
+
+# Short
+mage testBenchShort
 ```
 
 ### Fuzz Tests

@@ -308,6 +308,44 @@ func (Test) Bench(_ ...string) error {
 	return nil
 }
 
+// BenchShort runs benchmarks with shorter duration for quick feedback
+func (Test) BenchShort(_ ...string) error {
+	utils.Header("Running Short Benchmarks")
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
+
+	if config.Test.Verbose {
+		args = append(args, "-v")
+	}
+
+	if len(config.Test.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(config.Test.Tags, ","))
+	}
+
+	// Use shorter benchmark time for quick feedback (1s instead of 10s)
+	benchTime := utils.GetEnv("BENCH_TIME", "1s")
+	args = append(args, "-benchtime", benchTime)
+
+	if count := utils.GetEnv("BENCH_COUNT", ""); count != "" {
+		args = append(args, "-count", count)
+	}
+
+	args = append(args, "./...")
+
+	start := time.Now()
+	if err := GetRunner().RunCmd("go", args...); err != nil {
+		return fmt.Errorf("short benchmarks failed: %w", err)
+	}
+
+	utils.Success("Short benchmarks completed in %s", utils.FormatDuration(time.Since(start)))
+	return nil
+}
+
 // Integration runs integration tests
 func (Test) Integration() error {
 	utils.Header("Running Integration Tests")

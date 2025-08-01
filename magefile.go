@@ -287,6 +287,12 @@ func TestBench() error {
 	return t.Bench()
 }
 
+// TestBenchShort runs benchmark tests with shorter duration for quick feedback
+func TestBenchShort() error {
+	var t Test
+	return t.BenchShort()
+}
+
 // TestFuzz runs fuzz tests
 func TestFuzz() error {
 	var t Test
@@ -428,6 +434,7 @@ func Help() error {
 				{"testRace", "Run tests with race detector", []string{"mage testRace"}},
 				{"testCover", "Run tests with coverage", []string{"mage testCover"}},
 				{"testBench", "Run benchmark tests", []string{"mage testBench"}},
+				{"testBenchShort", "Run quick benchmark tests", []string{"mage testBenchShort"}},
 				{"testFuzz", "Run fuzz tests", []string{"mage testFuzz"}},
 				{"testIntegration", "Run integration tests", []string{"mage testIntegration"}},
 				{"testShort", "Run short tests only", []string{"mage testShort"}},
@@ -602,6 +609,7 @@ func List() error {
 				{"testRace", "Run tests with race detector", []string{"mage testRace"}},
 				{"testCover", "Run tests with coverage", []string{"mage testCover"}},
 				{"testBench", "Run benchmark tests", []string{"mage testBench"}},
+				{"testBenchShort", "Run quick benchmark tests", []string{"mage testBenchShort"}},
 				{"testFuzz", "Run fuzz tests", []string{"mage testFuzz"}},
 				{"testIntegration", "Run integration tests", []string{"mage testIntegration"}},
 				{"testShort", "Run short tests only", []string{"mage testShort"}},

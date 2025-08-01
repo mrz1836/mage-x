@@ -167,9 +167,10 @@ mage buildDocker    # Build Docker containers
 mage buildClean     # Clean build artifacts
 
 # Test operations
-mage testRace       # Test with race detector
-mage testBench      # Run benchmarks
-mage testFuzz       # Run fuzz tests
+mage testRace         # Test with race detector
+mage testBench        # Run benchmarks
+mage testBenchShort   # Run benchmarks (1s)
+mage testFuzz         # Run fuzz tests
 
 # Development tools
 mage toolsUpdate    # Update all tools
@@ -243,7 +244,7 @@ modDownload, modTidy, modUpdate, modVerify
 release, releaseDefault
 
 # Testing
-test, testBench, testCover, testFuzz, testIntegration, testRace, testUnit
+test, testShort, testBench, testBenchShort, testCover, testFuzz, testIntegration, testRace, testUnit
 
 # Tools
 toolsCheck, toolsInstall, toolsUpdate

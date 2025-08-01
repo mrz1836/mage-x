@@ -47,6 +47,7 @@ With just 3 lines of code, you get:
 - `testRace` - Tests with race detector
 - `testCover` - Tests with coverage
 - `testBench` - Run benchmarks
+- `testBenchShort` - Run benchmarks with 1s
 - `testFuzz` - Run fuzz tests
 
 ### Lint Tasks
