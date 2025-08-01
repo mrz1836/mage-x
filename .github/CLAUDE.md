@@ -7,24 +7,28 @@
 ## Architecture
 
 ### Namespace Architecture
-- **18 namespace interfaces**: Build, Test, Lint, Format, Deps, Git, Release, Docs, Deploy, Tools, Security, Generate, CLI, Update, Mod, Recipes, Metrics, Workflow
+- **30+ namespace interfaces**: The project contains over 30 namespaces including:
+  - **Core Namespaces (13)**: Build, Test, Lint, Tools, Deps, Mod, Docs, Git, Release, Metrics, Version, Install, Audit
+  - **Advanced Namespaces (17+)**: Workflow, Enterprise, Wizard, Init, Releases, Help, CLI, Recipes, Bench, Yaml, Integrations, Vet, Update, Format, Configure, Generate, EnterpriseConfig
 - **Interface-based design**: Each namespace has a corresponding interface (e.g., `BuildNamespace`)
 - **Factory functions**: `NewBuildNamespace()`, `NewTestNamespace()`, etc.
 - **Registry pattern**: `DefaultNamespaceRegistry` for centralized access
 - **Flexible usage**: Both `Build{}` struct and interface-based approaches are supported
 
 ### Core Features
-- **Build**: Build operations for Go projects
-- **Test**: Comprehensive testing with linting and test suites  
-- **Tools**: Development tool installation (golangci-lint, gofumpt, govulncheck, mockgen, swag)
-- **Deps**: Dependency management
+- **Build**: Build operations for Go projects (Default, All, Docker, Clean, Generate)
+- **Test**: Comprehensive testing suite (Unit, Integration, Race, Coverage, Fuzz, Benchmarks)
+- **Lint**: Code quality checks (golangci-lint, go vet, gofumpt)
+- **Tools**: Development tool installation and management
+- **Deps**: Dependency management (Update, Tidy, Audit, Outdated)
 - **Mod**: Go module management
-- **Metrics**: Code analysis and statistics
-- **Generate**: Code generation
-- **Lint**: Code quality checks
-- **Update**: Update checking
-- **Security**: Security scanning and validation
-- **Workflow**: Advanced workflow operations
+- **Docs**: Documentation generation and serving
+- **Git**: Git operations (Status, Commit, Tag, Push)
+- **Release**: Release management
+- **Metrics**: Code analysis (LOC, Coverage, Complexity)
+- **Version**: Version management (Show, Bump, Check)
+- **Install**: Installation utilities (Tools, Binary, Stdlib)
+- **Audit**: Security and compliance auditing
 
 ### Project Structure
 
@@ -256,6 +260,111 @@ func (namespace Namespace) Task() error {
     return nil
 }
 ```
+
+## Complete Command Reference
+
+### Exposed Commands (58 total)
+
+The main `magefile.go` exposes 58 commands that can be called directly via `mage`:
+
+#### Default & Aliases
+- `mage` - Default command (runs buildDefault)
+- `Default` - Maps to BuildDefault
+
+#### Build Commands (5)
+- `buildDefault` - Build for current platform
+- `buildAll` - Build for all configured platforms  
+- `buildClean` - Clean build artifacts
+- `buildDocker` - Build Docker containers
+- `buildGenerate` - Generate code before building
+
+#### Test Commands (11)
+- `testDefault` - Run complete test suite with linting
+- `testFull` - Run full test suite with linting
+- `testUnit` - Run unit tests only
+- `testShort` - Run short tests
+- `testRace` - Run tests with race detector
+- `testCover` - Run tests with coverage
+- `testCoverRace` - Run tests with coverage and race detector
+- `testBench` - Run benchmark tests
+- `testBenchShort` - Run short benchmark tests
+- `testFuzz` - Run fuzz tests
+- `testFuzzShort` - Run quick fuzz tests
+- `testIntegration` - Run integration tests
+
+#### Lint Commands (6)
+- `lintDefault` - Run essential linters
+- `lintAll` - Run all linting checks
+- `lintFix` - Auto-fix linting issues
+- `lintVet` - Run go vet static analysis
+- `lintFumpt` - Run gofumpt code formatting
+- `lintVersion` - Show linter version
+
+#### Dependency Commands (5)
+- `depsUpdate` - Update all dependencies
+- `depsTidy` - Clean up go.mod and go.sum
+- `depsDownload` - Download all dependencies
+- `depsOutdated` - Show outdated dependencies
+- `depsAudit` - Audit dependencies for vulnerabilities
+
+#### Tools Commands (4)
+- `toolsUpdate` - Update development tools
+- `toolsInstall` - Install required tools
+- `toolsCheck` - Check if tools are available
+- `toolsVulnCheck` - Run vulnerability check
+
+#### Module Commands (4)
+- `modUpdate` - Update go.mod file
+- `modTidy` - Tidy go.mod file
+- `modVerify` - Verify module checksums
+- `modDownload` - Download modules
+
+#### Documentation Commands (4)
+- `docsGenerate` - Generate documentation
+- `docsServe` - Serve documentation locally
+- `docsBuild` - Build static documentation
+- `docsCheck` - Validate documentation
+
+#### Git Commands (4)
+- `gitStatus` - Show repository status
+- `gitCommit` - Commit changes
+- `gitTag` - Create and push tag
+- `gitPush` - Push changes to remote
+
+#### Version Commands (3)
+- `versionShow` - Display version information
+- `versionBump` - Bump the version
+- `versionCheck` - Check version information
+
+#### Metrics Commands (3)
+- `metricsLOC` - Analyze lines of code
+- `metricsCoverage` - Generate coverage reports
+- `metricsComplexity` - Analyze code complexity
+
+#### Install Commands (4)
+- `installTools` - Install development tools
+- `installBinary` - Install project binary
+- `installStdlib` - Install Go standard library
+- `uninstall` - Remove installed binary
+
+#### Other Commands (4)
+- `releaseDefault` - Create a new release
+- `auditShow` - Display audit events
+- `help` - Beautiful command listing
+- `list` - Alternative command listing
+
+### Additional Namespace Methods
+
+While the main magefile exposes 58 commands, the pkg/mage package contains 30+ namespaces with hundreds of additional methods. These can be accessed by creating custom magefiles. Some examples:
+
+- **Audit**: Stats(), Export(), Cleanup(), Enable(), Disable(), Report()
+- **Build**: Linux(), Darwin(), Windows(), Platform(), PreBuild(), Install()
+- **Test**: CI(), CINoRace(), CoverReport(), CoverHTML(), Parallel(), NoLint()
+- **Format**: All(), Check(), Fix(), Go(), JSON(), Markdown(), SQL(), Shell(), YAML()
+- **Workflow**: Create(), Execute(), History(), Schedule(), Status(), Template()
+- **Enterprise**: Backup(), Deploy(), Promote(), Restore(), Rollback()
+- **Recipes**: Create(), Install(), List(), Run(), Search(), Show()
+- **Generate**: All(), Code(), Config(), Docs(), GraphQL(), Mocks(), OpenAPI()
 
 ## Contributing
 

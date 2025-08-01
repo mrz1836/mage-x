@@ -333,29 +333,40 @@ For comprehensive documentation, visit the [docs](docs) directory:
 
 MAGE-X provides a comprehensive set of commands organized by functionality. All commands are available through the `mage` CLI.
 
+#### 🎯 Command Discovery & Help
+```bash
+# Command Discovery
+mage help               # Beautiful command listing with categories and emojis
+mage list               # Alternative beautiful command listing
+mage -l                 # Plain list of all available targets
+mage -h <command>       # Get help for a specific command
+mage -version           # Show mage version and build info
+```
+
 #### 📦 Build Commands
 ```bash
 # Core Build Operations
-mage buildDefault       # Build for current platform (default)
+mage buildDefault       # Build for current platform (alias: mage)
+mage buildAll           # Build for all configured platforms
 mage buildDocker        # Build Docker containers
 mage buildClean         # Clean build artifacts
 mage buildGenerate      # Generate code before building
-
-# Build System Management
-mage installStdlib      # Install Go standard library for cross-compilation
 ```
 
 #### 🧪 Test Commands
 ```bash
 # Test Execution
 mage testDefault        # Run complete test suite with linting (default)
+mage testFull           # Run full test suite with linting
 mage testUnit           # Run unit tests only (no linting)
+mage testShort          # Run short tests (excludes integration tests)
 mage testRace           # Run tests with race detector
 mage testCover          # Run tests with coverage analysis
+mage testCoverRace      # Run tests with both coverage and race detector
 mage testBench          # Run benchmark tests
 mage testBenchShort     # Run short benchmark tests
 mage testFuzz           # Run fuzz tests
-mage testFuzzShort      # Run quick fuzz tests (5s)
+mage testFuzzShort      # Run quick fuzz tests (5s default)
 mage testIntegration    # Run integration tests
 ```
 
@@ -363,8 +374,11 @@ mage testIntegration    # Run integration tests
 ```bash
 # Linting and Code Quality
 mage lintDefault        # Run essential linters (golangci-lint + go vet)
-mage lintAll            # Run all linting checks (golangci-lint + go vet + go fmt)
+mage lintAll            # Run all linting checks
 mage lintFix            # Auto-fix linting issues + apply formatting
+mage lintVet            # Run go vet static analysis
+mage lintFumpt          # Run gofumpt code formatting
+mage lintVersion        # Show linter version information
 ```
 
 #### 📊 Metrics & Analysis
@@ -378,7 +392,7 @@ mage metricsComplexity  # Analyze code complexity
 #### 📦 Dependency Management
 ```bash
 # Dependency Operations
-mage depsUpdate         # Update all dependencies (equivalent to "make update")
+mage depsUpdate         # Update all dependencies
 mage depsTidy           # Clean up go.mod and go.sum
 mage depsDownload       # Download all dependencies
 mage depsOutdated       # Show outdated dependencies
@@ -391,8 +405,10 @@ mage depsAudit          # Audit dependencies for vulnerabilities
 mage toolsUpdate        # Update all development tools
 mage toolsInstall       # Install all required development tools
 mage toolsCheck         # Check if all required tools are available
-mage installTools       # Install development tools
+mage toolsVulnCheck     # Run vulnerability check using govulncheck
+mage installTools       # Install development tools (alias)
 mage installBinary      # Install the project binary
+mage installStdlib      # Install Go standard library for cross-compilation
 mage uninstall          # Remove installed binary
 ```
 
@@ -420,7 +436,7 @@ mage docsCheck          # Validate documentation
 mage gitStatus          # Show git repository status
 mage gitCommit          # Commit changes
 mage gitTag             # Create and push a new tag
-mage gitPush            # Push changes to remote
+mage gitPush            # Push changes to remote (main branch)
 ```
 
 #### 🏷️ Version Management
@@ -434,40 +450,71 @@ mage versionCheck       # Check version information
 #### 🚀 Release Management
 ```bash
 # Release Operations
-mage releaseDefault     # Create a new release (default)
+mage releaseDefault     # Create a new release
 ```
 
-#### 🎯 Default Targets
+#### 🛡️ Security & Audit
+```bash
+# Security and Compliance
+mage auditShow          # Display audit events with optional filtering
+```
+
+#### 🎯 Default Targets & Aliases
 ```bash
 # Quick Access Commands
-mage                    # Run default build (buildDefault)
-mage buildDefault       # Explicit default build
+mage                    # Run default build (alias for buildDefault)
+mage buildDefault       # Build the project (default target)
 mage testDefault        # Run complete test suite
-mage lintDefault        # Run linter
+mage lintDefault        # Run essential linters
+mage releaseDefault     # Create a new release
 ```
 
+### 📋 Complete Command List
 
-### 📋 Command Discovery
+Run `mage -l` to see a plain list of all 58 available commands, or use `mage help` for a beautiful categorized view with descriptions and usage tips.
 
-Discover available commands using these built-in help features:
+### 🔧 Advanced: Additional Namespace Methods
 
-```bash
-# Beautiful command listing with categories and emojis
-mage help
+MAGE-X includes 30+ namespaces with hundreds of additional methods that aren't exposed as top-level commands but can be accessed through custom magefiles:
 
-# Plain list of all available targets
-mage -l
+**Additional Namespaces:**
+- **Workflow** - Advanced workflow automation
+- **Enterprise** - Enterprise deployment and management
+- **Wizard** - Interactive setup wizards
+- **Init** - Project initialization templates
+- **Recipes** - Pre-built task recipes
+- **Bench** - Advanced benchmarking tools
+- **Format** - Code formatting utilities
+- **Configure** - Configuration management
+- **Generate** - Code generation tools
+- **CLI** - Command-line interface helpers
+- **Integrations** - External service integrations
+- **Update** - Update management
+- **Yaml** - YAML configuration tools
 
-# Get help for a specific command (if available)
-mage -h <command>
+**Example: Using Additional Methods**
+```go
+//go:build mage
 
-# Show mage version and build info
-mage -version
+package main
+
+import "github.com/mrz1836/mage-x/pkg/mage"
+
+// Access methods not exposed in default magefile
+func FormatAll() error {
+    return mage.Format{}.All()
+}
+
+func InitMicroservice() error {
+    return mage.Init{}.Microservice()
+}
+
+func RecipesList() error {
+    return mage.Recipes{}.List()
+}
 ```
 
-### Available Commands
-
-Use `mage help` to see all available commands with beautiful formatting, or `mage -l` for a plain list. The most commonly used commands are documented above in their respective sections.
+See the [examples directory](examples) for more custom magefile implementations.
 
 <br/>
 
