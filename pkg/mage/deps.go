@@ -64,6 +64,7 @@ func (Deps) Update() error {
 
 	deps := strings.Split(strings.TrimSpace(output), "\n")
 	updatedCount := 0
+	checkedCount := 0
 
 	for _, dep := range deps {
 		dep = strings.TrimSpace(dep)
@@ -72,6 +73,7 @@ func (Deps) Update() error {
 		}
 
 		utils.Info("Checking %s...", dep)
+		checkedCount++
 
 		// Get latest version
 		latestOutput, err := GetRunner().RunCmdOutput("go", "list", "-m", "-versions", dep)
@@ -100,7 +102,11 @@ func (Deps) Update() error {
 		return fmt.Errorf("failed to tidy after updates: %w", err)
 	}
 
-	utils.Success("Updated %d dependencies", updatedCount)
+	if updatedCount == 0 {
+		utils.Success("Checked %d dependencies - all are up to date", checkedCount)
+	} else {
+		utils.Success("Checked %d dependencies, updated %d", checkedCount, updatedCount)
+	}
 	return nil
 }
 
