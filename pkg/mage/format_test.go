@@ -66,6 +66,8 @@ func (ts *FormatTestSuite) TestFormatCheck() {
 	ts.Run("all files properly formatted", func() {
 		// Mock all format checks passing
 		ts.env.Runner.On("RunCmdOutput", "gofmt", []string{"-l", "."}).Return("", nil)
+		ts.env.Runner.On("RunCmdOutput", "gofumpt", []string{"-l", "-extra", "."}).Return("", nil)
+		ts.env.Runner.On("RunCmdOutput", "goimports", []string{"-l", "."}).Return("", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error

@@ -82,7 +82,10 @@ func (Test) Short() error {
 		return err
 	}
 
-	args := buildTestArgs(config, false, false)
+	// Explicitly disable race and coverage for short tests to keep them fast
+	raceDisabled := false
+	coverDisabled := false
+	args := buildTestArgsWithOverrides(config, &raceDisabled, &coverDisabled)
 	args = append(args, "-short", "./...")
 
 	if err := GetRunner().RunCmd("go", args...); err != nil {
@@ -455,6 +458,52 @@ func buildTestArgs(cfg *Config, race, cover bool) []string {
 	}
 
 	if cover || cfg.Test.Cover {
+		args = append(args, "-cover")
+	}
+
+	return args
+}
+
+// buildTestArgsWithOverrides builds test arguments with explicit overrides for race and cover
+// When raceOverride or coverOverride are not nil, they take precedence over config defaults
+func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool) []string {
+	args := []string{"test"}
+
+	if cfg.Test.Parallel {
+		parallelCount := cfg.Build.Parallel
+		if parallelCount <= 0 {
+			parallelCount = runtime.NumCPU()
+		}
+		args = append(args, "-p", fmt.Sprintf("%d", parallelCount))
+	}
+
+	if cfg.Test.Verbose {
+		args = append(args, "-v")
+	}
+
+	if cfg.Test.Timeout != "" {
+		args = append(args, "-timeout", cfg.Test.Timeout)
+	}
+
+	if len(cfg.Test.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(cfg.Test.Tags, ","))
+	}
+
+	// Handle race flag with explicit override
+	useRace := cfg.Test.Race
+	if raceOverride != nil {
+		useRace = *raceOverride
+	}
+	if useRace {
+		args = append(args, "-race")
+	}
+
+	// Handle cover flag with explicit override
+	useCover := cfg.Test.Cover
+	if coverOverride != nil {
+		useCover = *coverOverride
+	}
+	if useCover {
 		args = append(args, "-cover")
 	}
 
