@@ -195,7 +195,7 @@ All tests follow standard Go patterns. We love:
 - **Unit tests**: All new functions must have tests
 - **Integration tests**: Add to `test/integration/` for end-to-end scenarios
 - **Benchmarks**: Performance-critical code needs benchmarks
-- **Fuzz tests**: Add fuzz tests for parser/validation code
+- **Fuzz tests**: Add fuzz tests for parser/validation code (use `mage testFuzzShort` for quick tests)
 
 Tests should be:
 - Easy to understand

@@ -241,6 +241,7 @@ type TestNamespace interface {
     CoverReport() error
     CoverHTML() error
     Fuzz() error
+    FuzzShort() error
     Bench(params ...string) error
     Integration() error
     CI() error

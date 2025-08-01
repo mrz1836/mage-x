@@ -355,6 +355,7 @@ mage testCover          # Run tests with coverage analysis
 mage testBench          # Run benchmark tests
 mage testBenchShort	    # Run short benchmark tests
 mage testFuzz           # Run fuzz tests
+mage testFuzzShort      # Run quick fuzz tests (5s)
 mage testIntegration    # Run integration tests
 ```
 
@@ -481,7 +482,7 @@ All examples and tests run via GitHub Actions using Go 1.24+. View the [examples
 mage testDefault
 
 # Comprehensive testing
-mage testRace testCover testFuzz
+mage testRace testCover testFuzz testFuzzShort
 
 # Performance benchmarks
 mage testBenchShort

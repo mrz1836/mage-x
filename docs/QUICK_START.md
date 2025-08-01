@@ -171,6 +171,7 @@ mage testRace         # Test with race detector
 mage testBench        # Run benchmarks
 mage testBenchShort   # Run benchmarks (1s)
 mage testFuzz         # Run fuzz tests
+mage testFuzzShort    # Run quick fuzz tests (5s)
 
 # Development tools
 mage toolsUpdate    # Update all tools
@@ -244,7 +245,7 @@ modDownload, modTidy, modUpdate, modVerify
 release, releaseDefault
 
 # Testing
-test, testShort, testBench, testBenchShort, testCover, testFuzz, testIntegration, testRace, testUnit
+test, testShort, testBench, testBenchShort, testCover, testFuzz, testFuzzShort, testIntegration, testRace, testUnit
 
 # Tools
 toolsCheck, toolsInstall, toolsUpdate

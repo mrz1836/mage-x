@@ -49,6 +49,7 @@ With just 3 lines of code, you get:
 - `testBench` - Run benchmarks
 - `testBenchShort` - Run benchmarks with 1s
 - `testFuzz` - Run fuzz tests
+- `testFuzzShort` - Run quick fuzz tests (5s)
 
 ### Lint Tasks
 - `lint` - Run golangci-lint

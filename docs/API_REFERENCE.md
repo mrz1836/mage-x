@@ -448,6 +448,7 @@ The following mage targets are available through the exposed wrapper functions i
 | `mage testCover` | Run tests with coverage analysis | `go test -cover ./...` |
 | `mage testBench` | Run benchmark tests | `go test -bench=. ./...` |
 | `mage testFuzz` | Run fuzz tests | `go test -fuzz=. ./...` |
+| `mage testFuzzShort` | Run quick fuzz tests (5s) | `go test -fuzz=. -fuzztime=5s ./...` |
 | `mage testIntegration` | Run integration tests | `go test -tags=integration ./...` |
 
 ### Dependency Management Targets

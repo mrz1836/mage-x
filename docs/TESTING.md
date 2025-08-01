@@ -199,8 +199,14 @@ mage testBenchShort
 # Run fuzz tests
 mage testFuzz
 
+# Run quick fuzz tests (5s default)
+mage testFuzzShort
+
 # Run specific fuzz test
 go test -fuzz=FuzzReverse -fuzztime=10s ./pkg/utils
+
+# Override fuzz time
+FUZZ_TIME=30s mage testFuzzShort
 ```
 
 ## Writing Tests

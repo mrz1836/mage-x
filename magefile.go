@@ -299,6 +299,12 @@ func TestFuzz() error {
 	return t.Fuzz()
 }
 
+// TestFuzzShort runs fuzz tests with shorter duration for quick feedback
+func TestFuzzShort() error {
+	var t Test
+	return t.FuzzShort()
+}
+
 // TestIntegration runs integration tests
 func TestIntegration() error {
 	var t Test
@@ -436,6 +442,7 @@ func Help() error {
 				{"testBench", "Run benchmark tests", []string{"mage testBench"}},
 				{"testBenchShort", "Run quick benchmark tests", []string{"mage testBenchShort"}},
 				{"testFuzz", "Run fuzz tests", []string{"mage testFuzz"}},
+				{"testFuzzShort", "Run quick fuzz tests (5s default)", []string{"mage testFuzzShort"}},
 				{"testIntegration", "Run integration tests", []string{"mage testIntegration"}},
 				{"testShort", "Run short tests only", []string{"mage testShort"}},
 				{"testCoverRace", "Run tests with coverage and race detector", []string{"mage testCoverRace"}},
@@ -611,6 +618,7 @@ func List() error {
 				{"testBench", "Run benchmark tests", []string{"mage testBench"}},
 				{"testBenchShort", "Run quick benchmark tests", []string{"mage testBenchShort"}},
 				{"testFuzz", "Run fuzz tests", []string{"mage testFuzz"}},
+				{"testFuzzShort", "Run quick fuzz tests (5s default)", []string{"mage testFuzzShort"}},
 				{"testIntegration", "Run integration tests", []string{"mage testIntegration"}},
 				{"testShort", "Run short tests only", []string{"mage testShort"}},
 				{"testCoverRace", "Run tests with coverage and race detector", []string{"mage testCoverRace"}},
