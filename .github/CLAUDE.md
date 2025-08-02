@@ -101,6 +101,11 @@ func TestDefault() error {
     test := mage.NewTestNamespace()
     return test.Default()
 }
+
+// With aliases, users can now run:
+// mage test (alias for mage testDefault)
+// mage build (alias for mage buildDefault)
+// mage lint (alias for mage lintDefault)
 ```
 
 ### Custom Implementation
@@ -270,6 +275,13 @@ The main `magefile.go` exposes 58 commands that can be called directly via `mage
 #### Default & Aliases
 - `mage` - Default command (runs buildDefault)
 - `Default` - Maps to BuildDefault
+
+**Available Aliases:**
+- `mage lint` - Alias for `mage lintDefault`
+- `mage test` - Alias for `mage testDefault`
+- `mage build` - Alias for `mage buildDefault`
+- `mage release` - Alias for `mage releaseDefault`
+- `mage loc` - Alias for `mage metricsLOC`
 
 #### Build Commands (5)
 - `buildDefault` - Build for current platform

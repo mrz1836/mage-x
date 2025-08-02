@@ -28,6 +28,15 @@ type (
 	Audit   = mage.Audit
 )
 
+// Aliases provides short command names for common operations
+var Aliases = map[string]interface{}{
+	"lint":    LintDefault,
+	"test":    TestDefault,
+	"build":   BuildDefault,
+	"release": ReleaseDefault,
+	"loc":     MetricsLOC,
+}
+
 // Default target
 var Default = BuildDefault
 

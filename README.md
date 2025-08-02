@@ -165,9 +165,9 @@ var Default = func() error {
 
 ```bash
 # Or dive right in
-mage buildDefault   # Build your project
-mage testDefault    # Run tests with linting
-mage releaseDefault # Create a release
+mage build   # Build your project
+mage test    # Run tests with linting
+mage release # Create a release
 ```
 
 ### 4. Advanced Setup (Optional)
@@ -346,7 +346,7 @@ mage -version           # Show mage version and build info
 #### 📦 Build Commands
 ```bash
 # Core Build Operations
-mage buildDefault       # Build for current platform (alias: mage)
+mage build              # Build for current platform (alias: mage buildDefault)
 mage buildAll           # Build for all configured platforms
 mage buildDocker        # Build Docker containers
 mage buildClean         # Clean build artifacts
@@ -356,7 +356,7 @@ mage buildGenerate      # Generate code before building
 #### 🧪 Test Commands
 ```bash
 # Test Execution
-mage testDefault        # Run complete test suite with linting (default)
+mage test               # Run complete test suite with linting (alias: mage testDefault)
 mage testFull           # Run full test suite with linting
 mage testUnit           # Run unit tests only (no linting)
 mage testShort          # Run short tests (excludes integration tests)
@@ -373,7 +373,7 @@ mage testIntegration    # Run integration tests
 #### 🔍 Code Quality & Linting
 ```bash
 # Linting and Code Quality
-mage lintDefault        # Run essential linters (golangci-lint + go vet)
+mage lint               # Run essential linters (alias: mage lintDefault)
 mage lintAll            # Run all linting checks
 mage lintFix            # Auto-fix linting issues + apply formatting
 mage lintVet            # Run go vet static analysis
@@ -384,7 +384,7 @@ mage lintVersion        # Show linter version information
 #### 📊 Metrics & Analysis
 ```bash
 # Code Analysis
-mage metricsLOC         # Analyze lines of code
+mage loc                # Analyze lines of code (alias: mage metricsLOC)
 mage metricsCoverage    # Generate coverage reports
 mage metricsComplexity  # Analyze code complexity
 ```
@@ -450,7 +450,7 @@ mage versionCheck       # Check version information
 #### 🚀 Release Management
 ```bash
 # Release Operations
-mage releaseDefault     # Create a new release
+mage release            # Create a new release (alias: mage releaseDefault)
 ```
 
 #### 🛡️ Security & Audit
@@ -463,10 +463,11 @@ mage auditShow          # Display audit events with optional filtering
 ```bash
 # Quick Access Commands
 mage                    # Run default build (alias for buildDefault)
-mage buildDefault       # Build the project (default target)
-mage testDefault        # Run complete test suite
-mage lintDefault        # Run essential linters
-mage releaseDefault     # Create a new release
+mage build              # Build the project (alias: mage buildDefault) 
+mage test               # Run complete test suite (alias: mage testDefault)
+mage lint               # Run essential linters (alias: mage lintDefault)
+mage release            # Create a new release (alias: mage releaseDefault)
+mage loc                # Analyze lines of code (alias: mage metricsLOC)
 ```
 
 ### 📋 Complete Command List
@@ -526,7 +527,7 @@ All examples and tests run via GitHub Actions using Go 1.24+. View the [examples
 
 ```bash
 # Quick test suite
-mage testDefault
+mage test
 
 # Comprehensive testing
 mage testRace testCover testFuzz testFuzzShort
@@ -621,10 +622,10 @@ cd mage-x
 go mod download
 
 # Run tests
-mage testDefault
+mage test
 
 # Run linter
-mage lintDefault
+mage lint
 
 # See all available commands (beautiful format)
 mage help
