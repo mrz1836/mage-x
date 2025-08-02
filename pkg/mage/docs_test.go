@@ -835,8 +835,8 @@ func (ts *DocsTestSuite) TestDocsNetworkOperations() {
 		available := isPortAvailable(65432) // Should be available
 		ts.Require().True(available)
 
-		// Test with a port that's likely to be unavailable
-		available = isPortAvailable(0) // Invalid port
+		// Test with an actually invalid port
+		available = isPortAvailable(-1) // Invalid port
 		ts.Require().False(available)
 	})
 

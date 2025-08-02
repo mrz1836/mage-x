@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -453,14 +454,16 @@ func bumpVersion(current, bumpType string) (string, error) {
 		return "", fmt.Errorf("%w: %s", errInvalidVersionFormat, current)
 	}
 
-	var major, minor, patch int
-	if _, err := fmt.Sscanf(parts[0], "%d", &major); err != nil {
+	major, err := strconv.Atoi(parts[0])
+	if err != nil {
 		return "", fmt.Errorf("%w: %s", errInvalidMajorVersion, parts[0])
 	}
-	if _, err := fmt.Sscanf(parts[1], "%d", &minor); err != nil {
+	minor, err := strconv.Atoi(parts[1])
+	if err != nil {
 		return "", fmt.Errorf("%w: %s", errInvalidMinorVersion, parts[1])
 	}
-	if _, err := fmt.Sscanf(parts[2], "%d", &patch); err != nil {
+	patch, err := strconv.Atoi(parts[2])
+	if err != nil {
 		return "", fmt.Errorf("%w: %s", errInvalidPatchVersion, parts[2])
 	}
 

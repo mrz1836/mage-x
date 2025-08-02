@@ -331,6 +331,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 	if _, err := fmt.Scanln(&name); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
+		return fmt.Errorf("failed to read project name: %w", err)
 	}
 	if name != "" {
 		w.Config.Project.Name = name
@@ -341,6 +342,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 	if _, err := fmt.Scanln(&binary); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
+		return fmt.Errorf("failed to read binary name: %w", err)
 	}
 	if binary != "" {
 		w.Config.Project.Binary = binary
@@ -351,6 +353,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 	if _, err := fmt.Scanln(&module); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
+		return fmt.Errorf("failed to read module path: %w", err)
 	}
 	if module != "" {
 		w.Config.Project.Module = module
@@ -367,6 +370,7 @@ func (w *ConfigurationWizard) updateBuildConfig() error {
 	if _, err := fmt.Scanln(&output); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
+		return fmt.Errorf("failed to read output directory: %w", err)
 	}
 	if output != "" {
 		w.Config.Build.Output = output
@@ -393,6 +397,7 @@ func (w *ConfigurationWizard) updateTestConfig() error {
 	if _, err := fmt.Scanln(&timeout); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
+		return fmt.Errorf("failed to read test timeout: %w", err)
 	}
 	if timeout != "" {
 		w.Config.Test.Timeout = timeout
@@ -403,6 +408,7 @@ func (w *ConfigurationWizard) updateTestConfig() error {
 	if _, err := fmt.Scanln(&race); err != nil && err.Error() != errUnexpectedNewline {
 		// Handle scan errors other than empty input
 		utils.Error("Error reading input: %v", err)
+		return fmt.Errorf("failed to read race detection setting: %w", err)
 	}
 	if race != "" {
 		w.Config.Test.Race = strings.EqualFold(race, "true") || race == "y"

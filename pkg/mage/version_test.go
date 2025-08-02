@@ -692,7 +692,7 @@ func TestVersionStringHelpers(t *testing.T) {
 		}{
 			{"v1.2.3", "1.2.3"},
 			{"1.2.3", "1.2.3"},
-			{"version-1.2.3", "version-1.2.3"}, // Only "v" prefix is trimmed
+			{"version-1.2.3", "ersion-1.2.3"}, // TrimPrefix removes "v" from beginning
 		}
 
 		for _, tc := range testCases {

@@ -2,7 +2,7 @@
 
 This directory contains auto-generated documentation for all packages in the mage-x project.
 
-**Generated on:** 2025-08-02 08:19:22
+**Generated on:** 2025-08-02 10:02:21
 
 ## 📚 Available Documentation
 
