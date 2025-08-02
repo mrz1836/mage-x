@@ -3,6 +3,9 @@ name: Fortress Test Suite
 on:
   workflow_dispatch:
   workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        required: false
 
 permissions:
   contents: read

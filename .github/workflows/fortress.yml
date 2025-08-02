@@ -111,6 +111,7 @@ jobs:
     needs: pre-flight
     if: needs.pre-flight.outputs.should_run_tests == 'true'
     uses: ./.github/workflows/fortress-test-suite.yml
+    secrets: inherit
 
   # Run security scans
   security-scans:
