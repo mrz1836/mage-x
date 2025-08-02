@@ -341,8 +341,8 @@ The main `magefile.go` exposes 58 commands that can be called directly via `mage
 
 #### Git Commands (4)
 - `gitStatus` - Show repository status
-- `gitCommit` - Commit changes
-- `gitTag` - Create and push tag
+- `gitCommit` - Commit changes (requires `message="commit message"` env var)
+- `gitTag` - Create and push tag (requires `version="1.2.3"` env var)
 - `gitPush` - Push changes to remote
 
 #### Version Commands (3)

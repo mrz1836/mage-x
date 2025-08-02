@@ -434,10 +434,10 @@ mage docsCheck          # Validate documentation completeness and quality
 #### 🔀 Git Operations
 ```bash
 # Git Workflow
-mage gitStatus          # Show git repository status
-mage gitCommit          # Commit changes
-mage gitTag             # Create and push a new tag
-mage gitPush            # Push changes to remote (main branch)
+mage gitStatus                                # Show git repository status
+message="fix: commit message" mage gitCommit  # Commit changes (requires message env var)
+version="1.2.3" mage gitTag                   # Create and push a new tag (requires version env var)
+mage gitPush                                  # Push changes to remote (main branch)
 ```
 
 #### 🏷️ Version Management
