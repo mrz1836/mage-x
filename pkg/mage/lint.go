@@ -16,7 +16,9 @@ import (
 
 // Static errors for linting operations
 var (
-	errVetFailed = errors.New("go vet found issues")
+	errVetFailed     = errors.New("go vet found issues")
+	errLintingFailed = errors.New("linting failed")
+	errFixFailed     = errors.New("fix failed")
 )
 
 // Lint namespace for linting and formatting tasks
@@ -31,46 +33,106 @@ func (Lint) Default() error {
 		return err
 	}
 
-	linter := Lint{}
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
 	totalStart := time.Now()
+	var moduleErrors []moduleError
 
 	// Display linter configuration info
 	displayLinterConfig()
 
-	// Run golangci-lint
-	utils.Info("Running golangci-lint...")
+	// Ensure golangci-lint is installed
+	utils.Info("Checking golangci-lint installation...")
 	if err := ensureGolangciLint(config); err != nil {
 		return err
 	}
 
-	args := []string{"run", "./pkg/..."}
+	// Run linters for each module
+	for _, module := range modules {
+		displayModuleHeader(module, "Linting")
 
-	// Check for config file
-	if utils.FileExists(".golangci.json") {
-		args = append(args, "--config", ".golangci.json")
+		moduleStart := time.Now()
+		hasError := false
+
+		// Run golangci-lint
+		utils.Info("Running golangci-lint...")
+		args := []string{"run", "./..."}
+
+		// Check for config file in root directory
+		configPath := filepath.Join(module.Path, ".golangci.json")
+		if !utils.FileExists(configPath) {
+			// Check in root directory
+			rootConfig := ".golangci.json"
+			if utils.FileExists(rootConfig) {
+				// Use absolute path to root config
+				absPath, err := filepath.Abs(rootConfig)
+				if err != nil {
+					utils.Warn("Failed to get absolute path for config: %v", err)
+					absPath = rootConfig
+				}
+				args = append(args, "--config", absPath)
+			}
+		} else {
+			args = append(args, "--config", ".golangci.json")
+		}
+
+		if config.Lint.Timeout != "" {
+			args = append(args, "--timeout", config.Lint.Timeout)
+		}
+
+		if config.Build.Verbose {
+			args = append(args, "--verbose")
+		}
+
+		err := runCommandInModule(module, "golangci-lint", args...)
+		if err != nil {
+			hasError = true
+			utils.Error("golangci-lint failed for %s", module.Relative)
+		} else {
+			utils.Success("golangci-lint passed for %s", module.Relative)
+		}
+
+		// Run go vet
+		utils.Info("Running go vet...")
+		if err := runVetInModule(module, config); err != nil {
+			hasError = true
+			utils.Error("go vet failed for %s", module.Relative)
+		} else {
+			utils.Success("go vet passed for %s", module.Relative)
+		}
+
+		if hasError {
+			moduleErrors = append(moduleErrors, moduleError{
+				Module: module,
+				Error:  errLintingFailed,
+			})
+			utils.Error("Linting failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("Linting passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
 	}
 
-	if config.Lint.Timeout != "" {
-		args = append(args, "--timeout", config.Lint.Timeout)
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("\nLinting failed in %d/%d modules", len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
 	}
 
-	if config.Build.Verbose {
-		args = append(args, "--verbose")
-	}
-
-	start := time.Now()
-	if err := GetRunner().RunCmd("golangci-lint", args...); err != nil {
-		return fmt.Errorf("golangci-lint failed: %w", err)
-	}
-	utils.Success("golangci-lint passed in %s", utils.FormatDuration(time.Since(start)))
-
-	// Run go vet
-	utils.Info("Running go vet...")
-	if err := linter.Vet(); err != nil {
-		return fmt.Errorf("go vet failed: %w", err)
-	}
-
-	utils.Success("Default linting passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("\nAll linting passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -83,41 +145,102 @@ func (Lint) Fix() error {
 		return err
 	}
 
-	linter := Lint{}
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
 	totalStart := time.Now()
+	var moduleErrors []moduleError
 
 	// Display linter configuration info
 	displayLinterConfig()
 
-	// Run golangci-lint with auto-fix
-	utils.Info("Running golangci-lint --fix...")
+	// Ensure golangci-lint is installed
+	utils.Info("Checking golangci-lint installation...")
 	if err := ensureGolangciLint(config); err != nil {
 		return err
 	}
 
-	args := []string{"run", "--fix", "./pkg/..."}
+	// Run fix for each module
+	for _, module := range modules {
+		displayModuleHeader(module, "Fixing lint issues in")
 
-	// Check for config file
-	if utils.FileExists(".golangci.json") {
-		args = append(args, "--config", ".golangci.json")
+		moduleStart := time.Now()
+		hasError := false
+
+		// Run golangci-lint with auto-fix
+		utils.Info("Running golangci-lint --fix...")
+		args := []string{"run", "--fix", "./..."}
+
+		// Check for config file
+		configPath := filepath.Join(module.Path, ".golangci.json")
+		if !utils.FileExists(configPath) {
+			// Check in root directory
+			rootConfig := ".golangci.json"
+			if utils.FileExists(rootConfig) {
+				// Use absolute path to root config
+				absPath, err := filepath.Abs(rootConfig)
+				if err != nil {
+					utils.Warn("Failed to get absolute path for config: %v", err)
+					absPath = rootConfig
+				}
+				args = append(args, "--config", absPath)
+			}
+		} else {
+			args = append(args, "--config", ".golangci.json")
+		}
+
+		if config.Lint.Timeout != "" {
+			args = append(args, "--timeout", config.Lint.Timeout)
+		}
+
+		err := runCommandInModule(module, "golangci-lint", args...)
+		if err != nil {
+			hasError = true
+			utils.Error("golangci-lint fix failed for %s", module.Relative)
+		} else {
+			utils.Success("golangci-lint fixes applied for %s", module.Relative)
+		}
+
+		// Apply code formatting in module
+		utils.Info("Applying code formatting...")
+		if err := applyCodeFormattingInModule(module, Lint{}); err != nil {
+			hasError = true
+			utils.Error("Formatting failed for %s: %v", module.Relative, err)
+		} else {
+			utils.Success("Code formatted for %s", module.Relative)
+		}
+
+		if hasError {
+			moduleErrors = append(moduleErrors, moduleError{
+				Module: module,
+				Error:  errFixFailed,
+			})
+			utils.Error("Fix failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("All issues fixed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
 	}
 
-	if config.Lint.Timeout != "" {
-		args = append(args, "--timeout", config.Lint.Timeout)
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("\nFix failed in %d/%d modules", len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
 	}
 
-	start := time.Now()
-	if err := GetRunner().RunCmd("golangci-lint", args...); err != nil {
-		return fmt.Errorf("golangci-lint fix failed: %w", err)
-	}
-	utils.Success("golangci-lint fixes applied in %s", utils.FormatDuration(time.Since(start)))
-
-	// Apply code formatting - prefer gofumpt, fallback to go fmt
-	if err := applyCodeFormatting(linter); err != nil {
-		return fmt.Errorf("formatting failed: %w", err)
-	}
-
-	utils.Success("All lint issues fixed and code formatted in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("\nAll lint issues fixed and code formatted in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -204,48 +327,47 @@ func (Lint) Vet() error {
 		return err
 	}
 
-	module, err := utils.GetModuleName()
+	// Discover all modules
+	modules, err := findAllModules()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to find modules: %w", err)
 	}
 
-	// Get packages in current module
-	packages, err := utils.GoList("./...")
-	if err != nil {
-		return err
-	}
-
-	// Filter to only module packages
-	var modulePackages []string
-	for _, pkg := range packages {
-		if strings.HasPrefix(pkg, module) {
-			modulePackages = append(modulePackages, pkg)
-		}
-	}
-
-	if len(modulePackages) == 0 {
-		utils.Warn("No packages to vet")
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
 		return nil
 	}
 
-	args := []string{"vet"}
-
-	if config.Build.Verbose {
-		args = append(args, "-v")
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
 	}
 
-	if len(config.Build.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	// Run vet for each module
+	for _, module := range modules {
+		displayModuleHeader(module, "Running go vet in")
+
+		moduleStart := time.Now()
+
+		err := runVetInModule(module, config)
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Vet failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("Vet passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
 	}
 
-	args = append(args, modulePackages...)
-
-	start := time.Now()
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("vet failed: %w", err)
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("\nVet failed in %d/%d modules", len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("Vet passed in %s", utils.FormatDuration(time.Since(start)))
+	utils.Success("\nAll vet checks passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -360,33 +482,6 @@ func (Lint) Version() error {
 }
 
 // Helper functions
-
-// applyCodeFormatting applies the best available code formatting
-func applyCodeFormatting(linter Lint) error {
-	if utils.CommandExists("gofumpt") {
-		utils.Info("Running gofumpt for stricter formatting...")
-		start := time.Now()
-		if err := linter.Fumpt(); err != nil {
-			utils.Warn("gofumpt failed, falling back to go fmt: %v", err)
-			return applyGoFmt(linter)
-		}
-		utils.Success("gofumpt formatting applied in %s", utils.FormatDuration(time.Since(start)))
-		return nil
-	}
-
-	return applyGoFmt(linter)
-}
-
-// applyGoFmt applies basic go fmt formatting
-func applyGoFmt(linter Lint) error {
-	utils.Info("Running go fmt for basic formatting...")
-	start := time.Now()
-	if err := linter.Fmt(); err != nil {
-		return err
-	}
-	utils.Success("go fmt formatting applied in %s", utils.FormatDuration(time.Since(start)))
-	return nil
-}
 
 // ensureGolangciLint ensures golangci-lint is installed
 func ensureGolangciLint(cfg *Config) error {
@@ -789,4 +884,78 @@ func displayLinterConfig() {
 			utils.Info("Linters: %d enabled, %d disabled", enabledCount, disabledCount)
 		}
 	}
+}
+
+// runVetInModule runs go vet in a specific module directory
+func runVetInModule(module ModuleInfo, config *Config) error {
+	args := []string{"vet"}
+
+	if config.Build.Verbose {
+		args = append(args, "-v")
+	}
+
+	if len(config.Build.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
+	}
+
+	args = append(args, "./...")
+
+	return runCommandInModule(module, "go", args...)
+}
+
+// applyCodeFormattingInModule applies code formatting in a specific module
+func applyCodeFormattingInModule(module ModuleInfo, linter Lint) error {
+	// Save current directory
+	originalDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Change to module directory
+	if err := os.Chdir(module.Path); err != nil {
+		return fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
+	}
+
+	// Ensure we change back to original directory
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			utils.Error("Failed to change back to original directory: %v", err)
+		}
+	}()
+
+	// Apply formatting
+	if utils.CommandExists("gofumpt") {
+		return applyGofumptFormatting()
+	}
+	return applyGofmtFormatting()
+}
+
+// applyGofumptFormatting applies gofumpt formatting with fallback to gofmt
+func applyGofumptFormatting() error {
+	start := time.Now()
+	if err := GetRunner().RunCmd("gofumpt", "-w", "-extra", "."); err != nil {
+		utils.Warn("gofumpt failed, falling back to go fmt: %v", err)
+		return applyGofmtFallback(start)
+	}
+	utils.Success("gofumpt formatting applied in %s", utils.FormatDuration(time.Since(start)))
+	return nil
+}
+
+// applyGofmtFormatting applies standard gofmt formatting
+func applyGofmtFormatting() error {
+	start := time.Now()
+	if err := GetRunner().RunCmd("gofmt", "-w", "."); err != nil {
+		return fmt.Errorf("go fmt failed: %w", err)
+	}
+	utils.Success("go fmt formatting applied in %s", utils.FormatDuration(time.Since(start)))
+	return nil
+}
+
+// applyGofmtFallback applies gofmt as a fallback when gofumpt fails
+func applyGofmtFallback(start time.Time) error {
+	if err := GetRunner().RunCmd("gofmt", "-w", "."); err != nil {
+		return fmt.Errorf("go fmt failed: %w", err)
+	}
+	utils.Success("go fmt formatting applied in %s", utils.FormatDuration(time.Since(start)))
+	return nil
 }

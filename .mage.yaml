@@ -34,11 +34,11 @@ build:
   parallel: 4 # 0 = number of CPUs
 
 test:
-  # Run tests in parallel
-  parallel: true
+  # Run tests in parallel (disabled to avoid integration test conflicts)
+  parallel: false
 
-  # Test timeout
-  timeout: 10m
+  # Test timeout (increased for integration tests)
+  timeout: 20m
 
   # Enable race detector by default
   race: false
@@ -109,7 +109,7 @@ docker:
   # Build arguments
   build_args: {}
     # Example:
-    # GO_VERSION: "1.21"
+    # GO_VERSION: "1.24"
 
   # Target platforms for multi-arch builds
   platforms:

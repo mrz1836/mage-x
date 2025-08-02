@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package mage
 
 import (
@@ -699,5 +702,6 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 
 // TestAuditTestSuite runs the test suite
 func TestAuditTestSuite(t *testing.T) {
+	// Do not run in parallel to avoid conflicts with other integration tests
 	suite.Run(t, new(AuditTestSuite))
 }

@@ -474,7 +474,7 @@ mage docs               # Generate and serve documentation (alias: mage docsDefa
 
 ### 📋 Complete Command List
 
-Run `mage -l` to see a plain list of all 58 available commands, or use `mage help` for a beautiful categorized view with descriptions and usage tips.
+Run `mage -l` to see a plain list of all 59 available commands, or use `mage help` for a beautiful categorized view with descriptions and usage tips.
 
 ### 📚 Documentation System Features
 

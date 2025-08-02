@@ -1,10 +1,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/mrz1836/mage-x/pkg/mage"
+)
+
+// Static errors for mock testing
+var (
+	errMockFailure = errors.New("mock failure")
 )
 
 // MockBuild is a mock implementation of BuildNamespace for testing
@@ -30,7 +36,7 @@ func (m *MockBuild) Default() error {
 	m.defaultCalled = true
 	m.callOrder = append(m.callOrder, "Default")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -39,7 +45,7 @@ func (m *MockBuild) All() error {
 	m.allCalled = true
 	m.callOrder = append(m.callOrder, "All")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -48,7 +54,7 @@ func (m *MockBuild) Platform(platform string) error {
 	m.platformCalled[platform] = true
 	m.callOrder = append(m.callOrder, fmt.Sprintf("Platform(%s)", platform))
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -71,7 +77,7 @@ func (m *MockBuild) Windows() error {
 func (m *MockBuild) Docker() error {
 	m.callOrder = append(m.callOrder, "Docker")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -80,7 +86,7 @@ func (m *MockBuild) Clean() error {
 	m.cleanCalled = true
 	m.callOrder = append(m.callOrder, "Clean")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -88,7 +94,7 @@ func (m *MockBuild) Clean() error {
 func (m *MockBuild) Install() error {
 	m.callOrder = append(m.callOrder, "Install")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -96,7 +102,7 @@ func (m *MockBuild) Install() error {
 func (m *MockBuild) Generate() error {
 	m.callOrder = append(m.callOrder, "Generate")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -104,7 +110,7 @@ func (m *MockBuild) Generate() error {
 func (m *MockBuild) PreBuild() error {
 	m.callOrder = append(m.callOrder, "PreBuild")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -134,7 +140,7 @@ func (m *MockTest) Default() error {
 	m.defaultCalled = true
 	m.callOrder = append(m.callOrder, "Default")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -143,7 +149,7 @@ func (m *MockTest) Unit() error {
 	m.unitCalled = true
 	m.callOrder = append(m.callOrder, "Unit")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -152,7 +158,7 @@ func (m *MockTest) Integration() error {
 	m.integrationCalled = true
 	m.callOrder = append(m.callOrder, "Integration")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -161,7 +167,7 @@ func (m *MockTest) Coverage(args ...string) error {
 	m.coverageCalled = true
 	m.callOrder = append(m.callOrder, "Coverage")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -170,7 +176,7 @@ func (m *MockTest) Race() error {
 	m.raceCalled = true
 	m.callOrder = append(m.callOrder, "Race")
 	if m.shouldFail {
-		return fmt.Errorf("%s", m.failureMessage)
+		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
 	}
 	return nil
 }
@@ -264,7 +270,7 @@ func TestDeployApp(t *testing.T) {
 			t.Error("Expected error, got nil")
 		}
 
-		if err.Error() != "failed to build for linux/amd64: mock build failure" {
+		if err.Error() != "failed to build for linux/amd64: mock failure: mock build failure" {
 			t.Errorf("Unexpected error message: %v", err)
 		}
 	})
@@ -312,7 +318,7 @@ func TestRunCI(t *testing.T) {
 			t.Error("Expected error, got nil")
 		}
 
-		if err.Error() != "tests failed: test failure" {
+		if err.Error() != "tests failed: mock failure: test failure" {
 			t.Errorf("Unexpected error message: %v", err)
 		}
 
@@ -334,7 +340,7 @@ func TestRunCI(t *testing.T) {
 			t.Error("Expected error, got nil")
 		}
 
-		if err.Error() != "build failed: build failure" {
+		if err.Error() != "build failed: mock failure: build failure" {
 			t.Errorf("Unexpected error message: %v", err)
 		}
 
@@ -388,7 +394,7 @@ func TestBuildPipeline(t *testing.T) {
 			t.Error("Expected error, got nil")
 		}
 
-		if err.Error() != "pre-build failed: pre-build failure" {
+		if err.Error() != "pre-build failed: mock failure: pre-build failure" {
 			t.Errorf("Unexpected error message: %v", err)
 		}
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +10,7 @@ import (
 
 type MageInitTestSuite struct {
 	suite.Suite
+
 	tempDir string
 }
 
@@ -32,7 +32,7 @@ func (suite *MageInitTestSuite) TestValidateOptionsWithDefaults() {
 	}
 
 	err := validateOptions(opts)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.NotEmpty(opts.ProjectName)
 	suite.NotEmpty(opts.ModulePath)
 }
@@ -47,7 +47,7 @@ func (suite *MageInitTestSuite) TestValidateOptionsWithCustomValues() {
 	}
 
 	err := validateOptions(opts)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Equal("test-project", opts.ProjectName)
 	suite.Equal("github.com/test/test-project", opts.ModulePath)
 }
@@ -61,20 +61,23 @@ func (suite *MageInitTestSuite) TestValidateOptionsInvalidTemplate() {
 	}
 
 	err := validateOptions(opts)
-	suite.Error(err)
-	suite.True(errors.Is(err, ErrInvalidTemplate))
+	suite.Require().Error(err)
+	suite.Require().ErrorIs(err, ErrInvalidTemplate)
 	suite.Contains(err.Error(), "invalid-template")
 }
 
 func (suite *MageInitTestSuite) TestValidateOptionsCurrentDirectory() {
 	originalDir, err := os.Getwd()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	defer func() {
-		os.Chdir(originalDir)
+		if chdirErr := os.Chdir(originalDir); chdirErr != nil {
+			// Log the error but don't fail the test cleanup
+			suite.T().Logf("Failed to restore directory: %v", chdirErr)
+		}
 	}()
 
 	err = os.Chdir(suite.tempDir)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	opts := &InitOptions{
 		ProjectPath: ".",
@@ -83,7 +86,7 @@ func (suite *MageInitTestSuite) TestValidateOptionsCurrentDirectory() {
 	}
 
 	err = validateOptions(opts)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Equal(filepath.Base(suite.tempDir), opts.ProjectName)
 }
 
@@ -92,88 +95,88 @@ func (suite *MageInitTestSuite) TestEnsureProjectDirectoryNew() {
 	projectPath := filepath.Join(suite.tempDir, "new-project")
 
 	err := ensureProjectDirectory(projectPath, false)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// Directory should exist
 	stat, err := os.Stat(projectPath)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.True(stat.IsDir())
 }
 
 func (suite *MageInitTestSuite) TestEnsureProjectDirectoryEmptyExisting() {
 	projectPath := filepath.Join(suite.tempDir, "empty-project")
-	err := os.Mkdir(projectPath, 0o755)
-	suite.NoError(err)
+	err := os.Mkdir(projectPath, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	err = ensureProjectDirectory(projectPath, false)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 }
 
 func (suite *MageInitTestSuite) TestEnsureProjectDirectoryNonEmptyWithoutForce() {
 	projectPath := filepath.Join(suite.tempDir, "non-empty-project")
-	err := os.Mkdir(projectPath, 0o755)
-	suite.NoError(err)
+	err := os.Mkdir(projectPath, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	// Create a file in the directory
 	testFile := filepath.Join(projectPath, "test.txt")
-	err = os.WriteFile(testFile, []byte("test"), 0o644)
-	suite.NoError(err)
+	err = os.WriteFile(testFile, []byte("test"), 0o600) // #nosec G306 -- test file permissions
+	suite.Require().NoError(err)
 
 	err = ensureProjectDirectory(projectPath, false)
-	suite.Error(err)
-	suite.True(errors.Is(err, ErrDirectoryNotEmpty))
+	suite.Require().Error(err)
+	suite.ErrorIs(err, ErrDirectoryNotEmpty)
 }
 
 func (suite *MageInitTestSuite) TestEnsureProjectDirectoryNonEmptyWithForce() {
 	projectPath := filepath.Join(suite.tempDir, "non-empty-project-force")
-	err := os.Mkdir(projectPath, 0o755)
-	suite.NoError(err)
+	err := os.Mkdir(projectPath, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	// Create a file in the directory
 	testFile := filepath.Join(projectPath, "test.txt")
-	err = os.WriteFile(testFile, []byte("test"), 0o644)
-	suite.NoError(err)
+	err = os.WriteFile(testFile, []byte("test"), 0o600) // #nosec G306 -- test file permissions
+	suite.Require().NoError(err)
 
 	err = ensureProjectDirectory(projectPath, true)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 }
 
 // Test createDirectories function
 func (suite *MageInitTestSuite) TestCreateDirectories() {
 	projectPath := filepath.Join(suite.tempDir, "test-dirs")
-	err := os.Mkdir(projectPath, 0o755)
-	suite.NoError(err)
+	err := os.Mkdir(projectPath, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	directories := []string{"cmd", "pkg", "internal", "docs"}
 
 	err = createDirectories(projectPath, directories, false)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// Verify all directories were created
 	for _, dir := range directories {
 		dirPath := filepath.Join(projectPath, dir)
 		stat, err := os.Stat(dirPath)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.True(stat.IsDir())
 	}
 }
 
 func (suite *MageInitTestSuite) TestCreateDirectoriesVerbose() {
 	projectPath := filepath.Join(suite.tempDir, "test-dirs-verbose")
-	err := os.Mkdir(projectPath, 0o755)
-	suite.NoError(err)
+	err := os.Mkdir(projectPath, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	directories := []string{"cmd", "pkg"}
 
 	err = createDirectories(projectPath, directories, true)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 }
 
 // Test createFiles function
 func (suite *MageInitTestSuite) TestCreateFiles() {
 	projectPath := filepath.Join(suite.tempDir, "test-files")
-	err := os.Mkdir(projectPath, 0o755)
-	suite.NoError(err)
+	err := os.Mkdir(projectPath, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	opts := &InitOptions{
 		ProjectName: "test-project",
@@ -189,35 +192,35 @@ func (suite *MageInitTestSuite) TestCreateFiles() {
 
 	// Create subdirectory first for subdir test
 	subDir := filepath.Join(projectPath, "subdir")
-	err = os.MkdirAll(subDir, 0o755)
-	suite.NoError(err)
+	err = os.MkdirAll(subDir, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	files["subdir/sub.go"] = "package main"
 
 	err = createFiles(projectPath, files, opts, false)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// Verify files were created with template processing
 	testFile := filepath.Join(projectPath, "test.txt")
-	content, err := os.ReadFile(testFile)
-	suite.NoError(err)
+	content, err := os.ReadFile(testFile) // #nosec G304 -- controlled test file path
+	suite.Require().NoError(err)
 	suite.Equal("Hello test-project", string(content))
 
 	configFile := filepath.Join(projectPath, "config.yaml")
-	content, err = os.ReadFile(configFile)
-	suite.NoError(err)
+	content, err = os.ReadFile(configFile) // #nosec G304 -- controlled test file path
+	suite.Require().NoError(err)
 	suite.Contains(string(content), "github.com/test/test-project")
 
 	// Verify subdirectory file
 	subFile := filepath.Join(projectPath, "subdir", "sub.go")
 	_, err = os.Stat(subFile)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 }
 
 func (suite *MageInitTestSuite) TestCreateFilesVerbose() {
 	projectPath := filepath.Join(suite.tempDir, "test-files-verbose")
-	err := os.Mkdir(projectPath, 0o755)
-	suite.NoError(err)
+	err := os.Mkdir(projectPath, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	opts := &InitOptions{
 		ProjectName: "test-project",
@@ -230,7 +233,7 @@ func (suite *MageInitTestSuite) TestCreateFilesVerbose() {
 	}
 
 	err = createFiles(projectPath, files, opts, true)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 }
 
 // Test processTemplate function
@@ -238,7 +241,7 @@ func (suite *MageInitTestSuite) TestProcessTemplate() {
 	opts := &InitOptions{
 		ProjectName: "my-project",
 		ModulePath:  "github.com/user/my-project",
-		GoVersion:   "1.21",
+		GoVersion:   "1.24",
 	}
 
 	template := `Project: {{.ProjectName}}
@@ -250,8 +253,8 @@ Mixed: {{.ProjectName}}/{{.GoVersion}}`
 
 	expected := `Project: my-project
 Module: github.com/user/my-project
-Go Version: 1.21
-Mixed: my-project/1.21`
+Go Version: 1.24
+Mixed: my-project/1.24`
 
 	suite.Equal(expected, result)
 }
@@ -260,7 +263,7 @@ func (suite *MageInitTestSuite) TestProcessTemplateNoReplacements() {
 	opts := &InitOptions{
 		ProjectName: "test",
 		ModulePath:  "test",
-		GoVersion:   "1.21",
+		GoVersion:   "1.24",
 	}
 
 	template := "No templates here"
@@ -271,8 +274,8 @@ func (suite *MageInitTestSuite) TestProcessTemplateNoReplacements() {
 // Test initializeGoMod function
 func (suite *MageInitTestSuite) TestInitializeGoMod() {
 	projectPath := filepath.Join(suite.tempDir, "test-gomod")
-	err := os.Mkdir(projectPath, 0o755)
-	suite.NoError(err)
+	err := os.Mkdir(projectPath, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	opts := &InitOptions{
 		ModulePath: "github.com/test/test-project",
@@ -280,12 +283,12 @@ func (suite *MageInitTestSuite) TestInitializeGoMod() {
 	}
 
 	err = initializeGoMod(projectPath, opts)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// Verify go.mod was created
 	goModPath := filepath.Join(projectPath, "go.mod")
-	content, err := os.ReadFile(goModPath)
-	suite.NoError(err)
+	content, err := os.ReadFile(goModPath) // #nosec G304 -- controlled test file path
+	suite.Require().NoError(err)
 
 	contentStr := string(content)
 	suite.Contains(contentStr, "module github.com/test/test-project")
@@ -296,8 +299,8 @@ func (suite *MageInitTestSuite) TestInitializeGoMod() {
 // Test createMageConfig function
 func (suite *MageInitTestSuite) TestCreateMageConfig() {
 	projectPath := filepath.Join(suite.tempDir, "test-mage-config")
-	err := os.Mkdir(projectPath, 0o755)
-	suite.NoError(err)
+	err := os.Mkdir(projectPath, 0o750) // #nosec G301 -- test directory permissions
+	suite.Require().NoError(err)
 
 	opts := &InitOptions{
 		ProjectName: "test-project",
@@ -305,16 +308,16 @@ func (suite *MageInitTestSuite) TestCreateMageConfig() {
 	}
 
 	err = createMageConfig(projectPath, opts)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// Verify mage.yaml was created
 	configPath := filepath.Join(projectPath, "mage.yaml")
 	_, err = os.Stat(configPath)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// Read and verify content
-	content, err := os.ReadFile(configPath)
-	suite.NoError(err)
+	content, err := os.ReadFile(configPath) // #nosec G304 -- controlled test file path
+	suite.Require().NoError(err)
 	suite.Contains(string(content), "test-project")
 }
 
@@ -532,7 +535,7 @@ func (suite *MageInitTestSuite) TestInitializeProjectBasic() {
 	}
 
 	err := initializeProject(opts)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// Verify project structure was created
 	suite.DirExists(projectPath)
@@ -545,12 +548,12 @@ func (suite *MageInitTestSuite) TestInitializeProjectBasic() {
 	suite.DirExists(filepath.Join(projectPath, "pkg"))
 
 	// Verify content was processed
-	goMod, err := os.ReadFile(filepath.Join(projectPath, "go.mod"))
-	suite.NoError(err)
+	goMod, err := os.ReadFile(filepath.Join(projectPath, "go.mod")) // #nosec G304 -- controlled test file path
+	suite.Require().NoError(err)
 	suite.Contains(string(goMod), "module github.com/test/full-test")
 
-	readme, err := os.ReadFile(filepath.Join(projectPath, "README.md"))
-	suite.NoError(err)
+	readme, err := os.ReadFile(filepath.Join(projectPath, "README.md")) // #nosec G304 -- controlled test file path
+	suite.Require().NoError(err)
 	suite.Contains(string(readme), "# full-test")
 }
 
@@ -568,7 +571,7 @@ func (suite *MageInitTestSuite) TestInitializeProjectAdvanced() {
 	}
 
 	err := initializeProject(opts)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// Verify advanced template files were created
 	suite.FileExists(filepath.Join(projectPath, "Dockerfile"))
@@ -586,7 +589,7 @@ func (suite *MageInitTestSuite) FileExists(path string) {
 
 func (suite *MageInitTestSuite) DirExists(path string) {
 	stat, err := os.Stat(path)
-	suite.NoError(err, "Directory should exist: %s", path)
+	suite.Require().NoError(err, "Directory should exist: %s", path)
 	suite.True(stat.IsDir(), "Path should be a directory: %s", path)
 }
 
@@ -601,7 +604,7 @@ func (suite *MageInitTestSuite) TestInitializeProjectInvalidPath() {
 	}
 
 	err := initializeProject(opts)
-	suite.Error(err)
+	suite.Require().Error(err)
 }
 
 // Test edge cases

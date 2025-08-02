@@ -182,7 +182,7 @@ func (ts *DocsTestSuite) TestDocsGenerate() {
 		// Create a minimal go.mod for testing
 		goMod := `module github.com/test/project
 
-go 1.21`
+go 1.24`
 		err = os.WriteFile("go.mod", []byte(goMod), 0o600)
 		ts.Require().NoError(err)
 
@@ -934,6 +934,9 @@ func TestDocsRealWorldScenarios(t *testing.T) {
 
 // TestDocsIntegration tests integration between different docs methods
 func TestDocsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	t.Run("GenerateAndBuildSequence", func(t *testing.T) {
 		// Test that Generate -> Build sequence works
 		docs := Docs{}

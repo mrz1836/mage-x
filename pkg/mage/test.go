@@ -15,7 +15,8 @@ import (
 
 // Static errors to satisfy err113 linter
 var (
-	errNoCoverageFile = errors.New("no coverage file found. Run 'mage test:cover' first")
+	errNoCoverageFile         = errors.New("no coverage file found. Run 'mage test:cover' first")
+	errNoCoverageFilesToMerge = errors.New("no coverage files to merge")
 )
 
 // Test namespace for test-related tasks
@@ -51,25 +52,53 @@ func (Test) Unit() error {
 		return err
 	}
 
-	args := buildTestArgs(config, false, false)
-
-	// Add -short flag to exclude long-running tests
-	args = append(args, "-short")
-
-	// Get packages but exclude heavy integration packages
-	packages, err := getUnitTestPackages()
+	// Discover all modules
+	modules, err := findAllModules()
 	if err != nil {
-		return fmt.Errorf("failed to get unit test packages: %w", err)
+		return fmt.Errorf("failed to find modules: %w", err)
 	}
 
-	args = append(args, packages...)
-
-	start := time.Now()
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("tests failed: %w", err)
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
 	}
 
-	utils.Success("Tests passed in %s", utils.FormatDuration(time.Since(start)))
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	// Run tests for each module
+	for _, module := range modules {
+		displayModuleHeader(module, "Testing")
+
+		moduleStart := time.Now()
+
+		// Build test args
+		args := buildTestArgs(config, false, false)
+		args = append(args, "-short", "./...")
+
+		// Run tests in module directory
+		err := runCommandInModule(module, "go", args...)
+
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("Tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
+	}
+
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("\nUnit tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("\nAll unit tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -82,17 +111,55 @@ func (Test) Short() error {
 		return err
 	}
 
-	// Explicitly disable race and coverage for short tests to keep them fast
-	raceDisabled := false
-	coverDisabled := false
-	args := buildTestArgsWithOverrides(config, &raceDisabled, &coverDisabled)
-	args = append(args, "-short", "./...")
-
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("short tests failed: %w", err)
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
 	}
 
-	utils.Success("Short tests passed")
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	// Run tests for each module
+	for _, module := range modules {
+		displayModuleHeader(module, "Running short tests in")
+
+		moduleStart := time.Now()
+
+		// Explicitly disable race and coverage for short tests to keep them fast
+		raceDisabled := false
+		coverDisabled := false
+		args := buildTestArgsWithOverrides(config, &raceDisabled, &coverDisabled)
+		args = append(args, "-short", "./...")
+
+		// Run tests in module directory
+		err := runCommandInModule(module, "go", args...)
+
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Short tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("Short tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
+	}
+
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("\nShort tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("\nAll short tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -105,15 +172,52 @@ func (Test) Race() error {
 		return err
 	}
 
-	args := buildTestArgs(config, true, false)
-	args = append(args, "./...")
-
-	start := time.Now()
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("race tests failed: %w", err)
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
 	}
 
-	utils.Success("Race tests passed in %s", utils.FormatDuration(time.Since(start)))
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	// Run tests for each module
+	for _, module := range modules {
+		displayModuleHeader(module, "Running race tests in")
+
+		moduleStart := time.Now()
+
+		args := buildTestArgs(config, true, false)
+		args = append(args, "./...")
+
+		// Run tests in module directory
+		err := runCommandInModule(module, "go", args...)
+
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Race tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("Race tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
+	}
+
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("\nRace tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("\nAll race tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -126,24 +230,86 @@ func (Test) Cover() error {
 		return err
 	}
 
-	args := buildTestArgs(config, false, true)
-	args = append(args, "-coverprofile=coverage.txt", "-covermode="+config.Test.CoverMode)
-
-	if len(config.Test.CoverPkg) > 0 {
-		args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
 	}
 
-	args = append(args, "./...")
-
-	start := time.Now()
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("coverage tests failed: %w", err)
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
 	}
 
-	utils.Success("Coverage tests passed in %s", utils.FormatDuration(time.Since(start)))
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+	var coverageFiles []string
+
+	// Run tests for each module
+	for i, module := range modules {
+		displayModuleHeader(module, "Running coverage tests in")
+
+		moduleStart := time.Now()
+
+		// Create unique coverage file name for each module
+		coverFile := fmt.Sprintf("coverage_%d.txt", i)
+		if module.Relative != "." {
+			// Use sanitized path for coverage file name
+			sanitized := strings.ReplaceAll(module.Relative, "/", "_")
+			coverFile = fmt.Sprintf("coverage_%s.txt", sanitized)
+		}
+
+		args := buildTestArgs(config, false, true)
+		args = append(args, "-coverprofile="+coverFile, "-covermode="+config.Test.CoverMode)
+
+		if len(config.Test.CoverPkg) > 0 {
+			args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
+		}
+
+		args = append(args, "./...")
+
+		// Run tests in module directory
+		err := runCommandInModule(module, "go", args...)
+
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Coverage tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			// Move coverage file to root directory
+			srcPath := filepath.Join(module.Path, coverFile)
+			dstPath := coverFile
+			if utils.FileExists(srcPath) {
+				if err := os.Rename(srcPath, dstPath); err != nil {
+					utils.Warn("Failed to move coverage file for %s: %v", module.Relative, err)
+				} else {
+					coverageFiles = append(coverageFiles, coverFile)
+				}
+			}
+			utils.Success("Coverage tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
+	}
+
+	// Handle coverage files
+	handleCoverageFiles(coverageFiles)
+
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("\nCoverage tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("\nAll coverage tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 
 	// Show coverage summary
-	return Test{}.CoverReport()
+	if utils.FileExists("coverage.txt") {
+		return Test{}.CoverReport()
+	}
+	return nil
 }
 
 // CoverRace runs tests with both coverage and race detector
@@ -155,24 +321,86 @@ func (Test) CoverRace() error {
 		return err
 	}
 
-	args := buildTestArgs(config, true, true)
-	args = append(args, "-coverprofile=coverage.txt", "-covermode=atomic") // atomic is required with race
-
-	if len(config.Test.CoverPkg) > 0 {
-		args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
 	}
 
-	args = append(args, "./...")
-
-	start := time.Now()
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("coverage race tests failed: %w", err)
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
 	}
 
-	utils.Success("Coverage race tests passed in %s", utils.FormatDuration(time.Since(start)))
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+	var coverageFiles []string
+
+	// Run tests for each module
+	for i, module := range modules {
+		displayModuleHeader(module, "Running coverage+race tests in")
+
+		moduleStart := time.Now()
+
+		// Create unique coverage file name for each module
+		coverFile := fmt.Sprintf("coverage_%d.txt", i)
+		if module.Relative != "." {
+			// Use sanitized path for coverage file name
+			sanitized := strings.ReplaceAll(module.Relative, "/", "_")
+			coverFile = fmt.Sprintf("coverage_%s.txt", sanitized)
+		}
+
+		args := buildTestArgs(config, true, true)
+		args = append(args, "-coverprofile="+coverFile, "-covermode=atomic") // atomic is required with race
+
+		if len(config.Test.CoverPkg) > 0 {
+			args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
+		}
+
+		args = append(args, "./...")
+
+		// Run tests in module directory
+		err := runCommandInModule(module, "go", args...)
+
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Coverage+race tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			// Move coverage file to root directory
+			srcPath := filepath.Join(module.Path, coverFile)
+			dstPath := coverFile
+			if utils.FileExists(srcPath) {
+				if err := os.Rename(srcPath, dstPath); err != nil {
+					utils.Warn("Failed to move coverage file for %s: %v", module.Relative, err)
+				} else {
+					coverageFiles = append(coverageFiles, coverFile)
+				}
+			}
+			utils.Success("Coverage+race tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
+	}
+
+	// Handle coverage files
+	handleCoverageFiles(coverageFiles)
+
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("\nCoverage+race tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("\nAll coverage+race tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 
 	// Show coverage summary
-	return Test{}.CoverReport()
+	if utils.FileExists("coverage.txt") {
+		return Test{}.CoverReport()
+	}
+	return nil
 }
 
 // CoverReport shows coverage report
@@ -211,6 +439,38 @@ func (Test) CoverHTML() error {
 	}
 
 	return nil
+}
+
+// handleCoverageFiles processes coverage files by merging multiple files or renaming single file
+func handleCoverageFiles(coverageFiles []string) {
+	if len(coverageFiles) > 1 {
+		utils.Info("\nMerging coverage files...")
+		handleMultipleCoverageFiles(coverageFiles)
+	} else if len(coverageFiles) == 1 {
+		handleSingleCoverageFile(coverageFiles[0])
+	}
+}
+
+// handleMultipleCoverageFiles merges multiple coverage files
+func handleMultipleCoverageFiles(coverageFiles []string) {
+	if err := mergeCoverageFiles(coverageFiles, "coverage.txt"); err != nil {
+		utils.Warn("Failed to merge coverage files: %v", err)
+		return
+	}
+
+	// Clean up individual coverage files
+	for _, file := range coverageFiles {
+		if err := os.Remove(file); err != nil {
+			utils.Warn("Failed to remove coverage file %s: %v", file, err)
+		}
+	}
+}
+
+// handleSingleCoverageFile renames single coverage file to standard name
+func handleSingleCoverageFile(coverageFile string) {
+	if err := os.Rename(coverageFile, "coverage.txt"); err != nil {
+		utils.Warn("Failed to rename coverage file: %v", err)
+	}
 }
 
 // Fuzz runs fuzz tests
@@ -693,58 +953,43 @@ func (Test) All() error {
 	return runner.RunCmd("go", "test", "./...")
 }
 
-// getUnitTestPackages returns packages suitable for unit testing,
-// excluding heavy integration packages that take too long
-func getUnitTestPackages() ([]string, error) {
-	// Get all packages
-	output, err := GetRunner().RunCmdOutput("go", "list", "./...")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list packages: %w", err)
+// mergeCoverageFiles merges multiple coverage files into a single file
+func mergeCoverageFiles(files []string, output string) error {
+	if len(files) == 0 {
+		return errNoCoverageFilesToMerge
 	}
 
-	packages := strings.Split(strings.TrimSpace(output), "\n")
-	var unitPackages []string
+	// Read all coverage files
+	var allLines []string
+	modeSet := false
 
-	// Packages to exclude from unit tests (heavy integration packages)
-	excludePatterns := []string{
-		"/pkg/mage", // Main mage package with heavy integration tests
-	}
-
-	for _, pkg := range packages {
-		if pkg == "" {
-			continue
+	for _, file := range files {
+		content, err := os.ReadFile(file) // #nosec G304 -- coverage file path from controlled list
+		if err != nil {
+			return fmt.Errorf("failed to read coverage file %s: %w", file, err)
 		}
 
-		// Skip lines that are not valid package names (e.g., download progress messages)
-		if strings.HasPrefix(pkg, "go: ") || strings.Contains(pkg, ":") {
-			continue
-		}
-
-		// Additional validation: package names should look like paths
-		if !strings.Contains(pkg, "/") || strings.ContainsAny(pkg, " \t\n\r") {
-			continue
-		}
-
-		shouldExclude := false
-		for _, pattern := range excludePatterns {
-			if strings.Contains(pkg, pattern) {
-				// Only exclude the main /pkg/mage package, not subpackages
-				if strings.HasSuffix(pkg, "/pkg/mage") {
-					shouldExclude = true
-					utils.Info("Excluding heavy package from unit tests: %s", pkg)
-					break
+		lines := strings.Split(string(content), "\n")
+		for i, line := range lines {
+			if i == 0 && strings.HasPrefix(line, "mode:") {
+				if !modeSet {
+					modeSet = true
+					allLines = append(allLines, line)
 				}
+				// Skip mode line for subsequent files
+				continue
+			}
+			if line != "" {
+				allLines = append(allLines, line)
 			}
 		}
-
-		if !shouldExclude {
-			unitPackages = append(unitPackages, pkg)
-		}
 	}
 
-	if len(unitPackages) == 0 {
-		return []string{"./..."}, nil // Fallback to all packages if none found
+	// Write merged coverage file
+	mergedContent := strings.Join(allLines, "\n")
+	if err := os.WriteFile(output, []byte(mergedContent), 0o600); err != nil { // #nosec G306 -- coverage output file permissions
+		return fmt.Errorf("failed to write merged coverage file: %w", err)
 	}
 
-	return unitPackages, nil
+	return nil
 }

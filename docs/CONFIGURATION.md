@@ -43,7 +43,7 @@ project:
   repository: "https://github.com/user/my-project.git"
 
 build:
-  go_version: "1.21"
+  go_version: "1.24"
   platform: "linux/amd64"
   tags:
     - prod
@@ -144,7 +144,7 @@ Control how your project is built:
 
 ```yaml
 build:
-  go_version: "1.21"           # Go version to use
+  go_version: "1.24"           # Go version to use
   platform: "linux/amd64"     # Target platform
   tags:                       # Build tags
     - prod
@@ -361,7 +361,7 @@ export MAGE_PROJECT_DESCRIPTION="My project"
 
 ### Build Variables
 ```bash
-export MAGE_BUILD_GO_VERSION="1.21"
+export MAGE_BUILD_GO_VERSION="1.24"
 export MAGE_BUILD_PLATFORM="linux/amd64"
 export MAGE_BUILD_CGO_ENABLED="false"
 export MAGE_BUILD_OUTPUT_DIR="dist"

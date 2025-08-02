@@ -20,6 +20,9 @@
 // - Edge cases and boundary conditions
 // - Deployment step failure simulation
 // - Backup/restore workflow testing
+//go:build integration
+// +build integration
+
 package mage
 
 import (

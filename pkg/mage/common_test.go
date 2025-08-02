@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package mage
 
 import (
@@ -9,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
+	"github.com/mrz1836/mage-x/pkg/utils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -429,7 +433,7 @@ func (ts *CommonTestSuite) TestFormatDuration() {
 
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
-			result := formatDuration(tc.duration)
+			result := utils.FormatDuration(tc.duration)
 			ts.Require().Equal(tc.expected, result)
 		})
 	}

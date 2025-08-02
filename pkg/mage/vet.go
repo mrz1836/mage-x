@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/magefile/mage/mg"
@@ -16,6 +17,11 @@ var (
 	errGoVetFailed        = errors.New("go vet failed")
 	errStrictChecksFailed = errors.New("strict checks failed")
 )
+
+// shadowToolMutex prevents concurrent shadow tool installations
+//
+//nolint:gochecknoglobals // Required for synchronizing shadow tool installation across goroutines
+var shadowToolMutex sync.Mutex
 
 // Vet namespace for go vet tasks
 type Vet mg.Namespace
@@ -195,35 +201,60 @@ func (Vet) Parallel() error {
 func (Vet) Shadow() error {
 	utils.Header("Checking for Shadowed Variables")
 
-	// Check if shadow analyzer is available
+	// Check if shadow tool exists, and install if needed
+	if err := ensureShadowTool(); err != nil {
+		return fmt.Errorf("failed to ensure shadow tool is available: %w", err)
+	}
 
-	// Try to run vet with shadow
-	args := []string{"vet", "-vettool=$(which shadow)"}
+	// Determine shadow command path
+	shadowCmd := "shadow"
+	if gopath, err := GetRunner().RunCmdOutput("go", "env", "GOPATH"); err == nil {
+		shadowPath := strings.TrimSpace(gopath) + "/bin/shadow"
+		if utils.FileExists(shadowPath) {
+			shadowCmd = shadowPath
+		}
+	}
+
+	// Build shadow command args - exclude test files to reduce noise
+	args := []string{"-test=false", "./..."}
 
 	// Add build tags if specified
 	if tags := utils.GetEnv("GO_BUILD_TAGS", ""); tags != "" {
-		args = append(args, "-tags", tags)
+		args = append([]string{"-tags", tags}, args...)
 	}
 
-	args = append(args, "./...")
-
-	// First, try with the shadow tool
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		// If that fails, try installing and using it
-		utils.Info("Installing shadow analyzer...")
-		if err := GetRunner().RunCmd("go", "install", "golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow@latest"); err != nil {
-			return fmt.Errorf("failed to install shadow analyzer: %w", err)
-		}
-
-		// Try again with shadow
-		utils.Info("Running shadow check...")
-		if err := GetRunner().RunCmd("shadow", "./..."); err != nil {
-			return fmt.Errorf("shadow check found issues: %w", err)
-		}
+	// Run shadow directly
+	utils.Info("Running shadow check...")
+	if err := GetRunner().RunCmd(shadowCmd, args...); err != nil {
+		return fmt.Errorf("shadow check found issues: %w", err)
 	}
 
 	utils.Success("No shadowed variables found")
 	return nil
+}
+
+// ensureShadowTool ensures the shadow tool is installed and available
+func ensureShadowTool() error {
+	// Use mutex to prevent concurrent installations
+	shadowToolMutex.Lock()
+	defer shadowToolMutex.Unlock()
+
+	// Try using go env GOPATH to check if shadow is in GOPATH/bin first
+	if gopath, err := GetRunner().RunCmdOutput("go", "env", "GOPATH"); err == nil {
+		shadowPath := strings.TrimSpace(gopath) + "/bin/shadow"
+		if utils.FileExists(shadowPath) {
+			return nil // Tool is available in GOPATH/bin
+		}
+	}
+
+	// Check if shadow tool is already available by trying to run it
+	if err := GetRunner().RunCmd("which", "shadow"); err == nil {
+		return nil // Tool is already available
+	}
+
+	// Install shadow tool
+	utils.Info("Installing shadow analyzer...")
+	return GetRunner().RunCmd("go", "install", "golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow@latest")
 }
 
 // Strict runs go vet with additional strict checks

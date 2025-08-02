@@ -210,7 +210,7 @@ func (Integrations) Webhook() error {
 		return updateWebhook()
 	case "delete":
 		return deleteWebhook()
-	case "test":
+	case CmdGoTest:
 		return testWebhook()
 	default:
 		return fmt.Errorf("%w: %s", errUnknownWebhookOperation, operation)

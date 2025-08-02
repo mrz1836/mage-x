@@ -30,6 +30,8 @@ type (
 )
 
 // Aliases provides short command names for common operations
+//
+//nolint:gochecknoglobals // Required by mage for command aliases
 var Aliases = map[string]interface{}{
 	"build":   BuildDefault,
 	"docs":    DocsDefault,
@@ -40,6 +42,8 @@ var Aliases = map[string]interface{}{
 }
 
 // Default target
+//
+//nolint:gochecknoglobals // Required by mage for default target
 var Default = BuildDefault
 
 // BuildDefault is the default build target
@@ -449,7 +453,7 @@ func AuditShow() error {
 }
 
 // Help displays all available commands with beautiful MAGE-X formatting (clean output)
-func Help() error {
+func Help() {
 	utils.Header("🎯 MAGE-X Commands")
 
 	// Command categories with emoji icons and descriptions
@@ -621,12 +625,10 @@ func Help() error {
 	fmt.Printf("  • Interactive mode: mage interactive\n")
 	fmt.Printf("  • Recipe system: mage recipes:list\n")
 	fmt.Printf("  • Help system: mage help\n")
-
-	return nil
 }
 
 // List displays all available commands with beautiful MAGE-X formatting
-func List() error {
+func List() {
 	utils.Header("🎯 MAGE-X Commands")
 
 	// Command categories with emoji icons and descriptions
@@ -798,8 +800,6 @@ func List() error {
 	utils.Info("  • Interactive mode: mage interactive")
 	utils.Info("  • Recipe system: mage recipes:list")
 	utils.Info("  • Help system: mage help")
-
-	return nil
 }
 
 // CommandInfo represents command information for the List function

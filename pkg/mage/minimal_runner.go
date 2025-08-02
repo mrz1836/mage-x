@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mrz1836/mage-x/pkg/security"
 )
@@ -30,14 +31,54 @@ func NewSecureCommandRunner() CommandRunner {
 // RunCmd executes a command and returns an error if it fails
 func (r *SecureCommandRunner) RunCmd(name string, args ...string) error {
 	ctx := context.Background()
+	// Use adaptive timeout based on command type
+	timeout := r.getCommandTimeout(name, args)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	return r.executor.Execute(ctx, name, args...)
 }
 
 // RunCmdOutput executes a command and returns its output
 func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string, error) {
 	ctx := context.Background()
+	// Use adaptive timeout based on command type
+	timeout := r.getCommandTimeout(name, args)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	output, err := r.executor.ExecuteOutput(ctx, name, args...)
 	return strings.TrimSpace(output), err
+}
+
+// getCommandTimeout returns appropriate timeout based on command type
+func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time.Duration {
+	// For go commands, use longer timeouts
+	if name == "go" && len(args) > 0 {
+		switch args[0] {
+		case "test":
+			// Allow 10 minutes for go test commands
+			return 10 * time.Minute
+		case "install", "get", "mod":
+			// Allow 5 minutes for package operations
+			return 5 * time.Minute
+		case "build", "run":
+			// Allow 3 minutes for build operations
+			return 3 * time.Minute
+		default:
+			// Default go command timeout
+			return 2 * time.Minute
+		}
+	}
+
+	// For other tools that might take longer
+	switch name {
+	case "golangci-lint":
+		return 5 * time.Minute
+	case "staticcheck", "gosec", "govulncheck":
+		return 3 * time.Minute
+	default:
+		// Default timeout for other commands
+		return 30 * time.Second
+	}
 }
 
 // RunnerProvider manages the default command runner instance

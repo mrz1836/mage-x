@@ -268,9 +268,9 @@ func (namespace Namespace) Task() error {
 
 ## Complete Command Reference
 
-### Exposed Commands (58 total)
+### Exposed Commands (59 total)
 
-The main `magefile.go` exposes 58 commands that can be called directly via `mage`:
+The main `magefile.go` exposes 59 commands that can be called directly via `mage`:
 
 #### Default & Aliases
 - `mage` - Default command (runs buildDefault)
@@ -291,7 +291,7 @@ The main `magefile.go` exposes 58 commands that can be called directly via `mage
 - `buildDocker` - Build Docker containers
 - `buildGenerate` - Generate code before building
 
-#### Test Commands (11)
+#### Test Commands (12)
 - `testDefault` - Run complete test suite with linting
 - `testFull` - Run full test suite with linting
 - `testUnit` - Run unit tests only
@@ -369,7 +369,7 @@ The main `magefile.go` exposes 58 commands that can be called directly via `mage
 
 ### Additional Namespace Methods
 
-While the main magefile exposes 58 commands, the pkg/mage package contains 30+ namespaces with hundreds of additional methods. These can be accessed by creating custom magefiles. Some examples:
+While the main magefile exposes 59 commands, the pkg/mage package contains 30+ namespaces with hundreds of additional methods. These can be accessed by creating custom magefiles. Some examples:
 
 - **Audit**: Stats(), Export(), Cleanup(), Enable(), Disable(), Report()
 - **Build**: Linux(), Darwin(), Windows(), Platform(), PreBuild(), Install()

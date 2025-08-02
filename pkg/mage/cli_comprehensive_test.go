@@ -18,6 +18,9 @@
 // - Error condition verification
 // - Success path validation with various configurations
 // - Edge cases and boundary conditions
+//go:build integration
+// +build integration
+
 package mage
 
 import (
