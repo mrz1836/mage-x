@@ -444,7 +444,7 @@ mage gitPush                                  # Push changes to remote (current 
 ```bash
 # Version Control
 mage versionShow        # Display current version information
-mage versionBump        # Bump the version
+mage versionBump        # Bump the version (BUMP=minor/major PUSH=true mage versionBump)
 mage versionCheck       # Check version information
 ```
 

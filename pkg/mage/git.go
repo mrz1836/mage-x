@@ -16,7 +16,7 @@ import (
 var (
 	errUncommittedChanges          = errors.New("uncommitted changes in working directory")
 	errUncommittedChangesFound     = errors.New("uncommitted changes found")
-	errGitVersionRequired          = errors.New("version variable is required. Use: version=X.Y.Z mage git:tag")
+	errGitVersionRequired          = errors.New("version variable is required. Use: version=\"X.Y.Z\" mage gitTag")
 	errGitTagRemoveVersionRequired = errors.New("version variable is required. Use: version=X.Y.Z mage git:tagremove")
 	errGitTagUpdateVersionRequired = errors.New("version variable is required. Use: version=X.Y.Z mage git:tagupdate")
 	errGitCommitMessageRequired    = errors.New("message parameter or environment variable is required")
