@@ -111,6 +111,21 @@ func (mr *MockFileOperatorMockRecorder) MkdirAll(path, perm any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MkdirAll", reflect.TypeOf((*MockFileOperator)(nil).MkdirAll), path, perm)
 }
 
+// ReadDir mocks base method.
+func (m *MockFileOperator) ReadDir(path string) ([]fs.DirEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadDir", path)
+	ret0, _ := ret[0].([]fs.DirEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadDir indicates an expected call of ReadDir.
+func (mr *MockFileOperatorMockRecorder) ReadDir(path any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDir", reflect.TypeOf((*MockFileOperator)(nil).ReadDir), path)
+}
+
 // ReadFile mocks base method.
 func (m *MockFileOperator) ReadFile(path string) ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -466,6 +481,21 @@ func (m *MockSafeFileOperator) MkdirAll(path string, perm os.FileMode) error {
 func (mr *MockSafeFileOperatorMockRecorder) MkdirAll(path, perm any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MkdirAll", reflect.TypeOf((*MockSafeFileOperator)(nil).MkdirAll), path, perm)
+}
+
+// ReadDir mocks base method.
+func (m *MockSafeFileOperator) ReadDir(path string) ([]fs.DirEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadDir", path)
+	ret0, _ := ret[0].([]fs.DirEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadDir indicates an expected call of ReadDir.
+func (mr *MockSafeFileOperatorMockRecorder) ReadDir(path any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDir", reflect.TypeOf((*MockSafeFileOperator)(nil).ReadDir), path)
 }
 
 // ReadFile mocks base method.

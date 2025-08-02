@@ -41,7 +41,6 @@ func (EnterpriseConfigNamespace) Init() error {
 	utils.Header("🏢 Enterprise Configuration Initialization")
 
 	// Create enterprise configuration directory
-	enterpriseDir := ".mage/enterprise"
 	if err := os.MkdirAll(enterpriseDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create enterprise directory: %w", err)
 	}

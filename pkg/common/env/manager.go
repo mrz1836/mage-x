@@ -49,13 +49,21 @@ func (m *DefaultEnvManager) PushScope() Scope {
 	return scope
 }
 
-// PopScope removes the top scope
+// PopScope removes the top scope and restores environment variables
 func (m *DefaultEnvManager) PopScope() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if len(m.scopes) == 0 {
 		return errNoScopesToPop
+	}
+
+	// Get the top scope and restore its changes
+	scope := m.scopes[len(m.scopes)-1]
+	if defaultScope, ok := scope.(*DefaultEnvScope); ok {
+		if err := defaultScope.Restore(); err != nil {
+			return fmt.Errorf("failed to restore scope: %w", err)
+		}
 	}
 
 	// Remove the last scope
@@ -240,6 +248,11 @@ func (s *DefaultEnvScope) Rollback() error {
 
 	s.changes = make(map[string]Change)
 	return nil
+}
+
+// Restore reverts all changes (alias for Rollback)
+func (s *DefaultEnvScope) Restore() error {
+	return s.Rollback()
 }
 
 // Changes returns all changes made in this scope

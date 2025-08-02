@@ -169,22 +169,19 @@ func (e *DefaultEnvironment) GetDuration(key string, defaultValue time.Duration)
 
 // GetStringSlice retrieves a string slice environment variable (comma-separated)
 func (e *DefaultEnvironment) GetStringSlice(key string, defaultValue []string) []string {
-	value := e.Get(key)
-	if value == "" {
+	value, exists := os.LookupEnv(key)
+	if !exists {
 		return defaultValue
+	}
+	if value == "" {
+		return []string{""}
 	}
 
 	parts := strings.Split(value, ",")
 	result := make([]string, 0, len(parts))
 
 	for _, part := range parts {
-		if trimmed := strings.TrimSpace(part); trimmed != "" {
-			result = append(result, trimmed)
-		}
-	}
-
-	if len(result) == 0 {
-		return defaultValue
+		result = append(result, strings.TrimSpace(part))
 	}
 
 	return result

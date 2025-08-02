@@ -17,9 +17,11 @@ import (
 )
 
 const (
-	approvalTrue  = "true"
-	statusFailed  = "failed"
-	statusUnknown = "unknown"
+	approvalTrue         = "true"
+	statusFailed         = "failed"
+	statusUnknown        = "unknown"
+	enterpriseDir        = ".mage/enterprise"
+	deploymentRecordsDir = ".mage/enterprise/deployments"
 )
 
 // Static errors for err113 compliance
@@ -44,7 +46,6 @@ func (Enterprise) Init() error {
 	fileOps := fileops.New()
 
 	// Create enterprise directory structure
-	enterpriseDir := ".mage/enterprise"
 	if err := fileOps.File.MkdirAll(enterpriseDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create enterprise directory: %w", err)
 	}
@@ -859,7 +860,7 @@ func runPreDeploymentChecks(_ *EnterpriseConfig, _ *EnvironmentConfig) error {
 
 func saveDeploymentRecord(deployment *DeploymentRecord) error {
 	fileOps := fileops.New()
-	recordsDir := ".mage/enterprise/deployments"
+	recordsDir := deploymentRecordsDir
 	if err := fileOps.File.MkdirAll(recordsDir, 0o755); err != nil {
 		return err
 	}
@@ -890,7 +891,7 @@ func savePromotionRecord(promotion *PromotionRecord) error {
 }
 
 func getDeploymentHistory(environment string, limit int) ([]DeploymentRecord, error) {
-	recordsDir := ".mage/enterprise/deployments"
+	recordsDir := deploymentRecordsDir
 
 	entries, err := os.ReadDir(recordsDir)
 	if err != nil {
