@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
@@ -114,12 +113,6 @@ type ReleaseConfig struct {
 // Deprecated: These variables are maintained for backward compatibility only.
 // New code should use ConfigProvider interface instead.
 var (
-	// configOnce ensures configuration is loaded only once
-	configOnce sync.Once //nolint:gochecknoglobals,unused // Deprecated: maintained for backward compatibility
-	// loadedConfig holds the loaded configuration
-	loadedConfig *Config //nolint:gochecknoglobals,unused // Deprecated: maintained for backward compatibility
-	// errLoadConfig stores any error encountered during config loading
-	errLoadConfig error //nolint:unused // Deprecated: maintained for backward compatibility
 	// cfg is a backward compatibility variable for tests
 	cfg *Config //nolint:gochecknoglobals // Deprecated: maintained for backward compatibility
 )
@@ -153,9 +146,6 @@ func TestResetConfig() {
 	GetConfigProvider().ResetConfig()
 
 	// Reset deprecated variables for backward compatibility
-	configOnce = sync.Once{}
-	loadedConfig = nil
-	errLoadConfig = nil
 	cfg = nil
 }
 
