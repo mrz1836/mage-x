@@ -59,7 +59,7 @@ require (
 import (
 	"fmt"
 	"os"
-	
+
 	"%s/pkg/%s"
 )
 
@@ -214,7 +214,7 @@ package main
 import (
 	"fmt"
 	"os"
-	
+
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 )
@@ -258,7 +258,7 @@ func All() {
   name: myapp
   version: 1.0.0
   description: A sample application
-  
+
 build:
   output: bin/
   binary: myapp
@@ -268,13 +268,13 @@ build:
   ldflags:
     - -s
     - -w
-    
+
 test:
   coverage: true
   coverage_file: coverage.out
   coverage_html: coverage.html
   timeout: 5m
-  
+
 lint:
   tools:
     - name: golangci-lint
@@ -283,12 +283,12 @@ lint:
     - name: go-vet
       command: go
       args: [vet, ./...]
-      
+
 docker:
   registry: docker.io/example
   image: myapp
   dockerfile: Dockerfile
-  
+
 release:
   changelog: true
   artifacts:
@@ -405,20 +405,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.24'
-    
+
     - name: Install Mage
       run: go install github.com/magefile/mage@latest
-    
+
     - name: Run tests
       run: mage test
-    
+
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         file: ./coverage.out
 
@@ -426,15 +426,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.24'
-    
+
     - name: Install Mage
       run: go install github.com/magefile/mage@latest
-    
+
     - name: Run linting
       run: mage lint
 
@@ -443,18 +443,18 @@ jobs:
     needs: [test, lint]
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.24'
-    
+
     - name: Install Mage
       run: go install github.com/magefile/mage@latest
-    
+
     - name: Build
       run: mage build
-    
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -711,7 +711,7 @@ from .. import main
 class TestMain(unittest.TestCase):
     def test_hello(self):
         self.assertEqual(main.hello(), "Hello, World!")
-    
+
     def test_hello_with_name(self):
         self.assertEqual(main.hello("Alice"), "Hello, Alice!")
 

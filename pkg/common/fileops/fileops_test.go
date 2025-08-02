@@ -1530,21 +1530,27 @@ func TestGlobalConvenienceFunctions(t *testing.T) {
 		var jsonResult TestConfig
 		foundPath, err := LoadConfig([]string{jsonPath}, &jsonResult)
 		require.NoError(t, err, "LoadConfig JSON should succeed")
-		assert.JSONEq(t, jsonPath, foundPath, "Should find JSON config")
+		if foundPath != jsonPath {
+			t.Errorf("Expected path %s, got %s", jsonPath, foundPath)
+		}
 		assert.Equal(t, testConfig, jsonResult, "JSON config should match")
 
 		// Test loading YAML config
 		var yamlResult TestConfig
 		foundPath, err = LoadConfig([]string{yamlPath}, &yamlResult)
 		require.NoError(t, err, "LoadConfig YAML should succeed")
-		assert.YAMLEq(t, yamlPath, foundPath, "Should find YAML config")
+		if foundPath != yamlPath {
+			t.Errorf("Expected path %s, got %s", yamlPath, foundPath)
+		}
 		assert.Equal(t, testConfig, yamlResult, "YAML config should match")
 
 		// Test loading YML config
 		var ymlResult TestConfig
 		foundPath, err = LoadConfig([]string{ymlPath}, &ymlResult)
 		require.NoError(t, err, "LoadConfig YML should succeed")
-		assert.YAMLEq(t, ymlPath, foundPath, "Should find YML config")
+		if foundPath != ymlPath {
+			t.Errorf("Expected path %s, got %s", ymlPath, foundPath)
+		}
 		assert.Equal(t, testConfig, ymlResult, "YML config should match")
 
 		// Test loading config without extension (should try YAML first)
@@ -1559,7 +1565,9 @@ func TestGlobalConvenienceFunctions(t *testing.T) {
 		var fallbackResult TestConfig
 		foundPath, err = LoadConfig([]string{nonExistentPath, jsonPath}, &fallbackResult)
 		require.NoError(t, err, "LoadConfig fallback should succeed")
-		assert.JSONEq(t, jsonPath, foundPath, "Should find fallback config")
+		if foundPath != jsonPath {
+			t.Errorf("Expected fallback path %s, got %s", jsonPath, foundPath)
+		}
 		assert.Equal(t, testConfig, fallbackResult, "Fallback config should match")
 
 		// Test error case - no valid config files
@@ -1601,7 +1609,9 @@ func TestGlobalConvenienceFunctions(t *testing.T) {
 		var result TestConfig
 		foundPath, err := LoadConfig([]string{jsonDataPath}, &result)
 		require.NoError(t, err, "LoadConfig should succeed with JSON fallback")
-		assert.JSONEq(t, jsonDataPath, foundPath, "Should find JSON data file")
+		if foundPath != jsonDataPath {
+			t.Errorf("Expected JSON data path %s, got %s", jsonDataPath, foundPath)
+		}
 		assert.Equal(t, testConfig, result, "JSON data should match")
 	})
 }

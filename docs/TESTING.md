@@ -384,7 +384,7 @@ jobs:
         run: mage testCI
       
       - name: Upload Coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           file: ./coverage.txt
 ```
