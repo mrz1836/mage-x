@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -32,6 +33,9 @@ func (Lint) Default() error {
 
 	linter := Lint{}
 	totalStart := time.Now()
+
+	// Display linter configuration info
+	displayLinterConfig()
 
 	// Run golangci-lint
 	utils.Info("Running golangci-lint...")
@@ -81,6 +85,9 @@ func (Lint) Fix() error {
 
 	linter := Lint{}
 	totalStart := time.Now()
+
+	// Display linter configuration info
+	displayLinterConfig()
 
 	// Run golangci-lint with auto-fix
 	utils.Info("Running golangci-lint --fix...")
@@ -324,7 +331,24 @@ func (Lint) Version() error {
 		return err
 	}
 
-	fmt.Printf("Configured golangci-lint version: %s\n", config.Lint.GolangciVersion)
+	// Display configuration information
+	configFile, enabledCount, disabledCount := getLinterConfigInfo()
+
+	fmt.Printf("Configuration:\n")
+	if configFile == "default (no config file found)" {
+		fmt.Printf("  Config file: %s\n", configFile)
+	} else {
+		absPath, err := filepath.Abs(configFile)
+		if err != nil {
+			absPath = configFile
+		}
+		fmt.Printf("  Config file: %s\n", absPath)
+		if enabledCount > 0 || disabledCount > 0 {
+			fmt.Printf("  Linters: %d enabled, %d disabled\n", enabledCount, disabledCount)
+		}
+	}
+
+	fmt.Printf("\nConfigured version: %s\n", config.Lint.GolangciVersion)
 
 	if utils.CommandExists("golangci-lint") {
 		utils.Info("\nInstalled version:")
@@ -412,6 +436,9 @@ func ensureGolangciLint(cfg *Config) error {
 func (Lint) All() error {
 	utils.Header("Running All Linters")
 
+	// Display linter configuration info at the start
+	displayLinterConfig()
+
 	linter := Lint{}
 
 	// Run each linter in sequence
@@ -439,6 +466,9 @@ func (Lint) Go() error {
 	if err != nil {
 		return err
 	}
+
+	// Display linter configuration info
+	displayLinterConfig()
 
 	// Ensure golangci-lint is installed
 	if err := ensureGolangciLint(config); err != nil {
@@ -698,4 +728,65 @@ func (Lint) Fast() error {
 
 	utils.Success("Fast linting passed")
 	return nil
+}
+
+// Helper functions for config information
+
+// getLinterConfigInfo returns information about the golangci-lint configuration
+func getLinterConfigInfo() (configFile string, enabledCount int, disabledCount int) {
+	// Check for config files in order of precedence
+	configFiles := []string{".golangci.json", ".golangci.yml", ".golangci.yaml", "golangci.yml", "golangci.yaml"}
+
+	for _, file := range configFiles {
+		if utils.FileExists(file) {
+			configFile = file
+			break
+		}
+	}
+
+	if configFile == "" {
+		return "default (no config file found)", 0, 0
+	}
+
+	// For JSON config, parse and count linters
+	if strings.HasSuffix(configFile, ".json") {
+		// Use filepath.Clean to sanitize the config file path
+		cleanPath := filepath.Clean(configFile)
+		data, err := os.ReadFile(cleanPath)
+		if err != nil {
+			return configFile, 0, 0
+		}
+
+		var config struct {
+			Linters struct {
+				Enable  []string `json:"enable"`
+				Disable []string `json:"disable"`
+			} `json:"linters"`
+		}
+
+		if err := json.Unmarshal(data, &config); err == nil {
+			enabledCount = len(config.Linters.Enable)
+			disabledCount = len(config.Linters.Disable)
+		}
+	}
+
+	return configFile, enabledCount, disabledCount
+}
+
+// displayLinterConfig displays linter configuration information
+func displayLinterConfig() {
+	configFile, enabledCount, disabledCount := getLinterConfigInfo()
+
+	if configFile == "default (no config file found)" {
+		utils.Info("Using golangci-lint defaults (no config file found)")
+	} else {
+		absPath, err := filepath.Abs(configFile)
+		if err != nil {
+			absPath = configFile
+		}
+		utils.Info("Config: %s", absPath)
+		if enabledCount > 0 || disabledCount > 0 {
+			utils.Info("Linters: %d enabled, %d disabled", enabledCount, disabledCount)
+		}
+	}
 }

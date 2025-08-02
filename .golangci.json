@@ -218,86 +218,19 @@
 				"range-loops": true,
 				"for-loops": false
 			},
-			"revive": {
-				"ignore-generated-header": true,
-				"severity": "warning",
-				"rules": [
-					{
-						"name": "blank-imports"
-					},
-					{
-						"name": "context-as-argument"
-					},
-					{
-						"name": "context-keys-type"
-					},
-					{
-						"name": "dot-imports"
-					},
-					{
-						"name": "error-return"
-					},
-					{
-						"name": "error-strings"
-					},
-					{
-						"name": "error-naming"
-					},
-					{
-						"name": "exported"
-					},
-					{
-						"name": "if-return"
-					},
-					{
-						"name": "increment-decrement"
-					},
-					{
-						"name": "var-declaration"
-					},
-					{
-						"name": "package-comments"
-					},
-					{
-						"name": "range"
-					},
-					{
-						"name": "receiver-naming"
-					},
-					{
-						"name": "time-naming"
-					},
-					{
-						"name": "unexported-return"
-					},
-					{
-						"name": "indent-error-flow"
-					},
-					{
-						"name": "errorf"
-					},
-					{
-						"name": "empty-block"
-					},
-					{
-						"name": "superfluous-else"
-					},
-					{
-						"name": "unused-parameter"
-					},
-					{
-						"name": "unreachable-code"
-					},
-					{
-						"name": "redefines-builtin-id"
-					}
-				]
-			},
 			"unparam": {
 				"check-exported": false
 			},
 			"unused": {
 				"check-exported": false
+			},
+			"revive": {
+				"rules": [
+					{
+						"name": "var-naming",
+						"disabled": true
+					}
+				]
 			}
 		}
 	},
@@ -357,7 +290,6 @@
 				"path": "_test\\.go",
 				"linters": [
 					"gocyclo",
-					"errcheck",
 					"dupl",
 					"gosec",
 					"funlen",
@@ -383,20 +315,6 @@
 					"lll"
 				],
 				"source": "https://"
-			},
-			{
-				"path": "magefile\\.go",
-				"linters": [
-					"gochecknoinits"
-				]
-			},
-			{
-				"path": "examples/",
-				"linters": [
-					"errcheck",
-					"gosec",
-					"goconst"
-				]
 			}
 		],
 		"exclude-use-default": false,

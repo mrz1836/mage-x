@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -15,6 +16,15 @@ import (
 	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
+
+// ErrDatabaseURLRequired is returned when DATABASE_URL environment variable is not set
+var ErrDatabaseURLRequired = errors.New("DATABASE_URL environment variable is required")
+
+// ErrEnvironmentRequired is returned when environment parameter is missing
+var ErrEnvironmentRequired = errors.New("environment is required: dev, staging, or prod")
+
+// ErrInvalidEnvironment is returned when environment parameter is invalid
+var ErrInvalidEnvironment = errors.New("invalid environment: must be dev, staging, or prod")
 
 // Re-export types
 type (
@@ -37,7 +47,7 @@ type Custom mg.Namespace
 // Deploy deploys the application to the specified environment
 func (Custom) Deploy(env string) error {
 	if env == "" {
-		return fmt.Errorf("environment is required: dev, staging, or prod")
+		return ErrEnvironmentRequired
 	}
 
 	// Validate environment
@@ -51,7 +61,7 @@ func (Custom) Deploy(env string) error {
 	}
 
 	if !valid {
-		return fmt.Errorf("invalid environment: %s (must be dev, staging, or prod)", env)
+		return fmt.Errorf("%w: %s", ErrInvalidEnvironment, env)
 	}
 
 	// Ensure we have a build
@@ -170,7 +180,7 @@ func (DB) Migrate() error {
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		return fmt.Errorf("DATABASE_URL environment variable is required")
+		return ErrDatabaseURLRequired
 	}
 
 	// Example using golang-migrate
@@ -186,7 +196,7 @@ func (DB) Rollback() error {
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		return fmt.Errorf("DATABASE_URL environment variable is required")
+		return ErrDatabaseURLRequired
 	}
 
 	return sh.Run("migrate",
@@ -264,7 +274,7 @@ func (Docker) Run() error {
 
 // Push pushes the Docker image to registry
 func (Docker) Push() error {
-	fmt.Println("📤 Pushing Docker image...")
+	utils.Info("📤 Pushing Docker image...")
 
 	registry := os.Getenv("DOCKER_REGISTRY")
 	if registry == "" {
@@ -290,11 +300,11 @@ func (Docker) Push() error {
 
 // Dev runs the application in development mode with hot reload
 func Dev() error {
-	fmt.Println("🔧 Starting development server with hot reload...")
+	utils.Info("🔧 Starting development server with hot reload...")
 
 	// Install air if not present
 	if err := sh.Run("which", "air"); err != nil {
-		fmt.Println("Installing air for hot reload...")
+		utils.Info("Installing air for hot reload...")
 		if err := sh.Run("go", "install", "github.com/cosmtrek/air@latest"); err != nil {
 			return err
 		}
@@ -309,7 +319,7 @@ type Generate mg.Namespace
 
 // Mocks generates mock files
 func (Generate) Mocks() error {
-	fmt.Println("🎭 Generating mocks...")
+	utils.Info("🎭 Generating mocks...")
 
 	// Find all interfaces to mock
 	interfaces := []struct {
@@ -331,13 +341,13 @@ func (Generate) Mocks() error {
 		}
 	}
 
-	fmt.Println("✅ Mocks generated!")
+	utils.Info("✅ Mocks generated!")
 	return nil
 }
 
 // Swagger generates Swagger documentation
 func (Generate) Swagger() error {
-	fmt.Println("📚 Generating Swagger documentation...")
+	utils.Info("📚 Generating Swagger documentation...")
 
 	return sh.Run("swag", "init",
 		"-g", "./cmd/api/main.go",
@@ -348,7 +358,7 @@ func (Generate) Swagger() error {
 
 // Proto generates code from proto files
 func (Generate) Proto() error {
-	fmt.Println("📡 Generating protobuf code...")
+	utils.Info("📡 Generating protobuf code...")
 
 	return sh.Run("buf", "generate")
 }
@@ -365,7 +375,7 @@ func (Generate) All() error {
 
 // Setup installs all dependencies and prepares the development environment
 func Setup() error {
-	fmt.Println("🔧 Setting up development environment...")
+	utils.Info("🔧 Setting up development environment...")
 
 	// Install Go dependencies
 	var d Deps
@@ -407,17 +417,17 @@ func Setup() error {
 	// Copy example env file if needed
 	if _, err := os.Stat(".env"); os.IsNotExist(err) {
 		if err := sh.Run("cp", ".env.example", ".env"); err != nil {
-			fmt.Println("⚠️  No .env.example file found")
+			utils.Info("⚠️  No .env.example file found")
 		}
 	}
 
-	fmt.Println("✅ Setup completed! Run 'mage dev' to start development server")
+	utils.Info("✅ Setup completed! Run 'mage dev' to start development server")
 	return nil
 }
 
 // CI runs the complete CI pipeline
 func CI() error {
-	fmt.Println("🏗️  Running CI pipeline...")
+	utils.Info("🏗️  Running CI pipeline...")
 
 	start := time.Now()
 
@@ -446,7 +456,7 @@ func CI() error {
 
 // Clean removes all generated files and artifacts
 func Clean() error {
-	fmt.Println("🧹 Cleaning up...")
+	utils.Info("🧹 Cleaning up...")
 
 	// Use MAGE-X clean
 	var b Build

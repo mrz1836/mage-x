@@ -15,6 +15,7 @@ import (
 // LoggingBuild wraps any BuildNamespace with comprehensive logging
 type LoggingBuild struct {
 	mage.BuildNamespace
+
 	logger *log.Logger
 }
 
@@ -111,6 +112,7 @@ func (l *LoggingBuild) withLogging(operation string, fn func() error) error {
 // LoggingTest wraps any TestNamespace with logging
 type LoggingTest struct {
 	mage.TestNamespace
+
 	logger *log.Logger
 }
 

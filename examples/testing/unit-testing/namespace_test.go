@@ -111,7 +111,8 @@ func (m *MockBuild) PreBuild() error {
 
 // MockTest is a mock implementation of TestNamespace for testing
 type MockTest struct {
-	mage.Test         // Embed the real Test implementation
+	mage.Test // Embed the real Test implementation
+
 	defaultCalled     bool
 	unitCalled        bool
 	integrationCalled bool

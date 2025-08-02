@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -11,6 +12,13 @@ import (
 	"github.com/mrz1836/mage-x/pkg/common/config"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
+)
+
+var (
+	// ErrInvalidTemplate is returned when an invalid template is specified
+	ErrInvalidTemplate = errors.New("invalid template")
+	// ErrDirectoryNotEmpty is returned when trying to initialize in a non-empty directory without force
+	ErrDirectoryNotEmpty = errors.New("directory is not empty")
 )
 
 const (
@@ -129,7 +137,7 @@ func validateOptions(opts *InitOptions) error {
 	// Validate template
 	templates := getAvailableTemplates()
 	if _, exists := templates[opts.Template]; !exists {
-		return fmt.Errorf("invalid template '%s'. Available: %s", opts.Template, strings.Join(getTemplateNames(), ", "))
+		return fmt.Errorf("%w '%s'. Available: %s", ErrInvalidTemplate, opts.Template, strings.Join(getTemplateNames(), ", "))
 	}
 
 	return nil
@@ -245,7 +253,7 @@ func ensureProjectDirectory(projectPath string, force bool) error {
 	}
 
 	if len(entries) > 0 && !force {
-		return fmt.Errorf("directory '%s' is not empty. Use --force to initialize anyway", projectPath)
+		return fmt.Errorf("%w '%s'. Use --force to initialize anyway", ErrDirectoryNotEmpty, projectPath)
 	}
 
 	return nil

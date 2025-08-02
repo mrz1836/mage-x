@@ -78,7 +78,8 @@ func InstallStdlib() error {
 
 	// Install standard library for all configured platforms
 	for _, platform := range cfg.Build.Platforms {
-		p, err := utils.ParsePlatform(platform)
+		var p utils.Platform
+		p, err = utils.ParsePlatform(platform)
 		if err != nil {
 			return err
 		}
@@ -93,8 +94,12 @@ func InstallStdlib() error {
 			return fmt.Errorf("failed to set GOARCH: %w", err)
 		}
 		defer func() {
-			_ = os.Unsetenv("GOOS")   //nolint:errcheck // Cleanup, error not critical
-			_ = os.Unsetenv("GOARCH") //nolint:errcheck // Cleanup, error not critical
+			if unsetErr := os.Unsetenv("GOOS"); unsetErr != nil {
+				utils.Error("Failed to unset GOOS: %v", unsetErr)
+			}
+			if unsetErr := os.Unsetenv("GOARCH"); unsetErr != nil {
+				utils.Error("Failed to unset GOARCH: %v", unsetErr)
+			}
 		}()
 
 		// Install the standard library

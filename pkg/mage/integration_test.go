@@ -62,7 +62,7 @@ func main() {
 	}
 
 	// Override global config for test
-	cfg = config
+	TestSetConfig(config)
 
 	// Test build
 	build := Build{}
