@@ -379,7 +379,7 @@ func LogCommandExecution(command string, args []string, startTime time.Time, dur
 	auditLogger := utils.GetAuditLogger()
 
 	// Get current user
-	currentUser := "unknown"
+	currentUser := statusUnknown
 	if usr, err := user.Current(); err == nil {
 		currentUser = usr.Username
 	}

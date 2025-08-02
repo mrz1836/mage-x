@@ -342,7 +342,7 @@ func getVersionInfo() string {
 		return tag
 	}
 
-	return "dev"
+	return versionDev
 }
 
 // getCommitInfo returns the current commit
