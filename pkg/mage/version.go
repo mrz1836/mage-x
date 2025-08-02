@@ -63,7 +63,7 @@ type BuildInfo struct {
 // Package-level variables for build info configuration
 var (
 	// Build-time variables that can be set at build time
-	version   = "dev"     //nolint:gochecknoglobals // Build-time variables
+	version   = "dev"
 	commit    = "unknown" //nolint:gochecknoglobals // Build-time variables
 	buildDate = "unknown" //nolint:gochecknoglobals // Build-time variables
 
@@ -333,7 +333,7 @@ func getBuildInfo() BuildInfo {
 // getVersionInfo returns the current version
 func getVersionInfo() string {
 	buildInfo := getBuildInfo()
-	if buildInfo.Version != "dev" {
+	if buildInfo.Version != versionDev {
 		return buildInfo.Version
 	}
 
@@ -348,7 +348,7 @@ func getVersionInfo() string {
 // getCommitInfo returns the current commit
 func getCommitInfo() string {
 	buildInfo := getBuildInfo()
-	if buildInfo.Commit != "unknown" {
+	if buildInfo.Commit != statusUnknown {
 		return buildInfo.Commit
 	}
 
@@ -357,13 +357,13 @@ func getCommitInfo() string {
 		return strings.TrimSpace(sha)
 	}
 
-	return "unknown"
+	return statusUnknown
 }
 
 // getBuildDate returns the build date
 func getBuildDate() string {
 	buildInfo := getBuildInfo()
-	if buildInfo.BuildDate != "unknown" {
+	if buildInfo.BuildDate != statusUnknown {
 		return buildInfo.BuildDate
 	}
 

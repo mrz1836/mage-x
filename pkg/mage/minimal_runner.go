@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/mrz1836/mage-x/pkg/security"
 )
@@ -39,12 +40,21 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 	return strings.TrimSpace(output), err
 }
 
-// Global runner instance - now using secure executor
-var defaultRunner = NewSecureCommandRunner() //nolint:gochecknoglobals // Package-level default
+// RunnerProvider manages the default command runner instance
+type RunnerProvider struct {
+	runner CommandRunner
+	once   sync.Once
+}
 
-// GetRunner returns the secure command runner
+// defaultProvider holds the package-level runner provider
+var defaultProvider = &RunnerProvider{} //nolint:gochecknoglobals // Package-level runner provider for singleton pattern
+
+// GetRunner returns the secure command runner with thread-safe lazy initialization
 func GetRunner() CommandRunner {
-	return defaultRunner
+	defaultProvider.once.Do(func() {
+		defaultProvider.runner = NewSecureCommandRunner()
+	})
+	return defaultProvider.runner
 }
 
 // SetRunner allows setting a custom runner (mainly for testing)
@@ -52,7 +62,7 @@ func SetRunner(r CommandRunner) error {
 	if r == nil {
 		return errRunnerNil
 	}
-	defaultRunner = r
+	defaultProvider.runner = r
 	return nil
 }
 

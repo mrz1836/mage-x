@@ -43,11 +43,11 @@ func (m *MockCommandRunner) RunCmdOutput(name string, args ...string) (string, e
 
 // Test helper to replace the global runner
 func withMockRunner(t *testing.T, fn func(*MockCommandRunner)) {
-	originalRunner := defaultRunner
+	originalRunner := defaultProvider.runner
 	mockRunner := new(MockCommandRunner)
-	defaultRunner = mockRunner
+	defaultProvider.runner = mockRunner
 	defer func() {
-		defaultRunner = originalRunner
+		defaultProvider.runner = originalRunner
 		mockRunner.AssertExpectations(t)
 	}()
 	fn(mockRunner)

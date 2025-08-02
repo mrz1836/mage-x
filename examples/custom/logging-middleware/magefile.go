@@ -193,56 +193,60 @@ func (l *LoggingTest) withLogging(operation string, fn func() error) error {
 	return err
 }
 
-// Global logger setup
-var (
-	buildLogger = log.New(os.Stdout, "[BUILD] ", log.LstdFlags|log.Lshortfile) //nolint:gochecknoglobals // Example code demonstrating global loggers
-	testLogger  = log.New(os.Stdout, "[TEST]  ", log.LstdFlags|log.Lshortfile) //nolint:gochecknoglobals // Example code demonstrating global loggers
-)
+// Logger factory functions - creates loggers when needed following dependency injection patterns
+func newBuildLogger() *log.Logger {
+	return log.New(os.Stdout, "[BUILD] ", log.LstdFlags|log.Lshortfile)
+}
+
+func newTestLogger() *log.Logger {
+	return log.New(os.Stdout, "[TEST]  ", log.LstdFlags|log.Lshortfile)
+}
 
 // Build with comprehensive logging
 func Build() error {
 	baseBuild := mage.NewBuildNamespace()
-	loggingBuild := NewLoggingBuild(baseBuild, buildLogger)
+	loggingBuild := NewLoggingBuild(baseBuild, newBuildLogger())
 	return loggingBuild.Default()
 }
 
 // BuildAll builds for all platforms with logging
 func BuildAll() error {
 	baseBuild := mage.NewBuildNamespace()
-	loggingBuild := NewLoggingBuild(baseBuild, buildLogger)
+	loggingBuild := NewLoggingBuild(baseBuild, newBuildLogger())
 	return loggingBuild.All()
 }
 
 // BuildPlatform builds for specific platform with logging
 func BuildPlatform(platform string) error {
 	baseBuild := mage.NewBuildNamespace()
-	loggingBuild := NewLoggingBuild(baseBuild, buildLogger)
+	loggingBuild := NewLoggingBuild(baseBuild, newBuildLogger())
 	return loggingBuild.Platform(platform)
 }
 
 // Test with comprehensive logging
 func Test() error {
 	baseTest := mage.NewTestNamespace()
-	loggingTest := NewLoggingTest(baseTest, testLogger)
+	loggingTest := NewLoggingTest(baseTest, newTestLogger())
 	return loggingTest.Default()
 }
 
 // TestUnit runs unit tests with logging
 func TestUnit() error {
 	baseTest := mage.NewTestNamespace()
-	loggingTest := NewLoggingTest(baseTest, testLogger)
+	loggingTest := NewLoggingTest(baseTest, newTestLogger())
 	return loggingTest.Unit()
 }
 
 // TestCoverage runs coverage tests with logging
 func TestCoverage() error {
 	baseTest := mage.NewTestNamespace()
-	loggingTest := NewLoggingTest(baseTest, testLogger)
+	loggingTest := NewLoggingTest(baseTest, newTestLogger())
 	return loggingTest.Coverage()
 }
 
 // CI runs complete pipeline with detailed logging
 func CI() error {
+	// Note: Using fmt.Println here for example - in real code use utils.Info()
 	fmt.Println("🚀 Starting CI Pipeline with detailed logging...")
 
 	// Create loggers for different operations
@@ -273,6 +277,7 @@ func CI() error {
 		return fmt.Errorf("build failed: %w", err)
 	}
 
+	// Note: Using fmt.Println here for example - in real code use utils.Info()
 	fmt.Println("🎉 CI Pipeline completed successfully with full logging!")
 	return nil
 }
@@ -280,7 +285,7 @@ func CI() error {
 // Clean with logging
 func Clean() error {
 	baseBuild := mage.NewBuildNamespace()
-	loggingBuild := NewLoggingBuild(baseBuild, buildLogger)
+	loggingBuild := NewLoggingBuild(baseBuild, newBuildLogger())
 	return loggingBuild.Clean()
 }
 
@@ -294,7 +299,7 @@ func DeployPipeline() error {
 	platforms := []string{"linux/amd64", "darwin/amd64", "windows/amd64"}
 
 	baseBuild := mage.NewBuildNamespace()
-	loggingBuild := NewLoggingBuild(baseBuild, buildLogger)
+	loggingBuild := NewLoggingBuild(baseBuild, newBuildLogger())
 
 	for _, platform := range platforms {
 		deployLogger.Printf("📦 Building for platform: %s", platform)

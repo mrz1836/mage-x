@@ -18,11 +18,12 @@ type TestingInterface interface {
 
 // TestEnvironment provides a clean test environment with temporary directories
 type TestEnvironment struct {
-	TempDir string
-	OrigDir string
-	Runner  *MockRunner
-	Builder *MockBuilder
-	t       TestingInterface
+	TempDir        string
+	OrigDir        string
+	Runner         *MockRunner
+	Builder        *MockBuilder
+	CommandMatcher *CommandMatcher
+	t              TestingInterface
 }
 
 // NewTestEnvironment creates a new isolated test environment
@@ -46,11 +47,12 @@ func NewTestEnvironment(t TestingInterface) *TestEnvironment {
 	runner, builder := NewMockRunner()
 
 	return &TestEnvironment{
-		TempDir: tempDir,
-		OrigDir: origDir,
-		Runner:  runner,
-		Builder: builder,
-		t:       t,
+		TempDir:        tempDir,
+		OrigDir:        origDir,
+		Runner:         runner,
+		Builder:        builder,
+		CommandMatcher: NewCommandMatcher(),
+		t:              t,
 	}
 }
 

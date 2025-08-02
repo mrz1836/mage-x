@@ -47,31 +47,45 @@ func (m *MockRunner) Reset() {
 	m.shouldError = false
 }
 
-// Override the runner for testing
-var (
-	originalRunner CommandRunner //nolint:gochecknoglobals // Test global for mocking
-	mockRunner     *MockRunner   //nolint:gochecknoglobals // Test global for mocking
-)
-
-func setupMockRunner(tb testing.TB) {
-	mockRunner = &MockRunner{}
-	originalRunner = GetRunner()
-	require.NoError(tb, SetRunner(mockRunner))
+// OperationsTestHelper provides test utilities for operations testing
+type OperationsTestHelper struct {
+	originalRunner CommandRunner
+	mockRunner     *MockRunner
 }
 
-func teardownMockRunner() {
-	if originalRunner != nil {
-		_ = SetRunner(originalRunner) //nolint:errcheck // Test cleanup - error not critical
+// NewOperationsTestHelper creates a new operations test helper
+func NewOperationsTestHelper() *OperationsTestHelper {
+	return &OperationsTestHelper{}
+}
+
+// SetupMockRunner sets up the mock runner for testing
+func (h *OperationsTestHelper) SetupMockRunner(tb testing.TB) {
+	h.mockRunner = &MockRunner{}
+	h.originalRunner = GetRunner()
+	require.NoError(tb, SetRunner(h.mockRunner))
+}
+
+// TeardownMockRunner restores the original runner
+func (h *OperationsTestHelper) TeardownMockRunner() {
+	if h.originalRunner != nil {
+		_ = SetRunner(h.originalRunner) //nolint:errcheck // Test cleanup - error not critical
 	}
 }
 
+// GetMockRunner returns the current mock runner
+func (h *OperationsTestHelper) GetMockRunner() *MockRunner {
+	return h.mockRunner
+}
+
 func TestCheck_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	check := Check{}
 
 	t.Run("All", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := check.All()
 		require.NoError(t, err)
@@ -83,6 +97,7 @@ func TestCheck_Operations(t *testing.T) {
 	})
 
 	t.Run("Format", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := check.Format()
 		require.NoError(t, err)
@@ -95,6 +110,7 @@ func TestCheck_Operations(t *testing.T) {
 	})
 
 	t.Run("Security", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := check.Security()
 		require.NoError(t, err)
@@ -106,6 +122,7 @@ func TestCheck_Operations(t *testing.T) {
 	})
 
 	t.Run("Tidy", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := check.Tidy()
 		require.NoError(t, err)
@@ -118,6 +135,7 @@ func TestCheck_Operations(t *testing.T) {
 	})
 
 	t.Run("Error handling", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		mockRunner.shouldError = true
 		err := check.All()
@@ -126,12 +144,14 @@ func TestCheck_Operations(t *testing.T) {
 }
 
 func TestCI_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	ci := CI{}
 
 	t.Run("Run", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := ci.Run("test")
 		require.NoError(t, err)
@@ -145,6 +165,7 @@ func TestCI_Operations(t *testing.T) {
 	})
 
 	t.Run("Validate", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := ci.Validate()
 		require.NoError(t, err)
@@ -157,6 +178,7 @@ func TestCI_Operations(t *testing.T) {
 	})
 
 	t.Run("Status", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := ci.Status("main")
 		require.NoError(t, err)
@@ -170,6 +192,7 @@ func TestCI_Operations(t *testing.T) {
 	})
 
 	t.Run("Cache", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := ci.Cache("clear")
 		require.NoError(t, err)
@@ -184,12 +207,14 @@ func TestCI_Operations(t *testing.T) {
 }
 
 func TestMonitor_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	monitor := Monitor{}
 
 	t.Run("Health", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := monitor.Health("http://localhost:8080/health")
 		require.NoError(t, err)
@@ -203,6 +228,7 @@ func TestMonitor_Operations(t *testing.T) {
 	})
 
 	t.Run("Metrics", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := monitor.Metrics("1h")
 		require.NoError(t, err)
@@ -216,6 +242,7 @@ func TestMonitor_Operations(t *testing.T) {
 	})
 
 	t.Run("Logs", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := monitor.Logs("api-service")
 		require.NoError(t, err)
@@ -232,12 +259,14 @@ func TestMonitor_Operations(t *testing.T) {
 }
 
 func TestDatabase_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	db := Database{}
 
 	t.Run("Migrate", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := db.Migrate("up")
 		require.NoError(t, err)
@@ -251,6 +280,7 @@ func TestDatabase_Operations(t *testing.T) {
 	})
 
 	t.Run("Seed", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := db.Seed("test_data")
 		require.NoError(t, err)
@@ -264,6 +294,7 @@ func TestDatabase_Operations(t *testing.T) {
 	})
 
 	t.Run("Reset", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := db.Reset()
 		require.NoError(t, err)
@@ -276,6 +307,7 @@ func TestDatabase_Operations(t *testing.T) {
 	})
 
 	t.Run("Backup", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := db.Backup("backup.sql")
 		require.NoError(t, err)
@@ -290,12 +322,14 @@ func TestDatabase_Operations(t *testing.T) {
 }
 
 func TestDeploy_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	deploy := Deploy{}
 
 	t.Run("Staging", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := deploy.Staging()
 		require.NoError(t, err)
@@ -308,6 +342,7 @@ func TestDeploy_Operations(t *testing.T) {
 	})
 
 	t.Run("Production", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := deploy.Production()
 		require.NoError(t, err)
@@ -320,6 +355,7 @@ func TestDeploy_Operations(t *testing.T) {
 	})
 
 	t.Run("Status", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := deploy.Status("production")
 		require.NoError(t, err)
@@ -333,6 +369,7 @@ func TestDeploy_Operations(t *testing.T) {
 	})
 
 	t.Run("Rollback", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := deploy.Rollback("production", "v1.0.0")
 		require.NoError(t, err)
@@ -349,12 +386,14 @@ func TestDeploy_Operations(t *testing.T) {
 }
 
 func TestClean_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	clean := Clean{}
 
 	t.Run("All", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := clean.All()
 		require.NoError(t, err)
@@ -367,6 +406,7 @@ func TestClean_Operations(t *testing.T) {
 	})
 
 	t.Run("Build", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := clean.Build()
 		require.NoError(t, err)
@@ -378,6 +418,7 @@ func TestClean_Operations(t *testing.T) {
 	})
 
 	t.Run("Cache", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := clean.Cache()
 		require.NoError(t, err)
@@ -390,6 +431,7 @@ func TestClean_Operations(t *testing.T) {
 	})
 
 	t.Run("Dependencies", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := clean.Dependencies()
 		require.NoError(t, err)
@@ -403,12 +445,14 @@ func TestClean_Operations(t *testing.T) {
 }
 
 func TestRun_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	run := Run{}
 
 	t.Run("Dev", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := run.Dev()
 		require.NoError(t, err)
@@ -421,6 +465,7 @@ func TestRun_Operations(t *testing.T) {
 	})
 
 	t.Run("Watch", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := run.Watch()
 		require.NoError(t, err)
@@ -433,6 +478,7 @@ func TestRun_Operations(t *testing.T) {
 	})
 
 	t.Run("Debug", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := run.Debug()
 		require.NoError(t, err)
@@ -446,12 +492,14 @@ func TestRun_Operations(t *testing.T) {
 }
 
 func TestServe_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	serve := Serve{}
 
 	t.Run("HTTP", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := serve.HTTP()
 		require.NoError(t, err)
@@ -464,6 +512,7 @@ func TestServe_Operations(t *testing.T) {
 	})
 
 	t.Run("HTTPS", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := serve.HTTPS()
 		require.NoError(t, err)
@@ -478,6 +527,7 @@ func TestServe_Operations(t *testing.T) {
 	})
 
 	t.Run("Static", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := serve.Static()
 		require.NoError(t, err)
@@ -489,12 +539,14 @@ func TestServe_Operations(t *testing.T) {
 }
 
 func TestDockerOps_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	docker := DockerOps{}
 
 	t.Run("Build", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := docker.Build("test-app")
 		require.NoError(t, err)
@@ -509,6 +561,7 @@ func TestDockerOps_Operations(t *testing.T) {
 	})
 
 	t.Run("Run", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := docker.Run("test-app")
 		require.NoError(t, err)
@@ -521,6 +574,7 @@ func TestDockerOps_Operations(t *testing.T) {
 	})
 
 	t.Run("Push", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := docker.Push("test-app")
 		require.NoError(t, err)
@@ -533,6 +587,7 @@ func TestDockerOps_Operations(t *testing.T) {
 	})
 
 	t.Run("Stop", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := docker.Stop("test-app")
 		require.NoError(t, err)
@@ -545,6 +600,7 @@ func TestDockerOps_Operations(t *testing.T) {
 	})
 
 	t.Run("Clean", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := docker.Clean()
 		require.NoError(t, err)
@@ -560,12 +616,14 @@ func TestDockerOps_Operations(t *testing.T) {
 }
 
 func TestCommon_Operations(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
 	common := Common{}
 
 	t.Run("Version", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := common.Version()
 		require.NoError(t, err)
@@ -578,6 +636,7 @@ func TestCommon_Operations(t *testing.T) {
 	})
 
 	t.Run("Duration", func(t *testing.T) {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := common.Duration()
 		require.NoError(t, err)
@@ -629,13 +688,15 @@ func TestOperationStructs(t *testing.T) {
 
 // Benchmark tests for operations
 func BenchmarkCheck_All(b *testing.B) {
-	setupMockRunner(b)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(b)
+	defer helper.TeardownMockRunner()
 
 	check := Check{}
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := check.All()
 		_ = err // Ignore errors in benchmark - we're testing performance
@@ -643,13 +704,15 @@ func BenchmarkCheck_All(b *testing.B) {
 }
 
 func BenchmarkCI_Test(b *testing.B) {
-	setupMockRunner(b)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(b)
+	defer helper.TeardownMockRunner()
 
 	ci := CI{}
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := ci.Run("test")
 		_ = err // Ignore errors in benchmark - we're testing performance
@@ -657,13 +720,15 @@ func BenchmarkCI_Test(b *testing.B) {
 }
 
 func BenchmarkDocker_Build(b *testing.B) {
-	setupMockRunner(b)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(b)
+	defer helper.TeardownMockRunner()
 
 	docker := DockerOps{}
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := docker.Build("test")
 		_ = err // Ignore errors in benchmark - we're testing performance
@@ -672,9 +737,11 @@ func BenchmarkDocker_Build(b *testing.B) {
 
 // Test error propagation
 func TestOperations_ErrorHandling(t *testing.T) {
-	setupMockRunner(t)
-	defer teardownMockRunner()
+	helper := NewOperationsTestHelper()
+	helper.SetupMockRunner(t)
+	defer helper.TeardownMockRunner()
 
+	mockRunner := helper.GetMockRunner()
 	mockRunner.shouldError = true
 
 	t.Run("Check operations error handling", func(t *testing.T) {
