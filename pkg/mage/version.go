@@ -104,6 +104,16 @@ func (Version) Check(_ ...string) error {
 	// Check GitHub releases
 	latest, err := getLatestGitHubRelease(owner, repo)
 	if err != nil {
+		// Check if it's a 404 (no releases found)
+		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "Not Found") {
+			utils.Warn("No GitHub releases found for %s/%s", owner, repo)
+			utils.Info("This project may use Git tags instead of GitHub releases")
+			utils.Info("\nTo create a release:")
+			utils.Info("1. Visit https://github.com/%s/%s/releases", owner, repo)
+			utils.Info("2. Click 'Create a new release'")
+			utils.Info("3. Select tag %s and publish", current)
+			return nil
+		}
 		return fmt.Errorf("failed to check for updates: %w", err)
 	}
 
@@ -151,6 +161,13 @@ func (Version) Update() error {
 	// Get latest release
 	latest, err := getLatestGitHubRelease(owner, repo)
 	if err != nil {
+		// Check if it's a 404 (no releases found)
+		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "Not Found") {
+			utils.Warn("No GitHub releases found for %s/%s", owner, repo)
+			utils.Info("Cannot update without published releases")
+			utils.Info("Current version: %s", current)
+			return nil
+		}
 		return fmt.Errorf("failed to check for updates: %w", err)
 	}
 

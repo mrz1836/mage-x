@@ -386,7 +386,7 @@ func FuzzFilterEnvironment(f *testing.F) {
 		env := []string{envVar}
 
 		// Should not panic
-		filtered := executor.filterEnvironment(env)
+		filtered := executor.filterEnvironment(env, "fuzz-command")
 
 		// Verify filtering logic
 		if len(filtered) > 0 {
@@ -464,7 +464,7 @@ func FuzzFilterEnvironmentMultiple(f *testing.F) {
 		env := []string{env1, env2, env3}
 
 		// Should not panic
-		filtered := executor.filterEnvironment(env)
+		filtered := executor.filterEnvironment(env, "fuzz-command")
 
 		// Filtered should not have more items than original
 		assert.LessOrEqual(t, len(filtered), len(env),

@@ -51,6 +51,9 @@ type SecureExecutor struct {
 	Timeout time.Duration
 	// DryRun if true, commands are not actually executed
 	DryRun bool
+	// EnvWhitelist maps command names to environment variables they're allowed to access
+	// e.g. "goreleaser" -> ["GITHUB_TOKEN", "GITLAB_TOKEN"]
+	EnvWhitelist map[string][]string
 }
 
 // NewSecureExecutor creates a new secure command executor
@@ -58,6 +61,9 @@ func NewSecureExecutor() *SecureExecutor {
 	return &SecureExecutor{
 		AllowedCommands: make(map[string]bool),
 		Timeout:         5 * time.Minute,
+		EnvWhitelist: map[string][]string{
+			"goreleaser": {"GITHUB_TOKEN", "GITLAB_TOKEN", "GITEA_TOKEN"},
+		},
 	}
 }
 
@@ -99,7 +105,7 @@ func (e *SecureExecutor) Execute(ctx context.Context, name string, args ...strin
 	}
 
 	// Inherit environment but filter sensitive variables
-	cmd.Env = e.filterEnvironment(os.Environ())
+	cmd.Env = e.filterEnvironment(os.Environ(), name)
 
 	// Connect output
 	cmd.Stdout = os.Stdout
@@ -159,7 +165,7 @@ func (e *SecureExecutor) ExecuteOutput(ctx context.Context, name string, args ..
 	}
 
 	// Inherit environment but filter sensitive variables
-	cmd.Env = e.filterEnvironment(os.Environ())
+	cmd.Env = e.filterEnvironment(os.Environ(), name)
 
 	// Execute and capture output
 	output, err := cmd.CombinedOutput()
@@ -217,7 +223,7 @@ func (e *SecureExecutor) ExecuteWithEnv(ctx context.Context, env []string, name 
 	}
 
 	// Merge provided environment with filtered base environment
-	baseEnv := e.filterEnvironment(os.Environ())
+	baseEnv := e.filterEnvironment(os.Environ(), name)
 	cmd.Env = make([]string, 0, len(baseEnv)+len(env))
 	cmd.Env = append(cmd.Env, baseEnv...)
 	cmd.Env = append(cmd.Env, env...)
@@ -277,7 +283,7 @@ func (e *SecureExecutor) contextWithTimeout(ctx context.Context) (context.Contex
 }
 
 // filterEnvironment removes sensitive environment variables
-func (e *SecureExecutor) filterEnvironment(env []string) []string {
+func (se *SecureExecutor) filterEnvironment(env []string, commandName string) []string {
 	// List of environment variable prefixes to filter out
 	sensitivePrefix := []string{
 		"AWS_SECRET",
@@ -307,12 +313,28 @@ func (e *SecureExecutor) filterEnvironment(env []string) []string {
 
 		// Check if this environment variable contains sensitive data
 		for _, prefix := range sensitivePrefix {
-			if strings.HasPrefix(varName, prefix) && (len(varName) == len(prefix) || varName[len(prefix)] == '_') {
-				// Only filter if it's an exact match or followed by underscore
-				keep = false
-				break
+			if !strings.HasPrefix(varName, prefix) {
+				continue
 			}
+			if len(varName) != len(prefix) && varName[len(prefix)] != '_' {
+				continue
+			}
+
+			// Check if this variable is whitelisted for this command
+			if whitelistedVars, ok := se.EnvWhitelist[commandName]; ok {
+				for _, whitelistedVar := range whitelistedVars {
+					if varName == whitelistedVar {
+						// This sensitive variable is whitelisted for this command
+						keep = true
+						goto nextVar
+					}
+				}
+			}
+			// Only filter if it's an exact match or followed by underscore
+			keep = false
+			break
 		}
+	nextVar:
 
 		if keep {
 			filtered = append(filtered, e)

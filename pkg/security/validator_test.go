@@ -309,7 +309,7 @@ func TestSecurityBypasses(t *testing.T) {
 			"MY_PRIVATE_KEY=value",   // Should pass (PRIVATE_KEY not at start)
 		}
 
-		result := executor.filterEnvironment(env)
+		result := executor.filterEnvironment(env, "validator-test")
 
 		// Check filtered
 		for _, r := range result {

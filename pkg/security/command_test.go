@@ -215,7 +215,7 @@ func TestSecureExecutor_FilterEnvironment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			executor := &SecureExecutor{}
-			result := executor.filterEnvironment(tt.input)
+			result := executor.filterEnvironment(tt.input, "test-command")
 
 			// Check that expected vars are present
 			for _, expected := range tt.expected {
@@ -626,6 +626,6 @@ func BenchmarkSecureExecutor_FilterEnvironment(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = executor.filterEnvironment(env)
+		_ = executor.filterEnvironment(env, "benchmark-command")
 	}
 }
