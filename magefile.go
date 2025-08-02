@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -268,7 +269,21 @@ func GitTag() error {
 // GitPush pushes changes to remote
 func GitPush() error {
 	var g Git
-	return g.Push("origin", "main")
+
+	// Get current branch name
+	current, err := mage.GetRunner().RunCmdOutput("git", "branch", "--show-current")
+	if err != nil {
+		// Fallback to master if current branch detection fails
+		return g.Push("origin", "master")
+	}
+
+	branchName := strings.TrimSpace(current)
+	if branchName == "" {
+		// Fallback to master if branch name is empty
+		branchName = "master"
+	}
+
+	return g.Push("origin", branchName)
 }
 
 // VersionShow displays current version information

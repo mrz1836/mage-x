@@ -437,7 +437,7 @@ mage docsCheck          # Validate documentation completeness and quality
 mage gitStatus                                # Show git repository status
 message="fix: commit message" mage gitCommit  # Commit changes (requires message env var)
 version="1.2.3" mage gitTag                   # Create and push a new tag (requires version env var)
-mage gitPush                                  # Push changes to remote (main branch)
+mage gitPush                                  # Push changes to remote (current branch)
 ```
 
 #### 🏷️ Version Management
