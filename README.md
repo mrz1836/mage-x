@@ -27,8 +27,8 @@
         <a href="https://goreportcard.com/report/github.com/mrz1836/mage-x">
           <img src="https://goreportcard.com/badge/github.com/mrz1836/mage-x?style=flat&v=1" alt="Go Report Card">
         </a><br/>
-        <a href="https://codecov.io/gh/mrz1836/mage-x">
-          <img src="https://codecov.io/gh/mrz1836/mage-x/branch/main/graph/badge.svg?style=flat" alt="Code Coverage">
+        <a href="https://app.codecov.io/gh/mrz1836/mage-x/tree/master">
+          <img src="https://codecov.io/gh/mrz1836/mage-x/branch/master/graph/badge.svg?style=flat" alt="Code Coverage">
         </a><br/>
         <a href="https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck">
           <img src="https://img.shields.io/badge/security-govulncheck-blue?style=flat&logo=springsecurity&logoColor=white" alt="Security Scanning">
