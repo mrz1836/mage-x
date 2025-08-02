@@ -514,18 +514,18 @@ mage docsServeBoth      # Both project and stdlib
 MAGE-X includes 30+ namespaces with hundreds of additional methods that aren't exposed as top-level commands but can be accessed through custom magefiles:
 
 **Additional Namespaces:**
-- **Workflow** - Advanced workflow automation
-- **Enterprise** - Enterprise deployment and management
-- **Wizard** - Interactive setup wizards
-- **Init** - Project initialization templates
-- **Recipes** - Pre-built task recipes
 - **Bench** - Advanced benchmarking tools
-- **Format** - Code formatting utilities
-- **Configure** - Configuration management
-- **Generate** - Code generation tools
 - **CLI** - Command-line interface helpers
+- **Configure** - Configuration management
+- **Enterprise** - Enterprise deployment and management
+- **Format** - Code formatting utilities
+- **Generate** - Code generation tools
+- **Init** - Project initialization templates
 - **Integrations** - External service integrations
+- **Recipes** - Pre-built task recipes
 - **Update** - Update management
+- **Wizard** - Interactive setup wizards
+- **Workflow** - Advanced workflow automation
 - **Yaml** - YAML configuration tools
 
 **Example: Using Additional Methods**

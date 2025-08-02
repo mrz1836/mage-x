@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync/atomic"
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/providers"
@@ -19,11 +20,50 @@ var (
 	ErrNotImplemented         = errors.New("not implemented")
 )
 
+// IDGenerator defines the interface for generating unique IDs
+type IDGenerator interface {
+	GenerateID() string
+}
+
+// atomicIDGenerator implements IDGenerator with thread-safe counter
+type atomicIDGenerator struct {
+	counter int64
+}
+
+// NewAtomicIDGenerator creates a new atomic ID generator
+func NewAtomicIDGenerator() IDGenerator {
+	return &atomicIDGenerator{}
+}
+
+// GenerateID generates a unique ID using timestamp and atomic counter
+func (g *atomicIDGenerator) GenerateID() string {
+	count := atomic.AddInt64(&g.counter, 1)
+	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), count)
+}
+
+// MockIDGenerator provides a predictable ID generator for testing
+type MockIDGenerator struct {
+	counter int64
+	prefix  string
+}
+
+// NewMockIDGenerator creates a new mock ID generator
+func NewMockIDGenerator(prefix string) *MockIDGenerator {
+	return &MockIDGenerator{prefix: prefix}
+}
+
+// GenerateID generates a predictable ID for testing
+func (m *MockIDGenerator) GenerateID() string {
+	m.counter++
+	return fmt.Sprintf("%s-%d", m.prefix, m.counter)
+}
+
 // Provider implements the AWS provider
 type Provider struct {
 	config   providers.ProviderConfig
 	region   string
 	services *awsServices
+	idGen    IDGenerator
 }
 
 // awsServices holds AWS service clients
@@ -49,6 +89,7 @@ func New(config *providers.ProviderConfig) (providers.Provider, error) {
 	p := &Provider{
 		config: *config,
 		region: config.Region,
+		idGen:  NewAtomicIDGenerator(),
 	}
 
 	if err := p.Initialize(config); err != nil {
@@ -67,20 +108,20 @@ func (p *Provider) Name() string {
 func (p *Provider) Initialize(config *providers.ProviderConfig) error {
 	// Initialize AWS services
 	p.services = &awsServices{
-		compute:    newComputeService(config),
-		storage:    newStorageService(config),
-		network:    newNetworkService(config),
-		container:  newContainerService(config),
-		database:   newDatabaseService(config),
-		security:   newSecurityService(config),
-		monitoring: newMonitoringService(config),
-		serverless: newServerlessService(config),
-		ai:         newAIService(config),
-		cost:       newCostService(config),
-		compliance: newComplianceService(config),
-		disaster:   newDisasterService(config),
-		edge:       newEdgeService(config),
-		quantum:    newQuantumService(config),
+		compute:    newComputeService(config, p.idGen),
+		storage:    newStorageService(config, p.idGen),
+		network:    newNetworkService(config, p.idGen),
+		container:  newContainerService(config, p.idGen),
+		database:   newDatabaseService(config, p.idGen),
+		security:   newSecurityService(config, p.idGen),
+		monitoring: newMonitoringService(config, p.idGen),
+		serverless: newServerlessService(config, p.idGen),
+		ai:         newAIService(config, p.idGen),
+		cost:       newCostService(config, p.idGen),
+		compliance: newComplianceService(config, p.idGen),
+		disaster:   newDisasterService(config, p.idGen),
+		edge:       newEdgeService(config, p.idGen),
+		quantum:    newQuantumService(config, p.idGen),
 	}
 
 	return nil
@@ -230,16 +271,17 @@ func (p *Provider) Quantum() providers.QuantumService {
 // computeService implements AWS EC2 operations
 type computeService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newComputeService(config *providers.ProviderConfig) *computeService {
-	return &computeService{config: *config}
+func newComputeService(config *providers.ProviderConfig, idGen IDGenerator) *computeService {
+	return &computeService{config: *config, idGen: idGen}
 }
 
 func (s *computeService) CreateInstance(_ context.Context, req *providers.CreateInstanceRequest) (*providers.Instance, error) {
 	// AWS EC2 instance creation
 	instance := &providers.Instance{
-		ID:        fmt.Sprintf("i-%s", generateID()),
+		ID:        fmt.Sprintf("i-%s", s.idGen.GenerateID()),
 		Name:      req.Name,
 		Type:      req.Type,
 		State:     "pending",
@@ -335,7 +377,7 @@ func (s *computeService) ResizeInstance(_ context.Context, _, _ string) error {
 func (s *computeService) SnapshotInstance(_ context.Context, id, name string) (*providers.Snapshot, error) {
 	// Create EBS snapshot
 	return &providers.Snapshot{
-		ID:         fmt.Sprintf("snap-%s", generateID()),
+		ID:         fmt.Sprintf("snap-%s", s.idGen.GenerateID()),
 		Name:       name,
 		InstanceID: id,
 		State:      "pending",
@@ -357,10 +399,11 @@ func (s *computeService) CloneInstance(ctx context.Context, _ string, req *provi
 // storageService implements AWS S3 operations
 type storageService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newStorageService(config *providers.ProviderConfig) *storageService {
-	return &storageService{config: *config}
+func newStorageService(config *providers.ProviderConfig, idGen IDGenerator) *storageService {
+	return &storageService{config: *config, idGen: idGen}
 }
 
 func (s *storageService) CreateBucket(_ context.Context, req *providers.CreateBucketRequest) (*providers.Bucket, error) {
@@ -453,16 +496,17 @@ func (s *storageService) SetObjectACL(_ context.Context, _, _ string, _ *provide
 // networkService implements AWS VPC operations
 type networkService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newNetworkService(config *providers.ProviderConfig) *networkService {
-	return &networkService{config: *config}
+func newNetworkService(config *providers.ProviderConfig, idGen IDGenerator) *networkService {
+	return &networkService{config: *config, idGen: idGen}
 }
 
 func (s *networkService) CreateVPC(_ context.Context, req *providers.CreateVPCRequest) (*providers.VPC, error) {
 	// Create VPC
 	return &providers.VPC{
-		ID:     fmt.Sprintf("vpc-%s", generateID()),
+		ID:     fmt.Sprintf("vpc-%s", s.idGen.GenerateID()),
 		Name:   req.Name,
 		CIDR:   req.CIDR,
 		Region: req.Region,
@@ -510,7 +554,7 @@ func (s *networkService) DeleteVPC(_ context.Context, _ string) error {
 func (s *networkService) CreateSubnet(_ context.Context, vpcID string, req *providers.CreateSubnetRequest) (*providers.Subnet, error) {
 	// Create subnet
 	return &providers.Subnet{
-		ID:     fmt.Sprintf("subnet-%s", generateID()),
+		ID:     fmt.Sprintf("subnet-%s", s.idGen.GenerateID()),
 		Name:   req.Name,
 		VPCID:  vpcID,
 		CIDR:   req.CIDR,
@@ -565,7 +609,7 @@ func (s *networkService) DeleteSubnet(_ context.Context, _ string) error {
 func (s *networkService) CreateSecurityGroup(_ context.Context, req *providers.CreateSecurityGroupRequest) (*providers.SecurityGroup, error) {
 	// Create security group
 	return &providers.SecurityGroup{
-		ID:          fmt.Sprintf("sg-%s", generateID()),
+		ID:          fmt.Sprintf("sg-%s", s.idGen.GenerateID()),
 		Name:        req.Name,
 		Description: req.Description,
 		VPCID:       req.VPCID,
@@ -581,11 +625,11 @@ func (s *networkService) UpdateSecurityRules(_ context.Context, _ string, _ []*p
 func (s *networkService) CreateLoadBalancer(_ context.Context, req *providers.CreateLoadBalancerRequest) (*providers.LoadBalancer, error) {
 	// Create ALB/NLB
 	return &providers.LoadBalancer{
-		ID:           fmt.Sprintf("lb-%s", generateID()),
+		ID:           fmt.Sprintf("lb-%s", s.idGen.GenerateID()),
 		Name:         req.Name,
 		Type:         req.Type,
 		State:        "provisioning",
-		DNSName:      fmt.Sprintf("%s-%s.elb.amazonaws.com", req.Name, generateID()),
+		DNSName:      fmt.Sprintf("%s-%s.elb.amazonaws.com", req.Name, s.idGen.GenerateID()),
 		Listeners:    req.Listeners,
 		TargetGroups: []*providers.TargetGroup{},
 	}, nil
@@ -599,10 +643,11 @@ func (s *networkService) UpdateLoadBalancer(_ context.Context, _ string, _ *prov
 // containerService implements AWS ECS/EKS operations
 type containerService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newContainerService(config *providers.ProviderConfig) *containerService {
-	return &containerService{config: *config}
+func newContainerService(config *providers.ProviderConfig, idGen IDGenerator) *containerService {
+	return &containerService{config: *config, idGen: idGen}
 }
 
 func (s *containerService) CreateCluster(_ context.Context, req *providers.CreateClusterRequest) (*providers.Cluster, error) {
@@ -675,7 +720,7 @@ func (s *containerService) DeleteCluster(_ context.Context, _ string) error {
 func (s *containerService) DeployContainer(_ context.Context, clusterID string, req *providers.DeployRequest) (*providers.Deployment, error) {
 	// Deploy to ECS/EKS
 	return &providers.Deployment{
-		ID:        fmt.Sprintf("deployment-%s", generateID()),
+		ID:        fmt.Sprintf("deployment-%s", s.idGen.GenerateID()),
 		Name:      req.Name,
 		ClusterID: clusterID,
 		Image:     req.Image,
@@ -728,16 +773,17 @@ func (s *containerService) ConfigureTrafficPolicy(_ context.Context, _ *provider
 // databaseService implements AWS RDS operations
 type databaseService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newDatabaseService(config *providers.ProviderConfig) *databaseService {
-	return &databaseService{config: *config}
+func newDatabaseService(config *providers.ProviderConfig, idGen IDGenerator) *databaseService {
+	return &databaseService{config: *config, idGen: idGen}
 }
 
 func (s *databaseService) CreateDatabase(_ context.Context, req *providers.CreateDatabaseRequest) (*providers.Database, error) {
 	// Create RDS instance
 	return &providers.Database{
-		ID:        fmt.Sprintf("db-%s", generateID()),
+		ID:        fmt.Sprintf("db-%s", s.idGen.GenerateID()),
 		Name:      req.Name,
 		Engine:    req.Engine,
 		Version:   req.Version,
@@ -807,7 +853,7 @@ func (s *databaseService) DeleteDatabase(_ context.Context, _ string) error {
 func (s *databaseService) CreateBackup(_ context.Context, dbID, name string) (*providers.Backup, error) {
 	// Create RDS snapshot
 	return &providers.Backup{
-		ID:         fmt.Sprintf("snap-%s", generateID()),
+		ID:         fmt.Sprintf("snap-%s", s.idGen.GenerateID()),
 		DatabaseID: dbID,
 		Name:       name,
 		State:      "creating",
@@ -860,13 +906,6 @@ func (s *databaseService) EnableMultiMaster(_ context.Context, _ string, _ []str
 // Other service implementations (security, monitoring, serverless, etc.) would follow similar patterns...
 
 // Helper functions
-
-var idCounter int64 //nolint:gochecknoglobals // Required for ID generation singleton
-
-func generateID() string {
-	idCounter++
-	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), idCounter)
-}
 
 func generateIP() string {
 	return fmt.Sprintf("54.%d.%d.%d",

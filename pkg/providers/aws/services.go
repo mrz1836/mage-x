@@ -12,10 +12,11 @@ import (
 // securityService implements AWS IAM/Security operations
 type securityService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newSecurityService(config *providers.ProviderConfig) *securityService {
-	return &securityService{config: *config}
+func newSecurityService(config *providers.ProviderConfig, idGen IDGenerator) *securityService {
+	return &securityService{config: *config, idGen: idGen}
 }
 
 func (s *securityService) CreateRole(_ context.Context, req *providers.CreateRoleRequest) (*providers.Role, error) {
@@ -106,7 +107,7 @@ func (s *securityService) GetComplianceReport(_ context.Context, standard string
 func (s *securityService) CreateKMSKey(_ context.Context, req *providers.CreateKeyRequest) (*providers.KMSKey, error) {
 	// Create KMS key
 	return &providers.KMSKey{
-		ID:           fmt.Sprintf("arn:aws:kms:%s:123456789012:key/%s", s.config.Region, generateID()),
+		ID:           fmt.Sprintf("arn:aws:kms:%s:123456789012:key/%s", s.config.Region, s.idGen.GenerateID()),
 		Name:         req.Name,
 		Algorithm:    req.Algorithm,
 		State:        "Enabled",
@@ -138,10 +139,11 @@ func (s *securityService) Decrypt(_ context.Context, _ string, data []byte) ([]b
 // monitoringService implements AWS CloudWatch operations
 type monitoringService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newMonitoringService(config *providers.ProviderConfig) *monitoringService {
-	return &monitoringService{config: *config}
+func newMonitoringService(config *providers.ProviderConfig, idGen IDGenerator) *monitoringService {
+	return &monitoringService{config: *config, idGen: idGen}
 }
 
 func (s *monitoringService) PutMetric(_ context.Context, _ *providers.Metric) error {
@@ -164,7 +166,7 @@ func (s *monitoringService) GetMetrics(_ context.Context, _ *providers.MetricQue
 func (s *monitoringService) CreateDashboard(_ context.Context, req *providers.CreateDashboardRequest) (*providers.Dashboard, error) {
 	// Create CloudWatch dashboard
 	return &providers.Dashboard{
-		ID:          generateID(),
+		ID:          s.idGen.GenerateID(),
 		Name:        req.Name,
 		Description: req.Description,
 		Widgets:     req.Widgets,
@@ -204,7 +206,7 @@ func (s *monitoringService) QueryLogs(_ context.Context, _ *providers.LogQuery) 
 func (s *monitoringService) CreateAlert(_ context.Context, req *providers.CreateAlertRequest) (*providers.Alert, error) {
 	// Create CloudWatch alarm
 	return &providers.Alert{
-		ID:          fmt.Sprintf("alarm-%s", generateID()),
+		ID:          fmt.Sprintf("alarm-%s", s.idGen.GenerateID()),
 		Name:        req.Name,
 		Description: req.Description,
 		Condition:   req.Condition,
@@ -268,10 +270,11 @@ func (s *monitoringService) QueryTraces(_ context.Context, query *providers.Trac
 // serverlessService implements AWS Lambda operations
 type serverlessService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newServerlessService(config *providers.ProviderConfig) *serverlessService {
-	return &serverlessService{config: *config}
+func newServerlessService(config *providers.ProviderConfig, idGen IDGenerator) *serverlessService {
+	return &serverlessService{config: *config, idGen: idGen}
 }
 
 func (s *serverlessService) CreateFunction(_ context.Context, req *providers.CreateFunctionRequest) (*providers.Function, error) {
@@ -313,10 +316,10 @@ func (s *serverlessService) CreateEventTrigger(_ context.Context, _ string, _ *p
 func (s *serverlessService) CreateAPIGateway(_ context.Context, req *providers.CreateAPIGatewayRequest) (*providers.APIGateway, error) {
 	// Create API Gateway
 	return &providers.APIGateway{
-		ID:          fmt.Sprintf("api-%s", generateID()),
+		ID:          fmt.Sprintf("api-%s", s.idGen.GenerateID()),
 		Name:        req.Name,
 		Description: req.Description,
-		Endpoint:    fmt.Sprintf("https://%s.execute-api.%s.amazonaws.com", generateID(), s.config.Region),
+		Endpoint:    fmt.Sprintf("https://%s.execute-api.%s.amazonaws.com", s.idGen.GenerateID(), s.config.Region),
 		Routes:      req.Routes,
 		CreatedAt:   time.Now(),
 	}, nil
@@ -337,7 +340,7 @@ func (s *serverlessService) CreateWorkflow(_ context.Context, req *providers.Cre
 func (s *serverlessService) ExecuteWorkflow(_ context.Context, id string, input map[string]interface{}) (*providers.WorkflowExecution, error) {
 	// Execute Step Functions state machine
 	return &providers.WorkflowExecution{
-		ID:         fmt.Sprintf("exec-%s", generateID()),
+		ID:         fmt.Sprintf("exec-%s", s.idGen.GenerateID()),
 		WorkflowID: id,
 		Status:     "RUNNING",
 		Input:      input,
@@ -348,10 +351,11 @@ func (s *serverlessService) ExecuteWorkflow(_ context.Context, id string, input 
 // aiService implements AWS SageMaker operations
 type aiService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newAIService(config *providers.ProviderConfig) *aiService {
-	return &aiService{config: *config}
+func newAIService(config *providers.ProviderConfig, idGen IDGenerator) *aiService {
+	return &aiService{config: *config, idGen: idGen}
 }
 
 func (s *aiService) CreateModel(_ context.Context, req *providers.CreateModelRequest) (*providers.AIModel, error) {
@@ -371,7 +375,7 @@ func (s *aiService) CreateModel(_ context.Context, req *providers.CreateModelReq
 func (s *aiService) TrainModel(_ context.Context, id string, dataset *providers.Dataset) (*providers.TrainingJob, error) {
 	// Start SageMaker training job
 	return &providers.TrainingJob{
-		ID:        fmt.Sprintf("training-%s", generateID()),
+		ID:        fmt.Sprintf("training-%s", s.idGen.GenerateID()),
 		ModelID:   id,
 		DatasetID: dataset.ID,
 		Status:    "InProgress",
@@ -386,9 +390,9 @@ func (s *aiService) TrainModel(_ context.Context, id string, dataset *providers.
 func (s *aiService) DeployModel(_ context.Context, id string, _ *providers.DeploymentConfig) (*providers.ModelEndpoint, error) {
 	// Deploy SageMaker endpoint
 	return &providers.ModelEndpoint{
-		ID:        fmt.Sprintf("endpoint-%s", generateID()),
+		ID:        fmt.Sprintf("endpoint-%s", s.idGen.GenerateID()),
 		ModelID:   id,
-		URL:       fmt.Sprintf("https://runtime.sagemaker.%s.amazonaws.com/endpoints/model-%s", s.config.Region, generateID()),
+		URL:       fmt.Sprintf("https://runtime.sagemaker.%s.amazonaws.com/endpoints/model-%s", s.config.Region, s.idGen.GenerateID()),
 		Status:    "InService",
 		CreatedAt: time.Now(),
 	}, nil
@@ -406,7 +410,7 @@ func (s *aiService) Predict(_ context.Context, _ string, _ interface{}) (interfa
 func (s *aiService) CreateDataset(_ context.Context, req *providers.CreateDatasetRequest) (*providers.Dataset, error) {
 	// Create SageMaker dataset
 	return &providers.Dataset{
-		ID:        fmt.Sprintf("dataset-%s", generateID()),
+		ID:        fmt.Sprintf("dataset-%s", s.idGen.GenerateID()),
 		Name:      req.Name,
 		Type:      req.Type,
 		Size:      1024 * 1024 * 1024, // 1GB
@@ -424,7 +428,7 @@ func (s *aiService) PreprocessData(_ context.Context, _ string, _ *providers.Pip
 func (s *aiService) CreateNeuralNetwork(_ context.Context, architecture *providers.NetworkArchitecture) (*providers.NeuralNetwork, error) {
 	// Create neural network in SageMaker
 	return &providers.NeuralNetwork{
-		ID:           fmt.Sprintf("nn-%s", generateID()),
+		ID:           fmt.Sprintf("nn-%s", s.idGen.GenerateID()),
 		Name:         "custom-neural-network",
 		Architecture: architecture,
 		State:        "Ready",
@@ -467,10 +471,11 @@ func (s *aiService) ExplainPrediction(_ context.Context, _ string, _ interface{}
 // costService implements AWS Cost Explorer operations
 type costService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newCostService(config *providers.ProviderConfig) *costService {
-	return &costService{config: *config}
+func newCostService(config *providers.ProviderConfig, idGen IDGenerator) *costService {
+	return &costService{config: *config, idGen: idGen}
 }
 
 func (s *costService) GetCurrentSpend(_ context.Context) (*providers.SpendSummary, error) {
@@ -508,7 +513,7 @@ func (s *costService) GetForecast(_ context.Context, period time.Duration) (*pro
 func (s *costService) SetBudget(_ context.Context, req *providers.SetBudgetRequest) (*providers.Budget, error) {
 	// Create AWS Budget
 	return &providers.Budget{
-		ID:           fmt.Sprintf("budget-%s", generateID()),
+		ID:           fmt.Sprintf("budget-%s", s.idGen.GenerateID()),
 		Name:         req.Name,
 		Amount:       req.Amount,
 		Period:       req.Period,
@@ -550,10 +555,11 @@ func (s *costService) EnableCostAlerts(_ context.Context, _ *providers.AlertConf
 // complianceService implements AWS Config/Security Hub operations
 type complianceService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newComplianceService(config *providers.ProviderConfig) *complianceService {
-	return &complianceService{config: *config}
+func newComplianceService(config *providers.ProviderConfig, idGen IDGenerator) *complianceService {
+	return &complianceService{config: *config, idGen: idGen}
 }
 
 func (s *complianceService) RunComplianceCheck(_ context.Context, standard string) (*providers.ComplianceResult, error) {
@@ -598,10 +604,10 @@ func (s *complianceService) RemediateIssue(_ context.Context, _ string) error {
 func (s *complianceService) GenerateComplianceReport(_ context.Context, req *providers.ReportRequest) (*providers.Report, error) {
 	// Generate compliance report
 	return &providers.Report{
-		ID:          fmt.Sprintf("report-%s", generateID()),
+		ID:          fmt.Sprintf("report-%s", s.idGen.GenerateID()),
 		Type:        req.Type,
 		Format:      req.Format,
-		URL:         fmt.Sprintf("https://s3.amazonaws.com/compliance-reports/report-%s.%s", generateID(), req.Format),
+		URL:         fmt.Sprintf("https://s3.amazonaws.com/compliance-reports/report-%s.%s", s.idGen.GenerateID(), req.Format),
 		GeneratedAt: time.Now(),
 		ExpiresAt:   time.Now().Add(7 * 24 * time.Hour),
 	}, nil
@@ -615,16 +621,17 @@ func (s *complianceService) EnableContinuousCompliance(_ context.Context, _ []st
 // disasterService implements AWS Backup operations
 type disasterService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newDisasterService(config *providers.ProviderConfig) *disasterService {
-	return &disasterService{config: *config}
+func newDisasterService(config *providers.ProviderConfig, idGen IDGenerator) *disasterService {
+	return &disasterService{config: *config, idGen: idGen}
 }
 
 func (s *disasterService) CreateBackupPlan(_ context.Context, req *providers.CreateBackupPlanRequest) (*providers.BackupPlan, error) {
 	// Create AWS Backup plan
 	return &providers.BackupPlan{
-		ID:         fmt.Sprintf("backup-plan-%s", generateID()),
+		ID:         fmt.Sprintf("backup-plan-%s", s.idGen.GenerateID()),
 		Name:       req.Name,
 		Resources:  req.Resources,
 		Schedule:   req.Schedule,
@@ -637,7 +644,7 @@ func (s *disasterService) CreateBackupPlan(_ context.Context, req *providers.Cre
 func (s *disasterService) TestFailover(_ context.Context, planID string) (*providers.FailoverTest, error) {
 	// Test disaster recovery failover
 	return &providers.FailoverTest{
-		ID:        fmt.Sprintf("test-%s", generateID()),
+		ID:        fmt.Sprintf("test-%s", s.idGen.GenerateID()),
 		PlanID:    planID,
 		Status:    "SUCCESS",
 		Duration:  5 * time.Minute,
@@ -650,7 +657,7 @@ func (s *disasterService) TestFailover(_ context.Context, planID string) (*provi
 func (s *disasterService) InitiateFailover(_ context.Context, planID string) (*providers.Failover, error) {
 	// Initiate actual failover
 	return &providers.Failover{
-		ID:           fmt.Sprintf("failover-%s", generateID()),
+		ID:           fmt.Sprintf("failover-%s", s.idGen.GenerateID()),
 		PlanID:       planID,
 		Status:       "IN_PROGRESS",
 		StartTime:    time.Now(),
@@ -672,16 +679,17 @@ func (s *disasterService) GetRTO(_ context.Context) (time.Duration, error) {
 // edgeService implements AWS CloudFront/Wavelength operations
 type edgeService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newEdgeService(config *providers.ProviderConfig) *edgeService {
-	return &edgeService{config: *config}
+func newEdgeService(config *providers.ProviderConfig, idGen IDGenerator) *edgeService {
+	return &edgeService{config: *config, idGen: idGen}
 }
 
 func (s *edgeService) DeployToEdge(_ context.Context, req *providers.EdgeDeployRequest) (*providers.EdgeDeployment, error) {
 	// Deploy to CloudFront edge locations
 	return &providers.EdgeDeployment{
-		ID:          fmt.Sprintf("edge-%s", generateID()),
+		ID:          fmt.Sprintf("edge-%s", s.idGen.GenerateID()),
 		Name:        req.Name,
 		Application: req.Application,
 		Locations: []*providers.EdgeLocation{
@@ -744,16 +752,17 @@ func (s *edgeService) GetEdgeMetrics(_ context.Context, locationID string) (*pro
 // quantumService implements AWS Braket operations
 type quantumService struct {
 	config providers.ProviderConfig
+	idGen  IDGenerator
 }
 
-func newQuantumService(config *providers.ProviderConfig) *quantumService {
-	return &quantumService{config: *config}
+func newQuantumService(config *providers.ProviderConfig, idGen IDGenerator) *quantumService {
+	return &quantumService{config: *config, idGen: idGen}
 }
 
 func (s *quantumService) CreateQuantumCircuit(_ context.Context, req *providers.CreateCircuitRequest) (*providers.QuantumCircuit, error) {
 	// Create Braket quantum circuit
 	return &providers.QuantumCircuit{
-		ID:        fmt.Sprintf("circuit-%s", generateID()),
+		ID:        fmt.Sprintf("circuit-%s", s.idGen.GenerateID()),
 		Name:      req.Name,
 		Qubits:    req.Qubits,
 		Gates:     req.Gates,
@@ -765,7 +774,7 @@ func (s *quantumService) CreateQuantumCircuit(_ context.Context, req *providers.
 func (s *quantumService) RunQuantumJob(_ context.Context, circuitID string, shots int) (*providers.QuantumResult, error) {
 	// Run quantum job on Braket
 	return &providers.QuantumResult{
-		ID:        fmt.Sprintf("job-%s", generateID()),
+		ID:        fmt.Sprintf("job-%s", s.idGen.GenerateID()),
 		CircuitID: circuitID,
 		Shots:     shots,
 		Counts: map[string]int{

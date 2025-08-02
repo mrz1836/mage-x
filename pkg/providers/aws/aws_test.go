@@ -618,12 +618,37 @@ func (ts *AWSProviderTestSuite) TestAWSNetworkService() {
 // TestHelperFunctions tests AWS provider helper functions
 func (ts *AWSProviderTestSuite) TestHelperFunctions() {
 	ts.Run("ID generation", func() {
-		id1 := generateID()
-		id2 := generateID()
+		idGen := NewAtomicIDGenerator()
+		id1 := idGen.GenerateID()
+		id2 := idGen.GenerateID()
 
 		ts.Require().NotEmpty(id1)
 		ts.Require().NotEmpty(id2)
 		ts.Require().NotEqual(id1, id2) // Should be unique
+	})
+
+	ts.Run("ID generation thread safety", func() {
+		idGen := NewAtomicIDGenerator()
+		ids := make(map[string]bool)
+		idChan := make(chan string, 100)
+
+		// Generate IDs concurrently
+		for i := 0; i < 10; i++ {
+			go func() {
+				for j := 0; j < 10; j++ {
+					idChan <- idGen.GenerateID()
+				}
+			}()
+		}
+
+		// Collect all IDs
+		for i := 0; i < 100; i++ {
+			id := <-idChan
+			ts.Require().False(ids[id], "Duplicate ID generated: %s", id)
+			ids[id] = true
+		}
+
+		ts.Require().Len(ids, 100, "Should have 100 unique IDs")
 	})
 
 	ts.Run("IP generation", func() {
