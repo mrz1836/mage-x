@@ -30,11 +30,12 @@ type (
 
 // Aliases provides short command names for common operations
 var Aliases = map[string]interface{}{
-	"lint":    LintDefault,
-	"test":    TestDefault,
 	"build":   BuildDefault,
-	"release": ReleaseDefault,
+	"docs":    DocsDefault,
+	"lint":    LintDefault,
 	"loc":     MetricsLOC,
+	"release": ReleaseDefault,
+	"test":    TestDefault,
 }
 
 // Default target
@@ -221,6 +222,23 @@ func DocsServe() error {
 func DocsBuild() error {
 	var d Docs
 	return d.Build()
+}
+
+// DocsDefault generates and serves documentation (generate + serve in one command)
+func DocsDefault() error {
+	utils.Header("📚 MAGE-X Documentation Generator & Server")
+
+	// First generate documentation
+	utils.Info("Step 1: Generating documentation...")
+	if err := DocsGenerate(); err != nil {
+		return fmt.Errorf("failed to generate documentation: %w", err)
+	}
+
+	utils.Success("Documentation generated successfully!")
+	utils.Info("Step 2: Starting documentation server...")
+
+	// Then serve it
+	return DocsServe()
 }
 
 // DocsCheck validates documentation
@@ -512,6 +530,7 @@ func Help() error {
 			icon:        "📚",
 			description: "Documentation",
 			commands: []CommandInfo{
+				{"docsDefault", "Generate and serve documentation", []string{"mage docsDefault", "mage docs"}},
 				{"docsGenerate", "Generate documentation", []string{"mage docsGenerate"}},
 				{"docsServe", "Serve documentation locally", []string{"mage docsServe"}},
 				{"docsBuild", "Build static documentation", []string{"mage docsBuild"}},
@@ -688,6 +707,7 @@ func List() error {
 			icon:        "📚",
 			description: "Documentation",
 			commands: []CommandInfo{
+				{"docsDefault", "Generate and serve documentation", []string{"mage docsDefault", "mage docs"}},
 				{"docsGenerate", "Generate documentation", []string{"mage docsGenerate"}},
 				{"docsServe", "Serve documentation locally", []string{"mage docsServe"}},
 				{"docsBuild", "Build static documentation", []string{"mage docsBuild"}},

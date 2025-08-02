@@ -423,11 +423,12 @@ mage modDownload        # Download modules
 
 #### 📚 Documentation
 ```bash
-# Documentation Generation
-mage docsGenerate       # Generate documentation
-mage docsServe          # Serve documentation locally
-mage docsBuild          # Build static documentation
-mage docsCheck          # Validate documentation
+# Documentation Generation & Serving
+mage docs               # Generate and serve documentation (generate + serve in one command)
+mage docsGenerate       # Generate Go package documentation from source code
+mage docsServe          # Serve documentation locally with hybrid pkgsite/godoc support
+mage docsBuild          # Build enhanced static documentation files with metadata
+mage docsCheck          # Validate documentation completeness and quality
 ```
 
 #### 🔀 Git Operations
@@ -468,11 +469,45 @@ mage test               # Run complete test suite (alias: mage testDefault)
 mage lint               # Run essential linters (alias: mage lintDefault)
 mage release            # Create a new release (alias: mage releaseDefault)
 mage loc                # Analyze lines of code (alias: mage metricsLOC)
+mage docs               # Generate and serve documentation (alias: mage docsDefault)
 ```
 
 ### 📋 Complete Command List
 
 Run `mage -l` to see a plain list of all 58 available commands, or use `mage help` for a beautiful categorized view with descriptions and usage tips.
+
+### 📚 Documentation System Features
+
+MAGE-X includes a powerful hybrid documentation system with enterprise-grade capabilities:
+
+#### Smart Tool Detection
+- **Auto-detection**: Automatically detects and uses the best available documentation tool
+- **Hybrid Support**: Supports both `pkgsite` (modern) and `godoc` (classic) with smart fallback
+- **Auto-installation**: Automatically installs missing tools when needed
+- **Environment Control**: Override tool selection with `DOCS_TOOL=pkgsite|godoc`
+
+#### Multiple Serving Modes
+```bash
+# Automatic (recommended)
+mage docsServe          # Smart detection with fallback
+
+# Forced tool selection
+mage docsServePkgsite   # Force pkgsite (modern, project-focused)
+mage docsServeGodoc     # Force godoc (classic, comprehensive)
+
+# Specialized modes  
+mage docsServeStdlib    # Standard library documentation
+mage docsServeProject   # Project-only documentation
+mage docsServeBoth      # Both project and stdlib
+```
+
+#### Advanced Features
+- **Port Management**: Automatic port detection and conflict resolution
+- **Cross-Platform**: Browser auto-opening on macOS, Linux, and Windows
+- **CI/CD Ready**: Detects CI environments and disables browser opening
+- **Comprehensive Generation**: Documents all packages with categorization
+- **Static Building**: Enhanced markdown with metadata and navigation
+- **Build Artifacts**: JSON metadata and organized output structure
 
 ### 🔧 Advanced: Additional Namespace Methods
 

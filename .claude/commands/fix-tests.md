@@ -2,8 +2,8 @@ Your task is to use any sub agent that specializes in Go code to:
 
 From the main project directory...
 
-run: `mage lintDefault`
-run: `mage testDefault`
+run: `mage lint`
+run: `mage test`
 
 Make sure all modules and packages are linted and tested, and that all tests pass.
 

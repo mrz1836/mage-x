@@ -282,6 +282,7 @@ The main `magefile.go` exposes 58 commands that can be called directly via `mage
 - `mage build` - Alias for `mage buildDefault`
 - `mage release` - Alias for `mage releaseDefault`
 - `mage loc` - Alias for `mage metricsLOC`
+- `mage docs` - Alias for `mage docsDefault`
 
 #### Build Commands (5)
 - `buildDefault` - Build for current platform
@@ -331,11 +332,12 @@ The main `magefile.go` exposes 58 commands that can be called directly via `mage
 - `modVerify` - Verify module checksums
 - `modDownload` - Download modules
 
-#### Documentation Commands (4)
-- `docsGenerate` - Generate documentation
-- `docsServe` - Serve documentation locally
-- `docsBuild` - Build static documentation
-- `docsCheck` - Validate documentation
+#### Documentation Commands (5)
+- `docsDefault` - Generate and serve documentation (generate + serve combined)
+- `docsGenerate` - Generate Go package documentation from source code
+- `docsServe` - Serve documentation locally with hybrid pkgsite/godoc support
+- `docsBuild` - Build enhanced static documentation files with metadata
+- `docsCheck` - Validate documentation completeness and quality
 
 #### Git Commands (4)
 - `gitStatus` - Show repository status
@@ -396,3 +398,43 @@ When contributing to mage-x:
 - Use the test files as references for testing approaches
 
 The project provides a modern, flexible build automation system for Go projects with comprehensive testing demonstrating successful execution of build operations, tool management, dependency handling, and code analysis across the entire interface architecture.
+
+## Documentation System
+
+### Hybrid Documentation Server
+
+MAGE-X includes a sophisticated hybrid documentation system with enterprise-grade capabilities:
+
+- **Smart Tool Detection**: Automatically detects and uses the best available documentation tool (`pkgsite` or `godoc`)
+- **Auto-Installation**: Automatically installs missing documentation tools when needed
+- **Multiple Serving Modes**: Supports project-only, stdlib-only, or comprehensive documentation serving
+- **Port Management**: Automatic port detection and conflict resolution
+- **Cross-Platform Browser Opening**: Native browser launching on macOS, Linux, and Windows
+- **CI/CD Ready**: Detects CI environments and adjusts behavior accordingly
+- **Environment Control**: Override tool selection with `DOCS_TOOL=pkgsite|godoc` and `DOCS_PORT=8080`
+
+### Available Documentation Commands
+
+- `mage docs` - **NEW**: Generate and serve documentation in one command (generate + serve)
+- `mage docsGenerate` - Generate comprehensive Go package documentation
+- `mage docsServe` - Serve documentation with smart tool detection and fallback
+- `mage docsBuild` - Build enhanced static documentation files with metadata and navigation
+- `mage docsCheck` - Validate documentation completeness and quality
+
+### Advanced Serving Options
+
+The documentation system provides specialized serving methods (not exposed as top-level commands):
+
+- `ServePkgsite()` - Force modern pkgsite server (project-focused)
+- `ServeGodoc()` - Force classic godoc server (comprehensive)
+- `ServeStdlib()` - Standard library documentation only
+- `ServeProject()` - Project documentation only  
+- `ServeBoth()` - Both project and standard library documentation
+
+### Documentation Generation Features
+
+- **Package Discovery**: Automatically discovers all Go packages in the project
+- **Categorization**: Groups packages by type (Core, Common, Providers, Security, Utils, Commands, Other)
+- **Comprehensive Coverage**: Documents all public APIs, functions, types, and methods
+- **Markdown Output**: Generates well-formatted markdown documentation
+- **Build System**: Creates enhanced static documentation with metadata, navigation, and cross-references

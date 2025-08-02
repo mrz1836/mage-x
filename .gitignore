@@ -47,10 +47,11 @@ temp/
 
 # Mage specific
 mage_output_file.go
-
 .mage-cache/
-
 test-results/
-
 tests/.mage-cache/
 /pkg/utils/.mage/metrics/
+
+# Documentation and generated files
+/docs/build
+/docs/generated
