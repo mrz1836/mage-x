@@ -1530,7 +1530,7 @@ func TestGlobalConvenienceFunctions(t *testing.T) {
 		var jsonResult TestConfig
 		foundPath, err := LoadConfig([]string{jsonPath}, &jsonResult)
 		require.NoError(t, err, "LoadConfig JSON should succeed")
-		assert.JSONEq(t, jsonPath, foundPath, "Should find JSON config")
+		assert.Equal(t, jsonPath, foundPath, "Should find JSON config")
 		assert.Equal(t, testConfig, jsonResult, "JSON config should match")
 
 		// Test loading YAML config
@@ -1559,7 +1559,7 @@ func TestGlobalConvenienceFunctions(t *testing.T) {
 		var fallbackResult TestConfig
 		foundPath, err = LoadConfig([]string{nonExistentPath, jsonPath}, &fallbackResult)
 		require.NoError(t, err, "LoadConfig fallback should succeed")
-		assert.JSONEq(t, jsonPath, foundPath, "Should find fallback config")
+		assert.Equal(t, jsonPath, foundPath, "Should find fallback config")
 		assert.Equal(t, testConfig, fallbackResult, "Fallback config should match")
 
 		// Test error case - no valid config files
@@ -1601,7 +1601,7 @@ func TestGlobalConvenienceFunctions(t *testing.T) {
 		var result TestConfig
 		foundPath, err := LoadConfig([]string{jsonDataPath}, &result)
 		require.NoError(t, err, "LoadConfig should succeed with JSON fallback")
-		assert.JSONEq(t, jsonDataPath, foundPath, "Should find JSON data file")
+		assert.Equal(t, jsonDataPath, foundPath, "Should find JSON data file")
 		assert.Equal(t, testConfig, result, "JSON data should match")
 	})
 }
