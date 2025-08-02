@@ -60,12 +60,12 @@ func initCacheManager() *cache.Manager {
 func (b Build) Default() error {
 	utils.Header("Building Application")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
-	buildCtx := b.createBuildContext(cfg)
+	buildCtx := b.createBuildContext(config)
 	buildHash := b.generateBuildHash(buildCtx)
 
 	// Try to use cached build result
@@ -293,22 +293,22 @@ func (b Build) tryUseCachedBuild(buildHash, outputPath string, cm cache.Manager)
 func (b Build) All() error {
 	utils.Header("Building for All Platforms")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	start := time.Now()
-	buildErrs := make(chan error, len(cfg.Build.Platforms))
+	buildErrs := make(chan error, len(config.Build.Platforms))
 
-	for _, platform := range cfg.Build.Platforms {
+	for _, platform := range config.Build.Platforms {
 		go func(p string) {
 			buildErrs <- b.Platform(p)
 		}(platform)
 	}
 
 	var buildErrors []string
-	for range cfg.Build.Platforms {
+	for range config.Build.Platforms {
 		if err := <-buildErrs; err != nil {
 			buildErrors = append(buildErrors, err.Error())
 		}
@@ -329,21 +329,21 @@ func (b Build) Platform(platform string) error {
 		return err
 	}
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	binary := fmt.Sprintf("%s-%s-%s%s",
-		cfg.Project.Binary,
+		config.Project.Binary,
 		p.OS,
 		p.Arch,
 		utils.GetBinaryExt(p))
 
-	outputPath := filepath.Join(cfg.Build.Output, binary)
+	outputPath := filepath.Join(config.Build.Output, binary)
 
 	args := []string{"build"}
-	args = append(args, buildFlags(cfg)...)
+	args = append(args, buildFlags(config)...)
 	args = append(args, "-o", outputPath)
 
 	// Add the package path to build
@@ -407,7 +407,7 @@ func (b Build) Windows() error {
 func (Build) Docker() error {
 	utils.Header("Building Docker Image")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
@@ -417,23 +417,23 @@ func (Build) Docker() error {
 	}
 
 	// Check if Dockerfile exists
-	if _, err := os.Stat(cfg.Docker.Dockerfile); os.IsNotExist(err) {
+	if _, err := os.Stat(config.Docker.Dockerfile); os.IsNotExist(err) {
 		return ErrDockerfileNotFound
 	}
 
 	tag := fmt.Sprintf("%s/%s:%s",
-		cfg.Docker.Registry,
-		cfg.Docker.Repository,
+		config.Docker.Registry,
+		config.Docker.Repository,
 		getVersion())
 
 	args := []string{"build", "-t", tag}
 
 	// Add build args
-	for k, v := range cfg.Docker.BuildArgs {
+	for k, v := range config.Docker.BuildArgs {
 		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	args = append(args, "-f", cfg.Docker.Dockerfile, ".")
+	args = append(args, "-f", config.Docker.Dockerfile, ".")
 
 	return GetRunner().RunCmd("docker", args...)
 }
@@ -442,14 +442,14 @@ func (Build) Docker() error {
 func (Build) Clean() error {
 	utils.Header("Cleaning Build Artifacts")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	// Clean output directory
-	if cfg.Build.Output != "" {
-		if err := utils.CleanDir(cfg.Build.Output); err != nil {
+	if config.Build.Output != "" {
+		if err := utils.CleanDir(config.Build.Output); err != nil {
 			return fmt.Errorf("failed to clean output directory: %w", err)
 		}
 	}
@@ -475,15 +475,15 @@ func (Build) Clean() error {
 func (Build) Install() error {
 	utils.Header("Installing Binary")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	args := []string{"install"}
-	args = append(args, buildFlags(cfg)...)
+	args = append(args, buildFlags(config)...)
 
-	if cfg.Build.Verbose {
+	if config.Build.Verbose {
 		args = append(args, "-v")
 	}
 
@@ -508,7 +508,7 @@ func (Build) Install() error {
 		gopath = filepath.Join(os.Getenv("HOME"), "go")
 	}
 
-	utils.Success("Installed %s to %s", cfg.Project.Binary, filepath.Join(gopath, "bin"))
+	utils.Success("Installed %s to %s", config.Project.Binary, filepath.Join(gopath, "bin"))
 	return nil
 }
 
@@ -516,19 +516,19 @@ func (Build) Install() error {
 func (Build) Generate() error {
 	utils.Header("Running Code Generation")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	args := []string{"generate"}
 
-	if cfg.Build.Verbose {
+	if config.Build.Verbose {
 		args = append(args, "-v")
 	}
 
-	if len(cfg.Build.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(cfg.Build.Tags, ","))
+	if len(config.Build.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
 	}
 
 	args = append(args, "./...")
@@ -545,14 +545,14 @@ func (Build) Generate() error {
 func (Build) PreBuild() error {
 	utils.Header("Pre-building Packages")
 
-	cfg, err := GetConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	args := []string{"build"}
 
-	if cfg.Build.Verbose {
+	if config.Build.Verbose {
 		args = append(args, "-v")
 	}
 
