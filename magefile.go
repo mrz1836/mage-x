@@ -29,7 +29,7 @@ type (
 )
 
 // Default target
-var Default = BuildDefault //nolint:gochecknoglobals // Mage requires global Default target
+var Default = BuildDefault
 
 // BuildDefault is the default build target
 func BuildDefault() error {
