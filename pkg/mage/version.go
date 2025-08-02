@@ -12,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/magefile/mage/mg"
@@ -52,11 +53,23 @@ type VersionReleaseAsset struct {
 	Size               int64  `json:"size"`
 }
 
+// BuildInfo contains all build-time information
+type BuildInfo struct {
+	Version   string
+	Commit    string
+	BuildDate string
+}
+
+// Package-level variables for build info configuration
 var (
-	// Version info that can be set at build time
-	version   = "dev"
+	// Build-time variables that can be set at build time
+	version   = "dev"     //nolint:gochecknoglobals // Build-time variables
 	commit    = "unknown" //nolint:gochecknoglobals // Build-time variables
 	buildDate = "unknown" //nolint:gochecknoglobals // Build-time variables
+
+	// Thread-safe access to build info
+	buildInfoOnce sync.Once //nolint:gochecknoglobals // Required for thread-safe initialization
+	buildInfoData BuildInfo //nolint:gochecknoglobals // Private data for sync.Once pattern
 )
 
 // Show displays the current version
@@ -303,12 +316,25 @@ func (Version) Changelog() error {
 	return nil
 }
 
+// getBuildInfo returns the build information using thread-safe initialization
+func getBuildInfo() BuildInfo {
+	buildInfoOnce.Do(func() {
+		buildInfoData = BuildInfo{
+			Version:   version,
+			Commit:    commit,
+			BuildDate: buildDate,
+		}
+	})
+	return buildInfoData
+}
+
 // Helper functions
 
 // getVersionInfo returns the current version
 func getVersionInfo() string {
-	if version != versionDev {
-		return version
+	buildInfo := getBuildInfo()
+	if buildInfo.Version != "dev" {
+		return buildInfo.Version
 	}
 
 	// Try to get from git
@@ -321,8 +347,9 @@ func getVersionInfo() string {
 
 // getCommitInfo returns the current commit
 func getCommitInfo() string {
-	if commit != statusUnknown {
-		return commit
+	buildInfo := getBuildInfo()
+	if buildInfo.Commit != "unknown" {
+		return buildInfo.Commit
 	}
 
 	// Try to get from git
@@ -330,13 +357,14 @@ func getCommitInfo() string {
 		return strings.TrimSpace(sha)
 	}
 
-	return statusUnknown
+	return "unknown"
 }
 
 // getBuildDate returns the build date
 func getBuildDate() string {
-	if buildDate != statusUnknown {
-		return buildDate
+	buildInfo := getBuildInfo()
+	if buildInfo.BuildDate != "unknown" {
+		return buildInfo.BuildDate
 	}
 
 	return time.Now().Format(time.RFC3339)

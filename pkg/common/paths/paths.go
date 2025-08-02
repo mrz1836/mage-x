@@ -3,6 +3,7 @@ package paths
 
 import (
 	"io/fs"
+	"sync"
 	"time"
 )
 
@@ -315,23 +316,41 @@ func SecurePath(path, basePath string) (PathBuilder, error) {
 
 // Configuration functions
 
-// SetDefaultOptions sets default options for new PathBuilders
-func SetDefaultOptions(options PathOptions) {
-	// Update global default options that would be used by new PathBuilders
-	// This implementation stores options for future PathBuilder creations
-	globalPathOptions = options
+// Package-level variables for path options configuration
+var (
+	defaultPathOptionsOnce sync.Once    //nolint:gochecknoglobals // Required for thread-safe initialization
+	defaultPathOptionsData PathOptions  //nolint:gochecknoglobals // Private data for sync.Once pattern
+	defaultPathOptionsMu   sync.RWMutex //nolint:gochecknoglobals // Required for thread-safe read/write access
+)
+
+// getDefaultPathOptions returns the default path options using thread-safe initialization
+func getDefaultPathOptions() PathOptions {
+	defaultPathOptionsOnce.Do(func() {
+		defaultPathOptionsData = PathOptions{
+			CreateMode:    0o755,
+			CreateParents: true,
+			BufferSize:    8192,
+		}
+	})
+	defaultPathOptionsMu.RLock()
+	defer defaultPathOptionsMu.RUnlock()
+	return defaultPathOptionsData
 }
 
-// Global options storage
-var globalPathOptions = PathOptions{ //nolint:gochecknoglobals // Package-level configuration
-	CreateMode:    0o755,
-	CreateParents: true,
-	BufferSize:    8192,
+// SetDefaultOptions sets default options for new PathBuilders
+func SetDefaultOptions(options PathOptions) {
+	// Ensure initialization has occurred
+	getDefaultPathOptions()
+
+	// Update the options with write lock for thread safety
+	defaultPathOptionsMu.Lock()
+	defaultPathOptionsData = options
+	defaultPathOptionsMu.Unlock()
 }
 
 // GetDefaultOptions returns the current default options
 func GetDefaultOptions() PathOptions {
-	return globalPathOptions
+	return getDefaultPathOptions()
 }
 
 // Utility functions for testing and mocking

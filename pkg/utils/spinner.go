@@ -41,13 +41,25 @@ const (
 	SpinnerStyleBounce
 )
 
-var spinnerFrames = map[SpinnerStyle][]string{ //nolint:gochecknoglobals // Package-level configuration
-	SpinnerStyleDots:   {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
-	SpinnerStyleLine:   {"-", "\\", "|", "/"},
-	SpinnerStyleCircle: {"◐", "◓", "◑", "◒"},
-	SpinnerStyleSquare: {"◰", "◳", "◲", "◱"},
-	SpinnerStyleArrow:  {"←", "↖", "↑", "↗", "→", "↘", "↓", "↙"},
-	SpinnerStyleBounce: {"⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈"},
+// Package-level variables for spinner configuration
+var (
+	spinnerFramesOnce sync.Once                 //nolint:gochecknoglobals // Required for thread-safe initialization
+	spinnerFramesData map[SpinnerStyle][]string //nolint:gochecknoglobals // Private data for sync.Once pattern
+)
+
+// getSpinnerFrames returns the spinner frame configurations
+func getSpinnerFrames() map[SpinnerStyle][]string {
+	spinnerFramesOnce.Do(func() {
+		spinnerFramesData = map[SpinnerStyle][]string{
+			SpinnerStyleDots:   {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
+			SpinnerStyleLine:   {"-", "\\", "|", "/"},
+			SpinnerStyleCircle: {"◐", "◓", "◑", "◒"},
+			SpinnerStyleSquare: {"◰", "◳", "◲", "◱"},
+			SpinnerStyleArrow:  {"←", "↖", "↑", "↗", "→", "↘", "↓", "↙"},
+			SpinnerStyleBounce: {"⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈"},
+		}
+	})
+	return spinnerFramesData
 }
 
 // NewSpinner creates a new spinner with default style
@@ -57,9 +69,10 @@ func NewSpinner(message string) *Spinner {
 
 // NewSpinnerWithStyle creates a new spinner with a specific style
 func NewSpinnerWithStyle(message string, style SpinnerStyle) *Spinner {
-	frames, ok := spinnerFrames[style]
+	spinnerData := getSpinnerFrames()
+	frames, ok := spinnerData[style]
 	if !ok {
-		frames = spinnerFrames[SpinnerStyleDots]
+		frames = spinnerData[SpinnerStyleDots]
 	}
 
 	return &Spinner{
@@ -228,7 +241,7 @@ func (m *MultiSpinner) AddTask(name, message string) {
 		name:    name,
 		message: message,
 		status:  TaskStatusPending,
-		frames:  spinnerFrames[SpinnerStyleDots],
+		frames:  getSpinnerFrames()[SpinnerStyleDots],
 	}
 }
 
@@ -366,21 +379,39 @@ type treeSymbols struct {
 	empty      string
 }
 
+// Package-level variables for tree symbol configuration
 var (
-	unicodeTreeSymbols = treeSymbols{ //nolint:gochecknoglobals // Package-level configuration
-		branch:     "├─",
-		lastBranch: "└─",
-		vertical:   "│ ",
-		empty:      "  ",
-	}
-
-	asciiTreeSymbols = treeSymbols{ //nolint:gochecknoglobals // Package-level configuration
-		branch:     "|-",
-		lastBranch: "`-",
-		vertical:   "| ",
-		empty:      "  ",
-	}
+	unicodeTreeSymbolsOnce sync.Once   //nolint:gochecknoglobals // Required for thread-safe initialization
+	unicodeTreeSymbolsData treeSymbols //nolint:gochecknoglobals // Private data for sync.Once pattern
+	asciiTreeSymbolsOnce   sync.Once   //nolint:gochecknoglobals // Required for thread-safe initialization
+	asciiTreeSymbolsData   treeSymbols //nolint:gochecknoglobals // Private data for sync.Once pattern
 )
+
+// getUnicodeTreeSymbols returns the Unicode tree drawing symbols
+func getUnicodeTreeSymbols() treeSymbols {
+	unicodeTreeSymbolsOnce.Do(func() {
+		unicodeTreeSymbolsData = treeSymbols{
+			branch:     "├─",
+			lastBranch: "└─",
+			vertical:   "│ ",
+			empty:      "  ",
+		}
+	})
+	return unicodeTreeSymbolsData
+}
+
+// getASCIITreeSymbols returns the ASCII tree drawing symbols
+func getASCIITreeSymbols() treeSymbols {
+	asciiTreeSymbolsOnce.Do(func() {
+		asciiTreeSymbolsData = treeSymbols{
+			branch:     "|-",
+			lastBranch: "`-",
+			vertical:   "| ",
+			empty:      "  ",
+		}
+	})
+	return asciiTreeSymbolsData
+}
 
 // NewProgressTree creates a new progress tree
 func NewProgressTree(name string) *ProgressTree {
@@ -391,7 +422,7 @@ func NewProgressTree(name string) *ProgressTree {
 		},
 		renderer: &treeRenderer{
 			useColor: shouldUseColor(),
-			symbols:  unicodeTreeSymbols,
+			symbols:  getUnicodeTreeSymbols(),
 		},
 	}
 }

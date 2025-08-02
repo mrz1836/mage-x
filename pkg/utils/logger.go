@@ -77,55 +77,9 @@ var (
 	// DefaultLogger is the global logger instance
 	DefaultLogger = NewLogger() //nolint:gochecknoglobals // Package-level default
 
-	// Contextual messages based on time and state
-	contextualMessages = map[string][]string{ //nolint:gochecknoglobals // Package-level configuration
-		"morning": {
-			"☕ Time to build something great!",
-			"🌅 Fresh build, fresh start!",
-			"☕ Good morning! Let's ship some code!",
-		},
-		"afternoon": {
-			"🚀 Afternoon productivity boost!",
-			"💪 Keep pushing forward!",
-			"🔥 Let's make progress!",
-		},
-		"evening": {
-			"🌙 Burning the midnight oil!",
-			"✨ Evening coding session!",
-			"🌃 Night owl mode activated!",
-		},
-		"friday": {
-			"🎉 Ship it before the weekend!",
-			"📦 Feature Friday!",
-			"🚀 Friday deployment time!",
-		},
-		"monday": {
-			"💪 Monday motivation!",
-			"🚀 Fresh week, fresh code!",
-			"☕ Monday morning build!",
-		},
-		"fast": {
-			"⚡ Blazing fast build!",
-			"🏎️ Speed demon!",
-			"🚄 Express build complete!",
-		},
-		"slow": {
-			"🐌 Taking our time...",
-			"⏳ Good things take time...",
-			"🧘 Patience is a virtue...",
-		},
-		"success": {
-			"✨ All green! You're a wizard!",
-			"🎯 Nailed it!",
-			"🎉 Success! High five!",
-			"💯 Perfect execution!",
-		},
-		"fixed": {
-			"🔧 Fixed! Back in business!",
-			"✨ Problem solved!",
-			"💪 Bug squashed!",
-		},
-	}
+	// Package-level variables for contextual message configuration
+	contextualMessagesOnce sync.Once           //nolint:gochecknoglobals // Required for thread-safe initialization
+	contextualMessagesData map[string][]string //nolint:gochecknoglobals // Private data for sync.Once pattern
 )
 
 // NewLogger creates a new logger instance
@@ -291,9 +245,64 @@ func (l *Logger) UpdateSpinner(message string) {
 	}
 }
 
+// getContextualMessages returns the contextual message configurations
+func getContextualMessages() map[string][]string {
+	contextualMessagesOnce.Do(func() {
+		contextualMessagesData = map[string][]string{
+			"morning": {
+				"☕ Time to build something great!",
+				"🌅 Fresh build, fresh start!",
+				"☕ Good morning! Let's ship some code!",
+			},
+			"afternoon": {
+				"🚀 Afternoon productivity boost!",
+				"💪 Keep pushing forward!",
+				"🔥 Let's make progress!",
+			},
+			"evening": {
+				"🌙 Burning the midnight oil!",
+				"✨ Evening coding session!",
+				"🌃 Night owl mode activated!",
+			},
+			"friday": {
+				"🎉 Ship it before the weekend!",
+				"📦 Feature Friday!",
+				"🚀 Friday deployment time!",
+			},
+			"monday": {
+				"💪 Monday motivation!",
+				"🚀 Fresh week, fresh code!",
+				"☕ Monday morning build!",
+			},
+			"fast": {
+				"⚡ Blazing fast build!",
+				"🏎️ Speed demon!",
+				"🚄 Express build complete!",
+			},
+			"slow": {
+				"🐌 Taking our time...",
+				"⏳ Good things take time...",
+				"🧘 Patience is a virtue...",
+			},
+			"success": {
+				"✨ All green! You're a wizard!",
+				"🎯 Nailed it!",
+				"🎉 Success! High five!",
+				"💯 Perfect execution!",
+			},
+			"fixed": {
+				"🔧 Fixed! Back in business!",
+				"✨ Problem solved!",
+				"💪 Bug squashed!",
+			},
+		}
+	})
+	return contextualMessagesData
+}
+
 // GetContextualMessage returns a contextual message based on current time/state
 func (l *Logger) GetContextualMessage(context string) string {
-	messages, ok := contextualMessages[context]
+	messages, ok := getContextualMessages()[context]
 	if !ok {
 		return ""
 	}
