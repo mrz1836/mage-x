@@ -50,7 +50,7 @@ mage_output_file.go
 .mage-cache/
 test-results/
 tests/.mage-cache/
-/pkg/utils/.mage/metrics/
+/pkg/utils/.mage/
 
 # Documentation and generated files
 /docs/build
