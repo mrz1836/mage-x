@@ -30,6 +30,8 @@ var (
 	errInvalidMajorVersion       = errors.New("invalid major version")
 	errInvalidMinorVersion       = errors.New("invalid minor version")
 	errInvalidPatchVersion       = errors.New("invalid patch version")
+	errMultipleTagsOnCommit      = errors.New("current commit already has version tags")
+	errIllogicalVersionJump      = errors.New("version jump appears illogical")
 )
 
 // Version namespace for version management tasks
@@ -215,6 +217,23 @@ func (Version) Bump(_ ...string) error {
 		return fmt.Errorf("%w: %s", errInvalidBumpType, bumpType)
 	}
 
+	// Check for uncommitted changes first
+	if dirty := isGitDirty(); dirty {
+		return errVersionUncommittedChanges
+	}
+
+	// Check if current commit already has version tags
+	existingTags, err := getTagsOnCurrentCommit()
+	if err != nil {
+		return fmt.Errorf("failed to check existing tags: %w", err)
+	}
+
+	if len(existingTags) > 0 {
+		utils.Warn("Current commit already has version tags: %s", strings.Join(existingTags, ", "))
+		utils.Warn("Please create a new commit before bumping the version again")
+		return fmt.Errorf("%w: %s", errMultipleTagsOnCommit, strings.Join(existingTags, ", "))
+	}
+
 	// Get current version
 	current := getCurrentGitTag()
 	if current == "" {
@@ -228,14 +247,12 @@ func (Version) Bump(_ ...string) error {
 		return fmt.Errorf("failed to bump version: %w", err)
 	}
 
-	utils.Info("Bumping from %s to %s (%s bump)", current, newVersion, bumpType)
-
-	// Check for uncommitted changes
-	if dirty := isGitDirty(); dirty {
-		return errVersionUncommittedChanges
+	// Validate version progression
+	if err := validateVersionProgression(current, newVersion, bumpType); err != nil {
+		return err
 	}
 
-	// Create and push tag
+	utils.Info("Bumping from %s to %s (%s bump)", current, newVersion, bumpType)
 
 	// Create annotated tag
 	message := fmt.Sprintf("GitHubRelease %s", newVersion)
@@ -385,6 +402,24 @@ func isGitDirty() bool {
 
 // getCurrentGitTag gets the current git tag
 func getCurrentGitTag() string {
+	// Get all tags pointing to HEAD, sorted by version (highest first)
+	tags, err := GetRunner().RunCmdOutput("git", "tag", "--sort=-version:refname", "--points-at", "HEAD")
+	if err != nil {
+		// Fallback to getting the most recent tag if no tags point to HEAD
+		tag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(tag)
+	}
+
+	// If we have tags, return the first one (highest version)
+	tagList := strings.Split(strings.TrimSpace(tags), "\n")
+	if len(tagList) > 0 && tagList[0] != "" {
+		return tagList[0]
+	}
+
+	// Fallback to describe if no tags on HEAD
 	tag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
 	if err != nil {
 		return ""
@@ -483,6 +518,69 @@ func bumpVersion(current, bumpType string) (string, error) {
 }
 
 // formatReleaseNotes formats release notes for display
+
+// getTagsOnCurrentCommit returns all version tags on the current commit
+func getTagsOnCurrentCommit() ([]string, error) {
+	output, err := GetRunner().RunCmdOutput("git", "tag", "--points-at", "HEAD")
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(output) == "" {
+		return []string{}, nil
+	}
+
+	// Filter only version tags (starting with 'v' followed by a number)
+	allTags := strings.Split(strings.TrimSpace(output), "\n")
+	var versionTags []string
+	for _, tag := range allTags {
+		if strings.HasPrefix(tag, "v") && len(tag) > 1 {
+			if _, err := strconv.Atoi(string(tag[1])); err == nil {
+				versionTags = append(versionTags, tag)
+			}
+		}
+	}
+
+	return versionTags, nil
+}
+
+// validateVersionProgression checks if the version bump is logical
+func validateVersionProgression(current, new, bumpType string) error {
+	currentParts := strings.Split(strings.TrimPrefix(current, "v"), ".")
+	newParts := strings.Split(strings.TrimPrefix(new, "v"), ".")
+
+	if len(currentParts) != 3 || len(newParts) != 3 {
+		return nil // Skip validation if format is unexpected
+	}
+
+	currMajor, _ := strconv.Atoi(currentParts[0])
+	currMinor, _ := strconv.Atoi(currentParts[1])
+	currPatch, _ := strconv.Atoi(currentParts[2])
+
+	newMajor, _ := strconv.Atoi(newParts[0])
+	newMinor, _ := strconv.Atoi(newParts[1])
+	newPatch, _ := strconv.Atoi(newParts[2])
+
+	switch bumpType {
+	case "patch":
+		if newMajor != currMajor || newMinor != currMinor || newPatch != currPatch+1 {
+			return fmt.Errorf("%w: expected %s → v%d.%d.%d, got %s",
+				errIllogicalVersionJump, current, currMajor, currMinor, currPatch+1, new)
+		}
+	case "minor":
+		if newMajor != currMajor || newMinor != currMinor+1 || newPatch != 0 {
+			return fmt.Errorf("%w: expected %s → v%d.%d.0, got %s",
+				errIllogicalVersionJump, current, currMajor, currMinor+1, new)
+		}
+	case "major":
+		if newMajor != currMajor+1 || newMinor != 0 || newPatch != 0 {
+			return fmt.Errorf("%w: expected %s → v%d.0.0, got %s",
+				errIllogicalVersionJump, current, currMajor+1, new)
+		}
+	}
+
+	return nil
+}
 
 // Additional methods for Version namespace required by tests
 

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mrz1836/mage-x/pkg/utils"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -196,6 +197,34 @@ func (ts *VersionTestSuite) TestBumpVersion() {
 		ts.Require().Error(err)
 		ts.Require().ErrorIs(err, errInvalidPatchVersion)
 	})
+
+	ts.Run("BumpFromZero", func() {
+		newVersion, err := bumpVersion("v0.0.0", "patch")
+		ts.Require().NoError(err)
+		ts.Require().Equal("v0.0.1", newVersion)
+
+		newVersion, err = bumpVersion("v0.0.0", "minor")
+		ts.Require().NoError(err)
+		ts.Require().Equal("v0.1.0", newVersion)
+
+		newVersion, err = bumpVersion("v0.0.0", "major")
+		ts.Require().NoError(err)
+		ts.Require().Equal("v1.0.0", newVersion)
+	})
+
+	ts.Run("BumpLargeNumbers", func() {
+		newVersion, err := bumpVersion("v99.99.99", "patch")
+		ts.Require().NoError(err)
+		ts.Require().Equal("v99.99.100", newVersion)
+
+		newVersion, err = bumpVersion("v99.99.99", "minor")
+		ts.Require().NoError(err)
+		ts.Require().Equal("v99.100.0", newVersion)
+
+		newVersion, err = bumpVersion("v99.99.99", "major")
+		ts.Require().NoError(err)
+		ts.Require().Equal("v100.0.0", newVersion)
+	})
 }
 
 // TestGitOperations tests git-related functionality
@@ -230,10 +259,34 @@ func (ts *VersionTestSuite) TestVersionBumpNamespace() {
 	version := Version{}
 
 	ts.Run("BumpDefaultPatch", func() {
+		// Ensure BUMP is not set to test default behavior
+		ts.Require().NoError(os.Unsetenv("BUMP"))
+
 		// This test will fail in dirty git repos, but we test the logic
 		err := version.Bump()
 		// May fail due to git operations, but we're testing the method exists
 		ts.Require().True(err == nil || err != nil)
+	})
+
+	ts.Run("VerifyDefaultBumpType", func() {
+		// Clear BUMP environment variable
+		ts.Require().NoError(os.Unsetenv("BUMP"))
+
+		// The default should be "patch" when BUMP is not set
+		// We can't easily test the full Bump() method without git operations,
+		// but we can verify the environment variable behavior
+		bumpType := utils.GetEnv("BUMP", "patch")
+		ts.Require().Equal("patch", bumpType)
+
+		// Test with empty BUMP
+		ts.Require().NoError(os.Setenv("BUMP", ""))
+		bumpType = utils.GetEnv("BUMP", "patch")
+		ts.Require().Equal("patch", bumpType) // Empty string should use default
+
+		// Test with set BUMP
+		ts.Require().NoError(os.Setenv("BUMP", "minor"))
+		bumpType = utils.GetEnv("BUMP", "patch")
+		ts.Require().Equal("minor", bumpType)
 	})
 
 	ts.Run("BumpWithInvalidType", func() {
@@ -396,6 +449,84 @@ func (ts *VersionTestSuite) TestVersionChangelog() {
 	})
 }
 
+// TestVersionProgression tests version progression validation
+func (ts *VersionTestSuite) TestVersionProgression() {
+	ts.Run("ValidPatchProgression", func() {
+		err := validateVersionProgression("v1.2.3", "v1.2.4", "patch")
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("ValidMinorProgression", func() {
+		err := validateVersionProgression("v1.2.3", "v1.3.0", "minor")
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("ValidMajorProgression", func() {
+		err := validateVersionProgression("v1.2.3", "v2.0.0", "major")
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("InvalidPatchProgression", func() {
+		// Wrong patch increment
+		err := validateVersionProgression("v1.2.3", "v1.2.5", "patch")
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errIllogicalVersionJump)
+
+		// Major changed
+		err = validateVersionProgression("v1.2.3", "v2.2.4", "patch")
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errIllogicalVersionJump)
+
+		// Minor changed
+		err = validateVersionProgression("v1.2.3", "v1.3.4", "patch")
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errIllogicalVersionJump)
+	})
+
+	ts.Run("InvalidMinorProgression", func() {
+		// Wrong minor increment
+		err := validateVersionProgression("v1.2.3", "v1.4.0", "minor")
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errIllogicalVersionJump)
+
+		// Patch not reset
+		err = validateVersionProgression("v1.2.3", "v1.3.3", "minor")
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errIllogicalVersionJump)
+
+		// Major changed
+		err = validateVersionProgression("v1.2.3", "v2.3.0", "minor")
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errIllogicalVersionJump)
+	})
+
+	ts.Run("InvalidMajorProgression", func() {
+		// Wrong major increment
+		err := validateVersionProgression("v1.2.3", "v3.0.0", "major")
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errIllogicalVersionJump)
+
+		// Minor not reset
+		err = validateVersionProgression("v1.2.3", "v2.2.0", "major")
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errIllogicalVersionJump)
+
+		// Patch not reset
+		err = validateVersionProgression("v1.2.3", "v2.0.3", "major")
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errIllogicalVersionJump)
+	})
+
+	ts.Run("SkipValidationForInvalidFormat", func() {
+		// Should not error on invalid format (validation is skipped)
+		err := validateVersionProgression("v1.2", "v1.3", "patch")
+		ts.Require().NoError(err)
+
+		err = validateVersionProgression("v1.2.3.4", "v1.2.3.5", "patch")
+		ts.Require().NoError(err)
+	})
+}
+
 // TestErrorHandling tests error conditions and edge cases
 func (ts *VersionTestSuite) TestErrorHandling() {
 	ts.Run("StaticErrors", func() {
@@ -408,6 +539,8 @@ func (ts *VersionTestSuite) TestErrorHandling() {
 		ts.Require().Error(errInvalidMajorVersion)
 		ts.Require().Error(errInvalidMinorVersion)
 		ts.Require().Error(errInvalidPatchVersion)
+		ts.Require().Error(errMultipleTagsOnCommit)
+		ts.Require().Error(errIllogicalVersionJump)
 
 		// Test error messages are meaningful
 		ts.Require().Contains(errCannotParseGitHubInfo.Error(), "cannot parse GitHub info")
@@ -418,6 +551,8 @@ func (ts *VersionTestSuite) TestErrorHandling() {
 		ts.Require().Contains(errInvalidMajorVersion.Error(), "invalid major version")
 		ts.Require().Contains(errInvalidMinorVersion.Error(), "invalid minor version")
 		ts.Require().Contains(errInvalidPatchVersion.Error(), "invalid patch version")
+		ts.Require().Contains(errMultipleTagsOnCommit.Error(), "current commit already has version tags")
+		ts.Require().Contains(errIllogicalVersionJump.Error(), "version jump appears illogical")
 	})
 
 	ts.Run("BumpVersionEdgeCases", func() {
