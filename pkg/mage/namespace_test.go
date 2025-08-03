@@ -241,7 +241,10 @@ func TestLintNamespace_Fix(t *testing.T) {
 
 func TestToolsNamespace_Install(t *testing.T) {
 	withMockRunner(t, func(mockRunner *MockCommandRunner) {
-		// Mock installation of tools - gofumpt and govulncheck
+		// Mock golangci-lint installation via curl script
+		mockRunner.On("RunCmd", "sh", "-c", mock.AnythingOfType("string")).Return(nil).Maybe()
+
+		// Mock installation of other tools via go install - gofumpt and govulncheck
 		mockRunner.On("RunCmd", "go", "install", mock.AnythingOfType("string")).Return(nil).Maybe()
 
 		tools := NewToolsNamespace()
