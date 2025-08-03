@@ -13,8 +13,8 @@ import (
 // Predefined error variables to satisfy err113 linter
 var (
 	errNoTags          = errors.New("no tags")
-	errGitError        = errors.New("git error")
 	errNotGitRepoLocal = errors.New("not a git repository")
+	errGitError        = errors.New("git error")
 )
 
 // VersionMockRunner is a mock implementation of Runner for version testing

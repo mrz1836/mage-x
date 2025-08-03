@@ -1,72 +1,72 @@
 project:
-    name: mage-x
-    binary: mage-x
-    module: github.com/mrz1836/mage-x
-    description: ""
-    version: ""
-    git_domain: github.com
-    repo_owner: ""
-    repo_name: ""
-    env: {}
+  name: mage-x
+  binary: mage-x
+  module: github.com/mrz1836/mage-x
+  description: ""
+  version: ""
+  git_domain: github.com
+  repo_owner: ""
+  repo_name: ""
+  env: {}
 build:
-    tags: []
-    ldflags: []
-    platforms:
-        - linux/amd64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    goflags: []
-    output: bin
-    parallel: 10
-    verbose: false
-    trimpath: true
+  tags: []
+  ldflags: []
+  platforms:
+    - linux/amd64
+    - darwin/amd64
+    - darwin/arm64
+    - windows/amd64
+  goflags: []
+  output: bin
+  parallel: 10
+  verbose: false
+  trimpath: true
 test:
-    parallel: true
-    timeout: 10m
-    short: false
-    verbose: false
-    race: false
-    cover: false
-    covermode: atomic
-    coverpkg: []
-    tags: []
-    skip_fuzz: false
+  parallel: true
+  timeout: 10m
+  short: false
+  verbose: false
+  race: false
+  cover: false
+  covermode: atomic
+  coverpkg: []
+  tags: []
+  skip_fuzz: false
 lint:
-    golangci_version: v2.3.0
-    timeout: 5m
-    skip_dirs: []
-    skip_files: []
-    enable_all: false
-    disable_linters: []
-    enable_linters: []
+  golangci_version: v2.3.0
+  timeout: 5m
+  skip_dirs: []
+  skip_files: []
+  enable_all: false
+  disable_linters: []
+  enable_linters: []
 tools:
-    golangci_lint: v2.3.0
-    fumpt: latest
-    govulncheck: latest
-    mockgen: ""
-    swag: ""
-    custom: {}
+  golangci_lint: v2.3.0
+  fumpt: latest
+  govulncheck: latest
+  mockgen: ""
+  swag: ""
+  custom: {}
 docker:
-    registry: ""
-    repository: ""
-    dockerfile: Dockerfile
-    build_args: {}
-    platforms:
-        - linux/amd64
-        - linux/arm64
-    enable_buildkit: true
-    labels: {}
-    cache_from: []
-    security_opts: []
-    network_mode: ""
-    default_registry: docker.io
+  registry: ""
+  repository: ""
+  dockerfile: Dockerfile
+  build_args: {}
+  platforms:
+    - linux/amd64
+    - linux/arm64
+  enable_buildkit: true
+  labels: {}
+  cache_from: []
+  security_opts: []
+  network_mode: ""
+  default_registry: docker.io
 release:
-    github_token_env: GITHUB_TOKEN
-    changelog: true
-    draft: false
-    prerelease: false
-    name_template: ""
-    formats:
-        - tar.gz
-        - zip
+  github_token_env: GITHUB_TOKEN
+  changelog: true
+  draft: false
+  prerelease: false
+  name_template: ""
+  formats:
+    - tar.gz
+    - zip

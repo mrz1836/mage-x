@@ -46,8 +46,8 @@ func (Metrics) LOC() error {
 	date := time.Now().Format("2006-01-02")
 
 	utils.Info("")
-	utils.Info("| Type       | Total Lines | Date        |")
-	utils.Info("|------------|-------------|-------------|")
+	utils.Info("| Type       | Total Lines | Date       |")
+	utils.Info("|------------|-------------|------------|")
 	utils.Info("| Test Files | %-11d | %s |", testCount, date)
 	utils.Info("| Go Files   | %-11d | %s |", goCount, date)
 	utils.Info("")

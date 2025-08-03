@@ -82,6 +82,26 @@ jobs:
       - name: Run tests with race detector
         run: mage testRace
 
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+
+      - name: Run integration tests
+        run: mage testIntegration
+
   coverage-race-tests:
     runs-on: ubuntu-latest
 
@@ -183,7 +203,17 @@ jobs:
         run: mage testUnit
 
   summary:
-    needs: [standard-tests, coverage-tests, race-tests, coverage-race-tests, fuzz-tests, loc-metrics, test-matrix]
+    needs:
+      [
+        standard-tests,
+        coverage-tests,
+        race-tests,
+        integration-tests,
+        coverage-race-tests,
+        fuzz-tests,
+        loc-metrics,
+        test-matrix
+      ]
     runs-on: ubuntu-latest
     if: always()
 
@@ -196,6 +226,7 @@ jobs:
           echo "- Standard Tests: ${{ needs.standard-tests.result }}"
           echo "- Coverage Tests: ${{ needs.coverage-tests.result }}"
           echo "- Race Tests: ${{ needs.race-tests.result }}"
+          echo "- Integration Tests: ${{ needs.integration-tests.result }}"
           echo "- Coverage + Race Tests: ${{ needs.coverage-race-tests.result }}"
           echo "- Fuzz Tests: ${{ needs.fuzz-tests.result }}"
           echo "- LOC Metrics: ${{ needs.loc-metrics.result }}"

@@ -33,8 +33,6 @@ func (ts *BuildTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.env.CreateGoMod("test/module")
 	ts.build = Build{}
-	// Reset cache manager to avoid test interference
-	cacheManager = nil
 	// Disable cache for tests
 	if err := os.Setenv("MAGE_CACHE_DISABLED", "true"); err != nil {
 		ts.T().Fatalf("Failed to set MAGE_CACHE_DISABLED: %v", err)
