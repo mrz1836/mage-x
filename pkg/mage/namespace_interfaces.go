@@ -1,6 +1,10 @@
 // Package mage provides namespace interfaces for mage build operations
 package mage
 
+import (
+	"sync"
+)
+
 // BuildNamespace interface defines the contract for build operations
 type BuildNamespace interface {
 	// Default builds the application for the current platform
@@ -863,15 +867,54 @@ func (r *DefaultNamespaceRegistry) SetWorkflow(workflow WorkflowNamespace) {
 	r.workflow = workflow
 }
 
-// Global registry instance
-var globalNamespaceRegistry = NewNamespaceRegistry() //nolint:gochecknoglobals // Required for namespace registry singleton
-
-// GetNamespaceRegistry returns the global namespace registry
+// GetNamespaceRegistry returns the package-level namespace registry with thread-safe lazy initialization
 func GetNamespaceRegistry() *DefaultNamespaceRegistry {
-	return globalNamespaceRegistry
+	return getRegistryInstance()
 }
 
-// SetNamespaceRegistry sets the global namespace registry
+// SetNamespaceRegistry sets the package-level namespace registry (primarily for testing)
 func SetNamespaceRegistry(registry *DefaultNamespaceRegistry) {
-	globalNamespaceRegistry = registry
+	setRegistryInstance(registry)
 }
+
+// getRegistryInstance and setRegistryInstance are created using a closure to avoid global variables
+//
+//nolint:gochecknoglobals // Required for singleton pattern implementation
+var getRegistryInstance, setRegistryInstance = func() (func() *DefaultNamespaceRegistry, func(*DefaultNamespaceRegistry)) {
+	var (
+		once     sync.Once
+		instance *DefaultNamespaceRegistry
+		mu       sync.RWMutex
+	)
+
+	getter := func() *DefaultNamespaceRegistry {
+		mu.RLock()
+		if instance != nil {
+			defer mu.RUnlock()
+			return instance
+		}
+		mu.RUnlock()
+
+		once.Do(func() {
+			mu.Lock()
+			defer mu.Unlock()
+			if instance == nil {
+				instance = NewNamespaceRegistry()
+			}
+		})
+
+		mu.RLock()
+		defer mu.RUnlock()
+		return instance
+	}
+
+	setter := func(registry *DefaultNamespaceRegistry) {
+		mu.Lock()
+		defer mu.Unlock()
+		instance = registry
+		// Reset once to allow reinitialization if needed
+		once = sync.Once{}
+	}
+
+	return getter, setter
+}()
