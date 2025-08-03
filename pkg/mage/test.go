@@ -410,6 +410,13 @@ func (Test) CoverReport() error {
 		return nil
 	}
 
+	// Check if this is a multi-module coverage file
+	if isMultiModuleCoverage("coverage.txt") {
+		utils.Info("Multi-module coverage file detected. Coverage files generated successfully.")
+		utils.Info("Note: Individual module coverage reports cannot be displayed with 'go tool cover' for multi-module projects.")
+		return nil
+	}
+
 	utils.Info("Coverage Report:")
 	return GetRunner().RunCmd("go", "tool", "cover", "-func=coverage.txt")
 }
@@ -418,6 +425,13 @@ func (Test) CoverReport() error {
 func (Test) CoverHTML() error {
 	if !utils.FileExists("coverage.txt") {
 		return errNoCoverageFile
+	}
+
+	// Check if this is a multi-module coverage file
+	if isMultiModuleCoverage("coverage.txt") {
+		utils.Warn("Cannot generate HTML coverage report for multi-module projects.")
+		utils.Info("Coverage data is available in coverage.txt for external tools.")
+		return nil
 	}
 
 	utils.Info("Generating HTML coverage report...")
@@ -471,6 +485,52 @@ func handleSingleCoverageFile(coverageFile string) {
 	if err := os.Rename(coverageFile, "coverage.txt"); err != nil {
 		utils.Warn("Failed to rename coverage file: %v", err)
 	}
+}
+
+// isMultiModuleCoverage checks if a coverage file contains packages from multiple modules
+func isMultiModuleCoverage(coverageFile string) bool {
+	content, err := os.ReadFile(coverageFile) // #nosec G304 -- coverage file path is controlled
+	if err != nil {
+		utils.Debug("Failed to read coverage file: %v", err)
+		return false
+	}
+
+	// Get the current module name
+	currentModule, err := utils.GetModuleName()
+	if err != nil {
+		utils.Debug("Failed to get module name: %v", err)
+		return false
+	}
+	utils.Debug("Current module: %s", currentModule)
+
+	// Check if any line contains a package path from a submodule
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		if line == "" || strings.HasPrefix(line, "mode:") {
+			continue
+		}
+		// Coverage lines start with the package path
+		if idx := strings.Index(line, ":"); idx > 0 {
+			pkg := line[:idx]
+			// Check if this package is from a submodule by looking for paths that contain
+			// the main module but have their own go.mod (like .github/test-module)
+			if strings.HasPrefix(pkg, currentModule+"/") {
+				// Extract the relative path after the module name
+				relativePath := strings.TrimPrefix(pkg, currentModule+"/")
+				// Check for common submodule patterns
+				if strings.HasPrefix(relativePath, ".github/test-module/") ||
+					strings.HasPrefix(relativePath, "tools/cli-helper/") {
+					utils.Debug("Found package from submodule: %s", pkg)
+					return true
+				}
+			} else if !strings.HasPrefix(pkg, currentModule) && strings.Contains(pkg, "/") {
+				// Package from completely different module
+				utils.Debug("Found package from different module: %s", pkg)
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Fuzz runs fuzz tests

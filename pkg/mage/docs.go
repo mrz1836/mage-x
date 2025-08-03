@@ -410,6 +410,12 @@ func serveWithDocServer(server DocServer) error {
 
 // openBrowser opens the documentation URL in the default browser
 func openBrowser(url string) {
+	// Skip browser opening in test environment
+	if isTestEnvironment() {
+		utils.Info("Test environment detected - skipping browser open for: %s", url)
+		return
+	}
+
 	utils.Info("Opening browser...")
 
 	var cmd string
@@ -621,6 +627,26 @@ func getPortFromEnv(defaultPort int) int {
 func isCI() bool {
 	ci := os.Getenv("CI")
 	return ci == "true" || ci == "1"
+}
+
+// isTestEnvironment detects if code is running under go test
+func isTestEnvironment() bool {
+	// Check if running under go test by looking for test-specific indicators
+	// Method 1: Check for -test. binary suffix (most reliable)
+	if strings.HasSuffix(os.Args[0], ".test") || strings.Contains(os.Args[0], ".test") {
+		return true
+	}
+	// Method 2: Check for test flags
+	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "-test.") {
+			return true
+		}
+	}
+	// Method 3: Check environment variable that could be set by test runners
+	if os.Getenv("GO_TEST") == "1" {
+		return true
+	}
+	return false
 }
 
 // installDocTool installs the specified documentation tool if missing
