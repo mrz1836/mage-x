@@ -314,6 +314,11 @@ export PARALLEL=8
 export LINT_TIMEOUT=10m
 export FUZZ_TIME=30s
 export BENCH_TIME=10s
+
+# Version management
+export BUMP=minor      # Version bump type: patch (default), minor, major
+export PUSH=true       # Push tag to remote after creation
+export DRY_RUN=true    # Preview version bump without making changes
 ```
 
 <br/>
@@ -446,6 +451,17 @@ mage gitPush                                  # Push changes to remote (current 
 mage versionShow        # Display current version information
 mage versionBump        # Bump the version (BUMP=minor/major PUSH=true mage versionBump)
 mage versionCheck       # Check version information
+
+# Version Bump Examples
+BUMP=patch mage versionBump              # Bump patch version (default)
+BUMP=minor mage versionBump              # Bump minor version
+BUMP=major mage versionBump              # Bump major version
+BUMP=minor PUSH=true mage versionBump    # Bump minor and push to remote
+
+# Dry-run mode (preview changes without making them)
+DRY_RUN=true mage versionBump                        # Preview patch bump
+DRY_RUN=true BUMP=minor mage versionBump             # Preview minor bump
+DRY_RUN=true BUMP=major PUSH=true mage versionBump   # Preview major bump with push
 ```
 
 #### 🚀 Release Management

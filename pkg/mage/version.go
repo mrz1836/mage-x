@@ -215,9 +215,19 @@ func (Version) Bump(_ ...string) error {
 		return fmt.Errorf("%w: %s", errInvalidBumpType, bumpType)
 	}
 
+	// Check for dry-run mode
+	dryRun := os.Getenv("DRY_RUN") == approvalTrue
+	if dryRun {
+		utils.Info("🔍 Running in DRY-RUN mode - no changes will be made")
+	}
+
 	// Check for uncommitted changes first
 	if dirty := isGitDirty(); dirty {
-		return errVersionUncommittedChanges
+		if dryRun {
+			utils.Warn("Working directory has uncommitted changes (would fail in normal mode)")
+		} else {
+			return errVersionUncommittedChanges
+		}
 	}
 
 	// Check if current commit already has version tags
@@ -228,8 +238,12 @@ func (Version) Bump(_ ...string) error {
 
 	if len(existingTags) > 0 {
 		utils.Warn("Current commit already has version tags: %s", strings.Join(existingTags, ", "))
-		utils.Warn("Please create a new commit before bumping the version again")
-		return fmt.Errorf("%w: %s", errMultipleTagsOnCommit, strings.Join(existingTags, ", "))
+		if dryRun {
+			utils.Warn("Would fail in normal mode - need a new commit before bumping")
+		} else {
+			utils.Warn("Please create a new commit before bumping the version again")
+			return fmt.Errorf("%w: %s", errMultipleTagsOnCommit, strings.Join(existingTags, ", "))
+		}
 	}
 
 	// Get current version
@@ -251,6 +265,28 @@ func (Version) Bump(_ ...string) error {
 	}
 
 	utils.Info("Bumping from %s to %s (%s bump)", current, newVersion, bumpType)
+
+	if dryRun {
+		// Dry-run mode - show what would happen
+		utils.Info("\n📋 DRY-RUN Summary:")
+		utils.Info("  Current version: %s", current)
+		utils.Info("  New version:     %s", newVersion)
+		utils.Info("  Bump type:       %s", bumpType)
+		utils.Info("\n🔧 Commands that would be executed:")
+		message := fmt.Sprintf("GitHubRelease %s", newVersion)
+		utils.Info("  git tag -a %s -m \"%s\"", newVersion, message)
+
+		if os.Getenv("PUSH") == approvalTrue {
+			utils.Info("  git push origin %s", newVersion)
+		} else {
+			utils.Info("\n📌 Note: Tag would be created locally only")
+			utils.Info("  To push: git push origin %s", newVersion)
+			utils.Info("  Or set PUSH=true to push automatically")
+		}
+
+		utils.Success("\n✅ DRY-RUN completed - no changes made")
+		return nil
+	}
 
 	// Create annotated tag
 	message := fmt.Sprintf("GitHubRelease %s", newVersion)
