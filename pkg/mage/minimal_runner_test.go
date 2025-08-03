@@ -3,8 +3,10 @@ package mage
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -446,6 +448,156 @@ func (ts *MinimalRunnerTestSuite) TestMinimalRunnerIntegration() {
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "execution failed")
 	})
+}
+
+// TestSecureCommandRunner_getCommandTimeout tests the timeout logic
+func TestSecureCommandRunner_getCommandTimeout(t *testing.T) {
+	runner := &SecureCommandRunner{}
+
+	tests := []struct {
+		name     string
+		cmd      string
+		args     []string
+		expected time.Duration
+	}{
+		// Go commands
+		{
+			name:     "go test gets 10 minutes",
+			cmd:      "go",
+			args:     []string{"test", "./..."},
+			expected: 10 * time.Minute,
+		},
+		{
+			name:     "go install gets 5 minutes",
+			cmd:      "go",
+			args:     []string{"install", "github.com/tool"},
+			expected: 5 * time.Minute,
+		},
+		{
+			name:     "go build gets 3 minutes",
+			cmd:      "go",
+			args:     []string{"build", "./cmd/app"},
+			expected: 3 * time.Minute,
+		},
+		{
+			name:     "go fmt gets 2 minutes",
+			cmd:      "go",
+			args:     []string{"fmt", "./..."},
+			expected: 2 * time.Minute,
+		},
+		// Mage commands
+		{
+			name:     "mage testDefault gets 10 minutes",
+			cmd:      "mage",
+			args:     []string{"testDefault"},
+			expected: 10 * time.Minute,
+		},
+		{
+			name:     "mage test gets 10 minutes",
+			cmd:      "mage",
+			args:     []string{"test"},
+			expected: 10 * time.Minute,
+		},
+		{
+			name:     "mage test:cover gets 10 minutes",
+			cmd:      "mage",
+			args:     []string{"test:cover"},
+			expected: 10 * time.Minute,
+		},
+		{
+			name:     "mage test:race gets 10 minutes",
+			cmd:      "mage",
+			args:     []string{"test:race"},
+			expected: 10 * time.Minute,
+		},
+		{
+			name:     "mage test:ci gets 10 minutes",
+			cmd:      "mage",
+			args:     []string{"test:ci"},
+			expected: 10 * time.Minute,
+		},
+		{
+			name:     "mage test:full gets 10 minutes",
+			cmd:      "mage",
+			args:     []string{"test:full"},
+			expected: 10 * time.Minute,
+		},
+		{
+			name:     "mage build gets 3 minutes",
+			cmd:      "mage",
+			args:     []string{"build"},
+			expected: 3 * time.Minute,
+		},
+		{
+			name:     "mage lint gets 3 minutes",
+			cmd:      "mage",
+			args:     []string{"lint"},
+			expected: 3 * time.Minute,
+		},
+		// Other tools
+		{
+			name:     "goreleaser gets 30 minutes",
+			cmd:      "goreleaser",
+			args:     []string{"release", "--clean"},
+			expected: 30 * time.Minute,
+		},
+		{
+			name:     "golangci-lint gets 5 minutes",
+			cmd:      "golangci-lint",
+			args:     []string{"run", "./..."},
+			expected: 5 * time.Minute,
+		},
+		{
+			name:     "staticcheck gets 3 minutes",
+			cmd:      "staticcheck",
+			args:     []string{"./..."},
+			expected: 3 * time.Minute,
+		},
+		{
+			name:     "gosec gets 3 minutes",
+			cmd:      "gosec",
+			args:     []string{"./..."},
+			expected: 3 * time.Minute,
+		},
+		{
+			name:     "govulncheck gets 3 minutes",
+			cmd:      "govulncheck",
+			args:     []string{"./..."},
+			expected: 3 * time.Minute,
+		},
+		{
+			name:     "echo gets 30 seconds",
+			cmd:      "echo",
+			args:     []string{"hello"},
+			expected: 30 * time.Second,
+		},
+		{
+			name:     "git gets 30 seconds",
+			cmd:      "git",
+			args:     []string{"status"},
+			expected: 30 * time.Second,
+		},
+		// Edge cases
+		{
+			name:     "mage with no args gets 3 minutes",
+			cmd:      "mage",
+			args:     []string{},
+			expected: 3 * time.Minute,
+		},
+		{
+			name:     "go with no args gets 2 minutes",
+			cmd:      "go",
+			args:     []string{},
+			expected: 2 * time.Minute,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			timeout := runner.getCommandTimeout(tt.cmd, tt.args)
+			assert.Equal(t, tt.expected, timeout)
+		})
+	}
 }
 
 // TestMinimalRunnerTestSuite runs the test suite

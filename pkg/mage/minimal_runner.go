@@ -52,25 +52,48 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 // getCommandTimeout returns appropriate timeout based on command type
 func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time.Duration {
 	// For go commands, use longer timeouts
-	if name == "go" && len(args) > 0 {
-		switch args[0] {
-		case "test":
-			// Allow 10 minutes for go test commands
-			return 10 * time.Minute
-		case "install", "get", "mod":
-			// Allow 5 minutes for package operations
-			return 5 * time.Minute
-		case "build", "run":
-			// Allow 3 minutes for build operations
-			return 3 * time.Minute
-		default:
-			// Default go command timeout
-			return 2 * time.Minute
+	if name == "go" {
+		if len(args) > 0 {
+			switch args[0] {
+			case "test":
+				// Allow 10 minutes for go test commands
+				return 10 * time.Minute
+			case "install", "get", "mod":
+				// Allow 5 minutes for package operations
+				return 5 * time.Minute
+			case "build", "run":
+				// Allow 3 minutes for build operations
+				return 3 * time.Minute
+			default:
+				// Default go command timeout
+				return 2 * time.Minute
+			}
 		}
+		// Default go command timeout (when no args)
+		return 2 * time.Minute
+	}
+
+	// For mage commands, check if it's a test-related command
+	if name == "mage" {
+		if len(args) > 0 {
+			// Check for test-related mage commands
+			if args[0] == "testDefault" || args[0] == "test" ||
+				args[0] == "test:default" || args[0] == "test:unit" ||
+				args[0] == "test:cover" || args[0] == "test:race" ||
+				args[0] == "test:ci" || args[0] == "test:full" {
+				// Allow 10 minutes for mage test commands
+				return 10 * time.Minute
+			}
+		}
+		// Default mage command timeout (3 minutes for general tasks)
+		return 3 * time.Minute
 	}
 
 	// For other tools that might take longer
 	switch name {
+	case "goreleaser":
+		// Allow 30 minutes for goreleaser (builds, tests, uploads)
+		return 30 * time.Minute
 	case "golangci-lint":
 		return 5 * time.Minute
 	case "staticcheck", "gosec", "govulncheck":
