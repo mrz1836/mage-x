@@ -6,179 +6,140 @@ import (
 	"testing"
 
 	"github.com/mrz1836/mage-x/pkg/mage"
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 // Static errors for mock testing
 var (
-	errMockFailure = errors.New("mock failure")
+	errMockBuildFailure  = errors.New("mock build failure")
+	errMockTestFailure   = errors.New("test failure")
+	errMockBuildError    = errors.New("build failure")
+	errMockPreBuildError = errors.New("pre-build failure")
 )
 
-// MockBuild is a mock implementation of BuildNamespace for testing
+// MockBuild is a mock implementation of BuildNamespace using testhelpers.MockBase
 type MockBuild struct {
-	defaultCalled  bool
-	allCalled      bool
-	platformCalled map[string]bool
-	cleanCalled    bool
-	shouldFail     bool
-	failureMessage string
-	callOrder      []string
+	*testhelpers.MockBase
+
+	platformCalled map[string]bool // Keep for specific platform tracking
 }
 
 // NewMockBuild creates a new mock build namespace
-func NewMockBuild() *MockBuild {
+func NewMockBuild(t *testing.T) *MockBuild {
 	return &MockBuild{
+		MockBase:       testhelpers.NewMockBase(t),
 		platformCalled: make(map[string]bool),
-		callOrder:      []string{},
 	}
 }
 
 func (m *MockBuild) Default() error {
-	m.defaultCalled = true
-	m.callOrder = append(m.callOrder, "Default")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Default")
+	m.RecordCall("Default", nil, nil, err)
+	return err
 }
 
 func (m *MockBuild) All() error {
-	m.allCalled = true
-	m.callOrder = append(m.callOrder, "All")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("All")
+	m.RecordCall("All", nil, nil, err)
+	return err
 }
 
 func (m *MockBuild) Platform(platform string) error {
 	m.platformCalled[platform] = true
-	m.callOrder = append(m.callOrder, fmt.Sprintf("Platform(%s)", platform))
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Platform")
+	m.RecordCall("Platform", []interface{}{platform}, nil, err)
+	return err
 }
 
 func (m *MockBuild) Linux() error {
-	m.callOrder = append(m.callOrder, "Linux")
-	return m.Platform("linux/amd64")
+	err := m.Platform("linux/amd64")
+	m.RecordCall("Linux", nil, nil, err)
+	return err
 }
 
 func (m *MockBuild) Darwin() error {
-	m.callOrder = append(m.callOrder, "Darwin")
-	return m.Platform("darwin/amd64")
+	err := m.Platform("darwin/amd64")
+	m.RecordCall("Darwin", nil, nil, err)
+	return err
 }
 
 func (m *MockBuild) Windows() error {
-	m.callOrder = append(m.callOrder, "Windows")
-	return m.Platform("windows/amd64")
+	err := m.Platform("windows/amd64")
+	m.RecordCall("Windows", nil, nil, err)
+	return err
 }
 
 func (m *MockBuild) Docker() error {
-	m.callOrder = append(m.callOrder, "Docker")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Docker")
+	m.RecordCall("Docker", nil, nil, err)
+	return err
 }
 
 func (m *MockBuild) Clean() error {
-	m.cleanCalled = true
-	m.callOrder = append(m.callOrder, "Clean")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Clean")
+	m.RecordCall("Clean", nil, nil, err)
+	return err
 }
 
 func (m *MockBuild) Install() error {
-	m.callOrder = append(m.callOrder, "Install")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Install")
+	m.RecordCall("Install", nil, nil, err)
+	return err
 }
 
 func (m *MockBuild) Generate() error {
-	m.callOrder = append(m.callOrder, "Generate")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Generate")
+	m.RecordCall("Generate", nil, nil, err)
+	return err
 }
 
 func (m *MockBuild) PreBuild() error {
-	m.callOrder = append(m.callOrder, "PreBuild")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("PreBuild")
+	m.RecordCall("PreBuild", nil, nil, err)
+	return err
 }
 
-// MockTest is a mock implementation of TestNamespace for testing
+// MockTest is a mock implementation of TestNamespace using testhelpers.MockBase
 type MockTest struct {
+	*testhelpers.MockBase
 	mage.Test // Embed the real Test implementation
-
-	defaultCalled     bool
-	unitCalled        bool
-	integrationCalled bool
-	coverageCalled    bool
-	raceCalled        bool
-	shouldFail        bool
-	failureMessage    string
-	callOrder         []string
 }
 
-func NewMockTest() *MockTest {
+func NewMockTest(t *testing.T) *MockTest {
 	return &MockTest{
-		callOrder: []string{},
+		MockBase: testhelpers.NewMockBase(t),
 	}
 }
 
 // Only override the methods we want to track/mock
 func (m *MockTest) Default() error {
-	m.defaultCalled = true
-	m.callOrder = append(m.callOrder, "Default")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Default")
+	m.RecordCall("Default", nil, nil, err)
+	return err
 }
 
 func (m *MockTest) Unit() error {
-	m.unitCalled = true
-	m.callOrder = append(m.callOrder, "Unit")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Unit")
+	m.RecordCall("Unit", nil, nil, err)
+	return err
 }
 
 func (m *MockTest) Integration() error {
-	m.integrationCalled = true
-	m.callOrder = append(m.callOrder, "Integration")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Integration")
+	m.RecordCall("Integration", nil, nil, err)
+	return err
 }
 
 func (m *MockTest) Coverage(args ...string) error {
-	m.coverageCalled = true
-	m.callOrder = append(m.callOrder, "Coverage")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Coverage")
+	m.RecordCall("Coverage", []interface{}{args}, nil, err)
+	return err
 }
 
 func (m *MockTest) Race() error {
-	m.raceCalled = true
-	m.callOrder = append(m.callOrder, "Race")
-	if m.shouldFail {
-		return fmt.Errorf("%w: %s", errMockFailure, m.failureMessage)
-	}
-	return nil
+	err := m.ShouldReturnError("Race")
+	m.RecordCall("Race", nil, nil, err)
+	return err
 }
 
 // Functions to test
@@ -229,7 +190,7 @@ func buildPipeline(build mage.BuildNamespace) error {
 
 func TestDeployApp(t *testing.T) {
 	t.Run("successful deployment", func(t *testing.T) {
-		mockBuild := NewMockBuild()
+		mockBuild := NewMockBuild(t)
 		platforms := []string{"linux/amd64", "darwin/amd64", "windows/amd64"}
 
 		err := deployApp(mockBuild, platforms)
@@ -244,24 +205,19 @@ func TestDeployApp(t *testing.T) {
 			}
 		}
 
-		// Verify call order
-		expectedCalls := []string{
-			"Platform(linux/amd64)",
-			"Platform(darwin/amd64)",
-			"Platform(windows/amd64)",
-		}
+		// Verify call order using MockBase
+		mockBuild.AssertCalled("Platform")
+		mockBuild.AssertCalledTimes("Platform", 3)
 
-		for i, expected := range expectedCalls {
-			if i >= len(mockBuild.callOrder) || mockBuild.callOrder[i] != expected {
-				t.Errorf("Expected call %d to be %s, got %v", i, expected, mockBuild.callOrder)
-			}
+		// Verify platform arguments
+		for _, platform := range platforms {
+			mockBuild.AssertCalledWith("Platform", platform)
 		}
 	})
 
 	t.Run("build failure", func(t *testing.T) {
-		mockBuild := NewMockBuild()
-		mockBuild.shouldFail = true
-		mockBuild.failureMessage = "mock build failure"
+		mockBuild := NewMockBuild(t)
+		mockBuild.SetMethodError("Platform", errMockBuildFailure)
 		platforms := []string{"linux/amd64"}
 
 		err := deployApp(mockBuild, platforms)
@@ -270,7 +226,7 @@ func TestDeployApp(t *testing.T) {
 			t.Error("Expected error, got nil")
 		}
 
-		if err.Error() != "failed to build for linux/amd64: mock failure: mock build failure" {
+		if err.Error() != "failed to build for linux/amd64: mock build failure" {
 			t.Errorf("Unexpected error message: %v", err)
 		}
 	})
@@ -278,8 +234,8 @@ func TestDeployApp(t *testing.T) {
 
 func TestRunCI(t *testing.T) {
 	t.Run("successful CI", func(t *testing.T) {
-		mockBuild := NewMockBuild()
-		mockTest := NewMockTest()
+		mockBuild := NewMockBuild(t)
+		mockTest := NewMockTest(t)
 
 		err := runCI(mockBuild, mockTest)
 		if err != nil {
@@ -287,30 +243,20 @@ func TestRunCI(t *testing.T) {
 		}
 
 		// Verify tests were run
-		if !mockTest.coverageCalled {
-			t.Error("Coverage tests were not called")
-		}
+		mockTest.AssertCalled("Coverage")
 
 		// Verify build was run
-		if !mockBuild.defaultCalled {
-			t.Error("Default build was not called")
-		}
+		mockBuild.AssertCalled("Default")
 
-		// Verify order: tests should run before build
-		if len(mockTest.callOrder) == 0 || mockTest.callOrder[0] != "Coverage" {
-			t.Error("Coverage tests should run first")
-		}
-
-		if len(mockBuild.callOrder) == 0 || mockBuild.callOrder[0] != "Default" {
-			t.Error("Default build should run after tests")
-		}
+		// Both operations should have been called once
+		mockTest.AssertCalledTimes("Coverage", 1)
+		mockBuild.AssertCalledTimes("Default", 1)
 	})
 
 	t.Run("test failure", func(t *testing.T) {
-		mockBuild := NewMockBuild()
-		mockTest := NewMockTest()
-		mockTest.shouldFail = true
-		mockTest.failureMessage = "test failure"
+		mockBuild := NewMockBuild(t)
+		mockTest := NewMockTest(t)
+		mockTest.SetMethodError("Coverage", errMockTestFailure)
 
 		err := runCI(mockBuild, mockTest)
 
@@ -318,21 +264,18 @@ func TestRunCI(t *testing.T) {
 			t.Error("Expected error, got nil")
 		}
 
-		if err.Error() != "tests failed: mock failure: test failure" {
+		if err.Error() != "tests failed: test failure" {
 			t.Errorf("Unexpected error message: %v", err)
 		}
 
 		// Build should not have been called due to test failure
-		if mockBuild.defaultCalled {
-			t.Error("Build should not have been called when tests fail")
-		}
+		mockBuild.AssertNotCalled("Default")
 	})
 
 	t.Run("build failure", func(t *testing.T) {
-		mockBuild := NewMockBuild()
-		mockTest := NewMockTest()
-		mockBuild.shouldFail = true
-		mockBuild.failureMessage = "build failure"
+		mockBuild := NewMockBuild(t)
+		mockTest := NewMockTest(t)
+		mockBuild.SetMethodError("Default", errMockBuildError)
 
 		err := runCI(mockBuild, mockTest)
 
@@ -340,20 +283,18 @@ func TestRunCI(t *testing.T) {
 			t.Error("Expected error, got nil")
 		}
 
-		if err.Error() != "build failed: mock failure: build failure" {
+		if err.Error() != "build failed: build failure" {
 			t.Errorf("Unexpected error message: %v", err)
 		}
 
 		// Tests should have been called
-		if !mockTest.coverageCalled {
-			t.Error("Tests should have been called before build failure")
-		}
+		mockTest.AssertCalled("Coverage")
 	})
 }
 
 func TestBuildPipeline(t *testing.T) {
 	t.Run("successful pipeline", func(t *testing.T) {
-		mockBuild := NewMockBuild()
+		mockBuild := NewMockBuild(t)
 
 		err := buildPipeline(mockBuild)
 		if err != nil {
@@ -361,32 +302,19 @@ func TestBuildPipeline(t *testing.T) {
 		}
 
 		// Verify all operations were called
-		if !mockBuild.cleanCalled {
-			t.Error("Clean was not called")
-		}
+		mockBuild.AssertCalled("PreBuild")
+		mockBuild.AssertCalled("Clean")
+		mockBuild.AssertCalled("Default")
 
-		if !mockBuild.defaultCalled {
-			t.Error("Default build was not called")
-		}
-
-		// Verify correct order
-		expectedOrder := []string{"PreBuild", "Clean", "Default"}
-
-		if len(mockBuild.callOrder) != len(expectedOrder) {
-			t.Errorf("Expected %d calls, got %d", len(expectedOrder), len(mockBuild.callOrder))
-		}
-
-		for i, expected := range expectedOrder {
-			if i >= len(mockBuild.callOrder) || mockBuild.callOrder[i] != expected {
-				t.Errorf("Expected call %d to be %s, got %v", i, expected, mockBuild.callOrder)
-			}
-		}
+		// Verify call counts
+		mockBuild.AssertCalledTimes("PreBuild", 1)
+		mockBuild.AssertCalledTimes("Clean", 1)
+		mockBuild.AssertCalledTimes("Default", 1)
 	})
 
 	t.Run("pre-build failure", func(t *testing.T) {
-		mockBuild := NewMockBuild()
-		mockBuild.shouldFail = true
-		mockBuild.failureMessage = "pre-build failure"
+		mockBuild := NewMockBuild(t)
+		mockBuild.SetMethodError("PreBuild", errMockPreBuildError)
 
 		err := buildPipeline(mockBuild)
 
@@ -394,15 +322,14 @@ func TestBuildPipeline(t *testing.T) {
 			t.Error("Expected error, got nil")
 		}
 
-		if err.Error() != "pre-build failed: mock failure: pre-build failure" {
+		if err.Error() != "pre-build failed: pre-build failure" {
 			t.Errorf("Unexpected error message: %v", err)
 		}
 
 		// Only pre-build should have been called
-		expectedCalls := []string{"PreBuild"}
-		if len(mockBuild.callOrder) != len(expectedCalls) {
-			t.Errorf("Expected %d calls, got %d: %v", len(expectedCalls), len(mockBuild.callOrder), mockBuild.callOrder)
-		}
+		mockBuild.AssertCalled("PreBuild")
+		mockBuild.AssertNotCalled("Clean")
+		mockBuild.AssertNotCalled("Default")
 	})
 }
 
@@ -421,7 +348,7 @@ func TestInterfaceCompliance(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkMockBuild(b *testing.B) {
-	mockBuild := NewMockBuild()
+	mockBuild := NewMockBuild(nil) // No testing.T for benchmarks
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

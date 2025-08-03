@@ -11,34 +11,56 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
-// TestBuildIntegration tests the full build pipeline
-func TestBuildIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+// IntegrationTestSuite provides common infrastructure for integration tests
+type IntegrationTestSuite struct {
+	testhelpers.BaseSuite
+}
+
+// SetupSuite configures the integration test environment
+func (its *IntegrationTestSuite) SetupSuite() {
+	// Configure BaseSuite options for integration tests
+	its.Options = testhelpers.BaseSuiteOptions{
+		CreateTempDir:   true,
+		ChangeToTempDir: true,
+		CreateGoModule:  false, // We'll create our own test projects
+		PreserveEnv:     true,
+		DisableCache:    true,
+		SetupGitRepo:    false,
 	}
 
-	// Setup test environment
-	tempDir := t.TempDir()
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
+	// Call parent setup
+	its.BaseSuite.SetupSuite()
+}
 
-	// Create a simple Go project
-	projectDir := filepath.Join(tempDir, "test-project")
-	require.NoError(t, os.MkdirAll(projectDir, 0o755))
-	require.NoError(t, os.Chdir(projectDir))
+// createTestProject creates a standardized test project with go.mod and main.go
+func (its *IntegrationTestSuite) createTestProject(name, module string) string {
+	its.T().Helper()
+
+	projectDir := filepath.Join(its.TmpDir, name)
+	its.RequireNoError(os.MkdirAll(projectDir, 0o755))
+	its.RequireNoError(os.Chdir(projectDir))
 
 	// Create go.mod
-	goMod := `module test-project
+	goMod := `module ` + module + `
 
 go 1.24
 `
-	require.NoError(t, os.WriteFile("go.mod", []byte(goMod), 0o644))
+	its.RequireNoError(os.WriteFile("go.mod", []byte(goMod), 0o644))
 
-	// Create main.go
-	mainGo := `package main
+	return projectDir
+}
+
+// setupGoProject creates a complete Go project with main.go
+func (its *IntegrationTestSuite) setupGoProject(dir, module, mainContent string) {
+	its.T().Helper()
+
+	if mainContent == "" {
+		mainContent = `package main
 
 import "fmt"
 
@@ -46,14 +68,20 @@ func main() {
 	fmt.Println("Hello, Integration Test!")
 }
 `
-	require.NoError(t, os.WriteFile("main.go", []byte(mainGo), 0o644))
+	}
 
-	// Create mage config
+	its.RequireNoError(os.WriteFile("main.go", []byte(mainContent), 0o644))
+}
+
+// setupMageConfig creates and sets a mage configuration for testing
+func (its *IntegrationTestSuite) setupMageConfig(name, binary, module string) {
+	its.T().Helper()
+
 	config := &Config{
 		Project: ProjectConfig{
-			Name:   "test-project",
-			Binary: "test-app",
-			Module: "test-project",
+			Name:   name,
+			Binary: binary,
+			Module: module,
 		},
 		Build: BuildConfig{
 			Output:   "bin",
@@ -61,27 +89,38 @@ func main() {
 		},
 	}
 
-	// Override global config for test
 	TestSetConfig(config)
+}
+
+// TestBuildIntegration tests the full build pipeline
+func (its *IntegrationTestSuite) TestBuildIntegration() {
+	if testing.Short() {
+		its.T().Skip("Skipping integration test in short mode")
+	}
+
+	// Create test project
+	its.createTestProject("test-project", "test-project")
+	its.setupGoProject("", "test-project", "")
+	its.setupMageConfig("test-project", "test-app", "test-project")
 
 	// Test build
 	build := Build{}
 	err := build.Default()
-	assert.NoError(t, err)
+	its.AssertNoError(err)
 
 	// Verify binary exists
 	binaryPath := filepath.Join("bin", "test-app")
 	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		t.Errorf("Expected binary at %s, but it doesn't exist", binaryPath)
+		its.T().Errorf("Expected binary at %s, but it doesn't exist", binaryPath)
 	}
 
 	// Test clean
 	err = build.Clean()
-	assert.NoError(t, err)
+	its.AssertNoError(err)
 
 	// Verify binary is removed
 	if _, err := os.Stat(binaryPath); !os.IsNotExist(err) {
-		t.Errorf("Expected binary to be removed after clean")
+		its.T().Errorf("Expected binary to be removed after clean")
 	}
 }
 
@@ -132,30 +171,27 @@ func TestSecureCommandExecution(t *testing.T) {
 }
 
 // TestMultipleNamespaceIntegration tests multiple namespaces working together
-func TestMultipleNamespaceIntegration(t *testing.T) {
+func (its *IntegrationTestSuite) TestMultipleNamespaceIntegration() {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		its.T().Skip("Skipping integration test in short mode")
 	}
 
-	// Setup
-	tempDir := t.TempDir()
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
+	// Create test project with tests
+	its.createTestProject("test", "test")
 
-	require.NoError(t, os.Chdir(tempDir))
-
-	// Create a Go project with tests
-	require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0o644))
-	require.NoError(t, os.WriteFile("main.go", []byte(`package main
+	// Create main.go with testable function
+	mainGo := `package main
 
 func Add(a, b int) int {
 	return a + b
 }
 
 func main() {}
-`), 0o644))
+`
+	its.RequireNoError(os.WriteFile("main.go", []byte(mainGo), 0o644))
 
-	require.NoError(t, os.WriteFile("main_test.go", []byte(`package main
+	// Create test file
+	testGo := `package main
 
 import "testing"
 
@@ -164,9 +200,10 @@ func TestAdd(t *testing.T) {
 		t.Error("1 + 2 should equal 3")
 	}
 }
-`), 0o644))
+`
+	its.RequireNoError(os.WriteFile("main_test.go", []byte(testGo), 0o644))
 
-	// Override config
+	// Setup config
 	TestSetConfig(&Config{
 		Project: ProjectConfig{
 			Name:   "test",
@@ -184,8 +221,8 @@ func TestAdd(t *testing.T) {
 		},
 	})
 
-	// Test workflow: Format -> Lint -> Test -> Build
-	t.Run("format", func(t *testing.T) {
+	// Test workflow: Format -> Test -> Build
+	its.T().Run("format", func(t *testing.T) {
 		format := Format{}
 		// Skip if gofumpt not installed
 		if _, err := GetRunner().RunCmdOutput("which", "gofumpt"); err != nil {
@@ -195,13 +232,13 @@ func TestAdd(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("test", func(t *testing.T) {
+	its.T().Run("test", func(t *testing.T) {
 		test := Test{}
 		err := test.Unit()
 		assert.NoError(t, err)
 	})
 
-	t.Run("build", func(t *testing.T) {
+	its.T().Run("build", func(t *testing.T) {
 		build := Build{}
 		err := build.Default()
 		assert.NoError(t, err)
@@ -250,19 +287,13 @@ func TestConcurrentOperations(t *testing.T) {
 }
 
 // TestConfigurationLoading tests configuration loading and validation
-func TestConfigurationLoading(t *testing.T) {
+func (its *IntegrationTestSuite) TestConfigurationLoading() {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		its.T().Skip("Skipping integration test in short mode")
 	}
 
-	tempDir := t.TempDir()
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
-
-	require.NoError(t, os.Chdir(tempDir))
-
 	// Test default config
-	t.Run("default config", func(t *testing.T) {
+	its.T().Run("default config", func(t *testing.T) {
 		TestResetConfig() // Reset
 		config, err := LoadConfig()
 		assert.NoError(t, err)
@@ -271,7 +302,7 @@ func TestConfigurationLoading(t *testing.T) {
 	})
 
 	// Test custom config
-	t.Run("custom config", func(t *testing.T) {
+	its.T().Run("custom config", func(t *testing.T) {
 		configYAML := `
 project:
   name: my-app
@@ -288,7 +319,7 @@ test:
   cover: true
   race: true
 `
-		require.NoError(t, os.WriteFile(".mage.yaml", []byte(configYAML), 0o644))
+		its.RequireNoError(os.WriteFile(".mage.yaml", []byte(configYAML), 0o644))
 
 		TestResetConfig() // Reset
 		config, err := LoadConfig()
@@ -302,69 +333,49 @@ test:
 }
 
 // TestCacheIntegration tests build caching functionality
-func TestCacheIntegration(t *testing.T) {
+func (its *IntegrationTestSuite) TestCacheIntegration() {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		its.T().Skip("Skipping integration test in short mode")
 	}
 
-	tempDir := t.TempDir()
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
+	// Create test project
+	its.createTestProject("cache-test", "cache-test")
 
-	projectDir := filepath.Join(tempDir, "cache-test")
-	require.NoError(t, os.MkdirAll(projectDir, 0o755))
-	require.NoError(t, os.Chdir(projectDir))
-
-	// Create project
-	require.NoError(t, os.WriteFile("go.mod", []byte("module cache-test\n\ngo 1.24\n"), 0o644))
-	require.NoError(t, os.WriteFile("main.go", []byte(`package main
+	// Create main.go
+	mainGo := `package main
 
 func main() {
 	println("cache test")
 }
-`), 0o644))
+`
+	its.RequireNoError(os.WriteFile("main.go", []byte(mainGo), 0o644))
 
-	// Setup config with caching enabled
-	TestSetConfig(&Config{
-		Project: ProjectConfig{
-			Name:   "cache-test",
-			Binary: "cache-app",
-			Module: "cache-test",
-		},
-		Build: BuildConfig{
-			Output: "bin",
-		},
-	})
+	// Setup config
+	its.setupMageConfig("cache-test", "cache-app", "cache-test")
 
 	build := Build{}
 
 	// First build - should compile
 	start1 := time.Now()
 	err := build.Default()
-	assert.NoError(t, err)
+	its.AssertNoError(err)
 	duration1 := time.Since(start1)
 
 	// Second build - should use cache (if implemented)
 	start2 := time.Now()
 	err = build.Default()
-	assert.NoError(t, err)
+	its.AssertNoError(err)
 	duration2 := time.Since(start2)
 
 	// Cache hit should be faster (this assumes caching is implemented)
-	t.Logf("First build: %v, Second build: %v", duration1, duration2)
+	its.T().Logf("First build: %v, Second build: %v", duration1, duration2)
 }
 
 // TestEnterpriseFeatures tests enterprise configuration features
-func TestEnterpriseFeatures(t *testing.T) {
+func (its *IntegrationTestSuite) TestEnterpriseFeatures() {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		its.T().Skip("Skipping integration test in short mode")
 	}
-
-	tempDir := t.TempDir()
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
-
-	require.NoError(t, os.Chdir(tempDir))
 
 	// Create enterprise config
 	enterpriseConfig := &EnterpriseConfiguration{
@@ -381,18 +392,18 @@ func TestEnterpriseFeatures(t *testing.T) {
 
 	// Save enterprise config
 	err := SaveEnterpriseConfig(enterpriseConfig)
-	assert.NoError(t, err)
+	its.AssertNoError(err)
 
 	// Verify file exists
 	_, err = os.Stat(".mage.enterprise.yaml")
-	assert.NoError(t, err)
+	its.AssertNoError(err)
 
 	// Load and verify
 	TestResetConfig()
 	config, err := LoadConfig()
-	assert.NoError(t, err)
-	assert.NotNil(t, config.Enterprise)
-	assert.Equal(t, "Test Corp", config.Enterprise.Organization.Name)
+	its.AssertNoError(err)
+	its.NotNil(config.Enterprise)
+	its.Equal("Test Corp", config.Enterprise.Organization.Name)
 }
 
 // TestWorkflowExecution tests workflow execution
@@ -413,21 +424,15 @@ func TestWorkflowExecution(t *testing.T) {
 }
 
 // TestErrorHandling tests error handling across namespaces
-func TestErrorHandling(t *testing.T) {
+func (its *IntegrationTestSuite) TestErrorHandling() {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		its.T().Skip("Skipping integration test in short mode")
 	}
 
-	tempDir := t.TempDir()
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
-
-	require.NoError(t, os.Chdir(tempDir))
-
 	// Test build error handling
-	t.Run("build with missing main", func(t *testing.T) {
-		require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0o644))
-		// No main.go file
+	its.T().Run("build with missing main", func(t *testing.T) {
+		// Create go.mod but no main.go file
+		its.RequireNoError(os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0o644))
 
 		TestSetConfig(&Config{
 			Project: ProjectConfig{
@@ -446,7 +451,7 @@ func TestErrorHandling(t *testing.T) {
 	})
 
 	// Test with invalid configuration
-	t.Run("invalid platform", func(t *testing.T) {
+	its.T().Run("invalid platform", func(t *testing.T) {
 		build := Build{}
 		err := build.Platform("invalid-platform")
 		assert.Error(t, err)
@@ -454,13 +459,13 @@ func TestErrorHandling(t *testing.T) {
 }
 
 // TestPerformanceRegression tests for performance regressions
-func TestPerformanceRegression(t *testing.T) {
+func (its *IntegrationTestSuite) TestPerformanceRegression() {
 	if testing.Short() {
-		t.Skip("Skipping performance test in short mode")
+		its.T().Skip("Skipping performance test in short mode")
 	}
 
 	// Test command execution performance
-	t.Run("command execution", func(t *testing.T) {
+	its.T().Run("command execution", func(t *testing.T) {
 		runner := NewSecureCommandRunner()
 
 		start := time.Now()
@@ -474,7 +479,7 @@ func TestPerformanceRegression(t *testing.T) {
 	})
 
 	// Test configuration loading performance
-	t.Run("config loading", func(t *testing.T) {
+	its.T().Run("config loading", func(t *testing.T) {
 		start := time.Now()
 		for i := 0; i < 100; i++ {
 			TestResetConfig()
@@ -485,4 +490,9 @@ func TestPerformanceRegression(t *testing.T) {
 		// Should load config 100 times quickly
 		assert.Less(t, duration, 1*time.Second, "Config loading is too slow")
 	})
+}
+
+// TestIntegrationSuite runs the integration test suite
+func TestIntegrationSuite(t *testing.T) {
+	suite.Run(t, new(IntegrationTestSuite))
 }

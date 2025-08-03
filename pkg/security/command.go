@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -82,7 +83,7 @@ func (e *SecureExecutor) Execute(ctx context.Context, name string, args ...strin
 
 	// Validate the command
 	if err := e.validateCommand(name, args); err != nil {
-		return fmt.Errorf("command validation failed: %w", err)
+		return mageErrors.WrapError(err, "command validation failed")
 	}
 
 	// Create command with timeout
@@ -120,7 +121,7 @@ func (e *SecureExecutor) Execute(ctx context.Context, name string, args ...strin
 			exitCode = 1
 		}
 		success = false
-		return fmt.Errorf("command failed: %w", err)
+		return mageErrors.CommandFailed(name, args, err)
 	}
 
 	exitCode = 0
@@ -143,7 +144,7 @@ func (e *SecureExecutor) ExecuteOutput(ctx context.Context, name string, args ..
 
 	// Validate the command
 	if err := e.validateCommand(name, args); err != nil {
-		return "", fmt.Errorf("command validation failed: %w", err)
+		return "", mageErrors.WrapError(err, "command validation failed")
 	}
 
 	// Create command with timeout
@@ -200,7 +201,7 @@ func (e *SecureExecutor) ExecuteWithEnv(ctx context.Context, env []string, name 
 
 	// Validate the command
 	if err := e.validateCommand(name, args); err != nil {
-		return fmt.Errorf("command validation failed: %w", err)
+		return mageErrors.WrapError(err, "command validation failed")
 	}
 
 	// Create command with timeout
@@ -241,7 +242,7 @@ func (e *SecureExecutor) ExecuteWithEnv(ctx context.Context, env []string, name 
 			exitCode = 1
 		}
 		success = false
-		return fmt.Errorf("command failed: %w", err)
+		return mageErrors.CommandFailed(name, args, err)
 	}
 
 	exitCode = 0

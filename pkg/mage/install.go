@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/magefile/mage/mg"
+	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -71,7 +72,7 @@ func (Install) Uninstall() error {
 			utils.Warn("Binary not found at %s", installPath)
 			return nil
 		}
-		return fmt.Errorf("failed to remove binary: %w", err)
+		return mageErrors.WrapError(err, "failed to remove binary")
 	}
 
 	utils.Success("Uninstalled %s from %s", binaryName, installPath)
@@ -132,7 +133,7 @@ func (Install) Default() error {
 
 	// Build and install
 	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("installation failed: %w", err)
+		return mageErrors.WrapError(err, "installation failed")
 	}
 
 	// Verify installation
@@ -159,7 +160,7 @@ func (Install) Go() error {
 	// Get module info
 	module, err := utils.GetModuleName()
 	if err != nil {
-		return fmt.Errorf("failed to get module name: %w", err)
+		return mageErrors.WrapError(err, "failed to get module name")
 	}
 
 	// Get version
@@ -189,7 +190,7 @@ func (Install) Go() error {
 
 	// Run go install
 	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("go install failed: %w", err)
+		return mageErrors.WrapError(err, "go install failed")
 	}
 
 	utils.Success("Successfully installed via go install")
@@ -203,7 +204,7 @@ func (Install) Stdlib() error {
 	utils.Info("Installing standard library packages...")
 
 	if err := GetRunner().RunCmd("go", "install", "std"); err != nil {
-		return fmt.Errorf("failed to install standard library: %w", err)
+		return mageErrors.WrapError(err, "failed to install standard library")
 	}
 
 	utils.Success("Go standard library installed")
@@ -297,7 +298,7 @@ func (Install) SystemWide() error {
 	args = append(args, ".")
 
 	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("build failed: %w", err)
+		return mageErrors.WrapError(err, "build failed")
 	}
 
 	// Install to /usr/local/bin
@@ -308,12 +309,12 @@ func (Install) SystemWide() error {
 
 	// Use sudo to copy
 	if err := GetRunner().RunCmd("sudo", "cp", tempBinary, installPath); err != nil {
-		return fmt.Errorf("installation failed: %w", err)
+		return mageErrors.WrapError(err, "installation failed")
 	}
 
 	// Make executable
 	if err := GetRunner().RunCmd("sudo", "chmod", "+x", installPath); err != nil {
-		return fmt.Errorf("failed to set permissions: %w", err)
+		return mageErrors.WrapError(err, "failed to set permissions")
 	}
 
 	// Clean up temp file
@@ -356,7 +357,7 @@ func (Install) Binary() error {
 
 	// Use the default installation method
 	if err := installer.Default(); err != nil {
-		return fmt.Errorf("binary installation failed: %w", err)
+		return mageErrors.WrapError(err, "binary installation failed")
 	}
 
 	return nil
@@ -414,7 +415,7 @@ func (Install) GitHooks() error {
 	// Create hooks directory if it doesn't exist
 	hooksDir := ".git/hooks"
 	if err := utils.EnsureDir(hooksDir); err != nil {
-		return fmt.Errorf("failed to create hooks directory: %w", err)
+		return mageErrors.WrapError(err, "failed to create hooks directory")
 	}
 
 	// Install pre-commit hook
@@ -427,7 +428,7 @@ fi
 `
 
 	if err := os.WriteFile(preCommitPath, []byte(preCommitContent), 0o700); err != nil { //nolint:gosec // Git hooks need to be executable
-		return fmt.Errorf("failed to write pre-commit hook: %w", err)
+		return mageErrors.WrapError(err, "failed to write pre-commit hook")
 	}
 
 	utils.Success("Git hooks installed")
@@ -487,7 +488,7 @@ func (Install) Certs() error {
 	// Create certs directory
 	certsDir := "certs"
 	if err := utils.EnsureDir(certsDir); err != nil {
-		return fmt.Errorf("failed to create certs directory: %w", err)
+		return mageErrors.WrapError(err, "failed to create certs directory")
 	}
 
 	// Generate self-signed certificate for development
@@ -507,7 +508,7 @@ func (Install) Certs() error {
 	}
 
 	if err := GetRunner().RunCmd("openssl", args...); err != nil {
-		return fmt.Errorf("failed to generate certificates: %w", err)
+		return mageErrors.WrapError(err, "failed to generate certificates")
 	}
 
 	utils.Success("Development certificates generated")
@@ -523,19 +524,19 @@ func (Install) Package() error {
 	// Install dependencies first
 	utils.Info("Installing dependencies...")
 	if err := GetRunner().RunCmd("go", "mod", "download"); err != nil {
-		return fmt.Errorf("failed to download dependencies: %w", err)
+		return mageErrors.WrapError(err, "failed to download dependencies")
 	}
 
 	// Verify dependencies
 	if err := GetRunner().RunCmd("go", "mod", "verify"); err != nil {
-		return fmt.Errorf("dependency verification failed: %w", err)
+		return mageErrors.WrapError(err, "dependency verification failed")
 	}
 
 	installer := Install{}
 
 	// Install the package
 	if err := installer.Default(); err != nil {
-		return fmt.Errorf("package installation failed: %w", err)
+		return mageErrors.WrapError(err, "package installation failed")
 	}
 
 	utils.Success("Package installed successfully")
@@ -570,7 +571,7 @@ func (Install) All() error {
 
 	// Install the main binary
 	if err := installer.Default(); err != nil {
-		return fmt.Errorf("binary installation failed: %w", err)
+		return mageErrors.WrapError(err, "binary installation failed")
 	}
 
 	utils.Success("All components installed")

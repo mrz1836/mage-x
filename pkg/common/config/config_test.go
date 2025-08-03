@@ -10,25 +10,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 // ConfigTestSuite tests configuration functionality
 type ConfigTestSuite struct {
-	suite.Suite
-
-	tmpDir string
-}
-
-func (s *ConfigTestSuite) SetupSuite() {
-	tmpDir, err := os.MkdirTemp("", "config-suite-test-*")
-	s.Require().NoError(err, "Failed to create temp dir")
-	s.tmpDir = tmpDir
-}
-
-func (s *ConfigTestSuite) TearDownSuite() {
-	if err := os.RemoveAll(s.tmpDir); err != nil {
-		s.T().Logf("Failed to remove temp dir: %v", err)
-	}
+	testhelpers.BaseSuite
 }
 
 func TestConfigTestSuite(t *testing.T) {
@@ -36,13 +24,7 @@ func TestConfigTestSuite(t *testing.T) {
 }
 
 func TestDefaultConfigLoader(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "config-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
-			t.Logf("Failed to remove temp dir: %v", removeErr)
-		}
-	}()
+	tmpDir := t.TempDir()
 
 	loader := NewDefaultConfigLoader()
 
@@ -175,8 +157,12 @@ func TestDefaultEnvProvider(t *testing.T) {
 	testKey := "TEST_CONFIG_VAR"
 	testValue := "test_value"
 
-	setupTestEnv(t, testKey)
-	defer cleanupTestEnv(t, testKey)
+	// Environment variable cleanup handled by t.Cleanup
+	t.Cleanup(func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			t.Logf("Failed to unset %s: %v", testKey, err)
+		}
+	})
 
 	t.Run("Set and Get", func(t *testing.T) {
 		testEnvSetAndGet(t, env, testKey, testValue)
@@ -205,22 +191,6 @@ func TestDefaultEnvProvider(t *testing.T) {
 	t.Run("GetStringSlice", func(t *testing.T) {
 		testEnvGetStringSlice(t, env)
 	})
-}
-
-// setupTestEnv sets up test environment
-func setupTestEnv(t *testing.T, testKey string) {
-	t.Helper()
-	if err := os.Unsetenv(testKey); err != nil {
-		t.Logf("Failed to unset %s: %v", testKey, err)
-	}
-}
-
-// cleanupTestEnv cleans up test environment
-func cleanupTestEnv(t *testing.T, testKey string) {
-	t.Helper()
-	if err := os.Unsetenv(testKey); err != nil {
-		t.Logf("Failed to unset %s: %v", testKey, err)
-	}
 }
 
 // testEnvSetAndGet tests basic set and get functionality
@@ -291,7 +261,11 @@ func testEnvGetBool(t *testing.T, env TypedEnvProvider) {
 	result := env.GetBool("NON_EXISTING_BOOL", true)
 	assert.True(t, result, "Should return default when var doesn't exist")
 
-	cleanupEnvVar(t, "TEST_BOOL")
+	t.Cleanup(func() {
+		if err := os.Unsetenv("TEST_BOOL"); err != nil {
+			t.Logf("Failed to unset TEST_BOOL: %v", err)
+		}
+	})
 }
 
 // testEnvGetInt tests integer environment variable parsing
@@ -316,7 +290,11 @@ func testEnvGetInt(t *testing.T, env TypedEnvProvider) {
 	result = env.GetInt("NON_EXISTING_INT", 200)
 	assert.Equal(t, 200, result, "Should return default for non-existing var")
 
-	cleanupEnvVar(t, "TEST_INT")
+	t.Cleanup(func() {
+		if err := os.Unsetenv("TEST_INT"); err != nil {
+			t.Logf("Failed to unset TEST_INT: %v", err)
+		}
+	})
 }
 
 // testEnvGetDuration tests duration environment variable parsing
@@ -344,7 +322,11 @@ func testEnvGetDuration(t *testing.T, env TypedEnvProvider) {
 	result := env.GetDuration("TEST_DURATION", 10*time.Second)
 	assert.Equal(t, 10*time.Second, result, "Should return default for invalid duration")
 
-	cleanupEnvVar(t, "TEST_DURATION")
+	t.Cleanup(func() {
+		if err := os.Unsetenv("TEST_DURATION"); err != nil {
+			t.Logf("Failed to unset TEST_DURATION: %v", err)
+		}
+	})
 }
 
 // testEnvGetStringSlice tests string slice environment variable parsing
@@ -373,32 +355,22 @@ func testEnvGetStringSlice(t *testing.T, env TypedEnvProvider) {
 	result = env.GetStringSlice("NON_EXISTING_SLICE", []string{"def1", "def2"})
 	assert.ElementsMatch(t, []string{"def1", "def2"}, result, "Should return default for non-existing var")
 
-	cleanupEnvVar(t, "TEST_SLICE")
-}
-
-// cleanupEnvVar cleans up an environment variable
-func cleanupEnvVar(t *testing.T, varName string) {
-	t.Helper()
-	if err := os.Unsetenv(varName); err != nil {
-		t.Logf("Failed to unset %s: %v", varName, err)
-	}
+	t.Cleanup(func() {
+		if err := os.Unsetenv("TEST_SLICE"); err != nil {
+			t.Logf("Failed to unset TEST_SLICE: %v", err)
+		}
+	})
 }
 
 func TestFileConfigSource(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "source-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
-			t.Logf("Failed to remove temp dir: %v", removeErr)
-		}
-	}()
+	tmpDir := t.TempDir()
 
 	configPath := filepath.Join(tmpDir, "test.yaml")
 	configContent := `test: value
 nested:
   key: nestedvalue`
 
-	err = os.WriteFile(configPath, []byte(configContent), 0o600)
+	err := os.WriteFile(configPath, []byte(configContent), 0o600)
 	require.NoError(t, err, "Failed to write config file")
 
 	source := NewFileConfigSource(configPath, FormatYAML, 100)
@@ -469,7 +441,7 @@ func (s *ConfigTestSuite) TestConfigFacade() {
 
 	s.Run("LoadFromPaths", func() {
 		// Create config file
-		configPath := filepath.Join(s.tmpDir, "myapp.yaml")
+		configPath := filepath.Join(s.TmpDir, "myapp.yaml")
 		configContent := `app:
   name: testapp
   port: 8080
@@ -482,7 +454,7 @@ func (s *ConfigTestSuite) TestConfigFacade() {
 		s.Require().NoError(err, "Failed to write config file")
 
 		var testConfig TestConfig
-		foundPath, err := config.LoadFromPaths(&testConfig, "myapp", s.tmpDir)
+		foundPath, err := config.LoadFromPaths(&testConfig, "myapp", s.TmpDir)
 		s.Require().NoError(err, "Failed to load config")
 
 		s.Equal(configPath, foundPath, "Should find config at expected path")
@@ -494,21 +466,11 @@ func (s *ConfigTestSuite) TestConfigFacade() {
 
 	s.Run("LoadWithEnvOverrides", func() {
 		// Set environment variables
-		s.Require().NoError(os.Setenv("MYAPP_APP_NAME", "env-override"))
-		s.Require().NoError(os.Setenv("MYAPP_APP_PORT", "9090"))
-		defer func() {
-			if err := os.Unsetenv("MYAPP_APP_NAME"); err != nil {
-				s.T().Logf("Failed to unset MYAPP_APP_NAME: %v", err)
-			}
-		}()
-		defer func() {
-			if err := os.Unsetenv("MYAPP_APP_PORT"); err != nil {
-				s.T().Logf("Failed to unset MYAPP_APP_PORT: %v", err)
-			}
-		}()
+		s.SetEnvVar("MYAPP_APP_NAME", "env-override")
+		s.SetEnvVar("MYAPP_APP_PORT", "9090")
 
 		// Create config file
-		configPath := filepath.Join(s.tmpDir, "myapp-env.yaml")
+		configPath := filepath.Join(s.TmpDir, "myapp-env.yaml")
 		configContent := `app:
   name: file-value
   port: 8080`
@@ -517,7 +479,7 @@ func (s *ConfigTestSuite) TestConfigFacade() {
 		s.Require().NoError(err)
 
 		var testConfig TestConfig
-		foundPath, err := config.LoadWithEnvOverrides(&testConfig, "myapp-env", "MYAPP", s.tmpDir)
+		foundPath, err := config.LoadWithEnvOverrides(&testConfig, "myapp-env", "MYAPP", s.TmpDir)
 		s.Require().NoError(err, "Failed to load config with env overrides")
 
 		s.Equal(configPath, foundPath)
@@ -528,7 +490,7 @@ func (s *ConfigTestSuite) TestConfigFacade() {
 	})
 
 	s.Run("SetupManager", func() {
-		config.SetupManager("testapp", "TEST", s.tmpDir)
+		config.SetupManager("testapp", "TEST", s.TmpDir)
 		// Manager setup verification would require checking internal state
 		// or using the manager to load config
 	})
@@ -692,13 +654,7 @@ func TestEnvProviderBoolParsing(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkConfigLoad(b *testing.B) {
-	tmpDir, err := os.MkdirTemp("", "bench-config-*")
-	require.NoError(b, err)
-	defer func() {
-		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
-			b.Logf("Failed to remove temp dir: %v", removeErr)
-		}
-	}()
+	tmpDir := b.TempDir()
 
 	// Create a test config
 	configPath := filepath.Join(tmpDir, "bench.yaml")
@@ -720,7 +676,7 @@ settings:
   retries: 3
   debug: true
 `
-	err = os.WriteFile(configPath, []byte(configContent), 0o600)
+	err := os.WriteFile(configPath, []byte(configContent), 0o600)
 	require.NoError(b, err)
 
 	loader := NewDefaultConfigLoader()

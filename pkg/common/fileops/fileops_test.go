@@ -53,14 +53,8 @@ func TestFileOpsTestSuite(t *testing.T) {
 }
 
 func TestDefaultFileOperator(t *testing.T) {
-	// Create temporary directory for tests
-	tmpDir, err := os.MkdirTemp("", "fileops-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	ops := NewDefaultFileOperator()
 
@@ -275,13 +269,8 @@ func TestDefaultFileOperator(t *testing.T) {
 
 // TestDefaultFileOperatorErrorCases tests error conditions and edge cases
 func TestDefaultFileOperatorErrorCases(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "fileops-error-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	ops := NewDefaultFileOperator()
 
@@ -325,13 +314,8 @@ func TestDefaultFileOperatorErrorCases(t *testing.T) {
 
 // TestDefaultJSONOperatorErrorCases tests error scenarios for JSON operations
 func TestDefaultJSONOperatorErrorCases(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "json-error-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	fileOps := NewDefaultFileOperator()
 	jsonOps := NewDefaultJSONOperator(fileOps)
@@ -379,13 +363,8 @@ func TestDefaultJSONOperatorErrorCases(t *testing.T) {
 }
 
 func TestDefaultJSONOperator(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "json-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	fileOps := NewDefaultFileOperator()
 	jsonOps := NewDefaultJSONOperator(fileOps)
@@ -528,13 +507,8 @@ func TestDefaultJSONOperator(t *testing.T) {
 
 // TestDefaultYAMLOperatorErrorCases tests error scenarios for YAML operations
 func TestDefaultYAMLOperatorErrorCases(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "yaml-error-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	fileOps := NewDefaultFileOperator()
 	yamlOps := NewDefaultYAMLOperator(fileOps)
@@ -573,13 +547,8 @@ func TestDefaultYAMLOperatorErrorCases(t *testing.T) {
 }
 
 func TestDefaultYAMLOperator(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "yaml-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	fileOps := NewDefaultFileOperator()
 	yamlOps := NewDefaultYAMLOperator(fileOps)
@@ -689,13 +658,8 @@ func TestDefaultYAMLOperator(t *testing.T) {
 
 // TestSafeFileOperatorComprehensive provides comprehensive coverage for SafeFileOperator
 func TestSafeFileOperatorComprehensive(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "safe-comprehensive-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	ops := NewDefaultSafeFileOperator()
 
@@ -792,13 +756,8 @@ func TestSafeFileOperatorComprehensive(t *testing.T) {
 }
 
 func TestSafeFileOperator(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "safe-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, err)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	ops := NewDefaultSafeFileOperator()
 
@@ -994,19 +953,14 @@ func (s *FileOpsTestSuite) TestFileOpsFacade() {
 }
 
 func TestPackageLevelFunctions(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "package-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, removeErr)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	testFile := filepath.Join(tmpDir, "package-test.txt")
 	testData := []byte("Package level test")
 
 	// Test package-level WriteFile
-	err = WriteFile(testFile, testData, 0o644)
+	err := WriteFile(testFile, testData, 0o644)
 	require.NoError(t, err, "Failed to write file using package function")
 
 	// Test package-level Exists
@@ -1290,13 +1244,8 @@ func TestNewConstructors(t *testing.T) {
 
 // TestFileOpsErrorHandling tests error paths in FileOps methods
 func TestFileOpsErrorHandling(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "fileops-error-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, removeErr)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	ops := New()
 
@@ -1405,13 +1354,8 @@ func TestFileOpsErrorHandling(t *testing.T) {
 
 // TestGlobalConvenienceFunctions tests the global convenience functions that were previously uncovered
 func TestGlobalConvenienceFunctions(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "global-conv-test-*")
-	require.NoError(t, err, "Failed to create temp dir")
-	defer func() {
-		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
-			t.Logf("Failed to remove temp dir %s: %v", tmpDir, removeErr)
-		}
-	}()
+	// Use t.TempDir() for automatic cleanup
+	tmpDir := t.TempDir()
 
 	type TestConfig struct {
 		Name     string            `json:"name" yaml:"name"`

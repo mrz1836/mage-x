@@ -10,6 +10,12 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// Test constants to satisfy goconst linter
+const (
+	testYAMLContent = `name: test
+value: 42`
+)
+
 // DefaultConfigTestSuite defines the test suite for default config functions
 type DefaultConfigTestSuite struct {
 	suite.Suite
@@ -50,9 +56,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_LoadFrom() {
 
 	ts.Run("load YAML file", func() {
 		yamlFile := filepath.Join(ts.tempDir, "config.yaml")
-		yamlContent := `name: test
-value: 42`
-		err := os.WriteFile(yamlFile, []byte(yamlContent), 0o600)
+		err := os.WriteFile(yamlFile, []byte(testYAMLContent), 0o600)
 		ts.Require().NoError(err)
 
 		var result map[string]interface{}
@@ -64,9 +68,7 @@ value: 42`
 
 	ts.Run("load YML file", func() {
 		ymlFile := filepath.Join(ts.tempDir, "config.yml")
-		ymlContent := `name: test
-value: 42`
-		err := os.WriteFile(ymlFile, []byte(ymlContent), 0o600)
+		err := os.WriteFile(ymlFile, []byte(testYAMLContent), 0o600)
 		ts.Require().NoError(err)
 
 		var result map[string]interface{}
@@ -78,9 +80,7 @@ value: 42`
 
 	ts.Run("load file with no extension - tries YAML then JSON", func() {
 		configFile := filepath.Join(ts.tempDir, "config")
-		yamlContent := `name: test
-value: 42`
-		err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+		err := os.WriteFile(configFile, []byte(testYAMLContent), 0o600)
 		ts.Require().NoError(err)
 
 		var result map[string]interface{}

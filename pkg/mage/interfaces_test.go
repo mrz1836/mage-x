@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,202 +15,201 @@ import (
 // Mock implementations for interface testing
 
 type MockBuilder struct {
-	buildCalled        bool
-	crossCompileCalled bool
-	packageCalled      bool
-	cleanCalled        bool
-	installCalled      bool
-	shouldError        bool
+	*testhelpers.MockBase
+}
+
+func NewMockBuilder(t *testing.T) *MockBuilder {
+	return &MockBuilder{
+		MockBase: testhelpers.NewMockBase(t),
+	}
 }
 
 func (m *MockBuilder) Build(_ context.Context, _ *BuildOptions) error {
-	m.buildCalled = true
-	if m.shouldError {
-		return assert.AnError
-	}
-	return nil
+	err := m.ShouldReturnError("Build")
+	m.RecordCall("Build", nil, nil, err)
+	return err
 }
 
-func (m *MockBuilder) CrossCompile(_ context.Context, _ []Platform) error {
-	m.crossCompileCalled = true
-	if m.shouldError {
-		return assert.AnError
-	}
-	return nil
+func (m *MockBuilder) CrossCompile(_ context.Context, platforms []Platform) error {
+	err := m.ShouldReturnError("CrossCompile")
+	m.RecordCall("CrossCompile", []interface{}{platforms}, nil, err)
+	return err
 }
 
-func (m *MockBuilder) Package(_ context.Context, _ PackageFormat) error {
-	m.packageCalled = true
-	if m.shouldError {
-		return assert.AnError
-	}
-	return nil
+func (m *MockBuilder) Package(_ context.Context, format PackageFormat) error {
+	err := m.ShouldReturnError("Package")
+	m.RecordCall("Package", []interface{}{format}, nil, err)
+	return err
 }
 
 func (m *MockBuilder) Clean(_ context.Context) error {
-	m.cleanCalled = true
-	if m.shouldError {
-		return assert.AnError
-	}
-	return nil
+	err := m.ShouldReturnError("Clean")
+	m.RecordCall("Clean", nil, nil, err)
+	return err
 }
 
-func (m *MockBuilder) Install(_ context.Context, _ string) error {
-	m.installCalled = true
-	if m.shouldError {
-		return assert.AnError
-	}
-	return nil
+func (m *MockBuilder) Install(_ context.Context, path string) error {
+	err := m.ShouldReturnError("Install")
+	m.RecordCall("Install", []interface{}{path}, nil, err)
+	return err
 }
 
 type MockTester struct {
-	runTestsCalled       bool
-	runBenchmarksCalled  bool
-	generateCovCalled    bool
-	runUnitCalled        bool
-	runIntegrationCalled bool
-	shouldError          bool
+	*testhelpers.MockBase
 }
 
-func (m *MockTester) RunTests(_ context.Context, _ TestOptions) (*TestResults, error) {
-	m.runTestsCalled = true
-	if m.shouldError {
-		return nil, assert.AnError
+func NewMockTester(t *testing.T) *MockTester {
+	return &MockTester{
+		MockBase: testhelpers.NewMockBase(t),
 	}
-	return &TestResults{Passed: 10, Failed: 0, Duration: time.Second}, nil
 }
 
-func (m *MockTester) RunBenchmarks(_ context.Context, _ *IBenchmarkOptions) (*IBenchmarkResults, error) {
-	m.runBenchmarksCalled = true
-	if m.shouldError {
-		return nil, assert.AnError
+func (m *MockTester) RunTests(_ context.Context, opts TestOptions) (*TestResults, error) {
+	err := m.ShouldReturnError("RunTests")
+	result := &TestResults{Passed: 10, Failed: 0, Duration: time.Second}
+	if err != nil {
+		result = nil
 	}
-	return &IBenchmarkResults{}, nil
+	m.RecordCall("RunTests", []interface{}{opts}, []interface{}{result}, err)
+	return result, err
 }
 
-func (m *MockTester) GenerateCoverage(_ context.Context, _ CoverageOptions) (*CoverageReport, error) {
-	m.generateCovCalled = true
-	if m.shouldError {
-		return nil, assert.AnError
+func (m *MockTester) RunBenchmarks(_ context.Context, opts *IBenchmarkOptions) (*IBenchmarkResults, error) {
+	err := m.ShouldReturnError("RunBenchmarks")
+	result := &IBenchmarkResults{}
+	if err != nil {
+		result = nil
 	}
-	return &CoverageReport{
+	m.RecordCall("RunBenchmarks", []interface{}{opts}, []interface{}{result}, err)
+	return result, err
+}
+
+func (m *MockTester) GenerateCoverage(_ context.Context, opts CoverageOptions) (*CoverageReport, error) {
+	err := m.ShouldReturnError("GenerateCoverage")
+	result := &CoverageReport{
 		Overall: &CoverageInfo{Percentage: 85.5},
-	}, nil
+	}
+	if err != nil {
+		result = nil
+	}
+	m.RecordCall("GenerateCoverage", []interface{}{opts}, []interface{}{result}, err)
+	return result, err
 }
 
-func (m *MockTester) RunUnit(_ context.Context, _ TestOptions) (*TestResults, error) {
-	m.runUnitCalled = true
-	if m.shouldError {
-		return nil, assert.AnError
+func (m *MockTester) RunUnit(_ context.Context, opts TestOptions) (*TestResults, error) {
+	err := m.ShouldReturnError("RunUnit")
+	result := &TestResults{Passed: 5, Failed: 0, Duration: time.Millisecond * 500}
+	if err != nil {
+		result = nil
 	}
-	return &TestResults{Passed: 5, Failed: 0, Duration: time.Millisecond * 500}, nil
+	m.RecordCall("RunUnit", []interface{}{opts}, []interface{}{result}, err)
+	return result, err
 }
 
-func (m *MockTester) RunIntegration(_ context.Context, _ TestOptions) (*TestResults, error) {
-	m.runIntegrationCalled = true
-	if m.shouldError {
-		return nil, assert.AnError
+func (m *MockTester) RunIntegration(_ context.Context, opts TestOptions) (*TestResults, error) {
+	err := m.ShouldReturnError("RunIntegration")
+	result := &TestResults{Passed: 5, Failed: 0, Duration: time.Millisecond * 1500}
+	if err != nil {
+		result = nil
 	}
-	return &TestResults{Passed: 5, Failed: 0, Duration: time.Millisecond * 1500}, nil
+	m.RecordCall("RunIntegration", []interface{}{opts}, []interface{}{result}, err)
+	return result, err
 }
 
 type MockDeployer struct {
-	deployCalled       bool
-	validateCalled     bool
-	rollbackCalled     bool
-	getStatusCalled    bool
-	scaleServiceCalled bool
-	logsCalled         bool
-	shouldError        bool
+	*testhelpers.MockBase
 }
 
-func (m *MockDeployer) Deploy(_ context.Context, _ DeployTarget, _ *DeployOptions) error {
-	m.deployCalled = true
-	if m.shouldError {
-		return assert.AnError
+func NewMockDeployer(t *testing.T) *MockDeployer {
+	return &MockDeployer{
+		MockBase: testhelpers.NewMockBase(t),
 	}
-	return nil
 }
 
-func (m *MockDeployer) Validate(_ context.Context, _ DeployTarget) error {
-	m.validateCalled = true
-	if m.shouldError {
-		return assert.AnError
-	}
-	return nil
+func (m *MockDeployer) Deploy(_ context.Context, target DeployTarget, opts *DeployOptions) error {
+	err := m.ShouldReturnError("Deploy")
+	m.RecordCall("Deploy", []interface{}{target, opts}, nil, err)
+	return err
 }
 
-func (m *MockDeployer) Rollback(_ context.Context, _ DeployTarget, _ string) error {
-	m.rollbackCalled = true
-	if m.shouldError {
-		return assert.AnError
-	}
-	return nil
+func (m *MockDeployer) Validate(_ context.Context, target DeployTarget) error {
+	err := m.ShouldReturnError("Validate")
+	m.RecordCall("Validate", []interface{}{target}, nil, err)
+	return err
 }
 
-func (m *MockDeployer) Status(_ context.Context, _ DeployTarget) (*DeployStatus, error) {
-	m.getStatusCalled = true
-	if m.shouldError {
-		return nil, assert.AnError
-	}
-	return &DeployStatus{Version: "1.0.0", State: "running"}, nil
+func (m *MockDeployer) Rollback(_ context.Context, target DeployTarget, version string) error {
+	err := m.ShouldReturnError("Rollback")
+	m.RecordCall("Rollback", []interface{}{target, version}, nil, err)
+	return err
 }
 
-func (m *MockDeployer) Scale(_ context.Context, _ DeployTarget, _ int) error {
-	m.scaleServiceCalled = true
-	if m.shouldError {
-		return assert.AnError
+func (m *MockDeployer) Status(_ context.Context, target DeployTarget) (*DeployStatus, error) {
+	err := m.ShouldReturnError("Status")
+	result := &DeployStatus{Version: "1.0.0", State: "running"}
+	if err != nil {
+		result = nil
 	}
-	return nil
+	m.RecordCall("Status", []interface{}{target}, []interface{}{result}, err)
+	return result, err
 }
 
-func (m *MockDeployer) Logs(_ context.Context, _ DeployTarget, _ LogOptions) ([]string, error) {
-	m.logsCalled = true
-	if m.shouldError {
-		return nil, assert.AnError
+func (m *MockDeployer) Scale(_ context.Context, target DeployTarget, replicas int) error {
+	err := m.ShouldReturnError("Scale")
+	m.RecordCall("Scale", []interface{}{target, replicas}, nil, err)
+	return err
+}
+
+func (m *MockDeployer) Logs(_ context.Context, target DeployTarget, opts LogOptions) ([]string, error) {
+	err := m.ShouldReturnError("Logs")
+	result := []string{"log line 1", "log line 2"}
+	if err != nil {
+		result = nil
 	}
-	return []string{"log line 1", "log line 2"}, nil
+	m.RecordCall("Logs", []interface{}{target, opts}, []interface{}{result}, err)
+	return result, err
 }
 
 // Test Builder interface
 func TestBuilder_Interface(t *testing.T) {
 	ctx := context.Background()
-	builder := &MockBuilder{}
+	builder := NewMockBuilder(t)
 
 	t.Run("Build", func(t *testing.T) {
 		opts := BuildOptions{Verbose: true}
 		err := builder.Build(ctx, &opts)
 		require.NoError(t, err)
-		assert.True(t, builder.buildCalled)
+		builder.AssertCalled("Build")
 	})
 
 	t.Run("CrossCompile", func(t *testing.T) {
 		platforms := []Platform{{OS: "linux", Arch: "amd64"}}
 		err := builder.CrossCompile(ctx, platforms)
 		require.NoError(t, err)
-		assert.True(t, builder.crossCompileCalled)
+		builder.AssertCalled("CrossCompile")
 	})
 
 	t.Run("Package", func(t *testing.T) {
 		err := builder.Package(ctx, PackageFormatTarGz)
 		require.NoError(t, err)
-		assert.True(t, builder.packageCalled)
+		builder.AssertCalled("Package")
 	})
 
 	t.Run("Clean", func(t *testing.T) {
 		err := builder.Clean(ctx)
 		require.NoError(t, err)
-		assert.True(t, builder.cleanCalled)
+		builder.AssertCalled("Clean")
 	})
 
 	t.Run("Install", func(t *testing.T) {
 		err := builder.Install(ctx, "/usr/local/bin")
 		require.NoError(t, err)
-		assert.True(t, builder.installCalled)
+		builder.AssertCalled("Install")
 	})
 
 	t.Run("Error handling", func(t *testing.T) {
-		errorBuilder := &MockBuilder{shouldError: true}
+		errorBuilder := NewMockBuilder(t)
+		errorBuilder.SetMethodError("Build", assert.AnError)
 		err := errorBuilder.Build(ctx, &BuildOptions{})
 		assert.Error(t, err)
 	})
@@ -218,14 +218,14 @@ func TestBuilder_Interface(t *testing.T) {
 // Test Tester interface
 func TestTester_Interface(t *testing.T) {
 	ctx := context.Background()
-	tester := &MockTester{}
+	tester := NewMockTester(t)
 
 	t.Run("RunTests", func(t *testing.T) {
 		opts := TestOptions{Verbose: true}
 		results, err := tester.RunTests(ctx, opts)
 		require.NoError(t, err)
 		require.NotNil(t, results)
-		assert.True(t, tester.runTestsCalled)
+		tester.AssertCalled("RunTests")
 		assert.Equal(t, 10, results.Passed)
 		assert.Equal(t, 0, results.Failed)
 	})
@@ -235,7 +235,7 @@ func TestTester_Interface(t *testing.T) {
 		results, err := tester.RunBenchmarks(ctx, &opts)
 		require.NoError(t, err)
 		require.NotNil(t, results)
-		assert.True(t, tester.runBenchmarksCalled)
+		tester.AssertCalled("RunBenchmarks")
 	})
 
 	t.Run("GenerateCoverage", func(t *testing.T) {
@@ -243,7 +243,7 @@ func TestTester_Interface(t *testing.T) {
 		report, err := tester.GenerateCoverage(ctx, opts)
 		require.NoError(t, err)
 		require.NotNil(t, report)
-		assert.True(t, tester.generateCovCalled)
+		tester.AssertCalled("GenerateCoverage")
 		assert.InDelta(t, 85.5, report.Overall.Percentage, 0.001)
 	})
 
@@ -252,7 +252,7 @@ func TestTester_Interface(t *testing.T) {
 		results, err := tester.RunUnit(ctx, opts)
 		require.NoError(t, err)
 		require.NotNil(t, results)
-		assert.True(t, tester.runUnitCalled)
+		tester.AssertCalled("RunUnit")
 		assert.Equal(t, 5, results.Passed)
 	})
 
@@ -261,12 +261,13 @@ func TestTester_Interface(t *testing.T) {
 		results, err := tester.RunIntegration(ctx, opts)
 		require.NoError(t, err)
 		require.NotNil(t, results)
-		assert.True(t, tester.runIntegrationCalled)
+		tester.AssertCalled("RunIntegration")
 		assert.Equal(t, 5, results.Passed)
 	})
 
 	t.Run("Error handling", func(t *testing.T) {
-		errorTester := &MockTester{shouldError: true}
+		errorTester := NewMockTester(t)
+		errorTester.SetMethodError("RunTests", assert.AnError)
 		_, err := errorTester.RunTests(ctx, TestOptions{})
 		assert.Error(t, err)
 	})
@@ -275,28 +276,28 @@ func TestTester_Interface(t *testing.T) {
 // Test Deployer interface
 func TestDeployer_Interface(t *testing.T) {
 	ctx := context.Background()
-	deployer := &MockDeployer{}
+	deployer := NewMockDeployer(t)
 
 	t.Run("Deploy", func(t *testing.T) {
 		target := DeployTarget{Environment: "staging"}
 		opts := DeployOptions{}
 		err := deployer.Deploy(ctx, target, &opts)
 		require.NoError(t, err)
-		assert.True(t, deployer.deployCalled)
+		deployer.AssertCalled("Deploy")
 	})
 
 	t.Run("Validate", func(t *testing.T) {
 		target := DeployTarget{Environment: "production"}
 		err := deployer.Validate(ctx, target)
 		require.NoError(t, err)
-		assert.True(t, deployer.validateCalled)
+		deployer.AssertCalled("Validate")
 	})
 
 	t.Run("Rollback", func(t *testing.T) {
 		target := DeployTarget{Environment: "production"}
 		err := deployer.Rollback(ctx, target, "v1.0.0")
 		require.NoError(t, err)
-		assert.True(t, deployer.rollbackCalled)
+		deployer.AssertCalled("Rollback")
 	})
 
 	t.Run("Status", func(t *testing.T) {
@@ -304,7 +305,7 @@ func TestDeployer_Interface(t *testing.T) {
 		status, err := deployer.Status(ctx, target)
 		require.NoError(t, err)
 		require.NotNil(t, status)
-		assert.True(t, deployer.getStatusCalled)
+		deployer.AssertCalled("Status")
 		assert.Equal(t, "1.0.0", status.Version)
 		assert.Equal(t, "running", status.State)
 	})
@@ -313,7 +314,7 @@ func TestDeployer_Interface(t *testing.T) {
 		target := DeployTarget{Environment: "production"}
 		err := deployer.Scale(ctx, target, 3)
 		require.NoError(t, err)
-		assert.True(t, deployer.scaleServiceCalled)
+		deployer.AssertCalled("Scale")
 	})
 
 	t.Run("Logs", func(t *testing.T) {
@@ -321,13 +322,14 @@ func TestDeployer_Interface(t *testing.T) {
 		logs, err := deployer.Logs(ctx, target, LogOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, logs)
-		assert.True(t, deployer.logsCalled)
+		deployer.AssertCalled("Logs")
 		assert.Len(t, logs, 2)
 		assert.Equal(t, "log line 1", logs[0])
 	})
 
 	t.Run("Error handling", func(t *testing.T) {
-		errorDeployer := &MockDeployer{shouldError: true}
+		errorDeployer := NewMockDeployer(t)
+		errorDeployer.SetMethodError("Deploy", assert.AnError)
 		err := errorDeployer.Deploy(ctx, DeployTarget{}, &DeployOptions{})
 		assert.Error(t, err)
 	})

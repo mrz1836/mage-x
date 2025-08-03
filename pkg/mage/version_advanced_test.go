@@ -12,13 +12,13 @@ import (
 
 // Predefined error variables to satisfy err113 linter
 var (
-	errNoTags   = errors.New("no tags")
-	errGitError = errors.New("git error")
-	// errNotGitRepo is already defined in namespace_test.go
+	errNoTags          = errors.New("no tags")
+	errGitError        = errors.New("git error")
+	errNotGitRepoLocal = errors.New("not a git repository")
 )
 
-// MockRunner is a mock implementation of Runner for testing
-type MockRunner struct {
+// VersionMockRunner is a mock implementation of Runner for version testing
+type VersionMockRunner struct {
 	outputs map[string]struct {
 		output string
 		err    error
@@ -26,8 +26,8 @@ type MockRunner struct {
 	commands []string
 }
 
-func NewMockRunner() *MockRunner {
-	return &MockRunner{
+func NewVersionMockRunner() *VersionMockRunner {
+	return &VersionMockRunner{
 		outputs: make(map[string]struct {
 			output string
 			err    error
@@ -36,14 +36,14 @@ func NewMockRunner() *MockRunner {
 	}
 }
 
-func (m *MockRunner) SetOutput(cmd string, output string, err error) {
+func (m *VersionMockRunner) SetOutput(cmd string, output string, err error) {
 	m.outputs[cmd] = struct {
 		output string
 		err    error
 	}{output: output, err: err}
 }
 
-func (m *MockRunner) RunCmd(command string, args ...string) error {
+func (m *VersionMockRunner) RunCmd(command string, args ...string) error {
 	fullCmd := fmt.Sprintf("%s %s", command, joinArgs(args))
 	m.commands = append(m.commands, fullCmd)
 	if result, ok := m.outputs[fullCmd]; ok {
@@ -52,7 +52,7 @@ func (m *MockRunner) RunCmd(command string, args ...string) error {
 	return nil
 }
 
-func (m *MockRunner) RunCmdOutput(command string, args ...string) (string, error) {
+func (m *VersionMockRunner) RunCmdOutput(command string, args ...string) (string, error) {
 	fullCmd := fmt.Sprintf("%s %s", command, joinArgs(args))
 	m.commands = append(m.commands, fullCmd)
 	if result, ok := m.outputs[fullCmd]; ok {
@@ -61,7 +61,7 @@ func (m *MockRunner) RunCmdOutput(command string, args ...string) (string, error
 	return "", nil
 }
 
-func (m *MockRunner) RunCmdOutputQuiet(command string, args ...string) (string, error) {
+func (m *VersionMockRunner) RunCmdOutputQuiet(command string, args ...string) (string, error) {
 	return m.RunCmdOutput(command, args...)
 }
 
@@ -86,7 +86,7 @@ func TestGetCurrentGitTagWithMocks(t *testing.T) {
 	}()
 
 	t.Run("MultipleTagsOnHEAD", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// Simulate multiple tags on HEAD - should return highest version
@@ -97,7 +97,7 @@ func TestGetCurrentGitTagWithMocks(t *testing.T) {
 	})
 
 	t.Run("NoTagsOnHEAD", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// No tags on HEAD, should fall back to describe
@@ -109,7 +109,7 @@ func TestGetCurrentGitTagWithMocks(t *testing.T) {
 	})
 
 	t.Run("NoTagsAtAll", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// No tags anywhere
@@ -121,7 +121,7 @@ func TestGetCurrentGitTagWithMocks(t *testing.T) {
 	})
 
 	t.Run("EmptyTagList", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// Empty tag list
@@ -142,7 +142,7 @@ func TestGetTagsOnCurrentCommitWithMocks(t *testing.T) {
 	}()
 
 	t.Run("MultipleVersionTags", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		mock.SetOutput("git tag --points-at HEAD", "v1.0.0\nv2.0.0\nrelease-tag\nv3.0.0", nil)
@@ -157,7 +157,7 @@ func TestGetTagsOnCurrentCommitWithMocks(t *testing.T) {
 	})
 
 	t.Run("NoTags", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
@@ -168,7 +168,7 @@ func TestGetTagsOnCurrentCommitWithMocks(t *testing.T) {
 	})
 
 	t.Run("ErrorGettingTags", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		mock.SetOutput("git tag --points-at HEAD", "", errGitError)
@@ -179,7 +179,7 @@ func TestGetTagsOnCurrentCommitWithMocks(t *testing.T) {
 	})
 
 	t.Run("MixedTags", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// Mix of version and non-version tags
@@ -202,7 +202,7 @@ func TestBumpMethodWithMocks(t *testing.T) {
 	}()
 
 	t.Run("SuccessfulPatchBump", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// Clean working directory
@@ -226,7 +226,7 @@ func TestBumpMethodWithMocks(t *testing.T) {
 	})
 
 	t.Run("FailureExistingTagsOnCommit", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// Clean working directory
@@ -250,7 +250,7 @@ func TestGetPreviousTagWithMocks(t *testing.T) {
 	}()
 
 	t.Run("MultipleTags", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		mock.SetOutput("git tag --sort=-version:refname", "v2.0.0\nv1.5.0\nv1.0.0\nv0.5.0", nil)
@@ -260,7 +260,7 @@ func TestGetPreviousTagWithMocks(t *testing.T) {
 	})
 
 	t.Run("SingleTag", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		mock.SetOutput("git tag --sort=-version:refname", "v1.0.0", nil)
@@ -270,7 +270,7 @@ func TestGetPreviousTagWithMocks(t *testing.T) {
 	})
 
 	t.Run("NoTags", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		mock.SetOutput("git tag --sort=-version:refname", "", errNoTags)
@@ -289,7 +289,7 @@ func TestVersionShowWithMocks(t *testing.T) {
 	}()
 
 	t.Run("WithGitInfo", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// Setup git responses
@@ -311,7 +311,7 @@ func TestVersionCheckWithMocks(t *testing.T) {
 	}()
 
 	t.Run("NoGitHubReleases404", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// Setup responses
@@ -336,7 +336,7 @@ func TestVersionUpdateWithMocks(t *testing.T) {
 	}()
 
 	t.Run("UpdateFlow", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// Setup git responses
@@ -365,7 +365,7 @@ func TestBumpWithPushEnabled(t *testing.T) {
 	}()
 
 	t.Run("PushEnabled", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 		require.NoError(t, os.Setenv("PUSH", "true"))
 
@@ -395,7 +395,7 @@ func TestChangelogEdgeCases(t *testing.T) {
 	}()
 
 	t.Run("NoCommits", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// No previous tag
@@ -410,7 +410,7 @@ func TestChangelogEdgeCases(t *testing.T) {
 	})
 
 	t.Run("WithFromTag", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		require.NoError(t, os.Setenv("FROM", "v1.0.0"))
@@ -435,11 +435,11 @@ func TestGetCommitInfoEdgeCases(t *testing.T) {
 	}()
 
 	t.Run("GitCommandFails", func(t *testing.T) {
-		mock := NewMockRunner()
+		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
 		// Git command fails
-		mock.SetOutput("git rev-parse --short HEAD", "", errNotGitRepo)
+		mock.SetOutput("git rev-parse --short HEAD", "", errNotGitRepoLocal)
 
 		commit := getCommitInfo()
 		assert.Equal(t, "unknown", commit)

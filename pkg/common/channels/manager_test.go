@@ -11,57 +11,71 @@ import (
 
 	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 // Test-specific static errors
-var errMockHookFailed = errors.New("hook error")
+var (
+	errMockHookFailed       = errors.New("hook error")
+	errMockTestError        = errors.New("test error")
+	errMockValidationError  = errors.New("validation error")
+	errMockCustomValidation = errors.New("custom validation failed")
+)
 
-// MockStore implements Store interface for testing
-type MockStore struct {
-	releases    map[string]map[string]*Release // channel -> version -> release
-	configs     map[Channel]*ChannelConfig
-	promotions  map[string][]*PromotionRequest // version -> requests
-	shouldError bool
+// EnhancedMockStore implements Store interface using MockBase framework for reduced duplication
+type EnhancedMockStore struct {
+	*testhelpers.MockBase
+
+	releases   map[string]map[string]*Release // channel -> version -> release
+	configs    map[Channel]*ChannelConfig
+	promotions map[string][]*PromotionRequest // version -> requests
 }
 
-func NewMockStore() *MockStore {
-	return &MockStore{
+// NewEnhancedMockStore creates a new store mock using our MockBase framework
+func NewEnhancedMockStore(t *testing.T) *EnhancedMockStore {
+	return &EnhancedMockStore{
+		MockBase:   testhelpers.NewMockBase(t),
 		releases:   make(map[string]map[string]*Release),
 		configs:    make(map[Channel]*ChannelConfig),
 		promotions: make(map[string][]*PromotionRequest),
 	}
 }
 
-func (m *MockStore) SetError(shouldError bool) {
-	m.shouldError = shouldError
-}
-
-func (m *MockStore) GetRelease(channel Channel, version string) (*Release, error) {
-	if m.shouldError {
-		return nil, ErrMockOperation
+func (m *EnhancedMockStore) GetRelease(channel Channel, version string) (*Release, error) {
+	if err := m.ShouldReturnError("GetRelease"); err != nil {
+		m.RecordCall("GetRelease", []interface{}{channel, version}, nil, err)
+		return nil, err
 	}
 
 	channelReleases, exists := m.releases[channel.String()]
 	if !exists {
-		return nil, ErrReleaseNotFound
+		err := ErrReleaseNotFound
+		m.RecordCall("GetRelease", []interface{}{channel, version}, nil, err)
+		return nil, err
 	}
 
 	release, exists := channelReleases[version]
 	if !exists {
-		return nil, ErrReleaseNotFound
+		err := ErrReleaseNotFound
+		m.RecordCall("GetRelease", []interface{}{channel, version}, nil, err)
+		return nil, err
 	}
 
+	m.RecordCall("GetRelease", []interface{}{channel, version}, []interface{}{release}, nil)
 	return release, nil
 }
 
-func (m *MockStore) ListReleases(channel Channel) ([]*Release, error) {
-	if m.shouldError {
-		return nil, ErrMockOperation
+func (m *EnhancedMockStore) ListReleases(channel Channel) ([]*Release, error) {
+	if err := m.ShouldReturnError("ListReleases"); err != nil {
+		m.RecordCall("ListReleases", []interface{}{channel}, nil, err)
+		return nil, err
 	}
 
 	channelReleases, exists := m.releases[channel.String()]
 	if !exists {
-		return []*Release{}, nil
+		result := []*Release{}
+		m.RecordCall("ListReleases", []interface{}{channel}, []interface{}{result}, nil)
+		return result, nil
 	}
 
 	releases := make([]*Release, 0, len(channelReleases))
@@ -69,15 +83,18 @@ func (m *MockStore) ListReleases(channel Channel) ([]*Release, error) {
 		releases = append(releases, release)
 	}
 
+	m.RecordCall("ListReleases", []interface{}{channel}, []interface{}{releases}, nil)
 	return releases, nil
 }
 
-func (m *MockStore) SaveRelease(release *Release) error {
-	if m.shouldError {
-		return ErrMockOperation
+func (m *EnhancedMockStore) SaveRelease(release *Release) error {
+	if err := m.ShouldReturnError("SaveRelease"); err != nil {
+		m.RecordCall("SaveRelease", []interface{}{release}, nil, err)
+		return err
 	}
 
 	if err := release.Validate(); err != nil {
+		m.RecordCall("SaveRelease", []interface{}{release}, nil, err)
 		return err
 	}
 
@@ -87,65 +104,83 @@ func (m *MockStore) SaveRelease(release *Release) error {
 	}
 
 	m.releases[channelKey][release.Version] = release
+	m.RecordCall("SaveRelease", []interface{}{release}, []interface{}{}, nil)
 	return nil
 }
 
-func (m *MockStore) DeleteRelease(channel Channel, version string) error {
-	if m.shouldError {
-		return ErrMockOperation
+func (m *EnhancedMockStore) DeleteRelease(channel Channel, version string) error {
+	if err := m.ShouldReturnError("DeleteRelease"); err != nil {
+		m.RecordCall("DeleteRelease", []interface{}{channel, version}, nil, err)
+		return err
 	}
 
 	channelReleases, exists := m.releases[channel.String()]
 	if !exists {
-		return mageErrors.WithCode(mageErrors.ErrNotFound, "release not found")
+		err := mageErrors.WithCode(mageErrors.ErrNotFound, "release not found")
+		m.RecordCall("DeleteRelease", []interface{}{channel, version}, nil, err)
+		return err
 	}
 
 	if _, exists := channelReleases[version]; !exists {
-		return mageErrors.WithCode(mageErrors.ErrNotFound, "release not found")
+		err := mageErrors.WithCode(mageErrors.ErrNotFound, "release not found")
+		m.RecordCall("DeleteRelease", []interface{}{channel, version}, nil, err)
+		return err
 	}
 
 	delete(channelReleases, version)
+	m.RecordCall("DeleteRelease", []interface{}{channel, version}, []interface{}{}, nil)
 	return nil
 }
 
-func (m *MockStore) GetChannelConfig(channel Channel) (*ChannelConfig, error) {
-	if m.shouldError {
-		return nil, ErrMockOperation
+func (m *EnhancedMockStore) GetChannelConfig(channel Channel) (*ChannelConfig, error) {
+	if err := m.ShouldReturnError("GetChannelConfig"); err != nil {
+		m.RecordCall("GetChannelConfig", []interface{}{channel}, nil, err)
+		return nil, err
 	}
 
 	config, exists := m.configs[channel]
 	if !exists {
-		return nil, ErrConfigNotFound
+		err := ErrConfigNotFound
+		m.RecordCall("GetChannelConfig", []interface{}{channel}, nil, err)
+		return nil, err
 	}
 
+	m.RecordCall("GetChannelConfig", []interface{}{channel}, []interface{}{config}, nil)
 	return config, nil
 }
 
-func (m *MockStore) SaveChannelConfig(config *ChannelConfig) error {
-	if m.shouldError {
-		return ErrMockOperation
+func (m *EnhancedMockStore) SaveChannelConfig(config *ChannelConfig) error {
+	if err := m.ShouldReturnError("SaveChannelConfig"); err != nil {
+		m.RecordCall("SaveChannelConfig", []interface{}{config}, nil, err)
+		return err
 	}
 
 	m.configs[config.Name] = config
+	m.RecordCall("SaveChannelConfig", []interface{}{config}, []interface{}{}, nil)
 	return nil
 }
 
-func (m *MockStore) GetPromotionHistory(version string) ([]*PromotionRequest, error) {
-	if m.shouldError {
-		return nil, ErrMockOperation
+func (m *EnhancedMockStore) GetPromotionHistory(version string) ([]*PromotionRequest, error) {
+	if err := m.ShouldReturnError("GetPromotionHistory"); err != nil {
+		m.RecordCall("GetPromotionHistory", []interface{}{version}, nil, err)
+		return nil, err
 	}
 
 	history, exists := m.promotions[version]
 	if !exists {
-		return []*PromotionRequest{}, nil
+		result := []*PromotionRequest{}
+		m.RecordCall("GetPromotionHistory", []interface{}{version}, []interface{}{result}, nil)
+		return result, nil
 	}
 
+	m.RecordCall("GetPromotionHistory", []interface{}{version}, []interface{}{history}, nil)
 	return history, nil
 }
 
-func (m *MockStore) SavePromotionRequest(request *PromotionRequest) error {
-	if m.shouldError {
-		return ErrMockOperation
+func (m *EnhancedMockStore) SavePromotionRequest(request *PromotionRequest) error {
+	if err := m.ShouldReturnError("SavePromotionRequest"); err != nil {
+		m.RecordCall("SavePromotionRequest", []interface{}{request}, nil, err)
+		return err
 	}
 
 	if _, exists := m.promotions[request.Version]; !exists {
@@ -153,56 +188,105 @@ func (m *MockStore) SavePromotionRequest(request *PromotionRequest) error {
 	}
 
 	m.promotions[request.Version] = append(m.promotions[request.Version], request)
+	m.RecordCall("SavePromotionRequest", []interface{}{request}, []interface{}{}, nil)
 	return nil
 }
 
-// MockValidator for testing
-type MockValidator struct {
-	shouldFail bool
-	errorMsg   string
+// EnhancedMockValidator using MockBase framework for reduced duplication
+type EnhancedMockValidator struct {
+	*testhelpers.MockBase
+
+	validationRules map[string]func(*Release) error
 }
 
-func (v *MockValidator) Validate(_ *Release) error {
-	if v.shouldFail {
-		return fmt.Errorf("%w: %s", ErrMockOperation, v.errorMsg)
+func NewEnhancedMockValidator(t *testing.T) *EnhancedMockValidator {
+	return &EnhancedMockValidator{
+		MockBase:        testhelpers.NewMockBase(t),
+		validationRules: make(map[string]func(*Release) error),
 	}
-	return nil
 }
 
-// MockHook for testing
-type MockHook struct {
-	publishCalled   bool
-	promoteCalled   bool
-	deprecateCalled bool
-	shouldFail      bool
+func (v *EnhancedMockValidator) SetValidationRule(rule string, fn func(*Release) error) {
+	v.validationRules[rule] = fn
 }
 
-func (h *MockHook) OnPublish(_ *Release) error {
-	h.publishCalled = true
-	if h.shouldFail {
-		return errMockHookFailed
+func (v *EnhancedMockValidator) Validate(release *Release) error {
+	if err := v.ShouldReturnError("Validate"); err != nil {
+		v.RecordCall("Validate", []interface{}{release}, nil, err)
+		return err
 	}
+
+	// Apply any custom validation rules
+	for _, rule := range v.validationRules {
+		if err := rule(release); err != nil {
+			v.RecordCall("Validate", []interface{}{release}, nil, err)
+			return err
+		}
+	}
+
+	v.RecordCall("Validate", []interface{}{release}, []interface{}{}, nil)
 	return nil
 }
 
-func (h *MockHook) OnPromote(_ *Release, _ Channel) error {
-	h.promoteCalled = true
-	if h.shouldFail {
-		return errMockHookFailed
+// EnhancedMockHook using MockBase framework for reduced duplication
+type EnhancedMockHook struct {
+	*testhelpers.MockBase
+}
+
+func NewEnhancedMockHook(t *testing.T) *EnhancedMockHook {
+	return &EnhancedMockHook{
+		MockBase: testhelpers.NewMockBase(t),
 	}
+}
+
+func (h *EnhancedMockHook) OnPublish(release *Release) error {
+	if err := h.ShouldReturnError("OnPublish"); err != nil {
+		h.RecordCall("OnPublish", []interface{}{release}, nil, err)
+		return err
+	}
+	h.RecordCall("OnPublish", []interface{}{release}, []interface{}{}, nil)
 	return nil
 }
 
-func (h *MockHook) OnDeprecate(_ *Release) error {
-	h.deprecateCalled = true
-	if h.shouldFail {
-		return errMockHookFailed
+func (h *EnhancedMockHook) OnPromote(release *Release, toChannel Channel) error {
+	if err := h.ShouldReturnError("OnPromote"); err != nil {
+		h.RecordCall("OnPromote", []interface{}{release, toChannel}, nil, err)
+		return err
 	}
+	h.RecordCall("OnPromote", []interface{}{release, toChannel}, []interface{}{}, nil)
 	return nil
 }
+
+func (h *EnhancedMockHook) OnDeprecate(release *Release) error {
+	if err := h.ShouldReturnError("OnDeprecate"); err != nil {
+		h.RecordCall("OnDeprecate", []interface{}{release}, nil, err)
+		return err
+	}
+	h.RecordCall("OnDeprecate", []interface{}{release}, []interface{}{}, nil)
+	return nil
+}
+
+// Convenience methods for testing hook calls
+func (h *EnhancedMockHook) AssertPublishCalled() {
+	h.AssertCalled("OnPublish")
+}
+
+func (h *EnhancedMockHook) AssertPromoteCalled() {
+	h.AssertCalled("OnPromote")
+}
+
+func (h *EnhancedMockHook) AssertDeprecateCalled() {
+	h.AssertCalled("OnDeprecate")
+}
+
+// Old MockStore removed - now using EnhancedMockStore from testhelpers.MockBase
+
+// All old MockStore methods removed - now using EnhancedMockStore
+
+// Old MockValidator and MockHook removed - now using Enhanced versions from testhelpers.MockBase
 
 func TestNewManager(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	fileOps := fileops.New().File
 
 	manager := NewManager(store, fileOps)
@@ -215,9 +299,37 @@ func TestNewManager(t *testing.T) {
 	assert.NotNil(t, manager.hooks)
 }
 
+// TestEnhancedMocksCompatibility demonstrates that our enhanced mocks work as drop-in replacements
+func TestEnhancedMocksCompatibility(t *testing.T) {
+	// Test that enhanced mocks provide the same interface as original mocks
+	store := NewEnhancedMockStore(t)
+	validator := NewEnhancedMockValidator(t)
+	hook := NewEnhancedMockHook(t)
+
+	// Test basic functionality
+	assert.NotNil(t, store)
+	assert.NotNil(t, validator)
+	assert.NotNil(t, hook)
+
+	// Test error injection capabilities
+	store.SetMethodError("GetRelease", errMockTestError)
+	validator.SetMethodError("Validate", errMockValidationError)
+	hook.SetMethodError("OnPublish", errMockHookFailed)
+
+	// Test that methods return the expected errors
+	_, err := store.GetRelease(Stable, "1.0.0")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "test error")
+
+	// Test call tracking
+	store.AssertCalled("GetRelease")
+	store.AssertCalledWith("GetRelease", Stable, "1.0.0")
+	store.AssertCalledTimes("GetRelease", 1)
+}
+
 func TestManager_Initialize(t *testing.T) {
 	t.Run("successful initialization", func(t *testing.T) {
-		store := NewMockStore()
+		store := NewEnhancedMockStore(t)
 		manager := NewManager(store, fileops.New().File)
 
 		err := manager.Initialize()
@@ -234,17 +346,20 @@ func TestManager_Initialize(t *testing.T) {
 	})
 
 	t.Run("store error", func(t *testing.T) {
-		store := NewMockStore()
-		store.SetError(true)
+		store := NewEnhancedMockStore(t)
+		store.SetMethodError("SaveChannelConfig", ErrMockOperation)
 		manager := NewManager(store, fileops.New().File)
 
 		err := manager.Initialize()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to save channel config")
+
+		// Verify the mock was called correctly
+		store.AssertCalled("SaveChannelConfig")
 	})
 
 	t.Run("existing configs preserved", func(t *testing.T) {
-		store := NewMockStore()
+		store := NewEnhancedMockStore(t)
 
 		// Pre-populate with custom config
 		customConfig := &ChannelConfig{
@@ -265,7 +380,7 @@ func TestManager_Initialize(t *testing.T) {
 }
 
 func TestManager_PublishRelease(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 	err := manager.Initialize()
 	require.NoError(t, err)
@@ -323,10 +438,8 @@ func TestManager_PublishRelease(t *testing.T) {
 	})
 
 	t.Run("custom validator failure", func(t *testing.T) {
-		validator := &MockValidator{
-			shouldFail: true,
-			errorMsg:   "custom validation failed",
-		}
+		validator := NewEnhancedMockValidator(t)
+		validator.SetMethodError("Validate", errMockCustomValidation)
 		manager.AddValidator(validator)
 
 		release := *validRelease
@@ -339,7 +452,7 @@ func TestManager_PublishRelease(t *testing.T) {
 
 	t.Run("version already exists", func(t *testing.T) {
 		// Create fresh manager for this test
-		store := NewMockStore()
+		store := NewEnhancedMockStore(t)
 		manager := NewManager(store, fileops.New().File)
 		err := manager.Initialize()
 		require.NoError(t, err)
@@ -358,12 +471,12 @@ func TestManager_PublishRelease(t *testing.T) {
 
 	t.Run("store error", func(t *testing.T) {
 		// Create fresh manager for this test
-		store := NewMockStore()
+		store := NewEnhancedMockStore(t)
 		manager := NewManager(store, fileops.New().File)
 		err := manager.Initialize()
 		require.NoError(t, err)
 
-		store.SetError(true)
+		store.SetMethodError("SaveRelease", ErrMockOperation)
 
 		release := *validRelease
 		release.Version = "1.1.0" // Different version
@@ -371,16 +484,19 @@ func TestManager_PublishRelease(t *testing.T) {
 		err = manager.PublishRelease(&release)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to save release")
+
+		// Verify the mock was called correctly
+		store.AssertCalled("SaveRelease")
 	})
 
 	t.Run("hook called", func(t *testing.T) {
 		// Create fresh manager for this test
-		store := NewMockStore()
+		store := NewEnhancedMockStore(t)
 		manager := NewManager(store, fileops.New().File)
 		err := manager.Initialize()
 		require.NoError(t, err)
 
-		hook := &MockHook{}
+		hook := NewEnhancedMockHook(t)
 		manager.AddHook(hook)
 
 		release := *validRelease
@@ -389,29 +505,33 @@ func TestManager_PublishRelease(t *testing.T) {
 		err = manager.PublishRelease(&release)
 		require.NoError(t, err)
 
-		assert.True(t, hook.publishCalled)
+		hook.AssertPublishCalled()
 	})
 
 	t.Run("hook error doesn't fail publish", func(t *testing.T) {
 		// Create fresh manager for this test
-		store := NewMockStore()
+		store := NewEnhancedMockStore(t)
 		manager := NewManager(store, fileops.New().File)
 		err := manager.Initialize()
 		require.NoError(t, err)
 
-		hook := &MockHook{shouldFail: true}
+		hook := NewEnhancedMockHook(t)
+		hook.SetMethodError("OnPublish", errMockHookFailed)
 		manager.AddHook(hook)
 
 		release := *validRelease
 		release.Version = "1.3.0"
 
 		err = manager.PublishRelease(&release)
-		assert.NoError(t, err) // Should not fail even with hook error
+		require.NoError(t, err) // Should not fail even with hook error
+
+		// Verify the hook was called even though it failed
+		hook.AssertCalled("OnPublish")
 	})
 }
 
 func TestManager_PromoteRelease(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 	err := manager.Initialize()
 	require.NoError(t, err)
@@ -511,7 +631,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 
 	t.Run("target already exists", func(t *testing.T) {
 		// Create fresh manager for this test
-		store := NewMockStore()
+		store := NewEnhancedMockStore(t)
 		manager := NewManager(store, fileops.New().File)
 		err := manager.Initialize()
 		require.NoError(t, err)
@@ -562,7 +682,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 
 	t.Run("missing required tests", func(t *testing.T) {
 		// Create fresh manager for this test
-		store := NewMockStore()
+		store := NewEnhancedMockStore(t)
 		manager := NewManager(store, fileops.New().File)
 		err := manager.Initialize()
 		require.NoError(t, err)
@@ -595,7 +715,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 
 	t.Run("failed required test", func(t *testing.T) {
 		// Create fresh manager for this test
-		store := NewMockStore()
+		store := NewEnhancedMockStore(t)
 		manager := NewManager(store, fileops.New().File)
 		err := manager.Initialize()
 		require.NoError(t, err)
@@ -631,7 +751,7 @@ func TestManager_PromoteRelease(t *testing.T) {
 }
 
 func TestManager_GetLatestRelease(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 
 	t.Run("no releases", func(t *testing.T) {
@@ -700,18 +820,19 @@ func TestManager_GetLatestRelease(t *testing.T) {
 	})
 
 	t.Run("store error", func(t *testing.T) {
-		store.SetError(true)
+		store.SetMethodError("ListReleases", ErrMockOperation)
 
 		_, err := manager.GetLatestRelease(Stable)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to list releases")
 
-		store.SetError(false)
+		// Verify the mock was called
+		store.AssertCalled("ListReleases")
 	})
 }
 
 func TestManager_ListReleases(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 
 	// Create test releases
@@ -758,18 +879,19 @@ func TestManager_ListReleases(t *testing.T) {
 	})
 
 	t.Run("store error", func(t *testing.T) {
-		store.SetError(true)
+		store.SetMethodError("ListReleases", ErrMockOperation)
 
 		_, err := manager.ListReleases(Stable, false)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to list releases")
 
-		store.SetError(false)
+		// Verify the mock was called
+		store.AssertCalled("ListReleases")
 	})
 }
 
 func TestManager_DeprecateRelease(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 
 	// Create a test release
@@ -818,18 +940,18 @@ func TestManager_DeprecateRelease(t *testing.T) {
 		err := store.SaveRelease(newRelease)
 		require.NoError(t, err)
 
-		hook := &MockHook{}
+		hook := NewEnhancedMockHook(t)
 		manager.AddHook(hook)
 
 		err = manager.DeprecateRelease(Stable, "1.1.0")
 		require.NoError(t, err)
 
-		assert.True(t, hook.deprecateCalled)
+		hook.AssertDeprecateCalled()
 	})
 }
 
 func TestManager_CleanupExpiredReleases(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 	err := manager.Initialize()
 	require.NoError(t, err)
@@ -885,17 +1007,18 @@ func TestManager_CleanupExpiredReleases(t *testing.T) {
 		require.NoError(t, err)
 
 		// Set store to error when deleting
-		store.SetError(true)
+		store.SetMethodError("DeleteRelease", ErrMockOperation)
 
 		err = manager.CleanupExpiredReleases()
 		require.Error(t, err)
 
-		store.SetError(false)
+		// Verify the mock was called
+		store.AssertCalled("DeleteRelease")
 	})
 }
 
 func TestManager_GetChannelStats(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 
 	t.Run("empty channel", func(t *testing.T) {
@@ -942,21 +1065,22 @@ func TestManager_GetChannelStats(t *testing.T) {
 	})
 
 	t.Run("store error", func(t *testing.T) {
-		store.SetError(true)
+		store.SetMethodError("ListReleases", ErrMockOperation)
 
 		_, err := manager.GetChannelStats(Stable)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to list releases")
 
-		store.SetError(false)
+		// Verify the mock was called
+		store.AssertCalled("ListReleases")
 	})
 }
 
 func TestManager_AddValidator(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 
-	validator := &MockValidator{}
+	validator := NewEnhancedMockValidator(t)
 	manager.AddValidator(validator)
 
 	assert.Len(t, manager.validators, 1)
@@ -964,10 +1088,10 @@ func TestManager_AddValidator(t *testing.T) {
 }
 
 func TestManager_AddHook(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 
-	hook := &MockHook{}
+	hook := NewEnhancedMockHook(t)
 	manager.AddHook(hook)
 
 	assert.Len(t, manager.hooks, 1)
@@ -975,7 +1099,7 @@ func TestManager_AddHook(t *testing.T) {
 }
 
 func TestManager_GetPromotionHistory(t *testing.T) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(t)
 	manager := NewManager(store, fileops.New().File)
 
 	t.Run("no history", func(t *testing.T) {
@@ -1003,18 +1127,19 @@ func TestManager_GetPromotionHistory(t *testing.T) {
 	})
 
 	t.Run("store error", func(t *testing.T) {
-		store.SetError(true)
+		store.SetMethodError("GetPromotionHistory", ErrMockOperation)
 
 		_, err := manager.GetPromotionHistory("1.0.0")
 		require.Error(t, err)
 
-		store.SetError(false)
+		// Verify the mock was called
+		store.AssertCalled("GetPromotionHistory")
 	})
 }
 
 // Benchmark tests
 func BenchmarkManager_PublishRelease(b *testing.B) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(nil) // No testing.T in benchmark
 	manager := NewManager(store, fileops.New().File)
 	if err := manager.Initialize(); err != nil {
 		b.Fatal(err)
@@ -1051,7 +1176,7 @@ func BenchmarkManager_PublishRelease(b *testing.B) {
 }
 
 func BenchmarkManager_GetLatestRelease(b *testing.B) {
-	store := NewMockStore()
+	store := NewEnhancedMockStore(nil) // No testing.T in benchmark
 	manager := NewManager(store, fileops.New().File)
 
 	// Pre-populate with releases
