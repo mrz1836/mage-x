@@ -67,11 +67,44 @@ type BuildInfo struct {
 var (
 	// Build-time variables that can be set at build time
 	version = "dev"
-
-	// Thread-safe access to build info
-	buildInfoOnce sync.Once //nolint:gochecknoglobals // Required for thread-safe initialization
-	buildInfoData BuildInfo //nolint:gochecknoglobals // Private data for sync.Once pattern
 )
+
+// BuildInfoProvider manages thread-safe access to build information
+type BuildInfoProvider interface {
+	GetBuildInfo() BuildInfo
+}
+
+// buildInfoProvider implements BuildInfoProvider with thread-safe lazy initialization
+type buildInfoProvider struct {
+	once sync.Once
+	data BuildInfo
+}
+
+// NewBuildInfoProvider creates a new build info provider
+func NewBuildInfoProvider() BuildInfoProvider {
+	return &buildInfoProvider{}
+}
+
+// GetBuildInfo returns the build information using thread-safe initialization
+func (bip *buildInfoProvider) GetBuildInfo() BuildInfo {
+	bip.once.Do(func() {
+		// Build-time variables that can be set at build time
+		commit := statusUnknown
+		buildDate := statusUnknown
+
+		bip.data = BuildInfo{
+			Version:   version,
+			Commit:    commit,
+			BuildDate: buildDate,
+		}
+	})
+	return bip.data
+}
+
+// GetDefaultBuildInfoProvider returns a default build info provider instance
+func GetDefaultBuildInfoProvider() BuildInfoProvider {
+	return NewBuildInfoProvider()
+}
 
 // Show displays the current version
 func (Version) Show() error {
@@ -369,19 +402,9 @@ func (Version) Changelog() error {
 }
 
 // getBuildInfo returns the build information using thread-safe initialization
+// Deprecated: Use BuildInfoProvider.GetBuildInfo() instead
 func getBuildInfo() BuildInfo {
-	buildInfoOnce.Do(func() {
-		// Build-time variables that can be set at build time
-		commit := statusUnknown
-		buildDate := statusUnknown
-
-		buildInfoData = BuildInfo{
-			Version:   version,
-			Commit:    commit,
-			BuildDate: buildDate,
-		}
-	})
-	return buildInfoData
+	return GetDefaultBuildInfoProvider().GetBuildInfo()
 }
 
 // Helper functions

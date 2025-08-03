@@ -18,10 +18,25 @@ var (
 	errStrictChecksFailed = errors.New("strict checks failed")
 )
 
-// shadowToolMutex prevents concurrent shadow tool installations
-//
-//nolint:gochecknoglobals // Required for synchronizing shadow tool installation across goroutines
-var shadowToolMutex sync.Mutex
+// ShadowToolManager manages shadow tool installation and ensures thread-safety
+type ShadowToolManager interface {
+	EnsureShadowTool() error
+}
+
+// shadowToolManager implements ShadowToolManager with thread-safe shadow tool installation
+type shadowToolManager struct {
+	mutex sync.Mutex
+}
+
+// NewShadowToolManager creates a new shadow tool manager
+func NewShadowToolManager() ShadowToolManager {
+	return &shadowToolManager{}
+}
+
+// GetDefaultShadowToolManager returns a default shadow tool manager instance
+func GetDefaultShadowToolManager() ShadowToolManager {
+	return NewShadowToolManager()
+}
 
 // Vet namespace for go vet tasks
 type Vet mg.Namespace
@@ -202,7 +217,7 @@ func (Vet) Shadow() error {
 	utils.Header("Checking for Shadowed Variables")
 
 	// Check if shadow tool exists, and install if needed
-	if err := ensureShadowTool(); err != nil {
+	if err := GetDefaultShadowToolManager().EnsureShadowTool(); err != nil {
 		return fmt.Errorf("failed to ensure shadow tool is available: %w", err)
 	}
 
@@ -233,11 +248,11 @@ func (Vet) Shadow() error {
 	return nil
 }
 
-// ensureShadowTool ensures the shadow tool is installed and available
-func ensureShadowTool() error {
+// EnsureShadowTool ensures the shadow tool is installed and available
+func (stm *shadowToolManager) EnsureShadowTool() error {
 	// Use mutex to prevent concurrent installations
-	shadowToolMutex.Lock()
-	defer shadowToolMutex.Unlock()
+	stm.mutex.Lock()
+	defer stm.mutex.Unlock()
 
 	// Try using go env GOPATH to check if shadow is in GOPATH/bin first
 	if gopath, err := GetRunner().RunCmdOutput("go", "env", "GOPATH"); err == nil {
