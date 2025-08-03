@@ -9,18 +9,24 @@ import (
 
 // Global default instances - thread-safe singleton pattern
 var (
-	// DefaultBuilder and DefaultMatcher use getter functions for dependency injection
+	// All default instances use getter functions for dependency injection
 	defaultBuilderOnce sync.Once   //nolint:gochecknoglobals // Required for thread-safe singleton pattern
 	defaultBuilderData PathBuilder //nolint:gochecknoglobals // Private data for singleton pattern
 
 	defaultMatcherOnce sync.Once   //nolint:gochecknoglobals // Required for thread-safe singleton pattern
 	defaultMatcherData PathMatcher //nolint:gochecknoglobals // Private data for singleton pattern
 
-	// Remaining globals to be refactored in future iterations
-	DefaultValidator = NewPathValidator() //nolint:gochecknoglobals // Package-level default
-	DefaultSet       = NewPathSet()       //nolint:gochecknoglobals // Package-level default
-	DefaultWatcher   = NewPathWatcher()   //nolint:gochecknoglobals // Package-level default
-	DefaultCache     = NewPathCache()     //nolint:gochecknoglobals // Package-level default
+	defaultValidatorOnce sync.Once     //nolint:gochecknoglobals // Required for thread-safe singleton pattern
+	defaultValidatorData PathValidator //nolint:gochecknoglobals // Private data for singleton pattern
+
+	defaultSetOnce sync.Once //nolint:gochecknoglobals // Required for thread-safe singleton pattern
+	defaultSetData PathSet   //nolint:gochecknoglobals // Private data for singleton pattern
+
+	defaultWatcherOnce sync.Once   //nolint:gochecknoglobals // Required for thread-safe singleton pattern
+	defaultWatcherData PathWatcher //nolint:gochecknoglobals // Private data for singleton pattern
+
+	defaultCacheOnce sync.Once //nolint:gochecknoglobals // Required for thread-safe singleton pattern
+	defaultCacheData PathCache //nolint:gochecknoglobals // Private data for singleton pattern
 )
 
 // GetDefaultBuilder returns the default PathBuilder instance using thread-safe initialization
@@ -37,6 +43,38 @@ func GetDefaultMatcher() PathMatcher {
 		defaultMatcherData = NewPathMatcher()
 	})
 	return defaultMatcherData
+}
+
+// GetDefaultValidator returns the default PathValidator instance using thread-safe initialization
+func GetDefaultValidator() PathValidator {
+	defaultValidatorOnce.Do(func() {
+		defaultValidatorData = NewPathValidator()
+	})
+	return defaultValidatorData
+}
+
+// GetDefaultSet returns the default PathSet instance using thread-safe initialization
+func GetDefaultSet() PathSet {
+	defaultSetOnce.Do(func() {
+		defaultSetData = NewPathSet()
+	})
+	return defaultSetData
+}
+
+// GetDefaultWatcher returns the default PathWatcher instance using thread-safe initialization
+func GetDefaultWatcher() PathWatcher {
+	defaultWatcherOnce.Do(func() {
+		defaultWatcherData = NewPathWatcher()
+	})
+	return defaultWatcherData
+}
+
+// GetDefaultCache returns the default PathCache instance using thread-safe initialization
+func GetDefaultCache() PathCache {
+	defaultCacheOnce.Do(func() {
+		defaultCacheData = NewPathCache()
+	})
+	return defaultCacheData
 }
 
 // Lazy wrapper types for backward compatibility
@@ -281,11 +319,287 @@ func (l *lazyPathMatcher) FilterPaths(paths []PathBuilder) []PathBuilder {
 	return GetDefaultMatcher().FilterPaths(paths)
 }
 
+// lazyPathValidator provides lazy initialization for the default PathValidator instance
+type lazyPathValidator struct{}
+
+func (l *lazyPathValidator) AddRule(rule ValidationRule) error {
+	return GetDefaultValidator().AddRule(rule)
+}
+
+func (l *lazyPathValidator) RemoveRule(name string) error {
+	return GetDefaultValidator().RemoveRule(name)
+}
+
+func (l *lazyPathValidator) ClearRules() error {
+	return GetDefaultValidator().ClearRules()
+}
+
+func (l *lazyPathValidator) Rules() []ValidationRule {
+	return GetDefaultValidator().Rules()
+}
+
+func (l *lazyPathValidator) Validate(path string) []ValidationError {
+	return GetDefaultValidator().Validate(path)
+}
+
+func (l *lazyPathValidator) ValidatePath(path PathBuilder) []ValidationError {
+	return GetDefaultValidator().ValidatePath(path)
+}
+
+func (l *lazyPathValidator) IsValid(path string) bool {
+	return GetDefaultValidator().IsValid(path)
+}
+
+func (l *lazyPathValidator) IsValidPath(path PathBuilder) bool {
+	return GetDefaultValidator().IsValidPath(path)
+}
+
+func (l *lazyPathValidator) RequireAbsolute() PathValidator {
+	return GetDefaultValidator().RequireAbsolute()
+}
+
+func (l *lazyPathValidator) RequireRelative() PathValidator {
+	return GetDefaultValidator().RequireRelative()
+}
+
+func (l *lazyPathValidator) RequireExists() PathValidator {
+	return GetDefaultValidator().RequireExists()
+}
+
+func (l *lazyPathValidator) RequireNotExists() PathValidator {
+	return GetDefaultValidator().RequireNotExists()
+}
+
+func (l *lazyPathValidator) RequireReadable() PathValidator {
+	return GetDefaultValidator().RequireReadable()
+}
+
+func (l *lazyPathValidator) RequireWritable() PathValidator {
+	return GetDefaultValidator().RequireWritable()
+}
+
+func (l *lazyPathValidator) RequireExecutable() PathValidator {
+	return GetDefaultValidator().RequireExecutable()
+}
+
+func (l *lazyPathValidator) RequireDirectory() PathValidator {
+	return GetDefaultValidator().RequireDirectory()
+}
+
+func (l *lazyPathValidator) RequireFile() PathValidator {
+	return GetDefaultValidator().RequireFile()
+}
+
+func (l *lazyPathValidator) RequireExtension(exts ...string) PathValidator {
+	return GetDefaultValidator().RequireExtension(exts...)
+}
+
+func (l *lazyPathValidator) RequireMaxLength(length int) PathValidator {
+	return GetDefaultValidator().RequireMaxLength(length)
+}
+
+func (l *lazyPathValidator) RequirePattern(pattern string) PathValidator {
+	return GetDefaultValidator().RequirePattern(pattern)
+}
+
+func (l *lazyPathValidator) ForbidPattern(pattern string) PathValidator {
+	return GetDefaultValidator().ForbidPattern(pattern)
+}
+
+// lazyPathSet provides lazy initialization for the default PathSet instance
+type lazyPathSet struct{}
+
+func (l *lazyPathSet) Add(path string) bool {
+	return GetDefaultSet().Add(path)
+}
+
+func (l *lazyPathSet) AddPath(path PathBuilder) bool {
+	return GetDefaultSet().AddPath(path)
+}
+
+func (l *lazyPathSet) Remove(path string) bool {
+	return GetDefaultSet().Remove(path)
+}
+
+func (l *lazyPathSet) RemovePath(path PathBuilder) bool {
+	return GetDefaultSet().RemovePath(path)
+}
+
+func (l *lazyPathSet) Contains(path string) bool {
+	return GetDefaultSet().Contains(path)
+}
+
+func (l *lazyPathSet) ContainsPath(path PathBuilder) bool {
+	return GetDefaultSet().ContainsPath(path)
+}
+
+func (l *lazyPathSet) Clear() error {
+	return GetDefaultSet().Clear()
+}
+
+func (l *lazyPathSet) Size() int {
+	return GetDefaultSet().Size()
+}
+
+func (l *lazyPathSet) IsEmpty() bool {
+	return GetDefaultSet().IsEmpty()
+}
+
+func (l *lazyPathSet) Paths() []string {
+	return GetDefaultSet().Paths()
+}
+
+func (l *lazyPathSet) PathBuilders() []PathBuilder {
+	return GetDefaultSet().PathBuilders()
+}
+
+func (l *lazyPathSet) Union(other PathSet) PathSet {
+	return GetDefaultSet().Union(other)
+}
+
+func (l *lazyPathSet) Intersection(other PathSet) PathSet {
+	return GetDefaultSet().Intersection(other)
+}
+
+func (l *lazyPathSet) Difference(other PathSet) PathSet {
+	return GetDefaultSet().Difference(other)
+}
+
+func (l *lazyPathSet) SymmetricDifference(other PathSet) PathSet {
+	return GetDefaultSet().SymmetricDifference(other)
+}
+
+func (l *lazyPathSet) Filter(predicate func(string) bool) PathSet {
+	return GetDefaultSet().Filter(predicate)
+}
+
+func (l *lazyPathSet) FilterPaths(predicate func(PathBuilder) bool) PathSet {
+	return GetDefaultSet().FilterPaths(predicate)
+}
+
+func (l *lazyPathSet) ForEach(fn func(string) error) error {
+	return GetDefaultSet().ForEach(fn)
+}
+
+func (l *lazyPathSet) ForEachPath(fn func(PathBuilder) error) error {
+	return GetDefaultSet().ForEachPath(fn)
+}
+
+// lazyPathWatcher provides lazy initialization for the default PathWatcher instance
+type lazyPathWatcher struct{}
+
+func (l *lazyPathWatcher) Watch(path string, events EventMask) error {
+	return GetDefaultWatcher().Watch(path, events)
+}
+
+func (l *lazyPathWatcher) WatchPath(path PathBuilder, events EventMask) error {
+	return GetDefaultWatcher().WatchPath(path, events)
+}
+
+func (l *lazyPathWatcher) Unwatch(path string) error {
+	return GetDefaultWatcher().Unwatch(path)
+}
+
+func (l *lazyPathWatcher) UnwatchPath(path PathBuilder) error {
+	return GetDefaultWatcher().UnwatchPath(path)
+}
+
+func (l *lazyPathWatcher) Events() <-chan *PathEvent {
+	return GetDefaultWatcher().Events()
+}
+
+func (l *lazyPathWatcher) Errors() <-chan error {
+	return GetDefaultWatcher().Errors()
+}
+
+func (l *lazyPathWatcher) Close() error {
+	return GetDefaultWatcher().Close()
+}
+
+func (l *lazyPathWatcher) SetBufferSize(size int) PathWatcher {
+	return GetDefaultWatcher().SetBufferSize(size)
+}
+
+func (l *lazyPathWatcher) SetRecursive(recursive bool) PathWatcher {
+	return GetDefaultWatcher().SetRecursive(recursive)
+}
+
+func (l *lazyPathWatcher) SetDebounce(duration time.Duration) PathWatcher {
+	return GetDefaultWatcher().SetDebounce(duration)
+}
+
+func (l *lazyPathWatcher) IsWatching(path string) bool {
+	return GetDefaultWatcher().IsWatching(path)
+}
+
+func (l *lazyPathWatcher) WatchedPaths() []string {
+	return GetDefaultWatcher().WatchedPaths()
+}
+
+// lazyPathCache provides lazy initialization for the default PathCache instance
+type lazyPathCache struct{}
+
+func (l *lazyPathCache) Get(key string) (PathBuilder, bool) {
+	return GetDefaultCache().Get(key)
+}
+
+func (l *lazyPathCache) Set(key string, path PathBuilder) error {
+	return GetDefaultCache().Set(key, path)
+}
+
+func (l *lazyPathCache) Delete(key string) error {
+	return GetDefaultCache().Delete(key)
+}
+
+func (l *lazyPathCache) Clear() error {
+	return GetDefaultCache().Clear()
+}
+
+func (l *lazyPathCache) Size() int {
+	return GetDefaultCache().Size()
+}
+
+func (l *lazyPathCache) Keys() []string {
+	return GetDefaultCache().Keys()
+}
+
+func (l *lazyPathCache) Stats() CacheStats {
+	return GetDefaultCache().Stats()
+}
+
+func (l *lazyPathCache) SetMaxSize(size int) PathCache {
+	return GetDefaultCache().SetMaxSize(size)
+}
+
+func (l *lazyPathCache) SetTTL(ttl time.Duration) PathCache {
+	return GetDefaultCache().SetTTL(ttl)
+}
+
+func (l *lazyPathCache) SetEvictionPolicy(policy EvictionPolicy) PathCache {
+	return GetDefaultCache().SetEvictionPolicy(policy)
+}
+
+func (l *lazyPathCache) Validate(key string) error {
+	return GetDefaultCache().Validate(key)
+}
+
+func (l *lazyPathCache) Refresh(key string) error {
+	return GetDefaultCache().Refresh(key)
+}
+
+func (l *lazyPathCache) RefreshAll() error {
+	return GetDefaultCache().RefreshAll()
+}
+
 // Backward compatibility: provide the original global variable names as lazy-initialized instances
 // These will be initialized on first access, maintaining the same interface
 var (
-	DefaultBuilder PathBuilder = &lazyPathBuilder{} //nolint:gochecknoglobals // Backward compatibility wrapper
-	DefaultMatcher PathMatcher = &lazyPathMatcher{} //nolint:gochecknoglobals // Backward compatibility wrapper
+	DefaultBuilder   PathBuilder   = &lazyPathBuilder{}   //nolint:gochecknoglobals // Backward compatibility wrapper
+	DefaultMatcher   PathMatcher   = &lazyPathMatcher{}   //nolint:gochecknoglobals // Backward compatibility wrapper
+	DefaultValidator PathValidator = &lazyPathValidator{} //nolint:gochecknoglobals // Backward compatibility wrapper
+	DefaultSet       PathSet       = &lazyPathSet{}       //nolint:gochecknoglobals // Backward compatibility wrapper
+	DefaultWatcher   PathWatcher   = &lazyPathWatcher{}   //nolint:gochecknoglobals // Backward compatibility wrapper
+	DefaultCache     PathCache     = &lazyPathCache{}     //nolint:gochecknoglobals // Backward compatibility wrapper
 )
 
 // Path Builder convenience functions
@@ -646,29 +960,37 @@ func SetDefaultMatcher(matcher PathMatcher) {
 
 // SetDefaultValidator sets the global default validator (for testing)
 func SetDefaultValidator(validator PathValidator) {
-	if defaultValidator, ok := validator.(*DefaultPathValidator); ok {
-		DefaultValidator = defaultValidator
+	if validator != nil {
+		// Force initialization and then replace the instance
+		GetDefaultValidator()
+		defaultValidatorData = validator
 	}
 }
 
 // SetDefaultSet sets the global default set (for testing)
 func SetDefaultSet(set PathSet) {
-	if defaultSet, ok := set.(*DefaultPathSet); ok {
-		DefaultSet = defaultSet
+	if set != nil {
+		// Force initialization and then replace the instance
+		GetDefaultSet()
+		defaultSetData = set
 	}
 }
 
 // SetDefaultWatcher sets the global default watcher (for testing)
 func SetDefaultWatcher(watcher PathWatcher) {
 	if watcher != nil {
-		DefaultWatcher = watcher
+		// Force initialization and then replace the instance
+		GetDefaultWatcher()
+		defaultWatcherData = watcher
 	}
 }
 
 // SetDefaultCache sets the global default cache (for testing)
 func SetDefaultCache(cache PathCache) {
 	if cache != nil {
-		DefaultCache = cache
+		// Force initialization and then replace the instance
+		GetDefaultCache()
+		defaultCacheData = cache
 	}
 }
 
@@ -758,54 +1080,55 @@ func AnalyzePath(path string) (*PathInfo, error) {
 
 // WatchPath starts watching a path using the default watcher
 func WatchPath(path string, events EventMask) error {
-	return DefaultWatcher.Watch(path, events)
+	return GetDefaultWatcher().Watch(path, events)
 }
 
 // UnwatchPath stops watching a path using the default watcher
 func UnwatchPath(path string) error {
-	return DefaultWatcher.Unwatch(path)
+	return GetDefaultWatcher().Unwatch(path)
 }
 
 // IsWatchingPath checks if a path is being watched using the default watcher
 func IsWatchingPath(path string) bool {
-	return DefaultWatcher.IsWatching(path)
+	return GetDefaultWatcher().IsWatching(path)
 }
 
 // GetAllWatchedPaths returns all watched paths using the default watcher
 func GetAllWatchedPaths() []string {
-	return DefaultWatcher.WatchedPaths()
+	return GetDefaultWatcher().WatchedPaths()
 }
 
 // PathCache convenience functions
 
 // CachePath stores a value in the default cache
 func CachePath(key string, path PathBuilder) error {
-	return DefaultCache.Set(key, path)
+	return GetDefaultCache().Set(key, path)
 }
 
 // GetCachedPath retrieves a value from the default cache
 func GetCachedPath(key string) (PathBuilder, bool) {
-	return DefaultCache.Get(key)
+	return GetDefaultCache().Get(key)
 }
 
 // DeleteCachedPath removes a value from the default cache
 func DeleteCachedPath(key string) error {
-	return DefaultCache.Delete(key)
+	return GetDefaultCache().Delete(key)
 }
 
 // ClearCache clears all cached values
 func ClearCache() error {
-	return DefaultCache.Clear()
+	return GetDefaultCache().Clear()
 }
 
 // GetCacheStats returns cache statistics
 func GetCacheStats() CacheStats {
-	return DefaultCache.Stats()
+	return GetDefaultCache().Stats()
 }
 
 // ExpireCachedPaths removes expired cache entries
 func ExpireCachedPaths() int {
-	if defaultCache, ok := DefaultCache.(*DefaultPathCache); ok {
+	cache := GetDefaultCache()
+	if defaultCache, ok := cache.(*DefaultPathCache); ok {
 		return defaultCache.Expire()
 	}
 	return 0

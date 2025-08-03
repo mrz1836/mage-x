@@ -18,11 +18,6 @@ import (
 // Build namespace for build-related tasks
 type Build mg.Namespace
 
-var (
-	cacheManager *cache.Manager //nolint:gochecknoglobals // Required for cache singleton
-	cacheOnce    sync.Once      //nolint:gochecknoglobals // Required for singleton initialization
-)
-
 // Static errors for err113 compliance
 var (
 	ErrBuildFailedError   = errors.New("build failed")
@@ -31,30 +26,35 @@ var (
 	ErrDockerfileNotFound = errors.New("dockerfile not found")
 )
 
-// initCacheManager initializes the cache manager if not already done
-func initCacheManager() *cache.Manager {
-	cacheOnce.Do(func() {
-		config := cache.DefaultConfig()
-		// Cache configuration uses default settings for now.
-		// Future enhancement: integrate with main Config struct for customization.
+// getCacheManager returns a cache manager instance using thread-safe singleton pattern
+var getCacheManager = func() func() *cache.Manager { //nolint:gochecknoglobals // Required for thread-safe cache singleton pattern
+	var once sync.Once
+	var manager *cache.Manager
 
-		// Check if cache is disabled via environment
-		if os.Getenv("MAGE_CACHE_DISABLED") == "true" {
-			config.Enabled = false
-		}
+	return func() *cache.Manager {
+		once.Do(func() {
+			config := cache.DefaultConfig()
+			// Cache configuration uses default settings for now.
+			// Future enhancement: integrate with main Config struct for customization.
 
-		cacheManager = cache.NewManager(config)
-		if cacheManager != nil {
-			if err := cacheManager.Init(); err != nil {
-				utils.Warn("Failed to initialize cache: %v", err)
-				// Continue without caching
+			// Check if cache is disabled via environment
+			if os.Getenv("MAGE_CACHE_DISABLED") == "true" {
 				config.Enabled = false
-				cacheManager = cache.NewManager(config)
 			}
-		}
-	})
-	return cacheManager
-}
+
+			manager = cache.NewManager(config)
+			if manager != nil {
+				if err := manager.Init(); err != nil {
+					utils.Warn("Failed to initialize cache: %v", err)
+					// Continue without caching
+					config.Enabled = false
+					manager = cache.NewManager(config)
+				}
+			}
+		})
+		return manager
+	}
+}()
 
 // Default builds the application for the current platform
 func (b Build) Default() error {
@@ -92,7 +92,7 @@ type buildContext struct {
 
 // createBuildContext creates a build context with all configuration
 func (b Build) createBuildContext(cfg *Config) *buildContext {
-	cm := initCacheManager()
+	cm := getCacheManager()
 	outputPath := b.determineBuildOutput(cfg)
 	packagePath := b.determinePackagePath(outputPath)
 	buildArgs := b.createBuildArgs(cfg, outputPath, packagePath)
