@@ -7,14 +7,285 @@ import (
 	"time"
 )
 
-// Global default instances
+// Global default instances - thread-safe singleton pattern
 var (
-	DefaultBuilder   = NewPathBuilder("") //nolint:gochecknoglobals // Package-level default
-	DefaultMatcher   = NewPathMatcher()   //nolint:gochecknoglobals // Package-level default
+	// DefaultBuilder and DefaultMatcher use getter functions for dependency injection
+	defaultBuilderOnce sync.Once   //nolint:gochecknoglobals // Required for thread-safe singleton pattern
+	defaultBuilderData PathBuilder //nolint:gochecknoglobals // Private data for singleton pattern
+
+	defaultMatcherOnce sync.Once   //nolint:gochecknoglobals // Required for thread-safe singleton pattern
+	defaultMatcherData PathMatcher //nolint:gochecknoglobals // Private data for singleton pattern
+
+	// Remaining globals to be refactored in future iterations
 	DefaultValidator = NewPathValidator() //nolint:gochecknoglobals // Package-level default
 	DefaultSet       = NewPathSet()       //nolint:gochecknoglobals // Package-level default
 	DefaultWatcher   = NewPathWatcher()   //nolint:gochecknoglobals // Package-level default
 	DefaultCache     = NewPathCache()     //nolint:gochecknoglobals // Package-level default
+)
+
+// GetDefaultBuilder returns the default PathBuilder instance using thread-safe initialization
+func GetDefaultBuilder() PathBuilder {
+	defaultBuilderOnce.Do(func() {
+		defaultBuilderData = NewPathBuilder("")
+	})
+	return defaultBuilderData
+}
+
+// GetDefaultMatcher returns the default PathMatcher instance using thread-safe initialization
+func GetDefaultMatcher() PathMatcher {
+	defaultMatcherOnce.Do(func() {
+		defaultMatcherData = NewPathMatcher()
+	})
+	return defaultMatcherData
+}
+
+// Lazy wrapper types for backward compatibility
+type lazyPathBuilder struct{}
+
+func (l *lazyPathBuilder) Join(elements ...string) PathBuilder {
+	return GetDefaultBuilder().Join(elements...)
+}
+
+func (l *lazyPathBuilder) Dir() PathBuilder {
+	return GetDefaultBuilder().Dir()
+}
+
+func (l *lazyPathBuilder) Base() string {
+	return GetDefaultBuilder().Base()
+}
+
+func (l *lazyPathBuilder) Ext() string {
+	return GetDefaultBuilder().Ext()
+}
+
+func (l *lazyPathBuilder) Clean() PathBuilder {
+	return GetDefaultBuilder().Clean()
+}
+
+func (l *lazyPathBuilder) Abs() (PathBuilder, error) {
+	return GetDefaultBuilder().Abs()
+}
+
+func (l *lazyPathBuilder) Append(suffix string) PathBuilder {
+	return GetDefaultBuilder().Append(suffix)
+}
+
+func (l *lazyPathBuilder) Prepend(prefix string) PathBuilder {
+	return GetDefaultBuilder().Prepend(prefix)
+}
+
+func (l *lazyPathBuilder) WithExt(ext string) PathBuilder {
+	return GetDefaultBuilder().WithExt(ext)
+}
+
+func (l *lazyPathBuilder) WithoutExt() PathBuilder {
+	return GetDefaultBuilder().WithoutExt()
+}
+
+func (l *lazyPathBuilder) WithName(name string) PathBuilder {
+	return GetDefaultBuilder().WithName(name)
+}
+
+func (l *lazyPathBuilder) Rel(basepath string) (PathBuilder, error) {
+	return GetDefaultBuilder().Rel(basepath)
+}
+
+func (l *lazyPathBuilder) RelTo(target PathBuilder) (PathBuilder, error) {
+	return GetDefaultBuilder().RelTo(target)
+}
+
+func (l *lazyPathBuilder) String() string {
+	return GetDefaultBuilder().String()
+}
+
+func (l *lazyPathBuilder) IsAbs() bool {
+	return GetDefaultBuilder().IsAbs()
+}
+
+func (l *lazyPathBuilder) IsDir() bool {
+	return GetDefaultBuilder().IsDir()
+}
+
+func (l *lazyPathBuilder) IsFile() bool {
+	return GetDefaultBuilder().IsFile()
+}
+
+func (l *lazyPathBuilder) Exists() bool {
+	return GetDefaultBuilder().Exists()
+}
+
+func (l *lazyPathBuilder) Size() int64 {
+	return GetDefaultBuilder().Size()
+}
+
+func (l *lazyPathBuilder) ModTime() time.Time {
+	return GetDefaultBuilder().ModTime()
+}
+
+func (l *lazyPathBuilder) Mode() fs.FileMode {
+	return GetDefaultBuilder().Mode()
+}
+
+func (l *lazyPathBuilder) Walk(fn WalkFunc) error {
+	return GetDefaultBuilder().Walk(fn)
+}
+
+func (l *lazyPathBuilder) List() ([]PathBuilder, error) {
+	return GetDefaultBuilder().List()
+}
+
+func (l *lazyPathBuilder) ListFiles() ([]PathBuilder, error) {
+	return GetDefaultBuilder().ListFiles()
+}
+
+func (l *lazyPathBuilder) ListDirs() ([]PathBuilder, error) {
+	return GetDefaultBuilder().ListDirs()
+}
+
+func (l *lazyPathBuilder) Glob(pattern string) ([]PathBuilder, error) {
+	return GetDefaultBuilder().Glob(pattern)
+}
+
+func (l *lazyPathBuilder) Validate() error {
+	return GetDefaultBuilder().Validate()
+}
+
+func (l *lazyPathBuilder) IsValid() bool {
+	return GetDefaultBuilder().IsValid()
+}
+
+func (l *lazyPathBuilder) IsEmpty() bool {
+	return GetDefaultBuilder().IsEmpty()
+}
+
+func (l *lazyPathBuilder) IsSafe() bool {
+	return GetDefaultBuilder().IsSafe()
+}
+
+func (l *lazyPathBuilder) Create() error {
+	return GetDefaultBuilder().Create()
+}
+
+func (l *lazyPathBuilder) CreateDir() error {
+	return GetDefaultBuilder().CreateDir()
+}
+
+func (l *lazyPathBuilder) CreateDirAll() error {
+	return GetDefaultBuilder().CreateDirAll()
+}
+
+func (l *lazyPathBuilder) Remove() error {
+	return GetDefaultBuilder().Remove()
+}
+
+func (l *lazyPathBuilder) RemoveAll() error {
+	return GetDefaultBuilder().RemoveAll()
+}
+
+func (l *lazyPathBuilder) Copy(dest PathBuilder) error {
+	return GetDefaultBuilder().Copy(dest)
+}
+
+func (l *lazyPathBuilder) Move(dest PathBuilder) error {
+	return GetDefaultBuilder().Move(dest)
+}
+
+func (l *lazyPathBuilder) Readlink() (PathBuilder, error) {
+	return GetDefaultBuilder().Readlink()
+}
+
+func (l *lazyPathBuilder) Symlink(target PathBuilder) error {
+	return GetDefaultBuilder().Symlink(target)
+}
+
+func (l *lazyPathBuilder) Match(pattern string) bool {
+	return GetDefaultBuilder().Match(pattern)
+}
+
+func (l *lazyPathBuilder) Contains(sub string) bool {
+	return GetDefaultBuilder().Contains(sub)
+}
+
+func (l *lazyPathBuilder) HasPrefix(prefix string) bool {
+	return GetDefaultBuilder().HasPrefix(prefix)
+}
+
+func (l *lazyPathBuilder) HasSuffix(suffix string) bool {
+	return GetDefaultBuilder().HasSuffix(suffix)
+}
+
+func (l *lazyPathBuilder) Clone() PathBuilder {
+	return GetDefaultBuilder().Clone()
+}
+
+// lazyPathMatcher provides lazy initialization for the default PathMatcher instance
+type lazyPathMatcher struct{}
+
+func (l *lazyPathMatcher) Match(path string) bool {
+	return GetDefaultMatcher().Match(path)
+}
+
+func (l *lazyPathMatcher) MatchPath(path PathBuilder) bool {
+	return GetDefaultMatcher().MatchPath(path)
+}
+
+func (l *lazyPathMatcher) Compile(pattern string) error {
+	return GetDefaultMatcher().Compile(pattern)
+}
+
+func (l *lazyPathMatcher) Pattern() string {
+	return GetDefaultMatcher().Pattern()
+}
+
+func (l *lazyPathMatcher) AddPattern(pattern string) error {
+	return GetDefaultMatcher().AddPattern(pattern)
+}
+
+func (l *lazyPathMatcher) RemovePattern(pattern string) error {
+	return GetDefaultMatcher().RemovePattern(pattern)
+}
+
+func (l *lazyPathMatcher) ClearPatterns() error {
+	return GetDefaultMatcher().ClearPatterns()
+}
+
+func (l *lazyPathMatcher) Patterns() []string {
+	return GetDefaultMatcher().Patterns()
+}
+
+func (l *lazyPathMatcher) SetCaseSensitive(sensitive bool) PathMatcher {
+	return GetDefaultMatcher().SetCaseSensitive(sensitive)
+}
+
+func (l *lazyPathMatcher) SetRecursive(recursive bool) PathMatcher {
+	return GetDefaultMatcher().SetRecursive(recursive)
+}
+
+func (l *lazyPathMatcher) SetMaxDepth(depth int) PathMatcher {
+	return GetDefaultMatcher().SetMaxDepth(depth)
+}
+
+func (l *lazyPathMatcher) MatchAny(paths ...string) bool {
+	return GetDefaultMatcher().MatchAny(paths...)
+}
+
+func (l *lazyPathMatcher) MatchAll(paths ...string) bool {
+	return GetDefaultMatcher().MatchAll(paths...)
+}
+
+func (l *lazyPathMatcher) Filter(paths []string) []string {
+	return GetDefaultMatcher().Filter(paths)
+}
+
+func (l *lazyPathMatcher) FilterPaths(paths []PathBuilder) []PathBuilder {
+	return GetDefaultMatcher().FilterPaths(paths)
+}
+
+// Backward compatibility: provide the original global variable names as lazy-initialized instances
+// These will be initialized on first access, maintaining the same interface
+var (
+	DefaultBuilder PathBuilder = &lazyPathBuilder{} //nolint:gochecknoglobals // Backward compatibility wrapper
+	DefaultMatcher PathMatcher = &lazyPathMatcher{} //nolint:gochecknoglobals // Backward compatibility wrapper
 )
 
 // Path Builder convenience functions
@@ -358,16 +629,18 @@ func GetDefaultOptions() PathOptions {
 // SetDefaultBuilder sets the global default builder (for testing)
 func SetDefaultBuilder(builder PathBuilder) {
 	if builder != nil {
-		if defaultBuilder, ok := builder.(*DefaultPathBuilder); ok {
-			DefaultBuilder = defaultBuilder
-		}
+		// Force initialization and then replace the instance
+		GetDefaultBuilder()
+		defaultBuilderData = builder
 	}
 }
 
 // SetDefaultMatcher sets the global default matcher (for testing)
 func SetDefaultMatcher(matcher PathMatcher) {
-	if defaultMatcher, ok := matcher.(*DefaultPathMatcher); ok {
-		DefaultMatcher = defaultMatcher
+	if matcher != nil {
+		// Force initialization and then replace the instance
+		GetDefaultMatcher()
+		defaultMatcherData = matcher
 	}
 }
 

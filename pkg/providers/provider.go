@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 )
 
@@ -325,20 +326,50 @@ type QuantumService interface {
 
 // Registry holds registered providers
 type Registry struct {
+	mu        sync.RWMutex
 	providers map[string]ProviderFactory
 }
 
 // ProviderFactory creates provider instances
 type ProviderFactory func(config *ProviderConfig) (Provider, error)
 
-// Global registry
-var globalRegistry = &Registry{ //nolint:gochecknoglobals // Required for provider registry singleton
-	providers: make(map[string]ProviderFactory),
+var (
+	// registryOnce ensures thread-safe lazy initialization of the registry
+	registryOnce     sync.Once    //nolint:gochecknoglobals // Required for thread-safe initialization
+	registryInstance *Registry    //nolint:gochecknoglobals // Private instance for sync.Once pattern
+	registryMu       sync.RWMutex //nolint:gochecknoglobals // Protects registryInstance
+)
+
+// GetRegistry returns the provider registry instance with thread-safe lazy initialization
+func GetRegistry() *Registry {
+	registryMu.RLock()
+	if registryInstance != nil {
+		defer registryMu.RUnlock()
+		return registryInstance
+	}
+	registryMu.RUnlock()
+
+	registryOnce.Do(func() {
+		registryMu.Lock()
+		defer registryMu.Unlock()
+		if registryInstance == nil {
+			registryInstance = &Registry{
+				providers: make(map[string]ProviderFactory),
+			}
+		}
+	})
+
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	return registryInstance
 }
 
 // Register registers a provider factory
 func Register(name string, factory ProviderFactory) {
-	globalRegistry.providers[name] = factory
+	registry := GetRegistry()
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	registry.providers[name] = factory
 }
 
 // RegisterAllProviders registers all available providers
@@ -349,7 +380,10 @@ func RegisterAllProviders() {
 
 // Get returns a provider instance
 func Get(name string, config *ProviderConfig) (Provider, error) {
-	factory, ok := globalRegistry.providers[name]
+	registry := GetRegistry()
+	registry.mu.RLock()
+	factory, ok := registry.providers[name]
+	registry.mu.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("%w: %s", ErrProviderNotFound, name)
 	}
@@ -358,8 +392,11 @@ func Get(name string, config *ProviderConfig) (Provider, error) {
 
 // List returns all registered provider names
 func List() []string {
-	names := make([]string, 0, len(globalRegistry.providers))
-	for name := range globalRegistry.providers {
+	registry := GetRegistry()
+	registry.mu.RLock()
+	defer registry.mu.RUnlock()
+	names := make([]string, 0, len(registry.providers))
+	for name := range registry.providers {
 		names = append(names, name)
 	}
 	return names
