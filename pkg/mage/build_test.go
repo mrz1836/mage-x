@@ -16,8 +16,8 @@ import (
 
 // Static test errors to satisfy err113 linter
 var (
-	errBuildError = errors.New("build error")
-	errGitError   = errors.New("git error")
+	errBuildError    = errors.New("build error")
+	errGitErrorBuild = errors.New("git error")
 )
 
 // BuildTestSuite defines the test suite for Build namespace methods
@@ -562,7 +562,7 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 		// Mock git command to return error
 		originalRunner := GetRunner()
 		mockRunner := &testutil.MockRunner{}
-		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("", errGitError)
+		mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("", errGitErrorBuild)
 		ts.Require().NoError(SetRunner(mockRunner))
 
 		commit := getCommit()
