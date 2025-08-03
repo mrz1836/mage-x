@@ -74,12 +74,14 @@ const (
 )
 
 var (
-	// DefaultLogger is the global logger instance
-	DefaultLogger = NewLogger() //nolint:gochecknoglobals // Package-level default
-
 	// Package-level variables for contextual message configuration
 	contextualMessagesOnce sync.Once           //nolint:gochecknoglobals // Required for thread-safe initialization
 	contextualMessagesData map[string][]string //nolint:gochecknoglobals // Private data for sync.Once pattern
+
+	// defaultLoggerOnce ensures thread-safe lazy initialization of the default logger
+	defaultLoggerOnce     sync.Once    //nolint:gochecknoglobals // Required for thread-safe initialization
+	defaultLoggerInstance *Logger      //nolint:gochecknoglobals // Private instance for sync.Once pattern
+	defaultLoggerMu       sync.RWMutex //nolint:gochecknoglobals // Protects defaultLoggerInstance
 )
 
 // NewLogger creates a new logger instance
@@ -89,6 +91,126 @@ func NewLogger() *Logger {
 		useColor: shouldUseColor(),
 		output:   os.Stdout,
 	}
+}
+
+// GetDefaultLogger returns the default logger instance with thread-safe lazy initialization
+func GetDefaultLogger() *Logger {
+	defaultLoggerMu.RLock()
+	if defaultLoggerInstance != nil {
+		defer defaultLoggerMu.RUnlock()
+		return defaultLoggerInstance
+	}
+	defaultLoggerMu.RUnlock()
+
+	defaultLoggerOnce.Do(func() {
+		defaultLoggerMu.Lock()
+		defer defaultLoggerMu.Unlock()
+		if defaultLoggerInstance == nil {
+			defaultLoggerInstance = NewLogger()
+		}
+	})
+
+	defaultLoggerMu.RLock()
+	defer defaultLoggerMu.RUnlock()
+	return defaultLoggerInstance
+}
+
+// SetDefaultLogger sets the default logger instance (primarily for testing)
+func SetDefaultLogger(logger *Logger) {
+	defaultLoggerMu.Lock()
+	defer defaultLoggerMu.Unlock()
+	defaultLoggerInstance = logger
+}
+
+// DefaultLogger provides backward compatibility for direct access to the default logger
+var DefaultLogger = &defaultLoggerProxy{} //nolint:gochecknoglobals // Backward compatibility proxy using getter pattern
+
+// defaultLoggerProxy provides transparent access to the default logger instance
+type defaultLoggerProxy struct{}
+
+// Debug logs a debug message using the default logger
+func (p *defaultLoggerProxy) Debug(format string, args ...interface{}) {
+	GetDefaultLogger().Debug(format, args...)
+}
+
+// Info logs an informational message using the default logger
+func (p *defaultLoggerProxy) Info(format string, args ...interface{}) {
+	GetDefaultLogger().Info(format, args...)
+}
+
+// Warn logs a warning message using the default logger
+func (p *defaultLoggerProxy) Warn(format string, args ...interface{}) {
+	GetDefaultLogger().Warn(format, args...)
+}
+
+// Error logs an error message using the default logger
+func (p *defaultLoggerProxy) Error(format string, args ...interface{}) {
+	GetDefaultLogger().Error(format, args...)
+}
+
+// Success logs a success message using the default logger
+func (p *defaultLoggerProxy) Success(format string, args ...interface{}) {
+	GetDefaultLogger().Success(format, args...)
+}
+
+// Fail logs a failure message using the default logger
+func (p *defaultLoggerProxy) Fail(format string, args ...interface{}) {
+	GetDefaultLogger().Fail(format, args...)
+}
+
+// Header prints a formatted header using the default logger
+func (p *defaultLoggerProxy) Header(text string) {
+	GetDefaultLogger().Header(text)
+}
+
+// StartSpinner starts a progress spinner using the default logger
+func (p *defaultLoggerProxy) StartSpinner(message string) {
+	GetDefaultLogger().StartSpinner(message)
+}
+
+// StopSpinner stops the current spinner using the default logger
+func (p *defaultLoggerProxy) StopSpinner() {
+	GetDefaultLogger().StopSpinner()
+}
+
+// UpdateSpinner updates the spinner message using the default logger
+func (p *defaultLoggerProxy) UpdateSpinner(message string) {
+	GetDefaultLogger().UpdateSpinner(message)
+}
+
+// WithPrefix creates a new logger with a prefix using the default logger
+func (p *defaultLoggerProxy) WithPrefix(prefix string) *Logger {
+	return GetDefaultLogger().WithPrefix(prefix)
+}
+
+// SetLevel sets the minimum log level using the default logger
+func (p *defaultLoggerProxy) SetLevel(level LogLevel) {
+	GetDefaultLogger().SetLevel(level)
+}
+
+// SetColorEnabled enables or disables color output using the default logger
+func (p *defaultLoggerProxy) SetColorEnabled(enabled bool) {
+	GetDefaultLogger().SetColorEnabled(enabled)
+}
+
+// SetOutput sets the output writer using the default logger
+func (p *defaultLoggerProxy) SetOutput(w io.Writer) {
+	GetDefaultLogger().SetOutput(w)
+}
+
+// GetContextualMessage returns a contextual message using the default logger
+func (p *defaultLoggerProxy) GetContextualMessage(context string) string {
+	return GetDefaultLogger().GetContextualMessage(context)
+}
+
+// GetTimeContext returns the current time context using the default logger
+func (p *defaultLoggerProxy) GetTimeContext() string {
+	return GetDefaultLogger().GetTimeContext()
+}
+
+// GetDayContext returns the current day context using the default logger
+func (p *defaultLoggerProxy) GetDayContext() string {
+	return GetDefaultLogger().GetDayContext()
 }
 
 // WithPrefix creates a new logger with a prefix
@@ -605,60 +727,60 @@ func formatDuration(d time.Duration) string {
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Debug(format string, args ...interface{}) {
-	DefaultLogger.Debug(format, args...)
+	GetDefaultLogger().Debug(format, args...)
 }
 
 // Info logs an informational message using the default logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Info(format string, args ...interface{}) {
-	DefaultLogger.Info(format, args...)
+	GetDefaultLogger().Info(format, args...)
 }
 
 // Warn logs a warning message using the default logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Warn(format string, args ...interface{}) {
-	DefaultLogger.Warn(format, args...)
+	GetDefaultLogger().Warn(format, args...)
 }
 
 // Error logs an error message using the default logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Error(format string, args ...interface{}) {
-	DefaultLogger.Error(format, args...)
+	GetDefaultLogger().Error(format, args...)
 }
 
 // Success logs a success message using the default logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Success(format string, args ...interface{}) {
-	DefaultLogger.Success(format, args...)
+	GetDefaultLogger().Success(format, args...)
 }
 
 // Fail logs a failure message using the default logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Fail(format string, args ...interface{}) {
-	DefaultLogger.Fail(format, args...)
+	GetDefaultLogger().Fail(format, args...)
 }
 
 // Header prints a formatted header using the default logger
 func Header(text string) {
-	DefaultLogger.Header(text)
+	GetDefaultLogger().Header(text)
 }
 
 // StartSpinner starts a progress spinner using the default logger
 func StartSpinner(message string) {
-	DefaultLogger.StartSpinner(message)
+	GetDefaultLogger().StartSpinner(message)
 }
 
 // StopSpinner stops the current spinner using the default logger
 func StopSpinner() {
-	DefaultLogger.StopSpinner()
+	GetDefaultLogger().StopSpinner()
 }
 
 // UpdateSpinner updates the spinner message using the default logger
 func UpdateSpinner(message string) {
-	DefaultLogger.UpdateSpinner(message)
+	GetDefaultLogger().UpdateSpinner(message)
 }

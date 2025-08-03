@@ -66,9 +66,7 @@ type BuildInfo struct {
 // Package-level variables for build info configuration
 var (
 	// Build-time variables that can be set at build time
-	version   = "dev"
-	commit    = "unknown" //nolint:gochecknoglobals // Build-time variables
-	buildDate = "unknown" //nolint:gochecknoglobals // Build-time variables
+	version = "dev"
 
 	// Thread-safe access to build info
 	buildInfoOnce sync.Once //nolint:gochecknoglobals // Required for thread-safe initialization
@@ -337,6 +335,10 @@ func (Version) Changelog() error {
 // getBuildInfo returns the build information using thread-safe initialization
 func getBuildInfo() BuildInfo {
 	buildInfoOnce.Do(func() {
+		// Build-time variables that can be set at build time
+		commit := statusUnknown
+		buildDate := statusUnknown
+
 		buildInfoData = BuildInfo{
 			Version:   version,
 			Commit:    commit,

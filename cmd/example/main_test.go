@@ -20,11 +20,12 @@ func TestExampleTestSuite(t *testing.T) {
 func (suite *ExampleTestSuite) TestMain() {
 	// Capture output from default logger like in the utils test
 	var buf bytes.Buffer
-	originalLogger := utils.DefaultLogger
-	utils.DefaultLogger = utils.NewLogger()
-	utils.DefaultLogger.SetOutput(&buf)
-	utils.DefaultLogger.SetColorEnabled(false)
-	defer func() { utils.DefaultLogger = originalLogger }()
+	originalLogger := utils.GetDefaultLogger()
+	testLogger := utils.NewLogger()
+	testLogger.SetOutput(&buf)
+	testLogger.SetColorEnabled(false)
+	utils.SetDefaultLogger(testLogger)
+	defer func() { utils.SetDefaultLogger(originalLogger) }()
 
 	// Execute main function
 	main()
@@ -38,11 +39,12 @@ func (suite *ExampleTestSuite) TestMain() {
 func (suite *ExampleTestSuite) TestMainOutput() {
 	// This test verifies that main() function calls utils.Info correctly
 	var buf bytes.Buffer
-	originalLogger := utils.DefaultLogger
-	utils.DefaultLogger = utils.NewLogger()
-	utils.DefaultLogger.SetOutput(&buf)
-	utils.DefaultLogger.SetColorEnabled(false)
-	defer func() { utils.DefaultLogger = originalLogger }()
+	originalLogger := utils.GetDefaultLogger()
+	testLogger := utils.NewLogger()
+	testLogger.SetOutput(&buf)
+	testLogger.SetColorEnabled(false)
+	utils.SetDefaultLogger(testLogger)
+	defer func() { utils.SetDefaultLogger(originalLogger) }()
 
 	// Execute main function
 	main()
@@ -106,7 +108,7 @@ func (suite *ExampleTestSuite) TestMainConcurrent() {
 // Test main function with logger capture
 func (suite *ExampleTestSuite) TestMainLoggerCapture() {
 	var buf bytes.Buffer
-	originalLogger := utils.DefaultLogger
+	originalLogger := utils.GetDefaultLogger()
 
 	// Create new logger with buffer output
 	testLogger := utils.NewLogger()
@@ -114,8 +116,8 @@ func (suite *ExampleTestSuite) TestMainLoggerCapture() {
 	testLogger.SetColorEnabled(false)
 	testLogger.SetLevel(utils.LogLevelInfo)
 
-	utils.DefaultLogger = testLogger
-	defer func() { utils.DefaultLogger = originalLogger }()
+	utils.SetDefaultLogger(testLogger)
+	defer func() { utils.SetDefaultLogger(originalLogger) }()
 
 	// Execute main function
 	main()
@@ -129,11 +131,12 @@ func (suite *ExampleTestSuite) TestMainLoggerCapture() {
 // Test that main function calls utils.Info exactly once
 func (suite *ExampleTestSuite) TestMainSingleInfoCall() {
 	var buf bytes.Buffer
-	originalLogger := utils.DefaultLogger
-	utils.DefaultLogger = utils.NewLogger()
-	utils.DefaultLogger.SetOutput(&buf)
-	utils.DefaultLogger.SetColorEnabled(false)
-	defer func() { utils.DefaultLogger = originalLogger }()
+	originalLogger := utils.GetDefaultLogger()
+	testLogger := utils.NewLogger()
+	testLogger.SetOutput(&buf)
+	testLogger.SetColorEnabled(false)
+	utils.SetDefaultLogger(testLogger)
+	defer func() { utils.SetDefaultLogger(originalLogger) }()
 
 	// Execute main function
 	main()

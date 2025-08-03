@@ -355,11 +355,12 @@ func TestPackageLevelFunctions(t *testing.T) {
 	t.Run("package functions use DefaultLogger", func(t *testing.T) {
 		// Capture output from default logger
 		var buf bytes.Buffer
-		originalLogger := DefaultLogger
-		DefaultLogger = NewLogger()
-		DefaultLogger.SetOutput(&buf)
-		DefaultLogger.SetColorEnabled(false)
-		defer func() { DefaultLogger = originalLogger }()
+		originalLogger := GetDefaultLogger()
+		testLogger := NewLogger()
+		testLogger.SetOutput(&buf)
+		testLogger.SetColorEnabled(false)
+		SetDefaultLogger(testLogger)
+		defer func() { SetDefaultLogger(originalLogger) }()
 
 		// Test various functions
 		assert.NotPanics(t, func() {

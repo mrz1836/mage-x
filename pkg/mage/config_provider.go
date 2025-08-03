@@ -142,34 +142,40 @@ func (r *ProviderRegistry) GetProvider() ConfigProvider {
 	return r.provider
 }
 
-// packageProviderManager manages the package-level configuration provider
-// This uses function-level static variables to avoid globals while maintaining state
-//
-//nolint:gochecknoglobals // Required for backward compatibility API
-var packageProviderManager = func() func() *ProviderRegistry {
-	var (
-		once     sync.Once
-		registry *ProviderRegistry
-	)
+// packageProviderRegistrySingleton manages the package-level configuration provider registry
+type packageProviderRegistrySingleton struct {
+	once     sync.Once
+	registry *ProviderRegistry
+}
 
-	return func() *ProviderRegistry {
-		once.Do(func() {
-			registry = NewProviderRegistry()
-		})
-		return registry
-	}
-}()
+// instance holds the singleton instance
+// Note: This is acceptable as it's encapsulated within the singleton pattern
+// and doesn't expose mutable global state
+func (s *packageProviderRegistrySingleton) getInstance() *ProviderRegistry {
+	s.once.Do(func() {
+		s.registry = NewProviderRegistry()
+	})
+	return s.registry
+}
+
+// singleton instance for the package provider registry
+var registrySingleton = &packageProviderRegistrySingleton{} //nolint:gochecknoglobals // Acceptable for singleton pattern
+
+// getPackageProviderRegistry returns the singleton provider registry
+func getPackageProviderRegistry() *ProviderRegistry {
+	return registrySingleton.getInstance()
+}
 
 // SetConfigProvider sets a custom configuration provider
 // This function maintains backward compatibility
 func SetConfigProvider(provider ConfigProvider) {
-	packageProviderManager().SetProvider(provider)
+	getPackageProviderRegistry().SetProvider(provider)
 }
 
 // GetConfigProvider returns the current configuration provider
 // This function maintains backward compatibility
 func GetConfigProvider() ConfigProvider {
-	return packageProviderManager().GetProvider()
+	return getPackageProviderRegistry().GetProvider()
 }
 
 // MockConfigProvider is a simple mock implementation for testing

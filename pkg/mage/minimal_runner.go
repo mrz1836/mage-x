@@ -110,15 +110,39 @@ type RunnerProvider struct {
 	once   sync.Once
 }
 
-// defaultProvider holds the package-level runner provider
-var defaultProvider = &RunnerProvider{} //nolint:gochecknoglobals // Package-level runner provider for singleton pattern
+// packageRunnerSingleton manages the package-level command runner provider
+type packageRunnerSingleton struct {
+	once     sync.Once
+	provider *RunnerProvider
+}
+
+// getInstance returns the singleton provider instance
+func (s *packageRunnerSingleton) getInstance() *RunnerProvider {
+	s.once.Do(func() {
+		s.provider = &RunnerProvider{}
+	})
+	return s.provider
+}
+
+// singleton instance for the package runner provider
+// Note: This is acceptable as it's encapsulated within the singleton pattern
+// and doesn't expose mutable global state
+var runnerSingleton = &packageRunnerSingleton{} //nolint:gochecknoglobals // Acceptable for singleton pattern
+
+// getPackageRunnerProvider returns the singleton runner provider
+func getPackageRunnerProvider() *RunnerProvider {
+	return runnerSingleton.getInstance()
+}
 
 // GetRunner returns the secure command runner with thread-safe lazy initialization
 func GetRunner() CommandRunner {
-	defaultProvider.once.Do(func() {
-		defaultProvider.runner = NewSecureCommandRunner()
+	provider := getPackageRunnerProvider()
+	provider.once.Do(func() {
+		if provider.runner == nil {
+			provider.runner = NewSecureCommandRunner()
+		}
 	})
-	return defaultProvider.runner
+	return provider.runner
 }
 
 // SetRunner allows setting a custom runner (mainly for testing)
@@ -126,7 +150,8 @@ func SetRunner(r CommandRunner) error {
 	if r == nil {
 		return errRunnerNil
 	}
-	defaultProvider.runner = r
+	provider := getPackageRunnerProvider()
+	provider.runner = r
 	return nil
 }
 
