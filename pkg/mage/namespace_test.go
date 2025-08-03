@@ -61,7 +61,8 @@ func TestBuildNamespace_Default(t *testing.T) {
 		{
 			name: "successful build",
 			setupMock: func(m *MockCommandRunner) {
-				// Mock version detection
+				// Mock version detection - first try current git tag command, then fallback
+				m.On("RunCmdOutput", "git", "tag", "--sort=-version:refname", "--points-at", "HEAD").Return("v1.0.0", nil).Maybe()
 				m.On("RunCmdOutput", "git", "describe", "--tags", "--abbrev=0").Return("v1.0.0", nil).Maybe()
 				// Mock commit hash detection
 				m.On("RunCmdOutput", "git", "rev-parse", "--short", "HEAD").Return("abc123", nil).Maybe()
@@ -73,7 +74,8 @@ func TestBuildNamespace_Default(t *testing.T) {
 		{
 			name: "build failure",
 			setupMock: func(m *MockCommandRunner) {
-				// Mock version detection
+				// Mock version detection - both commands fail
+				m.On("RunCmdOutput", "git", "tag", "--sort=-version:refname", "--points-at", "HEAD").Return("", errNotGitRepo).Maybe()
 				m.On("RunCmdOutput", "git", "describe", "--tags", "--abbrev=0").Return("", errNotGitRepo).Maybe()
 				// Mock commit hash detection
 				m.On("RunCmdOutput", "git", "rev-parse", "--short", "HEAD").Return("", errNotGitRepo).Maybe()
@@ -291,8 +293,9 @@ func TestModNamespace_Download(t *testing.T) {
 
 func TestUpdateNamespace_Check(t *testing.T) {
 	withMockRunner(t, func(mockRunner *MockCommandRunner) {
-		// Mock getting current version
-		mockRunner.On("RunCmdOutput", "git", "describe", "--tags", "--abbrev=0").Return("v1.0.0", nil)
+		// Mock getting current version - first try current git tag command, then fallback
+		mockRunner.On("RunCmdOutput", "git", "tag", "--sort=-version:refname", "--points-at", "HEAD").Return("v1.0.0", nil).Maybe()
+		mockRunner.On("RunCmdOutput", "git", "describe", "--tags", "--abbrev=0").Return("v1.0.0", nil).Maybe()
 		// Mock checking for updates (simulate no internet)
 
 		update := NewUpdateNamespace()

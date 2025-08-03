@@ -422,7 +422,7 @@ func populateFromProject(config *YamlConfig) {
 	}
 
 	// Get version
-	if version := getVersion(); version != "dev" {
+	if version := getVersion(); version != versionDev {
 		config.Project.Version = version
 	}
 

@@ -406,11 +406,11 @@ func getCurrentGitTag() string {
 	tags, err := GetRunner().RunCmdOutput("git", "tag", "--sort=-version:refname", "--points-at", "HEAD")
 	if err != nil {
 		// Fallback to getting the most recent tag if no tags point to HEAD
-		tag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
-		if err != nil {
+		fallbackTag, fallbackErr := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
+		if fallbackErr != nil {
 			return ""
 		}
-		return strings.TrimSpace(tag)
+		return strings.TrimSpace(fallbackTag)
 	}
 
 	// If we have tags, return the first one (highest version)
@@ -545,37 +545,55 @@ func getTagsOnCurrentCommit() ([]string, error) {
 }
 
 // validateVersionProgression checks if the version bump is logical
-func validateVersionProgression(current, new, bumpType string) error {
+func validateVersionProgression(current, newVersion, bumpType string) error {
 	currentParts := strings.Split(strings.TrimPrefix(current, "v"), ".")
-	newParts := strings.Split(strings.TrimPrefix(new, "v"), ".")
+	newParts := strings.Split(strings.TrimPrefix(newVersion, "v"), ".")
 
 	if len(currentParts) != 3 || len(newParts) != 3 {
 		return nil // Skip validation if format is unexpected
 	}
 
-	currMajor, _ := strconv.Atoi(currentParts[0])
-	currMinor, _ := strconv.Atoi(currentParts[1])
-	currPatch, _ := strconv.Atoi(currentParts[2])
+	currMajor, err := strconv.Atoi(currentParts[0])
+	if err != nil {
+		return fmt.Errorf("failed to parse current major version: %w", err)
+	}
+	currMinor, err := strconv.Atoi(currentParts[1])
+	if err != nil {
+		return fmt.Errorf("failed to parse current minor version: %w", err)
+	}
+	currPatch, err := strconv.Atoi(currentParts[2])
+	if err != nil {
+		return fmt.Errorf("failed to parse current patch version: %w", err)
+	}
 
-	newMajor, _ := strconv.Atoi(newParts[0])
-	newMinor, _ := strconv.Atoi(newParts[1])
-	newPatch, _ := strconv.Atoi(newParts[2])
+	newMajor, err := strconv.Atoi(newParts[0])
+	if err != nil {
+		return fmt.Errorf("failed to parse new major version: %w", err)
+	}
+	newMinor, err := strconv.Atoi(newParts[1])
+	if err != nil {
+		return fmt.Errorf("failed to parse new minor version: %w", err)
+	}
+	newPatch, err := strconv.Atoi(newParts[2])
+	if err != nil {
+		return fmt.Errorf("failed to parse new patch version: %w", err)
+	}
 
 	switch bumpType {
 	case "patch":
 		if newMajor != currMajor || newMinor != currMinor || newPatch != currPatch+1 {
 			return fmt.Errorf("%w: expected %s → v%d.%d.%d, got %s",
-				errIllogicalVersionJump, current, currMajor, currMinor, currPatch+1, new)
+				errIllogicalVersionJump, current, currMajor, currMinor, currPatch+1, newVersion)
 		}
 	case "minor":
 		if newMajor != currMajor || newMinor != currMinor+1 || newPatch != 0 {
 			return fmt.Errorf("%w: expected %s → v%d.%d.0, got %s",
-				errIllogicalVersionJump, current, currMajor, currMinor+1, new)
+				errIllogicalVersionJump, current, currMajor, currMinor+1, newVersion)
 		}
 	case "major":
 		if newMajor != currMajor+1 || newMinor != 0 || newPatch != 0 {
 			return fmt.Errorf("%w: expected %s → v%d.0.0, got %s",
-				errIllogicalVersionJump, current, currMajor+1, new)
+				errIllogicalVersionJump, current, currMajor+1, newVersion)
 		}
 	}
 

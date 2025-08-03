@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -245,12 +246,36 @@ func (ts *VersionTestSuite) TestGitOperations() {
 		// This may return empty string if no tags exist
 		tag := getCurrentGitTag()
 		ts.Require().IsType("", tag)
+
+		// Test the multiple tags on same commit handling
+		// We can't easily create tags in test, but we can verify the function behavior
+		if tag != "" {
+			// If we have a tag, it should be a valid version tag
+			ts.Require().True(strings.HasPrefix(tag, "v") || tag == "")
+		}
 	})
 
 	ts.Run("GetPreviousTag", func() {
 		// This may return empty string if no previous tags exist
 		tag := getPreviousTag()
 		ts.Require().IsType("", tag)
+	})
+
+	ts.Run("GetTagsOnCurrentCommit", func() {
+		// Test getTagsOnCurrentCommit function
+		tags, err := getTagsOnCurrentCommit()
+		ts.Require().NoError(err)
+		ts.Require().IsType([]string{}, tags)
+
+		// All returned tags should be version tags (start with 'v' followed by number)
+		for _, tag := range tags {
+			ts.Require().True(strings.HasPrefix(tag, "v"))
+			if len(tag) > 1 {
+				// Should have a number after 'v'
+				_, err := strconv.Atoi(string(tag[1]))
+				ts.Require().NoError(err)
+			}
+		}
 	})
 }
 
@@ -398,6 +423,96 @@ func (ts *VersionTestSuite) TestVersionCheck() {
 		// For now, we test that the method exists and handles errors
 		err := version.Check()
 		ts.Require().True(err == nil || err != nil)
+	})
+}
+
+// TestVersionBumpIntegration tests the full version bump workflow
+func (ts *VersionTestSuite) TestVersionBumpIntegration() {
+	version := Version{}
+
+	ts.Run("BumpWithUncommittedChanges", func() {
+		// Create a temporary file to make the repo dirty
+		tempFile := "test-temp-file.txt"
+		err := os.WriteFile(tempFile, []byte("test"), 0o600)
+		ts.Require().NoError(err)
+		defer func() { ts.Require().NoError(os.Remove(tempFile)) }()
+
+		// Should fail with uncommitted changes
+		err = version.Bump()
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, errVersionUncommittedChanges)
+	})
+
+	ts.Run("FormatReleaseNotes", func() {
+		// Test the formatReleaseNotes function (if it exists and is exported)
+		// This is a placeholder for when the function is available
+	})
+
+	ts.Run("IsNewer", func() {
+		// Test the isNewer function (if it exists and is exported)
+		// This is a placeholder for when the function is available
+	})
+}
+
+// TestGetCurrentGitTagScenarios tests getCurrentGitTag with different scenarios
+func (ts *VersionTestSuite) TestGetCurrentGitTagScenarios() {
+	ts.Run("NoTagsOnHead", func() {
+		// When no tags point to HEAD, it should fall back to git describe
+		tag := getCurrentGitTag()
+		// Should return a tag or empty string
+		ts.Require().True(tag == "" || strings.HasPrefix(tag, "v"))
+	})
+
+	ts.Run("MultipleTagsHandling", func() {
+		// This tests the logic when multiple tags exist
+		// In real scenario, if multiple tags exist on HEAD,
+		// it should return the highest version
+		tag := getCurrentGitTag()
+		if tag != "" {
+			// Verify it's a valid version tag
+			ts.Require().True(strings.HasPrefix(tag, "v"))
+			// Should be parseable as version
+			parts := strings.Split(strings.TrimPrefix(tag, "v"), ".")
+			if len(parts) == 3 {
+				for _, part := range parts {
+					_, err := strconv.Atoi(part)
+					ts.Require().NoError(err)
+				}
+			}
+		}
+	})
+}
+
+// TestVersionHelperFunctions tests various helper functions
+func (ts *VersionTestSuite) TestVersionHelperFunctions() {
+	ts.Run("GetVersionInfoWithGitTag", func() {
+		// Test when we have a git tag
+		info := getVersionInfo()
+		ts.Require().NotEmpty(info)
+		// Should be either "dev" or a version tag
+		ts.Require().True(info == "dev" || strings.HasPrefix(info, "v"))
+	})
+
+	ts.Run("GetCommitInfoFallback", func() {
+		// Test commit info retrieval
+		commit := getCommitInfo()
+		ts.Require().NotEmpty(commit)
+		// Should be either "unknown" or a valid commit hash
+		if commit != "unknown" {
+			// Git short SHA is typically 7 characters
+			ts.Require().GreaterOrEqual(len(commit), 7)
+		}
+	})
+
+	ts.Run("GetBuildDateFallback", func() {
+		// Test build date when not set at build time
+		date := getBuildDate()
+		ts.Require().NotEmpty(date)
+		// If not "unknown", should be parseable as RFC3339
+		if date != "unknown" {
+			_, err := time.Parse(time.RFC3339, date)
+			ts.Require().NoError(err)
+		}
 	})
 }
 

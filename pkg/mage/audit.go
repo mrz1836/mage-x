@@ -444,7 +444,7 @@ func getFilteredEnvironment() map[string]string {
 func getGoVersion() string {
 	output, err := GetRunner().RunCmdOutput("go", "version")
 	if err != nil {
-		return "unknown"
+		return statusUnknown
 	}
 
 	// Parse "go version go1.24.0 linux/amd64" -> "1.24.0"
@@ -456,5 +456,5 @@ func getGoVersion() string {
 		}
 	}
 
-	return "unknown"
+	return statusUnknown
 }
