@@ -119,12 +119,12 @@ func (Install) Default() error {
 	// Add build flags
 	args = append(args, "-trimpath")
 
-	if len(cfg.Build.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(cfg.Build.Tags, ","))
+	if len(config.Build.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
 	}
 
-	if len(cfg.Build.LDFlags) > 0 {
-		args = append(args, "-ldflags", strings.Join(cfg.Build.LDFlags, " "))
+	if len(config.Build.LDFlags) > 0 {
+		args = append(args, "-ldflags", strings.Join(config.Build.LDFlags, " "))
 	}
 
 	// Add main package
@@ -286,12 +286,12 @@ func (Install) SystemWide() error {
 	args := []string{"build", "-o", tempBinary}
 	args = append(args, "-trimpath")
 
-	if len(cfg.Build.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(cfg.Build.Tags, ","))
+	if len(config.Build.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
 	}
 
-	if len(cfg.Build.LDFlags) > 0 {
-		args = append(args, "-ldflags", strings.Join(cfg.Build.LDFlags, " "))
+	if len(config.Build.LDFlags) > 0 {
+		args = append(args, "-ldflags", strings.Join(config.Build.LDFlags, " "))
 	}
 
 	args = append(args, ".")

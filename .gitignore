@@ -55,3 +55,4 @@ tests/.mage-cache/
 # Documentation and generated files
 /docs/build
 /docs/generated
+/pkg/mage/docs

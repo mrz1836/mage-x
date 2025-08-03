@@ -115,26 +115,61 @@ func (p *DefaultConfigProvider) SetConfig(cfg *Config) {
 	p.err = nil
 }
 
-// Global config provider instance
-var (
-	// configProvider is the current configuration provider
-	configProvider ConfigProvider = NewDefaultConfigProvider() //nolint:gochecknoglobals // Required for provider pattern
-	// configProviderMu protects configProvider access
-	configProviderMu sync.RWMutex //nolint:gochecknoglobals // Required for thread-safe provider access
-)
+// ProviderRegistry manages configuration providers
+type ProviderRegistry struct {
+	mu       sync.RWMutex
+	provider ConfigProvider
+}
+
+// NewProviderRegistry creates a new provider registry with a default provider
+func NewProviderRegistry() *ProviderRegistry {
+	return &ProviderRegistry{
+		provider: NewDefaultConfigProvider(),
+	}
+}
+
+// SetProvider sets a custom configuration provider
+func (r *ProviderRegistry) SetProvider(provider ConfigProvider) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.provider = provider
+}
+
+// GetProvider returns the current configuration provider
+func (r *ProviderRegistry) GetProvider() ConfigProvider {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.provider
+}
+
+// packageProviderManager manages the package-level configuration provider
+// This uses function-level static variables to avoid globals while maintaining state
+//
+//nolint:gochecknoglobals // Required for backward compatibility API
+var packageProviderManager = func() func() *ProviderRegistry {
+	var (
+		once     sync.Once
+		registry *ProviderRegistry
+	)
+
+	return func() *ProviderRegistry {
+		once.Do(func() {
+			registry = NewProviderRegistry()
+		})
+		return registry
+	}
+}()
 
 // SetConfigProvider sets a custom configuration provider
+// This function maintains backward compatibility
 func SetConfigProvider(provider ConfigProvider) {
-	configProviderMu.Lock()
-	defer configProviderMu.Unlock()
-	configProvider = provider
+	packageProviderManager().SetProvider(provider)
 }
 
 // GetConfigProvider returns the current configuration provider
+// This function maintains backward compatibility
 func GetConfigProvider() ConfigProvider {
-	configProviderMu.RLock()
-	defer configProviderMu.RUnlock()
-	return configProvider
+	return packageProviderManager().GetProvider()
 }
 
 // MockConfigProvider is a simple mock implementation for testing

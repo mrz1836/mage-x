@@ -110,13 +110,6 @@ type ReleaseConfig struct {
 	Formats     []string `yaml:"formats"`
 }
 
-// Deprecated: These variables are maintained for backward compatibility only.
-// New code should use ConfigProvider interface instead.
-var (
-	// cfg is a backward compatibility variable for tests
-	cfg *Config //nolint:gochecknoglobals // Deprecated: maintained for backward compatibility
-)
-
 // Static errors for err113 compliance
 var (
 	ErrEnterpriseConfigExists = errors.New("enterprise configuration already exists")
@@ -125,11 +118,6 @@ var (
 // LoadConfig loads the configuration from file or returns defaults
 // Deprecated: Use GetConfig() instead, which uses the ConfigProvider pattern
 func LoadConfig() (*Config, error) {
-	// Maintain backward compatibility by checking deprecated cfg variable first
-	if cfg != nil {
-		return cfg, nil
-	}
-
 	// Use the config provider pattern
 	return GetConfigProvider().GetConfig()
 }
@@ -144,9 +132,6 @@ func GetConfig() (*Config, error) {
 func TestResetConfig() {
 	// Reset the config provider
 	GetConfigProvider().ResetConfig()
-
-	// Reset deprecated variables for backward compatibility
-	cfg = nil
 }
 
 // TestSetConfig sets a config for testing purposes only
@@ -154,9 +139,6 @@ func TestResetConfig() {
 func TestSetConfig(config *Config) {
 	// Set via the config provider
 	GetConfigProvider().SetConfig(config)
-
-	// Also set deprecated cfg variable for backward compatibility
-	cfg = config
 }
 
 // defaultConfig returns the default configuration
