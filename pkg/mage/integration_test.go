@@ -294,6 +294,11 @@ func (its *IntegrationTestSuite) TestConfigurationLoading() {
 
 	// Test default config
 	its.T().Run("default config", func(t *testing.T) {
+		// Create a completely isolated directory with no go.mod
+		isolatedDir := filepath.Join(its.TmpDir, "isolated")
+		its.RequireNoError(os.MkdirAll(isolatedDir, 0o755))
+		its.RequireNoError(os.Chdir(isolatedDir))
+
 		TestResetConfig() // Reset
 		config, err := LoadConfig()
 		assert.NoError(t, err)

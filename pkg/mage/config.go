@@ -132,6 +132,8 @@ func GetConfig() (*Config, error) {
 func TestResetConfig() {
 	// Reset the config provider
 	GetConfigProvider().ResetConfig()
+	// Also reset the singleton registry to ensure fresh provider instances
+	getPackageProviderRegistry().SetProvider(NewDefaultConfigProvider())
 }
 
 // TestSetConfig sets a config for testing purposes only
@@ -155,7 +157,7 @@ func defaultConfig() *Config {
 		module = ""
 	}
 	binary := filepath.Base(module)
-	if binary == "." || binary == "" {
+	if binary == "." || binary == "" || binary == "command-line-arguments" {
 		binary = defaultBinaryName
 	}
 

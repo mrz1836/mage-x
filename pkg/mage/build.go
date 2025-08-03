@@ -24,6 +24,7 @@ var (
 	ErrBuildErrors        = errors.New("build errors")
 	ErrDockerNotFound     = errors.New("docker command not found")
 	ErrDockerfileNotFound = errors.New("dockerfile not found")
+	ErrNoMainPackage      = errors.New("no main package found for binary build")
 )
 
 // getCacheManager returns a cache manager instance using thread-safe singleton pattern
@@ -65,7 +66,11 @@ func (b Build) Default() error {
 		return err
 	}
 
-	buildCtx := b.createBuildContext(config)
+	buildCtx, err := b.createBuildContext(config)
+	if err != nil {
+		return err
+	}
+
 	buildHash := b.generateBuildHash(buildCtx)
 
 	// Try to use cached build result
@@ -91,10 +96,17 @@ type buildContext struct {
 }
 
 // createBuildContext creates a build context with all configuration
-func (b Build) createBuildContext(cfg *Config) *buildContext {
+func (b Build) createBuildContext(cfg *Config) (*buildContext, error) {
 	cm := getCacheManager()
 	outputPath := b.determineBuildOutput(cfg)
-	packagePath := b.determinePackagePath(outputPath)
+
+	// For binary builds, require a main package
+	requireMain := outputPath != "" && !strings.HasSuffix(outputPath, "/...")
+	packagePath, err := b.determinePackagePath(outputPath, requireMain)
+	if err != nil {
+		return nil, err
+	}
+
 	buildArgs := b.createBuildArgs(cfg, outputPath, packagePath)
 	ldflags := b.determineLDFlags(cfg)
 	sourceFiles := b.findSourceFiles()
@@ -111,7 +123,7 @@ func (b Build) createBuildContext(cfg *Config) *buildContext {
 		sourceFiles:  sourceFiles,
 		configFiles:  configFiles,
 		platform:     platform,
-	}
+	}, nil
 }
 
 // determineBuildOutput determines the output path for the binary
@@ -124,19 +136,25 @@ func (b Build) determineBuildOutput(cfg *Config) string {
 }
 
 // determinePackagePath determines the package path to build
-func (b Build) determinePackagePath(_ string) string {
+func (b Build) determinePackagePath(outputPath string, requireMain bool) (string, error) {
 	if utils.DirExists("cmd/mage-init") {
-		return "./cmd/mage-init"
+		return "./cmd/mage-init", nil
 	}
 	if utils.DirExists("cmd/example") {
-		return "./cmd/example"
+		return "./cmd/example", nil
 	}
 	if utils.FileExists("main.go") {
-		return "."
+		return ".", nil
 	}
+
+	// If we're building to a specific binary output and require main, error
+	if requireMain && outputPath != "" && !strings.Contains(outputPath, "...") {
+		return "", ErrNoMainPackage
+	}
+
 	// This is a library project, just verify compilation
 	utils.Info("No main package found, building library packages for verification")
-	return "./..."
+	return "./...", nil
 }
 
 // createBuildArgs creates the build arguments
@@ -354,9 +372,8 @@ func (b Build) Platform(platform string) error {
 	} else if utils.FileExists("main.go") {
 		args = append(args, ".")
 	} else {
-		// This is a library project, skip platform builds
-		utils.Info("Skipping %s build for library project", platform)
-		return nil
+		// No main package found for platform-specific binary build
+		return ErrNoMainPackage
 	}
 
 	utils.Info("Building %s", platform)
