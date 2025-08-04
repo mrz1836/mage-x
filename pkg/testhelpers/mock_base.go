@@ -67,7 +67,7 @@ func (m *MockBase) ClearAllErrors() {
 }
 
 // RecordCall records a method call for later verification
-func (m *MockBase) RecordCall(method string, args []interface{}, result []interface{}, err error) {
+func (m *MockBase) RecordCall(method string, args, result []interface{}, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

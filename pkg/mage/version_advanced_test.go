@@ -36,7 +36,7 @@ func NewVersionMockRunner() *VersionMockRunner {
 	}
 }
 
-func (m *VersionMockRunner) SetOutput(cmd string, output string, err error) {
+func (m *VersionMockRunner) SetOutput(cmd, output string, err error) {
 	m.outputs[cmd] = struct {
 		output string
 		err    error

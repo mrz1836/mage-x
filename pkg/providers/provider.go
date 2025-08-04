@@ -112,8 +112,8 @@ type ComputeService interface {
 	RestartInstance(ctx context.Context, id string) error
 
 	// Advanced operations
-	ResizeInstance(ctx context.Context, id string, size string) error
-	SnapshotInstance(ctx context.Context, id string, name string) (*Snapshot, error)
+	ResizeInstance(ctx context.Context, id, size string) error
+	SnapshotInstance(ctx context.Context, id, name string) (*Snapshot, error)
 	CloneInstance(ctx context.Context, id string, req *CloneRequest) (*Instance, error)
 }
 
@@ -129,7 +129,7 @@ type StorageService interface {
 	PutObject(ctx context.Context, bucket, key string, reader io.Reader, opts *PutOptions) error
 	GetObject(ctx context.Context, bucket, key string) (io.ReadCloser, error)
 	DeleteObject(ctx context.Context, bucket, key string) error
-	ListObjects(ctx context.Context, bucket string, prefix string) ([]*Object, error)
+	ListObjects(ctx context.Context, bucket, prefix string) ([]*Object, error)
 
 	// Advanced operations
 	MultipartUpload(ctx context.Context, bucket, key string, reader io.Reader) error
@@ -191,13 +191,13 @@ type DatabaseService interface {
 	DeleteDatabase(ctx context.Context, id string) error
 
 	// Backup operations
-	CreateBackup(ctx context.Context, dbID string, name string) (*Backup, error)
-	RestoreBackup(ctx context.Context, backupID string, targetDB string) error
+	CreateBackup(ctx context.Context, dbID, name string) (*Backup, error)
+	RestoreBackup(ctx context.Context, backupID, targetDB string) error
 	ListBackups(ctx context.Context, dbID string) ([]*Backup, error)
 
 	// Scaling operations
 	ScaleDatabase(ctx context.Context, dbID string, req *ScaleRequest) error
-	EnableReadReplica(ctx context.Context, dbID string, region string) (*Database, error)
+	EnableReadReplica(ctx context.Context, dbID, region string) (*Database, error)
 	EnableMultiMaster(ctx context.Context, dbID string, regions []string) error
 }
 

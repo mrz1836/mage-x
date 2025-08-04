@@ -102,7 +102,7 @@ func (f *CommonErrorFactory) PermissionDenied(resource, operation string) error 
 }
 
 // Timeout creates a standardized timeout error
-func (f *CommonErrorFactory) Timeout(operation string, duration string) error {
+func (f *CommonErrorFactory) Timeout(operation, duration string) error {
 	return f.WithCodef(ErrTimeout, "%s timed out after %s", operation, duration)
 }
 
@@ -199,7 +199,7 @@ func PermissionDenied(resource, operation string) error {
 }
 
 // Timeout creates a standardized timeout error
-func Timeout(operation string, duration string) error {
+func Timeout(operation, duration string) error {
 	return createDefaultFactory().Timeout(operation, duration)
 }
 

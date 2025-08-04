@@ -828,7 +828,7 @@ func (Lint) Fast() error {
 // Helper functions for config information
 
 // getLinterConfigInfo returns information about the golangci-lint configuration
-func getLinterConfigInfo() (configFile string, enabledCount int, disabledCount int) {
+func getLinterConfigInfo() (configFile string, enabledCount, disabledCount int) {
 	// Check for config files in order of precedence
 	configFiles := []string{".golangci.json", ".golangci.yml", ".golangci.yaml", "golangci.yml", "golangci.yaml"}
 
