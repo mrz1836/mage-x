@@ -14,7 +14,8 @@ import (
 
 // Error definitions for test operations
 var (
-	ErrAccessKeyRequired = errors.New("access key required")
+	ErrAccessKeyRequired      = errors.New("access key required")
+	ErrProviderCreationFailed = errors.New("provider creation failed")
 )
 
 // ProvidersTestSuite defines the test suite for provider interfaces and registry
@@ -569,6 +570,334 @@ func (ts *ProvidersTestSuite) TestDataTypes() {
 	})
 }
 
+// TestRegistryManager tests the registry manager implementation
+func (ts *ProvidersTestSuite) TestRegistryManager() {
+	ts.Run("Registry manager singleton behavior", func() {
+		// Test that GetRegistry returns the same instance
+		reg1 := GetRegistry()
+		reg2 := GetRegistry()
+		ts.Require().Same(reg1, reg2, "GetRegistry should return same instance")
+	})
+
+	ts.Run("Registry thread safety", func() {
+		// Test concurrent access to registry
+		done := make(chan bool, 10)
+		for i := 0; i < 10; i++ {
+			go func(id int) {
+				defer func() { done <- true }()
+
+				// Register a provider
+				providerName := fmt.Sprintf("test-concurrent-%d", id)
+				Register(providerName, func(config *ProviderConfig) (Provider, error) {
+					p := &mockProvider{config: *config}
+					p.providerName = providerName
+					return p, nil
+				})
+
+				// Check if provider is registered (use assert in goroutines)
+				ts.True(HasProvider(providerName))
+
+				// Get provider list
+				providers := List()
+				ts.Contains(providers, providerName)
+			}(i)
+		}
+
+		// Wait for all goroutines to complete
+		for i := 0; i < 10; i++ {
+			<-done
+		}
+	})
+
+	ts.Run("Registry HasProvider method", func() {
+		// Test existing provider
+		Register("has-test", func(config *ProviderConfig) (Provider, error) {
+			return &mockProvider{config: *config}, nil
+		})
+		ts.Require().True(HasProvider("has-test"))
+
+		// Test non-existing provider
+		ts.Require().False(HasProvider("non-existent-provider"))
+	})
+}
+
+// TestProviderRegistration tests provider registration and retrieval
+func (ts *ProvidersTestSuite) TestProviderRegistration() {
+	ts.Run("Register provider with factory error", func() {
+		// Register a provider that fails to create
+		Register("failing-provider", func(config *ProviderConfig) (Provider, error) {
+			return nil, ErrProviderCreationFailed
+		})
+
+		// Try to get the failing provider
+		config := &ProviderConfig{}
+		_, err := Get("failing-provider", config)
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "provider creation failed")
+	})
+
+	ts.Run("Multiple registrations of same provider name", func() {
+		// Register first provider
+		Register("duplicate-test", func(config *ProviderConfig) (Provider, error) {
+			p := &mockProvider{config: *config}
+			p.providerName = "first-provider"
+			return p, nil
+		})
+
+		// Register second provider with same name (should overwrite)
+		Register("duplicate-test", func(config *ProviderConfig) (Provider, error) {
+			p := &mockProvider{config: *config}
+			p.providerName = "second-provider"
+			return p, nil
+		})
+
+		// Get provider should return the second one
+		config := &ProviderConfig{}
+		provider, err := Get("duplicate-test", config)
+		ts.Require().NoError(err)
+		ts.Require().Equal("second-provider", provider.Name())
+	})
+}
+
+// TestGlobalRegistryFunctions tests the global registry functions
+func (ts *ProvidersTestSuite) TestGlobalRegistryFunctions() {
+	ts.Run("RegisterAllProviders function", func() {
+		// This function should not panic when called
+		ts.Require().NotPanics(func() {
+			RegisterAllProviders()
+		})
+	})
+}
+
+// TestNewRegistry tests direct registry creation
+func (ts *ProvidersTestSuite) TestNewRegistry() {
+	ts.Run("Create new registry instance", func() {
+		reg := NewRegistry()
+		ts.Require().NotNil(reg)
+		ts.Require().Empty(reg.List())
+		ts.Require().False(reg.HasProvider("any-provider"))
+	})
+
+	ts.Run("Independent registry operations", func() {
+		// Create independent registry
+		reg := NewRegistry()
+
+		// Register provider in independent registry
+		reg.Register("independent-test", func(config *ProviderConfig) (Provider, error) {
+			p := &mockProvider{config: *config}
+			p.providerName = "independent-provider"
+			return p, nil
+		})
+
+		// Test independent registry operations
+		ts.Require().True(reg.HasProvider("independent-test"))
+		ts.Require().Contains(reg.List(), "independent-test")
+
+		// Get provider from independent registry
+		config := &ProviderConfig{}
+		provider, err := reg.Get("independent-test", config)
+		ts.Require().NoError(err)
+		ts.Require().Equal("independent-provider", provider.Name())
+
+		// Verify it doesn't affect global registry
+		ts.Require().False(HasProvider("independent-test"))
+	})
+}
+
+// TestErrorDefinitions tests package-level error definitions
+func (ts *ProvidersTestSuite) TestErrorDefinitions() {
+	ts.Run("ErrProviderNotFound error", func() {
+		ts.Require().Equal("provider not found", ErrProviderNotFound.Error())
+		ts.Require().Error(ErrProviderNotFound)
+	})
+
+	ts.Run("Provider not found error formatting", func() {
+		_, err := Get("nonexistent-provider", &ProviderConfig{})
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, ErrProviderNotFound)
+		ts.Require().Contains(err.Error(), "nonexistent-provider")
+	})
+}
+
+// TestProviderValidation tests provider configuration validation
+func (ts *ProvidersTestSuite) TestProviderValidation() {
+	ts.Run("Provider validation with missing credentials", func() {
+		provider := &mockProvider{}
+		config := &ProviderConfig{
+			Region: "us-east-1",
+			// Missing credentials
+		}
+
+		err := provider.Initialize(config)
+		ts.Require().NoError(err)
+
+		// Validation should fail due to missing access key
+		err = provider.Validate()
+		ts.Require().Error(err)
+		ts.Require().ErrorIs(err, ErrAccessKeyRequired)
+	})
+
+	ts.Run("Provider validation with valid credentials", func() {
+		provider := &mockProvider{}
+		config := &ProviderConfig{
+			Region: "us-east-1",
+			Credentials: Credentials{
+				Type:      "key",
+				AccessKey: "valid-key",
+				SecretKey: "valid-secret",
+			},
+		}
+
+		err := provider.Initialize(config)
+		ts.Require().NoError(err)
+
+		// Validation should pass
+		err = provider.Validate()
+		ts.Require().NoError(err)
+	})
+}
+
+// TestComplexProviderOperations tests advanced provider features
+func (ts *ProvidersTestSuite) TestComplexProviderOperations() {
+	ctx := context.Background()
+	provider := &mockProvider{}
+	err := provider.Initialize(&ProviderConfig{})
+	ts.Require().NoError(err)
+
+	ts.Run("SecurityService advanced operations", func() {
+		security := provider.Security()
+
+		// Test secret creation and rotation
+		secretReq := &CreateSecretRequest{
+			Name:         "test-secret",
+			Description:  "Test secret for unit tests",
+			Value:        "secret-value",
+			AutoRotate:   true,
+			RotationDays: 30,
+			Tags:         map[string]string{"env": "test"},
+		}
+		secret, err := security.CreateSecret(ctx, secretReq)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-secret", secret.Name)
+
+		// Test secret retrieval
+		retrievedSecret, err := security.GetSecret(ctx, secret.ID)
+		ts.Require().NoError(err)
+		ts.Require().Equal(secret.ID, retrievedSecret.ID)
+
+		// Test secret rotation
+		err = security.RotateSecret(ctx, secret.ID)
+		ts.Require().NoError(err)
+
+		// Test KMS operations
+		keyReq := &CreateKeyRequest{
+			Name:       "test-key",
+			Algorithm:  "AES-256",
+			Usage:      "encrypt",
+			AutoRotate: true,
+		}
+		key, err := security.CreateKMSKey(ctx, keyReq)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-key", key.Name)
+
+		// Test encryption/decryption
+		originalData := []byte("sensitive data")
+		encryptedData, err := security.Encrypt(ctx, key.ID, originalData)
+		ts.Require().NoError(err)
+
+		decryptedData, err := security.Decrypt(ctx, key.ID, encryptedData)
+		ts.Require().NoError(err)
+		ts.Require().Equal(originalData, decryptedData)
+	})
+
+	ts.Run("AIService operations", func() {
+		ai := provider.AI()
+
+		// Test dataset creation
+		datasetReq := &CreateDatasetRequest{
+			Name:   "training-data",
+			Type:   "supervised",
+			Source: "s3://bucket/dataset",
+			Format: "csv",
+			Tags:   map[string]string{"project": "ml-test"},
+		}
+		dataset, err := ai.CreateDataset(ctx, datasetReq)
+		ts.Require().NoError(err)
+		ts.Require().Equal("training-data", dataset.Name)
+
+		// Test model creation
+		modelReq := &CreateModelRequest{
+			Name:      "test-model",
+			Type:      "classification",
+			Framework: "tensorflow",
+			Architecture: map[string]interface{}{
+				"layers": 3,
+				"units":  []int{128, 64, 10},
+			},
+		}
+		model, err := ai.CreateModel(ctx, modelReq)
+		ts.Require().NoError(err)
+		ts.Require().Equal("test-model", model.Name)
+
+		// Test model training
+		trainingJob, err := ai.TrainModel(ctx, model.ID, dataset)
+		ts.Require().NoError(err)
+		ts.Require().Equal(model.ID, trainingJob.ModelID)
+
+		// Test model deployment
+		deployConfig := &DeploymentConfig{
+			InstanceType:  "ml.m5.large",
+			InstanceCount: 1,
+			AutoScale:     true,
+			MaxInstances:  5,
+		}
+		endpoint, err := ai.DeployModel(ctx, model.ID, deployConfig)
+		ts.Require().NoError(err)
+		ts.Require().Equal(model.ID, endpoint.ModelID)
+
+		// Test prediction
+		inputData := map[string]interface{}{"features": []float64{1.0, 2.0, 3.0}}
+		prediction, err := ai.Predict(ctx, endpoint.ID, inputData)
+		ts.Require().NoError(err)
+		ts.Require().Equal("prediction", prediction)
+	})
+
+	ts.Run("CostService operations", func() {
+		cost := provider.Cost()
+
+		// Test current spend
+		spend, err := cost.GetCurrentSpend(ctx)
+		ts.Require().NoError(err)
+		ts.Require().InEpsilon(1000.0, spend.Total, 0.001)
+
+		// Test forecast
+		forecast, err := cost.GetForecast(ctx, 30*24*time.Hour) // 30 days
+		ts.Require().NoError(err)
+		ts.Require().InEpsilon(1200.0, forecast.Predicted, 0.001)
+
+		// Test budget setting
+		budgetReq := &SetBudgetRequest{
+			Name:   "monthly-budget",
+			Amount: 2000.0,
+			Period: "monthly",
+			Alerts: []*BudgetAlert{
+				{Threshold: 80.0, Type: "percentage", Recipients: []string{"admin@example.com"}},
+				{Threshold: 1800.0, Type: "amount", Recipients: []string{"finance@example.com"}},
+			},
+		}
+		budget, err := cost.SetBudget(ctx, budgetReq)
+		ts.Require().NoError(err)
+		ts.Require().Equal("monthly-budget", budget.Name)
+		ts.Require().InEpsilon(2000.0, budget.Amount, 0.001)
+		ts.Require().Len(budget.Alerts, 2)
+
+		// Test recommendations
+		recommendations, err := cost.GetRecommendations(ctx)
+		ts.Require().NoError(err)
+		ts.Require().NotNil(recommendations)
+	})
+}
+
 // TestProvidersTestSuite runs the test suite
 func TestProvidersTestSuite(t *testing.T) {
 	suite.Run(t, new(ProvidersTestSuite))
@@ -1012,7 +1341,14 @@ func (s *mockMonitoringService) GetMetrics(_ context.Context, _ *MetricQuery) ([
 }
 
 func (s *mockMonitoringService) CreateDashboard(_ context.Context, req *CreateDashboardRequest) (*Dashboard, error) {
-	return &Dashboard{ID: "dash-123", Name: req.Name}, nil
+	return &Dashboard{
+		ID:          "dash-123",
+		Name:        req.Name,
+		Description: req.Description,
+		Widgets:     req.Widgets,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}, nil
 }
 func (s *mockMonitoringService) CreateLogGroup(_ context.Context, _ string) error { return nil }
 func (s *mockMonitoringService) PutLogs(_ context.Context, _ string, _ []*LogEntry) error {
@@ -1024,7 +1360,16 @@ func (s *mockMonitoringService) QueryLogs(_ context.Context, _ *LogQuery) ([]*Lo
 }
 
 func (s *mockMonitoringService) CreateAlert(_ context.Context, req *CreateAlertRequest) (*Alert, error) {
-	return &Alert{ID: "alert-123", Name: req.Name}, nil
+	return &Alert{
+		ID:          "alert-123",
+		Name:        req.Name,
+		Description: req.Description,
+		Condition:   req.Condition,
+		Actions:     req.Actions,
+		State:       "OK",
+		Enabled:     req.Enabled,
+		CreatedAt:   time.Now(),
+	}, nil
 }
 
 func (s *mockMonitoringService) UpdateAlert(_ context.Context, _ string, _ *UpdateAlertRequest) error {
@@ -1122,7 +1467,13 @@ func (s *mockCostService) GetForecast(_ context.Context, _ time.Duration) (*Cost
 }
 
 func (s *mockCostService) SetBudget(_ context.Context, req *SetBudgetRequest) (*Budget, error) {
-	return &Budget{ID: "budget-123", Name: req.Name}, nil
+	return &Budget{
+		ID:     "budget-123",
+		Name:   req.Name,
+		Amount: req.Amount,
+		Period: req.Period,
+		Alerts: req.Alerts,
+	}, nil
 }
 
 func (s *mockCostService) GetRecommendations(_ context.Context) ([]*CostRecommendation, error) {
@@ -1148,7 +1499,14 @@ func (s *mockComplianceService) RemediateIssue(_ context.Context, _ string) erro
 }
 
 func (s *mockComplianceService) GenerateComplianceReport(_ context.Context, req *ReportRequest) (*Report, error) {
-	return &Report{ID: "report-123", Type: req.Type}, nil
+	return &Report{
+		ID:          "report-123",
+		Type:        req.Type,
+		Format:      req.Format,
+		URL:         "https://example.com/reports/report-123.pdf",
+		GeneratedAt: time.Now(),
+		ExpiresAt:   time.Now().AddDate(0, 0, 30),
+	}, nil
 }
 
 func (s *mockComplianceService) EnableContinuousCompliance(_ context.Context, _ []string) error {
