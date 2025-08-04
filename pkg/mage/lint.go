@@ -46,7 +46,7 @@ func (Lint) Default() error {
 
 	// Show modules found
 	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
+		fmt.Printf("📦 Found %d Go modules\n", len(modules))
 	}
 
 	totalStart := time.Now()
@@ -158,7 +158,7 @@ func (Lint) Fix() error {
 
 	// Show modules found
 	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
+		fmt.Printf("📦 Found %d Go modules\n", len(modules))
 	}
 
 	totalStart := time.Now()
@@ -340,7 +340,7 @@ func (Lint) Vet() error {
 
 	// Show modules found
 	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
+		fmt.Printf("📦 Found %d Go modules\n", len(modules))
 	}
 
 	totalStart := time.Now()
@@ -537,19 +537,22 @@ func (Lint) All() error {
 	linter := Lint{}
 
 	// Run each linter in sequence
+	fmt.Printf("🔍 Running default linters...\n")
 	if err := linter.Default(); err != nil {
 		return fmt.Errorf("default linter failed: %w", err)
 	}
 
+	fmt.Printf("\n🔍 Running go vet...\n")
 	if err := linter.Vet(); err != nil {
 		return fmt.Errorf("vet failed: %w", err)
 	}
 
+	fmt.Printf("\n🔍 Running go fmt...\n")
 	if err := linter.Fmt(); err != nil {
 		return fmt.Errorf("fmt failed: %w", err)
 	}
 
-	utils.Success("All linters passed")
+	fmt.Printf("\n✅ All linters passed\n")
 	return nil
 }
 

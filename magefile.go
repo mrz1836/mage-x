@@ -43,6 +43,7 @@ type (
 var Aliases = map[string]interface{}{
 	"build":   BuildDefault,
 	"docs":    DocsDefault,
+	"help":    HelpDefault,
 	"lint":    LintDefault,
 	"loc":     MetricsLOC,
 	"release": ReleaseDefault,

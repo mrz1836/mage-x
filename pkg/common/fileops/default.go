@@ -1,6 +1,7 @@
 package fileops
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -208,7 +209,22 @@ func NewDefaultYAMLOperator(fileOps FileOperator) *DefaultYAMLOperator {
 
 // Marshal converts a value to YAML
 func (d *DefaultYAMLOperator) Marshal(v interface{}) ([]byte, error) {
-	return yaml.Marshal(v)
+	// Use a custom encoder to ensure proper formatting
+	var buf bytes.Buffer
+	encoder := yaml.NewEncoder(&buf)
+
+	// Set indentation to 2 spaces to match .editorconfig
+	encoder.SetIndent(2)
+
+	if err := encoder.Encode(v); err != nil {
+		return nil, err
+	}
+
+	if err := encoder.Close(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 // Unmarshal parses YAML data into a value
@@ -218,7 +234,7 @@ func (d *DefaultYAMLOperator) Unmarshal(data []byte, v interface{}) error {
 
 // WriteYAML writes a value as YAML to a file
 func (d *DefaultYAMLOperator) WriteYAML(path string, v interface{}) error {
-	data, err := yaml.Marshal(v)
+	data, err := d.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}

@@ -33,10 +33,16 @@ func (Test) Default() error {
 func (Test) Full() error {
 	utils.Header("Running Full Test Suite (Lint + Tests)")
 
+	fmt.Printf("\n📋 Step 1/2: Running linters...\n")
+	fmt.Printf("════════════════════════════════════════════════\n\n")
+
 	// Run lint first
 	if err := (Lint{}).Default(); err != nil {
 		return err
 	}
+
+	fmt.Printf("\n📋 Step 2/2: Running unit tests...\n")
+	fmt.Printf("════════════════════════════════════════════════\n\n")
 
 	// Then run unit tests
 	return Test{}.Unit()

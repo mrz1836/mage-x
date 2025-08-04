@@ -537,12 +537,13 @@ mage helpCompletions    # Generate shell completions
 ```bash
 # Quick Access Commands
 mage                    # Run default build (alias for buildDefault)
+mage help               # Show beautiful help with all commands (alias: mage helpDefault)
 mage build              # Build the project (alias: mage buildDefault) 
-mage test               # Run complete test suite (alias: mage testDefault)
-mage lint               # Run essential linters (alias: mage lintDefault)
-mage release            # Create a new release (alias: mage releaseDefault)
-mage loc                # Analyze lines of code (alias: mage metricsLOC)
 mage docs               # Generate and serve documentation (alias: mage docsDefault)
+mage lint               # Run essential linters (alias: mage lintDefault)
+mage loc                # Analyze lines of code (alias: mage metricsLOC)
+mage release            # Create a new release (alias: mage releaseDefault)
+mage test               # Run complete test suite (alias: mage testDefault)
 ```
 
 ### 📋 Complete Command List

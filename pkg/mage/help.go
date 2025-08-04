@@ -48,7 +48,7 @@ type HelpOption struct {
 func (Help) Default() error {
 	utils.Header("📖 MAGE-X Help System")
 
-	utils.Info(`🎯 MAGE-X: Write Once, Mage Everywhere
+	fmt.Printf(`🎯 MAGE-X: Write Once, Mage Everywhere
 
 MAGE-X is a comprehensive Go build automation toolkit that provides
 enterprise-grade development tools with a friendly user experience.
@@ -58,7 +58,7 @@ Quick Start:
   mage test               # Run tests
   mage lint               # Run linter
   mage release           # Create a release
-  mage interactive        # Start interactive mode
+  mage help               # Show this help
 
 Available Commands:
   mage helpCommands      # List all available commands
@@ -69,11 +69,9 @@ Available Commands:
 For detailed help on any command:
   mage helpCommand COMMAND_NAME
 
-For interactive help:
-  mage help
-
 Documentation:
-  https://github.com/mrz1836/mage-x`)
+  https://github.com/mrz1836/mage-x
+`)
 
 	return nil
 }
@@ -102,7 +100,7 @@ func (Help) Commands() error {
 
 	// Display commands by namespace
 	for _, ns := range sortedNamespaces {
-		utils.Info("\n%s Commands:", strings.ToUpper(ns[:1])+ns[1:])
+		fmt.Printf("\n%s Commands:\n", strings.ToUpper(ns[:1])+ns[1:])
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 
@@ -123,10 +121,9 @@ func (Help) Commands() error {
 		}
 	}
 
-	utils.Info("\nUsage:")
-	utils.Info("  mage COMMAND [OPTIONS]")
-	utils.Info("  mage COMMAND [OPTIONS]")
-	utils.Info("  mage helpCommand COMMAND_NAME")
+	fmt.Printf("\nUsage:\n")
+	fmt.Printf("  mage COMMAND [OPTIONS]\n")
+	fmt.Printf("  mage helpCommand COMMAND_NAME\n")
 
 	return nil
 }
@@ -145,19 +142,19 @@ func (Help) Command() error {
 
 	utils.Header("📖 Command Help: " + cmd.Name)
 
-	utils.Info("Description: %s", cmd.Description)
+	fmt.Printf("Description: %s\n", cmd.Description)
 
 	if cmd.Namespace != "" {
-		utils.Info("Namespace: %s", cmd.Namespace)
+		fmt.Printf("Namespace: %s\n", cmd.Namespace)
 	}
 
-	utils.Info("Usage: %s", cmd.Usage)
+	fmt.Printf("Usage: %s\n", cmd.Usage)
 
 	if len(cmd.Options) == 0 {
 		return nil
 	}
 
-	utils.Info("\nOptions:")
+	fmt.Printf("\nOptions:\n")
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	for _, opt := range cmd.Options {
 		optionLine := formatOption(opt)
@@ -170,16 +167,16 @@ func (Help) Command() error {
 	}
 
 	if len(cmd.Examples) > 0 {
-		utils.Info("\nExamples:")
+		fmt.Printf("\nExamples:\n")
 		for _, example := range cmd.Examples {
-			utils.Info("  %s", example)
+			fmt.Printf("  %s\n", example)
 		}
 	}
 
 	if len(cmd.SeeAlso) > 0 {
-		utils.Info("\nSee Also:")
+		fmt.Printf("\nSee Also:\n")
 		for _, related := range cmd.SeeAlso {
-			utils.Info("  mage helpCommand %s", related)
+			fmt.Printf("  mage helpCommand %s\n", related)
 		}
 	}
 
@@ -212,10 +209,9 @@ func (Help) Examples() error {
 		{
 			Category: "Project Setup",
 			Examples: []string{
-				"mage init:cli --name=myapp --module=github.com/user/myapp",
-				"mage init:library --name=mylib",
-				"mage init:webapi --name=myapi",
-				"mage yaml:init  # Create mage.yaml configuration",
+				"mage initCLI --name=myapp --module=github.com/user/myapp",
+				"mage initLibrary --name=mylib",
+				"mage configureInit  # Create mage.yaml configuration",
 			},
 		},
 		{
@@ -279,17 +275,17 @@ func (Help) Examples() error {
 	}
 
 	for _, category := range examples {
-		utils.Info("\n%s:", category.Category)
+		fmt.Printf("\n%s:\n", category.Category)
 		for _, example := range category.Examples {
-			utils.Info("  %s", example)
+			fmt.Printf("  %s\n", example)
 		}
 	}
 
-	utils.Info("\nTips:")
-	utils.Info("  • Use environment variables to pass parameters")
-	utils.Info("  • Add VERBOSE=true for detailed output")
-	utils.Info("  • Use interactive mode for guided assistance")
-	utils.Info("  • Check mage.yaml for project-specific configuration")
+	fmt.Printf("\nTips:\n")
+	fmt.Printf("  • Use environment variables to pass parameters\n")
+	fmt.Printf("  • Add VERBOSE=true for detailed output\n")
+	fmt.Printf("  • Check mage.yaml for project-specific configuration\n")
+	fmt.Printf("  • Use 'mage help' for beautiful command listing\n")
 
 	return nil
 }
@@ -506,20 +502,6 @@ func getAllCommands() []HelpCommand {
 				"mage formatCheck",
 			},
 			SeeAlso: []string{"lint", "test"},
-		},
-
-		// Interactive commands
-		{
-			Name:        "help",
-			Namespace:   "help",
-			Description: "Show help",
-			Usage:       "mage help",
-			Examples: []string{
-				"mage help",
-				"mage helpCommands",
-				"mage helpExamples",
-			},
-			SeeAlso: []string{"help", "recipes"},
 		},
 
 		// Recipe commands
