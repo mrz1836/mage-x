@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -665,8 +664,8 @@ func (Test) Bench(_ ...string) error {
 		args = append(args, "-v")
 	}
 
-	if len(config.Test.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(config.Test.Tags, ","))
+	if config.Test.Tags != "" {
+		args = append(args, "-tags", config.Test.Tags)
 	}
 
 	benchTime := utils.GetEnv("BENCH_TIME", "10s")
@@ -702,8 +701,8 @@ func (Test) BenchShort(_ ...string) error {
 		args = append(args, "-v")
 	}
 
-	if len(config.Test.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(config.Test.Tags, ","))
+	if config.Test.Tags != "" {
+		args = append(args, "-tags", config.Test.Tags)
 	}
 
 	// Use shorter benchmark time for quick feedback (1s instead of 10s)
@@ -735,12 +734,15 @@ func (Test) Integration() error {
 	}
 
 	// Set integration test tag
-	tags := make([]string, len(config.Test.Tags)+1)
-	copy(tags, config.Test.Tags)
-	tags[len(config.Test.Tags)] = "integration"
+	tags := config.Test.Tags
+	if tags != "" {
+		tags += ",integration"
+	} else {
+		tags = "integration"
+	}
 
 	args := []string{"test"}
-	args = append(args, "-tags", strings.Join(tags, ","))
+	args = append(args, "-tags", tags)
 
 	if config.Test.Verbose {
 		args = append(args, "-v")
@@ -789,8 +791,8 @@ func (Test) Parallel() error {
 		args = append(args, "-v")
 	}
 
-	if len(config.Test.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(config.Test.Tags, ","))
+	if config.Test.Tags != "" {
+		args = append(args, "-tags", config.Test.Tags)
 	}
 
 	args = append(args, "./...")
@@ -850,12 +852,8 @@ func (Test) CINoRace() error {
 func buildTestArgs(cfg *Config, race, cover bool) []string {
 	args := []string{"test"}
 
-	if cfg.Test.Parallel {
-		parallelCount := cfg.Build.Parallel
-		if parallelCount <= 0 {
-			parallelCount = runtime.NumCPU()
-		}
-		args = append(args, "-p", fmt.Sprintf("%d", parallelCount))
+	if cfg.Test.Parallel > 0 {
+		args = append(args, "-p", fmt.Sprintf("%d", cfg.Test.Parallel))
 	}
 
 	if cfg.Test.Verbose {
@@ -866,8 +864,8 @@ func buildTestArgs(cfg *Config, race, cover bool) []string {
 		args = append(args, "-timeout", cfg.Test.Timeout)
 	}
 
-	if len(cfg.Test.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(cfg.Test.Tags, ","))
+	if cfg.Test.Tags != "" {
+		args = append(args, "-tags", cfg.Test.Tags)
 	}
 
 	if race || cfg.Test.Race {
@@ -886,12 +884,8 @@ func buildTestArgs(cfg *Config, race, cover bool) []string {
 func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool) []string {
 	args := []string{"test"}
 
-	if cfg.Test.Parallel {
-		parallelCount := cfg.Build.Parallel
-		if parallelCount <= 0 {
-			parallelCount = runtime.NumCPU()
-		}
-		args = append(args, "-p", fmt.Sprintf("%d", parallelCount))
+	if cfg.Test.Parallel > 0 {
+		args = append(args, "-p", fmt.Sprintf("%d", cfg.Test.Parallel))
 	}
 
 	if cfg.Test.Verbose {
@@ -902,8 +896,8 @@ func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool) 
 		args = append(args, "-timeout", cfg.Test.Timeout)
 	}
 
-	if len(cfg.Test.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(cfg.Test.Tags, ","))
+	if cfg.Test.Tags != "" {
+		args = append(args, "-tags", cfg.Test.Tags)
 	}
 
 	// Handle race flag with explicit override

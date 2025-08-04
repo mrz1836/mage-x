@@ -21,6 +21,8 @@ type ModuleInfo struct {
 	Path     string // Absolute path to the directory containing go.mod
 	Module   string // Module name from go.mod
 	Relative string // Relative path from root
+	IsRoot   bool   // Whether this is the root module
+	Name     string // Short name for display (last part of module path)
 }
 
 // findAllModules discovers all go.mod files in the project, excluding vendor directories
@@ -67,10 +69,18 @@ func findAllModules() ([]ModuleInfo, error) {
 				moduleName = relPath
 			}
 
+			// Extract the name (last part of module path)
+			name := moduleName
+			if idx := strings.LastIndex(moduleName, "/"); idx >= 0 {
+				name = moduleName[idx+1:]
+			}
+
 			modules = append(modules, ModuleInfo{
 				Path:     dir,
 				Module:   moduleName,
 				Relative: relPath,
+				IsRoot:   relPath == ".",
+				Name:     name,
 			})
 		}
 

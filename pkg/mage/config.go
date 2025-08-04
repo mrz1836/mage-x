@@ -52,16 +52,23 @@ type BuildConfig struct {
 
 // TestConfig contains test-specific settings
 type TestConfig struct {
-	Parallel  bool     `yaml:"parallel"`
-	Timeout   string   `yaml:"timeout"`
-	Short     bool     `yaml:"short"`
-	Verbose   bool     `yaml:"verbose"`
-	Race      bool     `yaml:"race"`
-	Cover     bool     `yaml:"cover"`
-	CoverMode string   `yaml:"covermode"`
-	CoverPkg  []string `yaml:"coverpkg"`
-	Tags      []string `yaml:"tags"`
-	SkipFuzz  bool     `yaml:"skip_fuzz"`
+	Parallel           int      `yaml:"parallel"`
+	Timeout            string   `yaml:"timeout"`
+	IntegrationTimeout string   `yaml:"integration_timeout"`
+	IntegrationTag     string   `yaml:"integration_tag"`
+	Short              bool     `yaml:"short"`
+	Verbose            bool     `yaml:"verbose"`
+	Race               bool     `yaml:"race"`
+	Cover              bool     `yaml:"cover"`
+	CoverMode          string   `yaml:"covermode"`
+	CoverPkg           []string `yaml:"coverpkg"`
+	CoverageExclude    []string `yaml:"coverage_exclude"`
+	Tags               string   `yaml:"tags"`
+	SkipFuzz           bool     `yaml:"skip_fuzz"`
+	Shuffle            bool     `yaml:"shuffle"`
+	BenchCPU           int      `yaml:"bench_cpu"`
+	BenchTime          string   `yaml:"bench_time"`
+	BenchMem           bool     `yaml:"bench_mem"`
 }
 
 // LintConfig contains linting settings
@@ -180,9 +187,10 @@ func defaultConfig() *Config {
 			},
 		},
 		Test: TestConfig{
-			Parallel:  true,
-			Timeout:   "10m",
-			CoverMode: "atomic",
+			Parallel:           runtime.NumCPU(),
+			Timeout:            "10m",
+			IntegrationTimeout: "30m",
+			CoverMode:          "atomic",
 		},
 		Lint: LintConfig{
 			GolangciVersion: "v2.3.0",
