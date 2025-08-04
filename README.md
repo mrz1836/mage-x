@@ -114,6 +114,9 @@ Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminate
 - **🤖 AI Agent Ecosystem**  
   _19 specialized AI agents for intelligent development workflows. Comprehensive automation with strategic collaboration and parallel execution._
 
+- **⚡ Claude Code Commands**  
+  _13 optimized slash commands that orchestrate intelligent agent collaboration for maximum development efficiency._
+
 - **📊 Enterprise Features**  
   _Audit logging, compliance reporting, and team management capabilities for organizations that need governance._
 
@@ -329,6 +332,7 @@ For comprehensive documentation, visit the [docs](docs) directory:
 
 - **[Getting Started](docs/README.md)** - Complete documentation index
 - **[AI Agent Ecosystem](docs/SUB_AGENTS.md)** - 19 specialized agents for intelligent development workflows
+- **[Claude Code Commands](docs/CLAUDE_COMMANDS.md)** - 13 optimized slash commands for agent orchestration
 - **[Namespace Interface Architecture](docs/NAMESPACE_INTERFACES.md)** - Modern interface-based namespace system
 - **[API Reference](docs/API_REFERENCE.md)** - Complete interface and API documentation
 - **[Enterprise Features](docs/ENTERPRISE.md)** - Enterprise capabilities guide
@@ -720,8 +724,20 @@ MAGE-X features a comprehensive ecosystem of 19 specialized AI agents designed f
 - **🛡️ Security Integration**: All agents follow mage-x security-first patterns
 - **🏢 Enterprise Scale**: Built for managing 30+ repositories with governance and compliance
 
+### Claude Code Integration
+MAGE-X includes 13 optimized Claude Code slash commands that leverage the agent ecosystem:
+- **Testing & Quality**: `/test`, `/fix`, `/quality`
+- **Code Improvement**: `/dedupe`, `/explain`, `/optimize`
+- **Documentation**: `/docs-update`, `/docs-review`
+- **Development Workflow**: `/ci-diagnose`, `/release`
+- **Architecture & Security**: `/architect`, `/security`
+- **Planning**: `/prd`
+
+See [Claude Code Commands](docs/CLAUDE_COMMANDS.md) for complete documentation.
+
 ### Documentation & Guidelines
 - **[AI Agent Ecosystem](docs/SUB_AGENTS.md)** — Complete agent directory and collaboration patterns
+- **[Claude Code Commands](docs/CLAUDE_COMMANDS.md)** — Optimized slash commands for agent orchestration
 - **[AGENTS.md](.github/AGENTS.md)** — Development rules and architectural guidelines
 - **[CLAUDE.md](.github/CLAUDE.md)** — AI assistant integration guidelines
 - **[.cursorrules](.cursorrules)** — Machine-readable policies for AI development tools
