@@ -40,7 +40,7 @@ test:
   bench_time: ""
   bench_mem: false
 lint:
-  golangci_version: v2.3.0
+  golangci_version: v2.3.1
   timeout: 5m
   skip_dirs: []
   skip_files: []
@@ -48,7 +48,7 @@ lint:
   disable_linters: []
   enable_linters: []
 tools:
-  golangci_lint: v2.3.0
+  golangci_lint: v2.3.1
   fumpt: latest
   govulncheck: latest
   mockgen: ""

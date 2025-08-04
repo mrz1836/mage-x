@@ -193,11 +193,11 @@ func defaultConfig() *Config {
 			CoverMode:          "atomic",
 		},
 		Lint: LintConfig{
-			GolangciVersion: "v2.3.0",
+			GolangciVersion: "v2.3.1",
 			Timeout:         "5m",
 		},
 		Tools: ToolsConfig{
-			GolangciLint: "v2.3.0",
+			GolangciLint: "v2.3.1",
 			Fumpt:        "latest",
 			GoVulnCheck:  "latest",
 		},

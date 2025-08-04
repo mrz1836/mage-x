@@ -673,7 +673,7 @@ func (ts *VersionTestSuite) TestVersionProgression() {
 		ts.Require().ErrorIs(err, errIllogicalVersionJump)
 
 		// Major changed
-		err = validateVersionProgression("v1.2.3", "v2.3.0", "minor")
+		err = validateVersionProgression("v1.2.3", "v2.3.1", "minor")
 		ts.Require().Error(err)
 		ts.Require().ErrorIs(err, errIllogicalVersionJump)
 	})

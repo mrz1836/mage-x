@@ -280,11 +280,11 @@ test:
   covermode: atomic
   
 lint:
-  golangci_version: v2.3.0
+  golangci_version: v2.3.1
   timeout: 5m
   
 tools:
-  golangci_lint: v2.3.0
+  golangci_lint: v2.3.1
   fumpt: latest
   govulncheck: latest
 
