@@ -392,6 +392,20 @@ func loadWorkflowDefinition(name string) (WorkflowDefinition, error) {
 	return workflow, nil
 }
 
+func loadWorkflowDefinitionFromPath(filePath string) (WorkflowDefinition, error) {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return WorkflowDefinition{}, fmt.Errorf("%w: %s", errWorkflowNotFound, filePath)
+	}
+
+	fileOps := fileops.New()
+	var workflow WorkflowDefinition
+	if err := fileOps.JSON.ReadJSON(filePath, &workflow); err != nil {
+		return WorkflowDefinition{}, err
+	}
+
+	return workflow, nil
+}
+
 func executeWorkflowSteps(execution *WorkflowExecution) error {
 	// Create execution context
 	ctx := context.Background()
@@ -659,8 +673,8 @@ func discoverWorkflows(dir string) ([]WorkflowDefinition, error) {
 			continue
 		}
 
-		workflowName := strings.TrimSuffix(entry.Name(), ".json")
-		workflow, err := loadWorkflowDefinition(workflowName)
+		filePath := filepath.Join(dir, entry.Name())
+		workflow, err := loadWorkflowDefinitionFromPath(filePath)
 		if err != nil {
 			continue // Skip invalid workflows
 		}
