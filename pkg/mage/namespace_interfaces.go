@@ -2,7 +2,9 @@
 package mage
 
 import (
-	"sync"
+	"reflect"
+
+	"github.com/mrz1836/mage-x/pkg/common/providers"
 )
 
 // BuildNamespace interface defines the contract for build operations
@@ -634,68 +636,54 @@ func NewNamespaceRegistry() *DefaultNamespaceRegistry {
 	}
 }
 
+// Generic helper for lazy initialization of namespace instances
+// This consolidates the common pattern of "if nil, create wrapper"
+func lazyInitNamespace[T any, I any](current *I, constructor func() I) I {
+	v := reflect.ValueOf(*current)
+	if !v.IsValid() || v.IsNil() {
+		*current = constructor()
+	}
+	return *current
+}
+
 // Build returns the build namespace
 func (r *DefaultNamespaceRegistry) Build() BuildNamespace {
-	if r.build == nil {
-		r.build = &buildNamespaceWrapper{Build{}}
-	}
-	return r.build
+	return lazyInitNamespace[BuildNamespace, BuildNamespace](&r.build, NewBuildNamespace)
 }
 
 // Test returns the test namespace
 func (r *DefaultNamespaceRegistry) Test() TestNamespace {
-	if r.test == nil {
-		r.test = &testNamespaceWrapper{Test{}}
-	}
-	return r.test
+	return lazyInitNamespace[TestNamespace, TestNamespace](&r.test, NewTestNamespace)
 }
 
 // Lint returns the lint namespace
 func (r *DefaultNamespaceRegistry) Lint() LintNamespace {
-	if r.lint == nil {
-		r.lint = &lintNamespaceWrapper{Lint{}}
-	}
-	return r.lint
+	return lazyInitNamespace[LintNamespace, LintNamespace](&r.lint, NewLintNamespace)
 }
 
 // Format returns the format namespace
 func (r *DefaultNamespaceRegistry) Format() FormatNamespace {
-	if r.format == nil {
-		r.format = &formatNamespaceWrapper{Format{}}
-	}
-	return r.format
+	return lazyInitNamespace[FormatNamespace, FormatNamespace](&r.format, NewFormatNamespace)
 }
 
 // Deps returns the dependencies namespace
 func (r *DefaultNamespaceRegistry) Deps() DepsNamespace {
-	if r.deps == nil {
-		r.deps = &depsNamespaceWrapper{Deps{}}
-	}
-	return r.deps
+	return lazyInitNamespace[DepsNamespace, DepsNamespace](&r.deps, NewDepsNamespace)
 }
 
 // Git returns the git namespace
 func (r *DefaultNamespaceRegistry) Git() GitNamespace {
-	if r.git == nil {
-		r.git = &gitNamespaceWrapper{Git{}}
-	}
-	return r.git
+	return lazyInitNamespace[GitNamespace, GitNamespace](&r.git, NewGitNamespace)
 }
 
 // Release returns the release namespace
 func (r *DefaultNamespaceRegistry) Release() ReleaseNamespace {
-	if r.release == nil {
-		r.release = &releaseNamespaceWrapper{Release{}}
-	}
-	return r.release
+	return lazyInitNamespace[ReleaseNamespace, ReleaseNamespace](&r.release, NewReleaseNamespace)
 }
 
 // Docs returns the documentation namespace
 func (r *DefaultNamespaceRegistry) Docs() DocsNamespace {
-	if r.docs == nil {
-		r.docs = &docsNamespaceWrapper{Docs{}}
-	}
-	return r.docs
+	return lazyInitNamespace[DocsNamespace, DocsNamespace](&r.docs, NewDocsNamespace)
 }
 
 // Deploy returns the deployment namespace
@@ -706,35 +694,23 @@ func (r *DefaultNamespaceRegistry) Deploy() DeployNamespace {
 
 // Tools returns the tools namespace
 func (r *DefaultNamespaceRegistry) Tools() ToolsNamespace {
-	if r.tools == nil {
-		r.tools = &toolsNamespaceWrapper{Tools{}}
-	}
-	return r.tools
+	return lazyInitNamespace[ToolsNamespace, ToolsNamespace](&r.tools, NewToolsNamespace)
 }
 
 // Security returns the security namespace
 func (r *DefaultNamespaceRegistry) Security() SecurityNamespace {
-	// if r.security == nil {
-	// 	r.security = &securityNamespaceWrapper{Security{}}
-	// }
-	// return r.security
-	return nil // Temporarily disabled
+	// Temporarily disabled - would use lazyInitNamespace(&r.security, NewSecurityNamespace)
+	return nil
 }
 
 // Generate returns the generate namespace
 func (r *DefaultNamespaceRegistry) Generate() GenerateNamespace {
-	if r.generate == nil {
-		r.generate = &generateNamespaceWrapper{Generate{}}
-	}
-	return r.generate
+	return lazyInitNamespace[GenerateNamespace, GenerateNamespace](&r.generate, NewGenerateNamespace)
 }
 
 // CLI returns the CLI namespace
 func (r *DefaultNamespaceRegistry) CLI() CLINamespace {
-	if r.cli == nil {
-		r.cli = &cliNamespaceWrapper{CLI{}}
-	}
-	return r.cli
+	return lazyInitNamespace[CLINamespace, CLINamespace](&r.cli, NewCLINamespace)
 }
 
 // SetBuild sets a custom build namespace implementation
@@ -804,10 +780,7 @@ func (r *DefaultNamespaceRegistry) SetCLI(cli CLINamespace) {
 
 // Update returns the update namespace
 func (r *DefaultNamespaceRegistry) Update() UpdateNamespace {
-	if r.update == nil {
-		r.update = &updateNamespaceWrapper{Update{}}
-	}
-	return r.update
+	return lazyInitNamespace[UpdateNamespace, UpdateNamespace](&r.update, NewUpdateNamespace)
 }
 
 // SetUpdate sets a custom update namespace implementation
@@ -817,10 +790,7 @@ func (r *DefaultNamespaceRegistry) SetUpdate(update UpdateNamespace) {
 
 // Mod returns the mod namespace
 func (r *DefaultNamespaceRegistry) Mod() ModNamespace {
-	if r.mod == nil {
-		r.mod = &modNamespaceWrapper{Mod{}}
-	}
-	return r.mod
+	return lazyInitNamespace[ModNamespace, ModNamespace](&r.mod, NewModNamespace)
 }
 
 // SetMod sets a custom mod namespace implementation
@@ -830,10 +800,7 @@ func (r *DefaultNamespaceRegistry) SetMod(mod ModNamespace) {
 
 // Recipes returns the recipes namespace
 func (r *DefaultNamespaceRegistry) Recipes() RecipesNamespace {
-	if r.recipes == nil {
-		r.recipes = &recipesNamespaceWrapper{Recipes{}}
-	}
-	return r.recipes
+	return lazyInitNamespace[RecipesNamespace, RecipesNamespace](&r.recipes, NewRecipesNamespace)
 }
 
 // SetRecipes sets a custom recipes namespace implementation
@@ -843,10 +810,7 @@ func (r *DefaultNamespaceRegistry) SetRecipes(recipes RecipesNamespace) {
 
 // Metrics returns the metrics namespace
 func (r *DefaultNamespaceRegistry) Metrics() MetricsNamespace {
-	if r.metrics == nil {
-		r.metrics = &metricsNamespaceWrapper{Metrics{}}
-	}
-	return r.metrics
+	return lazyInitNamespace[MetricsNamespace, MetricsNamespace](&r.metrics, NewMetricsNamespace)
 }
 
 // SetMetrics sets a custom metrics namespace implementation
@@ -856,10 +820,7 @@ func (r *DefaultNamespaceRegistry) SetMetrics(metrics MetricsNamespace) {
 
 // Workflow returns the workflow namespace
 func (r *DefaultNamespaceRegistry) Workflow() WorkflowNamespace {
-	if r.workflow == nil {
-		r.workflow = &workflowNamespaceWrapper{Workflow{}}
-	}
-	return r.workflow
+	return lazyInitNamespace[WorkflowNamespace, WorkflowNamespace](&r.workflow, NewWorkflowNamespace)
 }
 
 // SetWorkflow sets a custom workflow namespace implementation
@@ -895,66 +856,43 @@ type NamespaceRegistryProvider interface {
 	GetNamespaceRegistry() *DefaultNamespaceRegistry
 }
 
-// DefaultNamespaceRegistryProvider provides a thread-safe singleton namespace registry
+// DefaultNamespaceRegistryProvider provides a thread-safe singleton namespace registry using generic provider
 type DefaultNamespaceRegistryProvider struct {
-	once     sync.Once
-	registry *DefaultNamespaceRegistry
+	*providers.Provider[*DefaultNamespaceRegistry]
 }
 
-// NewDefaultNamespaceRegistryProvider creates a new default namespace registry provider
+// NewDefaultNamespaceRegistryProvider creates a new default namespace registry provider using generic framework
 func NewDefaultNamespaceRegistryProvider() *DefaultNamespaceRegistryProvider {
-	return &DefaultNamespaceRegistryProvider{}
+	factory := func() *DefaultNamespaceRegistry {
+		return NewNamespaceRegistry()
+	}
+
+	return &DefaultNamespaceRegistryProvider{
+		Provider: providers.NewProvider(factory),
+	}
 }
 
 // GetNamespaceRegistry returns a namespace registry instance using thread-safe singleton pattern
 func (p *DefaultNamespaceRegistryProvider) GetNamespaceRegistry() *DefaultNamespaceRegistry {
-	p.once.Do(func() {
-		p.registry = NewNamespaceRegistry()
-	})
-	return p.registry
+	return p.Get()
 }
 
-// getNamespaceRegistryInstance and setNamespaceRegistryProvider are created using a closure to avoid global variables
+// packageNamespaceRegistryProvider provides a generic package-level namespace registry provider using the generic framework
 //
-//nolint:gochecknoglobals // Required for thread-safe namespace registry singleton pattern
-var getNamespaceRegistryInstance, setNamespaceRegistryProvider = func() (func() *DefaultNamespaceRegistry, func(NamespaceRegistryProvider)) {
-	var (
-		once     sync.Once
-		provider NamespaceRegistryProvider
-		mu       sync.RWMutex
-	)
+//nolint:gochecknoglobals // Required for package-level singleton access pattern
+var packageNamespaceRegistryProvider = providers.NewPackageProvider(func() NamespaceRegistryProvider {
+	return NewDefaultNamespaceRegistryProvider()
+})
 
-	getter := func() *DefaultNamespaceRegistry {
-		mu.RLock()
-		if provider != nil {
-			defer mu.RUnlock()
-			return provider.GetNamespaceRegistry()
-		}
-		mu.RUnlock()
+// getNamespaceRegistryInstance returns the namespace registry using the generic package provider
+func getNamespaceRegistryInstance() *DefaultNamespaceRegistry {
+	return packageNamespaceRegistryProvider.Get().GetNamespaceRegistry()
+}
 
-		once.Do(func() {
-			mu.Lock()
-			defer mu.Unlock()
-			if provider == nil {
-				provider = NewDefaultNamespaceRegistryProvider()
-			}
-		})
-
-		mu.RLock()
-		defer mu.RUnlock()
-		return provider.GetNamespaceRegistry()
-	}
-
-	setter := func(p NamespaceRegistryProvider) {
-		mu.Lock()
-		defer mu.Unlock()
-		provider = p
-		// Reset once to allow reinitialization if needed
-		once = sync.Once{}
-	}
-
-	return getter, setter
-}()
+// setNamespaceRegistryProvider sets a custom namespace registry provider using the generic package provider
+func setNamespaceRegistryProvider(provider NamespaceRegistryProvider) {
+	packageNamespaceRegistryProvider.Set(provider)
+}
 
 // SetNamespaceRegistryProvider sets a custom namespace registry provider
 // This allows for dependency injection and testing with mock providers

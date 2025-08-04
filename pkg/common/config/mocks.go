@@ -13,6 +13,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	"github.com/mrz1836/mage-x/pkg/common/mockrec"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -50,8 +51,7 @@ func (m *MockConfigLoader) GetSupportedFormats() []string {
 
 // GetSupportedFormats indicates an expected call of GetSupportedFormats.
 func (mr *MockConfigLoaderMockRecorder) GetSupportedFormats() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSupportedFormats", reflect.TypeOf((*MockConfigLoader)(nil).GetSupportedFormats))
+	return mockrec.RecordNoArgsCall(mr.mock.ctrl, mr.mock, "GetSupportedFormats", reflect.TypeOf((*MockConfigLoader)(nil).GetSupportedFormats))
 }
 
 // Load mocks base method.
@@ -65,8 +65,7 @@ func (m *MockConfigLoader) Load(paths []string, dest any) (string, error) {
 
 // Load indicates an expected call of Load.
 func (mr *MockConfigLoaderMockRecorder) Load(paths, dest any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockConfigLoader)(nil).Load), paths, dest)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Load", reflect.TypeOf((*MockConfigLoader)(nil).Load), paths, dest)
 }
 
 // LoadFrom mocks base method.
@@ -79,8 +78,7 @@ func (m *MockConfigLoader) LoadFrom(path string, dest any) error {
 
 // LoadFrom indicates an expected call of LoadFrom.
 func (mr *MockConfigLoaderMockRecorder) LoadFrom(path, dest any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadFrom", reflect.TypeOf((*MockConfigLoader)(nil).LoadFrom), path, dest)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "LoadFrom", reflect.TypeOf((*MockConfigLoader)(nil).LoadFrom), path, dest)
 }
 
 // Save mocks base method.
@@ -93,8 +91,7 @@ func (m *MockConfigLoader) Save(path string, data any, format string) error {
 
 // Save indicates an expected call of Save.
 func (mr *MockConfigLoaderMockRecorder) Save(path, data, format any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockConfigLoader)(nil).Save), path, data, format)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Save", reflect.TypeOf((*MockConfigLoader)(nil).Save), path, data, format)
 }
 
 // Validate mocks base method.
@@ -107,8 +104,7 @@ func (m *MockConfigLoader) Validate(data any) error {
 
 // Validate indicates an expected call of Validate.
 func (mr *MockConfigLoaderMockRecorder) Validate(data any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockConfigLoader)(nil).Validate), data)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Validate", reflect.TypeOf((*MockConfigLoader)(nil).Validate), data)
 }
 
 // MockEnvProvider is a mock of EnvProvider interface.
@@ -145,8 +141,7 @@ func (m *MockEnvProvider) Get(key string) string {
 
 // Get indicates an expected call of Get.
 func (mr *MockEnvProviderMockRecorder) Get(key any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockEnvProvider)(nil).Get), key)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Get", reflect.TypeOf((*MockEnvProvider)(nil).Get), key)
 }
 
 // GetAll mocks base method.
@@ -159,8 +154,7 @@ func (m *MockEnvProvider) GetAll() map[string]string {
 
 // GetAll indicates an expected call of GetAll.
 func (mr *MockEnvProviderMockRecorder) GetAll() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockEnvProvider)(nil).GetAll))
+	return mockrec.RecordNoArgsCall(mr.mock.ctrl, mr.mock, "GetAll", reflect.TypeOf((*MockEnvProvider)(nil).GetAll))
 }
 
 // GetWithDefault mocks base method.
@@ -173,8 +167,7 @@ func (m *MockEnvProvider) GetWithDefault(key, defaultValue string) string {
 
 // GetWithDefault indicates an expected call of GetWithDefault.
 func (mr *MockEnvProviderMockRecorder) GetWithDefault(key, defaultValue any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithDefault", reflect.TypeOf((*MockEnvProvider)(nil).GetWithDefault), key, defaultValue)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "GetWithDefault", reflect.TypeOf((*MockEnvProvider)(nil).GetWithDefault), key, defaultValue)
 }
 
 // LookupEnv mocks base method.
@@ -188,8 +181,7 @@ func (m *MockEnvProvider) LookupEnv(key string) (string, bool) {
 
 // LookupEnv indicates an expected call of LookupEnv.
 func (mr *MockEnvProviderMockRecorder) LookupEnv(key any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupEnv", reflect.TypeOf((*MockEnvProvider)(nil).LookupEnv), key)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "LookupEnv", reflect.TypeOf((*MockEnvProvider)(nil).LookupEnv), key)
 }
 
 // Set mocks base method.
@@ -202,8 +194,7 @@ func (m *MockEnvProvider) Set(key, value string) error {
 
 // Set indicates an expected call of Set.
 func (mr *MockEnvProviderMockRecorder) Set(key, value any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockEnvProvider)(nil).Set), key, value)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Set", reflect.TypeOf((*MockEnvProvider)(nil).Set), key, value)
 }
 
 // Unset mocks base method.
@@ -216,8 +207,7 @@ func (m *MockEnvProvider) Unset(key string) error {
 
 // Unset indicates an expected call of Unset.
 func (mr *MockEnvProviderMockRecorder) Unset(key any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unset", reflect.TypeOf((*MockEnvProvider)(nil).Unset), key)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Unset", reflect.TypeOf((*MockEnvProvider)(nil).Unset), key)
 }
 
 // MockTypedEnvProvider is a mock of TypedEnvProvider interface.
@@ -254,8 +244,7 @@ func (m *MockTypedEnvProvider) Get(key string) string {
 
 // Get indicates an expected call of Get.
 func (mr *MockTypedEnvProviderMockRecorder) Get(key any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTypedEnvProvider)(nil).Get), key)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Get", reflect.TypeOf((*MockTypedEnvProvider)(nil).Get), key)
 }
 
 // GetAll mocks base method.
@@ -268,8 +257,7 @@ func (m *MockTypedEnvProvider) GetAll() map[string]string {
 
 // GetAll indicates an expected call of GetAll.
 func (mr *MockTypedEnvProviderMockRecorder) GetAll() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetAll))
+	return mockrec.RecordNoArgsCall(mr.mock.ctrl, mr.mock, "GetAll", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetAll))
 }
 
 // GetBool mocks base method.
@@ -282,8 +270,7 @@ func (m *MockTypedEnvProvider) GetBool(key string, defaultValue bool) bool {
 
 // GetBool indicates an expected call of GetBool.
 func (mr *MockTypedEnvProviderMockRecorder) GetBool(key, defaultValue any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBool", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetBool), key, defaultValue)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "GetBool", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetBool), key, defaultValue)
 }
 
 // GetDuration mocks base method.
@@ -296,8 +283,7 @@ func (m *MockTypedEnvProvider) GetDuration(key string, defaultValue time.Duratio
 
 // GetDuration indicates an expected call of GetDuration.
 func (mr *MockTypedEnvProviderMockRecorder) GetDuration(key, defaultValue any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDuration", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetDuration), key, defaultValue)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "GetDuration", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetDuration), key, defaultValue)
 }
 
 // GetFloat64 mocks base method.
@@ -310,8 +296,7 @@ func (m *MockTypedEnvProvider) GetFloat64(key string, defaultValue float64) floa
 
 // GetFloat64 indicates an expected call of GetFloat64.
 func (mr *MockTypedEnvProviderMockRecorder) GetFloat64(key, defaultValue any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFloat64", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetFloat64), key, defaultValue)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "GetFloat64", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetFloat64), key, defaultValue)
 }
 
 // GetInt mocks base method.
@@ -324,8 +309,7 @@ func (m *MockTypedEnvProvider) GetInt(key string, defaultValue int) int {
 
 // GetInt indicates an expected call of GetInt.
 func (mr *MockTypedEnvProviderMockRecorder) GetInt(key, defaultValue any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInt", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetInt), key, defaultValue)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "GetInt", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetInt), key, defaultValue)
 }
 
 // GetInt64 mocks base method.
@@ -338,8 +322,7 @@ func (m *MockTypedEnvProvider) GetInt64(key string, defaultValue int64) int64 {
 
 // GetInt64 indicates an expected call of GetInt64.
 func (mr *MockTypedEnvProviderMockRecorder) GetInt64(key, defaultValue any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInt64", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetInt64), key, defaultValue)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "GetInt64", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetInt64), key, defaultValue)
 }
 
 // GetStringSlice mocks base method.
@@ -352,8 +335,7 @@ func (m *MockTypedEnvProvider) GetStringSlice(key string, defaultValue []string)
 
 // GetStringSlice indicates an expected call of GetStringSlice.
 func (mr *MockTypedEnvProviderMockRecorder) GetStringSlice(key, defaultValue any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStringSlice", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetStringSlice), key, defaultValue)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "GetStringSlice", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetStringSlice), key, defaultValue)
 }
 
 // GetWithDefault mocks base method.
@@ -366,8 +348,7 @@ func (m *MockTypedEnvProvider) GetWithDefault(key, defaultValue string) string {
 
 // GetWithDefault indicates an expected call of GetWithDefault.
 func (mr *MockTypedEnvProviderMockRecorder) GetWithDefault(key, defaultValue any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithDefault", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetWithDefault), key, defaultValue)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "GetWithDefault", reflect.TypeOf((*MockTypedEnvProvider)(nil).GetWithDefault), key, defaultValue)
 }
 
 // LookupEnv mocks base method.
@@ -381,8 +362,7 @@ func (m *MockTypedEnvProvider) LookupEnv(key string) (string, bool) {
 
 // LookupEnv indicates an expected call of LookupEnv.
 func (mr *MockTypedEnvProviderMockRecorder) LookupEnv(key any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupEnv", reflect.TypeOf((*MockTypedEnvProvider)(nil).LookupEnv), key)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "LookupEnv", reflect.TypeOf((*MockTypedEnvProvider)(nil).LookupEnv), key)
 }
 
 // Set mocks base method.
@@ -395,8 +375,7 @@ func (m *MockTypedEnvProvider) Set(key, value string) error {
 
 // Set indicates an expected call of Set.
 func (mr *MockTypedEnvProviderMockRecorder) Set(key, value any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockTypedEnvProvider)(nil).Set), key, value)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Set", reflect.TypeOf((*MockTypedEnvProvider)(nil).Set), key, value)
 }
 
 // Unset mocks base method.
@@ -409,8 +388,7 @@ func (m *MockTypedEnvProvider) Unset(key string) error {
 
 // Unset indicates an expected call of Unset.
 func (mr *MockTypedEnvProviderMockRecorder) Unset(key any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unset", reflect.TypeOf((*MockTypedEnvProvider)(nil).Unset), key)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Unset", reflect.TypeOf((*MockTypedEnvProvider)(nil).Unset), key)
 }
 
 // MockConfigSource is a mock of ConfigSource interface.
@@ -447,8 +425,7 @@ func (m *MockConfigSource) IsAvailable() bool {
 
 // IsAvailable indicates an expected call of IsAvailable.
 func (mr *MockConfigSourceMockRecorder) IsAvailable() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAvailable", reflect.TypeOf((*MockConfigSource)(nil).IsAvailable))
+	return mockrec.RecordNoArgsCall(mr.mock.ctrl, mr.mock, "IsAvailable", reflect.TypeOf((*MockConfigSource)(nil).IsAvailable))
 }
 
 // Load mocks base method.
@@ -461,8 +438,7 @@ func (m *MockConfigSource) Load(dest any) error {
 
 // Load indicates an expected call of Load.
 func (mr *MockConfigSourceMockRecorder) Load(dest any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockConfigSource)(nil).Load), dest)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Load", reflect.TypeOf((*MockConfigSource)(nil).Load), dest)
 }
 
 // Name mocks base method.
@@ -475,8 +451,7 @@ func (m *MockConfigSource) Name() string {
 
 // Name indicates an expected call of Name.
 func (mr *MockConfigSourceMockRecorder) Name() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockConfigSource)(nil).Name))
+	return mockrec.RecordNoArgsCall(mr.mock.ctrl, mr.mock, "Name", reflect.TypeOf((*MockConfigSource)(nil).Name))
 }
 
 // Priority mocks base method.
@@ -489,8 +464,7 @@ func (m *MockConfigSource) Priority() int {
 
 // Priority indicates an expected call of Priority.
 func (mr *MockConfigSourceMockRecorder) Priority() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Priority", reflect.TypeOf((*MockConfigSource)(nil).Priority))
+	return mockrec.RecordNoArgsCall(mr.mock.ctrl, mr.mock, "Priority", reflect.TypeOf((*MockConfigSource)(nil).Priority))
 }
 
 // MockConfigManager is a mock of ConfigManager interface.
@@ -525,8 +499,7 @@ func (m *MockConfigManager) AddSource(source Source) {
 
 // AddSource indicates an expected call of AddSource.
 func (mr *MockConfigManagerMockRecorder) AddSource(source any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSource", reflect.TypeOf((*MockConfigManager)(nil).AddSource), source)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "AddSource", reflect.TypeOf((*MockConfigManager)(nil).AddSource), source)
 }
 
 // GetActiveSources mocks base method.
@@ -539,8 +512,7 @@ func (m *MockConfigManager) GetActiveSources() []Source {
 
 // GetActiveSources indicates an expected call of GetActiveSources.
 func (mr *MockConfigManagerMockRecorder) GetActiveSources() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSources", reflect.TypeOf((*MockConfigManager)(nil).GetActiveSources))
+	return mockrec.RecordNoArgsCall(mr.mock.ctrl, mr.mock, "GetActiveSources", reflect.TypeOf((*MockConfigManager)(nil).GetActiveSources))
 }
 
 // LoadConfig mocks base method.
@@ -553,8 +525,7 @@ func (m *MockConfigManager) LoadConfig(dest any) error {
 
 // LoadConfig indicates an expected call of LoadConfig.
 func (mr *MockConfigManagerMockRecorder) LoadConfig(dest any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadConfig", reflect.TypeOf((*MockConfigManager)(nil).LoadConfig), dest)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "LoadConfig", reflect.TypeOf((*MockConfigManager)(nil).LoadConfig), dest)
 }
 
 // Reload mocks base method.
@@ -567,8 +538,7 @@ func (m *MockConfigManager) Reload(dest any) error {
 
 // Reload indicates an expected call of Reload.
 func (mr *MockConfigManagerMockRecorder) Reload(dest any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reload", reflect.TypeOf((*MockConfigManager)(nil).Reload), dest)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Reload", reflect.TypeOf((*MockConfigManager)(nil).Reload), dest)
 }
 
 // StopWatching mocks base method.
@@ -579,8 +549,7 @@ func (m *MockConfigManager) StopWatching() {
 
 // StopWatching indicates an expected call of StopWatching.
 func (mr *MockConfigManagerMockRecorder) StopWatching() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopWatching", reflect.TypeOf((*MockConfigManager)(nil).StopWatching))
+	return mockrec.RecordNoArgsCall(mr.mock.ctrl, mr.mock, "StopWatching", reflect.TypeOf((*MockConfigManager)(nil).StopWatching))
 }
 
 // Watch mocks base method.
@@ -593,8 +562,7 @@ func (m *MockConfigManager) Watch(callback func(any)) error {
 
 // Watch indicates an expected call of Watch.
 func (mr *MockConfigManagerMockRecorder) Watch(callback any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockConfigManager)(nil).Watch), callback)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Watch", reflect.TypeOf((*MockConfigManager)(nil).Watch), callback)
 }
 
 // MockValidator is a mock of Validator interface.
@@ -631,8 +599,7 @@ func (m *MockValidator) GetValidationRules() map[string]any {
 
 // GetValidationRules indicates an expected call of GetValidationRules.
 func (mr *MockValidatorMockRecorder) GetValidationRules() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidationRules", reflect.TypeOf((*MockValidator)(nil).GetValidationRules))
+	return mockrec.RecordNoArgsCall(mr.mock.ctrl, mr.mock, "GetValidationRules", reflect.TypeOf((*MockValidator)(nil).GetValidationRules))
 }
 
 // SetValidationRules mocks base method.
@@ -643,8 +610,7 @@ func (m *MockValidator) SetValidationRules(rules map[string]any) {
 
 // SetValidationRules indicates an expected call of SetValidationRules.
 func (mr *MockValidatorMockRecorder) SetValidationRules(rules any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetValidationRules", reflect.TypeOf((*MockValidator)(nil).SetValidationRules), rules)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "SetValidationRules", reflect.TypeOf((*MockValidator)(nil).SetValidationRules), rules)
 }
 
 // Validate mocks base method.
@@ -657,8 +623,7 @@ func (m *MockValidator) Validate(data any) error {
 
 // Validate indicates an expected call of Validate.
 func (mr *MockValidatorMockRecorder) Validate(data any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockValidator)(nil).Validate), data)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Validate", reflect.TypeOf((*MockValidator)(nil).Validate), data)
 }
 
 // ValidateField mocks base method.
@@ -671,6 +636,5 @@ func (m *MockValidator) ValidateField(fieldName string, value any) error {
 
 // ValidateField indicates an expected call of ValidateField.
 func (mr *MockValidatorMockRecorder) ValidateField(fieldName, value any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateField", reflect.TypeOf((*MockValidator)(nil).ValidateField), fieldName, value)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "ValidateField", reflect.TypeOf((*MockValidator)(nil).ValidateField), fieldName, value)
 }

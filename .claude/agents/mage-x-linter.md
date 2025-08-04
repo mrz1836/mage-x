@@ -20,14 +20,14 @@ When invoked, you must follow these steps:
    - Read project configuration files (.golangci.yml, go.mod) to understand settings
 
 2. **Execute Comprehensive Linting Suite**
-   - Run `mage lint:default` for standard linting checks
-   - Execute `mage lint:all` for comprehensive analysis
-   - Use `mage lint:vet` for go vet analysis
-   - Apply `mage lint:fumpt` for formatting consistency
+   - Run `mage lintDefault` for standard linting checks
+   - Execute `mage lintAll` for comprehensive analysis
+   - Use `mage lintVet` for go vet analysis
+   - Apply `mage lintFumpt` for formatting consistency
    - Run individual tools if mage commands are unavailable
 
 3. **Apply Automated Fixes**
-   - Use `mage lint:fix` for safe automated corrections
+   - Use `mage lintFix` for safe automated corrections
    - Apply `MultiEdit` for consistent formatting issues
    - Fix import organization and unused imports
    - Correct common golangci-lint violations where safe

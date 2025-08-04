@@ -2,16 +2,17 @@
 package testhelpers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
-	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // TestEnvironment provides an isolated environment for testing
@@ -488,7 +489,9 @@ func (te *TestEnvironment) SetupGitRepo() {
 	}
 
 	for _, cmd := range cmds {
-		if err := utils.RunCmd(cmd[0], cmd[1:]...); err != nil {
+		ctx := context.Background()
+		// #nosec G204 -- test helper with controlled input
+		if err := exec.CommandContext(ctx, cmd[0], cmd[1:]...).Run(); err != nil {
 			te.t.Fatalf("Failed to run %v: %v", cmd, err)
 		}
 	}
@@ -499,7 +502,9 @@ func (te *TestEnvironment) GitAdd(files ...string) {
 	te.t.Helper()
 
 	args := append([]string{"add"}, files...)
-	if err := utils.RunCmd("git", args...); err != nil {
+	ctx := context.Background()
+	// #nosec G204 -- test helper with controlled input
+	if err := exec.CommandContext(ctx, "git", args...).Run(); err != nil {
 		te.t.Fatalf("Failed to git add: %v", err)
 	}
 }
@@ -508,7 +513,8 @@ func (te *TestEnvironment) GitAdd(files ...string) {
 func (te *TestEnvironment) GitCommit(message string) {
 	te.t.Helper()
 
-	if err := utils.RunCmd("git", "commit", "-m", message); err != nil {
+	ctx := context.Background()
+	if err := exec.CommandContext(ctx, "git", "commit", "-m", message).Run(); err != nil {
 		te.t.Fatalf("Failed to git commit: %v", err)
 	}
 }

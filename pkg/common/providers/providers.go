@@ -16,16 +16,16 @@ var (
 	ErrUnknownProviderType = errors.New("unknown provider type")
 )
 
-// Provider defines the interface for cloud/platform providers
-type Provider interface {
+// CloudProvider defines the interface for cloud/platform providers
+type CloudProvider interface {
 	Config() config.MageLoader
 	Environment() env.Environment
 	FileOperator() fileops.FileOperator
 	PathBuilder() paths.PathBuilder
 }
 
-// providerImpl implements the Provider interface
-type providerImpl struct {
+// cloudProviderImpl implements the CloudProvider interface
+type cloudProviderImpl struct {
 	name         string
 	configLoader config.MageLoader
 	environment  env.Environment
@@ -33,8 +33,8 @@ type providerImpl struct {
 	pathBuilder  paths.PathBuilder
 }
 
-// NewProvider creates a new provider instance
-func NewProvider(providerType string) (Provider, error) {
+// NewCloudProvider creates a new cloud provider instance
+func NewCloudProvider(providerType string) (CloudProvider, error) {
 	switch providerType {
 	case "local":
 		return newLocalProvider(), nil
@@ -54,28 +54,28 @@ func NewProvider(providerType string) (Provider, error) {
 }
 
 // Config returns the configuration loader
-func (p *providerImpl) Config() config.MageLoader {
+func (p *cloudProviderImpl) Config() config.MageLoader {
 	return p.configLoader
 }
 
 // Environment returns the environment manager
-func (p *providerImpl) Environment() env.Environment {
+func (p *cloudProviderImpl) Environment() env.Environment {
 	return p.environment
 }
 
 // FileOperator returns the file operator
-func (p *providerImpl) FileOperator() fileops.FileOperator {
+func (p *cloudProviderImpl) FileOperator() fileops.FileOperator {
 	return p.fileOperator
 }
 
 // PathBuilder returns the path builder
-func (p *providerImpl) PathBuilder() paths.PathBuilder {
+func (p *cloudProviderImpl) PathBuilder() paths.PathBuilder {
 	return p.pathBuilder
 }
 
 // Local provider implementation
-func newLocalProvider() Provider {
-	return &providerImpl{
+func newLocalProvider() CloudProvider {
+	return &cloudProviderImpl{
 		name:         "local",
 		configLoader: config.NewLoader(),
 		environment:  env.NewEnvironment(),
@@ -85,8 +85,8 @@ func newLocalProvider() Provider {
 }
 
 // AWS provider implementation
-func newAWSProvider() Provider {
-	return &providerImpl{
+func newAWSProvider() CloudProvider {
+	return &cloudProviderImpl{
 		name:         "aws",
 		configLoader: config.NewLoader(),
 		environment:  env.NewEnvironment(),
@@ -96,8 +96,8 @@ func newAWSProvider() Provider {
 }
 
 // Azure provider implementation
-func newAzureProvider() Provider {
-	return &providerImpl{
+func newAzureProvider() CloudProvider {
+	return &cloudProviderImpl{
 		name:         "azure",
 		configLoader: config.NewLoader(),
 		environment:  env.NewEnvironment(),
@@ -107,8 +107,8 @@ func newAzureProvider() Provider {
 }
 
 // GCP provider implementation
-func newGCPProvider() Provider {
-	return &providerImpl{
+func newGCPProvider() CloudProvider {
+	return &cloudProviderImpl{
 		name:         "gcp",
 		configLoader: config.NewLoader(),
 		environment:  env.NewEnvironment(),
@@ -118,8 +118,8 @@ func newGCPProvider() Provider {
 }
 
 // Docker provider implementation
-func newDockerProvider() Provider {
-	return &providerImpl{
+func newDockerProvider() CloudProvider {
+	return &cloudProviderImpl{
 		name:         "docker",
 		configLoader: config.NewLoader(),
 		environment:  env.NewEnvironment(),
@@ -129,8 +129,8 @@ func newDockerProvider() Provider {
 }
 
 // Kubernetes provider implementation
-func newKubernetesProvider() Provider {
-	return &providerImpl{
+func newKubernetesProvider() CloudProvider {
+	return &cloudProviderImpl{
 		name:         "kubernetes",
 		configLoader: config.NewLoader(),
 		environment:  env.NewEnvironment(),

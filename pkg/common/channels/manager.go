@@ -3,6 +3,7 @@ package channels
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 	"sync"
 	"time"
@@ -10,7 +11,6 @@ import (
 	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/common/paths"
-	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Sentinel errors
@@ -181,7 +181,7 @@ func (m *Manager) PublishRelease(release *Release) error {
 	for _, hook := range m.hooks {
 		if err := hook.OnPublish(release); err != nil {
 			// Log error but don't fail the publish
-			utils.Warn("hook failed: %v", err)
+			log.Printf("[WARN] hook failed: %v", err)
 		}
 	}
 
@@ -326,7 +326,7 @@ func (m *Manager) savePromotionRequest(request *PromotionRequest) {
 	*request.ApprovedAt = time.Now()
 	if err := m.store.SavePromotionRequest(request); err != nil {
 		// Log error but don't fail the promotion
-		utils.Warn("failed to save promotion request: %v", err)
+		log.Printf("[WARN] failed to save promotion request: %v", err)
 	}
 }
 
@@ -335,7 +335,7 @@ func (m *Manager) runPromotionHooks(promotedRelease *Release, fromChannel Channe
 	for _, hook := range m.hooks {
 		if err := hook.OnPromote(promotedRelease, fromChannel); err != nil {
 			// Log error but don't fail
-			utils.Warn("hook failed: %v", err)
+			log.Printf("[WARN] hook failed: %v", err)
 		}
 	}
 }
@@ -416,7 +416,7 @@ func (m *Manager) DeprecateRelease(channel Channel, version string) error {
 	for _, hook := range m.hooks {
 		if err := hook.OnDeprecate(release); err != nil {
 			// Log error but don't fail
-			utils.Warn("hook failed: %v", err)
+			log.Printf("[WARN] hook failed: %v", err)
 		}
 	}
 
@@ -444,7 +444,7 @@ func (m *Manager) CleanupExpiredReleases() error {
 					cleanupErrors = append(cleanupErrors,
 						fmt.Errorf("failed to delete %s/%s: %w", channel, release.Version, err))
 				} else {
-					utils.Info("Cleaned up expired release: %s/%s", channel, release.Version)
+					log.Printf("[INFO] Cleaned up expired release: %s/%s", channel, release.Version)
 				}
 			}
 		}

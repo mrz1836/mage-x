@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"path/filepath"
 	"sync"
 
 	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
-	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Sentinel errors
@@ -119,14 +119,14 @@ func (s *FileStore) listReleasesUnlocked(channel Channel) ([]*Release, error) {
 		data, err := s.fileOps.ReadFile(path)
 		if err != nil {
 			// Log error but continue
-			utils.Warn("failed to read release file %s: %v", path, err)
+			log.Printf("[WARN] failed to read release file %s: %v", path, err)
 			continue
 		}
 
 		var release Release
 		if err := json.Unmarshal(data, &release); err != nil {
 			// Log error but continue
-			utils.Warn("failed to unmarshal release %s: %v", path, err)
+			log.Printf("[WARN] failed to unmarshal release %s: %v", path, err)
 			continue
 		}
 
@@ -165,7 +165,7 @@ func (s *FileStore) SaveRelease(release *Release) error {
 	// Also save to index for faster lookups
 	if err := s.updateChannelIndex(release.Channel); err != nil {
 		// Log error but don't fail the save
-		utils.Warn("failed to update channel index: %v", err)
+		log.Printf("[WARN] failed to update channel index: %v", err)
 	}
 
 	return nil
@@ -189,7 +189,7 @@ func (s *FileStore) DeleteRelease(channel Channel, version string) error {
 	// Update index
 	if err := s.updateChannelIndex(channel); err != nil {
 		// Log error but don't fail
-		utils.Warn("failed to update channel index: %v", err)
+		log.Printf("[WARN] failed to update channel index: %v", err)
 	}
 
 	return nil

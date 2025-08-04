@@ -73,14 +73,6 @@ type toolsNamespaceWrapper struct {
 // Ensure toolsNamespaceWrapper implements ToolsNamespace
 var _ ToolsNamespace = (*toolsNamespaceWrapper)(nil)
 
-// securityNamespaceWrapper wraps the Security namespace to implement SecurityNamespace interface
-// type securityNamespaceWrapper struct {
-// 	Security
-// }
-
-// Ensure securityNamespaceWrapper implements SecurityNamespace
-// var _ SecurityNamespace = (*securityNamespaceWrapper)(nil)
-
 // generateNamespaceWrapper wraps the Generate namespace to implement GenerateNamespace interface
 type generateNamespaceWrapper struct {
 	Generate
@@ -138,6 +130,7 @@ type workflowNamespaceWrapper struct {
 var _ WorkflowNamespace = (*workflowNamespaceWrapper)(nil)
 
 // Factory functions for creating namespace implementations
+// These maintain the exact same API but use consolidated implementation
 
 // NewBuildNamespace creates a new BuildNamespace implementation
 func NewBuildNamespace() BuildNamespace {

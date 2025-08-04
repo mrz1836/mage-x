@@ -14,6 +14,7 @@ import (
 	os "os"
 	reflect "reflect"
 
+	"github.com/mrz1836/mage-x/pkg/common/mockrec"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -51,8 +52,7 @@ func (m *MockFileOperator) Chmod(path string, mode os.FileMode) error {
 
 // Chmod indicates an expected call of Chmod.
 func (mr *MockFileOperatorMockRecorder) Chmod(path, mode any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Chmod", reflect.TypeOf((*MockFileOperator)(nil).Chmod), path, mode)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Chmod", reflect.TypeOf((*MockFileOperator)(nil).Chmod), path, mode)
 }
 
 // Copy mocks base method.
@@ -65,8 +65,7 @@ func (m *MockFileOperator) Copy(src, dst string) error {
 
 // Copy indicates an expected call of Copy.
 func (mr *MockFileOperatorMockRecorder) Copy(src, dst any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Copy", reflect.TypeOf((*MockFileOperator)(nil).Copy), src, dst)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Copy", reflect.TypeOf((*MockFileOperator)(nil).Copy), src, dst)
 }
 
 // Exists mocks base method.
@@ -79,8 +78,7 @@ func (m *MockFileOperator) Exists(path string) bool {
 
 // Exists indicates an expected call of Exists.
 func (mr *MockFileOperatorMockRecorder) Exists(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockFileOperator)(nil).Exists), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Exists", reflect.TypeOf((*MockFileOperator)(nil).Exists), path)
 }
 
 // IsDir mocks base method.
@@ -93,8 +91,7 @@ func (m *MockFileOperator) IsDir(path string) bool {
 
 // IsDir indicates an expected call of IsDir.
 func (mr *MockFileOperatorMockRecorder) IsDir(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDir", reflect.TypeOf((*MockFileOperator)(nil).IsDir), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "IsDir", reflect.TypeOf((*MockFileOperator)(nil).IsDir), path)
 }
 
 // MkdirAll mocks base method.
@@ -107,8 +104,7 @@ func (m *MockFileOperator) MkdirAll(path string, perm os.FileMode) error {
 
 // MkdirAll indicates an expected call of MkdirAll.
 func (mr *MockFileOperatorMockRecorder) MkdirAll(path, perm any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MkdirAll", reflect.TypeOf((*MockFileOperator)(nil).MkdirAll), path, perm)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "MkdirAll", reflect.TypeOf((*MockFileOperator)(nil).MkdirAll), path, perm)
 }
 
 // ReadDir mocks base method.
@@ -122,8 +118,7 @@ func (m *MockFileOperator) ReadDir(path string) ([]fs.DirEntry, error) {
 
 // ReadDir indicates an expected call of ReadDir.
 func (mr *MockFileOperatorMockRecorder) ReadDir(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDir", reflect.TypeOf((*MockFileOperator)(nil).ReadDir), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "ReadDir", reflect.TypeOf((*MockFileOperator)(nil).ReadDir), path)
 }
 
 // ReadFile mocks base method.
@@ -137,8 +132,7 @@ func (m *MockFileOperator) ReadFile(path string) ([]byte, error) {
 
 // ReadFile indicates an expected call of ReadFile.
 func (mr *MockFileOperatorMockRecorder) ReadFile(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockFileOperator)(nil).ReadFile), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "ReadFile", reflect.TypeOf((*MockFileOperator)(nil).ReadFile), path)
 }
 
 // Remove mocks base method.
@@ -151,8 +145,7 @@ func (m *MockFileOperator) Remove(path string) error {
 
 // Remove indicates an expected call of Remove.
 func (mr *MockFileOperatorMockRecorder) Remove(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockFileOperator)(nil).Remove), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Remove", reflect.TypeOf((*MockFileOperator)(nil).Remove), path)
 }
 
 // RemoveAll mocks base method.
@@ -165,8 +158,7 @@ func (m *MockFileOperator) RemoveAll(path string) error {
 
 // RemoveAll indicates an expected call of RemoveAll.
 func (mr *MockFileOperatorMockRecorder) RemoveAll(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAll", reflect.TypeOf((*MockFileOperator)(nil).RemoveAll), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "RemoveAll", reflect.TypeOf((*MockFileOperator)(nil).RemoveAll), path)
 }
 
 // Stat mocks base method.
@@ -180,8 +172,7 @@ func (m *MockFileOperator) Stat(path string) (fs.FileInfo, error) {
 
 // Stat indicates an expected call of Stat.
 func (mr *MockFileOperatorMockRecorder) Stat(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stat", reflect.TypeOf((*MockFileOperator)(nil).Stat), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Stat", reflect.TypeOf((*MockFileOperator)(nil).Stat), path)
 }
 
 // WriteFile mocks base method.
@@ -194,8 +185,7 @@ func (m *MockFileOperator) WriteFile(path string, data []byte, perm os.FileMode)
 
 // WriteFile indicates an expected call of WriteFile.
 func (mr *MockFileOperatorMockRecorder) WriteFile(path, data, perm any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFile", reflect.TypeOf((*MockFileOperator)(nil).WriteFile), path, data, perm)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "WriteFile", reflect.TypeOf((*MockFileOperator)(nil).WriteFile), path, data, perm)
 }
 
 // MockJSONOperator is a mock of JSONOperator interface.
@@ -233,8 +223,7 @@ func (m *MockJSONOperator) Marshal(v any) ([]byte, error) {
 
 // Marshal indicates an expected call of Marshal.
 func (mr *MockJSONOperatorMockRecorder) Marshal(v any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshal", reflect.TypeOf((*MockJSONOperator)(nil).Marshal), v)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Marshal", reflect.TypeOf((*MockJSONOperator)(nil).Marshal), v)
 }
 
 // MarshalIndent mocks base method.
@@ -248,8 +237,7 @@ func (m *MockJSONOperator) MarshalIndent(v any, prefix, indent string) ([]byte, 
 
 // MarshalIndent indicates an expected call of MarshalIndent.
 func (mr *MockJSONOperatorMockRecorder) MarshalIndent(v, prefix, indent any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarshalIndent", reflect.TypeOf((*MockJSONOperator)(nil).MarshalIndent), v, prefix, indent)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "MarshalIndent", reflect.TypeOf((*MockJSONOperator)(nil).MarshalIndent), v, prefix, indent)
 }
 
 // ReadJSON mocks base method.
@@ -262,8 +250,7 @@ func (m *MockJSONOperator) ReadJSON(path string, v any) error {
 
 // ReadJSON indicates an expected call of ReadJSON.
 func (mr *MockJSONOperatorMockRecorder) ReadJSON(path, v any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadJSON", reflect.TypeOf((*MockJSONOperator)(nil).ReadJSON), path, v)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "ReadJSON", reflect.TypeOf((*MockJSONOperator)(nil).ReadJSON), path, v)
 }
 
 // Unmarshal mocks base method.
@@ -276,8 +263,7 @@ func (m *MockJSONOperator) Unmarshal(data []byte, v any) error {
 
 // Unmarshal indicates an expected call of Unmarshal.
 func (mr *MockJSONOperatorMockRecorder) Unmarshal(data, v any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unmarshal", reflect.TypeOf((*MockJSONOperator)(nil).Unmarshal), data, v)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Unmarshal", reflect.TypeOf((*MockJSONOperator)(nil).Unmarshal), data, v)
 }
 
 // WriteJSON mocks base method.
@@ -290,8 +276,7 @@ func (m *MockJSONOperator) WriteJSON(path string, v any) error {
 
 // WriteJSON indicates an expected call of WriteJSON.
 func (mr *MockJSONOperatorMockRecorder) WriteJSON(path, v any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJSON", reflect.TypeOf((*MockJSONOperator)(nil).WriteJSON), path, v)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "WriteJSON", reflect.TypeOf((*MockJSONOperator)(nil).WriteJSON), path, v)
 }
 
 // WriteJSONIndent mocks base method.
@@ -304,8 +289,7 @@ func (m *MockJSONOperator) WriteJSONIndent(path string, v any, prefix, indent st
 
 // WriteJSONIndent indicates an expected call of WriteJSONIndent.
 func (mr *MockJSONOperatorMockRecorder) WriteJSONIndent(path, v, prefix, indent any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJSONIndent", reflect.TypeOf((*MockJSONOperator)(nil).WriteJSONIndent), path, v, prefix, indent)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "WriteJSONIndent", reflect.TypeOf((*MockJSONOperator)(nil).WriteJSONIndent), path, v, prefix, indent)
 }
 
 // MockYAMLOperator is a mock of YAMLOperator interface.
@@ -343,8 +327,7 @@ func (m *MockYAMLOperator) Marshal(v any) ([]byte, error) {
 
 // Marshal indicates an expected call of Marshal.
 func (mr *MockYAMLOperatorMockRecorder) Marshal(v any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshal", reflect.TypeOf((*MockYAMLOperator)(nil).Marshal), v)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Marshal", reflect.TypeOf((*MockYAMLOperator)(nil).Marshal), v)
 }
 
 // ReadYAML mocks base method.
@@ -357,8 +340,7 @@ func (m *MockYAMLOperator) ReadYAML(path string, v any) error {
 
 // ReadYAML indicates an expected call of ReadYAML.
 func (mr *MockYAMLOperatorMockRecorder) ReadYAML(path, v any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadYAML", reflect.TypeOf((*MockYAMLOperator)(nil).ReadYAML), path, v)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "ReadYAML", reflect.TypeOf((*MockYAMLOperator)(nil).ReadYAML), path, v)
 }
 
 // Unmarshal mocks base method.
@@ -371,8 +353,7 @@ func (m *MockYAMLOperator) Unmarshal(data []byte, v any) error {
 
 // Unmarshal indicates an expected call of Unmarshal.
 func (mr *MockYAMLOperatorMockRecorder) Unmarshal(data, v any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unmarshal", reflect.TypeOf((*MockYAMLOperator)(nil).Unmarshal), data, v)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Unmarshal", reflect.TypeOf((*MockYAMLOperator)(nil).Unmarshal), data, v)
 }
 
 // WriteYAML mocks base method.
@@ -385,8 +366,7 @@ func (m *MockYAMLOperator) WriteYAML(path string, v any) error {
 
 // WriteYAML indicates an expected call of WriteYAML.
 func (mr *MockYAMLOperatorMockRecorder) WriteYAML(path, v any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteYAML", reflect.TypeOf((*MockYAMLOperator)(nil).WriteYAML), path, v)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "WriteYAML", reflect.TypeOf((*MockYAMLOperator)(nil).WriteYAML), path, v)
 }
 
 // MockSafeFileOperator is a mock of SafeFileOperator interface.
@@ -423,8 +403,7 @@ func (m *MockSafeFileOperator) Chmod(path string, mode os.FileMode) error {
 
 // Chmod indicates an expected call of Chmod.
 func (mr *MockSafeFileOperatorMockRecorder) Chmod(path, mode any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Chmod", reflect.TypeOf((*MockSafeFileOperator)(nil).Chmod), path, mode)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Chmod", reflect.TypeOf((*MockSafeFileOperator)(nil).Chmod), path, mode)
 }
 
 // Copy mocks base method.
@@ -437,8 +416,7 @@ func (m *MockSafeFileOperator) Copy(src, dst string) error {
 
 // Copy indicates an expected call of Copy.
 func (mr *MockSafeFileOperatorMockRecorder) Copy(src, dst any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Copy", reflect.TypeOf((*MockSafeFileOperator)(nil).Copy), src, dst)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Copy", reflect.TypeOf((*MockSafeFileOperator)(nil).Copy), src, dst)
 }
 
 // Exists mocks base method.
@@ -451,8 +429,7 @@ func (m *MockSafeFileOperator) Exists(path string) bool {
 
 // Exists indicates an expected call of Exists.
 func (mr *MockSafeFileOperatorMockRecorder) Exists(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockSafeFileOperator)(nil).Exists), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Exists", reflect.TypeOf((*MockSafeFileOperator)(nil).Exists), path)
 }
 
 // IsDir mocks base method.
@@ -465,8 +442,7 @@ func (m *MockSafeFileOperator) IsDir(path string) bool {
 
 // IsDir indicates an expected call of IsDir.
 func (mr *MockSafeFileOperatorMockRecorder) IsDir(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDir", reflect.TypeOf((*MockSafeFileOperator)(nil).IsDir), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "IsDir", reflect.TypeOf((*MockSafeFileOperator)(nil).IsDir), path)
 }
 
 // MkdirAll mocks base method.
@@ -479,8 +455,7 @@ func (m *MockSafeFileOperator) MkdirAll(path string, perm os.FileMode) error {
 
 // MkdirAll indicates an expected call of MkdirAll.
 func (mr *MockSafeFileOperatorMockRecorder) MkdirAll(path, perm any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MkdirAll", reflect.TypeOf((*MockSafeFileOperator)(nil).MkdirAll), path, perm)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "MkdirAll", reflect.TypeOf((*MockSafeFileOperator)(nil).MkdirAll), path, perm)
 }
 
 // ReadDir mocks base method.
@@ -494,8 +469,7 @@ func (m *MockSafeFileOperator) ReadDir(path string) ([]fs.DirEntry, error) {
 
 // ReadDir indicates an expected call of ReadDir.
 func (mr *MockSafeFileOperatorMockRecorder) ReadDir(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDir", reflect.TypeOf((*MockSafeFileOperator)(nil).ReadDir), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "ReadDir", reflect.TypeOf((*MockSafeFileOperator)(nil).ReadDir), path)
 }
 
 // ReadFile mocks base method.
@@ -509,8 +483,7 @@ func (m *MockSafeFileOperator) ReadFile(path string) ([]byte, error) {
 
 // ReadFile indicates an expected call of ReadFile.
 func (mr *MockSafeFileOperatorMockRecorder) ReadFile(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockSafeFileOperator)(nil).ReadFile), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "ReadFile", reflect.TypeOf((*MockSafeFileOperator)(nil).ReadFile), path)
 }
 
 // Remove mocks base method.
@@ -523,8 +496,7 @@ func (m *MockSafeFileOperator) Remove(path string) error {
 
 // Remove indicates an expected call of Remove.
 func (mr *MockSafeFileOperatorMockRecorder) Remove(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockSafeFileOperator)(nil).Remove), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Remove", reflect.TypeOf((*MockSafeFileOperator)(nil).Remove), path)
 }
 
 // RemoveAll mocks base method.
@@ -537,8 +509,7 @@ func (m *MockSafeFileOperator) RemoveAll(path string) error {
 
 // RemoveAll indicates an expected call of RemoveAll.
 func (mr *MockSafeFileOperatorMockRecorder) RemoveAll(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAll", reflect.TypeOf((*MockSafeFileOperator)(nil).RemoveAll), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "RemoveAll", reflect.TypeOf((*MockSafeFileOperator)(nil).RemoveAll), path)
 }
 
 // Stat mocks base method.
@@ -552,8 +523,7 @@ func (m *MockSafeFileOperator) Stat(path string) (fs.FileInfo, error) {
 
 // Stat indicates an expected call of Stat.
 func (mr *MockSafeFileOperatorMockRecorder) Stat(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stat", reflect.TypeOf((*MockSafeFileOperator)(nil).Stat), path)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "Stat", reflect.TypeOf((*MockSafeFileOperator)(nil).Stat), path)
 }
 
 // WriteFile mocks base method.
@@ -566,8 +536,7 @@ func (m *MockSafeFileOperator) WriteFile(path string, data []byte, perm os.FileM
 
 // WriteFile indicates an expected call of WriteFile.
 func (mr *MockSafeFileOperatorMockRecorder) WriteFile(path, data, perm any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFile", reflect.TypeOf((*MockSafeFileOperator)(nil).WriteFile), path, data, perm)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "WriteFile", reflect.TypeOf((*MockSafeFileOperator)(nil).WriteFile), path, data, perm)
 }
 
 // WriteFileAtomic mocks base method.
@@ -580,8 +549,7 @@ func (m *MockSafeFileOperator) WriteFileAtomic(path string, data []byte, perm os
 
 // WriteFileAtomic indicates an expected call of WriteFileAtomic.
 func (mr *MockSafeFileOperatorMockRecorder) WriteFileAtomic(path, data, perm any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFileAtomic", reflect.TypeOf((*MockSafeFileOperator)(nil).WriteFileAtomic), path, data, perm)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "WriteFileAtomic", reflect.TypeOf((*MockSafeFileOperator)(nil).WriteFileAtomic), path, data, perm)
 }
 
 // WriteFileWithBackup mocks base method.
@@ -594,6 +562,5 @@ func (m *MockSafeFileOperator) WriteFileWithBackup(path string, data []byte, per
 
 // WriteFileWithBackup indicates an expected call of WriteFileWithBackup.
 func (mr *MockSafeFileOperatorMockRecorder) WriteFileWithBackup(path, data, perm any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFileWithBackup", reflect.TypeOf((*MockSafeFileOperator)(nil).WriteFileWithBackup), path, data, perm)
+	return mockrec.RecordCall(mr.mock.ctrl, mr.mock, "WriteFileWithBackup", reflect.TypeOf((*MockSafeFileOperator)(nil).WriteFileWithBackup), path, data, perm)
 }

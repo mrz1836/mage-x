@@ -230,130 +230,109 @@ func (ts *GenerateTestSuite) TestGenerateCode() {
 	})
 }
 
-// TestGenerateDocs tests the Docs method
-func (ts *GenerateTestSuite) TestGenerateDocs() {
-	ts.Run("successful docs generation", func() {
+// testEchoGenerateMethod is a helper method to test Generate methods that use echo commands
+func (ts *GenerateTestSuite) testEchoGenerateMethod(
+	testName string,
+	descriptionName string,
+	echoArgs []string,
+	methodFunc func() error,
+) {
+	ts.Run(testName, func() {
 		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Generating documentation"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "echo", echoArgs).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.generate.Docs()
-			},
+			methodFunc,
 		)
 
 		ts.Require().NoError(err)
 	})
+}
+
+// TestGenerateDocs tests the Docs method
+func (ts *GenerateTestSuite) TestGenerateDocs() {
+	ts.testEchoGenerateMethod(
+		"successful docs generation",
+		"docs",
+		[]string{"Generating documentation"},
+		func() error {
+			return ts.generate.Docs()
+		},
+	)
 }
 
 // TestGenerateSwagger tests the Swagger method
 func (ts *GenerateTestSuite) TestGenerateSwagger() {
-	ts.Run("successful Swagger generation", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Generating Swagger docs"}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.generate.Swagger()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
+	ts.testEchoGenerateMethod(
+		"successful Swagger generation",
+		"Swagger",
+		[]string{"Generating Swagger docs"},
+		func() error {
+			return ts.generate.Swagger()
+		},
+	)
 }
 
 // TestGenerateOpenAPI tests the OpenAPI method
 func (ts *GenerateTestSuite) TestGenerateOpenAPI() {
-	ts.Run("successful OpenAPI generation", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Generating OpenAPI spec"}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.generate.OpenAPI()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
+	ts.testEchoGenerateMethod(
+		"successful OpenAPI generation",
+		"OpenAPI",
+		[]string{"Generating OpenAPI spec"},
+		func() error {
+			return ts.generate.OpenAPI()
+		},
+	)
 }
 
 // TestGenerateGraphQL tests the GraphQL method
 func (ts *GenerateTestSuite) TestGenerateGraphQL() {
-	ts.Run("successful GraphQL generation", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Generating GraphQL code"}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.generate.GraphQL()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
+	ts.testEchoGenerateMethod(
+		"successful GraphQL generation",
+		"GraphQL",
+		[]string{"Generating GraphQL code"},
+		func() error {
+			return ts.generate.GraphQL()
+		},
+	)
 }
 
 // TestGenerateSQL tests the SQL method
 func (ts *GenerateTestSuite) TestGenerateSQL() {
-	ts.Run("successful SQL generation", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Generating SQL files"}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.generate.SQL()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
+	ts.testEchoGenerateMethod(
+		"successful SQL generation",
+		"SQL",
+		[]string{"Generating SQL files"},
+		func() error {
+			return ts.generate.SQL()
+		},
+	)
 }
 
 // TestGenerateWire tests the Wire method
 func (ts *GenerateTestSuite) TestGenerateWire() {
-	ts.Run("successful Wire generation", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Generating wire files"}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.generate.Wire()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
+	ts.testEchoGenerateMethod(
+		"successful Wire generation",
+		"Wire",
+		[]string{"Generating wire files"},
+		func() error {
+			return ts.generate.Wire()
+		},
+	)
 }
 
 // TestGenerateConfig tests the Config method
 func (ts *GenerateTestSuite) TestGenerateConfig() {
-	ts.Run("successful Config generation", func() {
-		// Mock successful echo command
-		ts.env.Runner.On("RunCmd", "echo", []string{"Generating config files"}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.generate.Config()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
+	ts.testEchoGenerateMethod(
+		"successful Config generation",
+		"Config",
+		[]string{"Generating config files"},
+		func() error {
+			return ts.generate.Config()
+		},
+	)
 }
 
 // TestGenerateHelperFunctions tests the helper functions

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/mrz1836/mage-x/pkg/common/providers"
 	"github.com/mrz1836/mage-x/pkg/security"
 )
 
@@ -104,45 +104,16 @@ func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time
 	}
 }
 
-// RunnerProvider manages the default command runner instance
-type RunnerProvider struct {
-	runner CommandRunner
-	once   sync.Once
-}
-
-// packageRunnerSingleton manages the package-level command runner provider
-type packageRunnerSingleton struct {
-	once     sync.Once
-	provider *RunnerProvider
-}
-
-// getInstance returns the singleton provider instance
-func (s *packageRunnerSingleton) getInstance() *RunnerProvider {
-	s.once.Do(func() {
-		s.provider = &RunnerProvider{}
-	})
-	return s.provider
-}
-
-// singleton instance for the package runner provider
-// Note: This is acceptable as it's encapsulated within the singleton pattern
-// and doesn't expose mutable global state
-var runnerSingleton = &packageRunnerSingleton{} //nolint:gochecknoglobals // Acceptable for singleton pattern
-
-// getPackageRunnerProvider returns the singleton runner provider
-func getPackageRunnerProvider() *RunnerProvider {
-	return runnerSingleton.getInstance()
-}
+// packageCommandRunnerProvider provides a generic package-level command runner provider using the generic framework
+//
+//nolint:gochecknoglobals // Required for package-level singleton access pattern
+var packageCommandRunnerProvider = providers.NewPackageProvider(func() CommandRunner {
+	return NewSecureCommandRunner()
+})
 
 // GetRunner returns the secure command runner with thread-safe lazy initialization
 func GetRunner() CommandRunner {
-	provider := getPackageRunnerProvider()
-	provider.once.Do(func() {
-		if provider.runner == nil {
-			provider.runner = NewSecureCommandRunner()
-		}
-	})
-	return provider.runner
+	return packageCommandRunnerProvider.Get()
 }
 
 // SetRunner allows setting a custom runner (mainly for testing)
@@ -150,8 +121,7 @@ func SetRunner(r CommandRunner) error {
 	if r == nil {
 		return errRunnerNil
 	}
-	provider := getPackageRunnerProvider()
-	provider.runner = r
+	packageCommandRunnerProvider.Set(r)
 	return nil
 }
 

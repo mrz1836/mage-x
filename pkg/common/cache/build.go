@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"log"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
-	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // BuildCache provides caching for build operations
@@ -159,13 +159,13 @@ func (c *BuildCache) Init() error {
 	return nil
 }
 
-// GetBuildResult retrieves a cached build result
-func (c *BuildCache) GetBuildResult(hash string) (*BuildResult, bool) {
+// getCacheResult is a generic helper for retrieving cache results
+func (c *BuildCache) getCacheResult(hash, subdir, entryType string, result interface{}) (interface{}, bool) {
 	if !c.enabled {
 		return nil, false
 	}
 
-	path := filepath.Join(c.cacheDir, "builds", hash+".json")
+	path := filepath.Join(c.cacheDir, subdir, hash+".json")
 	if !c.fileOps.File.Exists(path) {
 		return nil, false
 	}
@@ -175,196 +175,136 @@ func (c *BuildCache) GetBuildResult(hash string) (*BuildResult, bool) {
 		return nil, false
 	}
 
+	if err := json.Unmarshal(data, result); err != nil {
+		return nil, false
+	}
+
+	// Check if cache entry is expired using reflection
+	var timestamp time.Time
+	switch r := result.(type) {
+	case *BuildResult:
+		timestamp = r.Timestamp
+	case *TestResult:
+		timestamp = r.Timestamp
+	case *LintResult:
+		timestamp = r.Timestamp
+	case *DependencyResult:
+		timestamp = r.Timestamp
+	}
+
+	if time.Since(timestamp) > c.ttl {
+		if err := c.removeCacheEntry(path); err != nil {
+			log.Printf("[WARN] Failed to remove expired %s cache entry %s: %v", entryType, path, err)
+		}
+		return nil, false
+	}
+
+	return result, true
+}
+
+// GetBuildResult retrieves a cached build result
+func (c *BuildCache) GetBuildResult(hash string) (*BuildResult, bool) {
 	var result BuildResult
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, false
-	}
-
-	// Check if cache entry is expired
-	if time.Since(result.Timestamp) > c.ttl {
-		if err := c.removeCacheEntry(path); err != nil {
-			utils.Warn("Failed to remove expired cache entry %s: %v", path, err)
+	if cached, found := c.getCacheResult(hash, "builds", "", &result); found {
+		buildResult, ok := cached.(*BuildResult)
+		if !ok {
+			return nil, false
 		}
-		return nil, false
-	}
-
-	// Verify binary still exists
-	if result.Success && !c.fileOps.File.Exists(result.Binary) {
-		if err := c.removeCacheEntry(path); err != nil {
-			utils.Warn("Failed to remove cache entry with missing binary %s: %v", path, err)
+		// Verify binary still exists
+		if buildResult.Success && !c.fileOps.File.Exists(buildResult.Binary) {
+			path := filepath.Join(c.cacheDir, "builds", hash+".json")
+			if err := c.removeCacheEntry(path); err != nil {
+				log.Printf("[WARN] Failed to remove cache entry with missing binary %s: %v", path, err)
+			}
+			return nil, false
 		}
-		return nil, false
+		return buildResult, true
+	}
+	return nil, false
+}
+
+// storeCacheResult is a generic helper for storing cache results
+func (c *BuildCache) storeCacheResult(hash, subdir string, result interface{}) error {
+	if !c.enabled {
+		return nil
 	}
 
-	return &result, true
+	// Set hash and timestamp using reflection for interface{} types
+	switch r := result.(type) {
+	case *BuildResult:
+		r.Hash = hash
+		r.Timestamp = time.Now()
+	case *TestResult:
+		r.Hash = hash
+		r.Timestamp = time.Now()
+	case *LintResult:
+		r.Hash = hash
+		r.Timestamp = time.Now()
+	case *DependencyResult:
+		r.Hash = hash
+		r.Timestamp = time.Now()
+	}
+
+	data, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	path := filepath.Join(c.cacheDir, subdir, hash+".json")
+	return c.fileOps.File.WriteFile(path, data, 0o644)
 }
 
 // StoreBuildResult stores a build result in cache
 func (c *BuildCache) StoreBuildResult(hash string, result *BuildResult) error {
-	if !c.enabled {
-		return nil
-	}
-
-	result.Hash = hash
-	result.Timestamp = time.Now()
-
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	path := filepath.Join(c.cacheDir, "builds", hash+".json")
-	return c.fileOps.File.WriteFile(path, data, 0o644)
+	return c.storeCacheResult(hash, "builds", result)
 }
 
 // GetTestResult retrieves a cached test result
 func (c *BuildCache) GetTestResult(hash string) (*TestResult, bool) {
-	if !c.enabled {
-		return nil, false
-	}
-
-	path := filepath.Join(c.cacheDir, "tests", hash+".json")
-	if !c.fileOps.File.Exists(path) {
-		return nil, false
-	}
-
-	data, err := c.fileOps.File.ReadFile(path)
-	if err != nil {
-		return nil, false
-	}
-
 	var result TestResult
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, false
-	}
-
-	// Check if cache entry is expired
-	if time.Since(result.Timestamp) > c.ttl {
-		if err := c.removeCacheEntry(path); err != nil {
-			utils.Warn("Failed to remove expired test cache entry %s: %v", path, err)
+	if cached, found := c.getCacheResult(hash, "tests", "test", &result); found {
+		if testResult, ok := cached.(*TestResult); ok {
+			return testResult, true
 		}
-		return nil, false
 	}
-
-	return &result, true
+	return nil, false
 }
 
 // StoreTestResult stores a test result in cache
 func (c *BuildCache) StoreTestResult(hash string, result *TestResult) error {
-	if !c.enabled {
-		return nil
-	}
-
-	result.Hash = hash
-	result.Timestamp = time.Now()
-
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	path := filepath.Join(c.cacheDir, "tests", hash+".json")
-	return c.fileOps.File.WriteFile(path, data, 0o644)
+	return c.storeCacheResult(hash, "tests", result)
 }
 
 // GetLintResult retrieves a cached lint result
 func (c *BuildCache) GetLintResult(hash string) (*LintResult, bool) {
-	if !c.enabled {
-		return nil, false
-	}
-
-	path := filepath.Join(c.cacheDir, "lint", hash+".json")
-	if !c.fileOps.File.Exists(path) {
-		return nil, false
-	}
-
-	data, err := c.fileOps.File.ReadFile(path)
-	if err != nil {
-		return nil, false
-	}
-
 	var result LintResult
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, false
-	}
-
-	// Check if cache entry is expired
-	if time.Since(result.Timestamp) > c.ttl {
-		if err := c.removeCacheEntry(path); err != nil {
-			utils.Warn("Failed to remove expired lint cache entry %s: %v", path, err)
+	if cached, found := c.getCacheResult(hash, "lint", "lint", &result); found {
+		if lintResult, ok := cached.(*LintResult); ok {
+			return lintResult, true
 		}
-		return nil, false
 	}
-
-	return &result, true
+	return nil, false
 }
 
 // StoreLintResult stores a lint result in cache
 func (c *BuildCache) StoreLintResult(hash string, result *LintResult) error {
-	if !c.enabled {
-		return nil
-	}
-
-	result.Hash = hash
-	result.Timestamp = time.Now()
-
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	path := filepath.Join(c.cacheDir, "lint", hash+".json")
-	return c.fileOps.File.WriteFile(path, data, 0o644)
+	return c.storeCacheResult(hash, "lint", result)
 }
 
 // GetDependencyResult retrieves a cached dependency result
 func (c *BuildCache) GetDependencyResult(hash string) (*DependencyResult, bool) {
-	if !c.enabled {
-		return nil, false
-	}
-
-	path := filepath.Join(c.cacheDir, "deps", hash+".json")
-	if !c.fileOps.File.Exists(path) {
-		return nil, false
-	}
-
-	data, err := c.fileOps.File.ReadFile(path)
-	if err != nil {
-		return nil, false
-	}
-
 	var result DependencyResult
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, false
-	}
-
-	// Check if cache entry is expired
-	if time.Since(result.Timestamp) > c.ttl {
-		if err := c.removeCacheEntry(path); err != nil {
-			utils.Warn("Failed to remove expired dependency cache entry %s: %v", path, err)
+	if cached, found := c.getCacheResult(hash, "deps", "dependency", &result); found {
+		if depResult, ok := cached.(*DependencyResult); ok {
+			return depResult, true
 		}
-		return nil, false
 	}
-
-	return &result, true
+	return nil, false
 }
 
 // StoreDependencyResult stores a dependency result in cache
 func (c *BuildCache) StoreDependencyResult(hash string, result *DependencyResult) error {
-	if !c.enabled {
-		return nil
-	}
-
-	result.Hash = hash
-	result.Timestamp = time.Now()
-
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	path := filepath.Join(c.cacheDir, "deps", hash+".json")
-	return c.fileOps.File.WriteFile(path, data, 0o644)
+	return c.storeCacheResult(hash, "deps", result)
 }
 
 // GenerateHash creates a hash for cache keys
@@ -423,7 +363,7 @@ func (c *BuildCache) GetStats() (*Stats, error) {
 	err := filepath.WalkDir(c.cacheDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			// Log error but continue walking to gather partial stats
-			utils.Debug("cache stats: skipping path %s due to error: %v", path, err)
+			log.Printf("[DEBUG] cache stats: skipping path %s due to error: %v", path, err)
 			return nil
 		}
 		if !d.IsDir() {
@@ -457,7 +397,7 @@ func (c *BuildCache) Cleanup() error {
 	err := filepath.WalkDir(c.cacheDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			// Log error but continue cleanup to remove what we can
-			utils.Debug("cache cleanup: skipping path %s due to error: %v", path, err)
+			log.Printf("[DEBUG] cache cleanup: skipping path %s due to error: %v", path, err)
 			return nil
 		}
 
@@ -475,7 +415,7 @@ func (c *BuildCache) Cleanup() error {
 		return err
 	}
 
-	utils.Info("Cache cleanup completed: removed %d expired entries", removed)
+	log.Printf("[INFO] Cache cleanup completed: removed %d expired entries", removed)
 	return nil
 }
 

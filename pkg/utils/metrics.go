@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/common/providers"
 )
 
 // Static errors for metrics operations
@@ -216,43 +218,17 @@ type PerformanceComparison struct {
 	Significant bool    `json:"significant"`
 }
 
-// metricsCollectorManager manages the default metrics collector instance
-type metricsCollectorManager struct {
-	mu        sync.RWMutex
-	collector *MetricsCollector
-	once      sync.Once
-}
-
-// defaultManager is the package-level instance for backward compatibility
+// defaultMetricsCollectorProvider provides a generic package-level metrics collector provider using the generic framework
 //
 //nolint:gochecknoglobals // Required for backward compatibility with package-level functions
-var defaultManager = &metricsCollectorManager{}
-
-// get returns the metrics collector instance with thread-safe lazy initialization
-func (p *metricsCollectorManager) get() *MetricsCollector {
-	p.once.Do(func() {
-		p.mu.Lock()
-		defer p.mu.Unlock()
-		p.collector = createDefaultCollector()
-	})
-
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return p.collector
-}
-
-// set allows replacing the collector instance (for testing/dependency injection)
-func (p *metricsCollectorManager) set(collector *MetricsCollector) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.collector = collector
-	// Don't reset once - we're explicitly setting the collector
-}
+var defaultMetricsCollectorProvider = providers.NewPackageProvider(func() *MetricsCollector {
+	return createDefaultCollector()
+})
 
 // GetMetricsCollector returns the default metrics collector instance
 // This function maintains backward compatibility with existing code
 func GetMetricsCollector() *MetricsCollector {
-	return defaultManager.get()
+	return defaultMetricsCollectorProvider.Get()
 }
 
 // createDefaultCollector creates and configures the default metrics collector
@@ -275,7 +251,7 @@ func createDefaultCollector() *MetricsCollector {
 // SetDefaultCollector allows dependency injection by setting a custom collector
 // This enables better testing and dependency management
 func SetDefaultCollector(collector *MetricsCollector) {
-	defaultManager.set(collector)
+	defaultMetricsCollectorProvider.Set(collector)
 }
 
 // NewMetricsCollector creates a new metrics collector

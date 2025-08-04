@@ -42,12 +42,15 @@ func (m *MockCommandRunner) RunCmdOutput(name string, args ...string) (string, e
 
 // Test helper to replace the global runner
 func withMockRunner(t *testing.T, fn func(*MockCommandRunner)) {
-	provider := getPackageRunnerProvider()
-	originalRunner := provider.runner
+	originalRunner := GetRunner()
 	mockRunner := new(MockCommandRunner)
-	provider.runner = mockRunner
+	if err := SetRunner(mockRunner); err != nil {
+		t.Fatalf("Failed to set mock runner: %v", err)
+	}
 	defer func() {
-		provider.runner = originalRunner
+		if err := SetRunner(originalRunner); err != nil {
+			t.Errorf("Failed to restore original runner: %v", err)
+		}
 		mockRunner.AssertExpectations(t)
 	}()
 	fn(mockRunner)

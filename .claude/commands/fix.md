@@ -18,7 +18,7 @@ I need to fix code quality issues and test failures through parallel agent coord
 Execute these agents simultaneously for comprehensive analysis:
 
 1. **mage-x-linter** (if lint issues exist):
-   - Run comprehensive linting with `mage lint:all`
+   - Run comprehensive linting with `mage lintAll`
    - Identify auto-fixable issues vs manual fixes needed
    - Prioritize by severity (critical → high → medium → low)
 

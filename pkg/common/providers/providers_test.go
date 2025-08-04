@@ -22,17 +22,17 @@ func TestProviderCreation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider, err := NewProvider(tt.provider)
+			provider, err := NewCloudProvider(tt.provider)
 
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("NewProvider() expected error for %s", tt.provider)
+					t.Errorf("NewCloudProvider() expected error for %s", tt.provider)
 				}
 				return
 			}
 
 			if err != nil {
-				t.Errorf("NewProvider() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewCloudProvider() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
@@ -46,7 +46,7 @@ func TestProviderCreation(t *testing.T) {
 	}
 }
 
-func testProviderComponents(t *testing.T, provider Provider) {
+func testProviderComponents(t *testing.T, provider CloudProvider) {
 	// Test Config component
 	configLoader := provider.Config()
 	if configLoader == nil {
@@ -73,7 +73,7 @@ func testProviderComponents(t *testing.T, provider Provider) {
 }
 
 func TestLocalProvider(t *testing.T) {
-	provider, err := NewProvider("local")
+	provider, err := NewCloudProvider("local")
 	if err != nil {
 		t.Fatalf("Failed to create local provider: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestLocalProvider(t *testing.T) {
 }
 
 func TestAWSProvider(t *testing.T) {
-	provider, err := NewProvider("aws")
+	provider, err := NewCloudProvider("aws")
 	if err != nil {
 		t.Fatalf("Failed to create AWS provider: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestAWSProvider(t *testing.T) {
 }
 
 func TestAzureProvider(t *testing.T) {
-	provider, err := NewProvider("azure")
+	provider, err := NewCloudProvider("azure")
 	if err != nil {
 		t.Fatalf("Failed to create Azure provider: %v", err)
 	}
@@ -155,7 +155,7 @@ func TestAzureProvider(t *testing.T) {
 }
 
 func TestGCPProvider(t *testing.T) {
-	provider, err := NewProvider("gcp")
+	provider, err := NewCloudProvider("gcp")
 	if err != nil {
 		t.Fatalf("Failed to create GCP provider: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestGCPProvider(t *testing.T) {
 }
 
 func TestDockerProvider(t *testing.T) {
-	provider, err := NewProvider("docker")
+	provider, err := NewCloudProvider("docker")
 	if err != nil {
 		t.Fatalf("Failed to create Docker provider: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestDockerProvider(t *testing.T) {
 }
 
 func TestKubernetesProvider(t *testing.T) {
-	provider, err := NewProvider("kubernetes")
+	provider, err := NewCloudProvider("kubernetes")
 	if err != nil {
 		t.Fatalf("Failed to create Kubernetes provider: %v", err)
 	}
@@ -230,12 +230,12 @@ func TestKubernetesProvider(t *testing.T) {
 
 func TestProviderSwitching(t *testing.T) {
 	// Test that we can switch between providers
-	localProvider, err := NewProvider("local")
+	localProvider, err := NewCloudProvider("local")
 	if err != nil {
 		t.Fatalf("Failed to create local provider: %v", err)
 	}
 
-	awsProvider, err := NewProvider("aws")
+	awsProvider, err := NewCloudProvider("aws")
 	if err != nil {
 		t.Fatalf("Failed to create AWS provider: %v", err)
 	}
@@ -251,7 +251,7 @@ func TestProviderSwitching(t *testing.T) {
 }
 
 func TestProviderConfiguration(t *testing.T) {
-	provider, err := NewProvider("local")
+	provider, err := NewCloudProvider("local")
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -278,7 +278,7 @@ func TestProviderConfiguration(t *testing.T) {
 }
 
 func TestProviderFileOperations(t *testing.T) {
-	provider, err := NewProvider("local")
+	provider, err := NewCloudProvider("local")
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -318,7 +318,7 @@ func TestProviderFileOperations(t *testing.T) {
 }
 
 func TestProviderPathOperations(t *testing.T) {
-	provider, err := NewProvider("local")
+	provider, err := NewCloudProvider("local")
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -350,7 +350,7 @@ func TestProviderPathOperations(t *testing.T) {
 // Benchmark provider creation
 func BenchmarkProviderCreation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		provider, err := NewProvider("local")
+		provider, err := NewCloudProvider("local")
 		if err != nil {
 			b.Fatalf("Failed to create provider: %v", err)
 		}
@@ -360,7 +360,7 @@ func BenchmarkProviderCreation(b *testing.B) {
 
 // Benchmark provider component access
 func BenchmarkProviderComponentAccess(b *testing.B) {
-	provider, err := NewProvider("local")
+	provider, err := NewCloudProvider("local")
 	if err != nil {
 		b.Fatalf("Failed to create provider: %v", err)
 	}

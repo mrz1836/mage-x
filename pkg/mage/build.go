@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/mage-x/pkg/common/cache"
+	"github.com/mrz1836/mage-x/pkg/common/providers"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -32,20 +32,14 @@ type CacheManagerProvider interface {
 	GetCacheManager() *cache.Manager
 }
 
-// DefaultCacheManagerProvider provides a thread-safe singleton cache manager
+// DefaultCacheManagerProvider provides a thread-safe singleton cache manager using generic provider
 type DefaultCacheManagerProvider struct {
-	once    sync.Once
-	manager *cache.Manager
+	*providers.Provider[*cache.Manager]
 }
 
-// NewDefaultCacheManagerProvider creates a new default cache manager provider
+// NewDefaultCacheManagerProvider creates a new default cache manager provider using generic framework
 func NewDefaultCacheManagerProvider() *DefaultCacheManagerProvider {
-	return &DefaultCacheManagerProvider{}
-}
-
-// GetCacheManager returns a cache manager instance using thread-safe singleton pattern
-func (p *DefaultCacheManagerProvider) GetCacheManager() *cache.Manager {
-	p.once.Do(func() {
+	factory := func() *cache.Manager {
 		config := cache.DefaultConfig()
 		// Cache configuration uses default settings for now.
 		// Future enhancement: integrate with main Config struct for customization.
@@ -55,60 +49,44 @@ func (p *DefaultCacheManagerProvider) GetCacheManager() *cache.Manager {
 			config.Enabled = false
 		}
 
-		p.manager = cache.NewManager(config)
-		if p.manager != nil {
-			if err := p.manager.Init(); err != nil {
+		manager := cache.NewManager(config)
+		if manager != nil {
+			if err := manager.Init(); err != nil {
 				utils.Warn("Failed to initialize cache: %v", err)
 				// Continue without caching
 				config.Enabled = false
-				p.manager = cache.NewManager(config)
+				manager = cache.NewManager(config)
 			}
 		}
-	})
-	return p.manager
+		return manager
+	}
+
+	return &DefaultCacheManagerProvider{
+		Provider: providers.NewProvider(factory),
+	}
 }
 
-// getCacheManagerInstance and setCacheManagerProvider are created using a closure to avoid global variables
+// GetCacheManager returns a cache manager instance using thread-safe singleton pattern
+func (p *DefaultCacheManagerProvider) GetCacheManager() *cache.Manager {
+	return p.Get()
+}
+
+// packageCacheManagerProvider provides a generic package-level cache manager provider using the generic framework
 //
-//nolint:gochecknoglobals // Required for thread-safe cache manager singleton pattern
-var getCacheManagerInstance, setCacheManagerProvider = func() (func() *cache.Manager, func(CacheManagerProvider)) {
-	var (
-		once     sync.Once
-		provider CacheManagerProvider
-		mu       sync.RWMutex
-	)
+//nolint:gochecknoglobals // Required for package-level singleton access pattern
+var packageCacheManagerProvider = providers.NewPackageProvider(func() CacheManagerProvider {
+	return NewDefaultCacheManagerProvider()
+})
 
-	getter := func() *cache.Manager {
-		mu.RLock()
-		if provider != nil {
-			defer mu.RUnlock()
-			return provider.GetCacheManager()
-		}
-		mu.RUnlock()
+// getCacheManagerInstance returns the cache manager using the generic package provider
+func getCacheManagerInstance() *cache.Manager {
+	return packageCacheManagerProvider.Get().GetCacheManager()
+}
 
-		once.Do(func() {
-			mu.Lock()
-			defer mu.Unlock()
-			if provider == nil {
-				provider = NewDefaultCacheManagerProvider()
-			}
-		})
-
-		mu.RLock()
-		defer mu.RUnlock()
-		return provider.GetCacheManager()
-	}
-
-	setter := func(p CacheManagerProvider) {
-		mu.Lock()
-		defer mu.Unlock()
-		provider = p
-		// Reset once to allow reinitialization if needed
-		once = sync.Once{}
-	}
-
-	return getter, setter
-}()
+// setCacheManagerProvider sets a custom cache manager provider using the generic package provider
+func setCacheManagerProvider(provider CacheManagerProvider) {
+	packageCacheManagerProvider.Set(provider)
+}
 
 // SetCacheManagerProvider sets a custom cache manager provider for the Build namespace
 // This allows for dependency injection and testing with mock providers

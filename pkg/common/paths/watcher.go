@@ -5,11 +5,10 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"log"
 	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Error definitions for watcher operations
@@ -200,7 +199,7 @@ func (w *DefaultPathWatcher) checkForChanges() {
 		err := filepath.Walk(watchPath, func(path string, info fs.FileInfo, err error) error {
 			if err != nil {
 				// Log error but continue walking to check other files
-				utils.Debug("path watcher: skipping path %s due to error: %v", path, err)
+				log.Printf("[DEBUG] path watcher: skipping path %s due to error: %v", path, err)
 				return nil
 			}
 
