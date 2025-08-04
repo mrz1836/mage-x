@@ -553,35 +553,40 @@ func (s *IntegrationsStep) Execute(ctx *WizardContext) error {
 		return nil
 	}
 
-	// Available integrations
-	integrations := map[string]string{
-		"slack":      "Slack messaging",
-		"github":     "GitHub source control",
-		"gitlab":     "GitLab source control",
-		"jira":       "Jira issue tracking",
-		"jenkins":    "Jenkins CI/CD",
-		"docker":     "Docker containers",
-		"kubernetes": "Kubernetes orchestration",
-		"prometheus": "Prometheus monitoring",
-		"grafana":    "Grafana dashboards",
-		"aws":        "Amazon Web Services",
-		"azure":      "Microsoft Azure",
-		"gcp":        "Google Cloud Platform",
+	// Available integrations - use ordered slice to ensure deterministic iteration
+	type integration struct {
+		name        string
+		description string
+	}
+
+	integrations := []integration{
+		{"slack", "Slack messaging"},
+		{"github", "GitHub source control"},
+		{"gitlab", "GitLab source control"},
+		{"jira", "Jira issue tracking"},
+		{"jenkins", "Jenkins CI/CD"},
+		{"docker", "Docker containers"},
+		{"kubernetes", "Kubernetes orchestration"},
+		{"prometheus", "Prometheus monitoring"},
+		{"grafana", "Grafana dashboards"},
+		{"aws", "Amazon Web Services"},
+		{"azure", "Microsoft Azure"},
+		{"gcp", "Google Cloud Platform"},
 	}
 
 	ctx.Config.Integrations.Providers = make(map[string]IntegrationProvider)
 
-	for name, description := range integrations {
-		enable := s.promptBool(ctx, fmt.Sprintf("Enable %s (%s)", name, description), false)
+	for _, integration := range integrations {
+		enable := s.promptBool(ctx, fmt.Sprintf("Enable %s (%s)", integration.name, integration.description), false)
 		if enable {
 			provider := IntegrationProvider{
-				Type:        s.getIntegrationType(name),
+				Type:        s.getIntegrationType(integration.name),
 				Enabled:     true,
 				Settings:    make(map[string]string),
 				Credentials: make(map[string]string),
 				Endpoints:   make(map[string]string),
 			}
-			ctx.Config.Integrations.Providers[name] = provider
+			ctx.Config.Integrations.Providers[integration.name] = provider
 		}
 	}
 
