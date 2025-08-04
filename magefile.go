@@ -14,19 +14,27 @@ import (
 
 // Re-export all namespaces from mage package
 type (
-	Build   = mage.Build
-	Test    = mage.Test
-	Lint    = mage.Lint
-	Tools   = mage.Tools
-	Deps    = mage.Deps
-	Mod     = mage.Mod
-	Docs    = mage.Docs
-	Git     = mage.Git
-	Release = mage.Release
-	Metrics = mage.Metrics
-	Version = mage.Version
-	Install = mage.Install
-	Audit   = mage.Audit
+	Build     = mage.Build
+	Test      = mage.Test
+	Lint      = mage.Lint
+	Tools     = mage.Tools
+	Deps      = mage.Deps
+	Mod       = mage.Mod
+	Docs      = mage.Docs
+	Git       = mage.Git
+	Release   = mage.Release
+	Metrics   = mage.Metrics
+	Version   = mage.Version
+	Install   = mage.Install
+	Audit     = mage.Audit
+	Configure = mage.Configure
+	Format    = mage.Format
+	Generate  = mage.Generate
+	Help      = mage.Help
+	Init      = mage.Init
+	Recipes   = mage.Recipes
+	Update    = mage.Update
+	Vet       = mage.Vet
 )
 
 // Aliases provides short command names for common operations
@@ -452,8 +460,140 @@ func AuditShow() error {
 	return a.Show()
 }
 
-// Help displays all available commands with beautiful MAGE-X formatting (clean output)
-func Help() {
+// ConfigureInit initializes a new mage configuration
+func ConfigureInit() error {
+	var c Configure
+	return c.Init()
+}
+
+// ConfigureShow displays the current configuration
+func ConfigureShow() error {
+	var c Configure
+	return c.Show()
+}
+
+// ConfigureUpdate updates configuration values interactively
+func ConfigureUpdate() error {
+	var c Configure
+	return c.Update()
+}
+
+// FormatAll formats all Go source files
+func FormatAll() error {
+	var f Format
+	return f.All()
+}
+
+// FormatCheck checks if Go source files are properly formatted
+func FormatCheck() error {
+	var f Format
+	return f.Check()
+}
+
+// GenerateDefault runs go generate
+func GenerateDefault() error {
+	var g Generate
+	return g.Default()
+}
+
+// GenerateClean removes generated files
+func GenerateClean() error {
+	var g Generate
+	return g.Clean()
+}
+
+// InitProject initializes a new project
+func InitProject() error {
+	var i Init
+	return i.Project()
+}
+
+// InitCLI initializes a CLI project
+func InitCLI() error {
+	var i Init
+	return i.CLI()
+}
+
+// InitLibrary initializes a library project
+func InitLibrary() error {
+	var i Init
+	return i.Library()
+}
+
+// RecipesList lists available recipes
+func RecipesList() error {
+	var r Recipes
+	return r.List()
+}
+
+// RecipesRun runs a specific recipe
+func RecipesRun() error {
+	var r Recipes
+	return r.Run()
+}
+
+// UpdateCheck checks for updates
+func UpdateCheck() error {
+	var u Update
+	return u.Check()
+}
+
+// UpdateInstall installs the latest update
+func UpdateInstall() error {
+	var u Update
+	return u.Install()
+}
+
+// VetDefault runs go vet
+func VetDefault() error {
+	var v Vet
+	return v.Default()
+}
+
+// VetAll runs go vet with all checks
+func VetAll() error {
+	var v Vet
+	return v.All()
+}
+
+// HelpDefault displays all available commands with beautiful MAGE-X formatting (clean output)
+func HelpDefault() error {
+	var h Help
+	return h.Default()
+}
+
+// HelpCommands lists all available commands with descriptions
+func HelpCommands() error {
+	var h Help
+	return h.Commands()
+}
+
+// HelpExamples shows usage examples
+func HelpExamples() error {
+	var h Help
+	return h.Examples()
+}
+
+// HelpGettingStarted shows the getting started guide
+func HelpGettingStarted() error {
+	var h Help
+	return h.GettingStarted()
+}
+
+// HelpCompletions generates shell completions
+func HelpCompletions() error {
+	var h Help
+	return h.Completions()
+}
+
+// HelpCommand shows help for a specific command
+func HelpCommand() error {
+	var h Help
+	return h.Command()
+}
+
+// ShowHelp displays all available commands with beautiful MAGE-X formatting (clean output)
+func ShowHelp() {
 	utils.Header("🎯 MAGE-X Commands")
 
 	// Command categories with emoji icons and descriptions
@@ -508,6 +648,10 @@ func Help() {
 				{"lintVet", "Run go vet static analysis", []string{"mage lintVet"}},
 				{"lintFumpt", "Run gofumpt code formatting", []string{"mage lintFumpt"}},
 				{"lintVersion", "Show linter version", []string{"mage lintVersion"}},
+				{"vetDefault", "Run go vet", []string{"mage vetDefault"}},
+				{"vetAll", "Run go vet with all checks", []string{"mage vetAll"}},
+				{"formatAll", "Format all Go source files", []string{"mage formatAll"}},
+				{"formatCheck", "Check if Go source files are properly formatted", []string{"mage formatCheck"}},
 			},
 		},
 		"deps": {
@@ -591,10 +735,52 @@ func Help() {
 				{"auditShow", "Display audit events", []string{"mage auditShow"}},
 			},
 		},
+		"config": {
+			icon:        "⚙️",
+			description: "Configuration Management",
+			commands: []CommandInfo{
+				{"configureInit", "Initialize a new mage configuration", []string{"mage configureInit"}},
+				{"configureShow", "Display the current configuration", []string{"mage configureShow"}},
+				{"configureUpdate", "Update configuration values interactively", []string{"mage configureUpdate"}},
+			},
+		},
+		"generate": {
+			icon:        "🏗️",
+			description: "Code Generation",
+			commands: []CommandInfo{
+				{"generateDefault", "Run go generate", []string{"mage generateDefault"}},
+				{"generateClean", "Remove generated files", []string{"mage generateClean"}},
+			},
+		},
+		"init": {
+			icon:        "🚀",
+			description: "Project Initialization",
+			commands: []CommandInfo{
+				{"initProject", "Initialize a new project", []string{"mage initProject"}},
+				{"initCLI", "Initialize a CLI project", []string{"mage initCLI"}},
+				{"initLibrary", "Initialize a library project", []string{"mage initLibrary"}},
+			},
+		},
+		"recipes": {
+			icon:        "📋",
+			description: "Recipe Management",
+			commands: []CommandInfo{
+				{"recipesList", "List available recipes", []string{"mage recipesList"}},
+				{"recipesRun", "Run a specific recipe", []string{"mage recipesRun"}},
+			},
+		},
+		"update": {
+			icon:        "🔄",
+			description: "Update Management",
+			commands: []CommandInfo{
+				{"updateCheck", "Check for updates", []string{"mage updateCheck"}},
+				{"updateSelf", "Update mage-x to the latest version", []string{"mage updateSelf"}},
+			},
+		},
 	}
 
 	// Display each category with clean fmt.Printf (no logging prefixes)
-	categoryOrder := []string{"core", "build", "test", "quality", "deps", "tools", "modules", "docs", "git", "version", "metrics", "audit"}
+	categoryOrder := []string{"core", "build", "test", "quality", "deps", "tools", "modules", "docs", "git", "version", "metrics", "audit", "config", "generate", "init", "recipes", "update"}
 
 	for _, catKey := range categoryOrder {
 		if category, exists := categories[catKey]; exists {
@@ -622,9 +808,9 @@ func Help() {
 	fmt.Printf("  mage release    # Create a release\n")
 
 	fmt.Printf("\n📖 More Help:\n")
-	fmt.Printf("  • Interactive mode: mage interactive\n")
-	fmt.Printf("  • Recipe system: mage recipes:list\n")
-	fmt.Printf("  • Help system: mage help\n")
+	fmt.Printf("  • Recipe system: mage recipesList\n")
+	fmt.Printf("  • Configuration: mage configureShow\n")
+	fmt.Printf("  • Help system: mage helpDefault\n")
 }
 
 // List displays all available commands with beautiful MAGE-X formatting
@@ -683,6 +869,10 @@ func List() {
 				{"lintVet", "Run go vet static analysis", []string{"mage lintVet"}},
 				{"lintFumpt", "Run gofumpt code formatting", []string{"mage lintFumpt"}},
 				{"lintVersion", "Show linter version", []string{"mage lintVersion"}},
+				{"vetDefault", "Run go vet", []string{"mage vetDefault"}},
+				{"vetAll", "Run go vet with all checks", []string{"mage vetAll"}},
+				{"formatAll", "Format all Go source files", []string{"mage formatAll"}},
+				{"formatCheck", "Check if Go source files are properly formatted", []string{"mage formatCheck"}},
 			},
 		},
 		"deps": {
@@ -766,6 +956,48 @@ func List() {
 				{"auditShow", "Display audit events", []string{"mage auditShow"}},
 			},
 		},
+		"config": {
+			icon:        "⚙️",
+			description: "Configuration Management",
+			commands: []CommandInfo{
+				{"configureInit", "Initialize a new mage configuration", []string{"mage configureInit"}},
+				{"configureShow", "Display the current configuration", []string{"mage configureShow"}},
+				{"configureUpdate", "Update configuration values interactively", []string{"mage configureUpdate"}},
+			},
+		},
+		"generate": {
+			icon:        "🏗️",
+			description: "Code Generation",
+			commands: []CommandInfo{
+				{"generateDefault", "Run go generate", []string{"mage generateDefault"}},
+				{"generateClean", "Remove generated files", []string{"mage generateClean"}},
+			},
+		},
+		"init": {
+			icon:        "🚀",
+			description: "Project Initialization",
+			commands: []CommandInfo{
+				{"initProject", "Initialize a new project", []string{"mage initProject"}},
+				{"initCLI", "Initialize a CLI project", []string{"mage initCLI"}},
+				{"initLibrary", "Initialize a library project", []string{"mage initLibrary"}},
+			},
+		},
+		"recipes": {
+			icon:        "📋",
+			description: "Recipe Management",
+			commands: []CommandInfo{
+				{"recipesList", "List available recipes", []string{"mage recipesList"}},
+				{"recipesRun", "Run a specific recipe", []string{"mage recipesRun"}},
+			},
+		},
+		"update": {
+			icon:        "🔄",
+			description: "Update Management",
+			commands: []CommandInfo{
+				{"updateCheck", "Check for updates", []string{"mage updateCheck"}},
+				{"updateSelf", "Update mage-x to the latest version", []string{"mage updateSelf"}},
+			},
+		},
 	}
 
 	// Display each category
@@ -797,9 +1029,9 @@ func List() {
 	utils.Info("  mage release    # Create a release")
 
 	utils.Info("\n📖 More Help:")
-	utils.Info("  • Interactive mode: mage interactive")
-	utils.Info("  • Recipe system: mage recipes:list")
-	utils.Info("  • Help system: mage help")
+	utils.Info("  • Recipe system: mage recipesList")
+	utils.Info("  • Configuration: mage configureShow")
+	utils.Info("  • Help system: mage helpDefault")
 }
 
 // CommandInfo represents command information for the List function

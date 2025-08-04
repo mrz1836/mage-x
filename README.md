@@ -476,6 +476,63 @@ mage release            # Create a new release (alias: mage releaseDefault)
 mage auditShow          # Display audit events with optional filtering
 ```
 
+#### ⚙️ Configuration Management
+```bash
+# Configuration Commands
+mage configureInit      # Initialize a new mage configuration
+mage configureShow      # Display the current configuration
+mage configureUpdate    # Update configuration values interactively
+```
+
+#### 🏗️ Code Generation
+```bash
+# Generation Commands
+mage generateDefault    # Run go generate
+mage generateClean      # Remove generated files
+```
+
+#### 🚀 Project Initialization
+```bash
+# Initialization Commands
+mage initProject        # Initialize a new project
+mage initCLI            # Initialize a CLI project
+mage initLibrary        # Initialize a library project
+```
+
+#### 📋 Recipe Management
+```bash
+# Recipe Commands
+mage recipesList        # List available recipes
+mage recipesRun         # Run a specific recipe
+RECIPE=fresh-start mage recipesRun  # Run the fresh-start recipe
+```
+
+#### 🔄 Update Management
+```bash
+# Update Commands
+mage updateCheck        # Check for updates
+mage updateInstall      # Install the latest update
+```
+
+#### ✅ Code Validation
+```bash
+# Validation Commands
+mage vetDefault         # Run go vet
+mage vetAll             # Run go vet with all checks
+mage formatAll          # Format all Go source files
+mage formatCheck        # Check if Go source files are properly formatted
+```
+
+#### 📖 Help System
+```bash
+# Help Commands
+mage help               # Show general help
+mage helpCommands       # List all available commands
+mage helpExamples       # Show usage examples
+mage helpGettingStarted # Getting started guide
+mage helpCompletions    # Generate shell completions
+```
+
 #### 🎯 Default Targets & Aliases
 ```bash
 # Quick Access Commands
@@ -490,7 +547,7 @@ mage docs               # Generate and serve documentation (alias: mage docsDefa
 
 ### 📋 Complete Command List
 
-Run `mage -l` to see a plain list of all 59 available commands, or use `mage help` for a beautiful categorized view with descriptions and usage tips.
+Run `mage -l` to see a plain list of all available commands (90+ commands), or use `mage help` for a beautiful categorized view with descriptions and usage tips.
 
 ### 📚 Documentation System Features
 
@@ -525,26 +582,21 @@ mage docsServeBoth      # Both project and stdlib
 - **Static Building**: Enhanced markdown with metadata and navigation
 - **Build Artifacts**: JSON metadata and organized output structure
 
-### 🔧 Advanced: Additional Namespace Methods
+### 🏢 Enabling Enterprise Features
 
-MAGE-X includes 30+ namespaces with hundreds of additional methods that aren't exposed as top-level commands but can be accessed through custom magefiles:
+MAGE-X includes advanced namespaces not exposed by default to minimize dependencies and keep the core installation simple. These enterprise features can be enabled on-demand.
 
-**Additional Namespaces:**
-- **Bench** - Advanced benchmarking tools
-- **CLI** - Command-line interface helpers
-- **Configure** - Configuration management
-- **Enterprise** - Enterprise deployment and management
-- **Format** - Code formatting utilities
-- **Generate** - Code generation tools
-- **Init** - Project initialization templates
-- **Integrations** - External service integrations
-- **Recipes** - Pre-built task recipes
-- **Update** - Update management
-- **Wizard** - Interactive setup wizards
-- **Workflow** - Advanced workflow automation
-- **Yaml** - YAML configuration tools
+**Available Enterprise Namespaces:**
+- **CLI** - Bulk operations, advanced workflows, and pipeline automation
+- **Wizard** - Interactive configuration wizards for complex setups
+- **Enterprise** - Enterprise deployment and management capabilities
+- **Workflow** - Advanced automation pipelines and orchestration
+- **Integrations** - External service connections (Slack, GitHub, Jira, etc.)
+- **Bench** - Advanced benchmarking with profiling and regression detection
+- **Releases** - Multi-channel release management (stable, beta, edge)
+- **Yaml** - Advanced YAML configuration tools and validation
 
-**Example: Using Additional Methods**
+**To enable enterprise features in your magefile:**
 ```go
 //go:build mage
 
@@ -552,17 +604,39 @@ package main
 
 import "github.com/mrz1836/mage-x/pkg/mage"
 
-// Access methods not exposed in default magefile
-func FormatAll() error {
-    return mage.Format{}.All()
+// Export core namespaces (already included by default)
+type (
+    Build = mage.Build
+    Test  = mage.Test
+    // ... other default namespaces
+)
+
+// Add enterprise namespaces as needed
+type (
+    CLI         = mage.CLI
+    Wizard      = mage.Wizard
+    Enterprise  = mage.Enterprise
+    Workflow    = mage.Workflow
+    Integrations = mage.Integrations
+    Bench       = mage.Bench
+    Releases    = mage.Releases
+)
+```
+
+This approach keeps the default installation lightweight while allowing power users to access advanced features when needed.
+
+**Example: Enterprise CLI Operations**
+```go
+// Enable bulk operations across multiple repositories
+func BulkUpdate() error {
+    var cli CLI
+    return cli.Bulk()
 }
 
-func InitMicroservice() error {
-    return mage.Init{}.Microservice()
-}
-
-func RecipesList() error {
-    return mage.Recipes{}.List()
+// Run advanced workflow pipelines
+func RunPipeline() error {
+    var workflow Workflow
+    return workflow.Pipeline()
 }
 ```
 

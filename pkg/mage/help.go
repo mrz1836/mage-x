@@ -17,7 +17,7 @@ import (
 
 // Static errors for help operations
 var (
-	errHelpCommandRequired = errors.New("COMMAND environment variable is required. Usage: COMMAND=<name> mage help:command")
+	errHelpCommandRequired = errors.New("COMMAND environment variable is required. Usage: COMMAND=<name> mage helpCommand")
 	errUnsupportedShell    = errors.New("unsupported shell (supported: bash, zsh, fish)")
 	errCommandNotFound     = errors.New("command not found")
 )
@@ -57,20 +57,20 @@ Quick Start:
   mage build              # Build your project
   mage test               # Run tests
   mage lint               # Run linter
-  mage release:stable     # Create stable release
+  mage release           # Create a release
   mage interactive        # Start interactive mode
 
 Available Commands:
-  mage help:commands      # List all available commands
-  mage help:examples      # Show usage examples
-  mage help:getting-started # Getting started guide
-  mage help:completions   # Generate shell completions
+  mage helpCommands      # List all available commands
+  mage helpExamples      # Show usage examples
+  mage helpGettingStarted # Getting started guide
+  mage helpCompletions   # Generate shell completions
 
 For detailed help on any command:
-  mage help:command COMMAND_NAME
+  mage helpCommand COMMAND_NAME
 
 For interactive help:
-  mage interactive:help
+  mage help
 
 Documentation:
   https://github.com/mrz1836/mage-x`)
@@ -125,8 +125,8 @@ func (Help) Commands() error {
 
 	utils.Info("\nUsage:")
 	utils.Info("  mage COMMAND [OPTIONS]")
-	utils.Info("  mage NAMESPACE:COMMAND [OPTIONS]")
-	utils.Info("  mage help:command COMMAND_NAME")
+	utils.Info("  mage COMMAND [OPTIONS]")
+	utils.Info("  mage helpCommand COMMAND_NAME")
 
 	return nil
 }
@@ -179,7 +179,7 @@ func (Help) Command() error {
 	if len(cmd.SeeAlso) > 0 {
 		utils.Info("\nSee Also:")
 		for _, related := range cmd.SeeAlso {
-			utils.Info("  mage help:command %s", related)
+			utils.Info("  mage helpCommand %s", related)
 		}
 	}
 
@@ -252,10 +252,10 @@ func (Help) Examples() error {
 		{
 			Category: "Interactive Mode",
 			Examples: []string{
-				"mage interactive  # Start interactive mode",
-				"mage interactive:wizard  # Start guided wizard",
-				"mage recipes:list  # List available recipes",
-				"RECIPE=fresh-start mage recipes:run",
+				"mage help  # Show help",
+				"mage configureUpdate  # Start configuration wizard",
+				"mage recipesList  # List available recipes",
+				"RECIPE=fresh-start mage recipesRun",
 			},
 		},
 		{
@@ -318,15 +318,15 @@ First, install MAGE-X in your Go project:
 🏗️ Step 2: Initialize Your Project
 
 For a new project:
-  mage init:cli --name=myapp --module=github.com/user/myapp
+  mage initCLI --name=myapp --module=github.com/user/myapp
 
 For an existing project:
-  mage init:upgrade
+  mage initProject
 
 🔧 Step 3: Basic Configuration
 
-Create a mage.yaml configuration file:
-  mage yaml:init
+Create a mage configuration:
+  mage configureInit
 
 Edit the configuration to match your project needs.
 
@@ -341,38 +341,38 @@ Run tests:
 🎭 Step 5: Interactive Mode
 
 For a guided experience:
-  mage interactive
+  mage configureUpdate
 
-Or start with the wizard:
-  mage interactive:wizard
+Or show help:
+  mage help
 
 📚 Step 6: Explore Recipes
 
 Discover pre-built patterns:
-  mage recipes:list
+  mage recipesList
 
 Run a recipe:
-  RECIPE=fresh-start mage recipes:run
+  RECIPE=fresh-start mage recipesRun
 
 🚀 Step 7: Advanced Features
 
-- Multi-channel releases: mage release:stable
+- Releases: mage release
 - Code quality: mage lint
-- Security scanning: mage security:vulncheck
-- Auto-updates: mage version:check
+- Security scanning: mage toolsVulnCheck
+- Check for updates: mage updateCheck
 
 📖 Next Steps
 
-1. Read the documentation: mage help:commands
-2. Try the interactive wizard: mage interactive:wizard
-3. Set up CI/CD: RECIPE=ci-setup mage recipes:run
-4. Configure releases: mage releases:status
+1. Read the documentation: mage helpCommands
+2. Try the configuration wizard: mage configureUpdate
+3. Set up CI/CD: RECIPE=ci-setup mage recipesRun
+4. Show version: mage versionShow
 
 🆘 Getting Help
 
-- mage help:command COMMAND_NAME
-- mage interactive:help
-- mage help:examples
+- mage helpCommand COMMAND_NAME
+- mage help
+- mage helpExamples
 - GitHub: https://github.com/mrz1836/mage-x
 
 Happy coding with MAGE-X! 🎉`)
@@ -407,14 +407,13 @@ func (Help) Topics() error {
 		Description string
 		Command     string
 	}{
-		{"getting-started", "Getting started guide", "mage help:getting-started"},
-		{"commands", "List all commands", "mage help:commands"},
-		{"examples", "Usage examples", "mage help:examples"},
-		{"interactive", "Interactive mode help", "mage interactive:help"},
-		{"recipes", "Recipe system", "mage recipes:list"},
-		{"configuration", "Configuration with mage.yaml", "mage yaml:show"},
-		{"releases", "Release management", "mage releases:status"},
-		{"completions", "Shell completions", "mage help:completions"},
+		{"getting-started", "Getting started guide", "mage helpGettingStarted"},
+		{"commands", "List all commands", "mage helpCommands"},
+		{"examples", "Usage examples", "mage helpExamples"},
+		{"recipes", "Recipe system", "mage recipesList"},
+		{"configuration", "Configuration management", "mage configureShow"},
+		{"version", "Version management", "mage versionShow"},
+		{"completions", "Shell completions", "mage helpCompletions"},
 	}
 
 	utils.Info("\nAvailable Help Topics:")
@@ -430,8 +429,8 @@ func (Help) Topics() error {
 	}
 
 	utils.Info("\nUsage:")
-	utils.Info("  mage help:TOPIC")
-	utils.Info("  mage help:command COMMAND_NAME")
+	utils.Info("  mage helpTOPIC")
+	utils.Info("  mage helpCommand COMMAND_NAME")
 
 	return nil
 }
@@ -449,8 +448,8 @@ func getAllCommands() []HelpCommand {
 			Usage:       "mage build [options]",
 			Examples: []string{
 				"mage build",
-				"mage build:all",
-				"mage build:clean",
+				"mage buildAll",
+				"mage buildClean",
 			},
 			Options: []HelpOption{
 				{Name: "GO_BUILD_TAGS", Description: "Build tags", Default: ""},
@@ -467,8 +466,8 @@ func getAllCommands() []HelpCommand {
 			Usage:       "mage test [options]",
 			Examples: []string{
 				"mage test",
-				"mage test:race",
-				"mage test:cover",
+				"mage testRace",
+				"mage testCover",
 				"VERBOSE=true mage test",
 			},
 			Options: []HelpOption{
@@ -486,7 +485,7 @@ func getAllCommands() []HelpCommand {
 			Usage:       "mage lint [options]",
 			Examples: []string{
 				"mage lint",
-				"mage lint:fix",
+				"mage lintFix",
 				"LINT_TIMEOUT=5m mage lint",
 			},
 			Options: []HelpOption{
@@ -502,23 +501,23 @@ func getAllCommands() []HelpCommand {
 			Description: "Format code",
 			Usage:       "mage format [options]",
 			Examples: []string{
-				"mage format",
-				"mage format:fumpt",
-				"mage format:imports",
+				"mage formatAll",
+				"mage lintFumpt",
+				"mage formatCheck",
 			},
 			SeeAlso: []string{"lint", "test"},
 		},
 
 		// Interactive commands
 		{
-			Name:        "interactive",
-			Namespace:   "interactive",
-			Description: "Start interactive mode",
-			Usage:       "mage interactive",
+			Name:        "help",
+			Namespace:   "help",
+			Description: "Show help",
+			Usage:       "mage help",
 			Examples: []string{
-				"mage interactive",
-				"mage interactive:wizard",
-				"mage interactive:help",
+				"mage help",
+				"mage helpCommands",
+				"mage helpExamples",
 			},
 			SeeAlso: []string{"help", "recipes"},
 		},
@@ -528,11 +527,11 @@ func getAllCommands() []HelpCommand {
 			Name:        "recipes",
 			Namespace:   "recipes",
 			Description: "Recipe system for common patterns",
-			Usage:       "mage recipes:COMMAND",
+			Usage:       "mage recipes COMMAND",
 			Examples: []string{
-				"mage recipes:list",
-				"mage recipes:show fresh-start",
-				"RECIPE=fresh-start mage recipes:run",
+				"mage recipesList",
+				"mage recipesRun",
+				"RECIPE=fresh-start mage recipesRun",
 			},
 			Options: []HelpOption{
 				{Name: "RECIPE", Description: "Recipe name", Required: true},
@@ -546,11 +545,11 @@ func getAllCommands() []HelpCommand {
 			Name:        "release",
 			Namespace:   "release",
 			Description: "Create releases",
-			Usage:       "mage release:CHANNEL",
+			Usage:       "mage release [options]",
 			Examples: []string{
-				"mage release:stable",
-				"mage release:beta",
-				"VERSION=v1.2.3 mage release:stable",
+				"mage release",
+				"CHANNEL=beta mage release",
+				"VERSION=v1.2.3 mage release",
 			},
 			Options: []HelpOption{
 				{Name: "VERSION", Description: "Release version"},
@@ -564,11 +563,11 @@ func getAllCommands() []HelpCommand {
 			Name:        "init",
 			Namespace:   "init",
 			Description: "Initialize projects",
-			Usage:       "mage init:TYPE [options]",
+			Usage:       "mage init TYPE [options]",
 			Examples: []string{
-				"mage init:cli --name=myapp",
-				"mage init:library",
-				"mage init:upgrade",
+				"mage initCLI --name=myapp",
+				"mage initLibrary",
+				"mage initProject",
 			},
 			Options: []HelpOption{
 				{Name: "PROJECT_NAME", Description: "Project name"},
@@ -580,14 +579,14 @@ func getAllCommands() []HelpCommand {
 
 		// Configuration commands
 		{
-			Name:        "yaml",
-			Namespace:   "yaml",
+			Name:        "configure",
+			Namespace:   "configure",
 			Description: "Configuration management",
-			Usage:       "mage yaml:COMMAND",
+			Usage:       "mage configure COMMAND",
 			Examples: []string{
-				"mage yaml:init",
-				"mage yaml:validate",
-				"mage yaml:show",
+				"mage configureInit",
+				"mage configureShow",
+				"mage configureUpdate",
 			},
 			SeeAlso: []string{"init", "help"},
 		},
@@ -597,11 +596,11 @@ func getAllCommands() []HelpCommand {
 			Name:        "version",
 			Namespace:   "version",
 			Description: "Version management",
-			Usage:       "mage version:COMMAND",
+			Usage:       "mage version COMMAND",
 			Examples: []string{
-				"mage version:show",
-				"mage version:check",
-				"mage version:update",
+				"mage versionShow",
+				"mage versionCheck",
+				"mage versionBump",
 			},
 			SeeAlso: []string{"release", "update"},
 		},
@@ -611,11 +610,11 @@ func getAllCommands() []HelpCommand {
 			Name:        "help",
 			Namespace:   "help",
 			Description: "Help system",
-			Usage:       "mage help:COMMAND",
+			Usage:       "mage help COMMAND",
 			Examples: []string{
 				"mage help",
-				"mage help:commands",
-				"mage help:examples",
+				"mage helpCommands",
+				"mage helpExamples",
 			},
 			SeeAlso: []string{"interactive", "topics"},
 		},
@@ -627,7 +626,7 @@ func getCommandHelp(name string) (HelpCommand, error) {
 	commands := getAllCommands()
 
 	for i := range commands {
-		if commands[i].Name == name || commands[i].Namespace+":"+commands[i].Name == name {
+		if commands[i].Name == name {
 			return commands[i], nil
 		}
 	}
@@ -647,30 +646,8 @@ _mage_completions() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    # Basic commands
-    opts="build test lint format interactive recipes release init yaml version help"
-
-    # Namespace commands
-    if [[ ${cur} == *:* ]]; then
-        case "${cur%:*}" in
-            build)
-                COMPREPLY=( $(compgen -W "default all clean" -- "${cur#*:}") )
-                return 0
-                ;;
-            test)
-                COMPREPLY=( $(compgen -W "default unit race cover bench" -- "${cur#*:}") )
-                return 0
-                ;;
-            release)
-                COMPREPLY=( $(compgen -W "stable beta edge" -- "${cur#*:}") )
-                return 0
-                ;;
-            init)
-                COMPREPLY=( $(compgen -W "library cli webapi microservice tool" -- "${cur#*:}") )
-                return 0
-                ;;
-        esac
-    fi
+    # All available commands
+    opts="build buildAll buildClean buildDocker buildGenerate test testFull testUnit testRace testCover testBench testBenchShort testFuzz testFuzzShort testIntegration testShort testCoverRace lint lintAll lintFix lintVet lintFumpt lintVersion formatAll formatCheck vetDefault vetAll release deps depsUpdate depsTidy depsDownload depsOutdated depsAudit tools toolsInstall toolsUpdate toolsCheck toolsVulnCheck install installTools installBinary installStdlib uninstall mod modUpdate modTidy modVerify modDownload docs docsGenerate docsServe docsBuild docsCheck git gitStatus gitCommit gitTag gitPush version versionShow versionBump versionCheck metrics metricsLOC metricsCoverage metricsComplexity audit auditShow configure configureInit configureShow configureUpdate generate generateDefault generateClean init initProject initCLI initLibrary recipes recipesList recipesRun update updateCheck updateSelf help helpCommands helpExamples helpGettingStarted helpCompletions"
 
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
     return 0
