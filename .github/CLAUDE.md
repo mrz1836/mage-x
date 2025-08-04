@@ -4,6 +4,25 @@
 
 **mage-x** is a comprehensive build automation framework built on top of Magefile, designed to provide a complete set of build tools, workflows, and development operations for Go projects. The project provides both a library of reusable build tasks and advanced tooling for enterprise-level development.
 
+### AI Agent Ecosystem
+
+MAGE-X features a sophisticated ecosystem of **19 specialized AI agents** designed for intelligent development workflows:
+
+- **🔧 Core Development (5)**: mage-x-builder, mage-x-linter, mage-x-deps, mage-x-docs, mage-x-security
+- **🧪 Testing & Quality (2)**: mage-x-test-finder, mage-x-test-writer
+- **🚀 Release & CI/CD (3)**: mage-x-releaser, mage-x-git, mage-x-gh
+- **🏗️ Architecture & Performance (4)**: mage-x-architect, mage-x-refactor, mage-x-analyzer, mage-x-benchmark
+- **🏢 Enterprise & Workflow (3)**: mage-x-enterprise, mage-x-workflow, mage-x-wizard
+- **⚙️ Infrastructure (2)**: mage-x-config, mage-x-tools
+
+**Key Features:**
+- **Strategic Collaboration**: Agents coordinate intelligently for complex workflows
+- **Parallel Execution**: Multiple agents work simultaneously for maximum efficiency
+- **Security Integration**: All agents follow mage-x security-first patterns
+- **Enterprise Scale**: Built for managing 30+ repositories with governance
+
+See **[docs/SUB_AGENTS.md](../docs/SUB_AGENTS.md)** for complete agent documentation and collaboration patterns.
+
 ## Architecture
 
 ### Namespace Architecture
@@ -133,6 +152,13 @@ var Default = CustomBuild{}.Default
 
 ### For AI Assistants
 
+#### AI Agent Integration
+Claude Code users have access to 19 specialized mage-x agents for comprehensive development workflows:
+- **Single-Agent Tasks**: Use specialized agents like `mage-x-linter` for code quality or `mage-x-security` for security scanning
+- **Multi-Agent Workflows**: Coordinate multiple agents for complex operations (e.g., "analyze code quality and write tests" triggers parallel execution)
+- **Strategic Collaboration**: Agents automatically coordinate when their domains overlap
+- **Parallel Optimization**: Multiple agents work simultaneously for maximum efficiency
+
 #### Safe Operations
 - Read any file in the project
 - Modify namespace implementations in `pkg/mage/`
@@ -142,6 +168,7 @@ var Default = CustomBuild{}.Default
 - Add new namespace methods
 - Create examples
 - Run architecture tests
+- Coordinate with specialized mage-x agents for comprehensive workflows
 
 #### Best Practices
 - Always test with `go test ./pkg/mage/namespace_architecture_test.go -v`
@@ -392,12 +419,36 @@ When contributing to mage-x:
 
 ## Additional Resources
 
+- **[AI Agent Ecosystem](../docs/SUB_AGENTS.md)** - Complete documentation of all 19 specialized agents
 - See examples in `examples/` directory for practical usage
 - Check `docs/` for detailed documentation
 - Review existing namespace implementations for patterns
 - Use the test files as references for testing approaches
 
 The project provides a modern, flexible build automation system for Go projects with comprehensive testing demonstrating successful execution of build operations, tool management, dependency handling, and code analysis across the entire interface architecture.
+
+### AI Agent Workflow Examples
+
+#### Multi-Agent Parallel Execution
+```bash
+# Quality assurance workflow - triggers 3 agents in parallel
+"Analyze code quality, identify test gaps, and validate security"
+# Activates: mage-x-linter + mage-x-test-finder + mage-x-security
+
+# Performance optimization workflow
+"Optimize code performance and validate with benchmarks" 
+# Activates: mage-x-refactor + mage-x-benchmark + mage-x-analyzer
+
+# Release preparation workflow
+"Prepare production release with full validation"
+# Activates: mage-x-security + mage-x-docs + mage-x-releaser (coordinated sequence)
+```
+
+#### Strategic Agent Coordination
+Agents automatically coordinate when their domains overlap:
+- **mage-x-builder** automatically invokes **mage-x-linter** and **mage-x-security** for pre-build validation
+- **mage-x-test-writer** coordinates with **mage-x-benchmark** for performance test creation
+- **mage-x-releaser** works with **mage-x-git** and **mage-x-gh** for complete release workflows
 
 ## Documentation System
 

@@ -111,8 +111,8 @@ Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminate
 - **🌍 Cross-Platform Excellence**  
   _Full support for Linux, macOS, and Windows with optimized parallel execution and CPU-aware builds._
 
-- **🤖 AI Agent Ready**  
-  _Machine-readable guidelines for ChatGPT, Claude, Cursor, and other AI assistants. Your AI follows the same house rules._
+- **🤖 AI Agent Ecosystem**  
+  _19 specialized AI agents for intelligent development workflows. Comprehensive automation with strategic collaboration and parallel execution._
 
 - **📊 Enterprise Features**  
   _Audit logging, compliance reporting, and team management capabilities for organizations that need governance._
@@ -328,6 +328,7 @@ export DRY_RUN=true    # Preview version bump without making changes
 For comprehensive documentation, visit the [docs](docs) directory:
 
 - **[Getting Started](docs/README.md)** - Complete documentation index
+- **[AI Agent Ecosystem](docs/SUB_AGENTS.md)** - 19 specialized agents for intelligent development workflows
 - **[Namespace Interface Architecture](docs/NAMESPACE_INTERFACES.md)** - Modern interface-based namespace system
 - **[API Reference](docs/API_REFERENCE.md)** - Complete interface and API documentation
 - **[Enterprise Features](docs/ENTERPRISE.md)** - Enterprise capabilities guide
@@ -701,16 +702,36 @@ Read more about our [code standards](.github/CODE_STANDARDS.md) and [contributio
 
 <br/>
 
-## 🤖 AI Compliance
+## 🤖 AI Agent Ecosystem
 
-MAGE-X includes comprehensive AI assistant guidelines:
+MAGE-X features a comprehensive ecosystem of 19 specialized AI agents designed for intelligent development workflows:
 
-- **[AGENTS.md](.github/AGENTS.md)** — Complete rules for coding style, workflows, and best practices
-- **[CLAUDE.md](.github/CLAUDE.md)** — Guidelines for AI assistant integration
-- **[.cursorrules](.cursorrules)** — Machine-readable policies for Cursor and similar tools
-- **[sweep.yaml](.github/sweep.yaml)** — Configuration for Sweep AI code review
+### Agent Categories
+- **🔧 Core Development (5)**: Build, lint, deps, docs, security specialists
+- **🧪 Testing & Quality (2)**: Coverage analysis and comprehensive test implementation  
+- **🚀 Release & CI/CD (3)**: Version management, git operations, GitHub automation
+- **🏗️ Architecture & Performance (4)**: Code architecture, refactoring, analysis, benchmarking
+- **🏢 Enterprise & Workflow (3)**: Governance, automation pipelines, interactive guidance
+- **⚙️ Infrastructure (2)**: Configuration management, development environment setup
 
-These files ensure that AI assistants follow the same high standards as human contributors, maintaining code quality and consistency across all contributions.
+### Key Features
+- **🤝 Strategic Collaboration**: Agents coordinate intelligently for complex workflows
+- **⚡ Parallel Execution**: Multiple agents work simultaneously for maximum efficiency
+- **🛡️ Security Integration**: All agents follow mage-x security-first patterns
+- **🏢 Enterprise Scale**: Built for managing 30+ repositories with governance and compliance
+
+### Documentation & Guidelines
+- **[AI Agent Ecosystem](docs/SUB_AGENTS.md)** — Complete agent directory and collaboration patterns
+- **[AGENTS.md](.github/AGENTS.md)** — Development rules and architectural guidelines
+- **[CLAUDE.md](.github/CLAUDE.md)** — AI assistant integration guidelines
+- **[.cursorrules](.cursorrules)** — Machine-readable policies for AI development tools
+
+**Example Multi-Agent Workflow:**
+```bash
+# Triggers parallel execution of multiple specialized agents
+"Analyze code quality, write comprehensive tests, and optimize performance"
+```
+This automatically coordinates mage-x-linter, mage-x-test-finder, mage-x-test-writer, and mage-x-analyzer for comprehensive development workflow optimization.
 
 <br/>
 
