@@ -84,8 +84,13 @@ func withTestEnvironment(t *testing.T, envVars map[string]string, testFunc func(
 
 	// Set test environment variables
 	for key, value := range envVars {
-		err := os.Setenv(key, value)
-		require.NoError(t, err)
+		if value == "" {
+			err := os.Unsetenv(key)
+			require.NoError(t, err)
+		} else {
+			err := os.Setenv(key, value)
+			require.NoError(t, err)
+		}
 	}
 
 	// If testing empty environments, explicitly unset WORKFLOW
@@ -112,8 +117,6 @@ func withTestEnvironment(t *testing.T, envVars map[string]string, testFunc func(
 
 // Test WorkflowExecution.Execute() with environment variables
 func TestWorkflow_Execute_EnvironmentVariables(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name        string
 		envVars     map[string]string
@@ -121,8 +124,10 @@ func TestWorkflow_Execute_EnvironmentVariables(t *testing.T) {
 		errorMsg    string
 	}{
 		{
-			name:        "missing workflow environment variable",
-			envVars:     map[string]string{},
+			name: "missing workflow environment variable",
+			envVars: map[string]string{
+				"WORKFLOW": "", // Explicitly set to empty to ensure it's unset
+			},
 			expectError: true,
 			errorMsg:    "WORKFLOW environment variable is required",
 		},
@@ -132,14 +137,12 @@ func TestWorkflow_Execute_EnvironmentVariables(t *testing.T) {
 				"WORKFLOW": "test-workflow",
 			},
 			expectError: true, // Will fail because workflow doesn't exist
-			errorMsg:    "failed to load workflow",
+			errorMsg:    "failed to load workflow 'test-workflow'",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			withTestEnvironment(t, tt.envVars, func() {
 				workflow := Workflow{}
 				err := workflow.Execute()
