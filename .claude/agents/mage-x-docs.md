@@ -2,7 +2,7 @@
 name: mage-x-docs
 description: Use proactively for comprehensive Go documentation generation, validation, and serving in the mage-x project with hybrid pkgsite/godoc support
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: cyan
 ---
 

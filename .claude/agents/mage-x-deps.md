@@ -3,7 +3,7 @@ name: mage-x-deps
 description: Use proactively for dependency management, go.mod operations, security audits, and version updates in Go projects. Specialist for analyzing dependencies, performing security scans, and maintaining module hygiene across multi-repository architectures.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
 color: purple
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

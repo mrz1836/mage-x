@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-linter), Task(mage-x-test-writer), Task(mage-x-security), Task(mage-x-refactor), Bash(mage lint:*), Bash(mage test:*), Bash(go test:*), Read, Write, MultiEdit, Grep, Glob, LS
 argument-hint: [all|lint|test|security]
 description: Fix linting issues and test errors with parallel agent execution
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

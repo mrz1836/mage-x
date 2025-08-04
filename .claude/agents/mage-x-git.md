@@ -2,7 +2,7 @@
 name: mage-x-git
 description: Use proactively for Git operations, branch management, commit validation, tag creation, and multi-repository coordination in the mage-x project
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: green
 ---
 

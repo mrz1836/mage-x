@@ -2,7 +2,7 @@
 name: mage-x-releaser
 description: Specialized agent for version management, multi-channel releases, changelog generation, and asset distribution in the mage-x project. Use proactively for release workflows, version bumping, and release asset preparation.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: orange
 ---
 

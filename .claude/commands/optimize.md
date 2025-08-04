@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-benchmark), Task(mage-x-analyzer), Task(mage-x-refactor), Task(mage-x-builder), Bash(go test -bench:*), Bash(go build:*), Read, Write, MultiEdit, Grep, Glob
 argument-hint: [performance|memory|build|all]
 description: Performance analysis and optimization with benchmarking
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

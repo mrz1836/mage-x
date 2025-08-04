@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-docs), Task(mage-x-analyzer), Task(mage-x-refactor), Read, Grep, Glob, LS
 argument-hint: [strict|permissive]
 description: Review if documented features still exist in codebase
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

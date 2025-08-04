@@ -2,7 +2,7 @@
 name: mage-x-benchmark
 description: Specialized agent for performance testing, benchmarking, profiling, and optimization validation in the mage-x project. Use proactively for performance analysis, benchmark execution, bottleneck identification, and optimization validation.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

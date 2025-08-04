@@ -3,7 +3,7 @@ name: mage-x-config
 description: Use proactively for configuration management, YAML validation, environment handling, and defaults management in the mage-x project. Specialist for configuration governance across repositories.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
 color: brown
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

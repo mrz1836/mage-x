@@ -3,7 +3,7 @@ name: mage-x-analyzer
 description: Use proactively for comprehensive code metrics, complexity analysis, performance insights, and optimization recommendations in the mage-x project
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
 color: cyan
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

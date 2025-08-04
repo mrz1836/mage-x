@@ -2,7 +2,7 @@
 name: mage-x-enterprise
 description: Use proactively for audit logging, compliance reporting, team management, and enterprise governance features in the mage-x project (Phase 4). Specialist for enterprise security policies, compliance frameworks, and analytics.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

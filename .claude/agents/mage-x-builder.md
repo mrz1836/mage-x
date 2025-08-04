@@ -2,7 +2,7 @@
 name: mage-x-builder
 description: Specialized agent for build orchestration, cross-platform builds, Docker builds, and compilation management. Use proactively for comprehensive build workflows, multi-platform compilation, build optimization, and CI/CD integration in the mage-x project.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: blue
 ---
 

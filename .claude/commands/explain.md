@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-analyzer), Task(mage-x-architect), Task(mage-x-docs), Task(mage-x-test-finder), Read, Grep, Glob, LS
 argument-hint: [function|file|architecture|feature]
 description: Multi-agent code explanation and documentation
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

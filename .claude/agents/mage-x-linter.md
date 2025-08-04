@@ -2,7 +2,7 @@
 name: mage-x-linter
 description: Use proactively for code quality, static analysis, formatting, and linting operations in the mage-x project. Specialist for maintaining exceptional code standards, applying automated fixes, and enforcing architectural patterns.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: yellow
 ---
 

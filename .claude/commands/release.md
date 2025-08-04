@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-releaser), Task(mage-x-git), Task(mage-x-gh), Task(mage-x-security), Task(mage-x-docs), Task(mage-x-linter), Task(mage-x-test-writer), Bash(mage release:*), Bash(mage version:*), Bash(git:*), Bash(gh release:*), Read, Write, MultiEdit, Grep, Glob
 argument-hint: [version|channel|dry-run]
 description: Comprehensive release preparation with parallel validation
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

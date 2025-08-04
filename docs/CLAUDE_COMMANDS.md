@@ -278,13 +278,13 @@ All commands integrate seamlessly with MAGE-X build system:
 
 ## Performance Characteristics
 
-| Command | Agents Used | Parallel Phases | Typical Duration |
-|---------|-------------|-----------------|------------------|
-| `/test` | 6 | 3 | 30-60s |
-| `/quality` | 6 | 2 | 20-40s |
-| `/fix` | 4 | 3 | 15-30s |
-| `/release` | 6 | 3 | 45-90s |
-| `/security` | 4 | 3 | 25-45s |
+| Command     | Agents Used | Parallel Phases | Typical Duration |
+|-------------|-------------|-----------------|------------------|
+| `/test`     | 6           | 3               | 30-60s           |
+| `/quality`  | 6           | 2               | 20-40s           |
+| `/fix`      | 4           | 3               | 15-30s           |
+| `/release`  | 6           | 3               | 45-90s           |
+| `/security` | 4           | 3               | 25-45s           |
 
 ## Troubleshooting
 

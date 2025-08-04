@@ -2,7 +2,7 @@
 name: mage-x-workflow
 description: Specialized agent for CI/CD pipeline creation, workflow orchestration, automation patterns, and workflow management in the mage-x project. Use proactively for designing GitHub Actions workflows, optimizing CI/CD pipelines, and implementing enterprise automation patterns.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: lime
 ---
 

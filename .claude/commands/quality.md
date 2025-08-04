@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-linter), Task(mage-x-test-finder), Task(mage-x-security), Task(mage-x-analyzer), Task(mage-x-architect), Task(mage-x-benchmark), Bash(mage lint:*), Bash(mage test:*), Bash(mage metrics:*), Read, Grep, Glob, LS
 argument-hint: [full|quick|security|performance]
 description: Comprehensive code quality assessment with parallel analysis
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

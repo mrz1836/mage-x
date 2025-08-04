@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-test-finder), Task(mage-x-test-writer), Task(mage-x-analyzer), Task(mage-x-security), Task(mage-x-linter), Task(mage-x-architect), Bash(mage test:*), Bash(go test:*), Read, Write, MultiEdit, Grep, Glob, LS
 argument-hint: [specific-path-or-namespace]
 description: Create comprehensive Go tests with parallel agent execution
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

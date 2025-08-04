@@ -3,7 +3,7 @@ name: mage-x-refactor
 description: Use proactively for code refactoring, pattern application, technical debt reduction, and code modernization in the mage-x project. Specialist for improving code quality, applying Go best practices, and safe code transformation.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
 color: magenta
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

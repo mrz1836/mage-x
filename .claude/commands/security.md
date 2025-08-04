@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-security), Task(mage-x-deps), Task(mage-x-workflow), Task(mage-x-refactor), Bash(mage tools:vulncheck), Bash(go list:*), Bash(govulncheck:*), Read, Write, MultiEdit, Grep, Glob, LS
 argument-hint: [full|deps|code|secrets|fix]
 description: Comprehensive security audit with automated remediation
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

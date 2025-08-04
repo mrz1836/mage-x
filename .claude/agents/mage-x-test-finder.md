@@ -3,7 +3,7 @@ name: mage-x-test-finder
 description: Use proactively to identify Go code lacking test coverage and recommend comprehensive testing strategies for the mage-x project, with strategic agent collaboration and parallel testing optimization
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
 color: pink
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

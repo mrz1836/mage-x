@@ -2,7 +2,7 @@
 name: mage-x-wizard
 description: Use proactively for interactive setup, guided operations, user assistance, and configuration wizards in the mage-x project. Specialist for creating step-by-step workflows, onboarding new users, and providing contextual help throughout complex operations.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: purple
 ---
 

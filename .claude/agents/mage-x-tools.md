@@ -3,7 +3,7 @@ name: mage-x-tools
 description: Use proactively for tool installation, version management, dependency checking, and environment setup in the mage-x project. Specialist for managing Go toolchain, development dependencies, and enterprise tool governance.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
 color: blue
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-analyzer), Task(mage-x-refactor), Task(mage-x-architect), Task(mage-x-linter), Read, Write, MultiEdit, Grep, Glob, LS
 argument-hint: [aggressive|conservative]
 description: Remove duplicate code through intelligent refactoring
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

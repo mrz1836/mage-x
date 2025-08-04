@@ -3,7 +3,7 @@ name: mage-x-architect
 description: Use proactively for namespace design, interface validation, architecture compliance, and pattern enforcement in the mage-x project. Specialist for reviewing 30+ namespace system, interface-based architecture, factory functions, and registry patterns.
 tools: Read, Write, MultiEdit, Grep, Glob, LS
 color: indigo
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

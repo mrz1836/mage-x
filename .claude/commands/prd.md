@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-wizard), Task(mage-x-architect), Task(mage-x-analyzer), Task(mage-x-docs), Read, Write, Grep, Glob, LS
 argument-hint: [feature-name]
 description: Generate comprehensive product requirement documents
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

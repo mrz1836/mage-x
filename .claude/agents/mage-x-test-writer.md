@@ -2,7 +2,7 @@
 name: mage-x-test-writer
 description: Use proactively for writing comprehensive Go tests including unit tests, integration tests, benchmarks, and fuzz tests following Go best practices, mage-x patterns, and strategic agent collaboration
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: white
 ---
 

@@ -2,7 +2,7 @@
 allowed-tools: Task(mage-x-architect), Task(mage-x-analyzer), Task(mage-x-refactor), Task(mage-x-linter), Read, Grep, Glob, LS
 argument-hint: [review|validate|suggest]
 description: Architecture compliance review and improvement suggestions
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 ## Context

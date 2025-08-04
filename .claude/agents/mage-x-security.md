@@ -2,7 +2,7 @@
 name: mage-x-security
 description: Use proactively for security scanning, vulnerability detection, command validation, and security compliance in the mage-x project. Specialist for reviewing CommandExecutor usage, preventing command injection, and generating security compliance reports.
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: red
 ---
 

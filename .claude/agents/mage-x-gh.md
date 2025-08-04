@@ -2,7 +2,7 @@
 name: mage-x-gh
 description: Use proactively for GitHub operations including PR management, issue triage, release automation, GitHub CLI operations, and GitHub Actions workflow management in the mage-x project
 tools: Read, Write, MultiEdit, Grep, Glob, Bash, LS
-model: sonnet
+model: claude-sonnet-4-20250514
 color: purple
 ---
 
