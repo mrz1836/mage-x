@@ -213,7 +213,7 @@ func TestAdd(t *testing.T) {
 			Output: "bin",
 		},
 		Test: TestConfig{
-			Parallel: true,
+			Parallel: 1,
 			Cover:    true,
 		},
 		Lint: LintConfig{
