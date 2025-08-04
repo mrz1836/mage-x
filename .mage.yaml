@@ -35,7 +35,7 @@ build:
 
 test:
   # Run tests in parallel (disabled to avoid integration test conflicts)
-  parallel: false
+  parallel: 1
 
   # Test timeout (increased for integration tests)
   timeout: 20m
@@ -53,7 +53,7 @@ test:
   coverpkg: []
 
   # Build tags for tests
-  tags: []
+  tags: ""
 
   # Skip fuzz tests
   skip_fuzz: false

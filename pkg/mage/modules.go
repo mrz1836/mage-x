@@ -25,6 +25,11 @@ type ModuleInfo struct {
 	Name     string // Short name for display (last part of module path)
 }
 
+// GetPath returns the module path (for builder interface compatibility)
+func (m *ModuleInfo) GetPath() string {
+	return m.Path
+}
+
 // findAllModules discovers all go.mod files in the project, excluding vendor directories
 func findAllModules() ([]ModuleInfo, error) {
 	// Get the root directory

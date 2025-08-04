@@ -396,3 +396,103 @@ func (c *Config) Validate() error {
 func (c *Config) Save(_ string) error {
 	return SaveConfig(c)
 }
+
+// Builder interface methods for Config
+func (c *Config) GetLint() LintConfigInterface {
+	return &c.Lint
+}
+
+func (c *Config) GetBuild() BuildConfigInterface {
+	return &c.Build
+}
+
+func (c *Config) GetTest() TestConfigInterface {
+	return &c.Test
+}
+
+// LintConfigInterface methods
+type LintConfigInterface interface {
+	GetTimeout() string
+}
+
+func (l *LintConfig) GetTimeout() string {
+	return l.Timeout
+}
+
+// BuildConfigInterface methods
+type BuildConfigInterface interface {
+	GetVerbose() bool
+	GetParallel() int
+	GetTags() []string
+}
+
+func (b *BuildConfig) GetVerbose() bool {
+	return b.Verbose
+}
+
+func (b *BuildConfig) GetParallel() int {
+	return b.Parallel
+}
+
+func (b *BuildConfig) GetTags() []string {
+	return b.Tags
+}
+
+// TestConfigInterface methods
+type TestConfigInterface interface {
+	GetTimeout() string
+	GetIntegrationTimeout() string
+	GetIntegrationTag() string
+	GetCoverMode() string
+	GetParallel() int
+	GetTags() string
+	GetShuffle() bool
+	GetBenchCPU() int
+	GetBenchTime() string
+	GetBenchMem() bool
+	GetCoverageExclude() []string
+}
+
+func (t *TestConfig) GetTimeout() string {
+	return t.Timeout
+}
+
+func (t *TestConfig) GetIntegrationTimeout() string {
+	return t.IntegrationTimeout
+}
+
+func (t *TestConfig) GetIntegrationTag() string {
+	return t.IntegrationTag
+}
+
+func (t *TestConfig) GetCoverMode() string {
+	return t.CoverMode
+}
+
+func (t *TestConfig) GetParallel() int {
+	return t.Parallel
+}
+
+func (t *TestConfig) GetTags() string {
+	return t.Tags
+}
+
+func (t *TestConfig) GetShuffle() bool {
+	return t.Shuffle
+}
+
+func (t *TestConfig) GetBenchCPU() int {
+	return t.BenchCPU
+}
+
+func (t *TestConfig) GetBenchTime() string {
+	return t.BenchTime
+}
+
+func (t *TestConfig) GetBenchMem() bool {
+	return t.BenchMem
+}
+
+func (t *TestConfig) GetCoverageExclude() []string {
+	return t.CoverageExclude
+}

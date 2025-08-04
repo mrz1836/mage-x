@@ -5,9 +5,31 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
+
+// LintConfig interface provides access to lint configuration
+type LintConfig interface {
+	GetTimeout() string
+}
+
+// BuildConfig interface provides access to build configuration
+type BuildConfig interface {
+	GetVerbose() bool
+	GetParallel() int
+	GetTags() []string
+}
+
+// Config interface provides access to configuration needed by builders
+type Config interface {
+	GetLint() LintConfig
+	GetBuild() BuildConfig
+}
+
+// Module interface provides access to module information
+type Module interface {
+	GetPath() string
+}
 
 // LintOptions contains options for lint commands
 type LintOptions struct {
@@ -19,16 +41,16 @@ type LintOptions struct {
 
 // LintCommandBuilder builds lint-related commands
 type LintCommandBuilder struct {
-	config *mage.Config
+	config Config
 }
 
 // NewLintCommandBuilder creates a new lint command builder
-func NewLintCommandBuilder(config *mage.Config) *LintCommandBuilder {
+func NewLintCommandBuilder(config Config) *LintCommandBuilder {
 	return &LintCommandBuilder{config: config}
 }
 
 // BuildGolangciArgs builds arguments for golangci-lint
-func (b *LintCommandBuilder) BuildGolangciArgs(module mage.Module, options LintOptions) []string {
+func (b *LintCommandBuilder) BuildGolangciArgs(module Module, options LintOptions) []string {
 	args := []string{"run"}
 
 	// Check for config file
@@ -40,12 +62,12 @@ func (b *LintCommandBuilder) BuildGolangciArgs(module mage.Module, options LintO
 	}
 
 	// Add timeout
-	if b.config.Lint.Timeout != "" {
-		args = append(args, "--timeout", b.config.Lint.Timeout)
+	if timeout := b.config.GetLint().GetTimeout(); timeout != "" {
+		args = append(args, "--timeout", timeout)
 	}
 
 	// Add verbose flag
-	if b.config.Build.Verbose {
+	if b.config.GetBuild().GetVerbose() {
 		args = append(args, "--verbose")
 	}
 
@@ -65,13 +87,13 @@ func (b *LintCommandBuilder) BuildGolangciArgs(module mage.Module, options LintO
 	}
 
 	// Add concurrency based on build parallel setting
-	if b.config.Build.Parallel > 0 {
-		args = append(args, "--concurrency", fmt.Sprintf("%d", b.config.Build.Parallel))
+	if parallel := b.config.GetBuild().GetParallel(); parallel > 0 {
+		args = append(args, "--concurrency", fmt.Sprintf("%d", parallel))
 	}
 
 	// Add build tags
-	if len(b.config.Build.Tags) > 0 {
-		args = append(args, "--build-tags", strings.Join(b.config.Build.Tags, ","))
+	if tags := b.config.GetBuild().GetTags(); len(tags) > 0 {
+		args = append(args, "--build-tags", strings.Join(tags, ","))
 	}
 
 	// Always lint all packages in the module
@@ -85,12 +107,12 @@ func (b *LintCommandBuilder) BuildVetArgs() []string {
 	args := []string{"vet"}
 
 	// Add build tags
-	if len(b.config.Build.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(b.config.Build.Tags, ","))
+	if tags := b.config.GetBuild().GetTags(); len(tags) > 0 {
+		args = append(args, "-tags", strings.Join(tags, ","))
 	}
 
 	// Add verbose output if requested
-	if b.config.Build.Verbose {
+	if b.config.GetBuild().GetVerbose() {
 		args = append(args, "-v")
 	}
 
@@ -108,8 +130,8 @@ func (b *LintCommandBuilder) BuildStaticcheckArgs() []string {
 	args = append(args, "-f", "text")
 
 	// Add build tags
-	if len(b.config.Build.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(b.config.Build.Tags, ","))
+	if tags := b.config.GetBuild().GetTags(); len(tags) > 0 {
+		args = append(args, "-tags", strings.Join(tags, ","))
 	}
 
 	// Check all packages
@@ -154,10 +176,7 @@ func (b *LintCommandBuilder) BuildGofumptArgs(extra bool) []string {
 func (b *LintCommandBuilder) BuildGoimportsArgs() []string {
 	args := []string{"-w"}
 
-	// Add local prefix based on module name
-	if b.config.Project.Module != "" {
-		args = append(args, "-local", b.config.Project.Module)
-	}
+	// Add local prefix based on module name - temporarily removed until Project interface is added
 
 	// Format current directory
 	args = append(args, ".")
@@ -166,9 +185,9 @@ func (b *LintCommandBuilder) BuildGoimportsArgs() []string {
 }
 
 // findLintConfig finds the appropriate lint config file
-func (b *LintCommandBuilder) findLintConfig(module mage.Module) string {
+func (b *LintCommandBuilder) findLintConfig(module Module) string {
 	// Check for config file in module directory
-	configPath := filepath.Join(module.Path, ".golangci.json")
+	configPath := filepath.Join(module.GetPath(), ".golangci.json")
 	if utils.FileExists(configPath) {
 		return configPath
 	}
@@ -185,7 +204,7 @@ func (b *LintCommandBuilder) findLintConfig(module mage.Module) string {
 	}
 
 	// Check for YAML config as fallback
-	configPath = filepath.Join(module.Path, ".golangci.yml")
+	configPath = filepath.Join(module.GetPath(), ".golangci.yml")
 	if utils.FileExists(configPath) {
 		return configPath
 	}

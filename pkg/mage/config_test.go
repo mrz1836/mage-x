@@ -97,7 +97,7 @@ func (ts *ConfigTestSuite) TestDefaultConfig() {
 		ts.Require().Contains(config.Build.Platforms, "windows/amd64")
 
 		// Test test defaults
-		ts.Require().True(config.Test.Parallel)
+		ts.Require().Positive(config.Test.Parallel)
 		ts.Require().Equal("10m", config.Test.Timeout)
 		ts.Require().Equal("atomic", config.Test.CoverMode)
 

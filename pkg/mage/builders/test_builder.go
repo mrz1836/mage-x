@@ -6,9 +6,34 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
+
+// TestConfig interface provides access to test configuration
+type TestConfig interface {
+	GetTimeout() string
+	GetIntegrationTimeout() string
+	GetIntegrationTag() string
+	GetCoverMode() string
+	GetParallel() int
+	GetTags() string
+	GetShuffle() bool
+	GetBenchCPU() int
+	GetBenchTime() string
+	GetBenchMem() bool
+	GetCoverageExclude() []string
+}
+
+// TestBuildConfig interface provides access to build configuration for tests
+type TestBuildConfig interface {
+	GetVerbose() bool
+}
+
+// TestConfigProvider interface provides access to configuration needed by test builders
+type TestConfigProvider interface {
+	GetTest() TestConfig
+	GetBuild() TestBuildConfig
+}
 
 // TestOptions contains options for test commands
 type TestOptions struct {
@@ -23,11 +48,11 @@ type TestOptions struct {
 
 // TestCommandBuilder builds test-related commands
 type TestCommandBuilder struct {
-	config *mage.Config
+	config TestConfigProvider
 }
 
 // NewTestCommandBuilder creates a new test command builder
-func NewTestCommandBuilder(config *mage.Config) *TestCommandBuilder {
+func NewTestCommandBuilder(config TestConfigProvider) *TestCommandBuilder {
 	return &TestCommandBuilder{config: config}
 }
 
@@ -55,11 +80,11 @@ func (b *TestCommandBuilder) BuildIntegrationTestArgs(options TestOptions) []str
 	args := b.buildBaseTestArgs(options)
 
 	// Integration tests typically run longer
-	args = append(args, "-timeout", b.config.Test.IntegrationTimeout)
+	args = append(args, "-timeout", b.config.GetTest().GetIntegrationTimeout())
 
 	// Add integration tag if configured
-	if b.config.Test.IntegrationTag != "" {
-		args = append(args, "-tags", b.config.Test.IntegrationTag)
+	if tag := b.config.GetTest().GetIntegrationTag(); tag != "" {
+		args = append(args, "-tags", tag)
 	}
 
 	// Add pattern or default to all packages
@@ -85,8 +110,8 @@ func (b *TestCommandBuilder) BuildCoverageArgs(options TestOptions) []string {
 
 	if options.CoverageMode != "" {
 		args = append(args, "-covermode="+options.CoverageMode)
-	} else if b.config.Test.CoverageMode != "" {
-		args = append(args, "-covermode="+b.config.Test.CoverageMode)
+	} else if mode := b.config.GetTest().GetCoverMode(); mode != "" {
+		args = append(args, "-covermode="+mode)
 	}
 
 	// Add pattern or default to all packages
@@ -107,17 +132,17 @@ func (b *TestCommandBuilder) BuildBenchmarkArgs(pattern string) []string {
 	args = append(args, "-run", "^$")
 
 	// Add CPU count if configured
-	if b.config.Test.BenchCPU > 0 {
-		args = append(args, "-cpu", strconv.Itoa(b.config.Test.BenchCPU))
+	if cpu := b.config.GetTest().GetBenchCPU(); cpu > 0 {
+		args = append(args, "-cpu", strconv.Itoa(cpu))
 	}
 
 	// Add benchmark time if configured
-	if b.config.Test.BenchTime != "" {
-		args = append(args, "-benchtime", b.config.Test.BenchTime)
+	if benchTime := b.config.GetTest().GetBenchTime(); benchTime != "" {
+		args = append(args, "-benchtime", benchTime)
 	}
 
 	// Add benchmark memory flag if configured
-	if b.config.Test.BenchMem {
+	if b.config.GetTest().GetBenchMem() {
 		args = append(args, "-benchmem")
 	}
 
@@ -129,13 +154,13 @@ func (b *TestCommandBuilder) buildBaseTestArgs(options TestOptions) []string {
 	args := []string{"test"}
 
 	// Add verbose flag
-	if b.config.Build.Verbose || utils.GetEnv("VERBOSE", "") == "true" || utils.GetEnv("TEST_VERBOSE", "") == "true" {
+	if b.config.GetBuild().GetVerbose() || utils.GetEnv("VERBOSE", "") == "true" || utils.GetEnv("TEST_VERBOSE", "") == "true" {
 		args = append(args, "-v")
 	}
 
 	// Add timeout
-	if b.config.Test.Timeout != "" {
-		args = append(args, "-timeout", b.config.Test.Timeout)
+	if timeout := b.config.GetTest().GetTimeout(); timeout != "" {
+		args = append(args, "-timeout", timeout)
 	}
 
 	// Add race detection
@@ -144,8 +169,8 @@ func (b *TestCommandBuilder) buildBaseTestArgs(options TestOptions) []string {
 	}
 
 	// Add parallel flag
-	if b.config.Test.Parallel > 0 {
-		args = append(args, "-parallel", strconv.Itoa(b.config.Test.Parallel))
+	if parallel := b.config.GetTest().GetParallel(); parallel > 0 {
+		args = append(args, "-parallel", strconv.Itoa(parallel))
 	}
 
 	// Add custom test flags from environment
@@ -154,12 +179,12 @@ func (b *TestCommandBuilder) buildBaseTestArgs(options TestOptions) []string {
 	}
 
 	// Add build tags
-	if b.config.Test.Tags != "" {
-		args = append(args, "-tags", b.config.Test.Tags)
+	if tags := b.config.GetTest().GetTags(); tags != "" {
+		args = append(args, "-tags", tags)
 	}
 
 	// Add test shuffle
-	if b.config.Test.Shuffle && !options.Coverage {
+	if b.config.GetTest().GetShuffle() && !options.Coverage {
 		args = append(args, "-shuffle=on")
 	}
 
@@ -179,8 +204,8 @@ func (b *TestCommandBuilder) GetCoverageExcludePackages() []string {
 	}
 
 	// Add custom excludes from config
-	if len(b.config.Test.CoverageExclude) > 0 {
-		excludes = append(excludes, b.config.Test.CoverageExclude...)
+	if exclude := b.config.GetTest().GetCoverageExclude(); len(exclude) > 0 {
+		excludes = append(excludes, exclude...)
 	}
 
 	return excludes
