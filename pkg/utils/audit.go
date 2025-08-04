@@ -79,31 +79,147 @@ func DefaultAuditConfig() AuditConfig {
 	}
 }
 
-var (
-	// globalAuditLogger is the singleton audit logger instance
-	globalAuditLogger *AuditLogger //nolint:gochecknoglobals // Required for audit singleton
-	auditOnce         sync.Once    //nolint:gochecknoglobals // Required for singleton initialization
-)
+// AuditRegistry manages audit logger instances with thread-safe access
+type AuditRegistry struct {
+	mu       sync.RWMutex
+	loggers  map[string]*AuditLogger
+	default_ *AuditLogger
+}
 
-// GetAuditLogger returns the global audit logger instance
+// NewAuditRegistry creates a new audit registry
+func NewAuditRegistry() *AuditRegistry {
+	return &AuditRegistry{
+		loggers: make(map[string]*AuditLogger),
+	}
+}
+
+// defaultRegistry is the package-level registry for backward compatibility
+var defaultRegistry = NewAuditRegistry() //nolint:gochecknoglobals // Needed for backward compatibility
+
+// GetOrCreateLogger gets or creates an audit logger with the given name
+func (r *AuditRegistry) GetOrCreateLogger(name string, config *AuditConfig) *AuditLogger {
+	r.mu.RLock()
+	logger, exists := r.loggers[name]
+	r.mu.RUnlock()
+
+	if exists {
+		return logger
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if existingLogger, exists := r.loggers[name]; exists {
+		return existingLogger
+	}
+
+	// Create new logger
+	logger = NewAuditLogger(config)
+	r.loggers[name] = logger
+
+	return logger
+}
+
+// GetLogger retrieves an existing logger by name
+func (r *AuditRegistry) GetLogger(name string) (*AuditLogger, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	logger, exists := r.loggers[name]
+	return logger, exists
+}
+
+// SetDefaultLogger sets the default logger for the registry
+func (r *AuditRegistry) SetDefaultLogger(logger *AuditLogger) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.default_ = logger
+}
+
+// GetDefaultLogger returns the default logger, creating one if necessary
+func (r *AuditRegistry) GetDefaultLogger() *AuditLogger {
+	r.mu.RLock()
+	if r.default_ != nil {
+		defer r.mu.RUnlock()
+		return r.default_
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if r.default_ != nil {
+		return r.default_
+	}
+
+	// Create default logger with environment-based configuration
+	config := DefaultAuditConfig()
+
+	// Check if audit is enabled via environment variable
+	if os.Getenv("MAGE_AUDIT_ENABLED") == "true" {
+		config.Enabled = true
+	}
+
+	// Override database path if specified
+	if dbPath := os.Getenv("MAGE_AUDIT_DB"); dbPath != "" {
+		config.DatabasePath = dbPath
+	}
+
+	r.default_ = NewAuditLogger(&config)
+	return r.default_
+}
+
+// CloseAll closes all registered loggers
+func (r *AuditRegistry) CloseAll() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var firstErr error
+	for name, logger := range r.loggers {
+		if err := logger.Close(); err != nil && firstErr == nil {
+			firstErr = fmt.Errorf("failed to close logger %s: %w", name, err)
+		}
+	}
+
+	if r.default_ != nil {
+		if err := r.default_.Close(); err != nil && firstErr == nil {
+			firstErr = fmt.Errorf("failed to close default logger: %w", err)
+		}
+	}
+
+	// Clear the maps
+	r.loggers = make(map[string]*AuditLogger)
+	r.default_ = nil
+
+	return firstErr
+}
+
+// GetAuditLogger returns the default audit logger instance for backward compatibility
 func GetAuditLogger() *AuditLogger {
-	auditOnce.Do(func() {
-		config := DefaultAuditConfig()
+	return defaultRegistry.GetDefaultLogger()
+}
 
-		// Check if audit is enabled via environment variable
-		if os.Getenv("MAGE_AUDIT_ENABLED") == "true" {
-			config.Enabled = true
-		}
+// GetAuditRegistry returns the default audit registry for advanced usage
+func GetAuditRegistry() *AuditRegistry {
+	return defaultRegistry
+}
 
-		// Override database path if specified
-		if dbPath := os.Getenv("MAGE_AUDIT_DB"); dbPath != "" {
-			config.DatabasePath = dbPath
-		}
+// NewAuditLoggerWithName creates a named audit logger that can be retrieved later
+func NewAuditLoggerWithName(name string, config *AuditConfig) *AuditLogger {
+	return defaultRegistry.GetOrCreateLogger(name, config)
+}
 
-		globalAuditLogger = NewAuditLogger(&config)
-	})
+// GetAuditLoggerByName retrieves an existing named audit logger
+func GetAuditLoggerByName(name string) (*AuditLogger, bool) {
+	return defaultRegistry.GetLogger(name)
+}
 
-	return globalAuditLogger
+// CloseAllAuditLoggers closes all audit loggers managed by the default registry
+func CloseAllAuditLoggers() error {
+	return defaultRegistry.CloseAll()
 }
 
 // NewAuditLogger creates a new audit logger with the given configuration

@@ -869,52 +869,95 @@ func (r *DefaultNamespaceRegistry) SetWorkflow(workflow WorkflowNamespace) {
 
 // GetNamespaceRegistry returns the package-level namespace registry with thread-safe lazy initialization
 func GetNamespaceRegistry() *DefaultNamespaceRegistry {
-	return getRegistryInstance()
+	return getNamespaceRegistryInstance()
 }
 
 // SetNamespaceRegistry sets the package-level namespace registry (primarily for testing)
+// Deprecated: Use SetNamespaceRegistryProvider for better testability
 func SetNamespaceRegistry(registry *DefaultNamespaceRegistry) {
-	setRegistryInstance(registry)
+	// Create a custom provider that returns the provided registry
+	provider := &customNamespaceRegistryProvider{registry: registry}
+	setNamespaceRegistryProvider(provider)
 }
 
-// getRegistryInstance and setRegistryInstance are created using a closure to avoid global variables
+// customNamespaceRegistryProvider is a simple provider for the legacy SetNamespaceRegistry function
+type customNamespaceRegistryProvider struct {
+	registry *DefaultNamespaceRegistry
+}
+
+// GetNamespaceRegistry returns the pre-set registry
+func (p *customNamespaceRegistryProvider) GetNamespaceRegistry() *DefaultNamespaceRegistry {
+	return p.registry
+}
+
+// NamespaceRegistryProvider defines the interface for providing namespace registry instances
+type NamespaceRegistryProvider interface {
+	GetNamespaceRegistry() *DefaultNamespaceRegistry
+}
+
+// DefaultNamespaceRegistryProvider provides a thread-safe singleton namespace registry
+type DefaultNamespaceRegistryProvider struct {
+	once     sync.Once
+	registry *DefaultNamespaceRegistry
+}
+
+// NewDefaultNamespaceRegistryProvider creates a new default namespace registry provider
+func NewDefaultNamespaceRegistryProvider() *DefaultNamespaceRegistryProvider {
+	return &DefaultNamespaceRegistryProvider{}
+}
+
+// GetNamespaceRegistry returns a namespace registry instance using thread-safe singleton pattern
+func (p *DefaultNamespaceRegistryProvider) GetNamespaceRegistry() *DefaultNamespaceRegistry {
+	p.once.Do(func() {
+		p.registry = NewNamespaceRegistry()
+	})
+	return p.registry
+}
+
+// getNamespaceRegistryInstance and setNamespaceRegistryProvider are created using a closure to avoid global variables
 //
-//nolint:gochecknoglobals // Required for singleton pattern implementation
-var getRegistryInstance, setRegistryInstance = func() (func() *DefaultNamespaceRegistry, func(*DefaultNamespaceRegistry)) {
+//nolint:gochecknoglobals // Required for thread-safe namespace registry singleton pattern
+var getNamespaceRegistryInstance, setNamespaceRegistryProvider = func() (func() *DefaultNamespaceRegistry, func(NamespaceRegistryProvider)) {
 	var (
 		once     sync.Once
-		instance *DefaultNamespaceRegistry
+		provider NamespaceRegistryProvider
 		mu       sync.RWMutex
 	)
 
 	getter := func() *DefaultNamespaceRegistry {
 		mu.RLock()
-		if instance != nil {
+		if provider != nil {
 			defer mu.RUnlock()
-			return instance
+			return provider.GetNamespaceRegistry()
 		}
 		mu.RUnlock()
 
 		once.Do(func() {
 			mu.Lock()
 			defer mu.Unlock()
-			if instance == nil {
-				instance = NewNamespaceRegistry()
+			if provider == nil {
+				provider = NewDefaultNamespaceRegistryProvider()
 			}
 		})
 
 		mu.RLock()
 		defer mu.RUnlock()
-		return instance
+		return provider.GetNamespaceRegistry()
 	}
 
-	setter := func(registry *DefaultNamespaceRegistry) {
+	setter := func(p NamespaceRegistryProvider) {
 		mu.Lock()
 		defer mu.Unlock()
-		instance = registry
+		provider = p
 		// Reset once to allow reinitialization if needed
 		once = sync.Once{}
 	}
 
 	return getter, setter
 }()
+
+// SetNamespaceRegistryProvider sets a custom namespace registry provider
+// This allows for dependency injection and testing with mock providers
+func SetNamespaceRegistryProvider(provider NamespaceRegistryProvider) {
+	setNamespaceRegistryProvider(provider)
+}

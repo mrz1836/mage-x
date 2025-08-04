@@ -333,44 +333,114 @@ type Registry struct {
 // ProviderFactory creates provider instances
 type ProviderFactory func(config *ProviderConfig) (Provider, error)
 
-var (
-	// registryOnce ensures thread-safe lazy initialization of the registry
-	registryOnce     sync.Once    //nolint:gochecknoglobals // Required for thread-safe initialization
-	registryInstance *Registry    //nolint:gochecknoglobals // Private instance for sync.Once pattern
-	registryMu       sync.RWMutex //nolint:gochecknoglobals // Protects registryInstance
-)
-
-// GetRegistry returns the provider registry instance with thread-safe lazy initialization
-func GetRegistry() *Registry {
-	registryMu.RLock()
-	if registryInstance != nil {
-		defer registryMu.RUnlock()
-		return registryInstance
+// NewRegistry creates a new provider registry
+func NewRegistry() *Registry {
+	return &Registry{
+		providers: make(map[string]ProviderFactory),
 	}
-	registryMu.RUnlock()
+}
 
-	registryOnce.Do(func() {
-		registryMu.Lock()
-		defer registryMu.Unlock()
-		if registryInstance == nil {
-			registryInstance = &Registry{
-				providers: make(map[string]ProviderFactory),
-			}
+// Register registers a provider factory with this registry
+func (r *Registry) Register(name string, factory ProviderFactory) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.providers[name] = factory
+}
+
+// Get returns a provider instance from this registry
+func (r *Registry) Get(name string, config *ProviderConfig) (Provider, error) {
+	r.mu.RLock()
+	factory, ok := r.providers[name]
+	r.mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", ErrProviderNotFound, name)
+	}
+	return factory(config)
+}
+
+// List returns all registered provider names from this registry
+func (r *Registry) List() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	names := make([]string, 0, len(r.providers))
+	for name := range r.providers {
+		names = append(names, name)
+	}
+	return names
+}
+
+// HasProvider checks if a provider is registered in this registry
+func (r *Registry) HasProvider(name string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.providers[name]
+	return ok
+}
+
+// defaultRegistry holds the default registry instance used by package-level functions
+// This maintains backward compatibility while removing true global state
+type registryManager struct {
+	mu       sync.RWMutex
+	registry *Registry
+	once     sync.Once
+}
+
+// newRegistryManager creates a new registry manager
+func newRegistryManager() *registryManager {
+	return &registryManager{}
+}
+
+// getOrCreateRegistry returns the default registry, creating it if necessary
+func (rm *registryManager) getOrCreateRegistry() *Registry {
+	rm.mu.RLock()
+	if rm.registry != nil {
+		defer rm.mu.RUnlock()
+		return rm.registry
+	}
+	rm.mu.RUnlock()
+
+	rm.once.Do(func() {
+		rm.mu.Lock()
+		defer rm.mu.Unlock()
+		if rm.registry == nil {
+			rm.registry = NewRegistry()
 		}
 	})
 
-	registryMu.RLock()
-	defer registryMu.RUnlock()
-	return registryInstance
+	rm.mu.RLock()
+	defer rm.mu.RUnlock()
+	return rm.registry
 }
 
-// Register registers a provider factory
-func Register(name string, factory ProviderFactory) {
-	registry := GetRegistry()
-	registry.mu.Lock()
-	defer registry.mu.Unlock()
-	registry.providers[name] = factory
+// GetRegistry returns the provider registry instance with thread-safe lazy initialization
+// This function maintains backward compatibility with existing code
+func GetRegistry() *Registry {
+	return getDefaultRegistryManager().getOrCreateRegistry()
 }
+
+// Register registers a provider factory using the default registry
+// This function maintains backward compatibility with existing code
+func Register(name string, factory ProviderFactory) {
+	GetRegistry().Register(name, factory)
+}
+
+// getDefaultRegistryManager returns the singleton registry manager instance
+// This uses a closure-based singleton pattern for backward compatibility
+//
+//nolint:gochecknoglobals // Required for maintaining backward compatibility with shared provider registry
+var getDefaultRegistryManager = func() func() *registryManager {
+	var (
+		once     sync.Once
+		instance *registryManager
+	)
+
+	return func() *registryManager {
+		once.Do(func() {
+			instance = newRegistryManager()
+		})
+		return instance
+	}
+}()
 
 // RegisterAllProviders registers all available providers
 func RegisterAllProviders() {
@@ -378,26 +448,20 @@ func RegisterAllProviders() {
 	// Import statements will trigger the registration
 }
 
-// Get returns a provider instance
+// Get returns a provider instance using the default registry
+// This function maintains backward compatibility with existing code
 func Get(name string, config *ProviderConfig) (Provider, error) {
-	registry := GetRegistry()
-	registry.mu.RLock()
-	factory, ok := registry.providers[name]
-	registry.mu.RUnlock()
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrProviderNotFound, name)
-	}
-	return factory(config)
+	return GetRegistry().Get(name, config)
 }
 
-// List returns all registered provider names
+// List returns all registered provider names using the default registry
+// This function maintains backward compatibility with existing code
 func List() []string {
-	registry := GetRegistry()
-	registry.mu.RLock()
-	defer registry.mu.RUnlock()
-	names := make([]string, 0, len(registry.providers))
-	for name := range registry.providers {
-		names = append(names, name)
-	}
-	return names
+	return GetRegistry().List()
+}
+
+// HasProvider checks if a provider is registered using the default registry
+// This function maintains backward compatibility with existing code
+func HasProvider(name string) bool {
+	return GetRegistry().HasProvider(name)
 }

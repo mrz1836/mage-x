@@ -12,7 +12,8 @@ func TestSpinner_Basic(t *testing.T) {
 	t.Run("NewSpinner creates spinner with default style", func(t *testing.T) {
 		spinner := NewSpinner("Loading...")
 		assert.Equal(t, "Loading...", spinner.message)
-		assert.Equal(t, getSpinnerFrames()[SpinnerStyleDots], spinner.frames)
+		registry := newDefaultSpinnerFrameRegistry()
+		assert.Equal(t, registry.GetFrames()[SpinnerStyleDots], spinner.frames)
 		assert.Equal(t, 100*time.Millisecond, spinner.delay)
 		assert.False(t, spinner.active)
 		assert.False(t, spinner.paused)
@@ -21,14 +22,16 @@ func TestSpinner_Basic(t *testing.T) {
 	t.Run("NewSpinnerWithStyle creates spinner with specific style", func(t *testing.T) {
 		spinner := NewSpinnerWithStyle("Processing...", SpinnerStyleLine)
 		assert.Equal(t, "Processing...", spinner.message)
-		assert.Equal(t, getSpinnerFrames()[SpinnerStyleLine], spinner.frames)
+		registry := newDefaultSpinnerFrameRegistry()
+		assert.Equal(t, registry.GetFrames()[SpinnerStyleLine], spinner.frames)
 		assert.False(t, spinner.active)
 	})
 
 	t.Run("NewSpinnerWithStyle with invalid style uses default", func(t *testing.T) {
 		invalidStyle := SpinnerStyle(999)
 		spinner := NewSpinnerWithStyle("Test", invalidStyle)
-		assert.Equal(t, getSpinnerFrames()[SpinnerStyleDots], spinner.frames)
+		registry := newDefaultSpinnerFrameRegistry()
+		assert.Equal(t, registry.GetFrames()[SpinnerStyleDots], spinner.frames)
 	})
 }
 
@@ -178,7 +181,8 @@ func TestSpinnerStyles(t *testing.T) {
 	for _, style := range styles {
 		t.Run(string(rune(style)), func(t *testing.T) {
 			spinner := NewSpinnerWithStyle("Test", style)
-			expectedFrames := getSpinnerFrames()[style]
+			registry := newDefaultSpinnerFrameRegistry()
+			expectedFrames := registry.GetFrames()[style]
 			assert.Equal(t, expectedFrames, spinner.frames)
 			assert.NotEmpty(t, spinner.frames)
 		})
@@ -387,7 +391,8 @@ func TestProgressTree(t *testing.T) {
 
 func TestTreeSymbols(t *testing.T) {
 	t.Run("unicode tree symbols are defined", func(t *testing.T) {
-		unicodeSymbols := getUnicodeTreeSymbols()
+		registry := newDefaultTreeSymbolRegistry()
+		unicodeSymbols := registry.GetUnicodeSymbols()
 		assert.NotEmpty(t, unicodeSymbols.branch)
 		assert.NotEmpty(t, unicodeSymbols.lastBranch)
 		assert.NotEmpty(t, unicodeSymbols.vertical)
@@ -395,7 +400,8 @@ func TestTreeSymbols(t *testing.T) {
 	})
 
 	t.Run("ascii tree symbols are defined", func(t *testing.T) {
-		asciiSymbols := getASCIITreeSymbols()
+		registry := newDefaultTreeSymbolRegistry()
+		asciiSymbols := registry.GetASCIISymbols()
 		assert.NotEmpty(t, asciiSymbols.branch)
 		assert.NotEmpty(t, asciiSymbols.lastBranch)
 		assert.NotEmpty(t, asciiSymbols.vertical)

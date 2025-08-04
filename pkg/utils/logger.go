@@ -73,16 +73,38 @@ const (
 	emojiClock   = "⏱️"
 )
 
-var (
-	// Package-level variables for contextual message configuration
-	contextualMessagesOnce sync.Once           //nolint:gochecknoglobals // Required for thread-safe initialization
-	contextualMessagesData map[string][]string //nolint:gochecknoglobals // Private data for sync.Once pattern
+// loggerManager encapsulates the default logger and contextual message state
+type loggerManager struct {
+	mu                     sync.RWMutex
+	defaultLogger          *Logger
+	contextualMessagesOnce sync.Once
+	contextualMessagesData map[string][]string
+}
 
-	// defaultLoggerOnce ensures thread-safe lazy initialization of the default logger
-	defaultLoggerOnce     sync.Once    //nolint:gochecknoglobals // Required for thread-safe initialization
-	defaultLoggerInstance *Logger      //nolint:gochecknoglobals // Private instance for sync.Once pattern
-	defaultLoggerMu       sync.RWMutex //nolint:gochecknoglobals // Protects defaultLoggerInstance
-)
+// loggerManagerInstance is a package-level singleton holder
+// We need at least this one static instance for backward compatibility
+// but all other globals have been eliminated
+type loggerManagerInstance struct {
+	manager *loggerManager
+	once    sync.Once
+}
+
+func (lmi *loggerManagerInstance) get() *loggerManager {
+	lmi.once.Do(func() {
+		lmi.manager = &loggerManager{}
+	})
+	return lmi.manager
+}
+
+// singletonManager holds the single package-level manager instance
+// This is the minimal required global state for backward compatibility
+// All other package state has been encapsulated within this manager
+var singletonManager = &loggerManagerInstance{} //nolint:gochecknoglobals // Required for singleton pattern and backward compatibility
+
+// getLoggerManager returns the singleton logger manager instance
+func getLoggerManager() *loggerManager {
+	return singletonManager.get()
+}
 
 // NewLogger creates a new logger instance
 func NewLogger() *Logger {
@@ -93,37 +115,100 @@ func NewLogger() *Logger {
 	}
 }
 
-// GetDefaultLogger returns the default logger instance with thread-safe lazy initialization
-func GetDefaultLogger() *Logger {
-	defaultLoggerMu.RLock()
-	if defaultLoggerInstance != nil {
-		defer defaultLoggerMu.RUnlock()
-		return defaultLoggerInstance
+// getDefaultLogger returns the default logger instance with thread-safe lazy initialization
+func (m *loggerManager) getDefaultLogger() *Logger {
+	m.mu.RLock()
+	if m.defaultLogger != nil {
+		defer m.mu.RUnlock()
+		return m.defaultLogger
 	}
-	defaultLoggerMu.RUnlock()
+	m.mu.RUnlock()
 
-	defaultLoggerOnce.Do(func() {
-		defaultLoggerMu.Lock()
-		defer defaultLoggerMu.Unlock()
-		if defaultLoggerInstance == nil {
-			defaultLoggerInstance = NewLogger()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.defaultLogger == nil {
+		m.defaultLogger = NewLogger()
+	}
+	return m.defaultLogger
+}
+
+// setDefaultLogger sets the default logger instance (primarily for testing)
+func (m *loggerManager) setDefaultLogger(logger *Logger) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.defaultLogger = logger
+}
+
+// getContextualMessages returns the contextual message configurations
+func (m *loggerManager) getContextualMessages() map[string][]string {
+	m.contextualMessagesOnce.Do(func() {
+		m.contextualMessagesData = map[string][]string{
+			"morning": {
+				"☕ Time to build something great!",
+				"🌅 Fresh build, fresh start!",
+				"☕ Good morning! Let's ship some code!",
+			},
+			"afternoon": {
+				"🚀 Afternoon productivity boost!",
+				"💪 Keep pushing forward!",
+				"🔥 Let's make progress!",
+			},
+			"evening": {
+				"🌙 Burning the midnight oil!",
+				"✨ Evening coding session!",
+				"🌃 Night owl mode activated!",
+			},
+			"friday": {
+				"🎉 Ship it before the weekend!",
+				"📦 Feature Friday!",
+				"🚀 Friday deployment time!",
+			},
+			"monday": {
+				"💪 Monday motivation!",
+				"🚀 Fresh week, fresh code!",
+				"☕ Monday morning build!",
+			},
+			"fast": {
+				"⚡ Blazing fast build!",
+				"🏎️ Speed demon!",
+				"🚄 Express build complete!",
+			},
+			"slow": {
+				"🐌 Taking our time...",
+				"⏳ Good things take time...",
+				"🧘 Patience is a virtue...",
+			},
+			"success": {
+				"✨ All green! You're a wizard!",
+				"🎯 Nailed it!",
+				"🎉 Success! High five!",
+				"💯 Perfect execution!",
+			},
+			"fixed": {
+				"🔧 Fixed! Back in business!",
+				"✨ Problem solved!",
+				"💪 Bug squashed!",
+			},
 		}
 	})
+	return m.contextualMessagesData
+}
 
-	defaultLoggerMu.RLock()
-	defer defaultLoggerMu.RUnlock()
-	return defaultLoggerInstance
+// GetDefaultLogger returns the default logger instance with thread-safe lazy initialization
+func GetDefaultLogger() *Logger {
+	return getLoggerManager().getDefaultLogger()
 }
 
 // SetDefaultLogger sets the default logger instance (primarily for testing)
 func SetDefaultLogger(logger *Logger) {
-	defaultLoggerMu.Lock()
-	defer defaultLoggerMu.Unlock()
-	defaultLoggerInstance = logger
+	getLoggerManager().setDefaultLogger(logger)
 }
 
 // DefaultLogger provides backward compatibility for direct access to the default logger
-var DefaultLogger = &defaultLoggerProxy{} //nolint:gochecknoglobals // Backward compatibility proxy using getter pattern
+// Returns a proxy that delegates to the singleton default logger
+func DefaultLogger() *defaultLoggerProxy {
+	return &defaultLoggerProxy{}
+}
 
 // defaultLoggerProxy provides transparent access to the default logger instance
 type defaultLoggerProxy struct{}
@@ -367,64 +452,9 @@ func (l *Logger) UpdateSpinner(message string) {
 	}
 }
 
-// getContextualMessages returns the contextual message configurations
-func getContextualMessages() map[string][]string {
-	contextualMessagesOnce.Do(func() {
-		contextualMessagesData = map[string][]string{
-			"morning": {
-				"☕ Time to build something great!",
-				"🌅 Fresh build, fresh start!",
-				"☕ Good morning! Let's ship some code!",
-			},
-			"afternoon": {
-				"🚀 Afternoon productivity boost!",
-				"💪 Keep pushing forward!",
-				"🔥 Let's make progress!",
-			},
-			"evening": {
-				"🌙 Burning the midnight oil!",
-				"✨ Evening coding session!",
-				"🌃 Night owl mode activated!",
-			},
-			"friday": {
-				"🎉 Ship it before the weekend!",
-				"📦 Feature Friday!",
-				"🚀 Friday deployment time!",
-			},
-			"monday": {
-				"💪 Monday motivation!",
-				"🚀 Fresh week, fresh code!",
-				"☕ Monday morning build!",
-			},
-			"fast": {
-				"⚡ Blazing fast build!",
-				"🏎️ Speed demon!",
-				"🚄 Express build complete!",
-			},
-			"slow": {
-				"🐌 Taking our time...",
-				"⏳ Good things take time...",
-				"🧘 Patience is a virtue...",
-			},
-			"success": {
-				"✨ All green! You're a wizard!",
-				"🎯 Nailed it!",
-				"🎉 Success! High five!",
-				"💯 Perfect execution!",
-			},
-			"fixed": {
-				"🔧 Fixed! Back in business!",
-				"✨ Problem solved!",
-				"💪 Bug squashed!",
-			},
-		}
-	})
-	return contextualMessagesData
-}
-
 // GetContextualMessage returns a contextual message based on current time/state
 func (l *Logger) GetContextualMessage(context string) string {
-	messages, ok := getContextualMessages()[context]
+	messages, ok := getLoggerManager().getContextualMessages()[context]
 	if !ok {
 		return ""
 	}

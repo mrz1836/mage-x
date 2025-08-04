@@ -27,35 +27,99 @@ var (
 	ErrNoMainPackage      = errors.New("no main package found for binary build")
 )
 
-// getCacheManager returns a cache manager instance using thread-safe singleton pattern
-var getCacheManager = func() func() *cache.Manager { //nolint:gochecknoglobals // Required for thread-safe cache singleton pattern
-	var once sync.Once
-	var manager *cache.Manager
+// CacheManagerProvider defines the interface for providing cache manager instances
+type CacheManagerProvider interface {
+	GetCacheManager() *cache.Manager
+}
 
-	return func() *cache.Manager {
-		once.Do(func() {
-			config := cache.DefaultConfig()
-			// Cache configuration uses default settings for now.
-			// Future enhancement: integrate with main Config struct for customization.
+// DefaultCacheManagerProvider provides a thread-safe singleton cache manager
+type DefaultCacheManagerProvider struct {
+	once    sync.Once
+	manager *cache.Manager
+}
 
-			// Check if cache is disabled via environment
-			if os.Getenv("MAGE_CACHE_DISABLED") == "true" {
+// NewDefaultCacheManagerProvider creates a new default cache manager provider
+func NewDefaultCacheManagerProvider() *DefaultCacheManagerProvider {
+	return &DefaultCacheManagerProvider{}
+}
+
+// GetCacheManager returns a cache manager instance using thread-safe singleton pattern
+func (p *DefaultCacheManagerProvider) GetCacheManager() *cache.Manager {
+	p.once.Do(func() {
+		config := cache.DefaultConfig()
+		// Cache configuration uses default settings for now.
+		// Future enhancement: integrate with main Config struct for customization.
+
+		// Check if cache is disabled via environment
+		if os.Getenv("MAGE_CACHE_DISABLED") == "true" {
+			config.Enabled = false
+		}
+
+		p.manager = cache.NewManager(config)
+		if p.manager != nil {
+			if err := p.manager.Init(); err != nil {
+				utils.Warn("Failed to initialize cache: %v", err)
+				// Continue without caching
 				config.Enabled = false
+				p.manager = cache.NewManager(config)
 			}
+		}
+	})
+	return p.manager
+}
 
-			manager = cache.NewManager(config)
-			if manager != nil {
-				if err := manager.Init(); err != nil {
-					utils.Warn("Failed to initialize cache: %v", err)
-					// Continue without caching
-					config.Enabled = false
-					manager = cache.NewManager(config)
-				}
+// getCacheManagerInstance and setCacheManagerProvider are created using a closure to avoid global variables
+//
+//nolint:gochecknoglobals // Required for thread-safe cache manager singleton pattern
+var getCacheManagerInstance, setCacheManagerProvider = func() (func() *cache.Manager, func(CacheManagerProvider)) {
+	var (
+		once     sync.Once
+		provider CacheManagerProvider
+		mu       sync.RWMutex
+	)
+
+	getter := func() *cache.Manager {
+		mu.RLock()
+		if provider != nil {
+			defer mu.RUnlock()
+			return provider.GetCacheManager()
+		}
+		mu.RUnlock()
+
+		once.Do(func() {
+			mu.Lock()
+			defer mu.Unlock()
+			if provider == nil {
+				provider = NewDefaultCacheManagerProvider()
 			}
 		})
-		return manager
+
+		mu.RLock()
+		defer mu.RUnlock()
+		return provider.GetCacheManager()
 	}
+
+	setter := func(p CacheManagerProvider) {
+		mu.Lock()
+		defer mu.Unlock()
+		provider = p
+		// Reset once to allow reinitialization if needed
+		once = sync.Once{}
+	}
+
+	return getter, setter
 }()
+
+// SetCacheManagerProvider sets a custom cache manager provider for the Build namespace
+// This allows for dependency injection and testing with mock providers
+func SetCacheManagerProvider(provider CacheManagerProvider) {
+	setCacheManagerProvider(provider)
+}
+
+// getCacheManager returns the cache manager for backward compatibility
+func getCacheManager() *cache.Manager {
+	return getCacheManagerInstance()
+}
 
 // Default builds the application for the current platform
 func (b Build) Default() error {

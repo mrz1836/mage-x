@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"testing"
 	"time"
 
@@ -645,9 +644,8 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 			}
 		}()
 
-		// Reset global logger
-		globalAuditLogger = nil
-		auditOnce = sync.Once{}
+		// Reset default registry
+		defaultRegistry = NewAuditRegistry()
 
 		// Set environment variable
 		if err := os.Setenv("MAGE_AUDIT_ENABLED", "true"); err != nil {
@@ -684,9 +682,8 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 			}
 		}()
 
-		// Reset global logger
-		globalAuditLogger = nil
-		auditOnce = sync.Once{}
+		// Reset default registry
+		defaultRegistry = NewAuditRegistry()
 
 		// Set environment variables
 		if err := os.Setenv("MAGE_AUDIT_ENABLED", "true"); err != nil {

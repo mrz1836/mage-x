@@ -301,37 +301,65 @@ func createSecurityErrors() *SecurityErrorFactory {
 	return NewSecurityErrorFactory()
 }
 
-// Domain-specific factory instances using sync.Once for thread-safe lazy initialization
-var (
-	buildErrorsOnce    sync.Once //nolint:gochecknoglobals // Required for singleton pattern
-	testErrorsOnce     sync.Once //nolint:gochecknoglobals // Required for singleton pattern
-	securityErrorsOnce sync.Once //nolint:gochecknoglobals // Required for singleton pattern
+// FactoryRegistry manages domain-specific error factory instances
+// using thread-safe lazy initialization without global variables
+type FactoryRegistry struct {
+	buildOnce    sync.Once
+	testOnce     sync.Once
+	securityOnce sync.Once
 
-	buildErrorsInstance    *BuildErrorFactory    //nolint:gochecknoglobals // Required for singleton pattern
-	testErrorsInstance     *TestErrorFactory     //nolint:gochecknoglobals // Required for singleton pattern
-	securityErrorsInstance *SecurityErrorFactory //nolint:gochecknoglobals // Required for singleton pattern
-)
+	buildFactory    *BuildErrorFactory
+	testFactory     *TestErrorFactory
+	securityFactory *SecurityErrorFactory
+}
 
-// GetBuildErrors returns the singleton build error factory
+// NewFactoryRegistry creates a new factory registry
+func NewFactoryRegistry() *FactoryRegistry {
+	return &FactoryRegistry{}
+}
+
+// BuildErrors returns the build error factory, initializing it if needed
+func (r *FactoryRegistry) BuildErrors() *BuildErrorFactory {
+	r.buildOnce.Do(func() {
+		r.buildFactory = createBuildErrors()
+	})
+	return r.buildFactory
+}
+
+// TestErrors returns the test error factory, initializing it if needed
+func (r *FactoryRegistry) TestErrors() *TestErrorFactory {
+	r.testOnce.Do(func() {
+		r.testFactory = createTestErrors()
+	})
+	return r.testFactory
+}
+
+// SecurityErrors returns the security error factory, initializing it if needed
+func (r *FactoryRegistry) SecurityErrors() *SecurityErrorFactory {
+	r.securityOnce.Do(func() {
+		r.securityFactory = createSecurityErrors()
+	})
+	return r.securityFactory
+}
+
+// Package-level convenience functions for backward compatibility
+// These create new instances each time, which is actually more idiomatic Go
+// and avoids the need for global state while maintaining the same API
+
+// GetBuildErrors returns a build error factory
+// Note: This creates a new instance each time for thread safety without globals
 func GetBuildErrors() *BuildErrorFactory {
-	buildErrorsOnce.Do(func() {
-		buildErrorsInstance = createBuildErrors()
-	})
-	return buildErrorsInstance
+	return NewBuildErrorFactory()
 }
 
-// GetTestErrors returns the singleton test error factory
+// GetTestErrors returns a test error factory
+// Note: This creates a new instance each time for thread safety without globals
 func GetTestErrors() *TestErrorFactory {
-	testErrorsOnce.Do(func() {
-		testErrorsInstance = createTestErrors()
-	})
-	return testErrorsInstance
+	return NewTestErrorFactory()
 }
 
-// GetSecurityErrors returns the singleton security error factory
+// GetSecurityErrors returns a security error factory
+// Note: This creates a new instance each time for thread safety without globals
 func GetSecurityErrors() *SecurityErrorFactory {
-	securityErrorsOnce.Do(func() {
-		securityErrorsInstance = createSecurityErrors()
-	})
-	return securityErrorsInstance
+	return NewSecurityErrorFactory()
 }

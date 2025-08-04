@@ -216,31 +216,66 @@ type PerformanceComparison struct {
 	Significant bool    `json:"significant"`
 }
 
-var (
-	// globalMetricsCollector is the singleton metrics collector
-	globalMetricsCollector *MetricsCollector //nolint:gochecknoglobals // Required for metrics singleton
-	metricsOnce            sync.Once         //nolint:gochecknoglobals // Required for singleton initialization
-)
+// metricsCollectorManager manages the default metrics collector instance
+type metricsCollectorManager struct {
+	mu        sync.RWMutex
+	collector *MetricsCollector
+	once      sync.Once
+}
 
-// GetMetricsCollector returns the global metrics collector instance
-func GetMetricsCollector() *MetricsCollector {
-	metricsOnce.Do(func() {
-		config := DefaultMetricsConfig()
+// defaultManager is the package-level instance for backward compatibility
+//
+//nolint:gochecknoglobals // Required for backward compatibility with package-level functions
+var defaultManager = &metricsCollectorManager{}
 
-		// Check if metrics are enabled via environment variable
-		if os.Getenv("MAGE_METRICS_ENABLED") == "true" {
-			config.Enabled = true
-		}
-
-		// Override storage path if specified
-		if storagePath := os.Getenv("MAGE_METRICS_PATH"); storagePath != "" {
-			config.StoragePath = storagePath
-		}
-
-		globalMetricsCollector = NewMetricsCollector(&config)
+// get returns the metrics collector instance with thread-safe lazy initialization
+func (p *metricsCollectorManager) get() *MetricsCollector {
+	p.once.Do(func() {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		p.collector = createDefaultCollector()
 	})
 
-	return globalMetricsCollector
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.collector
+}
+
+// set allows replacing the collector instance (for testing/dependency injection)
+func (p *metricsCollectorManager) set(collector *MetricsCollector) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.collector = collector
+	// Don't reset once - we're explicitly setting the collector
+}
+
+// GetMetricsCollector returns the default metrics collector instance
+// This function maintains backward compatibility with existing code
+func GetMetricsCollector() *MetricsCollector {
+	return defaultManager.get()
+}
+
+// createDefaultCollector creates and configures the default metrics collector
+func createDefaultCollector() *MetricsCollector {
+	config := DefaultMetricsConfig()
+
+	// Check if metrics are enabled via environment variable
+	if os.Getenv("MAGE_METRICS_ENABLED") == "true" {
+		config.Enabled = true
+	}
+
+	// Override storage path if specified
+	if storagePath := os.Getenv("MAGE_METRICS_PATH"); storagePath != "" {
+		config.StoragePath = storagePath
+	}
+
+	return NewMetricsCollector(&config)
+}
+
+// SetDefaultCollector allows dependency injection by setting a custom collector
+// This enables better testing and dependency management
+func SetDefaultCollector(collector *MetricsCollector) {
+	defaultManager.set(collector)
 }
 
 // NewMetricsCollector creates a new metrics collector

@@ -41,16 +41,21 @@ const (
 	SpinnerStyleBounce
 )
 
-// Package-level variables for spinner configuration
-var (
-	spinnerFramesOnce sync.Once                 //nolint:gochecknoglobals // Required for thread-safe initialization
-	spinnerFramesData map[SpinnerStyle][]string //nolint:gochecknoglobals // Private data for sync.Once pattern
-)
+// SpinnerFrameRegistry provides thread-safe access to spinner frame configurations
+type SpinnerFrameRegistry struct {
+	once sync.Once
+	data map[SpinnerStyle][]string
+}
 
-// getSpinnerFrames returns the spinner frame configurations
-func getSpinnerFrames() map[SpinnerStyle][]string {
-	spinnerFramesOnce.Do(func() {
-		spinnerFramesData = map[SpinnerStyle][]string{
+// NewSpinnerFrameRegistry creates a new spinner frame registry
+func NewSpinnerFrameRegistry() *SpinnerFrameRegistry {
+	return &SpinnerFrameRegistry{}
+}
+
+// GetFrames returns the spinner frame configurations with thread-safe initialization
+func (r *SpinnerFrameRegistry) GetFrames() map[SpinnerStyle][]string {
+	r.once.Do(func() {
+		r.data = map[SpinnerStyle][]string{
 			SpinnerStyleDots:   {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
 			SpinnerStyleLine:   {"-", "\\", "|", "/"},
 			SpinnerStyleCircle: {"◐", "◓", "◑", "◒"},
@@ -59,7 +64,7 @@ func getSpinnerFrames() map[SpinnerStyle][]string {
 			SpinnerStyleBounce: {"⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈"},
 		}
 	})
-	return spinnerFramesData
+	return r.data
 }
 
 // NewSpinner creates a new spinner with default style
@@ -69,7 +74,12 @@ func NewSpinner(message string) *Spinner {
 
 // NewSpinnerWithStyle creates a new spinner with a specific style
 func NewSpinnerWithStyle(message string, style SpinnerStyle) *Spinner {
-	spinnerData := getSpinnerFrames()
+	return NewSpinnerWithStyleAndRegistry(message, style, newDefaultSpinnerFrameRegistry())
+}
+
+// NewSpinnerWithStyleAndRegistry creates a new spinner with a specific style and frame registry
+func NewSpinnerWithStyleAndRegistry(message string, style SpinnerStyle, registry *SpinnerFrameRegistry) *Spinner {
+	spinnerData := registry.GetFrames()
 	frames, ok := spinnerData[style]
 	if !ok {
 		frames = spinnerData[SpinnerStyleDots]
@@ -83,6 +93,11 @@ func NewSpinnerWithStyle(message string, style SpinnerStyle) *Spinner {
 		pauseCh:  make(chan struct{}),
 		resumeCh: make(chan struct{}),
 	}
+}
+
+// newDefaultSpinnerFrameRegistry creates the default registry instance
+func newDefaultSpinnerFrameRegistry() *SpinnerFrameRegistry {
+	return NewSpinnerFrameRegistry()
 }
 
 // Start starts the spinner animation
@@ -199,6 +214,7 @@ type MultiSpinner struct {
 	spinners map[string]*TaskSpinner
 	active   bool
 	stopCh   chan struct{}
+	registry *SpinnerFrameRegistry
 }
 
 // TaskSpinner represents a spinner for a specific task
@@ -226,9 +242,15 @@ const (
 
 // NewMultiSpinner creates a new multi-spinner
 func NewMultiSpinner() *MultiSpinner {
+	return NewMultiSpinnerWithRegistry(newDefaultSpinnerFrameRegistry())
+}
+
+// NewMultiSpinnerWithRegistry creates a new multi-spinner with a specific frame registry
+func NewMultiSpinnerWithRegistry(registry *SpinnerFrameRegistry) *MultiSpinner {
 	return &MultiSpinner{
 		spinners: make(map[string]*TaskSpinner),
 		stopCh:   make(chan struct{}),
+		registry: registry,
 	}
 }
 
@@ -241,7 +263,7 @@ func (m *MultiSpinner) AddTask(name, message string) {
 		name:    name,
 		message: message,
 		status:  TaskStatusPending,
-		frames:  getSpinnerFrames()[SpinnerStyleDots],
+		frames:  m.registry.GetFrames()[SpinnerStyleDots],
 	}
 }
 
@@ -369,6 +391,7 @@ type ProgressNode struct {
 type treeRenderer struct {
 	useColor bool
 	symbols  treeSymbols
+	registry *TreeSymbolRegistry
 }
 
 // treeSymbols contains symbols for tree rendering
@@ -379,42 +402,79 @@ type treeSymbols struct {
 	empty      string
 }
 
-// Package-level variables for tree symbol configuration
-var (
-	unicodeTreeSymbolsOnce sync.Once   //nolint:gochecknoglobals // Required for thread-safe initialization
-	unicodeTreeSymbolsData treeSymbols //nolint:gochecknoglobals // Private data for sync.Once pattern
-	asciiTreeSymbolsOnce   sync.Once   //nolint:gochecknoglobals // Required for thread-safe initialization
-	asciiTreeSymbolsData   treeSymbols //nolint:gochecknoglobals // Private data for sync.Once pattern
+// TreeSymbolType represents the style of tree symbols to use
+type TreeSymbolType int
+
+const (
+	// TreeSymbolTypeUnicode uses Unicode box drawing characters
+	TreeSymbolTypeUnicode TreeSymbolType = iota
+	// TreeSymbolTypeASCII uses ASCII characters for compatibility
+	TreeSymbolTypeASCII
 )
 
-// getUnicodeTreeSymbols returns the Unicode tree drawing symbols
-func getUnicodeTreeSymbols() treeSymbols {
-	unicodeTreeSymbolsOnce.Do(func() {
-		unicodeTreeSymbolsData = treeSymbols{
+// TreeSymbolRegistry provides thread-safe access to tree symbol configurations
+type TreeSymbolRegistry struct {
+	unicodeOnce sync.Once
+	unicodeData treeSymbols
+	asciiOnce   sync.Once
+	asciiData   treeSymbols
+}
+
+// NewTreeSymbolRegistry creates a new tree symbol registry
+func NewTreeSymbolRegistry() *TreeSymbolRegistry {
+	return &TreeSymbolRegistry{}
+}
+
+// GetUnicodeSymbols returns the Unicode tree drawing symbols with thread-safe initialization
+func (r *TreeSymbolRegistry) GetUnicodeSymbols() treeSymbols {
+	r.unicodeOnce.Do(func() {
+		r.unicodeData = treeSymbols{
 			branch:     "├─",
 			lastBranch: "└─",
 			vertical:   "│ ",
 			empty:      "  ",
 		}
 	})
-	return unicodeTreeSymbolsData
+	return r.unicodeData
 }
 
-// getASCIITreeSymbols returns the ASCII tree drawing symbols
-func getASCIITreeSymbols() treeSymbols {
-	asciiTreeSymbolsOnce.Do(func() {
-		asciiTreeSymbolsData = treeSymbols{
+// GetASCIISymbols returns the ASCII tree drawing symbols with thread-safe initialization
+func (r *TreeSymbolRegistry) GetASCIISymbols() treeSymbols {
+	r.asciiOnce.Do(func() {
+		r.asciiData = treeSymbols{
 			branch:     "|-",
 			lastBranch: "`-",
 			vertical:   "| ",
 			empty:      "  ",
 		}
 	})
-	return asciiTreeSymbolsData
+	return r.asciiData
+}
+
+// GetSymbols returns the tree symbols for the specified type
+func (r *TreeSymbolRegistry) GetSymbols(symbolType TreeSymbolType) treeSymbols {
+	switch symbolType {
+	case TreeSymbolTypeUnicode:
+		return r.GetUnicodeSymbols()
+	case TreeSymbolTypeASCII:
+		return r.GetASCIISymbols()
+	default:
+		return r.GetUnicodeSymbols()
+	}
+}
+
+// newDefaultTreeSymbolRegistry creates the default tree symbol registry instance
+func newDefaultTreeSymbolRegistry() *TreeSymbolRegistry {
+	return NewTreeSymbolRegistry()
 }
 
 // NewProgressTree creates a new progress tree
 func NewProgressTree(name string) *ProgressTree {
+	return NewProgressTreeWithRegistry(name, newDefaultTreeSymbolRegistry(), TreeSymbolTypeUnicode)
+}
+
+// NewProgressTreeWithRegistry creates a new progress tree with a specific symbol registry and type
+func NewProgressTreeWithRegistry(name string, registry *TreeSymbolRegistry, symbolType TreeSymbolType) *ProgressTree {
 	return &ProgressTree{
 		root: &ProgressNode{
 			name:   name,
@@ -422,7 +482,8 @@ func NewProgressTree(name string) *ProgressTree {
 		},
 		renderer: &treeRenderer{
 			useColor: shouldUseColor(),
-			symbols:  getUnicodeTreeSymbols(),
+			symbols:  registry.GetSymbols(symbolType),
+			registry: registry,
 		},
 	}
 }

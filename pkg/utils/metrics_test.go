@@ -579,6 +579,45 @@ func TestPackageLevelMetricsFunctions(t *testing.T) {
 		// Should return the same instance
 		assert.Equal(t, collector1, collector2)
 	})
+
+	t.Run("SetDefaultCollector allows dependency injection", func(t *testing.T) {
+		// Store original collector
+		originalCollector := GetMetricsCollector()
+
+		// Create custom collector
+		tempDir := t.TempDir()
+		customConfig := MetricsConfig{
+			Enabled:     true,
+			StoragePath: filepath.Join(tempDir, "custom_metrics"),
+		}
+		customCollector := NewMetricsCollector(&customConfig)
+
+		// Set custom collector
+		SetDefaultCollector(customCollector)
+
+		// Verify the custom collector is now used
+		currentCollector := GetMetricsCollector()
+		assert.Equal(t, customCollector, currentCollector)
+		assert.NotEqual(t, originalCollector, currentCollector)
+
+		// Test that package-level functions use the custom collector
+		err := RecordCounter("dependency_injection_test", 42.0, map[string]string{"test": "true"})
+		require.NoError(t, err)
+
+		// Verify the metric was recorded in the custom collector
+		found := false
+		for _, metric := range customCollector.metrics {
+			if metric.Name == "dependency_injection_test" {
+				found = true
+				assert.InDelta(t, 42.0, metric.Value, 0.001)
+				break
+			}
+		}
+		assert.True(t, found, "Metric should have been recorded in custom collector")
+
+		// Restore original collector for other tests
+		SetDefaultCollector(originalCollector)
+	})
 }
 
 func TestHelperFunctions(t *testing.T) {

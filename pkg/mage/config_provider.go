@@ -142,28 +142,99 @@ func (r *ProviderRegistry) GetProvider() ConfigProvider {
 	return r.provider
 }
 
-// packageProviderRegistrySingleton manages the package-level configuration provider registry
-type packageProviderRegistrySingleton struct {
+// PackageProviderRegistryProvider interface defines methods for managing the package-level provider registry
+type PackageProviderRegistryProvider interface {
+	// GetRegistry returns the current provider registry
+	GetRegistry() *ProviderRegistry
+	// SetRegistry sets a new provider registry (primarily for testing)
+	SetRegistry(registry *ProviderRegistry)
+	// ResetRegistry resets to a new default registry (primarily for testing)
+	ResetRegistry()
+}
+
+// DefaultPackageProviderRegistryProvider implements PackageProviderRegistryProvider
+type DefaultPackageProviderRegistryProvider struct {
 	once     sync.Once
 	registry *ProviderRegistry
+	mu       sync.RWMutex
 }
 
-// instance holds the singleton instance
-// Note: This is acceptable as it's encapsulated within the singleton pattern
-// and doesn't expose mutable global state
-func (s *packageProviderRegistrySingleton) getInstance() *ProviderRegistry {
-	s.once.Do(func() {
-		s.registry = NewProviderRegistry()
+// NewDefaultPackageProviderRegistryProvider creates a new default package provider registry provider
+func NewDefaultPackageProviderRegistryProvider() *DefaultPackageProviderRegistryProvider {
+	return &DefaultPackageProviderRegistryProvider{}
+}
+
+// GetRegistry returns the provider registry, creating it if necessary
+func (p *DefaultPackageProviderRegistryProvider) GetRegistry() *ProviderRegistry {
+	p.mu.RLock()
+	if p.registry != nil {
+		registry := p.registry
+		p.mu.RUnlock()
+		return registry
+	}
+	p.mu.RUnlock()
+
+	p.once.Do(func() {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		if p.registry == nil {
+			p.registry = NewProviderRegistry()
+		}
 	})
-	return s.registry
+
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.registry
 }
 
-// singleton instance for the package provider registry
-var registrySingleton = &packageProviderRegistrySingleton{} //nolint:gochecknoglobals // Acceptable for singleton pattern
+// SetRegistry sets a new provider registry (primarily for testing)
+func (p *DefaultPackageProviderRegistryProvider) SetRegistry(registry *ProviderRegistry) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.registry = registry
+}
 
-// getPackageProviderRegistry returns the singleton provider registry
+// ResetRegistry resets to a new default registry (primarily for testing)
+func (p *DefaultPackageProviderRegistryProvider) ResetRegistry() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.once = sync.Once{}
+	p.registry = nil
+}
+
+// Thread-safe singleton instances for package-level provider registry management
+var (
+	defaultPackageProviderRegistryProviderOnce     sync.Once                       //nolint:gochecknoglobals // Required for thread-safe singleton pattern
+	defaultPackageProviderRegistryProviderInstance PackageProviderRegistryProvider //nolint:gochecknoglobals // Required for thread-safe singleton pattern
+)
+
+// getDefaultPackageProviderRegistryProvider returns the default package provider registry provider instance
+func getDefaultPackageProviderRegistryProvider() PackageProviderRegistryProvider {
+	defaultPackageProviderRegistryProviderOnce.Do(func() {
+		defaultPackageProviderRegistryProviderInstance = NewDefaultPackageProviderRegistryProvider()
+	})
+	return defaultPackageProviderRegistryProviderInstance
+}
+
+// Package-level default instance for backward compatibility.
+// This variable provides the global API while internally using thread-safe singletons.
+var (
+	packageProviderRegistryProviderInstance PackageProviderRegistryProvider = getDefaultPackageProviderRegistryProvider() //nolint:gochecknoglobals // Required for backward compatibility API
+)
+
+// SetPackageProviderRegistryProvider sets a custom package provider registry provider (primarily for testing)
+func SetPackageProviderRegistryProvider(provider PackageProviderRegistryProvider) {
+	packageProviderRegistryProviderInstance = provider
+}
+
+// getPackageProviderRegistryProvider returns the current provider registry provider
+func getPackageProviderRegistryProvider() PackageProviderRegistryProvider {
+	return packageProviderRegistryProviderInstance
+}
+
+// getPackageProviderRegistry returns the current provider registry
 func getPackageProviderRegistry() *ProviderRegistry {
-	return registrySingleton.getInstance()
+	return getPackageProviderRegistryProvider().GetRegistry()
 }
 
 // SetConfigProvider sets a custom configuration provider

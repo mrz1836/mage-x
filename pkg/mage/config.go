@@ -132,8 +132,8 @@ func GetConfig() (*Config, error) {
 func TestResetConfig() {
 	// Reset the config provider
 	GetConfigProvider().ResetConfig()
-	// Also reset the singleton registry to ensure fresh provider instances
-	getPackageProviderRegistry().SetProvider(NewDefaultConfigProvider())
+	// Also reset the package provider registry provider to ensure fresh instances
+	getPackageProviderRegistryProvider().ResetRegistry()
 }
 
 // TestSetConfig sets a config for testing purposes only
