@@ -309,54 +309,69 @@ func (Vet) Strict() error {
 
 // runStaticcheck runs the staticcheck tool
 func runStaticcheck() error {
+	staticcheckVersion := getLinterVersion("staticcheck")
+
 	// Check if staticcheck is installed
 	if !utils.CommandExists("staticcheck") {
 		utils.Info("Installing staticcheck...")
 		if err := GetRunner().RunCmd("go", "install", "honnef.co/go/tools/cmd/staticcheck@latest"); err != nil {
 			return fmt.Errorf("failed to install staticcheck: %w", err)
 		}
+		staticcheckVersion = getLinterVersion("staticcheck")
 	}
 
 	// Run staticcheck
+	utils.Info("Running staticcheck %s...", staticcheckVersion)
 	if err := GetRunner().RunCmd("staticcheck", "./..."); err != nil {
 		return fmt.Errorf("staticcheck found issues: %w", err)
 	}
 
+	utils.Success("staticcheck %s passed", staticcheckVersion)
 	return nil
 }
 
 // runIneffassign checks for ineffectual assignments
 func runIneffassign() error {
+	ineffassignVersion := getLinterVersion("ineffassign")
+
 	// Check if ineffassign is installed
 	if !utils.CommandExists("ineffassign") {
 		utils.Info("Installing ineffassign...")
 		if err := GetRunner().RunCmd("go", "install", "github.com/gordonklaus/ineffassign@latest"); err != nil {
 			return fmt.Errorf("failed to install ineffassign: %w", err)
 		}
+		ineffassignVersion = getLinterVersion("ineffassign")
 	}
 
 	// Run ineffassign
+	utils.Info("Running ineffassign %s...", ineffassignVersion)
 	if err := GetRunner().RunCmd("ineffassign", "./..."); err != nil {
 		return fmt.Errorf("ineffassign found issues: %w", err)
 	}
 
+	utils.Success("ineffassign %s passed", ineffassignVersion)
 	return nil
 }
 
 // runMisspell checks for misspelled words
 func runMisspell() error {
+	misspellVersion := getLinterVersion("misspell")
+
 	// Check if misspell is installed
 	if !utils.CommandExists("misspell") {
 		utils.Info("Installing misspell...")
 		if err := GetRunner().RunCmd("go", "install", "github.com/client9/misspell/cmd/misspell@latest"); err != nil {
 			return fmt.Errorf("failed to install misspell: %w", err)
 		}
+		misspellVersion = getLinterVersion("misspell")
 	}
 
 	// Run misspell
+	utils.Info("Running misspell %s...", misspellVersion)
 	if err := GetRunner().RunCmd("misspell", "-w", "."); err != nil {
 		return fmt.Errorf("misspell found issues: %w", err)
 	}
 
+	utils.Success("misspell %s passed", misspellVersion)
 	return nil
 }

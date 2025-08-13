@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -69,7 +70,8 @@ func (Lint) Default() error {
 		hasError := false
 
 		// Run golangci-lint
-		utils.Info("Running golangci-lint...")
+		golangciVersion := getLinterVersion("golangci-lint")
+		utils.Info("Running golangci-lint %s...", golangciVersion)
 		args := []string{"run", "./..."}
 
 		// Check for config file in root directory
@@ -107,7 +109,8 @@ func (Lint) Default() error {
 		}
 
 		// Run go vet
-		utils.Info("Running go vet...")
+		goVersion := getLinterVersion("go", "version")
+		utils.Info("Running go vet (%s)...", goVersion)
 		if err := runVetInModule(module, config); err != nil {
 			hasError = true
 			utils.Error("go vet failed for %s", module.Relative)
@@ -181,7 +184,8 @@ func (Lint) Fix() error {
 		hasError := false
 
 		// Run golangci-lint with auto-fix
-		utils.Info("Running golangci-lint --fix...")
+		golangciVersion := getLinterVersion("golangci-lint")
+		utils.Info("Running golangci-lint %s --fix...", golangciVersion)
 		args := []string{"run", "--fix", "./..."}
 
 		// Check for config file
@@ -294,6 +298,8 @@ func (Lint) Fumpt() error {
 		return err
 	}
 
+	gofumptVersion := getLinterVersion("gofumpt")
+
 	// Ensure gofumpt is installed
 	if !utils.CommandExists("gofumpt") {
 		utils.Info("Installing gofumpt...")
@@ -310,11 +316,12 @@ func (Lint) Fumpt() error {
 	}
 
 	// Run gofumpt
+	utils.Info("Running gofumpt %s...", gofumptVersion)
 	if err := GetRunner().RunCmd("gofumpt", "-w", "-extra", "."); err != nil {
 		return fmt.Errorf("gofumpt failed: %w", err)
 	}
 
-	utils.Success("Code formatted with gofumpt")
+	utils.Success("Code formatted with gofumpt %s", gofumptVersion)
 	return nil
 }
 
@@ -483,6 +490,76 @@ func (Lint) Version() error {
 
 // Helper functions
 
+// getLinterVersion gets the version of a linter command
+func getLinterVersion(command string, versionArgs ...string) string {
+	if !utils.CommandExists(command) {
+		return "not installed"
+	}
+
+	// Default version arguments if none provided
+	if len(versionArgs) == 0 {
+		versionArgs = []string{"--version"}
+	}
+
+	// Try to get version output
+	output, err := GetRunner().RunCmdOutput(command, versionArgs...)
+	if err != nil {
+		// Try alternative version flags
+		alternatives := [][]string{
+			{"-version"},
+			{"version"},
+			{"-V"},
+		}
+
+		for _, alt := range alternatives {
+			if output, err = GetRunner().RunCmdOutput(command, alt...); err == nil {
+				break
+			}
+		}
+
+		if err != nil {
+			return statusUnknown
+		}
+	}
+
+	return parseVersionFromOutput(output)
+}
+
+// parseVersionFromOutput extracts version information from command output
+func parseVersionFromOutput(output string) string {
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) == 0 {
+		return statusUnknown
+	}
+
+	// Take the first line which usually contains version info
+	firstLine := strings.TrimSpace(lines[0])
+
+	// Common version patterns to extract
+	patterns := []string{
+		// Matches "v1.2.3" or "version 1.2.3"
+		`v?\d+\.\d+\.\d+(?:\-[a-zA-Z0-9\-\.]+)?`,
+		// Matches "1.2" format
+		`\d+\.\d+`,
+	}
+
+	for _, pattern := range patterns {
+		if match := regexp.MustCompile(pattern).FindString(firstLine); match != "" {
+			return match
+		}
+	}
+
+	// If no pattern matches, return the first word that looks like a version
+	words := strings.Fields(firstLine)
+	for _, word := range words {
+		if regexp.MustCompile(`[0-9]`).MatchString(word) {
+			return word
+		}
+	}
+
+	return strings.TrimSpace(firstLine)
+}
+
 // ensureGolangciLint ensures golangci-lint is installed
 func ensureGolangciLint(cfg *Config) error {
 	if utils.CommandExists("golangci-lint") {
@@ -591,17 +668,20 @@ func (Lint) Docker() error {
 		return nil
 	}
 
+	hadolintVersion := getLinterVersion("hadolint")
+
 	// Check if hadolint is available
 	if !utils.CommandExists("hadolint") {
 		utils.Info("hadolint not found, install it for Docker linting: brew install hadolint")
 		return nil
 	}
 
+	utils.Info("Running hadolint %s...", hadolintVersion)
 	if err := GetRunner().RunCmd("hadolint", "Dockerfile"); err != nil {
 		return fmt.Errorf("docker linting failed: %w", err)
 	}
 
-	utils.Success("Docker linting passed")
+	utils.Success("Docker linting passed with hadolint %s", hadolintVersion)
 	return nil
 }
 
@@ -619,17 +699,20 @@ func (Lint) YAML() error {
 		return nil
 	}
 
+	yamllintVersion := getLinterVersion("yamllint")
+
 	// Check if yamllint is available
 	if !utils.CommandExists("yamllint") {
 		utils.Info("yamllint not found, install it for YAML linting: pip install yamllint")
 		return nil
 	}
 
+	utils.Info("Running yamllint %s...", yamllintVersion)
 	if err := GetRunner().RunCmd("yamllint", "."); err != nil {
 		return fmt.Errorf("yaml linting failed: %w", err)
 	}
 
-	utils.Success("YAML linting passed")
+	utils.Success("YAML linting passed with yamllint %s", yamllintVersion)
 	return nil
 }
 
@@ -652,17 +735,20 @@ func (Lint) Markdown() error {
 		return nil
 	}
 
+	markdownlintVersion := getLinterVersion("markdownlint")
+
 	// Check if markdownlint is available
 	if !utils.CommandExists("markdownlint") {
 		utils.Info("markdownlint not found, install it for Markdown linting: npm install -g markdownlint-cli")
 		return nil
 	}
 
+	utils.Info("Running markdownlint %s...", markdownlintVersion)
 	if err := GetRunner().RunCmd("markdownlint", "*.md"); err != nil {
 		return fmt.Errorf("markdown linting failed: %w", err)
 	}
 
-	utils.Success("Markdown linting passed")
+	utils.Success("Markdown linting passed with markdownlint %s", markdownlintVersion)
 	return nil
 }
 
@@ -680,17 +766,20 @@ func (Lint) Shell() error {
 		return nil
 	}
 
+	shellcheckVersion := getLinterVersion("shellcheck")
+
 	// Check if shellcheck is available
 	if !utils.CommandExists("shellcheck") {
 		utils.Info("shellcheck not found, install it for shell linting: brew install shellcheck")
 		return nil
 	}
 
+	utils.Info("Running shellcheck %s...", shellcheckVersion)
 	if err := GetRunner().RunCmd("shellcheck", "**/*.sh"); err != nil {
 		return fmt.Errorf("shell linting failed: %w", err)
 	}
 
-	utils.Success("Shell script linting passed")
+	utils.Success("Shell script linting passed with shellcheck %s", shellcheckVersion)
 	return nil
 }
 
@@ -736,17 +825,20 @@ func (Lint) SQL() error {
 		return nil
 	}
 
+	sqlfluffVersion := getLinterVersion("sqlfluff")
+
 	// Check if sqlfluff is available
 	if !utils.CommandExists("sqlfluff") {
 		utils.Info("sqlfluff not found, install it for SQL linting: pip install sqlfluff")
 		return nil
 	}
 
+	utils.Info("Running sqlfluff %s...", sqlfluffVersion)
 	if err := GetRunner().RunCmd("sqlfluff", "lint", "."); err != nil {
 		return fmt.Errorf("sql linting failed: %w", err)
 	}
 
-	utils.Success("SQL linting passed")
+	utils.Success("SQL linting passed with sqlfluff %s", sqlfluffVersion)
 	return nil
 }
 
@@ -874,9 +966,10 @@ func getLinterConfigInfo() (configFile string, enabledCount, disabledCount int) 
 // displayLinterConfig displays linter configuration information
 func displayLinterConfig() {
 	configFile, enabledCount, disabledCount := getLinterConfigInfo()
+	golangciVersion := getLinterVersion("golangci-lint")
 
 	if configFile == "default (no config file found)" {
-		utils.Info("Using golangci-lint defaults (no config file found)")
+		utils.Info("Using golangci-lint %s defaults (no config file found)", golangciVersion)
 	} else {
 		absPath, err := filepath.Abs(configFile)
 		if err != nil {
@@ -884,7 +977,9 @@ func displayLinterConfig() {
 		}
 		utils.Info("Config: %s", absPath)
 		if enabledCount > 0 || disabledCount > 0 {
-			utils.Info("Linters: %d enabled, %d disabled", enabledCount, disabledCount)
+			utils.Info("Linters: %d enabled, %d disabled (golangci-lint %s)", enabledCount, disabledCount, golangciVersion)
+		} else {
+			utils.Info("Using golangci-lint %s", golangciVersion)
 		}
 	}
 }
