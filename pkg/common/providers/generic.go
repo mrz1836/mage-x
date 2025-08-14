@@ -9,6 +9,7 @@ import (
 // It uses sync.Once to ensure thread-safe lazy initialization with a factory function.
 type Provider[T any] struct {
 	once     sync.Once
+	mu       sync.RWMutex
 	instance T
 	factory  func() T
 }
@@ -25,16 +26,21 @@ func NewProvider[T any](factory func() T) *Provider[T] {
 // Subsequent calls return the same instance. This method is thread-safe.
 func (p *Provider[T]) Get() T {
 	p.once.Do(func() {
+		p.mu.Lock()
 		p.instance = p.factory()
+		p.mu.Unlock()
 	})
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.instance
 }
 
 // Reset clears the singleton instance and resets the sync.Once.
 // This is primarily useful for testing scenarios where you need to reinitialize the provider.
-// WARNING: This method is NOT thread-safe and should only be used in controlled environments
-// where you can guarantee no concurrent access.
+// This method is now thread-safe.
 func (p *Provider[T]) Reset() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.once = sync.Once{}
 	var zero T
 	p.instance = zero
@@ -42,9 +48,10 @@ func (p *Provider[T]) Reset() {
 
 // Set replaces the singleton instance with the provided value.
 // This bypasses the factory function and is primarily useful for dependency injection in tests.
-// WARNING: This method is NOT thread-safe and should only be used in controlled environments
-// where you can guarantee no concurrent access.
+// This method is now thread-safe.
 func (p *Provider[T]) Set(instance T) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.instance = instance
 	// Mark once as done to prevent factory from being called
 	p.once.Do(func() {})
