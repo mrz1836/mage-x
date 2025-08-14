@@ -6,7 +6,6 @@ package mage
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
