@@ -353,6 +353,19 @@ mage -h <command>       # Get help for a specific command
 mage -version           # Show mage version and build info
 ```
 
+#### 🎯 Default Targets & Aliases
+```bash
+# Quick Access Commands
+mage                    # Run default build (alias for buildDefault)
+mage help               # Show beautiful help with all commands (alias: mage helpDefault)
+mage build              # Build the project (alias: mage buildDefault) 
+mage docs               # Generate and serve documentation (alias: mage docsDefault)
+mage lint               # Run essential linters (alias: mage lintDefault)
+mage loc                # Analyze lines of code (alias: mage metricsLOC)
+mage release            # Create a new release (alias: mage releaseDefault)
+mage test               # Run complete test suite (alias: mage testDefault)
+```
+
 #### 📦 Build Commands
 ```bash
 # Core Build Operations
@@ -536,19 +549,6 @@ mage helpCommands       # List all available commands
 mage helpExamples       # Show usage examples
 mage helpGettingStarted # Getting started guide
 mage helpCompletions    # Generate shell completions
-```
-
-#### 🎯 Default Targets & Aliases
-```bash
-# Quick Access Commands
-mage                    # Run default build (alias for buildDefault)
-mage help               # Show beautiful help with all commands (alias: mage helpDefault)
-mage build              # Build the project (alias: mage buildDefault) 
-mage docs               # Generate and serve documentation (alias: mage docsDefault)
-mage lint               # Run essential linters (alias: mage lintDefault)
-mage loc                # Analyze lines of code (alias: mage metricsLOC)
-mage release            # Create a new release (alias: mage releaseDefault)
-mage test               # Run complete test suite (alias: mage testDefault)
 ```
 
 ### 📋 Complete Command List
