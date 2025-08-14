@@ -22,16 +22,20 @@ import (
 
 // Static errors to satisfy err113 linter
 var (
-	errCannotParseGitHubInfo     = errors.New("cannot parse GitHub info from module")
-	errInvalidBumpType           = errors.New("invalid BUMP type (must be major, minor, or patch)")
-	errVersionUncommittedChanges = errors.New("working directory has uncommitted changes")
-	errGitHubAPIError            = errors.New("GitHub API error")
-	errInvalidVersionFormat      = errors.New("invalid version format")
-	errInvalidMajorVersion       = errors.New("invalid major version")
-	errInvalidMinorVersion       = errors.New("invalid minor version")
-	errInvalidPatchVersion       = errors.New("invalid patch version")
-	errMultipleTagsOnCommit      = errors.New("current commit already has version tags")
-	errIllogicalVersionJump      = errors.New("version jump appears illogical")
+	errCannotParseGitHubInfo        = errors.New("cannot parse GitHub info from module")
+	errInvalidBumpType              = errors.New("invalid BUMP type (must be major, minor, or patch)")
+	errVersionUncommittedChanges    = errors.New("working directory has uncommitted changes")
+	errGitHubAPIError               = errors.New("GitHub API error")
+	errInvalidVersionFormat         = errors.New("invalid version format")
+	errInvalidMajorVersion          = errors.New("invalid major version")
+	errInvalidMinorVersion          = errors.New("invalid minor version")
+	errInvalidPatchVersion          = errors.New("invalid patch version")
+	errMultipleTagsOnCommit         = errors.New("current commit already has version tags")
+	errIllogicalVersionJump         = errors.New("version jump appears illogical")
+	errMajorBumpRequiresConfirm     = errors.New("major version bump requires explicit confirmation via MAJOR_BUMP_CONFIRM=true")
+	errVersionBumpBlocked           = errors.New("version bump blocked due to safety check - use FORCE_VERSION_BUMP=true to override")
+	errUnexpectedMajorVersionJump   = errors.New("unexpected major version jump")
+	errUnexpectedlyLargeVersionJump = errors.New("unexpectedly large version jump")
 )
 
 // Version namespace for version management tasks
@@ -242,14 +246,29 @@ func (Version) Update() error {
 func (Version) Bump(_ ...string) error {
 	utils.Header("Bumping Version")
 
-	// Get bump type from environment
+	// Check for dry-run mode first
+	dryRun := os.Getenv("DRY_RUN") == approvalTrue
+
+	// Get bump type from environment with enhanced validation
 	bumpType := utils.GetEnv("BUMP", "patch")
+
+	// Trim whitespace and convert to lowercase for robust validation
+	bumpType = strings.TrimSpace(strings.ToLower(bumpType))
+
+	// Log the bump type being used for debugging
+	utils.Info("Using BUMP type: %s", bumpType)
+
 	if bumpType != "major" && bumpType != "minor" && bumpType != "patch" {
 		return fmt.Errorf("%w: %s", errInvalidBumpType, bumpType)
 	}
 
-	// Check for dry-run mode
-	dryRun := os.Getenv("DRY_RUN") == approvalTrue
+	// Special validation for major version bumps to prevent accidents
+	if bumpType == "major" && !dryRun {
+		if err := validateMajorVersionBump(); err != nil {
+			return err
+		}
+	}
+
 	if dryRun {
 		utils.Info("🔍 Running in DRY-RUN mode - no changes will be made")
 	}
@@ -295,6 +314,19 @@ func (Version) Bump(_ ...string) error {
 	// Validate version progression
 	if err := validateVersionProgression(current, newVersion, bumpType); err != nil {
 		return err
+	}
+
+	// Additional check for unexpected version jumps (beyond validation errors)
+	if !dryRun {
+		if err := checkForUnexpectedVersionJump(current, newVersion, bumpType); err != nil {
+			utils.Warn("⚠️  %s", err.Error())
+			if os.Getenv("FORCE_VERSION_BUMP") != approvalTrue {
+				utils.Warn("To proceed anyway, set FORCE_VERSION_BUMP=true")
+				utils.Warn("Or use DRY_RUN=true to preview the change first")
+				return errVersionBumpBlocked
+			}
+			utils.Warn("⚠️  Proceeding with potentially unexpected version jump due to FORCE_VERSION_BUMP=true")
+		}
 	}
 
 	utils.Info("Bumping from %s to %s (%s bump)", current, newVersion, bumpType)
@@ -656,6 +688,71 @@ func validateVersionProgression(current, newVersion, bumpType string) error {
 			return fmt.Errorf("%w: expected %s → v%d.0.0, got %s",
 				errIllogicalVersionJump, current, currMajor+1, newVersion)
 		}
+	}
+
+	return nil
+}
+
+// validateMajorVersionBump validates major version bumps to prevent accidents
+func validateMajorVersionBump() error {
+	// Check if this appears to be an accidental major bump
+	current := getCurrentGitTag()
+	if current == "" {
+		return nil
+	}
+
+	newVersion, err := bumpVersion(current, "major")
+	if err != nil {
+		return nil //nolint:nilerr // Skip validation if bump calculation fails
+	}
+
+	utils.Warn("⚠️  MAJOR VERSION BUMP DETECTED:")
+	utils.Warn("   Current version: %s", current)
+	utils.Warn("   New version:     %s", newVersion)
+	utils.Warn("   This will create a breaking change release!")
+
+	// Check if user explicitly confirmed major bump
+	if os.Getenv("MAJOR_BUMP_CONFIRM") != approvalTrue {
+		utils.Warn("")
+		utils.Warn("To proceed with major version bump, set MAJOR_BUMP_CONFIRM=true")
+		utils.Warn("Example: MAJOR_BUMP_CONFIRM=true BUMP=major mage versionBump")
+		utils.Warn("")
+		utils.Warn("Or use DRY_RUN=true to preview the change first:")
+		utils.Warn("Example: DRY_RUN=true BUMP=major mage versionBump")
+		return errMajorBumpRequiresConfirm
+	}
+	utils.Success("✅ Major version bump confirmed via MAJOR_BUMP_CONFIRM=true")
+	return nil
+}
+
+// checkForUnexpectedVersionJump provides additional safety checks beyond basic validation
+func checkForUnexpectedVersionJump(current, newVersion, bumpType string) error {
+	// Parse versions
+	currentParts := strings.Split(strings.TrimPrefix(current, "v"), ".")
+	newParts := strings.Split(strings.TrimPrefix(newVersion, "v"), ".")
+
+	if len(currentParts) != 3 || len(newParts) != 3 {
+		return nil // Skip check for malformed versions
+	}
+
+	currMajor, err := strconv.Atoi(currentParts[0])
+	if err != nil {
+		return nil //nolint:nilerr // Skip check for malformed versions
+	}
+	newMajor, err := strconv.Atoi(newParts[0])
+	if err != nil {
+		return nil //nolint:nilerr // Skip check for malformed versions
+	}
+
+	// Check for unexpected major version jump when expecting patch
+	if bumpType == "patch" && newMajor > currMajor {
+		return fmt.Errorf("%w from %s to %s when BUMP=%s", errUnexpectedMajorVersionJump, current, newVersion, bumpType)
+	}
+
+	// Check for surprisingly large jumps that might indicate environment contamination
+	majorJump := newMajor - currMajor
+	if majorJump > 1 {
+		return fmt.Errorf("%w from %s to %s (major version increased by %d)", errUnexpectedlyLargeVersionJump, current, newVersion, majorJump)
 	}
 
 	return nil

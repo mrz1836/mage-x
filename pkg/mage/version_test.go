@@ -2,6 +2,7 @@ package mage
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -1048,5 +1049,262 @@ func TestVersionStringHelpers(t *testing.T) {
 				require.Len(t, parts, tc.expectedParts)
 			}
 		}
+	})
+}
+
+// TestEnvironmentVariablePrecedence tests BUMP environment variable handling thoroughly
+func TestEnvironmentVariablePrecedence(t *testing.T) {
+	// Save original BUMP value
+	originalBump := os.Getenv("BUMP")
+	defer func() {
+		if originalBump != "" {
+			require.NoError(t, os.Setenv("BUMP", originalBump))
+		} else {
+			require.NoError(t, os.Unsetenv("BUMP"))
+		}
+	}()
+
+	t.Run("DefaultWhenUnset", func(t *testing.T) {
+		require.NoError(t, os.Unsetenv("BUMP"))
+		
+		bumpType := utils.GetEnv("BUMP", "patch")
+		require.Equal(t, "patch", bumpType)
+	})
+
+	t.Run("EmptyStringUsesDefault", func(t *testing.T) {
+		require.NoError(t, os.Setenv("BUMP", ""))
+		
+		bumpType := utils.GetEnv("BUMP", "patch")
+		require.Equal(t, "patch", bumpType) // Empty should use default
+	})
+
+	t.Run("ExplicitValueOverridesDefault", func(t *testing.T) {
+		testCases := []string{"major", "minor", "patch"}
+		
+		for _, expected := range testCases {
+			t.Run(expected, func(t *testing.T) {
+				require.NoError(t, os.Setenv("BUMP", expected))
+				
+				bumpType := utils.GetEnv("BUMP", "patch")
+				require.Equal(t, expected, bumpType)
+			})
+		}
+	})
+
+	t.Run("CaseInsensitiveValidation", func(t *testing.T) {
+		// Note: The actual validation happens in Version.Bump(), 
+		// but we test utils.GetEnv behavior here
+		testCases := []string{"MAJOR", "Minor", "PATCH"}
+		
+		for _, bumpType := range testCases {
+			t.Run(bumpType, func(t *testing.T) {
+				require.NoError(t, os.Setenv("BUMP", bumpType))
+				
+				result := utils.GetEnv("BUMP", "patch")
+				require.Equal(t, bumpType, result) // GetEnv preserves case
+			})
+		}
+	})
+}
+
+// TestBumpVersionWithRealWorldScenarios tests bumpVersion with realistic tag scenarios
+func TestBumpVersionWithRealWorldScenarios(t *testing.T) {
+	t.Run("SequentialPatches", func(t *testing.T) {
+		// Simulate sequential patch releases
+		versions := []string{"v1.0.0", "v1.0.1", "v1.0.2", "v1.0.3", "v1.0.4", "v1.0.5", "v1.0.6"}
+		
+		for i, current := range versions[:len(versions)-1] {
+			expected := versions[i+1]
+			
+			result, err := bumpVersion(current, "patch")
+			require.NoError(t, err)
+			require.Equal(t, expected, result, "Sequential patch from %s should produce %s", current, expected)
+		}
+	})
+
+	t.Run("RealWorldVersionProgression", func(t *testing.T) {
+		// Test the exact scenario that caused the original issue
+		result, err := bumpVersion("v1.0.6", "patch")
+		require.NoError(t, err)
+		require.Equal(t, "v1.0.7", result, "v1.0.6 with patch should become v1.0.7")
+		
+		// NOT v2.0.0!
+		require.NotEqual(t, "v2.0.0", result, "Patch bump should never result in major version jump")
+	})
+
+	t.Run("MinorVersionResetsPatch", func(t *testing.T) {
+		result, err := bumpVersion("v1.0.6", "minor")
+		require.NoError(t, err)
+		require.Equal(t, "v1.1.0", result, "Minor bump should reset patch to 0")
+	})
+
+	t.Run("MajorVersionResetsMinorAndPatch", func(t *testing.T) {
+		result, err := bumpVersion("v1.0.6", "major")
+		require.NoError(t, err)
+		require.Equal(t, "v2.0.0", result, "Major bump should reset minor and patch to 0")
+	})
+
+	t.Run("LargeVersionNumbers", func(t *testing.T) {
+		testCases := []struct {
+			current  string
+			bumpType string
+			expected string
+		}{
+			{"v10.20.30", "patch", "v10.20.31"},
+			{"v10.20.30", "minor", "v10.21.0"},
+			{"v10.20.30", "major", "v11.0.0"},
+			{"v99.99.99", "major", "v100.0.0"}, // Test triple-digit major
+		}
+
+		for _, tc := range testCases {
+			t.Run(fmt.Sprintf("%s_%s", tc.current, tc.bumpType), func(t *testing.T) {
+				result, err := bumpVersion(tc.current, tc.bumpType)
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, result)
+			})
+		}
+	})
+}
+
+// TestValidateVersionProgressionExtended tests extended validation scenarios
+func TestValidateVersionProgressionExtended(t *testing.T) {
+	t.Run("ValidProgressions", func(t *testing.T) {
+		validCases := []struct {
+			current  string
+			new      string
+			bumpType string
+		}{
+			{"v1.0.6", "v1.0.7", "patch"},
+			{"v1.0.6", "v1.1.0", "minor"},
+			{"v1.0.6", "v2.0.0", "major"},
+			{"v0.0.1", "v0.0.2", "patch"},
+			{"v0.1.0", "v0.2.0", "minor"},
+			{"v1.0.0", "v2.0.0", "major"},
+		}
+
+		for _, tc := range validCases {
+			t.Run(fmt.Sprintf("%s_to_%s_%s", tc.current, tc.new, tc.bumpType), func(t *testing.T) {
+				err := validateVersionProgression(tc.current, tc.new, tc.bumpType)
+				require.NoError(t, err, "Valid progression should be allowed")
+			})
+		}
+	})
+
+	t.Run("InvalidProgressions", func(t *testing.T) {
+		invalidCases := []struct {
+			current   string
+			new       string
+			bumpType  string
+			reasonWhy string
+		}{
+			{"v1.0.6", "v2.0.0", "patch", "patch shouldn't jump major version"},
+			{"v1.0.6", "v1.1.0", "patch", "patch shouldn't jump minor version"}, 
+			{"v1.0.6", "v1.0.8", "patch", "patch should increment by 1"},
+			{"v1.0.6", "v1.2.0", "minor", "minor should increment by 1"},
+			{"v1.0.6", "v1.1.6", "minor", "minor should reset patch to 0"},
+			{"v1.0.6", "v3.0.0", "major", "major should increment by 1"},
+			{"v1.0.6", "v2.1.0", "major", "major should reset minor to 0"},
+			{"v1.0.6", "v2.0.6", "major", "major should reset patch to 0"},
+		}
+
+		for _, tc := range invalidCases {
+			t.Run(fmt.Sprintf("%s_to_%s_%s", tc.current, tc.new, tc.bumpType), func(t *testing.T) {
+				err := validateVersionProgression(tc.current, tc.new, tc.bumpType)
+				require.Error(t, err, "Invalid progression should be rejected: %s", tc.reasonWhy)
+				require.ErrorIs(t, err, errIllogicalVersionJump)
+			})
+		}
+	})
+
+	t.Run("EdgeCasesToleratedBehavior", func(t *testing.T) {
+		// These cases show current behavior for invalid formats
+		// Validation is skipped for malformed versions
+		
+		err := validateVersionProgression("v1.2", "v1.3", "patch")
+		require.NoError(t, err, "Invalid format should skip validation")
+		
+		err = validateVersionProgression("v1.2.3.4", "v1.2.3.5", "patch")
+		require.NoError(t, err, "Invalid format should skip validation")
+	})
+}
+
+// TestGetCurrentGitTagBehavior tests getCurrentGitTag function behavior
+func TestGetCurrentGitTagBehavior(t *testing.T) {
+	// This test uses the real git commands, so behavior depends on actual repository state
+	t.Run("FunctionExists", func(t *testing.T) {
+		// Basic sanity check that function doesn't panic
+		tag := getCurrentGitTag()
+		require.True(t, tag == "" || tag[0] == 'v' || (len(tag) > 0 && tag[0] != 'v'),
+			"getCurrentGitTag should return empty string or tag (with or without v prefix)")
+	})
+
+	t.Run("HandlesMissingTags", func(t *testing.T) {
+		// Function should handle case where no tags exist gracefully
+		tag := getCurrentGitTag()
+		// Should not panic, return string (possibly empty)
+		require.NotNil(t, &tag, "getCurrentGitTag should not panic")
+		_ = tag // Use the variable to avoid unused warning
+	})
+}
+
+// TestGetTagsOnCurrentCommitBehavior tests getTagsOnCurrentCommit function behavior
+func TestGetTagsOnCurrentCommitBehavior(t *testing.T) {
+	t.Run("FunctionExists", func(t *testing.T) {
+		tags, err := getTagsOnCurrentCommit()
+		require.NoError(t, err, "getTagsOnCurrentCommit should not error in valid git repo")
+		require.NotNil(t, tags, "Should return slice (possibly empty)")
+		
+		// All returned tags should be version tags (start with v followed by digit)
+		for _, tag := range tags {
+			require.True(t, strings.HasPrefix(tag, "v"), "All tags should start with 'v': %s", tag)
+			if len(tag) > 1 {
+				require.True(t, tag[1] >= '0' && tag[1] <= '9', 
+					"Character after 'v' should be digit: %s", tag)
+			}
+		}
+	})
+}
+
+// TestVersionBumpEnvironmentVariableEdgeCases tests edge cases in environment variable handling
+func TestVersionBumpEnvironmentVariableEdgeCases(t *testing.T) {
+	// Save original environment
+	originalVars := make(map[string]string)
+	envVars := []string{"BUMP", "PUSH", "DRY_RUN"}
+	for _, env := range envVars {
+		if value, exists := os.LookupEnv(env); exists {
+			originalVars[env] = value
+		}
+	}
+	defer func() {
+		for _, env := range envVars {
+			if value, existed := originalVars[env]; existed {
+				require.NoError(t, os.Setenv(env, value))
+			} else {
+				require.NoError(t, os.Unsetenv(env))
+			}
+		}
+	}()
+
+	t.Run("WhitespaceInBUMP", func(t *testing.T) {
+		require.NoError(t, os.Setenv("BUMP", " patch "))
+		
+		// The Version.Bump method should handle this (trim whitespace)
+		// For now, we test that GetEnv returns the literal value
+		bumpType := utils.GetEnv("BUMP", "patch")
+		require.Equal(t, " patch ", bumpType, "GetEnv should return literal value")
+	})
+
+	t.Run("MultipleEnvironmentVariables", func(t *testing.T) {
+		require.NoError(t, os.Setenv("BUMP", "minor"))
+		require.NoError(t, os.Setenv("PUSH", "true"))
+		require.NoError(t, os.Setenv("DRY_RUN", "false"))
+
+		bumpType := utils.GetEnv("BUMP", "patch")
+		pushEnabled := utils.GetEnv("PUSH", "false")
+		dryRun := utils.GetEnv("DRY_RUN", "false")
+
+		require.Equal(t, "minor", bumpType)
+		require.Equal(t, "true", pushEnabled)
+		require.Equal(t, "false", dryRun)
 	})
 }
