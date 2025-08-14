@@ -4,7 +4,6 @@ package mage
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -26,40 +25,24 @@ type Release mg.Namespace
 func (Release) Default() error {
 	utils.Header("Running Production Release")
 
-	// Check for GitHub token
-	token := os.Getenv("github_token")
-	if token == "" {
-		token = os.Getenv("GITHUB_TOKEN")
-	}
+	// Check for GitHub token, preferring github_token
+	githubToken := os.Getenv("github_token")
+	existingToken := os.Getenv("GITHUB_TOKEN")
 
-	if token == "" {
+	if githubToken != "" {
+		// If we're using github_token, set GITHUB_TOKEN permanently
+		if err := os.Setenv("GITHUB_TOKEN", githubToken); err != nil {
+			return fmt.Errorf("failed to set GITHUB_TOKEN: %w", err)
+		}
+	} else if existingToken == "" {
 		return errReleaseGitHubTokenRequired
 	}
+	// If existingToken != "", GITHUB_TOKEN is already set correctly
 
 	// Ensure goreleaser is installed
 	if err := ensureGoreleaser(); err != nil {
 		return err
 	}
-
-	// Run goreleaser
-	// Set environment variable temporarily
-	oldToken := os.Getenv("GITHUB_TOKEN")
-	if err := os.Setenv("GITHUB_TOKEN", token); err != nil {
-		return fmt.Errorf("failed to set GITHUB_TOKEN: %w", err)
-	}
-	defer func() {
-		if oldToken == "" {
-			if err := os.Unsetenv("GITHUB_TOKEN"); err != nil {
-				// Log error but don't fail - this is cleanup
-				log.Printf("failed to unset GITHUB_TOKEN during cleanup: %v", err)
-			}
-		} else {
-			if err := os.Setenv("GITHUB_TOKEN", oldToken); err != nil {
-				// Log error but don't fail - this is cleanup
-				log.Printf("failed to restore GITHUB_TOKEN during cleanup: %v", err)
-			}
-		}
-	}()
 
 	if err := GetRunner().RunCmd("goreleaser", "release", "--clean"); err != nil {
 		return fmt.Errorf("release failed: %w", err)
@@ -232,7 +215,8 @@ func (Release) Changelog() error {
 
 // ensureGoreleaser checks if goreleaser is installed
 func ensureGoreleaser() error {
-	if utils.CommandExists("goreleaser") {
+	// Use the runner to check if goreleaser exists (for mockability in tests)
+	if err := GetRunner().RunCmd("which", "goreleaser"); err == nil {
 		return nil
 	}
 

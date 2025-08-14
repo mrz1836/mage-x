@@ -13,46 +13,45 @@ import (
 
 // Static errors for validation
 var (
-	ErrVersionInvalidUTF8      = errors.New("version contains invalid UTF-8")
-	ErrVersionPathTraversal    = errors.New("version contains path traversal pattern")
+	ErrEmailEmpty              = errors.New("email cannot be empty")
+	ErrEmailInvalidDomain      = errors.New("invalid email domain")
+	ErrEmailInvalidFormat      = errors.New("invalid email format")
+	ErrEnvVarInvalidChar       = errors.New("environment variable contains invalid characters")
+	ErrEnvVarInvalidStart      = errors.New("environment variable must start with letter or underscore")
+	ErrEnvVarNameEmpty         = errors.New("environment variable name cannot be empty")
+	ErrFilenameDirRef          = errors.New("filename cannot be directory reference")
+	ErrFilenameEmpty           = errors.New("filename cannot be empty")
+	ErrFilenameInvalidChar     = errors.New("filename contains invalid characters")
+	ErrFilenameNullByte        = errors.New("filename contains null byte")
+	ErrFilenamePathSeparator   = errors.New("filename cannot contain path separators")
+	ErrFilenameWhitespace      = errors.New("filename cannot have leading/trailing whitespace")
+	ErrGitRefDangerousChar     = errors.New("git ref contains dangerous character")
+	ErrGitRefEmpty             = errors.New("git ref cannot be empty")
+	ErrGitRefInvalidFormat     = errors.New("invalid git ref format")
+	ErrPortInvalidRange        = errors.New("port must be between 1 and 65535")
+	ErrURLControlChar          = errors.New("URL contains control character")
+	ErrURLEmpty                = errors.New("URL cannot be empty")
+	ErrURLInvalidProtocol      = errors.New("invalid protocol - URL must use http or https")
+	ErrURLNullByte             = errors.New("URL contains null byte")
+	ErrURLSuspiciousPattern    = errors.New("suspicious pattern detected in URL")
+	ErrURLWhitespace           = errors.New("URL cannot have leading/trailing whitespace")
 	ErrVersionCommandInjection = errors.New("version contains command injection pattern")
-	ErrVersionNullByte         = errors.New("version contains null byte")
 	ErrVersionControlChar      = errors.New("version contains control character")
 	ErrVersionDoubleV          = errors.New("double 'v' prefix not allowed")
 	ErrVersionInvalidFormat    = errors.New("invalid version format")
-	ErrGitRefEmpty             = errors.New("git ref cannot be empty")
-	ErrGitRefInvalidFormat     = errors.New("invalid git ref format")
-	ErrGitRefDangerousChar     = errors.New("git ref contains dangerous character")
-	ErrFilenameEmpty           = errors.New("filename cannot be empty")
-	ErrFilenameInvalidChar     = errors.New("filename contains invalid characters")
-	ErrFilenamePathTraversal   = errors.New("filename contains path traversal")
-	ErrPathEmpty               = errors.New("path cannot be empty")
-	ErrPathInvalidChar         = errors.New("path contains invalid characters")
-	ErrPathTraversalDetected   = errors.New("path traversal detected")
-	ErrURLEmpty                = errors.New("URL cannot be empty")
-	ErrURLInvalidScheme        = errors.New("URL must use https scheme")
-	ErrURLDangerousChar        = errors.New("URL contains dangerous characters")
-	ErrEmailInvalidFormat      = errors.New("invalid email format")
-	ErrEmailInvalidDomain      = errors.New("invalid email domain")
-	ErrPortInvalidRange        = errors.New("port must be between 1 and 65535")
-	ErrEnvVarNameEmpty         = errors.New("environment variable name cannot be empty")
-	ErrEnvVarInvalidStart      = errors.New("environment variable must start with letter or underscore")
-	ErrEnvVarInvalidChar       = errors.New("environment variable contains invalid characters")
-	ErrFilenameDirRef          = errors.New("filename cannot be directory reference")
-	ErrFilenameNullByte        = errors.New("filename contains null byte")
-	ErrFilenameWhitespace      = errors.New("filename cannot have leading/trailing whitespace")
-	ErrFilenamePathSeparator   = errors.New("filename cannot contain path separators")
-	ErrURLNullByte             = errors.New("URL contains null byte")
-	ErrURLControlChar          = errors.New("URL contains control character")
-	ErrURLWhitespace           = errors.New("URL cannot have leading/trailing whitespace")
-	ErrURLInvalidProtocol      = errors.New("URL must start with http:// or https://")
-	ErrURLSuspiciousPattern    = errors.New("URL contains suspicious pattern")
-	ErrEmailEmpty              = errors.New("email cannot be empty")
+	ErrVersionInvalidUTF8      = errors.New("version contains invalid UTF-8")
+	ErrVersionNullByte         = errors.New("version contains null byte")
+	ErrVersionPathTraversal    = errors.New("version contains path traversal pattern")
+)
+
+// Error format constants
+const (
+	errFormatWithContext = "%w: %s"
 )
 
 var (
 	// Version regex for semantic versioning
-	versionRegex = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[a-zA-Z0-9\-.]+)?(\+[a-zA-Z0-9\-.]+)?$`)
+	versionRegex = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[\p{L}\p{N}\p{So}\-\.]+)?(\+[\p{L}\p{N}\p{So}\-\.]+)?$`)
 
 	// Git ref regex (branch names, tags)
 	gitRefRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_./]+$`)
@@ -69,17 +68,21 @@ func ValidateVersion(version string) error {
 	}
 
 	// Check for dangerous patterns first
-	if strings.Contains(version, "..") {
-		return fmt.Errorf("%w: %s", ErrVersionPathTraversal, version)
+	if strings.Contains(version, "..") || strings.Contains(version, "./") || strings.Contains(version, "../") || strings.Contains(version, "\\") {
+		return fmt.Errorf(errFormatWithContext, ErrVersionPathTraversal, version)
 	}
-	if strings.Contains(version, "$(") || strings.Contains(version, "`") {
-		return fmt.Errorf("%w: %s", ErrVersionCommandInjection, version)
+	if strings.Contains(version, "$(") || strings.Contains(version, "`") || strings.Contains(version, "${") {
+		return fmt.Errorf(errFormatWithContext, ErrVersionCommandInjection, version)
+	}
+	// Check for dangerous symbols that could be used for injection
+	if strings.Contains(version, "<") || strings.Contains(version, ">") {
+		return fmt.Errorf(errFormatWithContext, ErrVersionCommandInjection, version)
 	}
 	if strings.Contains(version, "\x00") {
-		return fmt.Errorf("%w: %s", ErrVersionNullByte, version)
+		return fmt.Errorf(errFormatWithContext, ErrVersionNullByte, version)
 	}
-	if strings.Contains(version, "\n") || strings.Contains(version, "\r") {
-		return fmt.Errorf("%w: %s", ErrVersionControlChar, version)
+	if strings.Contains(version, "\n") || strings.Contains(version, "\r") || strings.Contains(version, "\t") || strings.Contains(version, "\x1b") {
+		return fmt.Errorf(errFormatWithContext, ErrVersionControlChar, version)
 	}
 
 	// Remove leading 'v' if present for validation
@@ -87,7 +90,13 @@ func ValidateVersion(version string) error {
 
 	// The cleaned version should not start with 'v' (no double 'v' allowed)
 	if strings.HasPrefix(cleanVersion, "v") {
-		return fmt.Errorf("%w: %s", ErrVersionDoubleV, version)
+		return fmt.Errorf(errFormatWithContext, ErrVersionDoubleV, version)
+	}
+
+	// Check for empty prerelease or metadata sections
+	if strings.HasSuffix(cleanVersion, "-") || strings.HasSuffix(cleanVersion, "+") ||
+		strings.Contains(cleanVersion, "-+") {
+		return fmt.Errorf("%w: %s (prerelease/metadata sections cannot be empty)", ErrVersionInvalidFormat, version)
 	}
 
 	if !versionRegex.MatchString(cleanVersion) {
@@ -104,7 +113,7 @@ func ValidateGitRef(ref string) error {
 	}
 
 	if !gitRefRegex.MatchString(ref) {
-		return fmt.Errorf("%w: %s", ErrGitRefInvalidFormat, ref)
+		return fmt.Errorf(errFormatWithContext, ErrGitRefInvalidFormat, ref)
 	}
 
 	// Check for dangerous patterns
@@ -122,7 +131,7 @@ func ValidateGitRef(ref string) error {
 
 	for _, pattern := range dangerous {
 		if strings.Contains(ref, pattern) {
-			return fmt.Errorf("%w: %s", ErrGitRefDangerousChar, pattern)
+			return fmt.Errorf(errFormatWithContext, ErrGitRefDangerousChar, pattern)
 		}
 	}
 
@@ -137,13 +146,13 @@ func ValidateFilename(filename string) error {
 
 	// Check for dangerous patterns first
 	if filename == ".." || filename == "." {
-		return fmt.Errorf("%w: %s", ErrFilenameDirRef, filename)
+		return fmt.Errorf(errFormatWithContext, ErrFilenameDirRef, filename)
 	}
 	if strings.Contains(filename, "\x00") {
-		return fmt.Errorf("%w: %s", ErrFilenameNullByte, filename)
+		return fmt.Errorf(errFormatWithContext, ErrFilenameNullByte, filename)
 	}
 	if strings.TrimSpace(filename) != filename {
-		return fmt.Errorf("%w: %s", ErrFilenameWhitespace, filename)
+		return fmt.Errorf(errFormatWithContext, ErrFilenameWhitespace, filename)
 	}
 
 	// Check if it's just a filename (no path)
@@ -152,7 +161,7 @@ func ValidateFilename(filename string) error {
 	}
 
 	if !safeFilenameRegex.MatchString(filename) {
-		return fmt.Errorf("%w: %s", ErrFilenameInvalidChar, filename)
+		return fmt.Errorf(errFormatWithContext, ErrFilenameInvalidChar, filename)
 	}
 
 	return nil
@@ -175,17 +184,24 @@ func ValidateURL(url string) error {
 		return ErrURLWhitespace
 	}
 
-	// Basic URL validation
-	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-		return ErrURLInvalidProtocol
+	// Check for dangerous protocols first
+	dangerousProtocols := []string{
+		"javascript:",
+		"file:",
+		"ftp:",
+	}
+
+	lowerURL := strings.ToLower(url)
+	for _, protocol := range dangerousProtocols {
+		if strings.HasPrefix(lowerURL, protocol) {
+			return ErrURLInvalidProtocol
+		}
 	}
 
 	// Check for suspicious patterns
 	suspicious := []string{
-		"javascript:",
 		"data:",
 		"vbscript:",
-		"file:",
 		"about:",
 		"chrome:",
 		"<script",
@@ -195,11 +211,15 @@ func ValidateURL(url string) error {
 		"onload=",
 	}
 
-	lowerURL := strings.ToLower(url)
 	for _, pattern := range suspicious {
 		if strings.Contains(lowerURL, pattern) {
-			return fmt.Errorf("%w: %s", ErrURLSuspiciousPattern, pattern)
+			return fmt.Errorf(errFormatWithContext, ErrURLSuspiciousPattern, pattern)
 		}
+	}
+
+	// Basic URL validation - must use http or https
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		return ErrURLInvalidProtocol
 	}
 
 	return nil
@@ -223,6 +243,12 @@ func ValidateEmail(email string) error {
 
 	// Check domain has at least one dot
 	if !strings.Contains(parts[1], ".") {
+		return ErrEmailInvalidDomain
+	}
+
+	// Check domain doesn't start or end with dot
+	domain := parts[1]
+	if strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") {
 		return ErrEmailInvalidDomain
 	}
 
