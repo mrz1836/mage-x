@@ -2,7 +2,7 @@
 package mage
 
 import (
-	"reflect"
+	"sync"
 
 	"github.com/mrz1836/mage-x/pkg/common/providers"
 )
@@ -609,6 +609,7 @@ type NamespaceRegistry interface {
 
 // DefaultNamespaceRegistry provides the default namespace implementations
 type DefaultNamespaceRegistry struct {
+	mu       sync.RWMutex
 	build    BuildNamespace
 	test     TestNamespace
 	lint     LintNamespace
@@ -636,54 +637,140 @@ func NewNamespaceRegistry() *DefaultNamespaceRegistry {
 	}
 }
 
-// Generic helper for lazy initialization of namespace instances
-// This consolidates the common pattern of "if nil, create wrapper"
-func lazyInitNamespace[T, I any](current *I, constructor func() I) I {
-	v := reflect.ValueOf(*current)
-	if !v.IsValid() || v.IsNil() {
-		*current = constructor()
-	}
-	return *current
-}
-
 // Build returns the build namespace
 func (r *DefaultNamespaceRegistry) Build() BuildNamespace {
-	return lazyInitNamespace[BuildNamespace, BuildNamespace](&r.build, NewBuildNamespace)
+	r.mu.RLock()
+	if r.build != nil {
+		defer r.mu.RUnlock()
+		return r.build
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.build == nil {
+		r.build = NewBuildNamespace()
+	}
+	return r.build
 }
 
 // Test returns the test namespace
 func (r *DefaultNamespaceRegistry) Test() TestNamespace {
-	return lazyInitNamespace[TestNamespace, TestNamespace](&r.test, NewTestNamespace)
+	r.mu.RLock()
+	if r.test != nil {
+		defer r.mu.RUnlock()
+		return r.test
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.test == nil {
+		r.test = NewTestNamespace()
+	}
+	return r.test
 }
 
 // Lint returns the lint namespace
 func (r *DefaultNamespaceRegistry) Lint() LintNamespace {
-	return lazyInitNamespace[LintNamespace, LintNamespace](&r.lint, NewLintNamespace)
+	r.mu.RLock()
+	if r.lint != nil {
+		defer r.mu.RUnlock()
+		return r.lint
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.lint == nil {
+		r.lint = NewLintNamespace()
+	}
+	return r.lint
 }
 
 // Format returns the format namespace
 func (r *DefaultNamespaceRegistry) Format() FormatNamespace {
-	return lazyInitNamespace[FormatNamespace, FormatNamespace](&r.format, NewFormatNamespace)
+	r.mu.RLock()
+	if r.format != nil {
+		defer r.mu.RUnlock()
+		return r.format
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.format == nil {
+		r.format = NewFormatNamespace()
+	}
+	return r.format
 }
 
 // Deps returns the dependencies namespace
 func (r *DefaultNamespaceRegistry) Deps() DepsNamespace {
-	return lazyInitNamespace[DepsNamespace, DepsNamespace](&r.deps, NewDepsNamespace)
+	r.mu.RLock()
+	if r.deps != nil {
+		defer r.mu.RUnlock()
+		return r.deps
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.deps == nil {
+		r.deps = NewDepsNamespace()
+	}
+	return r.deps
 }
 
 // Git returns the git namespace
 func (r *DefaultNamespaceRegistry) Git() GitNamespace {
-	return lazyInitNamespace[GitNamespace, GitNamespace](&r.git, NewGitNamespace)
+	r.mu.RLock()
+	if r.git != nil {
+		defer r.mu.RUnlock()
+		return r.git
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.git == nil {
+		r.git = NewGitNamespace()
+	}
+	return r.git
 }
 
 // Release returns the release namespace
 func (r *DefaultNamespaceRegistry) Release() ReleaseNamespace {
-	return lazyInitNamespace[ReleaseNamespace, ReleaseNamespace](&r.release, NewReleaseNamespace)
+	r.mu.RLock()
+	if r.release != nil {
+		defer r.mu.RUnlock()
+		return r.release
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.release == nil {
+		r.release = NewReleaseNamespace()
+	}
+	return r.release
 }
 
 // Docs returns the documentation namespace
 func (r *DefaultNamespaceRegistry) Docs() DocsNamespace {
-	return lazyInitNamespace[DocsNamespace, DocsNamespace](&r.docs, NewDocsNamespace)
+	r.mu.RLock()
+	if r.docs != nil {
+		defer r.mu.RUnlock()
+		return r.docs
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.docs == nil {
+		r.docs = NewDocsNamespace()
+	}
+	return r.docs
 }
 
 // Deploy returns the deployment namespace
@@ -694,7 +781,19 @@ func (r *DefaultNamespaceRegistry) Deploy() DeployNamespace {
 
 // Tools returns the tools namespace
 func (r *DefaultNamespaceRegistry) Tools() ToolsNamespace {
-	return lazyInitNamespace[ToolsNamespace, ToolsNamespace](&r.tools, NewToolsNamespace)
+	r.mu.RLock()
+	if r.tools != nil {
+		defer r.mu.RUnlock()
+		return r.tools
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.tools == nil {
+		r.tools = NewToolsNamespace()
+	}
+	return r.tools
 }
 
 // Security returns the security namespace
@@ -705,12 +804,36 @@ func (r *DefaultNamespaceRegistry) Security() SecurityNamespace {
 
 // Generate returns the generate namespace
 func (r *DefaultNamespaceRegistry) Generate() GenerateNamespace {
-	return lazyInitNamespace[GenerateNamespace, GenerateNamespace](&r.generate, NewGenerateNamespace)
+	r.mu.RLock()
+	if r.generate != nil {
+		defer r.mu.RUnlock()
+		return r.generate
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.generate == nil {
+		r.generate = NewGenerateNamespace()
+	}
+	return r.generate
 }
 
 // CLI returns the CLI namespace
 func (r *DefaultNamespaceRegistry) CLI() CLINamespace {
-	return lazyInitNamespace[CLINamespace, CLINamespace](&r.cli, NewCLINamespace)
+	r.mu.RLock()
+	if r.cli != nil {
+		defer r.mu.RUnlock()
+		return r.cli
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.cli == nil {
+		r.cli = NewCLINamespace()
+	}
+	return r.cli
 }
 
 // SetBuild sets a custom build namespace implementation
@@ -780,7 +903,19 @@ func (r *DefaultNamespaceRegistry) SetCLI(cli CLINamespace) {
 
 // Update returns the update namespace
 func (r *DefaultNamespaceRegistry) Update() UpdateNamespace {
-	return lazyInitNamespace[UpdateNamespace, UpdateNamespace](&r.update, NewUpdateNamespace)
+	r.mu.RLock()
+	if r.update != nil {
+		defer r.mu.RUnlock()
+		return r.update
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.update == nil {
+		r.update = NewUpdateNamespace()
+	}
+	return r.update
 }
 
 // SetUpdate sets a custom update namespace implementation
@@ -790,7 +925,19 @@ func (r *DefaultNamespaceRegistry) SetUpdate(update UpdateNamespace) {
 
 // Mod returns the mod namespace
 func (r *DefaultNamespaceRegistry) Mod() ModNamespace {
-	return lazyInitNamespace[ModNamespace, ModNamespace](&r.mod, NewModNamespace)
+	r.mu.RLock()
+	if r.mod != nil {
+		defer r.mu.RUnlock()
+		return r.mod
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.mod == nil {
+		r.mod = NewModNamespace()
+	}
+	return r.mod
 }
 
 // SetMod sets a custom mod namespace implementation
@@ -800,7 +947,19 @@ func (r *DefaultNamespaceRegistry) SetMod(mod ModNamespace) {
 
 // Recipes returns the recipes namespace
 func (r *DefaultNamespaceRegistry) Recipes() RecipesNamespace {
-	return lazyInitNamespace[RecipesNamespace, RecipesNamespace](&r.recipes, NewRecipesNamespace)
+	r.mu.RLock()
+	if r.recipes != nil {
+		defer r.mu.RUnlock()
+		return r.recipes
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.recipes == nil {
+		r.recipes = NewRecipesNamespace()
+	}
+	return r.recipes
 }
 
 // SetRecipes sets a custom recipes namespace implementation
@@ -810,7 +969,19 @@ func (r *DefaultNamespaceRegistry) SetRecipes(recipes RecipesNamespace) {
 
 // Metrics returns the metrics namespace
 func (r *DefaultNamespaceRegistry) Metrics() MetricsNamespace {
-	return lazyInitNamespace[MetricsNamespace, MetricsNamespace](&r.metrics, NewMetricsNamespace)
+	r.mu.RLock()
+	if r.metrics != nil {
+		defer r.mu.RUnlock()
+		return r.metrics
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.metrics == nil {
+		r.metrics = NewMetricsNamespace()
+	}
+	return r.metrics
 }
 
 // SetMetrics sets a custom metrics namespace implementation
@@ -820,7 +991,19 @@ func (r *DefaultNamespaceRegistry) SetMetrics(metrics MetricsNamespace) {
 
 // Workflow returns the workflow namespace
 func (r *DefaultNamespaceRegistry) Workflow() WorkflowNamespace {
-	return lazyInitNamespace[WorkflowNamespace, WorkflowNamespace](&r.workflow, NewWorkflowNamespace)
+	r.mu.RLock()
+	if r.workflow != nil {
+		defer r.mu.RUnlock()
+		return r.workflow
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.workflow == nil {
+		r.workflow = NewWorkflowNamespace()
+	}
+	return r.workflow
 }
 
 // SetWorkflow sets a custom workflow namespace implementation
