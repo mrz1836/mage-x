@@ -463,7 +463,7 @@ func (suite *InterfaceComplianceTestSuite) TestNamespaceLifecycle() {
 	})
 
 	suite.Run("namespace replacement", func() {
-		// Test namespace replacement functionality  
+		// Test namespace replacement functionality
 		originalBuild := suite.registry.Build()
 		suite.NotNil(originalBuild)
 
@@ -474,7 +474,7 @@ func (suite *InterfaceComplianceTestSuite) TestNamespaceLifecycle() {
 		// Verify replacement - the registry should now return the new instance
 		currentBuild := suite.registry.Build()
 		suite.Same(newBuild, currentBuild)
-		
+
 		// For empty structs, Go may optimize memory allocation, so we verify
 		// the registry replacement functionality by confirming the current
 		// instance is the one we set, rather than comparing memory addresses

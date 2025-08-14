@@ -257,7 +257,7 @@ func (ts *VetTestSuite) TestVetStrict() {
 
 	ts.Run("StrictChecks", func() {
 		err := vet.Strict()
-		// Strict checks may fail due to various linting issues
+		// Strict checks may fail due to various linting issues,
 		// but we test that the method runs without panic
 		ts.Require().True(err == nil || err != nil)
 	})
@@ -340,11 +340,16 @@ func (ts *VetTestSuite) TestVetErrorHandling() {
 
 		// These methods should handle command failures gracefully
 		// without panicking or causing undefined behavior
-		_ = vet.Default()  //nolint:errcheck // Test intentionally ignores errors
-		_ = vet.All()      //nolint:errcheck // Test intentionally ignores errors
-		_ = vet.Parallel() //nolint:errcheck // Test intentionally ignores errors
-		_ = vet.Shadow()   //nolint:errcheck // Test intentionally ignores errors
-		_ = vet.Strict()   //nolint:errcheck // Test intentionally ignores errors
+		err := vet.Default()
+		ts.Require().NoError(err)
+		err = vet.All()
+		ts.Require().NoError(err)
+		err = vet.Parallel()
+		ts.Require().NoError(err)
+		err = vet.Shadow()
+		ts.Require().NoError(err)
+		err = vet.Strict()
+		ts.Require().NoError(err)
 	})
 }
 
@@ -365,11 +370,13 @@ func (ts *VetTestSuite) TestVetEnvironmentVariableHandling() {
 			ts.Require().NoError(os.Setenv("VERBOSE", tc.value))
 
 			// Test that environment variable is read correctly
-			// We can't easily verify the actual command construction without mocking
+			// We can't easily verify the actual command construction without mocking,
 			// but we can verify the methods handle the environment variables
 			vet := Vet{}
-			_ = vet.Default() //nolint:errcheck // Should not panic
-			_ = vet.All()     //nolint:errcheck // Should not panic
+			err := vet.Default()
+			ts.Require().NoError(err)
+			err = vet.All()
+			ts.Require().NoError(err)
 		}
 	})
 
@@ -385,10 +392,14 @@ func (ts *VetTestSuite) TestVetEnvironmentVariableHandling() {
 			ts.Require().NoError(os.Setenv("GO_BUILD_TAGS", tags))
 
 			vet := Vet{}
-			_ = vet.Default()  //nolint:errcheck // Should not panic
-			_ = vet.All()      //nolint:errcheck // Should not panic
-			_ = vet.Parallel() //nolint:errcheck // Should not panic
-			_ = vet.Shadow()   //nolint:errcheck // Should not panic
+			err := vet.Default()
+			ts.Require().NoError(err)
+			err = vet.All()
+			ts.Require().NoError(err)
+			err = vet.Parallel()
+			ts.Require().NoError(err)
+			err = vet.Shadow()
+			ts.Require().NoError(err)
 		}
 	})
 
@@ -471,7 +482,7 @@ func (ts *VetTestSuite) TestVetParallelExecution() {
 		// We test the error handling pattern used in the parallel method
 
 		// Simulate the error collection pattern
-		errorList := []error{}
+		var errorList []error
 		testErrors := []error{
 			nil,
 			errTestError1,

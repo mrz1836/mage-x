@@ -82,7 +82,7 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseDefaultSuccess() {
 	if err := SetRunner(suite.mockRunner); err != nil {
 		suite.T().Fatalf("Failed to set mock runner: %v", err)
 	}
-	defer func() { 
+	defer func() {
 		if err := SetRunner(originalRunner); err != nil {
 			suite.T().Logf("Warning: failed to restore original runner: %v", err)
 		}
@@ -113,7 +113,7 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseTestSuccess() {
 	if err := SetRunner(suite.mockRunner); err != nil {
 		suite.T().Fatalf("Failed to set mock runner: %v", err)
 	}
-	defer func() { 
+	defer func() {
 		if err := SetRunner(originalRunner); err != nil {
 			suite.T().Logf("Warning: failed to restore original runner: %v", err)
 		}
@@ -133,7 +133,7 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseSnapshotSuccess() {
 	if err := SetRunner(suite.mockRunner); err != nil {
 		suite.T().Fatalf("Failed to set mock runner: %v", err)
 	}
-	defer func() { 
+	defer func() {
 		if err := SetRunner(originalRunner); err != nil {
 			suite.T().Logf("Warning: failed to restore original runner: %v", err)
 		}
@@ -162,7 +162,7 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseCheckWithConfig() {
 	// Create a mock config file
 	err := os.WriteFile(".goreleaser.yml", []byte("# test config"), 0o600)
 	suite.Require().NoError(err)
-	defer func() { 
+	defer func() {
 		if removeErr := os.Remove(".goreleaser.yml"); removeErr != nil {
 			suite.T().Logf("Warning: failed to remove .goreleaser.yml: %v", removeErr)
 		}

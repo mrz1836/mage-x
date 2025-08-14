@@ -140,7 +140,7 @@ jobs:
 
           # Check if any files were modified
           if ! git diff --quiet; then
-            echo "::warning::Code formatting issues detected. Run 'mage lint:fumpt' locally."
+            echo "::warning::Code formatting issues detected. Run 'mage lintFumpt' locally."
             git diff --name-only
             exit 1
           fi
