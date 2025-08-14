@@ -78,9 +78,6 @@ mage-x/
 │   ├── basic/                        # Basic usage examples
 │   ├── custom/                       # Custom implementations
 │   └── testing/                      # Testing patterns
-├── scripts/                          # Shell scripts
-│   ├── setup.sh                      # Setup script
-│   └── test-runner.sh                # Test runner
 └── .github/CLAUDE.md                 # This file
 ```
 
