@@ -175,7 +175,19 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 						w.Header().Set("Content-Length", fmt.Sprintf("%d", len(fullContent)))
 						w.WriteHeader(http.StatusOK)
 						w.Write([]byte(fullContent[:20])) // Only first 20 characters
-						// Don't write the rest to simulate connection failure
+
+						// Flush the partial response to ensure it's sent
+						if flusher, ok := w.(http.Flusher); ok {
+							flusher.Flush()
+						}
+
+						// Simulate connection failure by hijacking the connection and closing it
+						if hijacker, ok := w.(http.Hijacker); ok {
+							conn, _, err := hijacker.Hijack()
+							if err == nil {
+								conn.Close()
+							}
+						}
 					}
 				})
 			},

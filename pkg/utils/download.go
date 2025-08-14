@@ -370,12 +370,17 @@ func isRetriableError(err error) bool {
 		return false
 	}
 
+	// IO errors that indicate connection issues are retriable
+	if errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF) {
+		return true
+	}
+
 	// HTTP status code errors
 	errorStr := err.Error()
 	// 5xx server errors are retriable, 4xx client errors are not
 	if contains(errorStr, "status 5") || contains(errorStr, "timeout") ||
 		contains(errorStr, "connection reset") || contains(errorStr, "connection refused") ||
-		contains(errorStr, "no such host") {
+		contains(errorStr, "no such host") || contains(errorStr, "unexpected EOF") {
 		return true
 	}
 
