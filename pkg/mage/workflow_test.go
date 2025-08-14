@@ -1153,7 +1153,7 @@ func Example_evaluateStepConditions() {
 }
 
 // Test helper functions
-func TestHelperFunctions(t *testing.T) {
+func TestWorkflowHelperFunctions(t *testing.T) {
 	t.Parallel()
 
 	t.Run("generateExecutionID", func(t *testing.T) {

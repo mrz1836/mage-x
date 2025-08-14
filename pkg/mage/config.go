@@ -21,6 +21,7 @@ type Config struct {
 	Tools      ToolsConfig              `yaml:"tools"`
 	Docker     DockerConfig             `yaml:"docker"`
 	Release    ReleaseConfig            `yaml:"release"`
+	Download   DownloadConfig           `yaml:"download"`
 	Enterprise *EnterpriseConfiguration `yaml:"enterprise,omitempty"`
 	Metadata   map[string]string        `yaml:"metadata,omitempty"`
 }
@@ -115,6 +116,17 @@ type ReleaseConfig struct {
 	Prerelease  bool     `yaml:"prerelease"`
 	NameTmpl    string   `yaml:"name_template"`
 	Formats     []string `yaml:"formats"`
+}
+
+// DownloadConfig contains download retry settings
+type DownloadConfig struct {
+	MaxRetries        int     `yaml:"max_retries"`
+	InitialDelayMs    int     `yaml:"initial_delay_ms"`
+	MaxDelayMs        int     `yaml:"max_delay_ms"`
+	TimeoutMs         int     `yaml:"timeout_ms"`
+	BackoffMultiplier float64 `yaml:"backoff_multiplier"`
+	EnableResume      bool    `yaml:"enable_resume"`
+	UserAgent         string  `yaml:"user_agent"`
 }
 
 // Static errors for err113 compliance
@@ -214,6 +226,15 @@ func defaultConfig() *Config {
 			Changelog:   true,
 			Formats:     []string{"tar.gz", "zip"},
 		},
+		Download: DownloadConfig{
+			MaxRetries:        5,
+			InitialDelayMs:    1000,  // 1 second
+			MaxDelayMs:        30000, // 30 seconds
+			TimeoutMs:         60000, // 60 seconds
+			BackoffMultiplier: 2.0,
+			EnableResume:      true,
+			UserAgent:         "mage-x-downloader/1.0",
+		},
 	}
 }
 
@@ -251,9 +272,67 @@ func applyEnvOverrides(c *Config) {
 		}
 	}
 
+	// Download config overrides
+	applyDownloadEnvOverrides(&c.Download)
+
 	// Enterprise overrides
 	if c.Enterprise != nil {
 		applyEnterpriseEnvOverrides(c.Enterprise)
+	}
+}
+
+// applyDownloadEnvOverrides applies environment variable overrides to download config
+func applyDownloadEnvOverrides(cfg *DownloadConfig) {
+	// Max retries override
+	if v := os.Getenv("MAGE_DOWNLOAD_RETRIES"); v != "" {
+		var retries int
+		if _, err := fmt.Sscanf(v, "%d", &retries); err == nil && retries >= 0 {
+			cfg.MaxRetries = retries
+		}
+	}
+
+	// Timeout override
+	if v := os.Getenv("MAGE_DOWNLOAD_TIMEOUT"); v != "" {
+		var timeout int
+		if _, err := fmt.Sscanf(v, "%d", &timeout); err == nil && timeout > 0 {
+			cfg.TimeoutMs = timeout
+		}
+	}
+
+	// Initial delay override
+	if v := os.Getenv("MAGE_DOWNLOAD_INITIAL_DELAY"); v != "" {
+		var delay int
+		if _, err := fmt.Sscanf(v, "%d", &delay); err == nil && delay > 0 {
+			cfg.InitialDelayMs = delay
+		}
+	}
+
+	// Max delay override
+	if v := os.Getenv("MAGE_DOWNLOAD_MAX_DELAY"); v != "" {
+		var delay int
+		if _, err := fmt.Sscanf(v, "%d", &delay); err == nil && delay > 0 {
+			cfg.MaxDelayMs = delay
+		}
+	}
+
+	// Backoff multiplier override
+	if v := os.Getenv("MAGE_DOWNLOAD_BACKOFF"); v != "" {
+		var backoff float64
+		if _, err := fmt.Sscanf(v, "%f", &backoff); err == nil && backoff > 0 {
+			cfg.BackoffMultiplier = backoff
+		}
+	}
+
+	// Resume override
+	if v := os.Getenv("MAGE_DOWNLOAD_RESUME"); v == approvalTrue || v == "1" {
+		cfg.EnableResume = true
+	} else if v == "false" || v == "0" {
+		cfg.EnableResume = false
+	}
+
+	// User agent override
+	if v := os.Getenv("MAGE_DOWNLOAD_USER_AGENT"); v != "" {
+		cfg.UserAgent = v
 	}
 }
 

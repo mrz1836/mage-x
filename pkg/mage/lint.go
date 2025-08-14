@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -289,7 +290,7 @@ func (Lint) Fmt() error {
 	return nil
 }
 
-// Fumpt runs gofumpt for stricter formatting
+// Fumpt runs gofumpt for stricter formatting with retry logic
 func (Lint) Fumpt() error {
 	utils.Header("Running gofumpt")
 
@@ -300,18 +301,11 @@ func (Lint) Fumpt() error {
 
 	gofumptVersion := getLinterVersion("gofumpt")
 
-	// Ensure gofumpt is installed
-	if !utils.CommandExists("gofumpt") {
-		utils.Info("Installing gofumpt...")
-		version := config.Tools.Fumpt
-		if version == "" || version == DefaultGoVulnCheckVersion {
-			version = VersionAtLatest
-		} else if !strings.HasPrefix(version, "@") {
-			version = "@" + version
-		}
+	// Ensure gofumpt is installed with retry logic
 
-		if err := GetRunner().RunCmd("go", "install", "mvdan.cc/gofumpt"+version); err != nil {
-			return fmt.Errorf("failed to install gofumpt: %w", err)
+	if !utils.CommandExists("gofumpt") {
+		if err := installGofumpt(config); err != nil {
+			return err
 		}
 	}
 
@@ -322,6 +316,43 @@ func (Lint) Fumpt() error {
 	}
 
 	utils.Success("Code formatted with gofumpt %s", gofumptVersion)
+	return nil
+}
+
+// installGofumpt installs gofumpt with retry and fallback logic
+func installGofumpt(config *Config) error {
+	utils.Info("Installing gofumpt with retry logic...")
+
+	ctx := context.Background()
+	maxRetries := config.Download.MaxRetries
+	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
+
+	version := config.Tools.Fumpt
+	if version == "" || version == DefaultGoVulnCheckVersion {
+		version = VersionAtLatest
+	} else if !strings.HasPrefix(version, "@") {
+		version = "@" + version
+	}
+
+	moduleWithVersion := "mvdan.cc/gofumpt" + version
+
+	// Get the secure executor with retry capabilities
+	runner := GetRunner()
+	secureRunner, ok := runner.(*SecureCommandRunner)
+	if !ok {
+		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+	}
+	executor := secureRunner.executor
+	err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", moduleWithVersion)
+	if err != nil {
+		// Try with direct proxy as fallback
+		utils.Warn("Installation failed: %v, trying direct proxy...", err)
+
+		env := []string{"GOPROXY=direct"}
+		if err := executor.ExecuteWithEnv(ctx, env, "go", "install", moduleWithVersion); err != nil {
+			return fmt.Errorf("failed to install gofumpt after %d retries and fallback: %w", maxRetries, err)
+		}
+	}
 	return nil
 }
 
@@ -560,7 +591,7 @@ func parseVersionFromOutput(output string) string {
 	return strings.TrimSpace(firstLine)
 }
 
-// ensureGolangciLint ensures golangci-lint is installed
+// ensureGolangciLint ensures golangci-lint is installed with retry logic
 func ensureGolangciLint(cfg *Config) error {
 	if utils.CommandExists("golangci-lint") {
 		return nil
@@ -568,16 +599,33 @@ func ensureGolangciLint(cfg *Config) error {
 
 	utils.Info("golangci-lint not found, installing...")
 
-	// Try brew on macOS
+	ctx := context.Background()
+	maxRetries := cfg.Download.MaxRetries
+	initialDelay := time.Duration(cfg.Download.InitialDelayMs) * time.Millisecond
+
+	// Try brew on macOS with retry logic
 	if runtime.GOOS == "darwin" && utils.CommandExists("brew") {
-		utils.Info("Installing via Homebrew...")
-		if err := GetRunner().RunCmd("brew", "install", "golangci-lint"); err == nil {
+		utils.Info("Installing via Homebrew with retry logic...")
+
+		// Get the secure executor with retry capabilities
+		runner := GetRunner()
+		secureRunner, ok := runner.(*SecureCommandRunner)
+		if !ok {
+			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+		}
+		executor := secureRunner.executor
+		err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "brew", "install", "golangci-lint")
+
+		if err == nil {
+			utils.Success("golangci-lint installed successfully via Homebrew")
 			return nil
 		}
+
+		utils.Warn("Homebrew installation failed: %v, trying curl method...", err)
 	}
 
-	// Install via curl
-	utils.Info("Installing via curl...")
+	// Install via curl with download retry
+	utils.Info("Installing via curl with retry logic...")
 
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
@@ -587,15 +635,42 @@ func ensureGolangciLint(cfg *Config) error {
 
 	// Ensure bin directory exists
 	if err := utils.EnsureDir(binPath); err != nil {
-		return err
+		return fmt.Errorf("failed to create bin directory: %w", err)
 	}
 
-	installScript := "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
-	cmd := fmt.Sprintf("curl -sSfL %s | sh -s -- -b %s %s", installScript, binPath, cfg.Lint.GolangciVersion)
+	// Use the new download utility with retry logic
+	downloadConfig := &utils.DownloadConfig{
+		MaxRetries:        cfg.Download.MaxRetries,
+		InitialDelay:      time.Duration(cfg.Download.InitialDelayMs) * time.Millisecond,
+		MaxDelay:          time.Duration(cfg.Download.MaxDelayMs) * time.Millisecond,
+		Timeout:           time.Duration(cfg.Download.TimeoutMs) * time.Millisecond,
+		BackoffMultiplier: cfg.Download.BackoffMultiplier,
+		EnableResume:      cfg.Download.EnableResume,
+		UserAgent:         cfg.Download.UserAgent,
+	}
 
-	shell, shellArgs := utils.GetShell()
-	if err := GetRunner().RunCmd(shell, append(shellArgs, cmd)...); err != nil {
-		return fmt.Errorf("failed to install golangci-lint: %w", err)
+	installScriptURL := "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
+	scriptArgs := fmt.Sprintf("-- -b %s %s", binPath, cfg.Lint.GolangciVersion)
+
+	// Download and execute the installation script with retry logic
+	err := utils.DownloadScript(ctx, installScriptURL, scriptArgs, downloadConfig)
+	if err != nil {
+		// Fallback to direct command execution with retry
+		utils.Warn("Script download failed: %v, trying direct curl command...", err)
+
+		cmd := fmt.Sprintf("curl -sSfL %s | sh -s -- -b %s %s", installScriptURL, binPath, cfg.Lint.GolangciVersion)
+		shell, shellArgs := utils.GetShell()
+
+		// Get the secure executor with retry capabilities
+		runner := GetRunner()
+		secureRunner, ok := runner.(*SecureCommandRunner)
+		if !ok {
+			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+		}
+		executor := secureRunner.executor
+		if err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, shell, append(shellArgs, cmd)...); err != nil {
+			return fmt.Errorf("failed to install golangci-lint after %d retries: %w", maxRetries, err)
+		}
 	}
 
 	utils.Success("golangci-lint installed successfully")

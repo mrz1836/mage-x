@@ -638,7 +638,7 @@ func NewNamespaceRegistry() *DefaultNamespaceRegistry {
 
 // Generic helper for lazy initialization of namespace instances
 // This consolidates the common pattern of "if nil, create wrapper"
-func lazyInitNamespace[T any, I any](current *I, constructor func() I) I {
+func lazyInitNamespace[T, I any](current *I, constructor func() I) I {
 	v := reflect.ValueOf(*current)
 	if !v.IsValid() || v.IsNil() {
 		*current = constructor()

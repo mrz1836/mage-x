@@ -77,3 +77,11 @@ release:
   formats:
     - tar.gz
     - zip
+download:
+  max_retries: 5
+  initial_delay_ms: 1000
+  max_delay_ms: 30000
+  timeout_ms: 60000
+  backoff_multiplier: 2
+  enable_resume: true
+  user_agent: mage-x-downloader/1.0

@@ -2,11 +2,13 @@
 package mage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -14,7 +16,8 @@ import (
 
 // Static errors for err113 compliance
 var (
-	ErrCodeNotFormatted = errors.New("code is not properly formatted")
+	ErrCodeNotFormatted     = errors.New("code is not properly formatted")
+	ErrUnexpectedRunnerType = errors.New("expected SecureCommandRunner")
 )
 
 // Format namespace for code formatting tasks
@@ -200,31 +203,83 @@ func (Format) InstallTools() error {
 
 // Helper functions
 
-// ensureGofumpt checks if gofumpt is installed
+// ensureGofumpt checks if gofumpt is installed with retry logic
 func ensureGofumpt() error {
 	if utils.CommandExists("gofumpt") {
 		return nil
 	}
 
-	utils.Info("gofumpt not found, installing...")
-	if err := GetRunner().RunCmd("go", "install", "mvdan.cc/gofumpt@latest"); err != nil {
-		return fmt.Errorf("failed to install gofumpt: %w", err)
+	utils.Info("gofumpt not found, installing with retry logic...")
+
+	config, err := GetConfig()
+	if err != nil {
+		// Use default config if loading fails
+		config = defaultConfig()
 	}
 
+	ctx := context.Background()
+	maxRetries := config.Download.MaxRetries
+	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
+
+	// Get the secure executor with retry capabilities
+	runner := GetRunner()
+	secureRunner, ok := runner.(*SecureCommandRunner)
+	if !ok {
+		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+	}
+	executor := secureRunner.executor
+	err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", "mvdan.cc/gofumpt@latest")
+	if err != nil {
+		// Try with direct proxy as fallback
+		utils.Warn("Installation failed: %v, trying direct proxy...", err)
+
+		env := []string{"GOPROXY=direct"}
+		if err := executor.ExecuteWithEnv(ctx, env, "go", "install", "mvdan.cc/gofumpt@latest"); err != nil {
+			return fmt.Errorf("failed to install gofumpt after %d retries and fallback: %w", maxRetries, err)
+		}
+	}
+
+	utils.Success("gofumpt installed successfully")
 	return nil
 }
 
-// ensureGoimports checks if goimports is installed
+// ensureGoimports checks if goimports is installed with retry logic
 func ensureGoimports() error {
 	if utils.CommandExists("goimports") {
 		return nil
 	}
 
-	utils.Info("goimports not found, installing...")
-	if err := GetRunner().RunCmd("go", "install", "golang.org/x/tools/cmd/goimports@latest"); err != nil {
-		return fmt.Errorf("failed to install goimports: %w", err)
+	utils.Info("goimports not found, installing with retry logic...")
+
+	config, err := GetConfig()
+	if err != nil {
+		// Use default config if loading fails
+		config = defaultConfig()
 	}
 
+	ctx := context.Background()
+	maxRetries := config.Download.MaxRetries
+	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
+
+	// Get the secure executor with retry capabilities
+	runner := GetRunner()
+	secureRunner, ok := runner.(*SecureCommandRunner)
+	if !ok {
+		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+	}
+	executor := secureRunner.executor
+	err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", "golang.org/x/tools/cmd/goimports@latest")
+	if err != nil {
+		// Try with direct proxy as fallback
+		utils.Warn("Installation failed: %v, trying direct proxy...", err)
+
+		env := []string{"GOPROXY=direct"}
+		if err := executor.ExecuteWithEnv(ctx, env, "go", "install", "golang.org/x/tools/cmd/goimports@latest"); err != nil {
+			return fmt.Errorf("failed to install goimports after %d retries and fallback: %w", maxRetries, err)
+		}
+	}
+
+	utils.Success("goimports installed successfully")
 	return nil
 }
 

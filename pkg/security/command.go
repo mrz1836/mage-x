@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -83,7 +85,7 @@ func (e *SecureExecutor) Execute(ctx context.Context, name string, args ...strin
 
 	// Validate the command
 	if err := e.validateCommand(name, args); err != nil {
-		return mageErrors.WrapError(err, "command validation failed")
+		return fmt.Errorf("command validation failed: %w", err)
 	}
 
 	// Create command with timeout
@@ -144,7 +146,7 @@ func (e *SecureExecutor) ExecuteOutput(ctx context.Context, name string, args ..
 
 	// Validate the command
 	if err := e.validateCommand(name, args); err != nil {
-		return "", mageErrors.WrapError(err, "command validation failed")
+		return "", fmt.Errorf("command validation failed: %w", err)
 	}
 
 	// Create command with timeout
@@ -201,7 +203,7 @@ func (e *SecureExecutor) ExecuteWithEnv(ctx context.Context, env []string, name 
 
 	// Validate the command
 	if err := e.validateCommand(name, args); err != nil {
-		return mageErrors.WrapError(err, "command validation failed")
+		return fmt.Errorf("command validation failed: %w", err)
 	}
 
 	// Create command with timeout
@@ -422,6 +424,193 @@ func ValidatePath(path string) error {
 	}
 
 	return nil
+}
+
+// ExecuteWithRetry executes a command with retry logic for network-related commands
+func (e *SecureExecutor) ExecuteWithRetry(ctx context.Context, maxRetries int, initialDelay time.Duration,
+	name string, args ...string,
+) error {
+	var lastErr error
+	delay := initialDelay
+	backoffMultiplier := 2.0
+	maxDelay := 30 * time.Second
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		err := e.Execute(ctx, name, args...)
+		if err == nil {
+			return nil
+		}
+
+		lastErr = err
+
+		// Check if this is a retriable error for command execution
+		if !isRetriableCommandError(err) {
+			return fmt.Errorf("permanent command error: %w", err)
+		}
+
+		// Don't sleep after the last attempt
+		if attempt < maxRetries {
+			// Log retry attempt
+			utils.Warn("Command %s attempt %d/%d failed: %v. Retrying in %v...",
+				name, attempt+1, maxRetries+1, err, delay)
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(delay):
+			}
+
+			// Exponential backoff
+			delay = time.Duration(float64(delay) * backoffMultiplier)
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+		}
+	}
+
+	return fmt.Errorf("command failed after %d attempts: %w", maxRetries+1, lastErr)
+}
+
+// ExecuteOutputWithRetry executes a command with retry logic and returns output
+func (e *SecureExecutor) ExecuteOutputWithRetry(ctx context.Context, maxRetries int, initialDelay time.Duration,
+	name string, args ...string,
+) (string, error) {
+	var lastErr error
+	var lastOutput string
+	delay := initialDelay
+	backoffMultiplier := 2.0
+	maxDelay := 30 * time.Second
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		output, err := e.ExecuteOutput(ctx, name, args...)
+		if err == nil {
+			return output, nil
+		}
+
+		lastErr = err
+		lastOutput = output
+
+		// Check if this is a retriable error for command execution
+		if !isRetriableCommandError(err) {
+			return lastOutput, fmt.Errorf("permanent command error: %w", err)
+		}
+
+		// Don't sleep after the last attempt
+		if attempt < maxRetries {
+			// Log retry attempt
+			utils.Warn("Command %s (with output) attempt %d/%d failed: %v. Retrying in %v...",
+				name, attempt+1, maxRetries+1, err, delay)
+
+			select {
+			case <-ctx.Done():
+				return lastOutput, ctx.Err()
+			case <-time.After(delay):
+			}
+
+			// Exponential backoff
+			delay = time.Duration(float64(delay) * backoffMultiplier)
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+		}
+	}
+
+	return lastOutput, fmt.Errorf("command failed after %d attempts: %w", maxRetries+1, lastErr)
+}
+
+// isRetriableCommandError determines if a command error should trigger a retry
+func isRetriableCommandError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errorStr := strings.ToLower(err.Error())
+
+	// Network-related errors that are retriable
+	retriablePatterns := []string{
+		"connection refused",
+		"connection reset",
+		"connection timeout",
+		"timeout",
+		"temporary failure in name resolution",
+		"no such host",
+		"no route to host",
+		"network is unreachable",
+		"host is unreachable",
+		"i/o timeout",
+		"context deadline exceeded",
+		"unexpected eof",
+		"tls handshake timeout",
+		"dial tcp",
+		"proxyconnect tcp",
+		// Go install specific errors
+		"go: downloading",
+		"go: module",
+		"verifying module",
+		"getting requirements",
+		"sumdb verification",
+	}
+
+	for _, pattern := range retriablePatterns {
+		if strings.Contains(errorStr, pattern) {
+			return true
+		}
+	}
+
+	// Check for specific network error types
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return netErr.Timeout()
+	}
+
+	// DNS errors are retriable for specific cases
+	var dnsErr *net.DNSError
+	if errors.As(err, &dnsErr) {
+		// DNS errors are generally retriable unless they indicate permanent failures
+		return !strings.Contains(strings.ToLower(dnsErr.Err), "no such host") ||
+			strings.Contains(strings.ToLower(dnsErr.Err), "temporary failure")
+	}
+
+	// Connection errors are retriable
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		return true
+	}
+
+	// Syscall errors that are retriable
+	var syscallErr syscall.Errno
+	if errors.As(err, &syscallErr) {
+		//nolint:exhaustive // Only specific network-related syscall errors are retriable
+		switch syscallErr {
+		case syscall.ECONNRESET, syscall.ECONNREFUSED, syscall.ETIMEDOUT,
+			syscall.EHOSTUNREACH, syscall.ENETUNREACH:
+			return true
+		}
+		// All other syscall errors are not retriable for security reasons
+		return false
+	}
+
+	// Exit errors with specific codes that may be network-related
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		// Some exit codes are retriable (network issues, temporary failures)
+		switch exitErr.ExitCode() {
+		case 1: // Generic failure - could be network
+			// Check if the error message contains network-related keywords
+			if exitErr.Stderr != nil {
+				stderrStr := strings.ToLower(string(exitErr.Stderr))
+				for _, pattern := range retriablePatterns {
+					if strings.Contains(stderrStr, pattern) {
+						return true
+					}
+				}
+			}
+		case 124: // timeout command exit code
+			return true
+		}
+	}
+
+	return false
 }
 
 // MockExecutor implements CommandExecutor for testing

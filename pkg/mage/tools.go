@@ -1,9 +1,11 @@
 package mage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -52,7 +54,7 @@ func (Tools) Install() error {
 	return nil
 }
 
-// Update updates all development tools to latest versions
+// Update updates all development tools to latest versions with retry logic
 func (Tools) Update() error {
 	utils.Header("Updating Development Tools")
 
@@ -61,22 +63,35 @@ func (Tools) Update() error {
 		return err
 	}
 
-	// Update golangci-lint if using brew
+	ctx := context.Background()
+	maxRetries := config.Download.MaxRetries
+	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
+
+	// Update golangci-lint if using brew with retry logic
 	if utils.IsMac() && utils.CommandExists("brew") {
-		utils.Info("Updating golangci-lint via brew...")
-		// Ignore error - best effort
-		err := GetRunner().RunCmd("brew", "upgrade", "golangci-lint")
-		_ = err // Best effort - ignore error
+		utils.Info("Updating golangci-lint via brew with retry logic...")
+
+		// Get the secure executor with retry capabilities
+		runner := GetRunner()
+		secureRunner, ok := runner.(*SecureCommandRunner)
+		if !ok {
+			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+		}
+		executor := secureRunner.executor
+		err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "brew", "upgrade", "golangci-lint")
+		if err != nil {
+			utils.Warn("Failed to update golangci-lint via brew: %v", err)
+		}
 	}
 
-	// Update other tools
+	// Update other tools with retry logic
 	tools := getRequiredTools(config)
 	for _, tool := range tools {
 		if tool.Module == "" {
 			continue
 		}
 
-		utils.Info("Updating %s...", tool.Name)
+		utils.Info("Updating %s with retry logic...", tool.Name)
 
 		version := tool.Version
 		if version == DefaultGoVulnCheckVersion || version == "" {
@@ -85,12 +100,33 @@ func (Tools) Update() error {
 			version = "@" + version
 		}
 
-		if err := GetRunner().RunCmd("go", "install", tool.Module+version); err != nil {
-			utils.Warn("Failed to update %s: %v", tool.Name, err)
+		moduleWithVersion := tool.Module + version
+
+		// Get the secure executor with retry capabilities
+		runner := GetRunner()
+		secureRunner, ok := runner.(*SecureCommandRunner)
+		if !ok {
+			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+		}
+		executor := secureRunner.executor
+		err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", moduleWithVersion)
+
+		if err != nil {
+			// Try with direct proxy as fallback
+			utils.Warn("Failed to update %s: %v, trying direct proxy...", tool.Name, err)
+
+			env := []string{"GOPROXY=direct"}
+			if err := executor.ExecuteWithEnv(ctx, env, "go", "install", moduleWithVersion); err != nil {
+				utils.Warn("Failed to update %s after retries and fallback: %v", tool.Name, err)
+			} else {
+				utils.Success("Updated %s via direct proxy", tool.Name)
+			}
+		} else {
+			utils.Success("Updated %s", tool.Name)
 		}
 	}
 
-	utils.Success("Tools updated")
+	utils.Success("Tools update completed")
 	return nil
 }
 
@@ -167,7 +203,7 @@ func (Tools) List() error {
 	return nil
 }
 
-// VulnCheck installs and runs govulncheck
+// VulnCheck installs and runs govulncheck with retry logic
 func (Tools) VulnCheck() error {
 	utils.Header("Checking for Vulnerabilities")
 
@@ -176,28 +212,90 @@ func (Tools) VulnCheck() error {
 		return err
 	}
 
-	// Ensure govulncheck is installed
+	ctx := context.Background()
+	maxRetries := config.Download.MaxRetries
+	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
+
+	// Ensure govulncheck is installed with retry logic
+
 	if !utils.CommandExists("govulncheck") {
-		utils.Info("Installing govulncheck...")
-
-		version := config.Tools.GoVulnCheck
-		if version == "" || version == VersionLatest {
-			version = VersionAtLatest
-		} else if !strings.HasPrefix(version, "@") {
-			version = "@" + version
-		}
-
-		if err := GetRunner().RunCmd("go", "install", "golang.org/x/vuln/cmd/govulncheck"+version); err != nil {
-			return fmt.Errorf("failed to install govulncheck: %w", err)
+		if err := installGovulncheck(ctx, config, maxRetries, initialDelay); err != nil {
+			return err
 		}
 	}
 
-	// Run vulnerability check
+	// Run vulnerability check (this generally doesn't need retry as it's running locally)
 	if err := GetRunner().RunCmd("govulncheck", "-show", "verbose", "./..."); err != nil {
 		return fmt.Errorf("vulnerability check failed: %w", err)
 	}
 
 	utils.Success("No vulnerabilities found")
+	return nil
+}
+
+// installGovulncheck installs govulncheck with retry and fallback logic
+func installGovulncheck(ctx context.Context, config *Config, maxRetries int, initialDelay time.Duration) error {
+	utils.Info("Installing govulncheck with retry logic...")
+
+	version := config.Tools.GoVulnCheck
+	if version == "" || version == VersionLatest {
+		version = VersionAtLatest
+	} else if !strings.HasPrefix(version, "@") {
+		version = "@" + version
+	}
+
+	moduleWithVersion := "golang.org/x/vuln/cmd/govulncheck" + version
+
+	// Get the secure executor with retry capabilities
+	runner := GetRunner()
+	secureRunner, ok := runner.(*SecureCommandRunner)
+	if !ok {
+		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+	}
+	executor := secureRunner.executor
+	err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", moduleWithVersion)
+	if err != nil {
+		// Try with direct proxy as fallback
+		utils.Warn("Installation failed: %v, trying direct proxy...", err)
+
+		env := []string{"GOPROXY=direct"}
+		if err := executor.ExecuteWithEnv(ctx, env, "go", "install", moduleWithVersion); err != nil {
+			return fmt.Errorf("failed to install govulncheck after %d retries and fallback: %w", maxRetries, err)
+		}
+	}
+	return nil
+}
+
+// installToolFromModule installs a tool from a Go module with retry logic
+func installToolFromModule(ctx context.Context, tool ToolDefinition, _ *Config, maxRetries int, initialDelay time.Duration) error {
+	version := tool.Version
+	if version == "" || version == VersionLatest {
+		version = VersionAtLatest
+	} else if !strings.HasPrefix(version, "@") {
+		version = "@" + version
+	}
+
+	moduleWithVersion := tool.Module + version
+	utils.Info("Installing %s from %s...", tool.Name, moduleWithVersion)
+
+	// Get the secure executor with retry capabilities
+	runner := GetRunner()
+	secureRunner, ok := runner.(*SecureCommandRunner)
+	if !ok {
+		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+	}
+	executor := secureRunner.executor
+	err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", moduleWithVersion)
+	if err != nil {
+		// Try with different module proxy settings as fallback
+		utils.Warn("Installation failed: %v, trying with direct module proxy...", err)
+
+		// Try with GOPROXY=direct to bypass proxy issues
+		env := []string{"GOPROXY=direct"}
+		if err := executor.ExecuteWithEnv(ctx, env, "go", "install", moduleWithVersion); err != nil {
+			return fmt.Errorf("failed to install %s after %d retries and fallback: %w", tool.Name, maxRetries, err)
+		}
+	}
 	return nil
 }
 
@@ -266,7 +364,7 @@ func getRequiredTools(cfg *Config) []ToolDefinition {
 	return tools
 }
 
-// installTool installs a single tool
+// installTool installs a single tool with retry logic
 func installTool(tool ToolDefinition) error {
 	// Check if already installed
 	if utils.CommandExists(tool.Check) {
@@ -274,33 +372,32 @@ func installTool(tool ToolDefinition) error {
 		return nil
 	}
 
-	utils.Info("Installing %s...", tool.Name)
+	utils.Info("Installing %s with retry logic...", tool.Name)
+
+	config, err := GetConfig()
+	if err != nil {
+		// Use default config if loading fails
+		config = defaultConfig()
+	}
+
+	ctx := context.Background()
+	maxRetries := config.Download.MaxRetries
+	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
 
 	// Special case for golangci-lint
 	if tool.Name == CmdGolangciLint {
-		config, err := GetConfig()
-		if err != nil {
-			// Use default config if loading fails
-			config = defaultConfig()
-		}
 		return ensureGolangciLint(config)
 	}
 
-	// Install via go install
-	if tool.Module != "" {
-		version := tool.Version
-		if version == "" || version == VersionLatest {
-			version = VersionAtLatest
-		} else if !strings.HasPrefix(version, "@") {
-			version = "@" + version
-		}
+	// Install via go install with retry logic
 
-		if err := GetRunner().RunCmd("go", "install", tool.Module+version); err != nil {
+	if tool.Module != "" {
+		if err := installToolFromModule(ctx, tool, config, maxRetries, initialDelay); err != nil {
 			return err
 		}
 	}
 
-	utils.Success("%s installed", tool.Name)
+	utils.Success("%s installed successfully", tool.Name)
 	return nil
 }
 

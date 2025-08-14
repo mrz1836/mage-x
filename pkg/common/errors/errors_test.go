@@ -394,7 +394,7 @@ func TestErrorFormatter(t *testing.T) {
 	assert.Contains(t, compact, "key=value", "Compact format should include fields")
 }
 
-func TestHelperFunctions(t *testing.T) {
+func TestErrorHelperFunctions(t *testing.T) {
 	// Test IsNotFound
 	err := WithCode(ErrNotFound, "not found")
 	assert.True(t, IsNotFound(err), "IsNotFound should return true for ErrNotFound")
