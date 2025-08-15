@@ -1066,25 +1066,25 @@ func TestEnvironmentVariablePrecedence(t *testing.T) {
 
 	t.Run("DefaultWhenUnset", func(t *testing.T) {
 		require.NoError(t, os.Unsetenv("BUMP"))
-		
+
 		bumpType := utils.GetEnv("BUMP", "patch")
 		require.Equal(t, "patch", bumpType)
 	})
 
 	t.Run("EmptyStringUsesDefault", func(t *testing.T) {
 		require.NoError(t, os.Setenv("BUMP", ""))
-		
+
 		bumpType := utils.GetEnv("BUMP", "patch")
 		require.Equal(t, "patch", bumpType) // Empty should use default
 	})
 
 	t.Run("ExplicitValueOverridesDefault", func(t *testing.T) {
 		testCases := []string{"major", "minor", "patch"}
-		
+
 		for _, expected := range testCases {
 			t.Run(expected, func(t *testing.T) {
 				require.NoError(t, os.Setenv("BUMP", expected))
-				
+
 				bumpType := utils.GetEnv("BUMP", "patch")
 				require.Equal(t, expected, bumpType)
 			})
@@ -1092,14 +1092,14 @@ func TestEnvironmentVariablePrecedence(t *testing.T) {
 	})
 
 	t.Run("CaseInsensitiveValidation", func(t *testing.T) {
-		// Note: The actual validation happens in Version.Bump(), 
+		// Note: The actual validation happens in Version.Bump(),
 		// but we test utils.GetEnv behavior here
 		testCases := []string{"MAJOR", "Minor", "PATCH"}
-		
+
 		for _, bumpType := range testCases {
 			t.Run(bumpType, func(t *testing.T) {
 				require.NoError(t, os.Setenv("BUMP", bumpType))
-				
+
 				result := utils.GetEnv("BUMP", "patch")
 				require.Equal(t, bumpType, result) // GetEnv preserves case
 			})
@@ -1112,10 +1112,10 @@ func TestBumpVersionWithRealWorldScenarios(t *testing.T) {
 	t.Run("SequentialPatches", func(t *testing.T) {
 		// Simulate sequential patch releases
 		versions := []string{"v1.0.0", "v1.0.1", "v1.0.2", "v1.0.3", "v1.0.4", "v1.0.5", "v1.0.6"}
-		
+
 		for i, current := range versions[:len(versions)-1] {
 			expected := versions[i+1]
-			
+
 			result, err := bumpVersion(current, "patch")
 			require.NoError(t, err)
 			require.Equal(t, expected, result, "Sequential patch from %s should produce %s", current, expected)
@@ -1127,7 +1127,7 @@ func TestBumpVersionWithRealWorldScenarios(t *testing.T) {
 		result, err := bumpVersion("v1.0.6", "patch")
 		require.NoError(t, err)
 		require.Equal(t, "v1.0.7", result, "v1.0.6 with patch should become v1.0.7")
-		
+
 		// NOT v2.0.0!
 		require.NotEqual(t, "v2.0.0", result, "Patch bump should never result in major version jump")
 	})
@@ -1198,7 +1198,7 @@ func TestValidateVersionProgressionExtended(t *testing.T) {
 			reasonWhy string
 		}{
 			{"v1.0.6", "v2.0.0", "patch", "patch shouldn't jump major version"},
-			{"v1.0.6", "v1.1.0", "patch", "patch shouldn't jump minor version"}, 
+			{"v1.0.6", "v1.1.0", "patch", "patch shouldn't jump minor version"},
 			{"v1.0.6", "v1.0.8", "patch", "patch should increment by 1"},
 			{"v1.0.6", "v1.2.0", "minor", "minor should increment by 1"},
 			{"v1.0.6", "v1.1.6", "minor", "minor should reset patch to 0"},
@@ -1219,10 +1219,10 @@ func TestValidateVersionProgressionExtended(t *testing.T) {
 	t.Run("EdgeCasesToleratedBehavior", func(t *testing.T) {
 		// These cases show current behavior for invalid formats
 		// Validation is skipped for malformed versions
-		
+
 		err := validateVersionProgression("v1.2", "v1.3", "patch")
 		require.NoError(t, err, "Invalid format should skip validation")
-		
+
 		err = validateVersionProgression("v1.2.3.4", "v1.2.3.5", "patch")
 		require.NoError(t, err, "Invalid format should skip validation")
 	})
@@ -1253,12 +1253,12 @@ func TestGetTagsOnCurrentCommitBehavior(t *testing.T) {
 		tags, err := getTagsOnCurrentCommit()
 		require.NoError(t, err, "getTagsOnCurrentCommit should not error in valid git repo")
 		require.NotNil(t, tags, "Should return slice (possibly empty)")
-		
+
 		// All returned tags should be version tags (start with v followed by digit)
 		for _, tag := range tags {
 			require.True(t, strings.HasPrefix(tag, "v"), "All tags should start with 'v': %s", tag)
 			if len(tag) > 1 {
-				require.True(t, tag[1] >= '0' && tag[1] <= '9', 
+				require.True(t, tag[1] >= '0' && tag[1] <= '9',
 					"Character after 'v' should be digit: %s", tag)
 			}
 		}
@@ -1287,7 +1287,7 @@ func TestVersionBumpEnvironmentVariableEdgeCases(t *testing.T) {
 
 	t.Run("WhitespaceInBUMP", func(t *testing.T) {
 		require.NoError(t, os.Setenv("BUMP", " patch "))
-		
+
 		// The Version.Bump method should handle this (trim whitespace)
 		// For now, we test that GetEnv returns the literal value
 		bumpType := utils.GetEnv("BUMP", "patch")

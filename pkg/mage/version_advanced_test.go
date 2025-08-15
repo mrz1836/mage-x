@@ -493,7 +493,7 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 			"Should create v1.0.7 tag (patch bump)")
 		require.Contains(t, mock.commands, "git push origin v1.0.7",
 			"Should push v1.0.7 tag with PUSH=true")
-		
+
 		// Verify it did NOT create v2.0.0
 		require.NotContains(t, mock.commands, "git tag -a v2.0.0",
 			"Should NOT create major version tag")
