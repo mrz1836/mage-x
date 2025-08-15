@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // DocsTestSuite provides a comprehensive test suite for documentation functionality
@@ -60,97 +62,6 @@ func (ts *DocsTestSuite) SetupTest() {
 // TestDocsSuite runs the docs test suite
 func TestDocsSuite(t *testing.T) {
 	suite.Run(t, new(DocsTestSuite))
-}
-
-// TestDocsCitation tests the Docs.Citation method
-func (ts *DocsTestSuite) TestDocsCitation() {
-	docs := Docs{}
-
-	ts.Run("CitationWithoutVersion", func() {
-		err := docs.Citation()
-		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, errVersionRequired)
-	})
-
-	ts.Run("CitationWithMissingFile", func() {
-		ts.Require().NoError(os.Setenv("version", "1.0.0"))
-
-		// Change to temp directory where no CITATION.cff exists
-		originalDir, err := os.Getwd()
-		ts.Require().NoError(err)
-		defer func() {
-			ts.Require().NoError(os.Chdir(originalDir))
-		}()
-
-		ts.Require().NoError(os.Chdir(ts.tempDir))
-
-		err = docs.Citation()
-		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, errCitationFileNotFound)
-	})
-
-	ts.Run("CitationSuccess", func() {
-		ts.Require().NoError(os.Setenv("version", "2.1.0"))
-
-		// Change to temp directory for this test
-		originalDir, err := os.Getwd()
-		ts.Require().NoError(err)
-		defer func() {
-			ts.Require().NoError(os.Chdir(originalDir))
-		}()
-
-		ts.Require().NoError(os.Chdir(ts.tempDir))
-
-		// Create a test CITATION.cff file
-		citationContent := `cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
-authors:
-  - family-names: "Test"
-    given-names: "Author"
-title: "Test Project"
-version: "1.0.0"
-date-released: 2023-01-01
-url: "https://github.com/test/project"`
-
-		err = os.WriteFile("CITATION.cff", []byte(citationContent), 0o600)
-		ts.Require().NoError(err)
-
-		err = docs.Citation()
-		ts.Require().NoError(err)
-
-		// Verify version was updated
-		updatedContent, err := os.ReadFile("CITATION.cff")
-		ts.Require().NoError(err)
-		ts.Require().Contains(string(updatedContent), `version: "2.1.0"`)
-	})
-
-	ts.Run("CitationWithoutVersionLine", func() {
-		ts.Require().NoError(os.Setenv("version", "1.5.0"))
-
-		// Change to temp directory for this test
-		originalDir, err := os.Getwd()
-		ts.Require().NoError(err)
-		defer func() {
-			ts.Require().NoError(os.Chdir(originalDir))
-		}()
-
-		ts.Require().NoError(os.Chdir(ts.tempDir))
-
-		// Create a CITATION.cff file without version line
-		citationContent := `cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
-authors:
-  - family-names: "Test"
-    given-names: "Author"
-title: "Test Project"`
-
-		err = os.WriteFile("CITATION.cff", []byte(citationContent), 0o600)
-		ts.Require().NoError(err)
-
-		err = docs.Citation()
-		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, errVersionLineNotFound)
-	})
 }
 
 // TestDocsGoDocs tests the Docs.GoDocs method
@@ -655,7 +566,6 @@ func (ts *DocsTestSuite) TestDocsStaticErrors() {
 	ts.Run("StaticErrors", func() {
 		// Test that static errors are properly defined
 		ts.Require().Error(errVersionRequired)
-		ts.Require().Error(errCitationFileNotFound)
 		ts.Require().Error(errVersionLineNotFound)
 		ts.Require().Error(errDocumentationCheckFailed)
 		ts.Require().Error(errNoDocumentationToolsAvailable)
@@ -664,7 +574,6 @@ func (ts *DocsTestSuite) TestDocsStaticErrors() {
 
 		// Test error messages are meaningful
 		ts.Require().Contains(errVersionRequired.Error(), "version variable is required")
-		ts.Require().Contains(errCitationFileNotFound.Error(), "CITATION.cff file not found")
 		ts.Require().Contains(errVersionLineNotFound.Error(), "version line")
 		ts.Require().Contains(errDocumentationCheckFailed.Error(), "documentation check failed")
 		ts.Require().Contains(errNoDocumentationToolsAvailable.Error(), "no documentation tools available")
@@ -679,7 +588,6 @@ func (ts *DocsTestSuite) TestDocsMethodStubs() {
 
 	ts.Run("AllMethodsExist", func() {
 		// Test that all methods exist and have correct signatures
-		ts.Require().NotNil(docs.Citation)
 		ts.Require().NotNil(docs.GoDocs)
 		ts.Require().NotNil(docs.Generate)
 		ts.Require().NotNil(docs.Check)
@@ -942,16 +850,43 @@ func TestDocsIntegration(t *testing.T) {
 		docs := Docs{}
 
 		// These operations may fail in test environment but shouldn't panic
-		_ = docs.Generate() //nolint:errcheck // Test intentionally ignores errors
-		_ = docs.Build()    //nolint:errcheck // Test intentionally ignores errors
-		_ = docs.Clean()    //nolint:errcheck // Test intentionally ignores errors
+		err := docs.Generate()
+		require.NoError(t, err)
+		err = docs.Build()
+		require.NoError(t, err)
+		err = docs.Clean()
+		require.NoError(t, err)
 	})
 
 	t.Run("CheckAndExamplesSequence", func(t *testing.T) {
-		// Test that Check -> Examples sequence works
+		// Test that Check -> Examples sequence works in project root
 		docs := Docs{}
 
-		_ = docs.Check()    //nolint:errcheck // Test intentionally ignores errors
-		_ = docs.Examples() //nolint:errcheck // Test intentionally ignores errors
+		// Change to project root if we're not already there
+		originalDir, err := os.Getwd()
+		require.NoError(t, err)
+		defer func() {
+			chErr := os.Chdir(originalDir)
+			require.NoError(t, chErr)
+		}()
+
+		// Find project root by looking for go.mod
+		projectRoot := originalDir
+		for !utils.FileExists(filepath.Join(projectRoot, "go.mod")) {
+
+			parent := filepath.Dir(projectRoot)
+			if parent == projectRoot {
+				break // reached filesystem root
+			}
+			projectRoot = parent
+		}
+
+		err = os.Chdir(projectRoot)
+		require.NoError(t, err)
+
+		err = docs.Check()
+		require.NoError(t, err)
+		err = docs.Examples()
+		require.NoError(t, err)
 	})
 }
