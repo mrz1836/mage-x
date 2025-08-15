@@ -56,3 +56,8 @@ tests/.mage-cache/
 /docs/build
 /docs/generated
 /pkg/mage/docs
+/magex
+/examples/basic/test-build
+/examples/basic/magefile-compiled
+/cmd/magex/magex
+/examples/override-commands/override-commands

@@ -1,5 +1,5 @@
  # 🪄 MAGE-X
-> Write Once, Mage Everywhere: Modern Build Automation for Go
+> Write Once, Mage Everywhere: Zero-Boilerplate Build Automation for Go
 
 <table>
   <thead>
@@ -78,7 +78,7 @@
 * [Examples & Tests](#-examples--tests)
 * [Benchmarks](#-benchmarks)
 * [Code Standards](#-code-standards)
-* [AI Compliance](#-ai-compliance)
+* [AI Agent Ecosystem](#-ai-agent-ecosystem)
 * [Maintainers](#-maintainers)
 * [Contributing](#-contributing)
 * [License](#-license)
@@ -87,40 +87,85 @@
 
 ## 🧩 What's Inside
 
-**MAGE-X** is a comprehensive build automation toolkit that transforms how you manage Go projects. Built on the philosophy of "Write Once, Mage Everywhere," it provides modern development tools with a delightfully friendly user experience.
-
-Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminates build boilerplate and delivers consistency across your entire development workflow.
+**MAGE-X** revolutionizes Go build automation with TRUE zero-boilerplate. Unlike traditional Mage which requires writing wrapper functions, MAGE-X provides all commands instantly through the `magex` binary.
 
 <br/>
 
-- **🎯 Zero-Configuration Excellence**  
-  _Works out of the box with intelligent defaults. No complex setup, no YAML hell—just add one import, and you're ready to build, test, and ship._
-
-- **🎭 Friendly CLI Experience**  
-  _Comprehensive CLI with help and intuitive commands. Building software should be enjoyable, not a chore._
-
-- **🚀 Multi-Channel Releases**  
-  _Stable, beta, and edge release channels with automated versioning, GitHub integration, and asset distribution._
-
-- **🔧 Recipe System**  
-  _Pre-built patterns for common development scenarios—from fresh project setup to CI/CD pipeline configuration._
-
-- **🛡️ Security-First Architecture**  
+- **🚀 Truly Zero-Configuration**
+  _No magefile.go needed. No imports. No wrappers. Just install `magex` and all 343 commands work immediately in any Go project._
+  <br/><br/>
+- **🎯 Drop-in Mage Replacement**
+  _`magex` is a superset of `mage` with all MAGE-X commands built-in. Your existing magefiles still work, now enhanced with 343 professional commands._
+  <br/><br/>
+- **🌍 Cross-Platform Excellence**
+  _Full support for Linux, macOS, and Windows with multi-architecture builds, parallel execution, and CPU-aware optimization._
+  <br/><br/>
+- **🛡️ Security-First Architecture**
   _Input validation, secure command execution, and minimal dependencies. Built for environments where security matters._
-
-- **🌍 Cross-Platform Excellence**  
-  _Full support for Linux, macOS, and Windows with optimized parallel execution and CPU-aware builds._
-
-- **🤖 AI Agent Ecosystem**  
-  _19 specialized AI agents for intelligent development workflows. Comprehensive automation with strategic collaboration and parallel execution._
-
-- **⚡ Claude Code Commands**  
-  _13 optimized slash commands that orchestrate intelligent agent collaboration for maximum development efficiency._
-
-- **📊 Enterprise Features**  
-  _Audit logging, compliance reporting, and team management capabilities for organizations that need governance._
+  <br/><br/>
+- **🔧 Advanced Recipe System**
+  _Pre-built development patterns with templates and automation—from fresh project setup to complete CI/CD workflows._
+  <br/><br/>
+- **📦 Professional Release Management**
+  _Multi-platform asset building, automated versioning, GitHub integration, and release automation for production deployments._
+  <br/><br/>
+- **📚 Smart Documentation System**
+  _Hybrid pkgsite/godoc support with auto-detection, port management, and cross-platform browser integration._
+  <br/><br/>
+- **🤖 AI Development Integration**
+  _19 specialized AI agents and 13 Claude Code slash commands for intelligent workflows, code analysis, and automated development tasks._
+  <br/><br/>
+- **🏢 Enterprise Foundation**
+  _Audit logging, configuration management, and extensible architecture ready for organizational governance and compliance needs._
 
 <br/>
+
+## ⚡ Quick Start
+
+### Zero Boilerplate with MAGE-X 🎉
+
+```bash
+# 1. Install magex binary (one time)
+go install github.com/mrz1836/mage-x/cmd/magex@latest
+
+# 2. Use it immediately in ANY Go project (no setup!)
+magex build         # Build your project
+magex test          # Run tests
+magex lint:fix      # Fix linting issues
+magex release:multi # Multi-platform release
+
+# That's it! No magefile.go needed! 🚀
+```
+
+### See What's Available
+
+```bash
+magex -l            # List all 343 commands
+magex -n            # Commands by namespace
+magex -search test  # Find specific commands
+magex -h            # Get help
+```
+
+### Optional: Add Custom Commands
+
+Only create a `magefile.go` if you need project-specific commands:
+
+```go
+//go:build mage
+package main
+
+// Your custom command (works alongside all MAGE-X commands!)
+func Deploy() error {
+    // Custom deployment logic
+    return nil
+}
+```
+
+Now you have both:
+```bash
+magex build    # Built-in MAGE-X command
+magex deploy   # Your custom command
+```
 
 ### 🚀 Quick Wins
 
@@ -130,67 +175,7 @@ Perfect for managing 30+ repositories or your first Go project, MAGE-X eliminate
 * **Guided Setup**: Project initialization and configuration management
 * **Recipe Library**: Common patterns and best practices built right in
 
-> **Tip:** Run `mage help` to see all available commands with beautiful formatting (or `mage -l` for plain list).
-
-<br/>
-
-## ⚡ Quick Start
-
-### 1. Install MAGE-X
-
-```bash
-# Install Mage (if not already installed)
-go install github.com/magefile/mage@latest
-
-# Add MAGE-X to your project
-go get github.com/mrz1836/mage-x
-```
-
-### 2. Create Your Magefile
-
-```go
-//go:build mage
-
-package main
-
-import (
-    // Import all MAGE-X tasks
-    _ "github.com/mrz1836/mage-x/pkg/mage"
-)
-
-// Default task - just run `mage`
-var Default = func() error {
-    return Build{}.Default()
-}
-```
-
-### 3. Start Building
-
-```bash
-# Or dive right in
-mage build   # Build your project
-mage test    # Run tests with linting
-mage release # Create a release
-```
-
-### 4. Advanced Setup (Optional)
-
-```bash
-# Create a configuration file (.mage.yaml)
-cat > .mage.yaml << EOF
-project:
-  name: my-project
-  version: v1.0.0
-build:
-  output: bin
-  platforms:
-    - linux/amd64
-    - darwin/amd64
-EOF
-
-# Download dependencies
-mage depsDownload
-```
+> **Tip:** Run `magex help` to see all available commands with beautiful formatting (or `magex -l` for plain list).
 
 <br/>
 
@@ -204,9 +189,9 @@ mage depsDownload
 
 ### Developer Experience
 - **🏗️ Project Templates**: CLI, library, web API, and microservice templates
-- **🚀 Multi-Channel Releases**: Stable, beta, and edge release channels
+- **📦 Release Automation**: Multi-platform asset building with GitHub integration
 - **⚙️ Configuration Management**: Flexible mage.yaml with smart defaults
-- **📦 Asset Distribution**: Automated building and distribution of release assets
+- **🔧 Recipe System**: Pre-built patterns and templates for common scenarios
 
 ### User Experience Features
 - **🎯 Command Discovery**: Comprehensive CLI with intuitive command structure
@@ -215,40 +200,48 @@ mage depsDownload
 - **⚙️ Project Templates**: Ready-made configurations for different project types
 
 ### Enterprise Features
-- **📊 Audit Logging**: Comprehensive activity tracking and compliance reporting
-- **🛡️ Security Scanning**: Vulnerability detection and security policy enforcement
-- **👥 Team Management**: Role-based access and team collaboration features
-- **📈 Analytics**: Build metrics, performance tracking, and optimization insights
+- **📊 Audit Logging**: Activity tracking and compliance reporting foundation
+- **🛡️ Security Scanning**: Vulnerability detection with govulncheck integration
+- **⚙️ Configuration Management**: Centralized project configuration and validation
+- **🔧 Extensible Architecture**: Plugin-ready foundation for custom enterprise needs
 
 <br/>
 
 ## 🏢 Advanced Features
 
-MAGE-X includes basic enterprise capabilities and extensibility for organizations.
+MAGE-X includes enterprise-ready capabilities and extensible architecture for organizations.
 
-### Basic Enterprise Features
+### Enterprise Capabilities
 
-Available enterprise-focused functionality:
+Available enterprise functionality:
 
 ```bash
-# Basic audit logging
-mage auditShow
+# Audit logging and compliance
+magex audit:show          # View audit events
+magex audit:stats         # Audit statistics
+magex audit:export        # Export audit data
+
+# Configuration management
+magex configure:show      # Display configuration
+magex configure:validate  # Validate configuration
 ```
 
-**Currently Available:**
-- **Basic Audit Logging**: Track build and deployment activities
-- **Configuration Management**: Centralized project configuration
-- **Integration Framework**: Foundation for external tool integration
-
-**Note:** Advanced enterprise features like comprehensive analytics, team management, and security scanning are under development. The current implementation provides a solid foundation with basic enterprise capabilities.
+**Production-Ready Features:**
+- **Audit System**: Track build activities with export capabilities
+- **Configuration Validation**: Schema-based configuration management
+- **Security Integration**: govulncheck and policy enforcement
+- **Extensible Architecture**: Plugin-ready foundation for custom enterprise needs
 
 <br/>
 
 ## ⚙️ Configuration
 
-### Basic Configuration
+MAGE-X works without any configuration, but you can customize behavior with `.mage.yaml` or environment variables.
 
-Create `.mage.yaml` in your project root:
+<details>
+<summary>📋 <strong>Configuration File (.mage.yaml)</strong></summary>
+
+Create `.mage.yaml` in your project root for custom settings:
 
 ```yaml
 project:
@@ -278,27 +271,33 @@ test:
   race: false
   cover: true
   covermode: atomic
-  
+
 lint:
   golangci_version: v2.3.1
   timeout: 5m
-  
+
 tools:
   golangci_lint: v2.3.1
   fumpt: latest
   govulncheck: latest
 
 release:
-  channels:
-    - stable
-    - beta
-    - edge
   github:
     owner: mrz
     repo: my-project
+  platforms:
+    - linux/amd64
+    - darwin/amd64
+    - darwin/arm64
+    - windows/amd64
 ```
 
-### Environment Variable Overrides
+</details>
+
+<details>
+<summary>🌍 <strong>Environment Variable Overrides</strong></summary>
+
+Override any configuration with environment variables:
 
 ```bash
 # Build configuration
@@ -324,6 +323,8 @@ export PUSH=true       # Push tag to remote after creation
 export DRY_RUN=true    # Preview version bump without making changes
 ```
 
+</details>
+
 <br/>
 
 ## 📚 Documentation
@@ -341,223 +342,402 @@ For comprehensive documentation, visit the [docs](docs) directory:
 
 ### Available Commands
 
-MAGE-X provides a comprehensive set of commands organized by functionality. All commands are available through the `mage` CLI.
+MAGE-X provides 343 commands organized by functionality. All commands work instantly through the `magex` CLI.
 
-#### 🎯 Command Discovery & Help
+<details>
+<summary>🎯 <strong>Essential Commands</strong></summary>
+
+**Quick Discovery:**
 ```bash
-# Command Discovery
-mage help               # Beautiful command listing with categories and emojis
-mage list               # Alternative beautiful command listing
-mage -l                 # Plain list of all available targets
-mage -h <command>       # Get help for a specific command
-mage -version           # Show mage version and build info
+magex help:default       # Beautiful command listing with categories and emojis
+magex -l                 # Plain list of all available targets
+magex -search test       # Find specific commands
 ```
 
-#### 🎯 Default Targets & Aliases
+**Most Used Commands:**
 ```bash
-# Quick Access Commands
-mage                    # Run default build (alias for buildDefault)
-mage help               # Show beautiful help with all commands (alias: mage helpDefault)
-mage build              # Build the project (alias: mage buildDefault) 
-mage docs               # Generate and serve documentation (alias: mage docsDefault)
-mage lint               # Run essential linters (alias: mage lintDefault)
-mage loc                # Analyze lines of code (alias: mage metricsLOC)
-mage release            # Create a new release (alias: mage releaseDefault)
-mage test               # Run complete test suite (alias: mage testDefault)
+magex                    # Run default build
+magex build              # Build for current platform
+magex test               # Run complete test suite
+magex lint:fix           # Auto-fix linting issues
+magex release:default    # Create a new release
 ```
 
-#### 📦 Build Commands
+</details>
+
+<details>
+<summary>📦 <strong>Build & Compilation</strong></summary>
+
 ```bash
-# Core Build Operations
-mage build              # Build for current platform (alias: mage buildDefault)
-mage buildAll           # Build for all configured platforms
-mage buildDocker        # Build Docker containers
-mage buildClean         # Clean build artifacts
-mage buildGenerate      # Generate code before building
+magex build:default       # Build for current platform
+magex build:all           # Build for all configured platforms
+magex build:docker        # Build Docker containers
+magex build:clean         # Clean build artifacts
+magex build:generate      # Generate code before building
+magex build:linux         # Build for Linux amd64
+magex build:darwin        # Build for macOS (amd64 and arm64)
+magex build:windows       # Build for Windows amd64
+magex build:install       # Install binary to $GOPATH/bin
+magex build:prebuild      # Pre-build all packages to warm cache
 ```
 
-#### 🧪 Test Commands
+</details>
+
+<details>
+<summary>🧪 <strong>Testing & Quality</strong></summary>
+
 ```bash
-# Test Execution
-mage test               # Run complete test suite with linting (alias: mage testDefault)
-mage testFull           # Run full test suite with linting
-mage testUnit           # Run unit tests only (no linting)
-mage testShort          # Run short tests (excludes integration tests)
-mage testRace           # Run tests with race detector
-mage testCover          # Run tests with coverage analysis
-mage testCoverRace      # Run tests with both coverage and race detector
-mage testBench          # Run benchmark tests
-mage testBenchShort     # Run short benchmark tests
-mage testFuzz           # Run fuzz tests
-mage testFuzzShort      # Run quick fuzz tests (5s default)
-mage testIntegration    # Run integration tests
+magex test               # Run complete test suite with linting
+magex test:unit          # Run unit tests only
+magex test:short         # Run short tests (excludes integration tests)
+magex test:race          # Run tests with race detector
+magex test:cover         # Run tests with coverage analysis
+magex test:coverrace     # Run tests with both coverage and race detector
+magex test:bench         # Run benchmark tests
+magex test:fuzz          # Run fuzz tests
+magex test:integration   # Run integration tests
+
+# Code Quality & Linting
+magex lint               # Run essential linters
+magex lint:fix           # Auto-fix linting issues + apply formatting
+magex test:vet           # Run go vet static analysis
+magex format:fix         # Run code formatting
+magex tools:verify       # Show tool version information
 ```
 
-#### 🔍 Code Quality & Linting
+</details>
+
+<details>
+<summary>📊 <strong>Analysis & Metrics</strong></summary>
+
 ```bash
-# Linting and Code Quality
-mage lint               # Run essential linters (alias: mage lintDefault)
-mage lintAll            # Run all linting checks
-mage lintFix            # Auto-fix linting issues + apply formatting
-mage lintVet            # Run go vet static analysis
-mage lintFumpt          # Run gofumpt code formatting
-mage lintVersion        # Show linter version information
+magex metrics:loc         # Analyze lines of code
+magex metrics:coverage    # Generate coverage reports
+magex metrics:complexity  # Analyze code complexity
+
+# Performance & Benchmarking
+magex bench:default       # Default benchmark operations
+magex bench:run           # Run performance benchmarks
+magex bench:profile       # Profile application performance
+magex bench:compare       # Compare benchmark results
+magex bench:report        # Generate benchmark reports
+magex bench:regression    # Check for performance regressions
+magex bench:memory        # Memory usage benchmarks
+magex bench:cpu           # CPU usage benchmarks
 ```
 
-#### 📊 Metrics & Analysis
+</details>
+
+<details>
+<summary>📦 <strong>Dependencies & Modules</strong></summary>
+
 ```bash
-# Code Analysis
-mage loc                # Analyze lines of code (alias: mage metricsLOC)
-mage metricsCoverage    # Generate coverage reports
-mage metricsComplexity  # Analyze code complexity
+# Dependency Management
+magex deps:update         # Update all dependencies
+magex deps:tidy           # Clean up go.mod and go.sum
+magex deps:download       # Download all dependencies
+magex deps:outdated       # Show outdated dependencies
+magex deps:audit          # Audit dependencies for vulnerabilities
+
+# Module Management
+magex mod:update          # Update go.mod file
+magex mod:tidy            # Tidy the go.mod file
+magex mod:verify          # Verify module checksums
+magex mod:download        # Download modules
 ```
 
-#### 📦 Dependency Management
+</details>
+
+<details>
+<summary>🔧 <strong>Development Tools</strong></summary>
+
 ```bash
-# Dependency Operations
-mage depsUpdate         # Update all dependencies
-mage depsTidy           # Clean up go.mod and go.sum
-mage depsDownload       # Download all dependencies
-mage depsOutdated       # Show outdated dependencies
-mage depsAudit          # Audit dependencies for vulnerabilities
+magex tools:update        # Update all development tools
+magex tools:install       # Install all required development tools
+magex tools:verify        # Check if all required tools are available
+magex deps:audit          # Run vulnerability check using govulncheck
+magex build:install       # Install the project binary
+magex install:stdlib      # Install Go standard library for cross-compilation
+magex uninstall           # Remove installed binary
 ```
 
-#### 🔧 Development Tools
+</details>
+
+<details>
+<summary>📚 <strong>Documentation</strong></summary>
+
 ```bash
-# Tool Management
-mage toolsUpdate        # Update all development tools
-mage toolsInstall       # Install all required development tools
-mage toolsCheck         # Check if all required tools are available
-mage toolsVulnCheck     # Run vulnerability check using govulncheck
-mage installTools       # Install development tools (alias)
-mage installBinary      # Install the project binary
-mage installStdlib      # Install Go standard library for cross-compilation
-mage uninstall          # Remove installed binary
+magex docs               # Generate and serve documentation (generate + serve in one command)
+magex docs:generate      # Generate Go package documentation from source code
+magex docs:serve         # Serve documentation locally with hybrid pkgsite/godoc support
+magex docs:build         # Build enhanced static documentation files with metadata
+magex docs:check         # Validate documentation completeness and quality
 ```
 
-#### 📝 Module Management
-```bash
-# Go Module Operations
-mage modUpdate          # Update go.mod file
-mage modTidy            # Tidy the go.mod file
-mage modVerify          # Verify module checksums
-mage modDownload        # Download modules
-```
+</details>
 
-#### 📚 Documentation
-```bash
-# Documentation Generation & Serving
-mage docs               # Generate and serve documentation (generate + serve in one command)
-mage docsGenerate       # Generate Go package documentation from source code
-mage docsServe          # Serve documentation locally with hybrid pkgsite/godoc support
-mage docsBuild          # Build enhanced static documentation files with metadata
-mage docsCheck          # Validate documentation completeness and quality
-```
+<details>
+<summary>🔀 <strong>Git & Version Control</strong></summary>
 
-#### 🔀 Git Operations
 ```bash
-# Git Workflow
-mage gitStatus                                # Show git repository status
-message="fix: commit message" mage gitCommit  # Commit changes (requires message env var)
-version="1.2.3" mage gitTag                   # Create and push a new tag (requires version env var)
-mage gitPush                                  # Push changes to remote (current branch)
-```
+# Git Operations
+magex git:status                                # Show git repository status
+message="fix: commit message" magex git:commit  # Commit changes (requires message env var)
+version="1.2.3" magex git:tag                   # Create and push a new tag (requires version env var)
+magex git:push                                  # Push changes to remote (current branch)
 
-#### 🏷️ Version Management
-```bash
-# Version Control
-mage versionShow        # Display current version information
-mage versionBump        # Bump the version (BUMP=minor/major PUSH=true mage versionBump)
-mage versionCheck       # Check version information
+# Version Management
+magex version:show         # Display current version information
+magex version:check        # Check version information and compare with latest
+magex version:update       # Update to latest version
+magex version:bump         # Bump version (patch, minor, major)
+magex version:changelog    # Generate changelog from git history
+magex version:tag          # Create version tag
+magex version:compare      # Compare two versions
+magex version:validate     # Validate version format
 
 # Version Bump Examples
-BUMP=patch mage versionBump              # Bump patch version (default)
-BUMP=minor mage versionBump              # Bump minor version
-BUMP=major mage versionBump              # Bump major version
-BUMP=minor PUSH=true mage versionBump    # Bump minor and push to remote
+BUMP=patch magex version:bump                # Bump patch version (default)
+BUMP=minor magex version:bump                # Bump minor version
+BUMP=major magex version:bump                # Bump major version
+BUMP=minor PUSH=true magex version:bump      # Bump minor and push to remote
 
 # Dry-run mode (preview changes without making them)
-DRY_RUN=true mage versionBump                        # Preview patch bump
-DRY_RUN=true BUMP=minor mage versionBump             # Preview minor bump
-DRY_RUN=true BUMP=major PUSH=true mage versionBump   # Preview major bump with push
+DRY_RUN=true magex version:bump                          # Preview patch bump
+DRY_RUN=true BUMP=minor magex version:bump               # Preview minor bump
+DRY_RUN=true BUMP=major PUSH=true magex version:bump     # Preview major bump with push
 ```
 
-#### 🚀 Release Management
+</details>
+
+<details>
+<summary>🚀 <strong>Release Management</strong></summary>
+
 ```bash
-# Release Operations
-mage release            # Create a new release (alias: mage releaseDefault)
+magex release:default    # Create a new release
+magex releases:stable     # Create stable releases
+magex releases:beta       # Create beta releases
+magex releases:edge       # Create edge releases
+magex releases:channels   # List available release channels
+magex releases:cleanup    # Clean up old releases
 ```
 
-#### 🛡️ Security & Audit
+</details>
+
+<details>
+<summary>🛡️ <strong>Security & Audit</strong></summary>
+
 ```bash
-# Security and Compliance
-mage auditShow          # Display audit events with optional filtering
+magex audit:show          # Display audit events with optional filtering
+magex audit:stats         # Show audit statistics and summaries
+magex audit:export        # Export audit data to various formats
+magex audit:cleanup       # Clean up old audit entries
+magex audit:enable        # Enable audit logging
+magex audit:disable       # Disable audit logging
+magex audit:report        # Generate comprehensive audit reports
 ```
 
-#### ⚙️ Configuration Management
+</details>
+
+<details>
+<summary>⚙️ <strong>Configuration Management</strong></summary>
+
 ```bash
-# Configuration Commands
-mage configureInit      # Initialize a new mage configuration
-mage configureShow      # Display the current configuration
-mage configureUpdate    # Update configuration values interactively
+magex configure:init      # Initialize a new mage configuration
+magex configure:show      # Display the current configuration
+magex configure:update    # Update configuration values interactively
+magex configure:enterprise # Configure enterprise settings
+magex configure:export    # Export configuration to file
+magex configure:import    # Import configuration from file
+magex configure:validate  # Validate configuration integrity
+magex configure:schema    # Show configuration schema
+
+# YAML Configuration
+magex yaml:init           # Create mage.yaml configuration
+magex yaml:validate       # Validate YAML configuration
+magex yaml:show           # Show current YAML configuration
+magex yaml:template       # Generate YAML templates
+magex yaml:format         # Format YAML files
+magex yaml:check          # Check YAML syntax
+magex yaml:merge          # Merge YAML configurations
+magex yaml:convert        # Convert between YAML formats
+magex yaml:schema         # Show YAML schema
 ```
 
-#### 🏗️ Code Generation
+</details>
+
+<details>
+<summary>🏗️ <strong>Project Setup & Initialization</strong></summary>
+
 ```bash
-# Generation Commands
-mage generateDefault    # Run go generate
-mage generateClean      # Remove generated files
+# Code Generation
+magex generate:default    # Run go generate
+magex generate:clean      # Remove generated files
+
+# Project Initialization
+magex init:default        # Default initialization
+magex init:project        # Initialize a new project
+magex init:library        # Initialize a library project
+magex init:cli            # Initialize a CLI project
+magex init:webapi         # Initialize a web API project
+magex init:microservice   # Initialize a microservice project
+magex init:tool           # Initialize a tool project
+magex init:upgrade        # Upgrade existing project
+magex init:templates      # Show available templates
+magex init:config         # Initialize configuration
+magex init:git            # Initialize git repository
+magex init:mage           # Initialize mage files
+magex init:ci             # Initialize CI/CD files
+magex init:docker         # Initialize Docker files
+magex init:docs           # Initialize documentation
+magex init:license        # Add license file
+magex init:makefile       # Create Makefile
+magex init:editorconfig   # Create .editorconfig
+
+# Recipe Management
+magex recipes:list        # List available recipes
+magex recipes:run         # Run a specific recipe
+RECIPE=fresh-start magex recipes:run  # Run the fresh-start recipe
 ```
 
-#### 🚀 Project Initialization
+</details>
+
+<details>
+<summary>✅ <strong>Code Validation & Formatting</strong></summary>
+
 ```bash
-# Initialization Commands
-mage initProject        # Initialize a new project
-mage initCLI            # Initialize a CLI project
-mage initLibrary        # Initialize a library project
+# Code Validation
+magex vet:default         # Run go vet
+magex vet:all             # Run go vet with all checks
+magex vet:parallel        # Run go vet in parallel
+magex vet:shadow          # Check for variable shadowing
+magex vet:strict          # Run strict vet checks
+
+# Code Formatting
+magex format:default      # Default formatting (gofmt)
+magex format:all          # Format all supported file types
+magex format:gofmt        # Run gofmt
+magex format:fumpt        # Run gofumpt (stricter formatting)
+magex format:imports      # Format imports
+magex format:go           # Format Go files
+magex format:yaml         # Format YAML files
+magex format:json         # Format JSON files
+magex format:markdown     # Format Markdown files
+magex format:sql          # Format SQL files
+magex format:dockerfile   # Format Dockerfiles
+magex format:shell        # Format shell scripts
+magex format:fix          # Fix formatting issues automatically
+magex format:check        # Check if files are properly formatted
 ```
 
-#### 📋 Recipe Management
+</details>
+
+<details>
+<summary>🏢 <strong>Enterprise & Advanced Features</strong></summary>
+
 ```bash
-# Recipe Commands
-mage recipesList        # List available recipes
-mage recipesRun         # Run a specific recipe
-RECIPE=fresh-start mage recipesRun  # Run the fresh-start recipe
+# Enterprise Management
+magex enterprise:init     # Initialize enterprise features
+magex enterprise:config   # Configure enterprise settings
+magex enterprise:deploy   # Deploy enterprise version
+magex enterprise:rollback # Rollback deployment
+magex enterprise:promote  # Promote deployment
+magex enterprise:status   # Show deployment status
+magex enterprise:backup   # Backup enterprise data
+magex enterprise:restore  # Restore enterprise data
+
+# Workflow Automation
+magex workflow:execute    # Execute workflow
+magex workflow:list       # List workflows
+magex workflow:status     # Show workflow status
+magex workflow:create     # Create workflow
+magex workflow:validate   # Validate workflow
+magex workflow:schedule   # Schedule workflow
+magex workflow:template   # Workflow templates
+magex workflow:history    # Show workflow history
+
+# Integration Management
+magex integrations:setup    # Setup integrations
+magex integrations:test     # Test integrations
+magex integrations:sync     # Sync integrations
+magex integrations:notify   # Send notifications
+magex integrations:status   # Show integration status
+magex integrations:webhook  # Webhook operations
+magex integrations:export   # Export integration data
+magex integrations:import   # Import integration data
+
+# CLI Operations
+magex cli:default         # Default CLI operation
+magex cli:help            # CLI help
+magex cli:version         # Show CLI version
+magex cli:completion      # Generate completions
+magex cli:config          # CLI configuration
+magex cli:update          # Update CLI
+magex cli:bulk            # Bulk operations
+magex cli:query           # Query operations
+magex cli:dashboard       # CLI dashboard
+magex cli:batch           # Batch operations
+magex cli:monitor         # Monitoring
+magex cli:workspace       # Workspace management
+magex cli:pipeline        # Pipeline operations
+magex cli:compliance      # Compliance checking
+
+# Interactive Wizards
+magex wizard:setup         # Interactive setup wizard
+magex wizard:config        # Configuration wizard
+magex wizard:project       # Project setup wizard
+magex wizard:deploy        # Deployment wizard
+magex wizard:troubleshoot  # Troubleshooting wizard
 ```
 
-#### 🔄 Update Management
+</details>
+
+<details>
+<summary>📖 <strong>Help & Updates</strong></summary>
+
 ```bash
-# Update Commands
-mage updateCheck        # Check for updates
-mage updateInstall      # Install the latest update
+# Help System
+magex help:default        # Show general help
+magex help:commands       # List all available commands
+magex help:examples       # Show usage examples
+magex help:gettingstarted # Getting started guide
+magex help:completions    # Generate shell completions
+
+# Update Management
+magex update:check        # Check for updates
+magex update:install      # Install the latest update
+
+# Installation Management
+magex install:default     # Default installation
+magex install:local       # Install locally
+magex install:binary      # Install project binary
+magex install:tools       # Install development tools
+magex install:go          # Install Go
+magex install:stdlib      # Install Go standard library
+magex install:systemwide  # Install system-wide
+magex install:deps        # Install dependencies
+magex install:mage        # Install mage
+magex install:docker      # Install Docker components
+magex install:githooks    # Install git hooks
+magex install:ci          # Install CI components
+magex install:certs       # Install certificates
+magex install:package     # Install package
+magex install:all         # Install everything
+magex uninstall           # Remove installation
 ```
 
-#### ✅ Code Validation
-```bash
-# Validation Commands
-mage vetDefault         # Run go vet
-mage vetAll             # Run go vet with all checks
-mage formatAll          # Format all Go source files
-mage formatCheck        # Check if Go source files are properly formatted
-```
-
-#### 📖 Help System
-```bash
-# Help Commands
-mage help               # Show general help
-mage helpCommands       # List all available commands
-mage helpExamples       # Show usage examples
-mage helpGettingStarted # Getting started guide
-mage helpCompletions    # Generate shell completions
-```
+</details>
 
 ### 📋 Complete Command List
 
-Run `mage -l` to see a plain list of all available commands (90+ commands), or use `mage help` for a beautiful categorized view with descriptions and usage tips.
+Run `magex -l` to see a plain list of all available commands (343 commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
 
-### 📚 Documentation System Features
+### 📚 Documentation System
 
-MAGE-X includes a powerful hybrid documentation system with enterprise-grade capabilities:
+MAGE-X includes a hybrid documentation system with auto-detection and cross-platform browser integration.
+
+<details>
+<summary>📖 <strong>Documentation Features & Capabilities</strong></summary>
 
 #### Smart Tool Detection
 - **Auto-detection**: Automatically detects and uses the best available documentation tool
@@ -567,17 +747,12 @@ MAGE-X includes a powerful hybrid documentation system with enterprise-grade cap
 
 #### Multiple Serving Modes
 ```bash
-# Automatic (recommended)
-mage docsServe          # Smart detection with fallback
-
-# Forced tool selection
-mage docsServePkgsite   # Force pkgsite (modern, project-focused)
-mage docsServeGodoc     # Force godoc (classic, comprehensive)
-
-# Specialized modes  
-mage docsServeStdlib    # Standard library documentation
-mage docsServeProject   # Project-only documentation
-mage docsServeBoth      # Both project and stdlib
+# Documentation serving
+magex docs:serve         # Serve documentation locally
+magex docs:godocs        # Serve with godoc format
+magex docs:api           # API documentation
+magex docs:examples      # Example documentation
+magex docs:readme        # README documentation
 ```
 
 #### Advanced Features
@@ -588,19 +763,23 @@ mage docsServeBoth      # Both project and stdlib
 - **Static Building**: Enhanced markdown with metadata and navigation
 - **Build Artifacts**: JSON metadata and organized output structure
 
-### 🏢 Enabling Enterprise Features
+</details>
 
-MAGE-X includes advanced namespaces not exposed by default to minimize dependencies and keep the core installation simple. These enterprise features can be enabled on-demand.
+### 🏢 Enterprise Namespaces
 
-**Available Enterprise Namespaces:**
-- **CLI** - Bulk operations, advanced workflows, and pipeline automation
-- **Wizard** - Interactive configuration wizards for complex setups
-- **Enterprise** - Enterprise deployment and management capabilities
-- **Workflow** - Advanced automation pipelines and orchestration
-- **Integrations** - External service connections (Slack, GitHub, Jira, etc.)
-- **Bench** - Advanced benchmarking with profiling and regression detection
-- **Releases** - Multi-channel release management (stable, beta, edge)
-- **Yaml** - Advanced YAML configuration tools and validation
+MAGE-X includes specialized namespaces for power users. These are opt-in to keep the core installation lightweight.
+
+<details>
+<summary>🔧 <strong>Advanced Namespace Configuration</strong></summary>
+
+**Available Specialized Namespaces:**
+- **CLI** - Advanced command-line operations and bulk processing
+- **Wizard** - Interactive setup and configuration wizards
+- **Enterprise** - Audit logging and enterprise management
+- **Workflow** - Build automation and pipeline orchestration
+- **Bench** - Performance benchmarking and profiling
+- **Releases** - Release creation and asset distribution
+- **Yaml** - YAML configuration management and validation
 
 **To enable enterprise features in your magefile:**
 ```go
@@ -619,32 +798,34 @@ type (
 
 // Add enterprise namespaces as needed
 type (
-    CLI         = mage.CLI
-    Wizard      = mage.Wizard
-    Enterprise  = mage.Enterprise
-    Workflow    = mage.Workflow
+    CLI          = mage.CLI
+    Wizard       = mage.Wizard
+    Enterprise   = mage.Enterprise
+    Workflow     = mage.Workflow
     Integrations = mage.Integrations
-    Bench       = mage.Bench
-    Releases    = mage.Releases
+    Bench        = mage.Bench
+    Releases     = mage.Releases
 )
 ```
 
 This approach keeps the default installation lightweight while allowing power users to access advanced features when needed.
 
-**Example: Enterprise CLI Operations**
+**Example: Enterprise Operations**
 ```go
-// Enable bulk operations across multiple repositories
-func BulkUpdate() error {
-    var cli CLI
-    return cli.Bulk()
+// Enable audit logging and compliance
+func AuditReport() error {
+    var enterprise Enterprise
+    return enterprise.Audit()
 }
 
-// Run advanced workflow pipelines
-func RunPipeline() error {
-    var workflow Workflow
-    return workflow.Pipeline()
+// Run benchmarking and performance analysis
+func PerformanceTest() error {
+    var bench Bench
+    return bench.Run()
 }
 ```
+
+</details>
 
 See the [examples directory](examples) for more custom magefile implementations.
 
@@ -658,21 +839,20 @@ All examples and tests run via GitHub Actions using Go 1.24+. View the [examples
 
 ```bash
 # Quick test suite
-mage test
+magex test
 
 # Comprehensive testing
-mage testRace testCover testFuzz testFuzzShort
+magex test:race test:cover test:fuzz
 
 # Performance benchmarks
-mage testBenchShort
+magex test:bench
 ```
 
 ### Example Projects
 
-- **[Basic Project](examples/basic)** - Minimal MAGE-X setup
-- **[Custom Tasks](examples/custom)** - Custom namespaces and deployment workflows
-- **[Provider Pattern](examples/provider-pattern)** - Cloud provider integration examples
-- **[Unit Testing](examples/testing)** - Testing with namespace interfaces and mocks
+- **[Basic Project](examples/basic)** - Zero-configuration MAGE-X usage
+- **[With Custom Commands](examples/with-custom)** - Adding project-specific commands
+- **[Zero Config](examples/zero-config)** - Instant productivity with magex
 
 <br/>
 
@@ -696,7 +876,7 @@ Performance benchmarks for core MAGE-X operations:
 
 MAGE-X follows strict coding standards and best practices:
 
-- **Code Quality**: 100% test coverage, comprehensive linting, and security scanning
+- **Code Quality**: >80% test coverage, comprehensive linting, and security scanning
 - **Go Best Practices**: Idiomatic Go code following community standards
 - **Security First**: Input validation, secure command execution, minimal dependencies
 - **Documentation**: Comprehensive godoc coverage and usage examples
@@ -708,11 +888,11 @@ Read more about our [code standards](.github/CODE_STANDARDS.md) and [contributio
 
 ## 🤖 AI Agent Ecosystem
 
-MAGE-X features a comprehensive ecosystem of 19 specialized AI agents designed for intelligent development workflows:
+MAGE-X features a comprehensive ecosystem of 19 specialized Claude Code AI agents designed for intelligent development workflows:
 
 ### Agent Categories
 - **🔧 Core Development (5)**: Build, lint, deps, docs, security specialists
-- **🧪 Testing & Quality (2)**: Coverage analysis and comprehensive test implementation  
+- **🧪 Testing & Quality (2)**: Coverage analysis and comprehensive test implementation
 - **🚀 Release & CI/CD (3)**: Version management, git operations, GitHub automation
 - **🏗️ Architecture & Performance (4)**: Code architecture, refactoring, analysis, benchmarking
 - **🏢 Enterprise & Workflow (3)**: Governance, automation pipelines, interactive guidance
@@ -742,13 +922,6 @@ See [Claude Code Commands](docs/CLAUDE_COMMANDS.md) for complete documentation.
 - **[CLAUDE.md](.github/CLAUDE.md)** — AI assistant integration guidelines
 - **[.cursorrules](.cursorrules)** — Machine-readable policies for AI development tools
 
-**Example Multi-Agent Workflow:**
-```bash
-# Triggers parallel execution of multiple specialized agents
-"Analyze code quality, write comprehensive tests, and optimize performance"
-```
-This automatically coordinates mage-x-linter, mage-x-test-finder, mage-x-test-writer, and mage-x-analyzer for comprehensive development workflow optimization.
-
 <br/>
 
 ## 👥 Maintainers
@@ -772,27 +945,7 @@ All kinds of contributions are welcome! :raised_hands:
 - **💡 Suggest features** with detailed use cases
 - **📝 Improve documentation** with examples and clarity
 - **🔧 Submit pull requests** with bug fixes or new features
-- **💬 Join discussions** and help other users
 
-### Quick Start for Contributors
-
-```bash
-# Clone the repository
-git clone https://github.com/mrz1836/mage-x.git
-cd mage-x
-
-# Install dependencies
-go mod download
-
-# Run tests
-mage test
-
-# Run linter
-mage lint
-
-# See all available commands (beautiful format)
-mage help
-```
 
 [![Stars](https://img.shields.io/github/stars/mrz1836/mage-x?label=Please%20like%20us&style=social)](https://github.com/mrz1836/mage-x/stargazers)
 
@@ -801,8 +954,6 @@ mage help
 ## 📝 License
 
 [![License](https://img.shields.io/github/license/mrz1836/mage-x.svg?style=flat&v=1)](LICENSE)
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 <br/>
 

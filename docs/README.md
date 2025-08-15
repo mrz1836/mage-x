@@ -81,8 +81,8 @@ mage help securityScan
 mage interactive
 
 # Configuration wizard
-mage configureInit
-mage configureEnterprise
+mage configure:init
+mage configure:enterprise
 ```
 
 ## 📊 Command Reference
@@ -105,19 +105,19 @@ mage deps           # Manage dependencies
 ### Enterprise Commands
 ```bash
 # Enterprise setup
-mage configureEnterprise  # Initialize enterprise features
-mage teamSetup           # Set up team management
-mage auditEnable         # Enable audit logging
+mage configure:enterprise  # Initialize enterprise features
+mage team:setup           # Set up team management
+mage audit:enable         # Enable audit logging
 
 # Security and compliance
-mage securityScan        # Run security scan
-mage securityReport      # Generate security report
-mage auditExport         # Export audit logs
+mage security:scan        # Run security scan
+mage security:report      # Generate security report
+mage audit:export         # Export audit logs
 
 # Analytics and monitoring
-mage analyticsDashboard  # View analytics dashboard
-mage analyticsExport     # Export metrics data
-mage workflowExecute     # Execute workflows
+mage analytics:dashboard  # View analytics dashboard
+mage analytics:export     # Export metrics data
+mage workflow:execute     # Execute workflows
 ```
 
 ## 🔗 External Resources

@@ -99,14 +99,14 @@ deploy:
     LOG_LEVEL: "info"
   hooks:
     pre_deploy:
-      - "mage testDefault"
-      - "mage lintDefault"
+      - "mage test:default"
+      - "mage lint:default"
     post_deploy:
-      - "mage healthCheck"
+      - "mage health:check"
     on_failure:
       - "mage rollback"
     on_success:
-      - "mage notifySuccess"
+      - "mage notify:success"
   rollback:
     enabled: true
     max_versions: 5
@@ -161,7 +161,7 @@ build:
 Support for multiple platforms:
 
 - `linux/amd64`
-- `linux/arm64` 
+- `linux/arm64`
 - `darwin/amd64`
 - `darwin/arm64`
 - `windows/amd64`
@@ -220,7 +220,7 @@ test:
   timeout: 1200
   coverage: false
   tags: ["integration"]
-  
+
 # Performance tests
 test:
   timeout: 600
@@ -290,7 +290,7 @@ Create a `.security-policy.yaml` file:
 vulnerabilities:
   severity_threshold: "MEDIUM"  # Minimum severity to fail
   max_age_days: 30             # Maximum age for vulnerabilities
-  
+
 secrets:
   patterns:
     - "api[_-]?key"
@@ -319,18 +319,18 @@ deploy:
     DATABASE_URL: "postgres://..."
   hooks:                    # Deployment hooks
     pre_deploy:
-      - "mage testDefault"
-      - "mage lintDefault"
-      - "mage securityCheck"
+      - "mage test:default"
+      - "mage lint:default"
+      - "mage security:check"
     post_deploy:
-      - "mage healthCheck"
-      - "mage smokeTest"
+      - "mage health:check"
+      - "mage smoke:test"
     on_failure:
       - "mage rollback"
-      - "mage notifyFailure"
+      - "mage notify:failure"
     on_success:
-      - "mage notifySuccess"
-      - "mage updateMetrics"
+      - "mage notify:success"
+      - "mage update:metrics"
   rollback:                 # Rollback configuration
     enabled: true
     max_versions: 5
@@ -428,14 +428,14 @@ environments:
       race: true
     security:
       enable_vuln_check: false
-  
+
   staging:
     build:
       tags: ["staging"]
     analytics:
       enabled: true
       sample_rate: 0.5
-  
+
   production:
     build:
       tags: ["prod", "release"]
@@ -560,10 +560,10 @@ Add comments to explain custom settings:
 build:
   # Custom ldflags for embedded version info
   ldflags: "-s -w -X main.version={{.Version}}"
-  
+
   # Enable CGO for database drivers
   cgo_enabled: true
-  
+
   # Production-specific build tags
   tags:
     - prod        # Production optimizations
@@ -577,11 +577,11 @@ Always validate configuration in CI/CD:
 
 ```bash
 # In your CI pipeline
-mage configValidate
+mage config:validate
 
 # Or check specific aspects
-mage configCheck --security
-mage configCheck --build
+mage config:check --security
+mage config:check --build
 ```
 
 ### 6. Version Your Configuration

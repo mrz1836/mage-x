@@ -70,7 +70,7 @@ func TestParsePlatform(t *testing.T) {
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             platform, err := ParsePlatform(tt.input)
-            
+
             if tt.wantErr {
                 assert.Error(t, err)
             } else {
@@ -112,15 +112,15 @@ func TestBuildTestSuite(t *testing.T) {
 // Create a test project structure
 func NewTestProject(t *testing.T) *TestProject {
     t.Helper()
-    
+
     tp := &TestProject{
         Dir: t.TempDir(),
         t:   t,
     }
-    
+
     tp.CreateGoModule("test/project")
     tp.CreateMainGo()
-    
+
     return tp
 }
 ```
@@ -132,9 +132,9 @@ func TestEnvOverrides(t *testing.T) {
     // Save and restore env var
     oldVal := os.Getenv("BINARY_NAME")
     defer os.Setenv("BINARY_NAME", oldVal)
-    
+
     os.Setenv("BINARY_NAME", "testbin")
-    
+
     cfg := LoadConfig()
     assert.Equal(t, "testbin", cfg.Project.Binary)
 }
@@ -149,13 +149,13 @@ func TestEnvOverrides(t *testing.T) {
 mage test
 
 # Run with coverage
-mage testCover
+mage test:cover
 
 # Run with race detector
-mage testRace
+mage test:race
 
 # Run short tests only
-mage testShort
+mage test:short
 
 # Run specific package tests
 go test ./pkg/mage
@@ -171,7 +171,7 @@ VERBOSE=1 mage test
 
 ```bash
 # Run integration tests
-mage testIntegration
+mage test:integration
 
 # Run with build tag
 go test -tags integration ./...
@@ -181,32 +181,32 @@ go test -tags integration ./...
 
 ```bash
 # Run all benchmarks
-mage testBench
+mage test:bench
 
 # Run specific benchmark
 go test -bench=BenchmarkBuildFlags ./pkg/mage
 
 # Run with custom time
-BENCH_TIME=30s mage testBench
+BENCH_TIME=30s mage test:bench
 
 # Short
-mage testBenchShort
+mage test:benchshort
 ```
 
 ### Fuzz Tests
 
 ```bash
 # Run fuzz tests
-mage testFuzz
+mage test:fuzz
 
 # Run quick fuzz tests (5s default)
-mage testFuzzShort
+mage test:fuzzshort
 
 # Run specific fuzz test
 go test -fuzz=FuzzReverse -fuzztime=10s ./pkg/utils
 
 # Override fuzz time
-FUZZ_TIME=30s mage testFuzzShort
+FUZZ_TIME=30s mage test:fuzzshort
 ```
 
 ## Writing Tests
@@ -218,16 +218,16 @@ func TestBuild_Default(t *testing.T) {
     // Create test project
     tp := NewTestProject(t)
     defer tp.Cleanup()
-    
+
     // Setup project files
     tp.CreateGoModule("test/project")
     tp.CreateMainGo()
     tp.CreateMageConfig(DefaultMageConfig())
-    
+
     // Execute build
     build := Build{}
     err := build.Default()
-    
+
     // Assert results
     assert.NoError(t, err)
     tp.AssertFileExists("bin/testapp")
@@ -249,10 +249,10 @@ func (m *MockRunner) RunCmd(name string, args ...string) error {
 func TestWithMock(t *testing.T) {
     mockRunner := new(MockRunner)
     mockRunner.On("RunCmd", "go", mock.Anything).Return(nil)
-    
+
     // Use mock in test
     err := mockRunner.RunCmd("go", "build")
-    
+
     assert.NoError(t, err)
     mockRunner.AssertExpectations(t)
 }
@@ -267,17 +267,17 @@ func TestWithMock(t *testing.T) {
 func TestBuildIntegration(t *testing.T) {
     SkipIfShort(t)
     SkipIfNoMage(t)
-    
+
     tp := NewTestProject(t)
     defer tp.Cleanup()
-    
+
     // Setup real project
     tp.CreatePackageStructure()
     tp.GitInit()
-    
+
     // Run real mage command
     err := tp.RunMage("build")
-    
+
     assert.NoError(t, err)
     tp.AssertFileExists("bin/testapp")
 }
@@ -290,18 +290,18 @@ func TestBuildIntegration(t *testing.T) {
 ```go
 func TestCommandExecution(t *testing.T) {
     runner := NewMockCommandRunner(t)
-    
+
     // Setup expectations
     runner.AddCommand("go version", "go version go1.24.0 linux/amd64", nil)
     runner.AddCommand("go build -o bin/app", "", nil)
-    
+
     // Execute test
     version, _ := runner.RunCmdOutput("go", "version")
     assert.Contains(t, version, "go1.24.0")
-    
+
     err := runner.RunCmd("go", "build", "-o", "bin/app")
     assert.NoError(t, err)
-    
+
     // Verify calls
     runner.AssertCalled(t, "go version")
     runner.AssertCalled(t, "go build -o bin/app")
@@ -314,12 +314,12 @@ func TestCommandExecution(t *testing.T) {
 func TestFileOperations(t *testing.T) {
     // Use temp directory for isolation
     tempDir := t.TempDir()
-    
+
     // Create test files
     testFile := filepath.Join(tempDir, "test.txt")
     err := os.WriteFile(testFile, []byte("content"), 0644)
     require.NoError(t, err)
-    
+
     // Test file operations
     assert.True(t, FileExists(testFile))
 }
@@ -331,13 +331,13 @@ func TestFileOperations(t *testing.T) {
 
 ```bash
 # Generate coverage file
-mage testCover
+mage test:cover
 
 # View coverage in terminal
-mage testCoverReport
+mage test:coverreport
 
 # Generate HTML report
-mage testCoverHTML
+mage test:coverhtml
 
 # Check coverage threshold
 go test -coverprofile=coverage.out ./... && \
@@ -369,20 +369,20 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         go: ['1.24', '1.22']
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
-      
+
       - name: Install Mage
         run: go install github.com/magefile/mage@latest
-      
+
       - name: Run Tests
-        run: mage testCI
-      
+        run: mage test:ci
+
       - name: Upload Coverage
         uses: codecov/codecov-action@v5
         with:
@@ -442,7 +442,7 @@ func defaultTestConfig() *Config {
 ```go
 func TestParallelSafe(t *testing.T) {
     t.Parallel() // Mark test as parallel-safe
-    
+
     // Don't use shared state
     // Don't change global variables
     // Use unique temp directories
