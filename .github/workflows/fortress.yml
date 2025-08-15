@@ -150,11 +150,11 @@ jobs:
           echo "## Building artifacts"
 
           # Build for current platform
-          mage buildDefault
+          mage build:default
 
           # Build for multiple platforms
           echo "Building for multiple platforms..."
-          mage buildAll
+          mage build:all
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

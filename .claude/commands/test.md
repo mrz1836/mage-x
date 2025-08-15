@@ -33,7 +33,7 @@ Please coordinate the following agents in parallel for optimal test creation:
 
 ### Phase 3: Quality Validation (Parallel)
 1. **mage-x-linter**: Validate test code quality and patterns
-2. **Execute Tests**: Run `mage testUnit` and `mage testRace` to validate
+2. **Execute Tests**: Run `mage test:unit` and `mage test:race` to validate
 
 ## Requirements
 - Focus on the 30+ namespace architecture and interface implementations

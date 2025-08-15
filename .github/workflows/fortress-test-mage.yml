@@ -43,8 +43,8 @@ jobs:
           - {name: "Help System", cmd: "mage -l", desc: "List all available targets"}
           - {name: "Version", cmd: "mage -version", desc: "Show mage version"}
           - {name: "Default Target", cmd: "mage", desc: "Run default target"}
-          - {name: "Build", cmd: "mage buildDefault", desc: "Test build functionality"}
-          - {name: "Clean", cmd: "mage buildClean", desc: "Test clean functionality"}
+          - {name: "Build", cmd: "mage build:default", desc: "Test build functionality"}
+          - {name: "Clean", cmd: "mage build:clean", desc: "Test clean functionality"}
 
     steps:
       - name: Checkout code
@@ -78,12 +78,12 @@ jobs:
       fail-fast: false
       matrix:
         namespace:
-          - {name: "Build", cmds: ["mage buildDefault", "mage buildClean"]}
-          - {name: "Test", cmds: ["mage testUnit", "mage testShort"]}
-          - {name: "Lint", cmds: ["mage lintVersion"]}
-          - {name: "Tools", cmds: ["mage toolsInstall"]}
-          - {name: "Deps", cmds: ["mage depsDownload"]}
-          - {name: "Mod", cmds: ["mage modDownload"]}
+          - {name: "Build", cmds: ["mage build:default", "mage build:clean"]}
+          - {name: "Test", cmds: ["mage test:unit", "mage test:short"]}
+          - {name: "Lint", cmds: ["mage lint:version"]}
+          - {name: "Tools", cmds: ["mage tools:install"]}
+          - {name: "Deps", cmds: ["mage deps:download"]}
+          - {name: "Mod", cmds: ["mage mod:download"]}
 
     steps:
       - name: Checkout code
@@ -106,30 +106,30 @@ jobs:
           # Run commands based on namespace
           case "${{ matrix.namespace.name }}" in
             "Build")
-              echo "### Running: mage buildDefault"
-              mage buildDefault
-              echo "### Running: mage buildClean"
-              mage buildClean
+              echo "### Running: mage build:default"
+              mage build:default
+              echo "### Running: mage build:clean"
+              mage build:clean
               ;;
             "Test")
-              echo "### Running: mage testUnit"
-              mage testUnit
+              echo "### Running: mage test:unit"
+              mage test:unit
               ;;
             "Lint")
-              echo "### Running: mage lintDefault"
-              mage lintDefault || echo "Lint may not be fully configured"
+              echo "### Running: mage lint:default"
+              mage lint:default || echo "Lint may not be fully configured"
               ;;
             "Tools")
-              echo "### Running: mage toolsInstall"
-              mage toolsInstall
+              echo "### Running: mage tools:install"
+              mage tools:install
               ;;
             "Deps")
-              echo "### Running: mage depsDownload"
-              mage depsDownload
+              echo "### Running: mage deps:download"
+              mage deps:download
               ;;
             "Mod")
-              echo "### Running: mage modDownload"
-              mage modDownload
+              echo "### Running: mage mod:download"
+              mage mod:download
               ;;
           esac
 
@@ -211,7 +211,7 @@ jobs:
           mage -l
 
           # Run a simple build
-          mage buildClean
+          mage build:clean
 
           echo "✅ Mage works correctly on ${{ matrix.os }}"
 

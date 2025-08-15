@@ -18,7 +18,7 @@ Perform a comprehensive quality assessment through coordinated parallel agent an
 Execute all agents simultaneously for maximum efficiency:
 
 1. **mage-x-linter** - Code Quality:
-   - Run full linting suite (`mage lintAll`)
+   - Run full linting suite (`mage lint:all`)
    - Analyze code style compliance
    - Check documentation quality
    - Identify technical debt
@@ -62,7 +62,7 @@ Synthesize results from all agents to provide:
 
 ### Quality Assessment Modes
 - **full**: Complete analysis across all dimensions
-- **quick**: Fast scan of critical issues only  
+- **quick**: Fast scan of critical issues only
 - **security**: Security-focused deep analysis
 - **performance**: Performance and scalability focus
 

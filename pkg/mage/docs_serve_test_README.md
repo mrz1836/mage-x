@@ -21,7 +21,7 @@ The test file was successfully updated with all requested linting fixes:
 The test file references several types and functions that are not currently accessible:
 
 - `CommandRunner` interface (exists in interfaces.go but may not be properly exported)
-- `Config` and `ProjectConfig` types (exist in config.go but may not be properly exported)  
+- `Config` and `ProjectConfig` types (exist in config.go but may not be properly exported)
 - `Docs` type (exists in docs.go but may not be properly exported)
 - Various internal documentation functions that are not exported
 
@@ -36,8 +36,7 @@ The test file references several types and functions that are not currently acce
 
 The disabled test suite provides comprehensive coverage for:
 
-- **Citation()**: Version updates in CITATION.cff files
-- **Clean()**: Documentation build artifact cleanup  
+- **Clean()**: Documentation build artifact cleanup
 - **Generate()**: Documentation generation with mocked command execution
 - **Check()**: Documentation validation with mocked dependencies
 - **Build()**: Documentation build process

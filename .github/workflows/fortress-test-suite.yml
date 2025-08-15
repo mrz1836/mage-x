@@ -31,7 +31,7 @@ jobs:
           mage -version
 
       - name: Run standard tests
-        run: mage testDefault
+        run: mage test:default
 
   coverage-tests:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
           go install github.com/magefile/mage@latest
 
       - name: Run tests with coverage
-        run: mage testCover
+        run: mage test:cover
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -80,7 +80,7 @@ jobs:
           go install github.com/magefile/mage@latest
 
       - name: Run tests with race detector
-        run: mage testRace
+        run: mage test:race
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -100,7 +100,7 @@ jobs:
           go install github.com/magefile/mage@latest
 
       - name: Run integration tests
-        run: mage testIntegration
+        run: mage test:integration
 
   coverage-race-tests:
     runs-on: ubuntu-latest
@@ -120,7 +120,7 @@ jobs:
           go install github.com/magefile/mage@latest
 
       - name: Run tests with coverage and race detector
-        run: mage testCover
+        run: mage test:cover
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -176,7 +176,7 @@ jobs:
       - name: Count lines of code
         run: |
           echo "## Lines of Code Metrics"
-          mage metricsLOC
+          mage metrics:loc
 
   test-matrix:
     strategy:
@@ -200,7 +200,7 @@ jobs:
         run: go install github.com/magefile/mage@latest
 
       - name: Run tests
-        run: mage testUnit
+        run: mage test:unit
 
   summary:
     needs:

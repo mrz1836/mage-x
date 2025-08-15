@@ -59,7 +59,7 @@ jobs:
       - name: Run golangci-lint
         run: |
           echo "## Running golangci-lint"
-          mage lintDefault
+          mage lint:default
 
   dependency-check:
     runs-on: ubuntu-latest
@@ -81,7 +81,7 @@ jobs:
       - name: Check dependencies
         run: |
           echo "## Checking dependencies"
-          mage modTidy
+          mage mod:tidy
 
           # Check if go.mod or go.sum were modified
           if ! git diff --quiet go.mod go.sum; then
@@ -140,7 +140,7 @@ jobs:
 
           # Check if any files were modified
           if ! git diff --quiet; then
-            echo "::warning::Code formatting issues detected. Run 'mage lintFumpt' locally."
+            echo "::warning::Code formatting issues detected. Run 'mage lint:fumpt' locally."
             git diff --name-only
             exit 1
           fi

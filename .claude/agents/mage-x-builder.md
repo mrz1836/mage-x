@@ -60,7 +60,7 @@ When invoked, you must follow these steps:
 
 **Best Practices:**
 - Always use mage build commands and understand the Build namespace structure
-- Support both `mage build` (single target) and `mage buildAll` (multi-platform) workflows
+- Support both `mage build` (single target) and `mage build:all` (multi-platform) workflows
 - Handle build failures gracefully with detailed error reporting and recovery suggestions
 - Optimize for parallel execution using Go's concurrent build capabilities
 - Follow mage-x security-first principles throughout the build process

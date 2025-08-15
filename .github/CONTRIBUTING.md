@@ -113,7 +113,7 @@ if !regexp.MustCompile(`^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$`).MatchString(repo) {
 // ✅ Use shared benchmark patterns
 func BenchmarkOperation(b *testing.B) {
     files := benchmark.SetupBenchmarkFiles(b, tempDir, 100)
-    
+
     benchmark.WithMemoryTracking(b, func() {
         for i := 0; i < b.N; i++ {
             processFiles(files)
@@ -195,7 +195,7 @@ All tests follow standard Go patterns. We love:
 - **Unit tests**: All new functions must have tests
 - **Integration tests**: Add to `test/integration/` for end-to-end scenarios
 - **Benchmarks**: Performance-critical code needs benchmarks
-- **Fuzz tests**: Add fuzz tests for parser/validation code (use `mage testFuzzShort` for quick tests)
+- **Fuzz tests**: Add fuzz tests for parser/validation code (use `mage test:fuzzshort` for quick tests)
 
 Tests should be:
 - Easy to understand
@@ -213,7 +213,7 @@ func TestNewFunction(t *testing.T) {
     tests := []testutil.TestCase[Input, Output]{
         {Name: "description", Input: input, Expected: output, WantErr: false},
     }
-    
+
     testutil.RunTableTests(t, tests, func(t *testing.T, tc testutil.TestCase[Input, Output]) {
         result, err := NewFunction(tc.Input)
         if tc.WantErr {
@@ -257,12 +257,12 @@ func ProcessFile(path string) error {
     if err := validation.ValidatePath(path); err != nil {
         return err
     }
-    
+
     data, err := os.ReadFile(path)
     if err != nil {
         return errors.WrapWithContext(err, "read file")
     }
-    
+
     return processData(data)
 }
 ```
@@ -273,7 +273,7 @@ func ProcessFile(path string) error {
 func TestFileProcessing(t *testing.T) {
     tempDir := testutil.CreateTestDirectory(t)
     files := testutil.CreateTestFiles(t, tempDir, 5)
-    
+
     for _, file := range files {
         err := ProcessFile(file)
         testutil.AssertNoError(t, err)

@@ -11,7 +11,6 @@
 
 # Documentation files
 *.md @mrz1836
-CITATION.cff @mrz1836
 
 # Build and makefiles
 Makefile @mrz1836

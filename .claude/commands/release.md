@@ -6,7 +6,7 @@ model: claude-sonnet-4-20250514
 ---
 
 ## Context
-- Current version: !`mage versionShow 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"`
+- Current version: !`mage version:show 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"`
 - Pending changes: !`git status --porcelain | wc -l | xargs echo "Modified files:"`
 - Recent commits: !`git log --oneline -10`
 - Release channels: !`grep -E "channels:|stable|beta|edge" .mage.yaml 2>/dev/null | head -5`

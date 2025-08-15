@@ -21,7 +21,7 @@ When invoked, you must follow these steps:
    - Check for existing tool installation scripts or configurations
 
 2. **Execute Tool Management Operations**
-   - Use `Bash` to run mage tools commands: `mage toolsUpdate`, `mage toolsInstall`, `mage toolsCheck`, `mage toolsVulnCheck`, `mage installTools`
+   - Use `Bash` to run mage tools commands: `mage tools:update`, `mage tools:install`, `mage tools:check`, `mage tools:vulncheck`, `mage install:tools`
    - Install and update Go tools, build tools, quality tools, documentation tools, security tools, and development tools
    - Handle cross-platform tool installation and compatibility checks
    - Manage tool version synchronization and dependency resolution

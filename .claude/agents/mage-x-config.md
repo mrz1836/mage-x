@@ -17,11 +17,11 @@ When invoked, you must follow these steps:
 1. **Analyze Configuration State**
    - Examine current mage.yaml files and configuration structure
    - Use `LS` and `Read` to identify all configuration files
-   - Run `mage yamlShow` to display current active configuration
+   - Run `mage yaml:show` to display current active configuration
    - Document configuration hierarchy and precedence
 
 2. **Validate YAML Configuration**
-   - Run `mage yamlValidate` to check YAML syntax and structure
+   - Run `mage yaml:validate` to check YAML syntax and structure
    - Use `Read` to examine mage.yaml files for completeness
    - Validate required fields and configuration schema
    - Check for deprecated or invalid configuration keys
