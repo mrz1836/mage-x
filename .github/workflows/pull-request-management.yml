@@ -3,10 +3,10 @@
 #
 #  Purpose: Comprehensive PR lifecycle management including automated labeling,
 #           assignments, size analysis, welcomes for new contributors, and cleanup
-#           tasks when PRs are closed. All configuration is centralized in .env.shared.
+#           tasks when PRs are closed. All configuration is centralized and customizable.
 #
-#  Configuration: All settings are loaded from .github/.env.shared for centralized
-#  management across all workflows.
+#  Configuration: All settings are loaded from .env.base and .env.custom files for
+#  centralized management across all workflows.
 #
 #  Triggers: Pull request events (opened, reopened, ready for review, closed)
 #
@@ -45,11 +45,11 @@ concurrency:
 # ————————————————————————————————————————————————————————————————
 # Environment Variables
 # ————————————————————————————————————————————————————————————————
-# Note: Configuration variables are loaded from .github/.env.shared
+# Note: Configuration variables are loaded from .env.base and .env.custom files
 
 jobs:
   # ----------------------------------------------------------------------------------
-  # Load Environment Variables from .env.shared
+  # Load Environment Variables
   # ----------------------------------------------------------------------------------
   load-env:
     name: 🌍 Load Environment Variables
@@ -64,7 +64,8 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           sparse-checkout: |
-            .github/.env.shared
+            .github/.env.base
+            .github/.env.custom
             .github/actions/load-env
 
       # ————————————————————————————————————————————————————————————————

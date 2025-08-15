@@ -5,14 +5,14 @@
 #           and readiness conditions are met. GitHub handles the actual merge
 #           when all status checks pass.
 #
-#  Configuration: All settings are loaded from .github/.env.shared for centralized
-#  management across all workflows.
+#  Configuration: All settings are loaded from .env.base and .env.custom files for
+#  centralized management across all workflows.
 #
 #  Triggers:
 #  - Pull request reviews (submitted)
 #  - Pull request state changes (ready_for_review, review_request_removed)
 #
-#  Auto-merge Rules (configurable via .env.shared):
+#  Auto-merge Rules (configurable via .env.base/.env.custom):
 #  - Minimum number of approvals
 #  - No requested reviewers remaining (if configured)
 #  - No "Changes Requested" reviews
@@ -48,11 +48,11 @@ concurrency:
 # ————————————————————————————————————————————————————————————————
 # Environment Variables
 # ————————————————————————————————————————————————————————————————
-# Note: Configuration variables are loaded from .github/.env.shared
+# Note: Configuration variables are loaded from .env.base and .env.custom files
 
 jobs:
   # ----------------------------------------------------------------------------------
-  # Load Environment Variables from .env.shared
+  # Load Environment Variables
   # ----------------------------------------------------------------------------------
   load-env:
     name: 🌍 Load Environment Variables
@@ -67,7 +67,8 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           sparse-checkout: |
-            .github/.env.shared
+            .github/.env.base
+            .github/.env.custom
             .github/actions/load-env
 
       # ————————————————————————————————————————————————————————————————

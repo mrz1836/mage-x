@@ -7,7 +7,7 @@
 
 # GitHub Actions workflows
 .github/workflows/* @mrz1836
-.github/.env.shared @mrz1836
+.github/.env.base @mrz1836
 
 # Documentation files
 *.md @mrz1836
