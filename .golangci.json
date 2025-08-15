@@ -65,7 +65,6 @@
       "goconst",
       "godox",
       "goheader",
-      "gomoddirectives",
       "gosec",
       "gosmopolitan",
       "govet",
@@ -105,7 +104,8 @@
 			"gocognit",
       "funcorder",
       "lll",
-      "recvcheck"
+      "recvcheck",
+      "gomoddirectives"
 		],
 		"settings": {
 			"depguard": {

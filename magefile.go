@@ -14,26 +14,26 @@ import (
 
 // Re-export all namespaces from mage package
 type (
-	Build     = mage.Build
-	Test      = mage.Test
-	Lint      = mage.Lint
-	Tools     = mage.Tools
-	Deps      = mage.Deps
-	Mod       = mage.Mod
-	Docs      = mage.Docs
-	Git       = mage.Git
-	Release   = mage.Release
-	Metrics   = mage.Metrics
-	Version   = mage.Version
-	Install   = mage.Install
 	Audit     = mage.Audit
+	Build     = mage.Build
 	Configure = mage.Configure
+	Deps      = mage.Deps
+	Docs      = mage.Docs
 	Format    = mage.Format
 	Generate  = mage.Generate
+	Git       = mage.Git
 	Help      = mage.Help
 	Init      = mage.Init
+	Install   = mage.Install
+	Lint      = mage.Lint
+	Metrics   = mage.Metrics
+	Mod       = mage.Mod
 	Recipes   = mage.Recipes
+	Release   = mage.Release
+	Test      = mage.Test
+	Tools     = mage.Tools
 	Update    = mage.Update
+	Version   = mage.Version
 	Vet       = mage.Vet
 )
 
@@ -594,450 +594,56 @@ func HelpCommand() error {
 }
 
 // ShowHelp displays all available commands with beautiful MAGE-X formatting (clean output)
+// This function is preserved for backward compatibility with existing magefiles
+// The actual help functionality has been unified in the magex binary
 func ShowHelp() {
 	utils.Header("🎯 MAGE-X Commands")
+	fmt.Printf("\n📚 For comprehensive help with all commands, use:\n")
+	fmt.Printf("  magex -h                 # Full help with categories and examples\n")
+	fmt.Printf("  magex -h <command>       # Detailed help for specific command\n")
+	fmt.Printf("  magex -search <term>     # Search for commands\n")
+	fmt.Printf("  magex -l                 # Simple list of all commands\n")
 
-	// Command categories with emoji icons and descriptions
-	categories := map[string]struct {
-		icon        string
-		description string
-		commands    []CommandInfo
-	}{
-		"core": {
-			icon:        "🎯",
-			description: "Essential Operations",
-			commands: []CommandInfo{
-				{"buildDefault", "Build the project for current platform", []string{"mage buildDefault", "mage build"}},
-				{"testDefault", "Run the default test suite", []string{"mage testDefault", "mage test"}},
-				{"lintDefault", "Run essential linters (golangci-lint + go vet)", []string{"mage lintDefault", "mage lint"}},
-				{"releaseDefault", "Create a new release", []string{"mage releaseDefault", "mage release"}},
-			},
-		},
-		"build": {
-			icon:        "🔨",
-			description: "Build & Compilation",
-			commands: []CommandInfo{
-				{"buildAll", "Build for all configured platforms", []string{"mage buildAll"}},
-				{"buildClean", "Clean build artifacts", []string{"mage buildClean"}},
-				{"buildDocker", "Build Docker containers", []string{"mage buildDocker"}},
-				{"buildGenerate", "Generate code before building", []string{"mage buildGenerate"}},
-			},
-		},
-		"test": {
-			icon:        "🧪",
-			description: "Testing & Quality",
-			commands: []CommandInfo{
-				{"testFull", "Run full test suite with linting", []string{"mage testFull"}},
-				{"testUnit", "Run unit tests only", []string{"mage testUnit"}},
-				{"testRace", "Run tests with race detector", []string{"mage testRace"}},
-				{"testCover", "Run tests with coverage", []string{"mage testCover"}},
-				{"testBench", "Run benchmark tests", []string{"mage testBench"}},
-				{"testBenchShort", "Run quick benchmark tests", []string{"mage testBenchShort"}},
-				{"testFuzz", "Run fuzz tests", []string{"mage testFuzz"}},
-				{"testFuzzShort", "Run quick fuzz tests (5s default)", []string{"mage testFuzzShort"}},
-				{"testIntegration", "Run integration tests", []string{"mage testIntegration"}},
-				{"testShort", "Run short tests only", []string{"mage testShort"}},
-				{"testCoverRace", "Run tests with coverage and race detector", []string{"mage testCoverRace"}},
-			},
-		},
-		"quality": {
-			icon:        "✨",
-			description: "Code Quality & Linting",
-			commands: []CommandInfo{
-				{"lintAll", "Run all linting checks", []string{"mage lintAll"}},
-				{"lintFix", "Auto-fix linting issues + apply formatting", []string{"mage lintFix"}},
-				{"lintVet", "Run go vet static analysis", []string{"mage lintVet"}},
-				{"lintFumpt", "Run gofumpt code formatting", []string{"mage lintFumpt"}},
-				{"lintVersion", "Show linter version", []string{"mage lintVersion"}},
-				{"vetDefault", "Run go vet", []string{"mage vetDefault"}},
-				{"vetAll", "Run go vet with all checks", []string{"mage vetAll"}},
-				{"formatAll", "Format all Go source files", []string{"mage formatAll"}},
-				{"formatCheck", "Check if Go source files are properly formatted", []string{"mage formatCheck"}},
-			},
-		},
-		"deps": {
-			icon:        "📦",
-			description: "Dependency Management",
-			commands: []CommandInfo{
-				{"depsUpdate", "Update all dependencies", []string{"mage depsUpdate"}},
-				{"depsTidy", "Clean up go.mod and go.sum", []string{"mage depsTidy"}},
-				{"depsDownload", "Download all dependencies", []string{"mage depsDownload"}},
-				{"depsOutdated", "Show outdated dependencies", []string{"mage depsOutdated"}},
-				{"depsAudit", "Audit dependencies for vulnerabilities", []string{"mage depsAudit"}},
-			},
-		},
-		"tools": {
-			icon:        "🔧",
-			description: "Development Tools",
-			commands: []CommandInfo{
-				{"toolsInstall", "Install development tools", []string{"mage toolsInstall"}},
-				{"toolsUpdate", "Update development tools", []string{"mage toolsUpdate"}},
-				{"toolsCheck", "Check if tools are available", []string{"mage toolsCheck"}},
-				{"toolsVulnCheck", "Run vulnerability check", []string{"mage toolsVulnCheck"}},
-				{"installTools", "Install all tools", []string{"mage installTools"}},
-				{"installBinary", "Install project binary", []string{"mage installBinary"}},
-				{"installStdlib", "Install Go standard library", []string{"mage installStdlib"}},
-				{"uninstall", "Remove installed binary", []string{"mage uninstall"}},
-			},
-		},
-		"modules": {
-			icon:        "📋",
-			description: "Go Module Operations",
-			commands: []CommandInfo{
-				{"modUpdate", "Update go.mod file", []string{"mage modUpdate"}},
-				{"modTidy", "Tidy go.mod file", []string{"mage modTidy"}},
-				{"modVerify", "Verify module checksums", []string{"mage modVerify"}},
-				{"modDownload", "Download modules", []string{"mage modDownload"}},
-			},
-		},
-		"docs": {
-			icon:        "📚",
-			description: "Documentation",
-			commands: []CommandInfo{
-				{"docsDefault", "Generate and serve documentation", []string{"mage docsDefault", "mage docs"}},
-				{"docsGenerate", "Generate documentation", []string{"mage docsGenerate"}},
-				{"docsServe", "Serve documentation locally", []string{"mage docsServe"}},
-				{"docsBuild", "Build static documentation", []string{"mage docsBuild"}},
-				{"docsCheck", "Validate documentation", []string{"mage docsCheck"}},
-			},
-		},
-		"git": {
-			icon:        "🔀",
-			description: "Git Operations",
-			commands: []CommandInfo{
-				{"gitStatus", "Show repository status", []string{"mage gitStatus"}},
-				{"gitCommit", "Commit changes", []string{"mage gitCommit"}},
-				{"gitTag", "Create and push tag", []string{"mage gitTag"}},
-				{"gitPush", "Push changes to remote", []string{"mage gitPush"}},
-			},
-		},
-		"version": {
-			icon:        "🏷️",
-			description: "Version Management",
-			commands: []CommandInfo{
-				{"versionShow", "Display version information", []string{"mage versionShow"}},
-				{"versionBump", "Bump the version", []string{"mage versionBump"}},
-				{"versionCheck", "Check version information", []string{"mage versionCheck"}},
-			},
-		},
-		"metrics": {
-			icon:        "📊",
-			description: "Code Analysis & Metrics",
-			commands: []CommandInfo{
-				{"metricsLOC", "Analyze lines of code", []string{"mage metricsLOC"}},
-				{"metricsCoverage", "Generate coverage reports", []string{"mage metricsCoverage"}},
-				{"metricsComplexity", "Analyze code complexity", []string{"mage metricsComplexity"}},
-			},
-		},
-		"audit": {
-			icon:        "🛡️",
-			description: "Security & Audit",
-			commands: []CommandInfo{
-				{"auditShow", "Display audit events", []string{"mage auditShow"}},
-			},
-		},
-		"config": {
-			icon:        "⚙️",
-			description: "Configuration Management",
-			commands: []CommandInfo{
-				{"configureInit", "Initialize a new mage configuration", []string{"mage configureInit"}},
-				{"configureShow", "Display the current configuration", []string{"mage configureShow"}},
-				{"configureUpdate", "Update configuration values interactively", []string{"mage configureUpdate"}},
-			},
-		},
-		"generate": {
-			icon:        "🏗️",
-			description: "Code Generation",
-			commands: []CommandInfo{
-				{"generateDefault", "Run go generate", []string{"mage generateDefault"}},
-				{"generateClean", "Remove generated files", []string{"mage generateClean"}},
-			},
-		},
-		"init": {
-			icon:        "🚀",
-			description: "Project Initialization",
-			commands: []CommandInfo{
-				{"initProject", "Initialize a new project", []string{"mage initProject"}},
-				{"initCLI", "Initialize a CLI project", []string{"mage initCLI"}},
-				{"initLibrary", "Initialize a library project", []string{"mage initLibrary"}},
-			},
-		},
-		"recipes": {
-			icon:        "📋",
-			description: "Recipe Management",
-			commands: []CommandInfo{
-				{"recipesList", "List available recipes", []string{"mage recipesList"}},
-				{"recipesRun", "Run a specific recipe", []string{"mage recipesRun"}},
-			},
-		},
-		"update": {
-			icon:        "🔄",
-			description: "Update Management",
-			commands: []CommandInfo{
-				{"updateCheck", "Check for updates", []string{"mage updateCheck"}},
-				{"updateSelf", "Update mage-x to the latest version", []string{"mage updateSelf"}},
-			},
-		},
-	}
+	fmt.Printf("\n🎯 Quick Commands:\n")
+	fmt.Printf("  mage build               # Build your project\n")
+	fmt.Printf("  mage test                # Run tests\n")
+	fmt.Printf("  mage lint                # Check code quality\n")
+	fmt.Printf("  mage release             # Create a release\n")
 
-	// Display each category with clean fmt.Printf (no logging prefixes)
-	categoryOrder := []string{"core", "build", "test", "quality", "deps", "tools", "modules", "docs", "git", "version", "metrics", "audit", "config", "generate", "init", "recipes", "update"}
-
-	for _, catKey := range categoryOrder {
-		if category, exists := categories[catKey]; exists {
-			fmt.Printf("\n%s %s:\n", category.icon, category.description)
-
-			for _, cmd := range category.commands {
-				fmt.Printf("  %-20s %s\n", cmd.name, cmd.description)
-			}
-		}
-	}
-
-	// Display usage information with clean fmt.Printf
-	fmt.Printf("\n💡 Usage Tips:\n")
-	fmt.Printf("  • Run any command: mage COMMAND\n")
-	fmt.Printf("  • Beautiful list: mage help (this view)\n")
-	fmt.Printf("  • Plain list: mage -l\n")
-	fmt.Printf("  • Default target: mage (runs buildDefault)\n")
-	fmt.Printf("  • Verbose output: VERBOSE=true mage COMMAND\n")
-	fmt.Printf("  • Multiple commands: mage test lint build\n")
-
-	fmt.Printf("\n🎯 Quick Start:\n")
-	fmt.Printf("  mage build      # Build your project\n")
-	fmt.Printf("  mage test       # Run tests\n")
-	fmt.Printf("  mage lint       # Check code quality\n")
-	fmt.Printf("  mage release    # Create a release\n")
-
-	fmt.Printf("\n📖 More Help:\n")
-	fmt.Printf("  • Recipe system: mage recipesList\n")
-	fmt.Printf("  • Configuration: mage configureShow\n")
-	fmt.Printf("  • Help system: mage helpDefault\n")
+	fmt.Printf("\n📖 Note: This is the legacy help view. For the complete unified help system\n")
+	fmt.Printf("   with 215+ commands, search, and detailed documentation, use 'magex -h'\n")
 }
 
 // List displays all available commands with beautiful MAGE-X formatting
+// This function is preserved for backward compatibility with existing magefiles
+// The actual help functionality has been unified in the magex binary
 func List() {
 	utils.Header("🎯 MAGE-X Commands")
+	fmt.Printf("\n📚 For comprehensive command listing with all 215+ commands, use:\n")
+	fmt.Printf("  magex -l                 # Simple list of all commands\n")
+	fmt.Printf("  magex -n                 # Commands organized by namespace\n")
+	fmt.Printf("  magex -h                 # Full help with categories and descriptions\n")
+	fmt.Printf("  magex -search <term>     # Search for specific commands\n")
 
-	// Command categories with emoji icons and descriptions
-	categories := map[string]struct {
-		icon        string
-		description string
-		commands    []CommandInfo
-	}{
-		"core": {
-			icon:        "🎯",
-			description: "Essential Operations",
-			commands: []CommandInfo{
-				{"buildDefault", "Build the project for current platform", []string{"mage buildDefault", "mage build"}},
-				{"testDefault", "Run the default test suite", []string{"mage testDefault", "mage test"}},
-				{"lintDefault", "Run essential linters (golangci-lint + go vet)", []string{"mage lintDefault", "mage lint"}},
-				{"releaseDefault", "Create a new release", []string{"mage releaseDefault", "mage release"}},
-			},
-		},
-		"build": {
-			icon:        "🔨",
-			description: "Build & Compilation",
-			commands: []CommandInfo{
-				{"buildAll", "Build for all configured platforms", []string{"mage buildAll"}},
-				{"buildClean", "Clean build artifacts", []string{"mage buildClean"}},
-				{"buildDocker", "Build Docker containers", []string{"mage buildDocker"}},
-				{"buildGenerate", "Generate code before building", []string{"mage buildGenerate"}},
-			},
-		},
-		"test": {
-			icon:        "🧪",
-			description: "Testing & Quality",
-			commands: []CommandInfo{
-				{"testFull", "Run full test suite with linting", []string{"mage testFull"}},
-				{"testUnit", "Run unit tests only", []string{"mage testUnit"}},
-				{"testRace", "Run tests with race detector", []string{"mage testRace"}},
-				{"testCover", "Run tests with coverage", []string{"mage testCover"}},
-				{"testBench", "Run benchmark tests", []string{"mage testBench"}},
-				{"testBenchShort", "Run quick benchmark tests", []string{"mage testBenchShort"}},
-				{"testFuzz", "Run fuzz tests", []string{"mage testFuzz"}},
-				{"testFuzzShort", "Run quick fuzz tests (5s default)", []string{"mage testFuzzShort"}},
-				{"testIntegration", "Run integration tests", []string{"mage testIntegration"}},
-				{"testShort", "Run short tests only", []string{"mage testShort"}},
-				{"testCoverRace", "Run tests with coverage and race detector", []string{"mage testCoverRace"}},
-			},
-		},
-		"quality": {
-			icon:        "✨",
-			description: "Code Quality & Linting",
-			commands: []CommandInfo{
-				{"lintAll", "Run all linting checks", []string{"mage lintAll"}},
-				{"lintFix", "Auto-fix linting issues + apply formatting", []string{"mage lintFix"}},
-				{"lintVet", "Run go vet static analysis", []string{"mage lintVet"}},
-				{"lintFumpt", "Run gofumpt code formatting", []string{"mage lintFumpt"}},
-				{"lintVersion", "Show linter version", []string{"mage lintVersion"}},
-				{"vetDefault", "Run go vet", []string{"mage vetDefault"}},
-				{"vetAll", "Run go vet with all checks", []string{"mage vetAll"}},
-				{"formatAll", "Format all Go source files", []string{"mage formatAll"}},
-				{"formatCheck", "Check if Go source files are properly formatted", []string{"mage formatCheck"}},
-			},
-		},
-		"deps": {
-			icon:        "📦",
-			description: "Dependency Management",
-			commands: []CommandInfo{
-				{"depsUpdate", "Update all dependencies", []string{"mage depsUpdate"}},
-				{"depsTidy", "Clean up go.mod and go.sum", []string{"mage depsTidy"}},
-				{"depsDownload", "Download all dependencies", []string{"mage depsDownload"}},
-				{"depsOutdated", "Show outdated dependencies", []string{"mage depsOutdated"}},
-				{"depsAudit", "Audit dependencies for vulnerabilities", []string{"mage depsAudit"}},
-			},
-		},
-		"tools": {
-			icon:        "🔧",
-			description: "Development Tools",
-			commands: []CommandInfo{
-				{"toolsInstall", "Install development tools", []string{"mage toolsInstall"}},
-				{"toolsUpdate", "Update development tools", []string{"mage toolsUpdate"}},
-				{"toolsCheck", "Check if tools are available", []string{"mage toolsCheck"}},
-				{"toolsVulnCheck", "Run vulnerability check", []string{"mage toolsVulnCheck"}},
-				{"installTools", "Install all tools", []string{"mage installTools"}},
-				{"installBinary", "Install project binary", []string{"mage installBinary"}},
-				{"installStdlib", "Install Go standard library", []string{"mage installStdlib"}},
-				{"uninstall", "Remove installed binary", []string{"mage uninstall"}},
-			},
-		},
-		"modules": {
-			icon:        "📋",
-			description: "Go Module Operations",
-			commands: []CommandInfo{
-				{"modUpdate", "Update go.mod file", []string{"mage modUpdate"}},
-				{"modTidy", "Tidy go.mod file", []string{"mage modTidy"}},
-				{"modVerify", "Verify module checksums", []string{"mage modVerify"}},
-				{"modDownload", "Download modules", []string{"mage modDownload"}},
-			},
-		},
-		"docs": {
-			icon:        "📚",
-			description: "Documentation",
-			commands: []CommandInfo{
-				{"docsDefault", "Generate and serve documentation", []string{"mage docsDefault", "mage docs"}},
-				{"docsGenerate", "Generate documentation", []string{"mage docsGenerate"}},
-				{"docsServe", "Serve documentation locally", []string{"mage docsServe"}},
-				{"docsBuild", "Build static documentation", []string{"mage docsBuild"}},
-				{"docsCheck", "Validate documentation", []string{"mage docsCheck"}},
-			},
-		},
-		"git": {
-			icon:        "🔀",
-			description: "Git Operations",
-			commands: []CommandInfo{
-				{"gitStatus", "Show repository status", []string{"mage gitStatus"}},
-				{"gitCommit", "Commit changes", []string{"mage gitCommit"}},
-				{"gitTag", "Create and push tag", []string{"mage gitTag"}},
-				{"gitPush", "Push changes to remote", []string{"mage gitPush"}},
-			},
-		},
-		"version": {
-			icon:        "🏷️",
-			description: "Version Management",
-			commands: []CommandInfo{
-				{"versionShow", "Display version information", []string{"mage versionShow"}},
-				{"versionBump", "Bump the version", []string{"mage versionBump"}},
-				{"versionCheck", "Check version information", []string{"mage versionCheck"}},
-			},
-		},
-		"metrics": {
-			icon:        "📊",
-			description: "Code Analysis & Metrics",
-			commands: []CommandInfo{
-				{"metricsLOC", "Analyze lines of code", []string{"mage metricsLOC"}},
-				{"metricsCoverage", "Generate coverage reports", []string{"mage metricsCoverage"}},
-				{"metricsComplexity", "Analyze code complexity", []string{"mage metricsComplexity"}},
-			},
-		},
-		"audit": {
-			icon:        "🛡️",
-			description: "Security & Audit",
-			commands: []CommandInfo{
-				{"auditShow", "Display audit events", []string{"mage auditShow"}},
-			},
-		},
-		"config": {
-			icon:        "⚙️",
-			description: "Configuration Management",
-			commands: []CommandInfo{
-				{"configureInit", "Initialize a new mage configuration", []string{"mage configureInit"}},
-				{"configureShow", "Display the current configuration", []string{"mage configureShow"}},
-				{"configureUpdate", "Update configuration values interactively", []string{"mage configureUpdate"}},
-			},
-		},
-		"generate": {
-			icon:        "🏗️",
-			description: "Code Generation",
-			commands: []CommandInfo{
-				{"generateDefault", "Run go generate", []string{"mage generateDefault"}},
-				{"generateClean", "Remove generated files", []string{"mage generateClean"}},
-			},
-		},
-		"init": {
-			icon:        "🚀",
-			description: "Project Initialization",
-			commands: []CommandInfo{
-				{"initProject", "Initialize a new project", []string{"mage initProject"}},
-				{"initCLI", "Initialize a CLI project", []string{"mage initCLI"}},
-				{"initLibrary", "Initialize a library project", []string{"mage initLibrary"}},
-			},
-		},
-		"recipes": {
-			icon:        "📋",
-			description: "Recipe Management",
-			commands: []CommandInfo{
-				{"recipesList", "List available recipes", []string{"mage recipesList"}},
-				{"recipesRun", "Run a specific recipe", []string{"mage recipesRun"}},
-			},
-		},
-		"update": {
-			icon:        "🔄",
-			description: "Update Management",
-			commands: []CommandInfo{
-				{"updateCheck", "Check for updates", []string{"mage updateCheck"}},
-				{"updateSelf", "Update mage-x to the latest version", []string{"mage updateSelf"}},
-			},
-		},
-	}
+	fmt.Printf("\n🎯 Available in This Magefile:\n")
+	fmt.Printf("  • All MAGE-X commands through mage binary\n")
+	fmt.Printf("  • Custom functions defined in this file\n")
+	fmt.Printf("  • Aliases: build, test, lint, release, docs, help, loc\n")
 
-	// Display each category
-	categoryOrder := []string{"core", "build", "test", "quality", "deps", "tools", "modules", "docs", "git", "version", "metrics", "audit"}
+	fmt.Printf("\n💡 Quick Commands:\n")
+	fmt.Printf("  mage build               # Build your project\n")
+	fmt.Printf("  mage test                # Run tests\n")
+	fmt.Printf("  mage lint                # Check code quality\n")
+	fmt.Printf("  mage release             # Create a release\n")
 
-	for _, catKey := range categoryOrder {
-		if category, exists := categories[catKey]; exists {
-			utils.Info("\n%s %s:", category.icon, category.description)
-
-			for _, cmd := range category.commands {
-				utils.Info("  %-20s %s", cmd.name, cmd.description)
-			}
-		}
-	}
-
-	// Display usage information
-	utils.Info("\n💡 Usage Tips:")
-	utils.Info("  • Run any command: mage COMMAND")
-	utils.Info("  • Beautiful list: mage help (this view)")
-	utils.Info("  • Plain list: mage -l")
-	utils.Info("  • Default target: mage (runs buildDefault)")
-	utils.Info("  • Verbose output: VERBOSE=true mage COMMAND")
-	utils.Info("  • Multiple commands: mage test lint build")
-
-	utils.Info("\n🎯 Quick Start:")
-	utils.Info("  mage build      # Build your project")
-	utils.Info("  mage test       # Run tests")
-	utils.Info("  mage lint       # Check code quality")
-	utils.Info("  mage release    # Create a release")
-
-	utils.Info("\n📖 More Help:")
-	utils.Info("  • Recipe system: mage recipesList")
-	utils.Info("  • Configuration: mage configureShow")
-	utils.Info("  • Help system: mage helpDefault")
+	fmt.Printf("\n📖 Note: This is the legacy list view. For the complete unified system\n")
+	fmt.Printf("   with all commands, categories, and search capabilities, use 'magex -l'\n")
 }
 
 // CommandInfo represents command information for the List function
+// Fields commented to avoid unused variable warnings - reserved for future use
 type CommandInfo struct {
-	name        string
-	description string
-	examples    []string
+	// name        string
+	// description string
+	// examples    []string
 }

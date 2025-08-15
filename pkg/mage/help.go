@@ -61,13 +61,13 @@ Quick Start:
   mage help               # Show this help
 
 Available Commands:
-  mage helpCommands      # List all available commands
-  mage helpExamples      # Show usage examples
-  mage helpGettingStarted # Getting started guide
-  mage helpCompletions   # Generate shell completions
+  mage help:commands      # List all available commands
+  mage help:examples      # Show usage examples
+  mage help:gettingstarted # Getting started guide
+  mage help:completions   # Generate shell completions
 
 For detailed help on any command:
-  mage helpCommand COMMAND_NAME
+  mage help:command COMMAND_NAME
 
 Documentation:
   https://github.com/mrz1836/mage-x
@@ -123,7 +123,7 @@ func (Help) Commands() error {
 
 	fmt.Printf("\nUsage:\n")
 	fmt.Printf("  mage COMMAND [OPTIONS]\n")
-	fmt.Printf("  mage helpCommand COMMAND_NAME\n")
+	fmt.Printf("  mage help:command COMMAND_NAME\n")
 
 	return nil
 }
@@ -209,9 +209,9 @@ func (Help) Examples() error {
 		{
 			Category: "Project Setup",
 			Examples: []string{
-				"mage initCLI --name=myapp --module=github.com/user/myapp",
-				"mage initLibrary --name=mylib",
-				"mage configureInit  # Create mage.yaml configuration",
+				"mage init:cli --name=myapp --module=github.com/user/myapp",
+				"mage init:library --name=mylib",
+				"mage configure:init  # Create mage.yaml configuration",
 			},
 		},
 		{
@@ -249,9 +249,9 @@ func (Help) Examples() error {
 			Category: "Interactive Mode",
 			Examples: []string{
 				"mage help  # Show help",
-				"mage configureUpdate  # Start configuration wizard",
-				"mage recipesList  # List available recipes",
-				"RECIPE=fresh-start mage recipesRun",
+				"mage configure:update  # Start configuration wizard",
+				"mage recipes:list  # List available recipes",
+				"RECIPE=fresh-start mage recipes:run",
 			},
 		},
 		{
@@ -314,15 +314,15 @@ First, install MAGE-X in your Go project:
 🏗️ Step 2: Initialize Your Project
 
 For a new project:
-  mage initCLI --name=myapp --module=github.com/user/myapp
+  mage init:cli --name=myapp --module=github.com/user/myapp
 
 For an existing project:
-  mage initProject
+  mage init:project
 
 🔧 Step 3: Basic Configuration
 
 Create a mage configuration:
-  mage configureInit
+  mage configure:init
 
 Edit the configuration to match your project needs.
 
@@ -337,7 +337,7 @@ Run tests:
 🎭 Step 5: Interactive Mode
 
 For a guided experience:
-  mage configureUpdate
+  mage configure:update
 
 Or show help:
   mage help
@@ -345,10 +345,10 @@ Or show help:
 📚 Step 6: Explore Recipes
 
 Discover pre-built patterns:
-  mage recipesList
+  mage recipes:list
 
 Run a recipe:
-  RECIPE=fresh-start mage recipesRun
+  RECIPE=fresh-start mage recipes:run
 
 🚀 Step 7: Advanced Features
 
@@ -359,16 +359,16 @@ Run a recipe:
 
 📖 Next Steps
 
-1. Read the documentation: mage helpCommands
-2. Try the configuration wizard: mage configureUpdate
-3. Set up CI/CD: RECIPE=ci-setup mage recipesRun
-4. Show version: mage versionShow
+1. Read the documentation: mage help:commands
+2. Try the configuration wizard: mage configure:update
+3. Set up CI/CD: RECIPE=ci-setup mage recipes:run
+4. Show version: mage version:show
 
 🆘 Getting Help
 
-- mage helpCommand COMMAND_NAME
+- mage help:command COMMAND_NAME
 - mage help
-- mage helpExamples
+- mage help:examples
 - GitHub: https://github.com/mrz1836/mage-x
 
 Happy coding with MAGE-X! 🎉`)
@@ -403,13 +403,13 @@ func (Help) Topics() error {
 		Description string
 		Command     string
 	}{
-		{"getting-started", "Getting started guide", "mage helpGettingStarted"},
-		{"commands", "List all commands", "mage helpCommands"},
-		{"examples", "Usage examples", "mage helpExamples"},
-		{"recipes", "Recipe system", "mage recipesList"},
-		{"configuration", "Configuration management", "mage configureShow"},
-		{"version", "Version management", "mage versionShow"},
-		{"completions", "Shell completions", "mage helpCompletions"},
+		{"getting-started", "Getting started guide", "mage help:gettingstarted"},
+		{"commands", "List all commands", "mage help:commands"},
+		{"examples", "Usage examples", "mage help:examples"},
+		{"recipes", "Recipe system", "mage recipes:list"},
+		{"configuration", "Configuration management", "mage configure:show"},
+		{"version", "Version management", "mage version:show"},
+		{"completions", "Shell completions", "mage help:completions"},
 	}
 
 	utils.Info("\nAvailable Help Topics:")
@@ -426,7 +426,7 @@ func (Help) Topics() error {
 
 	utils.Info("\nUsage:")
 	utils.Info("  mage helpTOPIC")
-	utils.Info("  mage helpCommand COMMAND_NAME")
+	utils.Info("  mage help:command COMMAND_NAME")
 
 	return nil
 }
@@ -444,8 +444,8 @@ func getAllCommands() []HelpCommand {
 			Usage:       "mage build [options]",
 			Examples: []string{
 				"mage build",
-				"mage buildAll",
-				"mage buildClean",
+				"mage build:all",
+				"mage build:clean",
 			},
 			Options: []HelpOption{
 				{Name: "GO_BUILD_TAGS", Description: "Build tags", Default: ""},
@@ -462,8 +462,8 @@ func getAllCommands() []HelpCommand {
 			Usage:       "mage test [options]",
 			Examples: []string{
 				"mage test",
-				"mage testRace",
-				"mage testCover",
+				"mage test:race",
+				"mage test:cover",
 				"VERBOSE=true mage test",
 			},
 			Options: []HelpOption{
@@ -481,7 +481,7 @@ func getAllCommands() []HelpCommand {
 			Usage:       "mage lint [options]",
 			Examples: []string{
 				"mage lint",
-				"mage lintFix",
+				"mage lint:fix",
 				"LINT_TIMEOUT=5m mage lint",
 			},
 			Options: []HelpOption{
@@ -497,9 +497,9 @@ func getAllCommands() []HelpCommand {
 			Description: "Format code",
 			Usage:       "mage format [options]",
 			Examples: []string{
-				"mage formatAll",
-				"mage lintFumpt",
-				"mage formatCheck",
+				"mage format:all",
+				"mage lint:fumpt",
+				"mage format:check",
 			},
 			SeeAlso: []string{"lint", "test"},
 		},
@@ -511,9 +511,9 @@ func getAllCommands() []HelpCommand {
 			Description: "Recipe system for common patterns",
 			Usage:       "mage recipes COMMAND",
 			Examples: []string{
-				"mage recipesList",
-				"mage recipesRun",
-				"RECIPE=fresh-start mage recipesRun",
+				"mage recipes:list",
+				"mage recipes:run",
+				"RECIPE=fresh-start mage recipes:run",
 			},
 			Options: []HelpOption{
 				{Name: "RECIPE", Description: "Recipe name", Required: true},
@@ -566,9 +566,9 @@ func getAllCommands() []HelpCommand {
 			Description: "Configuration management",
 			Usage:       "mage configure COMMAND",
 			Examples: []string{
-				"mage configureInit",
-				"mage configureShow",
-				"mage configureUpdate",
+				"mage configure:init",
+				"mage configure:show",
+				"mage configure:update",
 			},
 			SeeAlso: []string{"init", "help"},
 		},
@@ -580,9 +580,9 @@ func getAllCommands() []HelpCommand {
 			Description: "Version management",
 			Usage:       "mage version COMMAND",
 			Examples: []string{
-				"mage versionShow",
-				"mage versionCheck",
-				"mage versionBump",
+				"mage version:show",
+				"mage version:check",
+				"mage version:bump",
 			},
 			SeeAlso: []string{"release", "update"},
 		},
@@ -595,10 +595,85 @@ func getAllCommands() []HelpCommand {
 			Usage:       "mage help COMMAND",
 			Examples: []string{
 				"mage help",
-				"mage helpCommands",
-				"mage helpExamples",
+				"mage help:commands",
+				"mage help:examples",
 			},
 			SeeAlso: []string{"interactive", "topics"},
+		},
+
+		// Audit commands
+		{
+			Name:        "audit",
+			Namespace:   "audit",
+			Description: "Security and compliance auditing",
+			Usage:       "mage audit COMMAND",
+			Examples: []string{
+				"mage audit:show",
+				"mage audit:stats",
+				"mage audit:export",
+				"mage audit:report",
+			},
+			SeeAlso: []string{"security", "tools"},
+		},
+
+		// Enterprise commands
+		{
+			Name:        "enterprise",
+			Namespace:   "enterprise",
+			Description: "Enterprise deployment and management",
+			Usage:       "mage enterprise COMMAND",
+			Examples: []string{
+				"mage enterprise:init",
+				"mage enterprise:deploy",
+				"mage enterprise:status",
+				"mage enterprise:backup",
+			},
+			SeeAlso: []string{"workflow", "integrations"},
+		},
+
+		// Workflow commands
+		{
+			Name:        "workflow",
+			Namespace:   "workflow",
+			Description: "Automated workflow management",
+			Usage:       "mage workflow COMMAND",
+			Examples: []string{
+				"mage workflow:execute",
+				"mage workflow:list",
+				"mage workflow:create",
+				"mage workflow:schedule",
+			},
+			SeeAlso: []string{"enterprise", "cli"},
+		},
+
+		// Install commands
+		{
+			Name:        "install",
+			Namespace:   "install",
+			Description: "Installation management",
+			Usage:       "mage install COMMAND",
+			Examples: []string{
+				"mage install:tools",
+				"mage install:binary",
+				"mage install:all",
+				"mage uninstall",
+			},
+			SeeAlso: []string{"tools", "update"},
+		},
+
+		// YAML commands
+		{
+			Name:        "yaml",
+			Namespace:   "yaml",
+			Description: "YAML configuration management",
+			Usage:       "mage yaml COMMAND",
+			Examples: []string{
+				"mage yaml:init",
+				"mage yaml:validate",
+				"mage yaml:show",
+				"mage yaml:format",
+			},
+			SeeAlso: []string{"configure", "format"},
 		},
 	}
 }
@@ -628,8 +703,8 @@ _mage_completions() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    # All available commands
-    opts="build buildAll buildClean buildDocker buildGenerate test testFull testUnit testRace testCover testBench testBenchShort testFuzz testFuzzShort testIntegration testShort testCoverRace lint lintAll lintFix lintVet lintFumpt lintVersion formatAll formatCheck vetDefault vetAll release deps depsUpdate depsTidy depsDownload depsOutdated depsAudit tools toolsInstall toolsUpdate toolsCheck toolsVulnCheck install installTools installBinary installStdlib uninstall mod modUpdate modTidy modVerify modDownload docs docsGenerate docsServe docsBuild docsCheck git gitStatus gitCommit gitTag gitPush version versionShow versionBump versionCheck metrics metricsLOC metricsCoverage metricsComplexity audit auditShow configure configureInit configureShow configureUpdate generate generateDefault generateClean init initProject initCLI initLibrary recipes recipesList recipesRun update updateCheck updateSelf help helpCommands helpExamples helpGettingStarted helpCompletions"
+    # All available commands (300+ commands organized by namespace)
+    opts="build:default build:all build:docker build:clean build:generate build:linux build:darwin build:windows build:install build:prebuild test:default test:full test:unit test:race test:cover test:bench test:benchshort test:fuzz test:fuzzshort test:integration test:short test:coverrace test:ci lint:default lint:all lint:fix lint:vet lint:fumpt lint:version lint:go lint:docker lint:yaml lint:markdown lint:shell lint:json lint:sql format:default format:all format:gofmt format:fumpt format:imports format:go format:yaml format:json format:markdown format:sql format:dockerfile format:shell format:fix format:check vet:default vet:all vet:parallel vet:shadow vet:strict release:default releases:status releases:stable releases:beta releases:edge releases:promote deps:default deps:update deps:tidy deps:download deps:outdated deps:audit deps:clean deps:graph deps:why deps:verify tools:default tools:install tools:update tools:check tools:vulncheck tools:verify install:default install:local install:binary install:tools install:go install:stdlib install:systemwide install:deps install:mage install:docker install:githooks install:ci install:certs install:package install:all uninstall mod:update mod:tidy mod:verify mod:download mod:clean mod:graph mod:why mod:vendor mod:init docs:default docs:generate docs:serve docs:build docs:check docs:examples docs:lint docs:spell docs:links docs:api docs:markdown docs:readme docs:changelog docs:clean docs:godocs git:status git:diff git:tag git:log git:branch git:pull git:commit git:init git:add git:clone git:push version:show version:check version:update version:bump version:changelog version:tag version:compare version:validate metrics:loc metrics:coverage metrics:complexity audit:show audit:stats audit:export audit:cleanup audit:enable audit:disable audit:report configure:init configure:show configure:update configure:enterprise configure:export configure:import configure:validate configure:schema generate:default generate:clean init:default init:project init:library init:cli init:webapi init:microservice init:tool init:upgrade init:templates init:config init:git init:mage init:ci init:docker init:docs init:license init:makefile init:editorconfig recipes:default recipes:list recipes:run recipes:show recipes:search recipes:create recipes:install recipes:update recipes:categories recipes:interactive update:check update:install update:auto update:history update:rollback help:default help:commands help:command help:examples help:gettingstarted help:completions help:topics enterprise:init enterprise:config enterprise:deploy enterprise:rollback enterprise:promote enterprise:status enterprise:backup enterprise:restore workflow:execute workflow:list workflow:status workflow:create workflow:validate workflow:schedule workflow:template workflow:history integrations:setup integrations:test integrations:sync integrations:notify integrations:status integrations:webhook integrations:export integrations:import bench:default bench:run bench:profile bench:compare bench:report bench:regression bench:memory bench:cpu yaml:init yaml:validate yaml:show yaml:template yaml:format yaml:check yaml:merge yaml:convert yaml:schema cli:default cli:help cli:version cli:completion cli:config cli:update cli:bulk cli:query cli:dashboard cli:batch cli:monitor cli:workspace cli:pipeline cli:compliance wizard:setup wizard:config wizard:project wizard:deploy wizard:troubleshoot"
 
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
     return 0

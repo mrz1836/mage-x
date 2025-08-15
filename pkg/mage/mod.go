@@ -16,9 +16,9 @@ import (
 // Static errors to satisfy err113 linter
 var (
 	errOperationCanceled     = errors.New("operation canceled")
-	errModuleVarRequired     = errors.New("MODULE environment variable is required. Usage: MODULE=example.com/pkg mage mod:why")
+	errModuleVarRequired     = errors.New("MODULE environment variable is required. Usage: MODULE=example.com/pkg mage modWhy")
 	errGoModExists           = errors.New("go.mod already exists")
-	errModuleInitVarRequired = errors.New("MODULE environment variable is required. Usage: MODULE=github.com/user/repo mage mod:init")
+	errModuleInitVarRequired = errors.New("MODULE environment variable is required. Usage: MODULE=github.com/user/repo mage modInit")
 )
 
 // Mod namespace for Go module management tasks
