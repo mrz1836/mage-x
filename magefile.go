@@ -16,10 +16,36 @@ import (
 // Namespace types - these enable namespace:method syntax in mage
 // Each type must be defined as mg.Namespace for mage to recognize it
 type (
-	Build mg.Namespace
-	Test  mg.Namespace
-	Lint  mg.Namespace
-	Deps  mg.Namespace
+	Build            mg.Namespace
+	Test             mg.Namespace
+	Lint             mg.Namespace
+	Deps             mg.Namespace
+	Tools            mg.Namespace
+	Mod              mg.Namespace
+	Docs             mg.Namespace
+	Git              mg.Namespace
+	Version          mg.Namespace
+	Release          mg.Namespace
+	Metrics          mg.Namespace
+	Install          mg.Namespace
+	Audit            mg.Namespace
+	Configure        mg.Namespace
+	Format           mg.Namespace
+	Generate         mg.Namespace
+	Help             mg.Namespace
+	Init             mg.Namespace
+	Integrations     mg.Namespace
+	Recipes          mg.Namespace
+	Update           mg.Namespace
+	Vet              mg.Namespace
+	Bench            mg.Namespace
+	CLI              mg.Namespace
+	Enterprise       mg.Namespace
+	EnterpriseConfig mg.Namespace
+	Releases         mg.Namespace
+	Wizard           mg.Namespace
+	Workflow         mg.Namespace
+	Yaml             mg.Namespace
 )
 
 // Aliases provides short command names for common operations
@@ -726,117 +752,485 @@ func (t Test) CoverHTML() error {
 	return impl.CoverHTML()
 }
 
-/* Temporarily commented out remaining methods to test basic namespace functionality
-func (t Test) Fuzz() error { return t.Test.Fuzz() }
-func (t Test) FuzzShort() error { return t.Test.FuzzShort() }
-func (t Test) Bench() error { return t.Test.Bench() }
-func (t Test) BenchShort() error { return t.Test.BenchShort() }
-func (t Test) Integration() error { return t.Test.Integration() }
-func (t Test) CI() error { return t.Test.CI() }
-func (t Test) Parallel() error { return t.Test.Parallel() }
-func (t Test) NoLint() error { return t.Test.NoLint() }
-func (t Test) CINoRace() error { return t.Test.CINoRace() }
-func (t Test) Run() error { return t.Test.Run() }
-func (t Test) Coverage() error { return t.Test.Coverage() }
+func (t Test) Fuzz() error {
+	var impl mage.Test
+	return impl.Fuzz()
+}
+
+func (t Test) FuzzShort() error {
+	var impl mage.Test
+	return impl.FuzzShort()
+}
+
+func (t Test) Bench() error {
+	var impl mage.Test
+	return impl.Bench()
+}
+
+func (t Test) BenchShort() error {
+	var impl mage.Test
+	return impl.BenchShort()
+}
+
+func (t Test) Integration() error {
+	var impl mage.Test
+	return impl.Integration()
+}
+
+func (t Test) CI() error {
+	var impl mage.Test
+	return impl.CI()
+}
+
+func (t Test) Parallel() error {
+	var impl mage.Test
+	return impl.Parallel()
+}
+
+func (t Test) NoLint() error {
+	var impl mage.Test
+	return impl.NoLint()
+}
+
+func (t Test) CINoRace() error {
+	var impl mage.Test
+	return impl.CINoRace()
+}
+
+func (t Test) Run() error {
+	var impl mage.Test
+	return impl.Run()
+}
+
+func (t Test) Coverage() error {
+	var impl mage.Test
+	return impl.Coverage()
+}
 
 // Lint namespace methods
-func (l Lint) Default() error { return l.Lint.Default() }
-func (l Lint) Fix() error { return l.Lint.Fix() }
-func (l Lint) Fmt() error { return l.Lint.Fmt() }
-func (l Lint) Fumpt() error { return l.Lint.Fumpt() }
-func (l Lint) Vet() error { return l.Lint.Vet() }
-func (l Lint) VetParallel() error { return l.Lint.VetParallel() }
-func (l Lint) Version() error { return l.Lint.Version() }
-func (l Lint) All() error { return l.Lint.All() }
-func (l Lint) Go() error { return l.Lint.Go() }
-func (l Lint) Docker() error { return l.Lint.Docker() }
-func (l Lint) YAML() error { return l.Lint.YAML() }
-func (l Lint) Yaml() error { return l.Lint.Yaml() }
-func (l Lint) Markdown() error { return l.Lint.Markdown() }
-func (l Lint) Shell() error { return l.Lint.Shell() }
-func (l Lint) JSON() error { return l.Lint.JSON() }
-func (l Lint) SQL() error { return l.Lint.SQL() }
-func (l Lint) Config() error { return l.Lint.Config() }
-func (l Lint) CI() error { return l.Lint.CI() }
-func (l Lint) Fast() error { return l.Lint.Fast() }
+func (l Lint) Default() error {
+	var impl mage.Lint
+	return impl.Default()
+}
+
+func (l Lint) Fix() error {
+	var impl mage.Lint
+	return impl.Fix()
+}
+
+func (l Lint) Fmt() error {
+	var impl mage.Lint
+	return impl.Fmt()
+}
+
+func (l Lint) Fumpt() error {
+	var impl mage.Lint
+	return impl.Fumpt()
+}
+
+func (l Lint) Vet() error {
+	var impl mage.Lint
+	return impl.Vet()
+}
+
+func (l Lint) VetParallel() error {
+	var impl mage.Lint
+	return impl.VetParallel()
+}
+
+func (l Lint) Version() error {
+	var impl mage.Lint
+	return impl.Version()
+}
+
+func (l Lint) All() error {
+	var impl mage.Lint
+	return impl.All()
+}
+
+func (l Lint) Go() error {
+	var impl mage.Lint
+	return impl.Go()
+}
+
+func (l Lint) Docker() error {
+	var impl mage.Lint
+	return impl.Docker()
+}
+
+func (l Lint) YAML() error {
+	var impl mage.Lint
+	return impl.YAML()
+}
+
+func (l Lint) Markdown() error {
+	var impl mage.Lint
+	return impl.Markdown()
+}
+
+func (l Lint) Shell() error {
+	var impl mage.Lint
+	return impl.Shell()
+}
+
+func (l Lint) JSON() error {
+	var impl mage.Lint
+	return impl.JSON()
+}
+
+func (l Lint) SQL() error {
+	var impl mage.Lint
+	return impl.SQL()
+}
+
+func (l Lint) Config() error {
+	var impl mage.Lint
+	return impl.Config()
+}
+
+func (l Lint) CI() error {
+	var impl mage.Lint
+	return impl.CI()
+}
+
+func (l Lint) Fast() error {
+	var impl mage.Lint
+	return impl.Fast()
+}
 
 // Deps namespace methods
-func (d Deps) Default() error { return d.Deps.Default() }
-func (d Deps) Download() error { return d.Deps.Download() }
-func (d Deps) Tidy() error { return d.Deps.Tidy() }
-func (d Deps) Update() error { return d.Deps.Update() }
-func (d Deps) Clean() error { return d.Deps.Clean() }
-func (d Deps) Graph() error { return d.Deps.Graph() }
+func (d Deps) Default() error {
+	var impl mage.Deps
+	return impl.Default()
+}
+
+func (d Deps) Download() error {
+	var impl mage.Deps
+	return impl.Download()
+}
+
+func (d Deps) Tidy() error {
+	var impl mage.Deps
+	return impl.Tidy()
+}
+
+func (d Deps) Update() error {
+	var impl mage.Deps
+	return impl.Update()
+}
+
+func (d Deps) Clean() error {
+	var impl mage.Deps
+	return impl.Clean()
+}
+
+func (d Deps) Graph() error {
+	var impl mage.Deps
+	return impl.Graph()
+}
+
 // Why method requires parameters, not suitable for namespace syntax
-func (d Deps) Verify() error { return d.Deps.Verify() }
-func (d Deps) VulnCheck() error { return d.Deps.VulnCheck() }
-func (d Deps) List() error { return d.Deps.List() }
-func (d Deps) Outdated() error { return d.Deps.Outdated() }
-func (d Deps) Vendor() error { return d.Deps.Vendor() }
+func (d Deps) Verify() error {
+	var impl mage.Deps
+	return impl.Verify()
+}
+
+func (d Deps) VulnCheck() error {
+	var impl mage.Deps
+	return impl.VulnCheck()
+}
+
+func (d Deps) List() error {
+	var impl mage.Deps
+	return impl.List()
+}
+
+func (d Deps) Outdated() error {
+	var impl mage.Deps
+	return impl.Outdated()
+}
+
+func (d Deps) Vendor() error {
+	var impl mage.Deps
+	return impl.Vendor()
+}
+
 // Init method requires parameters, not suitable for namespace syntax
-func (d Deps) Audit() error { return d.Deps.Audit() }
-func (d Deps) Licenses() error { return d.Deps.Licenses() }
-func (d Deps) Check() error { return d.Deps.Check() }
+func (d Deps) Audit() error {
+	var impl mage.Deps
+	return impl.Audit()
+}
+
+func (d Deps) Licenses() error {
+	var impl mage.Deps
+	return impl.Licenses()
+}
+
+func (d Deps) Check() error {
+	var impl mage.Deps
+	return impl.Check()
+}
 
 // Tools namespace methods
-func (t Tools) Default() error { return t.Tools.Default() }
-func (t Tools) Install() error { return t.Tools.Install() }
-func (t Tools) Update() error { return t.Tools.Update() }
-func (t Tools) Verify() error { return t.Tools.Verify() }
-func (t Tools) List() error { return t.Tools.List() }
-func (t Tools) VulnCheck() error { return t.Tools.VulnCheck() }
-func (t Tools) Check() error { return t.Tools.Check() }
-func (t Tools) Clean() error { return t.Tools.Clean() }
+func (t Tools) Default() error {
+	var impl mage.Tools
+	return impl.Default()
+}
+
+func (t Tools) Install() error {
+	var impl mage.Tools
+	return impl.Install()
+}
+
+func (t Tools) Update() error {
+	var impl mage.Tools
+	return impl.Update()
+}
+
+func (t Tools) Verify() error {
+	var impl mage.Tools
+	return impl.Verify()
+}
+
+func (t Tools) List() error {
+	var impl mage.Tools
+	return impl.List()
+}
+
+func (t Tools) VulnCheck() error {
+	var impl mage.Tools
+	return impl.VulnCheck()
+}
+
+func (t Tools) Check() error {
+	var impl mage.Tools
+	return impl.Check()
+}
+
+func (t Tools) Clean() error {
+	var impl mage.Tools
+	return impl.Clean()
+}
 
 // Mod namespace methods
-func (m Mod) Download() error { return m.Mod.Download() }
-func (m Mod) Tidy() error { return m.Mod.Tidy() }
-func (m Mod) Update() error { return m.Mod.Update() }
-func (m Mod) Clean() error { return m.Mod.Clean() }
-func (m Mod) Graph() error { return m.Mod.Graph() }
-func (m Mod) Why() error { return m.Mod.Why() }
-func (m Mod) Vendor() error { return m.Mod.Vendor() }
-func (m Mod) Init() error { return m.Mod.Init() }
-func (m Mod) Verify() error { return m.Mod.Verify() }
-func (m Mod) Edit() error { return m.Mod.Edit() }
-func (m Mod) Get() error { return m.Mod.Get() }
-func (m Mod) List() error { return m.Mod.List() }
+func (m Mod) Download() error {
+	var impl mage.Mod
+	return impl.Download()
+}
+
+func (m Mod) Tidy() error {
+	var impl mage.Mod
+	return impl.Tidy()
+}
+
+func (m Mod) Update() error {
+	var impl mage.Mod
+	return impl.Update()
+}
+
+func (m Mod) Clean() error {
+	var impl mage.Mod
+	return impl.Clean()
+}
+
+func (m Mod) Graph() error {
+	var impl mage.Mod
+	return impl.Graph()
+}
+
+func (m Mod) Why() error {
+	var impl mage.Mod
+	return impl.Why()
+}
+
+func (m Mod) Vendor() error {
+	var impl mage.Mod
+	return impl.Vendor()
+}
+
+func (m Mod) Init() error {
+	var impl mage.Mod
+	return impl.Init()
+}
+
+func (m Mod) Verify() error {
+	var impl mage.Mod
+	return impl.Verify()
+}
+
+func (m Mod) Edit() error {
+	var impl mage.Mod
+	return impl.Edit()
+}
+
+func (m Mod) Get() error {
+	var impl mage.Mod
+	return impl.Get()
+}
+
+func (m Mod) List() error {
+	var impl mage.Mod
+	return impl.List()
+}
 
 // Docs namespace methods
-func (d Docs) Default() error { return d.Docs.Default() }
-func (d Docs) Generate() error { return d.Docs.Generate() }
-func (d Docs) Serve() error { return d.Docs.Serve() }
-func (d Docs) ServeDefault() error { return d.Docs.ServeDefault() }
-func (d Docs) ServePkgsite() error { return d.Docs.ServePkgsite() }
-func (d Docs) ServeGodoc() error { return d.Docs.ServeGodoc() }
-func (d Docs) ServeStdlib() error { return d.Docs.ServeStdlib() }
-func (d Docs) ServeProject() error { return d.Docs.ServeProject() }
-func (d Docs) ServeBoth() error { return d.Docs.ServeBoth() }
-func (d Docs) Check() error { return d.Docs.Check() }
-func (d Docs) Examples() error { return d.Docs.Examples() }
-func (d Docs) Build() error { return d.Docs.Build() }
-func (d Docs) Lint() error { return d.Docs.Lint() }
-func (d Docs) Spell() error { return d.Docs.Spell() }
-func (d Docs) Links() error { return d.Docs.Links() }
-func (d Docs) API() error { return d.Docs.API() }
-func (d Docs) Markdown() error { return d.Docs.Markdown() }
-func (d Docs) Readme() error { return d.Docs.Readme() }
+func (d Docs) Default() error {
+	var impl mage.Docs
+	return impl.Default()
+}
+
+func (d Docs) Generate() error {
+	var impl mage.Docs
+	return impl.Generate()
+}
+
+func (d Docs) Serve() error {
+	var impl mage.Docs
+	return impl.Serve()
+}
+
+func (d Docs) ServeDefault() error {
+	var impl mage.Docs
+	return impl.ServeDefault()
+}
+
+func (d Docs) ServePkgsite() error {
+	var impl mage.Docs
+	return impl.ServePkgsite()
+}
+
+func (d Docs) ServeGodoc() error {
+	var impl mage.Docs
+	return impl.ServeGodoc()
+}
+
+func (d Docs) ServeStdlib() error {
+	var impl mage.Docs
+	return impl.ServeStdlib()
+}
+
+func (d Docs) ServeProject() error {
+	var impl mage.Docs
+	return impl.ServeProject()
+}
+
+func (d Docs) ServeBoth() error {
+	var impl mage.Docs
+	return impl.ServeBoth()
+}
+
+func (d Docs) Check() error {
+	var impl mage.Docs
+	return impl.Check()
+}
+
+func (d Docs) Examples() error {
+	var impl mage.Docs
+	return impl.Examples()
+}
+
+func (d Docs) Build() error {
+	var impl mage.Docs
+	return impl.Build()
+}
+
+func (d Docs) Lint() error {
+	var impl mage.Docs
+	return impl.Lint()
+}
+
+func (d Docs) Spell() error {
+	var impl mage.Docs
+	return impl.Spell()
+}
+
+func (d Docs) Links() error {
+	var impl mage.Docs
+	return impl.Links()
+}
+
+func (d Docs) API() error {
+	var impl mage.Docs
+	return impl.API()
+}
+
+func (d Docs) Markdown() error {
+	var impl mage.Docs
+	return impl.Markdown()
+}
+
+func (d Docs) Readme() error {
+	var impl mage.Docs
+	return impl.Readme()
+}
+
 // Changelog method requires parameters, not suitable for namespace syntax
-func (d Docs) GoDocs() error { return d.Docs.GoDocs() }
+func (d Docs) GoDocs() error {
+	var impl mage.Docs
+	return impl.GoDocs()
+}
 
 // Git namespace methods
-func (g Git) Diff() error { return g.Git.Diff() }
-func (g Git) Tag() error { return g.Git.Tag() }
-func (g Git) TagRemove() error { return g.Git.TagRemove() }
-func (g Git) TagUpdate() error { return g.Git.TagUpdate() }
-func (g Git) Status() error { return g.Git.Status() }
-func (g Git) Log() error { return g.Git.Log() }
-func (g Git) Branch() error { return g.Git.Branch() }
-func (g Git) Pull() error { return g.Git.Pull() }
-func (g Git) Commit() error { return g.Git.Commit() }
-func (g Git) Init() error { return g.Git.Init() }
-func (g Git) Add() error { return g.Git.Add() }
-func (g Git) Clone() error { return g.Git.Clone() }
+func (g Git) Diff() error {
+	var impl mage.Git
+	return impl.Diff()
+}
+
+func (g Git) Tag() error {
+	var impl mage.Git
+	return impl.Tag()
+}
+
+func (g Git) TagRemove() error {
+	var impl mage.Git
+	return impl.TagRemove()
+}
+
+func (g Git) TagUpdate() error {
+	var impl mage.Git
+	return impl.TagUpdate()
+}
+
+func (g Git) Status() error {
+	var impl mage.Git
+	return impl.Status()
+}
+
+func (g Git) Log() error {
+	var impl mage.Git
+	return impl.Log()
+}
+
+func (g Git) Branch() error {
+	var impl mage.Git
+	return impl.Branch()
+}
+
+func (g Git) Pull() error {
+	var impl mage.Git
+	return impl.Pull()
+}
+
+func (g Git) Commit() error {
+	var impl mage.Git
+	return impl.Commit()
+}
+
+func (g Git) Init() error {
+	var impl mage.Git
+	return impl.Init()
+}
+
+func (g Git) Add() error {
+	var impl mage.Git
+	return impl.Add()
+}
+
+func (g Git) Clone() error {
+	var impl mage.Git
+	return impl.Clone()
+}
+
 // Push method requires parameters, not suitable for namespace syntax
 // PullWithRemote method requires parameters, not suitable for namespace syntax
 // TagWithMessage method requires parameters, not suitable for namespace syntax
@@ -845,12 +1239,36 @@ func (g Git) Clone() error { return g.Git.Clone() }
 // LogWithCount method requires parameters, not suitable for namespace syntax
 
 // Version namespace methods
-func (v Version) Show() error { return v.Version.Show() }
-func (v Version) Check() error { return v.Version.Check() }
-func (v Version) Update() error { return v.Version.Update() }
-func (v Version) Bump() error { return v.Version.Bump() }
-func (v Version) Changelog() error { return v.Version.Changelog() }
-func (v Version) Tag() error { return v.Version.Tag() }
+func (v Version) Show() error {
+	var impl mage.Version
+	return impl.Show()
+}
+
+func (v Version) Check() error {
+	var impl mage.Version
+	return impl.Check()
+}
+
+func (v Version) Update() error {
+	var impl mage.Version
+	return impl.Update()
+}
+
+func (v Version) Bump() error {
+	var impl mage.Version
+	return impl.Bump()
+}
+
+func (v Version) Changelog() error {
+	var impl mage.Version
+	return impl.Changelog()
+}
+
+func (v Version) Tag() error {
+	var impl mage.Version
+	return impl.Tag()
+}
+
 // Next method requires parameters and returns multiple values, not suitable for namespace syntax
 // Compare method requires parameters, not suitable for namespace syntax
 // Validate method requires parameters, not suitable for namespace syntax
@@ -858,249 +1276,1027 @@ func (v Version) Tag() error { return v.Version.Tag() }
 // Format method requires parameters and returns wrong type, not suitable for namespace syntax
 
 // Release namespace methods
-func (r Release) Default() error { return r.Release.Default() }
-func (r Release) Test() error { return r.Release.Test() }
-func (r Release) Snapshot() error { return r.Release.Snapshot() }
-func (r Release) Install() error { return r.Release.Install() }
-func (r Release) Update() error { return r.Release.Update() }
-func (r Release) Check() error { return r.Release.Check() }
-func (r Release) Init() error { return r.Release.Init() }
-func (r Release) Changelog() error { return r.Release.Changelog() }
-func (r Release) Create() error { return r.Release.Create() }
-func (r Release) Prepare() error { return r.Release.Prepare() }
-func (r Release) Publish() error { return r.Release.Publish() }
-func (r Release) Notes() error { return r.Release.Notes() }
-func (r Release) Validate() error { return r.Release.Validate() }
-func (r Release) Clean() error { return r.Release.Clean() }
-func (r Release) Archive() error { return r.Release.Archive() }
+func (r Release) Default() error {
+	var impl mage.Release
+	return impl.Default()
+}
+
+func (r Release) Test() error {
+	var impl mage.Release
+	return impl.Test()
+}
+
+func (r Release) Snapshot() error {
+	var impl mage.Release
+	return impl.Snapshot()
+}
+
+func (r Release) Install() error {
+	var impl mage.Release
+	return impl.Install()
+}
+
+func (r Release) Update() error {
+	var impl mage.Release
+	return impl.Update()
+}
+
+func (r Release) Check() error {
+	var impl mage.Release
+	return impl.Check()
+}
+
+func (r Release) Init() error {
+	var impl mage.Release
+	return impl.Init()
+}
+
+func (r Release) Changelog() error {
+	var impl mage.Release
+	return impl.Changelog()
+}
+
+func (r Release) Create() error {
+	var impl mage.Release
+	return impl.Create()
+}
+
+func (r Release) Prepare() error {
+	var impl mage.Release
+	return impl.Prepare()
+}
+
+func (r Release) Publish() error {
+	var impl mage.Release
+	return impl.Publish()
+}
+
+func (r Release) Notes() error {
+	var impl mage.Release
+	return impl.Notes()
+}
+
+func (r Release) Validate() error {
+	var impl mage.Release
+	return impl.Validate()
+}
+
+func (r Release) Clean() error {
+	var impl mage.Release
+	return impl.Clean()
+}
+
+func (r Release) Archive() error {
+	var impl mage.Release
+	return impl.Archive()
+}
+
 // Upload method requires parameters, not suitable for namespace syntax
-func (r Release) List() error { return r.Release.List() }
-func (r Release) Build() error { return r.Release.Build() }
-func (r Release) Package() error { return r.Release.Package() }
-func (r Release) Draft() error { return r.Release.Draft() }
+func (r Release) List() error {
+	var impl mage.Release
+	return impl.List()
+}
+
+func (r Release) Build() error {
+	var impl mage.Release
+	return impl.Build()
+}
+
+func (r Release) Package() error {
+	var impl mage.Release
+	return impl.Package()
+}
+
+func (r Release) Draft() error {
+	var impl mage.Release
+	return impl.Draft()
+}
 
 // Metrics namespace methods
-func (m Metrics) LOC() error { return m.Metrics.LOC() }
-func (m Metrics) Coverage() error { return m.Metrics.Coverage() }
-func (m Metrics) Complexity() error { return m.Metrics.Complexity() }
-func (m Metrics) Size() error { return m.Metrics.Size() }
-func (m Metrics) Quality() error { return m.Metrics.Quality() }
-func (m Metrics) Imports() error { return m.Metrics.Imports() }
+func (m Metrics) LOC() error {
+	var impl mage.Metrics
+	return impl.LOC()
+}
+
+func (m Metrics) Coverage() error {
+	var impl mage.Metrics
+	return impl.Coverage()
+}
+
+func (m Metrics) Complexity() error {
+	var impl mage.Metrics
+	return impl.Complexity()
+}
+
+func (m Metrics) Size() error {
+	var impl mage.Metrics
+	return impl.Size()
+}
+
+func (m Metrics) Quality() error {
+	var impl mage.Metrics
+	return impl.Quality()
+}
+
+func (m Metrics) Imports() error {
+	var impl mage.Metrics
+	return impl.Imports()
+}
 
 // Install namespace methods
-func (i Install) Local() error { return i.Install.Local() }
-func (i Install) Uninstall() error { return i.Install.Uninstall() }
-func (i Install) Default() error { return i.Install.Default() }
-func (i Install) Go() error { return i.Install.Go() }
-func (i Install) Stdlib() error { return i.Install.Stdlib() }
-func (i Install) Tools() error { return i.Install.Tools() }
-func (i Install) SystemWide() error { return i.Install.SystemWide() }
-func (i Install) Binary() error { return i.Install.Binary() }
-func (i Install) Deps() error { return i.Install.Deps() }
-func (i Install) Mage() error { return i.Install.Mage() }
-func (i Install) Docker() error { return i.Install.Docker() }
-func (i Install) GitHooks() error { return i.Install.GitHooks() }
-func (i Install) CI() error { return i.Install.CI() }
-func (i Install) Certs() error { return i.Install.Certs() }
-func (i Install) Package() error { return i.Install.Package() }
-func (i Install) All() error { return i.Install.All() }
+func (i Install) Local() error {
+	var impl mage.Install
+	return impl.Local()
+}
+
+func (i Install) Uninstall() error {
+	var impl mage.Install
+	return impl.Uninstall()
+}
+
+func (i Install) Default() error {
+	var impl mage.Install
+	return impl.Default()
+}
+
+func (i Install) Go() error {
+	var impl mage.Install
+	return impl.Go()
+}
+
+func (i Install) Stdlib() error {
+	var impl mage.Install
+	return impl.Stdlib()
+}
+
+func (i Install) Tools() error {
+	var impl mage.Install
+	return impl.Tools()
+}
+
+func (i Install) SystemWide() error {
+	var impl mage.Install
+	return impl.SystemWide()
+}
+
+func (i Install) Binary() error {
+	var impl mage.Install
+	return impl.Binary()
+}
+
+func (i Install) Deps() error {
+	var impl mage.Install
+	return impl.Deps()
+}
+
+func (i Install) Mage() error {
+	var impl mage.Install
+	return impl.Mage()
+}
+
+func (i Install) Docker() error {
+	var impl mage.Install
+	return impl.Docker()
+}
+
+func (i Install) GitHooks() error {
+	var impl mage.Install
+	return impl.GitHooks()
+}
+
+func (i Install) CI() error {
+	var impl mage.Install
+	return impl.CI()
+}
+
+func (i Install) Certs() error {
+	var impl mage.Install
+	return impl.Certs()
+}
+
+func (i Install) Package() error {
+	var impl mage.Install
+	return impl.Package()
+}
+
+func (i Install) All() error {
+	var impl mage.Install
+	return impl.All()
+}
 
 // Audit namespace methods
-func (a Audit) Show() error { return a.Audit.Show() }
-func (a Audit) Stats() error { return a.Audit.Stats() }
-func (a Audit) Export() error { return a.Audit.Export() }
-func (a Audit) Cleanup() error { return a.Audit.Cleanup() }
-func (a Audit) Enable() error { return a.Audit.Enable() }
-func (a Audit) Disable() error { return a.Audit.Disable() }
-func (a Audit) Report() error { return a.Audit.Report() }
+func (a Audit) Show() error {
+	var impl mage.Audit
+	return impl.Show()
+}
+
+func (a Audit) Stats() error {
+	var impl mage.Audit
+	return impl.Stats()
+}
+
+func (a Audit) Export() error {
+	var impl mage.Audit
+	return impl.Export()
+}
+
+func (a Audit) Cleanup() error {
+	var impl mage.Audit
+	return impl.Cleanup()
+}
+
+func (a Audit) Enable() error {
+	var impl mage.Audit
+	return impl.Enable()
+}
+
+func (a Audit) Disable() error {
+	var impl mage.Audit
+	return impl.Disable()
+}
+
+func (a Audit) Report() error {
+	var impl mage.Audit
+	return impl.Report()
+}
 
 // Configure namespace methods
-func (c Configure) Init() error { return c.Configure.Init() }
-func (c Configure) Show() error { return c.Configure.Show() }
-func (c Configure) Update() error { return c.Configure.Update() }
-func (c Configure) Enterprise() error { return c.Configure.Enterprise() }
-func (c Configure) Export() error { return c.Configure.Export() }
-func (c Configure) Import() error { return c.Configure.Import() }
-func (c Configure) Validate() error { return c.Configure.Validate() }
-func (c Configure) Schema() error { return c.Configure.Schema() }
+func (c Configure) Init() error {
+	var impl mage.Configure
+	return impl.Init()
+}
+
+func (c Configure) Show() error {
+	var impl mage.Configure
+	return impl.Show()
+}
+
+func (c Configure) Update() error {
+	var impl mage.Configure
+	return impl.Update()
+}
+
+func (c Configure) Enterprise() error {
+	var impl mage.Configure
+	return impl.Enterprise()
+}
+
+func (c Configure) Export() error {
+	var impl mage.Configure
+	return impl.Export()
+}
+
+func (c Configure) Import() error {
+	var impl mage.Configure
+	return impl.Import()
+}
+
+func (c Configure) Validate() error {
+	var impl mage.Configure
+	return impl.Validate()
+}
+
+func (c Configure) Schema() error {
+	var impl mage.Configure
+	return impl.Schema()
+}
 
 // Format namespace methods
-func (f Format) Default() error { return f.Format.Default() }
-func (f Format) All() error { return f.Format.All() }
-func (f Format) Go() error { return f.Format.Go() }
-func (f Format) YAML() error { return f.Format.YAML() }
-func (f Format) Yaml() error { return f.Format.Yaml() }
-func (f Format) JSON() error { return f.Format.JSON() }
-func (f Format) Markdown() error { return f.Format.Markdown() }
-func (f Format) SQL() error { return f.Format.SQL() }
-func (f Format) Dockerfile() error { return f.Format.Dockerfile() }
-func (f Format) Shell() error { return f.Format.Shell() }
-func (f Format) Fix() error { return f.Format.Fix() }
-func (f Format) Gofmt() error { return f.Format.Gofmt() }
-func (f Format) Fumpt() error { return f.Format.Fumpt() }
-func (f Format) Imports() error { return f.Format.Imports() }
-func (f Format) Check() error { return f.Format.Check() }
-func (f Format) InstallTools() error { return f.Format.InstallTools() }
+func (f Format) Default() error {
+	var impl mage.Format
+	return impl.Default()
+}
+
+func (f Format) All() error {
+	var impl mage.Format
+	return impl.All()
+}
+
+func (f Format) Go() error {
+	var impl mage.Format
+	return impl.Go()
+}
+
+func (f Format) YAML() error {
+	var impl mage.Format
+	return impl.YAML()
+}
+
+func (f Format) JSON() error {
+	var impl mage.Format
+	return impl.JSON()
+}
+
+func (f Format) Markdown() error {
+	var impl mage.Format
+	return impl.Markdown()
+}
+
+func (f Format) SQL() error {
+	var impl mage.Format
+	return impl.SQL()
+}
+
+func (f Format) Dockerfile() error {
+	var impl mage.Format
+	return impl.Dockerfile()
+}
+
+func (f Format) Shell() error {
+	var impl mage.Format
+	return impl.Shell()
+}
+
+func (f Format) Fix() error {
+	var impl mage.Format
+	return impl.Fix()
+}
+
+func (f Format) Gofmt() error {
+	var impl mage.Format
+	return impl.Gofmt()
+}
+
+func (f Format) Fumpt() error {
+	var impl mage.Format
+	return impl.Fumpt()
+}
+
+func (f Format) Imports() error {
+	var impl mage.Format
+	return impl.Imports()
+}
+
+func (f Format) Check() error {
+	var impl mage.Format
+	return impl.Check()
+}
+
+func (f Format) InstallTools() error {
+	var impl mage.Format
+	return impl.InstallTools()
+}
 
 // Generate namespace methods
-func (g Generate) Default() error { return g.Generate.Default() }
-func (g Generate) All() error { return g.Generate.All() }
-func (g Generate) Mocks() error { return g.Generate.Mocks() }
-func (g Generate) Proto() error { return g.Generate.Proto() }
-func (g Generate) Clean() error { return g.Generate.Clean() }
-func (g Generate) Check() error { return g.Generate.Check() }
-func (g Generate) Code() error { return g.Generate.Code() }
-func (g Generate) Docs() error { return g.Generate.Docs() }
-func (g Generate) Swagger() error { return g.Generate.Swagger() }
-func (g Generate) OpenAPI() error { return g.Generate.OpenAPI() }
-func (g Generate) GraphQL() error { return g.Generate.GraphQL() }
-func (g Generate) SQL() error { return g.Generate.SQL() }
-func (g Generate) Wire() error { return g.Generate.Wire() }
-func (g Generate) Config() error { return g.Generate.Config() }
+func (g Generate) Default() error {
+	var impl mage.Generate
+	return impl.Default()
+}
+
+func (g Generate) All() error {
+	var impl mage.Generate
+	return impl.All()
+}
+
+func (g Generate) Mocks() error {
+	var impl mage.Generate
+	return impl.Mocks()
+}
+
+func (g Generate) Proto() error {
+	var impl mage.Generate
+	return impl.Proto()
+}
+
+func (g Generate) Clean() error {
+	var impl mage.Generate
+	return impl.Clean()
+}
+
+func (g Generate) Check() error {
+	var impl mage.Generate
+	return impl.Check()
+}
+
+func (g Generate) Code() error {
+	var impl mage.Generate
+	return impl.Code()
+}
+
+func (g Generate) Docs() error {
+	var impl mage.Generate
+	return impl.Docs()
+}
+
+func (g Generate) Swagger() error {
+	var impl mage.Generate
+	return impl.Swagger()
+}
+
+func (g Generate) OpenAPI() error {
+	var impl mage.Generate
+	return impl.OpenAPI()
+}
+
+func (g Generate) GraphQL() error {
+	var impl mage.Generate
+	return impl.GraphQL()
+}
+
+func (g Generate) SQL() error {
+	var impl mage.Generate
+	return impl.SQL()
+}
+
+func (g Generate) Wire() error {
+	var impl mage.Generate
+	return impl.Wire()
+}
+
+func (g Generate) Config() error {
+	var impl mage.Generate
+	return impl.Config()
+}
 
 // Help namespace methods
-func (h Help) Default() error { return h.Help.Default() }
-func (h Help) Commands() error { return h.Help.Commands() }
-func (h Help) Command() error { return h.Help.Command() }
-func (h Help) Examples() error { return h.Help.Examples() }
-func (h Help) GettingStarted() error { return h.Help.GettingStarted() }
-func (h Help) Completions() error { return h.Help.Completions() }
-func (h Help) Topics() error { return h.Help.Topics() }
+func (h Help) Default() error {
+	var impl mage.Help
+	return impl.Default()
+}
+
+func (h Help) Commands() error {
+	var impl mage.Help
+	return impl.Commands()
+}
+
+func (h Help) Command() error {
+	var impl mage.Help
+	return impl.Command()
+}
+
+func (h Help) Examples() error {
+	var impl mage.Help
+	return impl.Examples()
+}
+
+func (h Help) GettingStarted() error {
+	var impl mage.Help
+	return impl.GettingStarted()
+}
+
+func (h Help) Completions() error {
+	var impl mage.Help
+	return impl.Completions()
+}
+
+func (h Help) Topics() error {
+	var impl mage.Help
+	return impl.Topics()
+}
 
 // Init namespace methods
-func (i Init) Default() error { return i.Init.Default() }
-func (i Init) Library() error { return i.Init.Library() }
-func (i Init) CLI() error { return i.Init.CLI() }
-func (i Init) WebAPI() error { return i.Init.WebAPI() }
-func (i Init) Microservice() error { return i.Init.Microservice() }
-func (i Init) Tool() error { return i.Init.Tool() }
-func (i Init) Upgrade() error { return i.Init.Upgrade() }
-func (i Init) Templates() error { return i.Init.Templates() }
-func (i Init) Project() error { return i.Init.Project() }
-func (i Init) Config() error { return i.Init.Config() }
-func (i Init) Git() error { return i.Init.Git() }
-func (i Init) Mage() error { return i.Init.Mage() }
-func (i Init) CI() error { return i.Init.CI() }
-func (i Init) Docker() error { return i.Init.Docker() }
-func (i Init) Docs() error { return i.Init.Docs() }
-func (i Init) License() error { return i.Init.License() }
-func (i Init) Makefile() error { return i.Init.Makefile() }
-func (i Init) Editorconfig() error { return i.Init.Editorconfig() }
+func (i Init) Default() error {
+	var impl mage.Init
+	return impl.Default()
+}
+
+func (i Init) Library() error {
+	var impl mage.Init
+	return impl.Library()
+}
+
+func (i Init) CLI() error {
+	var impl mage.Init
+	return impl.CLI()
+}
+
+func (i Init) WebAPI() error {
+	var impl mage.Init
+	return impl.WebAPI()
+}
+
+func (i Init) Microservice() error {
+	var impl mage.Init
+	return impl.Microservice()
+}
+
+func (i Init) Tool() error {
+	var impl mage.Init
+	return impl.Tool()
+}
+
+func (i Init) Upgrade() error {
+	var impl mage.Init
+	return impl.Upgrade()
+}
+
+func (i Init) Templates() error {
+	var impl mage.Init
+	return impl.Templates()
+}
+
+func (i Init) Project() error {
+	var impl mage.Init
+	return impl.Project()
+}
+
+func (i Init) Config() error {
+	var impl mage.Init
+	return impl.Config()
+}
+
+func (i Init) Git() error {
+	var impl mage.Init
+	return impl.Git()
+}
+
+func (i Init) Mage() error {
+	var impl mage.Init
+	return impl.Mage()
+}
+
+func (i Init) CI() error {
+	var impl mage.Init
+	return impl.CI()
+}
+
+func (i Init) Docker() error {
+	var impl mage.Init
+	return impl.Docker()
+}
+
+func (i Init) Docs() error {
+	var impl mage.Init
+	return impl.Docs()
+}
+
+func (i Init) License() error {
+	var impl mage.Init
+	return impl.License()
+}
+
+func (i Init) Makefile() error {
+	var impl mage.Init
+	return impl.Makefile()
+}
+
+func (i Init) Editorconfig() error {
+	var impl mage.Init
+	return impl.Editorconfig()
+}
 
 // Integrations namespace methods
-func (i Integrations) Setup() error { return i.Integrations.Setup() }
-func (i Integrations) Test() error { return i.Integrations.Test() }
-func (i Integrations) Sync() error { return i.Integrations.Sync() }
-func (i Integrations) Notify() error { return i.Integrations.Notify() }
-func (i Integrations) Status() error { return i.Integrations.Status() }
-func (i Integrations) Webhook() error { return i.Integrations.Webhook() }
-func (i Integrations) Export() error { return i.Integrations.Export() }
-func (i Integrations) Import() error { return i.Integrations.Import() }
+func (i Integrations) Setup() error {
+	var impl mage.Integrations
+	return impl.Setup()
+}
+
+func (i Integrations) Test() error {
+	var impl mage.Integrations
+	return impl.Test()
+}
+
+func (i Integrations) Sync() error {
+	var impl mage.Integrations
+	return impl.Sync()
+}
+
+func (i Integrations) Notify() error {
+	var impl mage.Integrations
+	return impl.Notify()
+}
+
+func (i Integrations) Status() error {
+	var impl mage.Integrations
+	return impl.Status()
+}
+
+func (i Integrations) Webhook() error {
+	var impl mage.Integrations
+	return impl.Webhook()
+}
+
+func (i Integrations) Export() error {
+	var impl mage.Integrations
+	return impl.Export()
+}
+
+func (i Integrations) Import() error {
+	var impl mage.Integrations
+	return impl.Import()
+}
 
 // Recipes namespace methods
-func (r Recipes) Default() error { return r.Recipes.Default() }
-func (r Recipes) List() error { return r.Recipes.List() }
-func (r Recipes) Show() error { return r.Recipes.Show() }
-func (r Recipes) Run() error { return r.Recipes.Run() }
-func (r Recipes) Search() error { return r.Recipes.Search() }
-func (r Recipes) Create() error { return r.Recipes.Create() }
-func (r Recipes) Install() error { return r.Recipes.Install() }
+func (r Recipes) Default() error {
+	var impl mage.Recipes
+	return impl.Default()
+}
+
+func (r Recipes) List() error {
+	var impl mage.Recipes
+	return impl.List()
+}
+
+func (r Recipes) Show() error {
+	var impl mage.Recipes
+	return impl.Show()
+}
+
+func (r Recipes) Run() error {
+	var impl mage.Recipes
+	return impl.Run()
+}
+
+func (r Recipes) Search() error {
+	var impl mage.Recipes
+	return impl.Search()
+}
+
+func (r Recipes) Create() error {
+	var impl mage.Recipes
+	return impl.Create()
+}
+
+func (r Recipes) Install() error {
+	var impl mage.Recipes
+	return impl.Install()
+}
 
 // Update namespace methods
-func (u Update) Check() error { return u.Update.Check() }
-func (u Update) Install() error { return u.Update.Install() }
-func (u Update) Auto() error { return u.Update.Auto() }
-func (u Update) History() error { return u.Update.History() }
-func (u Update) Rollback() error { return u.Update.Rollback() }
+func (u Update) Check() error {
+	var impl mage.Update
+	return impl.Check()
+}
+
+func (u Update) Install() error {
+	var impl mage.Update
+	return impl.Install()
+}
+
+func (u Update) Auto() error {
+	var impl mage.Update
+	return impl.Auto()
+}
+
+func (u Update) History() error {
+	var impl mage.Update
+	return impl.History()
+}
+
+func (u Update) Rollback() error {
+	var impl mage.Update
+	return impl.Rollback()
+}
 
 // Vet namespace methods
-func (v Vet) Default() error { return v.Vet.Default() }
-func (v Vet) All() error { return v.Vet.All() }
-func (v Vet) Parallel() error { return v.Vet.Parallel() }
-func (v Vet) Shadow() error { return v.Vet.Shadow() }
-func (v Vet) Strict() error { return v.Vet.Strict() }
+func (v Vet) Default() error {
+	var impl mage.Vet
+	return impl.Default()
+}
+
+func (v Vet) All() error {
+	var impl mage.Vet
+	return impl.All()
+}
+
+func (v Vet) Parallel() error {
+	var impl mage.Vet
+	return impl.Parallel()
+}
+
+func (v Vet) Shadow() error {
+	var impl mage.Vet
+	return impl.Shadow()
+}
+
+func (v Vet) Strict() error {
+	var impl mage.Vet
+	return impl.Strict()
+}
 
 // Bench namespace methods
-func (b Bench) Default() error { return b.Bench.Default() }
-func (b Bench) Compare() error { return b.Bench.Compare() }
-func (b Bench) Save() error { return b.Bench.Save() }
-func (b Bench) CPU() error { return b.Bench.CPU() }
-func (b Bench) Mem() error { return b.Bench.Mem() }
-func (b Bench) Profile() error { return b.Bench.Profile() }
-func (b Bench) Trace() error { return b.Bench.Trace() }
-func (b Bench) Regression() error { return b.Bench.Regression() }
+func (b Bench) Default() error {
+	var impl mage.Bench
+	return impl.Default()
+}
+
+func (b Bench) Compare() error {
+	var impl mage.Bench
+	return impl.Compare()
+}
+
+func (b Bench) Save() error {
+	var impl mage.Bench
+	return impl.Save()
+}
+
+func (b Bench) CPU() error {
+	var impl mage.Bench
+	return impl.CPU()
+}
+
+func (b Bench) Mem() error {
+	var impl mage.Bench
+	return impl.Mem()
+}
+
+func (b Bench) Profile() error {
+	var impl mage.Bench
+	return impl.Profile()
+}
+
+func (b Bench) Trace() error {
+	var impl mage.Bench
+	return impl.Trace()
+}
+
+func (b Bench) Regression() error {
+	var impl mage.Bench
+	return impl.Regression()
+}
 
 // CLI namespace methods
-func (c CLI) Bulk() error { return c.CLI.Bulk() }
-func (c CLI) Query() error { return c.CLI.Query() }
-func (c CLI) Dashboard() error { return c.CLI.Dashboard() }
-func (c CLI) Batch() error { return c.CLI.Batch() }
-func (c CLI) Monitor() error { return c.CLI.Monitor() }
-func (c CLI) Workspace() error { return c.CLI.Workspace() }
-func (c CLI) Pipeline() error { return c.CLI.Pipeline() }
-func (c CLI) Compliance() error { return c.CLI.Compliance() }
-func (c CLI) Default() error { return c.CLI.Default() }
-func (c CLI) Help() error { return c.CLI.Help() }
-func (c CLI) Version() error { return c.CLI.Version() }
-func (c CLI) Completion() error { return c.CLI.Completion() }
-func (c CLI) Config() error { return c.CLI.Config() }
-func (c CLI) Update() error { return c.CLI.Update() }
+func (c CLI) Bulk() error {
+	var impl mage.CLI
+	return impl.Bulk()
+}
+
+func (c CLI) Query() error {
+	var impl mage.CLI
+	return impl.Query()
+}
+
+func (c CLI) Dashboard() error {
+	var impl mage.CLI
+	return impl.Dashboard()
+}
+
+func (c CLI) Batch() error {
+	var impl mage.CLI
+	return impl.Batch()
+}
+
+func (c CLI) Monitor() error {
+	var impl mage.CLI
+	return impl.Monitor()
+}
+
+func (c CLI) Workspace() error {
+	var impl mage.CLI
+	return impl.Workspace()
+}
+
+func (c CLI) Pipeline() error {
+	var impl mage.CLI
+	return impl.Pipeline()
+}
+
+func (c CLI) Compliance() error {
+	var impl mage.CLI
+	return impl.Compliance()
+}
+
+func (c CLI) Default() error {
+	var impl mage.CLI
+	return impl.Default()
+}
+
+func (c CLI) Help() error {
+	var impl mage.CLI
+	return impl.Help()
+}
+
+func (c CLI) Version() error {
+	var impl mage.CLI
+	return impl.Version()
+}
+
+func (c CLI) Completion() error {
+	var impl mage.CLI
+	return impl.Completion()
+}
+
+func (c CLI) Config() error {
+	var impl mage.CLI
+	return impl.Config()
+}
+
+func (c CLI) Update() error {
+	var impl mage.CLI
+	return impl.Update()
+}
 
 // Enterprise namespace methods
-func (e Enterprise) Init() error { return e.Enterprise.Init() }
-func (e Enterprise) Config() error { return e.Enterprise.Config() }
-func (e Enterprise) Deploy() error { return e.Enterprise.Deploy() }
-func (e Enterprise) Rollback() error { return e.Enterprise.Rollback() }
-func (e Enterprise) Promote() error { return e.Enterprise.Promote() }
-func (e Enterprise) Status() error { return e.Enterprise.Status() }
-func (e Enterprise) Backup() error { return e.Enterprise.Backup() }
-func (e Enterprise) Restore() error { return e.Enterprise.Restore() }
+func (e Enterprise) Init() error {
+	var impl mage.Enterprise
+	return impl.Init()
+}
+
+func (e Enterprise) Config() error {
+	var impl mage.Enterprise
+	return impl.Config()
+}
+
+func (e Enterprise) Deploy() error {
+	var impl mage.Enterprise
+	return impl.Deploy()
+}
+
+func (e Enterprise) Rollback() error {
+	var impl mage.Enterprise
+	return impl.Rollback()
+}
+
+func (e Enterprise) Promote() error {
+	var impl mage.Enterprise
+	return impl.Promote()
+}
+
+func (e Enterprise) Status() error {
+	var impl mage.Enterprise
+	return impl.Status()
+}
+
+func (e Enterprise) Backup() error {
+	var impl mage.Enterprise
+	return impl.Backup()
+}
+
+func (e Enterprise) Restore() error {
+	var impl mage.Enterprise
+	return impl.Restore()
+}
 
 // EnterpriseConfig namespace methods
-func (e EnterpriseConfig) Init() error { return e.EnterpriseConfigNamespace.Init() }
-func (e EnterpriseConfig) Validate() error { return e.EnterpriseConfigNamespace.Validate() }
-func (e EnterpriseConfig) Update() error { return e.EnterpriseConfigNamespace.Update() }
-func (e EnterpriseConfig) Export() error { return e.EnterpriseConfigNamespace.Export() }
-func (e EnterpriseConfig) Import() error { return e.EnterpriseConfigNamespace.Import() }
-func (e EnterpriseConfig) Schema() error { return e.EnterpriseConfigNamespace.Schema() }
+func (e EnterpriseConfig) Init() error {
+	var impl mage.EnterpriseConfigNamespace
+	return impl.Init()
+}
+
+func (e EnterpriseConfig) Validate() error {
+	var impl mage.EnterpriseConfigNamespace
+	return impl.Validate()
+}
+
+func (e EnterpriseConfig) Update() error {
+	var impl mage.EnterpriseConfigNamespace
+	return impl.Update()
+}
+
+func (e EnterpriseConfig) Export() error {
+	var impl mage.EnterpriseConfigNamespace
+	return impl.Export()
+}
+
+func (e EnterpriseConfig) Import() error {
+	var impl mage.EnterpriseConfigNamespace
+	return impl.Import()
+}
+
+func (e EnterpriseConfig) Schema() error {
+	var impl mage.EnterpriseConfigNamespace
+	return impl.Schema()
+}
 
 // Releases namespace methods
-func (r Releases) Create() error { return r.Releases.Create() }
-func (r Releases) Publish() error { return r.Releases.Publish() }
-func (r Releases) Stable() error { return r.Releases.Stable() }
-func (r Releases) Beta() error { return r.Releases.Beta() }
-func (r Releases) Edge() error { return r.Releases.Edge() }
-func (r Releases) Draft() error { return r.Releases.Draft() }
-func (r Releases) Promote() error { return r.Releases.Promote() }
-func (r Releases) Status() error { return r.Releases.Status() }
-func (r Releases) Channels() error { return r.Releases.Channels() }
-func (r Releases) Cleanup() error { return r.Releases.Cleanup() }
+func (r Releases) Create() error {
+	var impl mage.Releases
+	return impl.Create()
+}
+
+func (r Releases) Publish() error {
+	var impl mage.Releases
+	return impl.Publish()
+}
+
+func (r Releases) Stable() error {
+	var impl mage.Releases
+	return impl.Stable()
+}
+
+func (r Releases) Beta() error {
+	var impl mage.Releases
+	return impl.Beta()
+}
+
+func (r Releases) Edge() error {
+	var impl mage.Releases
+	return impl.Edge()
+}
+
+func (r Releases) Draft() error {
+	var impl mage.Releases
+	return impl.Draft()
+}
+
+func (r Releases) Promote() error {
+	var impl mage.Releases
+	return impl.Promote()
+}
+
+func (r Releases) Status() error {
+	var impl mage.Releases
+	return impl.Status()
+}
+
+func (r Releases) Channels() error {
+	var impl mage.Releases
+	return impl.Channels()
+}
+
+func (r Releases) Cleanup() error {
+	var impl mage.Releases
+	return impl.Cleanup()
+}
 
 // Wizard namespace methods
-func (w Wizard) Setup() error { return w.Wizard.Setup() }
-func (w Wizard) Project() error { return w.Wizard.Project() }
-func (w Wizard) Integration() error { return w.Wizard.Integration() }
-func (w Wizard) Security() error { return w.Wizard.Security() }
-func (w Wizard) Workflow() error { return w.Wizard.Workflow() }
-func (w Wizard) Deployment() error { return w.Wizard.Deployment() }
+func (w Wizard) Setup() error {
+	var impl mage.Wizard
+	return impl.Setup()
+}
+
+func (w Wizard) Project() error {
+	var impl mage.Wizard
+	return impl.Project()
+}
+
+func (w Wizard) Integration() error {
+	var impl mage.Wizard
+	return impl.Integration()
+}
+
+func (w Wizard) Security() error {
+	var impl mage.Wizard
+	return impl.Security()
+}
+
+func (w Wizard) Workflow() error {
+	var impl mage.Wizard
+	return impl.Workflow()
+}
+
+func (w Wizard) Deployment() error {
+	var impl mage.Wizard
+	return impl.Deployment()
+}
+
 // Run method not available in wizard namespace
 // GetName method not available in wizard namespace
 // GetDescription method not available in wizard namespace
 
 // Workflow namespace methods
-func (w Workflow) Execute() error { return w.Workflow.Execute() }
-func (w Workflow) List() error { return w.Workflow.List() }
-func (w Workflow) Status() error { return w.Workflow.Status() }
-func (w Workflow) Create() error { return w.Workflow.Create() }
-func (w Workflow) Validate() error { return w.Workflow.Validate() }
-func (w Workflow) Schedule() error { return w.Workflow.Schedule() }
-func (w Workflow) Template() error { return w.Workflow.Template() }
-func (w Workflow) History() error { return w.Workflow.History() }
+func (w Workflow) Execute() error {
+	var impl mage.Workflow
+	return impl.Execute()
+}
+
+func (w Workflow) List() error {
+	var impl mage.Workflow
+	return impl.List()
+}
+
+func (w Workflow) Status() error {
+	var impl mage.Workflow
+	return impl.Status()
+}
+
+func (w Workflow) Create() error {
+	var impl mage.Workflow
+	return impl.Create()
+}
+
+func (w Workflow) Validate() error {
+	var impl mage.Workflow
+	return impl.Validate()
+}
+
+func (w Workflow) Schedule() error {
+	var impl mage.Workflow
+	return impl.Schedule()
+}
+
+func (w Workflow) Template() error {
+	var impl mage.Workflow
+	return impl.Template()
+}
+
+func (w Workflow) History() error {
+	var impl mage.Workflow
+	return impl.History()
+}
 
 // Yaml namespace methods
-func (y Yaml) Init() error { return y.Yaml.Init() }
-func (y Yaml) Validate() error { return y.Yaml.Validate() }
-func (y Yaml) Show() error { return y.Yaml.Show() }
-func (y Yaml) Update() error { return y.Yaml.Update() }
-func (y Yaml) Template() error { return y.Yaml.Template() }
-*/
+func (y Yaml) Init() error {
+	var impl mage.Yaml
+	return impl.Init()
+}
+
+func (y Yaml) Validate() error {
+	var impl mage.Yaml
+	return impl.Validate()
+}
+
+func (y Yaml) Show() error {
+	var impl mage.Yaml
+	return impl.Show()
+}
+
+func (y Yaml) Update() error {
+	var impl mage.Yaml
+	return impl.Update()
+}
+
+func (y Yaml) Template() error {
+	var impl mage.Yaml
+	return impl.Template()
+}
