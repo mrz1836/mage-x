@@ -61,3 +61,4 @@ tests/.mage-cache/
 /examples/basic/magefile-compiled
 /cmd/magex/magex
 /examples/override-commands/override-commands
+/tests/compatibility/magex

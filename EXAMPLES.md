@@ -29,6 +29,7 @@ func TestCustomEnvironment(t *testing.T) {
 	// In a real app, you might check database connections, etc.
 	t.Log("Custom test environment validation would go here")
 }
+
 ```
 
 ## test
