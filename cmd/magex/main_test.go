@@ -586,8 +586,8 @@ func TestEnvironmentVariables(t *testing.T) {
 	if os.Getenv("MAGEX_VERBOSE") != "true" {
 		t.Error("Verbose flag should set MAGEX_VERBOSE=true")
 	}
-	if os.Getenv("MAGE_VERBOSE") != "1" {
-		t.Error("Verbose flag should set MAGE_VERBOSE=1")
+	if os.Getenv("MAGE_X_VERBOSE") != "1" {
+		t.Error("Verbose flag should set MAGE_X_VERBOSE=1")
 	}
 
 	// Reset
@@ -597,7 +597,7 @@ func TestEnvironmentVariables(t *testing.T) {
 		// Test reset error is non-critical
 		_ = err
 	}
-	if err := os.Unsetenv("MAGE_VERBOSE"); err != nil {
+	if err := os.Unsetenv("MAGE_X_VERBOSE"); err != nil {
 		// Test reset error is non-critical
 		_ = err
 	}
@@ -608,8 +608,8 @@ func TestEnvironmentVariables(t *testing.T) {
 	if os.Getenv("MAGEX_DEBUG") != "true" {
 		t.Error("Debug flag should set MAGEX_DEBUG=true")
 	}
-	if os.Getenv("MAGE_DEBUG") != "1" {
-		t.Error("Debug flag should set MAGE_DEBUG=1")
+	if os.Getenv("MAGE_X_DEBUG") != "1" {
+		t.Error("Debug flag should set MAGE_X_DEBUG=1")
 	}
 }
 
@@ -620,7 +620,7 @@ func setEnvironmentFromFlags(flags *Flags) {
 			// Test environment variable setting is non-critical
 			_ = err
 		}
-		if err := os.Setenv("MAGE_VERBOSE", "1"); err != nil {
+		if err := os.Setenv("MAGE_X_VERBOSE", "1"); err != nil {
 			// Test environment variable setting is non-critical
 			_ = err
 		}
@@ -630,7 +630,7 @@ func setEnvironmentFromFlags(flags *Flags) {
 			// Test environment variable setting is non-critical
 			_ = err
 		}
-		if err := os.Setenv("MAGE_DEBUG", "1"); err != nil {
+		if err := os.Setenv("MAGE_X_DEBUG", "1"); err != nil {
 			// Test environment variable setting is non-critical
 			_ = err
 		}

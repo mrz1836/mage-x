@@ -159,12 +159,12 @@ func (r *AuditRegistry) GetDefaultLogger() *AuditLogger {
 	config := DefaultAuditConfig()
 
 	// Check if audit is enabled via environment variable
-	if os.Getenv("MAGE_AUDIT_ENABLED") == "true" {
+	if os.Getenv("MAGE_X_AUDIT_ENABLED") == "true" {
 		config.Enabled = true
 	}
 
 	// Override database path if specified
-	if dbPath := os.Getenv("MAGE_AUDIT_DB"); dbPath != "" {
+	if dbPath := os.Getenv("MAGE_X_AUDIT_DB"); dbPath != "" {
 		config.DatabasePath = dbPath
 	}
 

@@ -154,7 +154,7 @@ func (b *TestCommandBuilder) buildBaseTestArgs(options TestOptions) []string {
 	args := []string{"test"}
 
 	// Add verbose flag
-	if b.config.GetBuild().GetVerbose() || utils.GetEnv("VERBOSE", "") == "true" || utils.GetEnv("TEST_VERBOSE", "") == "true" {
+	if b.config.GetBuild().GetVerbose() || utils.GetEnv("MAGE_X_VERBOSE", "") == "true" || utils.GetEnv("MAGE_X_TEST_VERBOSE", "") == "true" {
 		args = append(args, "-v")
 	}
 

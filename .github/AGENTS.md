@@ -231,10 +231,10 @@ type BuildConfig struct {
 
 // Apply environment overrides
 func applyEnvOverrides(cfg *Config) {
-    if tags := os.Getenv("GO_BUILD_TAGS"); tags != "" {
+    if tags := os.Getenv("MAGE_X_BUILD_TAGS"); tags != "" {
         cfg.Build.Tags = strings.Split(tags, ",")
     }
-    if verbose := os.Getenv("VERBOSE"); verbose != "" {
+    if verbose := os.Getenv("MAGE_X_VERBOSE"); verbose != "" {
         cfg.Build.Verbose = verbose == "true"
     }
 }

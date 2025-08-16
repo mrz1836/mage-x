@@ -233,8 +233,8 @@ func TestMageEnvironmentVariables(t *testing.T) {
 		env  string
 		flag string
 	}{
-		{"verbose_env", "MAGE_VERBOSE=1", "-version"},
-		{"debug_env", "MAGE_DEBUG=1", "-version"},
+		{"verbose_env", "MAGE_X_VERBOSE=1", "-version"},
+		{"debug_env", "MAGE_X_DEBUG=1", "-version"},
 	}
 
 	for _, tt := range tests {

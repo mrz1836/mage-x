@@ -301,21 +301,21 @@ Override any configuration with environment variables:
 
 ```bash
 # Build configuration
-export BINARY_NAME=myapp
-export GO_BUILD_TAGS=prod,feature1
+export MAGE_X_BINARY_NAME=myapp
+export MAGE_X_BUILD_TAGS=prod,feature1
 export GOOS=linux
 export GOARCH=amd64
 
 # Test configuration
-export VERBOSE=true
-export TEST_RACE=true
-export TEST_TIMEOUT=15m
+export MAGE_X_VERBOSE=true
+export MAGE_X_TEST_RACE=true
+export MAGE_X_TEST_TIMEOUT=15m
 
 # Tool configuration
-export PARALLEL=8
-export LINT_TIMEOUT=10m
-export FUZZ_TIME=30s
-export BENCH_TIME=10s
+export MAGE_X_PARALLEL=8
+export MAGE_X_LINT_TIMEOUT=10m
+export MAGE_X_FUZZ_TIME=30s
+export MAGE_X_BENCH_TIME=10s
 
 # Version management
 export BUMP=minor      # Version bump type: patch (default), minor, major

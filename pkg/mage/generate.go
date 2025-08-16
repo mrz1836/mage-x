@@ -44,7 +44,7 @@ func (Generate) Default() error {
 	args := []string{"generate", "-v"}
 
 	// Add build tags if specified
-	if tags := os.Getenv("GO_BUILD_TAGS"); tags != "" {
+	if tags := os.Getenv("MAGE_X_BUILD_TAGS"); tags != "" {
 		args = append(args, "-tags", tags)
 	}
 
@@ -66,7 +66,7 @@ func (Generate) All() error {
 	args := []string{"generate", "-v", "./..."}
 
 	// Add build tags if specified
-	if tags := os.Getenv("GO_BUILD_TAGS"); tags != "" {
+	if tags := os.Getenv("MAGE_X_BUILD_TAGS"); tags != "" {
 		args = append(args, "-tags", tags)
 	}
 

@@ -85,7 +85,7 @@ func (Vet) Default() error {
 	}
 
 	// Add build tags if specified
-	if tags := utils.GetEnv("GO_BUILD_TAGS", ""); tags != "" {
+	if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
 		args = append(args, "-tags", tags)
 	}
 
@@ -113,7 +113,7 @@ func (Vet) All() error {
 	}
 
 	// Add build tags if specified
-	if tags := utils.GetEnv("GO_BUILD_TAGS", ""); tags != "" {
+	if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
 		args = append(args, "-tags", tags)
 	}
 
@@ -178,7 +178,7 @@ func (Vet) Parallel() error {
 			args := []string{"vet"}
 
 			// Add build tags if specified
-			if tags := utils.GetEnv("GO_BUILD_TAGS", ""); tags != "" {
+			if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
 				args = append(args, "-tags", tags)
 			}
 
@@ -234,7 +234,7 @@ func (Vet) Shadow() error {
 	args := []string{"-test=false", "./..."}
 
 	// Add build tags if specified
-	if tags := utils.GetEnv("GO_BUILD_TAGS", ""); tags != "" {
+	if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
 		args = append([]string{"-tags", tags}, args...)
 	}
 

@@ -27,10 +27,10 @@ func (ts *ConfigTestSuite) SetupSuite() {
 	// Store original environment variables
 	ts.origEnvVars = make(map[string]string)
 	envVars := []string{
-		"BINARY_NAME", "CUSTOM_BINARY_NAME", "GO_BUILD_TAGS", "VERBOSE",
-		"TEST_RACE", "PARALLEL", "MAGE_ORG_NAME", "MAGE_ORG_DOMAIN",
-		"MAGE_SECURITY_LEVEL", "MAGE_ENABLE_VAULT", "VAULT_ADDR",
-		"MAGE_ANALYTICS_ENABLED", "MAGE_METRICS_INTERVAL",
+		"MAGE_X_BINARY_NAME", "CUSTOM_BINARY_NAME", "MAGE_X_BUILD_TAGS", "MAGE_X_VERBOSE",
+		"MAGE_X_TEST_RACE", "MAGE_X_PARALLEL", "MAGE_X_ORG_NAME", "MAGE_X_ORG_DOMAIN",
+		"MAGE_X_SECURITY_LEVEL", "MAGE_X_ENABLE_VAULT", "VAULT_ADDR",
+		"MAGE_X_ANALYTICS_ENABLED", "MAGE_X_METRICS_INTERVAL",
 	}
 	for _, env := range envVars {
 		ts.origEnvVars[env] = os.Getenv(env)
@@ -59,8 +59,8 @@ func (ts *ConfigTestSuite) SetupTest() {
 
 	// Clear environment variables for clean test state
 	envVars := []string{
-		"BINARY_NAME", "CUSTOM_BINARY_NAME", "GO_BUILD_TAGS", "VERBOSE",
-		"TEST_RACE", "PARALLEL", "MAGE_ORG_NAME", "MAGE_ORG_DOMAIN",
+		"MAGE_X_BINARY_NAME", "CUSTOM_BINARY_NAME", "MAGE_X_BUILD_TAGS", "MAGE_X_VERBOSE",
+		"MAGE_X_TEST_RACE", "MAGE_X_PARALLEL", "MAGE_X_ORG_NAME", "MAGE_X_ORG_DOMAIN",
 	}
 	for _, env := range envVars {
 		ts.Require().NoError(os.Unsetenv(env))
@@ -144,7 +144,7 @@ func (ts *ConfigTestSuite) TestEnvironmentOverrides() {
 		config := defaultConfig()
 
 		// Test BINARY_NAME override
-		ts.Require().NoError(os.Setenv("BINARY_NAME", "custom-binary"))
+		ts.Require().NoError(os.Setenv("MAGE_X_BINARY_NAME", "custom-binary"))
 		applyEnvOverrides(config)
 		ts.Require().Equal("custom-binary", config.Project.Binary)
 
@@ -156,7 +156,7 @@ func (ts *ConfigTestSuite) TestEnvironmentOverrides() {
 
 	ts.Run("BuildTagsOverride", func() {
 		config := defaultConfig()
-		ts.Require().NoError(os.Setenv("GO_BUILD_TAGS", "tag1,tag2,tag3"))
+		ts.Require().NoError(os.Setenv("MAGE_X_BUILD_TAGS", "tag1,tag2,tag3"))
 		applyEnvOverrides(config)
 		ts.Require().Equal([]string{"tag1", "tag2", "tag3"}, config.Build.Tags)
 	})
@@ -165,7 +165,7 @@ func (ts *ConfigTestSuite) TestEnvironmentOverrides() {
 		config := defaultConfig()
 
 		// Test with "true"
-		ts.Require().NoError(os.Setenv("VERBOSE", "true"))
+		ts.Require().NoError(os.Setenv("MAGE_X_VERBOSE", "true"))
 		applyEnvOverrides(config)
 		ts.Require().True(config.Build.Verbose)
 		ts.Require().True(config.Test.Verbose)
@@ -174,14 +174,14 @@ func (ts *ConfigTestSuite) TestEnvironmentOverrides() {
 		config = defaultConfig()
 
 		// Test with "1"
-		ts.Require().NoError(os.Setenv("VERBOSE", "1"))
+		ts.Require().NoError(os.Setenv("MAGE_X_VERBOSE", "1"))
 		applyEnvOverrides(config)
 		ts.Require().True(config.Build.Verbose)
 		ts.Require().True(config.Test.Verbose)
 
 		// Test with "false" (should not change defaults)
 		config = defaultConfig()
-		ts.Require().NoError(os.Setenv("VERBOSE", "false"))
+		ts.Require().NoError(os.Setenv("MAGE_X_VERBOSE", "false"))
 		applyEnvOverrides(config)
 		ts.Require().False(config.Build.Verbose)
 		ts.Require().False(config.Test.Verbose)
@@ -191,34 +191,34 @@ func (ts *ConfigTestSuite) TestEnvironmentOverrides() {
 		config := defaultConfig()
 
 		// Test with "true"
-		ts.Require().NoError(os.Setenv("TEST_RACE", "true"))
+		ts.Require().NoError(os.Setenv("MAGE_X_TEST_RACE", "true"))
 		applyEnvOverrides(config)
 		ts.Require().True(config.Test.Race)
 
 		// Test with "1"
 		config = defaultConfig()
-		ts.Require().NoError(os.Setenv("TEST_RACE", "1"))
+		ts.Require().NoError(os.Setenv("MAGE_X_TEST_RACE", "1"))
 		applyEnvOverrides(config)
 		ts.Require().True(config.Test.Race)
 	})
 
 	ts.Run("ParallelOverride", func() {
 		config := defaultConfig()
-		ts.Require().NoError(os.Setenv("PARALLEL", "8"))
+		ts.Require().NoError(os.Setenv("MAGE_X_PARALLEL", "8"))
 		applyEnvOverrides(config)
 		ts.Require().Equal(8, config.Build.Parallel)
 
 		// Test invalid value (should not change config)
 		config = defaultConfig()
 		originalParallel := config.Build.Parallel
-		ts.Require().NoError(os.Setenv("PARALLEL", "invalid"))
+		ts.Require().NoError(os.Setenv("MAGE_X_PARALLEL", "invalid"))
 		applyEnvOverrides(config)
 		ts.Require().Equal(originalParallel, config.Build.Parallel)
 
 		// Test zero value (should not change config)
 		config = defaultConfig()
 		originalParallel = config.Build.Parallel
-		ts.Require().NoError(os.Setenv("PARALLEL", "0"))
+		ts.Require().NoError(os.Setenv("MAGE_X_PARALLEL", "0"))
 		applyEnvOverrides(config)
 		ts.Require().Equal(originalParallel, config.Build.Parallel)
 	})
@@ -234,8 +234,8 @@ func (ts *ConfigTestSuite) TestEnterpriseEnvironmentOverrides() {
 			},
 		}
 
-		ts.Require().NoError(os.Setenv("MAGE_ORG_NAME", "New Org"))
-		ts.Require().NoError(os.Setenv("MAGE_ORG_DOMAIN", "new.com"))
+		ts.Require().NoError(os.Setenv("MAGE_X_ORG_NAME", "New Org"))
+		ts.Require().NoError(os.Setenv("MAGE_X_ORG_DOMAIN", "new.com"))
 
 		applyEnterpriseEnvOverrides(enterpriseConfig)
 
@@ -245,11 +245,11 @@ func (ts *ConfigTestSuite) TestEnterpriseEnvironmentOverrides() {
 
 	ts.Run("PlaceholderEnvironmentVariables", func() {
 		// Test that placeholder environment variables don't cause errors
-		ts.Require().NoError(os.Setenv("MAGE_SECURITY_LEVEL", "high"))
-		ts.Require().NoError(os.Setenv("MAGE_ENABLE_VAULT", "true"))
+		ts.Require().NoError(os.Setenv("MAGE_X_SECURITY_LEVEL", "high"))
+		ts.Require().NoError(os.Setenv("MAGE_X_ENABLE_VAULT", "true"))
 		ts.Require().NoError(os.Setenv("VAULT_ADDR", "https://vault.example.com"))
-		ts.Require().NoError(os.Setenv("MAGE_ANALYTICS_ENABLED", "true"))
-		ts.Require().NoError(os.Setenv("MAGE_METRICS_INTERVAL", "30s"))
+		ts.Require().NoError(os.Setenv("MAGE_X_ANALYTICS_ENABLED", "true"))
+		ts.Require().NoError(os.Setenv("MAGE_X_METRICS_INTERVAL", "30s"))
 
 		enterpriseConfig := &EnterpriseConfiguration{}
 
@@ -268,7 +268,7 @@ func (ts *ConfigTestSuite) TestEnterpriseEnvironmentOverrides() {
 			},
 		}
 
-		ts.Require().NoError(os.Setenv("MAGE_ORG_NAME", "Updated Org"))
+		ts.Require().NoError(os.Setenv("MAGE_X_ORG_NAME", "Updated Org"))
 		applyEnvOverrides(config)
 
 		ts.Require().Equal("Updated Org", config.Enterprise.Organization.Name)

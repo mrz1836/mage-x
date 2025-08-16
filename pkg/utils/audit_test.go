@@ -629,17 +629,17 @@ func TestPackageLevelAuditFunctions(t *testing.T) {
 }
 
 func TestEnvironmentVariableConfiguration(t *testing.T) {
-	t.Run("MAGE_AUDIT_ENABLED enables audit", func(t *testing.T) {
+	t.Run("MAGE_X_AUDIT_ENABLED enables audit", func(t *testing.T) {
 		// Save original environment
-		original := os.Getenv("MAGE_AUDIT_ENABLED")
+		original := os.Getenv("MAGE_X_AUDIT_ENABLED")
 		defer func() {
 			if original == "" {
-				if err := os.Unsetenv("MAGE_AUDIT_ENABLED"); err != nil {
-					t.Logf("Warning: failed to unset MAGE_AUDIT_ENABLED: %v", err)
+				if err := os.Unsetenv("MAGE_X_AUDIT_ENABLED"); err != nil {
+					t.Logf("Warning: failed to unset MAGE_X_AUDIT_ENABLED: %v", err)
 				}
 			} else {
-				if err := os.Setenv("MAGE_AUDIT_ENABLED", original); err != nil {
-					t.Logf("Warning: failed to set MAGE_AUDIT_ENABLED: %v", err)
+				if err := os.Setenv("MAGE_X_AUDIT_ENABLED", original); err != nil {
+					t.Logf("Warning: failed to set MAGE_X_AUDIT_ENABLED: %v", err)
 				}
 			}
 		}()
@@ -648,8 +648,8 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 		defaultRegistry = NewAuditRegistry()
 
 		// Set environment variable
-		if err := os.Setenv("MAGE_AUDIT_ENABLED", "true"); err != nil {
-			t.Fatalf("Failed to set MAGE_AUDIT_ENABLED: %v", err)
+		if err := os.Setenv("MAGE_X_AUDIT_ENABLED", "true"); err != nil {
+			t.Fatalf("Failed to set MAGE_X_AUDIT_ENABLED: %v", err)
 		}
 
 		logger := GetAuditLogger()
@@ -657,27 +657,27 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 		assert.True(t, logger.config.Enabled)
 	})
 
-	t.Run("MAGE_AUDIT_DB sets database path", func(t *testing.T) {
+	t.Run("MAGE_X_AUDIT_DB sets database path", func(t *testing.T) {
 		// Save original environment
-		originalEnabled := os.Getenv("MAGE_AUDIT_ENABLED")
-		originalDB := os.Getenv("MAGE_AUDIT_DB")
+		originalEnabled := os.Getenv("MAGE_X_AUDIT_ENABLED")
+		originalDB := os.Getenv("MAGE_X_AUDIT_DB")
 		defer func() {
 			if originalEnabled == "" {
-				if err := os.Unsetenv("MAGE_AUDIT_ENABLED"); err != nil {
-					t.Logf("Warning: failed to unset MAGE_AUDIT_ENABLED: %v", err)
+				if err := os.Unsetenv("MAGE_X_AUDIT_ENABLED"); err != nil {
+					t.Logf("Warning: failed to unset MAGE_X_AUDIT_ENABLED: %v", err)
 				}
 			} else {
-				if err := os.Setenv("MAGE_AUDIT_ENABLED", originalEnabled); err != nil {
-					t.Logf("Warning: failed to set MAGE_AUDIT_ENABLED: %v", err)
+				if err := os.Setenv("MAGE_X_AUDIT_ENABLED", originalEnabled); err != nil {
+					t.Logf("Warning: failed to set MAGE_X_AUDIT_ENABLED: %v", err)
 				}
 			}
 			if originalDB == "" {
-				if err := os.Unsetenv("MAGE_AUDIT_DB"); err != nil {
-					t.Logf("Warning: failed to unset MAGE_AUDIT_DB: %v", err)
+				if err := os.Unsetenv("MAGE_X_AUDIT_DB"); err != nil {
+					t.Logf("Warning: failed to unset MAGE_X_AUDIT_DB: %v", err)
 				}
 			} else {
-				if err := os.Setenv("MAGE_AUDIT_DB", originalDB); err != nil {
-					t.Logf("Warning: failed to set MAGE_AUDIT_DB: %v", err)
+				if err := os.Setenv("MAGE_X_AUDIT_DB", originalDB); err != nil {
+					t.Logf("Warning: failed to set MAGE_X_AUDIT_DB: %v", err)
 				}
 			}
 		}()
@@ -686,11 +686,11 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 		defaultRegistry = NewAuditRegistry()
 
 		// Set environment variables
-		if err := os.Setenv("MAGE_AUDIT_ENABLED", "true"); err != nil {
-			t.Fatalf("Failed to set MAGE_AUDIT_ENABLED: %v", err)
+		if err := os.Setenv("MAGE_X_AUDIT_ENABLED", "true"); err != nil {
+			t.Fatalf("Failed to set MAGE_X_AUDIT_ENABLED: %v", err)
 		}
-		if err := os.Setenv("MAGE_AUDIT_DB", "/custom/path/audit.db"); err != nil {
-			t.Fatalf("Failed to set MAGE_AUDIT_DB: %v", err)
+		if err := os.Setenv("MAGE_X_AUDIT_DB", "/custom/path/audit.db"); err != nil {
+			t.Fatalf("Failed to set MAGE_X_AUDIT_DB: %v", err)
 		}
 
 		logger := GetAuditLogger()

@@ -89,16 +89,16 @@ func main() {
 		if err := os.Setenv("MAGEX_VERBOSE", "true"); err != nil {
 			fmt.Printf("Warning: Could not set MAGEX_VERBOSE: %v\n", err)
 		}
-		if err := os.Setenv("MAGE_VERBOSE", "1"); err != nil {
-			fmt.Printf("Warning: Could not set MAGE_VERBOSE: %v\n", err)
+		if err := os.Setenv("MAGE_X_VERBOSE", "1"); err != nil {
+			fmt.Printf("Warning: Could not set MAGE_X_VERBOSE: %v\n", err)
 		}
 	}
 	if *flags.Debug {
 		if err := os.Setenv("MAGEX_DEBUG", "true"); err != nil {
 			fmt.Printf("Warning: Could not set MAGEX_DEBUG: %v\n", err)
 		}
-		if err := os.Setenv("MAGE_DEBUG", "1"); err != nil {
-			fmt.Printf("Warning: Could not set MAGE_DEBUG: %v\n", err)
+		if err := os.Setenv("MAGE_X_DEBUG", "1"); err != nil {
+			fmt.Printf("Warning: Could not set MAGE_X_DEBUG: %v\n", err)
 		}
 	}
 

@@ -298,11 +298,11 @@ func (ts *TestCommandBuilderTestSuite) TestGetCoverageExcludePackages() {
 }
 
 func (ts *TestCommandBuilderTestSuite) TestBuildBaseTestArgsWithEnvironmentVerbose() {
-	// Test with VERBOSE environment variable
-	err := os.Setenv("VERBOSE", "true")
+	// Test with MAGE_X_VERBOSE environment variable
+	err := os.Setenv("MAGE_X_VERBOSE", "true")
 	ts.Require().NoError(err)
 	defer func() {
-		err := os.Unsetenv("VERBOSE")
+		err := os.Unsetenv("MAGE_X_VERBOSE")
 		ts.Require().NoError(err)
 	}()
 
@@ -324,11 +324,11 @@ func (ts *TestCommandBuilderTestSuite) TestBuildBaseTestArgsWithEnvironmentVerbo
 }
 
 func (ts *TestCommandBuilderTestSuite) TestBuildBaseTestArgsWithTestVerbose() {
-	// Test with TEST_VERBOSE environment variable
-	err := os.Setenv("TEST_VERBOSE", "true")
+	// Test with MAGE_X_TEST_VERBOSE environment variable
+	err := os.Setenv("MAGE_X_TEST_VERBOSE", "true")
 	ts.Require().NoError(err)
 	defer func() {
-		err := os.Unsetenv("TEST_VERBOSE")
+		err := os.Unsetenv("MAGE_X_TEST_VERBOSE")
 		ts.Require().NoError(err)
 	}()
 

@@ -241,7 +241,7 @@ func defaultConfig() *Config {
 // applyEnvOverrides applies environment variable overrides to config
 func applyEnvOverrides(c *Config) {
 	// Binary name override
-	if v := os.Getenv("BINARY_NAME"); v != "" {
+	if v := os.Getenv("MAGE_X_BINARY_NAME"); v != "" {
 		c.Project.Binary = v
 	}
 	if v := os.Getenv("CUSTOM_BINARY_NAME"); v != "" {
@@ -249,23 +249,23 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Build tags override
-	if v := os.Getenv("GO_BUILD_TAGS"); v != "" {
+	if v := os.Getenv("MAGE_X_BUILD_TAGS"); v != "" {
 		c.Build.Tags = strings.Split(v, ",")
 	}
 
 	// Verbose override
-	if v := os.Getenv("VERBOSE"); v == approvalTrue || v == "1" {
+	if v := os.Getenv("MAGE_X_VERBOSE"); v == approvalTrue || v == "1" {
 		c.Build.Verbose = true
 		c.Test.Verbose = true
 	}
 
 	// Test race override
-	if v := os.Getenv("TEST_RACE"); v == approvalTrue || v == "1" {
+	if v := os.Getenv("MAGE_X_TEST_RACE"); v == approvalTrue || v == "1" {
 		c.Test.Race = true
 	}
 
 	// Parallel override
-	if v := os.Getenv("PARALLEL"); v != "" {
+	if v := os.Getenv("MAGE_X_PARALLEL"); v != "" {
 		var parallel int
 		if _, err := fmt.Sscanf(v, "%d", &parallel); err == nil && parallel > 0 {
 			c.Build.Parallel = parallel
@@ -284,7 +284,7 @@ func applyEnvOverrides(c *Config) {
 // applyDownloadEnvOverrides applies environment variable overrides to download config
 func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	// Max retries override
-	if v := os.Getenv("MAGE_DOWNLOAD_RETRIES"); v != "" {
+	if v := os.Getenv("MAGE_X_DOWNLOAD_RETRIES"); v != "" {
 		var retries int
 		if _, err := fmt.Sscanf(v, "%d", &retries); err == nil && retries >= 0 {
 			cfg.MaxRetries = retries
@@ -292,7 +292,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Timeout override
-	if v := os.Getenv("MAGE_DOWNLOAD_TIMEOUT"); v != "" {
+	if v := os.Getenv("MAGE_X_DOWNLOAD_TIMEOUT"); v != "" {
 		var timeout int
 		if _, err := fmt.Sscanf(v, "%d", &timeout); err == nil && timeout > 0 {
 			cfg.TimeoutMs = timeout
@@ -300,7 +300,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Initial delay override
-	if v := os.Getenv("MAGE_DOWNLOAD_INITIAL_DELAY"); v != "" {
+	if v := os.Getenv("MAGE_X_DOWNLOAD_INITIAL_DELAY"); v != "" {
 		var delay int
 		if _, err := fmt.Sscanf(v, "%d", &delay); err == nil && delay > 0 {
 			cfg.InitialDelayMs = delay
@@ -308,7 +308,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Max delay override
-	if v := os.Getenv("MAGE_DOWNLOAD_MAX_DELAY"); v != "" {
+	if v := os.Getenv("MAGE_X_DOWNLOAD_MAX_DELAY"); v != "" {
 		var delay int
 		if _, err := fmt.Sscanf(v, "%d", &delay); err == nil && delay > 0 {
 			cfg.MaxDelayMs = delay
@@ -316,7 +316,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Backoff multiplier override
-	if v := os.Getenv("MAGE_DOWNLOAD_BACKOFF"); v != "" {
+	if v := os.Getenv("MAGE_X_DOWNLOAD_BACKOFF"); v != "" {
 		var backoff float64
 		if _, err := fmt.Sscanf(v, "%f", &backoff); err == nil && backoff > 0 {
 			cfg.BackoffMultiplier = backoff
@@ -324,14 +324,14 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Resume override
-	if v := os.Getenv("MAGE_DOWNLOAD_RESUME"); v == approvalTrue || v == "1" {
+	if v := os.Getenv("MAGE_X_DOWNLOAD_RESUME"); v == approvalTrue || v == "1" {
 		cfg.EnableResume = true
 	} else if v == "false" || v == "0" {
 		cfg.EnableResume = false
 	}
 
 	// User agent override
-	if v := os.Getenv("MAGE_DOWNLOAD_USER_AGENT"); v != "" {
+	if v := os.Getenv("MAGE_X_DOWNLOAD_USER_AGENT"); v != "" {
 		cfg.UserAgent = v
 	}
 }
@@ -339,25 +339,25 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 // applyEnterpriseEnvOverrides applies environment variable overrides to enterprise config
 func applyEnterpriseEnvOverrides(cfg *EnterpriseConfiguration) {
 	// Organization overrides
-	if v := os.Getenv("MAGE_ORG_NAME"); v != "" {
+	if v := os.Getenv("MAGE_X_ORG_NAME"); v != "" {
 		cfg.Organization.Name = v
 	}
-	if v := os.Getenv("MAGE_ORG_DOMAIN"); v != "" {
+	if v := os.Getenv("MAGE_X_ORG_DOMAIN"); v != "" {
 		cfg.Organization.Domain = v
 	}
 
 	// Security configuration environment variables are reserved for future implementation.
 	// When Security field is added to Config, these will be processed:
-	_ = os.Getenv("MAGE_SECURITY_LEVEL") // placeholder for security level
+	_ = os.Getenv("MAGE_X_SECURITY_LEVEL") // placeholder for security level
 	// Vault integration is reserved for future implementation.
 	// When Security field is added to Config, these will be processed:
-	_ = os.Getenv("MAGE_ENABLE_VAULT") // placeholder for vault enabled
-	_ = os.Getenv("VAULT_ADDR")        // placeholder for vault address
+	_ = os.Getenv("MAGE_X_ENABLE_VAULT") // placeholder for vault enabled
+	_ = os.Getenv("VAULT_ADDR")          // placeholder for vault address
 
 	// Analytics configuration is reserved for future implementation.
 	// When Analytics field is added to Config, these will be processed:
-	_ = os.Getenv("MAGE_ANALYTICS_ENABLED") // placeholder for analytics enabled
-	_ = os.Getenv("MAGE_METRICS_INTERVAL")  // placeholder for metrics interval
+	_ = os.Getenv("MAGE_X_ANALYTICS_ENABLED") // placeholder for analytics enabled
+	_ = os.Getenv("MAGE_X_METRICS_INTERVAL")  // placeholder for metrics interval
 }
 
 // BinaryName returns the configured binary name

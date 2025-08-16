@@ -427,8 +427,8 @@ func getFilteredEnvironment() map[string]string {
 		"GOOS",
 		"GOARCH",
 		"CGO_ENABLED",
-		"MAGE_VERBOSE",
-		"MAGE_AUDIT_ENABLED",
+		"MAGE_X_VERBOSE",
+		"MAGE_X_AUDIT_ENABLED",
 	}
 
 	for _, envVar := range relevantEnvs {

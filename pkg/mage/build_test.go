@@ -34,8 +34,8 @@ func (ts *BuildTestSuite) SetupTest() {
 	ts.env.CreateGoMod("test/module")
 	ts.build = Build{}
 	// Disable cache for tests
-	if err := os.Setenv("MAGE_CACHE_DISABLED", "true"); err != nil {
-		ts.T().Fatalf("Failed to set MAGE_CACHE_DISABLED: %v", err)
+	if err := os.Setenv("MAGE_X_CACHE_DISABLED", "true"); err != nil {
+		ts.T().Fatalf("Failed to set MAGE_X_CACHE_DISABLED: %v", err)
 	}
 }
 
@@ -54,8 +54,8 @@ func (ts *BuildTestSuite) TearDownTest() {
 	if err := os.Unsetenv("DOCKER_BUILDKIT"); err != nil {
 		ts.T().Logf("Failed to unset DOCKER_BUILDKIT: %v", err)
 	}
-	if err := os.Unsetenv("MAGE_CACHE_DISABLED"); err != nil {
-		ts.T().Logf("Failed to unset MAGE_CACHE_DISABLED: %v", err)
+	if err := os.Unsetenv("MAGE_X_CACHE_DISABLED"); err != nil {
+		ts.T().Logf("Failed to unset MAGE_X_CACHE_DISABLED: %v", err)
 	}
 
 	// Reset global config

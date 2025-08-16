@@ -394,7 +394,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 		// Set some environment variables
 		originalGoVersion := os.Getenv("GO_VERSION")
 		originalGoPath := os.Getenv("GOPATH")
-		originalMageVerbose := os.Getenv("MAGE_VERBOSE")
+		originalMageVerbose := os.Getenv("MAGE_X_VERBOSE")
 		defer func() {
 			if err := os.Setenv("GO_VERSION", originalGoVersion); err != nil {
 				ts.T().Logf("Failed to restore GO_VERSION: %v", err)
@@ -402,8 +402,8 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			if err := os.Setenv("GOPATH", originalGoPath); err != nil {
 				ts.T().Logf("Failed to restore GOPATH: %v", err)
 			}
-			if err := os.Setenv("MAGE_VERBOSE", originalMageVerbose); err != nil {
-				ts.T().Logf("Failed to restore MAGE_VERBOSE: %v", err)
+			if err := os.Setenv("MAGE_X_VERBOSE", originalMageVerbose); err != nil {
+				ts.T().Logf("Failed to restore MAGE_X_VERBOSE: %v", err)
 			}
 		}()
 
@@ -413,15 +413,15 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 		if err := os.Setenv("GOPATH", "/go"); err != nil {
 			ts.T().Fatalf("Failed to set GOPATH: %v", err)
 		}
-		if err := os.Setenv("MAGE_VERBOSE", "true"); err != nil {
-			ts.T().Fatalf("Failed to set MAGE_VERBOSE: %v", err)
+		if err := os.Setenv("MAGE_X_VERBOSE", "true"); err != nil {
+			ts.T().Fatalf("Failed to set MAGE_X_VERBOSE: %v", err)
 		}
 
 		env := getFilteredEnvironment()
 		ts.Require().Contains(env, "GO_VERSION")
 		ts.Require().Equal("1.24.0", env["GO_VERSION"])
 		ts.Require().Contains(env, "GOPATH")
-		ts.Require().Contains(env, "MAGE_VERBOSE")
+		ts.Require().Contains(env, "MAGE_X_VERBOSE")
 
 		// Should not contain non-relevant environment variables
 		ts.Require().NotContains(env, "HOME")
@@ -636,7 +636,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 			"LIMIT":              os.Getenv("LIMIT"),
 			"OUTPUT":             os.Getenv("OUTPUT"),
 			"GO_VERSION":         os.Getenv("GO_VERSION"),
-			"MAGE_AUDIT_ENABLED": os.Getenv("MAGE_AUDIT_ENABLED"),
+			"MAGE_X_AUDIT_ENABLED": os.Getenv("MAGE_X_AUDIT_ENABLED"),
 		}
 		defer func() {
 			for key, value := range originalVars {
@@ -670,8 +670,8 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 		if err := os.Setenv("GO_VERSION", "1.24.0"); err != nil {
 			ts.T().Fatalf("Failed to set GO_VERSION: %v", err)
 		}
-		if err := os.Setenv("MAGE_AUDIT_ENABLED", "true"); err != nil {
-			ts.T().Fatalf("Failed to set MAGE_AUDIT_ENABLED: %v", err)
+		if err := os.Setenv("MAGE_X_AUDIT_ENABLED", "true"); err != nil {
+			ts.T().Fatalf("Failed to set MAGE_X_AUDIT_ENABLED: %v", err)
 		}
 
 		err := ts.env.WithMockRunner(

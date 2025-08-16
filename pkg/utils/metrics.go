@@ -236,12 +236,12 @@ func createDefaultCollector() *MetricsCollector {
 	config := DefaultMetricsConfig()
 
 	// Check if metrics are enabled via environment variable
-	if os.Getenv("MAGE_METRICS_ENABLED") == "true" {
+	if os.Getenv("MAGE_X_METRICS_ENABLED") == "true" {
 		config.Enabled = true
 	}
 
 	// Override storage path if specified
-	if storagePath := os.Getenv("MAGE_METRICS_PATH"); storagePath != "" {
+	if storagePath := os.Getenv("MAGE_X_METRICS_PATH"); storagePath != "" {
 		config.StoragePath = storagePath
 	}
 
