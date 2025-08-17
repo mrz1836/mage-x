@@ -122,20 +122,39 @@
 
 ## ⚡ Quick Start
 
-### Zero Boilerplate with MAGE-X
+### 🎯 Which Path Should I Take?
+
+MAGE-X automatically detects your project structure and **just works**:
+
+| Your Project Structure                 | What MAGE-X Does                  | Example                    |
+|----------------------------------------|-----------------------------------|----------------------------|
+| **Single Binary**<br>`main.go` in root | Builds to `bin/projectname`       | Simple CLI tools, services |
+| **Multi-Binary**<br>`cmd/*/main.go`    | Auto-detects & builds first found | Microservices, tool suites |
+| **Library**<br>No main package         | Verifies compilation with `./...` | Packages, shared libraries |
+
+> 📖 **Need more details?** See the [Complete Quick Start Guide](docs/QUICK_START.md) for project-specific examples and troubleshooting.
+
+### Zero Boilerplate Installation
 
 ```bash
 # 1. Install magex binary (one time)
 go install github.com/mrz1836/mage-x/cmd/magex@latest
 
 # 2. Use it immediately in ANY Go project (no setup!)
-magex build         # Build your project
+magex build         # Automatically detects & builds your project
 magex test          # Run tests
 magex lint:fix      # Fix linting issues
 magex format:fix    # Format your code
 
 # That's it! No magefile.go needed! 🚀
 ```
+
+### 🔍 Quick Project Check
+```bash
+# See what MAGE-X detects in your project:
+magex build --dry-run  # Shows what will be built without building
+```
+
 <br>
 
 ### Full Command List

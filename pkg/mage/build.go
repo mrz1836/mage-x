@@ -193,6 +193,11 @@ func (b Build) determinePackagePath(outputPath string, requireMain bool) (string
 		return ".", nil
 	}
 
+	// Check for any main package in cmd/ subdirectories
+	if cmdPath := findMainInCmdDir(); cmdPath != "" {
+		return cmdPath, nil
+	}
+
 	// If we're building to a specific binary output and require main, error
 	if requireMain && outputPath != "" && !strings.Contains(outputPath, "...") {
 		return "", ErrNoMainPackage
@@ -417,6 +422,8 @@ func (b Build) Platform(platform string) error {
 		args = append(args, "./cmd/example")
 	} else if utils.FileExists("main.go") {
 		args = append(args, ".")
+	} else if cmdPath := findMainInCmdDir(); cmdPath != "" {
+		args = append(args, cmdPath)
 	} else {
 		// No main package found for platform-specific binary build
 		return ErrNoMainPackage
@@ -557,6 +564,8 @@ func (Build) Install() error {
 		args = append(args, "./cmd/example")
 	} else if utils.FileExists("main.go") {
 		args = append(args, ".")
+	} else if cmdPath := findMainInCmdDir(); cmdPath != "" {
+		args = append(args, cmdPath)
 	} else {
 		// This is a library project, install all packages
 		args = append(args, "./...")
@@ -714,4 +723,63 @@ func getBinarySize(path string) int64 {
 		return info.Size()
 	}
 	return 0
+}
+
+// findMainInCmdDir searches for any main package in cmd/ subdirectories
+func findMainInCmdDir() string {
+	if !utils.DirExists("cmd") {
+		return ""
+	}
+
+	// Read the cmd directory
+	entries, err := os.ReadDir("cmd")
+	if err != nil {
+		return ""
+	}
+
+	// Check each subdirectory for a main.go file
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		subdir := filepath.Join("cmd", entry.Name())
+		mainFile := filepath.Join(subdir, "main.go")
+
+		if utils.FileExists(mainFile) {
+			// Verify it's actually a main package by checking the package declaration
+			if isMainPackage(mainFile) {
+				return "./" + subdir
+			}
+		}
+	}
+
+	return ""
+}
+
+// isMainPackage checks if a Go file contains a main package declaration
+func isMainPackage(filePath string) bool {
+	// Validate the file path to satisfy gosec G304
+	// The path is constructed by findMainInCmdDir and should be safe
+	// but we add validation to ensure it's a .go file in the expected location
+	if !strings.HasSuffix(filePath, ".go") || !strings.Contains(filePath, "cmd/") {
+		return false
+	}
+
+	content, err := os.ReadFile(filepath.Clean(filePath)) // #nosec G304 - path is validated above
+	if err != nil {
+		return false
+	}
+
+	// Simple check for "package main" at the beginning of the file
+	// This is a basic implementation - could be enhanced with proper Go parsing
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "//") || strings.HasPrefix(line, "/*") {
+			continue // Skip empty lines and comments
+		}
+		return strings.HasPrefix(line, "package main")
+	}
+	return false
 }
