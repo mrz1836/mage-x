@@ -103,6 +103,12 @@ jobs:
           echo "## Testing ${{ matrix.namespace.name }} Namespace"
           echo "========================================="
 
+          # Source environment variables for tool versions
+          if [ -f .github/.env.base ]; then
+            source .github/.env.base
+            echo "✅ Loaded tool versions from .github/.env.base"
+          fi
+
           # Run commands based on namespace
           case "${{ matrix.namespace.name }}" in
             "Build")
