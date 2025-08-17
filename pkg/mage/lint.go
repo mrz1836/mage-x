@@ -1133,3 +1133,422 @@ func applyGofmtFallback(start time.Time) error {
 	utils.Success("go fmt formatting applied in %s", utils.FormatDuration(time.Since(start)))
 	return nil
 }
+
+// IssueCount represents counts for a specific issue type
+type IssueCount struct {
+	Message string
+	Count   int
+	Files   []string
+}
+
+// Issues scans the codebase for TODOs, FIXMEs, HACKs, nolint directives, test skips, and disabled files
+func (Lint) Issues() error {
+	utils.Header("Scanning Codebase for Issues")
+
+	start := time.Now()
+
+	// Scan for TODOs, FIXMEs, HACKs
+	todoIssues := scanForComments()
+
+	// Scan for nolint directives
+	nolintIssues := scanForNolintDirectives()
+
+	// Scan for test skips
+	skipIssues := scanForTestSkips()
+
+	// Scan for disabled files
+	disabledFiles := scanForDisabledFiles()
+
+	// Display results
+	displayIssueResults(todoIssues, nolintIssues, skipIssues, disabledFiles)
+
+	// Calculate totals
+	totalTodos := countTotalIssues(todoIssues)
+	totalNolints := countTotalIssues(nolintIssues)
+	totalSkips := countTotalIssues(skipIssues)
+
+	// Display summary
+	utils.Info("\n📊 Summary (scanned in %s):", utils.FormatDuration(time.Since(start)))
+	fmt.Printf("  • Code comments: %d issues\n", totalTodos)
+	fmt.Printf("  • Nolint directives: %d issues\n", totalNolints)
+	fmt.Printf("  • Test skips: %d issues\n", totalSkips)
+	fmt.Printf("  • Disabled files: %d files\n", len(disabledFiles))
+
+	grandTotal := totalTodos + totalNolints + totalSkips + len(disabledFiles)
+	if grandTotal == 0 {
+		utils.Success("✨ No issues found!")
+	} else {
+		utils.Warn("Total: %d issues found", grandTotal)
+	}
+
+	return nil
+}
+
+// scanForComments scans for TODO, FIXME, and HACK comments
+func scanForComments() map[string][]IssueCount {
+	patterns := map[string]string{
+		"TODO":  "TODO",
+		"FIXME": "FIXME",
+		"HACK":  "HACK",
+	}
+
+	results := make(map[string][]IssueCount)
+
+	for category, pattern := range patterns {
+		matches := findMatches(pattern)
+		counts := groupByMessage(matches, pattern)
+		if len(counts) > 0 {
+			results[category] = counts
+		}
+	}
+
+	return results
+}
+
+// scanForNolintDirectives scans for //nolint directives
+func scanForNolintDirectives() map[string][]IssueCount {
+	matches := findMatches("//nolint")
+	results := make(map[string][]IssueCount)
+	if len(matches) > 0 {
+		counts := groupNolintByTag(matches)
+		results["NOLINT"] = counts
+	}
+
+	return results
+}
+
+// scanForTestSkips scans for t.Skip() usage in tests
+func scanForTestSkips() map[string][]IssueCount {
+	matches := findMatches(`t\.Skip\(`)
+	results := make(map[string][]IssueCount)
+	if len(matches) > 0 {
+		counts := groupSkipsByMessage(matches)
+		results["TEST_SKIP"] = counts
+	}
+
+	return results
+}
+
+// scanForDisabledFiles scans for .go.disabled files
+func scanForDisabledFiles() []string {
+	output, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.go.disabled", "-type", "f")
+	if err != nil {
+		// find might fail if no files found, which is okay for this use case
+		return []string{}
+	}
+
+	if output == "" {
+		return []string{}
+	}
+
+	files := strings.Split(strings.TrimSpace(output), "\n")
+	var cleanFiles []string
+	for _, file := range files {
+		if file != "" {
+			cleanFiles = append(cleanFiles, strings.TrimPrefix(file, "./"))
+		}
+	}
+
+	return cleanFiles
+}
+
+// findMatches uses grep to find pattern matches in Go files
+func findMatches(pattern string) []string {
+	// Use word boundaries for comment patterns and exclude binary files
+	var cmd []string
+	if pattern == "TODO" || pattern == "FIXME" || pattern == "HACK" {
+		// Look for comment patterns: // TODO or /* TODO
+		grepPattern := `//.*` + pattern + `|/\*.*` + pattern
+		cmd = []string{"grep", "-rn", "--include=*.go", "--exclude-dir=vendor", "--exclude-dir=.git", "-E", grepPattern, "."}
+	} else {
+		// For other patterns, use them directly
+		cmd = []string{"grep", "-rn", "--include=*.go", "--exclude-dir=vendor", "--exclude-dir=.git", "-E", pattern, "."}
+	}
+
+	output, err := GetRunner().RunCmdOutput(cmd[0], cmd[1:]...)
+	if err != nil {
+		// grep returns non-zero exit code when no matches found, which is expected
+		return []string{}
+	}
+
+	if output == "" {
+		return []string{}
+	}
+
+	return strings.Split(strings.TrimSpace(output), "\n")
+}
+
+// groupByMessage groups matches by the comment message
+func groupByMessage(matches []string, pattern string) []IssueCount {
+	messageCounts := make(map[string]*IssueCount)
+
+	for _, match := range matches {
+		if match == "" {
+			continue
+		}
+
+		parts := strings.SplitN(match, ":", 3)
+		if len(parts) < 3 {
+			continue
+		}
+
+		file := parts[0]
+		content := parts[2]
+
+		// Simple approach: find the pattern and extract what comes after it
+		// Look for comment start first
+		if !strings.Contains(content, "//") && !strings.Contains(content, "/*") {
+			continue
+		}
+
+		// Skip lines that are just describing these patterns (like in our code)
+		lowerContent := strings.ToLower(content)
+		if strings.Contains(lowerContent, "scan") && (strings.Contains(lowerContent, "todo") || strings.Contains(lowerContent, "fixme") || strings.Contains(lowerContent, "hack")) {
+			continue
+		}
+		if strings.Contains(lowerContent, "extract") || strings.Contains(lowerContent, "pattern") {
+			continue
+		}
+
+		// Find the pattern in the content
+		idx := strings.Index(content, pattern)
+		if idx == -1 {
+			continue
+		}
+
+		// Extract everything after the pattern
+		afterPattern := content[idx+len(pattern):]
+
+		// Remove common separators
+		message := strings.TrimLeft(afterPattern, ": ")
+		message = strings.TrimSpace(message)
+
+		// Remove trailing comment markers
+		message = strings.TrimRight(message, "*/")
+		message = strings.TrimSpace(message)
+
+		if message == "" {
+			message = "(no message)"
+		}
+
+		// Limit message length for readability
+		if len(message) > 100 {
+			message = message[:97] + "..."
+		}
+
+		key := pattern + ": " + message
+		if existing, ok := messageCounts[key]; ok {
+			existing.Count++
+			existing.Files = append(existing.Files, file)
+		} else {
+			messageCounts[key] = &IssueCount{
+				Message: message,
+				Count:   1,
+				Files:   []string{file},
+			}
+		}
+	}
+
+	// Convert to slice and sort by count (descending)
+	results := make([]IssueCount, 0, len(messageCounts))
+	for _, count := range messageCounts {
+		results = append(results, *count)
+	}
+
+	// Sort by count (descending), then by message
+	for i := 0; i < len(results)-1; i++ {
+		for j := i + 1; j < len(results); j++ {
+			if results[i].Count < results[j].Count ||
+				(results[i].Count == results[j].Count && results[i].Message > results[j].Message) {
+				results[i], results[j] = results[j], results[i]
+			}
+		}
+	}
+
+	return results
+}
+
+// groupNolintByTag groups nolint directives by their tags
+func groupNolintByTag(matches []string) []IssueCount {
+	tagCounts := make(map[string]*IssueCount)
+
+	re := regexp.MustCompile(`//nolint:([a-zA-Z0-9,_-]+)`)
+
+	for _, match := range matches {
+		if match == "" {
+			continue
+		}
+
+		parts := strings.SplitN(match, ":", 3)
+		if len(parts) < 3 {
+			continue
+		}
+
+		file := parts[0]
+		content := parts[2]
+
+		// Extract nolint tags
+		submatches := re.FindAllStringSubmatch(content, -1)
+		for _, submatch := range submatches {
+			if len(submatch) < 2 {
+				continue
+			}
+
+			tags := strings.Split(submatch[1], ",")
+			for _, tag := range tags {
+				tag = strings.TrimSpace(tag)
+				if tag == "" {
+					continue
+				}
+
+				if existing, ok := tagCounts[tag]; ok {
+					existing.Count++
+					existing.Files = append(existing.Files, file)
+				} else {
+					tagCounts[tag] = &IssueCount{
+						Message: tag,
+						Count:   1,
+						Files:   []string{file},
+					}
+				}
+			}
+		}
+	}
+
+	// Convert to slice and sort
+	results := make([]IssueCount, 0, len(tagCounts))
+	for _, count := range tagCounts {
+		results = append(results, *count)
+	}
+
+	// Sort by count (descending), then by tag name
+	for i := 0; i < len(results)-1; i++ {
+		for j := i + 1; j < len(results); j++ {
+			if results[i].Count < results[j].Count ||
+				(results[i].Count == results[j].Count && results[i].Message > results[j].Message) {
+				results[i], results[j] = results[j], results[i]
+			}
+		}
+	}
+
+	return results
+}
+
+// groupSkipsByMessage groups test skips by their skip message
+func groupSkipsByMessage(matches []string) []IssueCount {
+	messageCounts := make(map[string]*IssueCount)
+
+	re := regexp.MustCompile(`t\.Skip\("([^"]+)"\)`)
+
+	for _, match := range matches {
+		if match == "" {
+			continue
+		}
+
+		parts := strings.SplitN(match, ":", 3)
+		if len(parts) < 3 {
+			continue
+		}
+
+		file := parts[0]
+		content := parts[2]
+
+		// Extract skip message
+		submatches := re.FindStringSubmatch(content)
+		var message string
+		if len(submatches) >= 2 {
+			message = submatches[1]
+		} else {
+			message = "(no message)"
+		}
+
+		if existing, ok := messageCounts[message]; ok {
+			existing.Count++
+			existing.Files = append(existing.Files, file)
+		} else {
+			messageCounts[message] = &IssueCount{
+				Message: message,
+				Count:   1,
+				Files:   []string{file},
+			}
+		}
+	}
+
+	// Convert to slice and sort
+	results := make([]IssueCount, 0, len(messageCounts))
+	for _, count := range messageCounts {
+		results = append(results, *count)
+	}
+
+	// Sort by count (descending), then by message
+	for i := 0; i < len(results)-1; i++ {
+		for j := i + 1; j < len(results); j++ {
+			if results[i].Count < results[j].Count ||
+				(results[i].Count == results[j].Count && results[i].Message > results[j].Message) {
+				results[i], results[j] = results[j], results[i]
+			}
+		}
+	}
+
+	return results
+}
+
+// displayIssueResults displays the results in a formatted way
+func displayIssueResults(todoIssues, nolintIssues, skipIssues map[string][]IssueCount, disabledFiles []string) {
+	// Display TODO/FIXME/HACK results
+	for category, issues := range todoIssues {
+		if len(issues) > 0 {
+			fmt.Printf("\n📝 %s Comments:\n", category)
+			for _, issue := range issues {
+				fmt.Printf("  • %s (%d occurrence%s)\n", issue.Message, issue.Count, pluralize(issue.Count))
+			}
+		}
+	}
+
+	// Display nolint directives
+	for category, issues := range nolintIssues {
+		if len(issues) > 0 {
+			fmt.Printf("\n🚫 %s Directives:\n", category)
+			for _, issue := range issues {
+				fmt.Printf("  • %s (%d occurrence%s)\n", issue.Message, issue.Count, pluralize(issue.Count))
+			}
+		}
+	}
+
+	// Display test skips
+	for category, issues := range skipIssues {
+		if len(issues) > 0 {
+			fmt.Printf("\n⏭️  %s Usage:\n", strings.ReplaceAll(category, "_", " "))
+			for _, issue := range issues {
+				fmt.Printf("  • %s (%d occurrence%s)\n", issue.Message, issue.Count, pluralize(issue.Count))
+			}
+		}
+	}
+
+	// Display disabled files
+	if len(disabledFiles) > 0 {
+		fmt.Printf("\n🚫 Disabled Files:\n")
+		for _, file := range disabledFiles {
+			fmt.Printf("  • %s\n", file)
+		}
+	}
+}
+
+// countTotalIssues counts total issues across all categories
+func countTotalIssues(issues map[string][]IssueCount) int {
+	total := 0
+	for _, categoryIssues := range issues {
+		for _, issue := range categoryIssues {
+			total += issue.Count
+		}
+	}
+	return total
+}
+
+// pluralize returns "s" for counts != 1, empty string otherwise
+func pluralize(count int) string {
+	if count == 1 {
+		return ""
+	}
+	return "s"
+}
