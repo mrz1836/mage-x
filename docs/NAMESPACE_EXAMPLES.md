@@ -1,6 +1,6 @@
 # Namespace Interface Examples
 
-This document provides comprehensive examples of using the Go-Mage namespace interface architecture in real-world scenarios.
+This document provides comprehensive examples of using the MAGE-X namespace interface architecture in real-world scenarios.
 
 ## Table of Contents
 
@@ -67,22 +67,22 @@ import (
 // BuildAll builds for all supported platforms
 func BuildAll() error {
     build := mage.NewBuildNamespace()
-    
+
     platforms := []string{
         "linux/amd64",
-        "linux/arm64", 
+        "linux/arm64",
         "darwin/amd64",
         "darwin/arm64",
         "windows/amd64",
     }
-    
+
     for _, platform := range platforms {
         fmt.Printf("Building for %s...\n", platform)
         if err := build.Platform(platform); err != nil {
             return fmt.Errorf("build failed for %s: %w", platform, err)
         }
     }
-    
+
     return nil
 }
 
@@ -121,42 +121,42 @@ import (
 // CI runs the complete CI pipeline
 func CI() error {
     fmt.Println("🚀 Starting CI Pipeline...")
-    
+
     // Step 1: Format check
     fmt.Println("📝 Checking code formatting...")
     format := mage.NewFormatNamespace()
     if err := format.Check(); err != nil {
         return fmt.Errorf("formatting check failed: %w", err)
     }
-    
+
     // Step 2: Linting
     fmt.Println("🔍 Running linters...")
     lint := mage.NewLintNamespace()
     if err := lint.CI(); err != nil {
         return fmt.Errorf("linting failed: %w", err)
     }
-    
+
     // Step 3: Security scan
     fmt.Println("🔒 Running security scan...")
     security := mage.NewSecurityNamespace()
     if err := security.Scan(); err != nil {
         return fmt.Errorf("security scan failed: %w", err)
     }
-    
+
     // Step 4: Tests
     fmt.Println("🧪 Running tests...")
     test := mage.NewTestNamespace()
     if err := test.Coverage(); err != nil {
         return fmt.Errorf("tests failed: %w", err)
     }
-    
+
     // Step 5: Build
     fmt.Println("🔨 Building application...")
     build := mage.NewBuildNamespace()
     if err := build.Default(); err != nil {
         return fmt.Errorf("build failed: %w", err)
     }
-    
+
     fmt.Println("✅ CI Pipeline completed successfully!")
     return nil
 }
@@ -210,13 +210,13 @@ func (p *Pipeline) Execute() error {
         {"security-scan", p.security.Scan},
         {"docker-build", p.docker.Build},
     }
-    
+
     for _, step := range steps {
         fmt.Printf("🔄 Running %s...\n", step.name)
-        
+
         if err := step.fn(); err != nil {
             log.Printf("❌ Step %s failed: %v", step.name, err)
-            
+
             // Attempt recovery for certain steps
             if step.name == "lint" {
                 fmt.Println("🔧 Attempting to fix linting issues...")
@@ -231,10 +231,10 @@ func (p *Pipeline) Execute() error {
                 return fmt.Errorf("step %s failed: %w", step.name, err)
             }
         }
-        
+
         fmt.Printf("✅ Step %s completed\n", step.name)
     }
-    
+
     return nil
 }
 
@@ -262,10 +262,10 @@ import (
 // setupNamespaces configures namespaces based on environment
 func setupNamespaces() *mage.NamespaceRegistry {
     registry := mage.NewNamespaceRegistry()
-    
+
     // Configure based on environment
     env := os.Getenv("BUILD_ENV")
-    
+
     switch env {
     case "production":
         // Use optimized build for production
@@ -279,7 +279,7 @@ func setupNamespaces() *mage.NamespaceRegistry {
         // Use default implementations
         fmt.Println("Using default namespace implementations")
     }
-    
+
     return registry
 }
 
@@ -395,42 +395,42 @@ func NewLoggingBuild(inner mage.BuildNamespace, logger *log.Logger) *LoggingBuil
 func (l *LoggingBuild) Default() error {
     l.logger.Println("🔨 Starting default build...")
     start := time.Now()
-    
+
     err := l.BuildNamespace.Default()
-    
+
     duration := time.Since(start)
     if err != nil {
         l.logger.Printf("❌ Build failed after %v: %v", duration, err)
     } else {
         l.logger.Printf("✅ Build completed successfully in %v", duration)
     }
-    
+
     return err
 }
 
 func (l *LoggingBuild) Platform(platform string) error {
     l.logger.Printf("🔨 Starting build for platform %s...", platform)
     start := time.Now()
-    
+
     err := l.BuildNamespace.Platform(platform)
-    
+
     duration := time.Since(start)
     if err != nil {
         l.logger.Printf("❌ Platform build failed after %v: %v", duration, err)
     } else {
         l.logger.Printf("✅ Platform build completed in %v", duration)
     }
-    
+
     return err
 }
 
 // Build with logging
 func Build() error {
     logger := log.New(os.Stdout, "[BUILD] ", log.LstdFlags)
-    
+
     baseBuild := mage.NewBuildNamespace()
     loggingBuild := NewLoggingBuild(baseBuild, logger)
-    
+
     return loggingBuild.Default()
 }
 ```
@@ -492,22 +492,22 @@ func (m *MetricsBuild) withMetrics(operation, platform string, fn func() error) 
         StartTime: time.Now(),
         Platform:  platform,
     }
-    
+
     err := fn()
-    
+
     metrics.EndTime = time.Now()
     metrics.Duration = metrics.EndTime.Sub(metrics.StartTime)
     metrics.Success = err == nil
-    
+
     if err != nil {
         metrics.ErrorMessage = err.Error()
     }
-    
+
     // Save metrics
     if saveErr := m.saveMetrics(metrics); saveErr != nil {
         fmt.Printf("Warning: Failed to save metrics: %v\n", saveErr)
     }
-    
+
     return err
 }
 
@@ -516,7 +516,7 @@ func (m *MetricsBuild) saveMetrics(metrics BuildMetrics) error {
     if err != nil {
         return err
     }
-    
+
     return os.WriteFile(m.metricsFile, data, 0644)
 }
 
@@ -524,7 +524,7 @@ func (m *MetricsBuild) saveMetrics(metrics BuildMetrics) error {
 func Build() error {
     baseBuild := mage.NewBuildNamespace()
     metricsBuild := NewMetricsBuild(baseBuild, "build-metrics.json")
-    
+
     return metricsBuild.Default()
 }
 ```
@@ -595,27 +595,27 @@ func TestDeployApp(t *testing.T) {
     t.Run("successful deployment", func(t *testing.T) {
         mockBuild := NewMockBuild()
         platforms := []string{"linux/amd64", "darwin/amd64"}
-        
+
         err := deployApp(mockBuild, platforms)
-        
+
         if err != nil {
             t.Errorf("Expected no error, got %v", err)
         }
-        
+
         for _, platform := range platforms {
             if !mockBuild.platformCalled[platform] {
                 t.Errorf("Platform %s was not built", platform)
             }
         }
     })
-    
+
     t.Run("build failure", func(t *testing.T) {
         mockBuild := NewMockBuild()
         mockBuild.shouldFail = true
         platforms := []string{"linux/amd64"}
-        
+
         err := deployApp(mockBuild, platforms)
-        
+
         if err == nil {
             t.Error("Expected error, got nil")
         }
@@ -636,7 +636,7 @@ import (
 
 func TestBuildIntegration(t *testing.T) {
     env := testhelpers.NewTestEnvironment(t)
-    
+
     // Create a test Go project
     env.CreateGoModule("test-app")
     env.WriteFile("main.go", `package main
@@ -646,16 +646,16 @@ import "fmt"
 func main() {
     fmt.Println("Hello, World!")
 }`)
-    
+
     t.Run("build succeeds", func(t *testing.T) {
         build := mage.NewBuildNamespace()
         err := build.Default()
-        
+
         // Build may fail due to missing dependencies in test environment
         // but we can verify the interface works
         t.Logf("Build result: %v", err)
     })
-    
+
     t.Run("clean works", func(t *testing.T) {
         build := mage.NewBuildNamespace()
         err := build.Clean()
@@ -666,11 +666,11 @@ func main() {
 func TestNamespaceRegistry(t *testing.T) {
     t.Run("default namespaces available", func(t *testing.T) {
         registry := mage.NewNamespaceRegistry()
-        
+
         requiredNamespaces := []string{
             "build", "test", "lint", "format", "docs",
         }
-        
+
         for _, name := range requiredNamespaces {
             ns := registry.Get(name)
             if ns == nil {
@@ -678,16 +678,16 @@ func TestNamespaceRegistry(t *testing.T) {
             }
         }
     })
-    
+
     t.Run("custom registration works", func(t *testing.T) {
         registry := mage.NewNamespaceRegistry()
         mockBuild := NewMockBuild()
-        
+
         err := registry.Register("build", mockBuild)
         if err != nil {
             t.Errorf("Failed to register custom build: %v", err)
         }
-        
+
         retrieved := registry.Get("build")
         if retrieved != mockBuild {
             t.Error("Registry did not return custom implementation")
@@ -730,13 +730,13 @@ var services = []Microservice{
 // BuildAll builds all microservices
 func BuildAll() error {
     fmt.Println("🏗️ Building all microservices...")
-    
+
     for _, service := range services {
         if err := buildService(service); err != nil {
             return fmt.Errorf("failed to build %s: %w", service.Name, err)
         }
     }
-    
+
     fmt.Println("✅ All microservices built successfully!")
     return nil
 }
@@ -753,75 +753,75 @@ func BuildService(serviceName string) error {
 
 func buildService(service Microservice) error {
     fmt.Printf("🔨 Building %s...\n", service.Name)
-    
+
     build := mage.NewBuildNamespace()
-    
+
     // Change to service directory and build
     originalDir, _ := os.Getwd()
     defer os.Chdir(originalDir)
-    
+
     if err := os.Chdir(service.Path); err != nil {
         return fmt.Errorf("failed to change to service directory: %w", err)
     }
-    
+
     return build.Default()
 }
 
 // TestAll runs tests for all microservices
 func TestAll() error {
     fmt.Println("🧪 Testing all microservices...")
-    
+
     for _, service := range services {
         if err := testService(service); err != nil {
             return fmt.Errorf("tests failed for %s: %w", service.Name, err)
         }
     }
-    
+
     fmt.Println("✅ All tests passed!")
     return nil
 }
 
 func testService(service Microservice) error {
     fmt.Printf("🧪 Testing %s...\n", service.Name)
-    
+
     test := mage.NewTestNamespace()
-    
+
     originalDir, _ := os.Getwd()
     defer os.Chdir(originalDir)
-    
+
     if err := os.Chdir(service.Path); err != nil {
         return fmt.Errorf("failed to change to service directory: %w", err)
     }
-    
+
     return test.Unit()
 }
 
 // DeployAll deploys all microservices
 func DeployAll() error {
     fmt.Println("🚀 Deploying all microservices...")
-    
+
     // First build all services
     if err := BuildAll(); err != nil {
         return err
     }
-    
+
     // Then build Docker images
     docker := mage.NewDockerNamespace()
-    
+
     for _, service := range services {
         fmt.Printf("🐳 Building Docker image for %s...\n", service.Name)
-        
+
         originalDir, _ := os.Getwd()
         os.Chdir(service.Path)
-        
+
         if err := docker.Build(); err != nil {
             os.Chdir(originalDir)
             return fmt.Errorf("failed to build Docker image for %s: %w", service.Name, err)
         }
-        
+
         os.Chdir(originalDir)
     }
-    
+
     fmt.Println("✅ All microservices deployed!")
     return nil
 }
@@ -853,31 +853,31 @@ type Package struct {
 // discoverPackages finds all Go packages in the monorepo
 func discoverPackages() ([]Package, error) {
     var packages []Package
-    
+
     err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
         if err != nil {
             return err
         }
-        
+
         if info.Name() == "go.mod" {
             dir := filepath.Dir(path)
             if dir == "." {
                 return nil // Skip root module
             }
-            
+
             name := filepath.Base(dir)
             pkgType := determinePackageType(dir)
-            
+
             packages = append(packages, Package{
                 Name: name,
                 Path: dir,
                 Type: pkgType,
             })
         }
-        
+
         return nil
     })
-    
+
     return packages, err
 }
 
@@ -897,36 +897,36 @@ func BuildChanged() error {
     if err != nil {
         return fmt.Errorf("failed to discover packages: %w", err)
     }
-    
+
     changedPkgs, err := getChangedPackages(packages)
     if err != nil {
         return fmt.Errorf("failed to detect changes: %w", err)
     }
-    
+
     if len(changedPkgs) == 0 {
         fmt.Println("📦 No packages have changed")
         return nil
     }
-    
+
     fmt.Printf("📦 Building %d changed packages...\n", len(changedPkgs))
-    
+
     build := mage.NewBuildNamespace()
-    
+
     for _, pkg := range changedPkgs {
         fmt.Printf("🔨 Building %s (%s)...\n", pkg.Name, pkg.Type)
-        
+
         originalDir, _ := os.Getwd()
         defer os.Chdir(originalDir)
-        
+
         if err := os.Chdir(pkg.Path); err != nil {
             return fmt.Errorf("failed to change to package directory: %w", err)
         }
-        
+
         if err := build.Default(); err != nil {
             return fmt.Errorf("build failed for %s: %w", pkg.Name, err)
         }
     }
-    
+
     fmt.Println("✅ All changed packages built successfully!")
     return nil
 }
@@ -943,24 +943,24 @@ func TestAffected() error {
     if err != nil {
         return fmt.Errorf("failed to discover packages: %w", err)
     }
-    
+
     test := mage.NewTestNamespace()
-    
+
     for _, pkg := range packages {
         fmt.Printf("🧪 Testing %s...\n", pkg.Name)
-        
+
         originalDir, _ := os.Getwd()
         defer os.Chdir(originalDir)
-        
+
         if err := os.Chdir(pkg.Path); err != nil {
             return fmt.Errorf("failed to change to package directory: %w", err)
         }
-        
+
         if err := test.Unit(); err != nil {
             return fmt.Errorf("tests failed for %s: %w", pkg.Name, err)
         }
     }
-    
+
     return nil
 }
 ```
@@ -1007,15 +1007,15 @@ func CI() error {
     build := mage.NewBuildNamespace()
     test := mage.NewTestNamespace()
     lint := mage.NewLintNamespace()
-    
+
     if err := lint.Default(); err != nil {
         return err
     }
-    
+
     if err := build.Default(); err != nil {
         return err
     }
-    
+
     return test.Unit()
 }
 
@@ -1051,18 +1051,18 @@ func init() {
 
 func setupNamespaces() *mage.NamespaceRegistry {
     reg := mage.NewNamespaceRegistry()
-    
+
     // Configure based on environment or configuration
     if os.Getenv("FAST_BUILD") == "true" {
         // Register fast implementations
         reg.Register("build", &FastBuild{})
     }
-    
+
     if os.Getenv("VERBOSE_TESTS") == "true" {
         // Register verbose test implementation
         reg.Register("test", &VerboseTest{})
     }
-    
+
     return reg
 }
 

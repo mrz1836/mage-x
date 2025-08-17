@@ -1,6 +1,6 @@
-# Go-Mage Namespace Interface Architecture
+# MAGE-X Namespace Interface Architecture
 
-> **Modern, extensible, and type-safe namespace system for Go-Mage**
+> **Modern, extensible, and type-safe namespace system for MAGE-X**
 
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.19-blue.svg)](https://golang.org/)
 [![Architecture](https://img.shields.io/badge/architecture-interface--based-green.svg)](#interface-based-design)
@@ -195,19 +195,19 @@ func CI() error {
     build := mage.NewBuildNamespace()
     test := mage.NewTestNamespace()
     lint := mage.NewLintNamespace()
-    
+
     if err := lint.Default(); err != nil {
         return fmt.Errorf("linting failed: %w", err)
     }
-    
+
     if err := build.Default(); err != nil {
         return fmt.Errorf("build failed: %w", err)
     }
-    
+
     if err := test.Unit(); err != nil {
         return fmt.Errorf("tests failed: %w", err)
     }
-    
+
     return nil
 }
 ```
@@ -250,13 +250,13 @@ func (m *MockBuild) Default() error {
 
 func TestDeployment(t *testing.T) {
     mockBuild := &MockBuild{}
-    
+
     err := deployWithBuild(mockBuild)
-    
+
     if err != nil {
         t.Errorf("Deployment failed: %v", err)
     }
-    
+
     if !mockBuild.defaultCalled {
         t.Error("Build.Default() was not called")
     }
@@ -351,11 +351,11 @@ go run test_namespace_architecture.go
 ```go
 func BuildPipeline() error {
     registry := mage.NewNamespaceRegistry()
-    
+
     // Could register custom implementations here
     build := registry.Get("build").(mage.BuildNamespace)
     test := registry.Get("test").(mage.TestNamespace)
-    
+
     return pipeline(build, test)
 }
 
@@ -371,15 +371,15 @@ func pipeline(build mage.BuildNamespace, test mage.TestNamespace) error {
 ```go
 func BuildAllPlatforms() error {
     build := mage.NewBuildNamespace()
-    
+
     platforms := []string{"linux/amd64", "darwin/amd64", "windows/amd64"}
-    
+
     for _, platform := range platforms {
         if err := build.Platform(platform); err != nil {
             return fmt.Errorf("build failed for %s: %w", platform, err)
         }
     }
-    
+
     return nil
 }
 ```
@@ -388,7 +388,7 @@ func BuildAllPlatforms() error {
 ```go
 func Deploy() error {
     registry := mage.NewNamespaceRegistry()
-    
+
     // Choose deployment method based on environment
     if os.Getenv("USE_DOCKER") == "true" {
         docker := registry.Get("docker").(mage.DockerNamespace)
@@ -413,13 +413,13 @@ See [CONTRIBUTING.md](../../.github/CONTRIBUTING.md) for detailed guidelines.
 
 ## 📜 License
 
-This project is licensed under the same terms as the original Go-Mage project.
+This project is licensed under the same terms as the original MAGE-X project.
 
 ---
 
 <div align="center">
 
-**Go-Mage Namespace Architecture** - *Modern, extensible, type-safe*
+**MAGE-X Namespace Architecture** - *Modern, extensible, type-safe*
 
 [Documentation](docs/) • [Examples](docs/NAMESPACE_EXAMPLES.md) • [API Reference](docs/API_REFERENCE.md) • [Migration Guide](docs/MIGRATION_GUIDE.md)
 

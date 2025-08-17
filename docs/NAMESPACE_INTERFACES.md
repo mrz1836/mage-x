@@ -1,8 +1,8 @@
-# Go-Mage Namespace Interface Architecture
+# MAGE-X Namespace Interface Architecture
 
 ## Overview
 
-Go-Mage now features a modern, interface-based namespace architecture that provides type safety, dependency injection, and extensibility while maintaining full backward compatibility with existing code.
+MAGE-X now features a modern, interface-based namespace architecture that provides type safety, dependency injection, and extensibility while maintaining full backward compatibility with existing code.
 
 ## Quick Start
 
@@ -20,11 +20,11 @@ err := build.Default()
 
 ### Available Namespaces
 
-Go-Mage provides 37 built-in namespaces organized by functionality:
+MAGE-X provides 37 built-in namespaces organized by functionality:
 
 #### Core Development
 - **Build** (`BuildNamespace`) - Building and compilation
-- **Test** (`TestNamespace`) - Testing and coverage  
+- **Test** (`TestNamespace`) - Testing and coverage
 - **Lint** (`LintNamespace`) - Code linting and analysis
 - **Format** (`FormatNamespace`) - Code formatting
 - **Docs** (`DocNamespace`) - Documentation generation
@@ -42,7 +42,7 @@ Go-Mage provides 37 built-in namespaces organized by functionality:
 - **Mod** (`ModNamespace`) - Go module operations
 - **Vet** (`VetNamespace`) - Go vet operations
 
-#### Deployment & Infrastructure  
+#### Deployment & Infrastructure
 - **Docker** (`DockerNamespace`) - Docker operations
 - **K8s** (`K8sNamespace`) - Kubernetes operations
 - **Install** (`InstallNamespace`) - Installation tasks
@@ -180,10 +180,10 @@ func TestMyCode(t *testing.T) {
     mockBuild := &MockBuild{}
     registry := mage.NewNamespaceRegistry()
     registry.Register("build", mockBuild)
-    
+
     // Test code that uses build namespace
     myFunction(registry)
-    
+
     // Verify mock was called
     if !mockBuild.defaultCalled {
         t.Error("Default() was not called")
@@ -200,22 +200,22 @@ func BuildAndTest() error {
     build := mage.NewBuildNamespace()
     test := mage.NewTestNamespace()
     lint := mage.NewLintNamespace()
-    
+
     // Pre-build validation
     if err := lint.Default(); err != nil {
         return fmt.Errorf("linting failed: %w", err)
     }
-    
+
     // Build
     if err := build.Default(); err != nil {
         return fmt.Errorf("build failed: %w", err)
     }
-    
+
     // Test
     if err := test.Unit(); err != nil {
         return fmt.Errorf("tests failed: %w", err)
     }
-    
+
     return nil
 }
 ```
@@ -357,7 +357,7 @@ if build, ok := registry.Get("build").(mage.BuildNamespace); ok {
 
 The interface architecture has minimal performance impact:
 - Factory functions: ~1ns overhead
-- Registry lookups: ~10ns overhead  
+- Registry lookups: ~10ns overhead
 - Interface method calls: No overhead (inlined by compiler)
 
 ## Examples
