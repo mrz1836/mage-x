@@ -122,7 +122,7 @@
 
 ## ⚡ Quick Start
 
-### Zero Boilerplate with MAGE-X 🎉
+### Zero Boilerplate with MAGE-X
 
 ```bash
 # 1. Install magex binary (one time)
@@ -136,8 +136,9 @@ magex release:multi # Multi-platform release
 
 # That's it! No magefile.go needed! 🚀
 ```
+<br>
 
-### See What's Available
+### Full Command List
 
 ```bash
 magex -l            # List all 343 commands
@@ -146,7 +147,9 @@ magex -search test  # Find specific commands
 magex -h            # Get help
 ```
 
-### Optional: Add Custom Commands
+<br>
+
+### _Optional:_ Add Custom Commands
 
 Only create a `magefile.go` if you need project-specific commands:
 
@@ -166,6 +169,7 @@ Now you have both:
 magex build    # Built-in MAGE-X command
 magex deploy   # Your custom command
 ```
+<br>
 
 ### 🚀 Quick Wins
 
@@ -339,6 +343,8 @@ For comprehensive documentation, visit the [docs](docs) directory:
 - **[Enterprise Features](docs/ENTERPRISE.md)** - Enterprise capabilities guide
 - **[Quick Start](docs/QUICK_START.md)** - Get up and running in minutes
 - **[Configuration Reference](docs/CONFIGURATION.md)** - Complete configuration guide
+
+<br>
 
 ### Available Commands
 
