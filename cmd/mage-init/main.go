@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/mrz1836/mage-x/pkg/common/config"
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -85,6 +86,12 @@ func main() {
 	listTemplates := flag.Bool("list-templates", false, "List available templates")
 
 	flag.Parse()
+
+	// Load environment variables from .env files (early startup hook)
+	// This loads .github/.env.base and other env files before tool version checks
+	if err := env.LoadStartupEnv(); err != nil && opts.Verbose {
+		fmt.Printf("Debug: Could not load env files: %v\n", err)
+	}
 
 	if *showHelp {
 		showHelpMessage()

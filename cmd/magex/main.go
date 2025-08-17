@@ -14,6 +14,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/mage/embed"
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -84,6 +85,12 @@ func main() {
 
 	// Parse command line arguments
 	flag.Parse()
+
+	// Load environment variables from .env files (early startup hook)
+	// This loads .github/.env.base and other env files before tool version checks
+	if err := env.LoadStartupEnv(); err != nil && *flags.Debug {
+		fmt.Printf("Debug: Could not load env files: %v\n", err)
+	}
 
 	// Set environment variables based on flags (ignore errors as these are non-critical)
 	if *flags.Verbose {
