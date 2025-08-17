@@ -492,7 +492,7 @@ func installUpdate() error {
 		return err
 	}
 
-	return GetRunner().RunCmd("go", "install", module+"@latest")
+	return GetRunner().RunCmd("go", "install", module+"/cmd/magex@latest")
 }
 
 // getUpdateConfigPath returns the update configuration path
