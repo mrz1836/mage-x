@@ -126,11 +126,11 @@
 
 MAGE-X automatically detects your project structure and **just works**:
 
-| Your Project Structure                 | What MAGE-X Does                  |
-|----------------------------------------|-----------------------------------|
-| **Single Binary**<br>`main.go` in root | Builds to `bin/projectname`       |
-| **Multi-Binary**<br>`cmd/*/main.go`    | Auto-detects & builds first found |
-| **Library**<br>No main package         | Verifies compilation with `./...` |
+| Your Project Structure              | What MAGE-X Does                  |
+|-------------------------------------|-----------------------------------|
+| **Single Binary** `main.go` in root | Builds to `bin/projectname`       |
+| **Multi-Binary** `cmd/*/main.go`    | Auto-detects & builds first found |
+| **Library** No main package         | Verifies compilation with `./...` |
 
 > 📖 **Need more details?** See the [Complete Quick Start Guide](docs/QUICK_START.md) for project-specific examples and troubleshooting.
 
