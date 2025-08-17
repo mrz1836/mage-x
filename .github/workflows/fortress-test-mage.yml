@@ -105,7 +105,9 @@ jobs:
 
           # Source environment variables for tool versions
           if [ -f .github/.env.base ]; then
+            set -a  # automatically export all variables
             source .github/.env.base
+            set +a  # turn off automatic export
             echo "✅ Loaded tool versions from .github/.env.base"
           fi
 
