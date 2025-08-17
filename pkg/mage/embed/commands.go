@@ -373,8 +373,13 @@ func registerLintCommands(reg *registry.Registry) {
 			MustBuild(),
 	)
 
-	// Note: Some methods may not exist in the actual implementation
-	// These are placeholders for future enhancements
+	reg.MustRegister(
+		registry.NewNamespaceCommand("lint", "issues").
+			WithDescription("Scan for TODOs, FIXMEs, nolint directives, and test skips").
+			WithFunc(func() error { return l.Issues() }).
+			WithCategory("Lint").
+			MustBuild(),
+	)
 }
 
 // registerFormatCommands registers all Format namespace commands

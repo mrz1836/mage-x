@@ -400,6 +400,7 @@ magex test:integration   # Run integration tests
 # Code Quality & Linting
 magex lint               # Run essential linters
 magex lint:fix           # Auto-fix linting issues + apply formatting
+magex lint:issues        # Scan for TODOs, FIXMEs, nolint directives, and test skips
 magex test:vet           # Run go vet static analysis
 magex format:fix         # Run code formatting
 magex tools:verify       # Show tool version information

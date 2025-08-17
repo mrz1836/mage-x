@@ -143,6 +143,9 @@ type LintNamespace interface {
 
 	// Config validates linter configuration
 	Config() error
+
+	// Issues scans for TODOs, FIXMEs, nolint directives, and test skips
+	Issues() error
 }
 
 // FormatNamespace interface defines the contract for formatting operations
