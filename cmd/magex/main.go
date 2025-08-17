@@ -303,7 +303,7 @@ func showVersion() {
 		if len(info.Commit) > 7 {
 			shortCommit = info.Commit[:7]
 		}
-		fmt.Printf("  🔨 Commit:       %s\n", shortCommit)
+		fmt.Printf("  Commit:       %s\n", shortCommit)
 	}
 
 	if isValidBuildValue(info.BuildDate) {
