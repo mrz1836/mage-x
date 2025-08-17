@@ -851,6 +851,7 @@ magex test:bench
 ### Example Projects
 
 - **[Basic Project](examples/basic)** - Zero-configuration MAGE-X usage
+- **[With Configuration](examples/with-config)** - Using .mage.yaml for project customization
 - **[With Custom Commands](examples/with-custom)** - Adding project-specific commands
 - **[Zero Config](examples/zero-config)** - Instant productivity with magex
 

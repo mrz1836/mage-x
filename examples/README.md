@@ -11,6 +11,12 @@ examples/
 │   └── README.md           # Demonstrates instant magex usage
 ├── basic/                   # Basic usage example
 │   └── README.md           # Simple project setup
+├── with-config/             # Configuration example using .mage.yaml
+│   ├── README.md           # Complete configuration guide
+│   ├── .mage.yaml          # Comprehensive configuration example
+│   ├── main.go             # Sample Go application
+│   ├── main_test.go        # Test file with various test types
+│   └── go.mod              # Go module file
 ├── with-custom/            # Custom commands alongside built-in commands
 │   ├── README.md           # How to add custom commands
 │   └── magefile.go         # Custom commands example
@@ -39,7 +45,7 @@ See [zero-config/](zero-config/) for the complete example.
 
 ### Adding Custom Commands
 
-Want project-specific commands alongside the 215+ built-in ones?
+Want project-specific commands alongside the 343+ built-in ones?
 
 ```go
 //go:build mage
@@ -60,12 +66,45 @@ magex deploy   # Your custom command
 
 See [with-custom/](with-custom/) for the complete example.
 
+### Configuration-Driven Development
+
+Want to customize build settings, test configuration, or tool versions?
+
+```yaml
+# .mage.yaml
+project:
+  name: my-project
+  binary: myapp
+
+build:
+  platforms:
+    - linux/amd64
+    - darwin/amd64
+    - windows/amd64
+  ldflags:
+    - -s -w
+    - -X main.version={{.Version}}
+
+test:
+  timeout: 10m
+  race: true
+  cover: true
+```
+
+Now all MAGE-X commands use your configuration:
+```bash
+magex build:all   # Builds for all configured platforms
+magex test        # Uses timeout and race detection from config
+```
+
+See [with-config/](with-config/) for the complete example.
+
 ## Example Categories
 
 ### 1. Zero Configuration (`zero-config/`)
 **Best for:** Getting started immediately
 - No magefile.go required
-- All 215+ commands available instantly
+- All 343+ commands available instantly
 - Perfect for standard Go projects
 
 ### 2. Basic Usage (`basic/`)
@@ -74,13 +113,21 @@ See [with-custom/](with-custom/) for the complete example.
 - Common command usage
 - Standard workflows
 
-### 3. With Custom Commands (`with-custom/`)
+### 3. Configuration Example (`with-config/`)
+**Best for:** Customizing MAGE-X behavior
+- Complete `.mage.yaml` configuration reference
+- Build customization and cross-platform compilation
+- Test configuration and coverage settings
+- Tool version management
+- Environment variable overrides
+
+### 4. With Custom Commands (`with-custom/`)
 **Best for:** Projects needing custom automation
 - Add project-specific commands
 - Works alongside all built-in commands
 - Progressive enhancement approach
 
-### 4. Override Commands (`override-commands/`)
+### 5. Override Commands (`override-commands/`)
 **Best for:** Customizing built-in command behavior
 - Override specific built-in commands (like `magex lint`)
 - Add custom pre/post processing
@@ -115,7 +162,7 @@ With magex:
 # Just run commands directly!
 magex build
 magex test
-# All 215+ commands work instantly
+# All 343+ commands work instantly
 ```
 
 ### Progressive Enhancement
