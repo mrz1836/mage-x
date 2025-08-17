@@ -62,3 +62,6 @@ tests/.mage-cache/
 /cmd/magex/magex
 /examples/override-commands/override-commands
 /tests/compatibility/magex
+/pkg/mage/.mage/enterprise/backups/
+/pkg/mage/.mage/enterprise/deployments
+/pkg/mage/.mage/profiles
