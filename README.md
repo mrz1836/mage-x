@@ -171,43 +171,31 @@ magex deploy   # Your custom command
 ```
 <br>
 
-### 🚀 Quick Wins
-
-* **One-Command Setup**: From zero to a production-ready build system in under 30 seconds
-* **Intelligent Defaults**: No configuration required, but infinitely customizable when you need it
-* **Multi-Project Management**: Manage 30+ repositories with consistent tooling and workflows
-* **Guided Setup**: Project initialization and configuration management
-* **Recipe Library**: Common patterns and best practices built right in
-
-> **Tip:** Run `magex help` to see all available commands with beautiful formatting (or `magex -l` for plain list).
-
-<br/>
-
 ## 🚀 Features
 
 ### Core Excellence
-- **🔧 Command Execution**: Secure, interface-based command execution with validation
-- **📝 Native Logging**: Colored output, progress indicators, and structured logging
-- **🛠️ Complete Build System**: All essential build, test, lint, and release tasks
-- **🔄 Version Management**: Automatic version detection and update infrastructure
+- **Command Execution**: Secure, interface-based command execution with validation
+- **Native Logging**: Colored output, progress indicators, and structured logging
+- **Complete Build System**: All essential build, test, lint, and release tasks
+- **Version Management**: Automatic version detection and update infrastructure
 
 ### Developer Experience
-- **🏗️ Project Templates**: CLI, library, web API, and microservice templates
-- **📦 Release Automation**: Multi-platform asset building with GitHub integration
-- **⚙️ Configuration Management**: Flexible mage.yaml with smart defaults
-- **🔧 Recipe System**: Pre-built patterns and templates for common scenarios
+- **Project Templates**: CLI, library, web API, and microservice templates
+- **Release Automation**: Multi-platform asset building with GitHub integration
+- **Configuration Management**: Flexible mage.yaml with smart defaults
+- **Recipe System**: Pre-built patterns and templates for common scenarios
 
 ### User Experience Features
-- **🎯 Command Discovery**: Comprehensive CLI with intuitive command structure
-- **📖 Help System**: Built-in documentation and usage examples
-- **🔄 Recipe System**: Common patterns and best practices library
-- **⚙️ Project Templates**: Ready-made configurations for different project types
+- **Command Discovery**: Comprehensive CLI with intuitive command structure
+- **Help System**: Built-in documentation and usage examples
+- **Recipe System**: Common patterns and best practices library
+- **Project Templates**: Ready-made configurations for different project types
 
 ### Enterprise Features
-- **📊 Audit Logging**: Activity tracking and compliance reporting foundation
-- **🛡️ Security Scanning**: Vulnerability detection with govulncheck integration
-- **⚙️ Configuration Management**: Centralized project configuration and validation
-- **🔧 Extensible Architecture**: Plugin-ready foundation for custom enterprise needs
+- **Audit Logging**: Activity tracking and compliance reporting foundation
+- **Security Scanning**: Vulnerability detection with govulncheck integration
+- **Configuration Management**: Centralized project configuration and validation
+- **Extensible Architecture**: Plugin-ready foundation for custom enterprise needs
 
 <br/>
 
@@ -905,20 +893,20 @@ Read more about our [code standards](.github/CODE_STANDARDS.md) and [contributio
 MAGE-X features a comprehensive ecosystem of 19 specialized Claude Code AI agents designed for intelligent development workflows:
 
 ### Agent Categories
-- **🔧 Core Development (5)**: Build, lint, deps, docs, security specialists
-- **🧪 Testing & Quality (2)**: Coverage analysis and comprehensive test implementation
-- **🚀 Release & CI/CD (3)**: Version management, git operations, GitHub automation
-- **🏗️ Architecture & Performance (4)**: Code architecture, refactoring, analysis, benchmarking
-- **🏢 Enterprise & Workflow (3)**: Governance, automation pipelines, interactive guidance
-- **⚙️ Infrastructure (2)**: Configuration management, development environment setup
+- **Core Development (5)**: Build, lint, deps, docs, security specialists
+- **Testing & Quality (2)**: Coverage analysis and comprehensive test implementation
+- **Release & CI/CD (3)**: Version management, git operations, GitHub automation
+- **Architecture & Performance (4)**: Code architecture, refactoring, analysis, benchmarking
+- **Enterprise & Workflow (3)**: Governance, automation pipelines, interactive guidance
+- **Infrastructure (2)**: Configuration management, development environment setup
 
 <br/>
 
 ### Key Features
-- **🤝 Strategic Collaboration**: Agents coordinate intelligently for complex workflows
-- **⚡ Parallel Execution**: Multiple agents work simultaneously for maximum efficiency
-- **🛡️ Security Integration**: All agents follow mage-x security-first patterns
-- **🏢 Enterprise Scale**: Built for managing 30+ repositories with governance and compliance
+- **Strategic Collaboration**: Agents coordinate intelligently for complex workflows
+- **Parallel Execution**: Multiple agents work simultaneously for maximum efficiency
+- **Security Integration**: All agents follow mage-x security-first patterns
+- **Enterprise Scale**: Built for managing 30+ repositories with governance and compliance
 
 <br/>
 
