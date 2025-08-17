@@ -55,9 +55,14 @@ func (Release) Default() error {
 	latestTag = strings.TrimSpace(latestTag)
 	utils.Info("Releasing tag: %s", latestTag)
 
-	// Run goreleaser with specific git ref
-	// This ensures we always build from the tag, regardless of current git state
-	if err := GetRunner().RunCmd("goreleaser", "release", "--clean", "--git-ref", latestTag); err != nil {
+	// Set the tag via environment variable for explicit control (goreleaser v2)
+	// This replaces the deprecated --git-ref flag from v1
+	if err := os.Setenv("GORELEASER_CURRENT_TAG", latestTag); err != nil {
+		return fmt.Errorf("failed to set GORELEASER_CURRENT_TAG: %w", err)
+	}
+
+	// Run goreleaser release
+	if err := GetRunner().RunCmd("goreleaser", "release", "--clean"); err != nil {
 		return fmt.Errorf("release failed for tag %s: %w", latestTag, err)
 	}
 
