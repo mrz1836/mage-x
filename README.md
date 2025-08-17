@@ -729,9 +729,13 @@ magex uninstall           # Remove installation
 
 </details>
 
+<br/>
+
 ### 📋 Complete Command List
 
 Run `magex -l` to see a plain list of all available commands (343 commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
+
+<br/>
 
 ### 📚 Documentation System
 
@@ -765,6 +769,8 @@ magex docs:readme        # README documentation
 - **Build Artifacts**: JSON metadata and organized output structure
 
 </details>
+
+<br/>
 
 ### 🏢 Enterprise Namespaces
 
@@ -900,11 +906,15 @@ MAGE-X features a comprehensive ecosystem of 19 specialized Claude Code AI agent
 - **🏢 Enterprise & Workflow (3)**: Governance, automation pipelines, interactive guidance
 - **⚙️ Infrastructure (2)**: Configuration management, development environment setup
 
+<br/>
+
 ### Key Features
 - **🤝 Strategic Collaboration**: Agents coordinate intelligently for complex workflows
 - **⚡ Parallel Execution**: Multiple agents work simultaneously for maximum efficiency
 - **🛡️ Security Integration**: All agents follow mage-x security-first patterns
 - **🏢 Enterprise Scale**: Built for managing 30+ repositories with governance and compliance
+
+<br/>
 
 ### Claude Code Integration
 MAGE-X includes 13 optimized Claude Code slash commands that leverage the agent ecosystem:
@@ -916,6 +926,8 @@ MAGE-X includes 13 optimized Claude Code slash commands that leverage the agent 
 - **Planning**: `/prd`
 
 See [Claude Code Commands](docs/CLAUDE_COMMANDS.md) for complete documentation.
+
+<br/>
 
 ### Documentation & Guidelines
 - **[AI Agent Ecosystem](docs/SUB_AGENTS.md)** — Complete agent directory and collaboration patterns
