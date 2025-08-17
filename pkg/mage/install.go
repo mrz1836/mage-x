@@ -164,19 +164,19 @@ func (Install) Go() error {
 	}
 
 	// Get version
-	version := utils.GetEnv("VERSION", getVersion())
-	if version == versionDev || version == "" {
-		version = GetDefaultGoVulnCheckVersion()
-		if version == "" {
+	installVersion := utils.GetEnv("VERSION", getVersion())
+	if installVersion == versionDev || installVersion == "" {
+		installVersion = GetDefaultGoVulnCheckVersion()
+		if installVersion == "" {
 			utils.Warn("GoVulnCheck version not available, using @latest")
-			version = VersionLatest
+			installVersion = VersionLatest
 		}
 	}
 
 	// Build install command
 	var pkg string
-	if version != VersionLatest && version != "" {
-		pkg = fmt.Sprintf("%s@%s", module, version)
+	if installVersion != VersionLatest && installVersion != "" {
+		pkg = fmt.Sprintf("%s@%s", module, installVersion)
 	} else {
 		pkg = fmt.Sprintf("%s@latest", module)
 	}

@@ -28,7 +28,7 @@ func getVersion() string {
 	}
 
 	// Try to get from config
-	if config, err := LoadConfig(); err == nil && config.Project.Version != "" {
+	if config, err := GetConfig(); err == nil && config.Project.Version != "" {
 		return config.Project.Version
 	}
 

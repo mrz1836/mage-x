@@ -219,12 +219,12 @@ func (Update) History() error {
 func (Update) Rollback() error {
 	utils.Header("Rolling Back Update")
 
-	version := utils.GetEnv("VERSION", "")
-	if version == "" {
+	rollbackVersion := utils.GetEnv("VERSION", "")
+	if rollbackVersion == "" {
 		return errUpdateVersionRequired
 	}
 
-	utils.Info("Rolling back to version %s", version)
+	utils.Info("Rolling back to version %s", rollbackVersion)
 
 	// Get module info
 	module, err := utils.GetModuleName()
@@ -233,13 +233,13 @@ func (Update) Rollback() error {
 	}
 
 	// Install specific version
-	pkg := fmt.Sprintf("%s@%s", module, version)
+	pkg := fmt.Sprintf("%s@%s", module, rollbackVersion)
 
 	if err := GetRunner().RunCmd("go", "install", pkg); err != nil {
 		return fmt.Errorf("rollback failed: %w", err)
 	}
 
-	utils.Success("Successfully rolled back to version %s", version)
+	utils.Success("Successfully rolled back to version %s", rollbackVersion)
 	utils.Info("Please restart your application")
 
 	return nil

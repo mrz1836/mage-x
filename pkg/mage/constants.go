@@ -158,15 +158,15 @@ func getToolVersionOrWarn(envVar, legacyEnvVar, toolName string) string {
 	// Provide fallback defaults for tools (matching test expectations)
 	var fallback string
 	switch toolName {
-	case "golangci-lint":
+	case CmdGolangciLint:
 		fallback = "v2.4.0" // Match .env.base current version
-	case "gofumpt":
+	case CmdGofumpt:
 		fallback = VersionLatest // Match test expectation
-	case "govulncheck":
+	case CmdGoVulnCheck:
 		fallback = "v1.1.4" // Match specific test expectation
-	case "mockgen":
+	case CmdMockgen:
 		fallback = VersionLatest // Default fallback
-	case "swag":
+	case CmdSwag:
 		fallback = VersionLatest // Default fallback
 	case "go":
 		fallback = "1.24"
@@ -181,29 +181,34 @@ func getToolVersionOrWarn(envVar, legacyEnvVar, toolName string) string {
 	return fallback
 }
 
-// Tool version getters (environment-aware functions, not globals)
+// GetDefaultGolangciLintVersion returns the default golangci-lint version from env or fallback
 func GetDefaultGolangciLintVersion() string {
-	return getToolVersionOrWarn("MAGE_X_GOLANGCI_LINT_VERSION", "GOLANGCI_LINT_VERSION", "golangci-lint")
+	return getToolVersionOrWarn("MAGE_X_GOLANGCI_LINT_VERSION", "GOLANGCI_LINT_VERSION", CmdGolangciLint)
 }
 
+// GetDefaultGofumptVersion returns the default gofumpt version from env or fallback
 func GetDefaultGofumptVersion() string {
-	return getToolVersionOrWarn("MAGE_X_GOFUMPT_VERSION", "GOFUMPT_VERSION", "gofumpt")
+	return getToolVersionOrWarn("MAGE_X_GOFUMPT_VERSION", "GOFUMPT_VERSION", CmdGofumpt)
 }
 
+// GetDefaultGoVulnCheckVersion returns the default govulncheck version from env or fallback
 func GetDefaultGoVulnCheckVersion() string {
-	return getToolVersionOrWarn("MAGE_X_GOVULNCHECK_VERSION", "GOVULNCHECK_VERSION", "govulncheck")
+	return getToolVersionOrWarn("MAGE_X_GOVULNCHECK_VERSION", "GOVULNCHECK_VERSION", CmdGoVulnCheck)
 }
 
+// GetDefaultMockgenVersion returns the default mockgen version from env or fallback
 func GetDefaultMockgenVersion() string {
-	return getToolVersionOrWarn("MAGE_X_MOCKGEN_VERSION", "MOCKGEN_VERSION", "mockgen")
+	return getToolVersionOrWarn("MAGE_X_MOCKGEN_VERSION", "MOCKGEN_VERSION", CmdMockgen)
 }
 
+// GetDefaultSwagVersion returns the default swag version from env or fallback
 func GetDefaultSwagVersion() string {
-	return getToolVersionOrWarn("MAGE_X_SWAG_VERSION", "SWAG_VERSION", "swag")
+	return getToolVersionOrWarn("MAGE_X_SWAG_VERSION", "SWAG_VERSION", CmdSwag)
 }
 
+// GetDefaultGoVersion returns the default Go version from env or fallback
 func GetDefaultGoVersion() string {
-	version := getToolVersionOrWarn("MAGE_X_GO_VERSION", "GO_PRIMARY_VERSION", "go")
+	version = getToolVersionOrWarn("MAGE_X_GO_VERSION", "GO_PRIMARY_VERSION", "go")
 	// Clean up the version to remove any .x suffix for actual usage
 	if version != "" && len(version) > 2 && version[len(version)-2:] == ".x" {
 		return version[:len(version)-2]

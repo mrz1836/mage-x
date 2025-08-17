@@ -242,7 +242,7 @@ go test ./... -race
 The mage-x architecture supports:
 
 - **Flexibility**: Interface-based design allows custom implementations
-- **Testability**: Mock interfaces for unit testing  
+- **Testability**: Mock interfaces for unit testing
 - **Maintainability**: Clean separation of concerns
 - **Dual Approach**: Both struct-based and interface-based usage patterns
 - **Extensibility**: Easy to add new namespaces and methods
@@ -265,16 +265,16 @@ func (namespace Namespace) Task() error {
 ### Configuration Access
 ```go
 func (namespace Namespace) Task() error {
-    cfg, err := LoadConfig()
+    cfg, err := GetConfig()
     if err != nil {
         return fmt.Errorf("failed to load config: %w", err)
     }
-    
+
     // Use configuration
     if cfg.SomeOption {
         // Do something
     }
-    
+
     return nil
 }
 ```
@@ -310,7 +310,7 @@ The main `magefile.go` exposes 59 commands that can be called directly via `mage
 
 #### Build Commands (5)
 - `buildDefault` - Build for current platform
-- `buildAll` - Build for all configured platforms  
+- `buildAll` - Build for all configured platforms
 - `buildClean` - Clean build artifacts
 - `buildDocker` - Build Docker containers
 - `buildGenerate` - Generate code before building
@@ -433,7 +433,7 @@ The project provides a modern, flexible build automation system for Go projects 
 # Activates: mage-x-linter + mage-x-test-finder + mage-x-security
 
 # Performance optimization workflow
-"Optimize code performance and validate with benchmarks" 
+"Optimize code performance and validate with benchmarks"
 # Activates: mage-x-refactor + mage-x-benchmark + mage-x-analyzer
 
 # Release preparation workflow
@@ -476,7 +476,7 @@ The documentation system provides specialized serving methods (not exposed as to
 - `ServePkgsite()` - Force modern pkgsite server (project-focused)
 - `ServeGodoc()` - Force classic godoc server (comprehensive)
 - `ServeStdlib()` - Standard library documentation only
-- `ServeProject()` - Project documentation only  
+- `ServeProject()` - Project documentation only
 - `ServeBoth()` - Both project and standard library documentation
 
 ### Documentation Generation Features

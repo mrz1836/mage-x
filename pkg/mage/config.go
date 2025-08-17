@@ -136,13 +136,6 @@ var (
 	ErrMissingToolVersions    = errors.New("missing required tool versions")
 )
 
-// LoadConfig loads the configuration from file or returns defaults
-// Deprecated: Use GetConfig() instead, which uses the ConfigProvider pattern
-func LoadConfig() (*Config, error) {
-	// Use the config provider pattern
-	return GetConfigProvider().GetConfig()
-}
-
 // GetConfig returns the current configuration using the active ConfigProvider
 func GetConfig() (*Config, error) {
 	return GetConfigProvider().GetConfig()
@@ -172,7 +165,7 @@ func GetToolVersion(toolName string) string {
 	if !exists {
 		// For unknown tools, try to construct environment variable name
 		envVar := "MAGE_X_" + strings.ToUpper(strings.ReplaceAll(toolName, "-", "_")) + "_VERSION"
-		if version := os.Getenv(envVar); version != "" {
+		if version = os.Getenv(envVar); version != "" {
 			return version
 		}
 		utils.Warn("Tool version for %s not found in environment variables (%s)", toolName, envVar)
@@ -181,13 +174,13 @@ func GetToolVersion(toolName string) string {
 	}
 
 	// Check primary environment variable first
-	if version := os.Getenv(toolInfo.envVar); version != "" {
+	if version = os.Getenv(toolInfo.envVar); version != "" {
 		return version
 	}
 
 	// Check legacy environment variable for backward compatibility
 	if toolInfo.legacyEnvVar != "" {
-		if version := os.Getenv(toolInfo.legacyEnvVar); version != "" {
+		if version = os.Getenv(toolInfo.legacyEnvVar); version != "" {
 			return version
 		}
 	}
@@ -627,7 +620,7 @@ func SetupEnterpriseConfig() error {
 
 // Load loads configuration from file
 func (c *Config) Load() error {
-	_, err := LoadConfig()
+	_, err := GetConfig()
 	return err
 }
 

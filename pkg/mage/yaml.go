@@ -422,8 +422,8 @@ func populateFromProject(config *YamlConfig) {
 	}
 
 	// Get version
-	if version := getVersion(); version != versionDev {
-		config.Project.Version = version
+	if projectVersion := getVersion(); projectVersion != versionDev {
+		config.Project.Version = projectVersion
 	}
 
 	// Check for existing files
@@ -461,8 +461,8 @@ func updateFromEnv(config *YamlConfig) {
 		config.Project.Description = desc
 	}
 
-	if version := utils.GetEnv("PROJECT_VERSION", ""); version != "" {
-		config.Project.Version = version
+	if envVersion := utils.GetEnv("PROJECT_VERSION", ""); envVersion != "" {
+		config.Project.Version = envVersion
 	}
 
 	if license := utils.GetEnv("PROJECT_LICENSE", ""); license != "" {

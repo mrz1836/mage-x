@@ -86,20 +86,20 @@ func (Docs) GoDocs() error {
 	}
 
 	// Get latest version
-	version := getVersion()
-	if version == versionDev {
+	currentVersion := getVersion()
+	if currentVersion == versionDev {
 		utils.Warn("No version tag found, using latest")
-		version = GetDefaultGoVulnCheckVersion()
-		if version == "" {
+		currentVersion = GetDefaultGoVulnCheckVersion()
+		if currentVersion == "" {
 			utils.Warn("GoVulnCheck version not available, using 'latest'")
-			version = VersionLatest
+			currentVersion = VersionLatest
 		}
 	}
 
 	// Construct pkg.go.dev URL
-	proxyURL := fmt.Sprintf("https://proxy.golang.org/%s/@v/%s.info", module, version)
+	proxyURL := fmt.Sprintf("https://proxy.golang.org/%s/@v/%s.info", module, currentVersion)
 
-	utils.Info("Triggering sync for %s@%s", module, version)
+	utils.Info("Triggering sync for %s@%s", module, currentVersion)
 
 	// Use curl to trigger the proxy
 	output, err := GetRunner().RunCmdOutput("curl", "-sSf", proxyURL)

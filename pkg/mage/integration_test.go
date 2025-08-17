@@ -300,7 +300,7 @@ func (its *IntegrationTestSuite) TestConfigurationLoading() {
 		its.RequireNoError(os.Chdir(isolatedDir))
 
 		TestResetConfig() // Reset
-		config, err := LoadConfig()
+		config, err := GetConfig()
 		assert.NoError(t, err)
 		assert.NotNil(t, config)
 		assert.Equal(t, "app", config.Project.Binary)
@@ -327,7 +327,7 @@ test:
 		its.RequireNoError(os.WriteFile(".mage.yaml", []byte(configYAML), 0o644))
 
 		TestResetConfig() // Reset
-		config, err := LoadConfig()
+		config, err := GetConfig()
 		assert.NoError(t, err)
 		assert.Equal(t, "my-app", config.Project.Name)
 		assert.Equal(t, "myapp", config.Project.Binary)
@@ -405,7 +405,7 @@ func (its *IntegrationTestSuite) TestEnterpriseFeatures() {
 
 	// Load and verify
 	TestResetConfig()
-	config, err := LoadConfig()
+	config, err := GetConfig()
 	its.AssertNoError(err)
 	its.NotNil(config.Enterprise)
 	its.Equal("Test Corp", config.Enterprise.Organization.Name)
@@ -488,7 +488,7 @@ func (its *IntegrationTestSuite) TestPerformanceRegression() {
 		start := time.Now()
 		for i := 0; i < 100; i++ {
 			TestResetConfig()
-			_, _ = LoadConfig()
+			_, _ = GetConfig()
 		}
 		duration := time.Since(start)
 

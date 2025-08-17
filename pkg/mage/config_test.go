@@ -316,8 +316,8 @@ func (ts *ConfigTestSuite) TestConfigFunctions() {
 	})
 
 	ts.Run("LoadConfigDeprecated", func() {
-		// Test deprecated LoadConfig function
-		config, err := LoadConfig()
+		// Test GetConfig function (formerly LoadConfig)
+		config, err := GetConfig()
 		ts.Require().NoError(err)
 		ts.Require().NotNil(config)
 	})

@@ -123,13 +123,13 @@ func (Releases) Promote() error {
 
 	fromChannel := utils.GetEnv("FROM_CHANNEL", "beta")
 	toChannel := utils.GetEnv("TO_CHANNEL", "stable")
-	version := utils.GetEnv("VERSION", "")
+	releaseVersion := utils.GetEnv("VERSION", "")
 
-	if version == "" {
+	if releaseVersion == "" {
 		return errReleasesVersionRequired
 	}
 
-	utils.Info("Promoting %s from %s to %s", version, fromChannel, toChannel)
+	utils.Info("Promoting %s from %s to %s", releaseVersion, fromChannel, toChannel)
 
 	// Validate channels
 	if err := validateChannels(fromChannel, toChannel); err != nil {
@@ -252,12 +252,12 @@ func (Releases) Cleanup() error {
 func createRelease(config *MultiChannelReleaseConfig) error {
 	// Get version
 	if config.Version == "" {
-		version := utils.GetEnv("VERSION", "")
-		if version == "" {
+		envVersion := utils.GetEnv("VERSION", "")
+		if envVersion == "" {
 			// Generate version based on channel
-			version = generateVersion(config.Channel)
+			envVersion = generateVersion(config.Channel)
 		}
-		config.Version = version
+		config.Version = envVersion
 	}
 
 	// Get GitHub token

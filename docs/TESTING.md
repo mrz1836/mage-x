@@ -135,7 +135,7 @@ func TestEnvOverrides(t *testing.T) {
 
     os.Setenv("BINARY_NAME", "testbin")
 
-    cfg := LoadConfig()
+    cfg, _ := GetConfig()
     assert.Equal(t, "testbin", cfg.Project.Binary)
 }
 ```

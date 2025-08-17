@@ -450,9 +450,9 @@ func getGoVersion() string {
 	// Parse "go version go1.24.0 linux/amd64" -> "1.24.0"
 	parts := strings.Fields(output)
 	if len(parts) >= 3 {
-		version := parts[2]
-		if strings.HasPrefix(version, "go") {
-			return version[2:]
+		goVersion := parts[2]
+		if strings.HasPrefix(goVersion, "go") {
+			return goVersion[2:]
 		}
 	}
 

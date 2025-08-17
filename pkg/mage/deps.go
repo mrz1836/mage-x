@@ -258,14 +258,14 @@ func (Deps) Audit() error {
 	if !utils.CommandExists("govulncheck") {
 		utils.Info("Installing govulncheck...")
 
-		version := config.Tools.GoVulnCheck
-		if version == "" || version == VersionLatest {
-			version = VersionAtLatest
-		} else if !strings.HasPrefix(version, "@") {
-			version = "@" + version
+		vulnVersion := config.Tools.GoVulnCheck
+		if vulnVersion == "" || vulnVersion == VersionLatest {
+			vulnVersion = VersionAtLatest
+		} else if !strings.HasPrefix(vulnVersion, "@") {
+			vulnVersion = "@" + vulnVersion
 		}
 
-		if err := GetRunner().RunCmd("go", "install", "golang.org/x/vuln/cmd/govulncheck"+version); err != nil {
+		if err := GetRunner().RunCmd("go", "install", "golang.org/x/vuln/cmd/govulncheck"+vulnVersion); err != nil {
 			return fmt.Errorf("failed to install govulncheck: %w", err)
 		}
 	}

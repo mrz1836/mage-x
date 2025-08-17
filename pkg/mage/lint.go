@@ -327,15 +327,15 @@ func installGofumpt(config *Config) error {
 	maxRetries := config.Download.MaxRetries
 	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
 
-	version := config.Tools.Fumpt
-	if version == "" {
+	fumptVersion := config.Tools.Fumpt
+	if fumptVersion == "" {
 		utils.Warn("Gofumpt version not available, using @latest")
-		version = VersionAtLatest
-	} else if !strings.HasPrefix(version, "@") {
-		version = "@" + version
+		fumptVersion = VersionAtLatest
+	} else if !strings.HasPrefix(fumptVersion, "@") {
+		fumptVersion = "@" + fumptVersion
 	}
 
-	moduleWithVersion := "mvdan.cc/gofumpt" + version
+	moduleWithVersion := "mvdan.cc/gofumpt" + fumptVersion
 
 	// Get the secure executor with retry capabilities
 	runner := GetRunner()

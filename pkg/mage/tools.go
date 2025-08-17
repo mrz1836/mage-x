@@ -93,15 +93,15 @@ func (Tools) Update() error {
 
 		utils.Info("Updating %s with retry logic...", tool.Name)
 
-		version := tool.Version
-		if version == "" {
+		toolVersion := tool.Version
+		if toolVersion == "" {
 			utils.Warn("Version for tool %s not available, using @latest", tool.Name)
-			version = VersionAtLatest
-		} else if !strings.HasPrefix(version, "@") {
-			version = "@" + version
+			toolVersion = VersionAtLatest
+		} else if !strings.HasPrefix(toolVersion, "@") {
+			toolVersion = "@" + toolVersion
 		}
 
-		moduleWithVersion := tool.Module + version
+		moduleWithVersion := tool.Module + toolVersion
 
 		// Get the secure executor with retry capabilities
 		runner := GetRunner()
@@ -157,11 +157,11 @@ func (Tools) Verify() error {
 				utils.Success("%s: installed", tool.Name)
 				continue
 			}
-			version := strings.TrimSpace(output)
-			if version == "" {
-				version = "installed"
+			installedVersion := strings.TrimSpace(output)
+			if installedVersion == "" {
+				installedVersion = "installed"
 			}
-			utils.Success("%s: %s", tool.Name, version)
+			utils.Success("%s: %s", tool.Name, installedVersion)
 		} else {
 			utils.Error("%s: not installed", tool.Name)
 			allGood = false
@@ -238,15 +238,15 @@ func (Tools) VulnCheck() error {
 func installGovulncheck(ctx context.Context, config *Config, maxRetries int, initialDelay time.Duration) error {
 	utils.Info("Installing govulncheck with retry logic...")
 
-	version := config.Tools.GoVulnCheck
-	if version == "" || version == VersionLatest {
+	govulnVersion := config.Tools.GoVulnCheck
+	if govulnVersion == "" || govulnVersion == VersionLatest {
 		utils.Warn("GoVulnCheck version not available, using @latest")
-		version = VersionAtLatest
-	} else if !strings.HasPrefix(version, "@") {
-		version = "@" + version
+		govulnVersion = VersionAtLatest
+	} else if !strings.HasPrefix(govulnVersion, "@") {
+		govulnVersion = "@" + govulnVersion
 	}
 
-	moduleWithVersion := "golang.org/x/vuln/cmd/govulncheck" + version
+	moduleWithVersion := "golang.org/x/vuln/cmd/govulncheck" + govulnVersion
 
 	// Get the secure executor with retry capabilities
 	runner := GetRunner()
@@ -270,15 +270,15 @@ func installGovulncheck(ctx context.Context, config *Config, maxRetries int, ini
 
 // installToolFromModule installs a tool from a Go module with retry logic
 func installToolFromModule(ctx context.Context, tool ToolDefinition, _ *Config, maxRetries int, initialDelay time.Duration) error {
-	version := tool.Version
-	if version == "" || version == VersionLatest {
+	moduleVersion := tool.Version
+	if moduleVersion == "" || moduleVersion == VersionLatest {
 		utils.Warn("Version for tool %s not available, using @latest", tool.Name)
-		version = VersionAtLatest
-	} else if !strings.HasPrefix(version, "@") {
-		version = "@" + version
+		moduleVersion = VersionAtLatest
+	} else if !strings.HasPrefix(moduleVersion, "@") {
+		moduleVersion = "@" + moduleVersion
 	}
 
-	moduleWithVersion := tool.Module + version
+	moduleWithVersion := tool.Module + moduleVersion
 	utils.Info("Installing %s from %s...", tool.Name, moduleWithVersion)
 
 	// Get the secure executor with retry capabilities
@@ -351,15 +351,15 @@ func getRequiredTools(cfg *Config) []ToolDefinition {
 		// Parse module@version format
 		parts := strings.Split(module, "@")
 		modulePath := parts[0]
-		version := VersionLatest
+		modVer := VersionLatest
 		if len(parts) > 1 {
-			version = parts[1]
+			modVer = parts[1]
 		}
 
 		tools = append(tools, ToolDefinition{
 			Name:    name,
 			Module:  modulePath,
-			Version: version,
+			Version: modVer,
 			Check:   name,
 		})
 	}

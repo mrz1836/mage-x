@@ -87,12 +87,12 @@ lint:
 	b.Run("LoadConfig", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			// Reset config for benchmark
-			_, _ = LoadConfig() //nolint:errcheck // Benchmark ignores errors
+			_, _ = GetConfig() //nolint:errcheck // Benchmark ignores errors
 		}
 	})
 
 	b.Run("SaveConfig", func(b *testing.B) {
-		config, _ := LoadConfig() //nolint:errcheck // Benchmark ignores errors
+		config, _ := GetConfig() //nolint:errcheck // Benchmark ignores errors
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_ = SaveConfig(config) //nolint:errcheck // Benchmark ignores errors
@@ -101,7 +101,7 @@ lint:
 
 	b.Run("GetConfig", func(b *testing.B) {
 		// Pre-load config
-		testCfg, _ := LoadConfig() //nolint:errcheck // Benchmark ignores errors
+		testCfg, _ := GetConfig() //nolint:errcheck // Benchmark ignores errors
 		_ = testCfg
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -453,7 +453,7 @@ func BenchmarkConcurrentOperations(b *testing.B) {
 
 	b.Run("parallel_config_access", func(b *testing.B) {
 		// Pre-load config
-		testCfg, _ := LoadConfig() //nolint:errcheck // Benchmark ignores errors
+		testCfg, _ := GetConfig() //nolint:errcheck // Benchmark ignores errors
 		_ = testCfg
 		b.ResetTimer()
 

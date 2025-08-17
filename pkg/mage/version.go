@@ -766,7 +766,7 @@ func (Version) Tag(_ ...string) error {
 	return runner.RunCmd("echo", "Creating version tag")
 }
 
-// Next shows next version
+// Next shows the next version
 func (Version) Next(_, _ string) (string, error) {
 	return "v1.0.1", nil
 }

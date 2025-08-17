@@ -57,19 +57,19 @@ func (Git) Diff() error {
 
 // Tag creates and pushes a new tag (use version=X.Y.Z)
 func (Git) Tag() error {
-	version := os.Getenv("version")
-	if version == "" {
+	tagVersion := os.Getenv("version")
+	if tagVersion == "" {
 		return errGitVersionRequired
 	}
 
 	// Validate version format
-	if err := security.ValidateVersion(version); err != nil {
+	if err := security.ValidateVersion(tagVersion); err != nil {
 		return fmt.Errorf("invalid version format: %w", err)
 	}
 
-	utils.Header(fmt.Sprintf("Creating Tag v%s", version))
+	utils.Header(fmt.Sprintf("Creating Tag v%s", tagVersion))
 
-	tagName := fmt.Sprintf("v%s", version)
+	tagName := fmt.Sprintf("v%s", tagVersion)
 
 	// Create annotated tag
 	if err := GetRunner().RunCmd("git", "tag", "-a", tagName, "-m", "Pending full release..."); err != nil {
@@ -92,19 +92,19 @@ func (Git) Tag() error {
 
 // TagRemove removes local and remote tag (use version=X.Y.Z)
 func (Git) TagRemove() error {
-	version := os.Getenv("version")
-	if version == "" {
+	tagVersion := os.Getenv("version")
+	if tagVersion == "" {
 		return errGitTagRemoveVersionRequired
 	}
 
 	// Validate version format
-	if err := security.ValidateVersion(version); err != nil {
+	if err := security.ValidateVersion(tagVersion); err != nil {
 		return fmt.Errorf("invalid version format: %w", err)
 	}
 
-	utils.Header(fmt.Sprintf("Removing Tag v%s", version))
+	utils.Header(fmt.Sprintf("Removing Tag v%s", tagVersion))
 
-	tagName := fmt.Sprintf("v%s", version)
+	tagName := fmt.Sprintf("v%s", tagVersion)
 
 	// Delete local tag
 	if err := GetRunner().RunCmd("git", "tag", "-d", tagName); err != nil {
@@ -127,19 +127,19 @@ func (Git) TagRemove() error {
 
 // TagUpdate force-updates tag to current commit (use version=X.Y.Z)
 func (Git) TagUpdate() error {
-	version := os.Getenv("version")
-	if version == "" {
+	tagVersion := os.Getenv("version")
+	if tagVersion == "" {
 		return errGitTagUpdateVersionRequired
 	}
 
 	// Validate version format
-	if err := security.ValidateVersion(version); err != nil {
+	if err := security.ValidateVersion(tagVersion); err != nil {
 		return fmt.Errorf("invalid version format: %w", err)
 	}
 
-	utils.Header(fmt.Sprintf("Force Updating Tag v%s", version))
+	utils.Header(fmt.Sprintf("Force Updating Tag v%s", tagVersion))
 
-	tagName := fmt.Sprintf("v%s", version)
+	tagName := fmt.Sprintf("v%s", tagVersion)
 
 	// Force push current HEAD to tag
 	refSpec := fmt.Sprintf("HEAD:refs/tags/%s", tagName)
