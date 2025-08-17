@@ -1,8 +1,8 @@
 {
-  "description": "Development environment",
-  "endpoint": "http://localhost:8080",
-  "health_check": "/health",
-  "name": "development",
-  "secrets": [],
-  "variables": {}
+    "description": "Development environment",
+    "endpoint": "http://localhost:8080",
+    "health_check": "/health",
+    "name": "development",
+    "secrets": [],
+    "variables": {}
 }

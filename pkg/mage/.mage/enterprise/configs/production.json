@@ -1,8 +1,8 @@
 {
-  "description": "Production environment",
-  "endpoint": "https://api.example.com",
-  "health_check": "/health",
-  "name": "production",
-  "secrets": [],
-  "variables": {}
+    "description": "Production environment",
+    "endpoint": "https://api.example.com",
+    "health_check": "/health",
+    "name": "production",
+    "secrets": [],
+    "variables": {}
 }
