@@ -342,7 +342,7 @@ func createDefaultConfig() *YamlConfig {
 			Provider:  "github",
 			Workflows: []string{"ci.yml"},
 			Matrix: CIMatrix{
-				GoVersions: []string{"1.24", "1.22"},
+				GoVersions: []string{GetDefaultGoVersion(), GetSecondaryGoVersion()},
 				Platforms:  []string{"ubuntu-latest", "macos-latest", "windows-latest"},
 			},
 		},

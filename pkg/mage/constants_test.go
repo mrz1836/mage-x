@@ -324,8 +324,14 @@ func (ts *ConstantsTestSuite) TestToolVersions() {
 		}
 	}
 
-	ts.Require().Equal("v1.1.4", GetDefaultGoVulnCheckVersion())
-	ts.Require().True(strings.HasPrefix(GetDefaultGolangciLintVersion(), "v"))
+	// Test version functions return valid values (either from env or fallback)
+	vulnVersion := GetDefaultGoVulnCheckVersion()
+	ts.Require().True(vulnVersion == "latest" || strings.HasPrefix(vulnVersion, "v"),
+		"GoVulnCheck version should be 'latest' or start with 'v', got: %s", vulnVersion)
+	
+	lintVersion := GetDefaultGolangciLintVersion()
+	ts.Require().True(lintVersion == "latest" || strings.HasPrefix(lintVersion, "v"),
+		"GolangciLint version should be 'latest' or start with 'v', got: %s", lintVersion)
 }
 
 // TestErrorMessages tests error message constants

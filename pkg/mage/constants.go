@@ -155,21 +155,21 @@ func getToolVersionOrWarn(envVar, legacyEnvVar, toolName string) string {
 		}
 	}
 
-	// Provide fallback defaults for tools (matching test expectations)
+	// Provide fallback defaults for tools - all use latest to avoid hardcoded versions
 	var fallback string
 	switch toolName {
 	case CmdGolangciLint:
-		fallback = "v2.4.0" // Match .env.base current version
+		fallback = VersionLatest // Use latest if env vars not loaded
 	case CmdGofumpt:
-		fallback = VersionLatest // Match test expectation
+		fallback = VersionLatest
 	case CmdGoVulnCheck:
-		fallback = "v1.1.4" // Match specific test expectation
+		fallback = VersionLatest // Use latest if env vars not loaded
 	case CmdMockgen:
-		fallback = VersionLatest // Default fallback
+		fallback = VersionLatest
 	case CmdSwag:
-		fallback = VersionLatest // Default fallback
+		fallback = VersionLatest
 	case "go":
-		fallback = "1.24"
+		fallback = VersionLatest // Use latest if env vars not loaded
 	default:
 		fallback = VersionLatest
 	}
@@ -214,6 +214,16 @@ func GetDefaultGoVersion() string {
 		return version[:len(version)-2]
 	}
 	return version
+}
+
+// GetSecondaryGoVersion returns the secondary Go version from env or fallback
+func GetSecondaryGoVersion() string {
+	secondaryVersion := getToolVersionOrWarn("MAGE_X_GO_SECONDARY_VERSION", "GO_SECONDARY_VERSION", "go")
+	// Clean up the version to remove any .x suffix for actual usage
+	if secondaryVersion != "" && len(secondaryVersion) > 2 && secondaryVersion[len(secondaryVersion)-2:] == ".x" {
+		return secondaryVersion[:len(secondaryVersion)-2]
+	}
+	return secondaryVersion
 }
 
 // Version constants for consistency
