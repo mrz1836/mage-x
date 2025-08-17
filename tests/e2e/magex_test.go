@@ -56,8 +56,25 @@ func TestMagexVersion(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if !strings.Contains(outputStr, "MAGE-X version") {
-		t.Errorf("Version output should contain 'MAGE-X version', got: %s", outputStr)
+
+	// Check for key components of the enhanced version output
+	expectedStrings := []string{
+		"MAGE-X - Write Once, Mage Everywhere", // Banner tagline
+		"Version Information",                  // Section header
+		"Version:",                             // Version field
+		"Capabilities",                         // Capabilities section
+		"Commands:",                            // Commands count
+	}
+
+	for _, expected := range expectedStrings {
+		if !strings.Contains(outputStr, expected) {
+			t.Errorf("Version output should contain '%s', got: %s", expected, outputStr)
+		}
+	}
+
+	// Verify it contains a version number (e.g., 1.2.1)
+	if !strings.Contains(outputStr, "Version:") {
+		t.Errorf("Version output should contain version number, got: %s", outputStr)
 	}
 }
 

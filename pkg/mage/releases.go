@@ -455,7 +455,7 @@ func buildManually(config *MultiChannelReleaseConfig) error {
 	}
 
 	for _, platform := range config.Platforms {
-		outputPath, err := buildForPlatform(binaryName, platform)
+		outputPath, err := buildForPlatform(binaryName, platform, config)
 		if err != nil {
 			return err
 		}
@@ -473,7 +473,7 @@ func getBinaryName() (string, error) {
 	return filepath.Base(module), nil
 }
 
-func buildForPlatform(binaryName, platform string) (string, error) {
+func buildForPlatform(binaryName, platform string, config *MultiChannelReleaseConfig) (string, error) {
 	goos, goarch, err := parsePlatform(platform)
 	if err != nil {
 		return "", err
@@ -484,7 +484,14 @@ func buildForPlatform(binaryName, platform string) (string, error) {
 
 	// Build with proper environment
 	err = withBuildEnvironment(goos, goarch, func() error {
-		args := []string{"build", "-o", outputPath, "-ldflags", "-s -w"}
+		ldflags := fmt.Sprintf("-s -w -X main.version=%s -X main.commit=%s -X main.date=%s",
+			config.Version, getCommit(), time.Now().Format(time.RFC3339))
+		// Detect if we're building magex specifically
+		buildTarget := "./..."
+		if strings.Contains(binaryName, "magex") || strings.Contains(binaryName, "mage-x") {
+			buildTarget = "./cmd/magex"
+		}
+		args := []string{"build", "-o", outputPath, "-ldflags", ldflags, buildTarget}
 		return GetRunner().RunCmd("go", args...)
 	})
 	if err != nil {

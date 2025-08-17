@@ -179,6 +179,10 @@ func (b Build) determineBuildOutput(cfg *Config) string {
 
 // determinePackagePath determines the package path to build
 func (b Build) determinePackagePath(outputPath string, requireMain bool) (string, error) {
+	// Check for magex first (primary binary)
+	if utils.DirExists("cmd/magex") {
+		return "./cmd/magex", nil
+	}
 	if utils.DirExists("cmd/mage-init") {
 		return "./cmd/mage-init", nil
 	}

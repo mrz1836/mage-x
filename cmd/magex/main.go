@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"text/tabwriter"
 
@@ -21,7 +22,7 @@ import (
 )
 
 const (
-	version = "1.0.0"
+	version = "1.2.1"
 	banner  = `
 ███╗   ███╗ █████╗  ██████╗ ███████╗      ██╗  ██╗
 ████╗ ████║██╔══██╗██╔════╝ ██╔════╝      ╚██╗██╔╝
@@ -31,6 +32,15 @@ const (
 ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝      ╚═╝  ╚═╝
    🪄 MAGE-X - Write Once, Mage Everywhere
 `
+)
+
+// Version variables populated via ldflags during build
+//
+//nolint:gochecknoglobals // These are standard for version injection via ldflags
+var (
+	commit    = "unknown"
+	buildDate = "unknown"
+	buildTime = "unknown"
 )
 
 // ErrMagefileExists is returned when trying to initialize a magefile that already exists
@@ -240,11 +250,73 @@ func showUsage() {
 	showUnifiedHelp("")
 }
 
-// showVersion displays version information
+// showVersion displays version information with awesome formatting
 func showVersion() {
-	fmt.Printf("MAGE-X version %s\n", version)
-	utils.Println("Built-in commands from all MAGE-X namespaces")
-	utils.Println("Compatible with Mage build tool")
+	// Show the banner first
+	fmt.Print(banner)
+
+	// Initialize registry to get command count
+	reg := registry.Global()
+	embed.RegisterAll(reg)
+	metadata := reg.Metadata()
+
+	// Version header
+	utils.Println("\n📦 Version Information")
+	utils.Println(strings.Repeat("─", 50))
+
+	// Core version info
+	fmt.Printf("  🏷️  Version:      %s\n", version)
+
+	// Build information if available
+	if commit != "unknown" && commit != "" {
+		// Show first 7 chars of commit like git does
+		shortCommit := commit
+		if len(commit) > 7 {
+			shortCommit = commit[:7]
+		}
+		fmt.Printf("  🔨 Commit:       %s\n", shortCommit)
+	}
+
+	if buildDate != "unknown" && buildDate != "" {
+		fmt.Printf("  📅 Build Date:   %s\n", buildDate)
+	}
+
+	if buildTime != "unknown" && buildTime != "" {
+		fmt.Printf("  ⏰ Build Time:   %s\n", buildTime)
+	}
+
+	// Platform information
+	fmt.Printf("  💻 Platform:     %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	fmt.Printf("  🐹 Go Version:   %s\n", runtime.Version())
+
+	// Capabilities
+	utils.Println("\n🚀 Capabilities")
+	utils.Println(strings.Repeat("─", 50))
+	fmt.Printf("  📋 Commands:     %d built-in commands\n", metadata.TotalCommands)
+	fmt.Printf("  📁 Namespaces:   30+ specialized namespaces\n")
+	fmt.Printf("  🤖 AI Agents:    19 intelligent agents\n")
+	fmt.Printf("  ⚡ Features:     Zero-config, Write Once, Mage Everywhere\n")
+
+	// Compatibility
+	utils.Println("\n✅ Compatibility")
+	utils.Println(strings.Repeat("─", 50))
+	utils.Println("  • Drop-in replacement for Mage")
+	utils.Println("  • Works with existing magefiles")
+	utils.Println("  • Cross-platform (Windows, macOS, Linux)")
+	utils.Println("  • Go 1.19+ supported")
+
+	// Quick start hint
+	utils.Println("\n💡 Quick Start")
+	utils.Println(strings.Repeat("─", 50))
+	utils.Println("  magex -h         Show comprehensive help")
+	utils.Println("  magex -l         List all available commands")
+	utils.Println("  magex build      Build your project")
+	utils.Println("  magex test       Run tests")
+
+	// Footer
+	utils.Println("\n🔗 Learn More")
+	utils.Println(strings.Repeat("─", 50))
+	utils.Println("  https://github.com/mrz1836/mage-x")
 }
 
 // showUnifiedHelp displays the comprehensive unified help system

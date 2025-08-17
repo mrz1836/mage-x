@@ -132,7 +132,7 @@ go install github.com/mrz1836/mage-x/cmd/magex@latest
 magex build         # Build your project
 magex test          # Run tests
 magex lint:fix      # Fix linting issues
-magex release:multi # Multi-platform release
+magex format:fix    # Format your code
 
 # That's it! No magefile.go needed! 🚀
 ```
