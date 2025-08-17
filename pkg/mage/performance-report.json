@@ -1,24 +1,24 @@
 {
-  "generated_at": "2025-07-18T21:47:08.485022-04:00",
-  "period": "week",
-  "total_builds": 0,
-  "success_rate": 0,
-  "average_duration": 0,
-  "build_trends": {},
-  "test_metrics": {},
-  "resource_usage": {},
-  "bottlenecks": [],
-  "recommendations": [
-    {
-      "title": "Improve Build Reliability",
-      "category": "Reliability",
-      "priority": "High",
-      "impact": "High",
-      "effort": "Medium",
-      "description": "Build success rate is 0.0%, below the recommended 95%",
-      "action": "Investigate and fix failing builds, improve error handling",
-      "confidence": 0.9
-    }
-  ],
-  "comparisons": {}
+    "generated_at": "2025-07-18T21:47:08.485022-04:00",
+    "period": "week",
+    "total_builds": 0,
+    "success_rate": 0,
+    "average_duration": 0,
+    "build_trends": {},
+    "test_metrics": {},
+    "resource_usage": {},
+    "bottlenecks": [],
+    "recommendations": [
+        {
+            "title": "Improve Build Reliability",
+            "category": "Reliability",
+            "priority": "High",
+            "impact": "High",
+            "effort": "Medium",
+            "description": "Build success rate is 0.0%, below the recommended 95%",
+            "action": "Investigate and fix failing builds, improve error handling",
+            "confidence": 0.9
+        }
+    ],
+    "comparisons": {}
 }

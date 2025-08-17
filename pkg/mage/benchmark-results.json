@@ -1,57 +1,57 @@
 [
-  {
-    "name": "Build Performance",
-    "description": "Measures build time and resource usage",
-    "iterations": 3,
-    "min_duration": 101060458,
-    "max_duration": 101224125,
-    "avg_duration": 101130208,
-    "median": 101106042,
-    "success": true,
-    "timestamp": "2025-07-18T21:47:08.819918-04:00"
-  },
-  {
-    "name": "Test Performance",
-    "description": "Measures test execution time",
-    "iterations": 3,
-    "min_duration": 51041583,
-    "max_duration": 51485708,
-    "avg_duration": 51189930,
-    "median": 51042500,
-    "success": true,
-    "timestamp": "2025-07-18T21:47:09.006632-04:00"
-  },
-  {
-    "name": "Dependency Resolution",
-    "description": "Measures dependency resolution time",
-    "iterations": 3,
-    "min_duration": 200686250,
-    "max_duration": 201172959,
-    "avg_duration": 200978083,
-    "median": 201075042,
-    "success": true,
-    "timestamp": "2025-07-18T21:47:09.644756-04:00"
-  },
-  {
-    "name": "Code Generation",
-    "description": "Measures code generation performance",
-    "iterations": 3,
-    "min_duration": 151072959,
-    "max_duration": 151876417,
-    "avg_duration": 151342903,
-    "median": 151079333,
-    "success": true,
-    "timestamp": "2025-07-18T21:47:10.122284-04:00"
-  },
-  {
-    "name": "Linting Performance",
-    "description": "Measures linting speed",
-    "iterations": 3,
-    "min_duration": 76048125,
-    "max_duration": 76071833,
-    "avg_duration": 76062430,
-    "median": 76067333,
-    "success": true,
-    "timestamp": "2025-07-18T21:47:10.368664-04:00"
-  }
+    {
+        "name": "Build Performance",
+        "description": "Measures build time and resource usage",
+        "iterations": 3,
+        "min_duration": 101060458,
+        "max_duration": 101224125,
+        "avg_duration": 101130208,
+        "median": 101106042,
+        "success": true,
+        "timestamp": "2025-07-18T21:47:08.819918-04:00"
+    },
+    {
+        "name": "Test Performance",
+        "description": "Measures test execution time",
+        "iterations": 3,
+        "min_duration": 51041583,
+        "max_duration": 51485708,
+        "avg_duration": 51189930,
+        "median": 51042500,
+        "success": true,
+        "timestamp": "2025-07-18T21:47:09.006632-04:00"
+    },
+    {
+        "name": "Dependency Resolution",
+        "description": "Measures dependency resolution time",
+        "iterations": 3,
+        "min_duration": 200686250,
+        "max_duration": 201172959,
+        "avg_duration": 200978083,
+        "median": 201075042,
+        "success": true,
+        "timestamp": "2025-07-18T21:47:09.644756-04:00"
+    },
+    {
+        "name": "Code Generation",
+        "description": "Measures code generation performance",
+        "iterations": 3,
+        "min_duration": 151072959,
+        "max_duration": 151876417,
+        "avg_duration": 151342903,
+        "median": 151079333,
+        "success": true,
+        "timestamp": "2025-07-18T21:47:10.122284-04:00"
+    },
+    {
+        "name": "Linting Performance",
+        "description": "Measures linting speed",
+        "iterations": 3,
+        "min_duration": 76048125,
+        "max_duration": 76071833,
+        "avg_duration": 76062430,
+        "median": 76067333,
+        "success": true,
+        "timestamp": "2025-07-18T21:47:10.368664-04:00"
+    }
 ]

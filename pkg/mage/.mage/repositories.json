@@ -1,10 +1,10 @@
 {
-  "version": "1.0.0",
-  "repositories": [],
-  "groups": [],
-  "settings": {
-    "max_concurrency": 5,
-    "timeout": "30m",
-    "default_branch": "main"
-  }
+    "version": "1.0.0",
+    "repositories": [],
+    "groups": [],
+    "settings": {
+        "max_concurrency": 5,
+        "timeout": "30m",
+        "default_branch": "main"
+    }
 }
