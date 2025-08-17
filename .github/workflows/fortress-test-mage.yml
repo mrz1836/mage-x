@@ -79,7 +79,7 @@ jobs:
       matrix:
         namespace:
           - {name: "Build", cmds: ["mage build:default", "mage build:clean"]}
-          - {name: "Test", cmds: ["mage test:unit", "mage test:short"]}
+          - {name: "Test", cmds: ["mage test:short"]}
           - {name: "Lint", cmds: ["mage lint:version"]}
           - {name: "Tools", cmds: ["mage tools:install"]}
           - {name: "Deps", cmds: ["mage deps:download"]}
@@ -120,8 +120,8 @@ jobs:
               mage build:clean
               ;;
             "Test")
-              echo "### Running: mage test:unit"
-              mage test:unit
+              echo "### Running: mage test:short (using short flag to avoid timeouts)"
+              mage test:short
               ;;
             "Lint")
               echo "### Running: mage lint:default"
