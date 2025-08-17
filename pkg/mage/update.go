@@ -484,15 +484,41 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 
 // installUpdate installs the downloaded update
 func installUpdate() error {
-	// This is simplified - in reality would handle binary replacement
-	// For now, we use go install
-
 	module, err := utils.GetModuleName()
 	if err != nil {
 		return err
 	}
 
-	return GetRunner().RunCmd("go", "install", module+"/cmd/magex@latest")
+	// Get the latest version tag
+	latestTag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
+	if err != nil {
+		return fmt.Errorf("failed to get latest tag: %w", err)
+	}
+	latestTag = strings.TrimSpace(latestTag)
+
+	// Get the commit for the tag
+	commit, err := GetRunner().RunCmdOutput("git", "rev-list", "-n", "1", latestTag)
+	if err != nil {
+		return fmt.Errorf("failed to get commit for tag: %w", err)
+	}
+	commit = strings.TrimSpace(commit)
+	if len(commit) > 7 {
+		commit = commit[:7] // Use short commit
+	}
+
+	// Build with proper ldflags
+	ldflags := fmt.Sprintf("-s -w -X main.version=%s -X main.commit=%s -X main.buildDate=%s -X main.buildTime=%s",
+		latestTag, commit, time.Now().Format("2006-01-02"), time.Now().Format("15:04:05"))
+
+	// Get GOPATH for installation location
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = filepath.Join(os.Getenv("HOME"), "go")
+	}
+	outputPath := filepath.Join(gopath, "bin", "magex")
+
+	// Build and install
+	return GetRunner().RunCmd("go", "build", "-ldflags", ldflags, "-o", outputPath, module+"/cmd/magex")
 }
 
 // getUpdateConfigPath returns the update configuration path
