@@ -580,7 +580,8 @@ DRY_RUN=true BUMP=major PUSH=true magex version:bump     # Preview major bump wi
 <summary>🚀 <strong>Release Management</strong></summary>
 
 ```bash
-magex release:default    # Create a new release
+magex release:default     # Create a new release from the latest tag
+magex release:localinstall # Build from latest tag and install locally
 magex releases:stable     # Create stable releases
 magex releases:beta       # Create beta releases
 magex releases:edge       # Create edge releases
