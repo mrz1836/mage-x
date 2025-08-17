@@ -21,9 +21,7 @@ import (
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
-const (
-	version = "1.2.1"
-	banner  = `
+const banner = `
 ███╗   ███╗ █████╗  ██████╗ ███████╗      ██╗  ██╗
 ████╗ ████║██╔══██╗██╔════╝ ██╔════╝      ╚██╗██╔╝
 ██╔████╔██║███████║██║  ███╗█████╗  █████╗ ╚███╔╝
@@ -32,12 +30,12 @@ const (
 ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝      ╚═╝  ╚═╝
    🪄 MAGE-X - Write Once, Mage Everywhere
 `
-)
 
 // Version variables populated via ldflags during build
 //
 //nolint:gochecknoglobals // These are standard for version injection via ldflags
 var (
+	version   = "dev"
 	commit    = "unknown"
 	buildDate = "unknown"
 	buildTime = "unknown"
@@ -261,11 +259,11 @@ func showVersion() {
 	metadata := reg.Metadata()
 
 	// Version header
-	utils.Println("\n📦 Version Information")
+	utils.Println("\nVersion Information")
 	utils.Println(strings.Repeat("─", 50))
 
 	// Core version info
-	fmt.Printf("  🏷️  Version:      %s\n", version)
+	fmt.Printf("  Version:      %s\n", version)
 
 	// Build information if available
 	if commit != "unknown" && commit != "" {
@@ -278,24 +276,24 @@ func showVersion() {
 	}
 
 	if buildDate != "unknown" && buildDate != "" {
-		fmt.Printf("  📅 Build Date:   %s\n", buildDate)
+		fmt.Printf("  Build Date:   %s\n", buildDate)
 	}
 
 	if buildTime != "unknown" && buildTime != "" {
-		fmt.Printf("  ⏰ Build Time:   %s\n", buildTime)
+		fmt.Printf("  Build Time:   %s\n", buildTime)
 	}
 
 	// Platform information
-	fmt.Printf("  💻 Platform:     %s/%s\n", runtime.GOOS, runtime.GOARCH)
-	fmt.Printf("  🐹 Go Version:   %s\n", runtime.Version())
+	fmt.Printf("  Platform:     %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	fmt.Printf("  Go Version:   %s\n", runtime.Version())
 
 	// Capabilities
 	utils.Println("\n🚀 Capabilities")
 	utils.Println(strings.Repeat("─", 50))
-	fmt.Printf("  📋 Commands:     %d built-in commands\n", metadata.TotalCommands)
-	fmt.Printf("  📁 Namespaces:   30+ specialized namespaces\n")
-	fmt.Printf("  🤖 AI Agents:    19 intelligent agents\n")
-	fmt.Printf("  ⚡ Features:     Zero-config, Write Once, Mage Everywhere\n")
+	fmt.Printf("  Commands:     %d built-in commands\n", metadata.TotalCommands)
+	fmt.Printf("  Namespaces:   30+ specialized namespaces\n")
+	fmt.Printf("  AI Features:  19 intelligent agents + 13+ commands\n")
+	fmt.Printf("  Features:     Zero-config, Write Once, Mage Everywhere\n")
 
 	// Compatibility
 	utils.Println("\n✅ Compatibility")
@@ -303,13 +301,11 @@ func showVersion() {
 	utils.Println("  • Drop-in replacement for Mage")
 	utils.Println("  • Works with existing magefiles")
 	utils.Println("  • Cross-platform (Windows, macOS, Linux)")
-	utils.Println("  • Go 1.19+ supported")
 
 	// Quick start hint
 	utils.Println("\n💡 Quick Start")
 	utils.Println(strings.Repeat("─", 50))
-	utils.Println("  magex -h         Show comprehensive help")
-	utils.Println("  magex -l         List all available commands")
+	utils.Println("  magex help       Show comprehensive help")
 	utils.Println("  magex build      Build your project")
 	utils.Println("  magex test       Run tests")
 
