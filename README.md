@@ -366,6 +366,62 @@ magex release:default    # Create a new release
 </details>
 
 <details>
+<summary>🏗️ <strong>Project Setup & Initialization</strong></summary>
+
+```bash
+# Code Generation
+magex generate:default    # Run go generate
+magex generate:clean      # Remove generated files
+
+# Project Initialization
+magex init:default        # Default initialization
+magex init:project        # Initialize a new project
+magex init:library        # Initialize a library project
+magex init:cli            # Initialize a CLI project
+magex init:webapi         # Initialize a web API project
+magex init:microservice   # Initialize a microservice project
+magex init:tool           # Initialize a tool project
+magex init:upgrade        # Upgrade existing project
+magex init:templates      # Show available templates
+magex init:config         # Initialize configuration
+magex init:git            # Initialize git repository
+magex init:mage           # Initialize mage files
+magex init:ci             # Initialize CI/CD files
+magex init:docker         # Initialize Docker files
+magex init:docs           # Initialize documentation
+magex init:license        # Add license file
+magex init:makefile       # Create Makefile
+magex init:editorconfig   # Create .editorconfig
+
+# Recipe Management
+magex recipes:list        # List available recipes
+magex recipes:run         # Run a specific recipe
+RECIPE=fresh-start magex recipes:run  # Run the fresh-start recipe
+```
+
+</details>
+
+<details>
+<summary>📦 <strong>Dependencies & Modules</strong></summary>
+
+```bash
+# Dependency Management
+magex deps:update         # Update all dependencies
+magex deps:tidy           # Clean up go.mod and go.sum
+magex deps:download       # Download all dependencies
+magex deps:outdated       # Show outdated dependencies
+magex deps:audit          # Audit dependencies for vulnerabilities
+
+# Module Management
+magex mod:update          # Update go.mod file
+magex mod:tidy            # Tidy the go.mod file
+magex mod:verify          # Verify module checksums
+magex mod:download        # Download modules
+```
+
+</details>
+
+<details>
 <summary>📦 <strong>Build & Compilation</strong></summary>
 
 ```bash
@@ -409,6 +465,36 @@ magex tools:verify       # Show tool version information
 </details>
 
 <details>
+<summary>✅ <strong>Code Validation & Formatting</strong></summary>
+
+```bash
+# Code Validation
+magex vet:default         # Run go vet
+magex vet:all             # Run go vet with all checks
+magex vet:parallel        # Run go vet in parallel
+magex vet:shadow          # Check for variable shadowing
+magex vet:strict          # Run strict vet checks
+
+# Code Formatting
+magex format:default      # Default formatting (gofmt)
+magex format:all          # Format all supported file types
+magex format:gofmt        # Run gofmt
+magex format:fumpt        # Run gofumpt (stricter formatting)
+magex format:imports      # Format imports
+magex format:go           # Format Go files
+magex format:yaml         # Format YAML files
+magex format:json         # Format JSON files
+magex format:markdown     # Format Markdown files
+magex format:sql          # Format SQL files
+magex format:dockerfile   # Format Dockerfiles
+magex format:shell        # Format shell scripts
+magex format:fix          # Fix formatting issues automatically
+magex format:check        # Check if files are properly formatted
+```
+
+</details>
+
+<details>
 <summary>📊 <strong>Analysis & Metrics</strong></summary>
 
 ```bash
@@ -425,41 +511,6 @@ magex bench:report        # Generate benchmark reports
 magex bench:regression    # Check for performance regressions
 magex bench:memory        # Memory usage benchmarks
 magex bench:cpu           # CPU usage benchmarks
-```
-
-</details>
-
-<details>
-<summary>📦 <strong>Dependencies & Modules</strong></summary>
-
-```bash
-# Dependency Management
-magex deps:update         # Update all dependencies
-magex deps:tidy           # Clean up go.mod and go.sum
-magex deps:download       # Download all dependencies
-magex deps:outdated       # Show outdated dependencies
-magex deps:audit          # Audit dependencies for vulnerabilities
-
-# Module Management
-magex mod:update          # Update go.mod file
-magex mod:tidy            # Tidy the go.mod file
-magex mod:verify          # Verify module checksums
-magex mod:download        # Download modules
-```
-
-</details>
-
-<details>
-<summary>🔧 <strong>Development Tools</strong></summary>
-
-```bash
-magex tools:update        # Update all development tools
-magex tools:install       # Install all required development tools
-magex tools:verify        # Check if all required tools are available
-magex deps:audit          # Run vulnerability check using govulncheck
-magex build:install       # Install the project binary
-magex install:stdlib      # Install Go standard library for cross-compilation
-magex uninstall           # Remove installed binary
 ```
 
 </details>
@@ -526,16 +577,16 @@ magex releases:cleanup    # Clean up old releases
 </details>
 
 <details>
-<summary>🛡️ <strong>Security & Audit</strong></summary>
+<summary>🔧 <strong>Development Tools</strong></summary>
 
 ```bash
-magex audit:show          # Display audit events with optional filtering
-magex audit:stats         # Show audit statistics and summaries
-magex audit:export        # Export audit data to various formats
-magex audit:cleanup       # Clean up old audit entries
-magex audit:enable        # Enable audit logging
-magex audit:disable       # Disable audit logging
-magex audit:report        # Generate comprehensive audit reports
+magex tools:update        # Update all development tools
+magex tools:install       # Install all required development tools
+magex tools:verify        # Check if all required tools are available
+magex deps:audit          # Run vulnerability check using govulncheck
+magex build:install       # Install the project binary
+magex install:stdlib      # Install Go standard library for cross-compilation
+magex uninstall           # Remove installed binary
 ```
 
 </details>
@@ -568,67 +619,16 @@ magex yaml:schema         # Show YAML schema
 </details>
 
 <details>
-<summary>🏗️ <strong>Project Setup & Initialization</strong></summary>
+<summary>🛡️ <strong>Security & Audit</strong></summary>
 
 ```bash
-# Code Generation
-magex generate:default    # Run go generate
-magex generate:clean      # Remove generated files
-
-# Project Initialization
-magex init:default        # Default initialization
-magex init:project        # Initialize a new project
-magex init:library        # Initialize a library project
-magex init:cli            # Initialize a CLI project
-magex init:webapi         # Initialize a web API project
-magex init:microservice   # Initialize a microservice project
-magex init:tool           # Initialize a tool project
-magex init:upgrade        # Upgrade existing project
-magex init:templates      # Show available templates
-magex init:config         # Initialize configuration
-magex init:git            # Initialize git repository
-magex init:mage           # Initialize mage files
-magex init:ci             # Initialize CI/CD files
-magex init:docker         # Initialize Docker files
-magex init:docs           # Initialize documentation
-magex init:license        # Add license file
-magex init:makefile       # Create Makefile
-magex init:editorconfig   # Create .editorconfig
-
-# Recipe Management
-magex recipes:list        # List available recipes
-magex recipes:run         # Run a specific recipe
-RECIPE=fresh-start magex recipes:run  # Run the fresh-start recipe
-```
-
-</details>
-
-<details>
-<summary>✅ <strong>Code Validation & Formatting</strong></summary>
-
-```bash
-# Code Validation
-magex vet:default         # Run go vet
-magex vet:all             # Run go vet with all checks
-magex vet:parallel        # Run go vet in parallel
-magex vet:shadow          # Check for variable shadowing
-magex vet:strict          # Run strict vet checks
-
-# Code Formatting
-magex format:default      # Default formatting (gofmt)
-magex format:all          # Format all supported file types
-magex format:gofmt        # Run gofmt
-magex format:fumpt        # Run gofumpt (stricter formatting)
-magex format:imports      # Format imports
-magex format:go           # Format Go files
-magex format:yaml         # Format YAML files
-magex format:json         # Format JSON files
-magex format:markdown     # Format Markdown files
-magex format:sql          # Format SQL files
-magex format:dockerfile   # Format Dockerfiles
-magex format:shell        # Format shell scripts
-magex format:fix          # Fix formatting issues automatically
-magex format:check        # Check if files are properly formatted
+magex audit:show          # Display audit events with optional filtering
+magex audit:stats         # Show audit statistics and summaries
+magex audit:export        # Export audit data to various formats
+magex audit:cleanup       # Clean up old audit entries
+magex audit:enable        # Enable audit logging
+magex audit:disable       # Disable audit logging
+magex audit:report        # Generate comprehensive audit reports
 ```
 
 </details>
