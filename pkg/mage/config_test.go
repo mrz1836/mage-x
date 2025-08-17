@@ -81,6 +81,38 @@ func TestConfigSuite(t *testing.T) {
 // TestDefaultConfig tests the default configuration generation
 func (ts *ConfigTestSuite) TestDefaultConfig() {
 	ts.Run("DefaultConfigStructure", func() {
+		// Temporarily clear environment variables to test true defaults
+		originalVars := make(map[string]string)
+		envVars := []string{
+			"MAGE_X_GOLANGCI_LINT_VERSION",
+			"MAGE_X_GOFUMPT_VERSION",
+			"MAGE_X_GOVULNCHECK_VERSION",
+			"MAGE_X_MOCKGEN_VERSION",
+			"MAGE_X_SWAG_VERSION",
+			"GOLANGCI_LINT_VERSION",
+			"GOFUMPT_VERSION",
+			"GOVULNCHECK_VERSION",
+			"MOCKGEN_VERSION",
+			"SWAG_VERSION",
+		}
+
+		// Save original values and unset
+		for _, envVar := range envVars {
+			originalVars[envVar] = os.Getenv(envVar)
+			ts.Require().NoError(os.Unsetenv(envVar))
+		}
+
+		// Restore environment after test
+		defer func() {
+			for _, envVar := range envVars {
+				if originalVal, exists := originalVars[envVar]; exists && originalVal != "" {
+					ts.Require().NoError(os.Setenv(envVar, originalVal))
+				} else {
+					ts.Require().NoError(os.Unsetenv(envVar))
+				}
+			}
+		}()
+
 		config := defaultConfig()
 		ts.Require().NotNil(config)
 
