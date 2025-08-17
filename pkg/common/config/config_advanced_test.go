@@ -77,7 +77,7 @@ func createComplexConfig() *MageConfig {
 			License:     "MIT",
 		},
 		Build: BuildConfig{
-			GoVersion:  "1.24",
+			GoVersion:  getDefaultGoVersion(),
 			Platform:   "linux/amd64",
 			Tags:       []string{"integration", "performance", "security"},
 			LDFlags:    "-s -w -X main.version=2.1.0",
@@ -114,7 +114,7 @@ func verifyComplexConfig(t *testing.T, config *MageConfig) {
 	t.Helper()
 	assert.Equal(t, "complex-project", config.Project.Name)
 	assert.Len(t, config.Project.Authors, 3)
-	assert.Equal(t, "1.24", config.Build.GoVersion)
+	assert.Equal(t, getDefaultGoVersion(), config.Build.GoVersion)
 	assert.Len(t, config.Build.Tags, 3)
 	assert.Equal(t, 300, config.Test.Timeout)
 	assert.Equal(t, 4, config.Test.Parallel)
@@ -141,7 +141,7 @@ func createBaseConfig() *MageConfig {
 			Version: "1.0.0",
 		},
 		Build: BuildConfig{
-			GoVersion: "1.20",
+			GoVersion: getDefaultGoVersion(),
 			Platform:  "linux/amd64",
 		},
 		Test: TestConfig{
@@ -159,7 +159,7 @@ func createOverrideConfig() *MageConfig {
 			Description: "Updated description",
 		},
 		Build: BuildConfig{
-			GoVersion: "1.24",
+			GoVersion: getDefaultGoVersion(),
 			Tags:      []string{"production"},
 		},
 		Test: TestConfig{
@@ -176,7 +176,7 @@ func verifyMergedConfig(t *testing.T, config *MageConfig) {
 	assert.Equal(t, "base-project", config.Project.Name)
 	assert.Equal(t, "1.1.0", config.Project.Version)
 	assert.Equal(t, "Updated description", config.Project.Description)
-	assert.Equal(t, "1.24", config.Build.GoVersion)
+	assert.Equal(t, getDefaultGoVersion(), config.Build.GoVersion)
 	assert.Equal(t, "linux/amd64", config.Build.Platform)
 	assert.Equal(t, []string{"production"}, config.Build.Tags)
 	assert.Equal(t, 120, config.Test.Timeout)
@@ -205,7 +205,7 @@ func createValidConfig() *MageConfig {
 			Version: "1.0.0",
 		},
 		Build: BuildConfig{
-			GoVersion: "1.20",
+			GoVersion: getDefaultGoVersion(),
 			Platform:  "linux/amd64",
 		},
 		Test: TestConfig{
@@ -280,7 +280,7 @@ func testEnvironmentVariableInterpolation(t *testing.T, manager MageConfigManage
 func setupTestEnvVars(t *testing.T) {
 	t.Helper()
 	require.NoError(t, os.Setenv("TEST_PROJECT_NAME", "env-project"))
-	require.NoError(t, os.Setenv("TEST_GO_VERSION", "1.24"))
+	require.NoError(t, os.Setenv("TEST_GO_VERSION", getDefaultGoVersion()))
 	require.NoError(t, os.Setenv("TEST_PARALLEL_COUNT", "8"))
 }
 
@@ -435,7 +435,7 @@ func TestConfigMigration(t *testing.T) {
 				// Missing newer fields like Description, Authors
 			},
 			Build: BuildConfig{
-				GoVersion: "1.19", // Older Go version
+				GoVersion: "1.19", // Keep older version for migration test
 				Platform:  "linux/amd64",
 				// Missing newer fields like Tags, LDFlags
 			},
@@ -492,7 +492,7 @@ func BenchmarkConfigOperations(b *testing.B) {
 			Version: "1.0.0",
 		},
 		Build: BuildConfig{
-			GoVersion: "1.24",
+			GoVersion: getDefaultGoVersion(),
 			Platform:  "linux/amd64",
 		},
 	}

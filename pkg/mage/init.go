@@ -196,7 +196,7 @@ func (Init) Upgrade() error {
 	}
 
 	utils.Success("✅ Project upgraded to MAGE-X!")
-	utils.Info("Run 'mage help' to see available commands with beautiful formatting")
+	utils.Info("Run 'magex help' to see available commands with beautiful formatting")
 
 	return nil
 }

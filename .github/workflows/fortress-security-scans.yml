@@ -85,7 +85,7 @@ jobs:
 
           # Check if go.mod or go.sum were modified
           if ! git diff --quiet go.mod go.sum; then
-            echo "::warning::Dependencies are not up to date. Run 'mage mod:tidy' locally."
+            echo "::warning::Dependencies are not up to date. Run 'magex mod:tidy' locally."
             git diff go.mod go.sum
             exit 1
           fi
@@ -140,7 +140,7 @@ jobs:
 
           # Check if any files were modified
           if ! git diff --quiet; then
-            echo "::warning::Code formatting issues detected. Run 'mage lint:fumpt' locally."
+            echo "::warning::Code formatting issues detected. Run 'magex format:fix' locally."
             git diff --name-only
             exit 1
           fi

@@ -13,7 +13,7 @@ import (
 
 // Static errors to satisfy err113 linter
 var (
-	errToolsMissing = errors.New("some tools are missing. Run 'mage tools:install' to install them")
+	errToolsMissing = errors.New("some tools are missing. Run 'magex tools:install' to install them")
 )
 
 // Tools namespace for tool management tasks
@@ -94,7 +94,8 @@ func (Tools) Update() error {
 		utils.Info("Updating %s with retry logic...", tool.Name)
 
 		version := tool.Version
-		if version == DefaultGoVulnCheckVersion || version == "" {
+		if version == "" {
+			utils.Warn("Version for tool %s not available, using @latest", tool.Name)
 			version = VersionAtLatest
 		} else if !strings.HasPrefix(version, "@") {
 			version = "@" + version
@@ -239,6 +240,7 @@ func installGovulncheck(ctx context.Context, config *Config, maxRetries int, ini
 
 	version := config.Tools.GoVulnCheck
 	if version == "" || version == VersionLatest {
+		utils.Warn("GoVulnCheck version not available, using @latest")
 		version = VersionAtLatest
 	} else if !strings.HasPrefix(version, "@") {
 		version = "@" + version
@@ -270,6 +272,7 @@ func installGovulncheck(ctx context.Context, config *Config, maxRetries int, ini
 func installToolFromModule(ctx context.Context, tool ToolDefinition, _ *Config, maxRetries int, initialDelay time.Duration) error {
 	version := tool.Version
 	if version == "" || version == VersionLatest {
+		utils.Warn("Version for tool %s not available, using @latest", tool.Name)
 		version = VersionAtLatest
 	} else if !strings.HasPrefix(version, "@") {
 		version = "@" + version

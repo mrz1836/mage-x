@@ -166,12 +166,16 @@ func (Install) Go() error {
 	// Get version
 	version := utils.GetEnv("VERSION", getVersion())
 	if version == versionDev || version == "" {
-		version = DefaultGoVulnCheckVersion
+		version = GetDefaultGoVulnCheckVersion()
+		if version == "" {
+			utils.Warn("GoVulnCheck version not available, using @latest")
+			version = VersionLatest
+		}
 	}
 
 	// Build install command
 	var pkg string
-	if version != DefaultGoVulnCheckVersion {
+	if version != VersionLatest && version != "" {
 		pkg = fmt.Sprintf("%s@%s", module, version)
 	} else {
 		pkg = fmt.Sprintf("%s@latest", module)

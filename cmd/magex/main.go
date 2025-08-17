@@ -22,16 +22,17 @@ import (
 const (
 	version = "1.0.0"
 	banner  = `
-    __  __   ___   ___________      _  __
-   /  |/  /  / _ | / ___/ __/_____ | |/_/
-  / /|_/ /  / __ |/ (_ / _/ /___/ />  <
- /_/  /_/  /_/ |_|\___/___/     /_/|_|
-
+███╗   ███╗ █████╗  ██████╗ ███████╗      ██╗  ██╗
+████╗ ████║██╔══██╗██╔════╝ ██╔════╝      ╚██╗██╔╝
+██╔████╔██║███████║██║  ███╗█████╗  █████╗ ╚███╔╝
+██║╚██╔╝██║██╔══██║██║   ██║██╔══╝  ╚════╝ ██╔██╗
+██║ ╚═╝ ██║██║  ██║╚██████╔╝███████╗      ██╔╝ ██╗
+╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝      ╚═╝  ╚═╝
    🪄 MAGE-X - Write Once, Mage Everywhere
 `
 )
 
-// Static errors
+// ErrMagefileExists is returned when trying to initialize a magefile that already exists
 var (
 	ErrMagefileExists = errors.New("magefile.go already exists")
 )
@@ -110,7 +111,10 @@ func main() {
 	loader := registry.NewLoader(reg)
 	if err := loader.LoadUserMagefile("."); err != nil {
 		if *flags.Verbose {
-			fmt.Fprintf(os.Stderr, "Warning: failed to load user magefile: %v\n", err)
+			_, err = fmt.Fprintf(os.Stderr, "Warning: failed to load user magefile: %v\n", err)
+			if err != nil {
+				return
+			}
 		}
 	}
 
@@ -147,7 +151,10 @@ func main() {
 
 	if *flags.Init {
 		if err := initMagefile(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			_, err = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			if err != nil {
+				return
+			}
 			os.Exit(1)
 		}
 		return
@@ -190,10 +197,10 @@ func main() {
 	if len(args) == 0 {
 		// No command specified, show available commands
 		fmt.Print(banner)
-		utils.Info("\n📋 Available Commands (run 'magex -l' for full list):")
+		utils.Println("\n📋 Available Commands (run 'magex -l' for full list):")
 		showQuickList(reg)
-		utils.Info("\n💡 Run 'magex <command>' to execute a command")
-		utils.Info("   Run 'magex -h' for help")
+		utils.Println("\n💡 Run 'magex <command>' to execute a command")
+		utils.Println("   Run 'magex -h' for help")
 		return
 	}
 
@@ -211,7 +218,10 @@ func main() {
 
 	// Execute the command
 	if err := reg.Execute(command, commandArgs...); err != nil {
-		fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
+		_, err = fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
+		if err != nil {
+			return
+		}
 		os.Exit(1)
 	}
 }
@@ -226,8 +236,8 @@ func showUsage() {
 // showVersion displays version information
 func showVersion() {
 	fmt.Printf("MAGE-X version %s\n", version)
-	utils.Info("Built-in commands from all MAGE-X namespaces")
-	utils.Info("Compatible with Mage build tool")
+	utils.Println("Built-in commands from all MAGE-X namespaces")
+	utils.Println("Compatible with Mage build tool")
 }
 
 // showUnifiedHelp displays the comprehensive unified help system
@@ -246,7 +256,7 @@ func showUnifiedHelp(command string) {
 func showGeneralHelp(reg *registry.Registry) {
 	// Show banner
 	fmt.Print(banner)
-	utils.Info("\n📚 Universal Build Automation for Go")
+	utils.Println("\n📚 Universal Build Automation for Go")
 
 	// Show usage
 	showUsageSection()
@@ -478,7 +488,7 @@ func listCommands(reg *registry.Registry, verbose bool) {
 	commands := reg.List()
 
 	if len(commands) == 0 {
-		utils.Info("No commands available")
+		utils.Println("No commands available")
 		return
 	}
 
@@ -490,7 +500,7 @@ func listCommands(reg *registry.Registry, verbose bool) {
 		listCommandsSimple(commands)
 	}
 
-	utils.Info("\n💡 Run 'magex <command>' to execute a command")
+	utils.Println("\n💡 Run 'magex <command>' to execute a command")
 }
 
 // listCommandsVerbose displays commands with descriptions
@@ -520,17 +530,17 @@ func listCommandsSimple(commands []*registry.Command) {
 	for i, cmd := range commands {
 		fmt.Printf("  %-25s", cmd.FullName())
 		if (i+1)%3 == 0 {
-			utils.Info("")
+			utils.Println("")
 		}
 	}
 	if len(commands)%3 != 0 {
-		utils.Info("")
+		utils.Println("")
 	}
 }
 
 // listByNamespace displays commands organized by namespace
 func listByNamespace(reg *registry.Registry) {
-	utils.Info("Available commands with namespaces:")
+	utils.Println("Available commands with namespaces:")
 
 	namespaces := reg.Namespaces()
 	for _, ns := range namespaces {
@@ -692,7 +702,7 @@ func showQuickList(reg *registry.Registry) {
 		"deps", "release", "docker", "help",
 	}
 
-	utils.Info("")
+	utils.Println("")
 	for _, name := range commonCommands {
 		if cmd, exists := reg.Get(name); exists {
 			fmt.Printf("  %-15s - %s\n", name, truncate(cmd.Description, 50))
@@ -733,7 +743,7 @@ func Deploy() error {
 	// Check if file already exists
 	if _, err := os.Stat(filename); err == nil {
 		fmt.Printf("❌ Error: %s already exists\n", filename)
-		utils.Info("💡 Tip: Remove or rename the existing file first")
+		utils.Println("💡 Tip: Remove or rename the existing file first")
 		return fmt.Errorf("%w: %s", ErrMagefileExists, filename)
 	}
 
@@ -744,10 +754,10 @@ func Deploy() error {
 	}
 
 	fmt.Printf("✅ Created %s with MAGE-X imports\n", filename)
-	utils.Info("🚀 You can now:")
-	utils.Info("   • Run 'magex -l' to see all available commands")
-	utils.Info("   • Add custom commands to magefile.go")
-	utils.Info("   • Run 'magex build' to build your project")
+	utils.Println("🚀 You can now:")
+	utils.Println("   • Run 'magex -l' to see all available commands")
+	utils.Println("   • Add custom commands to magefile.go")
+	utils.Println("   • Run 'magex build' to build your project")
 	return nil
 }
 
@@ -820,7 +830,7 @@ func TestCover() error { var t mage.Test; return t.Cover() }
 	}
 
 	fmt.Printf("✅ Generated %s\n", output)
-	utils.Info("📝 You can now use this file with standard mage")
+	utils.Println("📝 You can now use this file with standard mage")
 }
 
 // Helper functions

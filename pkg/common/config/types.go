@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -140,6 +141,30 @@ func NewLoader() MageLoader {
 	return &loaderImpl{}
 }
 
+// getDefaultGoVersion returns the default Go version from environment or fallback
+func getDefaultGoVersion() string {
+	// Check primary environment variable
+	if value := os.Getenv("MAGE_X_GO_VERSION"); value != "" {
+		// Clean up the version to remove any .x suffix for actual usage
+		if len(value) > 2 && value[len(value)-2:] == ".x" {
+			return value[:len(value)-2]
+		}
+		return value
+	}
+
+	// Check legacy environment variable for backward compatibility
+	if value := os.Getenv("GO_PRIMARY_VERSION"); value != "" {
+		// Clean up the version to remove any .x suffix for actual usage
+		if len(value) > 2 && value[len(value)-2:] == ".x" {
+			return value[:len(value)-2]
+		}
+		return value
+	}
+
+	// Fallback if environment is not set
+	return "1.24"
+}
+
 // configManagerImpl implements ConfigManager
 type configManagerImpl struct{}
 
@@ -217,7 +242,7 @@ func (m *configManagerImpl) GetDefaults() *MageConfig {
 			Version: "1.0.0",
 		},
 		Build: BuildConfig{
-			GoVersion:  "1.24",
+			GoVersion:  getDefaultGoVersion(),
 			Platform:   "linux/amd64",
 			CGOEnabled: false,
 		},

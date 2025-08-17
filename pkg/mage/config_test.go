@@ -102,13 +102,13 @@ func (ts *ConfigTestSuite) TestDefaultConfig() {
 		ts.Require().Equal("atomic", config.Test.CoverMode)
 
 		// Test lint defaults
-		ts.Require().Equal("v2.3.1", config.Lint.GolangciVersion)
+		ts.Require().Equal("v2.4.0", config.Lint.GolangciVersion)
 		ts.Require().Equal("5m", config.Lint.Timeout)
 
 		// Test tools defaults
-		ts.Require().Equal("v2.3.1", config.Tools.GolangciLint)
-		ts.Require().Equal("latest", config.Tools.Fumpt)
-		ts.Require().Equal("latest", config.Tools.GoVulnCheck)
+		ts.Require().Equal("v2.4.0", config.Tools.GolangciLint)
+		ts.Require().Equal(VersionLatest, config.Tools.Fumpt)
+		ts.Require().Equal("v1.1.4", config.Tools.GoVulnCheck)
 
 		// Test docker defaults
 		ts.Require().Equal("Dockerfile", config.Docker.Dockerfile)

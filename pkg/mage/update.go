@@ -73,7 +73,7 @@ func (Update) Check() error {
 			utils.Info("\nRelease Notes:")
 			utils.Info("%s", info.ReleaseNotes)
 		}
-		utils.Info("\nRun 'mage update:install' to update")
+		utils.Info("\nRun 'magex update:install' to update")
 	} else {
 		utils.Success("\n✅ You are running the latest version")
 	}

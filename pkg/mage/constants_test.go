@@ -309,23 +309,23 @@ func (ts *ConstantsTestSuite) TestReleaseChannels() {
 // TestToolVersions tests default tool version constants
 func (ts *ConstantsTestSuite) TestToolVersions() {
 	toolVersions := map[string]string{
-		"DefaultGolangciLintVersion": DefaultGolangciLintVersion,
-		"DefaultGofumptVersion":      DefaultGofumptVersion,
-		"DefaultGoVulnCheckVersion":  DefaultGoVulnCheckVersion,
-		"DefaultMockgenVersion":      DefaultMockgenVersion,
-		"DefaultSwagVersion":         DefaultSwagVersion,
+		"DefaultGolangciLintVersion": GetDefaultGolangciLintVersion(),
+		"DefaultGofumptVersion":      GetDefaultGofumptVersion(),
+		"DefaultGoVulnCheckVersion":  GetDefaultGoVulnCheckVersion(),
+		"DefaultMockgenVersion":      GetDefaultMockgenVersion(),
+		"DefaultSwagVersion":         GetDefaultSwagVersion(),
 	}
 
 	for name, version := range toolVersions {
 		ts.Require().NotEmpty(version, "Tool version %s should not be empty", name)
-		if version != "latest" {
+		if version != VersionLatest {
 			ts.Require().True(strings.HasPrefix(version, "v"),
 				"Tool version %s (%s) should start with 'v' or be 'latest'", name, version)
 		}
 	}
 
-	ts.Require().Equal("latest", DefaultGoVulnCheckVersion)
-	ts.Require().True(strings.HasPrefix(DefaultGolangciLintVersion, "v"))
+	ts.Require().Equal("v1.1.4", GetDefaultGoVulnCheckVersion())
+	ts.Require().True(strings.HasPrefix(GetDefaultGolangciLintVersion(), "v"))
 }
 
 // TestErrorMessages tests error message constants

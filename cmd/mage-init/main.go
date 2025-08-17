@@ -11,6 +11,7 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/common/config"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -24,11 +25,13 @@ var (
 const (
 	version = "1.0.0"
 	banner  = `
-    __  __   ___   ___________      _  __
-   /  |/  /  / _ | / ___/ __/_____ | |/_/
-  / /|_/ /  / __ |/ (_ / _/ /___/ />  <  
- /_/  /_/  /_/ |_|\___/___/     /_/|_|  
-                                        
+███╗   ███╗ █████╗  ██████╗ ███████╗      ██╗  ██╗
+████╗ ████║██╔══██╗██╔════╝ ██╔════╝      ╚██╗██╔╝
+██╔████╔██║███████║██║  ███╗█████╗  █████╗ ╚███╔╝
+██║╚██╔╝██║██╔══██║██║   ██║██╔══╝  ╚════╝ ██╔██╗
+██║ ╚═╝ ██║██║  ██║╚██████╔╝███████╗      ██╔╝ ██╗
+╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝      ╚═╝  ╚═╝
+
 🪄 MAGE-X Project Initialization Tool v%s
    Write Once, Mage Everywhere
 `
@@ -55,6 +58,15 @@ type InitOptions struct {
 	Interactive bool
 }
 
+// getDefaultGoVersion returns the default Go version from environment or fallback
+func getDefaultGoVersion() string {
+	if version := mage.GetDefaultGoVersion(); version != "" {
+		return version
+	}
+	// Fallback if environment is not set
+	return "1.24"
+}
+
 func main() {
 	fmt.Printf(banner, version)
 
@@ -62,7 +74,7 @@ func main() {
 	flag.StringVar(&opts.ProjectName, "name", "", "Project name")
 	flag.StringVar(&opts.ProjectPath, "path", ".", "Project path (default: current directory)")
 	flag.StringVar(&opts.Template, "template", "basic", "Project template (basic, advanced, enterprise, cli, web, microservice)")
-	flag.StringVar(&opts.GoVersion, "go-version", "1.24", "Go version to use")
+	flag.StringVar(&opts.GoVersion, "go-version", getDefaultGoVersion(), "Go version to use")
 	flag.StringVar(&opts.ModulePath, "module", "", "Go module path (e.g., github.com/user/project)")
 	flag.BoolVar(&opts.Force, "force", false, "Force initialization even if directory is not empty")
 	flag.BoolVar(&opts.Verbose, "verbose", false, "Verbose output")

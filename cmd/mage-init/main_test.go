@@ -28,7 +28,7 @@ func (suite *MageInitTestSuite) TestValidateOptionsWithDefaults() {
 	opts := &InitOptions{
 		ProjectPath: suite.tempDir,
 		Template:    "basic",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	err := validateOptions(opts)
@@ -43,7 +43,7 @@ func (suite *MageInitTestSuite) TestValidateOptionsWithCustomValues() {
 		ProjectPath: suite.tempDir,
 		ModulePath:  "github.com/test/test-project",
 		Template:    "advanced",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	err := validateOptions(opts)
@@ -57,7 +57,7 @@ func (suite *MageInitTestSuite) TestValidateOptionsInvalidTemplate() {
 		ProjectName: "test-project",
 		ProjectPath: suite.tempDir,
 		Template:    "invalid-template",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	err := validateOptions(opts)
@@ -82,7 +82,7 @@ func (suite *MageInitTestSuite) TestValidateOptionsCurrentDirectory() {
 	opts := &InitOptions{
 		ProjectPath: ".",
 		Template:    "basic",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	err = validateOptions(opts)
@@ -181,7 +181,7 @@ func (suite *MageInitTestSuite) TestCreateFiles() {
 	opts := &InitOptions{
 		ProjectName: "test-project",
 		ModulePath:  "github.com/test/test-project",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	files := map[string]string{
@@ -225,7 +225,7 @@ func (suite *MageInitTestSuite) TestCreateFilesVerbose() {
 	opts := &InitOptions{
 		ProjectName: "test-project",
 		ModulePath:  "github.com/test/test-project",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	files := map[string]string{
@@ -241,7 +241,7 @@ func (suite *MageInitTestSuite) TestProcessTemplate() {
 	opts := &InitOptions{
 		ProjectName: "my-project",
 		ModulePath:  "github.com/user/my-project",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	template := `Project: {{.ProjectName}}
@@ -253,8 +253,8 @@ Mixed: {{.ProjectName}}/{{.GoVersion}}`
 
 	expected := `Project: my-project
 Module: github.com/user/my-project
-Go Version: 1.24
-Mixed: my-project/1.24`
+Go Version: ` + getDefaultGoVersion() + `
+Mixed: my-project/` + getDefaultGoVersion()
 
 	suite.Equal(expected, result)
 }
@@ -263,7 +263,7 @@ func (suite *MageInitTestSuite) TestProcessTemplateNoReplacements() {
 	opts := &InitOptions{
 		ProjectName: "test",
 		ModulePath:  "test",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	template := "No templates here"
@@ -279,7 +279,7 @@ func (suite *MageInitTestSuite) TestInitializeGoMod() {
 
 	opts := &InitOptions{
 		ModulePath: "github.com/test/test-project",
-		GoVersion:  "1.24",
+		GoVersion:  getDefaultGoVersion(),
 	}
 
 	err = initializeGoMod(projectPath, opts)
@@ -292,7 +292,7 @@ func (suite *MageInitTestSuite) TestInitializeGoMod() {
 
 	contentStr := string(content)
 	suite.Contains(contentStr, "module github.com/test/test-project")
-	suite.Contains(contentStr, "go 1.24")
+	suite.Contains(contentStr, "go "+getDefaultGoVersion())
 	suite.Contains(contentStr, "github.com/magefile/mage")
 }
 
@@ -304,7 +304,7 @@ func (suite *MageInitTestSuite) TestCreateMageConfig() {
 
 	opts := &InitOptions{
 		ProjectName: "test-project",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	err = createMageConfig(projectPath, opts)
@@ -528,7 +528,7 @@ func (suite *MageInitTestSuite) TestInitializeProjectBasic() {
 		ProjectName: "full-test",
 		ProjectPath: projectPath,
 		Template:    "basic",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 		ModulePath:  "github.com/test/full-test",
 		Force:       false,
 		Verbose:     false,
@@ -564,7 +564,7 @@ func (suite *MageInitTestSuite) TestInitializeProjectAdvanced() {
 		ProjectName: "advanced-test",
 		ProjectPath: projectPath,
 		Template:    "advanced",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 		ModulePath:  "github.com/test/advanced-test",
 		Force:       false,
 		Verbose:     true,
@@ -599,7 +599,7 @@ func (suite *MageInitTestSuite) TestInitializeProjectInvalidPath() {
 		ProjectName: "test",
 		ProjectPath: "/invalid/path/that/does/not/exist/and/cannot/be/created",
 		Template:    "basic",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 		ModulePath:  "test",
 	}
 
@@ -624,12 +624,12 @@ func (suite *MageInitTestSuite) TestProcessTemplateSpecialCharacters() {
 	opts := &InitOptions{
 		ProjectName: "test-project_v2",
 		ModulePath:  "github.com/user/test-project_v2",
-		GoVersion:   "1.24.1",
+		GoVersion:   getDefaultGoVersion(),
 	}
 
 	template := "Project: {{.ProjectName}}, Module: {{.ModulePath}}, Version: {{.GoVersion}}"
 	result := processTemplate(template, opts)
-	expected := "Project: test-project_v2, Module: github.com/user/test-project_v2, Version: 1.24.1"
+	expected := "Project: test-project_v2, Module: github.com/user/test-project_v2, Version: " + getDefaultGoVersion()
 	suite.Equal(expected, result)
 }
 
@@ -668,7 +668,7 @@ func (suite *MageInitTestSuite) TestInitOptionsStruct() {
 		ProjectName: "test",
 		ProjectPath: "/path/to/test",
 		Template:    "basic",
-		GoVersion:   "1.24",
+		GoVersion:   getDefaultGoVersion(),
 		ModulePath:  "github.com/user/test",
 		Force:       true,
 		Verbose:     true,
@@ -678,7 +678,7 @@ func (suite *MageInitTestSuite) TestInitOptionsStruct() {
 	suite.Equal("test", opts.ProjectName)
 	suite.Equal("/path/to/test", opts.ProjectPath)
 	suite.Equal("basic", opts.Template)
-	suite.Equal("1.24", opts.GoVersion)
+	suite.Equal(getDefaultGoVersion(), opts.GoVersion)
 	suite.Equal("github.com/user/test", opts.ModulePath)
 	suite.True(opts.Force)
 	suite.True(opts.Verbose)

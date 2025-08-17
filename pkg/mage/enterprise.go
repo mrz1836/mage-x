@@ -32,7 +32,7 @@ var (
 	ErrTargetEnvNotFound          = errors.New("target environment not found")
 	ErrBackupIDRequired           = errors.New("BACKUP_ID environment variable is required")
 	ErrRestoreConfirmation        = errors.New("restoration requires confirmation (set RESTORE_CONFIRMED=true)")
-	ErrEnterpriseConfigMissing    = errors.New("enterprise config not found. Run 'mage enterprise:init' first")
+	ErrEnterpriseConfigMissing    = errors.New("enterprise config not found. Run 'magex enterprise:init' first")
 	ErrDeploymentApprovalRequired = errors.New("deployment requires approval (set DEPLOYMENT_APPROVED=true)")
 )
 

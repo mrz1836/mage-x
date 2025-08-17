@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Config represents the mage configuration
@@ -132,6 +133,7 @@ type DownloadConfig struct {
 // Static errors for err113 compliance
 var (
 	ErrEnterpriseConfigExists = errors.New("enterprise configuration already exists")
+	ErrMissingToolVersions    = errors.New("missing required tool versions")
 )
 
 // LoadConfig loads the configuration from file or returns defaults
@@ -144,6 +146,123 @@ func LoadConfig() (*Config, error) {
 // GetConfig returns the current configuration using the active ConfigProvider
 func GetConfig() (*Config, error) {
 	return GetConfigProvider().GetConfig()
+}
+
+// GetToolVersion returns the version for a given tool, reading from environment variables
+// with fallback to configuration or empty string if not found. This provides a centralized way to get tool versions.
+func GetToolVersion(toolName string) string {
+	// Define the mapping from tool names to environment variables
+	toolVersionMap := map[string]struct {
+		envVar       string
+		legacyEnvVar string
+	}{
+		"golangci-lint": {"MAGE_X_GOLANGCI_LINT_VERSION", "GOLANGCI_LINT_VERSION"},
+		"gofumpt":       {"MAGE_X_GOFUMPT_VERSION", "GOFUMPT_VERSION"},
+		"govulncheck":   {"MAGE_X_GOVULNCHECK_VERSION", "GOVULNCHECK_VERSION"},
+		"mockgen":       {"MAGE_X_MOCKGEN_VERSION", "MOCKGEN_VERSION"},
+		"swag":          {"MAGE_X_SWAG_VERSION", "SWAG_VERSION"},
+		"staticcheck":   {"MAGE_X_STATICCHECK_VERSION", ""},
+		"nancy":         {"MAGE_X_NANCY_VERSION", "NANCY_VERSION"},
+		"gitleaks":      {"MAGE_X_GITLEAKS_VERSION", "GITLEAKS_VERSION"},
+		"goreleaser":    {"MAGE_X_GORELEASER_VERSION", "GORELEASER_VERSION"},
+		"prettier":      {"MAGE_X_PRETTIER_VERSION", "PRETTIER_VERSION"},
+	}
+
+	toolInfo, exists := toolVersionMap[toolName]
+	if !exists {
+		// For unknown tools, try to construct environment variable name
+		envVar := "MAGE_X_" + strings.ToUpper(strings.ReplaceAll(toolName, "-", "_")) + "_VERSION"
+		if version := os.Getenv(envVar); version != "" {
+			return version
+		}
+		utils.Warn("Tool version for %s not found in environment variables (%s)", toolName, envVar)
+		utils.Warn("Consider sourcing .github/.env.base: source .github/.env.base")
+		return ""
+	}
+
+	// Check primary environment variable first
+	if version := os.Getenv(toolInfo.envVar); version != "" {
+		return version
+	}
+
+	// Check legacy environment variable for backward compatibility
+	if toolInfo.legacyEnvVar != "" {
+		if version := os.Getenv(toolInfo.legacyEnvVar); version != "" {
+			return version
+		}
+	}
+
+	// Warn if not found and return empty string
+	utils.Warn("Tool version for %s not found in environment variables (%s)", toolName, toolInfo.envVar)
+	utils.Warn("Consider sourcing .github/.env.base: source .github/.env.base")
+	return ""
+}
+
+// ValidateToolVersions validates that all required tool versions are available in environment variables
+func ValidateToolVersions() error {
+	requiredTools := []string{
+		"golangci-lint", "gofumpt", "govulncheck",
+	}
+
+	optionalTools := []string{
+		"mockgen", "swag", "staticcheck", "nancy", "gitleaks", "goreleaser", "prettier",
+	}
+
+	var missingRequired []string
+	var missingOptional []string
+
+	// Check required tools
+	for _, tool := range requiredTools {
+		if GetToolVersion(tool) == "" {
+			missingRequired = append(missingRequired, tool)
+		}
+	}
+
+	// Check optional tools
+	for _, tool := range optionalTools {
+		if GetToolVersion(tool) == "" {
+			missingOptional = append(missingOptional, tool)
+		}
+	}
+
+	// Report missing tools
+	if len(missingRequired) > 0 {
+		return fmt.Errorf("%w: %v. Source .github/.env.base to fix", ErrMissingToolVersions, missingRequired)
+	}
+
+	if len(missingOptional) > 0 {
+		utils.Warn("Missing optional tool versions: %v", missingOptional)
+		utils.Warn("These tools may not function correctly without version information")
+	}
+
+	return nil
+}
+
+// EnsureEnvironmentLoaded checks if key environment variables are loaded and provides guidance
+func EnsureEnvironmentLoaded() {
+	// Check if key environment variables are set
+	keyEnvVars := []string{
+		"MAGE_X_GOLANGCI_LINT_VERSION",
+		"MAGE_X_GOFUMPT_VERSION",
+		"MAGE_X_GOVULNCHECK_VERSION",
+	}
+
+	var missing []string
+	for _, envVar := range keyEnvVars {
+		if os.Getenv(envVar) == "" {
+			missing = append(missing, envVar)
+		}
+	}
+
+	if len(missing) > 0 {
+		utils.Warn("Key environment variables not loaded: %v", missing)
+		utils.Warn("Consider sourcing .github/.env.base:")
+		utils.Warn("  source .github/.env.base")
+		utils.Warn("Or set environment variables manually:")
+		for _, envVar := range missing {
+			utils.Warn("  export %s=<version>", envVar)
+		}
+	}
 }
 
 // TestResetConfig resets the config for testing purposes only
@@ -205,13 +324,16 @@ func defaultConfig() *Config {
 			CoverMode:          "atomic",
 		},
 		Lint: LintConfig{
-			GolangciVersion: "v2.3.1",
+			GolangciVersion: GetDefaultGolangciLintVersion(),
 			Timeout:         "5m",
 		},
 		Tools: ToolsConfig{
-			GolangciLint: "v2.3.1",
-			Fumpt:        "latest",
-			GoVulnCheck:  "latest",
+			GolangciLint: GetDefaultGolangciLintVersion(),
+			Fumpt:        GetDefaultGofumptVersion(),
+			GoVulnCheck:  GetDefaultGoVulnCheckVersion(),
+			Mockgen:      GetDefaultMockgenVersion(),
+			Swag:         GetDefaultSwagVersion(),
+			Custom:       make(map[string]string),
 		},
 		Docker: DockerConfig{
 			Dockerfile:      "Dockerfile",
@@ -275,6 +397,9 @@ func applyEnvOverrides(c *Config) {
 	// Download config overrides
 	applyDownloadEnvOverrides(&c.Download)
 
+	// Tool version overrides
+	applyToolVersionEnvOverrides(&c.Tools)
+
 	// Enterprise overrides
 	if c.Enterprise != nil {
 		applyEnterpriseEnvOverrides(c.Enterprise)
@@ -333,6 +458,47 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	// User agent override
 	if v := os.Getenv("MAGE_X_DOWNLOAD_USER_AGENT"); v != "" {
 		cfg.UserAgent = v
+	}
+}
+
+// applyToolVersionEnvOverrides applies environment variable overrides to tool versions
+func applyToolVersionEnvOverrides(cfg *ToolsConfig) {
+	// Core linting tools
+	if v := os.Getenv("MAGE_X_GOLANGCI_LINT_VERSION"); v != "" {
+		cfg.GolangciLint = v
+	}
+	if v := os.Getenv("MAGE_X_GOFUMPT_VERSION"); v != "" {
+		cfg.Fumpt = v
+	}
+
+	// Security scanning tools
+	if v := os.Getenv("MAGE_X_GOVULNCHECK_VERSION"); v != "" {
+		cfg.GoVulnCheck = v
+	}
+
+	// Code generation tools
+	if v := os.Getenv("MAGE_X_MOCKGEN_VERSION"); v != "" {
+		cfg.Mockgen = v
+	}
+	if v := os.Getenv("MAGE_X_SWAG_VERSION"); v != "" {
+		cfg.Swag = v
+	}
+
+	// Legacy environment variable support for backward compatibility
+	if v := os.Getenv("GOLANGCI_LINT_VERSION"); v != "" && cfg.GolangciLint == "" {
+		cfg.GolangciLint = v
+	}
+	if v := os.Getenv("GOFUMPT_VERSION"); v != "" && cfg.Fumpt == "" {
+		cfg.Fumpt = v
+	}
+	if v := os.Getenv("GOVULNCHECK_VERSION"); v != "" && cfg.GoVulnCheck == "" {
+		cfg.GoVulnCheck = v
+	}
+	if v := os.Getenv("MOCKGEN_VERSION"); v != "" && cfg.Mockgen == "" {
+		cfg.Mockgen = v
+	}
+	if v := os.Getenv("SWAG_VERSION"); v != "" && cfg.Swag == "" {
+		cfg.Swag = v
 	}
 }
 

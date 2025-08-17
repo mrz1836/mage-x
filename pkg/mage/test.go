@@ -14,7 +14,7 @@ import (
 
 // Static errors to satisfy err113 linter
 var (
-	errNoCoverageFile         = errors.New("no coverage file found. Run 'mage test:cover' first")
+	errNoCoverageFile         = errors.New("no coverage file found. Run 'magex test:cover' first")
 	errNoCoverageFilesToMerge = errors.New("no coverage files to merge")
 )
 
@@ -411,7 +411,7 @@ func (Test) CoverRace() error {
 // CoverReport shows coverage report
 func (Test) CoverReport() error {
 	if !utils.FileExists("coverage.txt") {
-		utils.Warn("No coverage file found. Run 'mage test:cover' first.")
+		utils.Warn("No coverage file found. Run 'magex test:cover' first.")
 		return nil
 	}
 

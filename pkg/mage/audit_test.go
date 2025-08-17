@@ -19,6 +19,15 @@ var (
 	errCommandFailed = errors.New("command failed")
 )
 
+// getDefaultGoVersionForTest returns the default Go version for tests
+func getDefaultGoVersionForTest() string {
+	if version := GetDefaultGoVersion(); version != "" {
+		return version + ".0" // Add patch version for test compatibility
+	}
+	// Fallback if environment is not set
+	return "1.24.0"
+}
+
 // AuditTestSuite defines the test suite for Audit functions
 type AuditTestSuite struct {
 	suite.Suite
@@ -407,7 +416,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			}
 		}()
 
-		if err := os.Setenv("GO_VERSION", "1.24.0"); err != nil {
+		if err := os.Setenv("GO_VERSION", getDefaultGoVersionForTest()); err != nil {
 			ts.T().Fatalf("Failed to set GO_VERSION: %v", err)
 		}
 		if err := os.Setenv("GOPATH", "/go"); err != nil {
@@ -419,7 +428,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 
 		env := getFilteredEnvironment()
 		ts.Require().Contains(env, "GO_VERSION")
-		ts.Require().Equal("1.24.0", env["GO_VERSION"])
+		ts.Require().Equal(getDefaultGoVersionForTest(), env["GO_VERSION"])
 		ts.Require().Contains(env, "GOPATH")
 		ts.Require().Contains(env, "MAGE_X_VERBOSE")
 
@@ -435,7 +444,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			defer env.Cleanup()
 
 			// Mock successful go version command
-			env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go1.24.0 linux/amd64", nil)
+			env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go"+getDefaultGoVersionForTest()+" linux/amd64", nil)
 
 			version := ""
 			err := env.WithMockRunner(
@@ -454,7 +463,7 @@ func (ts *AuditTestSuite) TestAuditHelperFunctions() {
 			)
 
 			ts.Require().NoError(err)
-			ts.Require().Equal("1.24.0", version)
+			ts.Require().Equal(getDefaultGoVersionForTest(), version)
 		})
 
 		ts.Run("failed go version detection", func() {
@@ -578,7 +587,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 	ts.Run("complete audit workflow", func() {
 		// Mock git and go version commands that are called by LogCommandExecution
 		ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.0.0", nil)
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go1.24.0 linux/amd64", nil)
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"version"}).Return("go version go"+getDefaultGoVersionForTest()+" linux/amd64", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
@@ -667,7 +676,7 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 		if err := os.Setenv("OUTPUT", "test-audit.json"); err != nil {
 			ts.T().Fatalf("Failed to set OUTPUT: %v", err)
 		}
-		if err := os.Setenv("GO_VERSION", "1.24.0"); err != nil {
+		if err := os.Setenv("GO_VERSION", getDefaultGoVersionForTest()); err != nil {
 			ts.T().Fatalf("Failed to set GO_VERSION: %v", err)
 		}
 		if err := os.Setenv("MAGE_X_AUDIT_ENABLED", "true"); err != nil {

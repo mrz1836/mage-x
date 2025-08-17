@@ -443,59 +443,6 @@ func (ts *DocsTestSuite) TestDocsCheck() {
 	})
 }
 
-// TestDocsExamples tests the Docs.Examples method
-func (ts *DocsTestSuite) TestDocsExamples() {
-	docs := Docs{}
-
-	ts.Run("ExamplesWithNoFiles", func() {
-		// Change to temp directory with no example files
-		originalDir, err := os.Getwd()
-		ts.Require().NoError(err)
-		defer func() {
-			ts.Require().NoError(os.Chdir(originalDir))
-		}()
-
-		ts.Require().NoError(os.Chdir(ts.tempDir))
-
-		err = docs.Examples()
-		ts.Require().NoError(err) // Should succeed with warning
-	})
-
-	ts.Run("ExamplesWithFiles", func() {
-		// Change to temp directory and create example files
-		originalDir, err := os.Getwd()
-		ts.Require().NoError(err)
-		defer func() {
-			ts.Require().NoError(os.Chdir(originalDir))
-		}()
-
-		ts.Require().NoError(os.Chdir(ts.tempDir))
-
-		// Create example files
-		example1 := `package main
-
-import "fmt"
-
-func ExampleHello() {
-	fmt.Println("Hello")
-	// Output: Hello
-}`
-		err = os.WriteFile("example_hello.go", []byte(example1), 0o600)
-		ts.Require().NoError(err)
-
-		err = docs.Examples()
-		ts.Require().NoError(err)
-
-		// Check that EXAMPLES.md was created
-		ts.Require().FileExists("EXAMPLES.md")
-
-		// Verify content
-		content, err := os.ReadFile("EXAMPLES.md")
-		ts.Require().NoError(err)
-		ts.Require().Contains(string(content), "# Examples")
-		ts.Require().Contains(string(content), "hello")
-	})
-}
 
 // TestDocsBuild tests the Docs.Build method
 func (ts *DocsTestSuite) TestDocsBuild() {
@@ -591,7 +538,6 @@ func (ts *DocsTestSuite) TestDocsMethodStubs() {
 		ts.Require().NotNil(docs.GoDocs)
 		ts.Require().NotNil(docs.Generate)
 		ts.Require().NotNil(docs.Check)
-		ts.Require().NotNil(docs.Examples)
 		ts.Require().NotNil(docs.Default)
 		ts.Require().NotNil(docs.Build)
 		ts.Require().NotNil(docs.Clean)
@@ -858,8 +804,8 @@ func TestDocsIntegration(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("CheckAndExamplesSequence", func(t *testing.T) {
-		// Test that Check -> Examples sequence works in project root
+	t.Run("CheckSequence", func(t *testing.T) {
+		// Test that Check works in project root
 		docs := Docs{}
 
 		// Change to project root if we're not already there
@@ -885,8 +831,6 @@ func TestDocsIntegration(t *testing.T) {
 		require.NoError(t, err)
 
 		err = docs.Check()
-		require.NoError(t, err)
-		err = docs.Examples()
 		require.NoError(t, err)
 	})
 }

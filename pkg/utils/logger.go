@@ -814,3 +814,23 @@ func StopSpinner() {
 func UpdateSpinner(message string) {
 	GetDefaultLogger().UpdateSpinner(message)
 }
+
+// Print outputs text directly to stdout without timestamps or log level tags
+// This is useful for CLI output where structured logging is not appropriate
+//
+//nolint:goprintffuncname // Domain-specific API for cleaner CLI output
+func Print(format string, args ...interface{}) {
+	if _, err := fmt.Fprintf(os.Stdout, format, args...); err != nil {
+		// Continue if write fails - this is for CLI output
+		log.Printf("failed to write to stdout: %v", err)
+	}
+}
+
+// Println outputs text with a newline directly to stdout without timestamps or log level tags
+// This is useful for CLI output where structured logging is not appropriate
+func Println(text string) {
+	if _, err := fmt.Fprintln(os.Stdout, text); err != nil {
+		// Continue if write fails - this is for CLI output
+		log.Printf("failed to write to stdout: %v", err)
+	}
+}

@@ -207,7 +207,7 @@ func (Deps) Outdated() error {
 		for _, dep := range outdated {
 			utils.Info("  %s", dep)
 		}
-		utils.Info("\nRun 'mage deps:update' to update all dependencies")
+		utils.Info("\nRun 'magex deps:update' to update all dependencies")
 	}
 
 	return nil

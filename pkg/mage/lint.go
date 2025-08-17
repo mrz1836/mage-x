@@ -328,7 +328,8 @@ func installGofumpt(config *Config) error {
 	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
 
 	version := config.Tools.Fumpt
-	if version == "" || version == DefaultGoVulnCheckVersion {
+	if version == "" {
+		utils.Warn("Gofumpt version not available, using @latest")
 		version = VersionAtLatest
 	} else if !strings.HasPrefix(version, "@") {
 		version = "@" + version

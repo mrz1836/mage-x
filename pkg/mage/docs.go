@@ -89,7 +89,11 @@ func (Docs) GoDocs() error {
 	version := getVersion()
 	if version == versionDev {
 		utils.Warn("No version tag found, using latest")
-		version = DefaultGoVulnCheckVersion
+		version = GetDefaultGoVulnCheckVersion()
+		if version == "" {
+			utils.Warn("GoVulnCheck version not available, using 'latest'")
+			version = VersionLatest
+		}
 	}
 
 	// Construct pkg.go.dev URL
@@ -688,59 +692,6 @@ func (Docs) Check() error {
 	return nil
 }
 
-// Examples generates example documentation
-func (Docs) Examples() error {
-	utils.Header("Generating Example Documentation")
-
-	// Find all example files
-	examples, err := utils.FindFiles(".", "example*.go")
-	if err != nil {
-		return fmt.Errorf("failed to find examples: %w", err)
-	}
-
-	if len(examples) == 0 {
-		utils.Warn("No example files found")
-		return nil
-	}
-
-	// Create examples documentation
-	var content strings.Builder
-	content.WriteString("# Examples\n\n")
-
-	for _, example := range examples {
-		utils.Info("Processing %s", example)
-
-		// Read example file
-		fileOps := fileops.New()
-		code, err := fileOps.File.ReadFile(example)
-		if err != nil {
-			utils.Warn("Failed to read %s: %v", example, err)
-			continue
-		}
-
-		// Extract example name from filename
-		name := filepath.Base(example)
-		name = strings.TrimSuffix(name, ".go")
-		name = strings.TrimPrefix(name, "example_")
-
-		// Add to documentation
-		content.WriteString(fmt.Sprintf("## %s\n\n", name))
-		content.WriteString("```go\n")
-		content.Write(code)
-		content.WriteString("\n```\n\n")
-	}
-
-	// Write examples documentation
-	examplesFile := "EXAMPLES.md"
-	fileOps := fileops.New()
-	if err := fileOps.File.WriteFile(examplesFile, []byte(content.String()), 0o644); err != nil {
-		return fmt.Errorf("failed to write examples documentation: %w", err)
-	}
-
-	utils.Success("Generated %s with %d examples", examplesFile, len(examples))
-	return nil
-}
-
 // Default generates default documentation
 func (Docs) Default() error {
 	runner := GetRunner()
@@ -1032,6 +983,118 @@ func (Docs) Clean() error {
 
 	utils.Success("Documentation build artifacts cleaned")
 	utils.Info("Removed directory: %s", buildDir)
+
+	return nil
+}
+
+// Examples generates example documentation and usage patterns
+func (Docs) Examples() error {
+	utils.Header("Generating Example Documentation")
+
+	// Check if examples directory exists
+	examplesDir := "examples"
+	if !utils.DirExists(examplesDir) {
+		utils.Warn("No examples directory found")
+		return nil
+	}
+
+	// Create docs/examples directory if it doesn't exist
+	docsExamplesDir := "docs/examples"
+	fileOps := fileops.New()
+	if !utils.DirExists(docsExamplesDir) {
+		utils.Info("Creating docs/examples directory...")
+		if err := fileOps.File.MkdirAll(docsExamplesDir, 0o755); err != nil {
+			return fmt.Errorf("failed to create docs/examples directory: %w", err)
+		}
+	}
+
+	// Find all example directories
+	exampleDirs, err := GetRunner().RunCmdOutput("find", examplesDir, "-type", "d", "-mindepth", "1", "-maxdepth", "1")
+	if err != nil {
+		return fmt.Errorf("failed to find example directories: %w", err)
+	}
+
+	if strings.TrimSpace(exampleDirs) == "" {
+		utils.Info("No example directories found")
+		return nil
+	}
+
+	dirs := strings.Split(strings.TrimSpace(exampleDirs), "\n")
+	utils.Info("Found %d example directories", len(dirs))
+
+	// Generate documentation for each example
+	for _, dir := range dirs {
+		if dir == "" {
+			continue
+		}
+
+		exampleName := filepath.Base(dir)
+		utils.Info("Processing example: %s", exampleName)
+
+		// Create example documentation
+		if err := generateExampleDoc(dir, exampleName, docsExamplesDir); err != nil {
+			utils.Warn("Failed to generate documentation for %s: %v", exampleName, err)
+			continue
+		}
+
+		utils.Success("Generated documentation for example: %s", exampleName)
+	}
+
+	utils.Success("Example documentation generation completed")
+	return nil
+}
+
+// generateExampleDoc creates documentation for a single example
+func generateExampleDoc(exampleDir, exampleName, outputDir string) error {
+	fileOps := fileops.New()
+
+	// Read README if it exists
+	readmePath := filepath.Join(exampleDir, "README.md")
+	var readmeContent string
+	if utils.FileExists(readmePath) {
+		content, err := fileOps.File.ReadFile(readmePath)
+		if err != nil {
+			return fmt.Errorf("failed to read README: %w", err)
+		}
+		readmeContent = string(content)
+	}
+
+	// Create output file
+	outputFile := filepath.Join(outputDir, exampleName+".md")
+
+	// Generate documentation content
+	docContent := fmt.Sprintf("# %s Example\n\n", strings.ToUpper(string(exampleName[0]))+exampleName[1:])
+
+	if readmeContent != "" {
+		docContent += readmeContent + "\n\n"
+	} else {
+		docContent += fmt.Sprintf("This example demonstrates %s functionality.\n\n", exampleName)
+	}
+
+	docContent += fmt.Sprintf("## Location\n\n`%s/`\n\n", exampleDir)
+
+	// Add usage instructions
+	docContent += "## Usage\n\n"
+	docContent += fmt.Sprintf("```bash\ncd %s\ngo run .\n```\n\n", exampleDir)
+
+	// Find and list Go files
+	goFiles, err := GetRunner().RunCmdOutput("find", exampleDir, "-name", "*.go", "-type", "f")
+	if err == nil && strings.TrimSpace(goFiles) != "" {
+		files := strings.Split(strings.TrimSpace(goFiles), "\n")
+		docContent += "## Files\n\n"
+		for _, file := range files {
+			if file != "" {
+				relFile := strings.TrimPrefix(file, exampleDir+"/")
+				docContent += fmt.Sprintf("- `%s`\n", relFile)
+			}
+		}
+		docContent += "\n"
+	}
+
+	// Write the documentation
+	if err := fileOps.File.WriteFile(outputFile, []byte(docContent), 0o644); err != nil {
+		return fmt.Errorf("failed to write example documentation: %w", err)
+	}
 
 	return nil
 }

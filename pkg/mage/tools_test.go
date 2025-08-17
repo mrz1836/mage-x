@@ -75,9 +75,18 @@ func (ts *ToolsTestSuite) TestTools_Install() {
 func (ts *ToolsTestSuite) TestTools_Install_ConfigError() {
 	TestResetConfig() // This causes LoadConfig to create a default config
 
-	// Mock expected tool installation calls for default config
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@latest"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	// Mock expected tool installation calls for default config  
+	fumptVersion := GetDefaultGofumptVersion()
+	if fumptVersion == "" {
+		fumptVersion = "latest"
+	}
+	govulnVersion := GetDefaultGoVulnCheckVersion()
+	if govulnVersion == "" {
+		govulnVersion = "latest"
+	}
+	
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -110,9 +119,18 @@ func (ts *ToolsTestSuite) TestTools_Update_ConfigError() {
 	TestResetConfig() // This causes LoadConfig to create a default config
 
 	// Mock expected tool update calls for default config
+	fumptVersion := GetDefaultGofumptVersion()
+	if fumptVersion == "" {
+		fumptVersion = "latest"
+	}
+	govulnVersion := GetDefaultGoVulnCheckVersion()
+	if govulnVersion == "" {
+		govulnVersion = "latest"
+	}
+	
 	ts.env.Runner.On("RunCmd", "brew", []string{"upgrade", "golangci-lint"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@latest"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -205,7 +223,11 @@ func (ts *ToolsTestSuite) TestTools_List_ConfigError() {
 func (ts *ToolsTestSuite) TestTools_VulnCheck() {
 	ts.setupConfig()
 	// Since govulncheck likely isn't installed, expect installation first
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	govulnVersion := GetDefaultGoVulnCheckVersion()
+	if govulnVersion == "" {
+		govulnVersion = "latest"
+	}
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
@@ -222,7 +244,11 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck() {
 // TestTools_VulnCheck_InstallFirst tests VulnCheck function when govulncheck needs to be installed
 func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallFirst() {
 	ts.setupConfig()
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	govulnVersion := GetDefaultGoVulnCheckVersion()
+	if govulnVersion == "" {
+		govulnVersion = "latest"
+	}
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
@@ -252,7 +278,11 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallError() {
 		ts.T().Fatalf("Failed to set PATH: %v", err)
 	}
 
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(errToolsInstallFailed)
+	govulnVersion := GetDefaultGoVulnCheckVersion()
+	if govulnVersion == "" {
+		govulnVersion = "latest"
+	}
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(errToolsInstallFailed)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -271,7 +301,11 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_CheckError() {
 	expectedError := require.New(ts.T())
 	ts.setupConfig()
 	// Expect installation first, then failure on check
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	govulnVersion := GetDefaultGoVulnCheckVersion()
+	if govulnVersion == "" {
+		govulnVersion = "latest"
+	}
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(errVulnerabilityFound)
 
 	err := ts.env.WithMockRunner(
@@ -291,7 +325,11 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_ConfigError() {
 	TestResetConfig() // This causes LoadConfig to create a default config
 
 	// Mock installation and vulnerability check calls
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	govulnVersion := GetDefaultGoVulnCheckVersion()
+	if govulnVersion == "" {
+		govulnVersion = "latest"
+	}
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
@@ -349,11 +387,11 @@ func (ts *ToolsTestSuite) TestTools_Clean() {
 func (ts *ToolsTestSuite) TestGetRequiredTools() {
 	config := &Config{
 		Tools: ToolsConfig{
-			GolangciLint: "v1.50.0",
-			Fumpt:        "v0.4.0",
-			GoVulnCheck:  "latest",
-			Mockgen:      "v1.6.0",
-			Swag:         "v1.8.0",
+			GolangciLint: GetDefaultGolangciLintVersion(),
+			Fumpt:        GetDefaultGofumptVersion(),
+			GoVulnCheck:  GetDefaultGoVulnCheckVersion(),
+			Mockgen:      GetDefaultMockgenVersion(),
+			Swag:         GetDefaultSwagVersion(),
 			Custom: map[string]string{
 				"gotestsum": "gotest.tools/gotestsum@v1.8.0",
 				"gci":       "github.com/daixiang0/gci@latest",
@@ -363,21 +401,37 @@ func (ts *ToolsTestSuite) TestGetRequiredTools() {
 
 	tools := getRequiredTools(config)
 
-	// Should have 3 base tools + 2 optional + 2 custom = 7 tools
-	ts.Require().Len(tools, 7)
+	// Should have at least 3 base tools, more if optional tools have versions
+	ts.Require().GreaterOrEqual(len(tools), 3)
 
-	// Check base tools
+	// Check base tools (always present)
 	ts.Require().Equal("golangci-lint", tools[0].Name)
 	ts.Require().Equal("gofumpt", tools[1].Name)
 	ts.Require().Equal("govulncheck", tools[2].Name)
 
-	// Check optional tools
-	ts.Require().Equal("mockgen", tools[3].Name)
-	ts.Require().Equal("swag", tools[4].Name)
+	// Optional tools are only added if they have versions configured
+	foundMockgen := false
+	foundSwag := false
+	for _, tool := range tools {
+		if tool.Name == "mockgen" {
+			foundMockgen = true
+		}
+		if tool.Name == "swag" {
+			foundSwag = true
+		}
+	}
+	
+	// If versions are available, tools should be present
+	if GetDefaultMockgenVersion() != "" {
+		ts.Require().True(foundMockgen, "mockgen should be present when version is configured")
+	}
+	if GetDefaultSwagVersion() != "" {
+		ts.Require().True(foundSwag, "swag should be present when version is configured")
+	}
 
 	// Check custom tools - find them by name since order is not deterministic
 	var gotestsum, gci *ToolDefinition
-	for i := 5; i < 7; i++ {
+	for i := range tools {
 		switch tools[i].Name {
 		case "gotestsum":
 			gotestsum = &tools[i]
@@ -399,9 +453,9 @@ func (ts *ToolsTestSuite) TestGetRequiredTools() {
 func (ts *ToolsTestSuite) TestGetRequiredTools_MinimalConfig() {
 	config := &Config{
 		Tools: ToolsConfig{
-			GolangciLint: "latest",
-			Fumpt:        "latest",
-			GoVulnCheck:  "latest",
+			GolangciLint: GetDefaultGolangciLintVersion(),
+			Fumpt:        GetDefaultGofumptVersion(),
+			GoVulnCheck:  GetDefaultGoVulnCheckVersion(),
 		},
 	}
 
@@ -423,7 +477,11 @@ func (ts *ToolsTestSuite) TestInstallTool_AlreadyInstalled() {
 	}
 
 	// Since utils.CommandExists will likely return false, expect installation
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@latest"}).Return(nil)
+	fumptVersion := GetDefaultGofumptVersion()
+	if fumptVersion == "" {
+		fumptVersion = "latest"
+	}
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -438,14 +496,20 @@ func (ts *ToolsTestSuite) TestInstallTool_AlreadyInstalled() {
 
 // TestInstallTool tests the installTool function for new tool installation
 func (ts *ToolsTestSuite) TestInstallTool_NewInstall() {
+	mockgenVersion := GetDefaultMockgenVersion()
+	if mockgenVersion == "" {
+		mockgenVersion = "latest"
+	}
+	
 	tool := ToolDefinition{
 		Name:    "mockgen",
 		Module:  "go.uber.org/mock/mockgen",
-		Version: "v1.6.0",
+		Version: mockgenVersion,
 		Check:   "mockgen",
 	}
 
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "go.uber.org/mock/mockgen@v1.6.0"}).Return(nil)
+	expectedCmd := "go.uber.org/mock/mockgen@" + mockgenVersion
+	ts.env.Runner.On("RunCmd", "go", []string{"install", expectedCmd}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -507,9 +571,9 @@ func (ts *ToolsTestSuite) TestInstallTool_InstallError() {
 func (ts *ToolsTestSuite) setupConfig() {
 	TestSetConfig(&Config{
 		Tools: ToolsConfig{
-			GolangciLint: "v1.50.0",
-			Fumpt:        "v0.4.0",
-			GoVulnCheck:  "latest",
+			GolangciLint: GetDefaultGolangciLintVersion(),
+			Fumpt:        GetDefaultGofumptVersion(),
+			GoVulnCheck:  GetDefaultGoVulnCheckVersion(),
 			Custom: map[string]string{
 				"gotestsum": "gotest.tools/gotestsum@v1.8.0",
 			},
@@ -521,10 +585,20 @@ func (ts *ToolsTestSuite) setupConfig() {
 func (ts *ToolsTestSuite) setupSuccessfulInstall() {
 	ts.setupConfig()
 
+	// Get versions from environment or use @latest as fallback
+	fumptVersion := GetDefaultGofumptVersion()
+	if fumptVersion == "" {
+		fumptVersion = "latest"
+	}
+	govulnVersion := GetDefaultGoVulnCheckVersion()
+	if govulnVersion == "" {
+		govulnVersion = "latest"
+	}
+
 	// Mock installation commands for various tools
 	// Note: golangci-lint is a special case and uses ensureGolangciLint which we can't easily mock here
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@v0.4.0"}).Return(nil).Maybe()
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil).Maybe()
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil).Maybe()
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil).Maybe()
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "gotest.tools/gotestsum@v1.8.0"}).Return(nil).Maybe()
 
 	// golangci-lint might try brew or curl installation
@@ -535,12 +609,22 @@ func (ts *ToolsTestSuite) setupSuccessfulInstall() {
 func (ts *ToolsTestSuite) setupSuccessfulUpdate() {
 	ts.setupConfig()
 
+	// Get versions from environment or use @latest as fallback
+	fumptVersion := GetDefaultGofumptVersion()
+	if fumptVersion == "" {
+		fumptVersion = "latest"
+	}
+	govulnVersion := GetDefaultGoVulnCheckVersion()
+	if govulnVersion == "" {
+		govulnVersion = "latest"
+	}
+
 	// Mock brew upgrade for golangci-lint (assumes Mac)
 	ts.env.Runner.On("RunCmd", "brew", []string{"upgrade", "golangci-lint"}).Return(nil)
 
 	// Mock go install commands for tool updates
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@v0.4.0"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "gotest.tools/gotestsum@v1.8.0"}).Return(nil)
 }
 

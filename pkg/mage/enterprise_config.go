@@ -27,7 +27,7 @@ var (
 	ErrConfigValidationFailed       = errors.New("configuration validation failed")
 	ErrInputEnvRequired             = errors.New("INPUT environment variable is required")
 	ErrImportedConfigInvalid        = errors.New("imported configuration is invalid")
-	ErrEnterpriseConfigNotFoundInit = errors.New("enterprise configuration not found. Run 'mage enterprise-config:init' first")
+	ErrEnterpriseConfigNotFoundInit = errors.New("enterprise configuration not found. Run 'magex enterprise-config:init' first")
 	ErrInvalidSelection             = errors.New("invalid selection")
 	ErrUnknownSection               = errors.New("unknown section")
 	ErrUnsupportedConfigFormat      = errors.New("unsupported format")
