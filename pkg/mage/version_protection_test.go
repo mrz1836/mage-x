@@ -127,7 +127,8 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)
+		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 		mock.SetOutput("git push origin v1.0.7", "", nil)
 
@@ -155,7 +156,8 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)
+		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 		mock.SetOutput("git push origin v1.0.7", "", nil)
 
@@ -179,7 +181,8 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)
+		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 
 		version := Version{}
 		err := version.Bump()
@@ -308,7 +311,8 @@ func (vpts *VersionProtectionTestSuite) TestGitTagScenarios() {
 		// No tags on HEAD
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
 		// But tags exist in history
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)
+		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 
 		tag := getCurrentGitTag()
 		vpts.Equal("v1.0.6", tag, "Should fall back to git describe when no tags on HEAD")
@@ -320,7 +324,8 @@ func (vpts *VersionProtectionTestSuite) TestGitTagScenarios() {
 
 		// No tags anywhere
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)
+		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
+		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)        // Fallback also fails
 
 		tag := getCurrentGitTag()
 		vpts.Empty(tag, "Should return empty string when no tags exist")
