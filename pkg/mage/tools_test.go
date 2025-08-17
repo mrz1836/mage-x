@@ -75,7 +75,7 @@ func (ts *ToolsTestSuite) TestTools_Install() {
 func (ts *ToolsTestSuite) TestTools_Install_ConfigError() {
 	TestResetConfig() // This causes LoadConfig to create a default config
 
-	// Mock expected tool installation calls for default config  
+	// Mock expected tool installation calls for default config
 	fumptVersion := GetDefaultGofumptVersion()
 	if fumptVersion == "" {
 		fumptVersion = "latest"
@@ -84,7 +84,7 @@ func (ts *ToolsTestSuite) TestTools_Install_ConfigError() {
 	if govulnVersion == "" {
 		govulnVersion = "latest"
 	}
-	
+
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
 
@@ -127,7 +127,7 @@ func (ts *ToolsTestSuite) TestTools_Update_ConfigError() {
 	if govulnVersion == "" {
 		govulnVersion = "latest"
 	}
-	
+
 	ts.env.Runner.On("RunCmd", "brew", []string{"upgrade", "golangci-lint"}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
@@ -420,7 +420,7 @@ func (ts *ToolsTestSuite) TestGetRequiredTools() {
 			foundSwag = true
 		}
 	}
-	
+
 	// If versions are available, tools should be present
 	if GetDefaultMockgenVersion() != "" {
 		ts.Require().True(foundMockgen, "mockgen should be present when version is configured")
@@ -500,7 +500,7 @@ func (ts *ToolsTestSuite) TestInstallTool_NewInstall() {
 	if mockgenVersion == "" {
 		mockgenVersion = "latest"
 	}
-	
+
 	tool := ToolDefinition{
 		Name:    "mockgen",
 		Module:  "go.uber.org/mock/mockgen",

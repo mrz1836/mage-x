@@ -637,14 +637,14 @@ func (ts *AuditTestSuite) TestAuditIntegration() {
 	ts.Run("audit with various environment configurations", func() {
 		// Set various environment variables
 		originalVars := map[string]string{
-			"START_TIME":         os.Getenv("START_TIME"),
-			"END_TIME":           os.Getenv("END_TIME"),
-			"USER":               os.Getenv("USER"),
-			"COMMAND":            os.Getenv("COMMAND"),
-			"SUCCESS":            os.Getenv("SUCCESS"),
-			"LIMIT":              os.Getenv("LIMIT"),
-			"OUTPUT":             os.Getenv("OUTPUT"),
-			"GO_VERSION":         os.Getenv("GO_VERSION"),
+			"START_TIME":           os.Getenv("START_TIME"),
+			"END_TIME":             os.Getenv("END_TIME"),
+			"USER":                 os.Getenv("USER"),
+			"COMMAND":              os.Getenv("COMMAND"),
+			"SUCCESS":              os.Getenv("SUCCESS"),
+			"LIMIT":                os.Getenv("LIMIT"),
+			"OUTPUT":               os.Getenv("OUTPUT"),
+			"GO_VERSION":           os.Getenv("GO_VERSION"),
 			"MAGE_X_AUDIT_ENABLED": os.Getenv("MAGE_X_AUDIT_ENABLED"),
 		}
 		defer func() {

@@ -443,7 +443,6 @@ func (ts *DocsTestSuite) TestDocsCheck() {
 	})
 }
 
-
 // TestDocsBuild tests the Docs.Build method
 func (ts *DocsTestSuite) TestDocsBuild() {
 	docs := Docs{}
