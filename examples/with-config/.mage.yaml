@@ -20,35 +20,35 @@ project:
 build:
   # Output directory for compiled binaries
   output: bin
-  
+
   # Remove file system paths from compiled executable (security & size)
   trimpath: true
-  
+
   # Target platforms for cross-compilation
   platforms:
     - linux/amd64
     - darwin/amd64
     - darwin/arm64
     - windows/amd64
-  
+
   # Build tags to include during compilation
   tags:
     - production
     - feature_flags
-  
+
   # Linker flags for optimization and metadata injection
   ldflags:
-    - -s -w                          # Strip debug info and symbol table
-    - -X main.version={{.Version}}   # Inject version at build time
-    - -X main.commit={{.Commit}}     # Inject git commit at build time
-    - -X main.buildDate={{.Date}}    # Inject build date
-  
+    - -s -w # Strip debug info and symbol table
+    - -X main.version={{.Version}} # Inject version at build time
+    - -X main.commit={{.Commit}} # Inject git commit at build time
+    - -X main.buildDate={{.Date}} # Inject build date
+
   # Go compiler flags (usually empty for production)
   goflags: []
-  
+
   # Number of parallel build processes (0 = auto-detect CPU cores)
   parallel: 0
-  
+
   # Enable verbose build output
   verbose: false
 
@@ -56,56 +56,56 @@ build:
 test:
   # Number of parallel test processes
   parallel: 4
-  
+
   # Global test timeout
   timeout: 10m
-  
+
   # Integration test timeout (typically longer)
   integration_timeout: 30m
-  
+
   # Build tag for integration tests
   integration_tag: integration
-  
+
   # Run only short tests (excludes long-running tests)
   short: false
-  
+
   # Enable verbose test output
   verbose: false
-  
+
   # Enable race condition detection
   race: true
-  
+
   # Enable test coverage collection
   cover: true
-  
+
   # Coverage mode: set, count, atomic
   covermode: atomic
-  
+
   # Packages to include in coverage (empty = all packages)
   coverpkg: []
-  
+
   # Files/patterns to exclude from coverage
   coverage_exclude:
     - "*/mock_*.go"
     - "*/testdata/*"
     - "*/vendor/*"
     - "*_test.go"
-  
+
   # Build tags for test execution
   tags: "integration"
-  
+
   # Skip fuzz tests during regular test runs
   skip_fuzz: false
-  
+
   # Randomize test execution order
   shuffle: true
-  
+
   # CPU cores to use for benchmarks
   bench_cpu: 1
-  
+
   # Duration for benchmark tests
   bench_time: "10s"
-  
+
   # Enable memory profiling for benchmarks
   bench_mem: true
 
@@ -113,30 +113,30 @@ test:
 lint:
   # golangci-lint version to use
   golangci_version: v2.3.1
-  
+
   # Linting timeout
   timeout: 5m
-  
+
   # Directories to skip during linting
   skip_dirs:
     - vendor
     - testdata
     - bin
     - .git
-  
+
   # Files to skip during linting
   skip_files:
     - "*.pb.go"
     - "*_generated.go"
-  
+
   # Enable all available linters (be careful - very strict)
   enable_all: false
-  
+
   # Specific linters to disable
   disable_linters:
-    - exhaustruct  # Too strict for most projects
-    - gomnd        # Magic number detection can be noisy
-  
+    - exhaustruct # Too strict for most projects
+    - gomnd # Magic number detection can be noisy
+
   # Specific linters to enable
   enable_linters:
     - govet
@@ -149,19 +149,19 @@ lint:
 tools:
   # Go linting tool
   golangci_lint: v2.3.1
-  
+
   # Enhanced Go formatter
   fumpt: latest
-  
+
   # Vulnerability scanner
   govulncheck: latest
-  
+
   # Mock generation tool
   mockgen: latest
-  
+
   # Swagger/OpenAPI documentation generator
   swag: latest
-  
+
   # Custom tools for your project
   custom:
     protoc: "3.21.12"
@@ -171,26 +171,26 @@ tools:
 docker:
   # Docker registry URL
   registry: ghcr.io
-  
+
   # Repository name in registry
   repository: example/config-demo
-  
+
   # Dockerfile path (relative to project root)
   dockerfile: Dockerfile
-  
+
   # Build context path
   build_context: .
-  
+
   # Build arguments to pass to Docker
   build_args:
     GO_VERSION: "1.24"
     APP_VERSION: "{{.Version}}"
-  
+
   # Image tags to create
   tags:
     - "{{.Version}}"
     - "latest"
-  
+
   # Target platforms for multi-arch builds
   platforms:
     - linux/amd64
@@ -202,22 +202,22 @@ release:
   github:
     owner: example
     repo: config-demo
-  
+
   # Platforms to build release assets for
   platforms:
     - linux/amd64
     - darwin/amd64
     - darwin/arm64
     - windows/amd64
-  
+
   # Archive formats for release assets
   formats:
     - tar.gz
     - zip
-  
+
   # Include checksums file
   checksums: true
-  
+
   # Include changelog in release
   changelog: true
 
@@ -225,10 +225,10 @@ release:
 download:
   # Maximum number of retry attempts
   max_retries: 5
-  
+
   # Initial delay between retries (milliseconds)
   initial_delay_ms: 1000
-  
+
   # Maximum delay between retries (milliseconds)
   max_delay_ms: 30000
 

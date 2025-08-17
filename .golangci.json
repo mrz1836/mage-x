@@ -1,10 +1,7 @@
 {
     "version": "2",
     "formatters": {
-        "enable": [
-            "gofmt",
-            "gofumpt"
-        ],
+        "enable": ["gofmt", "gofumpt"],
         "exclusions": {
             "generated": "lax",
             "paths": [
@@ -31,9 +28,7 @@
                 "extra-rules": false
             },
             "goimports": {
-                "local-prefixes": [
-                    "github.com/mrz1836/mage-x"
-                ]
+                "local-prefixes": ["github.com/mrz1836/mage-x"]
             }
         }
     },
@@ -111,9 +106,7 @@
             "depguard": {
                 "list-type": "blacklist",
                 "include-go-root": false,
-                "packages": [
-                    "github.com/sirupsen/logrus"
-                ]
+                "packages": ["github.com/sirupsen/logrus"]
             },
             "forbidigo": {
                 "forbid": [
@@ -166,19 +159,13 @@
                     "performance",
                     "experimental"
                 ],
-                "disabled-checks": [
-                    "commentedOutCode",
-                    "ifElseChain"
-                ]
+                "disabled-checks": ["commentedOutCode", "ifElseChain"]
             },
             "gocyclo": {
                 "min-complexity": 15
             },
             "govet": {
-                "enable": [
-                    "atomicalign",
-                    "shadow"
-                ],
+                "enable": ["atomicalign", "shadow"],
                 "check-shadowing": true,
                 "settings": {
                     "printf": {
@@ -197,10 +184,7 @@
             },
             "misspell": {
                 "locale": "US",
-                "ignore-rules": [
-                    "mage",
-                    "golang"
-                ]
+                "ignore-rules": ["mage", "golang"]
             },
             "nakedret": {
                 "max-func-lines": 30
@@ -240,17 +224,8 @@
         "timeout": "5m",
         "issues-exit-code": 1,
         "tests": true,
-        "build-tags": [
-            "mage"
-        ],
-        "exclude-dirs": [
-            "vendor",
-            ".git",
-            "testdata",
-            "examples",
-            "tmp",
-            "bin"
-        ]
+        "build-tags": ["mage"],
+        "exclude-dirs": ["vendor", ".git", "testdata", "examples", "tmp", "bin"]
     },
     "output": {
         "formats": {
@@ -265,20 +240,11 @@
         "default": "warning",
         "rules": [
             {
-                "linters": [
-                    "dupl",
-                    "misspell",
-                    "makezero",
-                    "goconst"
-                ],
+                "linters": ["dupl", "misspell", "makezero", "goconst"],
                 "severity": "info"
             },
             {
-                "linters": [
-                    "gosec",
-                    "errcheck",
-                    "staticcheck"
-                ],
+                "linters": ["gosec", "errcheck", "staticcheck"],
                 "severity": "error"
             }
         ]
@@ -300,20 +266,14 @@
             },
             {
                 "path": "pkg/utils/logger\\.go",
-                "linters": [
-                    "goprintffuncname"
-                ]
+                "linters": ["goprintffuncname"]
             },
             {
-                "linters": [
-                    "stylecheck"
-                ],
+                "linters": ["stylecheck"],
                 "text": "ST1000:"
             },
             {
-                "linters": [
-                    "lll"
-                ],
+                "linters": ["lll"],
                 "source": "https://"
             }
         ],

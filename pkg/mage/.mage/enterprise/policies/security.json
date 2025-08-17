@@ -5,12 +5,7 @@
         {
             "action": "block",
             "enabled": true,
-            "patterns": [
-                "password",
-                "secret",
-                "key",
-                "token"
-            ],
+            "patterns": ["password", "secret", "key", "token"],
             "severity": "high",
             "type": "secret_detection"
         },

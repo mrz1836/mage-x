@@ -9,11 +9,7 @@
         "type=cache,target=/home/vscode/.cache/go-build",
         "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
     ],
-    "runArgs": [
-        "--cap-drop=ALL",
-        "--security-opt",
-        "no-new-privileges:true"
-    ],
+    "runArgs": ["--cap-drop=ALL", "--security-opt", "no-new-privileges:true"],
     "postCreateCommand": "make lint && go vet ./... && go test ./...",
     "customizations": {
         "vscode": {

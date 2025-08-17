@@ -26,10 +26,7 @@
             "variables": {},
             "secrets": [],
             "health_check_url": "/health",
-            "notification_channels": [
-                "slack",
-                "email"
-            ]
+            "notification_channels": ["slack", "email"]
         },
         "staging": {
             "description": "Staging environment",
@@ -39,9 +36,7 @@
             "variables": {},
             "secrets": [],
             "health_check_url": "/health",
-            "notification_channels": [
-                "slack"
-            ]
+            "notification_channels": ["slack"]
         }
     },
     "policies": [
@@ -118,21 +113,14 @@
         "enabled": true,
         "metrics": {
             "enabled": true,
-            "collectors": [
-                "deployment_time",
-                "success_rate",
-                "error_rate"
-            ],
+            "collectors": ["deployment_time", "success_rate", "error_rate"],
             "interval": "30s",
             "settings": null
         },
         "alerting": {
             "enabled": true,
             "rules": null,
-            "channels": [
-                "deployment_failure",
-                "high_error_rate"
-            ],
+            "channels": ["deployment_failure", "high_error_rate"],
             "settings": null
         },
         "dashboards": {

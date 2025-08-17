@@ -14,8 +14,8 @@
           "SECRET",
           "PRIVATE_KEY",
           "TOKEN",
-          "PASSWORD"
+          "PASSWORD",
         ],
-      "ExcludeCommands": ["help", "version", "audit:show"]
-    }
+      "ExcludeCommands": ["help", "version", "audit:show"],
+    },
 }
