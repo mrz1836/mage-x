@@ -6,7 +6,7 @@ version: 2
 
 before:
   hooks:
-    - mage testDefault
+    - mage test
 changelog:
   sort: asc
   filters:
@@ -34,7 +34,7 @@ builds:
       - arm64
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.buildDate={{.Date}} -X main.buildTime={{.Date}}
-  
+
   - id: magex
     main: ./cmd/magex
     binary: magex
