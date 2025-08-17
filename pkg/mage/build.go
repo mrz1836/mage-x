@@ -171,7 +171,7 @@ func (b Build) createBuildContext(cfg *Config) (*buildContext, error) {
 // determineBuildOutput determines the output path for the binary
 func (b Build) determineBuildOutput(cfg *Config) string {
 	binary := cfg.Project.Binary
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == OSWindows {
 		binary += ".exe"
 	}
 	return filepath.Join(cfg.Build.Output, binary)

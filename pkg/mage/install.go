@@ -396,7 +396,7 @@ func (Install) Docker() error {
 		utils.Info("Or use Homebrew: brew install --cask docker")
 	case "linux":
 		utils.Info("Install Docker Engine: https://docs.docker.com/engine/install/")
-	case "windows":
+	case OSWindows:
 		utils.Info("Install Docker Desktop for Windows: https://docs.docker.com/docker-for-windows/install/")
 	default:
 		utils.Info("Please install Docker for your platform: https://docs.docker.com/get-docker/")

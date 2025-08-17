@@ -511,7 +511,7 @@ func parsePlatform(platform string) (goos, arch string, err error) {
 
 func generateOutputPath(binaryName, goos, goarch string) string {
 	outputName := fmt.Sprintf("%s-%s-%s", binaryName, goos, goarch)
-	if goos == "windows" {
+	if goos == OSWindows {
 		outputName += ".exe"
 	}
 	return filepath.Join("dist", outputName)

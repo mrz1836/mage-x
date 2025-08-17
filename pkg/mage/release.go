@@ -186,7 +186,7 @@ func buildAndInstallFromTag(latestTag string) error {
 		if checkoutErr := GetRunner().RunCmd("git", "checkout", latestTag); checkoutErr != nil {
 			// If stashed, restore before returning error
 			if hasStash {
-				_ = GetRunner().RunCmd("git", "stash", "pop")
+				_ = GetRunner().RunCmd("git", "stash", "pop") //nolint:errcheck // Best effort cleanup
 			}
 			return fmt.Errorf("failed to checkout tag %s: %w", latestTag, checkoutErr)
 		}
@@ -200,9 +200,9 @@ func buildAndInstallFromTag(latestTag string) error {
 	if buildErr := GetRunner().RunCmd("goreleaser", "build", "--snapshot", "--clean", "--single-target"); buildErr != nil {
 		// Clean up before returning error
 		if needCheckout {
-			_ = GetRunner().RunCmd("git", "checkout", currentRef)
+			_ = GetRunner().RunCmd("git", "checkout", currentRef) //nolint:errcheck // Best effort cleanup
 			if hasStash {
-				_ = GetRunner().RunCmd("git", "stash", "pop")
+				_ = GetRunner().RunCmd("git", "stash", "pop") //nolint:errcheck // Best effort cleanup
 			}
 		}
 		return fmt.Errorf("build failed for tag %s: %w", latestTag, buildErr)
@@ -222,7 +222,7 @@ func buildAndInstallFromTag(latestTag string) error {
 
 	// Determine the binary path based on platform
 	var binaryName string
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == OSWindows {
 		binaryName = "magex.exe"
 	} else {
 		binaryName = "magex"
@@ -260,7 +260,7 @@ func buildAndInstallFromTag(latestTag string) error {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 	targetPath := filepath.Join(homeDir, "go", "bin", "magex")
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == OSWindows {
 		targetPath += ".exe"
 	}
 
@@ -271,7 +271,7 @@ func buildAndInstallFromTag(latestTag string) error {
 	}
 
 	// Make it executable (on Unix-like systems)
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS != OSWindows {
 		if err := GetRunner().RunCmd("chmod", "+x", targetPath); err != nil {
 			utils.Warn("Failed to set executable permission: %v", err)
 		}
