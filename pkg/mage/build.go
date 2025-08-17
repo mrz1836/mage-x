@@ -233,7 +233,8 @@ func (b Build) determineLDFlags(cfg *Config) string {
 	defaultLDFlags := []string{
 		fmt.Sprintf("-X main.version=%s", getVersion()),
 		fmt.Sprintf("-X main.commit=%s", getCommit()),
-		fmt.Sprintf("-X main.date=%s", time.Now().Format(time.RFC3339)),
+		fmt.Sprintf("-X main.buildDate=%s", time.Now().Format(time.RFC3339)),
+		fmt.Sprintf("-X main.buildTime=%s", time.Now().Format(time.RFC3339)),
 	}
 	if !utils.GetEnvBool("DEBUG", false) {
 		defaultLDFlags = append(defaultLDFlags, "-s", "-w")
@@ -658,7 +659,8 @@ func buildFlags(cfg *Config) []string {
 		ldflags := []string{
 			fmt.Sprintf("-X main.version=%s", getVersion()),
 			fmt.Sprintf("-X main.commit=%s", getCommit()),
-			fmt.Sprintf("-X main.date=%s", time.Now().Format(time.RFC3339)),
+			fmt.Sprintf("-X main.buildDate=%s", time.Now().Format(time.RFC3339)),
+			fmt.Sprintf("-X main.buildTime=%s", time.Now().Format(time.RFC3339)),
 		}
 
 		// Add stripping flags for release builds

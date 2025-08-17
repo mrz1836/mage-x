@@ -484,8 +484,8 @@ func buildForPlatform(binaryName, platform string, config *MultiChannelReleaseCo
 
 	// Build with proper environment
 	err = withBuildEnvironment(goos, goarch, func() error {
-		ldflags := fmt.Sprintf("-s -w -X main.version=%s -X main.commit=%s -X main.date=%s",
-			config.Version, getCommit(), time.Now().Format(time.RFC3339))
+		ldflags := fmt.Sprintf("-s -w -X main.version=%s -X main.commit=%s -X main.buildDate=%s -X main.buildTime=%s",
+			config.Version, getCommit(), time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339))
 		// Detect if we're building magex specifically
 		buildTarget := "./..."
 		if strings.Contains(binaryName, "magex") || strings.Contains(binaryName, "mage-x") {

@@ -31,15 +31,43 @@ const banner = `
    🪄 MAGE-X - Write Once, Mage Everywhere
 `
 
-// Version variables populated via ldflags during build
+const noDescription = "No description available"
+
+// BuildInfo contains version and build information
+type BuildInfo struct {
+	Version   string
+	Commit    string
+	BuildDate string
+	BuildTime string
+}
+
+// Build-time variables populated via ldflags during build
+// These are intentionally left as simple strings for ldflags injection
 //
-//nolint:gochecknoglobals // These are standard for version injection via ldflags
+//nolint:gochecknoglobals // Required for ldflags injection
 var (
 	version   = "dev"
 	commit    = "unknown"
 	buildDate = "unknown"
 	buildTime = "unknown"
 )
+
+// getBuildInfo returns the build information struct
+// This function encapsulates the global variables and provides a clean interface
+func getBuildInfo() BuildInfo {
+	return BuildInfo{
+		Version:   version,
+		Commit:    commit,
+		BuildDate: buildDate,
+		BuildTime: buildTime,
+	}
+}
+
+// isValidBuildValue checks if a build value has been properly injected via ldflags
+// Returns false for empty strings or default "unknown" values
+func isValidBuildValue(value string) bool {
+	return value != "" && value != "unknown"
+}
 
 // ErrMagefileExists is returned when trying to initialize a magefile that already exists
 var (
@@ -48,39 +76,39 @@ var (
 
 // Flags holds all command line flags
 type Flags struct {
-	List      *bool
-	ListLong  *bool
+	Clean     *bool
+	Compile   *string
+	Debug     *bool
+	Force     *bool
 	Help      *bool
 	HelpLong  *bool
-	Version   *bool
-	Verbose   *bool
-	Compile   *string
 	Init      *bool
-	Clean     *bool
-	Debug     *bool
+	List      *bool
+	ListLong  *bool
 	Namespace *bool
 	Search    *string
 	Timeout   *string
-	Force     *bool
+	Verbose   *bool
+	Version   *bool
 }
 
 // initFlags initializes all command line flags
 func initFlags() *Flags {
 	return &Flags{
-		List:      flag.Bool("l", false, "list available commands"),
-		ListLong:  flag.Bool("list", false, "list available commands (verbose)"),
+		Clean:     flag.Bool("clean", false, "clean MAGE-X cache and temporary files"),
+		Compile:   flag.String("compile", "", "compile a magefile for use with mage"),
+		Debug:     flag.Bool("debug", false, "enable debug output"),
+		Force:     flag.Bool("f", false, "force operation"),
 		Help:      flag.Bool("h", false, "show help"),
 		HelpLong:  flag.Bool("help", false, "show help"),
-		Version:   flag.Bool("version", false, "show version"),
-		Verbose:   flag.Bool("v", false, "verbose output"),
-		Compile:   flag.String("compile", "", "compile a magefile for use with mage"),
 		Init:      flag.Bool("init", false, "initialize a new magefile with MAGE-X imports"),
-		Clean:     flag.Bool("clean", false, "clean MAGE-X cache and temporary files"),
-		Debug:     flag.Bool("debug", false, "enable debug output"),
+		List:      flag.Bool("l", false, "list available commands"),
+		ListLong:  flag.Bool("list", false, "list available commands (verbose)"),
 		Namespace: flag.Bool("n", false, "show commands organized by namespace"),
 		Search:    flag.String("search", "", "search for commands"),
 		Timeout:   flag.String("t", "", "timeout for command execution"),
-		Force:     flag.Bool("f", false, "force operation"),
+		Verbose:   flag.Bool("v", false, "verbose output"),
+		Version:   flag.Bool("version", false, "show version"),
 	}
 }
 
@@ -258,29 +286,32 @@ func showVersion() {
 	embed.RegisterAll(reg)
 	metadata := reg.Metadata()
 
+	// Get build information
+	info := getBuildInfo()
+
 	// Version header
 	utils.Println("\nVersion Information")
 	utils.Println(strings.Repeat("─", 50))
 
 	// Core version info
-	fmt.Printf("  Version:      %s\n", version)
+	fmt.Printf("  Version:      %s\n", info.Version)
 
-	// Build information if available
-	if commit != "unknown" && commit != "" {
+	// Build information if available (check if values were injected via ldflags)
+	if isValidBuildValue(info.Commit) {
 		// Show first 7 chars of commit like git does
-		shortCommit := commit
-		if len(commit) > 7 {
-			shortCommit = commit[:7]
+		shortCommit := info.Commit
+		if len(info.Commit) > 7 {
+			shortCommit = info.Commit[:7]
 		}
 		fmt.Printf("  🔨 Commit:       %s\n", shortCommit)
 	}
 
-	if buildDate != "unknown" && buildDate != "" {
-		fmt.Printf("  Build Date:   %s\n", buildDate)
+	if isValidBuildValue(info.BuildDate) {
+		fmt.Printf("  Build Date:   %s\n", info.BuildDate)
 	}
 
-	if buildTime != "unknown" && buildTime != "" {
-		fmt.Printf("  Build Time:   %s\n", buildTime)
+	if isValidBuildValue(info.BuildTime) {
+		fmt.Printf("  Build Time:   %s\n", info.BuildTime)
 	}
 
 	// Platform information
@@ -298,9 +329,9 @@ func showVersion() {
 	// Compatibility
 	utils.Println("\n✅ Compatibility")
 	utils.Println(strings.Repeat("─", 50))
-	utils.Println("  • Drop-in replacement for Mage")
-	utils.Println("  • Works with existing magefiles")
-	utils.Println("  • Cross-platform (Windows, macOS, Linux)")
+	utils.Println("  Drop-in replacement for Mage")
+	utils.Println("  Works with existing magefiles")
+	utils.Println("  Cross-platform (Windows, macOS, Linux)")
 
 	// Quick start hint
 	utils.Println("\n💡 Quick Start")
@@ -413,7 +444,7 @@ func showCategorizedCommands(reg *registry.Registry) {
 
 			description := cmd.Description
 			if description == "" {
-				description = "No description available"
+				description = noDescription
 			}
 
 			// Truncate long descriptions
@@ -584,7 +615,7 @@ func listCommandsVerbose(commands []*registry.Command) {
 	for _, cmd := range commands {
 		desc := cmd.Description
 		if desc == "" {
-			desc = "No description available"
+			desc = noDescription
 		}
 		if cmd.Deprecated != "" {
 			desc = fmt.Sprintf("⚠️  DEPRECATED: %s", cmd.Deprecated)
@@ -696,7 +727,7 @@ func searchCommands(reg *registry.Registry, query string) {
 		for _, cmd := range commands {
 			desc := cmd.Description
 			if desc == "" {
-				desc = "No description available"
+				desc = noDescription
 			}
 			// Highlight the matched term
 			highlightedName := highlightMatch(cmd.FullName(), query)
