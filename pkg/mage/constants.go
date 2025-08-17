@@ -208,12 +208,12 @@ func GetDefaultSwagVersion() string {
 
 // GetDefaultGoVersion returns the default Go version from env or fallback
 func GetDefaultGoVersion() string {
-	version = getToolVersionOrWarn("MAGE_X_GO_VERSION", "GO_PRIMARY_VERSION", "go")
+	goVersion := getToolVersionOrWarn("MAGE_X_GO_VERSION", "GO_PRIMARY_VERSION", "go")
 	// Clean up the version to remove any .x suffix for actual usage
-	if version != "" && len(version) > 2 && version[len(version)-2:] == ".x" {
-		return version[:len(version)-2]
+	if goVersion != "" && len(goVersion) > 2 && goVersion[len(goVersion)-2:] == ".x" {
+		return goVersion[:len(goVersion)-2]
 	}
-	return version
+	return goVersion
 }
 
 // GetSecondaryGoVersion returns the secondary Go version from env or fallback

@@ -328,7 +328,7 @@ func (ts *ConstantsTestSuite) TestToolVersions() {
 	vulnVersion := GetDefaultGoVulnCheckVersion()
 	ts.Require().True(vulnVersion == "latest" || strings.HasPrefix(vulnVersion, "v"),
 		"GoVulnCheck version should be 'latest' or start with 'v', got: %s", vulnVersion)
-	
+
 	lintVersion := GetDefaultGolangciLintVersion()
 	ts.Require().True(lintVersion == "latest" || strings.HasPrefix(lintVersion, "v"),
 		"GolangciLint version should be 'latest' or start with 'v', got: %s", lintVersion)
