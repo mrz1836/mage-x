@@ -139,10 +139,13 @@ MAGE-X automatically detects your project structure and **just works**:
 ### Zero Boilerplate Installation
 
 ```bash
-# 1. Install magex binary (one time)
+# Install magex (production branch)
 go install github.com/mrz1836/mage-x/cmd/magex@latest
 
-# 2. Use it immediately in ANY Go project (no setup!)
+# Auto-update to latest stable release (with proper version info)
+magex update:install
+
+# Now use it in ANY Go project (no setup!)
 magex build         # Automatically detects & builds your project
 magex test          # Run tests
 magex lint:fix      # Fix linting issues
@@ -150,6 +153,8 @@ magex format:fix    # Format your code
 
 # That's it! No magefile.go needed! 🚀
 ```
+
+> 💡 **Why two steps?** The `go install` command doesn't embed version information, so `magex update:install` downloads the latest pre-built release with proper version info. After step 2, `magex --version` will show the correct version instead of "dev".
 
 ### Quick Project Check
 ```bash

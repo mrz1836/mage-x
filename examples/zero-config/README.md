@@ -27,7 +27,11 @@ magex lint
 
 1. **Install MAGE-X**
 ```bash
+# Step 1: Install magex
 go install github.com/mrz1836/mage-x/cmd/magex@latest
+
+# Step 2: Auto-update to latest stable release
+magex update:install
 ```
 
 2. **Use it immediately in any Go project**
@@ -115,6 +119,7 @@ Here's a complete CI pipeline with zero setup:
 
 # Install magex (if not already installed)
 go install github.com/mrz1836/mage-x/cmd/magex@latest
+magex update:install
 
 # Run complete CI pipeline
 magex format:check    # Check formatting

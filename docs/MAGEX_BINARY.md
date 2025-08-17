@@ -19,14 +19,20 @@ The `magex` binary is MAGE-X's revolutionary hybrid approach that provides **tru
 
 ### Quick Install
 ```bash
+# Step 1: Install magex binary
 go install github.com/mrz1836/mage-x/cmd/magex@latest
+
+# Step 2: Auto-update to latest stable release (with proper version info)
+magex update:install
 ```
 
 ### Verify Installation
 ```bash
-magex -version
-# Should show: MAGE-X version 1.0.0
+magex --version
+# Should show: MAGE-X version 1.x.x (not "dev")
 ```
+
+> 💡 **Why two steps?** The `go install` command doesn't embed version information, so `magex update:install` downloads the latest pre-built release with proper version info.
 
 ### Alternative Methods
 
@@ -397,6 +403,7 @@ echo $PATH
 
 # Reinstall if needed
 go install github.com/mrz1836/mage-x/cmd/magex@latest
+magex update:install
 ```
 
 #### Plugin Compilation Fails
@@ -419,6 +426,7 @@ ls -la $(which magex)
 # Reinstall with proper permissions
 sudo rm $(which magex)
 go install github.com/mrz1836/mage-x/cmd/magex@latest
+magex update:install
 ```
 
 ### Debug Output
@@ -445,14 +453,22 @@ MAGEX_VERBOSE=true MAGEX_DEBUG=true magex build
 
 ### From Standard Mage
 
-1. **Install magex**: `go install github.com/mrz1836/mage-x/cmd/magex@latest`
+1. **Install magex**:
+   ```bash
+   go install github.com/mrz1836/mage-x/cmd/magex@latest
+   magex update:install
+   ```
 2. **Replace commands**: Use `magex` instead of `mage`
 3. **Remove boilerplate**: Delete wrapper functions from magefile.go
 4. **Keep custom code**: Maintain only project-specific commands
 
 ### From MAGE-X Library
 
-1. **Install binary**: `go install github.com/mrz1836/mage-x/cmd/magex@latest`
+1. **Install binary**:
+   ```bash
+   go install github.com/mrz1836/mage-x/cmd/magex@latest
+   magex update:install
+   ```
 2. **Remove imports**: No more `_ "github.com/mrz1836/mage-x/pkg/mage"`
 3. **Simplify magefile**: Keep only custom functions
 4. **Use directly**: `magex build` instead of `mage build`
@@ -499,6 +515,7 @@ MAGEX_VERBOSE=true MAGEX_DEBUG=true magex build
 
 ```bash
 go install github.com/mrz1836/mage-x/cmd/magex@latest
+magex update:install
 cd your-project
 magex build  # It just works! 🚀
 ```

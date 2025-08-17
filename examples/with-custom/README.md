@@ -153,8 +153,11 @@ func Deploy() error {
 ## 🎯 Try It
 
 ```bash
-# Install magex
+# Step 1: Install magex
 go install github.com/mrz1836/mage-x/cmd/magex@latest
+
+# Step 2: Auto-update to latest stable release
+magex update:install
 
 # See all commands (built-in + custom)
 magex -l

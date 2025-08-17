@@ -90,6 +90,7 @@ func ReleaseCmd() error {
 
 // Note: For the full zero-boilerplate experience, use the magex binary instead:
 //   go install github.com/mrz1836/mage-x/cmd/magex@latest
+//   magex update:install  # Get latest stable release with proper version info
 //   magex build
 //   magex test
 //   etc.

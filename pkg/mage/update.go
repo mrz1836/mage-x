@@ -263,7 +263,7 @@ func getUpdateChannel() UpdateChannel {
 
 // checkForUpdates checks for available updates
 func checkForUpdates(channel UpdateChannel) (*UpdateInfo, error) {
-	current := getVersionInfo()
+	current := getVersionInfoForUpdate()
 
 	// Get module info
 	module, err := utils.GetModuleName()
@@ -547,4 +547,28 @@ func saveUpdateRecord(info *UpdateInfo) {
 		// Best effort - ignore error in cleanup
 		log.Printf("failed to write update history: %v", err)
 	}
+}
+
+// getVersionInfoForUpdate returns version specifically for update checking
+// This prioritizes the binary version and warns about "dev" versions
+func getVersionInfoForUpdate() string {
+	buildInfo := getBuildInfo()
+
+	// If we have a proper version in the binary, use it
+	if buildInfo.Version != versionDev {
+		return buildInfo.Version
+	}
+
+	// If binary shows "dev", check if we're in the mage-x repo itself
+	if module, err := utils.GetModuleName(); err == nil && strings.Contains(module, "mage-x") {
+		// We're in the mage-x development environment, use git tag
+		if tag := getCurrentGitTag(); tag != "" {
+			utils.Warn("Binary version shows 'dev' - you may want to run 'magex update:install' to get the properly versioned binary")
+			return tag
+		}
+	}
+
+	// For any other case with "dev" version, warn the user
+	utils.Warn("Binary version is 'dev' - run 'magex update:install' to get the latest stable release")
+	return versionDev
 }

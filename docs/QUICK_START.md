@@ -31,13 +31,16 @@ graph TD
 
 MAGE-X now provides **true zero-boilerplate** automation through the `magex` binary. No more wrapper functions or complex setup!
 
-### ⚡ 30-Second Setup
+### ⚡ Installation & Setup
 
 ```bash
-# 1. Install magex binary (once)
+# Step 1: Install magex binary
 go install github.com/mrz1836/mage-x/cmd/magex@latest
 
-# 2. Use immediately in ANY Go project!
+# Step 2: Auto-update to latest stable release (with proper version info)
+magex update:install
+
+# Step 3: Use immediately in ANY Go project!
 cd your-go-project
 magex build         # Automatically detects & builds your project
 magex test          # Run tests
@@ -45,6 +48,24 @@ magex lint:fix      # Fix linting issues
 magex release:multi # Multi-platform release
 
 # That's it! No magefile.go needed! 🚀
+```
+
+> 💡 **Why the update step?** The `go install` command doesn't embed version information in the binary, so you get a "dev" version. Running `magex update:install` downloads the latest pre-built release with proper version info embedded. After step 2, `magex --version` will show the correct version instead of "dev".
+
+### 🔧 Troubleshooting Installation
+
+**Problem:** `magex --version` shows "dev"
+**Solution:** Run `magex update:install` to get the properly versioned binary
+
+**Problem:** `magex update:check` says latest version but binary shows "dev"
+**Solution:** This is expected behavior - the update check reads git tags, not binary version. Run `magex update:install` to fix.
+
+**Problem:** Want to ensure you have the absolute latest release
+**Solution:**
+```bash
+magex update:check    # Check what's available
+magex update:install  # Install latest release
+magex --version       # Verify version
 ```
 
 ### 📋 See What's Available
@@ -278,7 +299,7 @@ project:
 build:
   output: bin
   # Optionally specify exact path
-  # main_path: ./cmd/app  
+  # main_path: ./cmd/app
 ```
 
 ### Build Detection Issues
@@ -360,7 +381,7 @@ Create `.mage.yaml` or `.magex.yaml` for project-specific settings:
 project:
   name: my-app
   binary: my-app
-  
+
 build:
   output: bin
   go_version: "1.24"
