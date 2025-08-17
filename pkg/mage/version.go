@@ -298,7 +298,7 @@ func (Version) Bump(_ ...string) error {
 		}
 	}
 
-	// Get current version
+	// Get current version with enhanced logging
 	current := getCurrentGitTag()
 	if current == "" {
 		current = "v0.0.0"
@@ -309,6 +309,12 @@ func (Version) Bump(_ ...string) error {
 	newVersion, err := bumpVersion(current, bumpType)
 	if err != nil {
 		return fmt.Errorf("failed to bump version: %w", err)
+	}
+
+	// Check for version gaps and warn about them
+	gapWarnings := detectVersionGaps(current, newVersion)
+	for _, warning := range gapWarnings {
+		utils.Warn("⚠️  %s", warning)
 	}
 
 	// Validate version progression
@@ -329,7 +335,10 @@ func (Version) Bump(_ ...string) error {
 		}
 	}
 
-	utils.Info("Bumping from %s to %s (%s bump)", current, newVersion, bumpType)
+	utils.Info("\n📋 Version Bump Summary:")
+	utils.Info("  From:    %s", current)
+	utils.Info("  To:      %s", newVersion)
+	utils.Info("  Type:    %s bump", bumpType)
 
 	if dryRun {
 		// Dry-run mode - show what would happen
@@ -493,31 +502,203 @@ func isGitDirty() bool {
 	return err == nil && strings.TrimSpace(output) != ""
 }
 
-// getCurrentGitTag gets the current git tag
+// getCurrentGitTag gets the current git tag with detailed logging
 func getCurrentGitTag() string {
-	// Get all tags pointing to HEAD, sorted by version (highest first)
-	tags, err := GetRunner().RunCmdOutput("git", "tag", "--sort=-version:refname", "--points-at", "HEAD")
-	if err != nil {
-		// Fallback to getting the most recent tag if no tags point to HEAD
-		fallbackTag, fallbackErr := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
-		if fallbackErr != nil {
-			return ""
+	utils.Info("Detecting current version...")
+
+	// First, check for tags directly on HEAD
+	tagsOnHead := getTagsOnHead()
+	if len(tagsOnHead) > 0 {
+		selectedTag := tagsOnHead[0]
+		utils.Info("Found tag on HEAD commit: %s", selectedTag)
+		if len(tagsOnHead) > 1 {
+			utils.Warn("Multiple tags found on HEAD: %s", strings.Join(tagsOnHead, ", "))
+			utils.Info("Using highest version: %s", selectedTag)
 		}
-		return strings.TrimSpace(fallbackTag)
+		return selectedTag
 	}
 
-	// If we have tags, return the first one (highest version)
-	tagList := strings.Split(strings.TrimSpace(tags), "\n")
-	if len(tagList) > 0 && tagList[0] != "" {
-		return tagList[0]
-	}
+	utils.Info("No tags found on HEAD commit")
+	utils.Info("Searching for latest reachable tag...")
 
-	// Fallback to describe if no tags on HEAD
-	tag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
-	if err != nil {
+	// Get the latest reachable tag with distance info
+	latestTag, distance := getLatestReachableTag()
+	if latestTag == "" {
+		utils.Info("No previous tags found in repository")
 		return ""
 	}
-	return strings.TrimSpace(tag)
+
+	if distance > 0 {
+		utils.Warn("Current version tag is not on HEAD - there are %d commits since %s", distance, latestTag)
+		// Show recent commits for context
+		if recentCommits, err := GetRunner().RunCmdOutput("git", "log", "--oneline", "-5", "--no-decorate"); err == nil {
+			utils.Info("Recent commits:\n%s", recentCommits)
+		}
+	} else {
+		utils.Info("Found tag: %s (on current commit)", latestTag)
+	}
+
+	// Show recent version tags for context
+	showRecentVersionTags()
+
+	return latestTag
+}
+
+// getTagsOnHead returns all version tags pointing to HEAD, sorted by version (highest first)
+func getTagsOnHead() []string {
+	tags, err := GetRunner().RunCmdOutput("git", "tag", "--sort=-version:refname", "--points-at", "HEAD")
+	if err != nil || strings.TrimSpace(tags) == "" {
+		return []string{}
+	}
+
+	tagList := strings.Split(strings.TrimSpace(tags), "\n")
+	// Filter out empty strings
+	var result []string
+	for _, tag := range tagList {
+		if tag != "" {
+			result = append(result, tag)
+		}
+	}
+	return result
+}
+
+// getLatestReachableTag returns the latest tag reachable from HEAD and the distance (commits) from it
+func getLatestReachableTag() (string, int) {
+	// Use git describe to get tag and distance
+	describeOutput, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--long", "--abbrev=0")
+	if err != nil {
+		// Fallback to simple describe
+		simpleTag, simpleErr := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
+		if simpleErr != nil {
+			return "", 0
+		}
+		// Try to get distance separately
+		tag := strings.TrimSpace(simpleTag)
+		distance := 0
+		if distanceCmd, err := GetRunner().RunCmdOutput("git", "rev-list", "--count", tag+"..HEAD"); err == nil {
+			if d, parseErr := strconv.Atoi(strings.TrimSpace(distanceCmd)); parseErr == nil {
+				distance = d
+			}
+		}
+		return tag, distance
+	}
+
+	// Parse the describe output (format: tag-distance-gcommit)
+	parts := strings.Split(strings.TrimSpace(describeOutput), "-")
+	if len(parts) >= 2 {
+		tag := parts[0]
+		distance := 0
+		if len(parts) >= 2 {
+			if d, err := strconv.Atoi(parts[len(parts)-2]); err == nil {
+				distance = d
+			}
+		}
+		return tag, distance
+	}
+
+	return strings.TrimSpace(describeOutput), 0
+}
+
+// showRecentVersionTags displays recent version tags for context
+func showRecentVersionTags() {
+	tags, err := GetRunner().RunCmdOutput("git", "tag", "--sort=-version:refname", "-n", "5")
+	if err != nil || strings.TrimSpace(tags) == "" {
+		return
+	}
+
+	tagList := strings.Split(strings.TrimSpace(tags), "\n")
+	if len(tagList) == 0 {
+		return
+	}
+
+	var recentTags []string
+	for i, tag := range tagList {
+		if i >= 5 {
+			break
+		}
+		if tag != "" {
+			// Extract just the tag name (remove any annotation)
+			tagParts := strings.Fields(tag)
+			if len(tagParts) > 0 {
+				recentTags = append(recentTags, tagParts[0])
+			}
+		}
+	}
+
+	if len(recentTags) > 0 {
+		utils.Info("Recent version tags: %s", strings.Join(recentTags, ", "))
+	}
+}
+
+// detectVersionGaps checks for non-sequential version progression and returns warnings
+func detectVersionGaps(currentVersion, newVersion string) []string {
+	var warnings []string
+
+	// Get all existing tags
+	allTags, err := GetRunner().RunCmdOutput("git", "tag", "--sort=-version:refname")
+	if err != nil {
+		return warnings
+	}
+
+	tagList := strings.Split(strings.TrimSpace(allTags), "\n")
+
+	// Check if there are tags between current and new version
+	var foundCurrent, foundGap bool
+	for _, tag := range tagList {
+		if tag == "" {
+			continue
+		}
+		if tag == currentVersion {
+			foundCurrent = true
+			continue
+		}
+		if foundCurrent && !foundGap {
+			// Check if this tag would be between current and new
+			if isVersionBetween(currentVersion, tag, newVersion) {
+				warnings = append(warnings, fmt.Sprintf("Version %s exists between %s and %s", tag, currentVersion, newVersion))
+				foundGap = true
+			}
+		}
+	}
+
+	return warnings
+}
+
+// isVersionBetween checks if middle version is between start and end versions
+func isVersionBetween(start, middle, end string) bool {
+	// Simple comparison - could be enhanced with proper semver parsing
+	startClean := strings.TrimPrefix(start, "v")
+	middleClean := strings.TrimPrefix(middle, "v")
+	endClean := strings.TrimPrefix(end, "v")
+
+	// Parse versions
+	startParts := strings.Split(startClean, ".")
+	middleParts := strings.Split(middleClean, ".")
+	endParts := strings.Split(endClean, ".")
+
+	if len(startParts) != 3 || len(middleParts) != 3 || len(endParts) != 3 {
+		return false
+	}
+
+	// Compare major.minor.patch
+	for i := 0; i < 3; i++ {
+		s, errS := strconv.Atoi(startParts[i])
+		m, errM := strconv.Atoi(middleParts[i])
+		e, errE := strconv.Atoi(endParts[i])
+
+		if errS != nil || errM != nil || errE != nil {
+			return false
+		}
+
+		if m > s && m < e {
+			return true
+		}
+		if m < s || m > e {
+			return false
+		}
+	}
+
+	return false
 }
 
 // getPreviousTag gets the previous git tag
