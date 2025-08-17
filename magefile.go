@@ -1291,6 +1291,11 @@ func (r Release) Snapshot() error {
 	return impl.Snapshot()
 }
 
+func (r Release) LocalInstall() error {
+	var impl mage.Release
+	return impl.LocalInstall()
+}
+
 func (r Release) Install() error {
 	var impl mage.Release
 	return impl.Install()

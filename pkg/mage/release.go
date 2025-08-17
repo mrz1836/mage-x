@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/magefile/mage/mg"
@@ -16,6 +18,7 @@ var (
 	errReleaseGitHubTokenRequired = errors.New("github_token or GITHUB_TOKEN environment variable is required")
 	errNoGoreleaserConfig         = errors.New("no goreleaser configuration file found")
 	errGoreleaserConfigExists     = errors.New("goreleaser configuration already exists")
+	errBinaryNotFound             = errors.New("built binary not found in expected locations")
 )
 
 // Release namespace for release-related tasks
@@ -44,11 +47,21 @@ func (Release) Default() error {
 		return err
 	}
 
-	if err := GetRunner().RunCmd("goreleaser", "release", "--clean"); err != nil {
-		return fmt.Errorf("release failed: %w", err)
+	// Get the latest tag to release
+	latestTag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
+	if err != nil {
+		return fmt.Errorf("no tags found in repository: %w", err)
+	}
+	latestTag = strings.TrimSpace(latestTag)
+	utils.Info("Releasing tag: %s", latestTag)
+
+	// Run goreleaser with specific git ref
+	// This ensures we always build from the tag, regardless of current git state
+	if err := GetRunner().RunCmd("goreleaser", "release", "--clean", "--git-ref", latestTag); err != nil {
+		return fmt.Errorf("release failed for tag %s: %w", latestTag, err)
 	}
 
-	utils.Success("Release completed successfully")
+	utils.Success("Release %s completed successfully", latestTag)
 	return nil
 }
 
@@ -86,6 +99,185 @@ func (Release) Snapshot() error {
 
 	utils.Success("Snapshot build completed successfully")
 	utils.Info("Artifacts available in ./dist/")
+	return nil
+}
+
+// LocalInstall builds from the latest tag and installs locally
+func (Release) LocalInstall() error {
+	utils.Header("Building and Installing from Latest Tag")
+
+	// Ensure goreleaser is installed
+	if err := ensureGoreleaser(); err != nil {
+		return err
+	}
+
+	// Get the latest tag
+	latestTag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
+	if err != nil {
+		return fmt.Errorf("no tags found in repository: %w", err)
+	}
+	latestTag = strings.TrimSpace(latestTag)
+	utils.Info("Building from tag: %s", latestTag)
+
+	// Build and install the binary
+	if err := buildAndInstallFromTag(latestTag); err != nil {
+		return err
+	}
+
+	utils.Success("Successfully installed magex %s", latestTag)
+	utils.Info("Run 'magex --version' to verify the installation")
+	return nil
+}
+
+// buildAndInstallFromTag handles the complete build and install process
+func buildAndInstallFromTag(latestTag string) error {
+	// Get commit hash for the tag
+	tagCommit, err := GetRunner().RunCmdOutput("git", "rev-list", "-n", "1", latestTag)
+	if err != nil {
+		return fmt.Errorf("failed to get commit for tag %s: %w", latestTag, err)
+	}
+	tagCommit = strings.TrimSpace(tagCommit)
+
+	// Set environment variable to force goreleaser to use our version
+	// Strip the "v" prefix if present for the version
+	versionStr := strings.TrimPrefix(latestTag, "v")
+	if setEnvErr := os.Setenv("GORELEASER_CURRENT_TAG", versionStr); setEnvErr != nil {
+		utils.Warn("Failed to set GORELEASER_CURRENT_TAG: %v", setEnvErr)
+	}
+
+	// Save current branch/commit
+	currentRef, err := GetRunner().RunCmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil {
+		// Might be in detached HEAD state, get commit instead
+		currentRef, err = GetRunner().RunCmdOutput("git", "rev-parse", "HEAD")
+		if err != nil {
+			return fmt.Errorf("failed to get current git reference: %w", err)
+		}
+	}
+	currentRef = strings.TrimSpace(currentRef)
+
+	// Check if we need to checkout the tag
+	var currentCommit string
+	if commitOut, commitErr := GetRunner().RunCmdOutput("git", "rev-parse", "HEAD"); commitErr == nil {
+		currentCommit = strings.TrimSpace(commitOut)
+	}
+
+	needCheckout := currentCommit != tagCommit
+	hasStash := false
+
+	if needCheckout { //nolint:nestif // Complex but necessary for proper git state management
+		utils.Info("Checking out tag %s for build...", latestTag)
+
+		// Check for uncommitted changes
+		var hasChanges bool
+		if statusOut, statusErr := GetRunner().RunCmdOutput("git", "status", "--porcelain"); statusErr == nil {
+			hasChanges = len(strings.TrimSpace(statusOut)) > 0
+		}
+
+		if hasChanges {
+			utils.Warn("You have uncommitted changes. Stashing them temporarily...")
+			if stashErr := GetRunner().RunCmd("git", "stash", "push", "-m", "mage-release-localinstall-temp"); stashErr != nil {
+				return fmt.Errorf("failed to stash changes: %w", stashErr)
+			}
+			hasStash = true
+		}
+
+		// Checkout the tag
+		if checkoutErr := GetRunner().RunCmd("git", "checkout", latestTag); checkoutErr != nil {
+			// If stashed, restore before returning error
+			if hasStash {
+				_ = GetRunner().RunCmd("git", "stash", "pop")
+			}
+			return fmt.Errorf("failed to checkout tag %s: %w", latestTag, checkoutErr)
+		}
+	} else {
+		utils.Info("Already on tag %s, no checkout needed", latestTag)
+	}
+
+	// Build with goreleaser in snapshot mode since we're on the tag
+	// Use --single-target to only build for current platform
+	// We use snapshot to avoid git validation issues
+	if buildErr := GetRunner().RunCmd("goreleaser", "build", "--snapshot", "--clean", "--single-target"); buildErr != nil {
+		// Clean up before returning error
+		if needCheckout {
+			_ = GetRunner().RunCmd("git", "checkout", currentRef)
+			if hasStash {
+				_ = GetRunner().RunCmd("git", "stash", "pop")
+			}
+		}
+		return fmt.Errorf("build failed for tag %s: %w", latestTag, buildErr)
+	}
+
+	// Restore original state if we checked out
+	if needCheckout {
+		if returnErr := GetRunner().RunCmd("git", "checkout", currentRef); returnErr != nil {
+			utils.Error("Failed to return to %s: %v", currentRef, returnErr)
+		}
+		if hasStash {
+			if popErr := GetRunner().RunCmd("git", "stash", "pop"); popErr != nil {
+				utils.Warn("Failed to restore stashed changes: %v", popErr)
+			}
+		}
+	}
+
+	// Determine the binary path based on platform
+	var binaryName string
+	if runtime.GOOS == "windows" {
+		binaryName = "magex.exe"
+	} else {
+		binaryName = "magex"
+	}
+
+	// goreleaser puts binaries in dist/{project}_{os}_{arch}[_v{variant}]/
+	// For ARM64, it might include version info like _v8.0
+	var sourcePath string
+	possiblePaths := []string{
+		filepath.Join(fmt.Sprintf("dist/magex_%s_%s", runtime.GOOS, runtime.GOARCH), binaryName),
+		filepath.Join(fmt.Sprintf("dist/magex_%s_%s_v8.0", runtime.GOOS, runtime.GOARCH), binaryName),
+		filepath.Join(fmt.Sprintf("dist/magex_%s_%s_v7", runtime.GOOS, runtime.GOARCH), binaryName),
+		filepath.Join("dist", binaryName),
+	}
+
+	// Find the binary in one of the expected locations
+	for _, path := range possiblePaths {
+		if utils.FileExists(path) {
+			sourcePath = path
+			break
+		}
+	}
+
+	if sourcePath == "" {
+		// List dist directory to help debug
+		if listErr := GetRunner().RunCmd("ls", "-la", "dist/"); listErr != nil {
+			utils.Warn("Failed to list dist directory: %v", listErr)
+		}
+		return errBinaryNotFound
+	}
+
+	// Determine installation target
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+	targetPath := filepath.Join(homeDir, "go", "bin", "magex")
+	if runtime.GOOS == "windows" {
+		targetPath += ".exe"
+	}
+
+	// Copy the binary to the target location
+	utils.Info("Installing binary to: %s", targetPath)
+	if err := GetRunner().RunCmd("cp", sourcePath, targetPath); err != nil {
+		return fmt.Errorf("failed to install binary: %w", err)
+	}
+
+	// Make it executable (on Unix-like systems)
+	if runtime.GOOS != "windows" {
+		if err := GetRunner().RunCmd("chmod", "+x", targetPath); err != nil {
+			utils.Warn("Failed to set executable permission: %v", err)
+		}
+	}
+
+	utils.Success("Installation completed: %s", targetPath)
 	return nil
 }
 
