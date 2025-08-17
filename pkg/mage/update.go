@@ -550,7 +550,7 @@ func saveUpdateRecord(info *UpdateInfo) {
 }
 
 // getVersionInfoForUpdate returns version specifically for update checking
-// This prioritizes the binary version and warns about "dev" versions
+// This prioritizes the binary version and always returns "dev" to force updates when needed
 func getVersionInfoForUpdate() string {
 	buildInfo := getBuildInfo()
 
@@ -559,16 +559,16 @@ func getVersionInfoForUpdate() string {
 		return buildInfo.Version
 	}
 
-	// If binary shows "dev", check if we're in the mage-x repo itself
+	// Binary shows "dev" - provide helpful context but always return "dev" to force update
+	utils.Info("Detecting current version...")
 	if module, err := utils.GetModuleName(); err == nil && strings.Contains(module, "mage-x") {
-		// We're in the mage-x development environment, use git tag
+		// We're in the mage-x development environment - show git context
 		if tag := getCurrentGitTag(); tag != "" {
-			utils.Warn("Binary version shows 'dev' - you may want to run 'magex update:install' to get the properly versioned binary")
-			return tag
+			utils.Info("Found tag on HEAD commit: %s", tag)
 		}
 	}
 
-	// For any other case with "dev" version, warn the user
-	utils.Warn("Binary version is 'dev' - run 'magex update:install' to get the latest stable release")
+	// Always return "dev" when binary shows "dev" to ensure update happens
+	// This forces the comparison "dev" < "v1.x.x" = true, triggering update
 	return versionDev
 }
