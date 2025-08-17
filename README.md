@@ -122,17 +122,19 @@
 
 ## ⚡ Quick Start
 
-### 🎯 Which Path Should I Take?
+### Which Path Should I Take?
 
 MAGE-X automatically detects your project structure and **just works**:
 
-| Your Project Structure                 | What MAGE-X Does                  | Example                    |
-|----------------------------------------|-----------------------------------|----------------------------|
-| **Single Binary**<br>`main.go` in root | Builds to `bin/projectname`       | Simple CLI tools, services |
-| **Multi-Binary**<br>`cmd/*/main.go`    | Auto-detects & builds first found | Microservices, tool suites |
-| **Library**<br>No main package         | Verifies compilation with `./...` | Packages, shared libraries |
+| Your Project Structure                 | What MAGE-X Does                  |
+|----------------------------------------|-----------------------------------|
+| **Single Binary**<br>`main.go` in root | Builds to `bin/projectname`       |
+| **Multi-Binary**<br>`cmd/*/main.go`    | Auto-detects & builds first found |
+| **Library**<br>No main package         | Verifies compilation with `./...` |
 
 > 📖 **Need more details?** See the [Complete Quick Start Guide](docs/QUICK_START.md) for project-specific examples and troubleshooting.
+
+<br>
 
 ### Zero Boilerplate Installation
 
@@ -149,7 +151,7 @@ magex format:fix    # Format your code
 # That's it! No magefile.go needed! 🚀
 ```
 
-### 🔍 Quick Project Check
+### Quick Project Check
 ```bash
 # See what MAGE-X detects in your project:
 magex build --dry-run  # Shows what will be built without building
@@ -160,10 +162,9 @@ magex build --dry-run  # Shows what will be built without building
 ### Full Command List
 
 ```bash
-magex -l            # List all 343 commands
+magex help          # List all commands & get help
 magex -n            # Commands by namespace
 magex -search test  # Find specific commands
-magex -h            # Get help
 ```
 
 <br>
