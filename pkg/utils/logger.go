@@ -516,10 +516,10 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 		levelStr = "DEBUG"
 		color = colorGray
 	case LogLevelInfo:
-		levelStr = "INFO "
+		levelStr = "INFO"
 		color = colorBlue
 	case LogLevelWarn:
-		levelStr = "WARN "
+		levelStr = "WARN"
 		color = colorYellow
 	case LogLevelError:
 		levelStr = "ERROR"
