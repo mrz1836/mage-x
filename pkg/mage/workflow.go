@@ -21,6 +21,7 @@ import (
 // Static errors to satisfy err113 linter
 var (
 	errWorkflowEnvRequired              = errors.New("workflow parameter is required. Usage: magex workflow:execute workflow=<name>")
+	errWorkflowEnvVarRequired           = errors.New("WORKFLOW environment variable is required")
 	errWorkflowNameEnvRequired          = errors.New("name parameter is required. Usage: magex workflow:create name=<workflow-name>")
 	errUnknownScheduleOperation         = errors.New("unknown schedule operation")
 	errUnknownTemplateOperation         = errors.New("unknown template operation")
@@ -48,7 +49,7 @@ func (Workflow) Execute() error {
 	// Get workflow name from environment variable
 	workflowName := os.Getenv("WORKFLOW")
 	if workflowName == "" {
-		return errWorkflowEnvRequired
+		return errWorkflowEnvVarRequired
 	}
 
 	// Load workflow definition

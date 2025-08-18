@@ -180,7 +180,7 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 
 		version := Version{}
-		err := version.Bump("bump=major", "push")  // Deliberately NOT passing "confirm" to test protection
+		err := version.Bump("bump=major", "push") // Deliberately NOT passing "confirm" to test protection
 		vpts.Require().Error(err, "Should prevent major bump without confirmation")
 		vpts.Contains(err.Error(), "major version bump requires explicit confirmation")
 
