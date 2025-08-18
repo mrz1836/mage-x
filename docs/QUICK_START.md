@@ -21,11 +21,11 @@ graph TD
 
 ### Common Project Structures
 
-| Structure | Detection | Build Output | Example Projects |
-|-----------|-----------|--------------|------------------|
-| **Single Binary** | `main.go` in root | `bin/{project-name}` | CLI tools, simple services |
-| **Multi-Binary** | `cmd/{name}/main.go` | `bin/{name}` | go-pre-commit, kubernetes tools |
-| **Library Only** | No main packages | Compilation check only | SDK packages, shared libs |
+| Structure         | Detection            | Build Output           | Example Projects                |
+|-------------------|----------------------|------------------------|---------------------------------|
+| **Single Binary** | `main.go` in root    | `bin/{project-name}`   | CLI tools, simple services      |
+| **Multi-Binary**  | `cmd/{name}/main.go` | `bin/{name}`           | go-pre-commit, kubernetes tools |
+| **Library Only**  | No main packages     | Compilation check only | SDK packages, shared libs       |
 
 ## The New Way: Zero Configuration! 🎉
 
@@ -57,7 +57,7 @@ magex release:multi # Multi-platform release
 **Problem:** `magex --version` shows "dev"
 **Solution:** Run `magex update:install` to get the properly versioned binary
 
-**Problem:** `magex update:check` says latest version but binary shows "dev"
+**Problem:** `magex update:check` says the latest version but binary shows "dev"
 **Solution:** This is expected behavior - the update check reads git tags, not binary version. Run `magex update:install` to fix.
 
 **Problem:** Want to ensure you have the absolute latest release
@@ -82,20 +82,20 @@ magex -h            # Get help
 ```bash
 # Building
 magex build                 # Build for current platform
-magex build:linux          # Build for Linux
-magex build:multiplatform  # Build for all platforms
+magex build:linux           # Build for Linux
+magex build:multiplatform   # Build for all platforms
 
 # Testing
 magex test                  # Run all tests
-magex test:unit            # Run unit tests only
-magex test:integration     # Run integration tests
-magex test:coverage        # Generate coverage reports
+magex test:unit             # Run unit tests only
+magex test:integration      # Run integration tests
+magex test:coverage         # Generate coverage reports
 
 # Linting & Quality
 magex lint                 # Run linter
-magex lint:fix            # Auto-fix linting issues
-magex format              # Format code
-magex vet                 # Run go vet
+magex lint:fix             # Auto-fix linting issues
+magex format               # Format code
+magex vet                  # Run go vet
 
 # Dependencies
 magex deps:update         # Update dependencies
