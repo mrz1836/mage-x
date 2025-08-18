@@ -319,29 +319,21 @@ func showVersion() {
 	fmt.Printf("  Go Version:   %s\n", runtime.Version())
 
 	// Capabilities
-	utils.Println("\n🚀 Capabilities")
+	utils.Println("\n Capabilities")
 	utils.Println(strings.Repeat("─", 50))
 	fmt.Printf("  Commands:     %d built-in commands\n", metadata.TotalCommands)
-	fmt.Printf("  Namespaces:   30+ specialized namespaces\n")
-	fmt.Printf("  AI Features:  19 intelligent agents + 13+ commands\n")
-	fmt.Printf("  Features:     Zero-config, Write Once, Mage Everywhere\n")
-
-	// Compatibility
-	utils.Println("\n✅ Compatibility")
-	utils.Println(strings.Repeat("─", 50))
-	utils.Println("  Drop-in replacement for Mage")
-	utils.Println("  Works with existing magefiles")
-	utils.Println("  Cross-platform (Windows, macOS, Linux)")
+	fmt.Printf("  Namespaces:   20+ specialized namespaces\n")
+	fmt.Printf("  AI Features:  15+ intelligent agents and 13+ commands\n")
 
 	// Quick start hint
-	utils.Println("\n💡 Quick Start")
+	utils.Println("\n Quick Start")
 	utils.Println(strings.Repeat("─", 50))
 	utils.Println("  magex help       Show comprehensive help")
 	utils.Println("  magex build      Build your project")
 	utils.Println("  magex test       Run tests")
 
 	// Footer
-	utils.Println("\n🔗 Learn More")
+	utils.Println("\n Learn More")
 	utils.Println(strings.Repeat("─", 50))
 	utils.Println("  https://github.com/mrz1836/mage-x")
 }
