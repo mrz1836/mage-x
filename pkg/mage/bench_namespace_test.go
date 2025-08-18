@@ -89,17 +89,6 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 	})
 
 	ts.Run("benchmark with custom time", func() {
-		// Set environment variable for custom bench time
-		originalBenchTime := os.Getenv("BENCH_TIME")
-		defer func() {
-			if err := os.Setenv("BENCH_TIME", originalBenchTime); err != nil {
-				ts.T().Logf("Failed to restore BENCH_TIME: %v", err)
-			}
-		}()
-		if err := os.Setenv("BENCH_TIME", "5s"); err != nil {
-			ts.T().Fatalf("Failed to set BENCH_TIME: %v", err)
-		}
-
 		// Mock successful go test benchmark command with custom time
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "5s", "./..."}).Return(nil)
 
@@ -109,7 +98,41 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
-				return ts.bench.Default()
+				return ts.bench.DefaultWithArgs("time=5s")
+			},
+		)
+
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("benchmark with time parameter", func() {
+		// Test the new parameter-based approach
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "50ms", "./..."}).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) error {
+				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
+			},
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.bench.DefaultWithArgs("time=50ms")
+			},
+		)
+
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("benchmark with time and count parameters", func() {
+		// Test multiple parameters
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "100ms", "-count", "2", "./..."}).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) error {
+				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
+			},
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.bench.DefaultWithArgs("time=100ms", "count=2")
 			},
 		)
 

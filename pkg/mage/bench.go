@@ -25,12 +25,20 @@ type Bench mg.Namespace
 
 // Default runs all benchmarks with memory profiling
 func (Bench) Default() error {
+	return Bench{}.DefaultWithArgs()
+}
+
+// DefaultWithArgs runs all benchmarks with memory profiling and accepts parameters
+func (Bench) DefaultWithArgs(argsList ...string) error {
 	utils.Header("Running Benchmarks")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
 
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
-	// Add bench time
-	benchTime := utils.GetEnv("BENCH_TIME", "10s")
+	// Add bench time from parameter or default
+	benchTime := utils.GetParam(params, "time", "10s")
 	args = append(args, "-benchtime", benchTime)
 
 	// Add count if specified
@@ -74,7 +82,15 @@ func (Bench) Default() error {
 
 // Compare compares benchmark results
 func (Bench) Compare() error {
+	return Bench{}.CompareWithArgs()
+}
+
+// CompareWithArgs compares benchmark results with parameters
+func (Bench) CompareWithArgs(argsList ...string) error {
 	utils.Header("Comparing Benchmark Results")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
 
 	// Check if benchstat is installed
 	if !utils.CommandExists("benchstat") {
@@ -84,9 +100,15 @@ func (Bench) Compare() error {
 		}
 	}
 
-	// Get benchmark files
-	oldBenchFile := utils.GetEnv("BENCH_OLD", "old.txt")
-	newBenchFile := utils.GetEnv("BENCH_NEW", "new.txt")
+	// Get benchmark files from parameters or environment
+	oldBenchFile := utils.GetParam(params, "old", "")
+	if oldBenchFile == "" {
+		oldBenchFile = utils.GetEnv("BENCH_OLD", "old.txt")
+	}
+	newBenchFile := utils.GetParam(params, "new", "")
+	if newBenchFile == "" {
+		newBenchFile = utils.GetEnv("BENCH_NEW", "new.txt")
+	}
 
 	// Check if files exist
 	if !utils.FileExists(oldBenchFile) {
@@ -104,10 +126,21 @@ func (Bench) Compare() error {
 
 // Save saves current benchmark results
 func (Bench) Save() error {
+	return Bench{}.SaveWithArgs()
+}
+
+// SaveWithArgs saves current benchmark results with parameters
+func (Bench) SaveWithArgs(argsList ...string) error {
 	utils.Header("Saving Benchmark Results")
 
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
 	// Determine output file
-	output := os.Getenv("BENCH_FILE")
+	output := utils.GetParam(params, "output", "")
+	if output == "" {
+		output = os.Getenv("BENCH_FILE")
+	}
 	if output == "" {
 		// Generate filename with timestamp
 		output = fmt.Sprintf("bench-%s.txt", time.Now().Format("20060102-150405"))
@@ -126,7 +159,7 @@ func (Bench) Save() error {
 	// Run benchmarks and save output
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
-	benchTime := utils.GetEnv("BENCH_TIME", "10s")
+	benchTime := utils.GetParam(params, "time", "10s")
 	args = append(args, "-benchtime", benchTime)
 
 	if count := os.Getenv("BENCH_COUNT"); count != "" {
@@ -154,15 +187,26 @@ func (Bench) Save() error {
 
 // CPU runs benchmarks with CPU profiling
 func (Bench) CPU() error {
+	return Bench{}.CPUWithArgs()
+}
+
+// CPUWithArgs runs benchmarks with CPU profiling and accepts parameters
+func (Bench) CPUWithArgs(argsList ...string) error {
 	utils.Header("Running Benchmarks with CPU Profiling")
 
-	profile := utils.GetEnv("CPU_PROFILE", "cpu.prof")
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
+	profile := utils.GetParam(params, "profile", "cpu.prof")
+	if profile == "" {
+		profile = utils.GetEnv("CPU_PROFILE", "cpu.prof")
+	}
 	if err := os.Setenv("BENCH_CPU_PROFILE", profile); err != nil {
 		return fmt.Errorf("failed to set BENCH_CPU_PROFILE: %w", err)
 	}
 
 	var b Bench
-	if err := b.Default(); err != nil {
+	if err := b.DefaultWithArgs(argsList...); err != nil {
 		return err
 	}
 
@@ -181,15 +225,26 @@ func (Bench) CPU() error {
 
 // Mem runs benchmarks with memory profiling
 func (Bench) Mem() error {
+	return Bench{}.MemWithArgs()
+}
+
+// MemWithArgs runs benchmarks with memory profiling and accepts parameters
+func (Bench) MemWithArgs(argsList ...string) error {
 	utils.Header("Running Benchmarks with Memory Profiling")
 
-	profile := utils.GetEnv("MEM_PROFILE", "mem.prof")
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
+	profile := utils.GetParam(params, "profile", "mem.prof")
+	if profile == "" {
+		profile = utils.GetEnv("MEM_PROFILE", "mem.prof")
+	}
 	if err := os.Setenv("BENCH_MEM_PROFILE", profile); err != nil {
 		return fmt.Errorf("failed to set BENCH_MEM_PROFILE: %w", err)
 	}
 
 	var b Bench
-	if err := b.Default(); err != nil {
+	if err := b.DefaultWithArgs(argsList...); err != nil {
 		return err
 	}
 
@@ -208,17 +263,28 @@ func (Bench) Mem() error {
 
 // Profile runs benchmarks with both CPU and memory profiling
 func (Bench) Profile() error {
+	return Bench{}.ProfileWithArgs()
+}
+
+// ProfileWithArgs runs benchmarks with both CPU and memory profiling and accepts parameters
+func (Bench) ProfileWithArgs(argsList ...string) error {
 	utils.Header("Running Benchmarks with Full Profiling")
 
-	if err := os.Setenv("BENCH_CPU_PROFILE", "cpu.prof"); err != nil {
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
+	cpuProfile := utils.GetParam(params, "cpu-profile", "cpu.prof")
+	memProfile := utils.GetParam(params, "mem-profile", "mem.prof")
+
+	if err := os.Setenv("BENCH_CPU_PROFILE", cpuProfile); err != nil {
 		return fmt.Errorf("failed to set BENCH_CPU_PROFILE: %w", err)
 	}
-	if err := os.Setenv("BENCH_MEM_PROFILE", "mem.prof"); err != nil {
+	if err := os.Setenv("BENCH_MEM_PROFILE", memProfile); err != nil {
 		return fmt.Errorf("failed to set BENCH_MEM_PROFILE: %w", err)
 	}
 
 	var b Bench
-	if err := b.Default(); err != nil {
+	if err := b.DefaultWithArgs(argsList...); err != nil {
 		return err
 	}
 
@@ -232,13 +298,24 @@ func (Bench) Profile() error {
 
 // Trace runs benchmarks with execution tracing
 func (Bench) Trace() error {
+	return Bench{}.TraceWithArgs()
+}
+
+// TraceWithArgs runs benchmarks with execution tracing and accepts parameters
+func (Bench) TraceWithArgs(argsList ...string) error {
 	utils.Header("Running Benchmarks with Execution Trace")
 
-	trace := utils.GetEnv("TRACE_FILE", "trace.out")
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
+	trace := utils.GetParam(params, "trace", "trace.out")
+	if trace == "" {
+		trace = utils.GetEnv("TRACE_FILE", "trace.out")
+	}
 
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", trace}
 
-	benchTime := utils.GetEnv("BENCH_TIME", "10s")
+	benchTime := utils.GetParam(params, "time", "10s")
 	args = append(args, "-benchtime", benchTime, "./...")
 
 	utils.Info("Trace will be saved to: %s", trace)
@@ -256,14 +333,23 @@ func (Bench) Trace() error {
 
 // Regression checks for performance regressions
 func (Bench) Regression() error {
+	return Bench{}.RegressionWithArgs()
+}
+
+// RegressionWithArgs checks for performance regressions with parameters
+func (Bench) RegressionWithArgs(argsList ...string) error {
 	utils.Header("Checking for Performance Regressions")
 
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
 	// Save current results
-	if err := os.Setenv("BENCH_FILE", "bench-current.txt"); err != nil {
+	currentFile := "bench-current.txt"
+	if err := os.Setenv("BENCH_FILE", currentFile); err != nil {
 		return fmt.Errorf("failed to set BENCH_FILE: %w", err)
 	}
 	var b Bench
-	if err := b.Save(); err != nil {
+	if err := b.SaveWithArgs(argsList...); err != nil {
 		return err
 	}
 
@@ -285,19 +371,24 @@ func (Bench) Regression() error {
 	if err := os.Setenv("BENCH_OLD", baseline); err != nil {
 		return fmt.Errorf("failed to set BENCH_OLD: %w", err)
 	}
-	if err := os.Setenv("BENCH_NEW", "bench-current.txt"); err != nil {
+	if err := os.Setenv("BENCH_NEW", currentFile); err != nil {
 		return fmt.Errorf("failed to set BENCH_NEW: %w", err)
 	}
 
 	utils.Info("Comparing with baseline...")
-	if err := b.Compare(); err != nil {
+	compareArgs := []string{"old=" + baseline, "new=" + currentFile}
+	if err := b.CompareWithArgs(compareArgs...); err != nil {
 		return err
 	}
 
 	// Ask about updating baseline
-	utils.Info("Update baseline with current results? (set UPDATE_BASELINE=true)")
-	if os.Getenv("UPDATE_BASELINE") == approvalTrue {
-		if err := os.Rename("bench-current.txt", baseline); err != nil {
+	updateBaseline := utils.GetParam(params, "update-baseline", "")
+	if updateBaseline == "" {
+		utils.Info("Update baseline with current results? (set UPDATE_BASELINE=true or use update-baseline=true parameter)")
+		updateBaseline = os.Getenv("UPDATE_BASELINE")
+	}
+	if updateBaseline == approvalTrue || utils.IsParamTrue(params, "update-baseline") {
+		if err := os.Rename(currentFile, baseline); err != nil {
 			return fmt.Errorf("failed to update baseline: %w", err)
 		}
 		utils.Success("Baseline updated")

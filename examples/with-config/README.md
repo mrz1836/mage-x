@@ -53,7 +53,9 @@ magex test
 magex test:cover
 
 # Run benchmarks with configured duration
-magex test:bench
+magex test:bench           # Uses config file bench_time setting
+magex bench time=50ms      # Override with parameter (preferred)
+magex bench time=10s count=3  # Multiple parameters
 ```
 
 ### 4. Cross-Platform Builds
@@ -177,7 +179,8 @@ magex test:race
 magex test:cover
 
 # Benchmark tests (uses bench_time from config)
-magex test:bench
+magex test:bench              # Uses config: bench_time: "10s"
+magex bench time=1s           # Override with parameter
 ```
 
 ### Verify Configuration

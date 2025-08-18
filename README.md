@@ -333,7 +333,12 @@ export MAGE_X_TEST_TIMEOUT=15m
 export MAGE_X_PARALLEL=8
 export MAGE_X_LINT_TIMEOUT=10m
 export MAGE_X_FUZZ_TIME=30s
-export MAGE_X_BENCH_TIME=10s
+
+# Benchmark timing with parameters (preferred)
+magex bench time=50ms         # Quick benchmarks
+magex bench time=10s          # Full benchmarks
+magex bench:cpu time=30s      # CPU profiling
+magex bench:save time=5s output=results.txt
 
 # Version management examples with new parameter format
 magex version:bump bump=patch              # Bump patch version
@@ -474,7 +479,9 @@ magex test:race          # Run tests with race detector
 magex test:cover         # Run tests with coverage analysis
 magex test:coverrace     # Run tests with both coverage and race detector
 magex test:bench         # Run benchmark tests
-magex bench              # Run benchmarks (alias for test:bench)
+magex bench              # Run benchmarks with default timing
+magex bench time=50ms    # Run quick benchmarks (50ms duration)
+magex bench time=10s count=3  # Run benchmarks with custom time and count
 magex test:fuzz          # Run fuzz tests
 magex test:integration   # Run integration tests
 
@@ -528,14 +535,14 @@ magex metrics:coverage    # Generate coverage reports
 magex metrics:complexity  # Analyze code complexity
 
 # Performance & Benchmarking
-magex bench:default       # Default benchmark operations
-magex bench:run           # Run performance benchmarks
+magex bench               # Default benchmark operations
+magex bench time=50ms     # Quick benchmarks (50ms runs)
+magex bench time=10s      # Comprehensive benchmarks (10s runs)
 magex bench:profile       # Profile application performance
 magex bench:compare       # Compare benchmark results
-magex bench:report        # Generate benchmark reports
 magex bench:regression    # Check for performance regressions
-magex bench:memory        # Memory usage benchmarks
-magex bench:cpu           # CPU usage benchmarks
+magex bench:cpu time=30s  # CPU usage benchmarks with custom duration
+magex bench:mem time=2s   # Memory usage benchmarks
 ```
 
 </details>
@@ -856,7 +863,13 @@ func AuditReport() error {
 // Run benchmarking and performance analysis
 func PerformanceTest() error {
     var bench Bench
-    return bench.Run()
+    return bench.Default()
+}
+
+// Run quick benchmarks with custom timing
+func QuickBench() error {
+    var bench Bench
+    return bench.DefaultWithArgs("time=50ms")
 }
 ```
 
@@ -880,8 +893,10 @@ magex test
 magex test:race test:cover test:fuzz
 
 # Performance benchmarks
-magex bench
-magex test:bench
+magex bench                    # Default benchmarks (10s duration)
+magex bench time=50ms          # Quick benchmarks for CI
+magex bench time=10s count=3   # Comprehensive benchmarks
+magex test:bench               # Via test namespace
 ```
 
 ### Example Projects

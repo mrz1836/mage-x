@@ -656,8 +656,11 @@ func (Test) FuzzShort() error {
 }
 
 // Bench runs benchmarks
-func (Test) Bench(_ ...string) error {
+func (Test) Bench(argsList ...string) error {
 	utils.Header("Running Benchmarks")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
 
 	config, err := GetConfig()
 	if err != nil {
@@ -674,10 +677,19 @@ func (Test) Bench(_ ...string) error {
 		args = append(args, "-tags", config.Test.Tags)
 	}
 
-	benchTime := utils.GetEnv("BENCH_TIME", "10s")
+	// Get benchmark time from parameter, fallback to environment, then default
+	benchTime := utils.GetParam(params, "time", "")
+	if benchTime == "" {
+		benchTime = utils.GetEnv("BENCH_TIME", "10s")
+	}
 	args = append(args, "-benchtime", benchTime)
 
-	if count := utils.GetEnv("BENCH_COUNT", ""); count != "" {
+	// Get count from parameter or environment
+	count := utils.GetParam(params, "count", "")
+	if count == "" {
+		count = utils.GetEnv("BENCH_COUNT", "")
+	}
+	if count != "" {
 		args = append(args, "-count", count)
 	}
 
@@ -693,8 +705,11 @@ func (Test) Bench(_ ...string) error {
 }
 
 // BenchShort runs benchmarks with shorter duration for quick feedback
-func (Test) BenchShort(_ ...string) error {
+func (Test) BenchShort(argsList ...string) error {
 	utils.Header("Running Short Benchmarks")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
 
 	config, err := GetConfig()
 	if err != nil {
@@ -711,11 +726,19 @@ func (Test) BenchShort(_ ...string) error {
 		args = append(args, "-tags", config.Test.Tags)
 	}
 
-	// Use shorter benchmark time for quick feedback (1s instead of 10s)
-	benchTime := utils.GetEnv("BENCH_TIME", "1s")
+	// Get benchmark time from parameter, fallback to environment, then default (1s for short)
+	benchTime := utils.GetParam(params, "time", "")
+	if benchTime == "" {
+		benchTime = utils.GetEnv("BENCH_TIME", "1s")
+	}
 	args = append(args, "-benchtime", benchTime)
 
-	if count := utils.GetEnv("BENCH_COUNT", ""); count != "" {
+	// Get count from parameter or environment
+	count := utils.GetParam(params, "count", "")
+	if count == "" {
+		count = utils.GetEnv("BENCH_COUNT", "")
+	}
+	if count != "" {
 		args = append(args, "-count", count)
 	}
 

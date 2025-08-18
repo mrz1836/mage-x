@@ -32,6 +32,7 @@ magex test:unit       # Unit tests only
 magex test:race       # With race detector
 magex test:cover      # With coverage
 magex test:bench      # Run benchmarks
+magex bench time=50ms # Quick benchmarks with parameter
 ```
 
 ### Code Quality
