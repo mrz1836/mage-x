@@ -16,19 +16,14 @@ import (
 
 // Static errors for recipe operations
 var (
-	errRecipeShowRequired            = errors.New("recipe parameter is required. Usage: magex recipes:show recipe=<name>")
-	errRecipeRunRequired             = errors.New("recipe parameter is required. Usage: magex recipes:run recipe=<name>")
-	errTermSearchRequired            = errors.New("term parameter is required. Usage: magex recipes:search term=<search>")
-	errRecipeCreateRequired          = errors.New("recipe parameter is required. Usage: magex recipes:create recipe=<name>")
-	errSourceInstallRequired         = errors.New("source parameter is required. Usage: magex recipes:install source=<url|file>")
-	errRecipeNotFound                = errors.New("recipe not found")
-	errCustomRecipeFileNotFound      = errors.New("custom recipe file not found")
-	errRequiredDependencyNotFound    = errors.New("required dependency not found")
-	errRecipeShowWithArgsRequired    = errors.New("show requires recipe parameter: use ShowWithArgs instead")
-	errRecipeRunWithArgsRequired     = errors.New("run requires recipe parameter: use RunWithArgs instead")
-	errRecipeSearchWithArgsRequired  = errors.New("search requires term parameter: use SearchWithArgs instead")
-	errRecipeCreateWithArgsRequired  = errors.New("create requires recipe parameter: use CreateWithArgs instead")
-	errRecipeInstallWithArgsRequired = errors.New("install requires source parameter: use InstallWithArgs instead")
+	errRecipeShowRequired         = errors.New("recipe parameter is required. Usage: magex recipes:show recipe=<name>")
+	errRecipeRunRequired          = errors.New("recipe parameter is required. Usage: magex recipes:run recipe=<name>")
+	errTermSearchRequired         = errors.New("term parameter is required. Usage: magex recipes:search term=<search>")
+	errRecipeCreateRequired       = errors.New("recipe parameter is required. Usage: magex recipes:create recipe=<name>")
+	errSourceInstallRequired      = errors.New("source parameter is required. Usage: magex recipes:install source=<url|file>")
+	errRecipeNotFound             = errors.New("recipe not found")
+	errCustomRecipeFileNotFound   = errors.New("custom recipe file not found")
+	errRequiredDependencyNotFound = errors.New("required dependency not found")
 )
 
 // Recipes namespace for common development patterns
@@ -103,9 +98,43 @@ func (Recipes) List() error {
 	return nil
 }
 
-// Show displays details of a specific recipe
+// Show displays details of all available recipes
 func (Recipes) Show() error {
-	return errRecipeShowWithArgsRequired
+	utils.Header("📖 All Recipe Details")
+
+	recipes := getBuiltinRecipes()
+
+	if len(recipes) == 0 {
+		utils.Info("No recipes available")
+		return nil
+	}
+
+	// Display each recipe in detail
+	for i := range recipes {
+		recipe := &recipes[i]
+
+		if i > 0 {
+			utils.Info("")
+		}
+
+		fmt.Printf("📋 %s\n", recipe.Name)
+		fmt.Printf("   Category: %s\n", recipe.Category)
+		fmt.Printf("   Description: %s\n", recipe.Description)
+
+		if len(recipe.Tags) > 0 {
+			fmt.Printf("   Tags: %s\n", strings.Join(recipe.Tags, ", "))
+		}
+
+		if len(recipe.Dependencies) > 0 {
+			fmt.Printf("   Dependencies: %s\n", strings.Join(recipe.Dependencies, ", "))
+		}
+
+		fmt.Printf("   Steps: %d\n", len(recipe.Steps))
+	}
+
+	utils.Info("\nUse 'magex recipes:show recipe=<name>' to see detailed steps for a specific recipe")
+
+	return nil
 }
 
 // ShowWithArgs displays details of a specific recipe (use recipe=<name>)
@@ -154,9 +183,71 @@ func (Recipes) ShowWithArgs(args ...string) error {
 	return nil
 }
 
-// Run executes a recipe
+// Run shows available recipes and prompts for selection
 func (Recipes) Run() error {
-	return errRecipeRunWithArgsRequired
+	utils.Header("🚀 Recipe Execution Menu")
+
+	recipes := getBuiltinRecipes()
+
+	if len(recipes) == 0 {
+		utils.Info("No recipes available")
+		return nil
+	}
+
+	// Display recipes with numbers
+	utils.Info("Available recipes:")
+	for i, recipe := range recipes {
+		fmt.Printf("  %d. %-20s - %s\n", i+1, recipe.Name, recipe.Description)
+	}
+
+	// Prompt for selection
+	utils.Info("\nEnter recipe number or name:")
+	choice, err := utils.PromptForInput("Recipe choice")
+	if err != nil {
+		return fmt.Errorf("failed to get recipe choice: %w", err)
+	}
+
+	if choice == "" {
+		utils.Info("No recipe selected")
+		return nil
+	}
+
+	var selectedRecipe *Recipe
+
+	// Try to parse as number first
+	if num := parseInt(choice); num > 0 && num <= len(recipes) {
+		selectedRecipe = &recipes[num-1]
+	} else {
+		// Try to find by name
+		for i := range recipes {
+			recipe := &recipes[i]
+			if strings.EqualFold(recipe.Name, choice) || strings.Contains(strings.ToLower(recipe.Name), strings.ToLower(choice)) {
+				selectedRecipe = recipe
+				break
+			}
+		}
+	}
+
+	if selectedRecipe == nil {
+		return fmt.Errorf("%w: %s", errRecipeNotFound, choice)
+	}
+
+	utils.Info("🎯 Selected recipe: %s", selectedRecipe.Name)
+	utils.Info("📝 Description: %s", selectedRecipe.Description)
+
+	// Confirm execution
+	confirm, err := utils.PromptForInput("Execute this recipe? (y/N)")
+	if err != nil {
+		return fmt.Errorf("failed to get confirmation: %w", err)
+	}
+
+	if strings.ToLower(confirm) != "y" && strings.ToLower(confirm) != "yes" {
+		utils.Info("Recipe execution canceled")
+		return nil
+	}
+
+	// Execute the selected recipe
+	return executeRecipe(selectedRecipe)
 }
 
 // RunWithArgs executes a recipe (use recipe=<name>)
@@ -214,9 +305,106 @@ func (Recipes) RunWithArgs(args ...string) error {
 	return nil
 }
 
-// Search searches for recipes by keyword
+// promptToRunRecipe prompts user to run one of the found recipes
+func promptToRunRecipe(matches []Recipe) error {
+	runChoice, err := utils.PromptForInput("Run one of these recipes? (y/N)")
+	if err != nil {
+		return err
+	}
+	if !isYesResponse(runChoice) {
+		return nil
+	}
+
+	if len(matches) == 1 {
+		return executeRecipe(&matches[0])
+	}
+
+	return promptAndSelectRecipe(matches)
+}
+
+// isYesResponse checks if the response is a yes
+func isYesResponse(response string) bool {
+	lower := strings.ToLower(response)
+	return lower == "y" || lower == "yes"
+}
+
+// promptAndSelectRecipe prompts user to select a recipe from matches
+func promptAndSelectRecipe(matches []Recipe) error {
+	utils.Info("\nEnter recipe name to run:")
+	recipeName, err := utils.PromptForInput("Recipe name")
+	if err != nil {
+		return err
+	}
+	if recipeName == "" {
+		return nil
+	}
+
+	for i := range matches {
+		if strings.EqualFold(matches[i].Name, recipeName) {
+			return executeRecipe(&matches[i])
+		}
+	}
+
+	utils.Warn("Recipe '%s' not found in the results", recipeName)
+	return nil
+}
+
+// Search launches interactive recipe search
 func (Recipes) Search() error {
-	return errRecipeSearchWithArgsRequired
+	utils.Header("🔍 Interactive Recipe Search")
+
+	// Prompt for search term
+	searchTerm, err := utils.PromptForInput("Enter search term")
+	if err != nil {
+		return fmt.Errorf("failed to get search term: %w", err)
+	}
+
+	if searchTerm == "" {
+		utils.Info("No search term entered")
+		return nil
+	}
+
+	utils.Info("Searching for recipes matching '%s'...", searchTerm)
+
+	recipes := getBuiltinRecipes()
+	searchTermLower := strings.ToLower(searchTerm)
+
+	var matches []Recipe
+	for i := range recipes {
+		recipe := &recipes[i]
+		if strings.Contains(strings.ToLower(recipe.Name), searchTermLower) ||
+			strings.Contains(strings.ToLower(recipe.Description), searchTermLower) ||
+			containsTag(recipe.Tags, searchTermLower) {
+			matches = append(matches, *recipe)
+		}
+	}
+
+	if len(matches) == 0 {
+		utils.Info("No recipes found matching '%s'", searchTerm)
+		utils.Info("\nTry searching for:")
+		utils.Info("  - Project types: 'cli', 'web', 'library'")
+		utils.Info("  - Technologies: 'docker', 'git', 'ci'")
+		utils.Info("  - Actions: 'setup', 'build', 'deploy'")
+		return nil
+	}
+
+	utils.Success("Found %d recipes matching '%s':", len(matches), searchTerm)
+
+	for i := range matches {
+		recipe := &matches[i]
+		fmt.Printf("\n📦 %s (%s)\n", recipe.Name, recipe.Category)
+		fmt.Printf("   %s\n", recipe.Description)
+		if len(recipe.Tags) > 0 {
+			fmt.Printf("   Tags: %s\n", strings.Join(recipe.Tags, ", "))
+		}
+	}
+
+	// Ask if user wants to run any of the found recipes
+	if len(matches) > 0 {
+		return promptToRunRecipe(matches)
+	}
+
+	return nil
 }
 
 // SearchWithArgs searches for recipes by keyword (use term=<search>)
@@ -263,9 +451,96 @@ func (Recipes) SearchWithArgs(args ...string) error {
 	return nil
 }
 
-// Create creates a new custom recipe
+// Create launches interactive recipe creation wizard
 func (Recipes) Create() error {
-	return errRecipeCreateWithArgsRequired
+	utils.Header("📝 Interactive Recipe Creation Wizard")
+
+	// Prompt for recipe name
+	recipeName, err := utils.PromptForInput("Enter recipe name")
+	if err != nil {
+		return fmt.Errorf("failed to get recipe name: %w", err)
+	}
+
+	if recipeName == "" {
+		return errValueEmpty
+	}
+
+	// Prompt for description
+	description, err := utils.PromptForInput("Enter recipe description")
+	if err != nil {
+		return fmt.Errorf("failed to get description: %w", err)
+	}
+	if description == "" {
+		description = fmt.Sprintf("Custom recipe: %s", recipeName)
+	}
+
+	// Prompt for category
+	utils.Info("Available categories:")
+	utils.Info("  1. setup - Project setup and initialization")
+	utils.Info("  2. build - Build and compilation tasks")
+	utils.Info("  3. test - Testing and quality assurance")
+	utils.Info("  4. deploy - Deployment and release tasks")
+	utils.Info("  5. custom - Custom category")
+
+	categoryChoice, err := utils.PromptForInput("Select category (1-5)")
+	if err != nil {
+		return fmt.Errorf("failed to get category: %w", err)
+	}
+
+	var category string
+	switch categoryChoice {
+	case "1":
+		category = "setup"
+	case "2":
+		category = "build"
+	case "3":
+		category = "test"
+	case "4":
+		category = "deploy"
+	case "5", "":
+		category = "custom"
+	default:
+		category = "custom"
+	}
+
+	// Create recipe
+	recipe := Recipe{
+		Name:        recipeName,
+		Description: description,
+		Category:    category,
+		Steps: []RecipeStep{
+			{
+				Name:        "Example Step",
+				Description: "This is an example step - edit to customize",
+				Command:     "echo",
+				Args:        []string{"Hello from " + recipeName + " recipe!"},
+			},
+		},
+		Variables: map[string]string{
+			"PROJECT_NAME": "{{.ProjectName}}",
+			"MODULE_PATH":  "{{.ModulePath}}",
+		},
+		Tags: []string{category, "custom"},
+	}
+
+	// Create recipes directory
+	recipesDir := ".mage/recipes"
+	if err := os.MkdirAll(recipesDir, 0o750); err != nil {
+		return fmt.Errorf("failed to create recipes directory: %w", err)
+	}
+
+	// Save recipe as YAML
+	recipeFile := filepath.Join(recipesDir, recipeName+".yaml")
+	if err := saveRecipeAsYAML(&recipe, recipeFile); err != nil {
+		return fmt.Errorf("failed to save recipe: %w", err)
+	}
+
+	utils.Success("✅ Created custom recipe: %s", recipeFile)
+	utils.Info("📝 Category: %s", category)
+	utils.Info("📁 Location: %s", recipeFile)
+	utils.Info("✏️  Edit the file to customize your recipe steps and variables")
+
+	return nil
 }
 
 // CreateWithArgs creates a new custom recipe (use recipe=<name>)
@@ -318,9 +593,50 @@ func (Recipes) CreateWithArgs(args ...string) error {
 	return nil
 }
 
-// Install installs a recipe from a repository
+// Install shows available recipe sources and installation options
 func (Recipes) Install() error {
-	return errRecipeInstallWithArgsRequired
+	utils.Header("📥 Recipe Installation Options")
+
+	utils.Info("Available recipe sources:")
+	utils.Info("  • Official MAGE-X Recipe Repository")
+	utils.Info("  • GitHub repositories")
+	utils.Info("  • Local recipe files")
+	utils.Info("  • Community recipe collections")
+
+	utils.Info("\nSupported source formats:")
+	utils.Info("  • GitHub URLs: https://github.com/user/repo")
+	utils.Info("  • Direct files: /path/to/recipe.yaml")
+	utils.Info("  • Git repos: git@github.com:user/repo.git")
+
+	utils.Info("\nExample usage:")
+	utils.Info("  magex recipes:install source=https://github.com/mage-recipes/go-web")
+	utils.Info("  magex recipes:install source=./my-recipe.yaml")
+	utils.Info("  magex recipes:install source=https://raw.githubusercontent.com/user/repo/main/recipe.yaml")
+
+	// Show currently available built-in recipes
+	utils.Info("\nCurrently available built-in recipes:")
+	recipes := getBuiltinRecipes()
+	for _, recipe := range recipes {
+		fmt.Printf("  %-20s - %s\n", recipe.Name, recipe.Description)
+	}
+
+	// Prompt for interactive installation
+	installChoice, err := utils.PromptForInput("Install a recipe from source? (y/N)")
+	if err == nil && (strings.ToLower(installChoice) == "y" || strings.ToLower(installChoice) == "yes") {
+		source, err := utils.PromptForInput("Enter recipe source (URL or file path)")
+		if err != nil {
+			return fmt.Errorf("failed to get source: %w", err)
+		}
+
+		if source != "" {
+			// Call the WithArgs version to handle the installation
+			return (Recipes{}).InstallWithArgs("source=" + source)
+		}
+	}
+
+	utils.Info("\nFor more recipe sources, visit: https://github.com/mage-x/recipes")
+
+	return nil
 }
 
 // InstallWithArgs installs a recipe from a repository (use source=<url|file>)
@@ -642,6 +958,48 @@ func evaluateRecipeCondition(condition string) bool {
 	default:
 		return true
 	}
+}
+
+// executeRecipe executes a complete recipe
+func executeRecipe(recipe *Recipe) error {
+	utils.Header("🚀 Running Recipe: " + recipe.Name)
+
+	// Create context
+	context := createRecipeContext(recipe)
+
+	// Check dependencies
+	if err := checkDependencies(recipe.Dependencies); err != nil {
+		return fmt.Errorf("dependency check failed: %w", err)
+	}
+
+	// Execute steps
+	for i, step := range recipe.Steps {
+		utils.Info("📋 Step %d: %s", i+1, step.Name)
+
+		if step.Description != "" {
+			utils.Info("   %s", step.Description)
+		}
+
+		// Check condition if specified
+		if step.Condition != "" && !evaluateRecipeCondition(step.Condition) {
+			utils.Info("   ⏭️  Skipped (condition not met)")
+			continue
+		}
+
+		// Execute step
+		if err := executeRecipeStep(&step, context); err != nil {
+			if step.Optional {
+				utils.Warn("   Optional step failed: %v", err)
+				continue
+			}
+			return fmt.Errorf("step %d failed: %w", i+1, err)
+		}
+
+		utils.Success("   ✅ Completed")
+	}
+
+	utils.Success("🎉 Recipe '%s' completed successfully!", recipe.Name)
+	return nil
 }
 
 // executeRecipeStep executes a single recipe step

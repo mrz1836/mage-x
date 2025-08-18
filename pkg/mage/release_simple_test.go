@@ -264,8 +264,14 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseChangelog() {
 	suite.Require().NoError(err)
 }
 
-// TestReleaseAdditionalMethods tests placeholder methods
-func (suite *ReleaseSimpleTestSuite) TestReleaseAdditionalMethods() {
+// TestReleaseValidateSuccess tests successful release validation
+func (suite *ReleaseSimpleTestSuite) TestReleaseValidateSuccess() {
+	// Mock commands for successful validation
+	suite.mockRunner.SetOutput("git", []string{"status", "--porcelain"}, "")
+	suite.mockRunner.SetOutput("git", []string{"describe", "--tags", "--abbrev=0"}, "v1.0.0")
+	suite.mockRunner.SetOutput("which", []string{"goreleaser"}, "/usr/local/bin/goreleaser")
+	suite.mockRunner.SetError("goreleaser", []string{"check"}, nil)
+
 	originalRunner := GetRunner()
 	if err := SetRunner(suite.mockRunner); err != nil {
 		suite.T().Fatalf("Failed to set mock runner: %v", err)
@@ -276,35 +282,47 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseAdditionalMethods() {
 		}
 	}()
 
-	// Set up mock for echo commands
-	suite.mockRunner.SetDefaultError(nil)
+	// Create a mock config file
+	err := os.WriteFile(".goreleaser.yml", []byte("# test config"), 0o600)
+	suite.Require().NoError(err)
+	defer func() {
+		if removeErr := os.Remove(".goreleaser.yml"); removeErr != nil {
+			suite.T().Logf("Warning: failed to remove .goreleaser.yml: %v", removeErr)
+		}
+	}()
 
-	testCases := []struct {
-		name   string
-		method func() error
-	}{
-		{"Create", suite.release.Create},
-		{"Prepare", suite.release.Prepare},
-		{"Publish", suite.release.Publish},
-		{"Notes", suite.release.Notes},
-		{"Validate", suite.release.Validate},
-		{"Clean", suite.release.Clean},
-		{"Archive", suite.release.Archive},
-		{"Build", suite.release.Build},
-		{"Package", suite.release.Package},
-		{"Draft", suite.release.Draft},
-		{"Alpha", suite.release.Alpha},
-		{"Beta", suite.release.Beta},
-		{"RC", suite.release.RC},
-		{"Final", suite.release.Final},
-	}
+	err = suite.release.Validate()
+	suite.Require().NoError(err)
+}
 
-	for _, tc := range testCases {
-		suite.Run(tc.name, func() {
-			err := tc.method()
-			suite.Require().NoError(err)
-		})
+// TestReleaseCleanSuccess tests successful artifact cleanup
+func (suite *ReleaseSimpleTestSuite) TestReleaseCleanSuccess() {
+	// Mock commands for clean operation
+	suite.mockRunner.SetError("rm", []string{"-rf", "dist"}, nil)
+	suite.mockRunner.SetError("rm", []string{"-f"}, nil) // for temp files
+	suite.mockRunner.SetError("go", []string{"clean", "-cache"}, nil)
+
+	originalRunner := GetRunner()
+	if err := SetRunner(suite.mockRunner); err != nil {
+		suite.T().Fatalf("Failed to set mock runner: %v", err)
 	}
+	defer func() {
+		if err := SetRunner(originalRunner); err != nil {
+			suite.T().Logf("Warning: failed to restore original runner: %v", err)
+		}
+	}()
+
+	// Create a mock dist directory
+	err := os.MkdirAll("dist", 0o750)
+	suite.Require().NoError(err)
+	defer func() {
+		if removeErr := os.RemoveAll("dist"); removeErr != nil {
+			suite.T().Logf("Warning: failed to remove dist: %v", removeErr)
+		}
+	}()
+
+	err = suite.release.Clean()
+	suite.Require().NoError(err)
 }
 
 // TestReleaseTokenHandling tests token environment variable handling
@@ -388,46 +406,6 @@ func TestReleaseBasicFunctionality(t *testing.T) {
 		// Test interface compliance
 		_ = release
 	})
-
-	t.Run("upload method with parameters", func(t *testing.T) {
-		t.Parallel()
-		release := Release{}
-		mockRunner := testhelpers.NewMockRunner()
-		mockRunner.SetDefaultError(nil)
-
-		originalRunner := GetRunner()
-		if err := SetRunner(mockRunner); err != nil {
-			t.Fatalf("Failed to set mock runner: %v", err)
-		}
-		defer func() {
-			if err := SetRunner(originalRunner); err != nil {
-				t.Logf("Warning: failed to restore original runner: %v", err)
-			}
-		}()
-
-		err := release.Upload("v1.0.0", "file1.zip", "file2.tar.gz")
-		assert.NoError(t, err)
-	})
-
-	t.Run("list method with parameter", func(t *testing.T) {
-		t.Parallel()
-		release := Release{}
-		mockRunner := testhelpers.NewMockRunner()
-		mockRunner.SetDefaultError(nil)
-
-		originalRunner := GetRunner()
-		if err := SetRunner(mockRunner); err != nil {
-			t.Fatalf("Failed to set mock runner: %v", err)
-		}
-		defer func() {
-			if err := SetRunner(originalRunner); err != nil {
-				t.Logf("Warning: failed to restore original runner: %v", err)
-			}
-		}()
-
-		err := release.List(10)
-		assert.NoError(t, err)
-	})
 }
 
 // BenchmarkReleaseOperations benchmarks release operations
@@ -446,11 +424,11 @@ func BenchmarkReleaseOperations(b *testing.B) {
 		}
 	}()
 
-	b.Run("Notes", func(b *testing.B) {
+	b.Run("Changelog", func(b *testing.B) {
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				if err := release.Notes(); err != nil {
+				if err := release.Changelog(); err != nil {
 					// Expected - this is a benchmark, just consume the error
 					_ = err
 				}
@@ -458,25 +436,13 @@ func BenchmarkReleaseOperations(b *testing.B) {
 		})
 	})
 
-	b.Run("Create", func(b *testing.B) {
+	b.Run("Check", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			if err := release.Create(); err != nil {
+			if err := release.Check(); err != nil {
 				// Expected - this is a benchmark, just consume the error
 				_ = err
 			}
 		}
-	})
-
-	b.Run("Validate", func(b *testing.B) {
-		b.ResetTimer()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				if err := release.Validate(); err != nil {
-					// Expected - this is a benchmark, just consume the error
-					_ = err
-				}
-			}
-		})
 	})
 }

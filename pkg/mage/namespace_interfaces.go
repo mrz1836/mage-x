@@ -3,6 +3,7 @@ package mage
 
 import (
 	"sync"
+	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/providers"
 )
@@ -69,8 +70,17 @@ type TestNamespace interface {
 	// CoverHTML generates HTML coverage report
 	CoverHTML() error
 
-	// Fuzz runs fuzz tests
-	Fuzz() error
+	// Fuzz runs fuzz tests with configurable time
+	Fuzz(params ...string) error
+
+	// FuzzShort runs short fuzz tests with configurable time
+	FuzzShort(params ...string) error
+
+	// FuzzWithTime runs fuzz tests with specified duration (deprecated - use Fuzz with time parameter)
+	FuzzWithTime(fuzzTime time.Duration) error
+
+	// FuzzShortWithTime runs short fuzz tests with specified duration (deprecated - use FuzzShort with time parameter)
+	FuzzShortWithTime(fuzzTime time.Duration) error
 
 	// Bench runs benchmarks
 	Bench(params ...string) error
@@ -243,38 +253,29 @@ type ReleaseNamespace interface {
 	// Default creates a default release
 	Default(args ...string) error
 
-	// Create creates a new release
-	Create() error
+	// Test runs release dry-run (no publish)
+	Test() error
 
-	// Build builds release artifacts
-	Build() error
+	// Snapshot builds snapshot binaries
+	Snapshot() error
 
-	// Package packages release artifacts
-	Package() error
+	// LocalInstall builds from the latest tag and installs locally
+	LocalInstall() error
 
-	// Publish publishes release
-	Publish() error
+	// Check validates .goreleaser.yml configuration
+	Check() error
 
-	// Notes generates release notes
-	Notes() error
+	// Init creates a .goreleaser.yml template
+	Init() error
 
 	// Changelog generates changelog
 	Changelog() error
 
-	// Draft creates a draft release
-	Draft() error
+	// Validate validates release readiness
+	Validate() error
 
-	// Alpha creates an alpha release
-	Alpha() error
-
-	// Beta creates a beta release
-	Beta() error
-
-	// RC creates a release candidate
-	RC() error
-
-	// Final creates a final release
-	Final() error
+	// Clean cleans release artifacts
+	Clean() error
 }
 
 // DocsNamespace interface defines the contract for documentation operations

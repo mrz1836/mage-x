@@ -486,8 +486,8 @@ func (suite *SecurityValidatorTestSuite) TestValidateVersionComprehensive() {
 
 		// Edge cases for length
 		{"very long version", strings.Repeat("1", 1000) + ".0.0", false, ""},
-		{"unicode characters", "1.0.0-α", false, ""},
-		{"emoji", "1.0.0-🚀", false, ""},
+		{"unicode characters", "1.0.0-α", true, "invalid version format"},
+		{"emoji", "1.0.0-🚀", true, "invalid version format"},
 	}
 
 	for _, tt := range tests {

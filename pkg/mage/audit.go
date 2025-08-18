@@ -95,9 +95,9 @@ func (Audit) Show() error {
 
 	for i := range events {
 		event := &events[i]
-		status := "✅"
+		status := EmojiSuccess
 		if !event.Success {
-			status = "❌"
+			status = EmojiError
 		}
 
 		utils.Info("%-20s %-12s %-20s %-15s %-8s %-10d",

@@ -710,7 +710,7 @@ func registerReleaseCommands(reg *registry.Registry) {
 	reg.MustRegister(
 		registry.NewNamespaceCommand("release", "default").
 			WithDescription("Create a release").
-			WithFunc(func() error { return r.Default() }).
+			WithArgsFunc(func(args ...string) error { return r.Default(args...) }).
 			WithCategory("Release").
 			WithAliases("release").
 			MustBuild(),
@@ -728,22 +728,6 @@ func registerReleaseCommands(reg *registry.Registry) {
 		registry.NewNamespaceCommand("release", "snapshot").
 			WithDescription("Create a snapshot release").
 			WithFunc(func() error { return r.Snapshot() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "install").
-			WithDescription("Install GoReleaser").
-			WithFunc(func() error { return r.Install() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "update").
-			WithDescription("Update GoReleaser").
-			WithFunc(func() error { return r.Update() }).
 			WithCategory("Release").
 			MustBuild(),
 	)
@@ -773,40 +757,8 @@ func registerReleaseCommands(reg *registry.Registry) {
 	)
 
 	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "create").
-			WithDescription("Create a new release").
-			WithFunc(func() error { return r.Create() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "prepare").
-			WithDescription("Prepare release").
-			WithFunc(func() error { return r.Prepare() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "publish").
-			WithDescription("Publish release").
-			WithFunc(func() error { return r.Publish() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "notes").
-			WithDescription("Generate release notes").
-			WithFunc(func() error { return r.Notes() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
 		registry.NewNamespaceCommand("release", "validate").
-			WithDescription("Validate release").
+			WithDescription("Comprehensive release readiness validation").
 			WithFunc(func() error { return r.Validate() }).
 			WithCategory("Release").
 			MustBuild(),
@@ -814,64 +766,16 @@ func registerReleaseCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("release", "clean").
-			WithDescription("Clean release artifacts").
+			WithDescription("Clean release artifacts and build cache").
 			WithFunc(func() error { return r.Clean() }).
 			WithCategory("Release").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "build").
-			WithDescription("Build release artifacts").
-			WithFunc(func() error { return r.Build() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "package").
-			WithDescription("Package release").
-			WithFunc(func() error { return r.Package() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "draft").
-			WithDescription("Create draft release").
-			WithFunc(func() error { return r.Draft() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "alpha").
-			WithDescription("Create alpha release").
-			WithFunc(func() error { return r.Alpha() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "beta").
-			WithDescription("Create beta release").
-			WithFunc(func() error { return r.Beta() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "rc").
-			WithDescription("Create release candidate").
-			WithFunc(func() error { return r.RC() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "final").
-			WithDescription("Create final release").
-			WithFunc(func() error { return r.Final() }).
+		registry.NewNamespaceCommand("release", "localinstall").
+			WithDescription("Build from latest tag and install locally").
+			WithFunc(func() error { return r.LocalInstall() }).
 			WithCategory("Release").
 			MustBuild(),
 	)

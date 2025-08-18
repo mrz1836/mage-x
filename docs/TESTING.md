@@ -187,7 +187,7 @@ mage test:bench
 go test -bench=BenchmarkBuildFlags ./pkg/mage
 
 # Run with custom time
-BENCH_TIME=30s mage test:bench
+mage test:bench time=30s
 
 # Short
 mage test:benchshort

@@ -272,15 +272,17 @@ test:
   bench_time: "10s"  # Default when no time parameter is provided
 ```
 
-### Environment Variable Fallback
+### Parameter-Only Configuration
 
-Also supports environment variables for backward compatibility:
+Benchmark timing is configured using parameters only:
 
 ```bash
-export BENCH_TIME="10s"  # Used when no parameter or config is set
+magex bench time=10s          # Standard benchmarks
+magex bench time=50ms         # Quick benchmarks
+magex bench:cpu time=30s      # CPU profiling
 ```
 
-**Priority Order**: Parameter > Config File > Environment Variable > Default (10s)
+**Priority Order**: Parameter > Config File > Default (10s)
 
 ## 📊 Analytics Configuration
 
@@ -455,15 +457,12 @@ export TEST_TIMEOUT="15m"
 # Tool configuration
 export PARALLEL="8"
 export LINT_TIMEOUT="10m"
-export FUZZ_TIME="30s"
 
-# Benchmark timing (for backward compatibility)
-export BENCH_TIME="10s"
-
-# Preferred: Use parameters instead
+# Benchmark timing via parameters
 magex bench time=50ms         # Quick benchmarks
 magex bench time=10s          # Standard benchmarks
 magex bench:cpu time=30s      # CPU profiling with custom duration
+magex bench time=2s count=5   # With custom count
 ```
 
 ## ⚙️ Advanced Configuration
