@@ -92,10 +92,10 @@
 <br/>
 
 - **Truly Zero-Configuration**<br/>
-  _No magefile.go needed. No imports. No wrappers. Just install `magex` and all 343 commands work immediately in any Go project._
+  _No magefile.go needed. No imports. No wrappers. Just install `magex` and all built-in and custom commands work immediately in any Go project._
   <br/><br/>
 - **Drop-in Mage Replacement**<br/>
-  _`magex` is a superset of `mage` with all MAGE-X commands built-in. Your existing magefiles still work, now enhanced with 343 professional commands._
+  _`magex` is a superset of `mage` with all MAGE-X commands built-in. Your existing magefiles still work, now enhanced with 300+ professional commands._
   <br/><br/>
 - **Cross-Platform Excellence**<br/>
   _Full support for Linux, macOS, and Windows with multi-architecture builds, parallel execution, and CPU-aware optimization._
@@ -132,7 +132,7 @@ MAGE-X automatically detects your project structure and **just works**:
 | **Multi-Binary** `cmd/*/main.go`    | Auto-detects & builds first found |
 | **Library** No main package         | Verifies compilation with `./...` |
 
-> 📖 **Need more details?** See the [Complete Quick Start Guide](docs/QUICK_START.md) for project-specific examples and troubleshooting.
+> 📖 See the [Complete Quick Start Guide](docs/QUICK_START.md) for project-specific examples and troubleshooting.
 
 <br>
 
@@ -147,15 +147,15 @@ magex update:install
 
 # Now use it in ANY Go project (no setup!)
 magex build         # Automatically detects & builds your project
-magex test          # Run tests
-magex bench         # Run benchmarks
-magex lint:fix      # Fix linting issues
+magex test          # Run your tests
+magex bench         # Run your benchmarks
+magex lint:fix      # Fix any linting issues
 magex format:fix    # Format your code
 
 # That's it! No magefile.go needed! 🚀
 ```
 
-> 💡 **Why two steps?** The `go install` command doesn't embed version information, so `magex update:install` downloads the latest pre-built release with proper version info. After step 2, `magex --version` will show the correct version instead of "dev".
+<br>
 
 ### Quick Project Check
 ```bash
@@ -332,8 +332,13 @@ export MAGE_X_TEST_TIMEOUT=15m
 # Tool configuration
 export MAGE_X_PARALLEL=8
 export MAGE_X_LINT_TIMEOUT=10m
-export MAGE_X_FUZZ_TIME=30s
-export MAGE_X_BENCH_TIME=10s
+
+# Benchmark timing with parameters
+magex bench time=50ms         # Quick benchmarks
+magex bench time=10s          # Full benchmarks
+magex bench:cpu time=30s      # CPU profiling
+magex bench:save time=5s output=results.txt
+magex bench time=2s count=5   # With custom count parameter
 
 # Version management examples with new parameter format
 magex version:bump bump=patch              # Bump patch version
@@ -363,7 +368,7 @@ For comprehensive documentation, visit the [docs](docs) directory:
 
 ### Available Commands
 
-MAGE-X provides 343 commands organized by functionality. All commands work instantly through the `magex` CLI.
+MAGE-X provides 300+ commands organized by functionality. All commands work instantly through the `magex` CLI.
 
 <details>
 <summary>🎯 <strong>Essential Commands</strong></summary>
@@ -467,24 +472,28 @@ magex build:prebuild      # Pre-build all packages to warm cache
 <summary>🧪 <strong>Testing & Quality</strong></summary>
 
 ```bash
-magex test               # Run complete test suite with linting
-magex test:unit          # Run unit tests only
-magex test:short         # Run short tests (excludes integration tests)
-magex test:race          # Run tests with race detector
-magex test:cover         # Run tests with coverage analysis
-magex test:coverrace     # Run tests with both coverage and race detector
-magex test:bench         # Run benchmark tests
-magex bench              # Run benchmarks (alias for test:bench)
-magex test:fuzz          # Run fuzz tests
-magex test:integration   # Run integration tests
+magex test                     # Run complete test suite with linting
+magex test:unit                # Run unit tests only
+magex test:short               # Run short tests (excludes integration tests)
+magex test:race                # Run tests with race detector
+magex test:cover               # Run tests with coverage analysis
+magex test:coverrace           # Run tests with both coverage and race detector
+magex test:bench               # Run benchmark tests
+magex bench                    # Run benchmarks with default timing
+magex bench time=50ms          # Run quick benchmarks (50ms duration)
+magex bench time=10s count=3   # Run benchmarks with custom time and count
+magex test:fuzz                # Run fuzz tests (default: 10s)
+magex test:fuzz time=30s       # Run fuzz tests with custom duration
+magex test:fuzzShort time=1s   # Run short fuzz tests with custom duration
+magex test:integration         # Run integration tests
 
 # Code Quality & Linting
-magex lint               # Run essential linters
-magex lint:fix           # Auto-fix linting issues + apply formatting
-magex lint:issues        # Scan for TODOs, FIXMEs, nolint directives, and test skips
-magex test:vet           # Run go vet static analysis
-magex format:fix         # Run code formatting
-magex tools:verify       # Show tool version information
+magex lint                     # Run essential linters
+magex lint:fix                 # Auto-fix linting issues + apply formatting
+magex lint:issues              # Scan for TODOs, FIXMEs, nolint directives, and test skips
+magex test:vet                 # Run go vet static analysis
+magex format:fix               # Run code formatting
+magex tools:verify             # Show tool version information
 ```
 
 </details>
@@ -528,14 +537,15 @@ magex metrics:coverage    # Generate coverage reports
 magex metrics:complexity  # Analyze code complexity
 
 # Performance & Benchmarking
-magex bench:default       # Default benchmark operations
-magex bench:run           # Run performance benchmarks
+magex bench               # Default benchmark operations
+magex bench time=50ms     # Quick benchmarks (50ms runs)
+magex bench time=10s      # Comprehensive benchmarks (10s runs)
+magex bench count=3       # Run benchmarks 3 times
 magex bench:profile       # Profile application performance
 magex bench:compare       # Compare benchmark results
-magex bench:report        # Generate benchmark reports
 magex bench:regression    # Check for performance regressions
-magex bench:memory        # Memory usage benchmarks
-magex bench:cpu           # CPU usage benchmarks
+magex bench:cpu time=30s  # CPU usage benchmarks with custom duration
+magex bench:mem time=2s   # Memory usage benchmarks
 ```
 
 </details>
@@ -562,7 +572,7 @@ magex docs:godocs        # Update GoDocs proxy (alias for docs:update)
 # Git Operations
 magex git:status                           # Show git repository status
 magex git:commit message="fix: commit message"  # Commit changes with message parameter
-magex git:tag version=1.2.3               # Create and push a new tag with version parameter
+magex git:tag version=1.2.3                # Create and push a new tag with version parameter
 magex git:tagremove version=1.2.3          # Remove a tag
 magex git:tagupdate version=1.2.3          # Force update a tag
 
@@ -577,10 +587,10 @@ magex version:compare      # Compare two versions
 magex version:validate     # Validate version format
 
 # Version Bump Examples (now using parameters)
-magex version:bump                         # Bump patch version (default)
-magex version:bump bump=minor              # Bump minor version  
+magex version:bump                          # Bump patch version (default)
+magex version:bump bump=minor               # Bump minor version
 magex version:bump bump=major major-confirm # Bump major version with confirmation
-magex version:bump bump=minor push         # Bump minor and push to remote
+magex version:bump bump=minor push          # Bump minor and push to remote
 
 # Dry-run mode (preview changes without making them)
 magex version:bump dry-run                 # Preview patch bump
@@ -594,12 +604,20 @@ magex version:bump bump=major major-confirm push dry-run  # Preview major bump w
 <summary>🚀 <strong>Release Management</strong></summary>
 
 ```bash
+# Core Release Operations
 magex release              # Create a new release from the latest tag
 magex release godocs       # Create a release and update GoDocs proxy
 magex release:default      # Create a new release from the latest tag
 magex release:test         # Dry-run release without publishing
 magex release:snapshot     # Build release artifacts without git tag
 magex release:localinstall # Build from latest tag and install locally
+
+# Release Setup & Validation
+magex release:init         # Initialize .goreleaser.yml configuration
+magex release:check        # Validate .goreleaser.yml configuration
+magex release:validate     # Comprehensive release readiness validation
+magex release:changelog    # Generate changelog from git history
+magex release:clean        # Clean release artifacts and build cache
 ```
 
 </details>
@@ -761,7 +779,7 @@ magex uninstall           # Remove installation
 
 ### 📋 Complete Command List
 
-Run `magex -l` to see a plain list of all available commands (343 commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
+Run `magex -l` to see a plain list of all available commands (300+ commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
 
 <br/>
 
@@ -856,7 +874,13 @@ func AuditReport() error {
 // Run benchmarking and performance analysis
 func PerformanceTest() error {
     var bench Bench
-    return bench.Run()
+    return bench.Default()
+}
+
+// Run quick benchmarks with custom timing
+func QuickBench() error {
+    var bench Bench
+    return bench.DefaultWithArgs("time=50ms")
 }
 ```
 
@@ -880,8 +904,11 @@ magex test
 magex test:race test:cover test:fuzz
 
 # Performance benchmarks
-magex bench
-magex test:bench
+magex bench                    # Default benchmarks (10s duration)
+magex bench time=50ms          # Quick benchmarks for CI
+magex bench time=10s count=3   # Comprehensive benchmarks with count parameter
+magex test:bench               # Via test namespace
+magex test:bench time=30s      # Test namespace with custom timing
 ```
 
 ### Example Projects

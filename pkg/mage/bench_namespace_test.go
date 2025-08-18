@@ -29,12 +29,6 @@ func (ts *BenchTestSuite) SetupTest() {
 // TearDownTest runs after each test
 func (ts *BenchTestSuite) TearDownTest() {
 	// Clean up environment variables that might be set by tests
-	if err := os.Unsetenv("BENCH_TIME"); err != nil {
-		ts.T().Logf("Failed to unset BENCH_TIME: %v", err)
-	}
-	if err := os.Unsetenv("BENCH_COUNT"); err != nil {
-		ts.T().Logf("Failed to unset BENCH_COUNT: %v", err)
-	}
 	if err := os.Unsetenv("BENCH_CPU_PROFILE"); err != nil {
 		ts.T().Logf("Failed to unset BENCH_CPU_PROFILE: %v", err)
 	}
@@ -89,17 +83,6 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 	})
 
 	ts.Run("benchmark with custom time", func() {
-		// Set environment variable for custom bench time
-		originalBenchTime := os.Getenv("BENCH_TIME")
-		defer func() {
-			if err := os.Setenv("BENCH_TIME", originalBenchTime); err != nil {
-				ts.T().Logf("Failed to restore BENCH_TIME: %v", err)
-			}
-		}()
-		if err := os.Setenv("BENCH_TIME", "5s"); err != nil {
-			ts.T().Fatalf("Failed to set BENCH_TIME: %v", err)
-		}
-
 		// Mock successful go test benchmark command with custom time
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "5s", "./..."}).Return(nil)
 
@@ -109,27 +92,16 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
-				return ts.bench.Default()
+				return ts.bench.DefaultWithArgs("time=5s")
 			},
 		)
 
 		ts.Require().NoError(err)
 	})
 
-	ts.Run("benchmark with count", func() {
-		// Set environment variable for count
-		originalBenchCount := os.Getenv("BENCH_COUNT")
-		defer func() {
-			if err := os.Setenv("BENCH_COUNT", originalBenchCount); err != nil {
-				ts.T().Logf("Failed to restore BENCH_COUNT: %v", err)
-			}
-		}()
-		if err := os.Setenv("BENCH_COUNT", "3"); err != nil {
-			ts.T().Fatalf("Failed to set BENCH_COUNT: %v", err)
-		}
-
-		// Mock successful go test benchmark command with count
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-count", "3", "./..."}).Return(nil)
+	ts.Run("benchmark with time parameter", func() {
+		// Test the new parameter-based approach
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "50ms", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error {
@@ -137,12 +109,31 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 			},
 			func() interface{} { return GetRunner() },
 			func() error {
-				return ts.bench.Default()
+				return ts.bench.DefaultWithArgs("time=50ms")
 			},
 		)
 
 		ts.Require().NoError(err)
 	})
+
+	ts.Run("benchmark with time and count parameters", func() {
+		// Test multiple parameters
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "100ms", "-count", "2", "./..."}).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) error {
+				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
+			},
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.bench.DefaultWithArgs("time=100ms", "count=2")
+			},
+		)
+
+		ts.Require().NoError(err)
+	})
+
+	// Test removed: benchmark count is now parameter-only, no environment variable support
 
 	ts.Run("benchmark with CPU and memory profiling", func() {
 		// Set environment variables for profiling

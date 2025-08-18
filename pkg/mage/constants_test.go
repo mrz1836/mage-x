@@ -291,7 +291,6 @@ func (ts *ConstantsTestSuite) TestCoverageModes() {
 	ts.Require().Equal("atomic", CoverModeAtomic)
 }
 
-
 // TestToolVersions tests default tool version constants
 func (ts *ConstantsTestSuite) TestToolVersions() {
 	toolVersions := map[string]string{

@@ -224,10 +224,65 @@ test:
 # Performance tests
 test:
   timeout: 600
-  bench_time: "30s"
+  bench_time: "30s"      # Default for environment variable fallback
   mem_profile: true
   cpu_profile: true
+
+# With parameters (preferred approach):
+# magex bench time=30s cpu-profile=cpu.prof mem-profile=mem.prof
 ```
+
+## ⚡ Benchmark Configuration
+
+MAGE-X supports benchmark timing through both configuration files and command-line parameters. **Parameters are the preferred approach** for better CLI usability:
+
+### Parameter-Based Timing (Recommended)
+
+```bash
+# Quick benchmarks for CI/fast feedback
+magex bench time=50ms
+
+# Standard benchmarks  
+magex bench time=100ms
+
+# Comprehensive benchmarks
+magex bench time=10s
+
+# Multiple parameters
+magex bench time=5s count=3
+
+# Profiling benchmarks
+magex bench:cpu time=30s profile=cpu-profile.out
+magex bench:mem time=2s profile=mem-profile.out
+magex bench:profile time=10s cpu-profile=cpu.prof mem-profile=mem.prof
+
+# Benchmark comparison
+magex bench:compare old=baseline.txt new=current.txt
+
+# Regression testing
+magex bench:regression time=5s update-baseline=true
+```
+
+### Configuration File Fallback
+
+For backward compatibility, you can still configure default timing in `.mage.yaml`:
+
+```yaml
+test:
+  bench_time: "10s"  # Default when no time parameter is provided
+```
+
+### Parameter-Only Configuration
+
+Benchmark timing is configured using parameters only:
+
+```bash
+magex bench time=10s          # Standard benchmarks
+magex bench time=50ms         # Quick benchmarks
+magex bench:cpu time=30s      # CPU profiling
+```
+
+**Priority Order**: Parameter > Config File > Default (10s)
 
 ## 📊 Analytics Configuration
 
@@ -402,8 +457,12 @@ export TEST_TIMEOUT="15m"
 # Tool configuration
 export PARALLEL="8"
 export LINT_TIMEOUT="10m"
-export FUZZ_TIME="30s"
-export BENCH_TIME="10s"
+
+# Benchmark timing via parameters
+magex bench time=50ms         # Quick benchmarks
+magex bench time=10s          # Standard benchmarks
+magex bench:cpu time=30s      # CPU profiling with custom duration
+magex bench time=2s count=5   # With custom count
 ```
 
 ## ⚙️ Advanced Configuration

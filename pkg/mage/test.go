@@ -538,8 +538,74 @@ func isMultiModuleCoverage(coverageFile string) bool {
 	return false
 }
 
-// Fuzz runs fuzz tests
-func (Test) Fuzz() error {
+// Fuzz runs fuzz tests with configurable time
+func (Test) Fuzz(argsList ...string) error {
+	utils.Header("Running Fuzz Tests")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	if config.Test.SkipFuzz {
+		utils.Info("Fuzz tests skipped")
+		return nil
+	}
+
+	// Find packages with fuzz tests
+	packages := findFuzzPackages()
+
+	if len(packages) == 0 {
+		utils.Info("No fuzz tests found")
+		return nil
+	}
+
+	// Get fuzz time from parameter or use default (10s)
+	fuzzTimeStr := utils.GetParam(params, "time", "10s")
+	fuzzTime, err := time.ParseDuration(fuzzTimeStr)
+	if err != nil {
+		return fmt.Errorf("invalid time parameter: %w", err)
+	}
+
+	for _, pkg := range packages {
+		// List fuzz tests in package
+		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
+		if err != nil {
+			continue
+		}
+
+		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
+		for _, test := range fuzzTests {
+			if !strings.HasPrefix(test, "Fuzz") {
+				continue
+			}
+
+			utils.Info("Fuzzing %s.%s", pkg, test)
+
+			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
+			args = append(args, "-fuzztime", fuzzTime.String())
+
+			if config.Test.Verbose {
+				args = append(args, "-v")
+			}
+
+			args = append(args, pkg)
+
+			if err := GetRunner().RunCmd("go", args...); err != nil {
+				return fmt.Errorf("fuzz test %s failed: %w", test, err)
+			}
+		}
+	}
+
+	utils.Success("Fuzz tests completed")
+	return nil
+}
+
+// FuzzWithTime runs fuzz tests with specified duration
+func (Test) FuzzWithTime(fuzzTime time.Duration) error {
 	utils.Header("Running Fuzz Tests")
 
 	config, err := GetConfig()
@@ -560,7 +626,8 @@ func (Test) Fuzz() error {
 		return nil
 	}
 
-	fuzzTime := utils.GetEnv("FUZZ_TIME", "10s")
+	// Use provided duration
+	fuzzTimeStr := fuzzTime.String()
 
 	for _, pkg := range packages {
 		// List fuzz tests in package
@@ -578,7 +645,7 @@ func (Test) Fuzz() error {
 			utils.Info("Fuzzing %s.%s", pkg, test)
 
 			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTime)
+			args = append(args, "-fuzztime", fuzzTimeStr)
 
 			if config.Test.Verbose {
 				args = append(args, "-v")
@@ -596,8 +663,74 @@ func (Test) Fuzz() error {
 	return nil
 }
 
-// FuzzShort runs fuzz tests with shorter duration for quick feedback
-func (Test) FuzzShort() error {
+// FuzzShort runs fuzz tests with configurable time (default: 5s for quick feedback)
+func (Test) FuzzShort(argsList ...string) error {
+	utils.Header("Running Short Fuzz Tests")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	if config.Test.SkipFuzz {
+		utils.Info("Fuzz tests skipped")
+		return nil
+	}
+
+	// Find packages with fuzz tests
+	packages := findFuzzPackages()
+
+	if len(packages) == 0 {
+		utils.Info("No fuzz tests found")
+		return nil
+	}
+
+	// Get fuzz time from parameter or use default (5s for short)
+	fuzzTimeStr := utils.GetParam(params, "time", "5s")
+	fuzzTime, err := time.ParseDuration(fuzzTimeStr)
+	if err != nil {
+		return fmt.Errorf("invalid time parameter: %w", err)
+	}
+
+	for _, pkg := range packages {
+		// List fuzz tests in package
+		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
+		if err != nil {
+			continue
+		}
+
+		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
+		for _, test := range fuzzTests {
+			if !strings.HasPrefix(test, "Fuzz") {
+				continue
+			}
+
+			utils.Info("Fuzzing %s.%s", pkg, test)
+
+			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
+			args = append(args, "-fuzztime", fuzzTime.String())
+
+			if config.Test.Verbose {
+				args = append(args, "-v")
+			}
+
+			args = append(args, pkg)
+
+			if err := GetRunner().RunCmd("go", args...); err != nil {
+				return fmt.Errorf("short fuzz test %s failed: %w", test, err)
+			}
+		}
+	}
+
+	utils.Success("Short fuzz tests completed")
+	return nil
+}
+
+// FuzzShortWithTime runs fuzz tests with specified duration (optimized for quick feedback)
+func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 	utils.Header("Running Short Fuzz Tests")
 
 	config, err := GetConfig()
@@ -618,8 +751,8 @@ func (Test) FuzzShort() error {
 		return nil
 	}
 
-	// Use shorter fuzz time for quick feedback (5s instead of 10s)
-	fuzzTime := utils.GetEnv("FUZZ_TIME", "5s")
+	// Use provided duration
+	fuzzTimeStr := fuzzTime.String()
 
 	for _, pkg := range packages {
 		// List fuzz tests in package
@@ -637,7 +770,7 @@ func (Test) FuzzShort() error {
 			utils.Info("Fuzzing %s.%s", pkg, test)
 
 			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTime)
+			args = append(args, "-fuzztime", fuzzTimeStr)
 
 			if config.Test.Verbose {
 				args = append(args, "-v")
@@ -656,8 +789,11 @@ func (Test) FuzzShort() error {
 }
 
 // Bench runs benchmarks
-func (Test) Bench(_ ...string) error {
+func (Test) Bench(argsList ...string) error {
 	utils.Header("Running Benchmarks")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
 
 	config, err := GetConfig()
 	if err != nil {
@@ -674,10 +810,13 @@ func (Test) Bench(_ ...string) error {
 		args = append(args, "-tags", config.Test.Tags)
 	}
 
-	benchTime := utils.GetEnv("BENCH_TIME", "10s")
+	// Get benchmark time from parameter or use default
+	benchTime := utils.GetParam(params, "time", "10s")
 	args = append(args, "-benchtime", benchTime)
 
-	if count := utils.GetEnv("BENCH_COUNT", ""); count != "" {
+	// Get count from parameter
+	count := utils.GetParam(params, "count", "")
+	if count != "" {
 		args = append(args, "-count", count)
 	}
 
@@ -693,8 +832,11 @@ func (Test) Bench(_ ...string) error {
 }
 
 // BenchShort runs benchmarks with shorter duration for quick feedback
-func (Test) BenchShort(_ ...string) error {
+func (Test) BenchShort(argsList ...string) error {
 	utils.Header("Running Short Benchmarks")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
 
 	config, err := GetConfig()
 	if err != nil {
@@ -711,11 +853,13 @@ func (Test) BenchShort(_ ...string) error {
 		args = append(args, "-tags", config.Test.Tags)
 	}
 
-	// Use shorter benchmark time for quick feedback (1s instead of 10s)
-	benchTime := utils.GetEnv("BENCH_TIME", "1s")
+	// Get benchmark time from parameter or use default (1s for short)
+	benchTime := utils.GetParam(params, "time", "1s")
 	args = append(args, "-benchtime", benchTime)
 
-	if count := utils.GetEnv("BENCH_COUNT", ""); count != "" {
+	// Get count from parameter
+	count := utils.GetParam(params, "count", "")
+	if count != "" {
 		args = append(args, "-count", count)
 	}
 

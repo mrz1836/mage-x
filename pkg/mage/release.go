@@ -19,6 +19,7 @@ var (
 	errNoGoreleaserConfig         = errors.New("no goreleaser configuration file found")
 	errGoreleaserConfigExists     = errors.New("goreleaser configuration already exists")
 	errBinaryNotFound             = errors.New("built binary not found in expected locations")
+	errGitDirtyWorkingTree        = errors.New("git repository has uncommitted changes - clean working directory required for release")
 )
 
 // Release namespace for release-related tasks
@@ -300,31 +301,6 @@ func buildAndInstallFromTag(latestTag string) error {
 	return nil
 }
 
-// Install installs GoReleaser
-func (Release) Install() error {
-	return installGoreleaser()
-}
-
-// Update updates GoReleaser to latest version
-func (Release) Update() error {
-	utils.Header("Updating GoReleaser")
-
-	if utils.IsMac() && utils.CommandExists("brew") {
-		utils.Info("Updating via Homebrew...")
-		if err := GetRunner().RunCmd("brew", "upgrade", "goreleaser"); err != nil {
-			return fmt.Errorf("failed to update goreleaser: %w", err)
-		}
-	} else {
-		// Re-install latest version
-		if err := installGoreleaser(); err != nil {
-			return err
-		}
-	}
-
-	utils.Success("GoReleaser updated successfully")
-	return nil
-}
-
 // Check validates .goreleaser.yml configuration
 func (Release) Check() error {
 	utils.Header("Checking Release Configuration")
@@ -470,102 +446,87 @@ func installGoreleaser() error {
 	return nil
 }
 
-// Additional methods for Release namespace required by tests
-
-// Create creates a release
-func (Release) Create() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Creating release")
-}
-
-// Prepare prepares a release
-func (Release) Prepare() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Preparing release")
-}
-
-// Publish publishes a release
-func (Release) Publish() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Publishing release")
-}
-
-// Notes generates release notes
-func (Release) Notes() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Generating release notes")
-}
-
-// Validate validates release configuration
+// Validate validates release readiness
 func (Release) Validate() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Validating release")
+	utils.Header("Validating Release Readiness")
+
+	// Check if git repository is clean
+	statusOutput, err := GetRunner().RunCmdOutput("git", "status", "--porcelain")
+	if err != nil {
+		return fmt.Errorf("failed to check git status: %w", err)
+	}
+	if strings.TrimSpace(statusOutput) != "" {
+		return errGitDirtyWorkingTree
+	}
+	utils.Success("Git repository is clean")
+
+	// Check if latest tag exists
+	if _, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0"); err != nil {
+		return fmt.Errorf("no git tags found - create a tag first: %w", err)
+	}
+	utils.Success("Git tags found")
+
+	// Check if goreleaser config exists and is valid
+	configFiles := []string{".goreleaser.yml", ".goreleaser.yaml", "goreleaser.yml", "goreleaser.yaml"}
+	found := false
+	for _, file := range configFiles {
+		if utils.FileExists(file) {
+			found = true
+			utils.Info("Found configuration: %s", file)
+			break
+		}
+	}
+	if !found {
+		return errNoGoreleaserConfig
+	}
+
+	// Ensure goreleaser is installed
+	if err := ensureGoreleaser(); err != nil {
+		return err
+	}
+
+	// Validate goreleaser configuration
+	if err := GetRunner().RunCmd("goreleaser", "check"); err != nil {
+		return fmt.Errorf("goreleaser configuration validation failed: %w", err)
+	}
+	utils.Success("GoReleaser configuration is valid")
+
+	utils.Success("Release validation completed - ready for release")
+	return nil
 }
 
 // Clean cleans release artifacts
 func (Release) Clean() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Cleaning release artifacts")
-}
+	utils.Header("Cleaning Release Artifacts")
 
-// Archive creates release archives
-func (Release) Archive() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Creating release archives")
-}
+	// Remove dist directory
+	if utils.FileExists("dist") {
+		utils.Info("Removing dist/ directory...")
+		if err := GetRunner().RunCmd("rm", "-rf", "dist"); err != nil {
+			return fmt.Errorf("failed to remove dist directory: %w", err)
+		}
+		utils.Success("Removed dist/ directory")
+	}
 
-// Upload uploads release artifacts
-func (Release) Upload(tag string, assets ...string) error {
-	runner := GetRunner()
-	cmdArgs := []string{"echo", "Uploading release artifacts", tag}
-	cmdArgs = append(cmdArgs, assets...)
-	return runner.RunCmd(cmdArgs[0], cmdArgs[1:]...)
-}
+	// Remove any .goreleaser-* temporary files
+	tempFiles, err := filepath.Glob(".goreleaser-*")
+	if err == nil && len(tempFiles) > 0 {
+		utils.Info("Removing temporary goreleaser files...")
+		for _, file := range tempFiles {
+			if err := GetRunner().RunCmd("rm", "-f", file); err != nil {
+				utils.Warn("Failed to remove %s: %v", file, err)
+			}
+		}
+		utils.Success("Removed temporary files")
+	}
 
-// List lists releases
-func (Release) List(_ ...int) error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Listing releases")
-}
+	// Clean any build caches
+	if err := GetRunner().RunCmd("go", "clean", "-cache"); err != nil {
+		utils.Warn("Failed to clean Go build cache: %v", err)
+	} else {
+		utils.Success("Cleaned Go build cache")
+	}
 
-// Build builds release artifacts
-func (Release) Build() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Building release artifacts")
-}
-
-// Package packages release artifacts
-func (Release) Package() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Packaging release artifacts")
-}
-
-// Draft creates a draft release
-func (Release) Draft() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Creating draft release")
-}
-
-// Alpha creates an alpha release
-func (Release) Alpha() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Creating alpha release")
-}
-
-// Beta creates a beta release
-func (Release) Beta() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Creating beta release")
-}
-
-// RC creates a release candidate
-func (Release) RC() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Creating release candidate")
-}
-
-// Final creates a final release
-func (Release) Final() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Creating final release")
+	utils.Success("Release artifacts cleaned")
+	return nil
 }

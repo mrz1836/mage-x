@@ -2,6 +2,8 @@
 package mage
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -25,6 +27,8 @@ var (
 	errNoReleasesFound       = errors.New("no releases found")
 	errUpdateVersionRequired = errors.New("VERSION environment variable is required")
 	errNoBetaReleasesFound   = errors.New("no beta releases found")
+	errNoTarGzFound          = errors.New("no tar.gz file found in update directory")
+	errMagexBinaryNotFound   = errors.New("magex binary not found in extracted files")
 )
 
 // Update namespace for auto-update functionality
@@ -117,7 +121,7 @@ func (Update) Install() error {
 	}
 
 	// Install update
-	if err := installUpdate(); err != nil {
+	if err := installUpdate(info, updateDir); err != nil {
 		return fmt.Errorf("failed to install update: %w", err)
 	}
 
@@ -294,10 +298,10 @@ func checkForUpdates(channel UpdateChannel) (*UpdateInfo, error) {
 		ReleaseNotes:    formatReleaseNotes(release.Body),
 	}
 
-	// Find appropriate asset
-	assetName := fmt.Sprintf("%s-%s-%s", repo, runtime.GOOS, runtime.GOARCH)
+	// Find appropriate asset - pattern: mage-x_VERSION_OS_ARCH.tar.gz
+	assetPattern := fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
 	for _, asset := range release.Assets {
-		if strings.Contains(asset.Name, assetName) {
+		if strings.Contains(asset.Name, assetPattern) {
 			info.DownloadURL = asset.BrowserDownloadURL
 			break
 		}
@@ -482,33 +486,119 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	return fileOps.File.WriteFile(targetPath, data, 0o644)
 }
 
+// extractTarGz extracts a tar.gz file to the specified directory
+func extractTarGz(src, dest string) error {
+	// Open the tar.gz file
+	//nolint:gosec // G304: src path validated by caller
+	file, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open tar.gz file: %w", err)
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Printf("failed to close tar.gz file: %v", closeErr)
+		}
+	}()
+
+	// Create gzip reader
+	gzipReader, err := gzip.NewReader(file)
+	if err != nil {
+		return fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+	defer func() {
+		if closeErr := gzipReader.Close(); closeErr != nil {
+			log.Printf("failed to close gzip reader: %v", closeErr)
+		}
+	}()
+
+	// Create tar reader
+	tarReader := tar.NewReader(gzipReader)
+
+	// Extract files
+	for {
+		header, err := tarReader.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read tar header: %w", err)
+		}
+
+		// Skip directories
+		if header.Typeflag == tar.TypeDir {
+			continue
+		}
+
+		// Only extract regular files
+		if header.Typeflag != tar.TypeReg {
+			continue
+		}
+
+		// Create destination file path
+		destPath := filepath.Join(dest, filepath.Base(header.Name))
+
+		// Create the file
+		//nolint:gosec // G304: destPath constructed safely from header
+		destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(header.Mode))
+		if err != nil {
+			return fmt.Errorf("failed to create destination file %s: %w", destPath, err)
+		}
+
+		// Copy file content
+		//nolint:gosec // G110: tar extraction from trusted source
+		_, copyErr := io.Copy(destFile, tarReader)
+		closeErr := destFile.Close()
+
+		if copyErr != nil {
+			return fmt.Errorf("failed to extract file %s: %w", destPath, copyErr)
+		}
+		if closeErr != nil {
+			return fmt.Errorf("failed to close destination file %s: %w", destPath, closeErr)
+		}
+
+		utils.Info("Extracted: %s", filepath.Base(header.Name))
+	}
+
+	return nil
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	//nolint:gosec // G304: src path validated by caller
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer func() {
+		if closeErr := srcFile.Close(); closeErr != nil {
+			log.Printf("failed to close source file: %v", closeErr)
+		}
+	}()
+
+	//nolint:gosec // G304: dst path validated by caller
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer func() {
+		if closeErr := dstFile.Close(); closeErr != nil {
+			log.Printf("failed to close destination file: %v", closeErr)
+		}
+	}()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("failed to copy file: %w", err)
+	}
+
+	return nil
+}
+
 // installUpdate installs the downloaded update
-func installUpdate() error {
+func installUpdate(info *UpdateInfo, updateDir string) error {
 	module, err := utils.GetModuleName()
 	if err != nil {
 		return err
 	}
-
-	// Get the latest version tag
-	latestTag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
-	if err != nil {
-		return fmt.Errorf("failed to get latest tag: %w", err)
-	}
-	latestTag = strings.TrimSpace(latestTag)
-
-	// Get the commit for the tag
-	commit, err := GetRunner().RunCmdOutput("git", "rev-list", "-n", "1", latestTag)
-	if err != nil {
-		return fmt.Errorf("failed to get commit for tag: %w", err)
-	}
-	commit = strings.TrimSpace(commit)
-	if len(commit) > 7 {
-		commit = commit[:7] // Use short commit
-	}
-
-	// Build with proper ldflags
-	ldflags := fmt.Sprintf("-s -w -X main.version=%s -X main.commit=%s -X main.buildDate=%s -X main.buildTime=%s",
-		latestTag, commit, time.Now().Format("2006-01-02"), time.Now().Format("15:04:05"))
 
 	// Get GOPATH for installation location
 	gopath := os.Getenv("GOPATH")
@@ -517,8 +607,80 @@ func installUpdate() error {
 	}
 	outputPath := filepath.Join(gopath, "bin", "magex")
 
-	// Build and install
-	return GetRunner().RunCmd("go", "build", "-ldflags", ldflags, "-o", outputPath, module+"/cmd/magex")
+	// If no binary was downloaded, fall back to go install
+	if info.DownloadURL == "" {
+		utils.Info("No binary asset found, using go install...")
+		return GetRunner().RunCmd("go", "install", fmt.Sprintf("%s@%s", module, info.LatestVersion))
+	}
+
+	utils.Info("Installing downloaded binary...")
+
+	// Find the downloaded tar.gz file
+	files, err := os.ReadDir(updateDir)
+	if err != nil {
+		return fmt.Errorf("failed to read update directory: %w", err)
+	}
+
+	var tarGzPath string
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".tar.gz") {
+			tarGzPath = filepath.Join(updateDir, file.Name())
+			break
+		}
+	}
+
+	if tarGzPath == "" {
+		return errNoTarGzFound
+	}
+
+	// Create temporary extraction directory
+	extractDir := filepath.Join(updateDir, "extract")
+	if mkdirErr := os.MkdirAll(extractDir, 0o750); mkdirErr != nil {
+		return fmt.Errorf("failed to create extraction directory: %w", mkdirErr)
+	}
+
+	// Extract the tar.gz
+	if extractErr := extractTarGz(tarGzPath, extractDir); extractErr != nil {
+		return fmt.Errorf("failed to extract binary: %w", extractErr)
+	}
+
+	// Find the magex binary in extracted files
+	extractedFiles, err := os.ReadDir(extractDir)
+	if err != nil {
+		return fmt.Errorf("failed to read extraction directory: %w", err)
+	}
+
+	var binaryPath string
+	for _, file := range extractedFiles {
+		if file.Name() == "magex" || (runtime.GOOS == "windows" && file.Name() == "magex.exe") {
+			binaryPath = filepath.Join(extractDir, file.Name())
+			break
+		}
+	}
+
+	if binaryPath == "" {
+		return errMagexBinaryNotFound
+	}
+
+	// Move binary to final location
+	if err := os.Rename(binaryPath, outputPath); err != nil {
+		// Try copy + delete if rename fails (cross-filesystem moves)
+		if copyErr := copyFile(binaryPath, outputPath); copyErr != nil {
+			return fmt.Errorf("failed to install binary: %w", copyErr)
+		}
+		if removeErr := os.Remove(binaryPath); removeErr != nil {
+			log.Printf("failed to remove temporary binary: %v", removeErr)
+		}
+	}
+
+	// Ensure binary is executable
+	//nolint:gosec // G302: Binary files need execute permissions
+	if err := os.Chmod(outputPath, 0o755); err != nil {
+		return fmt.Errorf("failed to make binary executable: %w", err)
+	}
+
+	utils.Success("Binary installed to: %s", outputPath)
+	return nil
 }
 
 // getUpdateConfigPath returns the update configuration path

@@ -710,7 +710,7 @@ func registerReleaseCommands(reg *registry.Registry) {
 	reg.MustRegister(
 		registry.NewNamespaceCommand("release", "default").
 			WithDescription("Create a release").
-			WithFunc(func() error { return r.Default() }).
+			WithArgsFunc(func(args ...string) error { return r.Default(args...) }).
 			WithCategory("Release").
 			WithAliases("release").
 			MustBuild(),
@@ -728,22 +728,6 @@ func registerReleaseCommands(reg *registry.Registry) {
 		registry.NewNamespaceCommand("release", "snapshot").
 			WithDescription("Create a snapshot release").
 			WithFunc(func() error { return r.Snapshot() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "install").
-			WithDescription("Install GoReleaser").
-			WithFunc(func() error { return r.Install() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "update").
-			WithDescription("Update GoReleaser").
-			WithFunc(func() error { return r.Update() }).
 			WithCategory("Release").
 			MustBuild(),
 	)
@@ -773,40 +757,8 @@ func registerReleaseCommands(reg *registry.Registry) {
 	)
 
 	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "create").
-			WithDescription("Create a new release").
-			WithFunc(func() error { return r.Create() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "prepare").
-			WithDescription("Prepare release").
-			WithFunc(func() error { return r.Prepare() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "publish").
-			WithDescription("Publish release").
-			WithFunc(func() error { return r.Publish() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "notes").
-			WithDescription("Generate release notes").
-			WithFunc(func() error { return r.Notes() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
 		registry.NewNamespaceCommand("release", "validate").
-			WithDescription("Validate release").
+			WithDescription("Comprehensive release readiness validation").
 			WithFunc(func() error { return r.Validate() }).
 			WithCategory("Release").
 			MustBuild(),
@@ -814,64 +766,16 @@ func registerReleaseCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("release", "clean").
-			WithDescription("Clean release artifacts").
+			WithDescription("Clean release artifacts and build cache").
 			WithFunc(func() error { return r.Clean() }).
 			WithCategory("Release").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "build").
-			WithDescription("Build release artifacts").
-			WithFunc(func() error { return r.Build() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "package").
-			WithDescription("Package release").
-			WithFunc(func() error { return r.Package() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "draft").
-			WithDescription("Create draft release").
-			WithFunc(func() error { return r.Draft() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "alpha").
-			WithDescription("Create alpha release").
-			WithFunc(func() error { return r.Alpha() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "beta").
-			WithDescription("Create beta release").
-			WithFunc(func() error { return r.Beta() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "rc").
-			WithDescription("Create release candidate").
-			WithFunc(func() error { return r.RC() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "final").
-			WithDescription("Create final release").
-			WithFunc(func() error { return r.Final() }).
+		registry.NewNamespaceCommand("release", "localinstall").
+			WithDescription("Build from latest tag and install locally").
+			WithFunc(func() error { return r.LocalInstall() }).
 			WithCategory("Release").
 			MustBuild(),
 	)
@@ -1489,65 +1393,81 @@ func registerBenchCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("bench", "default").
-			WithDescription("Run benchmarks").
+			WithDescription("Run benchmarks with optional parameters (time=duration)").
 			WithFunc(func() error { return b.Default() }).
+			WithArgsFunc(func(args ...string) error { return b.DefaultWithArgs(args...) }).
 			WithCategory("Benchmark").
+			WithExamples("magex bench", "magex bench time=50ms", "magex bench time=10s count=3").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("bench", "compare").
-			WithDescription("Compare benchmark results").
+			WithDescription("Compare benchmark results with optional file parameters").
 			WithFunc(func() error { return b.Compare() }).
+			WithArgsFunc(func(args ...string) error { return b.CompareWithArgs(args...) }).
 			WithCategory("Benchmark").
+			WithExamples("magex bench:compare", "magex bench:compare old=baseline.txt new=current.txt").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("bench", "save").
-			WithDescription("Save benchmark results").
+			WithDescription("Save benchmark results with optional parameters (time=duration, output=file)").
 			WithFunc(func() error { return b.Save() }).
+			WithArgsFunc(func(args ...string) error { return b.SaveWithArgs(args...) }).
 			WithCategory("Benchmark").
+			WithExamples("magex bench:save", "magex bench:save time=1s output=results.txt").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("bench", "cpu").
-			WithDescription("Run CPU benchmarks").
+			WithDescription("Run CPU benchmarks with optional parameters (time=duration, profile=file)").
 			WithFunc(func() error { return b.CPU() }).
+			WithArgsFunc(func(args ...string) error { return b.CPUWithArgs(args...) }).
 			WithCategory("Benchmark").
+			WithExamples("magex bench:cpu", "magex bench:cpu time=30s profile=cpu-profile.out").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("bench", "mem").
-			WithDescription("Run memory benchmarks").
+			WithDescription("Run memory benchmarks with optional parameters (time=duration, profile=file)").
 			WithFunc(func() error { return b.Mem() }).
+			WithArgsFunc(func(args ...string) error { return b.MemWithArgs(args...) }).
 			WithCategory("Benchmark").
+			WithExamples("magex bench:mem", "magex bench:mem time=2s profile=mem-profile.out").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("bench", "profile").
-			WithDescription("Generate benchmark profiles").
+			WithDescription("Generate benchmark profiles with optional parameters (time=duration, cpu-profile=file, mem-profile=file)").
 			WithFunc(func() error { return b.Profile() }).
+			WithArgsFunc(func(args ...string) error { return b.ProfileWithArgs(args...) }).
 			WithCategory("Benchmark").
+			WithExamples("magex bench:profile", "magex bench:profile time=5s cpu-profile=cpu.prof mem-profile=mem.prof").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("bench", "trace").
-			WithDescription("Generate execution traces").
+			WithDescription("Generate execution traces with optional parameters (time=duration, trace=file)").
 			WithFunc(func() error { return b.Trace() }).
+			WithArgsFunc(func(args ...string) error { return b.TraceWithArgs(args...) }).
 			WithCategory("Benchmark").
+			WithExamples("magex bench:trace", "magex bench:trace time=10s trace=bench-trace.out").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("bench", "regression").
-			WithDescription("Run regression benchmarks").
+			WithDescription("Run regression benchmarks with optional parameters (time=duration, update-baseline=true)").
 			WithFunc(func() error { return b.Regression() }).
+			WithArgsFunc(func(args ...string) error { return b.RegressionWithArgs(args...) }).
 			WithCategory("Benchmark").
+			WithExamples("magex bench:regression", "magex bench:regression time=5s update-baseline=true").
 			MustBuild(),
 	)
 }
