@@ -333,11 +333,12 @@ export MAGE_X_TEST_TIMEOUT=15m
 export MAGE_X_PARALLEL=8
 export MAGE_X_LINT_TIMEOUT=10m
 
-# Benchmark timing with parameters (preferred)
+# Benchmark timing with parameters
 magex bench time=50ms         # Quick benchmarks
 magex bench time=10s          # Full benchmarks
 magex bench:cpu time=30s      # CPU profiling
 magex bench:save time=5s output=results.txt
+magex bench time=2s count=5   # With custom count parameter
 
 # Version management examples with new parameter format
 magex version:bump bump=patch              # Bump patch version
@@ -471,28 +472,28 @@ magex build:prebuild      # Pre-build all packages to warm cache
 <summary>🧪 <strong>Testing & Quality</strong></summary>
 
 ```bash
-magex test               # Run complete test suite with linting
-magex test:unit          # Run unit tests only
-magex test:short         # Run short tests (excludes integration tests)
-magex test:race          # Run tests with race detector
-magex test:cover         # Run tests with coverage analysis
-magex test:coverrace     # Run tests with both coverage and race detector
-magex test:bench         # Run benchmark tests
-magex bench              # Run benchmarks with default timing
-magex bench time=50ms    # Run quick benchmarks (50ms duration)
-magex bench time=10s count=3  # Run benchmarks with custom time and count
-magex test:fuzz          # Run fuzz tests (default: 10s)
-magex testFuzzWithTime 30s     # Run fuzz tests with custom duration
-magex testFuzzShortWithTime 1s # Run short fuzz tests with custom duration
-magex test:integration   # Run integration tests
+magex test                     # Run complete test suite with linting
+magex test:unit                # Run unit tests only
+magex test:short               # Run short tests (excludes integration tests)
+magex test:race                # Run tests with race detector
+magex test:cover               # Run tests with coverage analysis
+magex test:coverrace           # Run tests with both coverage and race detector
+magex test:bench               # Run benchmark tests
+magex bench                    # Run benchmarks with default timing
+magex bench time=50ms          # Run quick benchmarks (50ms duration)
+magex bench time=10s count=3   # Run benchmarks with custom time and count
+magex test:fuzz                # Run fuzz tests (default: 10s)
+magex test:fuzz time=30s       # Run fuzz tests with custom duration
+magex test:fuzzShort time=1s   # Run short fuzz tests with custom duration
+magex test:integration         # Run integration tests
 
 # Code Quality & Linting
-magex lint               # Run essential linters
-magex lint:fix           # Auto-fix linting issues + apply formatting
-magex lint:issues        # Scan for TODOs, FIXMEs, nolint directives, and test skips
-magex test:vet           # Run go vet static analysis
-magex format:fix         # Run code formatting
-magex tools:verify       # Show tool version information
+magex lint                     # Run essential linters
+magex lint:fix                 # Auto-fix linting issues + apply formatting
+magex lint:issues              # Scan for TODOs, FIXMEs, nolint directives, and test skips
+magex test:vet                 # Run go vet static analysis
+magex format:fix               # Run code formatting
+magex tools:verify             # Show tool version information
 ```
 
 </details>
@@ -539,6 +540,7 @@ magex metrics:complexity  # Analyze code complexity
 magex bench               # Default benchmark operations
 magex bench time=50ms     # Quick benchmarks (50ms runs)
 magex bench time=10s      # Comprehensive benchmarks (10s runs)
+magex bench count=3       # Run benchmarks 3 times
 magex bench:profile       # Profile application performance
 magex bench:compare       # Compare benchmark results
 magex bench:regression    # Check for performance regressions
@@ -896,8 +898,9 @@ magex test:race test:cover test:fuzz
 # Performance benchmarks
 magex bench                    # Default benchmarks (10s duration)
 magex bench time=50ms          # Quick benchmarks for CI
-magex bench time=10s count=3   # Comprehensive benchmarks
+magex bench time=10s count=3   # Comprehensive benchmarks with count parameter
 magex test:bench               # Via test namespace
+magex test:bench time=30s      # Test namespace with custom timing
 ```
 
 ### Example Projects
