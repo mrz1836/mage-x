@@ -16,32 +16,32 @@ import (
 // Namespace types - these enable namespace:method syntax in mage
 // Each type must be defined as mg.Namespace for mage to recognize it
 type (
-	Build            mg.Namespace
-	Test             mg.Namespace
-	Lint             mg.Namespace
-	Deps             mg.Namespace
-	Tools            mg.Namespace
-	Mod              mg.Namespace
-	Docs             mg.Namespace
-	Git              mg.Namespace
-	Version          mg.Namespace
-	Release          mg.Namespace
-	Metrics          mg.Namespace
-	Install          mg.Namespace
 	Audit            mg.Namespace
-	Configure        mg.Namespace
-	Format           mg.Namespace
-	Generate         mg.Namespace
-	Help             mg.Namespace
-	Init             mg.Namespace
-	Integrations     mg.Namespace
-	Recipes          mg.Namespace
-	Update           mg.Namespace
-	Vet              mg.Namespace
 	Bench            mg.Namespace
+	Build            mg.Namespace
 	CLI              mg.Namespace
+	Configure        mg.Namespace
+	Deps             mg.Namespace
+	Docs             mg.Namespace
 	Enterprise       mg.Namespace
 	EnterpriseConfig mg.Namespace
+	Format           mg.Namespace
+	Generate         mg.Namespace
+	Git              mg.Namespace
+	Help             mg.Namespace
+	Init             mg.Namespace
+	Install          mg.Namespace
+	Integrations     mg.Namespace
+	Lint             mg.Namespace
+	Metrics          mg.Namespace
+	Mod              mg.Namespace
+	Recipes          mg.Namespace
+	Release          mg.Namespace
+	Test             mg.Namespace
+	Tools            mg.Namespace
+	Update           mg.Namespace
+	Version          mg.Namespace
+	Vet              mg.Namespace
 	Wizard           mg.Namespace
 	Workflow         mg.Namespace
 	Yaml             mg.Namespace
