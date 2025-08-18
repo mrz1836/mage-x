@@ -25,7 +25,7 @@ var (
 type Release mg.Namespace
 
 // Default runs production release (requires github_token)
-func (Release) Default() error {
+func (Release) Default(args ...string) error {
 	utils.Header("Running Production Release")
 
 	// Check for GitHub token, preferring github_token
@@ -67,6 +67,20 @@ func (Release) Default() error {
 	}
 
 	utils.Success("Release %s completed successfully", latestTag)
+
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	// Check if godocs parameter is present
+	if utils.HasParam(params, "godocs") {
+		utils.Info("Triggering GoDocs proxy update...")
+		docs := Docs{}
+		if err := docs.GoDocs(); err != nil {
+			utils.Warn("Failed to update GoDocs proxy: %v", err)
+			// Don't fail the release if godocs update fails
+		}
+	}
+
 	return nil
 }
 

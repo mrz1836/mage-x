@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -26,6 +28,7 @@ var (
 	errNoDocumentationToolsAvailable = errors.New("no documentation tools available")
 	errNoGeneratedDocumentationFound = errors.New("no generated documentation found - run 'mage docsGenerate' first")
 	errNoMarkdownFilesFound          = errors.New("no markdown files found in generated documentation")
+	errGoDocsHTTPError               = errors.New("failed to trigger pkg.go.dev sync: HTTP error")
 )
 
 const (
@@ -100,17 +103,43 @@ func (Docs) GoDocs() error {
 
 	utils.Info("Triggering sync for %s@%s", module, currentVersion)
 
-	// Use curl to trigger the proxy
-	output, err := GetRunner().RunCmdOutput("curl", "-sSf", proxyURL)
+	// Use HTTP client to trigger the proxy
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequestWithContext(context.Background(), "GET", proxyURL, http.NoBody)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to trigger pkg.go.dev sync: %w", err)
 	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			utils.Warn("Failed to close response body: %v", closeErr)
+		}
+	}()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%w: HTTP %d - %s", errGoDocsHTTPError, resp.StatusCode, string(body))
+	}
 
 	utils.Success("Successfully triggered pkg.go.dev sync")
-	utils.Info("Response: %s", strings.TrimSpace(output))
+	utils.Info("Response: %s", strings.TrimSpace(string(body)))
 	utils.Info("View at: https://pkg.go.dev/%s", module)
 
 	return nil
+}
+
+// Update is an alias for GoDocs - triggers pkg.go.dev sync
+func (Docs) Update() error {
+	return Docs{}.GoDocs()
 }
 
 // Generate generates Go documentation for all packages

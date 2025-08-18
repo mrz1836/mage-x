@@ -104,9 +104,6 @@ func RegisterAll(reg *registry.Registry) {
 	// Register Yaml namespace commands
 	registerYamlCommands(reg)
 
-	// Register Releases namespace commands
-	registerReleasesCommands(reg)
-
 	// Register EnterpriseConfig namespace commands
 	registerEnterpriseConfigCommands(reg)
 
@@ -2286,91 +2283,6 @@ func registerYamlCommands(reg *registry.Registry) {
 			WithDescription("Generate YAML templates").
 			WithFunc(func() error { return y.Template() }).
 			WithCategory("Configuration").
-			MustBuild(),
-	)
-}
-
-// registerReleasesCommands registers all Releases namespace commands
-func registerReleasesCommands(reg *registry.Registry) {
-	var r mage.Releases
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "create").
-			WithDescription("Create a new release").
-			WithFunc(func() error { return r.Create() }).
-			WithCategory("Release Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "publish").
-			WithDescription("Publish a release").
-			WithFunc(func() error { return r.Publish() }).
-			WithCategory("Release Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "stable").
-			WithDescription("Create stable releases").
-			WithFunc(func() error { return r.Stable() }).
-			WithCategory("Release Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "beta").
-			WithDescription("Create beta releases").
-			WithFunc(func() error { return r.Beta() }).
-			WithCategory("Release Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "edge").
-			WithDescription("Create edge releases").
-			WithFunc(func() error { return r.Edge() }).
-			WithCategory("Release Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "draft").
-			WithDescription("Create draft releases").
-			WithFunc(func() error { return r.Draft() }).
-			WithCategory("Release Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "promote").
-			WithDescription("Promote a release").
-			WithFunc(func() error { return r.Promote() }).
-			WithCategory("Release Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "status").
-			WithDescription("Show release status").
-			WithFunc(func() error { return r.Status() }).
-			WithCategory("Release Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "channels").
-			WithDescription("List available release channels").
-			WithFunc(func() error { return r.Channels() }).
-			WithCategory("Release Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("releases", "cleanup").
-			WithDescription("Clean up old releases").
-			WithFunc(func() error { return r.Cleanup() }).
-			WithCategory("Release Management").
 			MustBuild(),
 	)
 }

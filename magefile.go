@@ -42,7 +42,6 @@ type (
 	CLI              mg.Namespace
 	Enterprise       mg.Namespace
 	EnterpriseConfig mg.Namespace
-	Releases         mg.Namespace
 	Wizard           mg.Namespace
 	Workflow         mg.Namespace
 	Yaml             mg.Namespace
@@ -2151,57 +2150,6 @@ func (e EnterpriseConfig) Import() error {
 func (e EnterpriseConfig) Schema() error {
 	var impl mage.EnterpriseConfigNamespace
 	return impl.Schema()
-}
-
-// Releases namespace methods
-func (r Releases) Create() error {
-	var impl mage.Releases
-	return impl.Create()
-}
-
-func (r Releases) Publish() error {
-	var impl mage.Releases
-	return impl.Publish()
-}
-
-func (r Releases) Stable() error {
-	var impl mage.Releases
-	return impl.Stable()
-}
-
-func (r Releases) Beta() error {
-	var impl mage.Releases
-	return impl.Beta()
-}
-
-func (r Releases) Edge() error {
-	var impl mage.Releases
-	return impl.Edge()
-}
-
-func (r Releases) Draft() error {
-	var impl mage.Releases
-	return impl.Draft()
-}
-
-func (r Releases) Promote() error {
-	var impl mage.Releases
-	return impl.Promote()
-}
-
-func (r Releases) Status() error {
-	var impl mage.Releases
-	return impl.Status()
-}
-
-func (r Releases) Channels() error {
-	var impl mage.Releases
-	return impl.Channels()
-}
-
-func (r Releases) Cleanup() error {
-	var impl mage.Releases
-	return impl.Cleanup()
 }
 
 // Wizard namespace methods

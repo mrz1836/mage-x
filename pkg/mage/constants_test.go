@@ -291,20 +291,6 @@ func (ts *ConstantsTestSuite) TestCoverageModes() {
 	ts.Require().Equal("atomic", CoverModeAtomic)
 }
 
-// TestReleaseChannels tests release channel constants
-func (ts *ConstantsTestSuite) TestReleaseChannels() {
-	channels := []string{ChannelStable, ChannelBeta, ChannelEdge, ChannelNightly}
-	for _, channel := range channels {
-		ts.Require().NotEmpty(channel, "Release channel should not be empty")
-		ts.Require().Equal(strings.ToLower(channel), channel,
-			"Release channel (%s) should be lowercase", channel)
-	}
-
-	ts.Require().Equal("stable", ChannelStable)
-	ts.Require().Equal("beta", ChannelBeta)
-	ts.Require().Equal("edge", ChannelEdge)
-	ts.Require().Equal("nightly", ChannelNightly)
-}
 
 // TestToolVersions tests default tool version constants
 func (ts *ConstantsTestSuite) TestToolVersions() {

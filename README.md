@@ -107,7 +107,7 @@
   _Pre-built development patterns with templates and automation—from fresh project setup to complete CI/CD workflows._
   <br/><br/>
 - **Professional Release Management**<br/>
-  _Multi-platform asset building, automated versioning, GitHub integration, and release automation for production deployments._
+  _Multi-platform asset building, automated versioning, GitHub integration, GoDocs proxy sync, and release automation for production deployments._
   <br/><br/>
 - **Smart Documentation System**<br/>
   _Hybrid pkgsite/godoc support with auto-detection, port management, and cross-platform browser integration._
@@ -549,6 +549,8 @@ magex docs:generate      # Generate Go package documentation from source code
 magex docs:serve         # Serve documentation locally with hybrid pkgsite/godoc support
 magex docs:build         # Build enhanced static documentation files with metadata
 magex docs:check         # Validate documentation completeness and quality
+magex docs:update        # Update GoDocs proxy (trigger pkg.go.dev sync)
+magex docs:godocs        # Update GoDocs proxy (alias for docs:update)
 ```
 
 </details>
@@ -593,13 +595,11 @@ magex version:bump bump=major major-confirm push dry-run  # Preview major bump w
 
 ```bash
 magex release              # Create a new release from the latest tag
+magex release godocs       # Create a release and update GoDocs proxy
 magex release:default      # Create a new release from the latest tag
+magex release:test         # Dry-run release without publishing
+magex release:snapshot     # Build release artifacts without git tag
 magex release:localinstall # Build from latest tag and install locally
-magex releases:stable      # Create stable releases
-magex releases:beta        # Create beta releases
-magex releases:edge        # Create edge releases
-magex releases:channels    # List available release channels
-magex releases:cleanup     # Clean up old releases
 ```
 
 </details>

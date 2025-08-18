@@ -133,14 +133,6 @@ const (
 	CoverModeAtomic = "atomic"
 )
 
-// Release channels
-const (
-	ChannelStable  = "stable"
-	ChannelBeta    = "beta"
-	ChannelEdge    = "edge"
-	ChannelNightly = "nightly"
-)
-
 // getToolVersionOrWarn returns tool version from environment or warns if not found
 func getToolVersionOrWarn(envVar, legacyEnvVar, toolName string) string {
 	// Check primary environment variable

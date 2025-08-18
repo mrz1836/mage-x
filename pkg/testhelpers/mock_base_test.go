@@ -561,8 +561,7 @@ func TestMockHandler(t *testing.T) {
 
 // Example of how the MockBase can be used to reduce duplication
 func TestMockBaseUsageExample(t *testing.T) {
-	// This demonstrates how our generic MockBase reduces the duplication
-	// seen in files like pkg/common/channels/manager_test.go
+	// This demonstrates how our generic MockBase reduces duplication
 
 	t.Run("Comparison with existing mock patterns", func(t *testing.T) {
 		// Before: Each test file creates its own mock with similar patterns

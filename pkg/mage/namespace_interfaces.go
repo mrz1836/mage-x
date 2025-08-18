@@ -241,7 +241,7 @@ type GitNamespace interface {
 // ReleaseNamespace interface defines the contract for release operations
 type ReleaseNamespace interface {
 	// Default creates a default release
-	Default() error
+	Default(args ...string) error
 
 	// Create creates a new release
 	Create() error
@@ -302,6 +302,12 @@ type DocsNamespace interface {
 
 	// Markdown generates Markdown documentation
 	Markdown() error
+
+	// GoDocs triggers GoDocs proxy sync
+	GoDocs() error
+
+	// Update triggers GoDocs proxy sync (alias for GoDocs)
+	Update() error
 }
 
 // DeployNamespace interface defines the contract for deployment operations
