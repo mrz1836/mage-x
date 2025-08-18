@@ -29,6 +29,8 @@ updates:
   # ──────────────────────────────────────────────────────────────
   # 1. Go Modules (go.mod / go.sum)
   # ──────────────────────────────────────────────────────────────
+
+  # Root module
   - package-ecosystem: "gomod"
     directory: "/"
     target-branch: "master"
@@ -37,6 +39,105 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "America/New_York"
+    allow:
+      - dependency-type: "direct"
+    groups:
+      security-deps:
+        patterns:
+          - "*crypto*"
+          - "*security*"
+          - "*auth*"
+          - "*jwt*"
+          - "*oauth*"
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 10
+    assignees: ["mrz1836"]
+    labels: ["chore", "dependencies", "gomod"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Test module
+  - package-ecosystem: "gomod"
+    directory: "/.github/test-module"
+    target-branch: "master"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:05"
+      timezone: "America/New_York"
+    allow:
+      - dependency-type: "direct"
+    groups:
+      security-deps:
+        patterns:
+          - "*crypto*"
+          - "*security*"
+          - "*auth*"
+          - "*jwt*"
+          - "*oauth*"
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 10
+    assignees: ["mrz1836"]
+    labels: ["chore", "dependencies", "gomod"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Override commands example
+  - package-ecosystem: "gomod"
+    directory: "/examples/override-commands"
+    target-branch: "master"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:10"
+      timezone: "America/New_York"
+    allow:
+      - dependency-type: "direct"
+    groups:
+      security-deps:
+        patterns:
+          - "*crypto*"
+          - "*security*"
+          - "*auth*"
+          - "*jwt*"
+          - "*oauth*"
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 10
+    assignees: ["mrz1836"]
+    labels: ["chore", "dependencies", "gomod"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # With config example
+  - package-ecosystem: "gomod"
+    directory: "/examples/with-config"
+    target-branch: "master"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:12"
+      timezone: "America/New_York"
+    allow:
+      - dependency-type: "direct"
+    groups:
+      security-deps:
+        patterns:
+          - "*crypto*"
+          - "*security*"
+          - "*auth*"
+          - "*jwt*"
+          - "*oauth*"
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 10
+    assignees: ["mrz1836"]
+    labels: ["chore", "dependencies", "gomod"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
     allow:
       - dependency-type: "direct"
     groups:
