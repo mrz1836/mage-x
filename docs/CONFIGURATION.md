@@ -455,7 +455,6 @@ export TEST_TIMEOUT="15m"
 # Tool configuration
 export PARALLEL="8"
 export LINT_TIMEOUT="10m"
-export FUZZ_TIME="30s"
 
 # Benchmark timing (for backward compatibility)
 export BENCH_TIME="10s"

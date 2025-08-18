@@ -92,10 +92,10 @@
 <br/>
 
 - **Truly Zero-Configuration**<br/>
-  _No magefile.go needed. No imports. No wrappers. Just install `magex` and all 343 commands work immediately in any Go project._
+  _No magefile.go needed. No imports. No wrappers. Just install `magex` and all built-in and custom commands work immediately in any Go project._
   <br/><br/>
 - **Drop-in Mage Replacement**<br/>
-  _`magex` is a superset of `mage` with all MAGE-X commands built-in. Your existing magefiles still work, now enhanced with 343 professional commands._
+  _`magex` is a superset of `mage` with all MAGE-X commands built-in. Your existing magefiles still work, now enhanced with 300+ professional commands._
   <br/><br/>
 - **Cross-Platform Excellence**<br/>
   _Full support for Linux, macOS, and Windows with multi-architecture builds, parallel execution, and CPU-aware optimization._
@@ -132,7 +132,7 @@ MAGE-X automatically detects your project structure and **just works**:
 | **Multi-Binary** `cmd/*/main.go`    | Auto-detects & builds first found |
 | **Library** No main package         | Verifies compilation with `./...` |
 
-> 📖 **Need more details?** See the [Complete Quick Start Guide](docs/QUICK_START.md) for project-specific examples and troubleshooting.
+> 📖 See the [Complete Quick Start Guide](docs/QUICK_START.md) for project-specific examples and troubleshooting.
 
 <br>
 
@@ -332,7 +332,6 @@ export MAGE_X_TEST_TIMEOUT=15m
 # Tool configuration
 export MAGE_X_PARALLEL=8
 export MAGE_X_LINT_TIMEOUT=10m
-export MAGE_X_FUZZ_TIME=30s
 
 # Benchmark timing with parameters (preferred)
 magex bench time=50ms         # Quick benchmarks
@@ -368,7 +367,7 @@ For comprehensive documentation, visit the [docs](docs) directory:
 
 ### Available Commands
 
-MAGE-X provides 343 commands organized by functionality. All commands work instantly through the `magex` CLI.
+MAGE-X provides 300+ commands organized by functionality. All commands work instantly through the `magex` CLI.
 
 <details>
 <summary>🎯 <strong>Essential Commands</strong></summary>
@@ -482,7 +481,9 @@ magex test:bench         # Run benchmark tests
 magex bench              # Run benchmarks with default timing
 magex bench time=50ms    # Run quick benchmarks (50ms duration)
 magex bench time=10s count=3  # Run benchmarks with custom time and count
-magex test:fuzz          # Run fuzz tests
+magex test:fuzz          # Run fuzz tests (default: 10s)
+magex testFuzzWithTime 30s     # Run fuzz tests with custom duration
+magex testFuzzShortWithTime 1s # Run short fuzz tests with custom duration
 magex test:integration   # Run integration tests
 
 # Code Quality & Linting
@@ -768,7 +769,7 @@ magex uninstall           # Remove installation
 
 ### 📋 Complete Command List
 
-Run `magex -l` to see a plain list of all available commands (343 commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
+Run `magex -l` to see a plain list of all available commands (300+ commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
 
 <br/>
 

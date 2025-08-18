@@ -53,16 +53,17 @@ tests/.mage-cache/
 /pkg/utils/.mage/
 
 # Documentation and generated files
+/benchmarks/magex
+/cmd/magex/magex
 /docs/build
 /docs/generated
-/pkg/mage/docs
-/magex
-/examples/basic/test-build
 /examples/basic/magefile-compiled
-/cmd/magex/magex
+/examples/basic/test-build
 /examples/override-commands/override-commands
-/tests/compatibility/magex
+/magex
 /pkg/mage/.mage/enterprise/backups/
 /pkg/mage/.mage/enterprise/deployments
 /pkg/mage/.mage/profiles
-/benchmarks/magex
+/pkg/mage/docs
+/pkg/security/testdata/
+/tests/compatibility/magex

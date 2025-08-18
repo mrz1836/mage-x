@@ -538,8 +538,13 @@ func isMultiModuleCoverage(coverageFile string) bool {
 	return false
 }
 
-// Fuzz runs fuzz tests
+// Fuzz runs fuzz tests with default time (10s)
 func (Test) Fuzz() error {
+	return Test{}.FuzzWithTime(10 * time.Second)
+}
+
+// FuzzWithTime runs fuzz tests with specified duration
+func (Test) FuzzWithTime(fuzzTime time.Duration) error {
 	utils.Header("Running Fuzz Tests")
 
 	config, err := GetConfig()
@@ -560,7 +565,8 @@ func (Test) Fuzz() error {
 		return nil
 	}
 
-	fuzzTime := utils.GetEnv("FUZZ_TIME", "10s")
+	// Use provided duration
+	fuzzTimeStr := fuzzTime.String()
 
 	for _, pkg := range packages {
 		// List fuzz tests in package
@@ -578,7 +584,7 @@ func (Test) Fuzz() error {
 			utils.Info("Fuzzing %s.%s", pkg, test)
 
 			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTime)
+			args = append(args, "-fuzztime", fuzzTimeStr)
 
 			if config.Test.Verbose {
 				args = append(args, "-v")
@@ -596,8 +602,13 @@ func (Test) Fuzz() error {
 	return nil
 }
 
-// FuzzShort runs fuzz tests with shorter duration for quick feedback
+// FuzzShort runs fuzz tests with default short time (5s)
 func (Test) FuzzShort() error {
+	return Test{}.FuzzShortWithTime(5 * time.Second)
+}
+
+// FuzzShortWithTime runs fuzz tests with specified duration (optimized for quick feedback)
+func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 	utils.Header("Running Short Fuzz Tests")
 
 	config, err := GetConfig()
@@ -618,8 +629,8 @@ func (Test) FuzzShort() error {
 		return nil
 	}
 
-	// Use shorter fuzz time for quick feedback (5s instead of 10s)
-	fuzzTime := utils.GetEnv("FUZZ_TIME", "5s")
+	// Use provided duration
+	fuzzTimeStr := fuzzTime.String()
 
 	for _, pkg := range packages {
 		// List fuzz tests in package
@@ -637,7 +648,7 @@ func (Test) FuzzShort() error {
 			utils.Info("Fuzzing %s.%s", pkg, test)
 
 			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTime)
+			args = append(args, "-fuzztime", fuzzTimeStr)
 
 			if config.Test.Verbose {
 				args = append(args, "-v")

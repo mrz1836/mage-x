@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/mage-x/pkg/mage"
@@ -373,6 +374,18 @@ func TestFuzz() error {
 func TestFuzzShort() error {
 	var t mage.Test
 	return t.FuzzShort()
+}
+
+// TestFuzzWithTime runs fuzz tests with custom duration
+func TestFuzzWithTime(fuzzTime time.Duration) error {
+	var t mage.Test
+	return t.FuzzWithTime(fuzzTime)
+}
+
+// TestFuzzShortWithTime runs short fuzz tests with custom duration
+func TestFuzzShortWithTime(fuzzTime time.Duration) error {
+	var t mage.Test
+	return t.FuzzShortWithTime(fuzzTime)
 }
 
 // TestIntegration runs integration tests

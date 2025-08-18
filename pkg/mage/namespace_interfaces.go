@@ -3,6 +3,7 @@ package mage
 
 import (
 	"sync"
+	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/providers"
 )
@@ -71,6 +72,12 @@ type TestNamespace interface {
 
 	// Fuzz runs fuzz tests
 	Fuzz() error
+
+	// FuzzWithTime runs fuzz tests with specified duration
+	FuzzWithTime(fuzzTime time.Duration) error
+
+	// FuzzShortWithTime runs short fuzz tests with specified duration
+	FuzzShortWithTime(fuzzTime time.Duration) error
 
 	// Bench runs benchmarks
 	Bench(params ...string) error

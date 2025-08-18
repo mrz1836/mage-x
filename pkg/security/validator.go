@@ -51,7 +51,7 @@ const (
 
 var (
 	// Version regex for semantic versioning
-	versionRegex = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[\p{L}\p{N}\p{So}\-\.]+)?(\+[\p{L}\p{N}\p{So}\-\.]+)?$`)
+	versionRegex = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[a-zA-Z0-9\-\.]+)?(\+[a-zA-Z0-9\-\.]+)?$`)
 
 	// Git ref regex (branch names, tags)
 	gitRefRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_./]+$`)
