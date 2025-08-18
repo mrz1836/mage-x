@@ -4,13 +4,22 @@
 package mage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
+
+// generateOutputPath creates an output path for a binary based on name and platform
+// This is a helper function for benchmarking that mimics the logic from build.go
+func generateOutputPath(binary, goos, goarch string) string {
+	p := utils.Platform{OS: goos, Arch: goarch}
+	return fmt.Sprintf("%s-%s-%s%s", binary, p.OS, p.Arch, utils.GetBinaryExt(p))
+}
 
 // BenchmarkCommandExecution benchmarks secure command execution
 func BenchmarkCommandExecution(b *testing.B) {
@@ -424,7 +433,7 @@ func BenchmarkPlatformParsing(b *testing.B) {
 	b.Run("parsePlatform", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for _, p := range platforms {
-				_, _, _ = parsePlatform(p) //nolint:errcheck // Benchmark ignores errors
+				_, _ = utils.ParsePlatform(p) //nolint:errcheck // Benchmark ignores errors
 			}
 		}
 	})
@@ -432,8 +441,8 @@ func BenchmarkPlatformParsing(b *testing.B) {
 	b.Run("generateOutputPath", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for _, p := range platforms {
-				goos, goarch, _ := parsePlatform(p) //nolint:errcheck // Benchmark ignores errors
-				_ = generateOutputPath("myapp", goos, goarch)
+				platform, _ := utils.ParsePlatform(p) //nolint:errcheck // Benchmark ignores errors
+				_ = generateOutputPath("myapp", platform.OS, platform.Arch)
 			}
 		}
 	})
