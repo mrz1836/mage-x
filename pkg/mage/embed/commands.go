@@ -710,7 +710,7 @@ func registerReleaseCommands(reg *registry.Registry) {
 	reg.MustRegister(
 		registry.NewNamespaceCommand("release", "default").
 			WithDescription("Create a release").
-			WithFunc(func() error { return r.Default() }).
+			WithArgsFunc(func(args ...string) error { return r.Default(args...) }).
 			WithCategory("Release").
 			WithAliases("release").
 			MustBuild(),
