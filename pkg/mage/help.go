@@ -679,6 +679,177 @@ func getAllCommands() []HelpCommand {
 			},
 			SeeAlso: []string{"configure", "format"},
 		},
+
+		// Dependencies commands
+		{
+			Name:        "deps",
+			Namespace:   "deps",
+			Description: "Dependency management",
+			Usage:       "mage deps COMMAND",
+			Examples: []string{
+				"mage deps:update",
+				"mage deps:tidy",
+				"mage deps:download",
+				"mage deps:audit",
+			},
+			SeeAlso: []string{"mod", "tools"},
+		},
+
+		// Module commands
+		{
+			Name:        "mod",
+			Namespace:   "mod",
+			Description: "Go module management",
+			Usage:       "mage mod COMMAND",
+			Examples: []string{
+				"mage mod:tidy",
+				"mage mod:update",
+				"mage mod:verify",
+				"mage mod:download",
+			},
+			SeeAlso: []string{"deps", "tools"},
+		},
+
+		// Documentation commands
+		{
+			Name:        "docs",
+			Namespace:   "docs",
+			Description: "Documentation generation and serving",
+			Usage:       "mage docs COMMAND",
+			Examples: []string{
+				"mage docs:serve",
+				"mage docs:generate",
+				"mage docs:build",
+				"mage docs:godocs",
+			},
+			SeeAlso: []string{"help", "build"},
+		},
+
+		// Git commands
+		{
+			Name:        "git",
+			Namespace:   "git",
+			Description: "Git operations and version control",
+			Usage:       "mage git COMMAND",
+			Examples: []string{
+				"mage git:status",
+				"mage git:commit message='fix: bug'",
+				"mage git:tag version=1.2.3",
+			},
+			SeeAlso: []string{"version", "release"},
+		},
+
+		// Tools commands
+		{
+			Name:        "tools",
+			Namespace:   "tools",
+			Description: "Development tool management",
+			Usage:       "mage tools COMMAND",
+			Examples: []string{
+				"mage tools:install",
+				"mage tools:update",
+				"mage tools:verify",
+				"mage tools:vulncheck",
+			},
+			SeeAlso: []string{"deps", "install"},
+		},
+
+		// Benchmarking commands
+		{
+			Name:        "bench",
+			Namespace:   "bench",
+			Description: "Performance benchmarking and profiling",
+			Usage:       "mage bench [options]",
+			Examples: []string{
+				"mage bench",
+				"mage bench time=50ms",
+				"mage bench:cpu time=30s",
+				"mage bench:profile",
+			},
+			SeeAlso: []string{"test", "metrics"},
+		},
+
+		// Metrics commands
+		{
+			Name:        "metrics",
+			Namespace:   "metrics",
+			Description: "Code metrics and analysis",
+			Usage:       "mage metrics COMMAND",
+			Examples: []string{
+				"mage metrics:loc",
+				"mage metrics:coverage",
+				"mage metrics:complexity",
+			},
+			SeeAlso: []string{"test", "bench"},
+		},
+
+		// Vet commands
+		{
+			Name:        "vet",
+			Namespace:   "vet",
+			Description: "Code vetting and static analysis",
+			Usage:       "mage vet [options]",
+			Examples: []string{
+				"mage vet:default",
+				"mage vet:all",
+				"mage vet:shadow",
+			},
+			SeeAlso: []string{"lint", "test"},
+		},
+
+		// Update commands
+		{
+			Name:        "update",
+			Namespace:   "update",
+			Description: "Update management",
+			Usage:       "mage update COMMAND",
+			Examples: []string{
+				"mage update:check",
+				"mage update:install",
+			},
+			SeeAlso: []string{"version", "tools"},
+		},
+
+		// CLI commands
+		{
+			Name:        "cli",
+			Namespace:   "cli",
+			Description: "CLI operations and utilities",
+			Usage:       "mage cli COMMAND",
+			Examples: []string{
+				"mage cli:help",
+				"mage cli:version",
+				"mage cli:completion",
+			},
+			SeeAlso: []string{"help", "wizard"},
+		},
+
+		// Wizard commands
+		{
+			Name:        "wizard",
+			Namespace:   "wizard",
+			Description: "Interactive setup wizards",
+			Usage:       "mage wizard COMMAND",
+			Examples: []string{
+				"mage wizard:setup",
+				"mage wizard:config",
+				"mage wizard:project",
+			},
+			SeeAlso: []string{"init", "configure"},
+		},
+
+		// Generate commands
+		{
+			Name:        "generate",
+			Namespace:   "generate",
+			Description: "Code generation",
+			Usage:       "mage generate [options]",
+			Examples: []string{
+				"mage generate:default",
+				"mage generate:clean",
+			},
+			SeeAlso: []string{"build", "init"},
+		},
 	}
 }
 
