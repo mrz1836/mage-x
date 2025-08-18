@@ -157,6 +157,8 @@ magex format:fix    # Format your code
 
 > 💡 **Why two steps?** The `go install` command doesn't embed version information, so `magex update:install` downloads the latest pre-built release with proper version info. After step 2, `magex --version` will show the correct version instead of "dev".
 
+<br>
+
 ### Quick Project Check
 ```bash
 # See what MAGE-X detects in your project:
@@ -586,7 +588,7 @@ magex version:validate     # Validate version format
 
 # Version Bump Examples (now using parameters)
 magex version:bump                         # Bump patch version (default)
-magex version:bump bump=minor              # Bump minor version  
+magex version:bump bump=minor              # Bump minor version
 magex version:bump bump=major major-confirm # Bump major version with confirmation
 magex version:bump bump=minor push         # Bump minor and push to remote
 
