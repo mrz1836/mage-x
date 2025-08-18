@@ -706,7 +706,7 @@ VERBOSE=true mage build
 
 **2. Dry Run Mode**
 ```bash
-DRY_RUN=true mage build
+magex version:bump dry-run  # For version management
 ```
 
 **3. Debug Logging**

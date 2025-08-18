@@ -459,7 +459,7 @@ MAGE-X includes a sophisticated hybrid documentation system with enterprise-grad
 - **Port Management**: Automatic port detection and conflict resolution
 - **Cross-Platform Browser Opening**: Native browser launching on macOS, Linux, and Windows
 - **CI/CD Ready**: Detects CI environments and adjusts behavior accordingly
-- **Environment Control**: Override tool selection with `DOCS_TOOL=pkgsite|godoc` and `DOCS_PORT=8080`
+- **Configuration Control**: Override tool selection with `docs.tool: "pkgsite"` and `docs.port: 8080` in .mage.yaml
 
 ### Available Documentation Commands
 

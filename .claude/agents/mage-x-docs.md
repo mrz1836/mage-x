@@ -47,7 +47,7 @@ When invoked, you must follow these steps:
 6. **Execute Documentation Workflow**
    - Use `mage docs` for combined generation and serving
    - Handle both development and CI/CD environments
-   - Support environment variables (DOCS_TOOL, DOCS_PORT)
+   - Support configuration parameters (docs.tool, docs.port)
    - Optimize for enterprise-scale documentation serving
 
 7. **Cross-Platform Testing**

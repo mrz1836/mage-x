@@ -148,6 +148,7 @@ magex update:install
 # Now use it in ANY Go project (no setup!)
 magex build         # Automatically detects & builds your project
 magex test          # Run tests
+magex bench         # Run benchmarks
 magex lint:fix      # Fix linting issues
 magex format:fix    # Format your code
 
@@ -334,10 +335,11 @@ export MAGE_X_LINT_TIMEOUT=10m
 export MAGE_X_FUZZ_TIME=30s
 export MAGE_X_BENCH_TIME=10s
 
-# Version management
-export BUMP=minor      # Version bump type: patch (default), minor, major
-export PUSH=true       # Push tag to remote after creation
-export DRY_RUN=true    # Preview version bump without making changes
+# Version management examples with new parameter format
+magex version:bump bump=patch              # Bump patch version
+magex version:bump bump=minor push         # Bump minor and push
+magex git:tag version=1.2.3                # Create git tag
+magex git:commit message="fix: bug fix"    # Commit with message
 ```
 
 </details>
@@ -378,6 +380,7 @@ magex -search test       # Find specific commands
 magex                    # Run default build
 magex build              # Build for current platform
 magex test               # Run complete test suite
+magex bench              # Run benchmarks
 magex lint:fix           # Auto-fix linting issues
 magex release:default    # Create a new release
 ```
@@ -413,9 +416,11 @@ magex init:makefile       # Create Makefile
 magex init:editorconfig   # Create .editorconfig
 
 # Recipe Management
-magex recipes:list        # List available recipes
-magex recipes:run         # Run a specific recipe
-RECIPE=fresh-start magex recipes:run  # Run the fresh-start recipe
+magex recipes:list                    # List available recipes
+magex recipes:show recipe=fresh-start # Show recipe details
+magex recipes:run recipe=fresh-start  # Run the fresh-start recipe
+magex recipes:search term=docker      # Search for recipes
+magex recipes:create recipe=my-recipe # Create a custom recipe
 ```
 
 </details>
@@ -469,6 +474,7 @@ magex test:race          # Run tests with race detector
 magex test:cover         # Run tests with coverage analysis
 magex test:coverrace     # Run tests with both coverage and race detector
 magex test:bench         # Run benchmark tests
+magex bench              # Run benchmarks (alias for test:bench)
 magex test:fuzz          # Run fuzz tests
 magex test:integration   # Run integration tests
 
@@ -552,10 +558,11 @@ magex docs:check         # Validate documentation completeness and quality
 
 ```bash
 # Git Operations
-magex git:status                                # Show git repository status
-message="fix: commit message" magex git:commit  # Commit changes (requires message env var)
-version="1.2.3" magex git:tag                   # Create and push a new tag (requires version env var)
-magex git:push                                  # Push changes to remote (current branch)
+magex git:status                           # Show git repository status
+magex git:commit message="fix: commit message"  # Commit changes with message parameter
+magex git:tag version=1.2.3               # Create and push a new tag with version parameter
+magex git:tagremove version=1.2.3          # Remove a tag
+magex git:tagupdate version=1.2.3          # Force update a tag
 
 # Version Management
 magex version:show         # Display current version information
@@ -567,16 +574,16 @@ magex version:tag          # Create version tag
 magex version:compare      # Compare two versions
 magex version:validate     # Validate version format
 
-# Version Bump Examples
-BUMP=patch magex version:bump                # Bump patch version (default)
-BUMP=minor magex version:bump                # Bump minor version
-BUMP=major magex version:bump                # Bump major version
-BUMP=minor PUSH=true magex version:bump      # Bump minor and push to remote
+# Version Bump Examples (now using parameters)
+magex version:bump                         # Bump patch version (default)
+magex version:bump bump=minor              # Bump minor version  
+magex version:bump bump=major major-confirm # Bump major version with confirmation
+magex version:bump bump=minor push         # Bump minor and push to remote
 
 # Dry-run mode (preview changes without making them)
-DRY_RUN=true magex version:bump                          # Preview patch bump
-DRY_RUN=true BUMP=minor magex version:bump               # Preview minor bump
-DRY_RUN=true BUMP=major PUSH=true magex version:bump     # Preview major bump with push
+magex version:bump dry-run                 # Preview patch bump
+magex version:bump bump=minor dry-run      # Preview minor bump
+magex version:bump bump=major major-confirm push dry-run  # Preview major bump with push
 ```
 
 </details>
@@ -585,13 +592,14 @@ DRY_RUN=true BUMP=major PUSH=true magex version:bump     # Preview major bump wi
 <summary>🚀 <strong>Release Management</strong></summary>
 
 ```bash
-magex release:default     # Create a new release from the latest tag
+magex release              # Create a new release from the latest tag
+magex release:default      # Create a new release from the latest tag
 magex release:localinstall # Build from latest tag and install locally
-magex releases:stable     # Create stable releases
-magex releases:beta       # Create beta releases
-magex releases:edge       # Create edge releases
-magex releases:channels   # List available release channels
-magex releases:cleanup    # Clean up old releases
+magex releases:stable      # Create stable releases
+magex releases:beta        # Create beta releases
+magex releases:edge        # Create edge releases
+magex releases:channels    # List available release channels
+magex releases:cleanup     # Clean up old releases
 ```
 
 </details>
@@ -768,7 +776,7 @@ MAGE-X includes a hybrid documentation system with auto-detection and cross-plat
 - **Auto-detection**: Automatically detects and uses the best available documentation tool
 - **Hybrid Support**: Supports both `pkgsite` (modern) and `godoc` (classic) with smart fallback
 - **Auto-installation**: Automatically installs missing tools when needed
-- **Environment Control**: Override tool selection with `DOCS_TOOL=pkgsite|godoc`
+- **Configuration Control**: Override tool selection with `docs.tool` in .mage.yaml
 
 #### Multiple Serving Modes
 ```bash
@@ -872,6 +880,7 @@ magex test
 magex test:race test:cover test:fuzz
 
 # Performance benchmarks
+magex bench
 magex test:bench
 ```
 
