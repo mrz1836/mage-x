@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -405,7 +404,11 @@ func openBrowser(url string) {
 func (Docs) ServePkgsite() error {
 	utils.Header("Starting Pkgsite Documentation Server")
 
-	server := buildDocServer(DocToolPkgsite, DocModeProject, getPortFromEnv(DefaultPkgsitePort))
+	config, err := GetConfig()
+	if err != nil {
+		config = nil // Use nil config to trigger defaults
+	}
+	server := buildDocServer(DocToolPkgsite, DocModeProject, getPortFromConfig(config, DefaultPkgsitePort))
 	return serveWithDocServer(server)
 }
 
@@ -413,7 +416,11 @@ func (Docs) ServePkgsite() error {
 func (Docs) ServeGodoc() error {
 	utils.Header("Starting Godoc Documentation Server")
 
-	server := buildDocServer(DocToolGodoc, DocModeProject, getPortFromEnv(DefaultGodocPort))
+	config, err := GetConfig()
+	if err != nil {
+		config = nil // Use nil config to trigger defaults
+	}
+	server := buildDocServer(DocToolGodoc, DocModeProject, getPortFromConfig(config, DefaultGodocPort))
 	return serveWithDocServer(server)
 }
 
@@ -422,7 +429,11 @@ func (Docs) ServeStdlib() error {
 	utils.Header("Starting Standard Library Documentation Server")
 
 	// Prefer godoc for stdlib docs as it's more comprehensive
-	server := buildDocServer(DocToolGodoc, DocModeStdlib, getPortFromEnv(DefaultStdlibPort))
+	config, err := GetConfig()
+	if err != nil {
+		config = nil // Use nil config to trigger defaults
+	}
+	server := buildDocServer(DocToolGodoc, DocModeStdlib, getPortFromConfig(config, DefaultStdlibPort))
 	return serveWithDocServer(server)
 }
 
@@ -433,7 +444,11 @@ func (Docs) ServeProject() error {
 	// Prefer pkgsite for project docs as it's more modern
 	server := detectBestDocTool()
 	if server.Tool == DocToolNone {
-		server = buildDocServer(DocToolGodoc, DocModeProject, getPortFromEnv(DefaultGodocPort))
+		config, err := GetConfig()
+		if err != nil {
+			config = nil // Use nil config to trigger defaults
+		}
+		server = buildDocServer(DocToolGodoc, DocModeProject, getPortFromConfig(config, DefaultGodocPort))
 	}
 	server.Mode = DocModeProject
 	return serveWithDocServer(server)
@@ -444,31 +459,54 @@ func (Docs) ServeBoth() error {
 	utils.Header("Starting Full Documentation Server")
 
 	// Use godoc for comprehensive docs (both project and stdlib)
-	server := buildDocServer(DocToolGodoc, DocModeBoth, getPortFromEnv(DefaultGodocPort))
+	config, err := GetConfig()
+	if err != nil {
+		config = nil // Use nil config to trigger defaults
+	}
+	server := buildDocServer(DocToolGodoc, DocModeBoth, getPortFromConfig(config, DefaultGodocPort))
 	return serveWithDocServer(server)
 }
 
 // detectBestDocTool determines the best available documentation tool and configuration
 func detectBestDocTool() DocServer {
-	// Check environment variable override
-	if tool := os.Getenv("DOCS_TOOL"); tool != "" {
-		if tool == DocToolPkgsite && utils.CommandExists("pkgsite") {
-			return buildDocServer(DocToolPkgsite, DocModeProject, getPortFromEnv(DefaultPkgsitePort))
+	// Get configuration
+	config, err := GetConfig()
+	if err != nil {
+		// Fallback to auto-detect if config unavailable
+		return autoDetectDocTool()
+	}
+
+	// Check configuration override
+	if config.Docs.Tool != "" {
+		if config.Docs.Tool == DocToolPkgsite && utils.CommandExists("pkgsite") {
+			return buildDocServer(DocToolPkgsite, DocModeProject, getPortFromConfig(config, DefaultPkgsitePort))
 		}
-		if tool == DocToolGodoc && utils.CommandExists("godoc") {
-			return buildDocServer(DocToolGodoc, DocModeProject, getPortFromEnv(DefaultGodocPort))
+		if config.Docs.Tool == DocToolGodoc && utils.CommandExists("godoc") {
+			return buildDocServer(DocToolGodoc, DocModeProject, getPortFromConfig(config, DefaultGodocPort))
 		}
+	}
+
+	// Auto-detect best available tool
+	return autoDetectDocTool()
+}
+
+// autoDetectDocTool automatically detects the best available documentation tool
+func autoDetectDocTool() DocServer {
+	// Get configuration for port, use defaults if unavailable
+	config, err := GetConfig()
+	if err != nil {
+		config = nil // Use nil config to trigger defaults
 	}
 
 	// Priority 1: pkgsite (modern, project-focused)
 	if utils.CommandExists("pkgsite") {
-		port := getPortFromEnv(DefaultPkgsitePort)
+		port := getPortFromConfig(config, DefaultPkgsitePort)
 		return buildDocServer(DocToolPkgsite, DocModeProject, port)
 	}
 
 	// Priority 2: godoc with project focus
 	if utils.CommandExists("godoc") {
-		port := getPortFromEnv(DefaultGodocPort)
+		port := getPortFromConfig(config, DefaultGodocPort)
 		return buildDocServer(DocToolGodoc, DocModeProject, port)
 	}
 
@@ -575,12 +613,10 @@ func findAnyAvailablePort() int {
 	return 8080 // Ultimate fallback
 }
 
-// getPortFromEnv gets port from environment variable or returns default
-func getPortFromEnv(defaultPort int) int {
-	if portStr := os.Getenv("DOCS_PORT"); portStr != "" {
-		if port, err := strconv.Atoi(portStr); err == nil && port > 0 && port < 65536 {
-			return port
-		}
+// getPortFromConfig gets port from configuration or returns default
+func getPortFromConfig(config *Config, defaultPort int) int {
+	if config != nil && config.Docs.Port > 0 && config.Docs.Port < 65536 {
+		return config.Docs.Port
 	}
 	return defaultPort
 }

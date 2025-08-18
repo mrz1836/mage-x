@@ -68,14 +68,14 @@ func (Update) Check() error {
 	utils.Info("Latest version:  %s", info.LatestVersion)
 
 	if info.UpdateAvailable {
-		utils.Success("\n🎉 Update available!")
+		utils.Success("🎉 Update available!")
 		if info.ReleaseNotes != "" {
-			utils.Info("\nRelease Notes:")
+			utils.Info("Release Notes:")
 			utils.Info("%s", info.ReleaseNotes)
 		}
-		utils.Info("\nRun 'magex update:install' to update")
+		utils.Info("Run 'magex update:install' to update")
 	} else {
-		utils.Success("\n✅ You are running the latest version")
+		utils.Success("✅ You are running the latest version")
 	}
 
 	return nil
@@ -194,7 +194,7 @@ func (Update) History() error {
 		return nil
 	}
 
-	utils.Info("\nUpdate History:")
+	utils.Info("Update History:")
 	utils.Info("Date                  From Version    To Version      Channel")
 	utils.Info("-------------------   -------------   -------------   -------")
 

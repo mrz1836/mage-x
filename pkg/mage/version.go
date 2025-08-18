@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -159,7 +158,7 @@ func (Version) Check(_ ...string) error {
 		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "Not Found") {
 			utils.Warn("No GitHub releases found for %s/%s", owner, repo)
 			utils.Info("This project may use Git tags instead of GitHub releases")
-			utils.Info("\nTo create a release:")
+			utils.Info("To create a release:")
 			utils.Info("1. Visit https://github.com/%s/%s/releases", owner, repo)
 			utils.Info("2. Click 'Create a new release'")
 			utils.Info("3. Select tag %s and publish", current)
@@ -172,13 +171,13 @@ func (Version) Check(_ ...string) error {
 
 	// Compare versions
 	if isNewer(latest.TagName, current) {
-		utils.Success("\n🎉 New version available: %s", latest.TagName)
+		utils.Success("🎉 New version available: %s", latest.TagName)
 		utils.Info("GitHubRelease: %s", latest.Name)
 		if latest.Body != "" {
-			utils.Info("\nGitHubRelease Notes:")
+			utils.Info("GitHubRelease Notes:")
 			utils.Info("%s", formatReleaseNotes(latest.Body))
 		}
-		utils.Info("\nUpdate with: go install %s@%s", module, latest.TagName)
+		utils.Info("Update with: go install %s@%s", module, latest.TagName)
 	} else {
 		utils.Success("✅ You are running the latest version")
 	}
@@ -243,20 +242,21 @@ func (Version) Update() error {
 }
 
 // Bump bumps the version number
-func (Version) Bump(_ ...string) error {
+func (Version) Bump(args ...string) error {
 	utils.Header("Bumping Version")
 
-	// Check for dry-run mode first
-	dryRun := os.Getenv("DRY_RUN") == approvalTrue
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
 
-	// Get bump type from environment with enhanced validation
-	bumpType := utils.GetEnv("BUMP", "patch")
+	// Check for dry-run mode
+	dryRun := utils.IsParamTrue(params, "dry-run")
 
-	// Trim whitespace and convert to lowercase for robust validation
+	// Get bump type from parameters with default
+	bumpType := utils.GetParam(params, "bump", "patch")
 	bumpType = strings.TrimSpace(strings.ToLower(bumpType))
 
 	// Log the bump type being used for debugging
-	utils.Info("Using BUMP type: %s", bumpType)
+	utils.Info("Using bump type: %s", bumpType)
 
 	if bumpType != "major" && bumpType != "minor" && bumpType != "patch" {
 		return fmt.Errorf("%w: %s", errInvalidBumpType, bumpType)
@@ -264,7 +264,7 @@ func (Version) Bump(_ ...string) error {
 
 	// Special validation for major version bumps to prevent accidents
 	if bumpType == "major" && !dryRun {
-		if err := validateMajorVersionBump(); err != nil {
+		if err := validateMajorVersionBump(params); err != nil {
 			return err
 		}
 	}
@@ -326,39 +326,39 @@ func (Version) Bump(_ ...string) error {
 	if !dryRun {
 		if err := checkForUnexpectedVersionJump(current, newVersion, bumpType); err != nil {
 			utils.Warn("⚠️  %s", err.Error())
-			if os.Getenv("FORCE_VERSION_BUMP") != approvalTrue {
-				utils.Warn("To proceed anyway, set FORCE_VERSION_BUMP=true")
-				utils.Warn("Or use DRY_RUN=true to preview the change first")
+			if !utils.IsParamTrue(params, "force") {
+				utils.Warn("To proceed anyway, add 'force' parameter")
+				utils.Warn("Or use 'dry-run' to preview the change first")
 				return errVersionBumpBlocked
 			}
-			utils.Warn("⚠️  Proceeding with potentially unexpected version jump due to FORCE_VERSION_BUMP=true")
+			utils.Warn("⚠️  Proceeding with potentially unexpected version jump due to 'force' parameter")
 		}
 	}
 
-	utils.Info("\n📋 Version Bump Summary:")
+	utils.Info("📋 Version Bump Summary:")
 	utils.Info("  From:    %s", current)
 	utils.Info("  To:      %s", newVersion)
 	utils.Info("  Type:    %s bump", bumpType)
 
 	if dryRun {
 		// Dry-run mode - show what would happen
-		utils.Info("\n📋 DRY-RUN Summary:")
+		utils.Info("📋 DRY-RUN Summary:")
 		utils.Info("  Current version: %s", current)
 		utils.Info("  New version:     %s", newVersion)
 		utils.Info("  Bump type:       %s", bumpType)
-		utils.Info("\n🔧 Commands that would be executed:")
+		utils.Info("🔧 Commands that would be executed:")
 		message := fmt.Sprintf("GitHubRelease %s", newVersion)
 		utils.Info("  git tag -a %s -m \"%s\"", newVersion, message)
 
-		if os.Getenv("PUSH") == approvalTrue {
+		if utils.IsParamTrue(params, "push") {
 			utils.Info("  git push origin %s", newVersion)
 		} else {
-			utils.Info("\n📌 Note: Tag would be created locally only")
+			utils.Info("📌 Note: Tag would be created locally only")
 			utils.Info("  To push: git push origin %s", newVersion)
-			utils.Info("  Or set PUSH=true to push automatically")
+			utils.Info("  Or add 'push' parameter to push automatically")
 		}
 
-		utils.Success("\n✅ DRY-RUN completed - no changes made")
+		utils.Success("✅ DRY-RUN completed - no changes made")
 		return nil
 	}
 
@@ -370,8 +370,8 @@ func (Version) Bump(_ ...string) error {
 
 	utils.Success("Created tag: %s", newVersion)
 
-	// Ask to push
-	if os.Getenv("PUSH") == approvalTrue {
+	// Push if requested
+	if utils.IsParamTrue(params, "push") {
 		utils.Info("Pushing tag to remote...")
 		if err := GetRunner().RunCmd("git", "push", "origin", newVersion); err != nil {
 			return fmt.Errorf("failed to push tag: %w", err)
@@ -379,19 +379,22 @@ func (Version) Bump(_ ...string) error {
 		utils.Success("Tag pushed to remote")
 	} else {
 		utils.Info("To push the tag, run: git push origin %s", newVersion)
-		utils.Info("Or set PUSH=true to push automatically")
+		utils.Info("Or add 'push' parameter to push automatically")
 	}
 
 	return nil
 }
 
 // Changelog generates a changelog for the current version
-func (Version) Changelog() error {
+func (Version) Changelog(args ...string) error {
 	utils.Header("Generating Changelog")
 
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
 	// Get version range
-	fromTag := utils.GetEnv("FROM", "")
-	toTag := utils.GetEnv("TO", "HEAD")
+	fromTag := utils.GetParam(params, "from", "")
+	toTag := utils.GetParam(params, "to", "HEAD")
 
 	if fromTag == "" {
 		// Get previous tag
@@ -403,14 +406,14 @@ func (Version) Changelog() error {
 
 	// Generate changelog
 
-	var args []string
+	var gitArgs []string
 	if fromTag != "" {
-		args = []string{"log", "--pretty=format:- %s (%h)", fmt.Sprintf("%s..%s", fromTag, toTag)}
+		gitArgs = []string{"log", "--pretty=format:- %s (%h)", fmt.Sprintf("%s..%s", fromTag, toTag)}
 	} else {
-		args = []string{"log", "--pretty=format:- %s (%h)", toTag}
+		gitArgs = []string{"log", "--pretty=format:- %s (%h)", toTag}
 	}
 
-	output, err := GetRunner().RunCmdOutput("git", args...)
+	output, err := GetRunner().RunCmdOutput("git", gitArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to generate changelog: %w", err)
 	}
@@ -875,7 +878,7 @@ func validateVersionProgression(current, newVersion, bumpType string) error {
 }
 
 // validateMajorVersionBump validates major version bumps to prevent accidents
-func validateMajorVersionBump() error {
+func validateMajorVersionBump(params map[string]string) error {
 	// Check if this appears to be an accidental major bump
 	current := getCurrentGitTag()
 	if current == "" {
@@ -893,16 +896,16 @@ func validateMajorVersionBump() error {
 	utils.Warn("   This will create a breaking change release!")
 
 	// Check if user explicitly confirmed major bump
-	if os.Getenv("MAJOR_BUMP_CONFIRM") != approvalTrue {
+	if !utils.IsParamTrue(params, "major-confirm") {
 		utils.Warn("")
-		utils.Warn("To proceed with major version bump, set MAJOR_BUMP_CONFIRM=true")
-		utils.Warn("Example: MAJOR_BUMP_CONFIRM=true BUMP=major mage versionBump")
+		utils.Warn("To proceed with major version bump, add 'major-confirm' parameter")
+		utils.Warn("Example: magex version:bump bump=major major-confirm push")
 		utils.Warn("")
-		utils.Warn("Or use DRY_RUN=true to preview the change first:")
-		utils.Warn("Example: DRY_RUN=true BUMP=major mage versionBump")
+		utils.Warn("Or use 'dry-run' to preview the change first:")
+		utils.Warn("Example: magex version:bump bump=major dry-run")
 		return errMajorBumpRequiresConfirm
 	}
-	utils.Success("✅ Major version bump confirmed via MAJOR_BUMP_CONFIRM=true")
+	utils.Success("✅ Major version bump confirmed via 'major-confirm' parameter")
 	return nil
 }
 

@@ -61,11 +61,11 @@ func (Bench) Default() error {
 
 	// Show how to analyze profiles if created
 	if cpuProfile := os.Getenv("BENCH_CPU_PROFILE"); cpuProfile != "" {
-		utils.Info("\nAnalyze CPU profile with:")
+		utils.Info("Analyze CPU profile with:")
 		utils.Info("  go tool pprof %s", cpuProfile)
 	}
 	if memProfile := os.Getenv("BENCH_MEM_PROFILE"); memProfile != "" {
-		utils.Info("\nAnalyze memory profile with:")
+		utils.Info("Analyze memory profile with:")
 		utils.Info("  go tool pprof %s", memProfile)
 	}
 
@@ -167,10 +167,10 @@ func (Bench) CPU() error {
 	}
 
 	// Analyze the profile
-	utils.Info("\nAnalyzing CPU profile...")
+	utils.Info("Analyzing CPU profile...")
 
 	// Show top functions
-	utils.Info("\nTop CPU consuming functions:")
+	utils.Info("Top CPU consuming functions:")
 	if err := GetRunner().RunCmd("go", "tool", "pprof", "-top", profile); err != nil {
 		// Error expected and acceptable - analysis command may fail
 		utils.Warn("CPU profile analysis failed: %v", err)
@@ -194,10 +194,10 @@ func (Bench) Mem() error {
 	}
 
 	// Analyze the profile
-	utils.Info("\nAnalyzing memory profile...")
+	utils.Info("Analyzing memory profile...")
 
 	// Show top memory allocations
-	utils.Info("\nTop memory allocating functions:")
+	utils.Info("Top memory allocating functions:")
 	if err := GetRunner().RunCmd("go", "tool", "pprof", "-top", "-alloc_space", profile); err != nil {
 		// Error expected and acceptable - analysis command may fail
 		utils.Warn("Memory profile analysis failed: %v", err)
@@ -222,10 +222,10 @@ func (Bench) Profile() error {
 		return err
 	}
 
-	utils.Success("\nProfiling data saved:")
+	utils.Success("Profiling data saved:")
 	utils.Info("  CPU profile: cpu.prof")
 	utils.Info("  Memory profile: mem.prof")
-	utils.Info("\nUse 'go tool pprof' to analyze the profiles")
+	utils.Info("Use 'go tool pprof' to analyze the profiles")
 
 	return nil
 }
@@ -248,7 +248,7 @@ func (Bench) Trace() error {
 	}
 
 	utils.Success("Trace saved to: %s", trace)
-	utils.Info("\nAnalyze trace with:")
+	utils.Info("Analyze trace with:")
 	utils.Info("  go tool trace %s", trace)
 
 	return nil
@@ -289,13 +289,13 @@ func (Bench) Regression() error {
 		return fmt.Errorf("failed to set BENCH_NEW: %w", err)
 	}
 
-	utils.Info("\nComparing with baseline...")
+	utils.Info("Comparing with baseline...")
 	if err := b.Compare(); err != nil {
 		return err
 	}
 
 	// Ask about updating baseline
-	utils.Info("\nUpdate baseline with current results? (set UPDATE_BASELINE=true)")
+	utils.Info("Update baseline with current results? (set UPDATE_BASELINE=true)")
 	if os.Getenv("UPDATE_BASELINE") == approvalTrue {
 		if err := os.Rename("bench-current.txt", baseline); err != nil {
 			return fmt.Errorf("failed to update baseline: %w", err)

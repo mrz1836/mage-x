@@ -117,7 +117,7 @@ func (vpts *VersionProtectionTestSuite) TestEnvironmentVariableIsolation() {
 func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 	vpts.Run("PUSHTrueWithDefaultBump", func() {
 		mock := NewVersionMockRunner()
-		vpts.NoError(SetRunner(mock))
+		vpts.Require().NoError(SetRunner(mock))
 
 		// Simulate the exact command: PUSH=true mage versionBump (no explicit BUMP)
 		vpts.NoError(os.Setenv("PUSH", "true"))
@@ -134,8 +134,8 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 
 		// Run version bump
 		version := Version{}
-		err := version.Bump()
-		vpts.Require().NoError(err, "PUSH=true with default BUMP should succeed")
+		err := version.Bump("push")
+		vpts.Require().NoError(err, "push with default BUMP should succeed")
 
 		// Verify it was a patch bump (v1.0.6 -> v1.0.7)
 		vpts.Contains(mock.commands, "git tag -a v1.0.7 -m GitHubRelease v1.0.7",
@@ -146,7 +146,7 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 
 	vpts.Run("PUSHTrueWithExplicitPatch", func() {
 		mock := NewVersionMockRunner()
-		vpts.NoError(SetRunner(mock))
+		vpts.Require().NoError(SetRunner(mock))
 
 		// Simulate: PUSH=true BUMP=patch mage versionBump
 		vpts.NoError(os.Setenv("PUSH", "true"))
@@ -162,7 +162,7 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git push origin v1.0.7", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=patch", "push")
 		vpts.Require().NoError(err)
 
 		vpts.Contains(mock.commands, "git tag -a v1.0.7 -m GitHubRelease v1.0.7")
@@ -170,12 +170,7 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 
 	vpts.Run("AccidentalMajorBumpPrevented", func() {
 		mock := NewVersionMockRunner()
-		vpts.NoError(SetRunner(mock))
-
-		// Simulate contaminated environment with BUMP=major (no confirmation)
-		vpts.NoError(os.Setenv("PUSH", "true"))
-		vpts.NoError(os.Setenv("BUMP", "major"))
-		// Deliberately NOT setting MAJOR_BUMP_CONFIRM to test protection
+		vpts.Require().NoError(SetRunner(mock))
 
 		// Set up mock
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -185,7 +180,7 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=major", "push")  // Deliberately NOT passing "confirm" to test protection
 		vpts.Require().Error(err, "Should prevent major bump without confirmation")
 		vpts.Contains(err.Error(), "major version bump requires explicit confirmation")
 
@@ -261,32 +256,38 @@ func (vpts *VersionProtectionTestSuite) TestBumpVersionEdgeCases() {
 	})
 
 	vpts.Run("PreventInvalidBumpTypes", func() {
-		invalidTypes := []string{"hotfix", "beta", "alpha", "rc", "invalid", ""}
+		invalidTypes := []string{"hotfix", "beta", "alpha", "rc", "invalid"}
 
 		for _, invalidType := range invalidTypes {
 			vpts.Run(fmt.Sprintf("InvalidType_%s", invalidType), func() {
 				// This test validates the Version.Bump method validation
 				mock := NewVersionMockRunner()
-				vpts.NoError(SetRunner(mock))
-
-				vpts.NoError(os.Setenv("BUMP", invalidType))
+				vpts.Require().NoError(SetRunner(mock))
 
 				version := Version{}
-				err := version.Bump()
+				err := version.Bump("bump=" + invalidType)
 
-				if invalidType == "" {
-					// Empty string should use default "patch"
-					// For this test, we'll accept either success or git-related failure
-					// but not invalid bump type error
-					if err != nil {
-						vpts.NotContains(err.Error(), "invalid BUMP type")
-					}
-				} else {
-					vpts.Require().Error(err, "Invalid bump type should be rejected")
-					vpts.ErrorIs(err, errInvalidBumpType)
-				}
+				vpts.Require().Error(err, "Invalid bump type should be rejected")
+				vpts.ErrorIs(err, errInvalidBumpType)
 			})
 		}
+
+		// Test default bump type (when no bump parameter is provided)
+		vpts.Run("DefaultBumpType", func() {
+			mock := NewVersionMockRunner()
+			vpts.Require().NoError(SetRunner(mock))
+
+			// Set up successful mock for default patch bump
+			mock.SetOutput("git status --porcelain", "", nil)
+			mock.SetOutput("git tag --points-at HEAD", "", nil)
+			mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
+			mock.SetOutput("git describe --tags --abbrev=0", "v1.0.0", nil)
+			mock.SetOutput("git tag -a v1.0.1 -m GitHubRelease v1.0.1", "", nil)
+
+			version := Version{}
+			err := version.Bump() // No parameters - should default to patch
+			vpts.NoError(err)
+		})
 	})
 }
 
@@ -336,7 +337,7 @@ func (vpts *VersionProtectionTestSuite) TestGitTagScenarios() {
 func (vpts *VersionProtectionTestSuite) TestDryRunProtection() {
 	vpts.Run("DryRunWithMajorBump", func() {
 		mock := NewVersionMockRunner()
-		vpts.NoError(SetRunner(mock))
+		vpts.Require().NoError(SetRunner(mock))
 
 		// Simulate dangerous scenario: BUMP=major with dry run
 		vpts.NoError(os.Setenv("BUMP", "major"))
@@ -362,11 +363,7 @@ func (vpts *VersionProtectionTestSuite) TestDryRunProtection() {
 
 	vpts.Run("DryRunWithContaminatedEnvironment", func() {
 		mock := NewVersionMockRunner()
-		vpts.NoError(SetRunner(mock))
-
-		// Simulate contaminated environment that would cause major bump
-		vpts.NoError(os.Setenv("BUMP", "major"))
-		vpts.NoError(os.Setenv("DRY_RUN", "true"))
+		vpts.Require().NoError(SetRunner(mock))
 
 		// Even dirty repo should work in dry run
 		mock.SetOutput("git status --porcelain", "M some-file.go", nil)
@@ -375,7 +372,7 @@ func (vpts *VersionProtectionTestSuite) TestDryRunProtection() {
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=major", "dry-run")
 		vpts.NoError(err, "Dry run should work even with dirty repo")
 	})
 }

@@ -328,11 +328,18 @@ func (r *Registry) searchTags(tags []string, query string) bool {
 func (r *Registry) Execute(name string, args ...string) error {
 	cmd, exists := r.Get(name)
 	if !exists {
-		// Try fuzzy matching for helpful error messages
-		suggestions := r.findSimilar(name)
+		// Use comprehensive search for better suggestions
+		suggestions := r.Search(name)
 		if len(suggestions) > 0 {
+			var suggestionNames []string
+			for i, suggestion := range suggestions {
+				if i >= 5 { // Limit to 5 suggestions
+					break
+				}
+				suggestionNames = append(suggestionNames, suggestion.FullName())
+			}
 			return fmt.Errorf("%w '%s'. Did you mean: %s?",
-				ErrUnknownCommand, name, strings.Join(suggestions, ", "))
+				ErrUnknownCommand, name, strings.Join(suggestionNames, ", "))
 		}
 		return fmt.Errorf("%w: %s", ErrUnknownCommand, name)
 	}
@@ -423,23 +430,6 @@ func (r *Registry) getStandardCategoryInfo(category string) CategoryInfo {
 		Icon:  "📋",
 		Order: 99,
 	}
-}
-
-// findSimilar finds commands with similar names (for helpful error messages)
-func (r *Registry) findSimilar(name string) []string {
-	var similar []string
-	nameLower := strings.ToLower(name)
-
-	for cmdName := range r.commands {
-		if strings.Contains(cmdName, nameLower) || strings.Contains(nameLower, cmdName) {
-			similar = append(similar, cmdName)
-			if len(similar) >= 3 {
-				break
-			}
-		}
-	}
-
-	return similar
 }
 
 // Global registration functions for convenience

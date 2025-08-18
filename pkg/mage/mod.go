@@ -98,7 +98,7 @@ func (Mod) Update() error {
 		return nil
 	}
 
-	utils.Info("\nFound %d updates available", updates)
+	utils.Info("Found %d updates available", updates)
 
 	// Update dependencies
 	utils.Info("Updating dependencies...")
@@ -170,7 +170,7 @@ func (Mod) Graph() error {
 		module = statusUnknown
 	}
 	if directDeps, ok := deps[module]; ok {
-		utils.Info("\nDirect dependencies (%d):", len(directDeps))
+		utils.Info("Direct dependencies (%d):", len(directDeps))
 		for _, dep := range directDeps {
 			fmt.Printf("  - %s\n", dep)
 		}
@@ -185,7 +185,7 @@ func (Mod) Graph() error {
 		utils.Success("Full dependency graph saved to: %s", graphFile)
 	}
 
-	utils.Info("\nTotal modules in graph: %d", len(deps))
+	utils.Info("Total modules in graph: %d", len(deps))
 	return nil
 }
 
@@ -205,7 +205,7 @@ func (Mod) Why() error {
 		return fmt.Errorf("failed to analyze module: %w", err)
 	}
 
-	utils.Info("\nDependency path:")
+	utils.Info("Dependency path:")
 	utils.Info("%s", output)
 
 	// Also check if it's a direct dependency

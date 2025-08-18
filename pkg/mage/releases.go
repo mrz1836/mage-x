@@ -159,7 +159,7 @@ func (Releases) Status() error {
 
 	channels := []ReleaseChannel{StableRelease, BetaRelease, EdgeRelease}
 
-	utils.Info("\n📈 Multi-Channel Release Status:")
+	utils.Info("📈 Multi-Channel Release Status:")
 	utils.Info("Channel   Latest Version   Released        Downloads")
 	utils.Info("--------  --------------   --------------- ----------")
 
@@ -188,7 +188,7 @@ func (Releases) Channels() error {
 		{EdgeRelease, "Latest development builds", "Low", "Developers"},
 	}
 
-	utils.Info("\n📋 Available Release Channels:")
+	utils.Info("📋 Available Release Channels:")
 	utils.Info("Channel   Description                     Stability   Audience")
 	utils.Info("--------  -----------------------------   ---------   ----------------")
 
@@ -196,7 +196,7 @@ func (Releases) Channels() error {
 		fmt.Printf("%-8s  %-29s   %-9s   %s\n", ch.Name, ch.Description, ch.Stability, ch.Audience)
 	}
 
-	utils.Info("\nUsage:")
+	utils.Info("Usage:")
 	utils.Info("  mage releases:stable    # Create stable release")
 	utils.Info("  mage releases:beta      # Create beta release")
 	utils.Info("  mage releases:edge      # Create edge release")

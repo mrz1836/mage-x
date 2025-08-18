@@ -132,11 +132,11 @@ func (Lint) Default() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("\nLinting failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Linting failed in %d/%d modules", len(moduleErrors), len(modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("\nAll linting passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("All linting passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -241,11 +241,11 @@ func (Lint) Fix() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("\nFix failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Fix failed in %d/%d modules", len(moduleErrors), len(modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("\nAll lint issues fixed and code formatted in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("All lint issues fixed and code formatted in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -402,11 +402,11 @@ func (Lint) Vet() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("\nVet failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Vet failed in %d/%d modules", len(moduleErrors), len(modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("\nAll vet checks passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("All vet checks passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -512,7 +512,7 @@ func (Lint) Version() error {
 	fmt.Printf("\nConfigured version: %s\n", config.Lint.GolangciVersion)
 
 	if utils.CommandExists("golangci-lint") {
-		utils.Info("\nInstalled version:")
+		utils.Info("Installed version:")
 		return GetRunner().RunCmd("golangci-lint", "--version")
 	}
 
@@ -1168,7 +1168,7 @@ func (Lint) Issues() error {
 	totalSkips := countTotalIssues(skipIssues)
 
 	// Display summary
-	utils.Info("\n📊 Summary (scanned in %s):", utils.FormatDuration(time.Since(start)))
+	utils.Info("📊 Summary (scanned in %s):", utils.FormatDuration(time.Since(start)))
 	fmt.Printf("  • Code comments: %d issues\n", totalTodos)
 	fmt.Printf("  • Nolint directives: %d issues\n", totalNolints)
 	fmt.Printf("  • Test skips: %d issues\n", totalSkips)

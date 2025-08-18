@@ -40,7 +40,7 @@ test:
   bench_time: ""
   bench_mem: false
 lint:
-  golangci_version: v2.4.0
+  golangci_version: latest
   timeout: 5m
   skip_dirs: []
   skip_files: []
@@ -48,11 +48,11 @@ lint:
   disable_linters: []
   enable_linters: []
 tools:
-  golangci_lint: v2.4.0
-  fumpt: v0.8.0
-  govulncheck: v1.1.4
-  mockgen: v0.4.0
-  swag: v1.16.6
+  golangci_lint: latest
+  fumpt: latest
+  govulncheck: latest
+  mockgen: latest
+  swag: latest
   custom: {}
 docker:
   registry: ""
@@ -85,3 +85,6 @@ download:
   backoff_multiplier: 2
   enable_resume: true
   user_agent: mage-x-downloader/1.0
+docs:
+  tool: ""
+  port: 0

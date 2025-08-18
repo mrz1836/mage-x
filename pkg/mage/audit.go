@@ -71,11 +71,11 @@ func (Audit) Show() error {
 		// Check if audit is disabled and provide helpful message
 		if err.Error() == "audit logging is disabled" {
 			utils.Warn("Audit logging is currently disabled")
-			utils.Info("\nTo enable audit logging, set the environment variable:")
+			utils.Info("To enable audit logging, set the environment variable:")
 			utils.Info("  export MAGE_AUDIT_ENABLED=true")
-			utils.Info("\nOptionally, you can also set a custom database path:")
+			utils.Info("Optionally, you can also set a custom database path:")
 			utils.Info("  export MAGE_AUDIT_DB=/path/to/audit.db")
-			utils.Info("\nOnce enabled, all mage commands will be logged for audit purposes.")
+			utils.Info("Once enabled, all mage commands will be logged for audit purposes.")
 			return nil
 		}
 		return fmt.Errorf("failed to get audit events: %w", err)
@@ -136,7 +136,7 @@ func (Audit) Stats() error {
 	utils.Info("  Date Range:   %s to %s", stats.EarliestEvent.Format("2006-01-02"), stats.LatestEvent.Format("2006-01-02"))
 
 	if len(stats.TopUsers) > 0 {
-		utils.Info("\nTop Users:")
+		utils.Info("Top Users:")
 		for i, user := range stats.TopUsers {
 			if i >= 5 { // Show top 5
 				break
@@ -146,7 +146,7 @@ func (Audit) Stats() error {
 	}
 
 	if len(stats.TopCommands) > 0 {
-		utils.Info("\nTop Commands:")
+		utils.Info("Top Commands:")
 		for i, cmd := range stats.TopCommands {
 			if i >= 5 { // Show top 5
 				break
@@ -349,7 +349,7 @@ func (Audit) Report() error {
 	utils.Success("Compliance report generated: %s", outputFile)
 
 	// Display summary
-	utils.Info("\nCompliance Report Summary:")
+	utils.Info("Compliance Report Summary:")
 	utils.Info("  Report Period: %s", report.ReportPeriod)
 	utils.Info("  Total Events: %d", report.TotalEvents)
 	utils.Info("  Success Rate: %.1f%%", report.SuccessRate)

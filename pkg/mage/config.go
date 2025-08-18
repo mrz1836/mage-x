@@ -23,6 +23,7 @@ type Config struct {
 	Docker     DockerConfig             `yaml:"docker"`
 	Release    ReleaseConfig            `yaml:"release"`
 	Download   DownloadConfig           `yaml:"download"`
+	Docs       DocsConfig               `yaml:"docs"`
 	Enterprise *EnterpriseConfiguration `yaml:"enterprise,omitempty"`
 	Metadata   map[string]string        `yaml:"metadata,omitempty"`
 }
@@ -128,6 +129,12 @@ type DownloadConfig struct {
 	BackoffMultiplier float64 `yaml:"backoff_multiplier"`
 	EnableResume      bool    `yaml:"enable_resume"`
 	UserAgent         string  `yaml:"user_agent"`
+}
+
+// DocsConfig contains documentation settings
+type DocsConfig struct {
+	Tool string `yaml:"tool"` // "pkgsite", "godoc", or "" for auto-detect
+	Port int    `yaml:"port"` // 0 for default port
 }
 
 // Static errors for err113 compliance

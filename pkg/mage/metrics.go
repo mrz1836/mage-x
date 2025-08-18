@@ -93,7 +93,7 @@ func (Metrics) Coverage() error {
 	}
 
 	// Show detailed coverage by package
-	utils.Info("\nPackage coverage:")
+	utils.Info("Package coverage:")
 	if err := GetRunner().RunCmd("go", "test", "-cover", "./..."); err != nil {
 		utils.Warn("Failed to show package coverage")
 	}
@@ -123,7 +123,7 @@ func (Metrics) Complexity() error {
 		utils.Debug("%s", "gocyclo found complex functions (expected): "+err.Error())
 	}
 
-	utils.Info("\nTop 10 most complex functions:")
+	utils.Info("Top 10 most complex functions:")
 	if err := GetRunner().RunCmd("gocyclo", "-top", "10", "."); err != nil {
 		return fmt.Errorf("failed to analyze complexity: %w", err)
 	}
@@ -161,13 +161,13 @@ func (Metrics) Size() error {
 	utils.Info("Binary size: %s", formatBytes(stat.Size()))
 
 	// Analyze binary sections
-	utils.Info("\nBinary composition:")
+	utils.Info("Binary composition:")
 	if err := GetRunner().RunCmd("go", "tool", "nm", "-size", binaryName); err != nil {
 		utils.Warn("Failed to analyze binary sections")
 	}
 
 	// Check module size
-	utils.Info("\nModule dependencies size:")
+	utils.Info("Module dependencies size:")
 	if modCache := os.Getenv("GOMODCACHE"); modCache != "" {
 		if info, err := getDirSize(modCache); err == nil {
 			utils.Info("Module cache size: %s", formatBytes(info))
@@ -193,7 +193,7 @@ func (Metrics) Quality() error {
 
 	failed := 0
 	for _, check := range checks {
-		utils.Info("\nRunning %s...", check.name)
+		utils.Info("Running %s...", check.name)
 		if err := check.fn(); err != nil {
 			utils.Error("Failed: %v", err)
 			failed++
@@ -204,7 +204,7 @@ func (Metrics) Quality() error {
 		return fmt.Errorf("%w: %d checks", errQualityChecksFailed, failed)
 	}
 
-	utils.Success("\nAll quality checks passed!")
+	utils.Success("All quality checks passed!")
 	return nil
 }
 

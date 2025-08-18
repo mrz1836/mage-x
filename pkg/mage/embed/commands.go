@@ -584,6 +584,16 @@ func registerTopLevelCommands(reg *registry.Registry) {
 			WithCategory("Common").
 			MustBuild(),
 	)
+
+	// Bench is an alias for test:bench
+	bench := mage.Test{}
+	reg.MustRegister(
+		registry.NewCommand("bench").
+			WithDescription("Run benchmarks").
+			WithArgsFunc(func(args ...string) error { return bench.Bench(args...) }).
+			WithCategory("Common").
+			MustBuild(),
+	)
 }
 
 // Stub implementations for remaining namespaces
@@ -610,25 +620,31 @@ func registerGitCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("git", "tag").
-			WithDescription("Create a git tag from version").
-			WithFunc(func() error { return g.Tag() }).
+			WithDescription("Create a git tag with version parameter").
+			WithArgsFunc(func(args ...string) error { return g.TagWithArgs(args...) }).
 			WithCategory("Git").
+			WithUsage("magex git:tag version=<X.Y.Z>").
+			WithExamples("magex git:tag version=1.2.3").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("git", "tagremove").
-			WithDescription("Remove a git tag").
-			WithFunc(func() error { return g.TagRemove() }).
+			WithDescription("Remove a git tag with version parameter").
+			WithArgsFunc(func(args ...string) error { return g.TagRemoveWithArgs(args...) }).
 			WithCategory("Git").
+			WithUsage("magex git:tagremove version=<X.Y.Z>").
+			WithExamples("magex git:tagremove version=1.2.3").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("git", "tagupdate").
-			WithDescription("Update a git tag").
-			WithFunc(func() error { return g.TagUpdate() }).
+			WithDescription("Update a git tag with version parameter").
+			WithArgsFunc(func(args ...string) error { return g.TagUpdate(args...) }).
 			WithCategory("Git").
+			WithUsage("magex git:tagupdate version=<X.Y.Z>").
+			WithExamples("magex git:tagupdate version=1.2.3").
 			MustBuild(),
 	)
 
@@ -658,9 +674,11 @@ func registerGitCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("git", "commit").
-			WithDescription("Create a git commit").
+			WithDescription("Create a git commit with message parameter").
 			WithArgsFunc(func(args ...string) error { return g.Commit(args...) }).
 			WithCategory("Git").
+			WithUsage("magex git:commit message=\"<commit message>\"").
+			WithExamples("magex git:commit message=\"fix: resolve bug in parser\"").
 			MustBuild(),
 	)
 
@@ -1286,41 +1304,51 @@ func registerRecipesCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("recipes", "show").
-			WithDescription("Show recipe details").
-			WithFunc(func() error { return r.Show() }).
+			WithDescription("Show recipe details with recipe parameter").
+			WithArgsFunc(func(args ...string) error { return r.ShowWithArgs(args...) }).
 			WithCategory("Recipes").
+			WithUsage("magex recipes:show recipe=<name>").
+			WithExamples("magex recipes:show recipe=fresh-start").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("recipes", "run").
-			WithDescription("Run a recipe").
-			WithFunc(func() error { return r.Run() }).
+			WithDescription("Run a recipe with recipe parameter").
+			WithArgsFunc(func(args ...string) error { return r.RunWithArgs(args...) }).
 			WithCategory("Recipes").
+			WithUsage("magex recipes:run recipe=<name>").
+			WithExamples("magex recipes:run recipe=fresh-start").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("recipes", "search").
-			WithDescription("Search recipes").
-			WithFunc(func() error { return r.Search() }).
+			WithDescription("Search recipes with term parameter").
+			WithArgsFunc(func(args ...string) error { return r.SearchWithArgs(args...) }).
 			WithCategory("Recipes").
+			WithUsage("magex recipes:search term=<search>").
+			WithExamples("magex recipes:search term=ci").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("recipes", "create").
-			WithDescription("Create a new recipe").
-			WithFunc(func() error { return r.Create() }).
+			WithDescription("Create a new recipe with recipe parameter").
+			WithArgsFunc(func(args ...string) error { return r.CreateWithArgs(args...) }).
 			WithCategory("Recipes").
+			WithUsage("magex recipes:create recipe=<name>").
+			WithExamples("magex recipes:create recipe=my-recipe").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("recipes", "install").
-			WithDescription("Install a recipe").
-			WithFunc(func() error { return r.Install() }).
+			WithDescription("Install a recipe with source parameter").
+			WithArgsFunc(func(args ...string) error { return r.InstallWithArgs(args...) }).
 			WithCategory("Recipes").
+			WithUsage("magex recipes:install source=<url|file>").
+			WithExamples("magex recipes:install source=./recipe.yaml").
 			MustBuild(),
 	)
 }
@@ -1382,9 +1410,11 @@ func registerWorkflowCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("workflow", "execute").
-			WithDescription("Execute a workflow").
-			WithFunc(func() error { return w.Execute() }).
+			WithDescription("Execute a workflow with workflow parameter").
+			WithArgsFunc(func(args ...string) error { return w.ExecuteWithArgs(args...) }).
 			WithCategory("Workflow").
+			WithUsage("magex workflow:execute workflow=<name>").
+			WithExamples("magex workflow:execute workflow=ci-pipeline").
 			MustBuild(),
 	)
 
@@ -1398,49 +1428,61 @@ func registerWorkflowCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("workflow", "status").
-			WithDescription("Show workflow status").
-			WithFunc(func() error { return w.Status() }).
+			WithDescription("Show workflow status with optional execution-id parameter").
+			WithArgsFunc(func(args ...string) error { return w.StatusWithArgs(args...) }).
 			WithCategory("Workflow").
+			WithUsage("magex workflow:status [execution-id=<id>]").
+			WithExamples("magex workflow:status", "magex workflow:status execution-id=abc123").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("workflow", "create").
-			WithDescription("Create a new workflow").
-			WithFunc(func() error { return w.Create() }).
+			WithDescription("Create a new workflow with name parameter").
+			WithArgsFunc(func(args ...string) error { return w.CreateWithArgs(args...) }).
 			WithCategory("Workflow").
+			WithUsage("magex workflow:create name=<workflow-name> [template=<type>]").
+			WithExamples("magex workflow:create name=my-workflow", "magex workflow:create name=ci-workflow template=advanced").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("workflow", "validate").
-			WithDescription("Validate workflow configuration").
-			WithFunc(func() error { return w.Validate() }).
+			WithDescription("Validate workflow configuration with optional workflow parameter").
+			WithArgsFunc(func(args ...string) error { return w.ValidateWithArgs(args...) }).
 			WithCategory("Workflow").
+			WithUsage("magex workflow:validate [workflow=<name>]").
+			WithExamples("magex workflow:validate", "magex workflow:validate workflow=ci-build").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("workflow", "schedule").
-			WithDescription("Schedule workflow execution").
-			WithFunc(func() error { return w.Schedule() }).
+			WithDescription("Schedule workflow execution with operation parameter").
+			WithArgsFunc(func(args ...string) error { return w.ScheduleWithArgs(args...) }).
 			WithCategory("Workflow").
+			WithUsage("magex workflow:schedule [operation=<list|add|remove|update>]").
+			WithExamples("magex workflow:schedule", "magex workflow:schedule operation=add").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("workflow", "template").
-			WithDescription("Create workflow from template").
-			WithFunc(func() error { return w.Template() }).
+			WithDescription("Manage workflow templates with operation parameter").
+			WithArgsFunc(func(args ...string) error { return w.TemplateWithArgs(args...) }).
 			WithCategory("Workflow").
+			WithUsage("magex workflow:template [operation=<list|create|update|delete>]").
+			WithExamples("magex workflow:template", "magex workflow:template operation=create").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("workflow", "history").
-			WithDescription("Show workflow execution history").
-			WithFunc(func() error { return w.History() }).
+			WithDescription("Show workflow execution history with optional filters").
+			WithArgsFunc(func(args ...string) error { return w.HistoryWithArgs(args...) }).
 			WithCategory("Workflow").
+			WithUsage("magex workflow:history [workflow=<name>] [limit=<number>]").
+			WithExamples("magex workflow:history", "magex workflow:history workflow=ci-build limit=5").
 			MustBuild(),
 	)
 }
@@ -1754,33 +1796,41 @@ func registerIntegrationsCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("integrations", "setup").
-			WithDescription("Setup integrations").
-			WithFunc(func() error { return i.Setup() }).
+			WithDescription("Setup integrations with type parameter").
+			WithArgsFunc(func(args ...string) error { return i.Setup(args...) }).
 			WithCategory("Integrations").
+			WithUsage("magex integrations:setup type=<integration-type>").
+			WithExamples("magex integrations:setup type=slack").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("integrations", "test").
-			WithDescription("Test integrations").
-			WithFunc(func() error { return i.Test() }).
+			WithDescription("Test integrations with optional service filter").
+			WithArgsFunc(func(args ...string) error { return i.Test(args...) }).
 			WithCategory("Integrations").
+			WithUsage("magex integrations:test [service=<name>] [output=<file>]").
+			WithExamples("magex integrations:test", "magex integrations:test service=slack").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("integrations", "sync").
-			WithDescription("Sync integration data").
-			WithFunc(func() error { return i.Sync() }).
+			WithDescription("Sync integration data with operation parameter").
+			WithArgsFunc(func(args ...string) error { return i.Sync(args...) }).
 			WithCategory("Integrations").
+			WithUsage("magex integrations:sync [operation=<all|issues|users|repositories|metrics>]").
+			WithExamples("magex integrations:sync", "magex integrations:sync operation=issues").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("integrations", "notify").
-			WithDescription("Send notifications").
-			WithFunc(func() error { return i.Notify() }).
+			WithDescription("Send notifications with channel and message parameters").
+			WithArgsFunc(func(args ...string) error { return i.Notify(args...) }).
 			WithCategory("Integrations").
+			WithUsage("magex integrations:notify channel=<name> message=\"<text>\" [level=<level>]").
+			WithExamples("magex integrations:notify channel=general message=\"Build completed\"").
 			MustBuild(),
 	)
 
@@ -1794,25 +1844,31 @@ func registerIntegrationsCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("integrations", "webhook").
-			WithDescription("Configure webhooks").
-			WithFunc(func() error { return i.Webhook() }).
+			WithDescription("Configure webhooks with operation parameter").
+			WithArgsFunc(func(args ...string) error { return i.Webhook(args...) }).
 			WithCategory("Integrations").
+			WithUsage("magex integrations:webhook [operation=<list|create|update|delete|test>]").
+			WithExamples("magex integrations:webhook", "magex integrations:webhook operation=create").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("integrations", "export").
-			WithDescription("Export integration configuration").
-			WithFunc(func() error { return i.Export() }).
+			WithDescription("Export integration configuration with type parameter").
+			WithArgsFunc(func(args ...string) error { return i.Export(args...) }).
 			WithCategory("Integrations").
+			WithUsage("magex integrations:export type=<type> [format=<format>] [output=<file>]").
+			WithExamples("magex integrations:export type=slack").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("integrations", "import").
-			WithDescription("Import integration configuration").
-			WithFunc(func() error { return i.Import() }).
+			WithDescription("Import integration configuration with type and input parameters").
+			WithArgsFunc(func(args ...string) error { return i.Import(args...) }).
 			WithCategory("Integrations").
+			WithUsage("magex integrations:import type=<type> input=<file>").
+			WithExamples("magex integrations:import type=slack input=./config.json").
 			MustBuild(),
 	)
 }
@@ -1960,17 +2016,29 @@ func registerVersionCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("version", "bump").
-			WithDescription("Bump version (patch, minor, major)").
-			WithFunc(func() error { return v.Bump() }).
+			WithDescription("Bump version with parameters: bump=<major|minor|patch> push dry-run force major-confirm").
+			WithArgsFunc(func(args ...string) error { return v.Bump(args...) }).
 			WithCategory("Version Management").
+			WithUsage("magex version:bump [bump=<type>] [push] [dry-run] [force] [major-confirm]").
+			WithExamples(
+				"magex version:bump bump=patch push",
+				"magex version:bump bump=minor dry-run",
+				"magex version:bump bump=major major-confirm push",
+			).
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("version", "changelog").
-			WithDescription("Generate changelog from git history").
-			WithFunc(func() error { return v.Changelog() }).
+			WithDescription("Generate changelog from git history with parameters: from=<tag> to=<tag>").
+			WithArgsFunc(func(args ...string) error { return v.Changelog(args...) }).
 			WithCategory("Version Management").
+			WithUsage("magex version:changelog [from=<tag>] [to=<tag>]").
+			WithExamples(
+				"magex version:changelog",
+				"magex version:changelog from=v1.0.0",
+				"magex version:changelog from=v1.0.0 to=v1.1.0",
+			).
 			MustBuild(),
 	)
 

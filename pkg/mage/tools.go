@@ -195,7 +195,7 @@ func (Tools) List() error {
 
 	// Custom tools
 	if len(config.Tools.Custom) > 0 {
-		utils.Info("\nCustom tools:")
+		utils.Info("Custom tools:")
 		for name, version := range config.Tools.Custom {
 			fmt.Printf("  %s: %s\n", name, version)
 		}

@@ -644,7 +644,7 @@ func displayBulkResults(results []BulkResult) {
 	utils.Info("  Failed: %d", len(results)-successCount)
 
 	// Display detailed results
-	utils.Info("\n%-20s %-10s %-12s %-8s", "REPOSITORY", "OPERATION", "DURATION", "STATUS")
+	utils.Info("%-20s %-10s %-12s %-8s", "REPOSITORY", "OPERATION", "DURATION", "STATUS")
 	utils.Info("%s", strings.Repeat("-", 55))
 
 	for _, result := range results {
@@ -760,7 +760,7 @@ func displayQueryResults(results []Repository) {
 	}
 
 	// Display results
-	utils.Info("\n%-20s %-10s %-12s %-8s %-15s", "NAME", "LANGUAGE", "FRAMEWORK", "STATUS", "LAST UPDATED")
+	utils.Info("%-20s %-10s %-12s %-8s %-15s", "NAME", "LANGUAGE", "FRAMEWORK", "STATUS", "LAST UPDATED")
 	utils.Info("%s", strings.Repeat("-", 75))
 
 	for i := range results {
@@ -848,7 +848,7 @@ func displayDashboard(dashboard *Dashboard) {
 	utils.Info("  Overall Health: %.1f%%", dashboard.Overview.OverallHealth)
 
 	// Display key metrics
-	utils.Info("\n📈 Key Metrics:")
+	utils.Info("📈 Key Metrics:")
 	utils.Info("  Build Success Rate: %.1f%%", dashboard.Metrics.BuildSuccess)
 	utils.Info("  Test Coverage: %.1f%%", dashboard.Metrics.TestCoverage)
 	utils.Info("  Response Time: %.1fms", dashboard.Metrics.ResponseTime)
@@ -856,7 +856,7 @@ func displayDashboard(dashboard *Dashboard) {
 
 	// Display recent activity
 	if len(dashboard.RecentActivity) > 0 {
-		utils.Info("\n🔄 Recent Activity:")
+		utils.Info("🔄 Recent Activity:")
 		for _, activity := range dashboard.RecentActivity {
 			utils.Info("  %s - %s: %s",
 				activity.Timestamp.Format("15:04"),
@@ -867,7 +867,7 @@ func displayDashboard(dashboard *Dashboard) {
 
 	// Display alerts
 	if len(dashboard.Alerts) > 0 {
-		utils.Info("\n⚠️  Alerts:")
+		utils.Info("⚠️  Alerts:")
 		for _, alert := range dashboard.Alerts {
 			utils.Info("  %s [%s]: %s", alert.Level, alert.Repository, alert.Title)
 		}
@@ -1110,7 +1110,7 @@ func newBatchResultFormatter() *batchResultFormatter {
 }
 
 func (f *batchResultFormatter) printHeader() {
-	utils.Info("\n%-*s %-*s %-*s",
+	utils.Info("%-*s %-*s %-*s",
 		f.nameWidth, "OPERATION",
 		f.durationWidth, "DURATION",
 		f.statusWidth, "STATUS")

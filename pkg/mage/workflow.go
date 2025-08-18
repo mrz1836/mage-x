@@ -20,16 +20,22 @@ import (
 
 // Static errors to satisfy err113 linter
 var (
-	errWorkflowEnvRequired       = errors.New("WORKFLOW environment variable is required")
-	errWorkflowNameEnvRequired   = errors.New("WORKFLOW_NAME environment variable is required")
-	errUnknownScheduleOperation  = errors.New("unknown schedule operation")
-	errUnknownTemplateOperation  = errors.New("unknown template operation")
-	errWorkflowNotFound          = errors.New("workflow not found")
-	errUnsupportedStepType       = errors.New("unsupported step type")
-	errExecutionNotFound         = errors.New("execution not found")
-	errWorkflowsFailedValidation = errors.New("workflows failed validation")
-	errWorkflowInvalid           = errors.New("workflow is invalid")
-	errWorkflowStepFailed        = errors.New("workflow step failed")
+	errWorkflowEnvRequired              = errors.New("workflow parameter is required. Usage: magex workflow:execute workflow=<name>")
+	errWorkflowNameEnvRequired          = errors.New("name parameter is required. Usage: magex workflow:create name=<workflow-name>")
+	errUnknownScheduleOperation         = errors.New("unknown schedule operation")
+	errUnknownTemplateOperation         = errors.New("unknown template operation")
+	errWorkflowNotFound                 = errors.New("workflow not found")
+	errUnsupportedStepType              = errors.New("unsupported step type")
+	errExecutionNotFound                = errors.New("execution not found")
+	errWorkflowsFailedValidation        = errors.New("workflows failed validation")
+	errWorkflowInvalid                  = errors.New("workflow is invalid")
+	errWorkflowStepFailed               = errors.New("workflow step failed")
+	errWorkflowStatusWithArgsRequired   = errors.New("status requires execution-id parameter: use StatusWithArgs instead")
+	errWorkflowCreateWithArgsRequired   = errors.New("create requires name parameter: use CreateWithArgs instead")
+	errWorkflowValidateWithArgsRequired = errors.New("validate requires workflow parameter: use ValidateWithArgs instead")
+	errWorkflowScheduleWithArgsRequired = errors.New("schedule requires operation parameter: use ScheduleWithArgs instead")
+	errWorkflowTemplateWithArgsRequired = errors.New("template requires operation parameter: use TemplateWithArgs instead")
+	errWorkflowHistoryWithArgsRequired  = errors.New("history requires workflow parameter: use HistoryWithArgs instead")
 )
 
 // Workflow namespace for enterprise workflow operations
@@ -39,8 +45,69 @@ type Workflow mg.Namespace
 func (Workflow) Execute() error {
 	utils.Header("🔄 Enterprise Workflow Execution")
 
+	// Get workflow name from environment variable
+	workflowName := os.Getenv("WORKFLOW")
+	if workflowName == "" {
+		return errors.New("WORKFLOW environment variable is required")
+	}
+
+	// Load workflow definition
+	workflow, err := loadWorkflowDefinition(workflowName)
+	if err != nil {
+		return fmt.Errorf("failed to load workflow '%s': %w", workflowName, err)
+	}
+
+	utils.Info("🚀 Executing workflow: %s", workflow.Name)
+	utils.Info("📝 Description: %s", workflow.Description)
+	utils.Info("📋 Steps: %d", len(workflow.Steps))
+
+	// Create execution context
+	execution := WorkflowExecution{
+		ID:        generateExecutionID(),
+		Workflow:  workflow,
+		StartTime: time.Now(),
+		Status:    "running",
+		Results:   make([]StepResult, len(workflow.Steps)),
+	}
+
+	// Execute workflow steps
+	if err := executeWorkflowSteps(&execution); err != nil {
+		execution.Status = "failed"
+		execution.Error = err.Error()
+		execution.EndTime = time.Now()
+
+		if saveErr := saveWorkflowExecution(&execution); saveErr != nil {
+			utils.Warn("Failed to save workflow execution: %v", saveErr)
+		}
+
+		return fmt.Errorf("workflow execution failed: %w", err)
+	}
+
+	// Mark as completed
+	execution.Status = "completed"
+	execution.EndTime = time.Now()
+
+	// Save execution results
+	if err := saveWorkflowExecution(&execution); err != nil {
+		utils.Warn("Failed to save workflow execution: %v", err)
+	}
+
+	utils.Success("✅ Workflow completed successfully")
+	utils.Info("📊 Execution ID: %s", execution.ID)
+	utils.Info("⏱️  Duration: %v", execution.EndTime.Sub(execution.StartTime))
+
+	return nil
+}
+
+// ExecuteWithArgs runs a predefined workflow (use workflow=<name>)
+func (Workflow) ExecuteWithArgs(args ...string) error {
+	utils.Header("🔄 Enterprise Workflow Execution")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
 	// Get workflow name
-	workflowName := utils.GetEnv("WORKFLOW", "")
+	workflowName := utils.GetParam(params, "workflow", "")
 	if workflowName == "" {
 		return errWorkflowEnvRequired
 	}
@@ -130,11 +197,19 @@ func (Workflow) List() error {
 	return nil
 }
 
-// Status shows workflow execution status
+// Status shows workflow status
 func (Workflow) Status() error {
+	return errWorkflowStatusWithArgsRequired
+}
+
+// StatusWithArgs shows workflow status (use execution-id=<id>)
+func (Workflow) StatusWithArgs(args ...string) error {
 	utils.Header("📊 Workflow Status")
 
-	executionID := utils.GetEnv("EXECUTION_ID", "")
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	executionID := utils.GetParam(params, "execution-id", "")
 	if executionID == "" {
 		return showAllExecutions()
 	}
@@ -142,16 +217,24 @@ func (Workflow) Status() error {
 	return showExecutionStatus(executionID)
 }
 
-// Create creates a new workflow from template
+// Create creates a new workflow
 func (Workflow) Create() error {
+	return errWorkflowCreateWithArgsRequired
+}
+
+// CreateWithArgs creates a new workflow (use name=<workflow_name>)
+func (Workflow) CreateWithArgs(args ...string) error {
 	utils.Header("📝 Create New Workflow")
 
-	workflowName := utils.GetEnv("WORKFLOW_NAME", "")
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	workflowName := utils.GetParam(params, "name", "")
 	if workflowName == "" {
 		return errWorkflowNameEnvRequired
 	}
 
-	templateType := utils.GetEnv("TEMPLATE", "basic")
+	templateType := utils.GetParam(params, "template", "basic")
 
 	// Create workflow from template
 	workflow := createWorkflowFromTemplate(workflowName, templateType)
@@ -169,9 +252,17 @@ func (Workflow) Create() error {
 
 // Validate validates workflow definitions
 func (Workflow) Validate() error {
+	return errWorkflowValidateWithArgsRequired
+}
+
+// ValidateWithArgs validates workflow definitions (use workflow=<name>)
+func (Workflow) ValidateWithArgs(args ...string) error {
 	utils.Header("🔍 Workflow Validation")
 
-	workflowName := utils.GetEnv("WORKFLOW", "")
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	workflowName := utils.GetParam(params, "workflow", "")
 	if workflowName == "" {
 		return validateAllWorkflows()
 	}
@@ -179,11 +270,19 @@ func (Workflow) Validate() error {
 	return validateWorkflow(workflowName)
 }
 
-// Schedule manages workflow scheduling
+// Schedule schedules workflow execution
 func (Workflow) Schedule() error {
+	return errWorkflowScheduleWithArgsRequired
+}
+
+// ScheduleWithArgs schedules workflow execution (use operation=<list|add|remove>)
+func (Workflow) ScheduleWithArgs(args ...string) error {
 	utils.Header("📅 Workflow Scheduling")
 
-	operation := utils.GetEnv("SCHEDULE_OPERATION", "list")
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	operation := utils.GetParam(params, "operation", "list")
 
 	switch operation {
 	case "list":
@@ -199,11 +298,19 @@ func (Workflow) Schedule() error {
 	}
 }
 
-// Template manages workflow templates
+// Template creates workflow from template
 func (Workflow) Template() error {
+	return errWorkflowTemplateWithArgsRequired
+}
+
+// TemplateWithArgs creates workflow from template (use operation=<list|create|update|delete>)
+func (Workflow) TemplateWithArgs(args ...string) error {
 	utils.Header("📋 Workflow Templates")
 
-	operation := utils.GetEnv("TEMPLATE_OPERATION", "list")
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	operation := utils.GetParam(params, "operation", "list")
 
 	switch operation {
 	case "list":
@@ -221,10 +328,19 @@ func (Workflow) Template() error {
 
 // History shows workflow execution history
 func (Workflow) History() error {
+	return errWorkflowHistoryWithArgsRequired
+}
+
+// HistoryWithArgs shows workflow execution history (use workflow=<name>)
+func (Workflow) HistoryWithArgs(args ...string) error {
 	utils.Header("📊 Workflow Execution History")
 
-	workflowName := utils.GetEnv("WORKFLOW", "")
-	limit := parseInt(utils.GetEnv("LIMIT", "10"))
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	workflowName := utils.GetParam(params, "workflow", "")
+	limitStr := utils.GetParam(params, "limit", "10")
+	limit := parseInt(limitStr)
 
 	executions, err := getWorkflowHistory(workflowName, limit)
 	if err != nil {

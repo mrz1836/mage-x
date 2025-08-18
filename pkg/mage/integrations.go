@@ -31,9 +31,9 @@ var (
 	errUnsupportedIntegrationType   = errors.New("unsupported integration type")
 	errUnknownSyncOperation         = errors.New("unknown sync operation")
 	errUnknownWebhookOperation      = errors.New("unknown webhook operation")
-	errChannelMessageRequired       = errors.New("CHANNEL and MESSAGE environment variables are required")
-	errIntegrationTypeRequired      = errors.New("INTEGRATION_TYPE environment variable is required")
-	errIntegrationTypeInputRequired = errors.New("INTEGRATION_TYPE and INPUT environment variables are required")
+	errChannelMessageRequired       = errors.New("channel and message parameters are required. Usage: magex integrations:notify channel=<name> message=\"<text>\"")
+	errIntegrationTypeRequired      = errors.New("type parameter is required. Usage: magex integrations:export type=<integration-type>")
+	errIntegrationTypeInputRequired = errors.New("type and input parameters are required. Usage: magex integrations:import type=<type> input=<file>")
 	errSlackWebhookURLRequired      = errors.New("SLACK_WEBHOOK_URL environment variable is required")
 	errGCPProjectIDRequired         = errors.New("GCP_PROJECT_ID environment variable is required")
 	errSlackWebhookFailed           = errors.New("slack webhook request failed")
@@ -43,11 +43,14 @@ var (
 type Integrations mg.Namespace
 
 // Setup configures enterprise integrations
-func (Integrations) Setup() error {
+func (Integrations) Setup(args ...string) error {
 	utils.Header("🔌 Enterprise Integrations Setup")
 
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
 	// Get integration type
-	integrationType := utils.GetEnv("INTEGRATION_TYPE", "")
+	integrationType := utils.GetParam(params, "type", "")
 	if integrationType == "" {
 		return showAvailableIntegrations()
 	}
@@ -84,8 +87,13 @@ func (Integrations) Setup() error {
 }
 
 // Test validates integration configurations
-func (Integrations) Test() error {
+func (Integrations) Test(args ...string) error {
 	utils.Header("🧪 Integration Testing")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+	service := utils.GetParam(params, "service", "all")
+	outputFile := utils.GetParam(params, "output", "integration-test-results.json")
 
 	// Load integration configurations
 	integrations, err := loadIntegrationConfigurations()
@@ -104,6 +112,10 @@ func (Integrations) Test() error {
 	results := make([]IntegrationTestResult, len(integrations))
 	for i := range integrations {
 		integration := &integrations[i]
+		// Filter by service if specified
+		if service != "all" && integration.Type != service {
+			continue
+		}
 		utils.Info("Testing %s integration...", integration.Name)
 		results[i] = testIntegration(integration)
 	}
@@ -112,7 +124,6 @@ func (Integrations) Test() error {
 	displayTestResults(results)
 
 	// Save test results
-	outputFile := utils.GetEnv("OUTPUT", "integration-test-results.json")
 	if err := saveTestResults(results, outputFile); err != nil {
 		utils.Warn("Failed to save test results: %v", err)
 	} else {
@@ -123,11 +134,12 @@ func (Integrations) Test() error {
 }
 
 // Sync synchronizes data between integrated systems
-func (Integrations) Sync() error {
+func (Integrations) Sync(args ...string) error {
 	utils.Header("🔄 Integration Synchronization")
 
-	// Get sync operation
-	operation := utils.GetEnv("SYNC_OPERATION", "all")
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+	operation := utils.GetParam(params, "operation", "all")
 
 	switch operation {
 	case "all":
@@ -146,13 +158,16 @@ func (Integrations) Sync() error {
 }
 
 // Notify sends notifications through configured channels
-func (Integrations) Notify() error {
+func (Integrations) Notify(args ...string) error {
 	utils.Header("📢 Integration Notifications")
 
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
 	// Get notification parameters
-	channel := utils.GetEnv("CHANNEL", "")
-	message := utils.GetEnv("MESSAGE", "")
-	level := utils.GetEnv("LEVEL", "info")
+	channel := utils.GetParam(params, "channel", "")
+	message := utils.GetParam(params, "message", "")
+	level := utils.GetParam(params, "level", "info")
 
 	if channel == "" || message == "" {
 		return errChannelMessageRequired
@@ -196,10 +211,12 @@ func (Integrations) Status() error {
 }
 
 // Webhook manages webhook integrations
-func (Integrations) Webhook() error {
+func (Integrations) Webhook(args ...string) error {
 	utils.Header("🔗 Webhook Management")
 
-	operation := utils.GetEnv("WEBHOOK_OPERATION", "list")
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+	operation := utils.GetParam(params, "operation", "list")
 
 	switch operation {
 	case "list":
@@ -218,13 +235,16 @@ func (Integrations) Webhook() error {
 }
 
 // Export exports integration data
-func (Integrations) Export() error {
+func (Integrations) Export(args ...string) error {
 	utils.Header("📤 Integration Data Export")
 
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
 	// Get export parameters
-	integrationType := utils.GetEnv("INTEGRATION_TYPE", "")
-	format := utils.GetEnv("FORMAT", "json")
-	outputFile := utils.GetEnv("OUTPUT", "integration-export.json")
+	integrationType := utils.GetParam(params, "type", "")
+	format := utils.GetParam(params, "format", "json")
+	outputFile := utils.GetParam(params, "output", "integration-export.json")
 
 	if integrationType == "" {
 		return errIntegrationTypeRequired
@@ -247,12 +267,15 @@ func (Integrations) Export() error {
 }
 
 // Import imports integration data
-func (Integrations) Import() error {
+func (Integrations) Import(args ...string) error {
 	utils.Header("📥 Integration Data Import")
 
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
 	// Get import parameters
-	integrationType := utils.GetEnv("INTEGRATION_TYPE", "")
-	inputFile := utils.GetEnv("INPUT", "")
+	integrationType := utils.GetParam(params, "type", "")
+	inputFile := utils.GetParam(params, "input", "")
 
 	if integrationType == "" || inputFile == "" {
 		return errIntegrationTypeInputRequired

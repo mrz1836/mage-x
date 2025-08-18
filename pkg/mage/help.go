@@ -17,7 +17,7 @@ import (
 
 // Static errors for help operations
 var (
-	errHelpCommandRequired = errors.New("COMMAND environment variable is required. Usage: COMMAND=<name> mage helpCommand")
+	errHelpCommandRequired = errors.New("command parameter is required. Usage: magex help:command command=<name>")
 	errUnsupportedShell    = errors.New("unsupported shell (supported: bash, zsh, fish)")
 	errCommandNotFound     = errors.New("command not found")
 )
@@ -56,6 +56,7 @@ enterprise-grade development tools with a friendly user experience.
 Quick Start:
   mage build              # Build your project
   mage test               # Run tests
+  mage bench              # Run benchmarks
   mage lint               # Run linter
   mage release           # Create a release
   mage help               # Show this help
@@ -241,7 +242,7 @@ func (Help) Examples() error {
 				"mage release:stable",
 				"mage release:beta",
 				"mage release:edge",
-				"VERSION=v1.2.3 mage release:stable",
+				"mage release:stable version=v1.2.3",
 				"mage releases:status  # Show release status",
 			},
 		},
@@ -251,7 +252,7 @@ func (Help) Examples() error {
 				"mage help  # Show help",
 				"mage configure:update  # Start configuration wizard",
 				"mage recipes:list  # List available recipes",
-				"RECIPE=fresh-start mage recipes:run",
+				"mage recipes:run recipe=fresh-start",
 			},
 		},
 		{
@@ -260,7 +261,9 @@ func (Help) Examples() error {
 				"mage version:show",
 				"mage version:check  # Check for updates",
 				"mage version:update  # Update to latest",
-				"BUMP=minor mage version:bump",
+				"mage version:bump bump=minor push",
+				"mage git:tag version=1.2.3",
+				"mage git:commit message='fix: bug fix'",
 			},
 		},
 		{
@@ -269,7 +272,7 @@ func (Help) Examples() error {
 				"mage yaml:init  # Create mage.yaml",
 				"mage yaml:validate  # Validate configuration",
 				"mage yaml:show  # Show current configuration",
-				"PROJECT_TYPE=cli mage yaml:template",
+				"mage yaml:template type=cli",
 			},
 		},
 	}
@@ -282,7 +285,7 @@ func (Help) Examples() error {
 	}
 
 	fmt.Printf("\nTips:\n")
-	fmt.Printf("  • Use environment variables to pass parameters\n")
+	fmt.Printf("  • Use 'param=value' format to pass parameters\n")
 	fmt.Printf("  • Add VERBOSE=true for detailed output\n")
 	fmt.Printf("  • Check mage.yaml for project-specific configuration\n")
 	fmt.Printf("  • Use 'mage help' for beautiful command listing\n")
@@ -348,7 +351,7 @@ Discover pre-built patterns:
   mage recipes:list
 
 Run a recipe:
-  RECIPE=fresh-start mage recipes:run
+  mage recipes:run recipe=fresh-start
 
 🚀 Step 7: Advanced Features
 
@@ -361,7 +364,7 @@ Run a recipe:
 
 1. Read the documentation: mage help:commands
 2. Try the configuration wizard: mage configure:update
-3. Set up CI/CD: RECIPE=ci-setup mage recipes:run
+3. Set up CI/CD: mage recipes:run recipe=ci-setup
 4. Show version: mage version:show
 
 🆘 Getting Help
@@ -412,7 +415,7 @@ func (Help) Topics() error {
 		{"completions", "Shell completions", "mage help:completions"},
 	}
 
-	utils.Info("\nAvailable Help Topics:")
+	utils.Info("Available Help Topics:")
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	for _, topic := range topics {
@@ -424,7 +427,7 @@ func (Help) Topics() error {
 		return fmt.Errorf("failed to flush topic help: %w", err)
 	}
 
-	utils.Info("\nUsage:")
+	utils.Info("Usage:")
 	utils.Info("  mage helpTOPIC")
 	utils.Info("  mage help:command COMMAND_NAME")
 
@@ -512,8 +515,9 @@ func getAllCommands() []HelpCommand {
 			Usage:       "mage recipes COMMAND",
 			Examples: []string{
 				"mage recipes:list",
-				"mage recipes:run",
-				"RECIPE=fresh-start mage recipes:run",
+				"mage recipes:show recipe=fresh-start",
+				"mage recipes:run recipe=fresh-start",
+				"mage recipes:search term=docker",
 			},
 			Options: []HelpOption{
 				{Name: "RECIPE", Description: "Recipe name", Required: true},

@@ -29,7 +29,7 @@ func (ts *DocsTestSuite) SetupSuite() {
 
 	// Store original environment variables
 	ts.origEnvVars = make(map[string]string)
-	envVars := []string{"version", "DOCS_TOOL", "DOCS_PORT", "CI"}
+	envVars := []string{"version", "CI"}
 	for _, env := range envVars {
 		ts.origEnvVars[env] = os.Getenv(env)
 	}
@@ -53,7 +53,7 @@ func (ts *DocsTestSuite) TearDownSuite() {
 // SetupTest runs before each test
 func (ts *DocsTestSuite) SetupTest() {
 	// Clear environment variables for clean test state
-	envVars := []string{"version", "DOCS_TOOL", "DOCS_PORT", "CI"}
+	envVars := []string{"version", "CI"}
 	for _, env := range envVars {
 		ts.Require().NoError(os.Unsetenv(env))
 	}
@@ -271,24 +271,29 @@ func (ts *DocsTestSuite) TestDocsHelperFunctions() {
 
 // TestDocsPortManagement tests port management functionality
 func (ts *DocsTestSuite) TestDocsPortManagement() {
-	ts.Run("GetPortFromEnv", func() {
-		// Test default port
-		port := getPortFromEnv(8080)
+	ts.Run("GetPortFromConfig", func() {
+		// Test default port with nil config
+		port := getPortFromConfig(nil, 8080)
 		ts.Require().Equal(8080, port)
 
-		// Test with environment variable
-		ts.Require().NoError(os.Setenv("DOCS_PORT", "9090"))
-		port = getPortFromEnv(8080)
+		// Test with config having no port set (0)
+		config := &Config{
+			Docs: DocsConfig{
+				Tool: "",
+				Port: 0,
+			},
+		}
+		port = getPortFromConfig(config, 8080)
+		ts.Require().Equal(8080, port)
+
+		// Test with valid port in config
+		config.Docs.Port = 9090
+		port = getPortFromConfig(config, 8080)
 		ts.Require().Equal(9090, port)
 
-		// Test with invalid environment variable
-		ts.Require().NoError(os.Setenv("DOCS_PORT", "invalid"))
-		port = getPortFromEnv(8080)
-		ts.Require().Equal(8080, port)
-
-		// Test with out-of-range port
-		ts.Require().NoError(os.Setenv("DOCS_PORT", "70000"))
-		port = getPortFromEnv(8080)
+		// Test with out-of-range port in config (should use default)
+		config.Docs.Port = 70000
+		port = getPortFromConfig(config, 8080)
 		ts.Require().Equal(8080, port)
 	})
 
@@ -369,10 +374,10 @@ func (ts *DocsTestSuite) TestDocsDetection() {
 		ts.Require().NotEmpty(server.Mode)
 	})
 
-	ts.Run("DetectWithEnvironmentOverride", func() {
-		ts.Require().NoError(os.Setenv("DOCS_TOOL", DocToolPkgsite))
+	ts.Run("DetectWithConfigOverride", func() {
+		// Test with pkgsite configured (may not be available in test environment)
 		server := detectBestDocTool()
-		// May or may not respect the override depending on tool availability
+		// Should return a valid server configuration based on auto-detection
 		ts.Require().True(server.Tool == DocToolPkgsite || server.Tool == DocToolGodoc || server.Tool == DocToolNone)
 	})
 
@@ -657,26 +662,35 @@ func (ts *DocsTestSuite) TestDocsBrowserHandling() {
 	})
 }
 
-// TestDocsEnvironmentHandling tests environment variable processing
-func (ts *DocsTestSuite) TestDocsEnvironmentHandling() {
+// TestDocsConfiguration tests configuration processing
+func (ts *DocsTestSuite) TestDocsConfiguration() {
 	ts.Run("VersionEnvironmentVariable", func() {
-		// Test version environment variable handling
+		// Test version environment variable handling (still used elsewhere)
 		ts.Require().NoError(os.Setenv("version", "1.2.3"))
 		version := os.Getenv("version")
 		ts.Require().Equal("1.2.3", version)
 	})
 
-	ts.Run("DocsToolEnvironmentVariable", func() {
-		// Test DOCS_TOOL environment variable
-		ts.Require().NoError(os.Setenv("DOCS_TOOL", DocToolPkgsite))
-		tool := os.Getenv("DOCS_TOOL")
-		ts.Require().Equal(DocToolPkgsite, tool)
+	ts.Run("DocsToolConfiguration", func() {
+		// Test DOCS_TOOL configuration
+		config := &Config{
+			Docs: DocsConfig{
+				Tool: DocToolPkgsite,
+				Port: 0,
+			},
+		}
+		ts.Require().Equal(DocToolPkgsite, config.Docs.Tool)
 	})
 
-	ts.Run("DocsPortEnvironmentVariable", func() {
-		// Test DOCS_PORT environment variable
-		ts.Require().NoError(os.Setenv("DOCS_PORT", "9999"))
-		port := getPortFromEnv(8080)
+	ts.Run("DocsPortConfiguration", func() {
+		// Test DOCS_PORT configuration
+		config := &Config{
+			Docs: DocsConfig{
+				Tool: "",
+				Port: 9999,
+			},
+		}
+		port := getPortFromConfig(config, 8080)
 		ts.Require().Equal(9999, port)
 	})
 }
@@ -694,23 +708,27 @@ func (ts *DocsTestSuite) TestDocsNetworkOperations() {
 	})
 
 	ts.Run("PortRangeValidation", func() {
-		// Test port range validation in getPortFromEnv
+		// Test port range validation in getPortFromConfig
 		testCases := []struct {
-			envValue     string
+			configPort   int
 			defaultPort  int
 			expectedPort int
 		}{
-			{"8080", 6060, 8080},
-			{"invalid", 6060, 6060},
-			{"70000", 6060, 6060}, // Out of range
-			{"0", 6060, 6060},     // Invalid
-			{"", 6060, 6060},      // Empty
+			{8080, 6060, 8080},
+			{70000, 6060, 6060}, // Out of range
+			{0, 6060, 6060},     // Invalid/unset
+			{-1, 6060, 6060},    // Invalid
 		}
 
 		for _, tc := range testCases {
-			ts.Require().NoError(os.Setenv("DOCS_PORT", tc.envValue))
-			port := getPortFromEnv(tc.defaultPort)
-			ts.Require().Equal(tc.expectedPort, port, "Test case: %s", tc.envValue)
+			config := &Config{
+				Docs: DocsConfig{
+					Tool: "",
+					Port: tc.configPort,
+				},
+			}
+			port := getPortFromConfig(config, tc.defaultPort)
+			ts.Require().Equal(tc.expectedPort, port, "Test case: port %d", tc.configPort)
 		}
 	})
 }

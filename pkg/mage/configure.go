@@ -79,14 +79,14 @@ func (Configure) Show() error {
 	}
 
 	// Display build configuration
-	utils.Info("\n🏗️  Build Configuration:")
+	utils.Info("🏗️  Build Configuration:")
 	utils.Info("  Output: %s", config.Build.Output)
 	utils.Info("  Parallel: %d", config.Build.Parallel)
 	utils.Info("  Platforms: %s", strings.Join(config.Build.Platforms, ", "))
 	utils.Info("  Trim Path: %v", config.Build.TrimPath)
 
 	// Display test configuration
-	utils.Info("\n🧪 Test Configuration:")
+	utils.Info("🧪 Test Configuration:")
 	utils.Info("  Parallel: %v", config.Test.Parallel)
 	utils.Info("  Timeout: %s", config.Test.Timeout)
 	utils.Info("  Cover Mode: %s", config.Test.CoverMode)
@@ -94,7 +94,7 @@ func (Configure) Show() error {
 
 	// Display enterprise configuration if available
 	if config.Enterprise != nil {
-		utils.Info("\n🏢 Enterprise Configuration:")
+		utils.Info("🏢 Enterprise Configuration:")
 		utils.Info("  Organization: %s", config.Enterprise.Organization.Name)
 		utils.Info("  Domain: %s", config.Enterprise.Organization.Domain)
 		utils.Info("  Security Level: %s", config.Enterprise.Security.Level)

@@ -381,7 +381,6 @@ func TestBumpWithPushEnabled(t *testing.T) {
 	t.Run("PushEnabled", func(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
-		require.NoError(t, os.Setenv("PUSH", "true"))
 
 		// Setup clean state
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -393,7 +392,7 @@ func TestBumpWithPushEnabled(t *testing.T) {
 		mock.SetOutput("git push origin v1.0.1", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("push")
 		require.NoError(t, err)
 
 		// Verify push was called
@@ -479,7 +478,6 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 
 		// Clear environment to ensure clean state
 		cleanupEnvironment(t)
-		require.NoError(t, os.Setenv("PUSH", "true"))
 
 		// Set up git state: clean repo, no tags on commit, v1.0.6 is latest tag
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -493,14 +491,14 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		mock.SetOutput("git push origin v1.0.7", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("push")
 		require.NoError(t, err, "Default patch bump should succeed")
 
 		// Verify correct commands were executed
 		require.Contains(t, mock.commands, "git tag -a v1.0.7 -m GitHubRelease v1.0.7",
 			"Should create v1.0.7 tag (patch bump)")
 		require.Contains(t, mock.commands, "git push origin v1.0.7",
-			"Should push v1.0.7 tag with PUSH=true")
+			"Should push v1.0.7 tag with push parameter")
 
 		// Verify it did NOT create v2.0.0
 		require.NotContains(t, mock.commands, "git tag -a v2.0.0",
@@ -508,15 +506,12 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 	})
 
 	t.Run("Issue_BUMPContaminationMajor", func(t *testing.T) {
-		// Test scenario where BUMP was contaminated with "major"
+		// Test scenario where major bump is explicitly requested
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		// Simulate contaminated environment
+		// Clear environment to ensure clean state
 		cleanupEnvironment(t)
-		require.NoError(t, os.Setenv("BUMP", "major"))
-		require.NoError(t, os.Setenv("PUSH", "true"))
-		require.NoError(t, os.Setenv("MAJOR_BUMP_CONFIRM", "true")) // Required for major bumps now
 
 		// Set up git state
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -525,17 +520,17 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 
-		// With BUMP=major, expect v2.0.0
+		// With bump=major, expect v2.0.0
 		mock.SetOutput("git tag -a v2.0.0 -m GitHubRelease v2.0.0", "", nil)
 		mock.SetOutput("git push origin v2.0.0", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=major", "push", "major-confirm")
 		require.NoError(t, err)
 
 		// This test documents the current behavior with confirmation required
 		require.Contains(t, mock.commands, "git tag -a v2.0.0 -m GitHubRelease v2.0.0",
-			"BUMP=major with confirmation creates major version jump")
+			"bump=major with confirmation creates major version jump")
 	})
 
 	t.Run("Issue_MultipleTagsOnSameCommit", func(t *testing.T) {
@@ -544,7 +539,6 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		require.NoError(t, SetRunner(mock))
 
 		cleanupEnvironment(t)
-		require.NoError(t, os.Setenv("PUSH", "true"))
 
 		// Clean working directory
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -552,7 +546,7 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		mock.SetOutput("git tag --points-at HEAD", "v1.0.7\nv1.0.8", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("push")
 		require.Error(t, err, "Should prevent bump when tags already exist on commit")
 		require.ErrorIs(t, err, errMultipleTagsOnCommit)
 
@@ -587,11 +581,8 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		// Contaminated environment that would cause major bump
+		// Clear environment to ensure clean state
 		cleanupEnvironment(t)
-		require.NoError(t, os.Setenv("BUMP", "major"))
-		require.NoError(t, os.Setenv("PUSH", "true"))
-		require.NoError(t, os.Setenv("DRY_RUN", "true"))
 
 		// Even with dirty repo, dry run should work
 		mock.SetOutput("git status --porcelain", "M test-file.go", nil)
@@ -601,7 +592,7 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=major", "push", "dry-run")
 		require.NoError(t, err, "Dry run should succeed even with contamination and dirty repo")
 
 		// Verify no actual git operations were performed
@@ -624,22 +615,8 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 	cleanupEnvironment(t)
 
 	t.Run("ValidWorkflowPatchBump", func(t *testing.T) {
-		// Clean environment variables
-		envVars := []string{"BUMP", "PUSH", "DRY_RUN", "MAJOR_BUMP_CONFIRM"}
-		for _, env := range envVars {
-			require.NoError(t, os.Unsetenv(env))
-		}
-		defer func() {
-			for _, env := range envVars {
-				_ = os.Unsetenv(env) //nolint:errcheck // Test cleanup
-			}
-		}()
-
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
-
-		require.NoError(t, os.Setenv("BUMP", "patch"))
-		require.NoError(t, os.Setenv("PUSH", "true"))
 
 		// Set up successful workflow
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -651,7 +628,7 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 		mock.SetOutput("git push origin v1.0.7", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=patch", "push")
 		require.NoError(t, err)
 
 		// Verify complete workflow
@@ -671,22 +648,8 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 	})
 
 	t.Run("ValidWorkflowMinorBump", func(t *testing.T) {
-		// Clean environment variables
-		envVars := []string{"BUMP", "PUSH", "DRY_RUN", "MAJOR_BUMP_CONFIRM"}
-		for _, env := range envVars {
-			require.NoError(t, os.Unsetenv(env))
-		}
-		defer func() {
-			for _, env := range envVars {
-				_ = os.Unsetenv(env) //nolint:errcheck // Test cleanup
-			}
-		}()
-
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
-
-		require.NoError(t, os.Setenv("BUMP", "minor"))
-		require.NoError(t, os.Setenv("PUSH", "true"))
 
 		// Set up for minor bump
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -698,7 +661,7 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 		mock.SetOutput("git push origin v1.1.0", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=minor", "push")
 		require.NoError(t, err)
 
 		require.Contains(t, mock.commands, "git tag -a v1.1.0 -m GitHubRelease v1.1.0",
@@ -706,23 +669,8 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 	})
 
 	t.Run("ValidWorkflowMajorBumpExplicit", func(t *testing.T) {
-		// Clean environment variables
-		envVars := []string{"BUMP", "PUSH", "DRY_RUN", "MAJOR_BUMP_CONFIRM"}
-		for _, env := range envVars {
-			require.NoError(t, os.Unsetenv(env))
-		}
-		defer func() {
-			for _, env := range envVars {
-				_ = os.Unsetenv(env) //nolint:errcheck // Test cleanup
-			}
-		}()
-
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
-
-		require.NoError(t, os.Setenv("BUMP", "major"))
-		require.NoError(t, os.Setenv("PUSH", "true"))
-		require.NoError(t, os.Setenv("MAJOR_BUMP_CONFIRM", "true"))
 
 		// Set up for major bump
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -734,7 +682,7 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 		mock.SetOutput("git push origin v2.0.0", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=major", "push", "major-confirm")
 		require.NoError(t, err)
 
 		require.Contains(t, mock.commands, "git tag -a v2.0.0 -m GitHubRelease v2.0.0",
@@ -781,9 +729,6 @@ func TestVersionBumpErrorRecovery(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		require.NoError(t, os.Setenv("BUMP", "patch"))
-		require.NoError(t, os.Setenv("PUSH", "true"))
-
 		// Successful tag creation but failed push
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
@@ -794,7 +739,7 @@ func TestVersionBumpErrorRecovery(t *testing.T) {
 		mock.SetOutput("git push origin v1.0.7", "", errGitError)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=patch", "push")
 		require.Error(t, err, "Should fail when git push fails")
 		require.Contains(t, err.Error(), "failed to push tag")
 
@@ -807,10 +752,8 @@ func TestVersionBumpErrorRecovery(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		require.NoError(t, os.Setenv("BUMP", "hotfix"))
-
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=hotfix")
 		require.Error(t, err, "Should fail with invalid bump type")
 		require.ErrorIs(t, err, errInvalidBumpType)
 
@@ -834,8 +777,6 @@ func TestVersionBumpComplexTagScenarios(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		require.NoError(t, os.Setenv("BUMP", "patch"))
-
 		// No tags anywhere in the repository
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
@@ -845,7 +786,7 @@ func TestVersionBumpComplexTagScenarios(t *testing.T) {
 		mock.SetOutput("git tag -a v0.0.1 -m GitHubRelease v0.0.1", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=patch")
 		require.NoError(t, err)
 
 		require.Contains(t, mock.commands, "git tag -a v0.0.1 -m GitHubRelease v0.0.1",
@@ -856,8 +797,6 @@ func TestVersionBumpComplexTagScenarios(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		require.NoError(t, os.Setenv("BUMP", "patch"))
-
 		// Multiple tags on HEAD - should choose highest
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
@@ -865,7 +804,7 @@ func TestVersionBumpComplexTagScenarios(t *testing.T) {
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=patch")
 		require.NoError(t, err)
 
 		require.Contains(t, mock.commands, "git tag -a v1.0.7 -m GitHubRelease v1.0.7",
@@ -876,8 +815,6 @@ func TestVersionBumpComplexTagScenarios(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		require.NoError(t, os.Setenv("BUMP", "patch"))
-
 		// No tags on HEAD but tags exist in history
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
@@ -887,7 +824,7 @@ func TestVersionBumpComplexTagScenarios(t *testing.T) {
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=patch")
 		require.NoError(t, err)
 
 		require.Contains(t, mock.commands, "git tag -a v1.0.7 -m GitHubRelease v1.0.7",

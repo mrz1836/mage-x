@@ -159,7 +159,7 @@ func (r *AuditRegistry) GetDefaultLogger() *AuditLogger {
 	config := DefaultAuditConfig()
 
 	// Check if audit is enabled via environment variable
-	if os.Getenv("MAGE_X_AUDIT_ENABLED") == "true" {
+	if os.Getenv("MAGE_X_AUDIT_ENABLED") == TrueValue {
 		config.Enabled = true
 	}
 

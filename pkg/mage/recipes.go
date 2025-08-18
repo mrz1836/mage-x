@@ -16,14 +16,19 @@ import (
 
 // Static errors for recipe operations
 var (
-	errRecipeShowRequired         = errors.New("RECIPE environment variable is required. Usage: RECIPE=<name> mage recipes:show")
-	errRecipeRunRequired          = errors.New("RECIPE environment variable is required. Usage: RECIPE=<name> mage recipes:run")
-	errTermSearchRequired         = errors.New("TERM environment variable is required. Usage: TERM=<search> mage recipes:search")
-	errRecipeCreateRequired       = errors.New("RECIPE environment variable is required. Usage: RECIPE=<name> mage recipes:create")
-	errSourceInstallRequired      = errors.New("SOURCE environment variable is required. Usage: SOURCE=<url|file> mage recipes:install")
-	errRecipeNotFound             = errors.New("recipe not found")
-	errCustomRecipeFileNotFound   = errors.New("custom recipe file not found")
-	errRequiredDependencyNotFound = errors.New("required dependency not found")
+	errRecipeShowRequired            = errors.New("recipe parameter is required. Usage: magex recipes:show recipe=<name>")
+	errRecipeRunRequired             = errors.New("recipe parameter is required. Usage: magex recipes:run recipe=<name>")
+	errTermSearchRequired            = errors.New("term parameter is required. Usage: magex recipes:search term=<search>")
+	errRecipeCreateRequired          = errors.New("recipe parameter is required. Usage: magex recipes:create recipe=<name>")
+	errSourceInstallRequired         = errors.New("source parameter is required. Usage: magex recipes:install source=<url|file>")
+	errRecipeNotFound                = errors.New("recipe not found")
+	errCustomRecipeFileNotFound      = errors.New("custom recipe file not found")
+	errRequiredDependencyNotFound    = errors.New("required dependency not found")
+	errRecipeShowWithArgsRequired    = errors.New("show requires recipe parameter: use ShowWithArgs instead")
+	errRecipeRunWithArgsRequired     = errors.New("run requires recipe parameter: use RunWithArgs instead")
+	errRecipeSearchWithArgsRequired  = errors.New("search requires term parameter: use SearchWithArgs instead")
+	errRecipeCreateWithArgsRequired  = errors.New("create requires recipe parameter: use CreateWithArgs instead")
+	errRecipeInstallWithArgsRequired = errors.New("install requires source parameter: use InstallWithArgs instead")
 )
 
 // Recipes namespace for common development patterns
@@ -79,7 +84,7 @@ func (Recipes) List() error {
 		categories[recipe.Category] = append(categories[recipe.Category], *recipe)
 	}
 
-	utils.Info("\n🎯 Recipe Categories:")
+	utils.Info("🎯 Recipe Categories:")
 
 	for category, categoryRecipes := range categories {
 		fmt.Printf("\n%s:\n", strings.ToUpper(category[:1])+category[1:])
@@ -89,7 +94,7 @@ func (Recipes) List() error {
 		}
 	}
 
-	utils.Info("\nUsage:")
+	utils.Info("Usage:")
 	utils.Info("  mage recipes:show <name>     # Show recipe details")
 	utils.Info("  mage recipes:run <name>      # Run a recipe")
 	utils.Info("  mage recipes:create <name>   # Create custom recipe")
@@ -100,7 +105,15 @@ func (Recipes) List() error {
 
 // Show displays details of a specific recipe
 func (Recipes) Show() error {
-	recipeName := utils.GetEnv("RECIPE", "")
+	return errRecipeShowWithArgsRequired
+}
+
+// ShowWithArgs displays details of a specific recipe (use recipe=<name>)
+func (Recipes) ShowWithArgs(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	recipeName := utils.GetParam(params, "recipe", "")
 	if recipeName == "" {
 		return errRecipeShowRequired
 	}
@@ -120,7 +133,7 @@ func (Recipes) Show() error {
 		fmt.Printf("Dependencies: %s\n", strings.Join(recipe.Dependencies, ", "))
 	}
 
-	utils.Info("\nSteps:")
+	utils.Info("Steps:")
 	for i, step := range recipe.Steps {
 		fmt.Printf("  %d. %s\n", i+1, step.Name)
 		if step.Description != "" {
@@ -132,7 +145,7 @@ func (Recipes) Show() error {
 	}
 
 	if len(recipe.Variables) > 0 {
-		utils.Info("\nVariables:")
+		utils.Info("Variables:")
 		for key, value := range recipe.Variables {
 			fmt.Printf("  %s = %s\n", key, value)
 		}
@@ -143,7 +156,15 @@ func (Recipes) Show() error {
 
 // Run executes a recipe
 func (Recipes) Run() error {
-	recipeName := utils.GetEnv("RECIPE", "")
+	return errRecipeRunWithArgsRequired
+}
+
+// RunWithArgs executes a recipe (use recipe=<name>)
+func (Recipes) RunWithArgs(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	recipeName := utils.GetParam(params, "recipe", "")
 	if recipeName == "" {
 		return errRecipeRunRequired
 	}
@@ -165,7 +186,7 @@ func (Recipes) Run() error {
 
 	// Execute steps
 	for i, step := range recipe.Steps {
-		utils.Info("\n📋 Step %d: %s", i+1, step.Name)
+		utils.Info("📋 Step %d: %s", i+1, step.Name)
 
 		if step.Description != "" {
 			utils.Info("   %s", step.Description)
@@ -189,13 +210,21 @@ func (Recipes) Run() error {
 		utils.Success("   ✅ Completed")
 	}
 
-	utils.Success("\n🎉 Recipe '%s' completed successfully!", recipe.Name)
+	utils.Success("🎉 Recipe '%s' completed successfully!", recipe.Name)
 	return nil
 }
 
-// Search searches for recipes by name or description
+// Search searches for recipes by keyword
 func (Recipes) Search() error {
-	searchTerm := utils.GetEnv("TERM", "")
+	return errRecipeSearchWithArgsRequired
+}
+
+// SearchWithArgs searches for recipes by keyword (use term=<search>)
+func (Recipes) SearchWithArgs(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	searchTerm := utils.GetParam(params, "term", "")
 	if searchTerm == "" {
 		return errTermSearchRequired
 	}
@@ -236,7 +265,15 @@ func (Recipes) Search() error {
 
 // Create creates a new custom recipe
 func (Recipes) Create() error {
-	recipeName := utils.GetEnv("RECIPE", "")
+	return errRecipeCreateWithArgsRequired
+}
+
+// CreateWithArgs creates a new custom recipe (use recipe=<name>)
+func (Recipes) CreateWithArgs(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	recipeName := utils.GetParam(params, "recipe", "")
 	if recipeName == "" {
 		return errRecipeCreateRequired
 	}
@@ -276,14 +313,22 @@ func (Recipes) Create() error {
 
 	utils.Success("Created custom recipe: %s", recipeFile)
 	utils.Info("Edit the file to customize your recipe")
-	utils.Info("Run with: RECIPE=%s mage recipes:run", recipeName)
+	utils.Info("Run with: magex recipes:run recipe=%s", recipeName)
 
 	return nil
 }
 
-// Install installs a recipe from a URL or file
+// Install installs a recipe from a repository
 func (Recipes) Install() error {
-	source := utils.GetEnv("SOURCE", "")
+	return errRecipeInstallWithArgsRequired
+}
+
+// InstallWithArgs installs a recipe from a repository (use source=<url|file>)
+func (Recipes) InstallWithArgs(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	source := utils.GetParam(params, "source", "")
 	if source == "" {
 		return errSourceInstallRequired
 	}

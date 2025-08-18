@@ -39,7 +39,7 @@ func (Generate) Default() error {
 	}
 
 	// Run go generate
-	utils.Info("\nRunning go generate...")
+	utils.Info("Running go generate...")
 
 	args := []string{"generate", "-v"}
 

@@ -99,11 +99,11 @@ func (Test) Unit() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("\nUnit tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Unit tests failed in %d/%d modules", len(moduleErrors), len(modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("\nAll unit tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("All unit tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -160,11 +160,11 @@ func (Test) Short() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("\nShort tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Short tests failed in %d/%d modules", len(moduleErrors), len(modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("\nAll short tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("All short tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -218,11 +218,11 @@ func (Test) Race() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("\nRace tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Race tests failed in %d/%d modules", len(moduleErrors), len(modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("\nAll race tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("All race tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -304,11 +304,11 @@ func (Test) Cover() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("\nCoverage tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Coverage tests failed in %d/%d modules", len(moduleErrors), len(modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("\nAll coverage tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("All coverage tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 
 	// Show coverage summary
 	if utils.FileExists("coverage.txt") {
@@ -395,11 +395,11 @@ func (Test) CoverRace() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("\nCoverage+race tests failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Coverage+race tests failed in %d/%d modules", len(moduleErrors), len(modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("\nAll coverage+race tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	utils.Success("All coverage+race tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
 
 	// Show coverage summary
 	if utils.FileExists("coverage.txt") {

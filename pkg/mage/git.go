@@ -4,7 +4,6 @@ package mage
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/magefile/mage/mg"
@@ -14,12 +13,14 @@ import (
 
 // Static errors for git operations
 var (
-	errUncommittedChanges          = errors.New("uncommitted changes in working directory")
-	errUncommittedChangesFound     = errors.New("uncommitted changes found")
-	errGitVersionRequired          = errors.New("version variable is required. Use: version=\"X.Y.Z\" mage gitTag")
-	errGitTagRemoveVersionRequired = errors.New("version variable is required. Use: version=X.Y.Z mage git:tagremove")
-	errGitTagUpdateVersionRequired = errors.New("version variable is required. Use: version=X.Y.Z mage git:tagupdate")
-	errGitCommitMessageRequired    = errors.New("message parameter or environment variable is required")
+	errUncommittedChanges           = errors.New("uncommitted changes in working directory")
+	errUncommittedChangesFound      = errors.New("uncommitted changes found")
+	errGitVersionRequired           = errors.New("version parameter is required. Use: magex git:tag version=X.Y.Z")
+	errGitTagRemoveVersionRequired  = errors.New("version parameter is required. Use: magex git:tagremove version=X.Y.Z")
+	errGitTagUpdateVersionRequired  = errors.New("version parameter is required. Use: magex git:tagupdate version=X.Y.Z")
+	errGitCommitMessageRequired     = errors.New("message parameter is required. Use: magex git:commit message=\"commit message\"")
+	errGitTagWithArgsRequired       = errors.New("tag requires version parameter: use TagWithArgs instead")
+	errGitTagRemoveWithArgsRequired = errors.New("tag remove requires version parameter: use TagRemoveWithArgs instead")
 )
 
 // Git namespace for git-related tasks
@@ -55,9 +56,17 @@ func (Git) Diff() error {
 	return nil
 }
 
-// Tag creates and pushes a new tag (use version=X.Y.Z)
+// Tag creates and pushes a new tag
 func (Git) Tag() error {
-	tagVersion := os.Getenv("version")
+	return errGitTagWithArgsRequired
+}
+
+// TagWithArgs creates and pushes a new tag (use version=X.Y.Z)
+func (Git) TagWithArgs(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	tagVersion := utils.GetParam(params, "version", "")
 	if tagVersion == "" {
 		return errGitVersionRequired
 	}
@@ -90,9 +99,17 @@ func (Git) Tag() error {
 	return nil
 }
 
-// TagRemove removes local and remote tag (use version=X.Y.Z)
+// TagRemove removes local and remote tags
 func (Git) TagRemove() error {
-	tagVersion := os.Getenv("version")
+	return errGitTagRemoveWithArgsRequired
+}
+
+// TagRemoveWithArgs removes local and remote tag (use version=X.Y.Z)
+func (Git) TagRemoveWithArgs(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	tagVersion := utils.GetParam(params, "version", "")
 	if tagVersion == "" {
 		return errGitTagRemoveVersionRequired
 	}
@@ -126,8 +143,11 @@ func (Git) TagRemove() error {
 }
 
 // TagUpdate force-updates tag to current commit (use version=X.Y.Z)
-func (Git) TagUpdate() error {
-	tagVersion := os.Getenv("version")
+func (Git) TagUpdate(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	tagVersion := utils.GetParam(params, "version", "")
 	if tagVersion == "" {
 		return errGitTagUpdateVersionRequired
 	}
@@ -203,15 +223,13 @@ func (Git) Pull() error {
 }
 
 // Commit creates a commit with a message
-func (Git) Commit(message ...string) error {
-	var commitMessage string
-	if len(message) > 0 {
-		commitMessage = message[0]
-	} else {
-		commitMessage = os.Getenv("message")
-		if commitMessage == "" {
-			return errGitCommitMessageRequired
-		}
+func (Git) Commit(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	commitMessage := utils.GetParam(params, "message", "")
+	if commitMessage == "" {
+		return errGitCommitMessageRequired
 	}
 
 	utils.Header("Creating Commit")

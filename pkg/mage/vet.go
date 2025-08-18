@@ -301,7 +301,7 @@ func (Vet) Strict() error {
 		return fmt.Errorf("%w: %d", errStrictChecksFailed, failed)
 	}
 
-	utils.Success("\nAll strict checks passed!")
+	utils.Success("All strict checks passed!")
 	return nil
 }
 

@@ -38,14 +38,14 @@ func (Format) Default() error {
 	}
 
 	for _, formatter := range formatters {
-		utils.Info("\nRunning %s...", formatter.name)
+		utils.Info("Running %s...", formatter.name)
 		if err := formatter.fn(); err != nil {
 			utils.Warn("Failed: %v", err)
 			// Continue with other formatters
 		}
 	}
 
-	utils.Success("\nFormatting complete")
+	utils.Success("Formatting complete")
 	return nil
 }
 

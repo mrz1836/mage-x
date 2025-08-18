@@ -100,8 +100,8 @@ func (Deps) Update() error {
 	}
 
 	// Tidy after updates
-	if err := GetRunner().RunCmd("go", "mod", "tidy"); err != nil {
-		return fmt.Errorf("failed to tidy after updates: %w", err)
+	if err := (Deps{}).Tidy(); err != nil {
+		return err
 	}
 
 	if updatedCount == 0 {
@@ -165,7 +165,7 @@ func (Deps) List() error {
 	utils.Header("Dependencies")
 
 	// Direct dependencies
-	utils.Info("\nDirect dependencies:")
+	utils.Info("Direct dependencies:")
 	if err := GetRunner().RunCmd("go", "list", "-m", "-f", "{{if not .Indirect}}{{.Path}} {{.Version}}{{end}}", "all"); err != nil {
 		return err
 	}
@@ -174,7 +174,7 @@ func (Deps) List() error {
 	output, err := GetRunner().RunCmdOutput("go", "list", "-m", "-f", "{{if .Indirect}}1{{end}}", "all")
 	if err == nil {
 		count := strings.Count(output, "1")
-		utils.Info("\n(%d indirect dependencies)", count)
+		utils.Info("(%d indirect dependencies)", count)
 	}
 
 	return nil
@@ -207,7 +207,7 @@ func (Deps) Outdated() error {
 		for _, dep := range outdated {
 			utils.Info("  %s", dep)
 		}
-		utils.Info("\nRun 'magex deps:update' to update all dependencies")
+		utils.Info("Run 'magex deps:update' to update all dependencies")
 	}
 
 	return nil

@@ -219,7 +219,7 @@ func (Init) Templates() error {
 		{GenericProject, "Generic", "Basic Go project structure", []string{"testing", "basic"}},
 	}
 
-	utils.Info("\n🎯 Available Templates:")
+	utils.Info("🎯 Available Templates:")
 	utils.Info("Type          Name          Description")
 	utils.Info("----------    ----------    -----------")
 
@@ -227,7 +227,7 @@ func (Init) Templates() error {
 		fmt.Printf("%-12s  %-12s  %s\n", tmpl.Type, tmpl.Name, tmpl.Description)
 	}
 
-	utils.Info("\nUsage:")
+	utils.Info("Usage:")
 	utils.Info("  mage init:library      # Create library project")
 	utils.Info("  mage init:cli          # Create CLI project")
 	utils.Info("  mage init:webapi       # Create web API project")
@@ -932,7 +932,7 @@ func updateGoMod() error {
 
 // showCompletionMessage shows project creation completion message
 func showCompletionMessage(config *InitProjectConfig) {
-	utils.Success("\n🎉 Project '%s' created successfully!", config.Name)
+	utils.Success("🎉 Project '%s' created successfully!", config.Name)
 
 	fmt.Printf("\n📁 Project Structure:\n")
 	fmt.Printf("  Module: %s\n", config.Module)

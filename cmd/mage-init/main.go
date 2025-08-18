@@ -164,7 +164,7 @@ func validateOptions(opts *InitOptions) error {
 
 // runInteractiveMode runs the interactive project initialization
 func runInteractiveMode(opts *InitOptions) error {
-	utils.Info("\n🎯 Interactive Project Setup")
+	utils.Info("🎯 Interactive Project Setup")
 	utils.Info("=============================")
 
 	// Project name
@@ -188,7 +188,7 @@ func runInteractiveMode(opts *InitOptions) error {
 	}
 
 	// Template selection
-	utils.Info("\nAvailable templates:")
+	utils.Info("Available templates:")
 	templates := getAvailableTemplates()
 	for name, template := range templates {
 		fmt.Printf("  %s - %s\n", name, template.Description)
@@ -422,7 +422,7 @@ EXAMPLES:
 
 // listAvailableTemplates displays all available templates
 func listAvailableTemplates() {
-	utils.Info("\n📋 Available Project Templates")
+	utils.Info("📋 Available Project Templates")
 	utils.Info("===============================")
 
 	templates := getAvailableTemplates()

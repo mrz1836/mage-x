@@ -401,7 +401,7 @@ func (Release) Changelog() error {
 	if strings.TrimSpace(output) == "" {
 		utils.Info("No changes since last release")
 	} else {
-		utils.Info("\nChangelog:")
+		utils.Info("Changelog:")
 		utils.Info("%s", output)
 	}
 

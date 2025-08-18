@@ -15,6 +15,11 @@ import (
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
+// Constants for common string values
+const (
+	TrueValue = "true"
+)
+
 // Static errors for utils operations
 var (
 	errInvalidPlatformFormat = errors.New("invalid platform format")
@@ -106,7 +111,7 @@ func GetEnvBool(key string, defaultValue bool) bool {
 	if value == "" {
 		return defaultValue
 	}
-	return value == "true" || value == "1" || value == "yes"
+	return value == TrueValue || value == "1" || value == "yes"
 }
 
 // GetEnvInt returns an integer environment variable

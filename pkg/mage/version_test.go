@@ -285,99 +285,74 @@ func (ts *VersionTestSuite) TestVersionBumpNamespace() {
 	version := Version{}
 
 	ts.Run("BumpDefaultPatch", func() {
-		// Ensure BUMP is not set to test default behavior
-		ts.Require().NoError(os.Unsetenv("BUMP"))
-		ts.Require().NoError(os.Unsetenv("DRY_RUN"))
-
-		// This test will fail in dirty git repos, but we test the logic
-		err := version.Bump()
-		// May fail due to git operations, but we're testing the method exists
-		ts.Require().True(err == nil || err != nil)
+		// Test default behavior (no parameters = patch bump)
+		err := version.Bump("dry-run") // Use dry-run to avoid git operations
+		// Should succeed in dry-run mode
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("VerifyDefaultBumpType", func() {
-		// Clear BUMP environment variable
-		ts.Require().NoError(os.Unsetenv("BUMP"))
-
-		// The default should be "patch" when BUMP is not set
-		// We can't easily test the full Bump() method without git operations,
-		// but we can verify the environment variable behavior
-		bumpType := utils.GetEnv("BUMP", "patch")
+		// Test parameter parsing with utils.GetParam
+		params := utils.ParseParams([]string{})
+		bumpType := utils.GetParam(params, "bump", "patch")
 		ts.Require().Equal("patch", bumpType)
 
-		// Test with empty BUMP
-		ts.Require().NoError(os.Setenv("BUMP", ""))
-		bumpType = utils.GetEnv("BUMP", "patch")
-		ts.Require().Equal("patch", bumpType) // Empty string should use default
-
-		// Test with set BUMP
-		ts.Require().NoError(os.Setenv("BUMP", "minor"))
-		bumpType = utils.GetEnv("BUMP", "patch")
+		// Test with explicit bump parameter
+		params = utils.ParseParams([]string{"bump=minor"})
+		bumpType = utils.GetParam(params, "bump", "patch")
 		ts.Require().Equal("minor", bumpType)
+
+		// Test with empty parameter should use default
+		params = utils.ParseParams([]string{"bump="})
+		bumpType = utils.GetParam(params, "bump", "patch")
+		ts.Require().Empty(bumpType) // Empty value is preserved, but would default to patch in actual use
 	})
 
 	ts.Run("BumpWithInvalidType", func() {
-		ts.Require().NoError(os.Setenv("BUMP", "invalid"))
-		ts.Require().NoError(os.Unsetenv("DRY_RUN"))
-		err := version.Bump()
+		err := version.Bump("bump=invalid")
 		ts.Require().Error(err)
 		ts.Require().ErrorIs(err, errInvalidBumpType)
 	})
 
 	ts.Run("BumpMajorType", func() {
-		ts.Require().NoError(os.Setenv("BUMP", "major"))
-		ts.Require().NoError(os.Unsetenv("DRY_RUN"))
-		err := version.Bump()
-		// May fail due to git operations, but we're testing the bump type validation
-		ts.Require().True(err == nil || (err != nil && !strings.Contains(err.Error(), "invalid BUMP type")))
+		err := version.Bump("bump=major", "dry-run") // Use dry-run to avoid git operations
+		// Should succeed in dry-run mode
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("BumpMinorType", func() {
-		ts.Require().NoError(os.Setenv("BUMP", "minor"))
-		ts.Require().NoError(os.Unsetenv("DRY_RUN"))
-		err := version.Bump()
-		// May fail due to git operations, but we're testing the bump type validation
-		ts.Require().True(err == nil || (err != nil && !strings.Contains(err.Error(), "invalid BUMP type")))
+		err := version.Bump("bump=minor", "dry-run") // Use dry-run to avoid git operations
+		// Should succeed in dry-run mode
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("BumpPatchType", func() {
-		ts.Require().NoError(os.Setenv("BUMP", "patch"))
-		ts.Require().NoError(os.Unsetenv("DRY_RUN"))
-		err := version.Bump()
-		// May fail due to git operations, but we're testing the bump type validation
-		ts.Require().True(err == nil || (err != nil && !strings.Contains(err.Error(), "invalid BUMP type")))
+		err := version.Bump("bump=patch", "dry-run") // Use dry-run to avoid git operations
+		// Should succeed in dry-run mode
+		ts.Require().NoError(err)
 	})
 
 	// Dry-run mode tests
 	ts.Run("BumpDryRunPatch", func() {
-		ts.Require().NoError(os.Setenv("BUMP", "patch"))
-		ts.Require().NoError(os.Setenv("DRY_RUN", "true"))
-		err := version.Bump()
+		err := version.Bump("bump=patch", "dry-run")
 		// Dry-run should always succeed (no actual git operations)
 		ts.Require().NoError(err)
 	})
 
 	ts.Run("BumpDryRunMinor", func() {
-		ts.Require().NoError(os.Setenv("BUMP", "minor"))
-		ts.Require().NoError(os.Setenv("DRY_RUN", "true"))
-		err := version.Bump()
+		err := version.Bump("bump=minor", "dry-run")
 		// Dry-run should always succeed (no actual git operations)
 		ts.Require().NoError(err)
 	})
 
 	ts.Run("BumpDryRunMajor", func() {
-		ts.Require().NoError(os.Setenv("BUMP", "major"))
-		ts.Require().NoError(os.Setenv("DRY_RUN", "true"))
-		err := version.Bump()
+		err := version.Bump("bump=major", "dry-run")
 		// Dry-run should always succeed (no actual git operations)
 		ts.Require().NoError(err)
 	})
 
 	ts.Run("BumpDryRunWithPush", func() {
-		ts.Require().NoError(os.Setenv("BUMP", "minor"))
-		ts.Require().NoError(os.Setenv("DRY_RUN", "true"))
-		ts.Require().NoError(os.Setenv("PUSH", "true"))
-		err := version.Bump()
+		err := version.Bump("bump=minor", "dry-run", "push")
 		// Dry-run should always succeed (no actual git operations)
 		ts.Require().NoError(err)
 	})
@@ -389,18 +364,13 @@ func (ts *VersionTestSuite) TestVersionBumpNamespace() {
 		ts.Require().NoError(err)
 		defer func() { ts.Require().NoError(os.Remove(tempFile)) }()
 
-		ts.Require().NoError(os.Setenv("BUMP", "patch"))
-		ts.Require().NoError(os.Setenv("DRY_RUN", "true"))
-
 		// In dry-run mode, it should succeed even with dirty repo
-		err = version.Bump()
+		err = version.Bump("bump=patch", "dry-run")
 		ts.Require().NoError(err)
 	})
 
 	ts.Run("BumpDryRunWithInvalidType", func() {
-		ts.Require().NoError(os.Setenv("BUMP", "invalid"))
-		ts.Require().NoError(os.Setenv("DRY_RUN", "true"))
-		err := version.Bump()
+		err := version.Bump("bump=invalid", "dry-run")
 		// Should still fail on invalid bump type even in dry-run
 		ts.Require().Error(err)
 		ts.Require().ErrorIs(err, errInvalidBumpType)
@@ -893,57 +863,41 @@ func (ts *VersionTestSuite) TestConcurrentAccess() {
 	})
 }
 
-// TestEnvironmentVariableHandling tests environment variable processing
-func (ts *VersionTestSuite) TestEnvironmentVariableHandling() {
-	ts.Run("BumpEnvironmentVariable", func() {
-		// Test default bump type
-		ts.Require().NoError(os.Unsetenv("BUMP"))
-		// Default should be "patch" - this would be tested in the actual Bump method
-
+// TestParameterHandling tests parameter processing
+func (ts *VersionTestSuite) TestParameterHandling() {
+	ts.Run("BumpParameter", func() {
 		// Test valid bump types
 		validBumpTypes := []string{"major", "minor", "patch"}
 		for _, bumpType := range validBumpTypes {
-			ts.Require().NoError(os.Setenv("BUMP", bumpType))
 			// The validation happens in the Bump method
 			version := Version{}
-			err := version.Bump()
+			err := version.Bump("bump="+bumpType, "dry-run") // Use dry-run to avoid git operations
 			// May fail due to git operations, but shouldn't fail on bump type validation
 			if err != nil {
-				ts.Require().NotContains(err.Error(), "invalid BUMP type")
+				ts.Require().NotContains(err.Error(), "invalid bump type")
 			}
 		}
 	})
 
-	ts.Run("PushEnvironmentVariable", func() {
-		// Test PUSH environment variable handling
-		ts.Require().NoError(os.Setenv("PUSH", "true"))
-		// This would be tested in the actual Bump method where it's used
-
-		ts.Require().NoError(os.Setenv("PUSH", "false"))
-		// This would be tested in the actual Bump method where it's used
+	ts.Run("PushParameter", func() {
+		// Test push parameter handling
+		version := Version{}
+		err := version.Bump("push", "dry-run") // Use dry-run to avoid actual git operations
+		ts.Require().NoError(err)
 	})
 
-	ts.Run("DryRunEnvironmentVariable", func() {
-		// Test DRY_RUN environment variable handling
-		ts.Require().NoError(os.Setenv("DRY_RUN", "true"))
+	ts.Run("DryRunParameter", func() {
+		// Test dry-run parameter handling
 		// In dry-run mode, version bump should succeed even with git issues
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("dry-run")
 		ts.Require().NoError(err)
-
-		// Test with DRY_RUN=false (same as unset)
-		ts.Require().NoError(os.Setenv("DRY_RUN", "false"))
-		// This would behave the same as no DRY_RUN set
 	})
 
-	ts.Run("ChangelogEnvironmentVariables", func() {
-		// Test FROM and TO environment variables
-		ts.Require().NoError(os.Setenv("FROM", "v1.0.0"))
-		ts.Require().NoError(os.Setenv("TO", "v1.1.0"))
-
-		// These would be used in the Changelog method
+	ts.Run("ChangelogParameters", func() {
+		// Test FROM and TO parameters
 		version := Version{}
-		err := version.Changelog()
+		err := version.Changelog("from=v1.0.0", "to=v1.1.0")
 		ts.Require().True(err == nil || err != nil) // May fail due to git operations
 	})
 }
