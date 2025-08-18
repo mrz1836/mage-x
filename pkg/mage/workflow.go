@@ -48,7 +48,7 @@ func (Workflow) Execute() error {
 	// Get workflow name from environment variable
 	workflowName := os.Getenv("WORKFLOW")
 	if workflowName == "" {
-		return errors.New("WORKFLOW environment variable is required")
+		return errWorkflowEnvRequired
 	}
 
 	// Load workflow definition

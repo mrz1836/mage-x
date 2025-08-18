@@ -1223,7 +1223,7 @@ func displayTestResults(results []IntegrationTestResult) {
 	for i := range results {
 		result := &results[i]
 		status := "✅"
-		if result.Status == "failed" {
+		if result.Status == statusFailed {
 			status = "❌"
 		}
 
