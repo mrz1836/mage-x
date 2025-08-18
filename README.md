@@ -572,7 +572,7 @@ magex docs:godocs        # Update GoDocs proxy (alias for docs:update)
 # Git Operations
 magex git:status                           # Show git repository status
 magex git:commit message="fix: commit message"  # Commit changes with message parameter
-magex git:tag version=1.2.3               # Create and push a new tag with version parameter
+magex git:tag version=1.2.3                # Create and push a new tag with version parameter
 magex git:tagremove version=1.2.3          # Remove a tag
 magex git:tagupdate version=1.2.3          # Force update a tag
 
@@ -587,10 +587,10 @@ magex version:compare      # Compare two versions
 magex version:validate     # Validate version format
 
 # Version Bump Examples (now using parameters)
-magex version:bump                         # Bump patch version (default)
-magex version:bump bump=minor              # Bump minor version
+magex version:bump                          # Bump patch version (default)
+magex version:bump bump=minor               # Bump minor version
 magex version:bump bump=major major-confirm # Bump major version with confirmation
-magex version:bump bump=minor push         # Bump minor and push to remote
+magex version:bump bump=minor push          # Bump minor and push to remote
 
 # Dry-run mode (preview changes without making them)
 magex version:bump dry-run                 # Preview patch bump
@@ -604,12 +604,20 @@ magex version:bump bump=major major-confirm push dry-run  # Preview major bump w
 <summary>🚀 <strong>Release Management</strong></summary>
 
 ```bash
+# Core Release Operations
 magex release              # Create a new release from the latest tag
 magex release godocs       # Create a release and update GoDocs proxy
 magex release:default      # Create a new release from the latest tag
 magex release:test         # Dry-run release without publishing
 magex release:snapshot     # Build release artifacts without git tag
 magex release:localinstall # Build from latest tag and install locally
+
+# Release Setup & Validation
+magex release:init         # Initialize .goreleaser.yml configuration
+magex release:check        # Validate .goreleaser.yml configuration
+magex release:validate     # Comprehensive release readiness validation
+magex release:changelog    # Generate changelog from git history
+magex release:clean        # Clean release artifacts and build cache
 ```
 
 </details>
