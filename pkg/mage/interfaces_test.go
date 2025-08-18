@@ -521,7 +521,9 @@ func TestDeployStatus(t *testing.T) {
 // Benchmark tests for interface methods
 func BenchmarkBuilder_Build(b *testing.B) {
 	ctx := context.Background()
-	builder := &MockBuilder{}
+	builder := &MockBuilder{
+		MockBase: testhelpers.NewMockBase(nil),
+	}
 	opts := BuildOptions{Verbose: false}
 
 	b.ResetTimer()
@@ -534,7 +536,9 @@ func BenchmarkBuilder_Build(b *testing.B) {
 
 func BenchmarkTester_RunTests(b *testing.B) {
 	ctx := context.Background()
-	tester := &MockTester{}
+	tester := &MockTester{
+		MockBase: testhelpers.NewMockBase(nil),
+	}
 	opts := TestOptions{Verbose: false}
 
 	b.ResetTimer()
@@ -547,7 +551,9 @@ func BenchmarkTester_RunTests(b *testing.B) {
 
 func BenchmarkDeployer_Deploy(b *testing.B) {
 	ctx := context.Background()
-	deployer := &MockDeployer{}
+	deployer := &MockDeployer{
+		MockBase: testhelpers.NewMockBase(nil),
+	}
 	target := DeployTarget{Environment: "test"}
 	opts := DeployOptions{}
 

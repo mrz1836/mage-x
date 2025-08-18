@@ -186,7 +186,7 @@ func (suite *InterfaceComplianceTestSuite) TestNamespaceInterfaceMethods() {
 		suite.NotNil(release)
 
 		methods := []string{
-			"Default", "Test", "Snapshot", "LocalInstall", "Check", 
+			"Default", "Test", "Snapshot", "LocalInstall", "Check",
 			"Init", "Changelog", "Validate", "Clean",
 		}
 
@@ -490,7 +490,7 @@ func (suite *InterfaceComplianceTestSuite) TestInterfaceStabilityAndEvolution() 
 			"BuildNamespace":   11, // Default, All, Platform, Linux, Darwin, Windows, Docker, Clean, Install, Generate, PreBuild
 			"TestNamespace":    21, // All test-related methods
 			"LintNamespace":    11, // All lint-related methods
-			"ReleaseNamespace": 9, // All release-related methods
+			"ReleaseNamespace": 9,  // All release-related methods
 		}
 
 		testCases := []struct {

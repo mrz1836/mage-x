@@ -406,7 +406,6 @@ func TestReleaseBasicFunctionality(t *testing.T) {
 		// Test interface compliance
 		_ = release
 	})
-
 }
 
 // BenchmarkReleaseOperations benchmarks release operations
