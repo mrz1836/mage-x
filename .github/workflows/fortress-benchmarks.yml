@@ -60,12 +60,12 @@ jobs:
       - name: Run benchmarks
         run: |
           echo "## Running Go Benchmarks"
-          echo "Benchmark time: $BENCH_TIME_PARAM_PARAM"
+          echo "Benchmark time: $BENCH_TIME_PARAM"
           echo "Packages: $BENCH_PACKAGES"
           echo ""
 
           # Run benchmarks on specific packages with shorter duration
-          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME_PARAM_PARAM $BENCH_PACKAGES | tee benchmark-results.txt
+          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME_PARAM $BENCH_PACKAGES | tee benchmark-results.txt
 
           # Show summary
           echo ""
@@ -104,7 +104,7 @@ jobs:
 
       - name: Run benchmarks on PR branch
         run: |
-          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME_PARAM_PARAM $BENCH_PACKAGES > pr-benchmarks.txt
+          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME_PARAM $BENCH_PACKAGES > pr-benchmarks.txt
 
       - name: Checkout base branch
         uses: actions/checkout@v5
@@ -113,7 +113,7 @@ jobs:
 
       - name: Run benchmarks on base branch
         run: |
-          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME_PARAM_PARAM $BENCH_PACKAGES > base-benchmarks.txt
+          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME_PARAM $BENCH_PACKAGES > base-benchmarks.txt
 
       - name: Compare benchmarks
         run: |
@@ -161,7 +161,7 @@ jobs:
           echo "Running benchmarks with CPU profiling on: $BENCH_PACKAGES"
 
           # Run benchmarks with CPU profiling on specific packages
-          go test -bench=. -benchtime=$BENCH_TIME_PARAM_PARAM -cpuprofile=cpu.prof $BENCH_PACKAGES || echo "CPU profiling completed"
+          go test -bench=. -benchtime=$BENCH_TIME_PARAM -cpuprofile=cpu.prof $BENCH_PACKAGES || echo "CPU profiling completed"
 
           if [ -f cpu.prof ]; then
             echo "### Top CPU consumers:"
