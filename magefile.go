@@ -1295,16 +1295,6 @@ func (r Release) LocalInstall() error {
 	return impl.LocalInstall()
 }
 
-func (r Release) Install() error {
-	var impl mage.Release
-	return impl.Install()
-}
-
-func (r Release) Update() error {
-	var impl mage.Release
-	return impl.Update()
-}
-
 func (r Release) Check() error {
 	var impl mage.Release
 	return impl.Check()
@@ -1320,26 +1310,6 @@ func (r Release) Changelog() error {
 	return impl.Changelog()
 }
 
-func (r Release) Create() error {
-	var impl mage.Release
-	return impl.Create()
-}
-
-func (r Release) Prepare() error {
-	var impl mage.Release
-	return impl.Prepare()
-}
-
-func (r Release) Publish() error {
-	var impl mage.Release
-	return impl.Publish()
-}
-
-func (r Release) Notes() error {
-	var impl mage.Release
-	return impl.Notes()
-}
-
 func (r Release) Validate() error {
 	var impl mage.Release
 	return impl.Validate()
@@ -1348,32 +1318,6 @@ func (r Release) Validate() error {
 func (r Release) Clean() error {
 	var impl mage.Release
 	return impl.Clean()
-}
-
-func (r Release) Archive() error {
-	var impl mage.Release
-	return impl.Archive()
-}
-
-// Upload method requires parameters, not suitable for namespace syntax
-func (r Release) List() error {
-	var impl mage.Release
-	return impl.List()
-}
-
-func (r Release) Build() error {
-	var impl mage.Release
-	return impl.Build()
-}
-
-func (r Release) Package() error {
-	var impl mage.Release
-	return impl.Package()
-}
-
-func (r Release) Draft() error {
-	var impl mage.Release
-	return impl.Draft()
 }
 
 // Metrics namespace methods

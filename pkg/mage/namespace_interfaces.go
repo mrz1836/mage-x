@@ -253,38 +253,29 @@ type ReleaseNamespace interface {
 	// Default creates a default release
 	Default(args ...string) error
 
-	// Create creates a new release
-	Create() error
+	// Test runs release dry-run (no publish)
+	Test() error
 
-	// Build builds release artifacts
-	Build() error
+	// Snapshot builds snapshot binaries
+	Snapshot() error
 
-	// Package packages release artifacts
-	Package() error
+	// LocalInstall builds from the latest tag and installs locally
+	LocalInstall() error
 
-	// Publish publishes release
-	Publish() error
+	// Check validates .goreleaser.yml configuration
+	Check() error
 
-	// Notes generates release notes
-	Notes() error
+	// Init creates a .goreleaser.yml template
+	Init() error
 
 	// Changelog generates changelog
 	Changelog() error
 
-	// Draft creates a draft release
-	Draft() error
+	// Validate validates release readiness
+	Validate() error
 
-	// Alpha creates an alpha release
-	Alpha() error
-
-	// Beta creates a beta release
-	Beta() error
-
-	// RC creates a release candidate
-	RC() error
-
-	// Final creates a final release
-	Final() error
+	// Clean cleans release artifacts
+	Clean() error
 }
 
 // DocsNamespace interface defines the contract for documentation operations
