@@ -55,7 +55,7 @@ func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time
 	if name == "go" {
 		if len(args) > 0 {
 			switch args[0] {
-			case "test":
+			case CmdGoTest:
 				// Allow 10 minutes for go test commands
 				return 10 * time.Minute
 			case "install", "get", "mod":

@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -374,6 +375,23 @@ func FormatBytes(bytes int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// PromptForInput prompts the user for input and returns the response
+func PromptForInput(prompt string) (string, error) {
+	if prompt != "" {
+		fmt.Printf("%s: ", prompt)
+	}
+
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return "", fmt.Errorf("failed to read input: %w", err)
+		}
+		return "", nil // EOF
+	}
+
+	return strings.TrimSpace(scanner.Text()), nil
 }
 
 // Note: Print functions have been moved to logger.go
