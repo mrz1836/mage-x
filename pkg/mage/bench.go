@@ -41,8 +41,9 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 	benchTime := utils.GetParam(params, "time", "10s")
 	args = append(args, "-benchtime", benchTime)
 
-	// Add count if specified
-	if count := os.Getenv("BENCH_COUNT"); count != "" {
+	// Get count from parameter
+	count := utils.GetParam(params, "count", "")
+	if count != "" {
 		args = append(args, "-count", count)
 	}
 
@@ -162,7 +163,9 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 	benchTime := utils.GetParam(params, "time", "10s")
 	args = append(args, "-benchtime", benchTime)
 
-	if count := os.Getenv("BENCH_COUNT"); count != "" {
+	// Get count from parameter
+	count := utils.GetParam(params, "count", "")
+	if count != "" {
 		args = append(args, "-count", count)
 	}
 

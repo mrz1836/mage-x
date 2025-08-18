@@ -70,13 +70,16 @@ type TestNamespace interface {
 	// CoverHTML generates HTML coverage report
 	CoverHTML() error
 
-	// Fuzz runs fuzz tests
-	Fuzz() error
+	// Fuzz runs fuzz tests with configurable time
+	Fuzz(params ...string) error
 
-	// FuzzWithTime runs fuzz tests with specified duration
+	// FuzzShort runs short fuzz tests with configurable time
+	FuzzShort(params ...string) error
+
+	// FuzzWithTime runs fuzz tests with specified duration (deprecated - use Fuzz with time parameter)
 	FuzzWithTime(fuzzTime time.Duration) error
 
-	// FuzzShortWithTime runs short fuzz tests with specified duration
+	// FuzzShortWithTime runs short fuzz tests with specified duration (deprecated - use FuzzShort with time parameter)
 	FuzzShortWithTime(fuzzTime time.Duration) error
 
 	// Bench runs benchmarks

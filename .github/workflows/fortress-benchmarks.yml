@@ -38,7 +38,7 @@ jobs:
   benchmarks:
     runs-on: ubuntu-latest
     env:
-      BENCH_TIME: ${{ inputs.benchmark_time || '1s' }}
+      BENCH_TIME_PARAM: ${{ inputs.benchmark_time || '1s' }}
       BENCH_PACKAGES: ${{ inputs.packages || './pkg/mage' }}
 
     steps:
@@ -60,12 +60,12 @@ jobs:
       - name: Run benchmarks
         run: |
           echo "## Running Go Benchmarks"
-          echo "Benchmark time: $BENCH_TIME"
+          echo "Benchmark time: $BENCH_TIME_PARAM_PARAM"
           echo "Packages: $BENCH_PACKAGES"
           echo ""
 
           # Run benchmarks on specific packages with shorter duration
-          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME $BENCH_PACKAGES | tee benchmark-results.txt
+          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME_PARAM_PARAM $BENCH_PACKAGES | tee benchmark-results.txt
 
           # Show summary
           echo ""
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     env:
-      BENCH_TIME: ${{ inputs.benchmark_time || '1s' }}
+      BENCH_TIME_PARAM: ${{ inputs.benchmark_time || '1s' }}
       BENCH_PACKAGES: ${{ inputs.packages || './pkg/mage' }}
 
     steps:
@@ -104,7 +104,7 @@ jobs:
 
       - name: Run benchmarks on PR branch
         run: |
-          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME $BENCH_PACKAGES > pr-benchmarks.txt
+          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME_PARAM_PARAM $BENCH_PACKAGES > pr-benchmarks.txt
 
       - name: Checkout base branch
         uses: actions/checkout@v5
@@ -113,7 +113,7 @@ jobs:
 
       - name: Run benchmarks on base branch
         run: |
-          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME $BENCH_PACKAGES > base-benchmarks.txt
+          go test -bench=. -benchmem -run=^$ -benchtime=$BENCH_TIME_PARAM_PARAM $BENCH_PACKAGES > base-benchmarks.txt
 
       - name: Compare benchmarks
         run: |
@@ -138,7 +138,7 @@ jobs:
     if: ${{ inputs.enable_profiling == true || inputs.enable_profiling == 'true' }}
     continue-on-error: true
     env:
-      BENCH_TIME: ${{ inputs.benchmark_time || '1s' }}
+      BENCH_TIME_PARAM: ${{ inputs.benchmark_time || '1s' }}
       BENCH_PACKAGES: ${{ inputs.packages || './pkg/mage' }}
 
     steps:
@@ -161,7 +161,7 @@ jobs:
           echo "Running benchmarks with CPU profiling on: $BENCH_PACKAGES"
 
           # Run benchmarks with CPU profiling on specific packages
-          go test -bench=. -benchtime=$BENCH_TIME -cpuprofile=cpu.prof $BENCH_PACKAGES || echo "CPU profiling completed"
+          go test -bench=. -benchtime=$BENCH_TIME_PARAM_PARAM -cpuprofile=cpu.prof $BENCH_PACKAGES || echo "CPU profiling completed"
 
           if [ -f cpu.prof ]; then
             echo "### Top CPU consumers:"
@@ -181,7 +181,7 @@ jobs:
     if: ${{ inputs.enable_profiling == true || inputs.enable_profiling == 'true' }}
     continue-on-error: true
     env:
-      BENCH_TIME: ${{ inputs.benchmark_time || '1s' }}
+      BENCH_TIME_PARAM: ${{ inputs.benchmark_time || '1s' }}
       BENCH_PACKAGES: ${{ inputs.packages || './pkg/mage' }}
 
     steps:
@@ -200,7 +200,7 @@ jobs:
           echo "Running benchmarks with memory profiling on: $BENCH_PACKAGES"
 
           # Run benchmarks with memory profiling on specific packages
-          go test -bench=. -benchtime=$BENCH_TIME -memprofile=mem.prof $BENCH_PACKAGES || echo "Memory profiling completed"
+          go test -bench=. -benchtime=$BENCH_TIME_PARAM_PARAM -memprofile=mem.prof $BENCH_PACKAGES || echo "Memory profiling completed"
 
           if [ -f mem.prof ]; then
             echo "### Top memory allocators:"
