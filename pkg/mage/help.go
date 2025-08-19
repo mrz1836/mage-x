@@ -54,21 +54,21 @@ MAGE-X is a comprehensive Go build automation toolkit that provides
 enterprise-grade development tools with a friendly user experience.
 
 Quick Start:
-  mage build              # Build your project
-  mage test               # Run tests
-  mage bench              # Run benchmarks
-  mage lint               # Run linter
-  mage release           # Create a release
-  mage help               # Show this help
+  magex build              # Build your project
+  magex test               # Run tests
+  magex bench              # Run benchmarks
+  magex lint               # Run linter
+  magex release            # Create a release
+  magex help               # Show this help
 
 Available Commands:
-  mage help:commands      # List all available commands
-  mage help:examples      # Show usage examples
-  mage help:gettingstarted # Getting started guide
-  mage help:completions   # Generate shell completions
+  magex help:commands       # List all available commands
+  magex help:examples       # Show usage examples
+  magex help:gettingstarted # Getting started guide
+  magex help:completions    # Generate shell completions
 
 For detailed help on any command:
-  mage help:command COMMAND_NAME
+  magex help:command COMMAND_NAME
 
 Documentation:
   https://github.com/mrz1836/mage-x
@@ -123,8 +123,8 @@ func (Help) Commands() error {
 	}
 
 	fmt.Printf("\nUsage:\n")
-	fmt.Printf("  mage COMMAND [OPTIONS]\n")
-	fmt.Printf("  mage help:command COMMAND_NAME\n")
+	fmt.Printf("  magex COMMAND [OPTIONS]\n")
+	fmt.Printf("  magex help:command COMMAND_NAME\n")
 
 	return nil
 }
@@ -177,7 +177,7 @@ func (Help) Command() error {
 	if len(cmd.SeeAlso) > 0 {
 		fmt.Printf("\nSee Also:\n")
 		for _, related := range cmd.SeeAlso {
-			fmt.Printf("  mage helpCommand %s\n", related)
+			fmt.Printf("  magex helpCommand %s\n", related)
 		}
 	}
 

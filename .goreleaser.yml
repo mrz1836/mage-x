@@ -6,7 +6,7 @@ version: 2
 
 before:
   hooks:
-    - mage test
+    - magex test
 changelog:
   sort: asc
   filters:

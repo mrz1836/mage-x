@@ -90,10 +90,10 @@ func (Recipes) List() error {
 	}
 
 	utils.Info("Usage:")
-	utils.Info("  mage recipes:show <name>     # Show recipe details")
-	utils.Info("  mage recipes:run <name>      # Run a recipe")
-	utils.Info("  mage recipes:create <name>   # Create custom recipe")
-	utils.Info("  mage recipes:search <term>   # Search recipes")
+	utils.Info("  magex recipes:show <name>     # Show recipe details")
+	utils.Info("  magex recipes:run <name>      # Run a recipe")
+	utils.Info("  magex recipes:create <name>   # Create custom recipe")
+	utils.Info("  magex recipes:search <term>   # Search recipes")
 
 	return nil
 }

@@ -128,7 +128,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("\n✅ Successfully initialized mage project '%s'\n", opts.ProjectName)
+	fmt.Printf("\n✅ Successfully initialized magex project '%s'\n", opts.ProjectName)
 	fmt.Printf("📁 Project location: %s\n", opts.ProjectPath)
 	fmt.Printf("🚀 Next steps:\n")
 	fmt.Printf("   cd %s\n", opts.ProjectPath)
@@ -581,13 +581,13 @@ go mod download
 
 ` + "```bash" + `
 # Build the application
-mage build
+magex build
 
 # Run tests
-mage test
+magex test
 
 # Clean build artifacts
-mage clean
+magex clean
 ` + "```" + `
 
 ### Available Mage Targets
@@ -604,14 +604,14 @@ mage clean
 To see all available mage targets:
 
 ` + "```bash" + `
-mage help  # Beautiful categorized list
-mage -l    # Plain text list
+magex help  # Beautiful categorized list
+magex -l    # Plain text list
 ` + "```" + `
 
 To run a specific target:
 
 ` + "```bash" + `
-mage <target>
+magex <target>
 ` + "```" + `
 `
 }

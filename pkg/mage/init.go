@@ -481,13 +481,13 @@ This project uses [MAGE-X](https://github.com/mrz1836/mage-x) for build automati
 go install github.com/magefile/mage@latest
 
 # See available commands (beautiful format)
-mage help
+magex help
 
 # Run tests
-mage test
+magex test
 
 # Build
-mage build
+magex build
 ` + "```" + `
 
 ## Contributing

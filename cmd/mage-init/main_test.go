@@ -385,8 +385,8 @@ func (suite *MageInitTestSuite) TestGetBasicReadmeContent() {
 	suite.NotEmpty(content)
 	suite.Contains(content, "# {{.ProjectName}}")
 	suite.Contains(content, "Go {{.GoVersion}}")
-	suite.Contains(content, "mage build")
-	suite.Contains(content, "mage test")
+	suite.Contains(content, "magex build")
+	suite.Contains(content, "magex test")
 }
 
 func (suite *MageInitTestSuite) TestGetBasicGitignoreContent() {
