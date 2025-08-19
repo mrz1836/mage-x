@@ -86,7 +86,7 @@ func (ts *VersionTestSuite) TestBuildInfo() {
 		versionInfo := getVersionInfo()
 		ts.Require().NotEmpty(versionInfo)
 		// Should return "dev" when no build version is set and no git tag is available
-		ts.Require().True(versionInfo == "dev" || strings.HasPrefix(versionInfo, "v"))
+		ts.Require().True(versionInfo == versionDev || strings.HasPrefix(versionInfo, "v"))
 	})
 
 	ts.Run("GetCommitInfo", func() {

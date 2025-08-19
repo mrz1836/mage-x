@@ -16,9 +16,14 @@ import (
 
 // getVersion returns the current version
 func getVersion() string {
+	// Check for environment variable override
+	if envVersion := os.Getenv("MAGE_X_VERSION"); envVersion != "" {
+		return envVersion
+	}
+
 	// Try to get from git
-	if tag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0"); err == nil {
-		return strings.TrimSpace(tag)
+	if gitVersion := getVersionFromGit(); gitVersion != "" {
+		return gitVersion
 	}
 
 	// Try reading from version file
@@ -32,7 +37,7 @@ func getVersion() string {
 		return config.Project.Version
 	}
 
-	return "dev"
+	return versionDev
 }
 
 // getModuleName returns the current module name
@@ -68,7 +73,7 @@ func isNewer(a, b string) bool {
 	a = strings.TrimPrefix(a, "v")
 	b = strings.TrimPrefix(b, "v")
 
-	if b == "dev" {
+	if b == versionDev {
 		return true
 	}
 
@@ -108,4 +113,31 @@ func formatReleaseNotes(body string) string {
 	}
 
 	return strings.Join(formatted, "\n")
+}
+
+// getVersionFromGit gets version from git, returning versionDev for development builds
+func getVersionFromGit() string {
+	tag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
+	if err != nil {
+		return ""
+	}
+	tag = strings.TrimSpace(tag)
+
+	// Check if we're exactly on the tag or if there are commits after
+	if fullDesc, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--always", "--dirty"); err == nil {
+		fullDesc = strings.TrimSpace(fullDesc)
+		// If the full description is different from just the tag, we're in development
+		if fullDesc != tag {
+			return versionDev
+		}
+	}
+
+	// Check if working directory is dirty
+	if status, err := GetRunner().RunCmdOutput("git", "status", "--porcelain"); err == nil {
+		if strings.TrimSpace(status) != "" {
+			return versionDev
+		}
+	}
+
+	return tag
 }
