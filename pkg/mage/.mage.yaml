@@ -40,7 +40,7 @@ test:
   bench_time: ""
   bench_mem: false
 lint:
-  golangci_version: latest
+  golangci_version: v2.4.0 # https://github.com/golangci/golangci-lint/releases
   timeout: 5m
   skip_dirs: []
   skip_files: []
@@ -48,11 +48,11 @@ lint:
   disable_linters: []
   enable_linters: []
 tools:
-  golangci_lint: latest
-  fumpt: latest
-  govulncheck: latest
-  mockgen: latest
-  swag: latest
+  golangci_lint: v2.4.0 # https://github.com/golangci/golangci-lint/releases
+  fumpt: v0.8.0 # https://github.com/mvdan/gofumpt/releases
+  govulncheck: v1.1.4 # https://pkg.go.dev/golang.org/x/vuln
+  mockgen: v0.4.0 # https://github.com/uber-go/mock/releases (cannot use 0.5.2, bad tools pkg)
+  swag: v1.16.6 # https://github.com/swaggo/swag/releases
   custom: {}
 docker:
   registry: ""
