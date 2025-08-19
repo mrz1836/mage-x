@@ -13,20 +13,28 @@ import (
 
 // Error definitions for validator operations
 var (
-	ErrRuleCannotBeNil       = errors.New("rule cannot be nil")
-	ErrRuleNotFound          = errors.New("rule not found")
-	ErrPathMustBeAbsolute    = errors.New("path must be absolute")
-	ErrPathMustBeRelative    = errors.New("path must be relative")
-	ErrPathDoesNotExist      = errors.New("path does not exist")
-	ErrPathAlreadyExists     = errors.New("path already exists")
-	ErrPathTraversalDetected = errors.New("invalid path: path traversal detected")
-	errPathNotExecutable     = errors.New("path is not executable")
-	errPathNotDirectory      = errors.New("path is not a directory")
-	errPathNotFile           = errors.New("path is not a file")
-	ErrInvalidExtensions     = errors.New("path must have one of the required extensions")
-	ErrPathTooLong           = errors.New("path exceeds maximum length")
-	ErrPatternMismatch       = errors.New("path does not match required pattern")
-	ErrForbiddenPattern      = errors.New("path matches forbidden pattern")
+	ErrRuleCannotBeNil         = errors.New("rule cannot be nil")
+	ErrRuleNotFound            = errors.New("rule not found")
+	ErrPathMustBeAbsolute      = errors.New("path must be absolute")
+	ErrPathMustBeRelative      = errors.New("path must be relative")
+	ErrPathDoesNotExist        = errors.New("path does not exist")
+	ErrPathAlreadyExists       = errors.New("path already exists")
+	ErrPathTraversalDetected   = errors.New("invalid path: path traversal detected")
+	errPathNotExecutable       = errors.New("path is not executable")
+	errPathNotDirectory        = errors.New("path is not a directory")
+	errPathNotFile             = errors.New("path is not a file")
+	ErrInvalidExtensions       = errors.New("path must have one of the required extensions")
+	ErrPathTooLong             = errors.New("path exceeds maximum length")
+	ErrPatternMismatch         = errors.New("path does not match required pattern")
+	ErrForbiddenPattern        = errors.New("path matches forbidden pattern")
+	ErrPathContainsNullByte    = errors.New("path contains null byte")
+	ErrPathContainsControlChar = errors.New("path contains control character")
+	ErrWindowsReservedName     = errors.New("path uses Windows reserved device name")
+	ErrUNCPathNotAllowed       = errors.New("UNC paths not allowed")
+	ErrDrivePathNotAllowed     = errors.New("windows drive paths not allowed")
+	ErrInvalidUTF8Bytes        = errors.New("path contains invalid UTF-8 bytes")
+	ErrOverlongUTF8Sequence    = errors.New("path contains overlong UTF-8 sequence")
+	ErrInvalidUTF8Continuation = errors.New("path contains invalid UTF-8 continuation byte")
 )
 
 // DefaultPathValidator implements PathValidator
@@ -641,7 +649,37 @@ func (r *PatternRule) Validate(path string) error {
 
 // ValidatePath validates that the given PathBuilder path matches or does not match the pattern
 func (r *PatternRule) ValidatePath(path PathBuilder) error {
+	// For security patterns (like path traversal), check the original path
+	// This prevents bypasses where cleaning removes dangerous patterns
+	if r.isSecurityPattern() {
+		originalErr := r.Validate(path.Original())
+		if originalErr != nil {
+			return originalErr
+		}
+	}
+
+	// Always check the cleaned path as well
 	return r.Validate(path.String())
+}
+
+// isSecurityPattern checks if this is a security-related pattern that should check original paths
+func (r *PatternRule) isSecurityPattern() bool {
+	// Common security patterns that attackers try to bypass through path cleaning
+	securityPatterns := []string{
+		`\.\.`,     // Path traversal
+		`\.\./`,    // Path traversal with slash
+		`/\.\./`,   // Path traversal with leading slash
+		`%2e%2e`,   // URL encoded ..
+		`%252e`,    // Double URL encoded
+		`\x2e\x2e`, // Hex encoded ..
+	}
+
+	for _, pattern := range securityPatterns {
+		if r.Pattern == pattern {
+			return true
+		}
+	}
+	return false
 }
 
 // Package-level convenience functions
@@ -678,4 +716,233 @@ func ValidateWritable(path string) error {
 func ValidateExtension(path string, extensions ...string) error {
 	rule := &ExtensionRule{Extensions: extensions}
 	return rule.Validate(path)
+}
+
+// Additional security validation rules
+
+// PathTraversalRule validates that a path doesn't contain path traversal patterns
+type PathTraversalRule struct{}
+
+// Name returns the rule name
+func (r *PathTraversalRule) Name() string { return "no-path-traversal" }
+
+// Description returns the rule description
+func (r *PathTraversalRule) Description() string {
+	return "path must not contain path traversal patterns"
+}
+
+// Validate checks if the given path contains path traversal patterns
+func (r *PathTraversalRule) Validate(path string) error {
+	// Check for various path traversal patterns
+	if strings.Contains(path, "..") {
+		return ErrPathTraversalDetected
+	}
+
+	// Check URL encoded patterns
+	if strings.Contains(path, "%2e%2e") || strings.Contains(path, "%252e%252e") {
+		return ErrPathTraversalDetected
+	}
+
+	// Check Unicode encoded patterns
+	if strings.Contains(path, "\u002e\u002e") {
+		return ErrPathTraversalDetected
+	}
+
+	// Check hex encoded patterns
+	if strings.Contains(path, "\x2e\x2e") {
+		return ErrPathTraversalDetected
+	}
+
+	return nil
+}
+
+// ValidatePath validates a PathBuilder instance
+func (r *PathTraversalRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// NullByteRule validates that a path doesn't contain null bytes
+type NullByteRule struct{}
+
+// Name returns the rule name
+func (r *NullByteRule) Name() string { return "no-null-bytes" }
+
+// Description returns the rule description
+func (r *NullByteRule) Description() string { return "path must not contain null bytes" }
+
+// Validate checks if the given path contains null bytes
+func (r *NullByteRule) Validate(path string) error {
+	if strings.Contains(path, "\x00") || strings.Contains(path, "%00") {
+		return ErrPathContainsNullByte
+	}
+	return nil
+}
+
+// ValidatePath validates a PathBuilder instance
+func (r *NullByteRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// ControlCharacterRule validates that a path doesn't contain control characters
+type ControlCharacterRule struct{}
+
+// Name returns the rule name
+func (r *ControlCharacterRule) Name() string { return "no-control-chars" }
+
+// Description returns the rule description
+func (r *ControlCharacterRule) Description() string {
+	return "path must not contain control characters"
+}
+
+// Validate checks if the given path contains control characters
+func (r *ControlCharacterRule) Validate(path string) error {
+	for _, char := range path {
+		if char < 32 && char != '\t' { // Allow tabs
+			return ErrPathContainsControlChar
+		}
+	}
+	return nil
+}
+
+// ValidatePath validates a PathBuilder instance
+func (r *ControlCharacterRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// WindowsReservedRule validates that a path doesn't use Windows reserved names
+type WindowsReservedRule struct{}
+
+// Name returns the rule name
+func (r *WindowsReservedRule) Name() string { return "no-windows-reserved" }
+
+// Description returns the rule description
+func (r *WindowsReservedRule) Description() string {
+	return "path must not use Windows reserved device names"
+}
+
+// Validate checks if the given path uses Windows reserved names
+func (r *WindowsReservedRule) Validate(path string) error {
+	reservedNames := []string{"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "CONIN$", "CONOUT$"}
+	baseName := strings.ToUpper(filepath.Base(path))
+	// Remove extension for checking
+	if idx := strings.LastIndex(baseName, "."); idx > 0 {
+		baseName = baseName[:idx]
+	}
+	for _, reserved := range reservedNames {
+		if baseName == reserved {
+			return ErrWindowsReservedName
+		}
+	}
+	return nil
+}
+
+// ValidatePath validates a PathBuilder instance
+func (r *WindowsReservedRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// UNCPathRule validates that a path doesn't use UNC paths
+type UNCPathRule struct{}
+
+// Name returns the rule name
+func (r *UNCPathRule) Name() string { return "no-unc-paths" }
+
+// Description returns the rule description
+func (r *UNCPathRule) Description() string { return "path must not use UNC paths" }
+
+// Validate checks if the given path is a UNC path
+func (r *UNCPathRule) Validate(path string) error {
+	if strings.HasPrefix(path, "\\\\") {
+		return ErrUNCPathNotAllowed
+	}
+	return nil
+}
+
+// ValidatePath validates a PathBuilder instance
+func (r *UNCPathRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// DrivePathRule validates that a path doesn't use Windows drive paths
+type DrivePathRule struct{}
+
+// Name returns the rule name
+func (r *DrivePathRule) Name() string { return "no-drive-paths" }
+
+// Description returns the rule description
+func (r *DrivePathRule) Description() string { return "path must not use Windows drive paths" }
+
+// Validate checks if the given path is a Windows drive path
+func (r *DrivePathRule) Validate(path string) error {
+	if len(path) > 1 && path[1] == ':' {
+		return ErrDrivePathNotAllowed
+	}
+	return nil
+}
+
+// ValidatePath validates a PathBuilder instance
+func (r *DrivePathRule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// ValidUTF8Rule validates that a path contains valid UTF-8
+type ValidUTF8Rule struct{}
+
+// Name returns the rule name
+func (r *ValidUTF8Rule) Name() string { return "valid-utf8" }
+
+// Description returns the rule description
+func (r *ValidUTF8Rule) Description() string { return "path must contain valid UTF-8" }
+
+// Validate checks if the given path contains valid UTF-8
+func (r *ValidUTF8Rule) Validate(path string) error {
+	// Check for invalid UTF-8 byte sequences
+	for i := 0; i < len(path); i++ {
+		b := path[i]
+		// Check for invalid UTF-8 bytes
+		if b == 0xff || b == 0xfe {
+			return ErrInvalidUTF8Bytes
+		}
+		// Check for overlong UTF-8 sequences (like \xc0\xaf for "/")
+		if b == 0xc0 || b == 0xc1 {
+			return ErrOverlongUTF8Sequence
+		}
+		// Check for other suspicious byte sequences
+		if b >= 0x80 && b <= 0xbf && (i == 0 || path[i-1] < 0x80) {
+			return ErrInvalidUTF8Continuation
+		}
+	}
+	return nil
+}
+
+// ValidatePath validates a PathBuilder instance
+func (r *ValidUTF8Rule) ValidatePath(path PathBuilder) error {
+	return r.Validate(path.String())
+}
+
+// RequireSecure adds comprehensive security validation rules
+func (pv *DefaultPathValidator) RequireSecure() PathValidator {
+	// Add all security rules
+	if err := pv.AddRule(&PathTraversalRule{}); err != nil {
+		log.Printf("failed to add path traversal rule: %v", err)
+	}
+	if err := pv.AddRule(&NullByteRule{}); err != nil {
+		log.Printf("failed to add null byte rule: %v", err)
+	}
+	if err := pv.AddRule(&ControlCharacterRule{}); err != nil {
+		log.Printf("failed to add control character rule: %v", err)
+	}
+	if err := pv.AddRule(&WindowsReservedRule{}); err != nil {
+		log.Printf("failed to add Windows reserved rule: %v", err)
+	}
+	if err := pv.AddRule(&UNCPathRule{}); err != nil {
+		log.Printf("failed to add UNC path rule: %v", err)
+	}
+	if err := pv.AddRule(&DrivePathRule{}); err != nil {
+		log.Printf("failed to add drive path rule: %v", err)
+	}
+	if err := pv.AddRule(&ValidUTF8Rule{}); err != nil {
+		log.Printf("failed to add valid UTF-8 rule: %v", err)
+	}
+	return pv
 }

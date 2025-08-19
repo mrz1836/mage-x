@@ -99,7 +99,7 @@ func (d *DefaultConfigLoader) Save(path string, data interface{}, format string)
 		if err != nil {
 			return fmt.Errorf("failed to marshal JSON: %w", err)
 		}
-		return d.fileOps.WriteFile(path, jsonData, 0o644)
+		return d.fileOps.WriteFile(path, jsonData, 0o600)
 	default:
 		return fmt.Errorf("%w: %s", ErrUnsupportedFormat, format)
 	}

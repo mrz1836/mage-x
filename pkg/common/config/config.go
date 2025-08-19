@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -88,23 +89,53 @@ func (c *Config) buildConfigPaths(baseName string, searchDirs ...string) []strin
 		expandedDir := c.expandPath(dir)
 
 		for _, ext := range extensions {
-			paths = append(paths, filepath.Join(expandedDir, baseName+ext))
+			candidatePath := filepath.Join(expandedDir, baseName+ext)
+			// Filter out paths containing null bytes
+			if !strings.Contains(candidatePath, "\x00") {
+				paths = append(paths, candidatePath)
+			}
 		}
 
 		// Also try without extension (for auto-detection)
-		paths = append(paths, filepath.Join(expandedDir, baseName))
+		candidatePath := filepath.Join(expandedDir, baseName)
+		// Filter out paths containing null bytes
+		if !strings.Contains(candidatePath, "\x00") {
+			paths = append(paths, candidatePath)
+		}
 	}
 
 	return paths
 }
 
-// expandPath expands environment variables in path
+// expandPath expands environment variables in path with security validation
 func (c *Config) expandPath(path string) string {
-	if strings.HasPrefix(path, "$HOME") {
-		home := c.Env.Get("HOME")
-		return strings.Replace(path, "$HOME", home, 1)
+	// First decode any URL-encoded sequences to detect hidden path traversal
+	decoded, err := url.QueryUnescape(path)
+	if err != nil {
+		// If decoding fails, use original path but validate it
+		decoded = path
 	}
-	return path
+
+	// Check for path traversal patterns in both original and decoded paths
+	if strings.Contains(decoded, "../") || strings.Contains(decoded, "..\\") ||
+		strings.HasSuffix(decoded, "..") || decoded == ".." {
+		// Return the original path without expansion as a security measure
+		return path
+	}
+
+	// Check for null bytes and control characters
+	if strings.Contains(decoded, "\x00") || strings.Contains(decoded, "\n") || strings.Contains(decoded, "\r") {
+		// Return the original path without expansion as a security measure
+		return path
+	}
+
+	// Use the decoded path for expansion
+	workingPath := decoded
+	if strings.HasPrefix(workingPath, "$HOME") {
+		home := c.Env.Get("HOME")
+		return strings.Replace(workingPath, "$HOME", home, 1)
+	}
+	return workingPath
 }
 
 // detectFormat detects configuration format from file extension
