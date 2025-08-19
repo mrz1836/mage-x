@@ -189,7 +189,7 @@ func BenchmarkSecurityVsPerformance(b *testing.B) {
 				_ = pb.IsSafe()
 				_ = validator.ValidatePath(pb)
 			}
-			}
+		}
 	})
 }
 

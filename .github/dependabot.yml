@@ -111,51 +111,6 @@ updates:
       prefix: "chore"
       include: "scope"
 
-  # With config example
-  - package-ecosystem: "gomod"
-    directory: "/examples/with-config"
-    target-branch: "master"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:12"
-      timezone: "America/New_York"
-    allow:
-      - dependency-type: "direct"
-    groups:
-      security-deps:
-        patterns:
-          - "*crypto*"
-          - "*security*"
-          - "*auth*"
-          - "*jwt*"
-          - "*oauth*"
-        update-types: ["minor", "patch"]
-    open-pull-requests-limit: 10
-    assignees: ["mrz1836"]
-    labels: ["chore", "dependencies", "gomod"]
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-
-    allow:
-      - dependency-type: "direct"
-    groups:
-      security-deps:
-        patterns:
-          - "*crypto*"
-          - "*security*"
-          - "*auth*"
-          - "*jwt*"
-          - "*oauth*"
-        update-types: ["minor", "patch"]
-    open-pull-requests-limit: 10
-    assignees: ["mrz1836"]
-    labels: ["chore", "dependencies", "gomod"]
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-
   # ──────────────────────────────────────────────────────────────
   # 2. GitHub Actions Workflows
   # ──────────────────────────────────────────────────────────────

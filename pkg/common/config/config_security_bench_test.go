@@ -120,11 +120,11 @@ func BenchmarkConfigSecurityValidation(b *testing.B) {
 			},
 		},
 		{
-			name: "medium_config",
+			name:   "medium_config",
 			config: generateTestConfig(50),
 		},
 		{
-			name: "large_config",
+			name:   "large_config",
 			config: generateTestConfig(500),
 		},
 		{
@@ -306,7 +306,7 @@ func BenchmarkConfigSecurityCommandValidation(b *testing.B) {
 			},
 		},
 		{
-			name: "mixed_commands",
+			name:     "mixed_commands",
 			commands: generateMixedCommands(100),
 		},
 	}
@@ -331,10 +331,10 @@ func BenchmarkConfigSecurityConfigLoad(b *testing.B) {
 
 	// Create test configuration files
 	configs := []struct {
-		name     string
-		format   string
-		content  string
-		size     string
+		name    string
+		format  string
+		content string
+		size    string
 	}{
 		{
 			name:    "small_yaml",

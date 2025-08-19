@@ -15,15 +15,15 @@ type FactoryFunctionsTestSuite struct {
 // TestFactoryFunctions tests all New*Namespace() factory functions
 func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 	tests := []struct {
-		name            string
-		factory         func() interface{}
-		expectedType    interface{}
-		interfaceCheck  func(interface{}) bool
-		description     string
+		name           string
+		factory        func() interface{}
+		expectedType   interface{}
+		interfaceCheck func(interface{}) bool
+		description    string
 	}{
 		{
-			name:    "NewBuildNamespace",
-			factory: func() interface{} { return NewBuildNamespace() },
+			name:         "NewBuildNamespace",
+			factory:      func() interface{} { return NewBuildNamespace() },
 			expectedType: (*buildNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(BuildNamespace)
@@ -32,8 +32,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates BuildNamespace implementation",
 		},
 		{
-			name:    "NewTestNamespace",
-			factory: func() interface{} { return NewTestNamespace() },
+			name:         "NewTestNamespace",
+			factory:      func() interface{} { return NewTestNamespace() },
 			expectedType: (*testNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(TestNamespace)
@@ -42,8 +42,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates TestNamespace implementation",
 		},
 		{
-			name:    "NewLintNamespace",
-			factory: func() interface{} { return NewLintNamespace() },
+			name:         "NewLintNamespace",
+			factory:      func() interface{} { return NewLintNamespace() },
 			expectedType: (*lintNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(LintNamespace)
@@ -52,8 +52,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates LintNamespace implementation",
 		},
 		{
-			name:    "NewFormatNamespace",
-			factory: func() interface{} { return NewFormatNamespace() },
+			name:         "NewFormatNamespace",
+			factory:      func() interface{} { return NewFormatNamespace() },
 			expectedType: (*formatNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(FormatNamespace)
@@ -62,8 +62,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates FormatNamespace implementation",
 		},
 		{
-			name:    "NewDepsNamespace",
-			factory: func() interface{} { return NewDepsNamespace() },
+			name:         "NewDepsNamespace",
+			factory:      func() interface{} { return NewDepsNamespace() },
 			expectedType: (*depsNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(DepsNamespace)
@@ -72,8 +72,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates DepsNamespace implementation",
 		},
 		{
-			name:    "NewGitNamespace",
-			factory: func() interface{} { return NewGitNamespace() },
+			name:         "NewGitNamespace",
+			factory:      func() interface{} { return NewGitNamespace() },
 			expectedType: (*gitNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(GitNamespace)
@@ -82,8 +82,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates GitNamespace implementation",
 		},
 		{
-			name:    "NewReleaseNamespace",
-			factory: func() interface{} { return NewReleaseNamespace() },
+			name:         "NewReleaseNamespace",
+			factory:      func() interface{} { return NewReleaseNamespace() },
 			expectedType: (*releaseNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(ReleaseNamespace)
@@ -92,8 +92,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates ReleaseNamespace implementation",
 		},
 		{
-			name:    "NewDocsNamespace",
-			factory: func() interface{} { return NewDocsNamespace() },
+			name:         "NewDocsNamespace",
+			factory:      func() interface{} { return NewDocsNamespace() },
 			expectedType: (*docsNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(DocsNamespace)
@@ -102,8 +102,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates DocsNamespace implementation",
 		},
 		{
-			name:    "NewToolsNamespace",
-			factory: func() interface{} { return NewToolsNamespace() },
+			name:         "NewToolsNamespace",
+			factory:      func() interface{} { return NewToolsNamespace() },
 			expectedType: (*toolsNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(ToolsNamespace)
@@ -112,8 +112,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates ToolsNamespace implementation",
 		},
 		{
-			name:    "NewGenerateNamespace",
-			factory: func() interface{} { return NewGenerateNamespace() },
+			name:         "NewGenerateNamespace",
+			factory:      func() interface{} { return NewGenerateNamespace() },
 			expectedType: (*generateNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(GenerateNamespace)
@@ -122,8 +122,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates GenerateNamespace implementation",
 		},
 		{
-			name:    "NewCLINamespace",
-			factory: func() interface{} { return NewCLINamespace() },
+			name:         "NewCLINamespace",
+			factory:      func() interface{} { return NewCLINamespace() },
 			expectedType: (*cliNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(CLINamespace)
@@ -132,8 +132,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates CLINamespace implementation",
 		},
 		{
-			name:    "NewUpdateNamespace",
-			factory: func() interface{} { return NewUpdateNamespace() },
+			name:         "NewUpdateNamespace",
+			factory:      func() interface{} { return NewUpdateNamespace() },
 			expectedType: (*updateNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(UpdateNamespace)
@@ -142,8 +142,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates UpdateNamespace implementation",
 		},
 		{
-			name:    "NewModNamespace",
-			factory: func() interface{} { return NewModNamespace() },
+			name:         "NewModNamespace",
+			factory:      func() interface{} { return NewModNamespace() },
 			expectedType: (*modNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(ModNamespace)
@@ -152,8 +152,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates ModNamespace implementation",
 		},
 		{
-			name:    "NewRecipesNamespace",
-			factory: func() interface{} { return NewRecipesNamespace() },
+			name:         "NewRecipesNamespace",
+			factory:      func() interface{} { return NewRecipesNamespace() },
 			expectedType: (*recipesNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(RecipesNamespace)
@@ -162,8 +162,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates RecipesNamespace implementation",
 		},
 		{
-			name:    "NewMetricsNamespace",
-			factory: func() interface{} { return NewMetricsNamespace() },
+			name:         "NewMetricsNamespace",
+			factory:      func() interface{} { return NewMetricsNamespace() },
 			expectedType: (*metricsNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(MetricsNamespace)
@@ -172,8 +172,8 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates MetricsNamespace implementation",
 		},
 		{
-			name:    "NewWorkflowNamespace",
-			factory: func() interface{} { return NewWorkflowNamespace() },
+			name:         "NewWorkflowNamespace",
+			factory:      func() interface{} { return NewWorkflowNamespace() },
 			expectedType: (*workflowNamespaceWrapper)(nil),
 			interfaceCheck: func(i interface{}) bool {
 				_, ok := i.(WorkflowNamespace)

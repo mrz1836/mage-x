@@ -367,23 +367,23 @@ func hasValidationError(errors []ValidationError, ruleName string) bool {
 // FuzzSecurityBypass fuzzes potential security bypass attempts
 func FuzzSecurityBypass(f *testing.F) {
 	// Seed with known bypass techniques
-	f.Add("..%2f..%2f..%2fetc%2fpasswd")                    // URL encoding
-	f.Add("..%252f..%252f..%252fetc%252fpasswd")              // Double URL encoding
-	f.Add("..\u002f..\u002f..\u002fetc\u002fpasswd")         // Unicode encoding
-	f.Add("../\x2e\x2e/\x2e\x2e/etc/passwd")              // Hex encoding
-	f.Add("..\\..\\..\\etc\\passwd")                      // Backslash normalization
-	f.Add("file.txt\x00../../../etc/passwd")                // Null byte injection
-	f.Add(".//..//..//..//etc//passwd")                      // Mixed current dir and traversal
-	f.Add("\x2e\x2e\x2f\x2e\x2e\x2f\x2e\x2e\x2f")        // All hex encoded
-	f.Add("file.txt%00../../../etc/passwd")                  // URL encoded null
-	f.Add("file.txt%0a../../../etc/passwd")                  // URL encoded newline
-	f.Add("file.txt%0d../../../etc/passwd")                  // URL encoded carriage return
-	f.Add("/proc/self/fd/../../../etc/passwd")               // Proc filesystem bypass
-	f.Add("\\?\\C:\\Windows\\System32\\config\\SAM")      // Windows long path prefix
-	f.Add("file.txt:$DATA")                                  // NTFS alternate data stream
-	f.Add("CONIN$.txt")                                      // Windows device names
-	f.Add("file.txt.")                                       // Trailing dot (Windows)
-	f.Add("file.txt ")                                       // Trailing space (Windows)
+	f.Add("..%2f..%2f..%2fetc%2fpasswd")             // URL encoding
+	f.Add("..%252f..%252f..%252fetc%252fpasswd")     // Double URL encoding
+	f.Add("..\u002f..\u002f..\u002fetc\u002fpasswd") // Unicode encoding
+	f.Add("../\x2e\x2e/\x2e\x2e/etc/passwd")         // Hex encoding
+	f.Add("..\\..\\..\\etc\\passwd")                 // Backslash normalization
+	f.Add("file.txt\x00../../../etc/passwd")         // Null byte injection
+	f.Add(".//..//..//..//etc//passwd")              // Mixed current dir and traversal
+	f.Add("\x2e\x2e\x2f\x2e\x2e\x2f\x2e\x2e\x2f")    // All hex encoded
+	f.Add("file.txt%00../../../etc/passwd")          // URL encoded null
+	f.Add("file.txt%0a../../../etc/passwd")          // URL encoded newline
+	f.Add("file.txt%0d../../../etc/passwd")          // URL encoded carriage return
+	f.Add("/proc/self/fd/../../../etc/passwd")       // Proc filesystem bypass
+	f.Add("\\?\\C:\\Windows\\System32\\config\\SAM") // Windows long path prefix
+	f.Add("file.txt:$DATA")                          // NTFS alternate data stream
+	f.Add("CONIN$.txt")                              // Windows device names
+	f.Add("file.txt.")                               // Trailing dot (Windows)
+	f.Add("file.txt ")                               // Trailing space (Windows)
 
 	f.Fuzz(func(t *testing.T, path string) {
 		// Skip invalid UTF-8
