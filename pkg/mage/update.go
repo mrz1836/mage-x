@@ -34,6 +34,7 @@ var (
 	errNoBetaReleasesFound   = errors.New("no beta releases found")
 	errNoTarGzFound          = errors.New("no tar.gz file found in update directory")
 	errMagexBinaryNotFound   = errors.New("magex binary not found in extracted files")
+	errPathTraversal         = errors.New("path traversal attempt detected")
 )
 
 // Update namespace for auto-update functionality
@@ -482,6 +483,30 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	return fileOps.File.WriteFile(targetPath, data, 0o644)
 }
 
+// validateExtractPath validates that a file path stays within the destination directory
+// and prevents directory traversal attacks (Zip Slip vulnerability)
+func validateExtractPath(destDir, tarPath string) (string, error) {
+	// Clean the destination directory path
+	destDir = filepath.Clean(destDir)
+
+	// Join and clean the target path
+	targetPath := filepath.Join(destDir, tarPath)
+	targetPath = filepath.Clean(targetPath)
+
+	// Check if the target path is within the destination directory
+	relPath, err := filepath.Rel(destDir, targetPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to determine relative path: %w", err)
+	}
+
+	// Reject paths that escape the destination directory
+	if strings.HasPrefix(relPath, "..") || strings.Contains(relPath, string(filepath.Separator)+"..") {
+		return "", fmt.Errorf("%w: %s", errPathTraversal, tarPath)
+	}
+
+	return targetPath, nil
+}
+
 // extractTarGz extracts a tar.gz file to the specified directory
 func extractTarGz(src, dest string) error {
 	// Open the tar.gz file
@@ -530,11 +555,20 @@ func extractTarGz(src, dest string) error {
 			continue
 		}
 
-		// Create destination file path
-		destPath := filepath.Join(dest, filepath.Base(header.Name))
+		// Validate and create secure destination file path
+		destPath, err := validateExtractPath(dest, header.Name)
+		if err != nil {
+			utils.Info("Skipping malicious file path: %s (%v)", header.Name, err)
+			continue
+		}
+
+		// Ensure the destination directory exists
+		if dirErr := os.MkdirAll(filepath.Dir(destPath), 0o750); dirErr != nil {
+			return fmt.Errorf("failed to create destination directory for %s: %w", destPath, dirErr)
+		}
 
 		// Create the file
-		//nolint:gosec // G304: destPath constructed safely from header
+		//nolint:gosec // G304: destPath validated by validateExtractPath function
 		destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(header.Mode))
 		if err != nil {
 			return fmt.Errorf("failed to create destination file %s: %w", destPath, err)
@@ -552,7 +586,7 @@ func extractTarGz(src, dest string) error {
 			return fmt.Errorf("failed to close destination file %s: %w", destPath, closeErr)
 		}
 
-		utils.Info("Extracted: %s", filepath.Base(header.Name))
+		utils.Info("Extracted: %s", filepath.Base(destPath))
 	}
 
 	return nil
