@@ -74,7 +74,7 @@ func (f *FileOps) WriteYAMLSafe(path string, data interface{}) error {
 		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}
 
-	return f.Safe.WriteFileAtomic(path, yamlData, 0o644)
+	return f.Safe.WriteFileAtomic(path, yamlData, 0o600)
 }
 
 // LoadConfig loads configuration from file with fallback to multiple paths and formats

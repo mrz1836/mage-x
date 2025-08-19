@@ -29,6 +29,7 @@ type PathBuilder interface {
 
 	// Information
 	String() string
+	Original() string // Returns the original unprocessed path for security validation
 	IsAbs() bool
 	IsDir() bool
 	IsFile() bool

@@ -147,6 +147,10 @@ func (m *MockPathBuilder) String() string {
 	return m.path
 }
 
+func (m *MockPathBuilder) Original() string {
+	return m.path // For mocks, just return the same path
+}
+
 func (m *MockPathBuilder) IsAbs() bool {
 	m.calls["IsAbs"]++
 	if value, exists := m.GetMockData("is_abs"); exists {

@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 
 func buildMagexBinary() error {
 	ctx := context.Background()
-	cmd := exec.CommandContext(ctx, "go", "build", "-o", "magex", "../cmd/magex")
+	cmd := exec.CommandContext(ctx, "go", "build", "-o", "magex", "../../cmd/magex")
 	cmd.Env = append(os.Environ(), "GO111MODULE=on")
 	return cmd.Run()
 }

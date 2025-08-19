@@ -53,7 +53,7 @@ tests/.mage-cache/
 /pkg/utils/.mage/
 
 # Documentation and generated files
-/benchmarks/magex
+/tests/benchmarks/magex
 /cmd/magex/magex
 /docs/build
 /docs/generated

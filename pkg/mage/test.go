@@ -523,8 +523,7 @@ func isMultiModuleCoverage(coverageFile string) bool {
 				// Extract the relative path after the module name
 				relativePath := strings.TrimPrefix(pkg, currentModule+"/")
 				// Check for common submodule patterns
-				if strings.HasPrefix(relativePath, ".github/test-module/") ||
-					strings.HasPrefix(relativePath, "tools/cli-helper/") {
+				if strings.HasPrefix(relativePath, ".github/test-module/") {
 					utils.Debug("Found package from submodule: %s", pkg)
 					return true
 				}

@@ -428,7 +428,7 @@ func (ts *VetTestSuite) TestVetPackageFiltering() {
 		testPackages := []string{
 			"github.com/mrz1836/mage-x/pkg/mage",
 			"github.com/mrz1836/mage-x/pkg/utils",
-			"github.com/mrz1836/mage-x/cmd/example",
+			"github.com/mrz1836/mage-x/cmd/mage-init",
 			"github.com/external/package",
 			"stdlib/package",
 		}
@@ -446,7 +446,7 @@ func (ts *VetTestSuite) TestVetPackageFiltering() {
 		ts.Require().Len(modulePackages, 3)
 		ts.Require().Contains(modulePackages, "github.com/mrz1836/mage-x/pkg/mage")
 		ts.Require().Contains(modulePackages, "github.com/mrz1836/mage-x/pkg/utils")
-		ts.Require().Contains(modulePackages, "github.com/mrz1836/mage-x/cmd/example")
+		ts.Require().Contains(modulePackages, "github.com/mrz1836/mage-x/cmd/mage-init")
 		ts.Require().NotContains(modulePackages, "github.com/external/package")
 		ts.Require().NotContains(modulePackages, "stdlib/package")
 	})

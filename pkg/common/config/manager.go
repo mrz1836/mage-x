@@ -168,7 +168,28 @@ func (v *BasicValidator) Validate(data interface{}) error {
 		return errConfigDataCannotNil
 	}
 
-	// Basic validation - can be extended with more sophisticated rules
+	// Validate using configured rules
+	switch d := data.(type) {
+	case map[string]interface{}:
+		return v.validateMap(d)
+	case *map[string]interface{}:
+		if d != nil {
+			return v.validateMap(*d)
+		}
+		return errConfigDataCannotNil
+	default:
+		// For other types, basic validation passes
+		return nil
+	}
+}
+
+// validateMap validates a map using field-specific rules
+func (v *BasicValidator) validateMap(data map[string]interface{}) error {
+	for fieldName, value := range data {
+		if err := v.ValidateField(fieldName, value); err != nil {
+			return fmt.Errorf("validation failed for field '%s': %w", fieldName, err)
+		}
+	}
 	return nil
 }
 

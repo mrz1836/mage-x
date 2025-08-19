@@ -239,7 +239,7 @@ func (d *DefaultYAMLOperator) WriteYAML(path string, v interface{}) error {
 		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}
 
-	return d.fileOps.WriteFile(path, data, 0o644)
+	return d.fileOps.WriteFile(path, data, 0o600)
 }
 
 // ReadYAML reads YAML from a file into a value

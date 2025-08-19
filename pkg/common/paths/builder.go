@@ -9,15 +9,17 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // DefaultPathBuilder implements PathBuilder using standard library
 type DefaultPathBuilder struct {
-	path    string
-	options PathOptions
-	fileOps *fileops.FileOps
+	path         string
+	originalPath string // Store original path for security checks
+	options      PathOptions
+	fileOps      *fileops.FileOps
 }
 
 // NewPathBuilder creates a new path builder
@@ -29,7 +31,8 @@ func NewPathBuilder(path string) *DefaultPathBuilder {
 	}
 
 	return &DefaultPathBuilder{
-		path: cleanPath,
+		path:         cleanPath,
+		originalPath: path, // Store original for security checks
 		options: PathOptions{
 			CreateMode:    0o755,
 			CreateParents: true,
@@ -48,8 +51,9 @@ func NewPathBuilderWithOptions(path string, options PathOptions) *DefaultPathBui
 	}
 
 	return &DefaultPathBuilder{
-		path:    cleanPath,
-		options: options,
+		path:         cleanPath,
+		originalPath: path, // Store original for security checks
+		options:      options,
 	}
 }
 
@@ -58,9 +62,15 @@ func NewPathBuilderWithOptions(path string, options PathOptions) *DefaultPathBui
 // Join appends path elements to the current path
 func (pb *DefaultPathBuilder) Join(elements ...string) PathBuilder {
 	allElements := append([]string{pb.path}, elements...)
+	joinedOriginal := ""
+	if pb.originalPath != "" {
+		allOriginalElements := append([]string{pb.originalPath}, elements...)
+		joinedOriginal = filepath.Join(allOriginalElements...)
+	}
 	return &DefaultPathBuilder{
-		path:    filepath.Join(allElements...),
-		options: pb.options,
+		path:         filepath.Join(allElements...),
+		originalPath: joinedOriginal,
+		options:      pb.options,
 	}
 }
 
@@ -174,6 +184,11 @@ func (pb *DefaultPathBuilder) RelTo(target PathBuilder) (PathBuilder, error) {
 // String returns the string representation of the path
 func (pb *DefaultPathBuilder) String() string {
 	return pb.path
+}
+
+// Original returns the original unprocessed path for security validation
+func (pb *DefaultPathBuilder) Original() string {
+	return pb.originalPath
 }
 
 // IsAbs returns true if the path is absolute
@@ -382,9 +397,219 @@ func (pb *DefaultPathBuilder) IsEmpty() bool {
 	return pb.path == ""
 }
 
+// isPathSafe checks if a path string is safe
+func (pb *DefaultPathBuilder) isPathSafe(path string) bool {
+	// Check for path traversal patterns first - this catches both regular .. and paths like /proc/self/fd/../../..
+	if strings.Contains(path, "..") {
+		return false
+	}
+
+	// Check for suspicious Unix paths (but only after path traversal check above)
+	if strings.HasPrefix(path, "/proc/") || strings.HasPrefix(path, "/dev/") {
+		return false
+	}
+
+	// Check for URL encoded patterns
+	if strings.Contains(path, "%2e%2e") || strings.Contains(path, "%252e%252e") {
+		return false
+	}
+
+	// Check for Unicode encoded patterns
+	if strings.Contains(path, "\u002e\u002e") {
+		return false
+	}
+
+	// Check for hex encoded patterns
+	if strings.Contains(path, "\x2e\x2e") {
+		return false
+	}
+
+	// Check for null bytes
+	if strings.Contains(path, "\x00") {
+		return false
+	}
+
+	// Check for overlong UTF-8 encoding attacks
+	if strings.Contains(path, "\xc0\xaf") {
+		return false
+	}
+
+	// Check for control characters
+	for _, char := range path {
+		if char < 32 && char != '\t' { // Allow tabs, reject other control chars
+			return false
+		}
+	}
+
+	// Check for Unicode confusable characters that could be used to bypass validation
+	if strings.Contains(path, "⁄") { // Unicode fraction slash (U+2044)
+		return false
+	}
+
+	// Check for invalid UTF-8 sequences
+	if !utf8.ValidString(path) {
+		return false
+	}
+
+	return true
+}
+
+// isSymlinkUnsafe checks if the path is an unsafe symlink
+func (pb *DefaultPathBuilder) isSymlinkUnsafe() bool {
+	// Check if the path exists and is a symlink
+	info, err := os.Lstat(pb.path)
+	if err != nil {
+		// If we can't stat the path, it's not necessarily unsafe (might not exist yet)
+		return false
+	}
+
+	// If it's not a symlink, it's safe from symlink perspective
+	if info.Mode()&os.ModeSymlink == 0 {
+		return false
+	}
+
+	// If FollowSymlinks is explicitly disabled, any symlink is unsafe
+	if !pb.options.FollowSymlinks {
+		return true
+	}
+
+	// If we have a restricted base path, check if symlink target is within it
+	if pb.options.RestrictToBasePath != "" {
+		target, err := os.Readlink(pb.path)
+		if err != nil {
+			return true // Can't read symlink target, consider it unsafe
+		}
+
+		// Resolve the target path to absolute
+		var targetPath string
+		if filepath.IsAbs(target) {
+			targetPath = target
+		} else {
+			// Relative symlink - resolve relative to symlink's directory
+			symlinkDir := filepath.Dir(pb.path)
+			targetPath = filepath.Join(symlinkDir, target)
+		}
+
+		// Clean and resolve the target path
+		targetPath = filepath.Clean(targetPath)
+
+		// Check if target is within the restricted base path
+		restrictedBase := filepath.Clean(pb.options.RestrictToBasePath)
+		rel, err := filepath.Rel(restrictedBase, targetPath)
+		if err != nil {
+			return true // Can't determine relationship, consider unsafe
+		}
+
+		// If the relative path starts with "..", it's outside the base path
+		if strings.HasPrefix(rel, "..") {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isBasePathViolation checks if the path violates base path restrictions
+func (pb *DefaultPathBuilder) isBasePathViolation() bool {
+	// If no base path restriction is set, no violation
+	if pb.options.RestrictToBasePath == "" {
+		return false
+	}
+
+	// Clean and resolve the paths
+	currentPath := filepath.Clean(pb.path)
+	restrictedBase := filepath.Clean(pb.options.RestrictToBasePath)
+
+	// For absolute paths, check if they're outside the base
+	if filepath.IsAbs(currentPath) {
+		rel, err := filepath.Rel(restrictedBase, currentPath)
+		if err != nil {
+			return true // Can't determine relationship, consider it a violation
+		}
+
+		// If the relative path starts with "..", it's outside the base path
+		if strings.HasPrefix(rel, "..") {
+			return true
+		}
+	}
+
+	return false
+}
+
 // IsSafe returns true if the path is considered safe
 func (pb *DefaultPathBuilder) IsSafe() bool {
-	return !strings.Contains(pb.path, "..")
+	// Check the original path first for security issues that might be cleaned away
+	if pb.originalPath != "" && !pb.isPathSafe(pb.originalPath) {
+		return false
+	}
+
+	// Check the cleaned path for basic safety
+	if !pb.isPathSafe(pb.path) {
+		return false
+	}
+
+	// Check if path is a symlink and if symlinks are restricted
+	if pb.isSymlinkUnsafe() {
+		return false
+	}
+
+	// Check if path violates base path restrictions
+	if pb.isBasePathViolation() {
+		return false
+	}
+
+	// Additional checks specific to cleaned path
+	return pb.isWindowsSafe(pb.path) && pb.isUnixSafe(pb.path) && pb.isLengthSafe(pb.path)
+}
+
+// isWindowsSafe checks Windows-specific security issues
+func (pb *DefaultPathBuilder) isWindowsSafe(path string) bool {
+	// Check for Windows UNC paths
+	if strings.HasPrefix(path, "\\\\") {
+		return false
+	}
+
+	// Check for Windows drive paths (absolute paths starting with drive letter)
+	if len(path) > 1 && path[1] == ':' {
+		return false
+	}
+
+	// Check for Windows alternate data streams
+	if strings.Contains(path, ":$DATA") || (strings.Contains(path, ":") && strings.Contains(path, "$")) {
+		return false
+	}
+
+	// Check for Windows reserved device names
+	reservedNames := []string{"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "CONIN$", "CONOUT$"}
+	baseName := strings.ToUpper(filepath.Base(path))
+	// Remove extension for checking
+	if idx := strings.LastIndex(baseName, "."); idx > 0 {
+		baseName = baseName[:idx]
+	}
+	for _, reserved := range reservedNames {
+		if baseName == reserved {
+			return false
+		}
+	}
+
+	// Check for trailing dots or spaces (Windows issue)
+	if strings.HasSuffix(path, ".") || strings.HasSuffix(path, " ") {
+		return false
+	}
+
+	return true
+}
+
+// isUnixSafe checks Unix-specific security issues
+func (pb *DefaultPathBuilder) isUnixSafe(path string) bool {
+	// Check for suspicious Unix paths
+	return !strings.HasPrefix(path, "/proc/") && !strings.HasPrefix(path, "/dev/")
+}
+
+// isLengthSafe checks if path length is safe
+func (pb *DefaultPathBuilder) isLengthSafe(path string) bool {
+	// Check for extremely long paths (potential buffer overflow attacks)
+	return len(path) <= 4096
 }
 
 // Modification

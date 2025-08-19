@@ -1070,7 +1070,7 @@ func TestMockFileOperations(t *testing.T) {
 		// Set up mock expectations
 		mockFile.EXPECT().Exists("/test/path").Return(true) // Directory exists
 		mockYAML.EXPECT().Marshal(testData).Return(expectedYAML, nil)
-		mockSafe.EXPECT().WriteFileAtomic(testPath, expectedYAML, os.FileMode(0o644)).Return(nil)
+		mockSafe.EXPECT().WriteFileAtomic(testPath, expectedYAML, os.FileMode(0o600)).Return(nil)
 
 		err := ops.WriteYAMLSafe(testPath, testData)
 		assert.NoError(t, err, "WriteYAMLSafe should succeed with mocks")

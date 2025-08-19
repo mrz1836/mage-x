@@ -136,6 +136,10 @@ func (l *lazyPathBuilder) String() string {
 	return GetDefaultBuilder().String()
 }
 
+func (l *lazyPathBuilder) Original() string {
+	return GetDefaultBuilder().Original()
+}
+
 func (l *lazyPathBuilder) IsAbs() bool {
 	return GetDefaultBuilder().IsAbs()
 }
