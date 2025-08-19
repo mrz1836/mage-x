@@ -18,6 +18,7 @@ on:
     branches: ["main"]
   schedule:
     - cron: "24 19 * * 2"
+  workflow_dispatch: # Allow manual triggering
 
 jobs:
   analyze:
