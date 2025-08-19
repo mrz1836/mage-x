@@ -17,7 +17,7 @@ import (
 // getVersion returns the current version
 func getVersion() string {
 	// Check for environment variable override
-	if envVersion := os.Getenv("MAGE_X_VERSION"); envVersion != "" {
+	if envVersion := utils.GetEnvClean("MAGE_X_VERSION"); envVersion != "" {
 		return envVersion
 	}
 

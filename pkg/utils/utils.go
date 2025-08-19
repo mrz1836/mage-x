@@ -128,6 +128,25 @@ func GetEnvInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
+// GetEnvClean retrieves an environment variable with inline comment stripping
+// It removes anything after " #" and trims whitespace from the value
+// This is useful for environment files that contain inline comments like:
+// VARIABLE_NAME=value  # comment here
+func GetEnvClean(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return ""
+	}
+
+	// Find inline comment marker (space followed by #)
+	if idx := strings.Index(value, " #"); idx >= 0 {
+		value = value[:idx]
+	}
+
+	// Trim any leading/trailing whitespace
+	return strings.TrimSpace(value)
+}
+
 // IsVerbose checks if verbose mode is enabled
 func IsVerbose() bool {
 	return GetEnvBool("VERBOSE", false) || GetEnvBool("V", false)

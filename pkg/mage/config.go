@@ -465,40 +465,23 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 // applyToolVersionEnvOverrides applies environment variable overrides to tool versions
 func applyToolVersionEnvOverrides(cfg *ToolsConfig) {
 	// Core linting tools
-	if v := os.Getenv("MAGE_X_GOLANGCI_LINT_VERSION"); v != "" {
+	if v := utils.GetEnvClean("MAGE_X_GOLANGCI_LINT_VERSION"); v != "" {
 		cfg.GolangciLint = v
 	}
-	if v := os.Getenv("MAGE_X_GOFUMPT_VERSION"); v != "" {
+	if v := utils.GetEnvClean("MAGE_X_GOFUMPT_VERSION"); v != "" {
 		cfg.Fumpt = v
 	}
 
 	// Security scanning tools
-	if v := os.Getenv("MAGE_X_GOVULNCHECK_VERSION"); v != "" {
+	if v := utils.GetEnvClean("MAGE_X_GOVULNCHECK_VERSION"); v != "" {
 		cfg.GoVulnCheck = v
 	}
 
 	// Code generation tools
-	if v := os.Getenv("MAGE_X_MOCKGEN_VERSION"); v != "" {
+	if v := utils.GetEnvClean("MAGE_X_MOCKGEN_VERSION"); v != "" {
 		cfg.Mockgen = v
 	}
-	if v := os.Getenv("MAGE_X_SWAG_VERSION"); v != "" {
-		cfg.Swag = v
-	}
-
-	// Legacy environment variable support for backward compatibility
-	if v := os.Getenv("GOLANGCI_LINT_VERSION"); v != "" && cfg.GolangciLint == "" {
-		cfg.GolangciLint = v
-	}
-	if v := os.Getenv("GOFUMPT_VERSION"); v != "" && cfg.Fumpt == "" {
-		cfg.Fumpt = v
-	}
-	if v := os.Getenv("GOVULNCHECK_VERSION"); v != "" && cfg.GoVulnCheck == "" {
-		cfg.GoVulnCheck = v
-	}
-	if v := os.Getenv("MOCKGEN_VERSION"); v != "" && cfg.Mockgen == "" {
-		cfg.Mockgen = v
-	}
-	if v := os.Getenv("SWAG_VERSION"); v != "" && cfg.Swag == "" {
+	if v := utils.GetEnvClean("MAGE_X_SWAG_VERSION"); v != "" {
 		cfg.Swag = v
 	}
 }

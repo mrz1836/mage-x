@@ -141,10 +141,25 @@ func NewLoader() MageLoader {
 	return &loaderImpl{}
 }
 
+// cleanEnvValue removes inline comments and trims whitespace from environment variable values
+func cleanEnvValue(value string) string {
+	if value == "" {
+		return ""
+	}
+
+	// Find inline comment marker (space followed by #)
+	if idx := strings.Index(value, " #"); idx >= 0 {
+		value = value[:idx]
+	}
+
+	// Trim any leading/trailing whitespace
+	return strings.TrimSpace(value)
+}
+
 // getDefaultGoVersion returns the default Go version from environment or fallback
 func getDefaultGoVersion() string {
 	// Check primary environment variable
-	if value := os.Getenv("MAGE_X_GO_VERSION"); value != "" {
+	if value := cleanEnvValue(os.Getenv("MAGE_X_GO_VERSION")); value != "" {
 		// Clean up the version to remove any .x suffix for actual usage
 		if len(value) > 2 && value[len(value)-2:] == ".x" {
 			return value[:len(value)-2]

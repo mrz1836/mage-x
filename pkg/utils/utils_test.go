@@ -245,6 +245,116 @@ func TestGetEnvInt(t *testing.T) {
 	}
 }
 
+func TestGetEnvClean(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		envValue string
+		expected string
+	}{
+		{
+			name:     "returns clean value without comment",
+			key:      "TEST_CLEAN",
+			envValue: "v1.2.3",
+			expected: "v1.2.3",
+		},
+		{
+			name:     "strips inline comment with space",
+			key:      "TEST_CLEAN_COMMENT",
+			envValue: "v1.2.3 # this is a comment",
+			expected: "v1.2.3",
+		},
+		{
+			name:     "strips inline comment with multiple spaces",
+			key:      "TEST_CLEAN_SPACES",
+			envValue: "v1.2.3                  # https://github.com/example/releases",
+			expected: "v1.2.3",
+		},
+		{
+			name:     "trims leading and trailing whitespace",
+			key:      "TEST_CLEAN_TRIM",
+			envValue: "  v1.2.3  ",
+			expected: "v1.2.3",
+		},
+		{
+			name:     "trims whitespace and strips comment",
+			key:      "TEST_CLEAN_BOTH",
+			envValue: "  v1.2.3  # comment  ",
+			expected: "v1.2.3",
+		},
+		{
+			name:     "preserves # without preceding space",
+			key:      "TEST_CLEAN_NO_SPACE",
+			envValue: "value#notacomment",
+			expected: "value#notacomment",
+		},
+		{
+			name:     "handles multiple # symbols correctly",
+			key:      "TEST_CLEAN_MULTIPLE",
+			envValue: "value # comment # more",
+			expected: "value",
+		},
+		{
+			name:     "returns empty string for empty env var",
+			key:      "TEST_CLEAN_EMPTY",
+			envValue: "",
+			expected: "",
+		},
+		{
+			name:     "returns empty string for unset env var",
+			key:      "TEST_CLEAN_UNSET",
+			envValue: "", // This will not be set
+			expected: "",
+		},
+		{
+			name:     "handles only comment",
+			key:      "TEST_CLEAN_ONLY_COMMENT",
+			envValue: " # just a comment",
+			expected: "",
+		},
+		{
+			name:     "handles complex version string with URL",
+			key:      "TEST_CLEAN_COMPLEX",
+			envValue: "v1.2.19                  # https://github.com/mrz1836/mage-x/releases",
+			expected: "v1.2.19",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clean up first
+			if err := os.Unsetenv(tt.key); err != nil {
+				t.Logf("Warning: failed to unset %s: %v", tt.key, err)
+			}
+
+			// Set environment variable if needed (skip for unset test)
+			if tt.name != "returns empty string for unset env var" && tt.envValue != "" {
+				if err := os.Setenv(tt.key, tt.envValue); err != nil {
+					t.Fatalf("Failed to set %s: %v", tt.key, err)
+				}
+				defer func() {
+					if err := os.Unsetenv(tt.key); err != nil {
+						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
+					}
+				}()
+			} else if tt.name == "handles only comment" {
+				// For the "only comment" test, we still need to set the env var
+				if err := os.Setenv(tt.key, tt.envValue); err != nil {
+					t.Fatalf("Failed to set %s: %v", tt.key, err)
+				}
+				defer func() {
+					if err := os.Unsetenv(tt.key); err != nil {
+						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
+					}
+				}()
+			}
+
+			result := GetEnvClean(tt.key)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestIsVerbose(t *testing.T) {
 	tests := []struct {
 		name     string
