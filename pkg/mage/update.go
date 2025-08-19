@@ -22,6 +22,11 @@ import (
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
+const (
+	// magexModule is the module path for the magex binary
+	magexModule = "github.com/mrz1836/mage-x"
+)
+
 // Static errors to satisfy err113 linter
 var (
 	errNoReleasesFound       = errors.New("no releases found")
@@ -230,14 +235,8 @@ func (Update) Rollback() error {
 
 	utils.Info("Rolling back to version %s", rollbackVersion)
 
-	// Get module info
-	module, err := utils.GetModuleName()
-	if err != nil {
-		return fmt.Errorf("failed to get module name: %w", err)
-	}
-
-	// Install specific version
-	pkg := fmt.Sprintf("%s@%s", module, rollbackVersion)
+	// Install specific version of magex
+	pkg := fmt.Sprintf("%s@%s", magexModule, rollbackVersion)
 
 	if err := GetRunner().RunCmd("go", "install", pkg); err != nil {
 		return fmt.Errorf("rollback failed: %w", err)
@@ -269,11 +268,8 @@ func getUpdateChannel() UpdateChannel {
 func checkForUpdates(channel UpdateChannel) (*UpdateInfo, error) {
 	current := getVersionInfoForUpdate()
 
-	// Get module info
-	module, err := utils.GetModuleName()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get module name: %w", err)
-	}
+	// Always use the magex module for updates, regardless of current working directory
+	module := magexModule
 
 	// Parse module to get owner/repo
 	parts := strings.Split(module, "/")
@@ -595,11 +591,6 @@ func copyFile(src, dst string) error {
 
 // installUpdate installs the downloaded update
 func installUpdate(info *UpdateInfo, updateDir string) error {
-	module, err := utils.GetModuleName()
-	if err != nil {
-		return err
-	}
-
 	// Get GOPATH for installation location
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
@@ -610,7 +601,7 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 	// If no binary was downloaded, fall back to go install
 	if info.DownloadURL == "" {
 		utils.Info("No binary asset found, using go install...")
-		return GetRunner().RunCmd("go", "install", fmt.Sprintf("%s@%s", module, info.LatestVersion))
+		return GetRunner().RunCmd("go", "install", fmt.Sprintf("%s@%s", magexModule, info.LatestVersion))
 	}
 
 	utils.Info("Installing downloaded binary...")
