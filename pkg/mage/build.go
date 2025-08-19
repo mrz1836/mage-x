@@ -186,9 +186,6 @@ func (b Build) determinePackagePath(outputPath string, requireMain bool) (string
 	if utils.DirExists("cmd/mage-init") {
 		return "./cmd/mage-init", nil
 	}
-	if utils.DirExists("cmd/example") {
-		return "./cmd/example", nil
-	}
 	if utils.FileExists("main.go") {
 		return ".", nil
 	}
@@ -419,8 +416,6 @@ func (b Build) Platform(platform string) error {
 	// Add the package path to build
 	if utils.DirExists("cmd/mage-init") {
 		args = append(args, "./cmd/mage-init")
-	} else if utils.DirExists("cmd/example") {
-		args = append(args, "./cmd/example")
 	} else if utils.FileExists("main.go") {
 		args = append(args, ".")
 	} else if cmdPath := findMainInCmdDir(); cmdPath != "" {
@@ -561,8 +556,6 @@ func (Build) Install() error {
 	// Add the package path to install
 	if utils.DirExists("cmd/mage-init") {
 		args = append(args, "./cmd/mage-init")
-	} else if utils.DirExists("cmd/example") {
-		args = append(args, "./cmd/example")
 	} else if utils.FileExists("main.go") {
 		args = append(args, ".")
 	} else if cmdPath := findMainInCmdDir(); cmdPath != "" {

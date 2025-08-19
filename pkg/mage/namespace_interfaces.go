@@ -621,6 +621,7 @@ type NamespaceRegistry interface {
 type DefaultNamespaceRegistry struct {
 	mu       sync.RWMutex
 	build    BuildNamespace
+	buildSet bool // Track whether build was explicitly set
 	test     TestNamespace
 	lint     LintNamespace
 	format   FormatNamespace
@@ -650,7 +651,8 @@ func NewNamespaceRegistry() *DefaultNamespaceRegistry {
 // Build returns the build namespace
 func (r *DefaultNamespaceRegistry) Build() BuildNamespace {
 	r.mu.RLock()
-	if r.build != nil {
+	if r.buildSet {
+		// Build was explicitly set (could be nil or non-nil)
 		defer r.mu.RUnlock()
 		return r.build
 	}
@@ -658,8 +660,9 @@ func (r *DefaultNamespaceRegistry) Build() BuildNamespace {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.build == nil {
+	if !r.buildSet {
 		r.build = NewBuildNamespace()
+		r.buildSet = true
 	}
 	return r.build
 }
@@ -848,7 +851,10 @@ func (r *DefaultNamespaceRegistry) CLI() CLINamespace {
 
 // SetBuild sets a custom build namespace implementation
 func (r *DefaultNamespaceRegistry) SetBuild(build BuildNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.build = build
+	r.buildSet = true
 }
 
 // SetTest sets a custom test namespace implementation
