@@ -2,6 +2,7 @@ project:
   name: mage-x
   binary: mage-x
   module: github.com/mrz1836/mage-x
+  main: ""
   description: ""
   version: ""
   git_domain: github.com

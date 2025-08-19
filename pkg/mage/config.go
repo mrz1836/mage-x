@@ -33,6 +33,7 @@ type ProjectConfig struct {
 	Name        string            `yaml:"name"`
 	Binary      string            `yaml:"binary"`
 	Module      string            `yaml:"module"`
+	Main        string            `yaml:"main"`
 	Description string            `yaml:"description"`
 	Version     string            `yaml:"version"`
 	GitDomain   string            `yaml:"git_domain"`

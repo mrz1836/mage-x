@@ -25,6 +25,7 @@ var (
 	ErrDockerNotFound     = errors.New("docker command not found")
 	ErrDockerfileNotFound = errors.New("dockerfile not found")
 	ErrNoMainPackage      = errors.New("no main package found for binary build")
+	ErrInvalidMainPath    = errors.New("configured main path is invalid")
 )
 
 // CacheManagerProvider defines the interface for providing cache manager instances
@@ -144,7 +145,7 @@ func (b Build) createBuildContext(cfg *Config) (*buildContext, error) {
 
 	// For binary builds, require a main package
 	requireMain := outputPath != "" && !strings.HasSuffix(outputPath, "/...")
-	packagePath, err := b.determinePackagePath(outputPath, requireMain)
+	packagePath, err := b.determinePackagePath(cfg, outputPath, requireMain)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +179,57 @@ func (b Build) determineBuildOutput(cfg *Config) string {
 }
 
 // determinePackagePath determines the package path to build
-func (b Build) determinePackagePath(outputPath string, requireMain bool) (string, error) {
+func (b Build) determinePackagePath(cfg *Config, outputPath string, requireMain bool) (string, error) {
+	// Check for configured main path first
+	if cfg.Project.Main != "" {
+		return b.validateConfiguredMainPath(cfg.Project.Main)
+	}
+
+	return b.findPackagePath(outputPath, requireMain)
+}
+
+// validateConfiguredMainPath validates and returns the configured main path
+func (b Build) validateConfiguredMainPath(configuredMain string) (string, error) {
+	mainPath := b.normalizeMainPath(configuredMain)
+
+	if b.isValidMainPath(mainPath) {
+		return mainPath, nil
+	}
+
+	return "", fmt.Errorf("%w: %s does not exist or does not contain a valid main package", ErrInvalidMainPath, configuredMain)
+}
+
+// normalizeMainPath ensures the main path is properly formatted
+func (b Build) normalizeMainPath(mainPath string) string {
+	// Ensure the path is relative and clean
+	if !strings.HasPrefix(mainPath, "./") && !strings.HasPrefix(mainPath, "/") {
+		mainPath = "./" + mainPath
+	}
+
+	// Extract the directory path from the main.go file path
+	if strings.HasSuffix(mainPath, "/main.go") {
+		return strings.TrimSuffix(mainPath, "/main.go")
+	}
+	if strings.HasSuffix(mainPath, "main.go") {
+		return filepath.Dir(mainPath)
+	}
+
+	return mainPath
+}
+
+// isValidMainPath checks if the main path exists and contains a valid main package
+func (b Build) isValidMainPath(mainPath string) bool {
+	dirPath := strings.TrimPrefix(mainPath, "./")
+	if !utils.DirExists(dirPath) {
+		return false
+	}
+
+	mainFile := filepath.Join(dirPath, "main.go")
+	return utils.FileExists(mainFile) && isMainPackage(mainFile)
+}
+
+// findPackagePath finds the package path using fallback logic
+func (b Build) findPackagePath(outputPath string, requireMain bool) (string, error) {
 	// Check for magex first (primary binary)
 	if utils.DirExists("cmd/magex") {
 		return "./cmd/magex", nil
@@ -413,17 +464,12 @@ func (b Build) Platform(platform string) error {
 	args = append(args, buildFlags(config)...)
 	args = append(args, "-o", outputPath)
 
-	// Add the package path to build
-	if utils.DirExists("cmd/mage-init") {
-		args = append(args, "./cmd/mage-init")
-	} else if utils.FileExists("main.go") {
-		args = append(args, ".")
-	} else if cmdPath := findMainInCmdDir(); cmdPath != "" {
-		args = append(args, cmdPath)
-	} else {
-		// No main package found for platform-specific binary build
-		return ErrNoMainPackage
+	// Determine the package path using the same logic as the main build
+	packagePath, err := b.determinePackagePath(config, outputPath, true)
+	if err != nil {
+		return err
 	}
+	args = append(args, packagePath)
 
 	utils.Info("Building %s", platform)
 
@@ -538,7 +584,7 @@ func (Build) Clean() error {
 }
 
 // Install installs the binary to $GOPATH/bin
-func (Build) Install() error {
+func (b Build) Install() error {
 	utils.Header("Installing Binary")
 
 	config, err := GetConfig()
@@ -553,17 +599,12 @@ func (Build) Install() error {
 		args = append(args, "-v")
 	}
 
-	// Add the package path to install
-	if utils.DirExists("cmd/mage-init") {
-		args = append(args, "./cmd/mage-init")
-	} else if utils.FileExists("main.go") {
-		args = append(args, ".")
-	} else if cmdPath := findMainInCmdDir(); cmdPath != "" {
-		args = append(args, cmdPath)
-	} else {
-		// This is a library project, install all packages
-		args = append(args, "./...")
+	// Determine the package path using the same logic as the main build
+	packagePath, err := b.determinePackagePath(config, "", false)
+	if err != nil {
+		return err
 	}
+	args = append(args, packagePath)
 
 	if err := GetRunner().RunCmd("go", args...); err != nil {
 		return fmt.Errorf("install failed: %w", err)
