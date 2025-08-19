@@ -737,7 +737,7 @@ func TestPerformanceRegression(t *testing.T) {
 					t.Fatalf("Warm-up operation failed: %v", err)
 				}
 			}
-			
+
 			start := time.Now()
 			err := tt.operation()
 			duration := time.Since(start)
