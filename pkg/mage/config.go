@@ -282,6 +282,139 @@ func TestSetConfig(config *Config) {
 	GetConfigProvider().SetConfig(config)
 }
 
+// cleanEnvValue removes inline comments and trims whitespace from environment variable values
+func cleanEnvValue(value string) string {
+	if value == "" {
+		return ""
+	}
+
+	// Find inline comment marker (space followed by #)
+	if idx := strings.Index(value, " #"); idx >= 0 {
+		value = value[:idx]
+	}
+
+	// Trim any leading/trailing whitespace
+	return strings.TrimSpace(value)
+}
+
+// cleanConfigValues recursively cleans all string fields in a Config struct
+func cleanConfigValues(config *Config) {
+	if config == nil {
+		return
+	}
+
+	// Clean Project config strings
+	config.Project.Name = cleanEnvValue(config.Project.Name)
+	config.Project.Binary = cleanEnvValue(config.Project.Binary)
+	config.Project.Module = cleanEnvValue(config.Project.Module)
+	config.Project.Main = cleanEnvValue(config.Project.Main)
+	config.Project.Description = cleanEnvValue(config.Project.Description)
+	config.Project.Version = cleanEnvValue(config.Project.Version)
+	config.Project.GitDomain = cleanEnvValue(config.Project.GitDomain)
+	config.Project.RepoOwner = cleanEnvValue(config.Project.RepoOwner)
+	config.Project.RepoName = cleanEnvValue(config.Project.RepoName)
+
+	// Clean Project env map
+	for k, v := range config.Project.Env {
+		config.Project.Env[k] = cleanEnvValue(v)
+	}
+
+	// Clean Build config strings
+	config.Build.Output = cleanEnvValue(config.Build.Output)
+	for i, tag := range config.Build.Tags {
+		config.Build.Tags[i] = cleanEnvValue(tag)
+	}
+	for i, flag := range config.Build.LDFlags {
+		config.Build.LDFlags[i] = cleanEnvValue(flag)
+	}
+	for i, platform := range config.Build.Platforms {
+		config.Build.Platforms[i] = cleanEnvValue(platform)
+	}
+	for i, flag := range config.Build.GoFlags {
+		config.Build.GoFlags[i] = cleanEnvValue(flag)
+	}
+
+	// Clean Test config strings
+	config.Test.Timeout = cleanEnvValue(config.Test.Timeout)
+	config.Test.IntegrationTimeout = cleanEnvValue(config.Test.IntegrationTimeout)
+	config.Test.IntegrationTag = cleanEnvValue(config.Test.IntegrationTag)
+	config.Test.CoverMode = cleanEnvValue(config.Test.CoverMode)
+	config.Test.Tags = cleanEnvValue(config.Test.Tags)
+	config.Test.BenchTime = cleanEnvValue(config.Test.BenchTime)
+	for i, pkg := range config.Test.CoverPkg {
+		config.Test.CoverPkg[i] = cleanEnvValue(pkg)
+	}
+	for i, exclude := range config.Test.CoverageExclude {
+		config.Test.CoverageExclude[i] = cleanEnvValue(exclude)
+	}
+
+	// Clean Lint config strings
+	config.Lint.GolangciVersion = cleanEnvValue(config.Lint.GolangciVersion)
+	config.Lint.Timeout = cleanEnvValue(config.Lint.Timeout)
+	for i, dir := range config.Lint.SkipDirs {
+		config.Lint.SkipDirs[i] = cleanEnvValue(dir)
+	}
+	for i, file := range config.Lint.SkipFiles {
+		config.Lint.SkipFiles[i] = cleanEnvValue(file)
+	}
+	for i, linter := range config.Lint.DisableLinters {
+		config.Lint.DisableLinters[i] = cleanEnvValue(linter)
+	}
+	for i, linter := range config.Lint.EnableLinters {
+		config.Lint.EnableLinters[i] = cleanEnvValue(linter)
+	}
+
+	// Clean Tools config strings
+	config.Tools.GolangciLint = cleanEnvValue(config.Tools.GolangciLint)
+	config.Tools.Fumpt = cleanEnvValue(config.Tools.Fumpt)
+	config.Tools.GoVulnCheck = cleanEnvValue(config.Tools.GoVulnCheck)
+	config.Tools.Mockgen = cleanEnvValue(config.Tools.Mockgen)
+	config.Tools.Swag = cleanEnvValue(config.Tools.Swag)
+	for k, v := range config.Tools.Custom {
+		config.Tools.Custom[k] = cleanEnvValue(v)
+	}
+
+	// Clean Docker config strings
+	config.Docker.Registry = cleanEnvValue(config.Docker.Registry)
+	config.Docker.Repository = cleanEnvValue(config.Docker.Repository)
+	config.Docker.Dockerfile = cleanEnvValue(config.Docker.Dockerfile)
+	config.Docker.NetworkMode = cleanEnvValue(config.Docker.NetworkMode)
+	config.Docker.DefaultRegistry = cleanEnvValue(config.Docker.DefaultRegistry)
+	for k, v := range config.Docker.BuildArgs {
+		config.Docker.BuildArgs[k] = cleanEnvValue(v)
+	}
+	for k, v := range config.Docker.Labels {
+		config.Docker.Labels[k] = cleanEnvValue(v)
+	}
+	for i, platform := range config.Docker.Platforms {
+		config.Docker.Platforms[i] = cleanEnvValue(platform)
+	}
+	for i, cache := range config.Docker.CacheFrom {
+		config.Docker.CacheFrom[i] = cleanEnvValue(cache)
+	}
+	for i, opt := range config.Docker.SecurityOpts {
+		config.Docker.SecurityOpts[i] = cleanEnvValue(opt)
+	}
+
+	// Clean Release config strings
+	config.Release.GitHubToken = cleanEnvValue(config.Release.GitHubToken)
+	config.Release.NameTmpl = cleanEnvValue(config.Release.NameTmpl)
+	for i, format := range config.Release.Formats {
+		config.Release.Formats[i] = cleanEnvValue(format)
+	}
+
+	// Clean Download config strings
+	config.Download.UserAgent = cleanEnvValue(config.Download.UserAgent)
+
+	// Clean Docs config strings
+	config.Docs.Tool = cleanEnvValue(config.Docs.Tool)
+
+	// Clean Metadata map
+	for k, v := range config.Metadata {
+		config.Metadata[k] = cleanEnvValue(v)
+	}
+}
+
 // defaultConfig returns the default configuration
 func defaultConfig() *Config {
 	parallel := runtime.NumCPU()
@@ -300,7 +433,7 @@ func defaultConfig() *Config {
 		binary = defaultBinaryName
 	}
 
-	return &Config{
+	config := &Config{
 		Project: ProjectConfig{
 			Name:      binary,
 			Binary:    binary,
@@ -359,6 +492,11 @@ func defaultConfig() *Config {
 			UserAgent:         "mage-x-downloader/1.0",
 		},
 	}
+
+	// Clean environment-sourced values in the default config
+	cleanConfigValues(config)
+
+	return config
 }
 
 // applyEnvOverrides applies environment variable overrides to config

@@ -660,3 +660,272 @@ func BenchmarkGetConfig(b *testing.B) {
 		require.NotNil(b, config)
 	}
 }
+
+// TestCleanEnvValue tests the cleanEnvValue function
+func (ts *ConfigTestSuite) TestCleanEnvValue() {
+	ts.Run("EmptyString", func() {
+		result := cleanEnvValue("")
+		ts.Empty(result)
+	})
+
+	ts.Run("NoComment", func() {
+		result := cleanEnvValue("v1.2.3")
+		ts.Equal("v1.2.3", result)
+	})
+
+	ts.Run("WithInlineComment", func() {
+		result := cleanEnvValue("v2.4.0 # https://github.com/golangci/golangci-lint/releases")
+		ts.Equal("v2.4.0", result)
+	})
+
+	ts.Run("WithWhitespace", func() {
+		result := cleanEnvValue("  v1.0.0  ")
+		ts.Equal("v1.0.0", result)
+	})
+
+	ts.Run("WithCommentAndWhitespace", func() {
+		result := cleanEnvValue("  v0.8.0           # https://github.com/mvdan/gofumpt/releases  ")
+		ts.Equal("v0.8.0", result)
+	})
+
+	ts.Run("OnlyComment", func() {
+		result := cleanEnvValue(" # just a comment")
+		ts.Empty(result)
+	})
+
+	ts.Run("HashInValue", func() {
+		// Hash not preceded by space should be preserved
+		result := cleanEnvValue("commit#abc123")
+		ts.Equal("commit#abc123", result)
+	})
+
+	ts.Run("MultipleSpaceHashes", func() {
+		// Only first space-hash should be treated as comment
+		result := cleanEnvValue("value # comment # more")
+		ts.Equal("value", result)
+	})
+}
+
+// TestCleanConfigValues tests the cleanConfigValues function
+func (ts *ConfigTestSuite) TestCleanConfigValues() {
+	ts.Run("CleanAllStringFields", func() {
+		config := &Config{
+			Project: ProjectConfig{
+				Name:        "test-project # comment",
+				Binary:      "  test-binary  ",
+				Module:      "github.com/test/module # module comment",
+				Main:        "cmd/main.go # main file",
+				Description: "  Test description  # desc comment  ",
+				Version:     "v1.0.0 # version comment",
+				GitDomain:   "github.com",
+				RepoOwner:   "test-owner # owner comment",
+				RepoName:    "test-repo # repo comment",
+				Env: map[string]string{
+					"KEY1": "value1 # env comment",
+					"KEY2": "  value2  ",
+				},
+			},
+			Build: BuildConfig{
+				Output:    "bin # output dir",
+				Tags:      []string{"tag1 # comment", "  tag2  "},
+				LDFlags:   []string{"-X main.version=1.0 # version flag"},
+				Platforms: []string{"linux/amd64 # platform comment"},
+				GoFlags:   []string{"-v # verbose flag"},
+			},
+			Test: TestConfig{
+				Timeout:            "10m # timeout comment",
+				IntegrationTimeout: "  30m  ",
+				IntegrationTag:     "integration # tag comment",
+				CoverMode:          "atomic # cover mode",
+				Tags:               "unit # test tags",
+				BenchTime:          "1s # bench time",
+				CoverPkg:           []string{"./... # cover pkg"},
+				CoverageExclude:    []string{"*_test.go # exclude pattern"},
+			},
+			Lint: LintConfig{
+				GolangciVersion: "v2.4.0 # golangci version",
+				Timeout:         "5m # lint timeout",
+				SkipDirs:        []string{"vendor # skip dir"},
+				SkipFiles:       []string{"*.pb.go # skip files"},
+				DisableLinters:  []string{"gosec # disable linter"},
+				EnableLinters:   []string{"gofmt # enable linter"},
+			},
+			Tools: ToolsConfig{
+				GolangciLint: "v2.4.0 # tools version",
+				Fumpt:        "  v0.8.0  ",
+				GoVulnCheck:  "v1.1.4 # vuln check version",
+				Mockgen:      "v0.4.0 # mockgen version",
+				Swag:         "v1.16.6 # swag version",
+				Custom: map[string]string{
+					"tool1": "version1 # custom tool",
+				},
+			},
+			Docker: DockerConfig{
+				Registry:        "registry.com # docker registry",
+				Repository:      "  repo  ",
+				Dockerfile:      "Dockerfile # dockerfile comment",
+				NetworkMode:     "bridge # network mode",
+				DefaultRegistry: "docker.io # default registry",
+				BuildArgs: map[string]string{
+					"ARG1": "value1 # build arg",
+				},
+				Labels: map[string]string{
+					"label1": "value1 # label",
+				},
+				Platforms:    []string{"linux/amd64 # platform"},
+				CacheFrom:    []string{"image:latest # cache"},
+				SecurityOpts: []string{"no-new-privileges # security"},
+			},
+			Release: ReleaseConfig{
+				GitHubToken: "GITHUB_TOKEN # token env",
+				NameTmpl:    "  template  ",
+				Formats:     []string{"tar.gz # format"},
+			},
+			Download: DownloadConfig{
+				UserAgent: "agent/1.0 # user agent",
+			},
+			Docs: DocsConfig{
+				Tool: "pkgsite # docs tool",
+			},
+			Metadata: map[string]string{
+				"key1": "value1 # metadata",
+			},
+		}
+
+		cleanConfigValues(config)
+
+		// Check Project fields
+		ts.Equal("test-project", config.Project.Name)
+		ts.Equal("test-binary", config.Project.Binary)
+		ts.Equal("github.com/test/module", config.Project.Module)
+		ts.Equal("cmd/main.go", config.Project.Main)
+		ts.Equal("Test description", config.Project.Description)
+		ts.Equal("v1.0.0", config.Project.Version)
+		ts.Equal("github.com", config.Project.GitDomain)
+		ts.Equal("test-owner", config.Project.RepoOwner)
+		ts.Equal("test-repo", config.Project.RepoName)
+		ts.Equal("value1", config.Project.Env["KEY1"])
+		ts.Equal("value2", config.Project.Env["KEY2"])
+
+		// Check Build fields
+		ts.Equal("bin", config.Build.Output)
+		ts.Equal("tag1", config.Build.Tags[0])
+		ts.Equal("tag2", config.Build.Tags[1])
+		ts.Equal("-X main.version=1.0", config.Build.LDFlags[0])
+		ts.Equal("linux/amd64", config.Build.Platforms[0])
+		ts.Equal("-v", config.Build.GoFlags[0])
+
+		// Check Test fields
+		ts.Equal("10m", config.Test.Timeout)
+		ts.Equal("30m", config.Test.IntegrationTimeout)
+		ts.Equal("integration", config.Test.IntegrationTag)
+		ts.Equal("atomic", config.Test.CoverMode)
+		ts.Equal("unit", config.Test.Tags)
+		ts.Equal("1s", config.Test.BenchTime)
+		ts.Equal("./...", config.Test.CoverPkg[0])
+		ts.Equal("*_test.go", config.Test.CoverageExclude[0])
+
+		// Check Lint fields
+		ts.Equal("v2.4.0", config.Lint.GolangciVersion)
+		ts.Equal("5m", config.Lint.Timeout)
+		ts.Equal("vendor", config.Lint.SkipDirs[0])
+		ts.Equal("*.pb.go", config.Lint.SkipFiles[0])
+		ts.Equal("gosec", config.Lint.DisableLinters[0])
+		ts.Equal("gofmt", config.Lint.EnableLinters[0])
+
+		// Check Tools fields
+		ts.Equal("v2.4.0", config.Tools.GolangciLint)
+		ts.Equal("v0.8.0", config.Tools.Fumpt)
+		ts.Equal("v1.1.4", config.Tools.GoVulnCheck)
+		ts.Equal("v0.4.0", config.Tools.Mockgen)
+		ts.Equal("v1.16.6", config.Tools.Swag)
+		ts.Equal("version1", config.Tools.Custom["tool1"])
+
+		// Check Docker fields
+		ts.Equal("registry.com", config.Docker.Registry)
+		ts.Equal("repo", config.Docker.Repository)
+		ts.Equal("Dockerfile", config.Docker.Dockerfile)
+		ts.Equal("bridge", config.Docker.NetworkMode)
+		ts.Equal("docker.io", config.Docker.DefaultRegistry)
+		ts.Equal("value1", config.Docker.BuildArgs["ARG1"])
+		ts.Equal("value1", config.Docker.Labels["label1"])
+		ts.Equal("linux/amd64", config.Docker.Platforms[0])
+		ts.Equal("image:latest", config.Docker.CacheFrom[0])
+		ts.Equal("no-new-privileges", config.Docker.SecurityOpts[0])
+
+		// Check Release fields
+		ts.Equal("GITHUB_TOKEN", config.Release.GitHubToken)
+		ts.Equal("template", config.Release.NameTmpl)
+		ts.Equal("tar.gz", config.Release.Formats[0])
+
+		// Check Download fields
+		ts.Equal("agent/1.0", config.Download.UserAgent)
+
+		// Check Docs fields
+		ts.Equal("pkgsite", config.Docs.Tool)
+
+		// Check Metadata
+		ts.Equal("value1", config.Metadata["key1"])
+	})
+
+	ts.Run("NilConfig", func() {
+		// Should not panic with nil config
+		ts.NotPanics(func() {
+			cleanConfigValues(nil)
+		})
+	})
+
+	ts.Run("EmptyMaps", func() {
+		config := &Config{
+			Project: ProjectConfig{
+				Env: make(map[string]string),
+			},
+			Tools: ToolsConfig{
+				Custom: make(map[string]string),
+			},
+			Docker: DockerConfig{
+				BuildArgs: make(map[string]string),
+				Labels:    make(map[string]string),
+			},
+			Metadata: make(map[string]string),
+		}
+
+		// Should not panic with empty maps
+		ts.NotPanics(func() {
+			cleanConfigValues(config)
+		})
+	})
+}
+
+// TestDefaultConfigAppliesCleanValues tests that defaultConfig() applies cleaning
+func (ts *ConfigTestSuite) TestDefaultConfigAppliesCleanValues() {
+	ts.Run("DefaultConfigCleansValues", func() {
+		// Mock environment variables with comments
+		originalVars := make(map[string]string)
+		envVars := map[string]string{
+			"MAGE_X_GOLANGCI_LINT_VERSION": "v2.4.0 # test comment",
+			"MAGE_X_GOFUMPT_VERSION":       "  v0.8.0  ",
+		}
+
+		// Set env vars and store originals
+		for key, value := range envVars {
+			originalVars[key] = os.Getenv(key)
+			ts.Require().NoError(os.Setenv(key, value))
+		}
+		defer func() {
+			for key, original := range originalVars {
+				if original == "" {
+					ts.Require().NoError(os.Unsetenv(key))
+				} else {
+					ts.Require().NoError(os.Setenv(key, original))
+				}
+			}
+		}()
+
+		config := defaultConfig()
+
+		// Verify that cleaning was applied and comments removed
+		ts.Equal("v2.4.0", config.Lint.GolangciVersion)
+		ts.Equal("v0.8.0", config.Tools.Fumpt)
+	})
+}

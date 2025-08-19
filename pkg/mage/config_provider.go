@@ -89,6 +89,9 @@ func (p *DefaultConfigProvider) GetConfig() (*Config, error) {
 			return
 		}
 
+		// Clean all loaded values to remove inline comments and trim whitespace
+		cleanConfigValues(p.config)
+
 		// Apply environment variable overrides
 		applyEnvOverrides(p.config)
 	})
