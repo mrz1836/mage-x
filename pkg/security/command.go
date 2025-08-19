@@ -285,6 +285,11 @@ func (e *SecureExecutor) contextWithTimeout(ctx context.Context) (context.Contex
 	return context.WithTimeout(ctx, e.Timeout)
 }
 
+// FilterEnvironment removes sensitive environment variables (exported for testing)
+func (se *SecureExecutor) FilterEnvironment(env []string, commandName string) []string {
+	return se.filterEnvironment(env, commandName)
+}
+
 // filterEnvironment removes sensitive environment variables
 func (se *SecureExecutor) filterEnvironment(env []string, commandName string) []string {
 	// List of environment variable prefixes to filter out
