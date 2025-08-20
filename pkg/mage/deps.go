@@ -56,7 +56,24 @@ func (Deps) Tidy() error {
 
 // Update updates all dependencies
 func (Deps) Update() error {
+	return (Deps{}).UpdateWithArgs()
+}
+
+// UpdateWithArgs updates all dependencies with optional parameters
+// Supports:
+//   - allow-major: Allow major version updates (default: false)
+func (Deps) UpdateWithArgs(argsList ...string) error {
 	utils.Header("Updating Dependencies")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+	allowMajor := utils.IsParamTrue(params, "allow-major")
+
+	if allowMajor {
+		utils.Info("Major version updates are ENABLED")
+	} else {
+		utils.Info("Major version updates are DISABLED (use 'allow-major' to enable)")
+	}
 
 	// Get list of direct dependencies
 	output, err := GetRunner().RunCmdOutput("go", "list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all")
@@ -67,6 +84,8 @@ func (Deps) Update() error {
 	deps := strings.Split(strings.TrimSpace(output), "\n")
 	updatedCount := 0
 	checkedCount := 0
+	skippedMajorCount := 0
+	var skippedMajorUpdates []string
 
 	for _, dep := range deps {
 		dep = strings.TrimSpace(dep)
@@ -76,6 +95,19 @@ func (Deps) Update() error {
 
 		utils.Info("Checking %s...", dep)
 		checkedCount++
+
+		// Get current version
+		currentOutput, err := GetRunner().RunCmdOutput("go", "list", "-m", dep)
+		if err != nil {
+			utils.Warn("Failed to get current version for %s: %v", dep, err)
+			continue
+		}
+
+		currentParts := strings.Fields(currentOutput)
+		if len(currentParts) < 2 {
+			continue
+		}
+		currentVersion := currentParts[1]
 
 		// Get latest version
 		latestOutput, err := GetRunner().RunCmdOutput("go", "list", "-m", "-versions", dep)
@@ -91,11 +123,31 @@ func (Deps) Update() error {
 
 		latestVersion := parts[len(parts)-1]
 
-		// Update to latest
-		if err := GetRunner().RunCmd("go", "get", "-u", dep+"@"+latestVersion); err != nil {
+		// Check if this would be a major version update
+		isMajorUpdate := isMajorVersionUpdate(currentVersion, latestVersion)
+
+		if isMajorUpdate && !allowMajor {
+			// Skip major version update but notify user
+			utils.Warn("Skipping major version update: %s %s → %s (use 'allow-major' to update)", dep, currentVersion, latestVersion)
+			skippedMajorCount++
+			skippedMajorUpdates = append(skippedMajorUpdates, fmt.Sprintf("%s %s → %s", dep, currentVersion, latestVersion))
+			continue
+		}
+
+		// Update to latest (or within major version if allow-major is false)
+		targetVersion := latestVersion
+		if !allowMajor && isMajorUpdate {
+			// This shouldn't happen due to the check above, but be safe
+			continue
+		}
+
+		if err := GetRunner().RunCmd("go", "get", "-u", dep+"@"+targetVersion); err != nil {
 			utils.Warn("Failed to update %s: %v", dep, err)
 		} else {
-			updatedCount++
+			if currentVersion != targetVersion {
+				utils.Info("Updated %s: %s → %s", dep, currentVersion, targetVersion)
+				updatedCount++
+			}
 		}
 	}
 
@@ -104,11 +156,22 @@ func (Deps) Update() error {
 		return err
 	}
 
-	if updatedCount == 0 {
+	// Summary message
+	if updatedCount == 0 && skippedMajorCount == 0 {
 		utils.Success("Checked %d dependencies - all are up to date", checkedCount)
 	} else {
-		utils.Success("Checked %d dependencies, updated %d", checkedCount, updatedCount)
+		if updatedCount > 0 {
+			utils.Success("Checked %d dependencies, updated %d", checkedCount, updatedCount)
+		}
+		if skippedMajorCount > 0 {
+			utils.Info("\n📋 Skipped %d major version updates:", skippedMajorCount)
+			for _, update := range skippedMajorUpdates {
+				utils.Info("  • %s", update)
+			}
+			utils.Info("\nTo allow major version updates, run: magex deps:update allow-major")
+		}
 	}
+
 	return nil
 }
 
@@ -320,4 +383,55 @@ func findGovulncheckCommand() string {
 	}
 
 	return "govulncheck" // Fall back to default
+}
+
+// isMajorVersionUpdate checks if updating from currentVersion to latestVersion
+// would be a major version update (v1 to v2, v2 to v3, etc.)
+func isMajorVersionUpdate(currentVersion, latestVersion string) bool {
+	// Handle common Go version formats
+
+	// Remove common prefixes
+	current := strings.TrimPrefix(currentVersion, "v")
+	latest := strings.TrimPrefix(latestVersion, "v")
+
+	// Split by dots to get major.minor.patch
+	currentParts := strings.Split(current, ".")
+	latestParts := strings.Split(latest, ".")
+
+	// Need at least major version in both
+	if len(currentParts) == 0 || len(latestParts) == 0 {
+		return false
+	}
+
+	// Extract major versions (first part before any non-digit)
+	currentMajor := extractMajorVersion(currentParts[0])
+	latestMajor := extractMajorVersion(latestParts[0])
+
+	// Compare major versions
+	return latestMajor > currentMajor
+}
+
+// extractMajorVersion extracts the major version number from a version string part
+func extractMajorVersion(versionPart string) int {
+	// Find the first non-digit character and extract everything before it
+	majorStr := ""
+	for _, r := range versionPart {
+		if r >= '0' && r <= '9' {
+			majorStr += string(r)
+		} else {
+			break
+		}
+	}
+
+	if majorStr == "" {
+		return 0
+	}
+
+	// Convert to integer
+	major := 0
+	for _, r := range majorStr {
+		major = major*10 + int(r-'0')
+	}
+
+	return major
 }

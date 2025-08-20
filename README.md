@@ -435,7 +435,8 @@ magex recipes:create recipe=my-recipe # Create a custom recipe
 
 ```bash
 # Dependency Management
-magex deps:update         # Update all dependencies
+magex deps:update         # Update dependencies (safe - no major version bumps)
+magex deps:update allow-major  # Update including major versions (v1→v2, etc)
 magex deps:tidy           # Clean up go.mod and go.sum
 magex deps:download       # Download all dependencies
 magex deps:outdated       # Show outdated dependencies

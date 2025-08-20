@@ -194,6 +194,149 @@ func (ts *DepsTestSuite) TestDeps_Update_TidyError() {
 	expectedError.Contains(err.Error(), "failed to tidy after updates")
 }
 
+// TestDeps_UpdateWithArgs_AllowMajor tests UpdateWithArgs with allow-major=true
+func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajor() {
+	// Mock the list of direct dependencies command
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/pkg/errors\ngithub.com/stretchr/testify", nil)
+	
+	// Mock current version queries
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.1", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.4", nil)
+	
+	// Mock versions command to return newer major versions
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.0 v0.8.1 v0.9.0 v0.9.1 v2.0.0", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.0 v1.8.4 v1.9.0", nil)
+	
+	// Mock update commands - should update to latest including major version
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/pkg/errors@v2.0.0"}).Return(nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+
+	err := ts.env.WithMockRunner(
+		func(r interface{}) error {
+			return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
+		},
+		func() interface{} { return GetRunner() },
+		func() error {
+			return ts.deps.UpdateWithArgs("allow-major")
+		},
+	)
+
+	ts.Require().NoError(err)
+}
+
+// TestDeps_UpdateWithArgs_NoMajor tests UpdateWithArgs without allow-major (default)
+func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_NoMajor() {
+	// Mock the list of direct dependencies command
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/pkg/errors\ngithub.com/stretchr/testify", nil)
+	
+	// Mock current version queries
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.1", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.4", nil)
+	
+	// Mock versions command to return newer major versions
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.0 v0.8.1 v0.9.0 v0.9.1 v2.0.0", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.0 v1.8.4 v1.9.0", nil)
+	
+	// Mock update commands - should skip major version update, only update minor
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+
+	err := ts.env.WithMockRunner(
+		func(r interface{}) error {
+			return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
+		},
+		func() interface{} { return GetRunner() },
+		func() error {
+			return ts.deps.UpdateWithArgs()
+		},
+	)
+
+	ts.Require().NoError(err)
+}
+
+// TestDeps_UpdateWithArgs_AllowMajorFalse tests UpdateWithArgs with allow-major=false explicitly
+func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajorFalse() {
+	// Mock the list of direct dependencies command
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/pkg/errors", nil)
+	
+	// Mock current version queries
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.1", nil)
+	
+	// Mock versions command to return newer major versions
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.0 v0.8.1 v0.9.0 v0.9.1 v2.0.0", nil)
+	
+	// Mock tidy command (no updates should happen)
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+
+	err := ts.env.WithMockRunner(
+		func(r interface{}) error {
+			return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
+		},
+		func() interface{} { return GetRunner() },
+		func() error {
+			return ts.deps.UpdateWithArgs("allow-major=false")
+		},
+	)
+
+	ts.Require().NoError(err)
+}
+
+// TestIsMajorVersionUpdate tests the isMajorVersionUpdate helper function
+func (ts *DepsTestSuite) TestIsMajorVersionUpdate() {
+	tests := []struct {
+		name     string
+		current  string
+		latest   string
+		expected bool
+	}{
+		{"v1 to v2", "v1.0.0", "v2.0.0", true},
+		{"v1.2.3 to v2.0.0", "v1.2.3", "v2.0.0", true},
+		{"v0.8.1 to v2.0.0", "v0.8.1", "v2.0.0", true},
+		{"v1.8.4 to v1.9.0", "v1.8.4", "v1.9.0", false},
+		{"v2.0.0 to v2.1.0", "v2.0.0", "v2.1.0", false},
+		{"v1.0.0 to v1.0.1", "v1.0.0", "v1.0.1", false},
+		{"same version", "v1.0.0", "v1.0.0", false},
+		{"v2 to v3", "v2.1.0", "v3.0.0", true},
+		{"no v prefix", "1.0.0", "2.0.0", true},
+		{"mixed prefix", "v1.0.0", "2.0.0", true},
+		{"complex version", "v1.0.0-alpha", "v2.0.0-beta", true},
+	}
+
+	for _, test := range tests {
+		ts.Run(test.name, func() {
+			result := isMajorVersionUpdate(test.current, test.latest)
+			ts.Equal(test.expected, result, "Expected %v for %s -> %s", test.expected, test.current, test.latest)
+		})
+	}
+}
+
+// TestExtractMajorVersion tests the extractMajorVersion helper function
+func (ts *DepsTestSuite) TestExtractMajorVersion() {
+	tests := []struct {
+		name     string
+		version  string
+		expected int
+	}{
+		{"simple major", "1", 1},
+		{"major with suffix", "2.0.0", 2},
+		{"major with alpha", "3-alpha", 3},
+		{"major with beta", "1-beta.1", 1},
+		{"zero major", "0", 0},
+		{"empty string", "", 0},
+		{"no digits", "alpha", 0},
+		{"large number", "123", 123},
+		{"mixed", "45abc", 45},
+	}
+
+	for _, test := range tests {
+		ts.Run(test.name, func() {
+			result := extractMajorVersion(test.version)
+			ts.Equal(test.expected, result, "Expected %d for %s", test.expected, test.version)
+		})
+	}
+}
+
 // TestDeps_Clean tests the Clean function
 func (ts *DepsTestSuite) TestDeps_Clean() {
 	ts.env.Builder.ExpectGoCommand("clean", nil)

@@ -688,6 +688,7 @@ func getAllCommands() []HelpCommand {
 			Usage:       "mage deps COMMAND",
 			Examples: []string{
 				"mage deps:update",
+				"mage deps:update allow-major",
 				"mage deps:tidy",
 				"mage deps:download",
 				"mage deps:audit",

@@ -46,7 +46,8 @@ magex format:fix      # Fix formatting
 ### Dependencies
 ```bash
 magex deps            # Check dependencies
-magex deps:update     # Update dependencies
+magex deps:update     # Update dependencies (safe - no major version bumps)
+magex deps:update allow-major  # Update including major versions (v1→v2, etc)
 magex deps:tidy       # Clean up go.mod
 magex deps:audit      # Security audit
 ```

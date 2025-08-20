@@ -98,7 +98,8 @@ magex format               # Format code
 magex vet                  # Run go vet
 
 # Dependencies
-magex deps:update         # Update dependencies
+magex deps:update         # Update dependencies (safe - stays within major versions)
+magex deps:update allow-major  # Update including major versions (v1→v2, etc)
 magex deps:audit          # Security audit
 magex mod:tidy            # Clean up go.mod
 
