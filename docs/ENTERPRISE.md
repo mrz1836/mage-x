@@ -51,10 +51,10 @@ metadata:
 organization:
   name: "Your Organization"
   domain: "yourorg.com"
-  
+
 security:
   level: "enterprise"
-  
+
 analytics:
   enabled: true
 EOF
@@ -77,17 +77,17 @@ Enterprise features can be configured using environment variables:
 
 ```bash
 # Organization settings
-export MAGE_ORG_NAME="Your Organization"
-export MAGE_ORG_DOMAIN="yourorg.com"
+export MAGE_X_ORG_NAME="Your Organization"
+export MAGE_X_ORG_DOMAIN="yourorg.com"
 
 # Security settings
-export MAGE_SECURITY_LEVEL="enterprise"
-export MAGE_ENABLE_VAULT=true
+export MAGE_X_SECURITY_LEVEL="enterprise"
+export MAGE_X_ENABLE_VAULT=true
 export VAULT_ADDR="https://vault.yourorg.com"
 
 # Analytics settings
-export MAGE_ANALYTICS_ENABLED=true
-export MAGE_METRICS_INTERVAL="5m"
+export MAGE_X_ANALYTICS_ENABLED=true
+export MAGE_X_METRICS_INTERVAL="5m"
 
 # Integration settings
 export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."

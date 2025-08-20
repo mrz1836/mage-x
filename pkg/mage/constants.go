@@ -91,6 +91,10 @@ const (
 
 // Environment variables
 const (
+	// MAGE-X specific environment variable prefix
+	EnvPrefix = "MAGE_X_"
+
+	// System environment variables (do not prefix these)
 	EnvGOOS        = "GOOS"
 	EnvGOARCH      = "GOARCH"
 	EnvGOPATH      = "GOPATH"
@@ -132,6 +136,11 @@ const (
 	CoverModeCount  = "count"
 	CoverModeAtomic = "atomic"
 )
+
+// GetMageXEnv returns the value of a MAGE-X environment variable with the proper prefix
+func GetMageXEnv(suffix string) string {
+	return os.Getenv(EnvPrefix + suffix)
+}
 
 // getToolVersionOrWarn returns tool version from environment or warns if not found
 func getToolVersionOrWarn(envVar, legacyEnvVar, toolName string) string {

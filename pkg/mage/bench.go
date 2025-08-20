@@ -48,13 +48,13 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 	}
 
 	// Add CPU profile if requested
-	if cpuProfile := os.Getenv("BENCH_CPU_PROFILE"); cpuProfile != "" {
+	if cpuProfile := GetMageXEnv("BENCH_CPU_PROFILE"); cpuProfile != "" {
 		args = append(args, "-cpuprofile", cpuProfile)
 		utils.Info("CPU profile will be saved to: %s", cpuProfile)
 	}
 
 	// Add memory profile if requested
-	if memProfile := os.Getenv("BENCH_MEM_PROFILE"); memProfile != "" {
+	if memProfile := GetMageXEnv("BENCH_MEM_PROFILE"); memProfile != "" {
 		args = append(args, "-memprofile", memProfile)
 		utils.Info("Memory profile will be saved to: %s", memProfile)
 	}
@@ -69,11 +69,11 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 	utils.Success("Benchmarks completed in %s", utils.FormatDuration(time.Since(start)))
 
 	// Show how to analyze profiles if created
-	if cpuProfile := os.Getenv("BENCH_CPU_PROFILE"); cpuProfile != "" {
+	if cpuProfile := GetMageXEnv("BENCH_CPU_PROFILE"); cpuProfile != "" {
 		utils.Info("Analyze CPU profile with:")
 		utils.Info("  go tool pprof %s", cpuProfile)
 	}
-	if memProfile := os.Getenv("BENCH_MEM_PROFILE"); memProfile != "" {
+	if memProfile := GetMageXEnv("BENCH_MEM_PROFILE"); memProfile != "" {
 		utils.Info("Analyze memory profile with:")
 		utils.Info("  go tool pprof %s", memProfile)
 	}
@@ -140,7 +140,7 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 	// Determine output file
 	output := utils.GetParam(params, "output", "")
 	if output == "" {
-		output = os.Getenv("BENCH_FILE")
+		output = GetMageXEnv("BENCH_FILE")
 	}
 	if output == "" {
 		// Generate filename with timestamp
@@ -204,8 +204,8 @@ func (Bench) CPUWithArgs(argsList ...string) error {
 	if profile == "" {
 		profile = utils.GetEnv("CPU_PROFILE", "cpu.prof")
 	}
-	if err := os.Setenv("BENCH_CPU_PROFILE", profile); err != nil {
-		return fmt.Errorf("failed to set BENCH_CPU_PROFILE: %w", err)
+	if err := os.Setenv("MAGE_X_BENCH_CPU_PROFILE", profile); err != nil {
+		return fmt.Errorf("failed to set MAGE_X_BENCH_CPU_PROFILE: %w", err)
 	}
 
 	var b Bench
@@ -242,8 +242,8 @@ func (Bench) MemWithArgs(argsList ...string) error {
 	if profile == "" {
 		profile = utils.GetEnv("MEM_PROFILE", "mem.prof")
 	}
-	if err := os.Setenv("BENCH_MEM_PROFILE", profile); err != nil {
-		return fmt.Errorf("failed to set BENCH_MEM_PROFILE: %w", err)
+	if err := os.Setenv("MAGE_X_BENCH_MEM_PROFILE", profile); err != nil {
+		return fmt.Errorf("failed to set MAGE_X_BENCH_MEM_PROFILE: %w", err)
 	}
 
 	var b Bench
@@ -279,11 +279,11 @@ func (Bench) ProfileWithArgs(argsList ...string) error {
 	cpuProfile := utils.GetParam(params, "cpu-profile", "cpu.prof")
 	memProfile := utils.GetParam(params, "mem-profile", "mem.prof")
 
-	if err := os.Setenv("BENCH_CPU_PROFILE", cpuProfile); err != nil {
-		return fmt.Errorf("failed to set BENCH_CPU_PROFILE: %w", err)
+	if err := os.Setenv("MAGE_X_BENCH_CPU_PROFILE", cpuProfile); err != nil {
+		return fmt.Errorf("failed to set MAGE_X_BENCH_CPU_PROFILE: %w", err)
 	}
-	if err := os.Setenv("BENCH_MEM_PROFILE", memProfile); err != nil {
-		return fmt.Errorf("failed to set BENCH_MEM_PROFILE: %w", err)
+	if err := os.Setenv("MAGE_X_BENCH_MEM_PROFILE", memProfile); err != nil {
+		return fmt.Errorf("failed to set MAGE_X_BENCH_MEM_PROFILE: %w", err)
 	}
 
 	var b Bench
@@ -348,8 +348,8 @@ func (Bench) RegressionWithArgs(argsList ...string) error {
 
 	// Save current results
 	currentFile := "bench-current.txt"
-	if err := os.Setenv("BENCH_FILE", currentFile); err != nil {
-		return fmt.Errorf("failed to set BENCH_FILE: %w", err)
+	if err := os.Setenv("MAGE_X_BENCH_FILE", currentFile); err != nil {
+		return fmt.Errorf("failed to set MAGE_X_BENCH_FILE: %w", err)
 	}
 	var b Bench
 	if err := b.SaveWithArgs(argsList...); err != nil {
@@ -388,7 +388,7 @@ func (Bench) RegressionWithArgs(argsList ...string) error {
 	updateBaseline := utils.GetParam(params, "update-baseline", "")
 	if updateBaseline == "" {
 		utils.Info("Update baseline with current results? (set UPDATE_BASELINE=true or use update-baseline=true parameter)")
-		updateBaseline = os.Getenv("UPDATE_BASELINE")
+		updateBaseline = GetMageXEnv("UPDATE_BASELINE")
 	}
 	if updateBaseline == approvalTrue || utils.IsParamTrue(params, "update-baseline") {
 		if err := os.Rename(currentFile, baseline); err != nil {

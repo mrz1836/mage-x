@@ -231,7 +231,7 @@ func (Yaml) Update() error {
 func (Yaml) Template() error {
 	utils.Header("📄 Creating Configuration Template")
 
-	projectType := utils.GetEnv("PROJECT_TYPE", "library")
+	projectType := utils.GetEnv("MAGE_X_PROJECT_TYPE", "library")
 
 	var config *YamlConfig
 
@@ -453,33 +453,33 @@ func populateFromProject(config *YamlConfig) {
 // updateFromEnv updates configuration from environment variables
 func updateFromEnv(config *YamlConfig) {
 	// Update from environment variables
-	if name := utils.GetEnv("PROJECT_NAME", ""); name != "" {
+	if name := utils.GetEnv("MAGE_X_PROJECT_NAME", ""); name != "" {
 		config.Project.Name = name
 	}
 
-	if desc := utils.GetEnv("PROJECT_DESCRIPTION", ""); desc != "" {
+	if desc := utils.GetEnv("MAGE_X_PROJECT_DESCRIPTION", ""); desc != "" {
 		config.Project.Description = desc
 	}
 
-	if envVersion := utils.GetEnv("PROJECT_VERSION", ""); envVersion != "" {
+	if envVersion := utils.GetEnv("MAGE_X_PROJECT_VERSION", ""); envVersion != "" {
 		config.Project.Version = envVersion
 	}
 
-	if license := utils.GetEnv("PROJECT_LICENSE", ""); license != "" {
+	if license := utils.GetEnv("MAGE_X_PROJECT_LICENSE", ""); license != "" {
 		config.Project.License = license
 	}
 
 	// Build configuration
-	if ldflags := utils.GetEnv("BUILD_LDFLAGS", ""); ldflags != "" {
+	if ldflags := utils.GetEnv("MAGE_X_BUILD_LDFLAGS", ""); ldflags != "" {
 		config.Build.LDFlags = ldflags
 	}
 
-	if platforms := utils.GetEnv("BUILD_PLATFORMS", ""); platforms != "" {
+	if platforms := utils.GetEnv("MAGE_X_BUILD_PLATFORMS", ""); platforms != "" {
 		config.Build.Platforms = strings.Split(platforms, ",")
 	}
 
 	// Test configuration
-	if timeout := utils.GetEnv("TEST_TIMEOUT", ""); timeout != "" {
+	if timeout := utils.GetEnv("MAGE_X_TEST_TIMEOUT", ""); timeout != "" {
 		config.Test.Timeout = timeout
 	}
 

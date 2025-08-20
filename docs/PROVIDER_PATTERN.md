@@ -33,7 +33,7 @@ type Provider interface {
     Validate() error
     Health() (*HealthStatus, error)
     Close() error
-    
+
     // Service interfaces
     Compute() ComputeService
     Storage() StorageService
@@ -44,7 +44,7 @@ type Provider interface {
     Monitoring() MonitoringService
     Serverless() ServerlessService
     AI() AIService
-    
+
     // Advanced features
     Cost() CostService
     Compliance() ComplianceService
@@ -129,7 +129,7 @@ for _, cloud := range clouds {
     if err != nil {
         continue
     }
-    
+
     // Deploy application
     deployment, err := provider.Container().DeployContainer(ctx, clusterID, &providers.DeployRequest{
         Name:     "my-app",
@@ -144,14 +144,14 @@ for _, cloud := range clouds {
 ```go
 func deployApplication(provider providers.Provider, appConfig AppConfig) error {
     // This function works with any provider
-    
+
     // Create network
     network := provider.Network()
     vpc, err := network.CreateVPC(ctx, &providers.CreateVPCRequest{
         Name: appConfig.NetworkName,
         CIDR: appConfig.NetworkCIDR,
     })
-    
+
     // Create database
     database := provider.Database()
     db, err := database.CreateDatabase(ctx, &providers.CreateDatabaseRequest{
@@ -159,14 +159,14 @@ func deployApplication(provider providers.Provider, appConfig AppConfig) error {
         Engine: appConfig.DBEngine,
         Size:   appConfig.DBSize,
     })
-    
+
     // Deploy containers
     container := provider.Container()
     deployment, err := container.DeployContainer(ctx, clusterID, &providers.DeployRequest{
         Name:  appConfig.AppName,
         Image: appConfig.AppImage,
     })
-    
+
     return nil
 }
 ```
@@ -259,7 +259,7 @@ func NewProductionAWSProvider() (providers.Provider, error) {
         MaxRetries:  5,
         EnableCache: true,
     }
-    
+
     return providers.Get("aws", config)
 }
 ```

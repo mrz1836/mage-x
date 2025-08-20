@@ -505,7 +505,7 @@ func applyEnvOverrides(c *Config) {
 	if v := os.Getenv("MAGE_X_BINARY_NAME"); v != "" {
 		c.Project.Binary = v
 	}
-	if v := os.Getenv("CUSTOM_BINARY_NAME"); v != "" {
+	if v := GetMageXEnv("CUSTOM_BINARY_NAME"); v != "" {
 		c.Project.Binary = v
 	}
 
@@ -640,7 +640,7 @@ func applyEnterpriseEnvOverrides(cfg *EnterpriseConfiguration) {
 	// Vault integration is reserved for future implementation.
 	// When Security field is added to Config, these will be processed:
 	_ = os.Getenv("MAGE_X_ENABLE_VAULT") // placeholder for vault enabled
-	_ = os.Getenv("VAULT_ADDR")          // placeholder for vault address
+	_ = GetMageXEnv("VAULT_ADDR")        // placeholder for vault address
 
 	// Analytics configuration is reserved for future implementation.
 	// When Analytics field is added to Config, these will be processed:

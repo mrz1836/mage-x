@@ -15,10 +15,9 @@ import (
 
 // Static errors to satisfy err113 linter
 var (
-	errOperationCanceled     = errors.New("operation canceled")
-	errModuleVarRequired     = errors.New("MODULE environment variable is required. Usage: MODULE=example.com/pkg mage modWhy")
-	errGoModExists           = errors.New("go.mod already exists")
-	errModuleInitVarRequired = errors.New("MODULE environment variable is required. Usage: MODULE=github.com/user/repo mage modInit")
+	errOperationCanceled = errors.New("operation canceled")
+	errGoModExists       = errors.New("go.mod already exists")
+	errModuleRequired    = errors.New("MAGE_X_MODULE environment variable is required")
 )
 
 // Mod namespace for Go module management tasks
@@ -124,8 +123,8 @@ func (Mod) Clean() error {
 	utils.Info("Module cache location: %s", getModCache())
 
 	// Check if FORCE is set
-	if os.Getenv("FORCE") != approvalTrue {
-		utils.Error("Set FORCE=true to confirm module cache deletion")
+	if GetMageXEnv("FORCE") != approvalTrue {
+		utils.Error("Set MAGE_X_FORCE=true to confirm module cache deletion")
 		return errOperationCanceled
 	}
 
@@ -177,7 +176,7 @@ func (Mod) Graph() error {
 	}
 
 	// Save full graph if requested
-	if graphFile := os.Getenv("GRAPH_FILE"); graphFile != "" {
+	if graphFile := GetMageXEnv("GRAPH_FILE"); graphFile != "" {
 		fileOps := fileops.New()
 		if err := fileOps.File.WriteFile(graphFile, []byte(output), 0o644); err != nil {
 			return fmt.Errorf("failed to write graph file: %w", err)
@@ -191,9 +190,9 @@ func (Mod) Graph() error {
 
 // Why shows why a module is needed
 func (Mod) Why() error {
-	module := os.Getenv("MODULE")
+	module := GetMageXEnv("MODULE")
 	if module == "" {
-		return errModuleVarRequired
+		return fmt.Errorf("%w. Usage: MAGE_X_MODULE=example.com/pkg mage modWhy", errModuleRequired)
 	}
 
 	utils.Header("Module Dependency Analysis")
@@ -257,7 +256,7 @@ func (Mod) Init() error {
 	}
 
 	// Get module name
-	moduleName := os.Getenv("MODULE")
+	moduleName := GetMageXEnv("MODULE")
 	if moduleName == "" {
 		// Try to infer from git remote
 		if remote, err := GetRunner().RunCmdOutput("git", "remote", "get-url", "origin"); err == nil {
@@ -268,7 +267,7 @@ func (Mod) Init() error {
 	}
 
 	if moduleName == "" {
-		return errModuleInitVarRequired
+		return fmt.Errorf("%w. Usage: MAGE_X_MODULE=github.com/user/repo mage modInit", errModuleRequired)
 	}
 
 	// Initialize module

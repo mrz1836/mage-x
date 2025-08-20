@@ -118,12 +118,12 @@ func (e *SecureExecutor) Execute(ctx context.Context, name string, args ...strin
     // Create command with timeout context
     ctx, cancel := e.contextWithTimeout(ctx)
     defer cancel()
-    
+
     // Validate before execution
     if err := e.validateCommand(name, args); err != nil {
         return fmt.Errorf("command validation failed: %w", err)
     }
-    
+
     // Execute with context
     cmd := exec.CommandContext(ctx, name, args...)
     return cmd.Run()
@@ -144,12 +144,12 @@ Security is paramount in MAGE-X. Every command execution must be validated and s
 // ✅ Correct: Security-first command execution
 func (b Build) Default() error {
     ctx := context.Background()
-    
+
     // Use secure executor from common.go
     if err := executor.Execute(ctx, "go", "build", "-o", cfg.Project.Binary); err != nil {
         return fmt.Errorf("build failed: %w", err)
     }
-    
+
     utils.Success("Build completed successfully")
     return nil
 }
@@ -175,14 +175,14 @@ MAGE-X provides a unified, friendly user experience across all operations.
 // ✅ Correct: Consistent messaging patterns
 func (t Test) Cover() error {
     utils.Header("🧪 Running Tests with Coverage")
-    
+
     ctx := context.Background()
     utils.Info("Generating coverage report...")
-    
+
     if err := executor.Execute(ctx, "go", "test", "-cover", "./..."); err != nil {
         return utils.Error("Tests failed: %v", err)
     }
-    
+
     utils.Success("Coverage report generated successfully")
     return nil
 }
@@ -267,14 +267,14 @@ func (e *SecureExecutor) validateCommand(name string, args []string) error {
     if len(e.AllowedCommands) > 0 && !e.AllowedCommands[name] {
         return fmt.Errorf("command '%s' is not in allowed list", name)
     }
-    
+
     // Validate arguments for injection attacks
     for _, arg := range args {
         if err := ValidateCommandArg(arg); err != nil {
             return fmt.Errorf("invalid argument '%s': %w", arg, err)
         }
     }
-    
+
     return nil
 }
 ```
@@ -445,14 +445,14 @@ When working with MAGE-X:
 // Claude-preferred pattern for new mage tasks
 func (namespace Namespace) NewTask() error {
     utils.Header("🎯 Starting New Task")
-    
+
     ctx := context.Background()
-    
+
     // Use secure executor
     if err := executor.Execute(ctx, "command", "args"); err != nil {
         return fmt.Errorf("task failed: %w", err)
     }
-    
+
     utils.Success("Task completed successfully")
     return nil
 }
@@ -520,14 +520,14 @@ type NewTask mg.Namespace
 // Default performs the main task operation
 func (NewTask) Default() error {
     utils.Header("🎯 New Task Operation")
-    
+
     ctx := context.Background()
-    
+
     // Use secure executor
     if err := executor.Execute(ctx, "command", "args"); err != nil {
         return fmt.Errorf("new task failed: %w", err)
     }
-    
+
     utils.Success("New task completed successfully")
     return nil
 }
@@ -580,16 +580,16 @@ func TestNewTask_Default(t *testing.T) {
     // Setup mock executor
     mockExecutor := security.NewMockExecutor()
     mockExecutor.SetResponse("command args", "", nil)
-    
+
     // Replace global executor for testing
     originalExecutor := executor
     executor = mockExecutor
     defer func() { executor = originalExecutor }()
-    
+
     // Test the task
     task := NewTask{}
     err := task.Default()
-    
+
     // Verify results
     assert.NoError(t, err)
     assert.Len(t, mockExecutor.ExecuteCalls, 1)

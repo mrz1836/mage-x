@@ -236,8 +236,8 @@ export MAGEX_CONFIG_DIR=~/.magex  # Config directory
 export MAGEX_CACHE_DIR=~/.magex/cache  # Cache directory
 
 # Backwards compatibility with mage
-export MAGE_VERBOSE=1          # Also enables verbose
-export MAGE_DEBUG=1            # Also enables debug
+export MAGE_X_VERBOSE=1          # Also enables verbose
+export MAGE_X_DEBUG=1            # Also enables debug
 ```
 
 ## 🔧 Advanced Usage

@@ -118,7 +118,7 @@ The ReleaseNamespace interface provides methods for release management.
 type ReleaseNamespace interface {
     Default() error           // Create default release
     Major() error            // Create major version release
-    Minor() error            // Create minor version release  
+    Minor() error            // Create minor version release
     Patch() error            // Create patch version release
     Prerelease() error       // Create prerelease
     Changelog() error        // Generate changelog
@@ -408,7 +408,7 @@ type Config struct {
 
 func LoadNamespaces(config *Config) (*mage.NamespaceRegistry, error) {
     registry := mage.NewNamespaceRegistry()
-    
+
     // Load build namespace based on config
     switch config.BuildProvider {
     case "fast":
@@ -418,7 +418,7 @@ func LoadNamespaces(config *Config) (*mage.NamespaceRegistry, error) {
     default:
         // Use default implementation
     }
-    
+
     return registry, nil
 }
 ```

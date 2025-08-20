@@ -120,7 +120,7 @@ magex customlintstrict
    magex lint
 
    # See custom build with environment variables
-   CUSTOM_VERSION=v2.0.0 CUSTOM_BUILD_TAGS=debug magex build
+   MAGE_X_CUSTOM_VERSION=v2.0.0 MAGE_X_CUSTOM_BUILD_TAGS=debug magex build
 
    # Try custom unit tests
    magex test:unit
@@ -188,7 +188,7 @@ echo "// TODO: fix this" > test.go
 magex lint  # Should warn about TODOs
 
 # Test custom build
-CUSTOM_VERSION=test magex build
+MAGE_X_CUSTOM_VERSION=test magex build
 cat BUILD_SUMMARY.md  # Should show custom version
 
 # Test strict lint

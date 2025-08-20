@@ -52,7 +52,7 @@ func Security() error {
 	if err != nil {
 		fmt.Println("Warning: Security scan found issues")
 	}
-	
+
 	sh.Run("nancy", "sleuth")
 	return sh.Run("govulncheck", "./...")
 }
@@ -61,12 +61,12 @@ func Security() error {
 func Compliance() error {
 	fmt.Println("Generating compliance reports...")
 	mg.Deps(Test, Security)
-	
+
 	err := sh.Run("syft", ".", "-o", "spdx-json=sbom.json")
 	if err != nil {
 		fmt.Println("Warning: Could not generate SBOM")
 	}
-	
+
 	return generateComplianceReport()
 }
 
@@ -83,12 +83,12 @@ func Format() error {
 	if err != nil {
 		return err
 	}
-	
+
 	err = sh.Run("goimports", "-w", ".")
 	if err != nil {
 		return err
 	}
-	
+
 	return sh.Run("gofumpt", "-w", ".")
 }
 
@@ -111,7 +111,7 @@ func Docker() error {
 	if err != nil {
 		return err
 	}
-	
+
 	return sh.Run("trivy", "image", dockerRepo+":latest")
 }
 
@@ -126,7 +126,7 @@ func generateComplianceReport() error {
 }
 
 func getVersion() string {
-	if version := os.Getenv("VERSION"); version != "" {
+	if version := os.Getenv("MAGE_X_VERSION"); version != "" {
 		return version
 	}
 	return "dev"
@@ -150,21 +150,21 @@ security:
   encryption:
     algorithm: "AES-256-GCM"
     key_rotation_days: 90
-  
+
   authentication:
     method: "oauth2"
     token_expiry: "1h"
     refresh_token_expiry: "24h"
-  
+
   authorization:
     rbac_enabled: true
     default_role: "user"
-  
+
   audit:
     enabled: true
     log_level: "info"
     retention_days: 365
-  
+
   tls:
     min_version: "1.3"
     cipher_suites:
@@ -182,7 +182,7 @@ compliance:
     - "ISO27001"
     - "GDPR"
     - "HIPAA"
-  
+
   data_classification:
     enabled: true
     levels:
@@ -190,12 +190,12 @@ compliance:
       - "internal"
       - "confidential"
       - "restricted"
-  
+
   privacy:
     data_retention_days: 2555  # 7 years
     anonymization_enabled: true
     consent_management: true
-  
+
   monitoring:
     compliance_dashboard: true
     automated_reporting: true
@@ -289,7 +289,7 @@ import (
 	"log"
 	"net/http"
 	"time"
-	
+
 	"{{.ModulePath}}/web"
 )
 
@@ -304,28 +304,28 @@ func main() {
 		dev  = flag.Bool("dev", false, "Development mode")
 		host = flag.String("host", "localhost", "Server host")
 	)
-	
+
 	flag.Parse()
-	
+
 	fmt.Printf("{{.ProjectName}} web server v%s\n", version)
 	fmt.Printf("Build time: %s\n", buildTime)
-	
+
 	// Setup handlers
 	mux := http.NewServeMux()
-	
+
 	// Static files
 	staticDir := "./static/"
 	if *dev {
 		fmt.Println("Running in development mode")
 	}
-	
+
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
-	
+
 	// Routes
 	mux.HandleFunc("/", web.HomeHandler)
 	mux.HandleFunc("/health", web.HealthHandler)
 	mux.HandleFunc("/api/", web.APIHandler)
-	
+
 	// Create server
 	server := &http.Server{
 		Addr:         *host + ":" + *port,
@@ -334,7 +334,7 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
-	
+
 	fmt.Printf("Server starting on http://%s:%s\n", *host, *port)
 	log.Fatal(server.ListenAndServe())
 }
@@ -366,7 +366,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	
+
 	data := struct {
 		Title   string
 		Message string
@@ -374,7 +374,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		Title:   "{{.ProjectName}}",
 		Message: "Welcome to {{.ProjectName}}!",
 	}
-	
+
 	err := templates.ExecuteTemplate(w, "index.html", data)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -386,13 +386,13 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	
+
 	response := map[string]interface{}{
 		"status":  "healthy",
 		"service": "{{.ProjectName}}",
 		"version": "1.0.0",
 	}
-	
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
@@ -401,7 +401,7 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 // APIHandler handles API requests
 func APIHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	switch r.Method {
 	case http.MethodGet:
 		handleAPIGet(w, r)
@@ -421,7 +421,7 @@ func handleAPIGet(w http.ResponseWriter, r *http.Request) {
 		"path":    r.URL.Path,
 		"method":  r.Method,
 	}
-	
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
@@ -437,12 +437,12 @@ func handleAPIPost(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"message": "Data received",
 		"data":    requestData,
 	}
-	
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
@@ -553,11 +553,11 @@ footer {
     .hero h2 {
         font-size: 2rem;
     }
-    
+
     .features {
         grid-template-columns: 1fr;
     }
-    
+
     .container {
         padding: 10px;
     }
@@ -581,7 +581,7 @@ func getWebTemplateContent() string {
             <h1>{{.Title}}</h1>
         </div>
     </header>
-    
+
     <main>
         <div class="container">
             <div class="hero">
@@ -589,18 +589,18 @@ func getWebTemplateContent() string {
                 <p>A modern web application built with Go and Mage</p>
                 <a href="/api/" class="btn">Try the API</a>
             </div>
-            
+
             <div class="features">
                 <div class="feature">
                     <h3>🚀 Fast</h3>
                     <p>Built with Go for maximum performance and efficiency</p>
                 </div>
-                
+
                 <div class="feature">
                     <h3>🔧 Automated</h3>
                     <p>Powered by Mage for streamlined build and deployment</p>
                 </div>
-                
+
                 <div class="feature">
                     <h3>📦 Containerized</h3>
                     <p>Ready for Docker and Kubernetes deployment</p>
@@ -608,7 +608,7 @@ func getWebTemplateContent() string {
             </div>
         </div>
     </main>
-    
+
     <footer>
         <div class="container">
             <p>&copy; 2024 {{.Title}}. Built with Go and Mage.</p>
@@ -628,7 +628,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	
+
 	"{{.ModulePath}}/pkg/cli"
 )
 
@@ -644,19 +644,19 @@ func main() {
 		verbose     = flag.Bool("verbose", false, "Enable verbose output")
 		config      = flag.String("config", "", "Configuration file path")
 	)
-	
+
 	flag.Parse()
-	
+
 	if *showVersion {
 		fmt.Printf("{{.ProjectName}} version %s (built: %s, commit: %s)\n", version, buildTime, gitCommit)
 		os.Exit(0)
 	}
-	
+
 	app := cli.NewApp(cli.Config{
 		Verbose:    *verbose,
 		ConfigPath: *config,
 	})
-	
+
 	if err := app.Run(flag.Args()); err != nil {
 		log.Fatal(err)
 	}
@@ -696,10 +696,10 @@ func (a *App) Run(args []string) error {
 	if len(args) == 0 {
 		return a.showHelp()
 	}
-	
+
 	command := args[0]
 	args = args[1:]
-	
+
 	switch command {
 	case "hello":
 		return a.helloCommand(args)
@@ -717,7 +717,7 @@ func (a *App) helloCommand(args []string) error {
 	if len(args) > 0 {
 		name = args[0]
 	}
-	
+
 	fmt.Printf("Hello, %s!\n", name)
 	return nil
 }

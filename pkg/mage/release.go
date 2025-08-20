@@ -15,7 +15,7 @@ import (
 
 // Static errors for release operations
 var (
-	errReleaseGitHubTokenRequired = errors.New("github_token or GITHUB_TOKEN environment variable is required")
+	errReleaseGitHubTokenRequired = errors.New("MAGE_X_GITHUB_TOKEN or GITHUB_TOKEN environment variable is required")
 	errNoGoreleaserConfig         = errors.New("no goreleaser configuration file found")
 	errGoreleaserConfigExists     = errors.New("goreleaser configuration already exists")
 	errBinaryNotFound             = errors.New("built binary not found in expected locations")
@@ -25,16 +25,16 @@ var (
 // Release namespace for release-related tasks
 type Release mg.Namespace
 
-// Default runs production release (requires github_token)
+// Default runs production release (requires MAGE_X_GITHUB_TOKEN)
 func (Release) Default(args ...string) error {
 	utils.Header("Running Production Release")
 
-	// Check for GitHub token, preferring github_token
-	githubToken := os.Getenv("github_token")
+	// Check for GitHub token, preferring MAGE_X_GITHUB_TOKEN
+	githubToken := GetMageXEnv("GITHUB_TOKEN")
 	existingToken := os.Getenv("GITHUB_TOKEN")
 
 	if githubToken != "" {
-		// If we're using github_token, set GITHUB_TOKEN permanently
+		// If we're using MAGE_X_GITHUB_TOKEN, set GITHUB_TOKEN permanently
 		if err := os.Setenv("GITHUB_TOKEN", githubToken); err != nil {
 			return fmt.Errorf("failed to set GITHUB_TOKEN: %w", err)
 		}

@@ -9,6 +9,11 @@ import (
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
+// getMageXEnv returns the value of a MAGE-X environment variable with the proper prefix
+func getMageXEnv(suffix string) string {
+	return os.Getenv("MAGE_X_" + suffix)
+}
+
 // TestConfig interface provides access to test configuration
 type TestConfig interface {
 	GetTimeout() string
@@ -174,7 +179,7 @@ func (b *TestCommandBuilder) buildBaseTestArgs(options TestOptions) []string {
 	}
 
 	// Add custom test flags from environment
-	if customFlags := os.Getenv("TEST_FLAGS"); customFlags != "" {
+	if customFlags := getMageXEnv("TEST_FLAGS"); customFlags != "" {
 		args = append(args, strings.Fields(customFlags)...)
 	}
 

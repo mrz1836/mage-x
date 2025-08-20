@@ -670,7 +670,7 @@ func isTestEnvironment() bool {
 		}
 	}
 	// Method 3: Check environment variable that could be set by test runners
-	if os.Getenv("GO_TEST") == "1" {
+	if GetMageXEnv("GO_TEST") == "1" {
 		return true
 	}
 	return false

@@ -207,7 +207,7 @@ func (Generate) Clean() error {
 	}
 
 	// Add custom patterns from environment
-	if custom := os.Getenv("GENERATED_PATTERNS"); custom != "" {
+	if custom := GetMageXEnv("GENERATED_PATTERNS"); custom != "" {
 		patterns = append(patterns, strings.Split(custom, ",")...)
 	}
 

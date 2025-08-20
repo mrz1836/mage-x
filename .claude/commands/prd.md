@@ -70,8 +70,8 @@ Brief overview of the feature, its purpose, and expected impact on MAGE-X users.
 ## User Stories
 
 ### Primary User Story
-**As a** [user type]  
-**I want to** [action]  
+**As a** [user type]
+**I want to** [action]
 **So that** [benefit]
 
 ### Acceptance Criteria

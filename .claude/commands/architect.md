@@ -89,7 +89,7 @@ Overall Health: [A-F grade]
 
 #### High Priority Issues
 ```
-🔴 Cyclic Dependency: 
+🔴 Cyclic Dependency:
    pkg/mage/builder → pkg/mage/test → pkg/mage/builder
    Impact: Tight coupling, difficult to test
    Fix: Extract shared interface to pkg/mage/common
@@ -106,7 +106,7 @@ Overall Health: [A-F grade]
    Issue: Returns concrete type instead of interface
    Fix: Return CustomNamespace interface
 
-⚠️  Registry Pattern: 
+⚠️  Registry Pattern:
    Issue: Direct map access instead of methods
    Fix: Add Get/Set/List methods
 ```

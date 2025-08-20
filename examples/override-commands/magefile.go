@@ -74,7 +74,7 @@ func (Build) Default() error {
 	utils.Info("Setting up custom build environment...")
 
 	// Example: Set custom build tags
-	customTags := os.Getenv("CUSTOM_BUILD_TAGS")
+	customTags := os.Getenv("MAGE_X_CUSTOM_BUILD_TAGS")
 	if customTags != "" {
 		utils.Info("Using custom build tags: %s", customTags)
 		if err := os.Setenv("BUILD_TAGS", customTags); err != nil {
@@ -83,7 +83,7 @@ func (Build) Default() error {
 	}
 
 	// Example: Custom version injection
-	if version := os.Getenv("CUSTOM_VERSION"); version != "" {
+	if version := os.Getenv("MAGE_X_CUSTOM_VERSION"); version != "" {
 		utils.Info("Injecting custom version: %s", version)
 		// Set ldflags for version injection
 		ldflags := fmt.Sprintf("-X main.Version=%s", version)
@@ -298,8 +298,8 @@ Custom version: %s
 
 	content := fmt.Sprintf(summary,
 		time.Now().Format("2006-01-02 15:04:05"),
-		os.Getenv("CUSTOM_BUILD_TAGS"),
-		os.Getenv("CUSTOM_VERSION"),
+		os.Getenv("MAGE_X_CUSTOM_BUILD_TAGS"),
+		os.Getenv("MAGE_X_CUSTOM_VERSION"),
 	)
 
 	return os.WriteFile("BUILD_SUMMARY.md", []byte(content), 0o600)

@@ -16,8 +16,8 @@ MAGE-X provides 13 specialized Claude Code slash commands that orchestrate intel
 ### 🧪 Testing & Quality Commands
 
 #### `/test [specific-path-or-namespace]`
-**Purpose**: Create comprehensive Go tests with parallel agent execution  
-**Agents**: test-finder, test-writer, analyzer, security, linter, architect  
+**Purpose**: Create comprehensive Go tests with parallel agent execution
+**Agents**: test-finder, test-writer, analyzer, security, linter, architect
 **Example**: `/test pkg/mage/build`
 
 Orchestrates multiple agents to:
@@ -27,8 +27,8 @@ Orchestrates multiple agents to:
 - Validate test quality and patterns
 
 #### `/fix [all|lint|test|security]`
-**Purpose**: Fix linting issues and test errors with parallel remediation  
-**Agents**: linter, test-writer, security, refactor  
+**Purpose**: Fix linting issues and test errors with parallel remediation
+**Agents**: linter, test-writer, security, refactor
 **Example**: `/fix lint`
 
 Coordinates fixes across:
@@ -38,8 +38,8 @@ Coordinates fixes across:
 - Code refactoring needs
 
 #### `/quality [full|quick|security|performance]`
-**Purpose**: Comprehensive code quality assessment  
-**Agents**: linter, test-finder, security, analyzer, architect, benchmark  
+**Purpose**: Comprehensive code quality assessment
+**Agents**: linter, test-finder, security, analyzer, architect, benchmark
 **Example**: `/quality full`
 
 Provides parallel analysis of:
@@ -52,8 +52,8 @@ Provides parallel analysis of:
 ### 🔧 Code Improvement Commands
 
 #### `/dedupe [aggressive|conservative]`
-**Purpose**: Remove duplicate code through intelligent refactoring  
-**Agents**: analyzer, refactor, architect, linter  
+**Purpose**: Remove duplicate code through intelligent refactoring
+**Agents**: analyzer, refactor, architect, linter
 **Example**: `/dedupe conservative`
 
 Identifies and eliminates:
@@ -63,8 +63,8 @@ Identifies and eliminates:
 - Copy-paste violations
 
 #### `/explain [function|file|architecture]`
-**Purpose**: Multi-agent code explanation and documentation  
-**Agents**: analyzer, architect, docs, test-finder  
+**Purpose**: Multi-agent code explanation and documentation
+**Agents**: analyzer, architect, docs, test-finder
 **Example**: `/explain architecture`
 
 Provides comprehensive explanations:
@@ -74,8 +74,8 @@ Provides comprehensive explanations:
 - Usage examples
 
 #### `/optimize [performance|memory|build]`
-**Purpose**: Performance analysis and optimization  
-**Agents**: benchmark, analyzer, refactor, builder  
+**Purpose**: Performance analysis and optimization
+**Agents**: benchmark, analyzer, refactor, builder
 **Example**: `/optimize performance`
 
 Delivers optimization through:
@@ -87,8 +87,8 @@ Delivers optimization through:
 ### 📚 Documentation Commands
 
 #### `/docs-update [feature|api|all]`
-**Purpose**: Update documentation for new or modified features  
-**Agents**: docs, analyzer, architect, test-finder  
+**Purpose**: Update documentation for new or modified features
+**Agents**: docs, analyzer, architect, test-finder
 **Example**: `/docs-update api`
 
 Automatically updates:
@@ -98,8 +98,8 @@ Automatically updates:
 - Migration guides
 
 #### `/docs-review`
-**Purpose**: Review if documented features still exist  
-**Agents**: docs, analyzer, refactor  
+**Purpose**: Review if documented features still exist
+**Agents**: docs, analyzer, refactor
 **Example**: `/docs-review`
 
 Validates documentation:
@@ -111,8 +111,8 @@ Validates documentation:
 ### 🚀 Development Workflow Commands
 
 #### `/ci-diagnose [workflow-name|run-id|all]`
-**Purpose**: Diagnose CI/CD issues in GitHub workflows  
-**Agents**: gh, workflow, security, tools  
+**Purpose**: Diagnose CI/CD issues in GitHub workflows
+**Agents**: gh, workflow, security, tools
 **Example**: `/ci-diagnose fortress.yml`
 
 Analyzes and fixes:
@@ -122,8 +122,8 @@ Analyzes and fixes:
 - Security problems
 
 #### `/release [version|channel|dry-run]`
-**Purpose**: Comprehensive release preparation  
-**Agents**: releaser, git, gh, security, docs, linter  
+**Purpose**: Comprehensive release preparation
+**Agents**: releaser, git, gh, security, docs, linter
 **Example**: `/release v1.2.0`
 
 Orchestrates complete release:
@@ -136,8 +136,8 @@ Orchestrates complete release:
 ### 🏗️ Architecture Commands
 
 #### `/architect [review|validate|suggest]`
-**Purpose**: Architecture compliance and improvement  
-**Agents**: architect, analyzer, refactor, linter  
+**Purpose**: Architecture compliance and improvement
+**Agents**: architect, analyzer, refactor, linter
 **Example**: `/architect review`
 
 Provides architectural:
@@ -147,8 +147,8 @@ Provides architectural:
 - Improvement suggestions
 
 #### `/security [full|deps|code|secrets|fix]`
-**Purpose**: Comprehensive security audit and fixes  
-**Agents**: security, deps, workflow, refactor  
+**Purpose**: Comprehensive security audit and fixes
+**Agents**: security, deps, workflow, refactor
 **Example**: `/security full`
 
 Performs security:
@@ -160,8 +160,8 @@ Performs security:
 ### 🎯 Planning Commands
 
 #### `/prd [feature-name]`
-**Purpose**: Generate product requirement documents  
-**Agents**: wizard, architect, analyzer, docs  
+**Purpose**: Generate product requirement documents
+**Agents**: wizard, architect, analyzer, docs
 **Example**: `/prd authentication-system`
 
 Creates comprehensive PRDs:

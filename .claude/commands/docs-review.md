@@ -88,7 +88,7 @@ Dead Links: [count]
    Status: Function no longer exists
    Action: Remove documentation or restore feature
 
-🚨 BROKEN EXAMPLE: 
+🚨 BROKEN EXAMPLE:
    File: docs/examples.md:120
    Error: undefined: OldTypeName
    Fix: Update to NewTypeName
@@ -109,7 +109,7 @@ Dead Links: [count]
 ```
 ✅ Valid Code Examples: 45/50
 ❌ Invalid Examples: 5/50
-✅ Working Links: 78/80  
+✅ Working Links: 78/80
 ❌ Broken Links: 2/80
 ```
 

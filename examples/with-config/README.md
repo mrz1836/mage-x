@@ -68,7 +68,7 @@ magex build:all
 
 # This will create binaries for:
 # - Linux AMD64
-# - macOS AMD64 
+# - macOS AMD64
 # - macOS ARM64 (Apple Silicon)
 # - Windows AMD64
 ```

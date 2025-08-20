@@ -71,7 +71,7 @@ When invoked, you must follow these steps:
 
 **Benchmarking Categories:**
 - **Function Benchmarks**: Individual function performance testing
-- **Integration Benchmarks**: End-to-end workflow performance  
+- **Integration Benchmarks**: End-to-end workflow performance
 - **Memory Benchmarks**: Memory allocation and garbage collection analysis
 - **Concurrency Benchmarks**: Parallel execution and goroutine performance
 - **I/O Benchmarks**: File system and network operation performance

@@ -35,13 +35,13 @@ download:
 All configuration options can be overridden using environment variables:
 
 ```bash
-export MAGE_DOWNLOAD_RETRIES=3              # Override max_retries
-export MAGE_DOWNLOAD_TIMEOUT=30000          # Override timeout_ms
-export MAGE_DOWNLOAD_INITIAL_DELAY=500      # Override initial_delay_ms
-export MAGE_DOWNLOAD_MAX_DELAY=15000        # Override max_delay_ms
-export MAGE_DOWNLOAD_BACKOFF=1.5            # Override backoff_multiplier
-export MAGE_DOWNLOAD_RESUME=true            # Override enable_resume
-export MAGE_DOWNLOAD_USER_AGENT="ci/1.0"    # Override user_agent
+export MAGE_X_DOWNLOAD_RETRIES=3              # Override max_retries
+export MAGE_X_DOWNLOAD_TIMEOUT=30000          # Override timeout_ms
+export MAGE_X_DOWNLOAD_INITIAL_DELAY=500      # Override initial_delay_ms
+export MAGE_X_DOWNLOAD_MAX_DELAY=15000        # Override max_delay_ms
+export MAGE_X_DOWNLOAD_BACKOFF=1.5            # Override backoff_multiplier
+export MAGE_X_DOWNLOAD_RESUME=true            # Override enable_resume
+export MAGE_X_DOWNLOAD_USER_AGENT="ci/1.0"    # Override user_agent
 ```
 
 ## Supported Tools
@@ -142,7 +142,7 @@ SUCCESS: gofumpt installed successfully
 Failed installations provide comprehensive error messages:
 
 ```
-failed to install gofumpt after 5 retries and fallback: 
+failed to install gofumpt after 5 retries and fallback:
   last error: context deadline exceeded
   attempted methods: go install, direct proxy
   total duration: 45.2s
@@ -156,16 +156,16 @@ For CI/CD environments, consider these optimizations:
 
 ```bash
 # Faster retries for CI (shorter delays, fewer attempts)
-export MAGE_DOWNLOAD_RETRIES=3
-export MAGE_DOWNLOAD_INITIAL_DELAY=250
-export MAGE_DOWNLOAD_MAX_DELAY=5000
-export MAGE_DOWNLOAD_TIMEOUT=30000
+export MAGE_X_DOWNLOAD_RETRIES=3
+export MAGE_X_DOWNLOAD_INITIAL_DELAY=250
+export MAGE_X_DOWNLOAD_MAX_DELAY=5000
+export MAGE_X_DOWNLOAD_TIMEOUT=30000
 
 # Disable resume for clean CI environments
-export MAGE_DOWNLOAD_RESUME=false
+export MAGE_X_DOWNLOAD_RESUME=false
 
 # Custom user agent for telemetry
-export MAGE_DOWNLOAD_USER_AGENT="ci-system/1.0"
+export MAGE_X_DOWNLOAD_USER_AGENT="ci-system/1.0"
 ```
 
 ### Parallel Builds

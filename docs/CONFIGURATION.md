@@ -242,7 +242,7 @@ MAGE-X supports benchmark timing through both configuration files and command-li
 # Quick benchmarks for CI/fast feedback
 magex bench time=50ms
 
-# Standard benchmarks  
+# Standard benchmarks
 magex bench time=100ms
 
 # Comprehensive benchmarks
@@ -409,33 +409,33 @@ Override any configuration using environment variables:
 
 ### Project Variables
 ```bash
-export MAGE_PROJECT_NAME="my-project"
-export MAGE_PROJECT_VERSION="v1.0.0"
-export MAGE_PROJECT_DESCRIPTION="My project"
+export MAGE_X_PROJECT_NAME="my-project"
+export MAGE_X_PROJECT_VERSION="v1.0.0"
+export MAGE_X_PROJECT_DESCRIPTION="My project"
 ```
 
 ### Build Variables
 ```bash
-export MAGE_BUILD_GO_VERSION="1.24"
-export MAGE_BUILD_PLATFORM="linux/amd64"
-export MAGE_BUILD_CGO_ENABLED="false"
-export MAGE_BUILD_OUTPUT_DIR="dist"
-export MAGE_BUILD_BINARY="myapp"
+export MAGE_X_BUILD_GO_VERSION="1.24"
+export MAGE_X_BUILD_PLATFORM="linux/amd64"
+export MAGE_X_BUILD_CGO_ENABLED="false"
+export MAGE_X_BUILD_OUTPUT_DIR="dist"
+export MAGE_X_BUILD_BINARY="myapp"
 ```
 
 ### Test Variables
 ```bash
-export MAGE_TEST_TIMEOUT="600"
-export MAGE_TEST_COVERAGE="true"
-export MAGE_TEST_RACE="false"
-export MAGE_TEST_PARALLEL="4"
+export MAGE_X_TEST_TIMEOUT="600"
+export MAGE_X_TEST_COVERAGE="true"
+export MAGE_X_TEST_RACE="false"
+export MAGE_X_TEST_PARALLEL="4"
 ```
 
 ### Security Variables
 ```bash
-export MAGE_SECURITY_ENABLE_VULN_CHECK="true"
-export MAGE_SECURITY_ENABLE_CODE_SCAN="true"
-export MAGE_SECURITY_POLICY_FILE=".security-policy.yaml"
+export MAGE_X_SECURITY_ENABLE_VULN_CHECK="true"
+export MAGE_X_SECURITY_ENABLE_CODE_SCAN="true"
+export MAGE_X_SECURITY_POLICY_FILE=".security-policy.yaml"
 ```
 
 ### Legacy Environment Variables

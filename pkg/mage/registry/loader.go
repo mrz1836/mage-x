@@ -36,7 +36,7 @@ func NewLoader(registry *Registry) *Loader {
 	}
 	return &Loader{
 		registry: registry,
-		verbose:  os.Getenv("MAGEX_VERBOSE") == "true",
+		verbose:  os.Getenv("MAGE_X_VERBOSE") == "true",
 	}
 }
 

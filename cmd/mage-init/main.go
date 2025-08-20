@@ -820,7 +820,7 @@ func buildLdflags() string {
 }
 
 func getVersion() string {
-	if version := os.Getenv("VERSION"); version != "" {
+	if version := os.Getenv("MAGE_X_VERSION"); version != "" {
 		return version
 	}
 	return "dev"
@@ -1150,7 +1150,7 @@ func buildForPlatform(platform string) error {
 }
 
 func getVersion() string {
-	if version := os.Getenv("VERSION"); version != "" {
+	if version := os.Getenv("MAGE_X_VERSION"); version != "" {
 		return version
 	}
 	return "dev"

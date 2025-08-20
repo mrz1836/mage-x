@@ -269,7 +269,7 @@ func (a *AuditLogger) initDatabase() error {
 		environment TEXT,
 		metadata TEXT
 	);
-	
+
 	CREATE INDEX IF NOT EXISTS idx_timestamp ON audit_events(timestamp);
 	CREATE INDEX IF NOT EXISTS idx_user ON audit_events(user);
 	CREATE INDEX IF NOT EXISTS idx_command ON audit_events(command);
@@ -326,7 +326,7 @@ func (a *AuditLogger) LogEvent(event *AuditEvent) error {
 	// Insert into database
 	query := `
 	INSERT INTO audit_events (
-		timestamp, user, command, args, working_dir, 
+		timestamp, user, command, args, working_dir,
 		duration, exit_code, success, environment, metadata
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
@@ -379,7 +379,7 @@ func (a *AuditLogger) GetEvents(filter *AuditFilter) ([]AuditEvent, error) {
 // buildEventsQuery constructs the SQL query and args for event filtering
 func (a *AuditLogger) buildEventsQuery(filter *AuditFilter) (query string, args []interface{}) {
 	query = `
-	SELECT id, timestamp, user, command, args, working_dir, 
+	SELECT id, timestamp, user, command, args, working_dir,
 		   duration, exit_code, success, environment, metadata
 	FROM audit_events
 	WHERE 1=1`
@@ -544,10 +544,10 @@ func (a *AuditLogger) getBasicStats(stats *AuditStats) error {
 // getTopUsers retrieves top users statistics
 func (a *AuditLogger) getTopUsers(stats *AuditStats) error {
 	rows, err := a.db.QueryContext(context.Background(), `
-		SELECT user, COUNT(*) as count 
-		FROM audit_events 
-		GROUP BY user 
-		ORDER BY count DESC 
+		SELECT user, COUNT(*) as count
+		FROM audit_events
+		GROUP BY user
+		ORDER BY count DESC
 		LIMIT 10
 	`)
 	if err != nil {
@@ -580,10 +580,10 @@ func (a *AuditLogger) getTopUsers(stats *AuditStats) error {
 // getTopCommands retrieves top commands statistics
 func (a *AuditLogger) getTopCommands(stats *AuditStats) error {
 	rows, err := a.db.QueryContext(context.Background(), `
-		SELECT command, COUNT(*) as count 
-		FROM audit_events 
-		GROUP BY command 
-		ORDER BY count DESC 
+		SELECT command, COUNT(*) as count
+		FROM audit_events
+		GROUP BY command
+		ORDER BY count DESC
 		LIMIT 10
 	`)
 	if err != nil {

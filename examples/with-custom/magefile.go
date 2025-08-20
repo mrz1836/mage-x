@@ -31,8 +31,8 @@ func Deploy() error {
 	time.Sleep(1 * time.Second)
 
 	// Simulate potential deployment error
-	if os.Getenv("DEPLOY_FAIL") != "" {
-		return fmt.Errorf("%w: %s", ErrDeploymentFailed, os.Getenv("DEPLOY_FAIL"))
+	if os.Getenv("MAGE_X_DEPLOY_FAIL") != "" {
+		return fmt.Errorf("%w: %s", ErrDeploymentFailed, os.Getenv("MAGE_X_DEPLOY_FAIL"))
 	}
 
 	utils.Info("🔄 Uploading to servers...")
@@ -52,8 +52,8 @@ func Stage() error {
 	}
 
 	// Simulate staging deployment that could fail
-	if os.Getenv("STAGE_FAIL") != "" {
-		return fmt.Errorf("%w: %s", ErrStagingFailed, os.Getenv("STAGE_FAIL"))
+	if os.Getenv("MAGE_X_STAGE_FAIL") != "" {
+		return fmt.Errorf("%w: %s", ErrStagingFailed, os.Getenv("MAGE_X_STAGE_FAIL"))
 	}
 
 	utils.Info("✅ Staged successfully!")
@@ -65,8 +65,8 @@ func Rollback() error {
 	utils.Info("⏮️  Rolling back deployment...")
 
 	// Rollback logic here - could fail in real scenarios
-	if os.Getenv("ROLLBACK_FAIL") != "" {
-		return fmt.Errorf("%w: %s", ErrStagingFailed, os.Getenv("ROLLBACK_FAIL"))
+	if os.Getenv("MAGE_X_ROLLBACK_FAIL") != "" {
+		return fmt.Errorf("%w: %s", ErrStagingFailed, os.Getenv("MAGE_X_ROLLBACK_FAIL"))
 	}
 
 	utils.Info("✅ Rollback complete!")
@@ -87,8 +87,8 @@ func (Pipeline) CI() error {
 	// - magex build:all
 
 	// Simulate potential CI failure
-	if os.Getenv("CI_FAIL") != "" {
-		return fmt.Errorf("%w: %s", ErrDeploymentFailed, os.Getenv("CI_FAIL"))
+	if os.Getenv("MAGE_X_CI_FAIL") != "" {
+		return fmt.Errorf("%w: %s", ErrDeploymentFailed, os.Getenv("MAGE_X_CI_FAIL"))
 	}
 
 	utils.Info("✅ CI pipeline complete!")
@@ -101,8 +101,8 @@ func (Pipeline) CD() error {
 
 	// Custom continuous deployment logic
 	// Simulate potential CD failure
-	if os.Getenv("CD_FAIL") != "" {
-		return fmt.Errorf("%w: %s", ErrDeploymentFailed, os.Getenv("CD_FAIL"))
+	if os.Getenv("MAGE_X_CD_FAIL") != "" {
+		return fmt.Errorf("%w: %s", ErrDeploymentFailed, os.Getenv("MAGE_X_CD_FAIL"))
 	}
 
 	utils.Info("✅ CD pipeline complete!")
