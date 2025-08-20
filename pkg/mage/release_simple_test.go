@@ -22,7 +22,7 @@ type ReleaseSimpleTestSuite struct {
 func (suite *ReleaseSimpleTestSuite) SetupSuite() {
 	// Save original environment
 	suite.originalEnv = make(map[string]string)
-	envVars := []string{"GITHUB_TOKEN", "github_token", "USER"}
+	envVars := []string{"GITHUB_TOKEN", "MAGE_X_GITHUB_TOKEN", "USER"}
 	for _, env := range envVars {
 		if val := os.Getenv(env); val != "" {
 			suite.originalEnv[env] = val
@@ -49,8 +49,8 @@ func (suite *ReleaseSimpleTestSuite) SetupTest() {
 	if err := os.Unsetenv("GITHUB_TOKEN"); err != nil {
 		suite.T().Logf("Warning: failed to unset GITHUB_TOKEN: %v", err)
 	}
-	if err := os.Unsetenv("github_token"); err != nil {
-		suite.T().Logf("Warning: failed to unset github_token: %v", err)
+	if err := os.Unsetenv("MAGE_X_GITHUB_TOKEN"); err != nil {
+		suite.T().Logf("Warning: failed to unset MAGE_X_GITHUB_TOKEN: %v", err)
 	}
 	if err := os.Unsetenv("USER"); err != nil {
 		suite.T().Logf("Warning: failed to unset USER: %v", err)
@@ -60,7 +60,7 @@ func (suite *ReleaseSimpleTestSuite) SetupTest() {
 // TearDownTest cleans up after each test
 func (suite *ReleaseSimpleTestSuite) TearDownTest() {
 	// Clean environment variables
-	envVars := []string{"GITHUB_TOKEN", "github_token", "USER"}
+	envVars := []string{"GITHUB_TOKEN", "MAGE_X_GITHUB_TOKEN", "USER"}
 	for _, env := range envVars {
 		if err := os.Unsetenv(env); err != nil {
 			suite.T().Logf("Warning: failed to unset environment variable %s: %v", env, err)
@@ -327,9 +327,9 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseCleanSuccess() {
 
 // TestReleaseTokenHandling tests token environment variable handling
 func (suite *ReleaseSimpleTestSuite) TestReleaseTokenHandling() {
-	suite.Run("uses github_token when GITHUB_TOKEN not set", func() {
-		if err := os.Setenv("github_token", "test-token"); err != nil {
-			suite.T().Fatalf("Failed to set github_token: %v", err)
+	suite.Run("uses MAGE_X_GITHUB_TOKEN when GITHUB_TOKEN not set", func() {
+		if err := os.Setenv("MAGE_X_GITHUB_TOKEN", "test-token"); err != nil {
+			suite.T().Fatalf("Failed to set MAGE_X_GITHUB_TOKEN: %v", err)
 		}
 
 		// Mock goreleaser commands
@@ -349,16 +349,16 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseTokenHandling() {
 		err := suite.release.Default()
 		suite.Require().NoError(err)
 
-		// Verify GITHUB_TOKEN was set from github_token
+		// Verify GITHUB_TOKEN was set from MAGE_X_GITHUB_TOKEN
 		suite.Equal("test-token", os.Getenv("GITHUB_TOKEN"))
 	})
 
-	suite.Run("prefers github_token over GITHUB_TOKEN", func() {
+	suite.Run("prefers MAGE_X_GITHUB_TOKEN over GITHUB_TOKEN", func() {
 		if err := os.Setenv("GITHUB_TOKEN", "old-token"); err != nil {
 			suite.T().Fatalf("Failed to set GITHUB_TOKEN: %v", err)
 		}
-		if err := os.Setenv("github_token", "new-token"); err != nil {
-			suite.T().Fatalf("Failed to set github_token: %v", err)
+		if err := os.Setenv("MAGE_X_GITHUB_TOKEN", "new-token"); err != nil {
+			suite.T().Fatalf("Failed to set MAGE_X_GITHUB_TOKEN: %v", err)
 		}
 
 		// Mock goreleaser commands
@@ -378,7 +378,7 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseTokenHandling() {
 		err := suite.release.Default()
 		suite.Require().NoError(err)
 
-		// Verify GITHUB_TOKEN was updated to github_token value
+		// Verify GITHUB_TOKEN was updated to MAGE_X_GITHUB_TOKEN value
 		suite.Equal("new-token", os.Getenv("GITHUB_TOKEN"))
 	})
 }
