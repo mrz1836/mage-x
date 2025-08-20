@@ -313,8 +313,10 @@ func TestTestNamespaceCommands(t *testing.T) {
 		{"coverrace", false},
 		{"coverreport", false},
 		{"coverhtml", false},
-		{"fuzz", false},
-		{"bench", true}, // Has ArgsFunc
+		{"fuzz", true},       // Now has ArgsFunc for time parameter
+		{"fuzzshort", true},  // Has ArgsFunc for time parameter
+		{"bench", true},      // Has ArgsFunc
+		{"benchshort", true}, // Has ArgsFunc for time parameter
 		{"integration", false},
 		{"ci", false},
 		{"parallel", false},
@@ -1024,6 +1026,93 @@ func TestThreadSafety(t *testing.T) {
 			}
 
 			assert.Empty(t, errorList, "Thread safety test should not produce errors: %v", errorList)
+		})
+	}
+}
+
+// TestFuzzCommandsAcceptArguments tests that fuzz commands properly accept time arguments
+func TestFuzzCommandsAcceptArguments(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		commandName string
+		args        []string
+		description string
+	}{
+		{
+			commandName: "test:fuzz",
+			args:        []string{"time=5s"},
+			description: "test:fuzz should accept time parameter",
+		},
+		{
+			commandName: "test:fuzzshort",
+			args:        []string{"time=3s"},
+			description: "test:fuzzshort should accept time parameter",
+		},
+		{
+			commandName: "test:benchshort",
+			args:        []string{"time=1s"},
+			description: "test:benchshort should accept time parameter",
+		},
+	}
+
+	mockReg := NewMockRegistry()
+	registerTestCommands(mockReg.Registry)
+	commands := mockReg.GetRegisteredCommands()
+
+	for _, tc := range testCases {
+		t.Run(tc.commandName, func(t *testing.T) {
+			cmd, exists := commands[tc.commandName]
+			require.True(t, exists, "Command %s should be registered", tc.commandName)
+
+			// Verify command has ArgsFunc (can accept arguments)
+			assert.NotNil(t, cmd.FuncWithArgs, "%s should have FuncWithArgs to accept arguments", tc.commandName)
+
+			// Verify command has proper usage examples
+			assert.NotEmpty(t, cmd.Usage, "%s should have usage information", tc.commandName)
+			assert.NotEmpty(t, cmd.Examples, "%s should have usage examples", tc.commandName)
+
+			// Verify the usage contains time parameter information
+			assert.Contains(t, cmd.Usage, "time", "%s usage should mention time parameter", tc.commandName)
+
+			// Verify examples show time usage
+			foundTimeExample := false
+			for _, example := range cmd.Examples {
+				if strings.Contains(example, "time=") {
+					foundTimeExample = true
+					break
+				}
+			}
+			assert.True(t, foundTimeExample, "%s should have example showing time parameter usage", tc.commandName)
+		})
+	}
+}
+
+// TestFuzzCommandArguments tests the specific argument handling for fuzz commands
+func TestFuzzCommandArguments(t *testing.T) {
+	t.Parallel()
+
+	// Test that the commands exist and can be called with time argument
+	mockReg := NewMockRegistry()
+	registerTestCommands(mockReg.Registry)
+
+	fuzzCommands := []string{"test:fuzz", "test:fuzzshort", "test:benchshort"}
+
+	for _, cmdName := range fuzzCommands {
+		t.Run(fmt.Sprintf("ArgumentHandling_%s", cmdName), func(t *testing.T) {
+			cmd, exists := mockReg.Get(cmdName)
+			require.True(t, exists, "Command %s should exist", cmdName)
+
+			// Verify the command is registered with ArgsFunc
+			assert.NotNil(t, cmd.FuncWithArgs, "Command %s should have FuncWithArgs", cmdName)
+
+			// Test that it has proper category
+			assert.Equal(t, "Test", cmd.Category, "Command %s should be in Test category", cmdName)
+
+			// Test command builder pattern completion
+			assert.NotEmpty(t, cmd.Description, "Command %s should have description", cmdName)
+			assert.NotEmpty(t, cmd.Usage, "Command %s should have usage", cmdName)
+			assert.NotEmpty(t, cmd.Examples, "Command %s should have examples", cmdName)
 		})
 	}
 }

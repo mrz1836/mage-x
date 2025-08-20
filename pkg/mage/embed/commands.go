@@ -271,9 +271,21 @@ func registerTestCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("test", "fuzz").
-			WithDescription("Run fuzz tests").
-			WithFunc(func() error { return t.Fuzz() }).
+			WithDescription("Run fuzz tests with optional time parameter").
+			WithArgsFunc(func(args ...string) error { return t.Fuzz(args...) }).
 			WithCategory("Test").
+			WithUsage("magex test:fuzz [time=<duration>]").
+			WithExamples("magex test:fuzz", "magex test:fuzz time=5s").
+			MustBuild(),
+	)
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("test", "fuzzshort").
+			WithDescription("Run short fuzz tests with optional time parameter").
+			WithArgsFunc(func(args ...string) error { return t.FuzzShort(args...) }).
+			WithCategory("Test").
+			WithUsage("magex test:fuzzshort [time=<duration>]").
+			WithExamples("magex test:fuzzshort", "magex test:fuzzshort time=3s").
 			MustBuild(),
 	)
 
@@ -283,6 +295,16 @@ func registerTestCommands(reg *registry.Registry) {
 			WithArgsFunc(func(args ...string) error { return t.Bench(args...) }).
 			WithCategory("Test").
 			WithAliases("benchmark").
+			MustBuild(),
+	)
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("test", "benchshort").
+			WithDescription("Run short benchmarks with optional time parameter").
+			WithArgsFunc(func(args ...string) error { return t.BenchShort(args...) }).
+			WithCategory("Test").
+			WithUsage("magex test:benchshort [time=<duration>]").
+			WithExamples("magex test:benchshort", "magex test:benchshort time=1s").
 			MustBuild(),
 	)
 
