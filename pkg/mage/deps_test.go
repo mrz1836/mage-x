@@ -198,15 +198,15 @@ func (ts *DepsTestSuite) TestDeps_Update_TidyError() {
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajor() {
 	// Mock the list of direct dependencies command
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/pkg/errors\ngithub.com/stretchr/testify", nil)
-	
+
 	// Mock current version queries
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.1", nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.4", nil)
-	
+
 	// Mock versions command to return newer major versions
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.0 v0.8.1 v0.9.0 v0.9.1 v2.0.0", nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.0 v1.8.4 v1.9.0", nil)
-	
+
 	// Mock update commands - should update to latest including major version
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/pkg/errors@v2.0.0"}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
@@ -229,15 +229,15 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajor() {
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_NoMajor() {
 	// Mock the list of direct dependencies command
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/pkg/errors\ngithub.com/stretchr/testify", nil)
-	
+
 	// Mock current version queries
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.1", nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.4", nil)
-	
+
 	// Mock versions command to return newer major versions
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.0 v0.8.1 v0.9.0 v0.9.1 v2.0.0", nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.0 v1.8.4 v1.9.0", nil)
-	
+
 	// Mock update commands - should skip major version update, only update minor
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
@@ -259,13 +259,13 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_NoMajor() {
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajorFalse() {
 	// Mock the list of direct dependencies command
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/pkg/errors", nil)
-	
+
 	// Mock current version queries
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.1", nil)
-	
+
 	// Mock versions command to return newer major versions
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.0 v0.8.1 v0.9.0 v0.9.1 v2.0.0", nil)
-	
+
 	// Mock tidy command (no updates should happen)
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
 
