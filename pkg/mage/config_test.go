@@ -181,7 +181,7 @@ func (ts *ConfigTestSuite) TestEnvironmentOverrides() {
 		ts.Require().Equal("custom-binary", config.Project.Binary)
 
 		// Test CUSTOM_BINARY_NAME override (should take precedence)
-		ts.Require().NoError(os.Setenv("CUSTOM_BINARY_NAME", "another-binary"))
+		ts.Require().NoError(os.Setenv("MAGE_X_CUSTOM_BINARY_NAME", "another-binary"))
 		applyEnvOverrides(config)
 		ts.Require().Equal("another-binary", config.Project.Binary)
 	})

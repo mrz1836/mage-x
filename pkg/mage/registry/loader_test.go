@@ -378,12 +378,12 @@ func TestLoader_Verbose(t *testing.T) {
 	}
 
 	// Test verbose mode
-	if err := os.Setenv("MAGEX_VERBOSE", "true"); err != nil {
+	if err := os.Setenv("MAGE_X_VERBOSE", "true"); err != nil {
 		// Test environment variable setting is non-critical
 		_ = err
 	}
 	defer func() {
-		if err := os.Unsetenv("MAGEX_VERBOSE"); err != nil {
+		if err := os.Unsetenv("MAGE_X_VERBOSE"); err != nil {
 			// Test cleanup error is non-critical
 			_ = err
 		}
@@ -391,7 +391,7 @@ func TestLoader_Verbose(t *testing.T) {
 
 	loader = NewLoader(NewRegistry())
 	if !loader.verbose {
-		t.Error("Loader should be verbose when MAGEX_VERBOSE=true")
+		t.Error("Loader should be verbose when MAGE_X_VERBOSE=true")
 	}
 }
 

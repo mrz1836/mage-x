@@ -351,10 +351,10 @@ func (ts *TestCommandBuilderTestSuite) TestBuildBaseTestArgsWithTestVerbose() {
 
 func (ts *TestCommandBuilderTestSuite) TestBuildBaseTestArgsWithTestFlags() {
 	// Test with TEST_FLAGS environment variable
-	err := os.Setenv("TEST_FLAGS", "-count=1 -failfast")
+	err := os.Setenv("MAGE_X_TEST_FLAGS", "-count=1 -failfast")
 	ts.Require().NoError(err)
 	defer func() {
-		err := os.Unsetenv("TEST_FLAGS")
+		err := os.Unsetenv("MAGE_X_TEST_FLAGS")
 		ts.Require().NoError(err)
 	}()
 
