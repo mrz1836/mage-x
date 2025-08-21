@@ -32,19 +32,38 @@ func (Bench) Default() error {
 func (Bench) DefaultWithArgs(argsList ...string) error {
 	utils.Header("Running Benchmarks")
 
-	// Parse command-line parameters
-	params := utils.ParseParams(argsList)
+	// Parse command-line parameters from os.Args
+	// Find arguments after the target name
+	var targetArgs []string
+	for i, arg := range os.Args {
+		if strings.Contains(arg, "bench:default") || strings.Contains(arg, "bench") {
+			targetArgs = os.Args[i+1:]
+			break
+		}
+	}
+	params := utils.ParseParams(targetArgs)
 
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
 	// Add bench time from parameter or default
-	benchTime := utils.GetParam(params, "time", "10s")
+	benchTime := utils.GetParam(params, "time", "3s")
 	args = append(args, "-benchtime", benchTime)
+
+	// Add verbose flag if requested
+	if utils.IsParamTrue(params, "verbose") {
+		args = append(args, "-v")
+	}
 
 	// Get count from parameter
 	count := utils.GetParam(params, "count", "")
 	if count != "" {
 		args = append(args, "-count", count)
+	}
+
+	// Add skip pattern if specified
+	skip := utils.GetParam(params, "skip", "")
+	if skip != "" {
+		args = append(args, "-skip", skip)
 	}
 
 	// Add CPU profile if requested
@@ -59,7 +78,12 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 		utils.Info("Memory profile will be saved to: %s", memProfile)
 	}
 
-	args = append(args, "./...")
+	// Add package filter from parameter or default to all packages
+	pkg := utils.GetParam(params, "pkg", "./...")
+	args = append(args, pkg)
+
+	// Show the command being run for transparency
+	utils.Info("Running: go %s", strings.Join(args, " "))
 
 	start := time.Now()
 	if err := GetRunner().RunCmd("go", args...); err != nil {
@@ -134,8 +158,16 @@ func (Bench) Save() error {
 func (Bench) SaveWithArgs(argsList ...string) error {
 	utils.Header("Saving Benchmark Results")
 
-	// Parse command-line parameters
-	params := utils.ParseParams(argsList)
+	// Parse command-line parameters from os.Args
+	// Find arguments after the target name
+	var targetArgs []string
+	for i, arg := range os.Args {
+		if strings.Contains(arg, "bench:save") {
+			targetArgs = os.Args[i+1:]
+			break
+		}
+	}
+	params := utils.ParseParams(targetArgs)
 
 	// Determine output file
 	output := utils.GetParam(params, "output", "")
@@ -160,8 +192,13 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 	// Run benchmarks and save output
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
-	benchTime := utils.GetParam(params, "time", "10s")
+	benchTime := utils.GetParam(params, "time", "3s")
 	args = append(args, "-benchtime", benchTime)
+
+	// Add verbose flag if requested
+	if utils.IsParamTrue(params, "verbose") {
+		args = append(args, "-v")
+	}
 
 	// Get count from parameter
 	count := utils.GetParam(params, "count", "")
@@ -169,7 +206,15 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 		args = append(args, "-count", count)
 	}
 
-	args = append(args, "./...")
+	// Add skip pattern if specified
+	skip := utils.GetParam(params, "skip", "")
+	if skip != "" {
+		args = append(args, "-skip", skip)
+	}
+
+	// Add package filter from parameter or default to all packages
+	pkg := utils.GetParam(params, "pkg", "./...")
+	args = append(args, pkg)
 
 	utils.Info("Running: go %s", strings.Join(args, " "))
 
@@ -308,8 +353,16 @@ func (Bench) Trace() error {
 func (Bench) TraceWithArgs(argsList ...string) error {
 	utils.Header("Running Benchmarks with Execution Trace")
 
-	// Parse command-line parameters
-	params := utils.ParseParams(argsList)
+	// Parse command-line parameters from os.Args
+	// Find arguments after the target name
+	var targetArgs []string
+	for i, arg := range os.Args {
+		if strings.Contains(arg, "bench:trace") {
+			targetArgs = os.Args[i+1:]
+			break
+		}
+	}
+	params := utils.ParseParams(targetArgs)
 
 	trace := utils.GetParam(params, "trace", "trace.out")
 	if trace == "" {
@@ -318,8 +371,23 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", trace}
 
-	benchTime := utils.GetParam(params, "time", "10s")
-	args = append(args, "-benchtime", benchTime, "./...")
+	benchTime := utils.GetParam(params, "time", "3s")
+	args = append(args, "-benchtime", benchTime)
+
+	// Add verbose flag if requested
+	if utils.IsParamTrue(params, "verbose") {
+		args = append(args, "-v")
+	}
+
+	// Add skip pattern if specified
+	skip := utils.GetParam(params, "skip", "")
+	if skip != "" {
+		args = append(args, "-skip", skip)
+	}
+
+	// Add package filter from parameter or default to all packages
+	pkg := utils.GetParam(params, "pkg", "./...")
+	args = append(args, pkg)
 
 	utils.Info("Trace will be saved to: %s", trace)
 
