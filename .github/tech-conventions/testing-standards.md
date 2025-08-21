@@ -153,7 +153,7 @@ func FuzzParseConfig(f *testing.F) {
 
 Generate coverage locally:
 ```bash
-make coverage
+magex test:cover
 ```
 
 View coverage in browser:

@@ -26,9 +26,7 @@ If you discover a vulnerability—no matter how small—follow our responsible d
 
 1. **govulncheck** - Go vulnerability database scanning
    ```bash
-   govulncheck ./...
-   # or
-   make govulncheck
+   magex deps:audit
    ```
 
 2. **gitleaks** - Secret detection in code

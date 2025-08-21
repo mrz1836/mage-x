@@ -317,8 +317,8 @@ govulncheck ./...
 go get -u ./...  # Update to latest minor/patch versions
 go mod tidy
 
-# ✅ Use Makefile for common tasks
-make update # updates dependencies and runs go mod tidy
+# ✅ Use MAGE-X for common tasks
+magex deps:update # updates dependencies and runs go mod tidy
 
 # 🚫 Avoid using `replace` unless absolutely necessary
 # go.mod
@@ -332,7 +332,7 @@ replace github.com/some/dependency => github.com/some/dependency v1.2.3
 
 Write code that performs well by default, and measure when optimization is needed.
 
-* **Use `make bench`** to establish performance baselines
+* **Use `magex bench`** to establish performance baselines
 * **Profile with `go tool pprof`** when investigating performance issues
 * **Avoid premature optimization** — write clear code first, optimize bottlenecks later
 * **Use benchmarks** to validate that optimizations actually improve performance
@@ -373,11 +373,8 @@ func processUsers(users []User) []ProcessedUser {
 Code must be cleanly formatted and pass all linters before being committed.
 
 ```bash
-go fmt ./...
-make goimports
-make fumpt
-make lint
-go vet ./...
+magex format:fix
+magex lint
 ```
 
 > Refer to `.golangci.json` for the full set of enabled linters and formatters.

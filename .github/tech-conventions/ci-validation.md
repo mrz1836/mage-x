@@ -8,10 +8,10 @@
 
 CI automatically runs on every PR to verify:
 
-* Formatting (`go fmt` and `goimports` and `gofumpt`)
-* Linting (`make lint`)
-* Tests (`make test`)
-* Fuzz tests (if applicable) (`make run-fuzz-tests`)
+* Formatting (use `magex format:fix` which runs: `go fmt` and `goimports` and `gofumpt`)
+* Linting (`magex lint`)
+* Tests (`magex test`)
+* Fuzz tests (if applicable) (`magex test:fuzz`)
 * This codebase uses GitHub Actions; test workflows reside in `.github/workflows/fortress.yml` and `.github/workflows/fortress-test-suite.yml`.
 * Pin each external GitHub Action to a **full commit SHA** (e.g., `actions/checkout@2f3b4a2e0e471e13e2ea2bc2a350e888c9cf9b75`) as recommended by GitHub's [security hardening guidance](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-pinned-actions). Dependabot will track and update these pinned versions automatically.
 
@@ -86,14 +86,11 @@ All PRs must pass these checks before merge:
 Run CI checks locally before pushing:
 
 ```bash
-# Run all CI checks
-make ci-local
-
 # Individual checks
-make lint          # Linting only
-make test         # Tests only
-make test-race    # Race detection
-make govulncheck  # Security scan
+magex lint         # Linting only
+magex test         # Tests only
+magex test:race    # Race detection
+magex deps:audit   # Security scan
 ```
 
 <br><br>
@@ -124,7 +121,7 @@ make govulncheck  # Security scan
 ### Security Workflow
 ```bash
 # Local security check
-make security-scan
+magex deps:audit
 
 # Components checked:
 # - Known CVEs in dependencies
@@ -158,8 +155,7 @@ make security-scan
 1. **Linting Failures**
    ```bash
    # Fix formatting
-   make fumpt
-   goimports -w .
+   magex format:fix
 
    # Check specific linter
    golangci-lint run --enable-only <linter-name>
@@ -177,7 +173,7 @@ make security-scan
 3. **Coverage Drops**
    ```bash
    # Generate coverage report
-   make coverage
+   magex test:cover
 
    # Find uncovered lines
    go tool cover -html=coverage.out
@@ -186,11 +182,10 @@ make security-scan
 4. **Security Vulnerabilities**
    ```bash
    # Check vulnerabilities
-   govulncheck ./...
+   magex deps:audit
 
    # Update dependencies
-   go get -u ./...
-   go mod tidy
+   magex deps:update
    ```
 
 <br><br>
