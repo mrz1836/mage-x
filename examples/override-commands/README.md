@@ -2,6 +2,52 @@
 
 This example demonstrates how to override built-in MAGE-X commands with custom implementations while maintaining access to the original functionality.
 
+## ⚠️ Important: How Overrides Work with magex
+
+**Key Understanding**: When using `magex`, command overrides work differently than with traditional `mage`:
+
+- **Built-in commands** (`magex build`, `magex test`, etc.) **always use the built-in MAGE-X implementation** for consistency
+- **Custom commands** in your magefile.go are discovered and executed via delegation to `mage`
+- **Override functions** like `LintDefault()` only work when running `mage lint` directly, not `magex lint`
+
+This design ensures **consistency across projects** - `magex build` behaves the same everywhere, while custom commands provide project-specific functionality.
+
+## 🔄 Two Approaches for Customization
+
+### Option 1: Custom Commands (Recommended)
+**Best for most use cases** - Create new commands alongside built-ins:
+
+```go
+// Custom deployment command
+func Deploy() error {
+    // Call built-in commands via magex
+    if err := exec.Command("magex", "test:ci").Run(); err != nil {
+        return err
+    }
+    if err := exec.Command("magex", "build:all").Run(); err != nil {
+        return err
+    }
+    // Your custom deployment logic
+    return deployToProduction()
+}
+```
+
+**Usage**: `magex deploy` (custom) + `magex build` (consistent built-in)
+
+### Option 2: Override Functions (Advanced)
+**For advanced users who need to modify built-in behavior**:
+
+```go
+// Override built-in lint behavior (only works with 'mage lint')
+func LintDefault() error {
+    // Your custom pre-processing
+    var l mage.Lint
+    return l.Default() // Call original
+}
+```
+
+**Usage**: `mage lint` (custom override) vs `magex lint` (built-in)
+
 ## 🎯 When to Use Command Overrides
 
 Override commands when you need to:
@@ -114,16 +160,27 @@ magex customlintstrict
    cd my-project/
    ```
 
-2. **Try the overridden commands**:
+2. **Try the overridden commands with mage** (not magex):
    ```bash
-   # See custom lint in action
-   magex lint
+   # Install mage first
+   go install github.com/magefile/mage@latest
+
+   # See custom lint in action (override function)
+   mage lint
 
    # See custom build with environment variables
-   MAGE_X_CUSTOM_VERSION=v2.0.0 MAGE_X_CUSTOM_BUILD_TAGS=debug magex build
+   MAGE_X_CUSTOM_VERSION=v2.0.0 MAGE_X_CUSTOM_BUILD_TAGS=debug mage build
 
    # Try custom unit tests
-   magex test:unit
+   mage test:unit
+   ```
+
+3. **Compare with magex behavior** (built-in commands):
+   ```bash
+   # These use built-in MAGE-X implementations (consistent across projects)
+   magex lint        # Built-in lint (not overridden)
+   magex build       # Built-in build (not overridden)
+   magex test:unit   # Built-in test:unit (not overridden)
    ```
 
 3. **Compare with originals**:

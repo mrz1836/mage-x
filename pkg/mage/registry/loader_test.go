@@ -37,44 +37,6 @@ func TestNewLoader_NilRegistry(t *testing.T) {
 	}
 }
 
-func TestLoader_LoadUserMagefile_NotFound(t *testing.T) {
-	r := NewRegistry()
-	loader := NewLoader(r)
-
-	// Test with a directory that doesn't have magefile.go
-	tmpDir := t.TempDir()
-	err := loader.LoadUserMagefile(tmpDir)
-	if err != nil {
-		t.Errorf("LoadUserMagefile() should not error when no magefile found: %v", err)
-	}
-}
-
-func TestLoader_LoadUserMagefile_InvalidGo(t *testing.T) {
-	r := NewRegistry()
-	loader := NewLoader(r)
-
-	// Create a directory with invalid Go code
-	tmpDir := t.TempDir()
-	magefilePath := filepath.Join(tmpDir, "magefile.go")
-
-	invalidGo := `package main
-	this is not valid go syntax
-	`
-
-	err := os.WriteFile(magefilePath, []byte(invalidGo), 0o600)
-	if err != nil {
-		t.Fatalf("Failed to create test magefile: %v", err)
-	}
-
-	err = loader.LoadUserMagefile(tmpDir)
-	if err == nil {
-		t.Error("LoadUserMagefile() should error with invalid Go syntax")
-	}
-	if !strings.Contains(err.Error(), "failed to parse magefile") {
-		t.Errorf("Expected parse error, got: %v", err)
-	}
-}
-
 func TestLoader_parseMagefile(t *testing.T) {
 	loader := NewLoader(NewRegistry())
 
@@ -144,13 +106,13 @@ func (Build) Windows() error {
 			}
 		case cmd.Method == "Linux" && cmd.IsNamespace:
 			foundLinux = true
-			if cmd.Namespace != "Build" {
-				t.Errorf("Linux namespace = %q, expected 'Build'", cmd.Namespace)
+			if cmd.Namespace != buildCmdName {
+				t.Errorf("Linux namespace = %q, expected '%s'", cmd.Namespace, buildCmdName)
 			}
 		case cmd.Method == "Windows" && cmd.IsNamespace:
 			foundWindows = true
-			if cmd.Namespace != "Build" {
-				t.Errorf("Windows namespace = %q, expected 'Build'", cmd.Namespace)
+			if cmd.Namespace != buildCmdName {
+				t.Errorf("Windows namespace = %q, expected '%s'", cmd.Namespace, buildCmdName)
 			}
 		case cmd.Name == "helper":
 			t.Error("Unexported function 'helper' should not be included")
@@ -354,22 +316,6 @@ func TestGetReceiverType_EdgeCases(t *testing.T) {
 	}
 }
 
-func TestLoader_LoadFromReader(t *testing.T) {
-	loader := NewLoader(NewRegistry())
-
-	// Test with nil reader
-	err := loader.LoadFromReader(nil)
-	if err != nil {
-		t.Errorf("LoadFromReader(nil) should not error: %v", err)
-	}
-
-	// Test with empty reader
-	err = loader.LoadFromReader(strings.NewReader(""))
-	if err != nil {
-		t.Errorf("LoadFromReader(empty) should not error: %v", err)
-	}
-}
-
 func TestLoader_Verbose(t *testing.T) {
 	// Test default (non-verbose)
 	loader := NewLoader(NewRegistry())
@@ -480,16 +426,15 @@ func Build() error {
 		t.Error("Expected at least one command from parsing")
 	}
 
-	// The actual LoadUserMagefile would fail at compilation step
-	// but that's expected behavior when magefile has invalid imports
-	err = loader.LoadUserMagefile(tmpDir)
-	if err == nil {
-		t.Log("LoadUserMagefile succeeded despite import issues - this is OK if Go toolchain handled it")
-	} else {
-		if !strings.Contains(err.Error(), "failed to compile") &&
-			!strings.Contains(err.Error(), "failed to load") {
-			t.Errorf("Expected compilation or loading error, got: %v", err)
-		}
+	// Test that DiscoverUserCommands can parse the file structure even with invalid imports
+	// (since we only parse AST, import validity doesn't matter)
+	commands, err = loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands should succeed even with import issues: %v", err)
+	}
+
+	if len(commands) == 0 {
+		t.Error("Expected at least one command to be discovered despite import issues")
 	}
 }
 
@@ -555,4 +500,282 @@ func Test() error {
 	// Go toolchain and plugin compilation which may not be available
 	// in all test environments. The parsing tests above cover the core
 	// functionality.
+}
+
+func TestLoader_DiscoverUserCommands_NotFound(t *testing.T) {
+	r := NewRegistry()
+	loader := NewLoader(r)
+
+	// Test with a directory that doesn't have magefile.go
+	tmpDir := t.TempDir()
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Errorf("DiscoverUserCommands() should not error when no magefile found: %v", err)
+	}
+	if len(commands) > 0 {
+		t.Errorf("DiscoverUserCommands() should return empty slice when no magefile found, got %d commands", len(commands))
+	}
+}
+
+func TestLoader_DiscoverUserCommands_InvalidGo(t *testing.T) {
+	r := NewRegistry()
+	loader := NewLoader(r)
+
+	// Create a directory with invalid Go code
+	tmpDir := t.TempDir()
+	magefilePath := filepath.Join(tmpDir, "magefile.go")
+
+	invalidGo := `package main
+	this is not valid go syntax
+	`
+
+	err := os.WriteFile(magefilePath, []byte(invalidGo), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test magefile: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err == nil {
+		t.Error("DiscoverUserCommands() should error with invalid Go syntax")
+	}
+	if !strings.Contains(err.Error(), "failed to parse magefile") {
+		t.Errorf("Expected parse error, got: %v", err)
+	}
+	if commands != nil {
+		t.Error("DiscoverUserCommands() should return nil commands on parse error")
+	}
+}
+
+func TestLoader_DiscoverUserCommands_Success(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary magefile
+	tmpDir := t.TempDir()
+	magefilePath := filepath.Join(tmpDir, "magefile.go")
+
+	magefileContent := `//go:build mage
+package main
+
+// Build builds the project
+func Build() error {
+	return nil
+}
+
+// Test runs the tests
+func Test() error {
+	return nil
+}
+`
+
+	err := os.WriteFile(magefilePath, []byte(magefileContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test magefile: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands() failed: %v", err)
+	}
+
+	if len(commands) != 2 {
+		t.Errorf("Expected 2 commands, got %d", len(commands))
+	}
+
+	// Check for specific commands
+	var foundBuild, foundTest bool
+	for _, cmd := range commands {
+		switch cmd.Name {
+		case "Build":
+			foundBuild = true
+			if cmd.IsNamespace {
+				t.Error("Build should not be a namespace command")
+			}
+			if cmd.Description != "Build builds the project" {
+				t.Errorf("Build description = %q, expected 'Build builds the project'", cmd.Description)
+			}
+		case "Test":
+			foundTest = true
+			if cmd.IsNamespace {
+				t.Error("Test should not be a namespace command")
+			}
+			if cmd.Description != "Test runs the tests" {
+				t.Errorf("Test description = %q, expected 'Test runs the tests'", cmd.Description)
+			}
+		}
+	}
+
+	if !foundBuild {
+		t.Error("Build command not found")
+	}
+	if !foundTest {
+		t.Error("Test command not found")
+	}
+}
+
+func TestLoader_DiscoverUserCommands_Namespaces(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary magefile with namespace methods
+	tmpDir := t.TempDir()
+	magefilePath := filepath.Join(tmpDir, "magefile.go")
+
+	magefileContent := `//go:build mage
+package main
+
+// Build namespace for advanced builds
+type Build struct{}
+
+// Linux builds for Linux
+func (Build) Linux() error {
+	return nil
+}
+
+// Windows builds for Windows
+func (Build) Windows() error {
+	return nil
+}
+
+// Named receiver test
+func (b Build) Darwin() error {
+	return nil
+}
+
+// Pointer receiver test
+func (b *Build) FreeBSD() error {
+	return nil
+}
+`
+
+	err := os.WriteFile(magefilePath, []byte(magefileContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test magefile: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands() failed: %v", err)
+	}
+
+	// Should find 5 commands: Build type + 4 methods
+	if len(commands) != 5 {
+		t.Errorf("Expected 5 commands, got %d", len(commands))
+	}
+
+	// Check namespace methods
+	var foundLinux, foundWindows, foundDarwin, foundFreeBSD bool
+	for _, cmd := range commands {
+		if cmd.IsNamespace && cmd.Namespace == buildCmdName {
+			switch cmd.Method {
+			case "Linux":
+				foundLinux = true
+			case "Windows":
+				foundWindows = true
+			case "Darwin":
+				foundDarwin = true
+			case "FreeBSD":
+				foundFreeBSD = true
+			}
+		}
+	}
+
+	if !foundLinux {
+		t.Error("Linux method not found")
+	}
+	if !foundWindows {
+		t.Error("Windows method not found")
+	}
+	if !foundDarwin {
+		t.Error("Darwin method not found")
+	}
+	if !foundFreeBSD {
+		t.Error("FreeBSD method not found")
+	}
+}
+
+func TestLoader_DiscoverUserCommands_IgnoresUnexported(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary magefile with unexported functions
+	tmpDir := t.TempDir()
+	magefilePath := filepath.Join(tmpDir, "magefile.go")
+
+	magefileContent := `//go:build mage
+package main
+
+import "github.com/magefile/mage/mg"
+
+// Build builds the project (exported)
+func Build() error {
+	return nil
+}
+
+// helper is an unexported function (should be ignored)
+func helper() error {
+	return nil
+}
+
+// internalBuild is unexported (should be ignored)
+func internalBuild() error {
+	return nil
+}
+
+// Namespace type alias (should be ignored)
+type NS = mg.Namespace
+
+// Custom namespace (should be included)
+type Deploy struct{}
+
+// Deploy method (should be included)
+func (Deploy) Production() error {
+	return nil
+}
+`
+
+	err := os.WriteFile(magefilePath, []byte(magefileContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test magefile: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands() failed: %v", err)
+	}
+
+	// Should find: Build function + Deploy type + Production method = 3 commands
+	if len(commands) != 3 {
+		t.Errorf("Expected 3 commands, got %d", len(commands))
+		for _, cmd := range commands {
+			t.Logf("Found command: %s (namespace: %v)", cmd.Name, cmd.IsNamespace)
+		}
+	}
+
+	// Verify unexported functions are not included
+	for _, cmd := range commands {
+		if cmd.Name == "helper" || cmd.Name == "internalBuild" || cmd.Name == "NS" {
+			t.Errorf("Unexported function/type %s should not be included", cmd.Name)
+		}
+	}
+
+	// Verify exported functions are included
+	var foundBuild, foundDeploy, foundProduction bool
+	for _, cmd := range commands {
+		switch {
+		case cmd.Name == "Build" && !cmd.IsNamespace:
+			foundBuild = true
+		case cmd.Name == "Deploy" && cmd.IsNamespace:
+			foundDeploy = true
+		case cmd.Method == "Production" && cmd.IsNamespace:
+			foundProduction = true
+		}
+	}
+
+	if !foundBuild {
+		t.Error("Build function should be included")
+	}
+	if !foundDeploy {
+		t.Error("Deploy type should be included")
+	}
+	if !foundProduction {
+		t.Error("Production method should be included")
+	}
 }

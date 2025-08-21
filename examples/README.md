@@ -48,7 +48,7 @@ See [zero-config/](zero-config/) for the complete example.
 
 ### Adding Custom Commands
 
-Want project-specific commands alongside the 343+ built-in ones?
+Want project-specific commands alongside the 241+ built-in ones?
 
 ```go
 //go:build mage
@@ -107,7 +107,7 @@ See [with-config/](with-config/) for the complete example.
 ### 1. Zero Configuration (`zero-config/`)
 **Best for:** Getting started immediately
 - No magefile.go required
-- All 343+ commands available instantly
+- All 241+ commands available instantly
 - Perfect for standard Go projects
 
 ### 2. Basic Usage (`basic/`)
@@ -131,11 +131,11 @@ See [with-config/](with-config/) for the complete example.
 - Progressive enhancement approach
 
 ### 5. Override Commands (`override-commands/`)
-**Best for:** Customizing built-in command behavior
-- Override specific built-in commands (like `magex lint`)
-- Add custom pre/post processing
-- Maintain access to original functionality
-- Integrate with organization-specific workflows
+**Best for:** Advanced users needing to modify built-in behavior
+- Override specific built-in commands (works with `mage lint`, not `magex lint`)
+- Add custom pre/post processing when using traditional mage
+- Understand the difference between `magex` (consistent) and `mage` (customizable)
+- Note: Most users should prefer custom commands over overrides
 
 ## Running Examples
 
@@ -165,14 +165,20 @@ With magex:
 # Just run commands directly!
 magex build
 magex test
-# All 343+ commands work instantly
+# All 241+ commands work instantly
 ```
 
 ### Progressive Enhancement
 Start with zero configuration, add custom commands only when needed:
 1. Begin with `magex` for instant access to all commands
 2. Add a `magefile.go` only when you need custom commands
-3. Custom commands work seamlessly with built-ins
+3. Custom commands work seamlessly with built-ins via delegation
+
+### Hybrid Execution Model
+MAGE-X's `magex` uses a smart hybrid approach:
+- **Built-in commands** execute directly for speed and consistency
+- **Custom commands** discovered in magefile.go delegate to `mage`
+- **Unified experience** - one command line interface for everything
 
 ### Command Discovery
 ```bash

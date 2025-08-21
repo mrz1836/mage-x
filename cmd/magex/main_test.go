@@ -303,7 +303,7 @@ func TestShowCommands_List(t *testing.T) {
 	}
 	os.Stdout = w
 
-	listCommands(reg, false)
+	listCommands(reg, NewCommandDiscovery(reg), false)
 
 	if err := w.Close(); err != nil {
 		t.Logf("Failed to close writer: %v", err)
@@ -364,7 +364,7 @@ func TestShowCommands_Namespace(t *testing.T) {
 	os.Stderr = w
 
 	// Run the function
-	listByNamespace(reg)
+	listByNamespace(reg, NewCommandDiscovery(reg))
 
 	// Close writer and restore streams
 	if err := w.Close(); err != nil {
@@ -423,7 +423,7 @@ func TestShowCommands_Search(t *testing.T) {
 	}
 	os.Stdout = w
 
-	searchCommands(reg, "build")
+	searchCommands(reg, NewCommandDiscovery(reg), "build")
 
 	if err := w.Close(); err != nil {
 		t.Logf("Failed to close writer: %v", err)
@@ -664,7 +664,7 @@ func BenchmarkShowCommands(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		listCommands(reg, false)
+		listCommands(reg, NewCommandDiscovery(reg), false)
 	}
 }
 

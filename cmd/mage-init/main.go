@@ -110,21 +110,21 @@ func main() {
 
 	// Validate options
 	if err := validateOptions(&opts); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Interactive mode
 	if opts.Interactive {
 		if err := runInteractiveMode(&opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Interactive mode failed: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "Interactive mode failed: %v\n", err)
 			os.Exit(1)
 		}
 	}
 
 	// Initialize project
 	if err := initializeProject(&opts); err != nil {
-		fmt.Fprintf(os.Stderr, "Project initialization failed: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Project initialization failed: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -789,9 +789,15 @@ func Format() error {
 // Clean removes build artifacts
 func Clean() error {
 	fmt.Println("Cleaning...")
-	sh.Rm(buildDir)
-	sh.Rm(distDir)
-	sh.Rm("coverage.out")
+	if err := sh.Rm(buildDir); err != nil {
+		fmt.Printf("Warning: failed to remove %s: %v\n", buildDir, err)
+	}
+	if err := sh.Rm(distDir); err != nil {
+		fmt.Printf("Warning: failed to remove %s: %v\n", distDir, err)
+	}
+	if err := sh.Rm("coverage.out"); err != nil {
+		fmt.Printf("Warning: failed to remove coverage.out: %v\n", err)
+	}
 	return nil
 }
 
@@ -996,6 +1002,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 )
@@ -1047,9 +1055,15 @@ func Format() error {
 // Clean removes build artifacts
 func Clean() error {
 	fmt.Println("Cleaning...")
-	sh.Rm(buildDir)
-	sh.Rm(distDir)
-	sh.Rm("coverage.out")
+	if err := sh.Rm(buildDir); err != nil {
+		fmt.Printf("Warning: failed to remove %s: %v\n", buildDir, err)
+	}
+	if err := sh.Rm(distDir); err != nil {
+		fmt.Printf("Warning: failed to remove %s: %v\n", distDir, err)
+	}
+	if err := sh.Rm("coverage.out"); err != nil {
+		fmt.Printf("Warning: failed to remove coverage.out: %v\n", err)
+	}
 	return nil
 }
 
@@ -1308,5 +1322,3 @@ help:
 	@awk 'BEGIN {FS = ":.*##"; printf "\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 `
 }
-
-// All template functions have been implemented above in previous edits

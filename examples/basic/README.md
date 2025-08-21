@@ -1,12 +1,15 @@
 # Basic MAGE-X Example
 
-This example demonstrates basic MAGE-X usage with the `magex` binary - no setup required!
+This example demonstrates basic MAGE-X usage with the `magex` binary - **ZERO SETUP REQUIRED!**
+
+## 🎯 Key Point: NO magefile.go Needed!
+
+Unlike traditional Mage which requires a magefile.go with wrapper functions, MAGE-X's `magex` binary provides all commands instantly.
 
 ## Quick Start
 
 ```bash
-# You don't need a magefile.go!
-# Just run magex commands directly:
+# NO magefile.go needed! Just run magex commands directly:
 
 magex build         # Build the project
 magex test          # Run tests
@@ -117,7 +120,7 @@ magex -h
 ## Key Benefits
 
 1. **Zero Setup** - No magefile.go needed
-2. **215+ Commands** - All available instantly
+2. **241+ Commands** - All available instantly
 3. **Consistent Interface** - Same commands across all projects
 4. **No Maintenance** - Updates automatically with MAGE-X
 
@@ -128,10 +131,16 @@ my-project/
 ├── main.go
 ├── go.mod
 ├── go.sum
-└── (no magefile.go needed!)
+└── (NO magefile.go needed - this is the magic!)
 ```
 
-Just run `magex` commands in your project directory - that's it!
+**Just run `magex` commands in your project directory - that's it!**
+
+## Why This Works
+
+- **Traditional Mage**: Requires writing 200+ lines of wrapper functions
+- **MAGE-X magex**: Zero setup, all 241+ commands work instantly
+- **True zero-boilerplate**: No configuration files, no imports, no wrappers
 
 ## Try It Now
 

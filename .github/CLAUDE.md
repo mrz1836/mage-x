@@ -132,6 +132,13 @@ package main
 
 import "github.com/mrz1836/mage-x/pkg/mage"
 
+// Custom command - works alongside all built-in magex commands
+func Deploy() error {
+    // Custom deployment logic
+    return nil
+}
+
+// Override built-in behavior (advanced usage)
 type CustomBuild struct {
     mage.BuildNamespace
     // Custom fields
@@ -165,6 +172,8 @@ Claude Code users have access to 19 specialized mage-x agents for comprehensive 
 - Add new namespace methods
 - Create examples
 - Run architecture tests
+- Use `magex` commands for built-in functionality
+- Create custom commands in magefile.go for project-specific needs
 - Coordinate with specialized mage-x agents for comprehensive workflows
 
 #### Best Practices
@@ -213,7 +222,13 @@ go build ./pkg/mage
 
 ### Run Specific Namespace
 ```bash
-# Through factory function
+# Using magex (recommended)
+magex build
+
+# Using traditional mage (for custom commands)
+mage build
+
+# Direct execution
 go run -tags mage . build
 ```
 
@@ -292,9 +307,9 @@ func (namespace Namespace) Task() error {
 
 ## Complete Command Reference
 
-### Exposed Commands (59 total)
+### Built-in Commands (241 total)
 
-The main `magefile.go` exposes 59 commands that can be called directly via `mage`:
+MAGE-X provides 241+ built-in commands available instantly through `magex`. The main `magefile.go` demonstrates 59 commonly used commands:
 
 #### Default & Aliases
 - `mage` - Default command (runs buildDefault)
@@ -393,7 +408,27 @@ The main `magefile.go` exposes 59 commands that can be called directly via `mage
 
 ### Additional Namespace Methods
 
-While the main magefile exposes 59 commands, the pkg/mage package contains 30+ namespaces with hundreds of additional methods. These can be accessed by creating custom magefiles. Some examples:
+### Custom Commands via Delegation
+
+MAGE-X uses a hybrid execution model:
+
+**Built-in Commands** (execute directly):
+- `magex build`, `magex test`, `magex lint`, etc. - Always use MAGE-X implementations for consistency
+- 241+ commands available instantly without any setup
+- Same behavior across all projects
+
+**Custom Commands** (discovered and delegated):
+- Functions in your `magefile.go` are automatically discovered via AST parsing
+- Executed by delegating to `mage` binary or `go run -tags=mage`
+- Works seamlessly alongside built-in commands
+
+**Example**: If you have a `Deploy()` function in your magefile.go:
+```bash
+magex build   # Built-in MAGE-X command (direct execution)
+magex deploy  # Your custom command (delegated to mage)
+```
+
+While the main magefile exposes 59 common commands, the pkg/mage package contains 30+ namespaces with hundreds of additional methods. These can be accessed through the built-in `magex` commands or by creating custom magefiles. Some examples:
 
 - **Audit**: Stats(), Export(), Cleanup(), Enable(), Disable(), Report()
 - **Build**: Linux(), Darwin(), Windows(), Platform(), PreBuild(), Install()

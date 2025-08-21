@@ -95,12 +95,24 @@ func Format() error {
 // Clean removes all build artifacts and reports
 func Clean() error {
 	fmt.Println("Cleaning enterprise artifacts...")
-	sh.Rm(buildDir)
-	sh.Rm(distDir)
-	sh.Rm("coverage.out")
-	sh.Rm("security-report.json")
-	sh.Rm("compliance-report.json")
-	sh.Rm("sbom.json")
+	if err := sh.Rm(buildDir); err != nil {
+		fmt.Printf("Warning: failed to remove %s: %v\\n", buildDir, err)
+	}
+	if err := sh.Rm(distDir); err != nil {
+		fmt.Printf("Warning: failed to remove %s: %v\\n", distDir, err)
+	}
+	if err := sh.Rm("coverage.out"); err != nil {
+		fmt.Printf("Warning: failed to remove coverage.out: %v\\n", err)
+	}
+	if err := sh.Rm("security-report.json"); err != nil {
+		fmt.Printf("Warning: failed to remove security-report.json: %v\\n", err)
+	}
+	if err := sh.Rm("compliance-report.json"); err != nil {
+		fmt.Printf("Warning: failed to remove compliance-report.json: %v\\n", err)
+	}
+	if err := sh.Rm("sbom.json"); err != nil {
+		fmt.Printf("Warning: failed to remove sbom.json: %v\\n", err)
+	}
 	return nil
 }
 
@@ -262,7 +274,10 @@ func Format() error {
 // Clean removes build artifacts
 func Clean() error {
 	fmt.Println("Cleaning...")
-	return sh.Rm(buildDir)
+	if err := sh.Rm(buildDir); err != nil {
+		fmt.Printf("Warning: failed to remove %s: %v\\n", buildDir, err)
+	}
+	return nil
 }
 
 // Dev runs the development server

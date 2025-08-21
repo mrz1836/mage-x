@@ -150,11 +150,12 @@ func main() {
 	reg := registry.Global()
 	embed.RegisterAll(reg)
 
-	// Load user's magefile if it exists
-	loader := registry.NewLoader(reg)
-	if err := loader.LoadUserMagefile("."); err != nil {
-		if *flags.Verbose {
-			_, err = fmt.Fprintf(os.Stderr, "Warning: failed to load user magefile: %v\n", err)
+	// Initialize command discovery for custom commands
+	discovery := NewCommandDiscovery(reg)
+	if *flags.Verbose {
+		// Discover commands early in verbose mode to show discovery info
+		if err := discovery.Discover(); err != nil && *flags.Verbose {
+			_, err = fmt.Fprintf(os.Stderr, "Warning: failed to discover custom commands: %v\n", err)
 			if err != nil {
 				return
 			}
@@ -211,22 +212,22 @@ func main() {
 	// Handle list commands
 	if *flags.List || *flags.ListLong {
 		if *flags.Namespace {
-			listByNamespace(reg)
+			listByNamespace(reg, discovery)
 		} else {
-			listCommands(reg, *flags.ListLong)
+			listCommands(reg, discovery, *flags.ListLong)
 		}
 		return
 	}
 
 	// Handle search
 	if *flags.Search != "" {
-		searchCommands(reg, *flags.Search)
+		searchCommands(reg, discovery, *flags.Search)
 		return
 	}
 
 	// Handle namespace listing
 	if *flags.Namespace {
-		listByNamespace(reg)
+		listByNamespace(reg, discovery)
 		return
 	}
 
@@ -241,7 +242,7 @@ func main() {
 		// No command specified, show available commands
 		fmt.Print(banner)
 		utils.Println("\n📋 Available Commands (run 'magex -l' for full list):")
-		showQuickList(reg)
+		showQuickList(reg, discovery)
 		utils.Println("\n💡 Run 'magex <command>' to execute a command")
 		utils.Println("   Run 'magex -h' for help")
 		return
@@ -259,14 +260,32 @@ func main() {
 		fmt.Print(banner)
 	}
 
-	// Execute the command
+	// Try to execute as built-in command first
 	if err := reg.Execute(command, commandArgs...); err != nil {
-		_, err = fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
-		if err != nil {
-			return
-		}
-		os.Exit(1)
+		executeCustomCommandOrExit(discovery, command, commandArgs, err)
 	}
+}
+
+// executeCustomCommandOrExit handles custom command execution or exits with error
+func executeCustomCommandOrExit(discovery *CommandDiscovery, command string, commandArgs []string, originalErr error) {
+	// If built-in command failed, try custom command delegation
+	if discovery.HasCommand(command) {
+		if delegateErr := DelegateToMage(command, commandArgs...); delegateErr != nil {
+			_, delegateErr = fmt.Fprintf(os.Stderr, "❌ Error executing custom command '%s': %v\n", command, delegateErr)
+			if delegateErr != nil {
+				return
+			}
+			os.Exit(1)
+		}
+		return // Success
+	}
+
+	// Neither built-in nor custom command found
+	_, err := fmt.Fprintf(os.Stderr, "❌ Error: %v\n", originalErr)
+	if err != nil {
+		return
+	}
+	os.Exit(1)
 }
 
 // showUsage displays custom usage information
@@ -582,28 +601,35 @@ func showCommandHelp(reg *registry.Registry, commandName string) {
 }
 
 // listCommands displays all available commands
-func listCommands(reg *registry.Registry, verbose bool) {
+func listCommands(reg *registry.Registry, discovery *CommandDiscovery, verbose bool) {
 	commands := reg.List()
+	customCommands, err := discovery.ListCommands()
+	if err != nil {
+		customCommands = nil // Use empty slice on error
+	}
 
-	if len(commands) == 0 {
+	total := len(commands) + len(customCommands)
+	if total == 0 {
 		utils.Println("No commands available")
 		return
 	}
 
-	fmt.Printf("🎯 Available Commands (%d total):\n", len(commands))
+	fmt.Printf("🎯 Available Commands (%d built-in + %d custom = %d total):\n", len(commands), len(customCommands), total)
 
 	if verbose {
-		listCommandsVerbose(commands)
+		listCommandsVerbose(commands, customCommands)
 	} else {
-		listCommandsSimple(commands)
+		listCommandsSimple(commands, customCommands)
 	}
 
 	utils.Println("\n💡 Run 'magex <command>' to execute a command")
 }
 
 // listCommandsVerbose displays commands with descriptions
-func listCommandsVerbose(commands []*registry.Command) {
+func listCommandsVerbose(commands []*registry.Command, customCommands []DiscoveredCommand) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+	// List built-in commands
 	for _, cmd := range commands {
 		desc := cmd.Description
 		if desc == "" {
@@ -617,6 +643,20 @@ func listCommandsVerbose(commands []*registry.Command) {
 			_ = err
 		}
 	}
+
+	// List custom commands
+	for _, cmd := range customCommands {
+		desc := cmd.Description
+		if desc == "" {
+			desc = "Custom command"
+		}
+		desc += " (custom)"
+		if _, err := fmt.Fprintf(w, "  %s\t%s\n", cmd.Name, desc); err != nil {
+			// Print error is non-critical, continue
+			_ = err
+		}
+	}
+
 	if err := w.Flush(); err != nil {
 		// Flush error is non-critical, continue
 		_ = err
@@ -624,22 +664,39 @@ func listCommandsVerbose(commands []*registry.Command) {
 }
 
 // listCommandsSimple displays commands in a simple grid format
-func listCommandsSimple(commands []*registry.Command) {
-	for i, cmd := range commands {
-		fmt.Printf("  %-25s", cmd.FullName())
+func listCommandsSimple(commands []*registry.Command, customCommands []DiscoveredCommand) {
+	allCommands := make([]string, 0, len(commands)+len(customCommands))
+
+	// Add built-in commands
+	for _, cmd := range commands {
+		allCommands = append(allCommands, cmd.FullName())
+	}
+
+	// Add custom commands with marker
+	for _, cmd := range customCommands {
+		allCommands = append(allCommands, cmd.Name+"*")
+	}
+
+	// Display in grid format
+	for i, name := range allCommands {
+		fmt.Printf("  %-25s", name)
 		if (i+1)%3 == 0 {
 			utils.Println("")
 		}
 	}
-	if len(commands)%3 != 0 {
+	if len(allCommands)%3 != 0 {
 		utils.Println("")
+	}
+	if len(customCommands) > 0 {
+		utils.Println("\n* Custom commands from magefile.go")
 	}
 }
 
 // listByNamespace displays commands organized by namespace
-func listByNamespace(reg *registry.Registry) {
+func listByNamespace(reg *registry.Registry, discovery *CommandDiscovery) {
 	utils.Println("Available commands with namespaces:")
 
+	// List built-in namespaced commands
 	namespaces := reg.Namespaces()
 	for _, ns := range namespaces {
 		commands := reg.ListByNamespace(ns)
@@ -656,36 +713,48 @@ func listByNamespace(reg *registry.Registry) {
 			}
 		}
 	}
+
+	// List custom commands
+	customCommands, err := discovery.ListCommands()
+	if err != nil {
+		customCommands = nil // Use empty slice on error
+	}
+	if len(customCommands) > 0 {
+		utils.Println("\n  Custom commands:")
+		for _, cmd := range customCommands {
+			if cmd.IsNamespace {
+				fmt.Printf("  %s (custom namespace)\n", cmd.Name)
+			} else {
+				fmt.Printf("  %s (custom)\n", cmd.Name)
+			}
+		}
+	}
 }
 
 // searchCommands searches for commands matching a query with enhanced results
-func searchCommands(reg *registry.Registry, query string) {
+func searchCommands(reg *registry.Registry, discovery *CommandDiscovery, query string) {
 	matches := reg.Search(query)
+	customCommands, err := discovery.ListCommands()
+	if err != nil {
+		customCommands = nil // Use empty slice on error
+	}
 
-	if len(matches) == 0 {
-		// Try fuzzy search for similar commands
-		allCommands := reg.List()
-		var fuzzyMatches []*registry.Command
-		for _, cmd := range allCommands {
-			if fuzzyMatch(cmd.FullName(), query) {
-				fuzzyMatches = append(fuzzyMatches, cmd)
-			}
+	// Search custom commands too
+	var customMatches []DiscoveredCommand
+	for _, cmd := range customCommands {
+		if strings.Contains(strings.ToLower(cmd.Name), strings.ToLower(query)) ||
+			strings.Contains(strings.ToLower(cmd.Description), strings.ToLower(query)) {
+			customMatches = append(customMatches, cmd)
 		}
+	}
 
-		fmt.Printf("❌ No exact commands found matching '%s'\n", query)
-		if len(fuzzyMatches) > 0 {
-			fmt.Printf("\n🔍 Did you mean:\n")
-			for i, cmd := range fuzzyMatches {
-				if i >= 5 {
-					break
-				}
-				fmt.Printf("  • %s - %s\n", cmd.FullName(), cmd.Description)
-			}
-		}
+	if len(matches) == 0 && len(customMatches) == 0 {
+		handleNoSearchResults(reg, customCommands, query)
 		return
 	}
 
-	fmt.Printf("\n🔍 Search Results for '%s' (%d found):\n", query, len(matches))
+	totalFound := len(matches) + len(customMatches)
+	fmt.Printf("\n🔍 Search Results for '%s' (%d found):\n", query, totalFound)
 	fmt.Printf("%s\n", strings.Repeat("-", 50))
 
 	// Group by category for better organization
@@ -735,10 +804,70 @@ func searchCommands(reg *registry.Registry, query string) {
 		}
 	}
 
+	// Display custom commands if any matched
+	if len(customMatches) > 0 {
+		fmt.Printf("\n🏠 Custom Commands:\n")
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		for _, cmd := range customMatches {
+			desc := cmd.Description
+			if desc == "" {
+				desc = "Custom command"
+			}
+			// Highlight the matched term
+			highlightedName := highlightMatch(cmd.Name, query)
+			highlightedDesc := highlightMatch(desc, query)
+			if _, err := fmt.Fprintf(w, "  %s\t%s (custom)\n", highlightedName, highlightedDesc); err != nil {
+				// Print error is non-critical, continue
+				_ = err
+			}
+		}
+		if err := w.Flush(); err != nil {
+			// Flush error is non-critical, continue
+			_ = err
+		}
+	}
+
 	fmt.Printf("\n💡 Tips:\n")
 	fmt.Printf("  • Use 'magex -h <command>' for detailed help on any command\n")
 	fmt.Printf("  • Use 'magex -n' to browse commands by namespace\n")
 	fmt.Printf("  • Try broader search terms for more results\n")
+}
+
+// handleNoSearchResults handles the case when no search results are found
+func handleNoSearchResults(reg *registry.Registry, customCommands []DiscoveredCommand, query string) {
+	// Try fuzzy search for similar commands
+	allCommands := reg.List()
+	var fuzzyMatches []*registry.Command
+	for _, cmd := range allCommands {
+		if fuzzyMatch(cmd.FullName(), query) {
+			fuzzyMatches = append(fuzzyMatches, cmd)
+		}
+	}
+
+	// Fuzzy search custom commands too
+	var fuzzyCustomMatches []DiscoveredCommand
+	for _, cmd := range customCommands {
+		if fuzzyMatch(cmd.Name, query) {
+			fuzzyCustomMatches = append(fuzzyCustomMatches, cmd)
+		}
+	}
+
+	fmt.Printf("❌ No exact commands found matching '%s'\n", query)
+	if len(fuzzyMatches) > 0 || len(fuzzyCustomMatches) > 0 {
+		fmt.Printf("\n🔍 Did you mean:\n")
+		for i, cmd := range fuzzyMatches {
+			if i >= 5 {
+				break
+			}
+			fmt.Printf("  • %s - %s\n", cmd.FullName(), cmd.Description)
+		}
+		for i, cmd := range fuzzyCustomMatches {
+			if i >= 5 {
+				break
+			}
+			fmt.Printf("  • %s - %s (custom)\n", cmd.Name, cmd.Description)
+		}
+	}
 }
 
 // fuzzyMatch performs simple fuzzy matching
@@ -793,7 +922,7 @@ func highlightMatch(text, pattern string) string {
 }
 
 // showQuickList shows a quick list of common commands
-func showQuickList(reg *registry.Registry) {
+func showQuickList(reg *registry.Registry, discovery *CommandDiscovery) {
 	// Show the most common/useful commands
 	commonCommands := []string{
 		"build", "test", "lint", "format", "clean",
@@ -804,6 +933,26 @@ func showQuickList(reg *registry.Registry) {
 	for _, name := range commonCommands {
 		if cmd, exists := reg.Get(name); exists {
 			fmt.Printf("  %-15s - %s\n", name, truncate(cmd.Description, 50))
+		}
+	}
+
+	// Show custom commands if any
+	customCommands, err := discovery.ListCommands()
+	if err != nil {
+		customCommands = nil // Use empty slice on error
+	}
+	if len(customCommands) > 0 {
+		utils.Println("\n  Custom commands:")
+		for i, cmd := range customCommands {
+			if i >= 5 { // Limit to first 5 custom commands
+				fmt.Printf("  ... and %d more (run 'magex -l' to see all)\n", len(customCommands)-5)
+				break
+			}
+			desc := cmd.Description
+			if desc == "" {
+				desc = "Custom command"
+			}
+			fmt.Printf("  %-15s - %s\n", cmd.Name, truncate(desc, 50))
 		}
 	}
 }

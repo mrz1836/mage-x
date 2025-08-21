@@ -95,7 +95,7 @@
   _No magefile.go needed. No imports. No wrappers. Just install `magex` and all built-in and custom commands work immediately in any Go project._
   <br/><br/>
 - **Drop-in Mage Replacement**<br/>
-  _`magex` is a superset of `mage` with all MAGE-X commands built-in. Your existing magefiles still work, now enhanced with 300+ professional commands._
+  _`magex` is a superset of `mage` with all MAGE-X commands built-in. Your existing magefiles still work, now enhanced with 241+ professional commands._
   <br/><br/>
 - **Cross-Platform Excellence**<br/>
   _Full support for Linux, macOS, and Windows with multi-architecture builds, parallel execution, and CPU-aware optimization._
@@ -195,6 +195,21 @@ Now you have both:
 magex build    # Built-in MAGE-X command
 magex deploy   # Your custom command
 ```
+
+### Hybrid Execution Model
+
+MAGE-X uses a smart hybrid approach that provides the best of both worlds:
+
+- **Built-in commands** execute directly for speed and consistency (`magex build`, `magex test`, etc.)
+- **Custom commands** in your magefile.go are automatically discovered and delegated to `mage`
+- **Unified experience** - one command line interface for everything
+
+This means:
+- `magex build` always behaves consistently across all projects
+- Your custom commands work seamlessly without any setup
+- No plugin compilation or platform-specific issues
+- Zero configuration required
+
 <br>
 
 ## 🚀 Features
@@ -368,7 +383,7 @@ For comprehensive documentation, visit the [docs](docs) directory:
 
 ### Available Commands
 
-MAGE-X provides 300+ commands organized by functionality. All commands work instantly through the `magex` CLI.
+MAGE-X provides 241+ commands organized by functionality. All commands work instantly through the `magex` CLI.
 
 <details>
 <summary>🎯 <strong>Essential Commands</strong></summary>
@@ -780,7 +795,7 @@ magex uninstall           # Remove installation
 
 ### 📋 Complete Command List
 
-Run `magex -l` to see a plain list of all available commands (300+ commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
+Run `magex -l` to see a plain list of all available commands (241+ commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
 
 <br/>
 
