@@ -29,11 +29,11 @@ We follow **Semantic Versioning (✧ SemVer)**:
 
 ## 🔄 Release Workflow
 
-| Step | Command                         | Purpose                                                                                            |
-|------|---------------------------------|----------------------------------------------------------------------------------------------------|
-| 1    | `make release-snap`             | Build & upload a **snapshot** (pre‑release) for quick CI validation.                               |
-| 2    | `make tag version=X.Y.Z`        | Create and push a signed Git tag. Triggers GitHub Actions to package the release                   |
-| 3    | GitHub Actions                  | CI runs `goreleaser release` on the tag; artifacts and changelog are published to GitHub Releases. |
+| Step | Command                  | Purpose                                                                                            |
+|------|--------------------------|----------------------------------------------------------------------------------------------------|
+| 1    | `magex release:snaphot`  | Build & upload a **snapshot** (pre‑release) for quick CI validation.                               |
+| 2    | `magex version:bump push=true bump=patch` | Create and push a signed Git tag. Triggers GitHub Actions to package the release                   |
+| 3    | GitHub Actions           | CI runs `goreleaser release` on the tag; artifacts and changelog are published to GitHub Releases. |
 
 > **Note for AI Agents:** Do not create or push tags automatically. Only the repository [codeowners](../CODEOWNERS) are authorized to tag and publish official releases.
 
@@ -90,8 +90,9 @@ All artifacts are automatically uploaded to GitHub Releases.
 
 Before tagging a release:
 
-- [ ] All tests passing (`make test`)
-- [ ] No security vulnerabilities (`make govulncheck`)
+- [ ] All linters passing (`magex lint`)
+- [ ] All tests passing (`magex test`)
+- [ ] No security vulnerabilities (`magex deps:audit`)
 - [ ] Documentation updated
 - [ ] CHANGELOG entries reviewed
 - [ ] Version bumped if needed

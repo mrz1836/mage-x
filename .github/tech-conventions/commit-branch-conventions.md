@@ -29,22 +29,24 @@ docs(README): improve installation instructions
 
 <br><br>
 
-## 📝 GoFortress Pre-Commit System (Optional)
+## 📝 go-pre-commit System (Optional)
 
-To ensure consistent commit messages and code quality, we use the GoFortress Pre-commit System that checks formatting, linting, and other standards before allowing a commit. The system is configured via `.github/.env.shared` and can be installed with:
+To ensure consistent commit messages and code quality, we use the external **go-pre-commit** tool that checks formatting, linting, and other standards before allowing a commit. The system is configured via `.github/.env.base` and can be installed with:
 
 ```bash
-cd .github/pre-commit
-make build
-./gofortress-pre-commit install
+# Install the external tool
+go install github.com/mrz1836/go-pre-commit/cmd/go-pre-commit@latest
+
+# Install hooks in your repository
+go-pre-commit install
 ```
 
 Run the pre-commit checks manually with:
 ```bash
-./gofortress-pre-commit run
+go-pre-commit run
 ```
 
-> The GoFortress Pre-commit System provides 17x faster execution than traditional Python-based pre-commit hooks and automatically enforces all code quality standards defined in AGENTS.md.
+> The go-pre-commit system provides 17x faster execution than traditional Python-based pre-commit hooks and automatically enforces all code quality standards. See **[Pre-commit Hooks](pre-commit.md)** for comprehensive documentation.
 
 <br><br>
 

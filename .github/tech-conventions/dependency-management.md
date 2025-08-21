@@ -31,9 +31,9 @@
   govulncheck ./...
 ```
 
-* Run via make command:
+* Run via magex command:
 ```bash
-  make govulncheck
+  magex deps:audit
 ```
 
 * Run [gitleaks](https://github.com/gitleaks/gitleaks) before committing code to detect hardcoded secrets or sensitive data in the repository:
@@ -76,14 +76,14 @@ gitleaks detect --source . --log-opts="--all" --verbose
 
 3. **Test thoroughly**
    ```bash
-   make test
-   make test-race
-   make bench
+   magex test
+   magex test:race
+   magex bench
    ```
 
 4. **Security scan**
    ```bash
-   make govulncheck
+   magex deps:audit
    ```
 
 ### Major Version Updates
