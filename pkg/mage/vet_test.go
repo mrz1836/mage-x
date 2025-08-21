@@ -26,7 +26,54 @@ var (
 type VetTestSuite struct {
 	suite.Suite
 
-	origEnvVars map[string]string
+	origEnvVars    map[string]string
+	originalRunner CommandRunner
+	mockRunner     *VetMockRunner
+}
+
+// VetMockRunner is a mock implementation of CommandRunner for testing
+type VetMockRunner struct {
+	commands [][]string
+	output   string
+	err      error
+}
+
+func (m *VetMockRunner) RunCmd(cmd string, args ...string) error {
+	fullCmd := append([]string{cmd}, args...)
+	m.commands = append(m.commands, fullCmd)
+	// Simulate short delay for more realistic behavior
+	time.Sleep(10 * time.Millisecond)
+	return m.err
+}
+
+func (m *VetMockRunner) RunCmdOutput(cmd string, args ...string) (string, error) {
+	fullCmd := append([]string{cmd}, args...)
+	m.commands = append(m.commands, fullCmd)
+	// Simulate short delay for more realistic behavior
+	time.Sleep(10 * time.Millisecond)
+	// Return mock package list for Parallel vet
+	if cmd == "go" && len(args) > 0 && args[0] == "list" {
+		return "github.com/mrz1836/mage-x/pkg/mage\ngithub.com/mrz1836/mage-x/pkg/utils", nil
+	}
+	return m.output, m.err
+}
+
+func (m *VetMockRunner) SetOutput(output string) {
+	m.output = output
+}
+
+func (m *VetMockRunner) SetError(err error) {
+	m.err = err
+}
+
+func (m *VetMockRunner) GetCommands() [][]string {
+	return m.commands
+}
+
+func (m *VetMockRunner) Reset() {
+	m.commands = nil
+	m.output = ""
+	m.err = nil
 }
 
 // SetupSuite runs before all tests in the suite
@@ -57,6 +104,24 @@ func (ts *VetTestSuite) SetupTest() {
 	envVars := []string{"VERBOSE", "GO_BUILD_TAGS"}
 	for _, env := range envVars {
 		ts.Require().NoError(os.Unsetenv(env))
+	}
+
+	// Store original runner
+	ts.originalRunner = GetRunner()
+
+	// Create and set mock runner for faster tests
+	ts.mockRunner = &VetMockRunner{}
+	ts.Require().NoError(SetRunner(ts.mockRunner))
+}
+
+// TearDownTest runs after each test
+func (ts *VetTestSuite) TearDownTest() {
+	// Restore original runner
+	if ts.originalRunner != nil {
+		err := SetRunner(ts.originalRunner)
+		if err != nil {
+			ts.T().Logf("Failed to restore original runner: %v", err)
+		}
 	}
 }
 
