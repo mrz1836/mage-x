@@ -133,6 +133,7 @@ func getVersionFromGit() string {
 		fullDesc = strings.TrimSpace(fullDesc)
 		// If the full description is different from just the tag, we're in development
 		if fullDesc != tag {
+			utils.Debug("Git describe shows '%s' (not exactly on tag '%s') - using dev version", fullDesc, tag)
 			return versionDev
 		}
 	}
@@ -140,6 +141,7 @@ func getVersionFromGit() string {
 	// Check if working directory is dirty
 	if status, err := GetRunner().RunCmdOutput("git", "status", "--porcelain"); err == nil {
 		if strings.TrimSpace(status) != "" {
+			utils.Debug("Working directory has uncommitted changes - using dev version")
 			return versionDev
 		}
 	}

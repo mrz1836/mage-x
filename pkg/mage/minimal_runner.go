@@ -64,6 +64,9 @@ func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time
 			case "build", "run":
 				// Allow 3 minutes for build operations
 				return 3 * time.Minute
+			case "vet", "list":
+				// Allow 1 minute for vet and list operations
+				return 1 * time.Minute
 			default:
 				// Default go command timeout
 				return 2 * time.Minute

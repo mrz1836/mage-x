@@ -17,6 +17,15 @@ import (
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
+// Constants for webhook operations
+const (
+	webhookOperationList   = "list"
+	webhookOperationCreate = "create"
+	webhookOperationUpdate = "update"
+	webhookOperationDelete = "delete"
+	webhookOperationTest   = "test"
+)
+
 // Static errors for integration operations
 var (
 	errJiraCredentialsRequired      = errors.New("JIRA_URL, JIRA_USERNAME, JIRA_TOKEN, and JIRA_PROJECT environment variables are required")
@@ -216,18 +225,18 @@ func (Integrations) Webhook(args ...string) error {
 
 	// Parse command-line parameters
 	params := utils.ParseParams(args)
-	operation := utils.GetParam(params, "operation", "list")
+	operation := utils.GetParam(params, "operation", webhookOperationList)
 
 	switch operation {
-	case "list":
+	case webhookOperationList:
 		return listWebhooks()
-	case "create":
+	case webhookOperationCreate:
 		return createWebhook()
-	case "update":
+	case webhookOperationUpdate:
 		return updateWebhook()
-	case "delete":
+	case webhookOperationDelete:
 		return deleteWebhook()
-	case CmdGoTest:
+	case webhookOperationTest:
 		return testWebhook()
 	default:
 		return fmt.Errorf("%w: %s", errUnknownWebhookOperation, operation)

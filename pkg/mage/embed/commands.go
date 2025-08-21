@@ -184,6 +184,15 @@ func registerBuildCommands(reg *registry.Registry) {
 	)
 
 	reg.MustRegister(
+		registry.NewNamespaceCommand("build", "dev").
+			WithDescription("Build and install development version (forced 'dev' version)").
+			WithFunc(func() error { return b.Dev() }).
+			WithCategory("Build").
+			WithAliases("dev").
+			MustBuild(),
+	)
+
+	reg.MustRegister(
 		registry.NewNamespaceCommand("build", "generate").
 			WithDescription("Run go generate").
 			WithFunc(func() error { return b.Generate() }).
