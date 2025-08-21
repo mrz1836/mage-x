@@ -464,6 +464,38 @@ func main() {
 	})
 }
 
+// TestBuildDev tests the Dev method
+func (ts *BuildTestSuite) TestBuildDev() {
+	ts.Run("builds and installs with forced dev version", func() {
+		// Create project file
+		ts.env.CreateFile("main.go", `package main
+func main() {
+	println("Dev app")
+}`)
+
+		// Mock git commands needed for version info
+		ts.mockGitCommands()
+
+		// Mock go install command with flexible args matching
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			return len(args) >= 2 && args[0] == "install" && args[len(args)-1] == "."
+		})).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.Dev()
+			},
+		)
+
+		ts.Require().NoError(err)
+
+		// Verify that MAGE_X_VERSION environment variable was cleaned up
+		ts.Require().Empty(os.Getenv("MAGE_X_VERSION"))
+	})
+}
+
 // TestBuildGenerate tests the Generate method
 func (ts *BuildTestSuite) TestBuildGenerate() {
 	ts.Run("runs go generate", func() {

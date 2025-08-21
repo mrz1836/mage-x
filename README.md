@@ -479,6 +479,7 @@ magex build:linux         # Build for Linux amd64
 magex build:darwin        # Build for macOS (amd64 and arm64)
 magex build:windows       # Build for Windows amd64
 magex build:install       # Install binary to $GOPATH/bin
+magex build:dev           # Build and install development version (forced 'dev' version)
 magex build:prebuild      # Pre-build all packages to warm cache
 ```
 
@@ -647,6 +648,7 @@ magex tools:install       # Install all required development tools
 magex tools:verify        # Check if all required tools are available
 magex deps:audit          # Run vulnerability check using govulncheck
 magex build:install       # Install the project binary
+magex build:dev           # Build and install development version (forced 'dev' version)
 magex install:stdlib      # Install Go standard library for cross-compilation
 magex uninstall           # Remove installed binary
 ```

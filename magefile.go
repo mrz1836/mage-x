@@ -705,6 +705,16 @@ func (b Build) Generate() error {
 	return impl.Generate()
 }
 
+func (b Build) Install() error {
+	var impl mage.Build
+	return impl.Install()
+}
+
+func (b Build) Dev() error {
+	var impl mage.Build
+	return impl.Dev()
+}
+
 // Test namespace methods
 func (t Test) Default() error {
 	var impl mage.Test

@@ -592,6 +592,14 @@ func (b Build) Install() error {
 		return err
 	}
 
+	// Show version information
+	version := getVersion()
+	if version == versionDev {
+		utils.Warn("⚠️  Repository has uncommitted changes - building with version 'dev'")
+	} else {
+		utils.Info("Building with version: %s", version)
+	}
+
 	args := []string{"install"}
 	args = append(args, buildFlags(config)...)
 
@@ -616,6 +624,53 @@ func (b Build) Install() error {
 	}
 
 	utils.Success("Installed %s to %s", config.Project.Binary, filepath.Join(gopath, "bin"))
+	return nil
+}
+
+// Dev builds and installs the binary with forced dev version for local development
+func (b Build) Dev() error {
+	utils.Header("Building Development Version")
+	utils.Info("🔧 Building development version (forced 'dev')")
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	// Force dev version by setting environment variable
+	if setErr := os.Setenv("MAGE_X_VERSION", versionDev); setErr != nil {
+		return fmt.Errorf("failed to set dev version: %w", setErr)
+	}
+	defer func() {
+		if unsetErr := os.Unsetenv("MAGE_X_VERSION"); unsetErr != nil {
+			utils.Error("Failed to unset MAGE_X_VERSION: %v", unsetErr)
+		}
+	}()
+
+	args := []string{"install"}
+	args = append(args, buildFlags(config)...)
+
+	if config.Build.Verbose {
+		args = append(args, "-v")
+	}
+
+	// Determine the package path using the same logic as the main build
+	packagePath, err := b.determinePackagePath(config, "", false)
+	if err != nil {
+		return err
+	}
+	args = append(args, packagePath)
+
+	if err := GetRunner().RunCmd("go", args...); err != nil {
+		return fmt.Errorf("dev build failed: %w", err)
+	}
+
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = filepath.Join(os.Getenv("HOME"), "go")
+	}
+
+	utils.Success("Installed development build of %s to %s", config.Project.Binary, filepath.Join(gopath, "bin"))
 	return nil
 }
 
