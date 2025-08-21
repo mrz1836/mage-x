@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,44 +34,77 @@ type VetTestSuite struct {
 
 // VetMockRunner is a mock implementation of CommandRunner for testing
 type VetMockRunner struct {
+	mu       sync.Mutex
 	commands [][]string
 	output   string
 	err      error
 }
 
 func (m *VetMockRunner) RunCmd(cmd string, args ...string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	fullCmd := append([]string{cmd}, args...)
 	m.commands = append(m.commands, fullCmd)
-	// Simulate short delay for more realistic behavior
+	err := m.err
+
+	// Simulate short delay for more realistic behavior (outside of lock)
+	m.mu.Unlock()
 	time.Sleep(10 * time.Millisecond)
-	return m.err
+	m.mu.Lock()
+
+	return err
 }
 
 func (m *VetMockRunner) RunCmdOutput(cmd string, args ...string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	fullCmd := append([]string{cmd}, args...)
 	m.commands = append(m.commands, fullCmd)
-	// Simulate short delay for more realistic behavior
+	output := m.output
+	err := m.err
+
+	// Simulate short delay for more realistic behavior (outside of lock)
+	m.mu.Unlock()
 	time.Sleep(10 * time.Millisecond)
+	m.mu.Lock()
+
 	// Return mock package list for Parallel vet
 	if cmd == "go" && len(args) > 0 && args[0] == "list" {
 		return "github.com/mrz1836/mage-x/pkg/mage\ngithub.com/mrz1836/mage-x/pkg/utils", nil
 	}
-	return m.output, m.err
+	return output, err
 }
 
 func (m *VetMockRunner) SetOutput(output string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.output = output
 }
 
 func (m *VetMockRunner) SetError(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.err = err
 }
 
 func (m *VetMockRunner) GetCommands() [][]string {
-	return m.commands
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Return a copy to avoid race conditions
+	commandsCopy := make([][]string, len(m.commands))
+	for i, cmd := range m.commands {
+		cmdCopy := make([]string, len(cmd))
+		copy(cmdCopy, cmd)
+		commandsCopy[i] = cmdCopy
+	}
+	return commandsCopy
 }
 
 func (m *VetMockRunner) Reset() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.commands = nil
 	m.output = ""
 	m.err = nil
