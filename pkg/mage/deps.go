@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -62,17 +63,25 @@ func (Deps) Update() error {
 // UpdateWithArgs updates all dependencies with optional parameters
 // Supports:
 //   - allow-major: Allow major version updates (default: false)
+//   - stable-only: Force downgrade from pre-release to stable versions (default: false)
 func (Deps) UpdateWithArgs(argsList ...string) error {
 	utils.Header("Updating Dependencies")
 
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 	allowMajor := utils.IsParamTrue(params, "allow-major")
+	stableOnly := utils.IsParamTrue(params, "stable-only")
 
 	if allowMajor {
 		utils.Info("Major version updates are ENABLED")
 	} else {
 		utils.Info("Major version updates are DISABLED (use 'allow-major' to enable)")
+	}
+
+	if stableOnly {
+		utils.Info("Stable-only mode ENABLED - will downgrade pre-release versions to stable")
+	} else {
+		utils.Info("Pre-release versions will be preserved (use 'stable-only' to force downgrade to stable)")
 	}
 
 	// Get list of direct dependencies
@@ -132,6 +141,15 @@ func (Deps) UpdateWithArgs(argsList ...string) error {
 			skippedMajorCount++
 			skippedMajorUpdates = append(skippedMajorUpdates, fmt.Sprintf("%s %s → %s", dep, currentVersion, latestVersion))
 			continue
+		}
+
+		// Check if current version is already newer than the "latest" stable version
+		// This handles pre-release versions that are newer than stable versions
+		if !stableOnly && isVersionNewer(currentVersion, latestVersion) {
+			utils.Info("Skipping %s: current version %s is newer than latest stable %s", dep, currentVersion, latestVersion)
+			continue
+		} else if stableOnly && isVersionNewer(currentVersion, latestVersion) {
+			utils.Warn("Downgrading %s: %s → %s (stable-only mode)", dep, currentVersion, latestVersion)
 		}
 
 		// Update to latest (or within major version if allow-major is false)
@@ -434,4 +452,86 @@ func extractMajorVersion(versionPart string) int {
 	}
 
 	return major
+}
+
+// compareVersions compares two version strings and returns:
+// -1 if v1 < v2
+//
+//	0 if v1 == v2
+//	1 if v1 > v2
+//
+// Handles pre-release versions according to semantic versioning rules
+func compareVersions(v1, v2 string) int {
+	// Normalize versions by removing 'v' prefix
+	v1 = strings.TrimPrefix(v1, "v")
+	v2 = strings.TrimPrefix(v2, "v")
+
+	if v1 == v2 {
+		return 0
+	}
+
+	// Split version into parts (major.minor.patch-prerelease)
+	parts1 := parseVersion(v1)
+	parts2 := parseVersion(v2)
+
+	// Compare major.minor.patch
+	for i := 0; i < 3; i++ {
+		if parts1.numbers[i] > parts2.numbers[i] {
+			return 1
+		} else if parts1.numbers[i] < parts2.numbers[i] {
+			return -1
+		}
+	}
+
+	// If major.minor.patch are equal, compare pre-release
+	// According to semver: pre-release versions have lower precedence than normal versions
+	if parts1.prerelease == "" && parts2.prerelease != "" {
+		return 1 // v1.2.3 > v1.2.3-alpha
+	}
+	if parts1.prerelease != "" && parts2.prerelease == "" {
+		return -1 // v1.2.3-alpha < v1.2.3
+	}
+	if parts1.prerelease != "" && parts2.prerelease != "" {
+		// Both have pre-release, compare lexicographically
+		if parts1.prerelease > parts2.prerelease {
+			return 1
+		} else if parts1.prerelease < parts2.prerelease {
+			return -1
+		}
+	}
+
+	return 0
+}
+
+// versionParts represents parsed version components
+type versionParts struct {
+	numbers    [3]int // major, minor, patch
+	prerelease string // everything after the first dash
+}
+
+// parseVersion parses a version string into components
+func parseVersion(version string) versionParts {
+	var parts versionParts
+
+	// Split at first dash to separate version from pre-release
+	mainPart := version
+	if dashIndex := strings.Index(version, "-"); dashIndex != -1 {
+		mainPart = version[:dashIndex]
+		parts.prerelease = version[dashIndex+1:]
+	}
+
+	// Parse major.minor.patch
+	numberParts := strings.Split(mainPart, ".")
+	for i := 0; i < 3 && i < len(numberParts); i++ {
+		if num, err := strconv.Atoi(numberParts[i]); err == nil {
+			parts.numbers[i] = num
+		}
+	}
+
+	return parts
+}
+
+// isVersionNewer checks if version v1 is newer than version v2
+func isVersionNewer(v1, v2 string) bool {
+	return compareVersions(v1, v2) > 0
 }

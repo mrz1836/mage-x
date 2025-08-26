@@ -689,9 +689,14 @@ func getAllCommands() []HelpCommand {
 			Examples: []string{
 				"mage deps:update",
 				"mage deps:update allow-major",
+				"mage deps:update stable-only",
 				"mage deps:tidy",
 				"mage deps:download",
 				"mage deps:audit",
+			},
+			Options: []HelpOption{
+				{Name: "allow-major", Description: "Allow major version updates (v1→v2, etc)", Default: "false"},
+				{Name: "stable-only", Description: "Force downgrade from pre-release to stable versions", Default: "false"},
 			},
 			SeeAlso: []string{"mod", "tools"},
 		},
