@@ -859,61 +859,85 @@ func (r *DefaultNamespaceRegistry) SetBuild(build BuildNamespace) {
 
 // SetTest sets a custom test namespace implementation
 func (r *DefaultNamespaceRegistry) SetTest(test TestNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.test = test
 }
 
 // SetLint sets a custom lint namespace implementation
 func (r *DefaultNamespaceRegistry) SetLint(lint LintNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.lint = lint
 }
 
 // SetFormat sets a custom format namespace implementation
 func (r *DefaultNamespaceRegistry) SetFormat(format FormatNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.format = format
 }
 
 // SetDeps sets a custom dependencies namespace implementation
 func (r *DefaultNamespaceRegistry) SetDeps(deps DepsNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.deps = deps
 }
 
 // SetGit sets a custom git namespace implementation
 func (r *DefaultNamespaceRegistry) SetGit(git GitNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.git = git
 }
 
 // SetRelease sets a custom release namespace implementation
 func (r *DefaultNamespaceRegistry) SetRelease(release ReleaseNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.release = release
 }
 
 // SetDocs sets a custom documentation namespace implementation
 func (r *DefaultNamespaceRegistry) SetDocs(docs DocsNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.docs = docs
 }
 
 // SetDeploy sets a custom deployment namespace implementation
 func (r *DefaultNamespaceRegistry) SetDeploy(deploy DeployNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.deploy = deploy
 }
 
 // SetTools sets a custom tools namespace implementation
 func (r *DefaultNamespaceRegistry) SetTools(tools ToolsNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.tools = tools
 }
 
 // SetSecurity sets a custom security namespace implementation
 func (r *DefaultNamespaceRegistry) SetSecurity(security SecurityNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.security = security
 }
 
 // SetGenerate sets a custom generate namespace implementation
 func (r *DefaultNamespaceRegistry) SetGenerate(generate GenerateNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.generate = generate
 }
 
 // SetCLI sets a custom CLI namespace implementation
 func (r *DefaultNamespaceRegistry) SetCLI(cli CLINamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.cli = cli
 }
 
@@ -936,6 +960,8 @@ func (r *DefaultNamespaceRegistry) Update() UpdateNamespace {
 
 // SetUpdate sets a custom update namespace implementation
 func (r *DefaultNamespaceRegistry) SetUpdate(update UpdateNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.update = update
 }
 
@@ -958,6 +984,8 @@ func (r *DefaultNamespaceRegistry) Mod() ModNamespace {
 
 // SetMod sets a custom mod namespace implementation
 func (r *DefaultNamespaceRegistry) SetMod(mod ModNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.mod = mod
 }
 
@@ -980,6 +1008,8 @@ func (r *DefaultNamespaceRegistry) Recipes() RecipesNamespace {
 
 // SetRecipes sets a custom recipes namespace implementation
 func (r *DefaultNamespaceRegistry) SetRecipes(recipes RecipesNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.recipes = recipes
 }
 
@@ -1002,6 +1032,8 @@ func (r *DefaultNamespaceRegistry) Metrics() MetricsNamespace {
 
 // SetMetrics sets a custom metrics namespace implementation
 func (r *DefaultNamespaceRegistry) SetMetrics(metrics MetricsNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.metrics = metrics
 }
 
@@ -1024,6 +1056,8 @@ func (r *DefaultNamespaceRegistry) Workflow() WorkflowNamespace {
 
 // SetWorkflow sets a custom workflow namespace implementation
 func (r *DefaultNamespaceRegistry) SetWorkflow(workflow WorkflowNamespace) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.workflow = workflow
 }
 
