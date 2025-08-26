@@ -39,6 +39,7 @@ type ProjectConfig struct {
 	GitDomain   string            `yaml:"git_domain"`
 	RepoOwner   string            `yaml:"repo_owner"`
 	RepoName    string            `yaml:"repo_name"`
+	Aliases     []string          `yaml:"aliases,omitempty"`
 	Env         map[string]string `yaml:"env"`
 }
 
@@ -439,6 +440,7 @@ func defaultConfig() *Config {
 			Binary:    binary,
 			Module:    module,
 			GitDomain: "github.com",
+			Aliases:   getDefaultAliases(binary),
 		},
 		Build: BuildConfig{
 			Output:   "bin",
@@ -497,6 +499,16 @@ func defaultConfig() *Config {
 	cleanConfigValues(config)
 
 	return config
+}
+
+// getDefaultAliases returns default aliases for the given binary name
+func getDefaultAliases(binary string) []string {
+	switch binary {
+	case "magex":
+		return []string{"mgx"}
+	default:
+		return nil
+	}
 }
 
 // applyEnvOverrides applies environment variable overrides to config

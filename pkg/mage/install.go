@@ -141,6 +141,11 @@ func (Install) Default() error {
 		utils.Success("Successfully installed %s", binaryName)
 		utils.Info("Binary location: %s", installPath)
 
+		// Create symlink aliases from configuration
+		for _, alias := range config.Project.Aliases {
+			createSymlinkAlias(gopath, installPath, alias)
+		}
+
 		// Check if GOPATH/bin is in PATH
 		if !isInPath(filepath.Join(gopath, "bin")) {
 			utils.Warn("Note: %s/bin is not in your PATH", gopath)
@@ -347,6 +352,88 @@ func isInPath(dir string) bool {
 	}
 
 	return false
+}
+
+// createSymlinkAlias creates a symlink alias for the installed binary
+func createSymlinkAlias(gopath, installPath, aliasName string) {
+	// Determine alias path
+	aliasPath := filepath.Join(gopath, "bin", aliasName)
+	if runtime.GOOS == OSWindows && !strings.HasSuffix(aliasPath, ".exe") {
+		aliasPath += windowsExeExt
+	}
+
+	// Check if alias already exists
+	if utils.FileExists(aliasPath) {
+		if checkExistingAlias(aliasPath, installPath, aliasName) {
+			return
+		}
+		utils.Warn("File '%s' already exists, skipping alias creation", aliasPath)
+		return
+	}
+
+	// Create symlink (or batch file on Windows)
+	if runtime.GOOS == OSWindows {
+		// On Windows, create a batch file wrapper instead of symlink
+		createWindowsBatchWrapper(aliasPath, installPath, aliasName)
+	} else {
+		// Unix/Mac: create symlink
+		if err := os.Symlink(installPath, aliasPath); err != nil {
+			utils.Warn("Failed to create alias '%s': %v", aliasName, err)
+		} else {
+			binaryName := filepath.Base(installPath)
+			if runtime.GOOS == OSWindows {
+				binaryName = strings.TrimSuffix(binaryName, ".exe")
+			}
+			utils.Success("Created alias '%s' → '%s'", aliasName, binaryName)
+		}
+	}
+}
+
+// checkExistingAlias checks if an existing alias already points to our binary
+func checkExistingAlias(aliasPath, installPath, aliasName string) bool {
+	// If it's already a symlink to our binary, that's fine
+	link, err := os.Readlink(aliasPath)
+	if err != nil {
+		return false
+	}
+
+	absLink, err := filepath.Abs(link)
+	if err != nil {
+		return false
+	}
+
+	absInstall, err := filepath.Abs(installPath)
+	if err != nil {
+		return false
+	}
+
+	if absLink == absInstall {
+		utils.Info("Alias '%s' already points to the binary", aliasName)
+		return true
+	}
+
+	return false
+}
+
+// createWindowsBatchWrapper creates a batch file wrapper on Windows
+func createWindowsBatchWrapper(aliasPath, installPath, aliasName string) {
+	// Remove .exe extension for batch file
+	if strings.HasSuffix(aliasPath, ".exe") {
+		aliasPath = strings.TrimSuffix(aliasPath, ".exe") + ".bat"
+	}
+
+	// Create batch file content that forwards all arguments
+	batchContent := fmt.Sprintf("@echo off\n\"%s\" %%*\n", installPath)
+
+	if err := os.WriteFile(aliasPath, []byte(batchContent), 0o600); err != nil {
+		utils.Warn("Failed to create alias '%s': %v", aliasName, err)
+	} else {
+		binaryName := filepath.Base(installPath)
+		if runtime.GOOS == OSWindows {
+			binaryName = strings.TrimSuffix(binaryName, ".exe")
+		}
+		utils.Success("Created alias '%s' → '%s'", aliasName, binaryName)
+	}
 }
 
 // getVersion gets the current version

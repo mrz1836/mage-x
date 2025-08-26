@@ -146,6 +146,7 @@ go install github.com/mrz1836/mage-x/cmd/magex@latest
 magex update:install
 
 # Now use it in ANY Go project (no setup!)
+# Use either 'magex' or its shorter alias 'mgx'
 magex build         # Automatically detects & builds your project
 magex test          # Run your tests
 magex bench         # Run your benchmarks
@@ -161,6 +162,9 @@ magex format:fix    # Format your code
 ```bash
 # See what MAGE-X detects in your project:
 magex build --dry-run  # Shows what will be built without building
+
+# or use the shorter alias:
+mgx build --dry-run    # Same command, shorter to type
 ```
 
 <br>
@@ -171,6 +175,7 @@ magex build --dry-run  # Shows what will be built without building
 magex help          # List all commands & get help
 magex -n            # Commands by namespace
 magex -search test  # Find specific commands
+# Remember: you can use 'magex' or 'mgx' interchangeably
 ```
 
 <br>
@@ -205,7 +210,7 @@ MAGE-X uses a smart hybrid approach that provides the best of both worlds:
 - **Unified experience** - one command line interface for everything
 
 This means:
-- `magex build` always behaves consistently across all projects
+- `magex build` (or `mgx build`) always behaves consistently across all projects
 - Your custom commands work seamlessly without any setup
 - No plugin compilation or platform-specific issues
 - Zero configuration required
