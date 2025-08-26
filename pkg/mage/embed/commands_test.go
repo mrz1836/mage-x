@@ -644,7 +644,7 @@ func TestIndividualNamespaceRegistration(t *testing.T) {
 		{"ToolsCommands", registerToolsCommands, "tools:", 3},
 		{"GenerateCommands", registerGenerateCommands, "generate:", 4},
 		{"CLICommands", registerCLICommands, "cli:", 10},
-		{"UpdateCommands", registerUpdateCommands, "update:", 4},
+		{"UpdateCommands", registerUpdateCommands, "update:", 2},
 		{"ModCommands", registerModCommands, "mod:", 8},
 		{"RecipesCommands", registerRecipesCommands, "recipes:", 6},
 		{"MetricsCommands", registerMetricsCommands, "metrics:", 5},

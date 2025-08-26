@@ -1112,30 +1112,6 @@ func registerUpdateCommands(reg *registry.Registry) {
 			WithCategory("Update").
 			MustBuild(),
 	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("update", "auto").
-			WithDescription("Enable automatic updates").
-			WithFunc(func() error { return u.Auto() }).
-			WithCategory("Update").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("update", "history").
-			WithDescription("Show update history").
-			WithFunc(func() error { return u.History() }).
-			WithCategory("Update").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("update", "rollback").
-			WithDescription("Rollback to previous version").
-			WithFunc(func() error { return u.Rollback() }).
-			WithCategory("Update").
-			MustBuild(),
-	)
 }
 
 func registerModCommands(reg *registry.Registry) {

@@ -438,15 +438,6 @@ type UpdateNamespace interface {
 
 	// Install installs the latest update
 	Install() error
-
-	// Auto enables automatic update checking
-	Auto() error
-
-	// History shows update history
-	History() error
-
-	// Rollback rolls back to a previous version
-	Rollback() error
 }
 
 // ModNamespace interface defines the contract for Go module operations

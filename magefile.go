@@ -1881,21 +1881,6 @@ func (u Update) Install() error {
 	return impl.Install()
 }
 
-func (u Update) Auto() error {
-	var impl mage.Update
-	return impl.Auto()
-}
-
-func (u Update) History() error {
-	var impl mage.Update
-	return impl.History()
-}
-
-func (u Update) Rollback() error {
-	var impl mage.Update
-	return impl.Rollback()
-}
-
 // Vet namespace methods
 func (v Vet) Default() error {
 	var impl mage.Vet

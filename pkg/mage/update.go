@@ -29,12 +29,11 @@ const (
 
 // Static errors to satisfy err113 linter
 var (
-	errNoReleasesFound       = errors.New("no releases found")
-	errUpdateVersionRequired = errors.New("VERSION environment variable is required")
-	errNoBetaReleasesFound   = errors.New("no beta releases found")
-	errNoTarGzFound          = errors.New("no tar.gz file found in update directory")
-	errMagexBinaryNotFound   = errors.New("magex binary not found in extracted files")
-	errPathTraversal         = errors.New("path traversal attempt detected")
+	errNoReleasesFound     = errors.New("no releases found")
+	errNoBetaReleasesFound = errors.New("no beta releases found")
+	errNoTarGzFound        = errors.New("no tar.gz file found in update directory")
+	errMagexBinaryNotFound = errors.New("magex binary not found in extracted files")
+	errPathTraversal       = errors.New("path traversal attempt detected")
 )
 
 // Update namespace for auto-update functionality
@@ -133,118 +132,6 @@ func (Update) Install() error {
 
 	utils.Success("Successfully updated to version %s", info.LatestVersion)
 	utils.Info("Please restart your application to use the new version")
-
-	// Save update record
-	saveUpdateRecord(info)
-
-	return nil
-}
-
-// Auto enables automatic update checking
-func (Update) Auto() error {
-	utils.Header("Configuring Automatic Updates")
-
-	enabled := utils.GetEnv("ENABLED", approvalTrue) == approvalTrue
-	interval := utils.GetEnv("INTERVAL", "24h")
-	channel := getUpdateChannel()
-
-	configPath := getUpdateConfigPath()
-
-	config := map[string]interface{}{
-		"enabled":   enabled,
-		"interval":  interval,
-		"channel":   channel,
-		"lastCheck": time.Now().Format(time.RFC3339),
-	}
-
-	// Save configuration
-	configData, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o750); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	if err := os.WriteFile(configPath, configData, 0o600); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-
-	if enabled {
-		utils.Success("Automatic updates enabled")
-		utils.Info("Channel: %s", channel)
-		utils.Info("Check interval: %s", interval)
-		utils.Info("Configuration saved to: %s", configPath)
-	} else {
-		utils.Success("Automatic updates disabled")
-	}
-
-	return nil
-}
-
-// History shows update history
-func (Update) History() error {
-	utils.Header("Update History")
-
-	historyPath := getUpdateHistoryPath()
-	if !utils.FileExists(historyPath) {
-		utils.Info("No update history found")
-		return nil
-	}
-
-	fileOps := fileops.New()
-	var history []map[string]string
-	if err := fileOps.JSON.ReadJSON(historyPath, &history); err != nil {
-		return fmt.Errorf("failed to read history: %w", err)
-	}
-
-	if len(history) == 0 {
-		utils.Info("No updates recorded")
-		return nil
-	}
-
-	utils.Info("Update History:")
-	utils.Info("Date                  From Version    To Version      Channel")
-	utils.Info("-------------------   -------------   -------------   -------")
-
-	for _, record := range history {
-		date, err := time.Parse(time.RFC3339, record["date"])
-		if err != nil {
-			// If date parsing fails, use current time as fallback
-			date = time.Now()
-		}
-		fmt.Printf("%-19s   %-13s   %-13s   %s\n",
-			date.Format("2006-01-02 15:04:05"),
-			record["from"],
-			record["to"],
-			record["channel"],
-		)
-	}
-
-	return nil
-}
-
-// Rollback rolls back to a previous version
-func (Update) Rollback() error {
-	utils.Header("Rolling Back Update")
-
-	rollbackVersion := utils.GetEnv("VERSION", "")
-	if rollbackVersion == "" {
-		return errUpdateVersionRequired
-	}
-
-	utils.Info("Rolling back to version %s", rollbackVersion)
-
-	// Install specific version of magex
-	pkg := fmt.Sprintf("%s@%s", magexModule, rollbackVersion)
-
-	if err := GetRunner().RunCmd("go", "install", pkg); err != nil {
-		return fmt.Errorf("rollback failed: %w", err)
-	}
-
-	utils.Success("Successfully rolled back to version %s", rollbackVersion)
-	utils.Info("Please restart your application")
 
 	return nil
 }
@@ -706,60 +593,6 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 
 	utils.Success("Binary installed to: %s", outputPath)
 	return nil
-}
-
-// getUpdateConfigPath returns the update configuration path
-func getUpdateConfigPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return filepath.Join(os.TempDir(), ".config", "mage", "update.json")
-	}
-	return filepath.Join(home, ".config", "mage", "update.json")
-}
-
-// getUpdateHistoryPath returns the update history path
-func getUpdateHistoryPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return filepath.Join(os.TempDir(), ".config", "mage", "history.json")
-	}
-	return filepath.Join(home, ".config", "mage", "history.json")
-}
-
-// saveUpdateRecord saves an update record to history
-func saveUpdateRecord(info *UpdateInfo) {
-	historyPath := getUpdateHistoryPath()
-	fileOps := fileops.New()
-
-	var history []map[string]string
-	if err := fileOps.JSON.ReadJSON(historyPath, &history); err != nil {
-		// If file doesn't exist, start with empty history
-		history = []map[string]string{}
-	}
-
-	record := map[string]string{
-		"date":    time.Now().Format(time.RFC3339),
-		"from":    info.CurrentVersion,
-		"to":      info.LatestVersion,
-		"channel": string(info.Channel),
-	}
-
-	history = append(history, record)
-
-	// Keep only last 50 records
-	if len(history) > 50 {
-		history = history[len(history)-50:]
-	}
-
-	// Ensure directory exists and save
-	if err := fileOps.File.MkdirAll(filepath.Dir(historyPath), 0o755); err != nil {
-		// Best effort - ignore error in cleanup
-		log.Printf("failed to create history directory: %v", err)
-	}
-	if err := fileOps.JSON.WriteJSONIndent(historyPath, history, "", "  "); err != nil {
-		// Best effort - ignore error in cleanup
-		log.Printf("failed to write update history: %v", err)
-	}
 }
 
 // getVersionInfoForUpdate returns version specifically for update checking
