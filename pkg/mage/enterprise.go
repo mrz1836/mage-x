@@ -214,7 +214,7 @@ func (Enterprise) Deploy() error {
 	for i, step := range steps {
 		utils.Info("🔄 Step %d/%d: %s", i+1, len(steps), step.Name)
 
-		if err := step.Action(); err != nil {
+		if err = step.Action(); err != nil {
 			deployment.Status = statusFailed
 			deployment.Error = err.Error()
 			_ = saveDeploymentRecord(&deployment) //nolint:errcheck // Ignore error - best effort logging

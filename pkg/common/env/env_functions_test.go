@@ -48,7 +48,7 @@ func (suite *EnvFunctionsTestSuite) TearDownTest() {
 
 	for _, key := range testKeys {
 		//nolint:errcheck // Best-effort cleanup in test teardown
-		os.Unsetenv(key)
+		_ = os.Unsetenv(key)
 	}
 }
 
