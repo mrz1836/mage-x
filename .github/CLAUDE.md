@@ -365,11 +365,13 @@ MAGE-X provides 241+ built-in commands available instantly through `magex`. The 
 - `toolsCheck` - Check if tools are available
 - `toolsVulnCheck` - Run vulnerability check
 
-#### Module Commands (4)
+#### Module Commands (6)
 - `modUpdate` - Update go.mod file
 - `modTidy` - Tidy go.mod file
 - `modVerify` - Verify module checksums
 - `modDownload` - Download modules
+- `modGraph` - Visualize dependency graph (use depth=3 format=json filter=pattern show_versions=false)
+- `modWhy` - Show why specific modules are needed (use module names as parameters)
 
 #### Documentation Commands (5)
 - `docsDefault` - Generate and serve documentation (generate + serve combined)

@@ -467,6 +467,22 @@ magex mod:update          # Update go.mod file
 magex mod:tidy            # Tidy the go.mod file
 magex mod:verify          # Verify module checksums
 magex mod:download        # Download modules
+magex mod:graph           # Visualize dependency graph as tree with relationships
+magex mod:why             # Show why specific modules are needed
+
+# Dependency Graph Examples
+magex mod:graph                                  # Default tree view with versions
+magex mod:graph depth=3                          # Limit depth to 3 levels
+magex mod:graph show_versions=false              # Hide version numbers
+magex mod:graph format=json                      # JSON output format
+magex mod:graph format=dot                       # DOT format for graphviz
+magex mod:graph format=mermaid                   # Mermaid diagram format
+magex mod:graph filter=github.com depth=2        # Filter + depth combined
+magex mod:graph show_versions=false format=tree  # Clean tree view
+
+# Module Dependency Analysis Examples
+magex mod:why github.com/stretchr/testify        # Show why testify is needed
+magex mod:why github.com/pkg/errors golang.org/x/sync  # Analyze multiple modules
 ```
 
 </details>
