@@ -2,10 +2,12 @@
 package mage
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/magefile/mage/mg"
@@ -17,7 +19,8 @@ import (
 var (
 	errOperationCanceled = errors.New("operation canceled")
 	errGoModExists       = errors.New("go.mod already exists")
-	errModuleRequired    = errors.New("MAGE_X_MODULE environment variable is required")
+	errModuleRequired    = errors.New("module name is required")
+	errUnsupportedFormat = errors.New("unsupported format")
 )
 
 // Mod namespace for Go module management tasks
@@ -138,9 +141,22 @@ func (Mod) Clean() error {
 	return nil
 }
 
-// Graph generates a dependency graph
-func (Mod) Graph() error {
+// Graph generates a dependency graph with tree visualization (use depth=3 format=json filter=pattern show_versions=false)
+func (Mod) Graph(args ...string) error {
 	utils.Header("Generating Dependency Graph")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+
+	depth := 0 // 0 = unlimited
+	if depthStr := utils.GetParam(params, "depth", "0"); depthStr != "0" {
+		if d, err := strconv.Atoi(depthStr); err == nil {
+			depth = d
+		}
+	}
+	showVersions := utils.GetParam(params, "show_versions", "true") == "true"
+	filter := utils.GetParam(params, "filter", "")
+	format := strings.ToLower(utils.GetParam(params, "format", "tree"))
 
 	// Get module graph
 	utils.Info("Analyzing dependencies...")
@@ -149,33 +165,39 @@ func (Mod) Graph() error {
 		return fmt.Errorf("failed to generate dependency graph: %w", err)
 	}
 
-	// Parse and display summary
-	deps := make(map[string][]string)
-	lines := strings.Split(output, "\n")
+	// Parse the graph into a tree structure
+	graph := parseModGraph(output)
 
-	for _, line := range lines {
-		parts := strings.Fields(line)
-		if len(parts) == 2 {
-			parent := parts[0]
-			dep := parts[1]
-			deps[parent] = append(deps[parent], dep)
-		}
-	}
-
-	// Show direct dependencies
-	module, err := utils.GetModuleName()
+	// Get root module name
+	rootModule, err := utils.GetModuleName()
 	if err != nil {
 		utils.Debug("Failed to get module name: %v", err)
-		module = statusUnknown
-	}
-	if directDeps, ok := deps[module]; ok {
-		utils.Info("Direct dependencies (%d):", len(directDeps))
-		for _, dep := range directDeps {
-			fmt.Printf("  - %s\n", dep)
-		}
+		rootModule = statusUnknown
 	}
 
-	// Save full graph if requested
+	// Apply filter if specified
+	if filter != "" {
+		graph = filterGraph(graph, filter)
+	}
+
+	// Display the graph based on format
+	switch format {
+	case "tree":
+		displayTreeGraph(graph, rootModule, showVersions, depth)
+	case "json":
+		displayJSONGraph(graph, rootModule)
+	case "dot":
+		displayDotGraph(graph)
+	case "mermaid":
+		displayMermaidGraph(graph)
+	default:
+		return fmt.Errorf("%w: %s (supported: tree, json, dot, mermaid)", errUnsupportedFormat, format)
+	}
+
+	// Display summary statistics
+	displayGraphStats(graph, rootModule)
+
+	// Save full graph if requested (standard env var)
 	if graphFile := GetMageXEnv("GRAPH_FILE"); graphFile != "" {
 		fileOps := fileops.New()
 		if err := fileOps.File.WriteFile(graphFile, []byte(output), 0o644); err != nil {
@@ -184,35 +206,381 @@ func (Mod) Graph() error {
 		utils.Success("Full dependency graph saved to: %s", graphFile)
 	}
 
-	utils.Info("Total modules in graph: %d", len(deps))
 	return nil
 }
 
+// DependencyNode represents a node in the dependency tree
+type DependencyNode struct {
+	Name         string
+	Version      string
+	Dependencies []*DependencyNode
+	Visited      bool // for cycle detection
+}
+
+// DependencyGraph represents the full dependency graph
+type DependencyGraph struct {
+	Nodes map[string]*DependencyNode
+	Edges map[string][]string
+}
+
+// parseModGraph parses go mod graph output into a structured graph
+func parseModGraph(output string) *DependencyGraph {
+	graph := &DependencyGraph{
+		Nodes: make(map[string]*DependencyNode),
+		Edges: make(map[string][]string),
+	}
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		parts := strings.Fields(line)
+		if len(parts) != 2 {
+			continue
+		}
+
+		parent := parts[0]
+		dep := parts[1]
+
+		// Create parent node if it doesn't exist
+		if _, exists := graph.Nodes[parent]; !exists {
+			name, ver := parseModuleNameVersion(parent)
+			graph.Nodes[parent] = &DependencyNode{
+				Name:         name,
+				Version:      ver,
+				Dependencies: []*DependencyNode{},
+			}
+		}
+
+		// Create dependency node if it doesn't exist
+		if _, exists := graph.Nodes[dep]; !exists {
+			name, ver := parseModuleNameVersion(dep)
+			graph.Nodes[dep] = &DependencyNode{
+				Name:         name,
+				Version:      ver,
+				Dependencies: []*DependencyNode{},
+			}
+		}
+
+		// Add edge
+		graph.Edges[parent] = append(graph.Edges[parent], dep)
+		graph.Nodes[parent].Dependencies = append(graph.Nodes[parent].Dependencies, graph.Nodes[dep])
+	}
+
+	return graph
+}
+
+// parseModuleNameVersion splits module@version into name and version
+func parseModuleNameVersion(module string) (string, string) {
+	if parts := strings.Split(module, "@"); len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return module, ""
+}
+
+// filterGraph filters the graph to only include modules matching the filter
+func filterGraph(graph *DependencyGraph, filter string) *DependencyGraph {
+	filteredGraph := &DependencyGraph{
+		Nodes: make(map[string]*DependencyNode),
+		Edges: make(map[string][]string),
+	}
+
+	// Find matching nodes
+	for key, node := range graph.Nodes {
+		if strings.Contains(strings.ToLower(node.Name), strings.ToLower(filter)) {
+			filteredGraph.Nodes[key] = node
+			filteredGraph.Edges[key] = graph.Edges[key]
+		}
+	}
+
+	return filteredGraph
+}
+
+// displayTreeGraph displays the dependency graph as a tree
+func displayTreeGraph(graph *DependencyGraph, rootModule string, showVersions bool, maxDepth int) {
+	if rootNode, exists := graph.Nodes[rootModule]; exists {
+		utils.Info("Dependency Tree:")
+		fmt.Print("\n")
+		displayNode(rootNode, "", true, showVersions, 0, maxDepth, make(map[string]bool))
+	} else {
+		utils.Warn("Root module not found in graph: %s", rootModule)
+	}
+}
+
+// displayNode recursively displays a dependency node with tree formatting
+func displayNode(node *DependencyNode, prefix string, isLast, showVersions bool, depth, maxDepth int, visited map[string]bool) {
+	// Check depth limit
+	if maxDepth > 0 && depth >= maxDepth {
+		return
+	}
+
+	// Format node name
+	nodeName := node.Name
+	if showVersions && node.Version != "" {
+		nodeName += "@" + node.Version
+	}
+
+	// Check for cycles
+	nodeKey := nodeName
+	if visited[nodeKey] {
+		fmt.Printf("%s%s %s (cycle detected)\n", prefix, getTreeSymbol(isLast), nodeName)
+		return
+	}
+	visited[nodeKey] = true
+
+	// Print current node
+	fmt.Printf("%s%s %s\n", prefix, getTreeSymbol(isLast), nodeName)
+
+	// Print dependencies
+	for i, dep := range node.Dependencies {
+		isLastDep := i == len(node.Dependencies)-1
+		newPrefix := prefix + getTreePrefix(isLast)
+		displayNode(dep, newPrefix, isLastDep, showVersions, depth+1, maxDepth, visited)
+	}
+
+	// Remove from visited to allow showing the same module in different subtrees
+	delete(visited, nodeKey)
+}
+
+// getTreeSymbol returns the appropriate tree drawing symbol
+func getTreeSymbol(isLast bool) string {
+	if isLast {
+		return "└── "
+	}
+	return "├── "
+}
+
+// getTreePrefix returns the prefix for child nodes
+func getTreePrefix(parentIsLast bool) string {
+	if parentIsLast {
+		return "    "
+	}
+	return "│   "
+}
+
+// displayJSONGraph displays the dependency graph as JSON
+func displayJSONGraph(graph *DependencyGraph, rootModule string) {
+	utils.Info("Dependency Graph (JSON format):")
+	fmt.Print("\n")
+
+	// Convert graph to a simple structure for JSON serialization
+	type jsonNode struct {
+		Name         string     `json:"name"`
+		Version      string     `json:"version,omitempty"`
+		Dependencies []jsonNode `json:"dependencies,omitempty"`
+	}
+
+	var convertNode func(*DependencyNode, map[string]bool) jsonNode
+	convertNode = func(node *DependencyNode, visited map[string]bool) jsonNode {
+		nodeKey := node.Name + "@" + node.Version
+		result := jsonNode{
+			Name:    node.Name,
+			Version: node.Version,
+		}
+
+		if !visited[nodeKey] {
+			visited[nodeKey] = true
+			for _, dep := range node.Dependencies {
+				result.Dependencies = append(result.Dependencies, convertNode(dep, visited))
+			}
+		}
+
+		return result
+	}
+
+	if rootNode, exists := graph.Nodes[rootModule]; exists {
+		jsonData := convertNode(rootNode, make(map[string]bool))
+		if jsonBytes, err := json.MarshalIndent(jsonData, "", "  "); err == nil {
+			fmt.Print(string(jsonBytes) + "\n")
+		} else {
+			utils.Error("Failed to marshal JSON: %v", err)
+		}
+	} else {
+		utils.Warn("Root module not found in graph: %s", rootModule)
+	}
+}
+
+// displayDotGraph displays the dependency graph in DOT format for graphviz
+func displayDotGraph(graph *DependencyGraph) {
+	utils.Info("Dependency Graph (DOT format):")
+	fmt.Print("\n")
+	fmt.Print("digraph dependencies {\n")
+	fmt.Print("  rankdir=TB;\n")
+	fmt.Print("  node [shape=box, style=rounded];\n")
+	fmt.Print("\n")
+
+	// Add nodes
+	for _, node := range graph.Nodes {
+		nodeName := node.Name
+		if node.Version != "" {
+			nodeName += "\\n" + node.Version
+		}
+		fmt.Printf("  \"%s\" [label=\"%s\"];\n", node.Name, nodeName)
+	}
+
+	fmt.Print("\n")
+
+	// Add edges
+	for parent, deps := range graph.Edges {
+		for _, dep := range deps {
+			depName, _ := parseModuleNameVersion(dep)
+			parentName, _ := parseModuleNameVersion(parent)
+			fmt.Printf("  \"%s\" -> \"%s\";\n", parentName, depName)
+		}
+	}
+
+	fmt.Print("}\n")
+}
+
+// displayMermaidGraph displays the dependency graph in Mermaid format
+func displayMermaidGraph(graph *DependencyGraph) {
+	utils.Info("Dependency Graph (Mermaid format):")
+	fmt.Print("\n")
+	fmt.Print("graph TD;\n")
+
+	// Create node IDs
+	nodeIDs := make(map[string]string)
+	idCounter := 1
+	for key, node := range graph.Nodes {
+		nodeIDs[key] = fmt.Sprintf("N%d", idCounter)
+		idCounter++
+		nodeName := node.Name
+		if node.Version != "" {
+			nodeName += "<br/>" + node.Version
+		}
+		fmt.Printf("  %s[\"%s\"];\n", nodeIDs[key], nodeName)
+	}
+
+	fmt.Print("\n")
+
+	// Add edges
+	for parent, deps := range graph.Edges {
+		for _, dep := range deps {
+			fmt.Printf("  %s --> %s;\n", nodeIDs[parent], nodeIDs[dep])
+		}
+	}
+}
+
+// displayGraphStats displays summary statistics about the dependency graph
+func displayGraphStats(graph *DependencyGraph, rootModule string) {
+	fmt.Print("\n")
+	utils.Header("Dependency Statistics")
+
+	// Count direct dependencies
+	directDeps := 0
+	if deps, exists := graph.Edges[rootModule]; exists {
+		directDeps = len(deps)
+	}
+
+	// Count total unique modules
+	totalModules := len(graph.Nodes)
+
+	// Calculate maximum depth
+	maxDepth := calculateMaxDepth(graph, rootModule)
+
+	// Find duplicate dependencies (same module, different versions)
+	duplicates := findDuplicateDependencies(graph)
+
+	utils.Info("Direct dependencies: %d", directDeps)
+	utils.Info("Total unique modules: %d", totalModules)
+	utils.Info("Maximum dependency depth: %d", maxDepth)
+
+	if len(duplicates) > 0 {
+		utils.Warn("Modules with multiple versions:")
+		for module, versions := range duplicates {
+			utils.Warn("  %s: %s", module, strings.Join(versions, ", "))
+		}
+	}
+}
+
+// calculateMaxDepth calculates the maximum dependency depth from the root module
+func calculateMaxDepth(graph *DependencyGraph, rootModule string) int {
+	var calculateDepth func(string, map[string]bool) int
+	calculateDepth = func(module string, visited map[string]bool) int {
+		if visited[module] {
+			return 0 // Avoid infinite recursion on cycles
+		}
+		visited[module] = true
+		defer func() { delete(visited, module) }()
+
+		maxChildDepth := 0
+		if deps, exists := graph.Edges[module]; exists {
+			for _, dep := range deps {
+				childDepth := calculateDepth(dep, visited)
+				if childDepth > maxChildDepth {
+					maxChildDepth = childDepth
+				}
+			}
+		}
+		return maxChildDepth + 1
+	}
+
+	return calculateDepth(rootModule, make(map[string]bool)) - 1 // Subtract 1 to not count the root
+}
+
+// findDuplicateDependencies finds modules that appear with different versions
+func findDuplicateDependencies(graph *DependencyGraph) map[string][]string {
+	moduleVersions := make(map[string]map[string]bool)
+
+	// Collect all versions for each module
+	for _, node := range graph.Nodes {
+		if node.Version != "" {
+			if moduleVersions[node.Name] == nil {
+				moduleVersions[node.Name] = make(map[string]bool)
+			}
+			moduleVersions[node.Name][node.Version] = true
+		}
+	}
+
+	// Find modules with multiple versions
+	duplicates := make(map[string][]string)
+	for module, versions := range moduleVersions {
+		if len(versions) > 1 {
+			versionList := make([]string, 0, len(versions))
+			for version := range versions {
+				versionList = append(versionList, version)
+			}
+			duplicates[module] = versionList
+		}
+	}
+
+	return duplicates
+}
+
 // Why shows why a module is needed
-func (Mod) Why() error {
-	module := GetMageXEnv("MODULE")
-	if module == "" {
-		return fmt.Errorf("%w. Usage: MAGE_X_MODULE=example.com/pkg mage modWhy", errModuleRequired)
+func (Mod) Why(args ...string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("%w: usage: mage mod:why <module1> [module2]", errModuleRequired)
 	}
 
 	utils.Header("Module Dependency Analysis")
-	utils.Info("Analyzing why %s is needed...", module)
 
-	// Run go mod why
-	output, err := GetRunner().RunCmdOutput("go", "mod", "why", module)
-	if err != nil {
-		return fmt.Errorf("failed to analyze module: %w", err)
-	}
+	// Analyze each provided module
+	for i, module := range args {
+		if i > 0 {
+			fmt.Print("\n")
+		}
 
-	utils.Info("Dependency path:")
-	utils.Info("%s", output)
+		utils.Info("Analyzing why %s is needed...", module)
 
-	// Also check if it's a direct dependency
-	directDeps, err := GetRunner().RunCmdOutput("go", "list", "-m", "-f", "{{.Require}}", "all")
-	if err == nil && strings.Contains(directDeps, module) {
-		utils.Info("This is a DIRECT dependency")
-	} else {
-		utils.Info("This is an INDIRECT dependency")
+		// Run go mod why
+		output, err := GetRunner().RunCmdOutput("go", "mod", "why", module)
+		if err != nil {
+			return fmt.Errorf("failed to analyze module %s: %w", module, err)
+		}
+
+		utils.Info("Dependency path:")
+		utils.Info("%s", output)
+
+		// Also check if it's a direct dependency
+		directDeps, err := GetRunner().RunCmdOutput("go", "list", "-m", "-f", "{{.Require}}", "all")
+		if err == nil && strings.Contains(directDeps, module) {
+			utils.Info("This is a DIRECT dependency")
+		} else {
+			utils.Info("This is an INDIRECT dependency")
+		}
 	}
 
 	return nil
@@ -267,7 +635,7 @@ func (Mod) Init() error {
 	}
 
 	if moduleName == "" {
-		return fmt.Errorf("%w. Usage: MAGE_X_MODULE=github.com/user/repo mage modInit", errModuleRequired)
+		return fmt.Errorf("%w. Usage: MAGE_X_MODULE=github.com/user/repo magex mod:init", errModuleRequired)
 	}
 
 	// Initialize module

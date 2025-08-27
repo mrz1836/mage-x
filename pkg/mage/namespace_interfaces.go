@@ -455,10 +455,10 @@ type ModNamespace interface {
 	Clean() error
 
 	// Graph generates a dependency graph
-	Graph() error
+	Graph(args ...string) error
 
 	// Why shows why a module is needed
-	Why() error
+	Why(args ...string) error
 
 	// Vendor vendors all dependencies
 	Vendor() error

@@ -1151,9 +1151,16 @@ func registerModCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("mod", "graph").
-			WithDescription("Show module dependency graph").
-			WithFunc(func() error { return m.Graph() }).
+			WithDescription("Visualize dependency graph with parameters").
+			WithArgsFunc(func(args ...string) error { return m.Graph(args...) }).
 			WithCategory("Module").
+			WithUsage("magex mod:graph [depth=<n>] [format=<type>] [filter=<pattern>] [show_versions=<bool>]").
+			WithExamples(
+				"magex mod:graph",
+				"magex mod:graph depth=3",
+				"magex mod:graph format=json",
+				"magex mod:graph filter=github.com show_versions=false",
+			).
 			MustBuild(),
 	)
 
@@ -1161,7 +1168,13 @@ func registerModCommands(reg *registry.Registry) {
 		registry.NewNamespaceCommand("mod", "why").
 			WithDescription("Explain why packages are needed").
 			WithFunc(func() error { return m.Why() }).
+			WithArgsFunc(func(args ...string) error { return m.Why(args...) }).
 			WithCategory("Module").
+			WithUsage("magex mod:why <module1> [module2] ...").
+			WithExamples(
+				"magex mod:why github.com/stretchr/testify",
+				"magex mod:why github.com/pkg/errors golang.org/x/sync",
+			).
 			MustBuild(),
 	)
 
