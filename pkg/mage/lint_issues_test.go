@@ -182,7 +182,7 @@ func TestScanForNolintDirectives(t *testing.T) {
 		outputs: map[string]string{
 			"grep -rn --include=*.go --exclude-dir=vendor --exclude-dir=.git -E //nolint .": `main.go:12:	func badCode() { //nolint:gocyclo,unused
 utils.go:25:	var unused string //nolint:deadcode
-handlers.go:30:	fmt.Println("debug") //nolint:forbidigo,gocyclo`,
+handlers.go:30:	fmt.Println("debug") //nolint:forbidigo,gocyclo // Test data: intentional linting issues`,
 		},
 	}
 	if err := SetRunner(mockRunner); err != nil {
@@ -412,7 +412,7 @@ func TestGroupNolintByTag(t *testing.T) {
 	matches := []string{
 		"main.go:12:	func badCode() { //nolint:gocyclo,unused",
 		"utils.go:25:	var unused string //nolint:deadcode",
-		"handlers.go:30:	fmt.Println(debug) //nolint:gocyclo,forbidigo", // gocyclo appears again
+		"handlers.go:30:	fmt.Println(debug) //nolint:gocyclo,forbidigo", // gocyclo appears again - test data
 	}
 
 	results := groupNolintByTag(matches)
@@ -769,7 +769,7 @@ func helper() {
 // TODO: refactor this function
 /* HACK: temporary workaround */
 func handler() {
-	fmt.Println("debug") //nolint:forbidigo,gocyclo
+	fmt.Println("debug") //nolint:forbidigo,gocyclo // Test data: intentional linting issues for testing
 }
 `,
 		"main_test.go": `package main

@@ -227,14 +227,14 @@ func TestFileOps_Extended(t *testing.T) {
 		var loaded map[string]string
 		path, err := ops.LoadConfig([]string{configYAML}, &loaded)
 		require.NoError(t, err)
-		assert.Equal(t, configYAML, path) //nolint:testifylint // path comparison, not content comparison
+		assert.Equal(t, configYAML, path) //nolint:testifylint // Comparing file paths, not YAML content
 		assert.Equal(t, "yaml-value", loaded["key"])
 
 		// Test loading JSON
 		loaded = map[string]string{}
 		path, err = ops.LoadConfig([]string{configJSON}, &loaded)
 		require.NoError(t, err)
-		assert.Equal(t, configJSON, path) //nolint:testifylint // path comparison, not content comparison
+		assert.Equal(t, configJSON, path) //nolint:testifylint // Comparing file paths, not JSON content
 		assert.Equal(t, "json-value", loaded["key"])
 
 		// Test loading unknown extension (tries YAML first)

@@ -415,10 +415,10 @@ import "fmt"
 
 // TODO: add proper error handling and validation
 func handleRequest() {
-	fmt.Println("handling request") //nolint:forbidigo
+	fmt.Println("handling request") //nolint:forbidigo // Test data: intentional linting issue for testing
 
 	// FIXME: remove debug code before production
-	fmt.Printf("Debug info") //nolint:forbidigo,gocyclo
+	fmt.Printf("Debug info") //nolint:forbidigo,gocyclo // Test data: intentional linting issues for testing
 }
 
 // TODO: implement authentication middleware
@@ -547,7 +547,7 @@ import "fmt"
 
 // TODO: implement feature %d
 func Feature%d() {
-	fmt.Println("feature") //nolint:forbidigo
+	fmt.Println("feature") //nolint:forbidigo // Test data: intentional linting issue for testing
 	// FIXME: add error handling
 }
 `,
