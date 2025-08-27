@@ -1096,6 +1096,12 @@ func buildTestArgs(cfg *Config, race, cover bool, additionalArgs ...string) []st
 			// Log warning but continue - better to run tests without unsafe args than fail
 			fmt.Printf("Warning: %v. Ignoring unsafe arguments.\n", err)
 		} else {
+			// Check if user provided timeout in additional args to avoid duplicates
+			userHasTimeout := hasTimeoutFlag(safeArgs)
+			if userHasTimeout {
+				// Remove config timeout if user provided one
+				args = removeTimeoutFlag(args)
+			}
 			args = append(args, safeArgs...)
 		}
 	}
@@ -1149,6 +1155,12 @@ func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool, 
 			// Log warning but continue - better to run tests without unsafe args than fail
 			fmt.Printf("Warning: %v. Ignoring unsafe arguments.\n", err)
 		} else {
+			// Check if user provided timeout in additional args to avoid duplicates
+			userHasTimeout := hasTimeoutFlag(safeArgs)
+			if userHasTimeout {
+				// Remove config timeout if user provided one
+				args = removeTimeoutFlag(args)
+			}
 			args = append(args, safeArgs...)
 		}
 	}
@@ -1281,4 +1293,37 @@ func mergeCoverageFiles(files []string, output string) error {
 	}
 
 	return nil
+}
+
+// hasTimeoutFlag checks if a timeout flag exists in the arguments
+func hasTimeoutFlag(args []string) bool {
+	for _, arg := range args {
+		if arg == "-timeout" {
+			return true
+		}
+		if strings.HasPrefix(arg, "-timeout=") {
+			return true
+		}
+	}
+	return false
+}
+
+// removeTimeoutFlag removes timeout flags from the arguments
+func removeTimeoutFlag(args []string) []string {
+	var result []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "-timeout" {
+			// Skip this flag and its value
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++ // Skip the value too
+			}
+		} else if strings.HasPrefix(arg, "-timeout=") {
+			// Skip this flag with embedded value
+			continue
+		} else {
+			result = append(result, arg)
+		}
+	}
+	return result
 }
