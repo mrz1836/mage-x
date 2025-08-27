@@ -305,7 +305,7 @@ type DocsNamespace interface {
 	Markdown() error
 
 	// GoDocs triggers GoDocs proxy sync
-	GoDocs() error
+	GoDocs(args ...string) error
 
 	// Update triggers GoDocs proxy sync (alias for GoDocs)
 	Update() error

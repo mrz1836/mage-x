@@ -70,8 +70,11 @@ const (
 type Docs mg.Namespace
 
 // GoDocs triggers pkg.go.dev sync
-func (Docs) GoDocs() error {
+func (Docs) GoDocs(args ...string) error {
 	utils.Header("Syndicating to pkg.go.dev")
+
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
 
 	config, err := GetConfig()
 	if err != nil {
@@ -87,14 +90,17 @@ func (Docs) GoDocs() error {
 		}
 	}
 
-	// Get latest version
-	currentVersion := getVersion()
-	if currentVersion == versionDev {
-		utils.Warn("No version tag found, using latest")
-		currentVersion = GetDefaultGoVulnCheckVersion()
-		if currentVersion == "" {
-			utils.Warn("GoVulnCheck version not available, using 'latest'")
-			currentVersion = VersionLatest
+	// Get version from parameter or detect current version
+	currentVersion := utils.GetParam(params, "version", "")
+	if currentVersion == "" {
+		currentVersion = getVersion()
+		if currentVersion == versionDev {
+			utils.Warn("No version tag found, using latest")
+			currentVersion = GetDefaultGoVulnCheckVersion()
+			if currentVersion == "" {
+				utils.Warn("GoVulnCheck version not available, using 'latest'")
+				currentVersion = VersionLatest
+			}
 		}
 	}
 

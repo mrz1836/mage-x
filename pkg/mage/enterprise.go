@@ -180,7 +180,7 @@ func (Enterprise) Deploy() error {
 	}
 
 	// Pre-deployment checks
-	if err := runPreDeploymentChecks(&config, &env); err != nil {
+	if err = runPreDeploymentChecks(&config, &env); err != nil {
 		return fmt.Errorf("pre-deployment checks failed: %w", err)
 	}
 
@@ -196,7 +196,7 @@ func (Enterprise) Deploy() error {
 	}
 
 	// Save deployment record
-	if err := saveDeploymentRecord(&deployment); err != nil {
+	if err = saveDeploymentRecord(&deployment); err != nil {
 		utils.Warn("Failed to save deployment record: %v", err)
 	}
 

@@ -57,7 +57,7 @@ func (Release) Default(args ...string) error {
 	utils.Info("Releasing tag: %s", latestTag)
 
 	// Set the tag via environment variable for explicit control (goreleaser v2)
-	// This replaces the deprecated --git-ref flag from v1
+	// This is the official way to specify which tag goreleaser should use
 	if err := os.Setenv("GORELEASER_CURRENT_TAG", latestTag); err != nil {
 		return fmt.Errorf("failed to set GORELEASER_CURRENT_TAG: %w", err)
 	}
@@ -76,20 +76,10 @@ func (Release) Default(args ...string) error {
 	if utils.HasParam(params, "godocs") {
 		utils.Info("Triggering GoDocs proxy update...")
 
-		// Set the release version for godocs to use the correct tag
-		if err := os.Setenv("MAGE_X_RELEASE_VERSION", latestTag); err != nil {
-			utils.Warn("Failed to set MAGE_X_RELEASE_VERSION: %v", err)
-		}
-
 		docs := Docs{}
-		if err := docs.GoDocs(); err != nil {
+		if err := docs.GoDocs("version=" + latestTag); err != nil {
 			utils.Warn("Failed to update GoDocs proxy: %v", err)
 			// Don't fail the release if godocs update fails
-		}
-
-		// Clean up the environment variable
-		if err := os.Unsetenv("MAGE_X_RELEASE_VERSION"); err != nil {
-			utils.Warn("Failed to clean up MAGE_X_RELEASE_VERSION: %v", err)
 		}
 	}
 
