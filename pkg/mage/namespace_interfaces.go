@@ -47,22 +47,25 @@ type BuildNamespace interface {
 // TestNamespace interface defines the contract for test operations
 type TestNamespace interface {
 	// Default runs standard test suite
-	Default() error
+	Default(args ...string) error
 
 	// Unit runs unit tests only
-	Unit() error
+	Unit(args ...string) error
 
 	// Short runs short tests
-	Short() error
+	Short(args ...string) error
 
 	// Race runs tests with race detector
-	Race() error
+	Race(args ...string) error
 
 	// Cover runs tests with coverage
-	Cover() error
+	Cover(args ...string) error
 
 	// CoverRace runs tests with coverage and race detector
-	CoverRace() error
+	CoverRace(args ...string) error
+
+	// Full runs full test suite with linting
+	Full(args ...string) error
 
 	// CoverReport generates coverage report
 	CoverReport() error

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 
@@ -528,17 +529,27 @@ func (suite *InterfaceComplianceTestSuite) TestInterfaceStabilityAndEvolution() 
 			suite.registry.Lint(),
 		}
 
-		// All namespaces should have Default method with same signature
+		// All namespaces should have Default method with consistent signature per namespace type
 		for _, ns := range namespaces {
 			value := reflect.ValueOf(ns)
 			defaultMethod := value.MethodByName("Default")
 
 			if defaultMethod.IsValid() {
 				methodType := defaultMethod.Type()
-				// Default() should take no parameters and return error
-				suite.Equal(0, methodType.NumIn(), "Default method should take no parameters")
-				suite.Equal(1, methodType.NumOut(), "Default method should return one value")
 
+				// TestNamespace Default() should take variadic string args and return error
+				// Other namespaces Default() should take no parameters and return error
+				nsType := reflect.TypeOf(ns).String()
+				if strings.Contains(nsType, "testNamespaceWrapper") {
+					// Test namespace should accept variadic arguments
+					suite.True(methodType.IsVariadic(), "Test namespace Default method should be variadic")
+					suite.Equal(1, methodType.NumIn(), "Test namespace Default method should take one variadic parameter")
+				} else {
+					// Other namespaces should take no parameters
+					suite.Equal(0, methodType.NumIn(), "Default method should take no parameters")
+				}
+
+				suite.Equal(1, methodType.NumOut(), "Default method should return one value")
 				errorInterface := reflect.TypeOf((*error)(nil)).Elem()
 				suite.True(methodType.Out(0).Implements(errorInterface), "Default method should return error")
 			}

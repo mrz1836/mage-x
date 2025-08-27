@@ -216,49 +216,71 @@ func registerTestCommands(reg *registry.Registry) {
 	reg.MustRegister(
 		registry.NewNamespaceCommand("test", "default").
 			WithDescription("Run standard test suite").
-			WithFunc(func() error { return t.Default() }).
+			WithArgsFunc(func(args ...string) error { return t.Default(args...) }).
 			WithCategory("Test").
 			WithAliases("test").
+			WithUsage("magex test [flags]").
+			WithExamples("magex test", "magex test -json", "magex test -race -v").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("test", "unit").
 			WithDescription("Run unit tests only").
-			WithFunc(func() error { return t.Unit() }).
+			WithArgsFunc(func(args ...string) error { return t.Unit(args...) }).
 			WithCategory("Test").
+			WithUsage("magex test:unit [flags]").
+			WithExamples("magex test:unit", "magex test:unit -json", "magex test:unit -v").
+			MustBuild(),
+	)
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("test", "full").
+			WithDescription("Run full test suite with linting").
+			WithArgsFunc(func(args ...string) error { return t.Full(args...) }).
+			WithCategory("Test").
+			WithUsage("magex test:full [flags]").
+			WithExamples("magex test:full", "magex test:full -json", "magex test:full -v").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("test", "short").
 			WithDescription("Run short tests").
-			WithFunc(func() error { return t.Short() }).
+			WithArgsFunc(func(args ...string) error { return t.Short(args...) }).
 			WithCategory("Test").
+			WithUsage("magex test:short [flags]").
+			WithExamples("magex test:short", "magex test:short -json").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("test", "race").
 			WithDescription("Run tests with race detector").
-			WithFunc(func() error { return t.Race() }).
+			WithArgsFunc(func(args ...string) error { return t.Race(args...) }).
 			WithCategory("Test").
+			WithUsage("magex test:race [flags]").
+			WithExamples("magex test:race", "magex test:race -json", "magex test:race -v").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("test", "cover").
 			WithDescription("Run tests with coverage").
-			WithFunc(func() error { return t.Cover() }).
+			WithArgsFunc(func(args ...string) error { return t.Cover(args...) }).
 			WithCategory("Test").
+			WithUsage("magex test:cover [flags]").
+			WithExamples("magex test:cover", "magex test:cover -json", "magex test:cover -v").
 			MustBuild(),
 	)
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("test", "coverrace").
 			WithDescription("Run tests with coverage and race detector").
-			WithFunc(func() error { return t.CoverRace() }).
+			WithArgsFunc(func(args ...string) error { return t.CoverRace(args...) }).
 			WithCategory("Test").
+			WithUsage("magex test:coverrace [flags]").
+			WithExamples("magex test:coverrace", "magex test:coverrace -json", "magex test:coverrace -v").
 			MustBuild(),
 	)
 

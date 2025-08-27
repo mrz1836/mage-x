@@ -305,12 +305,12 @@ func TestTestNamespaceCommands(t *testing.T) {
 		method      string
 		hasArgsFunc bool
 	}{
-		{"default", false},
-		{"unit", false},
-		{"short", false},
-		{"race", false},
-		{"cover", false},
-		{"coverrace", false},
+		{"default", true},   // Now has ArgsFunc for JSON support
+		{"unit", true},      // Now has ArgsFunc for JSON support
+		{"short", true},     // Now has ArgsFunc for JSON support
+		{"race", true},      // Now has ArgsFunc for JSON support
+		{"cover", true},     // Now has ArgsFunc for JSON support
+		{"coverrace", true}, // Now has ArgsFunc for JSON support
 		{"coverreport", false},
 		{"coverhtml", false},
 		{"fuzz", true},       // Now has ArgsFunc for time parameter

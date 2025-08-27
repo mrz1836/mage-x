@@ -16,21 +16,22 @@ import (
 var (
 	errNoCoverageFile         = errors.New("no coverage file found. Run 'magex test:cover' first")
 	errNoCoverageFilesToMerge = errors.New("no coverage files to merge")
+	errFlagNotAllowed         = errors.New("flag not allowed for security reasons")
 )
 
 // Test namespace for test-related tasks
 type Test mg.Namespace
 
 // Default runs the default test suite (unit tests only)
-func (Test) Default() error {
+func (Test) Default(args ...string) error {
 	utils.Header("Running Default Test Suite")
 
 	// Run unit tests only - no linting
-	return Test{}.Unit()
+	return Test{}.Unit(args...)
 }
 
 // Full runs the complete test suite with linting
-func (Test) Full() error {
+func (Test) Full(args ...string) error {
 	utils.Header("Running Full Test Suite (Lint + Tests)")
 
 	fmt.Printf("\n📋 Step 1/2: Running linters...\n")
@@ -45,11 +46,11 @@ func (Test) Full() error {
 	fmt.Printf("════════════════════════════════════════════════\n\n")
 
 	// Then run unit tests
-	return Test{}.Unit()
+	return Test{}.Unit(args...)
 }
 
 // Unit runs unit tests
-func (Test) Unit() error {
+func (Test) Unit(args ...string) error {
 	utils.Header("Running Unit Tests")
 
 	config, err := GetConfig()
@@ -82,12 +83,12 @@ func (Test) Unit() error {
 
 		moduleStart := time.Now()
 
-		// Build test args
-		args := buildTestArgs(config, false, false)
-		args = append(args, "-short", "./...")
+		// Build test args with additional arguments
+		testArgs := buildTestArgs(config, false, false, args...)
+		testArgs = append(testArgs, "-short", "./...")
 
 		// Run tests in module directory
-		err := runCommandInModule(module, "go", args...)
+		err := runCommandInModule(module, "go", testArgs...)
 
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
@@ -108,7 +109,7 @@ func (Test) Unit() error {
 }
 
 // Short runs short tests (excludes integration tests)
-func (Test) Short() error {
+func (Test) Short(args ...string) error {
 	utils.Header("Running Short Tests")
 
 	config, err := GetConfig()
@@ -144,11 +145,11 @@ func (Test) Short() error {
 		// Explicitly disable race and coverage for short tests to keep them fast
 		raceDisabled := false
 		coverDisabled := false
-		args := buildTestArgsWithOverrides(config, &raceDisabled, &coverDisabled)
-		args = append(args, "-short", "./...")
+		testArgs := buildTestArgsWithOverrides(config, &raceDisabled, &coverDisabled, args...)
+		testArgs = append(testArgs, "-short", "./...")
 
 		// Run tests in module directory
-		err := runCommandInModule(module, "go", args...)
+		err := runCommandInModule(module, "go", testArgs...)
 
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
@@ -169,7 +170,7 @@ func (Test) Short() error {
 }
 
 // Race runs tests with race detector
-func (Test) Race() error {
+func (Test) Race(args ...string) error {
 	utils.Header("Running Tests with Race Detector")
 
 	config, err := GetConfig()
@@ -202,11 +203,11 @@ func (Test) Race() error {
 
 		moduleStart := time.Now()
 
-		args := buildTestArgs(config, true, false)
-		args = append(args, "./...")
+		testArgs := buildTestArgs(config, true, false, args...)
+		testArgs = append(testArgs, "./...")
 
 		// Run tests in module directory
-		err := runCommandInModule(module, "go", args...)
+		err := runCommandInModule(module, "go", testArgs...)
 
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
@@ -227,7 +228,7 @@ func (Test) Race() error {
 }
 
 // Cover runs tests with coverage
-func (Test) Cover() error {
+func (Test) Cover(args ...string) error {
 	utils.Header("Running Tests with Coverage")
 
 	config, err := GetConfig()
@@ -269,17 +270,17 @@ func (Test) Cover() error {
 			coverFile = fmt.Sprintf("coverage_%s.txt", sanitized)
 		}
 
-		args := buildTestArgs(config, false, true)
-		args = append(args, "-coverprofile="+coverFile, "-covermode="+config.Test.CoverMode)
+		testArgs := buildTestArgs(config, false, true, args...)
+		testArgs = append(testArgs, "-coverprofile="+coverFile, "-covermode="+config.Test.CoverMode)
 
 		if len(config.Test.CoverPkg) > 0 {
-			args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
+			testArgs = append(testArgs, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
 		}
 
-		args = append(args, "./...")
+		testArgs = append(testArgs, "./...")
 
 		// Run tests in module directory
-		err := runCommandInModule(module, "go", args...)
+		err := runCommandInModule(module, "go", testArgs...)
 
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
@@ -318,7 +319,7 @@ func (Test) Cover() error {
 }
 
 // CoverRace runs tests with both coverage and race detector
-func (Test) CoverRace() error {
+func (Test) CoverRace(args ...string) error {
 	utils.Header("Running Tests with Coverage and Race Detector")
 
 	config, err := GetConfig()
@@ -360,17 +361,17 @@ func (Test) CoverRace() error {
 			coverFile = fmt.Sprintf("coverage_%s.txt", sanitized)
 		}
 
-		args := buildTestArgs(config, true, true)
-		args = append(args, "-coverprofile="+coverFile, "-covermode=atomic") // atomic is required with race
+		testArgs := buildTestArgs(config, true, true, args...)
+		testArgs = append(testArgs, "-coverprofile="+coverFile, "-covermode=atomic") // atomic is required with race
 
 		if len(config.Test.CoverPkg) > 0 {
-			args = append(args, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
+			testArgs = append(testArgs, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
 		}
 
-		args = append(args, "./...")
+		testArgs = append(testArgs, "./...")
 
 		// Run tests in module directory
-		err := runCommandInModule(module, "go", args...)
+		err := runCommandInModule(module, "go", testArgs...)
 
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
@@ -997,8 +998,71 @@ func (Test) CINoRace() error {
 
 // Helper functions
 
-// buildTestArgs builds common test arguments
-func buildTestArgs(cfg *Config, race, cover bool) []string {
+// parseSafeTestArgs parses and validates safe test arguments
+func parseSafeTestArgs(args []string) ([]string, error) {
+	var safeArgs []string
+
+	// Define allowed flags for security
+	allowedFlags := map[string]bool{
+		"-json":      true,
+		"-v":         true,
+		"-count":     true,
+		"-cpu":       true,
+		"-parallel":  true,
+		"-shuffle":   true,
+		"-failfast":  true,
+		"-vet":       true,
+		"-run":       true,
+		"-bench":     true,
+		"-benchmem":  true,
+		"-benchtime": true,
+		"-short":     true,
+		"-timeout":   true,
+		"-race":      true,
+		"-cover":     true,
+		"-covermode": true,
+		"-coverpkg":  true,
+		"-tags":      true,
+	}
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+
+		// Handle flags with values (like -count=5 or -count 5)
+		if strings.Contains(arg, "=") {
+			parts := strings.SplitN(arg, "=", 2)
+			flagName := parts[0]
+			if !allowedFlags[flagName] {
+				return nil, fmt.Errorf("%w: %s", errFlagNotAllowed, flagName)
+			}
+			safeArgs = append(safeArgs, arg)
+		} else if allowedFlags[arg] {
+			safeArgs = append(safeArgs, arg)
+
+			// Check if this flag expects a value (next argument)
+			flagsWithValues := map[string]bool{
+				"-count": true, "-cpu": true, "-parallel": true, "-vet": true,
+				"-run": true, "-bench": true, "-benchtime": true, "-timeout": true,
+				"-covermode": true, "-coverpkg": true, "-tags": true,
+			}
+
+			if flagsWithValues[arg] && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++ // Skip the next argument (it's the value)
+				safeArgs = append(safeArgs, args[i])
+			}
+		} else if strings.HasPrefix(arg, "-") {
+			return nil, fmt.Errorf("%w: %s", errFlagNotAllowed, arg)
+		} else {
+			// Non-flag arguments are allowed (like package paths)
+			safeArgs = append(safeArgs, arg)
+		}
+	}
+
+	return safeArgs, nil
+}
+
+// buildTestArgs builds common test arguments with optional additional args
+func buildTestArgs(cfg *Config, race, cover bool, additionalArgs ...string) []string {
 	args := []string{"test"}
 
 	if cfg.Test.Parallel > 0 {
@@ -1025,12 +1089,23 @@ func buildTestArgs(cfg *Config, race, cover bool) []string {
 		args = append(args, "-cover")
 	}
 
+	// Add additional arguments if provided
+	if len(additionalArgs) > 0 {
+		safeArgs, err := parseSafeTestArgs(additionalArgs)
+		if err != nil {
+			// Log warning but continue - better to run tests without unsafe args than fail
+			fmt.Printf("Warning: %v. Ignoring unsafe arguments.\n", err)
+		} else {
+			args = append(args, safeArgs...)
+		}
+	}
+
 	return args
 }
 
 // buildTestArgsWithOverrides builds test arguments with explicit overrides for race and cover
 // When raceOverride or coverOverride are not nil, they take precedence over config defaults
-func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool) []string {
+func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool, additionalArgs ...string) []string {
 	args := []string{"test"}
 
 	if cfg.Test.Parallel > 0 {
@@ -1065,6 +1140,17 @@ func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool) 
 	}
 	if useCover {
 		args = append(args, "-cover")
+	}
+
+	// Add additional arguments if provided
+	if len(additionalArgs) > 0 {
+		safeArgs, err := parseSafeTestArgs(additionalArgs)
+		if err != nil {
+			// Log warning but continue - better to run tests without unsafe args than fail
+			fmt.Printf("Warning: %v. Ignoring unsafe arguments.\n", err)
+		} else {
+			args = append(args, safeArgs...)
+		}
 	}
 
 	return args

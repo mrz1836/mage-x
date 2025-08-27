@@ -487,15 +487,15 @@ func TestNamespaceMethodSignatureConsistency(t *testing.T) {
 	require.NotNil(t, lint)
 	require.NotNil(t, format)
 
-	// Verify Default method signatures (func() error)
+	// Verify Default method signatures (func(...string) error for test namespace, func() error for others)
 	assert.IsType(t, func() error { return nil }, build.Default)
-	assert.IsType(t, func() error { return nil }, test.Default)
+	assert.IsType(t, func(args ...string) error { return nil }, test.Default)
 	assert.IsType(t, func() error { return nil }, lint.Default)
 	assert.IsType(t, func() error { return nil }, format.Default)
 
 	// Test other common method signatures
 	assert.IsType(t, func() error { return nil }, build.Clean)
-	assert.IsType(t, func() error { return nil }, test.Unit)
+	assert.IsType(t, func(args ...string) error { return nil }, test.Unit)
 	assert.IsType(t, func() error { return nil }, lint.All)
 	assert.IsType(t, func() error { return nil }, format.Check)
 }

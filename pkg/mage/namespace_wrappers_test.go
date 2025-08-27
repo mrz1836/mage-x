@@ -481,10 +481,10 @@ func TestWrapperMethodSignatures(t *testing.T) {
 	test := NewTestNamespace()
 	require.NotNil(t, test)
 
-	assert.IsType(t, func() error { return nil }, test.Default)
-	assert.IsType(t, func() error { return nil }, test.Unit)
-	assert.IsType(t, func() error { return nil }, test.Race)
-	assert.IsType(t, func() error { return nil }, test.Cover)
+	assert.IsType(t, func(args ...string) error { return nil }, test.Default)
+	assert.IsType(t, func(args ...string) error { return nil }, test.Unit)
+	assert.IsType(t, func(args ...string) error { return nil }, test.Race)
+	assert.IsType(t, func(args ...string) error { return nil }, test.Cover)
 }
 
 // BenchmarkWrapperCreation benchmarks wrapper creation performance

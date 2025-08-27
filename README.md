@@ -525,6 +525,21 @@ magex test:fuzz time=30s       # Run fuzz tests with custom duration
 magex test:fuzzShort time=1s   # Run short fuzz tests with custom duration
 magex test:integration         # Run integration tests
 
+# JSON Output Support for Test Commands
+magex test -json               # Run tests with JSON output for tooling
+magex test:unit -json          # Unit tests with JSON output
+magex test:race -json          # Race detection with JSON output
+magex test:cover -json         # Coverage tests with JSON output
+magex test:coverrace -json     # Coverage + race with JSON output
+magex test:short -json         # Short tests with JSON output
+
+# Advanced Test Options (all commands support these flags)
+magex test -v                  # Verbose output
+magex test:cover -count=3      # Run tests 3 times
+magex test -failfast           # Stop at first failure
+magex test -shuffle=on         # Randomize test execution
+magex test -parallel=4         # Set parallel test execution
+
 # Code Quality & Linting
 magex lint                     # Run essential linters
 magex lint:fix                 # Auto-fix linting issues + apply formatting
@@ -941,6 +956,10 @@ magex test
 
 # Comprehensive testing
 magex test:race test:cover test:fuzz
+
+# JSON output for tooling integration
+magex test -json               # JSON output for CI/CD tools
+magex test:coverrace -json     # Coverage + race with JSON output
 
 # Performance benchmarks
 magex bench                    # Default benchmarks (10s duration)
