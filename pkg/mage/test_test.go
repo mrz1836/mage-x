@@ -164,7 +164,7 @@ func TestTestRace(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				test.Race,
+				func() error { return test.Race() },
 			)
 
 			if tt.expectErr {
@@ -446,7 +446,7 @@ github.com/test/project/pkg/mage`
 			err := env.WithMockRunner(
 				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() interface{} { return GetRunner() },
-				test.Unit,
+				func() error { return test.Unit() },
 			)
 
 			if tt.expectErr {
