@@ -48,12 +48,12 @@ func (Metrics) LOC() error {
 	utils.Println("")
 	utils.Println("| Type       | Total Lines | Date       |")
 	utils.Println("|------------|-------------|------------|")
-	utils.Print("| Test Files | %-11d | %s |\n", testCount, date)
-	utils.Print("| Go Files   | %-11d | %s |\n", goCount, date)
+	utils.Print("| Test Files | %-11s | %s |\n", formatNumberWithCommas(testCount), date)
+	utils.Print("| Go Files   | %-11s | %s |\n", formatNumberWithCommas(goCount), date)
 	utils.Println("")
 
 	total := testCount + goCount
-	utils.Success("Total lines of code: %d", total)
+	utils.Success("Total lines of code: %s", formatNumberWithCommas(total))
 
 	return nil
 }
@@ -258,6 +258,23 @@ func (Metrics) Imports() error {
 }
 
 // Helper functions
+
+// formatNumberWithCommas formats an integer with thousand separators
+func formatNumberWithCommas(n int) string {
+	str := fmt.Sprintf("%d", n)
+	if len(str) <= 3 {
+		return str
+	}
+
+	result := ""
+	for i, digit := range str {
+		if i > 0 && (len(str)-i)%3 == 0 {
+			result += ","
+		}
+		result += string(digit)
+	}
+	return result
+}
 
 // countLines counts lines in files matching pattern
 func countLines(pattern string, excludeDirs []string) (int, error) {
