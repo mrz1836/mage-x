@@ -26,9 +26,9 @@ type VersionTestSuite struct {
 
 // SetupSuite runs before all tests in the suite
 func (ts *VersionTestSuite) SetupSuite() {
-	// Store original environment variables
+	// Store original environment variables (only for GitHub token which is still supported)
 	ts.origEnvVars = make(map[string]string)
-	envVars := []string{"BUMP", "PUSH", "FROM", "TO", "DRY_RUN"}
+	envVars := []string{"GITHUB_TOKEN"}
 	for _, env := range envVars {
 		ts.origEnvVars[env] = os.Getenv(env)
 	}
@@ -53,11 +53,7 @@ func (ts *VersionTestSuite) TearDownSuite() {
 
 // SetupTest runs before each test
 func (ts *VersionTestSuite) SetupTest() {
-	// Clear environment variables for clean test state
-	envVars := []string{"BUMP", "PUSH", "FROM", "TO", "DRY_RUN"}
-	for _, env := range envVars {
-		ts.Require().NoError(os.Unsetenv(env))
-	}
+	// No environment variables to clear since we use parameters
 }
 
 // TestVersionSuite runs the version test suite
@@ -1006,58 +1002,47 @@ func TestVersionStringHelpers(t *testing.T) {
 	})
 }
 
-// TestEnvironmentVariablePrecedence tests BUMP environment variable handling thoroughly
-func TestEnvironmentVariablePrecedence(t *testing.T) {
-	// Save original BUMP value
-	originalBump := os.Getenv("BUMP")
-	defer func() {
-		if originalBump != "" {
-			require.NoError(t, os.Setenv("BUMP", originalBump))
-		} else {
-			require.NoError(t, os.Unsetenv("BUMP"))
-		}
-	}()
-
-	t.Run("DefaultWhenUnset", func(t *testing.T) {
-		require.NoError(t, os.Unsetenv("BUMP"))
-
-		bumpType := utils.GetEnv("BUMP", "patch")
+// TestParameterParsing tests that version functions use parameters correctly
+func TestParameterParsing(t *testing.T) {
+	t.Run("DefaultBumpType", func(t *testing.T) {
+		params := utils.ParseParams([]string{})
+		bumpType := utils.GetParam(params, "bump", "patch")
 		require.Equal(t, "patch", bumpType)
 	})
 
-	t.Run("EmptyStringUsesDefault", func(t *testing.T) {
-		require.NoError(t, os.Setenv("BUMP", ""))
-
-		bumpType := utils.GetEnv("BUMP", "patch")
-		require.Equal(t, "patch", bumpType) // Empty should use default
-	})
-
-	t.Run("ExplicitValueOverridesDefault", func(t *testing.T) {
+	t.Run("ExplicitBumpType", func(t *testing.T) {
 		testCases := []string{"major", "minor", "patch"}
 
 		for _, expected := range testCases {
 			t.Run(expected, func(t *testing.T) {
-				require.NoError(t, os.Setenv("BUMP", expected))
-
-				bumpType := utils.GetEnv("BUMP", "patch")
+				params := utils.ParseParams([]string{"bump=" + expected})
+				bumpType := utils.GetParam(params, "bump", "patch")
 				require.Equal(t, expected, bumpType)
 			})
 		}
 	})
 
-	t.Run("CaseInsensitiveValidation", func(t *testing.T) {
-		// Note: The actual validation happens in Version.Bump(),
-		// but we test utils.GetEnv behavior here
+	t.Run("CaseHandlingInParameters", func(t *testing.T) {
+		// Test that parameters preserve case (validation happens in Version.Bump)
 		testCases := []string{"MAJOR", "Minor", "PATCH"}
 
 		for _, bumpType := range testCases {
 			t.Run(bumpType, func(t *testing.T) {
-				require.NoError(t, os.Setenv("BUMP", bumpType))
-
-				result := utils.GetEnv("BUMP", "patch")
-				require.Equal(t, bumpType, result) // GetEnv preserves case
+				params := utils.ParseParams([]string{"bump=" + bumpType})
+				result := utils.GetParam(params, "bump", "patch")
+				require.Equal(t, bumpType, result) // GetParam preserves case
 			})
 		}
+	})
+
+	t.Run("MultipleParameters", func(t *testing.T) {
+		params := utils.ParseParams([]string{"bump=minor", "push", "dry-run"})
+
+		bumpType := utils.GetParam(params, "bump", "patch")
+		require.Equal(t, "minor", bumpType)
+
+		require.True(t, utils.HasParam(params, "push"))
+		require.True(t, utils.HasParam(params, "dry-run"))
 	})
 }
 
@@ -1219,46 +1204,41 @@ func TestGetTagsOnCurrentCommitBehavior(t *testing.T) {
 	})
 }
 
-// TestVersionBumpEnvironmentVariableEdgeCases tests edge cases in environment variable handling
-func TestVersionBumpEnvironmentVariableEdgeCases(t *testing.T) {
-	// Save original environment
-	originalVars := make(map[string]string)
-	envVars := []string{"BUMP", "PUSH", "DRY_RUN"}
-	for _, env := range envVars {
-		if value, exists := os.LookupEnv(env); exists {
-			originalVars[env] = value
-		}
-	}
-	defer func() {
-		for _, env := range envVars {
-			if value, existed := originalVars[env]; existed {
-				require.NoError(t, os.Setenv(env, value))
-			} else {
-				require.NoError(t, os.Unsetenv(env))
-			}
-		}
-	}()
-
-	t.Run("WhitespaceInBUMP", func(t *testing.T) {
-		require.NoError(t, os.Setenv("BUMP", " patch "))
-
-		// The Version.Bump method should handle this (trim whitespace)
-		// For now, we test that GetEnv returns the literal value
-		bumpType := utils.GetEnv("BUMP", "patch")
-		require.Equal(t, " patch ", bumpType, "GetEnv should return literal value")
+// TestVersionBumpParameterEdgeCases tests edge cases in parameter handling
+func TestVersionBumpParameterEdgeCases(t *testing.T) {
+	t.Run("WhitespaceInParameters", func(t *testing.T) {
+		// Test that ParseParams handles whitespace correctly
+		params := utils.ParseParams([]string{"bump= patch "})
+		bumpType := utils.GetParam(params, "bump", "minor")
+		require.Equal(t, "patch", bumpType, "ParseParams should trim whitespace")
 	})
 
-	t.Run("MultipleEnvironmentVariables", func(t *testing.T) {
-		require.NoError(t, os.Setenv("BUMP", "minor"))
-		require.NoError(t, os.Setenv("PUSH", "true"))
-		require.NoError(t, os.Setenv("DRY_RUN", "false"))
+	t.Run("ParameterCaseSensitivity", func(t *testing.T) {
+		// Test that parameter keys are case sensitive
+		params := utils.ParseParams([]string{"BUMP=major", "bump=minor"})
 
-		bumpType := utils.GetEnv("BUMP", "patch")
-		pushEnabled := utils.GetEnv("PUSH", "false")
-		dryRun := utils.GetEnv("DRY_RUN", "false")
-
+		// Should find the exact key match
+		bumpType := utils.GetParam(params, "bump", "patch")
 		require.Equal(t, "minor", bumpType)
-		require.Equal(t, "true", pushEnabled)
-		require.Equal(t, "false", dryRun)
+
+		// Should use default for non-matching case
+		bumpTypeUpper := utils.GetParam(params, "BUMP", "patch")
+		require.Equal(t, "major", bumpTypeUpper)
+	})
+
+	t.Run("EmptyParameterValues", func(t *testing.T) {
+		params := utils.ParseParams([]string{"bump=", "push", "dry-run="})
+
+		// Empty value should be preserved
+		bumpType := utils.GetParam(params, "bump", "patch")
+		require.Empty(t, bumpType)
+
+		// Flag parameter should exist
+		require.True(t, utils.HasParam(params, "push"))
+
+		// Empty value parameter should exist but have empty value
+		require.True(t, utils.HasParam(params, "dry-run"))
+		dryRun := utils.GetParam(params, "dry-run", "false")
+		require.Empty(t, dryRun)
 	})
 }

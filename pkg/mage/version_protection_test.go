@@ -2,7 +2,6 @@ package mage
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -10,52 +9,29 @@ import (
 )
 
 // VersionProtectionTestSuite provides comprehensive tests to prevent unexpected version bumps
-// This test suite was created to prevent the issue where "PUSH=true mage versionBump"
-// unexpectedly jumped from v1.0.6 to v2.0.0 instead of v1.0.7
+// This test suite ensures that parameters are handled correctly and prevents issues like
+// accidentally jumping from v1.0.6 to v2.0.0 instead of v1.0.7 due to parameter contamination
 type VersionProtectionTestSuite struct {
 	suite.Suite
 
-	originalRunner  interface{}
-	originalEnvVars map[string]string
+	originalRunner interface{}
 }
 
 // SetupSuite runs once before all tests
 func (vpts *VersionProtectionTestSuite) SetupSuite() {
 	// Save original runner
 	vpts.originalRunner = GetRunner()
-
-	// Save critical environment variables
-	vpts.originalEnvVars = make(map[string]string)
-	envVars := []string{"BUMP", "PUSH", "DRY_RUN", "MAJOR_BUMP_CONFIRM"}
-	for _, env := range envVars {
-		if value, exists := os.LookupEnv(env); exists {
-			vpts.originalEnvVars[env] = value
-		}
-	}
 }
 
 // TearDownSuite runs once after all tests
 func (vpts *VersionProtectionTestSuite) TearDownSuite() {
 	// Restore original runner
 	_ = SetRunner(vpts.originalRunner.(CommandRunner)) //nolint:errcheck // Cleanup operation
-
-	// Restore original environment variables
-	for _, env := range []string{"BUMP", "PUSH", "DRY_RUN", "MAJOR_BUMP_CONFIRM"} {
-		if originalValue, existed := vpts.originalEnvVars[env]; existed {
-			vpts.NoError(os.Setenv(env, originalValue))
-		} else {
-			vpts.NoError(os.Unsetenv(env))
-		}
-	}
 }
 
-// SetupTest runs before each test to ensure clean environment
+// SetupTest runs before each test
 func (vpts *VersionProtectionTestSuite) SetupTest() {
-	// Clear all version-related environment variables
-	envVars := []string{"BUMP", "PUSH", "DRY_RUN", "MAJOR_BUMP_CONFIRM"}
-	for _, env := range envVars {
-		vpts.NoError(os.Unsetenv(env))
-	}
+	// No cleanup needed since we use parameters instead of environment variables
 }
 
 // TestVersionProtectionSuite runs the protection test suite
@@ -63,65 +39,58 @@ func TestVersionProtectionSuite(t *testing.T) {
 	suite.Run(t, new(VersionProtectionTestSuite))
 }
 
-// TestEnvironmentVariableIsolation tests that environment variables don't contaminate each other
-func (vpts *VersionProtectionTestSuite) TestEnvironmentVariableIsolation() {
-	vpts.Run("DefaultBumpWhenUnset", func() {
-		// Ensure BUMP is not set
-		vpts.Require().NoError(os.Unsetenv("BUMP"))
-
-		// Test that utils.GetEnv returns the default correctly
-		bumpType := utils.GetEnv("BUMP", "patch")
-		vpts.Equal("patch", bumpType, "Default BUMP should be 'patch' when environment variable is unset")
+// TestParameterHandling tests that parameters are handled correctly without contamination
+func (vpts *VersionProtectionTestSuite) TestParameterHandling() {
+	vpts.Run("DefaultBumpWhenNoParameter", func() {
+		// Test parsing empty parameters
+		params := utils.ParseParams([]string{})
+		bumpType := utils.GetParam(params, "bump", "patch")
+		vpts.Equal("patch", bumpType, "Default bump should be 'patch' when no parameter is provided")
 	})
 
-	vpts.Run("EmptyBumpUsesDefault", func() {
-		// Set BUMP to empty string
-		vpts.Require().NoError(os.Setenv("BUMP", ""))
-
-		// Test that empty string falls back to default
-		bumpType := utils.GetEnv("BUMP", "patch")
-		vpts.Equal("patch", bumpType, "Empty BUMP should use default 'patch'")
-	})
-
-	vpts.Run("ExplicitBumpOverridesDefault", func() {
+	vpts.Run("ExplicitBumpParameter", func() {
 		testCases := []string{"major", "minor", "patch"}
 
 		for _, expectedBump := range testCases {
 			vpts.Run(fmt.Sprintf("Bump_%s", expectedBump), func() {
-				vpts.Require().NoError(os.Setenv("BUMP", expectedBump))
-
-				bumpType := utils.GetEnv("BUMP", "patch")
-				vpts.Equal(expectedBump, bumpType, "Explicit BUMP should override default")
+				params := utils.ParseParams([]string{"bump=" + expectedBump})
+				bumpType := utils.GetParam(params, "bump", "patch")
+				vpts.Equal(expectedBump, bumpType, "Explicit bump parameter should override default")
 			})
 		}
 	})
 
-	vpts.Run("BumpContaminationFromPreviousCommand", func() {
-		// Simulate contamination: set BUMP to major (as if from previous command)
-		vpts.Require().NoError(os.Setenv("BUMP", "major"))
+	vpts.Run("ParameterIsolation", func() {
+		// Test that different parameter sets don't interfere with each other
+		params1 := utils.ParseParams([]string{"bump=major", "push"})
+		params2 := utils.ParseParams([]string{"bump=patch", "dry-run"})
 
-		// Verify it's contaminated
-		bumpType := utils.GetEnv("BUMP", "patch")
-		vpts.Equal("major", bumpType, "Should detect contaminated environment")
+		// First parameter set
+		bumpType1 := utils.GetParam(params1, "bump", "minor")
+		vpts.Equal("major", bumpType1)
+		vpts.True(utils.HasParam(params1, "push"))
+		vpts.False(utils.HasParam(params1, "dry-run"))
 
-		// Clear environment (simulating new shell/command)
-		vpts.Require().NoError(os.Unsetenv("BUMP"))
+		// Second parameter set (independent)
+		bumpType2 := utils.GetParam(params2, "bump", "minor")
+		vpts.Equal("patch", bumpType2)
+		vpts.False(utils.HasParam(params2, "push"))
+		vpts.True(utils.HasParam(params2, "dry-run"))
+	})
 
-		// Verify default is restored
-		bumpType = utils.GetEnv("BUMP", "patch")
-		vpts.Equal("patch", bumpType, "Should use default after clearing contamination")
+	vpts.Run("EmptyParameterValue", func() {
+		// Test handling of empty parameter values
+		params := utils.ParseParams([]string{"bump="})
+		bumpType := utils.GetParam(params, "bump", "patch")
+		vpts.Empty(bumpType, "Empty parameter value should be preserved")
 	})
 }
 
 // TestCommandSimulation tests the exact command scenarios that could cause issues
 func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
-	vpts.Run("PUSHTrueWithDefaultBump", func() {
+	vpts.Run("PushWithDefaultBump", func() {
 		mock := NewVersionMockRunner()
 		vpts.Require().NoError(SetRunner(mock))
-
-		// Simulate the exact command: PUSH=true mage versionBump (no explicit BUMP)
-		vpts.NoError(os.Setenv("PUSH", "true"))
-		vpts.NoError(os.Unsetenv("BUMP")) // Ensure BUMP is not set
 
 		// Set up mock for successful patch bump
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -132,10 +101,10 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 		mock.SetOutput("git push origin v1.0.7", "", nil)
 
-		// Run version bump
+		// Run version bump with push parameter (default bump type)
 		version := Version{}
 		err := version.Bump("push")
-		vpts.Require().NoError(err, "push with default BUMP should succeed")
+		vpts.Require().NoError(err, "push with default bump should succeed")
 
 		// Verify it was a patch bump (v1.0.6 -> v1.0.7)
 		vpts.Contains(mock.commands, "git tag -a v1.0.7 -m GitHubRelease v1.0.7",
@@ -144,13 +113,9 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 			"Should push the v1.0.7 tag")
 	})
 
-	vpts.Run("PUSHTrueWithExplicitPatch", func() {
+	vpts.Run("PushWithExplicitPatch", func() {
 		mock := NewVersionMockRunner()
 		vpts.Require().NoError(SetRunner(mock))
-
-		// Simulate: PUSH=true BUMP=patch mage versionBump
-		vpts.NoError(os.Setenv("PUSH", "true"))
-		vpts.NoError(os.Setenv("BUMP", "patch"))
 
 		// Set up mock for successful patch bump
 		mock.SetOutput("git status --porcelain", "", nil)
@@ -339,11 +304,6 @@ func (vpts *VersionProtectionTestSuite) TestDryRunProtection() {
 		mock := NewVersionMockRunner()
 		vpts.Require().NoError(SetRunner(mock))
 
-		// Simulate dangerous scenario: BUMP=major with dry run
-		vpts.NoError(os.Setenv("BUMP", "major"))
-		vpts.NoError(os.Setenv("DRY_RUN", "true"))
-		vpts.NoError(os.Setenv("PUSH", "true"))
-
 		// Set up mock for dry run
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
@@ -351,7 +311,7 @@ func (vpts *VersionProtectionTestSuite) TestDryRunProtection() {
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=major", "dry-run", "push")
 		vpts.Require().NoError(err, "Dry run should always succeed")
 
 		// Verify no actual git commands were executed
@@ -452,20 +412,16 @@ func (vpts *VersionProtectionTestSuite) TestVersionStringParsing() {
 
 // Benchmark tests to ensure version operations are performant
 func BenchmarkVersionProtection(b *testing.B) {
-	// Store original environment
-	originalBump := os.Getenv("BUMP")
-	defer func() {
-		if originalBump != "" {
-			_ = os.Setenv("BUMP", originalBump) //nolint:errcheck // Cleanup operation
-		} else {
-			_ = os.Unsetenv("BUMP") //nolint:errcheck // Cleanup operation
-		}
-	}()
-
-	b.Run("GetEnvBUMP", func(b *testing.B) {
-		_ = os.Setenv("BUMP", "patch") //nolint:errcheck // Test setup
+	b.Run("ParseParams", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_ = utils.GetEnv("BUMP", "patch")
+			_ = utils.ParseParams([]string{"bump=patch", "push", "dry-run"})
+		}
+	})
+
+	b.Run("GetParam", func(b *testing.B) {
+		params := utils.ParseParams([]string{"bump=patch", "push", "dry-run"})
+		for i := 0; i < b.N; i++ {
+			_ = utils.GetParam(params, "bump", "patch")
 		}
 	})
 

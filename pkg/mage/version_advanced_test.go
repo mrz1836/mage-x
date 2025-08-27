@@ -3,7 +3,6 @@ package mage
 import (
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,12 +16,10 @@ var (
 	errGitError        = errors.New("git error")
 )
 
-// cleanupEnvironment cleans up version-related environment variables
+// cleanupEnvironment is no longer needed since we use parameters instead of environment variables
+// Keeping the function for backward compatibility but it's now a no-op
 func cleanupEnvironment(t *testing.T) {
-	envVars := []string{"BUMP", "PUSH", "DRY_RUN", "MAJOR_BUMP_CONFIRM"}
-	for _, env := range envVars {
-		require.NoError(t, os.Unsetenv(env))
-	}
+	// No-op: parameters don't need cleanup
 }
 
 // VersionMockRunner is a mock implementation of Runner for version testing
@@ -366,16 +363,10 @@ func TestVersionUpdateWithMocks(t *testing.T) {
 
 // TestBumpWithPushEnabled tests Bump with PUSH=true
 func TestBumpWithPushEnabled(t *testing.T) {
-	// Save original runner and env
+	// Save original runner
 	originalRunner := GetRunner()
-	originalPush := os.Getenv("PUSH")
 	defer func() {
 		require.NoError(t, SetRunner(originalRunner))
-		if originalPush == "" {
-			require.NoError(t, os.Unsetenv("PUSH"))
-		} else {
-			require.NoError(t, os.Setenv("PUSH", originalPush))
-		}
 	}()
 
 	t.Run("PushEnabled", func(t *testing.T) {
@@ -427,15 +418,14 @@ func TestChangelogEdgeCases(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		require.NoError(t, os.Setenv("FROM", "v1.0.0"))
-		defer func() { require.NoError(t, os.Unsetenv("FROM")) }()
+		// Test uses FROM parameter instead of environment variable
 
 		// Some commits
 		mock.SetOutput("git log --pretty=format:- %s (%h) v1.0.0..HEAD", "- fix: bug (abc123)", nil)
 		mock.SetOutput("git rev-list --count v1.0.0..HEAD", "1", nil)
 
 		version := Version{}
-		err := version.Changelog()
+		err := version.Changelog("from=v1.0.0")
 		require.NoError(t, err)
 	})
 }
@@ -561,13 +551,12 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		require.NoError(t, SetRunner(mock))
 
 		cleanupEnvironment(t)
-		require.NoError(t, os.Setenv("PUSH", "true"))
 
 		// Dirty working directory
 		mock.SetOutput("git status --porcelain", "M pkg/mage/version.go\n?? new-file.txt", nil)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("push")
 		require.Error(t, err, "Should prevent bump with dirty working directory")
 		require.ErrorIs(t, err, errVersionUncommittedChanges)
 
@@ -705,8 +694,6 @@ func TestVersionBumpErrorRecovery(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		require.NoError(t, os.Setenv("BUMP", "patch"))
-
 		// Set up successful validation but failed tag creation
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
@@ -716,7 +703,7 @@ func TestVersionBumpErrorRecovery(t *testing.T) {
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", errGitError)
 
 		version := Version{}
-		err := version.Bump()
+		err := version.Bump("bump=patch")
 		require.Error(t, err, "Should fail when git tag creation fails")
 		require.Contains(t, err.Error(), "failed to create tag")
 
