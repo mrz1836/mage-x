@@ -111,14 +111,24 @@ func (c *Command) Execute(args ...string) error {
 		fmt.Printf("⚠️  Warning: '%s' is deprecated. %s\n", c.FullName(), c.Deprecated)
 	}
 
-	// Try FuncWithArgs first (even with empty args)
-	if c.FuncWithArgs != nil {
+	// If arguments are provided and FuncWithArgs exists, use it
+	if len(args) > 0 && c.FuncWithArgs != nil {
 		return c.FuncWithArgs(args...)
 	}
 
-	// Fall back to standard function
-	if c.Func != nil {
+	// If no arguments provided, prefer Func over FuncWithArgs
+	if len(args) == 0 && c.Func != nil {
 		return c.Func()
+	}
+
+	// If we have args but no FuncWithArgs, fallback to Func if it exists
+	if len(args) > 0 && c.FuncWithArgs == nil && c.Func != nil {
+		return c.Func()
+	}
+
+	// If we have FuncWithArgs but no args were provided and no Func, use FuncWithArgs
+	if c.FuncWithArgs != nil {
+		return c.FuncWithArgs(args...)
 	}
 
 	return fmt.Errorf("%w: %s", ErrNoFunction, c.FullName())
