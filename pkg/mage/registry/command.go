@@ -111,12 +111,12 @@ func (c *Command) Execute(args ...string) error {
 		fmt.Printf("⚠️  Warning: '%s' is deprecated. %s\n", c.FullName(), c.Deprecated)
 	}
 
-	// Execute with args if available and args provided
-	if len(args) > 0 && c.FuncWithArgs != nil {
+	// Try FuncWithArgs first (even with empty args)
+	if c.FuncWithArgs != nil {
 		return c.FuncWithArgs(args...)
 	}
 
-	// Execute standard function
+	// Fall back to standard function
 	if c.Func != nil {
 		return c.Func()
 	}
