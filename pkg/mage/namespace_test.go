@@ -272,6 +272,8 @@ func TestDepsNamespace_Default(t *testing.T) {
 
 func TestDepsNamespace_Update(t *testing.T) {
 	withMockRunner(t, func(mockRunner *MockCommandRunner) {
+		// Mock capturing initial dependency state (new functionality)
+		mockRunner.On("RunCmdOutput", "go", "list", "-m", "-f", "{{.Path}} {{.Version}}", "all").Return("github.com/magefile/mage v1.12.0\ngithub.com/stretchr/testify v1.8.4", nil).Maybe()
 		// Mock go list command to get direct dependencies
 		mockRunner.On("RunCmdOutput", "go", "list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all").Return("github.com/magefile/mage\ngithub.com/stretchr/testify", nil).Maybe()
 		// Mock go list to get current versions for each dependency
