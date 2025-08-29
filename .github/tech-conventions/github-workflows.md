@@ -155,8 +155,6 @@ permissions: write-all
       ~/go/pkg/mod
       ~/.cache/go-build
     key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-    restore-keys: |
-      ${{ runner.os }}-go-
 ```
 
 <br><br>
