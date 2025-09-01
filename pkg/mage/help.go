@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"text/tabwriter"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/mage/registry"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -81,38 +84,49 @@ Documentation:
 func (Help) Commands() error {
 	utils.Header("📋 Available Commands")
 
-	commands := getAllCommands()
+	// Get the global registry
+	reg := registry.Global()
 
-	// Group by namespace
-	namespaces := make(map[string][]HelpCommand)
-	for i := range commands {
-		if commands[i].Namespace == "" {
-			commands[i].Namespace = "core"
+	// Use the registry's categorized commands for more efficient display
+	categorized := reg.CategorizedCommands()
+	categoryOrder := reg.CategoryOrder()
+	metadata := reg.Metadata()
+
+	totalCommands := metadata.TotalCommands
+	fmt.Printf("\n(%d commands available)\n", totalCommands)
+
+	// Display commands by category
+	for _, category := range categoryOrder {
+		commands, exists := categorized[category]
+		if !exists || len(commands) == 0 {
+			continue
 		}
-		namespaces[commands[i].Namespace] = append(namespaces[commands[i].Namespace], commands[i])
-	}
 
-	// Sort namespaces
-	sortedNamespaces := make([]string, 0, len(namespaces))
-	for ns := range namespaces {
-		sortedNamespaces = append(sortedNamespaces, ns)
-	}
-	sort.Strings(sortedNamespaces)
+		// Display category header
+		categoryInfo := metadata.CategoryInfo[category]
+		categoryName := category
+		if categoryInfo.Name != "" {
+			categoryName = categoryInfo.Name
+		}
 
-	// Display commands by namespace
-	for _, ns := range sortedNamespaces {
-		fmt.Printf("\n%s Commands:\n", strings.ToUpper(ns[:1])+ns[1:])
+		fmt.Printf("\n%s Commands:\n", categoryName)
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 
-		// Sort commands within namespace
-		nsCommands := namespaces[ns]
-		sort.Slice(nsCommands, func(i, j int) bool {
-			return nsCommands[i].Name < nsCommands[j].Name
-		})
+		// Commands are already sorted by the registry
+		for _, cmd := range commands {
+			description := cmd.Description
+			if description == "" {
+				description = "No description available"
+			}
 
-		for i := range nsCommands {
-			if _, err := fmt.Fprintf(w, "  %s\t%s\n", nsCommands[i].Name, nsCommands[i].Description); err != nil {
+			// Use the command's full name
+			cmdName := cmd.FullName()
+			if len(cmd.Aliases) > 0 {
+				cmdName = cmd.Aliases[0] // Use primary alias if available
+			}
+
+			if _, err := fmt.Fprintf(w, "  %s\t%s\n", cmdName, description); err != nil {
 				return fmt.Errorf("failed to write command help: %w", err)
 			}
 		}
@@ -125,17 +139,30 @@ func (Help) Commands() error {
 	fmt.Printf("\nUsage:\n")
 	fmt.Printf("  magex COMMAND [OPTIONS]\n")
 	fmt.Printf("  magex help:command COMMAND_NAME\n")
+	fmt.Printf("  magex -h NAMESPACE  # Show all commands in a namespace\n")
 
 	return nil
 }
 
-// Command shows detailed help for a specific command
+// Command shows detailed help for a specific command or namespace
 func (Help) Command() error {
 	commandName := utils.GetEnv("COMMAND", "")
 	if commandName == "" {
 		return errHelpCommandRequired
 	}
 
+	// Get the global registry for namespace checking
+	reg := registry.Global()
+
+	// First check if this is a namespace request
+	namespaces := reg.Namespaces()
+	for _, namespace := range namespaces {
+		if strings.EqualFold(namespace, commandName) {
+			return showHelpNamespace(reg, namespace)
+		}
+	}
+
+	// If not a namespace, try to get specific command help
 	cmd, err := getCommandHelp(commandName)
 	if err != nil {
 		return err
@@ -436,427 +463,104 @@ func (Help) Topics() error {
 
 // Helper functions
 
-// getAllCommands returns all available commands with help information
-func getAllCommands() []HelpCommand {
-	return []HelpCommand{
-		// Core commands
-		{
-			Name:        "build",
-			Namespace:   "build",
-			Description: "Build the project",
-			Usage:       "mage build [options]",
-			Examples: []string{
-				"mage build",
-				"mage build:all",
-				"mage build:clean",
-			},
-			Options: []HelpOption{
-				{Name: "MAGE_X_BUILD_TAGS", Description: "Build tags", Default: ""},
-				{Name: "GOOS", Description: "Target OS", Default: "current"},
-				{Name: "GOARCH", Description: "Target architecture", Default: "current"},
-			},
-			SeeAlso: []string{"test", "lint", "release"},
-		},
-
-		{
-			Name:        "test",
-			Namespace:   "test",
-			Description: "Run tests",
-			Usage:       "mage test [options]",
-			Examples: []string{
-				"mage test",
-				"mage test:race",
-				"mage test:cover",
-				"MAGE_X_VERBOSE=true mage test",
-			},
-			Options: []HelpOption{
-				{Name: "MAGE_X_VERBOSE", Description: "Verbose output", Default: "false"},
-				{Name: "MAGE_X_TEST_TIMEOUT", Description: "Test timeout", Default: "10m"},
-				{Name: "MAGE_X_TEST_RACE", Description: "Enable race detector", Default: "false"},
-			},
-			SeeAlso: []string{"build", "lint", "bench"},
-		},
-
-		{
-			Name:        "lint",
-			Namespace:   "lint",
-			Description: "Run linter",
-			Usage:       "mage lint [options]",
-			Examples: []string{
-				"mage lint",
-				"mage lint:fix",
-				"MAGE_X_LINT_TIMEOUT=5m mage lint",
-			},
-			Options: []HelpOption{
-				{Name: "LINT_FIX", Description: "Fix issues automatically", Default: "false"},
-				{Name: "MAGE_X_LINT_TIMEOUT", Description: "Lint timeout", Default: "5m"},
-			},
-			SeeAlso: []string{"format", "test", "security"},
-		},
-
-		{
-			Name:        "format",
-			Namespace:   "format",
-			Description: "Format code",
-			Usage:       "mage format [options]",
-			Examples: []string{
-				"mage format:all",
-				"mage lint:fumpt",
-				"mage format:check",
-			},
-			SeeAlso: []string{"lint", "test"},
-		},
-
-		// Recipe commands
-		{
-			Name:        "recipes",
-			Namespace:   "recipes",
-			Description: "Recipe system for common patterns",
-			Usage:       "mage recipes COMMAND",
-			Examples: []string{
-				"mage recipes:list",
-				"mage recipes:show recipe=fresh-start",
-				"mage recipes:run recipe=fresh-start",
-				"mage recipes:search term=docker",
-			},
-			Options: []HelpOption{
-				{Name: "RECIPE", Description: "Recipe name", Required: true},
-				{Name: "TERM", Description: "Search term for recipes:search"},
-			},
-			SeeAlso: []string{"init", "interactive"},
-		},
-
-		// Release commands
-		{
-			Name:        "release",
-			Namespace:   "release",
-			Description: "Create releases",
-			Usage:       "mage release [options]",
-			Examples: []string{
-				"mage release",
-				"CHANNEL=beta mage release",
-				"VERSION=v1.2.3 mage release",
-			},
-			Options: []HelpOption{
-				{Name: "VERSION", Description: "Release version"},
-				{Name: "GITHUB_TOKEN", Description: "GitHub token", Required: true},
-			},
-			SeeAlso: []string{"version", "releases"},
-		},
-
-		// Init commands
-		{
-			Name:        "init",
-			Namespace:   "init",
-			Description: "Initialize projects",
-			Usage:       "mage init TYPE [options]",
-			Examples: []string{
-				"mage initCLI --name=myapp",
-				"mage initLibrary",
-				"mage initProject",
-			},
-			Options: []HelpOption{
-				{Name: "PROJECT_NAME", Description: "Project name"},
-				{Name: "PROJECT_MODULE", Description: "Module path"},
-				{Name: "PROJECT_TYPE", Description: "Project type"},
-			},
-			SeeAlso: []string{"yaml", "recipes"},
-		},
-
-		// Configuration commands
-		{
-			Name:        "configure",
-			Namespace:   "configure",
-			Description: "Configuration management",
-			Usage:       "mage configure COMMAND",
-			Examples: []string{
-				"mage configure:init",
-				"mage configure:show",
-				"mage configure:update",
-			},
-			SeeAlso: []string{"init", "help"},
-		},
-
-		// Version commands
-		{
-			Name:        "version",
-			Namespace:   "version",
-			Description: "Version management",
-			Usage:       "mage version COMMAND",
-			Examples: []string{
-				"mage version:show",
-				"mage version:check",
-				"mage version:bump",
-			},
-			SeeAlso: []string{"release", "update"},
-		},
-
-		// Help commands
-		{
-			Name:        "help",
-			Namespace:   "help",
-			Description: "Help system",
-			Usage:       "mage help COMMAND",
-			Examples: []string{
-				"mage help",
-				"mage help:commands",
-				"mage help:examples",
-			},
-			SeeAlso: []string{"interactive", "topics"},
-		},
-
-		// Audit commands
-		{
-			Name:        "audit",
-			Namespace:   "audit",
-			Description: "Security and compliance auditing",
-			Usage:       "mage audit COMMAND",
-			Examples: []string{
-				"mage audit:show",
-				"mage audit:stats",
-				"mage audit:export",
-				"mage audit:report",
-			},
-			SeeAlso: []string{"security", "tools"},
-		},
-
-		// Enterprise commands
-		{
-			Name:        "enterprise",
-			Namespace:   "enterprise",
-			Description: "Enterprise deployment and management",
-			Usage:       "mage enterprise COMMAND",
-			Examples: []string{
-				"mage enterprise:init",
-				"mage enterprise:deploy",
-				"mage enterprise:status",
-				"mage enterprise:backup",
-			},
-			SeeAlso: []string{"workflow", "integrations"},
-		},
-
-		// Workflow commands
-		{
-			Name:        "workflow",
-			Namespace:   "workflow",
-			Description: "Automated workflow management",
-			Usage:       "mage workflow COMMAND",
-			Examples: []string{
-				"mage workflow:execute",
-				"mage workflow:list",
-				"mage workflow:create",
-				"mage workflow:schedule",
-			},
-			SeeAlso: []string{"enterprise", "cli"},
-		},
-
-		// Install commands
-		{
-			Name:        "install",
-			Namespace:   "install",
-			Description: "Installation management",
-			Usage:       "mage install COMMAND",
-			Examples: []string{
-				"mage install:tools",
-				"mage install:binary",
-				"mage install:all",
-				"mage uninstall",
-			},
-			SeeAlso: []string{"tools", "update"},
-		},
-
-		// YAML commands
-		{
-			Name:        "yaml",
-			Namespace:   "yaml",
-			Description: "YAML configuration management",
-			Usage:       "mage yaml COMMAND",
-			Examples: []string{
-				"mage yaml:init",
-				"mage yaml:validate",
-				"mage yaml:show",
-				"mage yaml:format",
-			},
-			SeeAlso: []string{"configure", "format"},
-		},
-
-		// Dependencies commands
-		{
-			Name:        "deps",
-			Namespace:   "deps",
-			Description: "Dependency management",
-			Usage:       "mage deps COMMAND",
-			Examples: []string{
-				"mage deps:update",
-				"mage deps:update allow-major",
-				"mage deps:update stable-only",
-				"mage deps:tidy",
-				"mage deps:download",
-				"mage deps:audit",
-			},
-			Options: []HelpOption{
-				{Name: "allow-major", Description: "Allow major version updates (v1→v2, etc)", Default: "false"},
-				{Name: "stable-only", Description: "Force downgrade from pre-release to stable versions", Default: "false"},
-			},
-			SeeAlso: []string{"mod", "tools"},
-		},
-
-		// Module commands
-		{
-			Name:        "mod",
-			Namespace:   "mod",
-			Description: "Go module management",
-			Usage:       "mage mod COMMAND",
-			Examples: []string{
-				"mage mod:tidy",
-				"mage mod:update",
-				"mage mod:verify",
-				"mage mod:download",
-			},
-			SeeAlso: []string{"deps", "tools"},
-		},
-
-		// Documentation commands
-		{
-			Name:        "docs",
-			Namespace:   "docs",
-			Description: "Documentation generation and serving",
-			Usage:       "mage docs COMMAND",
-			Examples: []string{
-				"mage docs:serve",
-				"mage docs:generate",
-				"mage docs:build",
-				"mage docs:godocs",
-			},
-			SeeAlso: []string{"help", "build"},
-		},
-
-		// Git commands
-		{
-			Name:        "git",
-			Namespace:   "git",
-			Description: "Git operations and version control",
-			Usage:       "mage git COMMAND",
-			Examples: []string{
-				"mage git:status",
-				"mage git:commit message='fix: bug'",
-				"mage git:tag version=1.2.3",
-			},
-			SeeAlso: []string{"version", "release"},
-		},
-
-		// Tools commands
-		{
-			Name:        "tools",
-			Namespace:   "tools",
-			Description: "Development tool management",
-			Usage:       "mage tools COMMAND",
-			Examples: []string{
-				"mage tools:install",
-				"mage tools:update",
-				"mage tools:verify",
-				"mage tools:vulncheck",
-			},
-			SeeAlso: []string{"deps", "install"},
-		},
-
-		// Benchmarking commands
-		{
-			Name:        "bench",
-			Namespace:   "bench",
-			Description: "Performance benchmarking and profiling",
-			Usage:       "mage bench [options]",
-			Examples: []string{
-				"mage bench",
-				"mage bench time=50ms",
-				"mage bench:cpu time=30s",
-				"mage bench:profile",
-			},
-			SeeAlso: []string{"test", "metrics"},
-		},
-
-		// Metrics commands
-		{
-			Name:        "metrics",
-			Namespace:   "metrics",
-			Description: "Code metrics and analysis",
-			Usage:       "mage metrics COMMAND",
-			Examples: []string{
-				"mage metrics:loc",
-				"mage metrics:coverage",
-				"mage metrics:complexity",
-			},
-			SeeAlso: []string{"test", "bench"},
-		},
-
-		// Vet commands
-		{
-			Name:        "vet",
-			Namespace:   "vet",
-			Description: "Code vetting and static analysis",
-			Usage:       "mage vet [options]",
-			Examples: []string{
-				"mage vet:default",
-				"mage vet:all",
-				"mage vet:shadow",
-			},
-			SeeAlso: []string{"lint", "test"},
-		},
-
-		// Update commands
-		{
-			Name:        "update",
-			Namespace:   "update",
-			Description: "Update management",
-			Usage:       "mage update COMMAND",
-			Examples: []string{
-				"mage update:check",
-				"mage update:install",
-			},
-			SeeAlso: []string{"version", "tools"},
-		},
-
-		// CLI commands
-		{
-			Name:        "cli",
-			Namespace:   "cli",
-			Description: "CLI operations and utilities",
-			Usage:       "mage cli COMMAND",
-			Examples: []string{
-				"mage cli:help",
-				"mage cli:version",
-				"mage cli:completion",
-			},
-			SeeAlso: []string{"help", "wizard"},
-		},
-
-		// Wizard commands
-		{
-			Name:        "wizard",
-			Namespace:   "wizard",
-			Description: "Interactive setup wizards",
-			Usage:       "mage wizard COMMAND",
-			Examples: []string{
-				"mage wizard:setup",
-				"mage wizard:config",
-				"mage wizard:project",
-			},
-			SeeAlso: []string{"init", "configure"},
-		},
-
-		// Generate commands
-		{
-			Name:        "generate",
-			Namespace:   "generate",
-			Description: "Code generation",
-			Usage:       "mage generate [options]",
-			Examples: []string{
-				"mage generate:default",
-				"mage generate:clean",
-			},
-			SeeAlso: []string{"build", "init"},
-		},
+// showHelpNamespace displays help for all commands in a namespace (for Help namespace)
+func showHelpNamespace(reg *registry.Registry, namespace string) error {
+	commands := reg.ListByNamespace(namespace)
+	if len(commands) == 0 {
+		fmt.Printf("❌ No commands found in namespace '%s'\n", namespace)
+		return nil
 	}
+
+	// Show namespace help header
+	utils.Header(fmt.Sprintf("📖 Namespace Help: %s", namespace))
+
+	// Get namespace info if available
+	metadata := reg.Metadata()
+	titleCaser := cases.Title(language.English)
+	categoryInfo, hasInfo := metadata.CategoryInfo[titleCaser.String(namespace)]
+	if hasInfo && categoryInfo.Description != "" {
+		fmt.Printf("📝 Description: %s\n", categoryInfo.Description)
+	}
+
+	fmt.Printf("\n🔧 Available Commands in %s namespace (%d commands):\n\n", namespace, len(commands))
+
+	// Display commands in the namespace
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	for _, cmd := range commands {
+		fullName := cmd.FullName()
+		description := cmd.Description
+		if description == "" {
+			description = "No description available"
+		}
+
+		// Truncate long descriptions
+		if len(description) > 70 {
+			description = description[:67] + "..."
+		}
+
+		if _, err := fmt.Fprintf(w, "  %s\t%s\n", fullName, description); err != nil {
+			return fmt.Errorf("failed to write namespace help: %w", err)
+		}
+	}
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("failed to flush namespace help: %w", err)
+	}
+
+	// Show usage examples
+	fmt.Printf("\n💡 Usage Examples:\n")
+	for i, cmd := range commands {
+		if i >= 3 { // Show max 3 examples
+			fmt.Printf("  ... and %d more commands\n", len(commands)-i)
+			break
+		}
+		fmt.Printf("  magex %s\n", cmd.FullName())
+	}
+
+	// Show general help hint
+	fmt.Printf("\n🔍 For detailed help on any command:\n")
+	fmt.Printf("  magex help:command command=%s:<method>\n", namespace)
+	fmt.Printf("  Example: magex help:command command=%s:%s\n", namespace, commands[0].Method)
+
+	return nil
+}
+
+// getAllCommands returns all available commands with help information from the registry
+func getAllCommands() []HelpCommand {
+	// Get the global registry and ensure commands are registered
+	reg := registry.Global()
+
+	// Get all commands from the registry
+	commands := reg.List()
+
+	// Convert registry commands to HelpCommand format
+	helpCommands := make([]HelpCommand, 0, len(commands))
+	for _, cmd := range commands {
+		helpCmd := HelpCommand{
+			Name:        cmd.FullName(),
+			Namespace:   cmd.Namespace,
+			Description: cmd.Description,
+			Usage:       cmd.Usage,
+			Examples:    cmd.Examples,
+			SeeAlso:     cmd.SeeAlso,
+		}
+
+		// Convert options if available
+		if len(cmd.Options) > 0 {
+			helpCmd.Options = make([]HelpOption, len(cmd.Options))
+			for i, opt := range cmd.Options {
+				helpCmd.Options[i] = HelpOption{
+					Name:        opt.Name,
+					Description: opt.Description,
+					Default:     opt.Default,
+					Required:    opt.Required,
+				}
+			}
+		}
+
+		helpCommands = append(helpCommands, helpCmd)
+	}
+
+	return helpCommands
 }
 
 // getCommandHelp returns help information for a specific command

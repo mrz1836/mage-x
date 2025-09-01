@@ -490,6 +490,16 @@ func showTipsAndFooter() {
 
 // showCommandHelp displays detailed help for a specific command
 func showCommandHelp(reg *registry.Registry, commandName string) {
+	// First check if this is a namespace request
+	namespaces := reg.Namespaces()
+	for _, namespace := range namespaces {
+		if strings.EqualFold(namespace, commandName) {
+			showNamespaceHelp(reg, namespace)
+			return
+		}
+	}
+
+	// Check for specific command
 	cmd, exists := reg.Get(commandName)
 	if !exists {
 		// Try to find similar commands
@@ -598,6 +608,66 @@ func showCommandHelp(reg *registry.Registry, commandName string) {
 		fmt.Printf("\n⚠️  WARNING: This command is deprecated\n")
 		fmt.Printf("   %s\n", cmd.Deprecated)
 	}
+}
+
+// showNamespaceHelp displays help for all commands in a namespace
+func showNamespaceHelp(reg *registry.Registry, namespace string) {
+	commands := reg.ListByNamespace(namespace)
+	if len(commands) == 0 {
+		fmt.Printf("❌ No commands found in namespace '%s'\n", namespace)
+		return
+	}
+
+	// Show namespace help header
+	fmt.Printf("\n📖 Namespace Help: %s\n", namespace)
+	fmt.Printf("\n%s\n", strings.Repeat("=", 50))
+
+	// Get namespace info if available
+	metadata := reg.Metadata()
+	titleCaser := cases.Title(language.English)
+	categoryInfo, hasInfo := metadata.CategoryInfo[titleCaser.String(namespace)]
+	if hasInfo && categoryInfo.Description != "" {
+		fmt.Printf("\n📝 Description:\n  %s\n", categoryInfo.Description)
+	}
+
+	fmt.Printf("\n🔧 Available Commands in %s namespace (%d commands):\n", namespace, len(commands))
+
+	// Display commands in the namespace
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	for _, cmd := range commands {
+		fullName := cmd.FullName()
+		description := cmd.Description
+		if description == "" {
+			description = noDescription
+		}
+
+		// Truncate long descriptions
+		if len(description) > 70 {
+			description = description[:67] + "..."
+		}
+
+		if _, err := fmt.Fprintf(w, "  %s\t%s\n", fullName, description); err != nil {
+			fmt.Printf("Warning: failed to write namespace help: %v\n", err)
+		}
+	}
+	if err := w.Flush(); err != nil {
+		fmt.Printf("Warning: failed to flush namespace help: %v\n", err)
+	}
+
+	// Show usage examples
+	fmt.Printf("\n💡 Usage Examples:\n")
+	for i, cmd := range commands {
+		if i >= 3 { // Show max 3 examples
+			fmt.Printf("  ... and %d more commands\n", len(commands)-i)
+			break
+		}
+		fmt.Printf("  magex %s\n", cmd.FullName())
+	}
+
+	// Show general help hint
+	fmt.Printf("\n🔍 For detailed help on any command:\n")
+	fmt.Printf("  magex -h %s:<command>\n", namespace)
+	fmt.Printf("  Example: magex -h %s:%s\n", namespace, commands[0].Method)
 }
 
 // listCommands displays all available commands
