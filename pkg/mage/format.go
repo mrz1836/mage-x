@@ -283,6 +283,27 @@ func ensureGoimports() error {
 	return nil
 }
 
+// getFormatExcludePaths returns the list of paths to exclude from formatting
+func getFormatExcludePaths() []string {
+	excludePaths := utils.GetEnv("MAGE_X_FORMAT_EXCLUDE_PATHS", "vendor,node_modules,.git,.idea,.vscode")
+	return strings.Split(excludePaths, ",")
+}
+
+// buildFindExcludeArgs builds the find command arguments for excluding paths
+func buildFindExcludeArgs() []string {
+	excludePaths := getFormatExcludePaths()
+	var args []string
+	for _, excludePath := range excludePaths {
+		trimmed := strings.TrimSpace(excludePath)
+		if trimmed != "" {
+			// Add patterns for both direct matches and subdirectories
+			args = append(args, "-not", "-path", "./"+trimmed+"/*")
+			args = append(args, "-not", "-path", "./*"+trimmed+"*/*")
+		}
+	}
+	return args
+}
+
 // findGoFiles finds all Go files in the project
 func findGoFiles() ([]string, error) {
 	var files []string
@@ -292,11 +313,11 @@ func findGoFiles() ([]string, error) {
 			return err
 		}
 
-		// Skip vendor and other common directories
+		// Skip directories from environment variable
 		if info.IsDir() {
-			skip := []string{"vendor", ".git", "node_modules", ".idea", ".vscode"}
-			for _, s := range skip {
-				if info.Name() == s {
+			excludePaths := getFormatExcludePaths()
+			for _, excludePath := range excludePaths {
+				if info.Name() == strings.TrimSpace(excludePath) {
 					return filepath.SkipDir
 				}
 			}
@@ -353,7 +374,9 @@ func (Format) YAML() error {
 	utils.Header("Formatting YAML Files")
 
 	// Find YAML files
-	yamlFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*")
+	findArgs := []string{".", "-name", "*.yml", "-o", "-name", "*.yaml"}
+	findArgs = append(findArgs, buildFindExcludeArgs()...)
+	yamlFiles, err := GetRunner().RunCmdOutput("find", findArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to find YAML files: %w", err)
 	}
@@ -366,7 +389,7 @@ func (Format) YAML() error {
 	// Check if prettier is available for YAML formatting
 	if utils.CommandExists("prettier") {
 		utils.Info("Formatting YAML files with prettier...")
-		if err := GetRunner().RunCmd("prettier", "--write", "**/*.{yml,yaml}"); err != nil {
+		if err := GetRunner().RunCmd("prettier", "--write", "--ignore-path", ".github/.prettierignore", "**/*.{yml,yaml}"); err != nil {
 			return fmt.Errorf("prettier formatting failed: %w", err)
 		}
 	} else {
@@ -391,7 +414,7 @@ func formatJSONFile(file string) bool {
 
 	// Use prettier if available, otherwise python
 	if utils.CommandExists("prettier") {
-		if err := GetRunner().RunCmd("prettier", "--write", file); err != nil {
+		if err := GetRunner().RunCmd("prettier", "--write", "--ignore-path", ".github/.prettierignore", file); err != nil {
 			utils.Warn("Failed to format %s with prettier: %v", file, err)
 			return false
 		}
@@ -427,7 +450,9 @@ func (Format) JSON() error {
 	}
 
 	// Find JSON files
-	jsonFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.json", "-not", "-path", "./vendor/*")
+	findArgs := []string{".", "-name", "*.json"}
+	findArgs = append(findArgs, buildFindExcludeArgs()...)
+	jsonFiles, err := GetRunner().RunCmdOutput("find", findArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to find JSON files: %w", err)
 	}
@@ -460,7 +485,9 @@ func (Format) Markdown() error {
 	utils.Header("Formatting Markdown Files")
 
 	// Find Markdown files
-	mdFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.md", "-not", "-path", "./vendor/*")
+	findArgs := []string{".", "-name", "*.md"}
+	findArgs = append(findArgs, buildFindExcludeArgs()...)
+	mdFiles, err := GetRunner().RunCmdOutput("find", findArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to find Markdown files: %w", err)
 	}
@@ -473,7 +500,7 @@ func (Format) Markdown() error {
 	// Check if prettier is available for Markdown formatting
 	if utils.CommandExists("prettier") {
 		utils.Info("Formatting Markdown files with prettier...")
-		if err := GetRunner().RunCmd("prettier", "--write", "**/*.md"); err != nil {
+		if err := GetRunner().RunCmd("prettier", "--write", "--ignore-path", ".github/.prettierignore", "**/*.md"); err != nil {
 			return fmt.Errorf("prettier formatting failed: %w", err)
 		}
 	} else {
