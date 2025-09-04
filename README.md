@@ -349,9 +349,12 @@ export MAGE_X_VERBOSE=true
 export MAGE_X_TEST_RACE=true
 export MAGE_X_TEST_TIMEOUT=15m
 
+# Linting configuration
+export MAGE_X_LINT_VERBOSE=true   # Enable verbose linting output
+export MAGE_X_LINT_TIMEOUT=10m
+
 # Tool configuration
 export MAGE_X_PARALLEL=8
-export MAGE_X_LINT_TIMEOUT=10m
 
 # Benchmark timing with parameters
 magex bench time=50ms         # Quick benchmarks
@@ -542,6 +545,8 @@ magex test -parallel=4         # Set parallel test execution
 
 # Code Quality & Linting
 magex lint                     # Run essential linters
+magex lint verbose=true        # Run linters with verbose output
+magex lint:verbose             # Alternative: dedicated verbose linting command
 magex lint:fix                 # Auto-fix linting issues + apply formatting
 magex lint:issues              # Scan for TODOs, FIXMEs, nolint directives, and test skips
 magex test:vet                 # Run go vet static analysis

@@ -97,7 +97,13 @@ func (Lint) Default() error {
 			args = append(args, "--timeout", config.Lint.Timeout)
 		}
 
-		if config.Build.Verbose {
+		// Add build tags if configured
+		if len(config.Build.Tags) > 0 {
+			args = append(args, "--build-tags", strings.Join(config.Build.Tags, ","))
+		}
+
+		// Add verbose flag if enabled via parameter, environment, or config
+		if shouldUseVerboseMode(config) {
 			args = append(args, "--verbose")
 		}
 
@@ -209,6 +215,16 @@ func (Lint) Fix() error {
 
 		if config.Lint.Timeout != "" {
 			args = append(args, "--timeout", config.Lint.Timeout)
+		}
+
+		// Add build tags if configured
+		if len(config.Build.Tags) > 0 {
+			args = append(args, "--build-tags", strings.Join(config.Build.Tags, ","))
+		}
+
+		// Add verbose flag if enabled via parameter, environment, or config
+		if shouldUseVerboseMode(config) {
+			args = append(args, "--verbose")
 		}
 
 		err := runCommandInModule(module, "golangci-lint", args...)
@@ -1058,6 +1074,21 @@ func displayLinterConfig() {
 			utils.Info("Using golangci-lint %s", golangciVersion)
 		}
 	}
+
+	// Display build tags information and verbose mode status
+	config, err := GetConfig()
+	if err == nil {
+		if len(config.Build.Tags) > 0 {
+			utils.Info("Build tags: %s", strings.Join(config.Build.Tags, ", "))
+		}
+
+		// Show verbose mode status
+		verboseStatus := "disabled"
+		if shouldUseVerboseMode(config) {
+			verboseStatus = "enabled"
+		}
+		utils.Info("Verbose output: %s", verboseStatus)
+	}
 }
 
 // runVetInModule runs go vet in a specific module directory
@@ -1551,4 +1582,56 @@ func pluralize(count int) string {
 		return ""
 	}
 	return "s"
+}
+
+// shouldUseVerboseMode checks if verbose mode should be enabled based on:
+// 1. Command-line parameters (highest priority)
+// 2. Environment variables
+// 3. Config settings
+func shouldUseVerboseMode(config *Config) bool {
+	// Parse command-line parameters from os.Args
+	var targetArgs []string
+	for i, arg := range os.Args {
+		if strings.Contains(arg, "lint") {
+			targetArgs = os.Args[i+1:]
+			break
+		}
+	}
+
+	// Check command-line parameter first (highest priority)
+	params := utils.ParseParams(targetArgs)
+	if verboseParam := utils.GetParam(params, "verbose", ""); verboseParam != "" {
+		return verboseParam == approvalTrue || verboseParam == "1"
+	}
+
+	// Check environment variable
+	if verboseEnv := utils.GetEnv("MAGE_X_LINT_VERBOSE", ""); verboseEnv != "" {
+		return verboseEnv == approvalTrue || verboseEnv == "1"
+	}
+
+	// Default: use config setting or false
+	return config.Build.Verbose
+}
+
+// Verbose runs the default linting with explicit verbose output control
+func (Lint) Verbose() error {
+	utils.Header("Running Linters (Verbose)")
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	// Force verbose mode for this command
+	originalVerbose := config.Build.Verbose
+	config.Build.Verbose = true
+
+	// Restore original setting after execution
+	defer func() {
+		config.Build.Verbose = originalVerbose
+	}()
+
+	// Run the default linting logic
+	linter := Lint{}
+	return linter.Default()
 }
