@@ -210,6 +210,68 @@ func getReleaseForChannel(owner, repo string, channel UpdateChannel) (*GitHubRel
 
 // getLatestStableRelease gets the latest stable release
 func getLatestStableRelease(owner, repo string) (*GitHubRelease, error) {
+	// Try gh CLI first if available
+	if utils.CommandExists("gh") {
+		if release, err := getLatestStableReleaseViaGH(owner, repo); err == nil {
+			return release, nil
+		}
+		utils.Info("gh CLI failed, falling back to GitHub API...")
+	}
+
+	// Fallback to direct GitHub API
+	return getLatestStableReleaseViaAPI(owner, repo)
+}
+
+// convertGHReleaseToGitHubRelease converts gh CLI response to GitHub API format
+func convertGHReleaseToGitHubRelease(ghRelease *GHReleaseResponse) (*GitHubRelease, error) {
+	// Parse the publishedAt time
+	publishedAt, err := time.Parse(time.RFC3339, ghRelease.PublishedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse publishedAt time: %w", err)
+	}
+
+	// Convert assets
+	assets := make([]VersionReleaseAsset, len(ghRelease.Assets))
+	for i, asset := range ghRelease.Assets {
+		assets[i] = VersionReleaseAsset{
+			Name:               asset.Name,
+			BrowserDownloadURL: asset.URL,
+			Size:               asset.Size,
+		}
+	}
+
+	return &GitHubRelease{
+		TagName:     ghRelease.TagName,
+		Name:        ghRelease.TagName, // gh CLI doesn't return name, use tagName
+		Prerelease:  ghRelease.IsPrerelease,
+		Draft:       ghRelease.IsDraft,
+		PublishedAt: publishedAt,
+		Body:        ghRelease.Body,
+		HTMLURL:     ghRelease.URL,
+		Assets:      assets,
+	}, nil
+}
+
+// getLatestStableReleaseViaGH gets the latest stable release using gh CLI
+func getLatestStableReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
+	repoName := fmt.Sprintf("%s/%s", owner, repo)
+
+	// Get the latest release using gh CLI
+	output, err := utils.RunCmdOutput("gh", "release", "view", "--repo", repoName, "--json", "tagName,assets,body,isPrerelease,isDraft,publishedAt,url")
+	if err != nil {
+		return nil, fmt.Errorf("gh CLI command failed: %w", err)
+	}
+
+	var ghRelease GHReleaseResponse
+	if err := json.Unmarshal([]byte(output), &ghRelease); err != nil {
+		return nil, fmt.Errorf("failed to parse gh CLI response: %w", err)
+	}
+
+	return convertGHReleaseToGitHubRelease(&ghRelease)
+}
+
+// getLatestStableReleaseViaAPI gets the latest stable release using GitHub API
+func getLatestStableReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -247,6 +309,45 @@ func getLatestStableRelease(owner, repo string) (*GitHubRelease, error) {
 
 // getLatestBetaRelease gets the latest beta release
 func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
+	// Try gh CLI first if available
+	if utils.CommandExists("gh") {
+		if release, err := getLatestBetaReleaseViaGH(owner, repo); err == nil {
+			return release, nil
+		}
+		utils.Info("gh CLI failed, falling back to GitHub API...")
+	}
+
+	// Fallback to direct GitHub API
+	return getLatestBetaReleaseViaAPI(owner, repo)
+}
+
+// getLatestBetaReleaseViaGH gets the latest beta release using gh CLI
+func getLatestBetaReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
+	repoName := fmt.Sprintf("%s/%s", owner, repo)
+
+	// Get all releases using gh CLI
+	output, err := utils.RunCmdOutput("gh", "release", "list", "--repo", repoName, "--json", "tagName,assets,body,isPrerelease,isDraft,publishedAt,url", "--limit", "20")
+	if err != nil {
+		return nil, fmt.Errorf("gh CLI command failed: %w", err)
+	}
+
+	var ghReleases []GHReleaseResponse
+	if err := json.Unmarshal([]byte(output), &ghReleases); err != nil {
+		return nil, fmt.Errorf("failed to parse gh CLI response: %w", err)
+	}
+
+	// Find latest beta or stable (same logic as API version)
+	for _, ghRelease := range ghReleases {
+		if !ghRelease.IsDraft && (ghRelease.IsPrerelease || !ghRelease.IsPrerelease) {
+			return convertGHReleaseToGitHubRelease(&ghRelease)
+		}
+	}
+
+	return nil, errNoBetaReleasesFound
+}
+
+// getLatestBetaReleaseViaAPI gets the latest beta release using GitHub API
+func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -291,6 +392,42 @@ func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
 
 // getLatestEdgeRelease gets the latest edge release (any release including pre-release)
 func getLatestEdgeRelease(owner, repo string) (*GitHubRelease, error) {
+	// Try gh CLI first if available
+	if utils.CommandExists("gh") {
+		if release, err := getLatestEdgeReleaseViaGH(owner, repo); err == nil {
+			return release, nil
+		}
+		utils.Info("gh CLI failed, falling back to GitHub API...")
+	}
+
+	// Fallback to direct GitHub API
+	return getLatestEdgeReleaseViaAPI(owner, repo)
+}
+
+// getLatestEdgeReleaseViaGH gets the latest edge release using gh CLI
+func getLatestEdgeReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
+	repoName := fmt.Sprintf("%s/%s", owner, repo)
+
+	// Get all releases using gh CLI (edge means the very latest, including prereleases)
+	output, err := utils.RunCmdOutput("gh", "release", "list", "--repo", repoName, "--json", "tagName,assets,body,isPrerelease,isDraft,publishedAt,url", "--limit", "1")
+	if err != nil {
+		return nil, fmt.Errorf("gh CLI command failed: %w", err)
+	}
+
+	var ghReleases []GHReleaseResponse
+	if err := json.Unmarshal([]byte(output), &ghReleases); err != nil {
+		return nil, fmt.Errorf("failed to parse gh CLI response: %w", err)
+	}
+
+	if len(ghReleases) > 0 {
+		return convertGHReleaseToGitHubRelease(&ghReleases[0])
+	}
+
+	return nil, errNoReleasesFound
+}
+
+// getLatestEdgeReleaseViaAPI gets the latest edge release using GitHub API
+func getLatestEdgeReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
 
 	client := &http.Client{Timeout: 10 * time.Second}

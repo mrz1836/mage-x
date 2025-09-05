@@ -59,6 +59,24 @@ type VersionReleaseAsset struct {
 	Size               int64  `json:"size"`
 }
 
+// GHReleaseResponse represents a GitHub release from gh CLI
+type GHReleaseResponse struct {
+	TagName      string           `json:"tagName"`
+	Body         string           `json:"body"`
+	IsPrerelease bool             `json:"isPrerelease"`
+	IsDraft      bool             `json:"isDraft"`
+	PublishedAt  string           `json:"publishedAt"`
+	URL          string           `json:"url"`
+	Assets       []GHReleaseAsset `json:"assets"`
+}
+
+// GHReleaseAsset represents a release asset from gh CLI
+type GHReleaseAsset struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+	Size int64  `json:"size"`
+}
+
 // BuildInfo contains all build-time information
 type BuildInfo struct {
 	Version   string
