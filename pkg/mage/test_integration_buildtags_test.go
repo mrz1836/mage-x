@@ -29,9 +29,9 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 	require.NoError(t, os.Chdir(tempDir))
 
 	// Reset config for clean test
-	originalProvider := configProvider
+	originalProvider := GetConfigProvider()
 	defer func() {
-		configProvider = originalProvider
+		SetConfigProvider(originalProvider)
 		TestResetConfig()
 	}()
 	TestResetConfig()
@@ -145,9 +145,11 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 
 		config, err := GetConfig()
 		require.NoError(t, err)
+		assert.True(t, config.Test.AutoDiscoverBuildTags) // Use config
 
 		// Test coverage file naming with build tags
 		modules := []ModuleInfo{{Path: ".", Relative: ".", Name: "test-module", IsRoot: true}}
+		assert.Len(t, modules, 1) // Use modules
 
 		// Create mock coverage files
 		coverageFiles := []string{"coverage_1.txt", "coverage_2.txt"}
@@ -191,9 +193,9 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 	require.NoError(t, os.Chdir(tempDir))
 
 	// Reset config for clean test
-	originalProvider := configProvider
+	originalProvider := GetConfigProvider()
 	defer func() {
-		configProvider = originalProvider
+		SetConfigProvider(originalProvider)
 		TestResetConfig()
 	}()
 	TestResetConfig()

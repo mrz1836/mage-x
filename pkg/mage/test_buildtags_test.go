@@ -19,12 +19,12 @@ var (
 	errTaggedTestsFailed = errors.New("tagged tests failed")
 )
 
-// MockRunner implements CommandRunner for testing
-type MockRunner struct {
+// MockBuildTagRunner implements CommandRunner for testing
+type MockBuildTagRunner struct {
 	mock.Mock
 }
 
-func (m *MockRunner) RunCmd(cmd string, args ...string) error {
+func (m *MockBuildTagRunner) RunCmd(cmd string, args ...string) error {
 	allArgs := append([]string{cmd}, args...)
 	argsInterface := make([]interface{}, len(allArgs))
 	for i, v := range allArgs {
@@ -35,7 +35,7 @@ func (m *MockRunner) RunCmd(cmd string, args ...string) error {
 	return callArgs.Error(0)
 }
 
-func (m *MockRunner) RunCmdOutput(cmd string, args ...string) (string, error) {
+func (m *MockBuildTagRunner) RunCmdOutput(cmd string, args ...string) (string, error) {
 	allArgs := append([]string{cmd}, args...)
 	argsInterface := make([]interface{}, len(allArgs))
 	for i, v := range allArgs {
@@ -201,7 +201,7 @@ func TestProcessBuildTagAutoDiscovery(t *testing.T) {
 
 func TestRunTestsWithBuildTagDiscoveryTags(t *testing.T) {
 	// Mock runner setup
-	mockRunner := &MockRunner{}
+	mockRunner := &MockBuildTagRunner{}
 	originalRunner := GetRunner()
 	err := SetRunner(mockRunner)
 	require.NoError(t, err)
@@ -285,7 +285,7 @@ func TestRunTestsWithBuildTagDiscoveryTags(t *testing.T) {
 
 func TestRunCoverageTestsWithBuildTagDiscoveryTags(t *testing.T) {
 	// Mock runner setup
-	mockRunner := &MockRunner{}
+	mockRunner := &MockBuildTagRunner{}
 	originalRunner := GetRunner()
 	err := SetRunner(mockRunner)
 	require.NoError(t, err)
