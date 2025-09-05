@@ -50,7 +50,7 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 		assert.Contains(t, config.Test.AutoDiscoverBuildTagsExclude, "performance")
 
 		// Test build tag discovery
-		tags, err := GetDiscoveredBuildTags(config)
+		tags, err := GetDiscoveredBuildTags(config, tempDir)
 		require.NoError(t, err)
 
 		// Verify discovered tags
@@ -89,7 +89,7 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 		assert.Contains(t, config.Test.AutoDiscoverBuildTagsExclude, "e2e")
 
 		// Test discovery with exclusions
-		tags, err := GetDiscoveredBuildTags(config)
+		tags, err := GetDiscoveredBuildTags(config, tempDir)
 		require.NoError(t, err)
 
 		assert.Contains(t, tags, "unit")
@@ -102,15 +102,23 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 		// Create project structure
 		createIntegrationProjectStructure(t, tempDir)
 
-		// Create config with auto-discovery disabled
-		createMageConfig(t, tempDir, false, nil)
+		// Create and set config with auto-discovery disabled manually
+		config := &Config{
+			Test: TestConfig{
+				AutoDiscoverBuildTags:        false,
+				AutoDiscoverBuildTagsExclude: []string{},
+				Timeout:                      "10m",
+			},
+		}
+		TestSetConfig(config)
 
-		config, err := GetConfig()
+		// Verify config is set correctly
+		retrievedConfig, err := GetConfig()
 		require.NoError(t, err)
-		assert.False(t, config.Test.AutoDiscoverBuildTags)
+		assert.False(t, retrievedConfig.Test.AutoDiscoverBuildTags)
 
 		// Build tag discovery should return empty when disabled
-		tags, err := GetDiscoveredBuildTags(config)
+		tags, err := GetDiscoveredBuildTags(retrievedConfig, tempDir)
 		require.NoError(t, err)
 		assert.Empty(t, tags)
 	})
@@ -119,13 +127,20 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 		// Create files with complex build expressions
 		createComplexBuildTagFiles(t, tempDir)
 
-		// Create config with auto-discovery enabled
-		createMageConfig(t, tempDir, true, nil)
+		// Create and set config with auto-discovery enabled manually
+		config := &Config{
+			Test: TestConfig{
+				AutoDiscoverBuildTags:        true,
+				AutoDiscoverBuildTagsExclude: []string{},
+				Timeout:                      "10m",
+			},
+		}
+		TestSetConfig(config)
 
-		config, err := GetConfig()
+		retrievedConfig, err := GetConfig()
 		require.NoError(t, err)
 
-		tags, err := GetDiscoveredBuildTags(config)
+		tags, err := GetDiscoveredBuildTags(retrievedConfig, tempDir)
 		require.NoError(t, err)
 
 		// Should discover all individual tags from complex expressions
@@ -140,12 +155,19 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 		// Create basic project structure
 		createIntegrationProjectStructure(t, tempDir)
 
-		// Create config with auto-discovery enabled
-		createMageConfig(t, tempDir, true, nil)
+		// Create and set config with auto-discovery enabled manually
+		config := &Config{
+			Test: TestConfig{
+				AutoDiscoverBuildTags:        true,
+				AutoDiscoverBuildTagsExclude: []string{},
+				Timeout:                      "10m",
+			},
+		}
+		TestSetConfig(config)
 
-		config, err := GetConfig()
+		retrievedConfig, err := GetConfig()
 		require.NoError(t, err)
-		assert.True(t, config.Test.AutoDiscoverBuildTags) // Use config
+		assert.True(t, retrievedConfig.Test.AutoDiscoverBuildTags) // Use config
 
 		// Test coverage file naming with build tags
 		modules := []ModuleInfo{{Path: ".", Relative: ".", Name: "test-module", IsRoot: true}}
@@ -209,7 +231,7 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 		assert.True(t, config.Test.AutoDiscoverBuildTags)
 		assert.Empty(t, config.Test.AutoDiscoverBuildTagsExclude)
 
-		tags, err := GetDiscoveredBuildTags(config)
+		tags, err := GetDiscoveredBuildTags(config, tempDir)
 		require.NoError(t, err)
 		assert.Greater(t, len(tags), 0)
 	})
@@ -419,12 +441,12 @@ func createMageConfig(t *testing.T, baseDir string, autoDiscover bool, excludeTa
 }
 
 // GetDiscoveredBuildTags is a helper function to get discovered build tags for testing
-func GetDiscoveredBuildTags(config *Config) ([]string, error) {
+func GetDiscoveredBuildTags(config *Config, rootDir string) ([]string, error) {
 	if !config.Test.AutoDiscoverBuildTags {
 		return nil, nil
 	}
 
-	tags, err := utils.DiscoverBuildTagsFromCurrentDir(config.Test.AutoDiscoverBuildTagsExclude)
+	tags, err := utils.DiscoverBuildTags(rootDir, config.Test.AutoDiscoverBuildTagsExclude)
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover build tags: %w", err)
 	}
