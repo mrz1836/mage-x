@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"gopkg.in/yaml.v3"
 )
@@ -49,6 +50,11 @@ func (p *DefaultConfigProvider) GetConfig() (*Config, error) {
 		p.mu.Lock()
 		defer p.mu.Unlock()
 
+		// Load .env files before processing configuration
+		// This ensures environment variables from .env files are available
+		// when applyEnvOverrides is called later
+		_ = env.LoadEnvFiles() //nolint:errcheck // .env files are optional
+
 		p.config = defaultConfig()
 		configFile := ".mage.yaml"
 
@@ -73,26 +79,25 @@ func (p *DefaultConfigProvider) GetConfig() (*Config, error) {
 			}
 		}
 
-		if !fileOps.File.Exists(configFile) {
-			// Config file doesn't exist, use defaults
-			return
-		}
+		if fileOps.File.Exists(configFile) {
+			// Config file exists, read and parse it
+			data, err := fileOps.File.ReadFile(configFile)
+			if err != nil {
+				p.err = fmt.Errorf("failed to read config: %w", err)
+				return
+			}
 
-		data, err := fileOps.File.ReadFile(configFile)
-		if err != nil {
-			p.err = fmt.Errorf("failed to read config: %w", err)
-			return
+			if err := yaml.Unmarshal(data, p.config); err != nil {
+				p.err = fmt.Errorf("failed to parse config: %w", err)
+				return
+			}
 		}
-
-		if err := yaml.Unmarshal(data, p.config); err != nil {
-			p.err = fmt.Errorf("failed to parse config: %w", err)
-			return
-		}
+		// If config file doesn't exist, we continue with defaults
 
 		// Clean all loaded values to remove inline comments and trim whitespace
 		cleanConfigValues(p.config)
 
-		// Apply environment variable overrides
+		// Apply environment variable overrides (always apply, regardless of config file existence)
 		applyEnvOverrides(p.config)
 	})
 

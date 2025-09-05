@@ -1,91 +1,93 @@
-project:
-  name: mage-x
-  binary: mage-x
-  module: github.com/mrz1836/mage-x
-  main: ""
-  description: ""
-  version: ""
-  git_domain: github.com
-  repo_owner: ""
-  repo_name: ""
-  env: {}
 build:
-  tags: []
+  goflags: []
   ldflags: []
+  output: bin
+  parallel: 10
   platforms:
     - linux/amd64
     - darwin/amd64
     - darwin/arm64
     - windows/amd64
-  goflags: []
-  output: bin
-  parallel: 10
-  verbose: false
+  tags: []
   trimpath: true
-test:
-  parallel: 10
-  timeout: 10m
-  integration_timeout: 30m
-  integration_tag: ""
-  short: false
   verbose: false
-  race: false
+docker:
+  build_args: {}
+  cache_from: []
+  default_registry: docker.io
+  dockerfile: Dockerfile
+  enable_buildkit: true
+  labels: {}
+  network_mode: ""
+  platforms:
+    - linux/amd64
+    - linux/arm64
+  registry: ""
+  repository: ""
+  security_opts: []
+docs:
+  tool: ""
+  port: 0
+download:
+  backoff_multiplier: 2
+  enable_resume: true
+  initial_delay_ms: 1000
+  max_delay_ms: 30000
+  max_retries: 5
+  timeout_ms: 60000
+  user_agent: mage-x-downloader/1.0
+lint:
+  disable_linters: []
+  enable_all: false
+  enable_linters: []
+  golangci_version: latest
+  skip_dirs: []
+  skip_files: []
+  timeout: 5m
+project:
+  binary: mage-x
+  description: ""
+  env: {}
+  git_domain: github.com
+  main: ""
+  module: github.com/mrz1836/mage-x
+  name: mage-x
+  repo_name: ""
+  repo_owner: ""
+  version: ""
+release:
+  changelog: true
+  draft: false
+  formats:
+    - tar.gz
+    - zip
+  github_token_env: GITHUB_TOKEN
+  name_template: ""
+  prerelease: false
+test:
+  auto_discover_build_tags: false
+  auto_discover_build_tags_exclude: []
+  bench_cpu: 0
+  bench_mem: false
+  bench_time: ""
   cover: false
   covermode: atomic
   coverpkg: []
   coverage_exclude: []
-  tags: ""
-  skip_fuzz: false
+  integration_tag: ""
+  integration_timeout: 30m
+  parallel: 10
+  race: false
+  short: false
   shuffle: false
-  bench_cpu: 0
-  bench_time: ""
-  bench_mem: false
-lint:
-  golangci_version: latest
-  timeout: 5m
-  skip_dirs: []
-  skip_files: []
-  enable_all: false
-  disable_linters: []
-  enable_linters: []
+  skip_fuzz: false
+  tags: ""
+  timeout: 10m
+  verbose: false
 tools:
-  golangci_lint: latest
+  custom: {}
   fumpt: latest
   govulncheck: latest
+  golangci_lint: latest
   mockgen: latest
   swag: latest
-  custom: {}
-docker:
-  registry: ""
-  repository: ""
-  dockerfile: Dockerfile
-  build_args: {}
-  platforms:
-    - linux/amd64
-    - linux/arm64
-  enable_buildkit: true
-  labels: {}
-  cache_from: []
-  security_opts: []
-  network_mode: ""
-  default_registry: docker.io
-release:
-  github_token_env: GITHUB_TOKEN
-  changelog: true
-  draft: false
-  prerelease: false
-  name_template: ""
-  formats:
-    - tar.gz
-    - zip
-download:
-  max_retries: 5
-  initial_delay_ms: 1000
-  max_delay_ms: 30000
-  timeout_ms: 60000
-  backoff_multiplier: 2
-  enable_resume: true
-  user_agent: mage-x-downloader/1.0
-docs:
-  tool: ""
-  port: 0

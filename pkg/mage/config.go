@@ -15,121 +15,123 @@ import (
 
 // Config represents the mage configuration
 type Config struct {
-	Project    ProjectConfig            `yaml:"project"`
 	Build      BuildConfig              `yaml:"build"`
-	Test       TestConfig               `yaml:"test"`
-	Lint       LintConfig               `yaml:"lint"`
-	Tools      ToolsConfig              `yaml:"tools"`
 	Docker     DockerConfig             `yaml:"docker"`
-	Release    ReleaseConfig            `yaml:"release"`
-	Download   DownloadConfig           `yaml:"download"`
 	Docs       DocsConfig               `yaml:"docs"`
+	Download   DownloadConfig           `yaml:"download"`
 	Enterprise *EnterpriseConfiguration `yaml:"enterprise,omitempty"`
+	Lint       LintConfig               `yaml:"lint"`
 	Metadata   map[string]string        `yaml:"metadata,omitempty"`
+	Project    ProjectConfig            `yaml:"project"`
+	Release    ReleaseConfig            `yaml:"release"`
+	Test       TestConfig               `yaml:"test"`
+	Tools      ToolsConfig              `yaml:"tools"`
 }
 
 // ProjectConfig contains project-specific settings
 type ProjectConfig struct {
-	Name        string            `yaml:"name"`
-	Binary      string            `yaml:"binary"`
-	Module      string            `yaml:"module"`
-	Main        string            `yaml:"main"`
-	Description string            `yaml:"description"`
-	Version     string            `yaml:"version"`
-	GitDomain   string            `yaml:"git_domain"`
-	RepoOwner   string            `yaml:"repo_owner"`
-	RepoName    string            `yaml:"repo_name"`
 	Aliases     []string          `yaml:"aliases,omitempty"`
+	Binary      string            `yaml:"binary"`
+	Description string            `yaml:"description"`
 	Env         map[string]string `yaml:"env"`
+	GitDomain   string            `yaml:"git_domain"`
+	Main        string            `yaml:"main"`
+	Module      string            `yaml:"module"`
+	Name        string            `yaml:"name"`
+	RepoName    string            `yaml:"repo_name"`
+	RepoOwner   string            `yaml:"repo_owner"`
+	Version     string            `yaml:"version"`
 }
 
 // BuildConfig contains build-specific settings
 type BuildConfig struct {
-	Tags      []string `yaml:"tags"`
-	LDFlags   []string `yaml:"ldflags"`
-	Platforms []string `yaml:"platforms"`
 	GoFlags   []string `yaml:"goflags"`
+	LDFlags   []string `yaml:"ldflags"`
 	Output    string   `yaml:"output"`
 	Parallel  int      `yaml:"parallel"`
-	Verbose   bool     `yaml:"verbose"`
+	Platforms []string `yaml:"platforms"`
+	Tags      []string `yaml:"tags"`
 	TrimPath  bool     `yaml:"trimpath"`
+	Verbose   bool     `yaml:"verbose"`
 }
 
 // TestConfig contains test-specific settings
 type TestConfig struct {
-	Parallel           int      `yaml:"parallel"`
-	Timeout            string   `yaml:"timeout"`
-	IntegrationTimeout string   `yaml:"integration_timeout"`
-	IntegrationTag     string   `yaml:"integration_tag"`
-	Short              bool     `yaml:"short"`
-	Verbose            bool     `yaml:"verbose"`
-	Race               bool     `yaml:"race"`
-	Cover              bool     `yaml:"cover"`
-	CoverMode          string   `yaml:"covermode"`
-	CoverPkg           []string `yaml:"coverpkg"`
-	CoverageExclude    []string `yaml:"coverage_exclude"`
-	Tags               string   `yaml:"tags"`
-	SkipFuzz           bool     `yaml:"skip_fuzz"`
-	Shuffle            bool     `yaml:"shuffle"`
-	BenchCPU           int      `yaml:"bench_cpu"`
-	BenchTime          string   `yaml:"bench_time"`
-	BenchMem           bool     `yaml:"bench_mem"`
+	AutoDiscoverBuildTags        bool     `yaml:"auto_discover_build_tags"`
+	AutoDiscoverBuildTagsExclude []string `yaml:"auto_discover_build_tags_exclude"`
+	BenchCPU                     int      `yaml:"bench_cpu"`
+	BenchMem                     bool     `yaml:"bench_mem"`
+	BenchTime                    string   `yaml:"bench_time"`
+	Cover                        bool     `yaml:"cover"`
+	CoverMode                    string   `yaml:"covermode"`
+	CoverPkg                     []string `yaml:"coverpkg"`
+	CoverageExclude              []string `yaml:"coverage_exclude"`
+	IntegrationTag               string   `yaml:"integration_tag"`
+	IntegrationTimeout           string   `yaml:"integration_timeout"`
+	Parallel                     int      `yaml:"parallel"`
+	Race                         bool     `yaml:"race"`
+	Short                        bool     `yaml:"short"`
+	Shuffle                      bool     `yaml:"shuffle"`
+	SkipFuzz                     bool     `yaml:"skip_fuzz"`
+	Tags                         string   `yaml:"tags"`
+	Timeout                      string   `yaml:"timeout"`
+	Verbose                      bool     `yaml:"verbose"`
 }
 
 // LintConfig contains linting settings
 type LintConfig struct {
+	DisableLinters  []string `yaml:"disable_linters"`
+	EnableAll       bool     `yaml:"enable_all"`
+	EnableLinters   []string `yaml:"enable_linters"`
 	GolangciVersion string   `yaml:"golangci_version"`
-	Timeout         string   `yaml:"timeout"`
 	SkipDirs        []string `yaml:"skip_dirs"`
 	SkipFiles       []string `yaml:"skip_files"`
-	EnableAll       bool     `yaml:"enable_all"`
-	DisableLinters  []string `yaml:"disable_linters"`
-	EnableLinters   []string `yaml:"enable_linters"`
+	Timeout         string   `yaml:"timeout"`
 }
 
 // ToolsConfig contains tool versions
 type ToolsConfig struct {
-	GolangciLint string            `yaml:"golangci_lint"`
+	Custom       map[string]string `yaml:"custom"`
 	Fumpt        string            `yaml:"fumpt"`
 	GoVulnCheck  string            `yaml:"govulncheck"`
+	GolangciLint string            `yaml:"golangci_lint"`
 	Mockgen      string            `yaml:"mockgen"`
 	Swag         string            `yaml:"swag"`
-	Custom       map[string]string `yaml:"custom"`
 }
 
 // DockerConfig contains Docker settings
 type DockerConfig struct {
-	Registry        string            `yaml:"registry"`
-	Repository      string            `yaml:"repository"`
-	Dockerfile      string            `yaml:"dockerfile"`
 	BuildArgs       map[string]string `yaml:"build_args"`
-	Platforms       []string          `yaml:"platforms"`
+	CacheFrom       []string          `yaml:"cache_from"`
+	DefaultRegistry string            `yaml:"default_registry"`
+	Dockerfile      string            `yaml:"dockerfile"`
 	EnableBuildKit  bool              `yaml:"enable_buildkit"`
 	Labels          map[string]string `yaml:"labels"`
-	CacheFrom       []string          `yaml:"cache_from"`
-	SecurityOpts    []string          `yaml:"security_opts"`
 	NetworkMode     string            `yaml:"network_mode"`
-	DefaultRegistry string            `yaml:"default_registry"`
+	Platforms       []string          `yaml:"platforms"`
+	Registry        string            `yaml:"registry"`
+	Repository      string            `yaml:"repository"`
+	SecurityOpts    []string          `yaml:"security_opts"`
 }
 
 // ReleaseConfig contains release settings
 type ReleaseConfig struct {
-	GitHubToken string   `yaml:"github_token_env"`
 	Changelog   bool     `yaml:"changelog"`
 	Draft       bool     `yaml:"draft"`
-	Prerelease  bool     `yaml:"prerelease"`
-	NameTmpl    string   `yaml:"name_template"`
 	Formats     []string `yaml:"formats"`
+	GitHubToken string   `yaml:"github_token_env"`
+	NameTmpl    string   `yaml:"name_template"`
+	Prerelease  bool     `yaml:"prerelease"`
 }
 
 // DownloadConfig contains download retry settings
 type DownloadConfig struct {
-	MaxRetries        int     `yaml:"max_retries"`
-	InitialDelayMs    int     `yaml:"initial_delay_ms"`
-	MaxDelayMs        int     `yaml:"max_delay_ms"`
-	TimeoutMs         int     `yaml:"timeout_ms"`
 	BackoffMultiplier float64 `yaml:"backoff_multiplier"`
 	EnableResume      bool    `yaml:"enable_resume"`
+	InitialDelayMs    int     `yaml:"initial_delay_ms"`
+	MaxDelayMs        int     `yaml:"max_delay_ms"`
+	MaxRetries        int     `yaml:"max_retries"`
+	TimeoutMs         int     `yaml:"timeout_ms"`
 	UserAgent         string  `yaml:"user_agent"`
 }
 
@@ -200,73 +202,6 @@ func GetToolVersion(toolName string) string {
 	return ""
 }
 
-// ValidateToolVersions validates that all required tool versions are available in environment variables
-func ValidateToolVersions() error {
-	requiredTools := []string{
-		"golangci-lint", "gofumpt", "govulncheck",
-	}
-
-	optionalTools := []string{
-		"mockgen", "swag", "staticcheck", "nancy", "gitleaks", "goreleaser", "prettier",
-	}
-
-	var missingRequired []string
-	var missingOptional []string
-
-	// Check required tools
-	for _, tool := range requiredTools {
-		if GetToolVersion(tool) == "" {
-			missingRequired = append(missingRequired, tool)
-		}
-	}
-
-	// Check optional tools
-	for _, tool := range optionalTools {
-		if GetToolVersion(tool) == "" {
-			missingOptional = append(missingOptional, tool)
-		}
-	}
-
-	// Report missing tools
-	if len(missingRequired) > 0 {
-		return fmt.Errorf("%w: %v. Source .github/.env.base to fix", ErrMissingToolVersions, missingRequired)
-	}
-
-	if len(missingOptional) > 0 {
-		utils.Warn("Missing optional tool versions: %v", missingOptional)
-		utils.Warn("These tools may not function correctly without version information")
-	}
-
-	return nil
-}
-
-// EnsureEnvironmentLoaded checks if key environment variables are loaded and provides guidance
-func EnsureEnvironmentLoaded() {
-	// Check if key environment variables are set
-	keyEnvVars := []string{
-		"MAGE_X_GOLANGCI_LINT_VERSION",
-		"MAGE_X_GOFUMPT_VERSION",
-		"MAGE_X_GOVULNCHECK_VERSION",
-	}
-
-	var missing []string
-	for _, envVar := range keyEnvVars {
-		if os.Getenv(envVar) == "" {
-			missing = append(missing, envVar)
-		}
-	}
-
-	if len(missing) > 0 {
-		utils.Warn("Key environment variables not loaded: %v", missing)
-		utils.Warn("Consider sourcing .github/.env.base:")
-		utils.Warn("  source .github/.env.base")
-		utils.Warn("Or set environment variables manually:")
-		for _, envVar := range missing {
-			utils.Warn("  export %s=<version>", envVar)
-		}
-	}
-}
-
 // TestResetConfig resets the config for testing purposes only
 // This should only be used in tests
 func TestResetConfig() {
@@ -289,12 +224,23 @@ func cleanEnvValue(value string) string {
 		return ""
 	}
 
-	// Find inline comment marker (space followed by #)
+	// Trim leading/trailing whitespace first
+	value = strings.TrimSpace(value)
+
+	// If it's a comment-only line, return empty string
+	if strings.HasPrefix(value, "#") {
+		return ""
+	}
+
+	// Find inline comment markers (space or tab followed by #)
 	if idx := strings.Index(value, " #"); idx >= 0 {
 		value = value[:idx]
 	}
+	if idx := strings.Index(value, "\t#"); idx >= 0 {
+		value = value[:idx]
+	}
 
-	// Trim any leading/trailing whitespace
+	// Trim any trailing whitespace after comment removal
 	return strings.TrimSpace(value)
 }
 
@@ -514,34 +460,50 @@ func getDefaultAliases(binary string) []string {
 // applyEnvOverrides applies environment variable overrides to config
 func applyEnvOverrides(c *Config) {
 	// Binary name override
-	if v := os.Getenv("MAGE_X_BINARY_NAME"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_BINARY_NAME")); v != "" {
 		c.Project.Binary = v
 	}
-	if v := GetMageXEnv("CUSTOM_BINARY_NAME"); v != "" {
+	if v := cleanEnvValue(GetMageXEnv("CUSTOM_BINARY_NAME")); v != "" {
 		c.Project.Binary = v
 	}
 
 	// Build tags override
-	if v := os.Getenv("MAGE_X_BUILD_TAGS"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_BUILD_TAGS")); v != "" {
 		c.Build.Tags = strings.Split(v, ",")
 	}
 
 	// Verbose override
-	if v := os.Getenv("MAGE_X_VERBOSE"); v == approvalTrue || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_VERBOSE")); v == approvalTrue || v == "1" {
 		c.Build.Verbose = true
 		c.Test.Verbose = true
 	}
 
 	// Test race override
-	if v := os.Getenv("MAGE_X_TEST_RACE"); v == approvalTrue || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_TEST_RACE")); v == approvalTrue || v == "1" {
 		c.Test.Race = true
 	}
 
 	// Parallel override
-	if v := os.Getenv("MAGE_X_PARALLEL"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_PARALLEL")); v != "" {
 		var parallel int
 		if _, err := fmt.Sscanf(v, "%d", &parallel); err == nil && parallel > 0 {
 			c.Build.Parallel = parallel
+		}
+	}
+
+	// Auto discover build tags override
+	if v := cleanEnvValue(os.Getenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")); v == approvalTrue || v == "1" {
+		c.Test.AutoDiscoverBuildTags = true
+	} else if v == "false" || v == "0" {
+		c.Test.AutoDiscoverBuildTags = false
+	}
+
+	// Auto discover build tags exclude override
+	if v := cleanEnvValue(os.Getenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")); v != "" {
+		c.Test.AutoDiscoverBuildTagsExclude = strings.Split(v, ",")
+		// Trim whitespace from each tag
+		for i, tag := range c.Test.AutoDiscoverBuildTagsExclude {
+			c.Test.AutoDiscoverBuildTagsExclude[i] = strings.TrimSpace(tag)
 		}
 	}
 
@@ -560,7 +522,7 @@ func applyEnvOverrides(c *Config) {
 // applyDownloadEnvOverrides applies environment variable overrides to download config
 func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	// Max retries override
-	if v := os.Getenv("MAGE_X_DOWNLOAD_RETRIES"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_RETRIES")); v != "" {
 		var retries int
 		if _, err := fmt.Sscanf(v, "%d", &retries); err == nil && retries >= 0 {
 			cfg.MaxRetries = retries
@@ -568,7 +530,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Timeout override
-	if v := os.Getenv("MAGE_X_DOWNLOAD_TIMEOUT"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_TIMEOUT")); v != "" {
 		var timeout int
 		if _, err := fmt.Sscanf(v, "%d", &timeout); err == nil && timeout > 0 {
 			cfg.TimeoutMs = timeout
@@ -576,7 +538,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Initial delay override
-	if v := os.Getenv("MAGE_X_DOWNLOAD_INITIAL_DELAY"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_INITIAL_DELAY")); v != "" {
 		var delay int
 		if _, err := fmt.Sscanf(v, "%d", &delay); err == nil && delay > 0 {
 			cfg.InitialDelayMs = delay
@@ -584,7 +546,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Max delay override
-	if v := os.Getenv("MAGE_X_DOWNLOAD_MAX_DELAY"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_MAX_DELAY")); v != "" {
 		var delay int
 		if _, err := fmt.Sscanf(v, "%d", &delay); err == nil && delay > 0 {
 			cfg.MaxDelayMs = delay
@@ -592,7 +554,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Backoff multiplier override
-	if v := os.Getenv("MAGE_X_DOWNLOAD_BACKOFF"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_BACKOFF")); v != "" {
 		var backoff float64
 		if _, err := fmt.Sscanf(v, "%f", &backoff); err == nil && backoff > 0 {
 			cfg.BackoffMultiplier = backoff
@@ -600,14 +562,14 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Resume override
-	if v := os.Getenv("MAGE_X_DOWNLOAD_RESUME"); v == approvalTrue || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_RESUME")); v == approvalTrue || v == "1" {
 		cfg.EnableResume = true
 	} else if v == "false" || v == "0" {
 		cfg.EnableResume = false
 	}
 
 	// User agent override
-	if v := os.Getenv("MAGE_X_DOWNLOAD_USER_AGENT"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_USER_AGENT")); v != "" {
 		cfg.UserAgent = v
 	}
 }
@@ -639,25 +601,25 @@ func applyToolVersionEnvOverrides(cfg *ToolsConfig) {
 // applyEnterpriseEnvOverrides applies environment variable overrides to enterprise config
 func applyEnterpriseEnvOverrides(cfg *EnterpriseConfiguration) {
 	// Organization overrides
-	if v := os.Getenv("MAGE_X_ORG_NAME"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_ORG_NAME")); v != "" {
 		cfg.Organization.Name = v
 	}
-	if v := os.Getenv("MAGE_X_ORG_DOMAIN"); v != "" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_ORG_DOMAIN")); v != "" {
 		cfg.Organization.Domain = v
 	}
 
 	// Security configuration environment variables are reserved for future implementation.
 	// When Security field is added to Config, these will be processed:
-	_ = os.Getenv("MAGE_X_SECURITY_LEVEL") // placeholder for security level
+	_ = cleanEnvValue(os.Getenv("MAGE_X_SECURITY_LEVEL")) // placeholder for security level
 	// Vault integration is reserved for future implementation.
 	// When Security field is added to Config, these will be processed:
-	_ = os.Getenv("MAGE_X_ENABLE_VAULT") // placeholder for vault enabled
-	_ = GetMageXEnv("VAULT_ADDR")        // placeholder for vault address
+	_ = cleanEnvValue(os.Getenv("MAGE_X_ENABLE_VAULT")) // placeholder for vault enabled
+	_ = cleanEnvValue(GetMageXEnv("VAULT_ADDR"))        // placeholder for vault address
 
 	// Analytics configuration is reserved for future implementation.
 	// When Analytics field is added to Config, these will be processed:
-	_ = os.Getenv("MAGE_X_ANALYTICS_ENABLED") // placeholder for analytics enabled
-	_ = os.Getenv("MAGE_X_METRICS_INTERVAL")  // placeholder for metrics interval
+	_ = cleanEnvValue(os.Getenv("MAGE_X_ANALYTICS_ENABLED")) // placeholder for analytics enabled
+	_ = cleanEnvValue(os.Getenv("MAGE_X_METRICS_INTERVAL"))  // placeholder for metrics interval
 }
 
 // BinaryName returns the configured binary name

@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -27,10 +28,11 @@ func (ts *ConfigTestSuite) SetupSuite() {
 	// Store original environment variables
 	ts.origEnvVars = make(map[string]string)
 	envVars := []string{
-		"MAGE_X_BINARY_NAME", "CUSTOM_BINARY_NAME", "MAGE_X_BUILD_TAGS", "MAGE_X_VERBOSE",
+		"MAGE_X_BINARY_NAME", "MAGE_X_BUILD_TAGS", "MAGE_X_VERBOSE",
 		"MAGE_X_TEST_RACE", "MAGE_X_PARALLEL", "MAGE_X_ORG_NAME", "MAGE_X_ORG_DOMAIN",
 		"MAGE_X_SECURITY_LEVEL", "MAGE_X_ENABLE_VAULT", "VAULT_ADDR",
 		"MAGE_X_ANALYTICS_ENABLED", "MAGE_X_METRICS_INTERVAL",
+		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE",
 	}
 	for _, env := range envVars {
 		ts.origEnvVars[env] = os.Getenv(env)
@@ -59,8 +61,9 @@ func (ts *ConfigTestSuite) SetupTest() {
 
 	// Clear environment variables for clean test state
 	envVars := []string{
-		"MAGE_X_BINARY_NAME", "CUSTOM_BINARY_NAME", "MAGE_X_BUILD_TAGS", "MAGE_X_VERBOSE",
+		"MAGE_X_BINARY_NAME", "MAGE_X_BUILD_TAGS", "MAGE_X_VERBOSE",
 		"MAGE_X_TEST_RACE", "MAGE_X_PARALLEL", "MAGE_X_ORG_NAME", "MAGE_X_ORG_DOMAIN",
+		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE",
 	}
 	for _, env := range envVars {
 		ts.Require().NoError(os.Unsetenv(env))
@@ -132,6 +135,8 @@ func (ts *ConfigTestSuite) TestDefaultConfig() {
 		ts.Require().Positive(config.Test.Parallel)
 		ts.Require().Equal("10m", config.Test.Timeout)
 		ts.Require().Equal("atomic", config.Test.CoverMode)
+		ts.Require().False(config.Test.AutoDiscoverBuildTags)
+		ts.Require().Empty(config.Test.AutoDiscoverBuildTagsExclude)
 
 		// Test lint defaults
 		ts.Require().Equal(GetDefaultGolangciLintVersion(), config.Lint.GolangciVersion)
@@ -253,6 +258,72 @@ func (ts *ConfigTestSuite) TestEnvironmentOverrides() {
 		ts.Require().NoError(os.Setenv("MAGE_X_PARALLEL", "0"))
 		applyEnvOverrides(config)
 		ts.Require().Equal(originalParallel, config.Build.Parallel)
+	})
+
+	ts.Run("AutoDiscoverBuildTagsOverride", func() {
+		config := defaultConfig()
+
+		// Test enabling auto discovery with "true"
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "true"))
+		applyEnvOverrides(config)
+		ts.Require().True(config.Test.AutoDiscoverBuildTags)
+
+		// Test enabling auto discovery with "1"
+		config = defaultConfig()
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "1"))
+		applyEnvOverrides(config)
+		ts.Require().True(config.Test.AutoDiscoverBuildTags)
+
+		// Test disabling auto discovery with "false"
+		config = defaultConfig()
+		config.Test.AutoDiscoverBuildTags = true // Set initial state
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "false"))
+		applyEnvOverrides(config)
+		ts.Require().False(config.Test.AutoDiscoverBuildTags)
+
+		// Test disabling auto discovery with "0"
+		config = defaultConfig()
+		config.Test.AutoDiscoverBuildTags = true // Set initial state
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "0"))
+		applyEnvOverrides(config)
+		ts.Require().False(config.Test.AutoDiscoverBuildTags)
+
+		// Test with other values (should not change config)
+		config = defaultConfig()
+		originalAutoDiscover := config.Test.AutoDiscoverBuildTags
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "maybe"))
+		applyEnvOverrides(config)
+		ts.Require().Equal(originalAutoDiscover, config.Test.AutoDiscoverBuildTags)
+	})
+
+	ts.Run("AutoDiscoverBuildTagsExcludeOverride", func() {
+		config := defaultConfig()
+
+		// Test with single tag
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE", "integration"))
+		applyEnvOverrides(config)
+		ts.Require().Equal([]string{"integration"}, config.Test.AutoDiscoverBuildTagsExclude)
+
+		// Test with multiple tags
+		config = defaultConfig()
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE", "integration,e2e,performance"))
+		applyEnvOverrides(config)
+		expected := []string{"integration", "e2e", "performance"}
+		ts.Require().Equal(expected, config.Test.AutoDiscoverBuildTagsExclude)
+
+		// Test with whitespace (should be trimmed)
+		config = defaultConfig()
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE", " integration , e2e ,  performance  "))
+		applyEnvOverrides(config)
+		expected = []string{"integration", "e2e", "performance"}
+		ts.Require().Equal(expected, config.Test.AutoDiscoverBuildTagsExclude)
+
+		// Test with empty string (should not change config)
+		config = defaultConfig()
+		originalExclude := config.Test.AutoDiscoverBuildTagsExclude
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE", ""))
+		applyEnvOverrides(config)
+		ts.Require().Equal(originalExclude, config.Test.AutoDiscoverBuildTagsExclude)
 	})
 }
 
@@ -928,4 +999,81 @@ func (ts *ConfigTestSuite) TestDefaultConfigAppliesCleanValues() {
 		ts.Equal("v2.4.0", config.Lint.GolangciVersion)
 		ts.Equal("v0.8.0", config.Tools.Fumpt)
 	})
+}
+
+// TestCleanEnvValue tests the cleanEnvValue function used for processing environment variables
+func TestCleanEnvValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "EmptyString",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "SimpleValue",
+			input:    "test-value",
+			expected: "test-value",
+		},
+		{
+			name:     "ValueWithWhitespace",
+			input:    "  test-value  ",
+			expected: "test-value",
+		},
+		{
+			name:     "ValueWithComment",
+			input:    "test-value # this is a comment",
+			expected: "test-value",
+		},
+		{
+			name:     "ValueWithWhitespaceAndComment",
+			input:    "  test-value  # this is a comment  ",
+			expected: "test-value",
+		},
+		{
+			name:     "ValueWithMultipleComments",
+			input:    "test-value # comment1 # comment2",
+			expected: "test-value",
+		},
+		{
+			name:     "CommentOnly",
+			input:    "# just a comment",
+			expected: "",
+		},
+		{
+			name:     "WhitespaceOnly",
+			input:    "   \t\n   ",
+			expected: "",
+		},
+		{
+			name:     "HashInValue",
+			input:    "test#hash-value",
+			expected: "test#hash-value",
+		},
+		{
+			name:     "HashAtEnd",
+			input:    "test-value#",
+			expected: "test-value#",
+		},
+		{
+			name:     "SpaceBeforeHash",
+			input:    "test-value #comment",
+			expected: "test-value",
+		},
+		{
+			name:     "TabBeforeHash",
+			input:    "test-value\t#comment",
+			expected: "test-value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := cleanEnvValue(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
