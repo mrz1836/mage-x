@@ -23,11 +23,12 @@ func LoadEnvFiles(basePaths ...string) error {
 
 	// Files to load in order of priority (lowest to highest)
 	envFiles := []string{
-		".github/.env.base", // Base configuration (lowest priority)
-		".env.base",         // Alternative base location
-		".env.custom",       // Custom overrides
-		".env.local",        // Local development
-		".env",              // Standard env file (highest priority)
+		".github/.env.base",   // Base configuration (lowest priority)
+		".env.base",           // Alternative base location
+		".github/.env.custom", // Custom overrides in .github directory
+		".env.custom",         // Custom overrides in root directory
+		".env.local",          // Local development
+		".env",                // Standard env file (highest priority)
 	}
 
 	var loadedCount int
@@ -78,18 +79,21 @@ func loadEnvFile(filePath string) error {
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 
+		// Handle inline comments (remove everything from # onwards)
+		if commentPos := strings.Index(value, "#"); commentPos >= 0 {
+			value = strings.TrimSpace(value[:commentPos])
+		}
+
 		// Expand variables in value (e.g., ${VAR} or $VAR)
 		value = expandVariables(value, loaded)
 
 		// Store in our local map for future expansions
 		loaded[key] = value
 
-		// Only set environment variable if not already set
-		if os.Getenv(key) == "" {
-			if err := os.Setenv(key, value); err != nil {
-				// Continue on error but could log if needed
-				_ = err
-			}
+		// Set environment variable (later files override earlier ones)
+		if err := os.Setenv(key, value); err != nil {
+			// Continue on error but could log if needed
+			_ = err
 		}
 	}
 

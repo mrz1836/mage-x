@@ -154,7 +154,7 @@ func (Mod) Graph(args ...string) error {
 			depth = d
 		}
 	}
-	showVersions := utils.GetParam(params, "show_versions", "true") == "true"
+	showVersions := utils.GetParam(params, "show_versions", approvalTrue) == approvalTrue
 	filter := utils.GetParam(params, "filter", "")
 	format := strings.ToLower(utils.GetParam(params, "format", "tree"))
 
