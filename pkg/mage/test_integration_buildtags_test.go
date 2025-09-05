@@ -73,10 +73,12 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 		// Test environment variable overrides
 		require.NoError(t, os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "true"))
 		require.NoError(t, os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE", "integration,e2e"))
-		defer func() {
+		cleanup := func() {
 			os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")
 			os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")
-		}()
+			TestResetConfig()
+		}
+		defer cleanup()
 
 		// Reset config to pick up environment variables
 		TestResetConfig()
@@ -96,6 +98,9 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 		assert.Contains(t, tags, "performance")
 		assert.NotContains(t, tags, "integration")
 		assert.NotContains(t, tags, "e2e")
+
+		// Explicit cleanup to ensure environment is clean for next tests
+		cleanup()
 	})
 
 	t.Run("DisabledAutoDiscovery", func(t *testing.T) {
@@ -256,9 +261,16 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 	})
 
 	t.Run("InvalidConfigurationValues", func(t *testing.T) {
+		// Ensure clean environment by explicitly unsetting related vars first
+		os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")
+		os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")
+
 		// Test with invalid boolean values
 		require.NoError(t, os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "maybe"))
-		defer os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")
+		defer func() {
+			os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")
+			os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")
+		}()
 
 		TestResetConfig()
 		config, err := GetConfig()

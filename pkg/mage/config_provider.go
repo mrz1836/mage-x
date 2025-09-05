@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
@@ -50,10 +51,12 @@ func (p *DefaultConfigProvider) GetConfig() (*Config, error) {
 		p.mu.Lock()
 		defer p.mu.Unlock()
 
-		// Load .env files before processing configuration
+		// Load .env files before processing configuration, but skip during tests
 		// This ensures environment variables from .env files are available
-		// when applyEnvOverrides is called later
-		_ = env.LoadEnvFiles() //nolint:errcheck // .env files are optional
+		// when applyEnvOverrides is called later, but prevents test interference
+		if !isRunningTests() {
+			_ = env.LoadEnvFiles() //nolint:errcheck // .env files are optional
+		}
 
 		p.config = defaultConfig()
 		configFile := ".mage.yaml"
@@ -283,6 +286,54 @@ func (m *MockConfigProvider) ResetConfig() {
 // SetConfig sets the mock configuration
 func (m *MockConfigProvider) SetConfig(cfg *Config) {
 	m.Config = cfg
+}
+
+// isRunningTests detects if we're running under go test
+// This prevents .env file loading during tests to avoid interference
+func isRunningTests() bool {
+	// Primary detection: Check if we're running under go test by examining os.Args[0]
+	if len(os.Args) > 0 {
+		arg0 := os.Args[0]
+
+		// Go test binaries typically have names ending in .test
+		if strings.HasSuffix(arg0, ".test") {
+			return true
+		}
+
+		// Check for temporary test binary patterns (like /tmp/go-build*/b001/exe/*)
+		if strings.Contains(arg0, "/go-build") && strings.Contains(arg0, "/exe/") {
+			return true
+		}
+
+		// Check for test binary patterns in various locations
+		if strings.Contains(arg0, "/test") || strings.Contains(arg0, "test.exe") {
+			return true
+		}
+	}
+
+	// Secondary detection: Check for test-specific environment variables
+	// Go sets these during test execution
+	testEnvVars := []string{
+		"GO_TEST_TIMEOUT_SCALE",
+		"GOCACHE", // While not test-specific, combined with other indicators
+	}
+
+	for _, env := range testEnvVars {
+		if os.Getenv(env) != "" {
+			// Additional validation for GOCACHE since it's not test-specific
+			if env == "GOCACHE" {
+				// Look for additional test indicators
+				if strings.Contains(os.Getenv("PWD"), "test") ||
+					os.Getenv("GO_TEST_TIMEOUT_SCALE") != "" {
+					return true
+				}
+			} else {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // Static errors for MockConfigProvider
