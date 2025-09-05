@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -51,12 +52,13 @@ func (Test) Full(args ...string) error {
 
 // Unit runs unit tests
 func (Test) Unit(args ...string) error {
-	utils.Header("Running Unit Tests")
-
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Display header with build tag information
+	discoveredTags := displayTestHeader("unit", config)
 
 	// Discover all modules
 	modules, err := findAllModules()
@@ -74,48 +76,19 @@ func (Test) Unit(args ...string) error {
 		utils.Info("Found %d Go modules", len(modules))
 	}
 
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-
-	// Run tests for each module
-	for _, module := range modules {
-		displayModuleHeader(module, "Testing")
-
-		moduleStart := time.Now()
-
-		// Build test args with additional arguments
-		testArgs := buildTestArgs(config, false, false, args...)
-		testArgs = append(testArgs, "-short", "./...")
-
-		// Run tests in module directory
-		err := runCommandInModule(module, "go", testArgs...)
-
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Unit tests failed in %d/%d modules", len(moduleErrors), len(modules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All unit tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
-	return nil
+	// Use new build tag discovery if enabled, passing pre-discovered tags
+	return runTestsWithBuildTagDiscoveryTags(config, modules, false, args, "unit", discoveredTags)
 }
 
 // Short runs short tests (excludes integration tests)
 func (Test) Short(args ...string) error {
-	utils.Header("Running Short Tests")
-
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Display header with build tag information
+	discoveredTags := displayTestHeader("short", config)
 
 	// Discover all modules
 	modules, err := findAllModules()
@@ -133,50 +106,19 @@ func (Test) Short(args ...string) error {
 		utils.Info("Found %d Go modules", len(modules))
 	}
 
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-
-	// Run tests for each module
-	for _, module := range modules {
-		displayModuleHeader(module, "Running short tests in")
-
-		moduleStart := time.Now()
-
-		// Explicitly disable race and coverage for short tests to keep them fast
-		raceDisabled := false
-		coverDisabled := false
-		testArgs := buildTestArgsWithOverrides(config, &raceDisabled, &coverDisabled, args...)
-		testArgs = append(testArgs, "-short", "./...")
-
-		// Run tests in module directory
-		err := runCommandInModule(module, "go", testArgs...)
-
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Short tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Short tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Short tests failed in %d/%d modules", len(moduleErrors), len(modules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All short tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
-	return nil
+	// Use new build tag discovery if enabled (explicitly disable race for speed)
+	return runTestsWithBuildTagDiscoveryTags(config, modules, false, args, "short", discoveredTags)
 }
 
 // Race runs tests with race detector
 func (Test) Race(args ...string) error {
-	utils.Header("Running Tests with Race Detector")
-
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Display header with build tag information
+	discoveredTags := displayTestHeader("race", config)
 
 	// Discover all modules
 	modules, err := findAllModules()
@@ -194,47 +136,19 @@ func (Test) Race(args ...string) error {
 		utils.Info("Found %d Go modules", len(modules))
 	}
 
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-
-	// Run tests for each module
-	for _, module := range modules {
-		displayModuleHeader(module, "Running race tests in")
-
-		moduleStart := time.Now()
-
-		testArgs := buildTestArgs(config, true, false, args...)
-		testArgs = append(testArgs, "./...")
-
-		// Run tests in module directory
-		err := runCommandInModule(module, "go", testArgs...)
-
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Race tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Race tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Race tests failed in %d/%d modules", len(moduleErrors), len(modules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All race tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
-	return nil
+	// Use new build tag discovery if enabled (with race detector)
+	return runTestsWithBuildTagDiscoveryTags(config, modules, true, args, "race", discoveredTags)
 }
 
 // Cover runs tests with coverage
 func (Test) Cover(args ...string) error {
-	utils.Header("Running Tests with Coverage")
-
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Display header with build tag information
+	discoveredTags := displayTestHeader("coverage", config)
 
 	// Discover all modules
 	modules, err := findAllModules()
@@ -252,80 +166,19 @@ func (Test) Cover(args ...string) error {
 		utils.Info("Found %d Go modules", len(modules))
 	}
 
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-	var coverageFiles []string
-
-	// Run tests for each module
-	for i, module := range modules {
-		displayModuleHeader(module, "Running coverage tests in")
-
-		moduleStart := time.Now()
-
-		// Create unique coverage file name for each module
-		coverFile := fmt.Sprintf("coverage_%d.txt", i)
-		if module.Relative != "." {
-			// Use sanitized path for coverage file name
-			sanitized := strings.ReplaceAll(module.Relative, "/", "_")
-			coverFile = fmt.Sprintf("coverage_%s.txt", sanitized)
-		}
-
-		testArgs := buildTestArgs(config, false, true, args...)
-		testArgs = append(testArgs, "-coverprofile="+coverFile, "-covermode="+config.Test.CoverMode)
-
-		if len(config.Test.CoverPkg) > 0 {
-			testArgs = append(testArgs, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
-		}
-
-		testArgs = append(testArgs, "./...")
-
-		// Run tests in module directory
-		err := runCommandInModule(module, "go", testArgs...)
-
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Coverage tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			// Move coverage file to root directory
-			srcPath := filepath.Join(module.Path, coverFile)
-			dstPath := coverFile
-			if utils.FileExists(srcPath) {
-				if err := os.Rename(srcPath, dstPath); err != nil {
-					utils.Warn("Failed to move coverage file for %s: %v", module.Relative, err)
-				} else {
-					coverageFiles = append(coverageFiles, coverFile)
-				}
-			}
-			utils.Success("Coverage tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Handle coverage files
-	handleCoverageFiles(coverageFiles)
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Coverage tests failed in %d/%d modules", len(moduleErrors), len(modules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All coverage tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
-
-	// Show coverage summary
-	if utils.FileExists("coverage.txt") {
-		return Test{}.CoverReport()
-	}
-	return nil
+	// Use build tag discovery for coverage tests
+	return runCoverageTestsWithBuildTagDiscoveryTags(config, modules, false, args, discoveredTags)
 }
 
 // CoverRace runs tests with both coverage and race detector
 func (Test) CoverRace(args ...string) error {
-	utils.Header("Running Tests with Coverage and Race Detector")
-
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Display header with build tag information
+	discoveredTags := displayTestHeader("coverage+race", config)
 
 	// Discover all modules
 	modules, err := findAllModules()
@@ -343,70 +196,8 @@ func (Test) CoverRace(args ...string) error {
 		utils.Info("Found %d Go modules", len(modules))
 	}
 
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-	var coverageFiles []string
-
-	// Run tests for each module
-	for i, module := range modules {
-		displayModuleHeader(module, "Running coverage+race tests in")
-
-		moduleStart := time.Now()
-
-		// Create unique coverage file name for each module
-		coverFile := fmt.Sprintf("coverage_%d.txt", i)
-		if module.Relative != "." {
-			// Use sanitized path for coverage file name
-			sanitized := strings.ReplaceAll(module.Relative, "/", "_")
-			coverFile = fmt.Sprintf("coverage_%s.txt", sanitized)
-		}
-
-		testArgs := buildTestArgs(config, true, true, args...)
-		testArgs = append(testArgs, "-coverprofile="+coverFile, "-covermode=atomic") // atomic is required with race
-
-		if len(config.Test.CoverPkg) > 0 {
-			testArgs = append(testArgs, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
-		}
-
-		testArgs = append(testArgs, "./...")
-
-		// Run tests in module directory
-		err := runCommandInModule(module, "go", testArgs...)
-
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Coverage+race tests failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			// Move coverage file to root directory
-			srcPath := filepath.Join(module.Path, coverFile)
-			dstPath := coverFile
-			if utils.FileExists(srcPath) {
-				if err := os.Rename(srcPath, dstPath); err != nil {
-					utils.Warn("Failed to move coverage file for %s: %v", module.Relative, err)
-				} else {
-					coverageFiles = append(coverageFiles, coverFile)
-				}
-			}
-			utils.Success("Coverage+race tests passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Handle coverage files
-	handleCoverageFiles(coverageFiles)
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Coverage+race tests failed in %d/%d modules", len(moduleErrors), len(modules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All coverage+race tests passed in %s", utils.FormatDuration(time.Since(totalStart)))
-
-	// Show coverage summary
-	if utils.FileExists("coverage.txt") {
-		return Test{}.CoverReport()
-	}
-	return nil
+	// Use build tag discovery for coverage+race tests
+	return runCoverageTestsWithBuildTagDiscoveryTags(config, modules, true, args, discoveredTags)
 }
 
 // CoverReport shows coverage report
@@ -540,8 +331,6 @@ func isMultiModuleCoverage(coverageFile string) bool {
 
 // Fuzz runs fuzz tests with configurable time
 func (Test) Fuzz(argsList ...string) error {
-	utils.Header("Running Fuzz Tests")
-
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
@@ -549,6 +338,8 @@ func (Test) Fuzz(argsList ...string) error {
 	if err != nil {
 		return err
 	}
+
+	displayTestHeader("fuzz", config)
 
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
@@ -665,8 +456,6 @@ func (Test) FuzzWithTime(fuzzTime time.Duration) error {
 
 // FuzzShort runs fuzz tests with configurable time (default: 5s for quick feedback)
 func (Test) FuzzShort(argsList ...string) error {
-	utils.Header("Running Short Fuzz Tests")
-
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
@@ -674,6 +463,8 @@ func (Test) FuzzShort(argsList ...string) error {
 	if err != nil {
 		return err
 	}
+
+	displayTestHeader("fuzz-short", config)
 
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
@@ -790,8 +581,6 @@ func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 
 // Bench runs benchmarks
 func (Test) Bench(argsList ...string) error {
-	utils.Header("Running Benchmarks")
-
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
@@ -799,6 +588,8 @@ func (Test) Bench(argsList ...string) error {
 	if err != nil {
 		return err
 	}
+
+	displayTestHeader("benchmark", config)
 
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
@@ -833,8 +624,6 @@ func (Test) Bench(argsList ...string) error {
 
 // BenchShort runs benchmarks with shorter duration for quick feedback
 func (Test) BenchShort(argsList ...string) error {
-	utils.Header("Running Short Benchmarks")
-
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
@@ -842,6 +631,8 @@ func (Test) BenchShort(argsList ...string) error {
 	if err != nil {
 		return err
 	}
+
+	displayTestHeader("benchmark-short", config)
 
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
@@ -876,12 +667,12 @@ func (Test) BenchShort(argsList ...string) error {
 
 // Integration runs integration tests
 func (Test) Integration() error {
-	utils.Header("Running Integration Tests")
-
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	displayTestHeader("integration", config)
 
 	// Set integration test tag
 	tags := config.Test.Tags
@@ -997,6 +788,442 @@ func (Test) CINoRace() error {
 }
 
 // Helper functions
+
+// displayTestHeader displays test header with build tag information if auto-discovery is enabled
+// formatBool returns a checkmark or X for boolean values
+func formatBool(value bool) string {
+	if value {
+		return "✓"
+	}
+	return "✗"
+}
+
+// getEnvWithDefault gets an environment variable with a fallback value
+func getEnvWithDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// formatDuration formats timeout values nicely
+func formatDuration(duration string) string {
+	if duration == "" {
+		return "default"
+	}
+	return duration
+}
+
+// truncateList truncates a string slice to a maximum length with ellipsis
+func truncateList(items []string, maxLength int) string {
+	if len(items) == 0 {
+		return "none"
+	}
+
+	joined := strings.Join(items, ", ")
+	if len(joined) <= maxLength {
+		return joined
+	}
+
+	// Find how many items we can fit
+	result := ""
+	for _, item := range items {
+		candidate := result
+		if candidate != "" {
+			candidate += ", "
+		}
+		candidate += item
+
+		if len(candidate)+4 > maxLength { // +4 for " ..."
+			if result == "" {
+				// Even first item is too long, truncate it
+				return item[:maxLength-3] + "..."
+			}
+			return result + " ..."
+		}
+		result = candidate
+	}
+	return result
+}
+
+func displayTestHeader(testType string, config *Config) []string {
+	// Discover build tags early for display
+	var discoveredTags []string
+	var buildTagsInfo string
+
+	if config.Test.AutoDiscoverBuildTags {
+		discoveredTags, buildTagsInfo = processBuildTagAutoDiscovery(config)
+	} else {
+		buildTagsInfo = fmt.Sprintf("Auto-Discovery: %s • Manual Tags: %s", formatBool(false),
+			getEnvWithDefault("MAGE_X_BUILD_TAGS", "none"))
+	}
+
+	// Get module information
+	modules, err := findAllModules()
+	var moduleList string
+	if err != nil {
+		moduleList = "Error loading modules"
+	} else {
+		moduleNames := make([]string, len(modules))
+		for i, mod := range modules {
+			if mod.IsRoot {
+				moduleNames[i] = fmt.Sprintf("%s (main)", mod.Name)
+			} else {
+				moduleNames[i] = mod.Name
+			}
+		}
+		moduleList = truncateList(moduleNames, 80)
+	}
+
+	// Get timeout from config only
+	timeout := formatDuration(config.Test.Timeout)
+
+	// Calculate effective values based on test type
+	effectiveRace := config.Test.Race
+	effectiveCover := config.Test.Cover
+	effectiveShort := config.Test.Short
+
+	switch testType {
+	case "race":
+		effectiveRace = true // Race tests always enable race detection
+	case "coverage":
+		effectiveCover = true // Coverage tests always enable coverage
+	case "coverage+race":
+		effectiveRace = true // Coverage+race enables both
+		effectiveCover = true
+	case "short":
+		effectiveShort = true // Short tests enable short mode
+	}
+
+	// Coverage information from config
+	coverMode := config.Test.CoverMode
+	if coverMode == "" {
+		coverMode = "atomic"
+	}
+
+	// Display clean header using utils.Print to avoid [INFO] prefixes
+	utils.Println(fmt.Sprintf("Running %s Tests", titleCase(testType)))
+	utils.Println(strings.Repeat("━", 60))
+
+	utils.Println("\nTest Configuration:")
+	utils.Print("  Timeout: %s • Race: %s • Cover: %s • Verbose: %s • Parallel: %d\n",
+		timeout, formatBool(effectiveRace), formatBool(effectiveCover),
+		formatBool(config.Test.Verbose), config.Test.Parallel)
+	utils.Print("  Coverage Mode: %s • Shuffle: %s • Short: %s\n",
+		coverMode, formatBool(config.Test.Shuffle), formatBool(effectiveShort))
+
+	utils.Println("\nBuild Tags:")
+	utils.Print("  %s\n", buildTagsInfo)
+
+	utils.Println("\nModules:")
+	if len(modules) == 0 {
+		utils.Println("  No modules found")
+	} else {
+		utils.Print("  %d found: %s\n", len(modules), moduleList)
+	}
+
+	utils.Println(strings.Repeat("━", 60))
+
+	return discoveredTags
+}
+
+// processBuildTagAutoDiscovery handles build tag auto-discovery logic
+func processBuildTagAutoDiscovery(config *Config) ([]string, string) {
+	tags, err := utils.DiscoverBuildTagsFromCurrentDir(config.Test.AutoDiscoverBuildTagsExclude)
+	if err != nil {
+		return nil, fmt.Sprintf("Auto-Discovery: %s | Error: %v", formatBool(true), err)
+	}
+
+	if len(tags) == 0 {
+		return nil, fmt.Sprintf("Auto-Discovery: %s | Found: none", formatBool(true))
+	}
+
+	excluded := truncateList(config.Test.AutoDiscoverBuildTagsExclude, 40)
+	testTargets := []string{"base"}
+	testTargets = append(testTargets, tags...)
+
+	// Show count and full list of discovered tags (or reasonable truncation)
+	var foundDisplay string
+	if len(tags) <= 10 {
+		// Show all tags if there are 10 or fewer
+		foundDisplay = fmt.Sprintf("%d tags: [%s]", len(tags), strings.Join(tags, ", "))
+	} else {
+		// Show count and truncated list for larger sets
+		foundDisplay = fmt.Sprintf("%d tags: [%s]", len(tags), truncateList(tags, 80))
+	}
+
+	buildTagsInfo := fmt.Sprintf("Auto-Discovery: %s | Found: %s", formatBool(true), foundDisplay)
+
+	if len(config.Test.AutoDiscoverBuildTagsExclude) > 0 {
+		buildTagsInfo += fmt.Sprintf("\n  Excluded: [%s]", excluded)
+		buildTagsInfo += fmt.Sprintf("\n  Testing: [%s]", truncateList(testTargets, 80))
+	} else {
+		buildTagsInfo += fmt.Sprintf("\n  Testing: [%s]", truncateList(testTargets, 80))
+	}
+
+	return tags, buildTagsInfo
+}
+
+// titleCase converts the first character to uppercase (replacement for deprecated strings.Title)
+func titleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	runes := []rune(s)
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
+}
+
+// getTagInfo returns formatted tag information string
+func getTagInfo(buildTag string) string {
+	if buildTag != "" {
+		return fmt.Sprintf(" with tag '%s'", buildTag)
+	}
+	return ""
+}
+
+// handleCoverageFileMove moves coverage file to root directory and updates coverage files list
+func handleCoverageFileMove(module ModuleInfo, coverFile string, coverageFiles *[]string) {
+	srcPath := filepath.Join(module.Path, coverFile)
+	dstPath := coverFile
+	if utils.FileExists(srcPath) {
+		if err := os.Rename(srcPath, dstPath); err != nil {
+			utils.Warn("Failed to move coverage file for %s: %v", module.Relative, err)
+		} else {
+			*coverageFiles = append(*coverageFiles, coverFile)
+		}
+	}
+}
+
+// handleCoverageFilesWithBuildTag handles coverage files based on build tag
+func handleCoverageFilesWithBuildTag(coverageFiles []string, buildTag string) {
+	if buildTag == "" {
+		// For base coverage (no tags), use standard coverage.txt
+		handleCoverageFiles(coverageFiles)
+		return
+	}
+
+	// For build tag coverage, create a separate merged coverage file
+	taggedCoverageFile := fmt.Sprintf("coverage_%s.txt", buildTag)
+	handleTaggedCoverageFiles(coverageFiles, taggedCoverageFile, buildTag)
+}
+
+// handleTaggedCoverageFiles processes coverage files for a specific build tag
+func handleTaggedCoverageFiles(coverageFiles []string, taggedCoverageFile, buildTag string) {
+	switch len(coverageFiles) {
+	case 0:
+		return
+	case 1:
+		if err := os.Rename(coverageFiles[0], taggedCoverageFile); err != nil {
+			utils.Warn("Failed to rename coverage file: %v", err)
+		}
+	default:
+		mergeAndCleanupCoverageFiles(coverageFiles, taggedCoverageFile, buildTag)
+	}
+}
+
+// mergeAndCleanupCoverageFiles merges multiple coverage files and cleans up
+func mergeAndCleanupCoverageFiles(coverageFiles []string, taggedCoverageFile, buildTag string) {
+	if err := mergeCoverageFiles(coverageFiles, taggedCoverageFile); err != nil {
+		utils.Warn("Failed to merge coverage files for tag '%s': %v", buildTag, err)
+		return
+	}
+	// Clean up individual coverage files
+	for _, file := range coverageFiles {
+		if err := os.Remove(file); err != nil {
+			utils.Warn("Failed to remove coverage file %s: %v", file, err)
+		}
+	}
+}
+
+// runTestsWithBuildTagDiscoveryTags runs tests with pre-discovered build tags
+func runTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, testType string, discoveredTags []string) error {
+	if !config.Test.AutoDiscoverBuildTags || len(discoveredTags) == 0 {
+		// Run tests normally without build tag discovery
+		return runTestsForModules(config, modules, race, false, additionalArgs, testType, "")
+	}
+
+	// Run base tests (no build tags)
+	utils.Info("Running %s tests without build tags", testType)
+	if err := runTestsForModules(config, modules, race, false, additionalArgs, testType, ""); err != nil {
+		return fmt.Errorf("base tests failed: %w", err)
+	}
+
+	// Run tests for each discovered build tag
+	for _, tag := range discoveredTags {
+		utils.Info("Running %s tests with build tag: %s", testType, tag)
+		if err := runTestsForModules(config, modules, race, false, additionalArgs, testType, tag); err != nil {
+			return fmt.Errorf("tests with tag '%s' failed: %w", tag, err)
+		}
+	}
+
+	return nil
+}
+
+// runCoverageTestsWithBuildTagDiscoveryTags runs coverage tests with pre-discovered build tags
+func runCoverageTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, race bool, additionalArgs, discoveredTags []string) error {
+	if !config.Test.AutoDiscoverBuildTags || len(discoveredTags) == 0 {
+		// Run coverage tests normally without build tag discovery
+		return runCoverageTestsForModules(config, modules, race, additionalArgs, "")
+	}
+
+	// Run base coverage tests (no build tags)
+	utils.Info("Running coverage tests without build tags")
+	if err := runCoverageTestsForModules(config, modules, race, additionalArgs, ""); err != nil {
+		return fmt.Errorf("base coverage tests failed: %w", err)
+	}
+
+	// Run coverage tests for each discovered build tag
+	for _, tag := range discoveredTags {
+		utils.Info("Running coverage tests with build tag: %s", tag)
+		if err := runCoverageTestsForModules(config, modules, race, additionalArgs, tag); err != nil {
+			return fmt.Errorf("coverage tests with tag '%s' failed: %w", tag, err)
+		}
+	}
+
+	// Show final coverage summary
+	if utils.FileExists("coverage.txt") {
+		return Test{}.CoverReport()
+	}
+	return nil
+}
+
+// runCoverageTestsForModules runs coverage tests for all modules with the specified build tag
+func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, buildTag string) error {
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+	var coverageFiles []string
+
+	tagSuffix := ""
+	if buildTag != "" {
+		tagSuffix = fmt.Sprintf("_%s", buildTag)
+	}
+
+	// Run tests for each module
+	for i, module := range modules {
+		tagInfo := ""
+		if buildTag != "" {
+			tagInfo = fmt.Sprintf(" (tag: %s)", buildTag)
+		}
+		displayModuleHeader(module, fmt.Sprintf("Running coverage tests%s", tagInfo))
+
+		moduleStart := time.Now()
+
+		// Create unique coverage file name for each module
+		coverFile := fmt.Sprintf("coverage_%d%s.txt", i, tagSuffix)
+		if module.Relative != "." {
+			// Use sanitized path for coverage file name
+			sanitized := strings.ReplaceAll(module.Relative, "/", "_")
+			coverFile = fmt.Sprintf("coverage_%s%s.txt", sanitized, tagSuffix)
+		}
+
+		// Build test args with build tag override if specified
+		var testArgs []string
+		if buildTag != "" {
+			// Override config tags with discovered build tag
+			tempConfig := *config
+			tempConfig.Test.Tags = buildTag
+			testArgs = buildTestArgs(&tempConfig, race, true, additionalArgs...)
+		} else {
+			testArgs = buildTestArgs(config, race, true, additionalArgs...)
+		}
+
+		testArgs = append(testArgs, "-coverprofile="+coverFile)
+		if race {
+			testArgs = append(testArgs, "-covermode=atomic") // atomic is required with race
+		} else {
+			testArgs = append(testArgs, "-covermode="+config.Test.CoverMode)
+		}
+
+		if len(config.Test.CoverPkg) > 0 {
+			testArgs = append(testArgs, "-coverpkg="+strings.Join(config.Test.CoverPkg, ","))
+		}
+
+		testArgs = append(testArgs, "./...")
+
+		// Run tests in module directory
+		err := runCommandInModule(module, "go", testArgs...)
+
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			tagInfo := getTagInfo(buildTag)
+			utils.Error("Coverage tests failed for %s%s in %s", module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			handleCoverageFileMove(module, coverFile, &coverageFiles)
+			tagInfo := getTagInfo(buildTag)
+			utils.Success("Coverage tests passed for %s%s in %s", module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
+		}
+	}
+
+	// Handle coverage files
+	handleCoverageFilesWithBuildTag(coverageFiles, buildTag)
+
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		tagInfo := getTagInfo(buildTag)
+		utils.Error("Coverage tests%s failed in %d/%d modules", tagInfo, len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	tagInfo := getTagInfo(buildTag)
+	utils.Success("All coverage tests%s passed in %s", tagInfo, utils.FormatDuration(time.Since(totalStart)))
+	return nil
+}
+
+// runTestsForModules runs tests for all modules with the specified configuration
+func runTestsForModules(config *Config, modules []ModuleInfo, race, cover bool, additionalArgs []string, testType, buildTag string) error {
+	var moduleErrors []moduleError
+	totalStart := time.Now()
+
+	for _, module := range modules {
+		tagSuffix := ""
+		if buildTag != "" {
+			tagSuffix = fmt.Sprintf(" (tag: %s)", buildTag)
+		}
+		displayModuleHeader(module, fmt.Sprintf("Running %s tests%s", testType, tagSuffix))
+
+		moduleStart := time.Now()
+
+		// Build test args with build tag override if specified
+		var testArgs []string
+		if buildTag != "" {
+			// Override config tags with discovered build tag
+			tempConfig := *config
+			tempConfig.Test.Tags = buildTag
+			testArgs = buildTestArgs(&tempConfig, race, cover, additionalArgs...)
+		} else {
+			testArgs = buildTestArgs(config, race, cover, additionalArgs...)
+		}
+
+		if testType == "unit" || testType == "short" {
+			testArgs = append(testArgs, "-short")
+		}
+		testArgs = append(testArgs, "./...")
+
+		// Run tests in module directory
+		err := runCommandInModule(module, "go", testArgs...)
+
+		if err != nil {
+			tagInfo := getTagInfo(buildTag)
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("%s tests failed for %s%s in %s", titleCase(testType), module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			tagInfo := getTagInfo(buildTag)
+			utils.Success("%s tests passed for %s%s in %s", titleCase(testType), module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
+		}
+	}
+
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		tagInfo := getTagInfo(buildTag)
+		utils.Error("%s tests%s failed in %d/%d modules", titleCase(testType), tagInfo, len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	tagInfo := getTagInfo(buildTag)
+	utils.Success("All %s tests%s passed in %s", testType, tagInfo, utils.FormatDuration(time.Since(totalStart)))
+	return nil
+}
 
 // parseSafeTestArgs parses and validates safe test arguments
 func parseSafeTestArgs(args []string) ([]string, error) {
