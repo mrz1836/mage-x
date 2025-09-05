@@ -28,6 +28,33 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 	defer os.Chdir(originalDir)
 	require.NoError(t, os.Chdir(tempDir))
 
+	// Clean environment variables that could interfere with tests
+	// Save current values for restoration
+	envVarsToClean := []string{
+		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
+		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE",
+		"MAGE_X_BINARY_NAME",
+		"MAGE_X_BUILD_TAGS",
+		"MAGE_X_VERBOSE",
+		"MAGE_X_TEST_RACE",
+		"MAGE_X_PARALLEL",
+	}
+	originalEnvValues := make(map[string]string)
+	for _, envVar := range envVarsToClean {
+		originalEnvValues[envVar] = os.Getenv(envVar)
+		os.Unsetenv(envVar)
+	}
+	defer func() {
+		// Restore original environment values
+		for envVar, originalValue := range originalEnvValues {
+			if originalValue != "" {
+				os.Setenv(envVar, originalValue)
+			} else {
+				os.Unsetenv(envVar)
+			}
+		}
+	}()
+
 	// Reset config for clean test
 	originalProvider := GetConfigProvider()
 	defer func() {
@@ -218,6 +245,33 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 	require.NoError(t, os.Chdir(tempDir))
+
+	// Clean environment variables that could interfere with tests
+	// Save current values for restoration
+	envVarsToClean := []string{
+		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
+		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE",
+		"MAGE_X_BINARY_NAME",
+		"MAGE_X_BUILD_TAGS",
+		"MAGE_X_VERBOSE",
+		"MAGE_X_TEST_RACE",
+		"MAGE_X_PARALLEL",
+	}
+	originalEnvValues := make(map[string]string)
+	for _, envVar := range envVarsToClean {
+		originalEnvValues[envVar] = os.Getenv(envVar)
+		os.Unsetenv(envVar)
+	}
+	defer func() {
+		// Restore original environment values
+		for envVar, originalValue := range originalEnvValues {
+			if originalValue != "" {
+				os.Setenv(envVar, originalValue)
+			} else {
+				os.Unsetenv(envVar)
+			}
+		}
+	}()
 
 	// Reset config for clean test
 	originalProvider := GetConfigProvider()
