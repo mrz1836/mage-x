@@ -13,7 +13,7 @@
     },
     "go.useLanguageServer": true,
     "gopls": {
-        "formatting.local": "github.com/mrz1836/go-broadcast",
+        "formatting.local": "github.com/mrz1836/mage-x",
         "formatting.gofumpt": true
     },
     "go.lintTool": "golangci-lint",
