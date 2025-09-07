@@ -29,15 +29,33 @@ func NewLoader(registry *Registry) *Loader {
 	}
 }
 
-// DiscoverUserCommands discovers commands in magefile.go without loading them
+// DiscoverUserCommands discovers commands in magefiles/ directory or magefile.go without loading them
 // Returns the list of commands that would be available for delegation
 func (l *Loader) DiscoverUserCommands(dir string) ([]CommandInfo, error) {
-	magefilePath := filepath.Join(dir, "magefile.go")
+	// First, check for magefiles/ directory (preferred by standard mage)
+	magefilesDir := filepath.Join(dir, "magefiles")
+	if info, err := os.Stat(magefilesDir); err == nil && info.IsDir() {
+		if l.verbose {
+			utils.Info("Found magefiles/ directory, scanning for Go files")
+		}
 
-	// Check if magefile exists
+		// Parse all Go files in the magefiles directory
+		commands, err := l.parseMagefilesDir(magefilesDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse magefiles directory: %w", err)
+		}
+
+		if l.verbose {
+			utils.Info("%s", fmt.Sprintf("Discovered %d custom commands in magefiles/ directory", len(commands)))
+		}
+		return commands, nil
+	}
+
+	// Fallback to root magefile.go
+	magefilePath := filepath.Join(dir, "magefile.go")
 	if _, err := os.Stat(magefilePath); os.IsNotExist(err) {
 		if l.verbose {
-			utils.Info("No magefile.go found, using built-in commands only")
+			utils.Info("No magefile.go or magefiles/ directory found, using built-in commands only")
 		}
 		return nil, nil
 	}
@@ -118,6 +136,45 @@ func (l *Loader) parseMagefile(path string) ([]CommandInfo, error) {
 	}
 
 	return commands, nil
+}
+
+// parseMagefilesDir parses all Go files in the magefiles directory to discover exported functions
+func (l *Loader) parseMagefilesDir(dir string) ([]CommandInfo, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read magefiles directory: %w", err)
+	}
+
+	var allCommands []CommandInfo
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue // Skip subdirectories
+		}
+
+		// Only process .go files
+		if !strings.HasSuffix(entry.Name(), ".go") {
+			continue
+		}
+
+		// Skip test files
+		if strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+
+		filePath := filepath.Join(dir, entry.Name())
+		commands, err := l.parseMagefile(filePath)
+		if err != nil {
+			if l.verbose {
+				utils.Info("Warning: failed to parse %s: %v", entry.Name(), err)
+			}
+			continue // Skip files that can't be parsed, don't fail the entire discovery
+		}
+
+		allCommands = append(allCommands, commands...)
+	}
+
+	return allCommands, nil
 }
 
 // Helper functions

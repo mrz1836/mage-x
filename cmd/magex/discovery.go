@@ -28,7 +28,7 @@ type CommandDiscovery struct {
 // NewCommandDiscovery creates a new command discovery instance
 func NewCommandDiscovery(reg *registry.Registry) *CommandDiscovery {
 	return &CommandDiscovery{
-		verbose:  os.Getenv("MAGE_X_VERBOSE") == "true" || os.Getenv("MAGEX_VERBOSE") == "true",
+		verbose:  os.Getenv("MAGE_X_VERBOSE") == trueValue || os.Getenv("MAGEX_VERBOSE") == trueValue,
 		registry: reg,
 	}
 }
@@ -43,6 +43,10 @@ func (d *CommandDiscovery) Discover() error {
 	loader := registry.NewLoader(nil)
 	commands, err := loader.DiscoverUserCommands(".")
 	if err != nil {
+		// In verbose mode or when debugging, show the actual error
+		if d.verbose || os.Getenv("MAGEX_VERBOSE") == trueValue {
+			fmt.Printf("Warning: Failed to discover custom commands: %v\n", err)
+		}
 		return fmt.Errorf("failed to discover commands: %w", err)
 	}
 
@@ -65,17 +69,16 @@ func (d *CommandDiscovery) Discover() error {
 			discovered.Name = strings.ToLower(cmd.Name)
 		}
 
-		// Skip if this command already exists as a built-in
+		// Don't skip commands that exist as built-in - custom commands should override built-ins
+		// This allows users to customize behavior of standard commands like build, test, etc.
 		if d.registry == nil {
 			d.commands = append(d.commands, discovered)
 			continue
 		}
 
-		if _, exists := d.registry.Get(discovered.Name); exists {
-			if d.verbose {
-				fmt.Printf("Skipping '%s' - already available as built-in command\n", discovered.Name)
-			}
-			continue
+		// Still log if we're overriding a built-in command, but allow it
+		if _, exists := d.registry.Get(discovered.Name); exists && d.verbose {
+			fmt.Printf("Custom command '%s' will override built-in command\n", discovered.Name)
 		}
 
 		// Also skip functions that look like namespace wrappers (e.g., BuildDefault -> build:default)

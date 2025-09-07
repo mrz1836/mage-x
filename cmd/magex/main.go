@@ -31,7 +31,10 @@ const banner = `
    🪄 MAGE-X - Write Once, Mage Everywhere
 `
 
-const noDescription = "No description available"
+const (
+	noDescription = "No description available"
+	trueValue     = "true"
+)
 
 // BuildInfo contains version and build information
 type BuildInfo struct {
@@ -130,7 +133,7 @@ func main() {
 
 	// Set environment variables based on flags (ignore errors as these are non-critical)
 	if *flags.Verbose {
-		if err := os.Setenv("MAGEX_VERBOSE", "true"); err != nil {
+		if err := os.Setenv("MAGEX_VERBOSE", trueValue); err != nil {
 			fmt.Printf("Warning: Could not set MAGEX_VERBOSE: %v\n", err)
 		}
 		if err := os.Setenv("MAGE_X_VERBOSE", "1"); err != nil {
@@ -152,14 +155,16 @@ func main() {
 
 	// Initialize command discovery for custom commands
 	discovery := NewCommandDiscovery(reg)
-	if *flags.Verbose {
-		// Discover commands early in verbose mode to show discovery info
-		if err := discovery.Discover(); err != nil && *flags.Verbose {
-			_, err = fmt.Fprintf(os.Stderr, "Warning: failed to discover custom commands: %v\n", err)
+	// Always try to discover commands early, regardless of verbose mode
+	// This ensures custom commands are available for listing and execution
+	if err := discovery.Discover(); err != nil {
+		if *flags.Debug {
+			_, err = fmt.Fprintf(os.Stderr, "Debug: failed to discover custom commands: %v\n", err)
 			if err != nil {
 				return
 			}
 		}
+		// Continue even if discovery fails - we can still run built-in commands
 	}
 
 	// Get arguments early for help processing
@@ -260,7 +265,20 @@ func main() {
 		fmt.Print(banner)
 	}
 
-	// Try to execute as built-in command first
+	// Check if we have custom commands available and this command exists as a custom command
+	// If so, prioritize custom commands over built-in ones for better user experience
+	if discovery.HasCommand(command) {
+		if delegateErr := DelegateToMage(command, commandArgs...); delegateErr != nil {
+			_, delegateErr = fmt.Fprintf(os.Stderr, "❌ Error executing custom command '%s': %v\n", command, delegateErr)
+			if delegateErr != nil {
+				return
+			}
+			os.Exit(1)
+		}
+		return // Success
+	}
+
+	// If no custom command found, try built-in command
 	if err := reg.Execute(command, commandArgs...); err != nil {
 		executeCustomCommandOrExit(discovery, command, commandArgs, err)
 	}
