@@ -471,7 +471,8 @@ func BenchmarkRegistryConcurrentAccess(b *testing.B) {
 func TestRegistryIntegrationWithFactories(t *testing.T) {
 	t.Parallel()
 
-	registry := GetNamespaceRegistry()
+	// Create a fresh registry instead of using the global one to avoid test pollution
+	registry := NewNamespaceRegistry()
 	require.NotNil(t, registry)
 
 	// Test that registry namespaces are compatible with factory-created namespaces
@@ -491,8 +492,9 @@ func TestRegistryIntegrationWithFactories(t *testing.T) {
 func TestRegistryProviderSwitching(t *testing.T) {
 	t.Parallel()
 
-	// Save original provider
-	originalProvider := NewDefaultNamespaceRegistryProvider()
+	// Save original provider by getting current state first
+	originalRegistry := GetNamespaceRegistry()
+	originalProvider := &MockNamespaceRegistryProvider{registry: originalRegistry}
 	defer SetNamespaceRegistryProvider(originalProvider)
 
 	// Create first custom registry
