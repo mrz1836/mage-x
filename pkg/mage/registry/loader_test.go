@@ -11,7 +11,17 @@ import (
 )
 
 const (
-	buildCmdName = "Build"
+	buildCmdName         = "Build"
+	testCmdName          = "Test"
+	basicMagefileContent = `//go:build mage
+package main
+
+// Build builds the project
+func Build() error {
+	return nil
+}
+`
+	secureDirPerm = 0o750
 )
 
 func TestNewLoader(t *testing.T) {
@@ -164,7 +174,7 @@ func TestCommandInfo(t *testing.T) {
 		Description: "Build the project",
 	}
 
-	if info.Name != "Build" {
+	if info.Name != buildCmdName {
 		t.Errorf("Name = %q, expected 'Build'", info.Name)
 	}
 	if info.IsNamespace {
@@ -243,22 +253,22 @@ func TestGetReceiverType(t *testing.T) {
 		{
 			name:     "pointer receiver",
 			receiver: "func (*Build) Linux() error { return nil }",
-			expected: "Build",
+			expected: buildCmdName,
 		},
 		{
 			name:     "value receiver",
 			receiver: "func (Build) Linux() error { return nil }",
-			expected: "Build",
+			expected: buildCmdName,
 		},
 		{
 			name:     "named receiver",
 			receiver: "func (b Build) Linux() error { return nil }",
-			expected: "Build",
+			expected: buildCmdName,
 		},
 		{
 			name:     "named pointer receiver",
 			receiver: "func (b *Build) Linux() error { return nil }",
-			expected: "Build",
+			expected: buildCmdName,
 		},
 	}
 
@@ -483,7 +493,7 @@ func Test() error {
 	// Verify command details
 	for _, cmd := range commands {
 		switch cmd.Name {
-		case "Build":
+		case buildCmdName:
 			if cmd.Description != buildCmdName+" builds the project" {
 				t.Errorf("%s description = %q, expected '%s builds the project'", buildCmdName, cmd.Description, buildCmdName)
 			}
@@ -585,7 +595,7 @@ func Test() error {
 	var foundBuild, foundTest bool
 	for _, cmd := range commands {
 		switch cmd.Name {
-		case "Build":
+		case buildCmdName:
 			foundBuild = true
 			if cmd.IsNamespace {
 				t.Error("Build should not be a namespace command")
@@ -760,7 +770,7 @@ func (Deploy) Production() error {
 	var foundBuild, foundDeploy, foundProduction bool
 	for _, cmd := range commands {
 		switch {
-		case cmd.Name == "Build" && !cmd.IsNamespace:
+		case cmd.Name == buildCmdName && !cmd.IsNamespace:
 			foundBuild = true
 		case cmd.Name == "Deploy" && cmd.IsNamespace:
 			foundDeploy = true
@@ -777,5 +787,551 @@ func (Deploy) Production() error {
 	}
 	if !foundProduction {
 		t.Error("Production method should be included")
+	}
+}
+
+func TestLoader_DiscoverUserCommands_MagefilesDir(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary directory with magefiles/ subdirectory
+	tmpDir := t.TempDir()
+	magefilesDir := filepath.Join(tmpDir, "magefiles")
+	err := os.Mkdir(magefilesDir, secureDirPerm)
+	if err != nil {
+		t.Fatalf("Failed to create magefiles directory: %v", err)
+	}
+
+	// Create a magefile inside the magefiles directory
+	magefilePath := filepath.Join(magefilesDir, "commands.go")
+	magefileContent := `//go:build mage
+package main
+
+// Build builds the project
+func Build() error {
+	return nil
+}
+
+// Test runs tests
+func Test() error {
+	return nil
+}
+`
+
+	err = os.WriteFile(magefilePath, []byte(magefileContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test magefile: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands() failed: %v", err)
+	}
+
+	if len(commands) != 2 {
+		t.Errorf("Expected 2 commands, got %d", len(commands))
+	}
+
+	// Check for specific commands
+	var foundBuild, foundTest bool
+	for _, cmd := range commands {
+		switch cmd.Name {
+		case buildCmdName:
+			foundBuild = true
+			if cmd.Description != "Build builds the project" {
+				t.Errorf("Build description = %q, expected 'Build builds the project'", cmd.Description)
+			}
+		case "Test":
+			foundTest = true
+			if cmd.Description != "Test runs tests" {
+				t.Errorf("Test description = %q, expected 'Test runs tests'", cmd.Description)
+			}
+		}
+	}
+
+	if !foundBuild {
+		t.Error("Build command not found")
+	}
+	if !foundTest {
+		t.Error("Test command not found")
+	}
+}
+
+func TestLoader_DiscoverUserCommands_MagefilesDirMultipleFiles(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary directory with magefiles/ subdirectory
+	tmpDir := t.TempDir()
+	magefilesDir := filepath.Join(tmpDir, "magefiles")
+	err := os.Mkdir(magefilesDir, secureDirPerm)
+	if err != nil {
+		t.Fatalf("Failed to create magefiles directory: %v", err)
+	}
+
+	// Create multiple magefile files
+	buildFile := filepath.Join(magefilesDir, "build.go")
+	buildContent := `//go:build mage
+package main
+
+// Build builds the project
+func Build() error {
+	return nil
+}
+
+// Clean cleans build artifacts
+func Clean() error {
+	return nil
+}
+`
+
+	testFile := filepath.Join(magefilesDir, "test.go")
+	testContent := `//go:build mage
+package main
+
+// Test runs tests
+func Test() error {
+	return nil
+}
+
+// Lint runs linting
+func Lint() error {
+	return nil
+}
+`
+
+	err = os.WriteFile(buildFile, []byte(buildContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create build file: %v", err)
+	}
+
+	err = os.WriteFile(testFile, []byte(testContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands() failed: %v", err)
+	}
+
+	// Should find 4 commands across 2 files
+	if len(commands) != 4 {
+		t.Errorf("Expected 4 commands, got %d", len(commands))
+		for _, cmd := range commands {
+			t.Logf("Found command: %s", cmd.Name)
+		}
+	}
+
+	// Check for all expected commands
+	expectedCommands := map[string]bool{buildCmdName: false, "Clean": false, testCmdName: false, "Lint": false}
+	for _, cmd := range commands {
+		if _, exists := expectedCommands[cmd.Name]; exists {
+			expectedCommands[cmd.Name] = true
+		} else {
+			t.Errorf("Unexpected command found: %s", cmd.Name)
+		}
+	}
+
+	for cmdName, found := range expectedCommands {
+		if !found {
+			t.Errorf("Expected command %s not found", cmdName)
+		}
+	}
+}
+
+func TestLoader_DiscoverUserCommands_MagefilesDirSkipsTestFiles(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary directory with magefiles/ subdirectory
+	tmpDir := t.TempDir()
+	magefilesDir := filepath.Join(tmpDir, "magefiles")
+	err := os.Mkdir(magefilesDir, secureDirPerm)
+	if err != nil {
+		t.Fatalf("Failed to create magefiles directory: %v", err)
+	}
+
+	// Create a regular magefile
+	regularFile := filepath.Join(magefilesDir, "commands.go")
+	regularContent := basicMagefileContent
+
+	// Create a test file (should be skipped)
+	testFile := filepath.Join(magefilesDir, "commands_test.go")
+	testContent := `package main
+
+import "testing"
+
+func TestBuild(t *testing.T) {
+	// This should not be discovered
+}
+
+// TestCommand should not be discovered even though it's exported
+func TestCommand() error {
+	return nil
+}
+`
+
+	err = os.WriteFile(regularFile, []byte(regularContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create regular file: %v", err)
+	}
+
+	err = os.WriteFile(testFile, []byte(testContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands() failed: %v", err)
+	}
+
+	// Should only find 1 command (from regular file, test file should be skipped)
+	if len(commands) != 1 {
+		t.Errorf("Expected 1 command, got %d", len(commands))
+		for _, cmd := range commands {
+			t.Logf("Found command: %s", cmd.Name)
+		}
+	}
+
+	// Verify only Build command is found
+	if commands[0].Name != buildCmdName {
+		t.Errorf("Expected Build command, got %s", commands[0].Name)
+	}
+}
+
+func TestLoader_DiscoverUserCommands_MagefilesDirSkipsSubdirs(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary directory with magefiles/ subdirectory
+	tmpDir := t.TempDir()
+	magefilesDir := filepath.Join(tmpDir, "magefiles")
+	err := os.Mkdir(magefilesDir, secureDirPerm)
+	if err != nil {
+		t.Fatalf("Failed to create magefiles directory: %v", err)
+	}
+
+	// Create a subdirectory inside magefiles
+	subDir := filepath.Join(magefilesDir, "subdir")
+	err = os.Mkdir(subDir, secureDirPerm)
+	if err != nil {
+		t.Fatalf("Failed to create subdirectory: %v", err)
+	}
+
+	// Create a magefile in the main directory
+	mainFile := filepath.Join(magefilesDir, "main.go")
+	mainContent := basicMagefileContent
+
+	// Create a magefile in the subdirectory (should be skipped)
+	subFile := filepath.Join(subDir, "sub.go")
+	subContent := `//go:build mage
+package main
+
+// SubCommand should not be discovered
+func SubCommand() error {
+	return nil
+}
+`
+
+	err = os.WriteFile(mainFile, []byte(mainContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create main file: %v", err)
+	}
+
+	err = os.WriteFile(subFile, []byte(subContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create sub file: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands() failed: %v", err)
+	}
+
+	// Should only find 1 command (subdirectories should be skipped)
+	if len(commands) != 1 {
+		t.Errorf("Expected 1 command, got %d", len(commands))
+		for _, cmd := range commands {
+			t.Logf("Found command: %s", cmd.Name)
+		}
+	}
+
+	// Verify only Build command is found
+	if commands[0].Name != buildCmdName {
+		t.Errorf("Expected Build command, got %s", commands[0].Name)
+	}
+}
+
+func TestLoader_DiscoverUserCommands_MagefilesDirWithInvalidFiles(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary directory with magefiles/ subdirectory
+	tmpDir := t.TempDir()
+	magefilesDir := filepath.Join(tmpDir, "magefiles")
+	err := os.Mkdir(magefilesDir, secureDirPerm)
+	if err != nil {
+		t.Fatalf("Failed to create magefiles directory: %v", err)
+	}
+
+	// Create a valid magefile
+	validFile := filepath.Join(magefilesDir, "valid.go")
+	validContent := basicMagefileContent
+
+	// Create an invalid Go file
+	invalidFile := filepath.Join(magefilesDir, "invalid.go")
+	invalidContent := `package main
+this is not valid go syntax
+`
+
+	// Create a non-Go file (should be skipped)
+	nonGoFile := filepath.Join(magefilesDir, "readme.txt")
+	nonGoContent := "This is not a Go file"
+
+	err = os.WriteFile(validFile, []byte(validContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create valid file: %v", err)
+	}
+
+	err = os.WriteFile(invalidFile, []byte(invalidContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create invalid file: %v", err)
+	}
+
+	err = os.WriteFile(nonGoFile, []byte(nonGoContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create non-Go file: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands() should not fail even with invalid files: %v", err)
+	}
+
+	// Should find 1 command from the valid file, invalid files should be skipped
+	if len(commands) != 1 {
+		t.Errorf("Expected 1 command, got %d", len(commands))
+		for _, cmd := range commands {
+			t.Logf("Found command: %s", cmd.Name)
+		}
+	}
+
+	// Verify Build command is found
+	if commands[0].Name != buildCmdName {
+		t.Errorf("Expected Build command, got %s", commands[0].Name)
+	}
+}
+
+func TestLoader_DiscoverUserCommands_PrefersMagefilesDir(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary directory with both magefiles/ directory and magefile.go
+	tmpDir := t.TempDir()
+	magefilesDir := filepath.Join(tmpDir, "magefiles")
+	err := os.Mkdir(magefilesDir, secureDirPerm)
+	if err != nil {
+		t.Fatalf("Failed to create magefiles directory: %v", err)
+	}
+
+	// Create a magefile in the magefiles directory
+	dirFile := filepath.Join(magefilesDir, "commands.go")
+	dirContent := `//go:build mage
+package main
+
+// BuildFromDir builds from magefiles directory
+func BuildFromDir() error {
+	return nil
+}
+`
+
+	// Create a root magefile.go (should be ignored)
+	rootFile := filepath.Join(tmpDir, "magefile.go")
+	rootContent := `//go:build mage
+package main
+
+// BuildFromRoot builds from root magefile
+func BuildFromRoot() error {
+	return nil
+}
+`
+
+	err = os.WriteFile(dirFile, []byte(dirContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create directory magefile: %v", err)
+	}
+
+	err = os.WriteFile(rootFile, []byte(rootContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create root magefile: %v", err)
+	}
+
+	commands, err := loader.DiscoverUserCommands(tmpDir)
+	if err != nil {
+		t.Fatalf("DiscoverUserCommands() failed: %v", err)
+	}
+
+	// Should find 1 command from the magefiles directory, root file should be ignored
+	if len(commands) != 1 {
+		t.Errorf("Expected 1 command, got %d", len(commands))
+		for _, cmd := range commands {
+			t.Logf("Found command: %s", cmd.Name)
+		}
+	}
+
+	// Verify BuildFromDir command is found (not BuildFromRoot)
+	if commands[0].Name != "BuildFromDir" {
+		t.Errorf("Expected BuildFromDir command, got %s", commands[0].Name)
+	}
+}
+
+func TestLoader_parseMagefilesDir(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary directory
+	tmpDir := t.TempDir()
+
+	// Create multiple Go files
+	file1 := filepath.Join(tmpDir, "commands1.go")
+	content1 := `//go:build mage
+package main
+
+// Build builds the project
+func Build() error {
+	return nil
+}
+`
+
+	file2 := filepath.Join(tmpDir, "commands2.go")
+	content2 := `//go:build mage
+package main
+
+// Test runs tests
+func Test() error {
+	return nil
+}
+
+// Deploy namespace
+type Deploy struct{}
+
+// Production deploys to production
+func (Deploy) Production() error {
+	return nil
+}
+`
+
+	err := os.WriteFile(file1, []byte(content1), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test file 1: %v", err)
+	}
+
+	err = os.WriteFile(file2, []byte(content2), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test file 2: %v", err)
+	}
+
+	commands, err := loader.parseMagefilesDir(tmpDir)
+	if err != nil {
+		t.Fatalf("parseMagefilesDir() failed: %v", err)
+	}
+
+	// Should find 4 commands: Build, Test, Deploy type, Production method
+	if len(commands) != 4 {
+		t.Errorf("Expected 4 commands, got %d", len(commands))
+		for _, cmd := range commands {
+			t.Logf("Found command: %s (namespace: %v)", cmd.Name, cmd.IsNamespace)
+		}
+	}
+
+	// Verify all expected commands are found
+	expectedCommands := map[string]bool{buildCmdName: false, testCmdName: false, "Deploy": false}
+	var foundProduction bool
+	for _, cmd := range commands {
+		if _, exists := expectedCommands[cmd.Name]; exists {
+			expectedCommands[cmd.Name] = true
+		}
+		if cmd.Method == "Production" && cmd.IsNamespace {
+			foundProduction = true
+		}
+	}
+
+	for cmdName, found := range expectedCommands {
+		if !found {
+			t.Errorf("Expected command %s not found", cmdName)
+		}
+	}
+	if !foundProduction {
+		t.Error("Production method not found")
+	}
+}
+
+func TestLoader_parseMagefilesDir_EmptyDir(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create an empty temporary directory
+	tmpDir := t.TempDir()
+
+	commands, err := loader.parseMagefilesDir(tmpDir)
+	if err != nil {
+		t.Fatalf("parseMagefilesDir() should not fail for empty directory: %v", err)
+	}
+
+	if len(commands) != 0 {
+		t.Errorf("Expected 0 commands from empty directory, got %d", len(commands))
+	}
+}
+
+func TestLoader_parseMagefilesDir_MixedContent(t *testing.T) {
+	loader := NewLoader(NewRegistry())
+
+	// Create a temporary directory
+	tmpDir := t.TempDir()
+
+	// Create a valid Go file
+	goFile := filepath.Join(tmpDir, "commands.go")
+	goContent := basicMagefileContent
+
+	// Create a test file (should be skipped)
+	testFile := filepath.Join(tmpDir, "commands_test.go")
+	testContent := "package main\n\nfunc TestSomething() {}"
+
+	// Create a non-Go file (should be skipped)
+	txtFile := filepath.Join(tmpDir, "readme.txt")
+	txtContent := "This is not a Go file"
+
+	// Create a subdirectory (should be skipped)
+	subDir := filepath.Join(tmpDir, "subdir")
+	err := os.Mkdir(subDir, secureDirPerm)
+	if err != nil {
+		t.Fatalf("Failed to create subdirectory: %v", err)
+	}
+
+	err = os.WriteFile(goFile, []byte(goContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create Go file: %v", err)
+	}
+
+	err = os.WriteFile(testFile, []byte(testContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = os.WriteFile(txtFile, []byte(txtContent), 0o600)
+	if err != nil {
+		t.Fatalf("Failed to create text file: %v", err)
+	}
+
+	commands, err := loader.parseMagefilesDir(tmpDir)
+	if err != nil {
+		t.Fatalf("parseMagefilesDir() failed: %v", err)
+	}
+
+	// Should only find 1 command from the valid Go file
+	if len(commands) != 1 {
+		t.Errorf("Expected 1 command, got %d", len(commands))
+		for _, cmd := range commands {
+			t.Logf("Found command: %s", cmd.Name)
+		}
+	}
+
+	// Verify Build command is found
+	if commands[0].Name != buildCmdName {
+		t.Errorf("Expected Build command, got %s", commands[0].Name)
 	}
 }

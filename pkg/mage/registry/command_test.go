@@ -12,6 +12,10 @@ var (
 	errTestArgs = errors.New("test args error")
 )
 
+const (
+	testCategory = "Test"
+)
+
 func TestCommand_FullName(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -363,8 +367,8 @@ func TestCommandBuilder_FluentInterface(t *testing.T) {
 	if len(cmd.Aliases) != 2 || cmd.Aliases[0] != "t" || cmd.Aliases[1] != "test-cmd" {
 		t.Errorf("Aliases = %v, expected %v", cmd.Aliases, []string{"t", "test-cmd"})
 	}
-	if cmd.Category != "Test" {
-		t.Errorf("Category = %q, expected %q", cmd.Category, "Test")
+	if cmd.Category != testCategory {
+		t.Errorf("Category = %q, expected %q", cmd.Category, testCategory)
 	}
 	if len(cmd.Dependencies) != 2 || cmd.Dependencies[0] != "dep1" || cmd.Dependencies[1] != "dep2" {
 		t.Errorf("Dependencies = %v, expected %v", cmd.Dependencies, []string{"dep1", "dep2"})

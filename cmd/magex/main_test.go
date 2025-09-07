@@ -583,7 +583,7 @@ func TestEnvironmentVariables(t *testing.T) {
 	// Test verbose flag setting environment
 	setEnvironmentFromFlags(flags)
 
-	if os.Getenv("MAGEX_VERBOSE") != "true" {
+	if os.Getenv("MAGEX_VERBOSE") != trueValue {
 		t.Error("Verbose flag should set MAGEX_VERBOSE=true")
 	}
 	if os.Getenv("MAGE_X_VERBOSE") != "1" {
@@ -616,7 +616,7 @@ func TestEnvironmentVariables(t *testing.T) {
 // setEnvironmentFromFlags is extracted from main() for testing
 func setEnvironmentFromFlags(flags *Flags) {
 	if *flags.Verbose {
-		if err := os.Setenv("MAGEX_VERBOSE", "true"); err != nil {
+		if err := os.Setenv("MAGEX_VERBOSE", trueValue); err != nil {
 			// Test environment variable setting is non-critical
 			_ = err
 		}
