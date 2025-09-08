@@ -316,9 +316,9 @@ func VersionShow() error {
 }
 
 // VersionBump bumps the version
-func VersionBump() error {
+func VersionBump(args ...string) error {
 	var v mage.Version
-	return v.Bump()
+	return v.Bump(args...)
 }
 
 // VersionCheck checks version information
@@ -1263,9 +1263,9 @@ func (v Version) Update() error {
 	return impl.Update()
 }
 
-func (v Version) Bump() error {
+func (v Version) Bump(args ...string) error {
 	var impl mage.Version
-	return impl.Bump()
+	return impl.Bump(args...)
 }
 
 func (v Version) Changelog() error {
