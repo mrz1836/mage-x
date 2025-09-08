@@ -63,8 +63,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
 )
 
 // BuildProject builds the project
@@ -80,20 +78,10 @@ func TestProject() error {
 }
 
 // ParamsTest demonstrates parameter handling
-func ParamsTest() error {
-	// Check for MAGE_ARGS environment variable set by magex
-	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
-		// Parse the space-separated arguments back to slice format for display
-		args := strings.Fields(mageArgs)
-		fmt.Printf("Parameters received: %v\n", args)
-	} else {
-		// Fallback to os.Args for direct execution
-		args := os.Args[1:]
-		if len(args) > 0 && args[0] == "paramstest" {
-			args = args[1:]
-		}
-		fmt.Printf("Parameters received: %v\n", args)
-	}
+func ParamsTest(key1, key2 string) error {
+	// Format parameters as key=value pairs for backward compatibility with test expectations
+	params := []string{fmt.Sprintf("key1=%s", key1), fmt.Sprintf("key2=%s", key2)}
+	fmt.Printf("Parameters received: %v\n", params)
 	return nil
 }
 
@@ -181,7 +169,7 @@ func (Deploy) Production() error {
 	// Test parameter passing
 	t.Run("ParameterPassing", func(t *testing.T) {
 		// #nosec G204 -- magexPath is controlled in tests
-		cmd := exec.CommandContext(context.Background(), magexPath, "paramstest", "key1=value1", "key2=value2")
+		cmd := exec.CommandContext(context.Background(), magexPath, "paramstest", "value1", "value2")
 		cmd.Dir = tmpDir
 		output, err := cmd.CombinedOutput()
 		if err != nil {
