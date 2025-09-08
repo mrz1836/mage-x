@@ -529,12 +529,12 @@ func getVersionInfo() string {
 // getCommitInfo returns the current commit
 func getCommitInfo() string {
 	buildInfo := getBuildInfo()
-	if buildInfo.Commit != statusUnknown {
+	if buildInfo.Commit != "" && buildInfo.Commit != statusUnknown {
 		return buildInfo.Commit
 	}
 
 	// Try to get from git
-	if sha, err := GetRunner().RunCmdOutput("git", "rev-parse", "--short", "HEAD"); err == nil {
+	if sha, err := GetRunner().RunCmdOutput("git", "rev-parse", "--short", "HEAD"); err == nil && sha != "" {
 		return strings.TrimSpace(sha)
 	}
 

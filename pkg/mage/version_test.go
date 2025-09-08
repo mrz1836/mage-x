@@ -461,6 +461,17 @@ func (ts *VersionTestSuite) TestVersionBumpIntegration() {
 	version := Version{}
 
 	ts.Run("BumpWithUncommittedChanges", func() {
+		// Save and restore the original runner to ensure clean state
+		originalRunner := GetRunner()
+		defer func() {
+			if err := SetRunner(originalRunner); err != nil {
+				ts.T().Errorf("Failed to restore original runner: %v", err)
+			}
+		}()
+
+		// Use a fresh runner for this test
+		ts.Require().NoError(SetRunner(NewSecureCommandRunner()))
+
 		// Create a temporary file to make the repo dirty
 		tempFile := "test-temp-file.txt"
 		err := os.WriteFile(tempFile, []byte("test"), 0o600)

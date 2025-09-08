@@ -391,13 +391,27 @@ func TestSecureCommandRunner_Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	// Save the current runner and ensure we restore it
+	originalRunner := GetRunner()
+	defer func() {
+		if err := SetRunner(originalRunner); err != nil {
+			t.Errorf("Failed to restore original runner: %v", err)
+		}
+	}()
+
+	// Reset to a fresh SecureCommandRunner for this test
+	freshRunner := NewSecureCommandRunner()
+	require.NoError(t, SetRunner(freshRunner))
+
 	// Test that the SecureCommandRunner is properly integrated
 	runner := GetRunner()
 	assert.NotNil(t, runner)
 
-	// Verify it's actually a SecureCommandRunner
-	_, ok := runner.(*SecureCommandRunner)
-	assert.True(t, ok, "GetRunner should return a SecureCommandRunner")
+	// Verify it implements CommandRunner interface and works correctly
+	output, err := runner.RunCmdOutput("echo", "test")
+	require.NoError(t, err)
+	assert.Equal(t, "test", output)
 }
 
 func TestSecureCommandRunner_ValidatesCommands(t *testing.T) {

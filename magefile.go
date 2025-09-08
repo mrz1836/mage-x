@@ -13,6 +13,15 @@ import (
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
+// getMageArgs reads and parses arguments from the MAGE_ARGS environment variable
+// This is how magex passes parameters to namespace methods
+func getMageArgs() []string {
+	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
+		return strings.Fields(mageArgs)
+	}
+	return nil
+}
+
 // Namespace types - these enable namespace:method syntax in mage
 // Each type must be defined as mg.Namespace for mage to recognize it
 type (
@@ -724,37 +733,37 @@ func (b Build) Dev() error {
 // Test namespace methods
 func (t Test) Default() error {
 	var impl mage.Test
-	return impl.Default()
+	return impl.Default(getMageArgs()...)
 }
 
 func (t Test) Full() error {
 	var impl mage.Test
-	return impl.Full()
+	return impl.Full(getMageArgs()...)
 }
 
 func (t Test) Unit() error {
 	var impl mage.Test
-	return impl.Unit()
+	return impl.Unit(getMageArgs()...)
 }
 
 func (t Test) Short() error {
 	var impl mage.Test
-	return impl.Short()
+	return impl.Short(getMageArgs()...)
 }
 
 func (t Test) Race() error {
 	var impl mage.Test
-	return impl.Race()
+	return impl.Race(getMageArgs()...)
 }
 
 func (t Test) Cover() error {
 	var impl mage.Test
-	return impl.Cover()
+	return impl.Cover(getMageArgs()...)
 }
 
 func (t Test) CoverRace() error {
 	var impl mage.Test
-	return impl.CoverRace()
+	return impl.CoverRace(getMageArgs()...)
 }
 
 func (t Test) CoverReport() error {
@@ -769,22 +778,22 @@ func (t Test) CoverHTML() error {
 
 func (t Test) Fuzz() error {
 	var impl mage.Test
-	return impl.Fuzz()
+	return impl.Fuzz(getMageArgs()...)
 }
 
 func (t Test) FuzzShort() error {
 	var impl mage.Test
-	return impl.FuzzShort()
+	return impl.FuzzShort(getMageArgs()...)
 }
 
 func (t Test) Bench() error {
 	var impl mage.Test
-	return impl.Bench()
+	return impl.Bench(getMageArgs()...)
 }
 
 func (t Test) BenchShort() error {
 	var impl mage.Test
-	return impl.BenchShort()
+	return impl.BenchShort(getMageArgs()...)
 }
 
 func (t Test) Integration() error {
@@ -819,7 +828,7 @@ func (t Test) Run() error {
 
 func (t Test) Coverage() error {
 	var impl mage.Test
-	return impl.Coverage()
+	return impl.Coverage(getMageArgs()...)
 }
 
 // Lint namespace methods
@@ -1050,12 +1059,12 @@ func (m Mod) Clean() error {
 
 func (m Mod) Graph() error {
 	var impl mage.Mod
-	return impl.Graph()
+	return impl.Graph(getMageArgs()...)
 }
 
 func (m Mod) Why() error {
 	var impl mage.Mod
-	return impl.Why()
+	return impl.Why(getMageArgs()...)
 }
 
 func (m Mod) Vendor() error {
@@ -1075,17 +1084,17 @@ func (m Mod) Verify() error {
 
 func (m Mod) Edit() error {
 	var impl mage.Mod
-	return impl.Edit()
+	return impl.Edit(getMageArgs()...)
 }
 
 func (m Mod) Get() error {
 	var impl mage.Mod
-	return impl.Get()
+	return impl.Get(getMageArgs()...)
 }
 
 func (m Mod) List() error {
 	var impl mage.Mod
-	return impl.List()
+	return impl.List(getMageArgs()...)
 }
 
 // Docs namespace methods
@@ -1182,7 +1191,7 @@ func (d Docs) Readme() error {
 // Changelog method requires parameters, not suitable for namespace syntax
 func (d Docs) GoDocs() error {
 	var impl mage.Docs
-	return impl.GoDocs()
+	return impl.GoDocs(getMageArgs()...)
 }
 
 // Git namespace methods
@@ -1203,7 +1212,7 @@ func (g Git) TagRemove() error {
 
 func (g Git) TagUpdate() error {
 	var impl mage.Git
-	return impl.TagUpdate()
+	return impl.TagUpdate(getMageArgs()...)
 }
 
 func (g Git) Status() error {
@@ -1228,7 +1237,7 @@ func (g Git) Pull() error {
 
 func (g Git) Commit() error {
 	var impl mage.Git
-	return impl.Commit()
+	return impl.Commit(getMageArgs()...)
 }
 
 func (g Git) Init() error {
@@ -1238,7 +1247,7 @@ func (g Git) Init() error {
 
 func (g Git) Add() error {
 	var impl mage.Git
-	return impl.Add()
+	return impl.Add(getMageArgs()...)
 }
 
 func (g Git) Clone() error {
@@ -1261,7 +1270,7 @@ func (v Version) Show() error {
 
 func (v Version) Check() error {
 	var impl mage.Version
-	return impl.Check()
+	return impl.Check(getMageArgs()...)
 }
 
 func (v Version) Update() error {
@@ -1271,27 +1280,17 @@ func (v Version) Update() error {
 
 func (v Version) Bump() error {
 	var impl mage.Version
-	// Get arguments from MAGE_ARGS environment variable if available
-	var args []string
-	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
-		args = strings.Fields(mageArgs)
-	}
-	return impl.Bump(args...)
+	return impl.Bump(getMageArgs()...)
 }
 
 func (v Version) Changelog() error {
 	var impl mage.Version
-	// Get arguments from MAGE_ARGS environment variable if available
-	var args []string
-	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
-		args = strings.Fields(mageArgs)
-	}
-	return impl.Changelog(args...)
+	return impl.Changelog(getMageArgs()...)
 }
 
 func (v Version) Tag() error {
 	var impl mage.Version
-	return impl.Tag()
+	return impl.Tag(getMageArgs()...)
 }
 
 // Next method requires parameters and returns multiple values, not suitable for namespace syntax
@@ -1303,7 +1302,7 @@ func (v Version) Tag() error {
 // Release namespace methods
 func (r Release) Default() error {
 	var impl mage.Release
-	return impl.Default()
+	return impl.Default(getMageArgs()...)
 }
 
 func (r Release) Test() error {
