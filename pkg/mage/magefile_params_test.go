@@ -4,6 +4,7 @@ package mage
 import (
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +13,7 @@ import (
 
 // SimpleMockRunner for parameter testing
 type SimpleMockRunner struct {
+	mu          sync.Mutex
 	commands    [][]string
 	outputs     map[string]string
 	errors      map[string]error
@@ -29,10 +31,14 @@ func NewSimpleMockRunner() *SimpleMockRunner {
 
 func (mr *SimpleMockRunner) RunCmd(name string, args ...string) error {
 	fullCmd := append([]string{name}, args...)
-	mr.commands = append(mr.commands, fullCmd)
 
+	mr.mu.Lock()
+	mr.commands = append(mr.commands, fullCmd)
 	cmdKey := strings.Join(fullCmd, " ")
-	if err, exists := mr.errors[cmdKey]; exists {
+	err, exists := mr.errors[cmdKey]
+	mr.mu.Unlock()
+
+	if exists {
 		return err
 	}
 	return nil
@@ -40,43 +46,58 @@ func (mr *SimpleMockRunner) RunCmd(name string, args ...string) error {
 
 func (mr *SimpleMockRunner) RunCmdOutput(name string, args ...string) (string, error) {
 	fullCmd := append([]string{name}, args...)
-	mr.commands = append(mr.commands, fullCmd)
 
+	mr.mu.Lock()
+	mr.commands = append(mr.commands, fullCmd)
 	cmdKey := strings.Join(fullCmd, " ")
-	if err, exists := mr.errors[cmdKey]; exists {
+	err, hasError := mr.errors[cmdKey]
+	output, hasOutput := mr.outputs[cmdKey]
+	mr.mu.Unlock()
+
+	if hasError {
 		return "", err
 	}
-	if output, exists := mr.outputs[cmdKey]; exists {
+	if hasOutput {
 		return output, nil
 	}
 	return "", nil
 }
 
 func (mr *SimpleMockRunner) SetOutput(cmd, output string) {
+	mr.mu.Lock()
 	mr.outputs[cmd] = output
+	mr.mu.Unlock()
 }
 
 func (mr *SimpleMockRunner) SetError(cmd string, err error) {
+	mr.mu.Lock()
 	mr.errors[cmd] = err
+	mr.mu.Unlock()
 }
 
 func (mr *SimpleMockRunner) SetFileContent(path, content string) {
+	mr.mu.Lock()
 	mr.fileContent[path] = content
+	mr.mu.Unlock()
 }
 
 func (mr *SimpleMockRunner) GetCommands() []string {
+	mr.mu.Lock()
 	result := make([]string, 0, len(mr.commands))
 	for _, cmd := range mr.commands {
 		result = append(result, strings.Join(cmd, " "))
 	}
+	mr.mu.Unlock()
 	return result
 }
 
 func (mr *SimpleMockRunner) Reset() {
+	mr.mu.Lock()
 	mr.commands = make([][]string, 0)
 	mr.outputs = make(map[string]string)
 	mr.errors = make(map[string]error)
 	mr.fileContent = make(map[string]string)
+	mr.mu.Unlock()
 }
 
 // TestMagefileParameterPassing tests that parameters are correctly passed
