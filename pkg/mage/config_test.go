@@ -968,10 +968,10 @@ func (ts *ConfigTestSuite) TestCleanConfigValues() {
 	})
 }
 
-// TestDefaultConfigAppliesCleanValues tests that defaultConfig() applies cleaning
-func (ts *ConfigTestSuite) TestDefaultConfigAppliesCleanValues() {
-	ts.Run("DefaultConfigCleansValues", func() {
-		// Mock environment variables with comments
+// TestDefaultConfigReturnsLatest tests that defaultConfig() returns 'latest' values
+func (ts *ConfigTestSuite) TestDefaultConfigReturnsLatest() {
+	ts.Run("DefaultConfigUsesLatest", func() {
+		// Mock environment variables with comments (these should NOT affect defaultConfig)
 		originalVars := make(map[string]string)
 		envVars := map[string]string{
 			"MAGE_X_GOLANGCI_LINT_VERSION": "v2.4.0 # test comment",
@@ -995,9 +995,12 @@ func (ts *ConfigTestSuite) TestDefaultConfigAppliesCleanValues() {
 
 		config := defaultConfig()
 
-		// Verify that cleaning was applied and comments removed
-		ts.Equal("v2.4.0", config.Lint.GolangciVersion)
-		ts.Equal("v0.8.0", config.Tools.Fumpt)
+		// defaultConfig() should return 'latest' regardless of env vars
+		// Environment resolution happens at runtime during tool installation
+		ts.Equal("latest", config.Lint.GolangciVersion)
+		ts.Equal("latest", config.Tools.GolangciLint)
+		ts.Equal("latest", config.Tools.Fumpt)
+		ts.Equal("latest", config.Tools.GoVulnCheck)
 	})
 }
 

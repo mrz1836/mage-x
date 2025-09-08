@@ -94,12 +94,21 @@ func (Tools) Update() error {
 		utils.Info("Updating %s with retry logic...", tool.Name)
 
 		toolVersion := tool.Version
-		if toolVersion == "" {
-			utils.Warn("Version for tool %s not available, using @latest", tool.Name)
-			toolVersion = VersionAtLatest
-		} else if !strings.HasPrefix(toolVersion, "@") {
+
+		// If version is "latest", try to resolve from environment variables first
+		if toolVersion == "" || toolVersion == VersionLatest {
+			if resolvedVersion := getToolVersionFromEnv(tool.Name); resolvedVersion != "" {
+				toolVersion = resolvedVersion
+			} else {
+				utils.Warn("Version for tool %s not available, using @latest", tool.Name)
+				toolVersion = VersionAtLatest
+			}
+		}
+
+		if !strings.HasPrefix(toolVersion, "@") && toolVersion != VersionAtLatest {
 			toolVersion = "@" + toolVersion
 		}
+		// Keep @latest as is for VersionAtLatest
 
 		moduleWithVersion := tool.Module + toolVersion
 
@@ -271,12 +280,21 @@ func installGovulncheck(ctx context.Context, config *Config, maxRetries int, ini
 // installToolFromModule installs a tool from a Go module with retry logic
 func installToolFromModule(ctx context.Context, tool ToolDefinition, _ *Config, maxRetries int, initialDelay time.Duration) error {
 	moduleVersion := tool.Version
+
+	// If version is "latest", try to resolve from environment variables first
 	if moduleVersion == "" || moduleVersion == VersionLatest {
-		utils.Warn("Version for tool %s not available, using @latest", tool.Name)
-		moduleVersion = VersionAtLatest
-	} else if !strings.HasPrefix(moduleVersion, "@") {
+		if resolvedVersion := getToolVersionFromEnv(tool.Name); resolvedVersion != "" {
+			moduleVersion = resolvedVersion
+		} else {
+			utils.Warn("Version for tool %s not available, using @latest", tool.Name)
+			moduleVersion = VersionAtLatest
+		}
+	}
+
+	if !strings.HasPrefix(moduleVersion, "@") && moduleVersion != VersionAtLatest {
 		moduleVersion = "@" + moduleVersion
 	}
+	// Keep @latest as is for VersionAtLatest
 
 	moduleWithVersion := tool.Module + moduleVersion
 	utils.Info("Installing %s from %s...", tool.Name, moduleWithVersion)
@@ -303,6 +321,25 @@ func installToolFromModule(ctx context.Context, tool ToolDefinition, _ *Config, 
 }
 
 // Helper functions
+
+// getToolVersionFromEnv resolves tool versions from environment variables
+func getToolVersionFromEnv(toolName string) string {
+	switch toolName {
+	case "golangci-lint":
+		return GetDefaultGolangciLintVersion()
+	case "gofumpt":
+		return GetDefaultGofumptVersion()
+	case "govulncheck":
+		return GetDefaultGoVulnCheckVersion()
+	case "mockgen":
+		return GetDefaultMockgenVersion()
+	case "swag":
+		return GetDefaultSwagVersion()
+	default:
+		// For unknown tools, try the generic version getter
+		return GetToolVersion(toolName)
+	}
+}
 
 // getRequiredTools returns the list of required tools based on configuration
 func getRequiredTools(cfg *Config) []ToolDefinition {

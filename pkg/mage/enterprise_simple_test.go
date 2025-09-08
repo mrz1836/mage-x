@@ -22,11 +22,17 @@ type EnterpriseSimpleTestSuite struct {
 func (ts *EnterpriseSimpleTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.env.CreateGoMod("test/module")
+
+	// Reset configuration to ensure clean state for each test
+	TestResetConfig()
 }
 
 // TearDownTest runs after each test
 func (ts *EnterpriseSimpleTestSuite) TearDownTest() {
 	ts.env.Cleanup()
+
+	// Reset configuration to ensure no state leaks between tests
+	TestResetConfig()
 }
 
 // TestNewEnterpriseConfiguration tests the NewEnterpriseConfiguration function

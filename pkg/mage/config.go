@@ -406,15 +406,15 @@ func defaultConfig() *Config {
 			CoverMode:          "atomic",
 		},
 		Lint: LintConfig{
-			GolangciVersion: GetDefaultGolangciLintVersion(),
+			GolangciVersion: VersionLatest,
 			Timeout:         "5m",
 		},
 		Tools: ToolsConfig{
-			GolangciLint: GetDefaultGolangciLintVersion(),
-			Fumpt:        GetDefaultGofumptVersion(),
-			GoVulnCheck:  GetDefaultGoVulnCheckVersion(),
-			Mockgen:      GetDefaultMockgenVersion(),
-			Swag:         GetDefaultSwagVersion(),
+			GolangciLint: VersionLatest,
+			Fumpt:        VersionLatest,
+			GoVulnCheck:  VersionLatest,
+			Mockgen:      VersionLatest,
+			Swag:         VersionLatest,
 			Custom:       make(map[string]string),
 		},
 		Docker: DockerConfig{
