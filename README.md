@@ -1105,3 +1105,4 @@ fix dry-run bug
 test push
 temporary debug
 test final fix
+test version fix

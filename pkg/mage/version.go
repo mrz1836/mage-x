@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -262,6 +263,13 @@ func (Version) Update() error {
 // Bump bumps the version number
 func (Version) Bump(args ...string) error {
 	utils.Header("Bumping Version")
+
+	// If no args provided, try to get from MAGE_ARGS environment variable
+	if len(args) == 0 {
+		if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
+			args = strings.Fields(mageArgs)
+		}
+	}
 
 	// Parse command-line parameters
 	params := utils.ParseParams(args)
