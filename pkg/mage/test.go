@@ -52,10 +52,6 @@ func (Test) Full(args ...string) error {
 
 // Unit runs unit tests
 func (Test) Unit(args ...string) error {
-	// Debug: Log received arguments to trace parameter flow
-	utils.Info("🐛 DEBUG [Test.Unit]: Raw args received: %v", args)
-	utils.Info("🐛 DEBUG [Test.Unit]: Args count: %d", len(args))
-
 	config, err := GetConfig()
 	if err != nil {
 		return err

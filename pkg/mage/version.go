@@ -264,21 +264,15 @@ func (Version) Update() error {
 func (Version) Bump(args ...string) error {
 	utils.Header("Bumping Version")
 
-	// Debug: Log received arguments to trace parameter flow
-	utils.Info("🐛 DEBUG: Raw args received: %v", args)
-	utils.Info("🐛 DEBUG: Args count: %d", len(args))
-
 	// If no args provided, try to get from MAGE_ARGS environment variable
 	if len(args) == 0 {
 		if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
-			utils.Info("🐛 DEBUG: Using MAGE_ARGS: %s", mageArgs)
 			args = strings.Fields(mageArgs)
 		}
 	}
 
 	// Parse command-line parameters
 	params := utils.ParseParams(args)
-	utils.Info("🐛 DEBUG: Parsed params: %v", params)
 
 	// Check for dry-run mode
 	dryRun := utils.IsParamTrue(params, "dry-run")
@@ -403,20 +397,13 @@ func (Version) Bump(args ...string) error {
 	utils.Success("✅ Created tag: %s", newVersion)
 
 	// Push if requested
-	pushValue, pushExists := params["push"]
-	utils.Info("🐛 DEBUG: Push parameter - exists: %v, value: '%s'", pushExists, pushValue)
-	utils.Info("🐛 DEBUG: utils.IsParamTrue(params, \"push\"): %v", utils.IsParamTrue(params, "push"))
-
 	if utils.IsParamTrue(params, "push") {
-		utils.Info("🐛 DEBUG: Push condition met - executing git push")
 		utils.Info("Pushing tag to remote...")
 		if err := GetRunner().RunCmd("git", "push", "origin", newVersion); err != nil {
-			utils.Error("🐛 DEBUG: Git push failed: %v", err)
 			return fmt.Errorf("failed to push tag: %w", err)
 		}
 		utils.Success("✅ Tag pushed to remote")
 	} else {
-		utils.Info("🐛 DEBUG: Push condition NOT met - showing manual instructions")
 		utils.Info("To push the tag, run: git push origin %s", newVersion)
 		utils.Info("Or add 'push' parameter to push automatically")
 	}

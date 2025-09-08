@@ -1271,12 +1271,22 @@ func (v Version) Update() error {
 
 func (v Version) Bump() error {
 	var impl mage.Version
-	return impl.Bump()
+	// Get arguments from MAGE_ARGS environment variable if available
+	var args []string
+	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
+		args = strings.Fields(mageArgs)
+	}
+	return impl.Bump(args...)
 }
 
 func (v Version) Changelog() error {
 	var impl mage.Version
-	return impl.Changelog()
+	// Get arguments from MAGE_ARGS environment variable if available
+	var args []string
+	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
+		args = strings.Fields(mageArgs)
+	}
+	return impl.Changelog(args...)
 }
 
 func (v Version) Tag() error {

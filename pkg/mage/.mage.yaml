@@ -40,7 +40,7 @@ lint:
   disable_linters: []
   enable_all: false
   enable_linters: []
-  golangci_version: latest
+  golangci_version: v2.4.0
   skip_dirs: []
   skip_files: []
   timeout: 5m
@@ -86,8 +86,8 @@ test:
   verbose: false
 tools:
   custom: {}
-  fumpt: latest
-  govulncheck: latest
-  golangci_lint: latest
-  mockgen: latest
-  swag: latest
+  fumpt: v0.8.0
+  govulncheck: v1.1.4
+  golangci_lint: v2.4.0
+  mockgen: v0.6.0
+  swag: v1.16.6

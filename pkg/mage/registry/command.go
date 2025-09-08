@@ -106,10 +106,6 @@ func (c *Command) Validate() error {
 
 // Execute runs the command with optional arguments
 func (c *Command) Execute(args ...string) error {
-	// Debug logging
-	fmt.Printf("🐛 DEBUG [Command.Execute]: Command %s, args: %v, FuncWithArgs: %v, Func: %v\n",
-		c.FullName(), args, c.FuncWithArgs != nil, c.Func != nil)
-
 	// Check if deprecated
 	if c.Deprecated != "" {
 		fmt.Printf("⚠️  Warning: '%s' is deprecated. %s\n", c.FullName(), c.Deprecated)
@@ -117,7 +113,6 @@ func (c *Command) Execute(args ...string) error {
 
 	// If arguments are provided and FuncWithArgs exists, use it
 	if len(args) > 0 && c.FuncWithArgs != nil {
-		fmt.Printf("🐛 DEBUG [Command.Execute]: Using FuncWithArgs with %d args\n", len(args))
 		return c.FuncWithArgs(args...)
 	}
 
