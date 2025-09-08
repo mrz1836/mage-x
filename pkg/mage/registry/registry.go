@@ -352,6 +352,7 @@ func (r *Registry) Execute(name string, args ...string) error {
 	}
 
 	// Execute the command
+	fmt.Printf("🐛 DEBUG [Registry.Execute]: Executing command %s with args: %v\n", name, args)
 	return cmd.Execute(args...)
 }
 

@@ -26,6 +26,8 @@ var (
 // DelegateToMage executes a custom command using mage or go run
 // This provides seamless execution of user-defined commands without plugin compilation
 func DelegateToMage(command string, args ...string) error {
+	// Debug: Log delegation details
+	fmt.Printf("🐛 DEBUG [DelegateToMage]: command=%s, args=%v\n", command, args)
 	// Check for magefiles/ directory first (preferred by standard mage)
 	magefilesDir := "magefiles"
 	var targetPath string
@@ -100,7 +102,11 @@ func DelegateToMage(command string, args ...string) error {
 
 	// Make arguments available via environment variable for magefile functions to access
 	if len(args) > 0 {
-		cmd.Env = append(cmd.Env, "MAGE_ARGS="+strings.Join(args, " "))
+		mageArgsValue := strings.Join(args, " ")
+		fmt.Printf("🐛 DEBUG [DelegateToMage]: Setting MAGE_ARGS=%s\n", mageArgsValue)
+		cmd.Env = append(cmd.Env, "MAGE_ARGS="+mageArgsValue)
+	} else {
+		fmt.Printf("🐛 DEBUG [DelegateToMage]: No args to set in MAGE_ARGS\n")
 	}
 
 	// Set working directory if not already set (directory case sets it specifically)

@@ -318,7 +318,13 @@ func VersionShow() error {
 // VersionBump bumps the version
 func VersionBump() error {
 	var v mage.Version
-	return v.Bump()
+	// Get arguments from MAGE_ARGS environment variable if available
+	// This is set by magex when delegating to mage
+	var args []string
+	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
+		args = strings.Fields(mageArgs)
+	}
+	return v.Bump(args...)
 }
 
 // VersionCheck checks version information
