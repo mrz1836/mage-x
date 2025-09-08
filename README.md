@@ -1100,10 +1100,3 @@ All kinds of contributions are welcome! :raised_hands:
     <em>MAGE-X: Write Once, Mage Everywhere</em>
   </p>
 </div>
-test change
-fix dry-run bug
-test push
-temporary debug
-test final fix
-test version fix
-test without push
