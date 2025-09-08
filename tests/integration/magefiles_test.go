@@ -63,6 +63,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strings"
 )
 
 // BuildProject builds the project
@@ -78,10 +80,20 @@ func TestProject() error {
 }
 
 // ParamsTest demonstrates parameter handling
-func ParamsTest(key1, key2 string) error {
-	// Format parameters as key=value pairs for backward compatibility with test expectations
-	params := []string{fmt.Sprintf("key1=%s", key1), fmt.Sprintf("key2=%s", key2)}
-	fmt.Printf("Parameters received: %v\n", params)
+func ParamsTest() error {
+	// Read parameters from MAGE_ARGS environment variable
+	var args []string
+	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
+		args = strings.Fields(mageArgs)
+	}
+
+	// Expect two parameters and format as key=value pairs for test expectations
+	if len(args) >= 2 {
+		params := []string{fmt.Sprintf("key1=%s", args[0]), fmt.Sprintf("key2=%s", args[1])}
+		fmt.Printf("Parameters received: %v\n", params)
+	} else {
+		fmt.Printf("Parameters received: %v (expected 2 parameters)\n", args)
+	}
 	return nil
 }
 
