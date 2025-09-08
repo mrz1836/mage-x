@@ -386,7 +386,7 @@ func (Version) Bump(args ...string) error {
 		return fmt.Errorf("failed to create tag: %w", err)
 	}
 
-	utils.Success("Created tag: %s", newVersion)
+	utils.Success("✅ Created tag: %s", newVersion)
 
 	// Push if requested
 	if utils.IsParamTrue(params, "push") {
@@ -394,7 +394,7 @@ func (Version) Bump(args ...string) error {
 		if err := GetRunner().RunCmd("git", "push", "origin", newVersion); err != nil {
 			return fmt.Errorf("failed to push tag: %w", err)
 		}
-		utils.Success("Tag pushed to remote")
+		utils.Success("✅ Tag pushed to remote")
 	} else {
 		utils.Info("To push the tag, run: git push origin %s", newVersion)
 		utils.Info("Or add 'push' parameter to push automatically")
