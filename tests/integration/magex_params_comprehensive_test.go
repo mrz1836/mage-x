@@ -40,41 +40,32 @@ func TestMagexParametersComprehensive(t *testing.T) {
 		// Should succeed
 		assert.NoError(t, err, "Command failed: %s", outputStr)
 
-		// Count the depth levels in the output by looking for nested structure
-		// With depth=1, we should see root and one level of dependencies
-		lines := strings.Split(outputStr, "\n")
-		maxDepth := 0
-		for _, line := range lines {
-			// Count the actual tree depth by looking for the tree structure
-			// Root has no indentation
-			// Level 1 has "├──" or "└──" with 4 spaces before
-			// Level 2 would have "│   ├──" or "│   └──" (with │ and spaces)
-			// Level 3 would have "│   │   ├──" etc.
-
-			depth := 0
-			// Count how many "│   " patterns appear before the branch
-			if strings.Contains(line, "├──") || strings.Contains(line, "└──") {
-				// Count the pipe symbols which indicate nesting level
-				// Convert to runes to handle Unicode characters properly
-				runes := []rune(line)
-				for i := 0; i < len(runes); i++ {
-					if i+4 <= len(runes) && string(runes[i:i+4]) == "│   " {
-						depth++
-						i += 3 // Skip ahead
-					} else if runes[i] == '├' || runes[i] == '└' {
-						break // Found the branch symbol
-					}
-				}
-				// The line after pipes is at depth+1
-				depth++
-				if depth > maxDepth {
-					maxDepth = depth
-				}
-			}
-		}
+		// Use helper function to count depth accurately
+		maxDepth := countTreeDepth(outputStr)
 
 		// With depth=1, we should see at most depth 1 (root is 0, direct deps are 1)
 		assert.LessOrEqual(t, maxDepth, 1, "Depth parameter not respected - saw depth %d when requested 1", maxDepth)
+
+		// Verify parameter is actually working by comparing with depth=3
+		cmd3 := exec.Command(magexPath, "mod:graph", "depth=3")
+		cmd3.Dir = testDir
+		output3, err3 := cmd3.CombinedOutput()
+		outputStr3 := string(output3)
+
+		if err3 == nil {
+			maxDepth3 := countTreeDepth(outputStr3)
+			deeper, moreLines, analysis := compareTreeOutputs(outputStr, outputStr3)
+
+			// depth=3 should show more than depth=1 (unless very simple module)
+			if deeper || moreLines {
+				t.Logf("✓ Depth parameter working correctly: %s", analysis)
+			} else if maxDepth3 <= 1 {
+				t.Logf("Note: Simple module graph - depth parameter working but limited dependencies")
+			}
+
+			// At minimum, depths should be properly limited
+			assert.LessOrEqual(t, maxDepth3, 3, "Depth=3 should not exceed depth 3, saw %d", maxDepth3)
+		}
 	})
 
 	t.Run("TestCoveragePackageParameter", func(t *testing.T) {

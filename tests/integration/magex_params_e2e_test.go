@@ -26,7 +26,7 @@ func TestMagexParameterPassingE2E(t *testing.T) {
 
 	// Build magex first to ensure we're testing the latest code
 	t.Run("BuildMagex", func(t *testing.T) {
-		cmd := exec.Command("go", "build", "-o", "magex-test", "./cmd/magex")
+		cmd := exec.Command("go", "build", "-o", "magex-test", "../../cmd/magex")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("Failed to build magex: %v\nOutput: %s", err, output)

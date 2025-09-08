@@ -115,6 +115,23 @@ func initFlags() *Flags {
 	}
 }
 
+// tryCustomCommand attempts to execute a custom command via delegation
+func tryCustomCommand(command string, commandArgs []string) bool {
+	// Check if we have a magefile with this command
+	if !HasMagefile() {
+		return false
+	}
+
+	if delegateErr := DelegateToMage(command, commandArgs...); delegateErr != nil {
+		_, printErr := fmt.Fprintf(os.Stderr, "❌ Error executing custom command '%s': %v\n", command, delegateErr)
+		if printErr != nil {
+			return false
+		}
+		os.Exit(1)
+	}
+	return true
+}
+
 func main() {
 	// Initialize flags
 	flags := initFlags()
@@ -268,15 +285,8 @@ func main() {
 	// Try built-in command first to ensure parameters work correctly
 	// Built-in commands have proper parameter handling
 	if err := reg.Execute(command, commandArgs...); err != nil {
-		// If built-in command not found, check for custom command
-		if discovery.HasCommand(command) {
-			if delegateErr := DelegateToMage(command, commandArgs...); delegateErr != nil {
-				_, delegateErr = fmt.Fprintf(os.Stderr, "❌ Error executing custom command '%s': %v\n", command, delegateErr)
-				if delegateErr != nil {
-					return
-				}
-				os.Exit(1)
-			}
+		// If built-in command not found, try custom command
+		if tryCustomCommand(command, commandArgs) {
 			return // Success
 		}
 		// Neither built-in nor custom command found
