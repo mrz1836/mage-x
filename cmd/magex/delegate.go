@@ -71,9 +71,8 @@ func DelegateToMage(command string, args ...string) error {
 	// Try to use mage first if available
 	if magePath, err := exec.LookPath("mage"); err == nil {
 		// Use mage binary - mage handles both directory and file automatically
-		// Pass command name and all arguments to mage
+		// For mage, we only pass the command name, arguments are provided via environment
 		cmdArgs := []string{command}
-		cmdArgs = append(cmdArgs, args...)
 		// #nosec G204 -- This is necessary for dynamic command execution with user-defined commands
 		cmd = exec.CommandContext(ctx, magePath, cmdArgs...)
 	} else {

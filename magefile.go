@@ -1263,9 +1263,9 @@ func (v Version) Update() error {
 	return impl.Update()
 }
 
-func (v Version) Bump(args ...string) error {
+func (v Version) Bump() error {
 	var impl mage.Version
-	return impl.Bump(args...)
+	return impl.Bump()
 }
 
 func (v Version) Changelog() error {
