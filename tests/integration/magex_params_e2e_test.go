@@ -110,6 +110,9 @@ func FuzzTest(f *testing.F) {
 		case err := <-done:
 			// Command completed
 			output := stdout.String() + stderr.String()
+			if err != nil {
+				t.Errorf("Fuzz test command failed: %v\nOutput: %s", err, output)
+			}
 
 			// Verify it used the correct time
 			if strings.Contains(output, "fuzzing for 10s") {

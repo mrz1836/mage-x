@@ -311,8 +311,9 @@ func displayTreeGraph(graph *DependencyGraph, rootModule string, showVersions bo
 
 // displayNode recursively displays a dependency node with tree formatting
 func displayNode(node *DependencyNode, prefix string, isLast, showVersions bool, depth, maxDepth int, visited map[string]bool) {
-	// Check depth limit
-	if maxDepth > 0 && depth >= maxDepth {
+	// Check depth limit - depth > maxDepth ensures we show nodes AT maxDepth level
+	// For example, depth=1 shows root (0) and direct children (1)
+	if maxDepth > 0 && depth > maxDepth {
 		return
 	}
 

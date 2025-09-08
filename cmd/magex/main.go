@@ -265,45 +265,27 @@ func main() {
 		fmt.Print(banner)
 	}
 
-	// Check if we have custom commands available and this command exists as a custom command
-	// If so, prioritize custom commands over built-in ones for better user experience
-	if discovery.HasCommand(command) {
-		if delegateErr := DelegateToMage(command, commandArgs...); delegateErr != nil {
-			_, delegateErr = fmt.Fprintf(os.Stderr, "❌ Error executing custom command '%s': %v\n", command, delegateErr)
-			if delegateErr != nil {
-				return
-			}
-			os.Exit(1)
-		}
-		return // Success
-	}
-
-	// If no custom command found, try built-in command
+	// Try built-in command first to ensure parameters work correctly
+	// Built-in commands have proper parameter handling
 	if err := reg.Execute(command, commandArgs...); err != nil {
-		executeCustomCommandOrExit(discovery, command, commandArgs, err)
-	}
-}
-
-// executeCustomCommandOrExit handles custom command execution or exits with error
-func executeCustomCommandOrExit(discovery *CommandDiscovery, command string, commandArgs []string, originalErr error) {
-	// If built-in command failed, try custom command delegation
-	if discovery.HasCommand(command) {
-		if delegateErr := DelegateToMage(command, commandArgs...); delegateErr != nil {
-			_, delegateErr = fmt.Fprintf(os.Stderr, "❌ Error executing custom command '%s': %v\n", command, delegateErr)
-			if delegateErr != nil {
-				return
+		// If built-in command not found, check for custom command
+		if discovery.HasCommand(command) {
+			if delegateErr := DelegateToMage(command, commandArgs...); delegateErr != nil {
+				_, delegateErr = fmt.Fprintf(os.Stderr, "❌ Error executing custom command '%s': %v\n", command, delegateErr)
+				if delegateErr != nil {
+					return
+				}
+				os.Exit(1)
 			}
-			os.Exit(1)
+			return // Success
 		}
-		return // Success
+		// Neither built-in nor custom command found
+		_, printErr := fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
+		if printErr != nil {
+			return
+		}
+		os.Exit(1)
 	}
-
-	// Neither built-in nor custom command found
-	_, err := fmt.Fprintf(os.Stderr, "❌ Error: %v\n", originalErr)
-	if err != nil {
-		return
-	}
-	os.Exit(1)
 }
 
 // showUsage displays custom usage information
