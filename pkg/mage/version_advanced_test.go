@@ -380,6 +380,9 @@ func TestBumpWithPushEnabled(t *testing.T) {
 		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.0", nil)        // Fallback succeeds
 		mock.SetOutput("git tag -a v1.0.1 -m GitHubRelease v1.0.1", "", nil)
+		// Mock git remote validation
+		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
+		mock.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main", nil)
 		mock.SetOutput("git push origin v1.0.1", "", nil)
 
 		version := Version{}
@@ -479,6 +482,9 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		// Expect patch bump: v1.0.6 -> v1.0.7
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 		mock.SetOutput("git push origin v1.0.7", "", nil)
+		// Mock git remote validation
+		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
+		mock.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main", nil)
 
 		version := Version{}
 		err := version.Bump("push")
@@ -512,6 +518,9 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 
 		// With bump=major, expect v2.0.0
 		mock.SetOutput("git tag -a v2.0.0 -m GitHubRelease v2.0.0", "", nil)
+		// Mock git remote validation
+		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
+		mock.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main", nil)
 		mock.SetOutput("git push origin v2.0.0", "", nil)
 
 		version := Version{}
@@ -614,6 +623,9 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
+		// Mock git remote validation
+		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
+		mock.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main", nil)
 		mock.SetOutput("git push origin v1.0.7", "", nil)
 
 		version := Version{}
@@ -647,6 +659,9 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 		mock.SetOutput("git tag -a v1.1.0 -m GitHubRelease v1.1.0", "", nil)
+		// Mock git remote validation
+		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
+		mock.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main", nil)
 		mock.SetOutput("git push origin v1.1.0", "", nil)
 
 		version := Version{}
@@ -668,6 +683,9 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 		mock.SetOutput("git tag -a v2.0.0 -m GitHubRelease v2.0.0", "", nil)
+		// Mock git remote validation
+		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
+		mock.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main", nil)
 		mock.SetOutput("git push origin v2.0.0", "", nil)
 
 		version := Version{}
@@ -723,6 +741,9 @@ func TestVersionBumpErrorRecovery(t *testing.T) {
 		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
+		// Mock git remote validation to pass, then fail on push
+		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
+		mock.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main", nil)
 		mock.SetOutput("git push origin v1.0.7", "", errGitError)
 
 		version := Version{}

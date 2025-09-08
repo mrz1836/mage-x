@@ -28,6 +28,7 @@ var (
 	errGitHubAPIError               = errors.New("GitHub API error")
 	errInvalidVersionFormat         = errors.New("invalid version format")
 	errInvalidMajorVersion          = errors.New("invalid major version")
+	errRemoteNotFound               = errors.New("remote not found")
 	errInvalidMinorVersion          = errors.New("invalid minor version")
 	errInvalidPatchVersion          = errors.New("invalid patch version")
 	errMultipleTagsOnCommit         = errors.New("current commit already has version tags")
@@ -397,17 +398,48 @@ func (Version) Bump(args ...string) error {
 	utils.Success("✅ Created tag: %s", newVersion)
 
 	// Push if requested
-	if utils.IsParamTrue(params, "push") {
-		utils.Info("Pushing tag to remote...")
-		if err := GetRunner().RunCmd("git", "push", "origin", newVersion); err != nil {
-			return fmt.Errorf("failed to push tag: %w", err)
+	shouldPush := utils.IsParamTrue(params, "push")
+	if shouldPush {
+		if err := handlePushTag(newVersion); err != nil {
+			return err
 		}
-		utils.Success("✅ Tag pushed to remote")
 	} else {
 		utils.Info("To push the tag, run: git push origin %s", newVersion)
 		utils.Info("Or add 'push' parameter to push automatically")
 	}
 
+	return nil
+}
+
+// handlePushTag handles the logic for pushing a git tag to remote
+func handlePushTag(newVersion string) error {
+	// Check if remote exists before attempting push
+	if err := validateGitRemote("origin"); err != nil {
+		utils.Warn("⚠️  Git remote validation failed: %s", err.Error())
+		utils.Info("To push manually later, run: git push origin %s", newVersion)
+		return nil // Don't fail the entire operation, just skip the push
+	}
+
+	utils.Info("Pushing tag to remote...")
+	if err := GetRunner().RunCmd("git", "push", "origin", newVersion); err != nil {
+		utils.Error("❌ Failed to push tag to remote")
+
+		// Provide helpful diagnostic information
+		if strings.Contains(err.Error(), "does not appear to be a git repository") {
+			utils.Warn("💡 Troubleshooting tips:")
+			utils.Warn("   • Check if 'origin' remote exists: git remote -v")
+			utils.Warn("   • Add remote if missing: git remote add origin <repo-url>")
+		} else if strings.Contains(err.Error(), "Could not read from remote repository") {
+			utils.Warn("💡 Troubleshooting tips:")
+			utils.Warn("   • Check repository access permissions")
+			utils.Warn("   • Verify SSH keys or authentication tokens")
+		} else {
+			utils.Warn("💡 To push manually: git push origin %s", newVersion)
+		}
+
+		return fmt.Errorf("failed to push tag: %w", err)
+	}
+	utils.Success("✅ Tag pushed to remote")
 	return nil
 }
 
@@ -529,6 +561,29 @@ func isGitRepo() bool {
 func isGitDirty() bool {
 	output, err := GetRunner().RunCmdOutput("git", "status", "--porcelain")
 	return err == nil && strings.TrimSpace(output) != ""
+}
+
+// validateGitRemote checks if a git remote exists and is accessible
+func validateGitRemote(remoteName string) error {
+	// Check if remote exists
+	output, err := GetRunner().RunCmdOutput("git", "remote", "-v")
+	if err != nil {
+		return fmt.Errorf("failed to list git remotes: %w", err)
+	}
+
+	if !strings.Contains(output, remoteName) {
+		return fmt.Errorf("%w: remote '%s' not found. Available remotes:\n%s", errRemoteNotFound, remoteName, output)
+	}
+
+	// Check if we can reach the remote (this is optional and non-blocking)
+	// We'll do a lightweight check that doesn't modify anything
+	err = GetRunner().RunCmd("git", "ls-remote", "--exit-code", remoteName, "HEAD")
+	if err != nil {
+		// Don't fail hard on connectivity issues, just warn
+		return fmt.Errorf("remote '%s' exists but may not be accessible: %w", remoteName, err)
+	}
+
+	return nil
 }
 
 // getCurrentGitTag gets the current git tag with detailed logging

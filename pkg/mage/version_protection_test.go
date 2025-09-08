@@ -99,6 +99,9 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
+		// Mock git remote validation
+		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
+		mock.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main", nil)
 		mock.SetOutput("git push origin v1.0.7", "", nil)
 
 		// Run version bump with push parameter (default bump type)
@@ -124,6 +127,9 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
 		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
+		// Mock git remote validation
+		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
+		mock.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main", nil)
 		mock.SetOutput("git push origin v1.0.7", "", nil)
 
 		version := Version{}
