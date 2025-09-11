@@ -209,11 +209,17 @@ func (ts *FormatTestSuite) TestFormatYaml() {
 // TestFormatJSON tests the JSON method
 func (ts *FormatTestSuite) TestFormatJSON() {
 	ts.Run("successful JSON formatting", func() {
-		// Mock finding JSON files
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./vendor/*").Return("package.json\nconfig.json", nil)
-		// Mock python3 formatting for each file
-		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "package.json", "package.json.tmp"}).Return(nil)
-		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "config.json", "config.json.tmp"}).Return(nil)
+		// Mock finding JSON files with default exclude paths
+		expectedFindArgs := []string{
+			".", "-name", "*.json",
+			"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*",
+			"-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*",
+			"-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*",
+			"-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*",
+			"-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*",
+		}
+		ts.env.Runner.On("RunCmdOutput", "find", expectedFindArgs).Return("package.json\nconfig.json", nil)
+		// JSON formatting now uses native Go implementation - no external commands needed
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -231,94 +237,22 @@ func (ts *FormatTestSuite) TestFormatJSON() {
 func (ts *FormatTestSuite) TestFormatJson() {
 	ts.Run("successful Json formatting (alias)", func() {
 		// Mock finding JSON files (called through JSON method)
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./vendor/*").Return("package.json\nconfig.json", nil)
-		// Mock python3 formatting for each file
-		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "package.json", "package.json.tmp"}).Return(nil)
-		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "config.json", "config.json.tmp"}).Return(nil)
+		expectedFindArgs := []string{
+			".", "-name", "*.json",
+			"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*",
+			"-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*",
+			"-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*",
+			"-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*",
+			"-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*",
+		}
+		ts.env.Runner.On("RunCmdOutput", "find", expectedFindArgs).Return("package.json\nconfig.json", nil)
+		// JSON formatting now uses native Go implementation - no external commands needed
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.JSON()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
-}
-
-// TestFormatMarkdown tests the Markdown method
-func (ts *FormatTestSuite) TestFormatMarkdown() {
-	ts.Run("skip Markdown formatting (no formatter)", func() {
-		// Mock finding Markdown files
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.md", "-not", "-path", "./vendor/*").Return("README.md\nDOCS.md", nil)
-		// Mock skipping markdown formatting (no formatter available)
-		// No mock needed as function returns early
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.format.Markdown()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
-}
-
-// TestFormatSQL tests the SQL method
-func (ts *FormatTestSuite) TestFormatSQL() {
-	ts.Run("successful SQL formatting", func() {
-		// Mock finding SQL files
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.sql").Return("schema.sql\nqueries.sql", nil)
-		// Mock sqlfluff formatting
-		ts.env.Runner.On("RunCmd", "sqlfluff", []string{"format", "."}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.format.SQL()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
-}
-
-// TestFormatDockerfile tests the Dockerfile method
-func (ts *FormatTestSuite) TestFormatDockerfile() {
-	ts.Run("successful Dockerfile formatting", func() {
-		// Mock dockerfile_lint command (if available)
-		ts.env.Runner.On("RunCmd", "dockerfile_lint", []string{"Dockerfile"}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.format.Dockerfile()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
-}
-
-// TestFormatShell tests the Shell method
-func (ts *FormatTestSuite) TestFormatShell() {
-	ts.Run("successful Shell formatting", func() {
-		// Mock finding shell script files
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.sh", "-o", "-name", "*.bash").Return("script.sh\nbuild.bash", nil)
-		// Mock shfmt formatting
-		ts.env.Runner.On("RunCmd", "shfmt", []string{"-i", "2", "-w", "."}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.format.Shell()
 			},
 		)
 
@@ -341,9 +275,9 @@ func (ts *FormatTestSuite) TestFormatFix() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(nil)
 
-		// JSON formatting commands
+		// JSON formatting commands - now uses native Go implementation
 		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./vendor/*").Return("package.json", nil)
-		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "package.json", "package.json.tmp"}).Return(nil)
+		// No external commands needed for JSON formatting
 
 		// YAML formatting commands with default exclude paths
 		expectedFindArgs := []string{
@@ -760,61 +694,15 @@ func (ts *FormatTestSuite) TestFormatFileTypeScenarios() {
 		ts.Require().NoError(err)
 	})
 
-	ts.Run("JSON formatting with python3", func() {
+	ts.Run("JSON formatting with native Go", func() {
 		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("package.json\nconfig.json", nil)
-		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "package.json", "package.json.tmp"}).Return(nil)
-		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "config.json", "config.json.tmp"}).Return(nil)
+		// JSON formatting now uses native Go implementation - no external commands needed
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
 			func() interface{} { return GetRunner() },
 			func() error {
 				return ts.format.JSON()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
-
-	ts.Run("Markdown formatting skipped (no formatter)", func() {
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.md", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("README.md", nil)
-		// No mock needed - function returns early
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.format.Markdown()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
-
-	ts.Run("Shell formatting with shfmt", func() {
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.sh", "-o", "-name", "*.bash").Return("build.sh\ntest.bash", nil)
-		ts.env.Runner.On("RunCmd", "shfmt", []string{"-i", "2", "-w", "."}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.format.Shell()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
-
-	ts.Run("SQL formatting with sqlfluff", func() {
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.sql").Return("schema.sql", nil)
-		ts.env.Runner.On("RunCmd", "sqlfluff", []string{"format", "."}).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.format.SQL()
 			},
 		)
 
@@ -864,7 +752,7 @@ func (ts *FormatTestSuite) TestFormatWithEnvironmentVariables() {
 
 		// Mock find command with custom exclude paths
 		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./build/*", "-not", "-path", "./*build*/*", "-not", "-path", "./dist/*", "-not", "-path", "./*dist*/*", "-not", "-path", "./tmp/*", "-not", "-path", "./*tmp*/*").Return("package.json", nil)
-		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "package.json", "package.json.tmp"}).Return(nil)
+		// JSON formatting now uses native Go implementation - no external commands needed
 
 		err := ts.env.WithMockRunner(
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
@@ -894,9 +782,9 @@ func (ts *FormatTestSuite) TestFormatFixMethod() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(nil)
 
-		// JSON formatting commands
+		// JSON formatting commands - now uses native Go implementation
 		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("package.json", nil)
-		ts.env.Runner.On("RunCmd", "python3", []string{"-m", "json.tool", "package.json", "package.json.tmp"}).Return(nil)
+		// No external commands needed for JSON formatting
 
 		// YAML formatting commands
 		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("config.yml", nil)

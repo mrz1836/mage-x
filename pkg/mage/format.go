@@ -3,6 +3,7 @@ package mage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -434,7 +435,7 @@ func (Format) YAML() error {
 	}
 
 	// Ensure yamlfmt is available for YAML formatting
-	if err := ensureYamlfmt(); err != nil {
+	if err = ensureYamlfmt(); err != nil {
 		return fmt.Errorf("failed to ensure yamlfmt is available: %w", err)
 	}
 
@@ -463,37 +464,60 @@ func (Format) Yaml() error {
 	return formatter.YAML()
 }
 
-// formatJSONFile formats a single JSON file using python3
+// formatJSONFile formats a single JSON file using native Go
 func formatJSONFile(file string) bool {
 	utils.Info("Formatting %s", file)
 
-	if utils.CommandExists("python3") {
-		// Read, format, and write back
-		if err := GetRunner().RunCmd("python3", "-m", "json.tool", file, file+".tmp"); err != nil {
-			utils.Warn("Failed to format %s: %v", file, err)
-			return false
-		}
-		// Move temp file to original
-		if err := os.Rename(file+".tmp", file); err != nil {
-			utils.Warn("Failed to replace %s: %v", file, err)
-			return false
-		}
-		return true
+	return formatJSONFileNative(file)
+}
+
+// formatJSONFileNative formats a single JSON file using Go's standard library
+func formatJSONFileNative(file string) bool {
+	// Read the JSON file
+	data, err := os.ReadFile(file) //nolint:gosec // file path is user-provided via API
+	if err != nil {
+		utils.Warn("Failed to read %s: %v", file, err)
+		return false
 	}
 
-	utils.Warn("python3 not available for JSON formatting")
-	return false
+	// Parse JSON to validate it and format it
+	var jsonData interface{}
+	if unmarshalErr := json.Unmarshal(data, &jsonData); unmarshalErr != nil {
+		utils.Warn("Invalid JSON in %s: %v", file, unmarshalErr)
+		return false
+	}
+
+	// Format JSON with 4-space indentation
+	formatted, err := json.MarshalIndent(jsonData, "", "    ")
+	if err != nil {
+		utils.Warn("Failed to format JSON in %s: %v", file, err)
+		return false
+	}
+
+	// Add trailing newline
+	formatted = append(formatted, '\n')
+
+	// Write to temporary file first for atomic operation
+	tmpFile := file + ".tmp"
+	if err := os.WriteFile(tmpFile, formatted, 0o600); err != nil {
+		utils.Warn("Failed to write temporary file %s: %v", tmpFile, err)
+		return false
+	}
+
+	// Move temp file to original
+	if err := os.Rename(tmpFile, file); err != nil {
+		utils.Warn("Failed to replace %s: %v", file, err)
+		// Clean up temp file on failure
+		_ = os.Remove(tmpFile) //nolint:errcheck // cleanup on failure, ignore error
+		return false
+	}
+
+	return true
 }
 
 // JSON formats JSON files
 func (Format) JSON() error {
 	utils.Header("Formatting JSON Files")
-
-	// Check if formatter is available
-	if !utils.CommandExists("python3") {
-		utils.Warn("No JSON formatter available, install python3")
-		return nil
-	}
 
 	// Find JSON files
 	findArgs := []string{".", "-name", "*.json"}
@@ -508,7 +532,7 @@ func (Format) JSON() error {
 		return nil
 	}
 
-	// Format JSON files using python's json.tool
+	// Format JSON files using native Go
 	files := strings.Split(strings.TrimSpace(jsonFiles), "\n")
 	formatted := 0
 
@@ -523,123 +547,6 @@ func (Format) JSON() error {
 	} else {
 		utils.Info("No JSON files formatted")
 	}
-	return nil
-}
-
-// Markdown formats Markdown files
-func (Format) Markdown() error {
-	utils.Header("Formatting Markdown Files")
-
-	// Find Markdown files
-	findArgs := []string{".", "-name", "*.md"}
-	findArgs = append(findArgs, buildFindExcludeArgs()...)
-	mdFiles, err := GetRunner().RunCmdOutput("find", findArgs...)
-	if err != nil {
-		return fmt.Errorf("failed to find Markdown files: %w", err)
-	}
-
-	if mdFiles == "" {
-		utils.Info("No Markdown files found")
-		return nil
-	}
-
-	// No Markdown formatter available - skipping
-	utils.Info("No Markdown formatter available")
-	utils.Info("Skipping Markdown formatting")
-	return nil
-}
-
-// SQL formats SQL files
-func (Format) SQL() error {
-	utils.Header("Formatting SQL Files")
-
-	// Find SQL files
-	sqlFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.sql")
-	if err != nil {
-		return fmt.Errorf("failed to find SQL files: %w", err)
-	}
-
-	if sqlFiles == "" {
-		utils.Info("No SQL files found")
-		return nil
-	}
-
-	// Check if sqlfluff is available for SQL formatting
-	if utils.CommandExists("sqlfluff") {
-		utils.Info("Formatting SQL files with sqlfluff...")
-		if err := GetRunner().RunCmd("sqlfluff", "format", "."); err != nil {
-			return fmt.Errorf("sqlfluff formatting failed: %w", err)
-		}
-	} else {
-		utils.Info("sqlfluff not found, install with: pip install sqlfluff")
-		utils.Info("Skipping SQL formatting")
-		return nil
-	}
-
-	utils.Success("SQL files formatted")
-	return nil
-}
-
-// Dockerfile formats Dockerfile
-func (Format) Dockerfile() error {
-	utils.Header("Formatting Dockerfile")
-
-	// Check if Dockerfile exists
-	if !utils.FileExists("Dockerfile") {
-		utils.Info("No Dockerfile found")
-		return nil
-	}
-
-	// Check if dockerfile_lint is available
-	if utils.CommandExists("dockerfile_lint") {
-		utils.Info("Linting Dockerfile...")
-		if err := GetRunner().RunCmd("dockerfile_lint", "Dockerfile"); err != nil {
-			utils.Warn("Dockerfile linting failed: %v", err)
-		}
-	} else {
-		utils.Info("dockerfile_lint not found, install with: npm install -g dockerfile_lint")
-	}
-
-	// Basic formatting suggestions
-	utils.Info("Dockerfile formatting suggestions:")
-	utils.Info("  - Use multi-stage builds when possible")
-	utils.Info("  - Minimize layers by combining RUN commands")
-	utils.Info("  - Use .dockerignore to exclude unnecessary files")
-	utils.Info("  - Sort multi-line arguments alphabetically")
-
-	utils.Success("Dockerfile formatting guidance provided")
-	return nil
-}
-
-// Shell formats shell scripts
-func (Format) Shell() error {
-	utils.Header("Formatting Shell Scripts")
-
-	// Find shell script files
-	shellFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.sh", "-o", "-name", "*.bash")
-	if err != nil {
-		return fmt.Errorf("failed to find shell script files: %w", err)
-	}
-
-	if shellFiles == "" {
-		utils.Info("No shell script files found")
-		return nil
-	}
-
-	// Check if shfmt is available for shell formatting
-	if utils.CommandExists("shfmt") {
-		utils.Info("Formatting shell scripts with shfmt...")
-		// Format with 2-space indentation and simplified output
-		if err := GetRunner().RunCmd("shfmt", "-i", "2", "-w", "."); err != nil {
-			return fmt.Errorf("shfmt formatting failed: %w", err)
-		}
-	} else {
-		utils.Info("shfmt not found, install with: go install mvdan.cc/sh/v3/cmd/shfmt@latest")
-		utils.Info("Skipping shell script formatting")
-		return nil
-	}
-
-	utils.Success("Shell scripts formatted")
 	return nil
 }
 
