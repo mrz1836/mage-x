@@ -1,7 +1,9 @@
 {
-    "version": "2",
     "formatters": {
-        "enable": ["gofmt", "gofumpt"],
+        "enable": [
+            "gofmt",
+            "gofumpt"
+        ],
         "exclusions": {
             "generated": "lax",
             "paths": [
@@ -28,11 +30,60 @@
                 "extra-rules": false
             },
             "goimports": {
-                "local-prefixes": ["github.com/mrz1836/mage-x"]
+                "local-prefixes": [
+                    "github.com/mrz1836/mage-x"
+                ]
             }
         }
     },
+    "issues": {
+        "exclude-rules": [
+            {
+                "linters": [
+                    "gocyclo",
+                    "dupl",
+                    "gosec",
+                    "funlen",
+                    "goconst",
+                    "gocognit",
+                    "gochecknoglobals"
+                ],
+                "path": "_test\\.go"
+            },
+            {
+                "linters": [
+                    "goprintffuncname"
+                ],
+                "path": "pkg/utils/logger\\.go"
+            },
+            {
+                "linters": [
+                    "stylecheck"
+                ],
+                "text": "ST1000:"
+            },
+            {
+                "linters": [
+                    "lll"
+                ],
+                "source": "https://"
+            }
+        ],
+        "exclude-use-default": false,
+        "fix": true,
+        "max-issues-per-linter": 50,
+        "max-same-issues": 10,
+        "new": false,
+        "uniq-by-line": true
+    },
     "linters": {
+        "disable": [
+            "gocognit",
+            "funcorder",
+            "lll",
+            "recvcheck",
+            "gomoddirectives"
+        ],
         "enable": [
             "arangolint",
             "asasalint",
@@ -95,35 +146,13 @@
             "wastedassign",
             "zerologlint"
         ],
-        "disable": [
-            "gocognit",
-            "funcorder",
-            "lll",
-            "recvcheck",
-            "gomoddirectives"
-        ],
         "settings": {
             "depguard": {
-                "list-type": "blacklist",
                 "include-go-root": false,
-                "packages": ["github.com/sirupsen/logrus"]
-            },
-            "forbidigo": {
-                "forbid": [
-                    {
-                        "pattern": "^fmt\\.Println$",
-                        "msg": "Use utils.Info() instead of fmt.Println()"
-                    },
-                    {
-                        "pattern": "^print$",
-                        "msg": "Use utils.Info() instead of print()"
-                    },
-                    {
-                        "pattern": "^println$",
-                        "msg": "Use utils.Info() instead of println()"
-                    }
-                ],
-                "exclude-godoc-examples": true
+                "list-type": "blacklist",
+                "packages": [
+                    "github.com/sirupsen/logrus"
+                ]
             },
             "dogsled": {
                 "max-blank-identifiers": 2
@@ -132,11 +161,28 @@
                 "threshold": 100
             },
             "errcheck": {
-                "check-type-assertions": true,
-                "check-blank": true
+                "check-blank": true,
+                "check-type-assertions": true
             },
             "exhaustive": {
                 "default-signifies-exhaustive": false
+            },
+            "forbidigo": {
+                "exclude-godoc-examples": true,
+                "forbid": [
+                    {
+                        "msg": "Use utils.Info() instead of fmt.Println()",
+                        "pattern": "^fmt\\.Println$"
+                    },
+                    {
+                        "msg": "Use utils.Info() instead of print()",
+                        "pattern": "^print$"
+                    },
+                    {
+                        "msg": "Use utils.Info() instead of println()",
+                        "pattern": "^println$"
+                    }
+                ]
             },
             "funcorder": {
                 "constructor-after-struct": true
@@ -153,20 +199,26 @@
                 "min-occurrences": 5
             },
             "gocritic": {
+                "disabled-checks": [
+                    "commentedOutCode",
+                    "ifElseChain"
+                ],
                 "enabled-tags": [
                     "diagnostic",
                     "style",
                     "performance",
                     "experimental"
-                ],
-                "disabled-checks": ["commentedOutCode", "ifElseChain"]
+                ]
             },
             "gocyclo": {
                 "min-complexity": 15
             },
             "govet": {
-                "enable": ["atomicalign", "shadow"],
                 "check-shadowing": true,
+                "enable": [
+                    "atomicalign",
+                    "shadow"
+                ],
                 "settings": {
                     "printf": {
                         "funcs": [
@@ -183,8 +235,11 @@
                 "tab-width": 1
             },
             "misspell": {
-                "locale": "US",
-                "ignore-rules": ["mage", "golang"]
+                "ignore-rules": [
+                    "mage",
+                    "golang"
+                ],
+                "locale": "US"
             },
             "nakedret": {
                 "max-func-lines": 30
@@ -198,34 +253,25 @@
                 "require-specific": true
             },
             "prealloc": {
-                "simple": true,
+                "for-loops": false,
                 "range-loops": true,
-                "for-loops": false
+                "simple": true
+            },
+            "revive": {
+                "rules": [
+                    {
+                        "disabled": true,
+                        "name": "var-naming"
+                    }
+                ]
             },
             "unparam": {
                 "check-exported": false
             },
             "unused": {
                 "check-exported": false
-            },
-            "revive": {
-                "rules": [
-                    {
-                        "name": "var-naming",
-                        "disabled": true
-                    }
-                ]
             }
         }
-    },
-    "run": {
-        "allow-parallel-runners": true,
-        "concurrency": 8,
-        "timeout": "5m",
-        "issues-exit-code": 1,
-        "tests": true,
-        "build-tags": ["mage"],
-        "exclude-dirs": ["vendor", ".git", "testdata", "examples", "tmp", "bin"]
     },
     "output": {
         "formats": {
@@ -236,51 +282,45 @@
             }
         }
     },
+    "run": {
+        "allow-parallel-runners": true,
+        "build-tags": [
+            "mage"
+        ],
+        "concurrency": 8,
+        "exclude-dirs": [
+            "vendor",
+            ".git",
+            "testdata",
+            "examples",
+            "tmp",
+            "bin"
+        ],
+        "issues-exit-code": 1,
+        "tests": true,
+        "timeout": "5m"
+    },
     "severity": {
         "default": "warning",
         "rules": [
             {
-                "linters": ["dupl", "misspell", "makezero", "goconst"],
+                "linters": [
+                    "dupl",
+                    "misspell",
+                    "makezero",
+                    "goconst"
+                ],
                 "severity": "info"
             },
             {
-                "linters": ["gosec", "errcheck", "staticcheck"],
+                "linters": [
+                    "gosec",
+                    "errcheck",
+                    "staticcheck"
+                ],
                 "severity": "error"
             }
         ]
     },
-    "issues": {
-        "uniq-by-line": true,
-        "exclude-rules": [
-            {
-                "path": "_test\\.go",
-                "linters": [
-                    "gocyclo",
-                    "dupl",
-                    "gosec",
-                    "funlen",
-                    "goconst",
-                    "gocognit",
-                    "gochecknoglobals"
-                ]
-            },
-            {
-                "path": "pkg/utils/logger\\.go",
-                "linters": ["goprintffuncname"]
-            },
-            {
-                "linters": ["stylecheck"],
-                "text": "ST1000:"
-            },
-            {
-                "linters": ["lll"],
-                "source": "https://"
-            }
-        ],
-        "exclude-use-default": false,
-        "max-issues-per-linter": 50,
-        "max-same-issues": 10,
-        "new": false,
-        "fix": true
-    }
+    "version": "2"
 }

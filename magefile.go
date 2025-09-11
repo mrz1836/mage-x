@@ -877,34 +877,14 @@ func (l Lint) Go() error {
 	return impl.Go()
 }
 
-func (l Lint) Docker() error {
-	var impl mage.Lint
-	return impl.Docker()
-}
-
 func (l Lint) YAML() error {
 	var impl mage.Lint
 	return impl.YAML()
 }
 
-func (l Lint) Markdown() error {
-	var impl mage.Lint
-	return impl.Markdown()
-}
-
-func (l Lint) Shell() error {
-	var impl mage.Lint
-	return impl.Shell()
-}
-
 func (l Lint) JSON() error {
 	var impl mage.Lint
 	return impl.JSON()
-}
-
-func (l Lint) SQL() error {
-	var impl mage.Lint
-	return impl.SQL()
 }
 
 func (l Lint) Config() error {
@@ -1558,26 +1538,6 @@ func (f Format) YAML() error {
 func (f Format) JSON() error {
 	var impl mage.Format
 	return impl.JSON()
-}
-
-func (f Format) Markdown() error {
-	var impl mage.Format
-	return impl.Markdown()
-}
-
-func (f Format) SQL() error {
-	var impl mage.Format
-	return impl.SQL()
-}
-
-func (f Format) Dockerfile() error {
-	var impl mage.Format
-	return impl.Dockerfile()
-}
-
-func (f Format) Shell() error {
-	var impl mage.Format
-	return impl.Shell()
 }
 
 func (f Format) Fix() error {

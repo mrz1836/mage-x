@@ -410,7 +410,8 @@ magex build              # Build for current platform
 magex test               # Run complete test suite
 magex bench              # Run benchmarks
 magex lint:fix           # Auto-fix linting issues
-magex release:default    # Create a new release
+magex format:fix		 # Format code automatically
+magex version:bump 	     # Bump version (patch, minor, major)
 ```
 
 </details>
@@ -544,13 +545,14 @@ magex test -shuffle=on         # Randomize test execution
 magex test -parallel=4         # Set parallel test execution
 
 # Code Quality & Linting
+magex format:fix               # Run code formatting
 magex lint                     # Run essential linters
 magex lint verbose=true        # Run linters with verbose output
-magex lint:verbose             # Alternative: dedicated verbose linting command
 magex lint:fix                 # Auto-fix linting issues + apply formatting
 magex lint:issues              # Scan for TODOs, FIXMEs, nolint directives, and test skips
+magex lint:verbose             # Alternative: dedicated verbose linting command
+magex lint:version 		       # Show golangci-lint version
 magex test:vet                 # Run go vet static analysis
-magex format:fix               # Run code formatting
 magex tools:verify             # Show tool version information
 ```
 
@@ -576,10 +578,6 @@ magex format:imports      # Format imports
 magex format:go           # Format Go files
 magex format:yaml         # Format YAML files
 magex format:json         # Format JSON files
-magex format:markdown     # Format Markdown files
-magex format:sql          # Format SQL files
-magex format:dockerfile   # Format Dockerfiles
-magex format:shell        # Format shell scripts
 magex format:fix          # Fix formatting issues automatically
 magex format:check        # Check if files are properly formatted
 ```
