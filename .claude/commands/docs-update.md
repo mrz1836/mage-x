@@ -1,5 +1,5 @@
 ---
-allowed-tools: Task(mage-x-docs), Task(mage-x-analyzer), Task(mage-x-architect), Task(mage-x-test-finder), Bash(mage docs:*), Read, Write, MultiEdit, Grep, Glob, LS
+allowed-tools: Task(mage-x-docs), Task(mage-x-analyzer), Task(mage-x-architect), Task(mage-x-test-finder), Bash(magex docs:*), Read, Write, MultiEdit, Grep, Glob, LS
 argument-hint: [feature|api|changelog|all]
 description: Update documentation for new or modified features
 model: claude-sonnet-4-20250514

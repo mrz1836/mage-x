@@ -42,7 +42,7 @@ When invoked, you must follow these steps:
    - Test workflow execution and error handling
    - Verify performance and resource optimization
    - Validate security and compliance requirements
-   - Ensure proper integration with mage commands
+   - Ensure proper integration with magex commands
 
 6. **Generate Documentation and Maintenance Guides**
    - Create workflow documentation and runbooks

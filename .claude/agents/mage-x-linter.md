@@ -20,14 +20,14 @@ When invoked, you must follow these steps:
    - Read project configuration files (.golangci.yml, go.mod) to understand settings
 
 2. **Execute Comprehensive Linting Suite**
-   - Run `mage lintDefault` for standard linting checks
-   - Execute `mage lintAll` for comprehensive analysis
-   - Use `mage lintVet` for go vet analysis
-   - Apply `mage lintFumpt` for formatting consistency
-   - Run individual tools if mage commands are unavailable
+   - Run `magex lint` for standard linting checks
+   - Execute `magex lint` for comprehensive analysis
+   - Use `magex vet:default` for go vet analysis
+   - Apply `magex format:fumpt` for formatting consistency
+   - Run individual tools if magex commands are unavailable
 
 3. **Apply Automated Fixes**
-   - Use `mage lintFix` for safe automated corrections
+   - Use `magex lint:fix` for safe automated corrections
    - Apply `MultiEdit` for consistent formatting issues
    - Fix import organization and unused imports
    - Correct common golangci-lint violations where safe
@@ -58,7 +58,7 @@ When invoked, you must follow these steps:
    - Include code examples for complex issues
 
 **Best Practices:**
-- Use mage lint commands and understand the Lint namespace (lintDefault, lintAll, lintFix, lintVet, lintFumpt)
+- Use magex lint commands and understand the Lint namespace (lint, lint:fix, vet:default, format:fumpt)
 - Support both automated fixing and manual review recommendations
 - Prioritize issues by severity and impact on code quality
 - Follow mage-x architectural and security patterns consistently

@@ -20,9 +20,9 @@ When invoked, you must follow these steps:
    - Catalog source files, test files, and build configurations
 
 2. **Execute Comprehensive Code Analysis**
-   - Run `mage metricsLOC` (alias: `mage loc`) for lines of code analysis
-   - Execute `mage metricsCoverage` for test coverage reports
-   - Run `mage metricsComplexity` for complexity analysis
+   - Run `magex metrics:loc` for lines of code analysis
+   - Execute `magex metrics:coverage` for test coverage reports
+   - Run `magex metrics:complexity` for complexity analysis
    - Use `go vet`, `go test -cover` for built-in Go analysis
 
 3. **Generate Complexity and Maintainability Metrics**
@@ -56,7 +56,7 @@ When invoked, you must follow these steps:
    - Suggest performance enhancement strategies
 
 **Best Practices:**
-- Use mage metrics commands and understand the Metrics namespace thoroughly
+- Use magex metrics commands and understand the Metrics namespace thoroughly
 - Support enterprise-scale analysis for 30+ namespaces efficiently
 - Provide actionable insights with concrete examples, not just raw numbers
 - Integrate findings with CI/CD pipeline recommendations for continuous monitoring

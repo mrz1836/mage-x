@@ -97,7 +97,7 @@ Dead Links: [count]
 ### Outdated References
 ```
 📝 File: README.md
-   Line 234: References "mage buildAll" (now "mage build:all")
+   Line 234: References "magex buildAll" (now "magex build:all")
    Line 567: Links to deleted file "old-guide.md"
 
 📝 File: docs/configuration.md

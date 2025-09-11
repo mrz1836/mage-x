@@ -1,12 +1,12 @@
 ---
-allowed-tools: Task(mage-x-releaser), Task(mage-x-git), Task(mage-x-gh), Task(mage-x-security), Task(mage-x-docs), Task(mage-x-linter), Task(mage-x-test-writer), Bash(mage release:*), Bash(mage version:*), Bash(git:*), Bash(gh release:*), Read, Write, MultiEdit, Grep, Glob
+allowed-tools: Task(mage-x-releaser), Task(mage-x-git), Task(mage-x-gh), Task(mage-x-security), Task(mage-x-docs), Task(mage-x-linter), Task(mage-x-test-writer), Bash(magex release:*), Bash(magex version:*), Bash(git:*), Bash(gh release:*), Read, Write, MultiEdit, Grep, Glob
 argument-hint: [version|channel|dry-run]
 description: Comprehensive release preparation with parallel validation
 model: claude-sonnet-4-20250514
 ---
 
 ## Context
-- Current version: !`mage version:show 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"`
+- Current version: !`magex version:show 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"`
 - Pending changes: !`git status --porcelain | wc -l | xargs echo "Modified files:"`
 - Recent commits: !`git log --oneline -10`
 - Release channels: !`grep -E "channels:|stable|beta|edge" .mage.yaml 2>/dev/null | head -5`

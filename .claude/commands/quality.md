@@ -1,5 +1,5 @@
 ---
-allowed-tools: Task(mage-x-linter), Task(mage-x-test-finder), Task(mage-x-security), Task(mage-x-analyzer), Task(mage-x-architect), Task(mage-x-benchmark), Bash(mage lint:*), Bash(mage test:*), Bash(mage metrics:*), Read, Grep, Glob, LS
+allowed-tools: Task(mage-x-linter), Task(mage-x-test-finder), Task(mage-x-security), Task(mage-x-analyzer), Task(mage-x-architect), Task(mage-x-benchmark), Bash(magex lint:*), Bash(magex test:*), Bash(magex metrics:*), Read, Grep, Glob, LS
 argument-hint: [full|quick|security|performance]
 description: Comprehensive code quality assessment with parallel analysis
 model: claude-sonnet-4-20250514
@@ -18,7 +18,7 @@ Perform a comprehensive quality assessment through coordinated parallel agent an
 Execute all agents simultaneously for maximum efficiency:
 
 1. **mage-x-linter** - Code Quality:
-   - Run full linting suite (`mage lint:all`)
+   - Run full linting suite (`magex lint`)
    - Analyze code style compliance
    - Check documentation quality
    - Identify technical debt

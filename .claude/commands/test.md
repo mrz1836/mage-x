@@ -1,13 +1,13 @@
 ---
-allowed-tools: Task(mage-x-test-finder), Task(mage-x-test-writer), Task(mage-x-analyzer), Task(mage-x-security), Task(mage-x-linter), Task(mage-x-architect), Bash(mage test:*), Bash(go test:*), Read, Write, MultiEdit, Grep, Glob, LS
+allowed-tools: Task(mage-x-test-finder), Task(mage-x-test-writer), Task(mage-x-analyzer), Task(mage-x-security), Task(mage-x-linter), Task(mage-x-architect), Bash(magex test:*), Bash(go test:*), Read, Write, MultiEdit, Grep, Glob, LS
 argument-hint: [specific-path-or-namespace]
 description: Create comprehensive Go tests with parallel agent execution
 model: claude-sonnet-4-20250514
 ---
 
 ## Context
-- Project overview: !`mage -version 2>/dev/null || echo "mage-x build system"`
-- Test execution modes: !`mage -l | grep -E "^test" | head -10`
+- Project overview: !`magex -version 2>/dev/null || echo "mage-x build system"`
+- Test execution modes: !`magex -l | grep -E "^test" | head -10`
 - Recent test results: !`go test -v ./... 2>&1 | grep -E "(PASS|FAIL|ok|SKIP)" | tail -20`
 
 ## Your Task
@@ -33,7 +33,7 @@ Please coordinate the following agents in parallel for optimal test creation:
 
 ### Phase 3: Quality Validation (Parallel)
 1. **mage-x-linter**: Validate test code quality and patterns
-2. **Execute Tests**: Run `mage test:unit` and `mage test:race` to validate
+2. **Execute Tests**: Run `magex test:unit` and `magex test:race` to validate
 
 ## Requirements
 - Focus on the 30+ namespace architecture and interface implementations

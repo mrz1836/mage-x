@@ -28,7 +28,7 @@ When invoked, you must follow these steps:
 
 3. **Identify Outdated Dependencies**
    - Run `go list -u -m all` to check for available updates
-   - Execute mage commands: `mage deps:outdated` if available
+   - Execute magex commands: `magex deps:outdated` if available
    - Assess semantic versioning implications of updates
    - Prioritize security updates over feature updates
 
@@ -71,7 +71,7 @@ When invoked, you must follow these steps:
 
 **Mage Integration:**
 
-- Use mage commands when available: `mage deps:update`, `mage deps:tidy`, `mage deps:audit`
+- Use magex commands when available: `magex deps:update`, `magex deps:tidy`, `magex deps:audit`
 - Understand mage-x namespace patterns and tool dependencies
 - Coordinate with build system requirements and constraints
 - Support both development and production dependency profiles

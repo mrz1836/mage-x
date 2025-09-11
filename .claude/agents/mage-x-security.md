@@ -20,7 +20,7 @@ When invoked, you must follow these steps:
    - Read key security files in `pkg/security/` to understand current security architecture
 
 2. **Vulnerability Scanning**
-   - Execute `mage tools:vulncheck` to check for known vulnerabilities in dependencies
+   - Execute `magex deps:audit` to check for known vulnerabilities in dependencies
    - Run `gosec` security scanner using `Bash` for static analysis
    - Use `govulncheck` to identify vulnerabilities in the Go toolchain and dependencies
    - Check for outdated dependencies with security implications

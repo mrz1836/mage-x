@@ -17,11 +17,11 @@ When invoked, you must follow these steps:
 1. **Analyze Configuration State**
    - Examine current mage.yaml files and configuration structure
    - Use `LS` and `Read` to identify all configuration files
-   - Run `mage yaml:show` to display current active configuration
+   - Run `magex yaml:show` to display current active configuration
    - Document configuration hierarchy and precedence
 
 2. **Validate YAML Configuration**
-   - Run `mage yaml:validate` to check YAML syntax and structure
+   - Run `magex yaml:validate` to check YAML syntax and structure
    - Use `Read` to examine mage.yaml files for completeness
    - Validate required fields and configuration schema
    - Check for deprecated or invalid configuration keys
@@ -57,7 +57,7 @@ When invoked, you must follow these steps:
    - Generate enterprise governance compliance reports
 
 **Best Practices:**
-- Always use mage yaml commands to interact with configuration system
+- Always use magex yaml commands to interact with configuration system
 - Understand the Yaml namespace methods for configuration management
 - Support both YAML and environment variable configuration patterns
 - Validate configuration security and handle sensitive data appropriately

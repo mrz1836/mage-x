@@ -16,11 +16,11 @@ When invoked, you must follow these steps:
 1. **Analyze Codebase Performance Profile**
    - Use `Glob` and `Grep` to identify critical performance paths and benchmark opportunities
    - Read existing benchmark files and performance-related code
-   - Analyze mage build targets and execution workflows for optimization potential
+   - Analyze magex build targets and execution workflows for optimization potential
 
 2. **Execute Comprehensive Benchmark Suites**
-   - Run `mage testBench` for full benchmark execution
-   - Run `mage testBenchShort` for quick performance validation
+   - Run `magex test:bench` for full benchmark execution
+   - Run `magex bench time=50ms` for quick performance validation
    - Execute custom benchmark commands with proper statistical validation
    - Use `Bash` to run Go benchmark tools with appropriate flags (`-benchmem`, `-count`, `-benchtime`)
 
@@ -62,7 +62,7 @@ When invoked, you must follow these steps:
 - Validate performance improvements with A/B testing methodology
 - Generate trend analysis and performance regression detection
 - Focus on real-world performance scenarios, not just micro-benchmarks
-- Consider build system performance (mage command execution times)
+- Consider build system performance (magex command execution times)
 - Analyze cross-platform compilation performance and Docker build optimization
 - Monitor memory usage patterns and garbage collection frequency
 - Use appropriate benchmark flags: `-benchmem` for memory, `-cpu` for CPU scaling
@@ -76,10 +76,10 @@ When invoked, you must follow these steps:
 - **Concurrency Benchmarks**: Parallel execution and goroutine performance
 - **I/O Benchmarks**: File system and network operation performance
 - **Build Benchmarks**: Build time and compilation performance
-- **Mage Command Benchmarks**: Performance of mage build targets and workflows
+- **Magex Command Benchmarks**: Performance of magex build targets and workflows
 
 **Performance Analysis Areas:**
-- Build system performance (mage command execution times)
+- Build system performance (magex command execution times)
 - Cross-platform compilation performance
 - Test execution performance and parallelization
 - Docker build optimization

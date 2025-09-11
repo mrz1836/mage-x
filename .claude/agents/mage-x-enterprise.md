@@ -24,7 +24,7 @@ When invoked, you must follow these steps:
    - Implement tamper-proof logging mechanisms
    - Create audit event categorization and retention policies
    - Establish log aggregation and monitoring capabilities
-   - Execute `mage auditShow` to display audit events when needed
+   - Execute `magex audit:show` to display audit events when needed
 
 3. **Configure Compliance Reporting**
    - Generate compliance reports for multiple frameworks simultaneously

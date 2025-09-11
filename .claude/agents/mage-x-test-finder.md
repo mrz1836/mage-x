@@ -35,10 +35,10 @@ When invoked, you must follow these steps:
    - Coordinate performance testing needs with mage-x-benchmark
 
 4. **Mage Integration Analysis**
-   - Reference mage test commands: `mage testUnit`, `mage testRace`, `mage testCover`, `mage testBench`
+   - Reference magex test commands: `magex test:unit`, `magex test:race`, `magex test:cover`, `magex test:bench`
    - Analyze build tag testing requirements
    - Assess parallel testing optimization opportunities with t.Parallel()
-   - Evaluate integration with existing mage testing workflows
+   - Evaluate integration with existing magex testing workflows
 
 5. **Security-Critical Code Identification**
    - Prioritize testing for security-sensitive functions
@@ -107,7 +107,7 @@ Provide your analysis in the following structured format:
 - **Integration Points**: Cross-component testing requirements
 
 ### Mage Integration Opportunities
-- Specific mage command integration recommendations
+- Specific magex command integration recommendations
 - Build tag testing strategy
 - Parallel execution optimization plan
 - Workflow integration improvements

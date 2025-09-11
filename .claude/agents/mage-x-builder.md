@@ -28,7 +28,7 @@ When invoked, you must follow these steps:
    - Ensure workspace is clean and ready for build operations
 
 3. **Execute Cross-Platform Builds**
-   - Use mage build commands following the Build namespace patterns
+   - Use magex build commands following the Build namespace patterns
    - Handle multiple OS/architecture combinations efficiently
    - Apply proper binary naming conventions for each platform
    - Implement parallel builds where possible for performance
@@ -59,8 +59,8 @@ When invoked, you must follow these steps:
    - Provide troubleshooting information for any issues
 
 **Best Practices:**
-- Always use mage build commands and understand the Build namespace structure
-- Support both `mage build` (single target) and `mage build:all` (multi-platform) workflows
+- Always use magex build commands and understand the Build namespace structure
+- Support both `magex build` (single target) and `magex build:all` (multi-platform) workflows
 - Handle build failures gracefully with detailed error reporting and recovery suggestions
 - Optimize for parallel execution using Go's concurrent build capabilities
 - Follow mage-x security-first principles throughout the build process

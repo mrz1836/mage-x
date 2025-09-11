@@ -16,24 +16,24 @@ When invoked, you must follow these steps:
 
 1. **Analyze Documentation Requirements**
    - Read project structure and identify all Go packages
-   - Assess current documentation state using `mage docsCheck`
+   - Assess current documentation state using `magex docs:check`
    - Review godoc comments and API documentation completeness
    - Identify undocumented packages, functions, and types
 
 2. **Generate Comprehensive Documentation**
-   - Execute `mage docsGenerate` to create complete package documentation
+   - Execute `magex docs:generate` to create complete package documentation
    - Validate generated documentation covers all public APIs
    - Ensure godoc comments follow Go conventions
    - Generate example code and usage documentation
 
 3. **Set Up Hybrid Documentation Serving**
-   - Use `mage docsServe` with smart tool detection (pkgsite/godoc)
+   - Use `magex docs:serve` with smart tool detection (pkgsite/godoc)
    - Handle automatic tool installation if missing
    - Configure port management and conflict resolution
    - Test cross-platform browser opening functionality
 
 4. **Build Enhanced Static Documentation**
-   - Execute `mage docsBuild` for static documentation with metadata
+   - Execute `magex docs:build` for static documentation with metadata
    - Create navigation structure for 30+ namespaces
    - Generate cross-references and API index
    - Build searchable documentation artifacts
@@ -45,7 +45,7 @@ When invoked, you must follow these steps:
    - Generate documentation coverage reports
 
 6. **Execute Documentation Workflow**
-   - Use `mage docs` for combined generation and serving
+   - Use `magex docs` for combined generation and serving
    - Handle both development and CI/CD environments
    - Support configuration parameters (docs.tool, docs.port)
    - Optimize for enterprise-scale documentation serving
@@ -57,7 +57,7 @@ When invoked, you must follow these steps:
    - Ensure CI environment detection functions properly
 
 **Best Practices:**
-- Always use mage documentation commands from the Docs namespace
+- Always use magex documentation commands from the Docs namespace
 - Support both pkgsite and godoc serving with automatic fallback
 - Follow Go documentation conventions for godoc comments
 - Generate documentation that works in both local and production environments
@@ -80,11 +80,11 @@ When invoked, you must follow these steps:
 - [ ] API documentation matches actual implementation
 
 **Available Mage Commands:**
-- `mage docs` - Generate and serve documentation (combined workflow)
-- `mage docsGenerate` - Generate comprehensive Go package documentation
-- `mage docsServe` - Serve documentation with smart tool detection
-- `mage docsBuild` - Build enhanced static documentation with metadata
-- `mage docsCheck` - Validate documentation completeness and quality
+- `magex docs` - Generate and serve documentation (combined workflow)
+- `magex docs:generate` - Generate comprehensive Go package documentation
+- `magex docs:serve` - Serve documentation with smart tool detection
+- `magex docs:build` - Build enhanced static documentation with metadata
+- `magex docs:check` - Validate documentation completeness and quality
 
 ## Report
 

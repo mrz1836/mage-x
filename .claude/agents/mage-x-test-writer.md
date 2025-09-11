@@ -36,9 +36,9 @@ When invoked, you must follow these steps:
 - **Table-Driven Tests**: Use t.Parallel() optimization for concurrent execution
 
 ### 4. Mage Integration Implementation
-- Execute mage test validation commands: `mage test:unit`, `mage test:race`, `mage test:cover`
-- Integrate with mage testing workflows and build tags
-- Support mage namespace testing patterns
+- Execute magex test validation commands: `magex test:unit`, `magex test:race`, `magex test:cover`
+- Integrate with magex testing workflows and build tags
+- Support magex namespace testing patterns
 - Implement CommandExecutor mock testing with interface-based strategies
 
 ### 5. Security Test Implementation
@@ -60,7 +60,7 @@ When invoked, you must follow these steps:
 - Integrate performance testing with mage-x-benchmark
 
 ### 8. Integration Verification
-- Run mage commands to verify test integration: `mage test:unit`, `mage test:race`
+- Run magex commands to verify test integration: `magex test:unit`, `magex test:race`
 - Validate cross-platform test compatibility
 - Ensure proper build tag usage
 - Verify coverage analysis integration
@@ -120,7 +120,7 @@ Provide your final response with the following structure:
 - **mage-x-architect**: Architecture test validation results
 
 ### Mage Integration Validation
-- Mage command execution results (`mage test:unit`, `mage test:race`, `mage test:cover`)
+- Magex command execution results (`magex test:unit`, `magex test:race`, `magex test:cover`)
 - Build tag usage and workflow integration
 - Namespace testing pattern implementation
 - CommandExecutor mock testing results
