@@ -276,7 +276,7 @@ func (Lint) Fmt() error {
 	}
 
 	// Check formatting
-	unformatted := []string{}
+	var unformatted []string
 	for _, pkg := range packages {
 		output, err := GetRunner().RunCmdOutput("gofmt", "-l", pkg)
 		if err != nil {
@@ -460,7 +460,7 @@ func (Lint) VetParallel() error {
 	}
 
 	// Create channel for errors
-	errors := make(chan error, len(modulePackages))
+	errs := make(chan error, len(modulePackages))
 	semaphore := make(chan struct{}, config.Build.Parallel)
 
 	start := time.Now()
@@ -477,10 +477,10 @@ func (Lint) VetParallel() error {
 			}
 			args = append(args, p)
 
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				errors <- fmt.Errorf("vet %s: %w", p, err)
+			if runErr := GetRunner().RunCmd("go", args...); runErr != nil {
+				errs <- fmt.Errorf("vet %s: %w", p, runErr)
 			} else {
-				errors <- nil
+				errs <- nil
 			}
 		}(pkg)
 	}
@@ -488,8 +488,8 @@ func (Lint) VetParallel() error {
 	// Collect results
 	var vetErrors []string
 	for i := 0; i < len(modulePackages); i++ {
-		if err := <-errors; err != nil {
-			vetErrors = append(vetErrors, err.Error())
+		if runErr := <-errs; runErr != nil {
+			vetErrors = append(vetErrors, runErr.Error())
 		}
 	}
 
@@ -515,7 +515,8 @@ func (Lint) Version() error {
 	if configFile == "default (no config file found)" {
 		fmt.Printf("  Config file: %s\n", configFile)
 	} else {
-		absPath, err := filepath.Abs(configFile)
+		var absPath string
+		absPath, err = filepath.Abs(configFile)
 		if err != nil {
 			absPath = configFile
 		}
@@ -750,33 +751,6 @@ func (Lint) Go() error {
 	return nil
 }
 
-// Docker runs Docker linters
-func (Lint) Docker() error {
-	utils.Header("Running Docker Linters")
-
-	// Check if Dockerfile exists
-	if !utils.FileExists("Dockerfile") {
-		utils.Warn("No Dockerfile found, skipping Docker linting")
-		return nil
-	}
-
-	hadolintVersion := getLinterVersion("hadolint")
-
-	// Check if hadolint is available
-	if !utils.CommandExists("hadolint") {
-		utils.Info("hadolint not found, install it for Docker linting: brew install hadolint")
-		return nil
-	}
-
-	utils.Info("Running hadolint %s...", hadolintVersion)
-	if err := GetRunner().RunCmd("hadolint", "Dockerfile"); err != nil {
-		return fmt.Errorf("docker linting failed: %w", err)
-	}
-
-	utils.Success("Docker linting passed with hadolint %s", hadolintVersion)
-	return nil
-}
-
 // YAML runs YAML linters
 func (Lint) YAML() error {
 	utils.Header("Running YAML Linters")
@@ -813,65 +787,20 @@ func (Lint) Yaml() error {
 	return Lint{}.YAML()
 }
 
-// Markdown runs Markdown linters
-func (Lint) Markdown() error {
-	utils.Header("Running Markdown Linters")
-
-	// Find Markdown files
-	mdFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.md", "-not", "-path", "./vendor/*")
+// validateJSONFile validates a single JSON file using native Go
+func validateJSONFile(file string) error {
+	// Read the JSON file
+	data, err := os.ReadFile(file) //nolint:gosec // file path is user-provided via API
 	if err != nil {
-		return fmt.Errorf("failed to find Markdown files: %w", err)
-	}
-	if mdFiles == "" {
-		utils.Info("No Markdown files found")
-		return nil
+		return fmt.Errorf("failed to read file: %w", err)
 	}
 
-	markdownlintVersion := getLinterVersion("markdownlint")
-
-	// Check if markdownlint is available
-	if !utils.CommandExists("markdownlint") {
-		utils.Info("markdownlint not found, install it for Markdown linting: npm install -g markdownlint-cli")
-		return nil
+	// Parse JSON to validate syntax
+	var jsonData interface{}
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return fmt.Errorf("invalid JSON syntax: %w", err)
 	}
 
-	utils.Info("Running markdownlint %s...", markdownlintVersion)
-	if err := GetRunner().RunCmd("markdownlint", "*.md"); err != nil {
-		return fmt.Errorf("markdown linting failed: %w", err)
-	}
-
-	utils.Success("Markdown linting passed with markdownlint %s", markdownlintVersion)
-	return nil
-}
-
-// Shell runs shell script linters
-func (Lint) Shell() error {
-	utils.Header("Running Shell Script Linters")
-
-	// Find shell script files
-	shellFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.sh", "-o", "-name", "*.bash")
-	if err != nil {
-		return fmt.Errorf("failed to find shell script files: %w", err)
-	}
-	if shellFiles == "" {
-		utils.Info("No shell script files found")
-		return nil
-	}
-
-	shellcheckVersion := getLinterVersion("shellcheck")
-
-	// Check if shellcheck is available
-	if !utils.CommandExists("shellcheck") {
-		utils.Info("shellcheck not found, install it for shell linting: brew install shellcheck")
-		return nil
-	}
-
-	utils.Info("Running shellcheck %s...", shellcheckVersion)
-	if err := GetRunner().RunCmd("shellcheck", "**/*.sh"); err != nil {
-		return fmt.Errorf("shell linting failed: %w", err)
-	}
-
-	utils.Success("Shell script linting passed with shellcheck %s", shellcheckVersion)
 	return nil
 }
 
@@ -889,48 +818,17 @@ func (Lint) JSON() error {
 		return nil
 	}
 
-	// Validate JSON syntax using built-in tools
+	// Validate JSON syntax using native Go
 	files := strings.Split(strings.TrimSpace(jsonFiles), "\n")
 	for _, file := range files {
 		if file != "" {
-			if err := GetRunner().RunCmd("python3", "-m", "json.tool", file); err != nil {
+			if err := validateJSONFile(file); err != nil {
 				return fmt.Errorf("json validation failed for %s: %w", file, err)
 			}
 		}
 	}
 
 	utils.Success("JSON linting passed")
-	return nil
-}
-
-// SQL runs SQL linters
-func (Lint) SQL() error {
-	utils.Header("Running SQL Linters")
-
-	// Find SQL files
-	sqlFiles, err := GetRunner().RunCmdOutput("find", ".", "-name", "*.sql")
-	if err != nil {
-		return fmt.Errorf("failed to find SQL files: %w", err)
-	}
-	if sqlFiles == "" {
-		utils.Info("No SQL files found")
-		return nil
-	}
-
-	sqlfluffVersion := getLinterVersion("sqlfluff")
-
-	// Check if sqlfluff is available
-	if !utils.CommandExists("sqlfluff") {
-		utils.Info("sqlfluff not found, install it for SQL linting: pip install sqlfluff")
-		return nil
-	}
-
-	utils.Info("Running sqlfluff %s...", sqlfluffVersion)
-	if err := GetRunner().RunCmd("sqlfluff", "lint", "."); err != nil {
-		return fmt.Errorf("sql linting failed: %w", err)
-	}
-
-	utils.Success("SQL linting passed with sqlfluff %s", sqlfluffVersion)
 	return nil
 }
 
@@ -948,7 +846,7 @@ func (Lint) Config() error {
 			utils.Info("Validating %s", file)
 			// Basic validation - check if file is readable
 			if strings.HasSuffix(file, ".json") {
-				if err := GetRunner().RunCmd("python3", "-m", "json.tool", file); err != nil {
+				if err := validateJSONFile(file); err != nil {
 					return fmt.Errorf("config validation failed for %s: %w", file, err)
 				}
 			}
@@ -993,7 +891,7 @@ func (Lint) CI() error {
 	return nil
 }
 
-// Fast runs fast linters only
+// Fast will run fast linters only
 func (Lint) Fast() error {
 	utils.Header("Running Fast Linters")
 
@@ -1109,7 +1007,7 @@ func runVetInModule(module ModuleInfo, config *Config) error {
 }
 
 // applyCodeFormattingInModule applies code formatting in a specific module
-func applyCodeFormattingInModule(module ModuleInfo, linter Lint) error {
+func applyCodeFormattingInModule(module ModuleInfo, _ Lint) error {
 	// Save current directory
 	originalDir, err := os.Getwd()
 	if err != nil {
@@ -1117,7 +1015,7 @@ func applyCodeFormattingInModule(module ModuleInfo, linter Lint) error {
 	}
 
 	// Change to module directory
-	if err := os.Chdir(module.Path); err != nil {
+	if err = os.Chdir(module.Path); err != nil {
 		return fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
 	}
 
