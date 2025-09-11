@@ -203,17 +203,7 @@ jobs:
         run: mage test:unit
 
   summary:
-    needs:
-      [
-        standard-tests,
-        coverage-tests,
-        race-tests,
-        integration-tests,
-        coverage-race-tests,
-        fuzz-tests,
-        loc-metrics,
-        test-matrix
-      ]
+    needs: [standard-tests, coverage-tests, race-tests, integration-tests, coverage-race-tests, fuzz-tests, loc-metrics, test-matrix]
     runs-on: ubuntu-latest
     if: always()
 

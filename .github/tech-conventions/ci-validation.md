@@ -25,7 +25,7 @@ Failing PRs will be blocked. AI agents should iterate until CI passes.
 1. **Code Quality Checks**
    - Format validation (gofmt, goimports, gofumpt)
    - Linting with 60+ linters via golangci-lint
-   - YAML formatting with Prettier
+   - YAML formatting with yamlfmt
 
 2. **Testing Suite**
    - Unit tests with coverage reporting

@@ -231,6 +231,7 @@ func (Install) Tools() error {
 	}{
 		{"golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint@latest", "Linter aggregator"},
 		{"gofumpt", "mvdan.cc/gofumpt@latest", "Stricter gofmt"},
+		{"yamlfmt", "github.com/google/yamlfmt/cmd/yamlfmt@" + GetDefaultYamlfmtVersion(), "YAML formatter"},
 		{"godoc", "golang.org/x/tools/cmd/godoc@latest", "Documentation server"},
 		{"goimports", "golang.org/x/tools/cmd/goimports@latest", "Import organizer"},
 		{"govulncheck", "golang.org/x/vuln/cmd/govulncheck@latest", "Vulnerability scanner"},

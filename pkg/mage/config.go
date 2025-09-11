@@ -93,6 +93,7 @@ type LintConfig struct {
 type ToolsConfig struct {
 	Custom       map[string]string `yaml:"custom"`
 	Fumpt        string            `yaml:"fumpt"`
+	Yamlfmt      string            `yaml:"yamlfmt"`
 	GoVulnCheck  string            `yaml:"govulncheck"`
 	GolangciLint string            `yaml:"golangci_lint"`
 	Mockgen      string            `yaml:"mockgen"`
@@ -162,6 +163,7 @@ func GetToolVersion(toolName string) string {
 	}{
 		"golangci-lint": {"MAGE_X_GOLANGCI_LINT_VERSION", "GOLANGCI_LINT_VERSION"},
 		"gofumpt":       {"MAGE_X_GOFUMPT_VERSION", "GOFUMPT_VERSION"},
+		"yamlfmt":       {"MAGE_X_YAMLFMT_VERSION", "YAMLFMT_VERSION"},
 		"govulncheck":   {"MAGE_X_GOVULNCHECK_VERSION", "GOVULNCHECK_VERSION"},
 		"mockgen":       {"MAGE_X_MOCKGEN_VERSION", "MOCKGEN_VERSION"},
 		"swag":          {"MAGE_X_SWAG_VERSION", "SWAG_VERSION"},
@@ -169,7 +171,6 @@ func GetToolVersion(toolName string) string {
 		"nancy":         {"MAGE_X_NANCY_VERSION", "NANCY_VERSION"},
 		"gitleaks":      {"MAGE_X_GITLEAKS_VERSION", "GITLEAKS_VERSION"},
 		"goreleaser":    {"MAGE_X_GORELEASER_VERSION", "GORELEASER_VERSION"},
-		"prettier":      {"MAGE_X_PRETTIER_VERSION", "PRETTIER_VERSION"},
 	}
 
 	toolInfo, exists := toolVersionMap[toolName]
@@ -412,6 +413,7 @@ func defaultConfig() *Config {
 		Tools: ToolsConfig{
 			GolangciLint: VersionLatest,
 			Fumpt:        VersionLatest,
+			Yamlfmt:      VersionLatest,
 			GoVulnCheck:  VersionLatest,
 			Mockgen:      VersionLatest,
 			Swag:         VersionLatest,
@@ -582,6 +584,9 @@ func applyToolVersionEnvOverrides(cfg *ToolsConfig) {
 	}
 	if v := utils.GetEnvClean("MAGE_X_GOFUMPT_VERSION"); v != "" {
 		cfg.Fumpt = v
+	}
+	if v := utils.GetEnvClean("MAGE_X_YAMLFMT_VERSION"); v != "" {
+		cfg.Yamlfmt = v
 	}
 
 	// Security scanning tools

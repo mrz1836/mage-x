@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -296,6 +297,7 @@ func (ts *ConstantsTestSuite) TestToolVersions() {
 	toolVersions := map[string]string{
 		"DefaultGolangciLintVersion": GetDefaultGolangciLintVersion(),
 		"DefaultGofumptVersion":      GetDefaultGofumptVersion(),
+		"DefaultYamlfmtVersion":      GetDefaultYamlfmtVersion(),
 		"DefaultGoVulnCheckVersion":  GetDefaultGoVulnCheckVersion(),
 		"DefaultMockgenVersion":      GetDefaultMockgenVersion(),
 		"DefaultSwagVersion":         GetDefaultSwagVersion(),
@@ -311,12 +313,164 @@ func (ts *ConstantsTestSuite) TestToolVersions() {
 
 	// Test version functions return valid values (either from env or fallback)
 	vulnVersion := GetDefaultGoVulnCheckVersion()
-	ts.Require().True(vulnVersion == "latest" || strings.HasPrefix(vulnVersion, "v"),
+	ts.Require().True(vulnVersion == VersionLatest || strings.HasPrefix(vulnVersion, "v"),
 		"GoVulnCheck version should be 'latest' or start with 'v', got: %s", vulnVersion)
 
 	lintVersion := GetDefaultGolangciLintVersion()
-	ts.Require().True(lintVersion == "latest" || strings.HasPrefix(lintVersion, "v"),
+	ts.Require().True(lintVersion == VersionLatest || strings.HasPrefix(lintVersion, "v"),
 		"GolangciLint version should be 'latest' or start with 'v', got: %s", lintVersion)
+}
+
+// TestYamlfmtVersionEnvironmentHandling tests yamlfmt version environment variable handling
+func (ts *ConstantsTestSuite) TestYamlfmtVersionEnvironmentHandling() {
+	// Test with environment variables
+	testCases := []struct {
+		name              string
+		mageXVersion      string
+		fallbackVersion   string
+		expectedVersion   string
+		shouldUseMageX    bool
+		shouldUseFallback bool
+	}{
+		{
+			name:            "MAGE_X_YAMLFMT_VERSION takes precedence",
+			mageXVersion:    "v0.10.0",
+			fallbackVersion: "v0.9.0",
+			expectedVersion: "v0.10.0",
+			shouldUseMageX:  true,
+		},
+		{
+			name:              "YAMLFMT_VERSION as fallback",
+			mageXVersion:      "",
+			fallbackVersion:   "v0.9.0",
+			expectedVersion:   "v0.9.0",
+			shouldUseFallback: true,
+		},
+		{
+			name:            "latest version handling",
+			mageXVersion:    "latest",
+			fallbackVersion: "v0.8.0",
+			expectedVersion: "latest",
+			shouldUseMageX:  true,
+		},
+		{
+			name:            "version with v prefix",
+			mageXVersion:    "v0.11.0",
+			fallbackVersion: "",
+			expectedVersion: "v0.11.0",
+			shouldUseMageX:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		ts.Run(tc.name, func() {
+			// Save original environment
+			originalMageX := os.Getenv("MAGE_X_YAMLFMT_VERSION")
+			originalFallback := os.Getenv("YAMLFMT_VERSION")
+			defer func() {
+				if originalMageX != "" {
+					_ = os.Setenv("MAGE_X_YAMLFMT_VERSION", originalMageX) //nolint:errcheck // test cleanup
+				} else {
+					_ = os.Unsetenv("MAGE_X_YAMLFMT_VERSION") //nolint:errcheck // test cleanup
+				}
+				if originalFallback != "" {
+					_ = os.Setenv("YAMLFMT_VERSION", originalFallback) //nolint:errcheck // test cleanup
+				} else {
+					_ = os.Unsetenv("YAMLFMT_VERSION") //nolint:errcheck // test cleanup
+				}
+			}()
+
+			// Set environment variables
+			if tc.mageXVersion != "" {
+				_ = os.Setenv("MAGE_X_YAMLFMT_VERSION", tc.mageXVersion) //nolint:errcheck // test setup
+			} else {
+				_ = os.Unsetenv("MAGE_X_YAMLFMT_VERSION") //nolint:errcheck // test cleanup
+			}
+
+			if tc.fallbackVersion != "" {
+				_ = os.Setenv("YAMLFMT_VERSION", tc.fallbackVersion) //nolint:errcheck // test setup
+			} else {
+				_ = os.Unsetenv("YAMLFMT_VERSION") //nolint:errcheck // test cleanup
+			}
+
+			// Test the function
+			version := GetDefaultYamlfmtVersion()
+			ts.Require().Equal(tc.expectedVersion, version,
+				"Expected version %s, got %s for case: %s", tc.expectedVersion, version, tc.name)
+
+			// Verify the version format
+			if version != "" && version != "latest" {
+				ts.Require().True(strings.HasPrefix(version, "v"),
+					"Version should start with 'v' or be 'latest', got: %s", version)
+			}
+		})
+	}
+}
+
+// TestYamlfmtVersionEdgeCases tests edge cases for yamlfmt version handling
+func (ts *ConstantsTestSuite) TestYamlfmtVersionEdgeCases() {
+	ts.Run("no environment variables set", func() {
+		// Save original environment
+		originalMageX := os.Getenv("MAGE_X_YAMLFMT_VERSION")
+		originalFallback := os.Getenv("YAMLFMT_VERSION")
+		defer func() {
+			if originalMageX != "" {
+				_ = os.Setenv("MAGE_X_YAMLFMT_VERSION", originalMageX) //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Unsetenv("MAGE_X_YAMLFMT_VERSION") //nolint:errcheck // test cleanup
+			}
+			if originalFallback != "" {
+				_ = os.Setenv("YAMLFMT_VERSION", originalFallback) //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Unsetenv("YAMLFMT_VERSION") //nolint:errcheck // test cleanup
+			}
+		}()
+
+		// Unset both environment variables
+		_ = os.Unsetenv("MAGE_X_YAMLFMT_VERSION") //nolint:errcheck // test cleanup
+		_ = os.Unsetenv("YAMLFMT_VERSION")        //nolint:errcheck // test cleanup
+
+		// Should return default fallback version
+		version := GetDefaultYamlfmtVersion()
+		ts.Require().NotEmpty(version, "Should return a default version when no env vars are set")
+
+		// Should be either "latest" or a version starting with "v"
+		ts.Require().True(version == VersionLatest || strings.HasPrefix(version, "v"),
+			"Default version should be 'latest' or start with 'v', got: %s", version)
+	})
+
+	ts.Run("empty environment variables", func() {
+		// Save original environment
+		originalMageX := os.Getenv("MAGE_X_YAMLFMT_VERSION")
+		originalFallback := os.Getenv("YAMLFMT_VERSION")
+		defer func() {
+			if originalMageX != "" {
+				_ = os.Setenv("MAGE_X_YAMLFMT_VERSION", originalMageX) //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Unsetenv("MAGE_X_YAMLFMT_VERSION") //nolint:errcheck // test cleanup
+			}
+			if originalFallback != "" {
+				_ = os.Setenv("YAMLFMT_VERSION", originalFallback) //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Unsetenv("YAMLFMT_VERSION") //nolint:errcheck // test cleanup
+			}
+		}()
+
+		// Set empty environment variables
+		_ = os.Setenv("MAGE_X_YAMLFMT_VERSION", "") //nolint:errcheck // test setup
+		_ = os.Setenv("YAMLFMT_VERSION", "")        //nolint:errcheck // test setup
+
+		// Should return default fallback version
+		version := GetDefaultYamlfmtVersion()
+		ts.Require().NotEmpty(version, "Should return a default version when env vars are empty")
+	})
+
+	ts.Run("version consistency", func() {
+		// Test that yamlfmt version is consistent across multiple calls
+		version1 := GetDefaultYamlfmtVersion()
+		version2 := GetDefaultYamlfmtVersion()
+		ts.Require().Equal(version1, version2, "Version should be consistent across calls")
+	})
 }
 
 // TestErrorMessages tests error message constants

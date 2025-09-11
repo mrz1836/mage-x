@@ -89,11 +89,13 @@ func (ts *ConfigTestSuite) TestDefaultConfig() {
 		envVars := []string{
 			"MAGE_X_GOLANGCI_LINT_VERSION",
 			"MAGE_X_GOFUMPT_VERSION",
+			"MAGE_X_YAMLFMT_VERSION",
 			"MAGE_X_GOVULNCHECK_VERSION",
 			"MAGE_X_MOCKGEN_VERSION",
 			"MAGE_X_SWAG_VERSION",
 			"GOLANGCI_LINT_VERSION",
 			"GOFUMPT_VERSION",
+			"YAMLFMT_VERSION",
 			"GOVULNCHECK_VERSION",
 			"MOCKGEN_VERSION",
 			"SWAG_VERSION",
@@ -976,6 +978,7 @@ func (ts *ConfigTestSuite) TestDefaultConfigReturnsLatest() {
 		envVars := map[string]string{
 			"MAGE_X_GOLANGCI_LINT_VERSION": "v2.4.0 # test comment",
 			"MAGE_X_GOFUMPT_VERSION":       "  v0.8.0  ",
+			"MAGE_X_YAMLFMT_VERSION":       "v0.17.2",
 		}
 
 		// Set env vars and store originals

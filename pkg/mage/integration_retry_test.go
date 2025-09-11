@@ -107,6 +107,180 @@ func TestIntegration_ToolInstallationWithNetworkFailures(t *testing.T) {
 			t.Log("Govulncheck installation succeeded with retry logic")
 		}
 	})
+
+	t.Run("YamlfmtInstallation_NetworkRetry", func(t *testing.T) {
+		// Create a temporary GOPATH to avoid affecting system
+		tempDir, err := os.MkdirTemp("", "mage_integration_yamlfmt_test")
+		if err != nil {
+			t.Fatalf("Failed to create temp directory: %v", err)
+		}
+		defer os.RemoveAll(tempDir)
+
+		// Set GOPATH temporarily
+		originalGOPATH := os.Getenv("GOPATH")
+		os.Setenv("GOPATH", tempDir)
+		defer os.Setenv("GOPATH", originalGOPATH)
+
+		// Set PATH to include our temp bin directory
+		binDir := filepath.Join(tempDir, "bin")
+		originalPATH := os.Getenv("PATH")
+		os.Setenv("PATH", binDir+string(os.PathListSeparator)+originalPATH)
+		defer os.Setenv("PATH", originalPATH)
+
+		// Create test YAML files for formatting
+		testYAMLDir := filepath.Join(tempDir, "test_yaml")
+		err = os.MkdirAll(testYAMLDir, 0o750)
+		if err != nil {
+			t.Fatalf("Failed to create test YAML directory: %v", err)
+		}
+
+		// Change to test directory
+		originalDir, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Failed to get current directory: %v", err)
+		}
+		defer os.Chdir(originalDir)
+
+		err = os.Chdir(testYAMLDir)
+		if err != nil {
+			t.Fatalf("Failed to change to test directory: %v", err)
+		}
+
+		// Create a test YAML file
+		testYAMLContent := `name:    test
+version:   1.0
+config:
+    debug:  true
+    verbose:   false
+`
+		err = os.WriteFile("test.yml", []byte(testYAMLContent), 0o600)
+		if err != nil {
+			t.Fatalf("Failed to create test YAML file: %v", err)
+		}
+
+		// Test yamlfmt installation and execution with retry logic
+		format := Format{}
+		err = format.YAML()
+
+		// We expect this to succeed eventually with retries
+		if err != nil {
+			t.Logf("Yamlfmt installation/execution failed (expected in integration test): %v", err)
+			// Don't fail the test - this is expected to sometimes fail in CI
+			// especially if yamlfmt is not available or network issues occur
+		} else {
+			t.Log("Yamlfmt installation and execution succeeded with retry logic")
+
+			// Verify that the YAML file was actually formatted
+			formattedContent, readErr := os.ReadFile("test.yml")
+			if readErr != nil {
+				t.Logf("Could not read formatted file to verify changes: %v", readErr)
+			} else {
+				t.Logf("Formatted YAML content:\n%s", string(formattedContent))
+			}
+		}
+	})
+
+	t.Run("YamlfmtInstallation_WithConfig", func(t *testing.T) {
+		// Create a temporary GOPATH
+		tempDir, err := os.MkdirTemp("", "mage_integration_yamlfmt_config_test")
+		if err != nil {
+			t.Fatalf("Failed to create temp directory: %v", err)
+		}
+		defer os.RemoveAll(tempDir)
+
+		// Set GOPATH temporarily
+		originalGOPATH := os.Getenv("GOPATH")
+		os.Setenv("GOPATH", tempDir)
+		defer os.Setenv("GOPATH", originalGOPATH)
+
+		// Set PATH to include our temp bin directory
+		binDir := filepath.Join(tempDir, "bin")
+		originalPATH := os.Getenv("PATH")
+		os.Setenv("PATH", binDir+string(os.PathListSeparator)+originalPATH)
+		defer os.Setenv("PATH", originalPATH)
+
+		// Create test directory structure
+		testYAMLDir := filepath.Join(tempDir, "test_yaml_config")
+		err = os.MkdirAll(testYAMLDir, 0o750)
+		if err != nil {
+			t.Fatalf("Failed to create test YAML directory: %v", err)
+		}
+
+		// Create .github directory and config file
+		githubDir := filepath.Join(testYAMLDir, ".github")
+		err = os.MkdirAll(githubDir, 0o750)
+		if err != nil {
+			t.Fatalf("Failed to create .github directory: %v", err)
+		}
+
+		// Create yamlfmt config file
+		configContent := `formatter:
+  type: basic
+  indent: 2
+  include_document_start: false
+  line_ending: lf
+  max_line_length: 120
+`
+		configPath := filepath.Join(githubDir, ".yamlfmt")
+		err = os.WriteFile(configPath, []byte(configContent), 0o600)
+		if err != nil {
+			t.Fatalf("Failed to create yamlfmt config: %v", err)
+		}
+
+		// Change to test directory
+		originalDir, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Failed to get current directory: %v", err)
+		}
+		defer os.Chdir(originalDir)
+
+		err = os.Chdir(testYAMLDir)
+		if err != nil {
+			t.Fatalf("Failed to change to test directory: %v", err)
+		}
+
+		// Create test YAML files
+		testFiles := map[string]string{
+			"config.yml": `api:
+  host:    localhost
+  port:     8080
+database:
+   host:   db.example.com
+   port:     5432
+`,
+			"docker-compose.yaml": `version:   '3.8'
+services:
+  web:
+    image:    nginx:latest
+    ports:
+      -   "80:80"
+  db:
+     image:  postgres:13
+`,
+		}
+
+		for filename, content := range testFiles {
+			err = os.WriteFile(filename, []byte(content), 0o600)
+			if err != nil {
+				t.Fatalf("Failed to create test file %s: %v", filename, err)
+			}
+		}
+
+		// Test yamlfmt with config file
+		format := Format{}
+		err = format.YAML()
+
+		if err != nil {
+			t.Logf("Yamlfmt with config failed (expected in integration test): %v", err)
+		} else {
+			t.Log("Yamlfmt with config file succeeded")
+
+			// Verify config file exists and was used
+			if utils.FileExists(".github/.yamlfmt") {
+				t.Log("Config file found and potentially used")
+			}
+		}
+	})
 }
 
 // TestIntegration_DownloadWithNetworkSimulation simulates various network

@@ -87,6 +87,7 @@ test:
 tools:
   custom: {}
   fumpt: latest
+  yamlfmt: latest
   govulncheck: latest
   golangci_lint: latest
   mockgen: latest

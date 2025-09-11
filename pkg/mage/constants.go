@@ -24,6 +24,7 @@ const (
 	CmdDocker       = "docker"
 	CmdGolangciLint = "golangci-lint"
 	CmdGofumpt      = "gofumpt"
+	CmdYamlfmt      = "yamlfmt"
 	LintTool        = "golangci-lint" // Default lint tool for compatibility
 	CmdGoVulnCheck  = "govulncheck"
 	CmdMockgen      = "mockgen"
@@ -163,6 +164,8 @@ func getToolVersionOrWarn(envVar, legacyEnvVar, toolName string) string {
 		fallback = VersionLatest // Use latest if env vars not loaded
 	case CmdGofumpt:
 		fallback = VersionLatest
+	case CmdYamlfmt:
+		fallback = VersionLatest // Use latest if env vars not loaded
 	case CmdGoVulnCheck:
 		fallback = VersionLatest // Use latest if env vars not loaded
 	case CmdMockgen:
@@ -190,6 +193,11 @@ func GetDefaultGolangciLintVersion() string {
 // GetDefaultGofumptVersion returns the default gofumpt version from env or fallback
 func GetDefaultGofumptVersion() string {
 	return getToolVersionOrWarn("MAGE_X_GOFUMPT_VERSION", "GOFUMPT_VERSION", CmdGofumpt)
+}
+
+// GetDefaultYamlfmtVersion returns the default yamlfmt version from env or fallback
+func GetDefaultYamlfmtVersion() string {
+	return getToolVersionOrWarn("MAGE_X_YAMLFMT_VERSION", "YAMLFMT_VERSION", CmdYamlfmt)
 }
 
 // GetDefaultGoVulnCheckVersion returns the default govulncheck version from env or fallback

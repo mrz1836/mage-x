@@ -385,27 +385,27 @@ platforms.
 
 <br><br>
 
-## 💄 Prettier (YAML Formatting)
+## 💄 yamlfmt (YAML Formatting)
 
-YAML files must be formatted consistently using Prettier to ensure clean diffs and readable configuration files.
+YAML files must be formatted consistently using yamlfmt to ensure clean diffs and readable configuration files.
 
 **Local Setup:**
 ```bash
-# Install prettier locally
-npm init -y && npm install --save-dev prettier
+# Install yamlfmt
+go install github.com/google/yamlfmt/cmd/yamlfmt@latest
 ```
 
 **Format YAML files:**
 ```bash
-# Check formatting
-npx prettier "**/*.{yml,yaml}" --check --config .github/.prettierrc.yml --ignore-path .github/.prettierignore
+# Check and format YAML files
+yamlfmt .
 
-# Fix formatting issues
-npx prettier "**/*.{yml,yaml}" --write --config .github/.prettierrc.yml --ignore-path .github/.prettierignore
+# Use with configuration file if available
+yamlfmt -conf .github/.yamlfmt .
 ```
 
-**Configuration Files:**
-* [`.github/.prettierrc.yml`](../.prettierrc.yml) - Prettier configuration settings
-* [`.github/.prettierignore`](../.prettierignore) - Files and patterns to ignore during formatting
+**Configuration:**
+* EditorConfig rules are automatically applied for YAML formatting
+* Optional: `.github/.yamlfmt` configuration file for advanced settings
 
-> CI automatically validates YAML formatting using the same prettier configuration. All YAML files must pass formatting checks before merge.
+> CI automatically validates YAML formatting using yamlfmt with EditorConfig integration. All YAML files must pass formatting checks before merge.

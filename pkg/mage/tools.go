@@ -329,6 +329,8 @@ func getToolVersionFromEnv(toolName string) string {
 		return GetDefaultGolangciLintVersion()
 	case "gofumpt":
 		return GetDefaultGofumptVersion()
+	case "yamlfmt":
+		return GetDefaultYamlfmtVersion()
 	case "govulncheck":
 		return GetDefaultGoVulnCheckVersion()
 	case "mockgen":

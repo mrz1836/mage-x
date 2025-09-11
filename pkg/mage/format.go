@@ -188,6 +188,7 @@ func (Format) InstallTools() error {
 	}{
 		{"gofumpt", "mvdan.cc/gofumpt@latest", ensureGofumpt},
 		{"goimports", "golang.org/x/tools/cmd/goimports@latest", ensureGoimports},
+		{"yamlfmt", "github.com/google/yamlfmt/cmd/yamlfmt@" + GetDefaultYamlfmtVersion(), ensureYamlfmt},
 	}
 
 	for _, tool := range tools {
@@ -280,6 +281,52 @@ func ensureGoimports() error {
 	}
 
 	utils.Success("goimports installed successfully")
+	return nil
+}
+
+// ensureYamlfmt checks if yamlfmt is installed with retry logic
+func ensureYamlfmt() error {
+	if utils.CommandExists("yamlfmt") {
+		return nil
+	}
+
+	utils.Info("yamlfmt not found, installing with retry logic...")
+
+	config, err := GetConfig()
+	if err != nil {
+		// Use default config if loading fails
+		config = defaultConfig()
+	}
+
+	ctx := context.Background()
+	maxRetries := config.Download.MaxRetries
+	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
+
+	// Get the secure executor with retry capabilities
+	runner := GetRunner()
+	secureRunner, ok := runner.(*SecureCommandRunner)
+	if !ok {
+		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+	}
+	executor := secureRunner.executor
+	yamlfmtVersion := GetDefaultYamlfmtVersion()
+	if yamlfmtVersion == "" || yamlfmtVersion == VersionLatest {
+		yamlfmtVersion = VersionLatest
+	}
+	installCmd := "github.com/google/yamlfmt/cmd/yamlfmt@" + yamlfmtVersion
+
+	err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", installCmd)
+	if err != nil {
+		// Try with direct proxy as fallback
+		utils.Warn("Installation failed: %v, trying direct proxy...", err)
+
+		env := []string{"GOPROXY=direct"}
+		if err := executor.ExecuteWithEnv(ctx, env, "go", "install", installCmd); err != nil {
+			return fmt.Errorf("failed to install yamlfmt after %d retries and fallback: %w", maxRetries, err)
+		}
+	}
+
+	utils.Success("yamlfmt installed successfully")
 	return nil
 }
 
@@ -386,16 +433,24 @@ func (Format) YAML() error {
 		return nil
 	}
 
-	// Check if prettier is available for YAML formatting
-	if utils.CommandExists("prettier") {
-		utils.Info("Formatting YAML files with prettier...")
-		if err := GetRunner().RunCmd("prettier", "--write", "--ignore-path", ".github/.prettierignore", "**/*.{yml,yaml}"); err != nil {
-			return fmt.Errorf("prettier formatting failed: %w", err)
+	// Ensure yamlfmt is available for YAML formatting
+	if err := ensureYamlfmt(); err != nil {
+		return fmt.Errorf("failed to ensure yamlfmt is available: %w", err)
+	}
+
+	utils.Info("Formatting YAML files with yamlfmt...")
+
+	// Use yamlfmt with config file
+	configPath := ".github/.yamlfmt"
+	if utils.FileExists(configPath) {
+		if err := GetRunner().RunCmd("yamlfmt", "-conf", configPath, "."); err != nil {
+			return fmt.Errorf("yamlfmt formatting failed: %w", err)
 		}
 	} else {
-		utils.Info("prettier not found, install with: npm install -g prettier")
-		utils.Info("Skipping YAML formatting")
-		return nil
+		// Fallback to default yamlfmt behavior
+		if err := GetRunner().RunCmd("yamlfmt", "."); err != nil {
+			return fmt.Errorf("yamlfmt formatting failed: %w", err)
+		}
 	}
 
 	utils.Success("YAML files formatted")
@@ -408,18 +463,9 @@ func (Format) Yaml() error {
 	return formatter.YAML()
 }
 
-// formatJSONFile formats a single JSON file using prettier or python3
+// formatJSONFile formats a single JSON file using python3
 func formatJSONFile(file string) bool {
 	utils.Info("Formatting %s", file)
-
-	// Use prettier if available, otherwise python
-	if utils.CommandExists("prettier") {
-		if err := GetRunner().RunCmd("prettier", "--write", "--ignore-path", ".github/.prettierignore", file); err != nil {
-			utils.Warn("Failed to format %s with prettier: %v", file, err)
-			return false
-		}
-		return true
-	}
 
 	if utils.CommandExists("python3") {
 		// Read, format, and write back
@@ -435,7 +481,7 @@ func formatJSONFile(file string) bool {
 		return true
 	}
 
-	// This should not happen since we check availability upfront
+	utils.Warn("python3 not available for JSON formatting")
 	return false
 }
 
@@ -444,8 +490,8 @@ func (Format) JSON() error {
 	utils.Header("Formatting JSON Files")
 
 	// Check if formatter is available
-	if !utils.CommandExists("prettier") && !utils.CommandExists("python3") {
-		utils.Warn("No JSON formatter available, install prettier or python3")
+	if !utils.CommandExists("python3") {
+		utils.Warn("No JSON formatter available, install python3")
 		return nil
 	}
 
@@ -462,7 +508,7 @@ func (Format) JSON() error {
 		return nil
 	}
 
-	// Format JSON files using python's json.tool or prettier
+	// Format JSON files using python's json.tool
 	files := strings.Split(strings.TrimSpace(jsonFiles), "\n")
 	formatted := 0
 
@@ -497,19 +543,9 @@ func (Format) Markdown() error {
 		return nil
 	}
 
-	// Check if prettier is available for Markdown formatting
-	if utils.CommandExists("prettier") {
-		utils.Info("Formatting Markdown files with prettier...")
-		if err := GetRunner().RunCmd("prettier", "--write", "--ignore-path", ".github/.prettierignore", "**/*.md"); err != nil {
-			return fmt.Errorf("prettier formatting failed: %w", err)
-		}
-	} else {
-		utils.Info("prettier not found, install with: npm install -g prettier")
-		utils.Info("Skipping Markdown formatting")
-		return nil
-	}
-
-	utils.Success("Markdown files formatted")
+	// No Markdown formatter available - skipping
+	utils.Info("No Markdown formatter available")
+	utils.Info("Skipping Markdown formatting")
 	return nil
 }
 

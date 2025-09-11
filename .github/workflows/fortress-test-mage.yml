@@ -44,7 +44,7 @@ jobs:
           - {name: "Version", cmd: "mage -version", desc: "Show mage version"}
           - {name: "Default Target", cmd: "mage", desc: "Run default target"}
           - {name: "Build", cmd: "mage build:default", desc: "Test build functionality"}
-          - {name: "Clean", cmd: "mage build:clean", desc: "Test clean functionality"}
+          - {name: "Clean", cmd: "mage build:clean", desc: "Test clean functionality",}
 
     steps:
       - name: Checkout code
@@ -83,7 +83,7 @@ jobs:
           - {name: "Lint", cmds: ["mage lint:version"]}
           - {name: "Tools", cmds: ["mage tools:install"]}
           - {name: "Deps", cmds: ["mage deps:download"]}
-          - {name: "Mod", cmds: ["mage mod:download"]}
+          - {name: "Mod", cmds: ["mage mod:download"],}
 
     steps:
       - name: Checkout code
