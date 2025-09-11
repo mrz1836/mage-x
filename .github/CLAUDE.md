@@ -435,7 +435,7 @@ While the main magefile exposes 59 common commands, the pkg/mage package contain
 - **Audit**: Stats(), Export(), Cleanup(), Enable(), Disable(), Report()
 - **Build**: Linux(), Darwin(), Windows(), Platform(), PreBuild(), Install()
 - **Test**: CI(), CINoRace(), CoverReport(), CoverHTML(), Parallel(), NoLint()
-- **Format**: All(), Check(), Fix(), Go(), JSON(), Markdown(), SQL(), Shell(), YAML()
+- **Format**: All(), Check(), Fix(), Go(), JSON(), YAML()
 - **Workflow**: Create(), Execute(), History(), Schedule(), Status(), Template()
 - **Enterprise**: Backup(), Deploy(), Promote(), Restore(), Rollback()
 - **Recipes**: Create(), Install(), List(), Run(), Search(), Show()

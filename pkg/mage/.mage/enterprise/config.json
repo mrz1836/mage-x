@@ -1,143 +1,155 @@
 {
-    "organization": "MAGE-X Organization",
-    "environment": "development",
-    "compliance_mode": false,
     "audit_enabled": false,
-    "metrics_enabled": true,
-    "security_level": "standard",
-    "region": "us-east-1",
-    "version": "1.0.0",
-    "environments": {
-        "development": {
-            "description": "Development environment",
-            "endpoint": "http://localhost:8080",
-            "requires_approval": false,
-            "auto_deploy": true,
-            "variables": {},
-            "secrets": [],
-            "health_check_url": "/health",
-            "notification_channels": []
-        },
-        "production": {
-            "description": "Production environment",
-            "endpoint": "https://api.example.com",
-            "requires_approval": true,
-            "auto_deploy": false,
-            "variables": {},
-            "secrets": [],
-            "health_check_url": "/health",
-            "notification_channels": ["slack", "email"]
-        },
-        "staging": {
-            "description": "Staging environment",
-            "endpoint": "https://staging.example.com",
-            "requires_approval": false,
-            "auto_deploy": false,
-            "variables": {},
-            "secrets": [],
-            "health_check_url": "/health",
-            "notification_channels": ["slack"]
+    "backup": {
+        "enabled": true,
+        "encryption": false,
+        "retention": "30d",
+        "schedule": "daily",
+        "settings": null,
+        "storage": {
+            "encryption": false,
+            "retention": "",
+            "settings": null,
+            "type": ""
         }
     },
-    "policies": [
-        {
-            "name": "Security Baseline",
-            "category": "security",
-            "enabled": true,
-            "rules": [
-                {
-                    "type": "pattern",
-                    "pattern": "password|secret|key",
-                    "action": "deny",
-                    "severity": "high",
-                    "description": "Potential secret detected"
-                }
+    "compliance_mode": false,
+    "created_at": "2025-07-18T19:32:02.556423-04:00",
+    "environment": "development",
+    "environments": {
+        "development": {
+            "auto_deploy": true,
+            "description": "Development environment",
+            "endpoint": "http://localhost:8080",
+            "health_check_url": "/health",
+            "notification_channels": [],
+            "requires_approval": false,
+            "secrets": [],
+            "variables": {}
+        },
+        "production": {
+            "auto_deploy": false,
+            "description": "Production environment",
+            "endpoint": "https://api.example.com",
+            "health_check_url": "/health",
+            "notification_channels": [
+                "slack",
+                "email"
             ],
-            "metadata": null
+            "requires_approval": true,
+            "secrets": [],
+            "variables": {}
+        },
+        "staging": {
+            "auto_deploy": false,
+            "description": "Staging environment",
+            "endpoint": "https://staging.example.com",
+            "health_check_url": "/health",
+            "notification_channels": [
+                "slack"
+            ],
+            "requires_approval": false,
+            "secrets": [],
+            "variables": {}
         }
-    ],
+    },
     "integrations": {
         "jira": {
-            "name": "",
-            "type": "ticketing",
+            "created": "0001-01-01T00:00:00Z",
+            "credentials": null,
             "enabled": false,
+            "endpoints": null,
+            "last_sync": "0001-01-01T00:00:00Z",
+            "name": "",
             "settings": {
                 "token": "",
                 "url": "",
                 "username": ""
             },
-            "credentials": null,
-            "endpoints": null,
-            "webhooks": null,
-            "last_sync": "0001-01-01T00:00:00Z",
-            "created": "0001-01-01T00:00:00Z",
-            "updated": "0001-01-01T00:00:00Z"
+            "type": "ticketing",
+            "updated": "0001-01-01T00:00:00Z",
+            "webhooks": null
         },
         "slack": {
-            "name": "",
-            "type": "notification",
+            "created": "0001-01-01T00:00:00Z",
+            "credentials": null,
             "enabled": false,
+            "endpoints": null,
+            "last_sync": "0001-01-01T00:00:00Z",
+            "name": "",
             "settings": {
                 "channel": "#deployments",
                 "webhook_url": ""
             },
-            "credentials": null,
-            "endpoints": null,
-            "webhooks": null,
-            "last_sync": "0001-01-01T00:00:00Z",
-            "created": "0001-01-01T00:00:00Z",
-            "updated": "0001-01-01T00:00:00Z"
+            "type": "notification",
+            "updated": "0001-01-01T00:00:00Z",
+            "webhooks": null
         }
     },
-    "notifications": {
-        "enabled": true,
-        "channels": {
-            "email": "",
-            "slack": ""
-        }
-    },
-    "backup": {
-        "enabled": true,
-        "schedule": "daily",
-        "retention": "30d",
-        "storage": {
-            "type": "",
-            "retention": "",
-            "encryption": false,
-            "settings": null
-        },
-        "encryption": false,
-        "settings": null
-    },
+    "metrics_enabled": true,
     "monitoring": {
-        "enabled": true,
-        "metrics": {
-            "enabled": true,
-            "collectors": ["deployment_time", "success_rate", "error_rate"],
-            "interval": "30s",
-            "settings": null
-        },
         "alerting": {
+            "channels": [
+                "deployment_failure",
+                "high_error_rate"
+            ],
             "enabled": true,
             "rules": null,
-            "channels": ["deployment_failure", "high_error_rate"],
             "settings": null
         },
         "dashboards": {
             "deployment": {
-                "title": "Deployment Dashboard",
                 "description": "Monitors deployment metrics",
                 "panels": null,
-                "settings": null
+                "settings": null,
+                "title": "Deployment Dashboard"
             },
             "performance": {
-                "title": "Performance Dashboard",
                 "description": "Monitors performance metrics",
                 "panels": null,
-                "settings": null
+                "settings": null,
+                "title": "Performance Dashboard"
             }
+        },
+        "enabled": true,
+        "metrics": {
+            "collectors": [
+                "deployment_time",
+                "success_rate",
+                "error_rate"
+            ],
+            "enabled": true,
+            "interval": "30s",
+            "settings": null
         }
     },
-    "created_at": "2025-07-18T19:32:02.556423-04:00",
-    "updated_at": "2025-07-18T19:32:02.556425-04:00"
+    "notifications": {
+        "channels": {
+            "email": "",
+            "slack": ""
+        },
+        "enabled": true
+    },
+    "organization": "MAGE-X Organization",
+    "policies": [
+        {
+            "category": "security",
+            "enabled": true,
+            "metadata": null,
+            "name": "Security Baseline",
+            "rules": [
+                {
+                    "action": "deny",
+                    "description": "Potential secret detected",
+                    "pattern": "password|secret|key",
+                    "severity": "high",
+                    "type": "pattern"
+                }
+            ]
+        }
+    ],
+    "region": "us-east-1",
+    "security_level": "standard",
+    "updated_at": "2025-07-18T19:32:02.556425-04:00",
+    "version": "1.0.0"
 }

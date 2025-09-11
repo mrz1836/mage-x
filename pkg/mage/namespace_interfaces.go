@@ -136,15 +136,6 @@ type LintNamespace interface {
 	// Yaml runs YAML linters
 	Yaml() error
 
-	// Docker runs Dockerfile linters
-	Docker() error
-
-	// Markdown runs Markdown linters
-	Markdown() error
-
-	// Shell runs shell script linters
-	Shell() error
-
 	// Fix attempts to fix linting issues
 	Fix() error
 
@@ -177,9 +168,6 @@ type FormatNamespace interface {
 
 	// JSON formats JSON files
 	JSON() error
-
-	// Markdown formats Markdown files
-	Markdown() error
 
 	// All formats all supported file types
 	All() error

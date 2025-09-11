@@ -173,8 +173,7 @@ func (suite *InterfaceComplianceTestSuite) TestNamespaceInterfaceMethods() {
 		suite.NotNil(lint)
 
 		methods := []string{
-			"Default", "All", "Go", "Yaml", "Docker", "Markdown",
-			"Shell", "Fix", "CI", "Fast", "Config",
+			"Default", "All", "Go", "Yaml", "Fix", "CI", "Fast", "Config",
 		}
 
 		for _, method := range methods {
