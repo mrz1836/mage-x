@@ -116,13 +116,20 @@ func initFlags() *Flags {
 }
 
 // tryCustomCommand attempts to execute a custom command via delegation
-func tryCustomCommand(command string, commandArgs []string) bool {
+func tryCustomCommand(command string, commandArgs []string, discovery *CommandDiscovery) bool {
 	// Check if we have a magefile with this command
 	if !HasMagefile() {
 		return false
 	}
 
-	if delegateErr := DelegateToMage(command, commandArgs...); delegateErr != nil {
+	// Check if this is a discovered custom command and get the original name
+	originalCommand := command
+	if discoveredCmd, found := discovery.GetCommand(command); found {
+		// Use the case-preserved original name for mage execution
+		originalCommand = discoveredCmd.OriginalName
+	}
+
+	if delegateErr := DelegateToMage(originalCommand, commandArgs...); delegateErr != nil {
 		_, printErr := fmt.Fprintf(os.Stderr, "❌ Error executing custom command '%s': %v\n", command, delegateErr)
 		if printErr != nil {
 			return false
@@ -286,7 +293,7 @@ func main() {
 	// Built-in commands have proper parameter handling
 	if err := reg.Execute(command, commandArgs...); err != nil {
 		// If built-in command not found, try custom command
-		if tryCustomCommand(command, commandArgs) {
+		if tryCustomCommand(command, commandArgs, discovery) {
 			return // Success
 		}
 		// Neither built-in nor custom command found

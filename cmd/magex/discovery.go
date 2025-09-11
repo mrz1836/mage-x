@@ -10,7 +10,8 @@ import (
 
 // DiscoveredCommand represents a custom command found in magefile.go
 type DiscoveredCommand struct {
-	Name        string // Full command name (e.g., "deploy" or "pipeline:ci")
+	Name        string // Full command name (e.g., "deploy" or "pipeline:ci") - normalized for lookups
+	OriginalName string // Case-preserved original name for mage execution
 	Description string
 	IsNamespace bool
 	Namespace   string
@@ -62,11 +63,13 @@ func (d *CommandDiscovery) Discover() error {
 
 		// Set the command name based on type
 		if cmd.IsNamespace && cmd.Method != "" {
-			// Namespace method: Pipeline.CI -> pipeline:ci
+			// Namespace method: Pipeline.CI -> pipeline:ci (normalized), preserve Pipeline:CI (original)
 			discovered.Name = strings.ToLower(cmd.Namespace) + ":" + strings.ToLower(cmd.Method)
+			discovered.OriginalName = cmd.Namespace + ":" + cmd.Method
 		} else {
-			// Simple function: Deploy -> deploy
+			// Simple function: Deploy -> deploy (normalized), preserve Deploy (original)
 			discovered.Name = strings.ToLower(cmd.Name)
+			discovered.OriginalName = cmd.Name
 		}
 
 		// Don't skip commands that exist as built-in - custom commands should override built-ins
