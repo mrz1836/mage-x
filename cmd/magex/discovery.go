@@ -10,12 +10,12 @@ import (
 
 // DiscoveredCommand represents a custom command found in magefile.go
 type DiscoveredCommand struct {
-	Name        string // Full command name (e.g., "deploy" or "pipeline:ci") - normalized for lookups
+	Name         string // Full command name (e.g., "deploy" or "pipeline:ci") - normalized for lookups
 	OriginalName string // Case-preserved original name for mage execution
-	Description string
-	IsNamespace bool
-	Namespace   string
-	Method      string
+	Description  string
+	IsNamespace  bool
+	Namespace    string
+	Method       string
 }
 
 // CommandDiscovery handles discovery and caching of custom commands
