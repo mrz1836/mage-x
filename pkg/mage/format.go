@@ -487,19 +487,22 @@ func formatJSONFileNative(file string) bool {
 		return false
 	}
 
-	// Format JSON with 4-space indentation
-	formatted, err := json.MarshalIndent(jsonData, "", "    ")
-	if err != nil {
+	// Format JSON with 4-space indentation and disabled HTML escaping
+	var formatted strings.Builder
+	encoder := json.NewEncoder(&formatted)
+	encoder.SetIndent("", "    ")
+	encoder.SetEscapeHTML(false) // Disable HTML escaping to preserve & characters
+	if err := encoder.Encode(jsonData); err != nil {
 		utils.Warn("Failed to format JSON in %s: %v", file, err)
 		return false
 	}
 
-	// Add trailing newline
-	formatted = append(formatted, '\n')
+	// Get formatted data as bytes
+	formattedData := []byte(formatted.String())
 
 	// Write to temporary file first for atomic operation
 	tmpFile := file + ".tmp"
-	if err := os.WriteFile(tmpFile, formatted, 0o600); err != nil {
+	if err := os.WriteFile(tmpFile, formattedData, 0o600); err != nil {
 		utils.Warn("Failed to write temporary file %s: %v", tmpFile, err)
 		return false
 	}

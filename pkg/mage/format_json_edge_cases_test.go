@@ -92,6 +92,12 @@ func TestFormatJSONEdgeCases(t *testing.T) {
 			description: "Duplicate keys should result in last value winning",
 		},
 		{
+			name:        "html characters not escaped",
+			input:       `{"postCreateCommand":"magex lint && magex vet && magex test","htmlChars":"<script>alert('test')</script>","ampersand":"A & B"}`,
+			expected:    "{\n    \"ampersand\": \"A & B\",\n    \"htmlChars\": \"<script>alert('test')</script>\",\n    \"postCreateCommand\": \"magex lint && magex vet && magex test\"\n}\n",
+			description: "HTML characters like &, <, > should not be escaped to unicode",
+		},
+		{
 			name:        "very long string",
 			input:       fmt.Sprintf(`{"long_string":"%s"}`, strings.Repeat("a", 1000)),
 			expected:    fmt.Sprintf("{\n    \"long_string\": \"%s\"\n}\n", strings.Repeat("a", 1000)),
