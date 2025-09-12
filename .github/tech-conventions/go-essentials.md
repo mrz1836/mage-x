@@ -385,27 +385,12 @@ platforms.
 
 <br><br>
 
-## 💄 yamlfmt (YAML Formatting)
+## 💄 YAML Formatting
 
-YAML files must be formatted consistently using yamlfmt to ensure clean diffs and readable configuration files.
+YAML files must be formatted consistently to ensure clean diffs and readable configuration files.
 
-**Local Setup:**
 ```bash
-# Install yamlfmt
-go install github.com/google/yamlfmt/cmd/yamlfmt@latest
+magex format:fix
 ```
 
-**Format YAML files:**
-```bash
-# Check and format YAML files
-yamlfmt .
-
-# Use with configuration file if available
-yamlfmt -conf .github/.yamlfmt .
-```
-
-**Configuration:**
-* EditorConfig rules are automatically applied for YAML formatting
-* Optional: `.github/.yamlfmt` configuration file for advanced settings
-
-> CI automatically validates YAML formatting using yamlfmt with EditorConfig integration. All YAML files must pass formatting checks before merge.
+> The `magex format:fix` command handles YAML formatting (via yamlfmt) along with Go, JSON, and other file types. CI automatically validates formatting using the same tools.
