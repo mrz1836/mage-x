@@ -16,7 +16,7 @@ trim_trailing_whitespace = false
 indent_style = space
 indent_size  = 2
 
-[*.json]
+[*.{json,prettierrc}]
 indent_style = space
 indent_size  = 4
 
@@ -35,5 +35,5 @@ indent_style = tab
 indent_style = space
 indent_size  = 2
 
-[{LICENSE,Dockerfile,.gitignore,.dockerignore}]
+[{LICENSE,Dockerfile,.gitignore,.dockerignore,.prettierignore}]
 insert_final_newline = true
