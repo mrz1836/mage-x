@@ -542,6 +542,14 @@ func registerDepsCommands(reg *registry.Registry) {
 			WithCategory("Dependencies").
 			MustBuild(),
 	)
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("deps", "audit").
+			WithDescription("Security audit of dependencies").
+			WithFunc(func() error { return d.Audit() }).
+			WithCategory("Dependencies").
+			MustBuild(),
+	)
 }
 
 // Continue with other namespace registrations...
