@@ -492,8 +492,8 @@ func TestRegistryIntegrationWithFactories(t *testing.T) {
 func TestRegistryProviderSwitching(t *testing.T) {
 	t.Parallel()
 
-	// Save original provider by getting current state first
-	originalRegistry := GetNamespaceRegistry()
+	// Save original provider by creating a fresh registry to avoid state pollution
+	originalRegistry := NewNamespaceRegistry()
 	originalProvider := &MockNamespaceRegistryProvider{registry: originalRegistry}
 	defer SetNamespaceRegistryProvider(originalProvider)
 
