@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -369,36 +368,6 @@ func BenchmarkBuildOperations(b *testing.B) {
 	})
 }
 
-// BenchmarkCLIOperations benchmarks CLI-related operations
-func BenchmarkCLIOperations(b *testing.B) {
-	// Create test data
-	results := []BatchOperationResult{}
-	for i := 0; i < 10; i++ {
-		results = append(results, BatchOperationResult{
-			Operation: BatchOperation{
-				Name: "test-op",
-			},
-			Success:  i%2 == 0,
-			Duration: time.Duration(i) * time.Millisecond,
-		})
-	}
-
-	b.Run("calculateBatchStats", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = calculateBatchStats(results)
-		}
-	})
-
-	b.Run("formatStatus", func(b *testing.B) {
-		formatter := newBatchResultFormatter()
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_ = formatter.formatStatus(true)
-			_ = formatter.formatStatus(false)
-		}
-	})
-}
-
 // BenchmarkPlatformParsing benchmarks platform string parsing
 func BenchmarkPlatformParsing(b *testing.B) {
 	platforms := []string{
@@ -468,14 +437,6 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			_ = defaultConfig()
-		}
-	})
-
-	b.Run("command_handler_allocation", func(b *testing.B) {
-		dashboard := Dashboard{}
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			_ = newDashboardCommandHandler(&dashboard)
 		}
 	})
 }

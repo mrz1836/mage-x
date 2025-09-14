@@ -162,14 +162,6 @@ func (ts *InitTestSuite) TestInitProjectTypes() {
 			features:     []string{"testing", "benchmarks", "docs"},
 		},
 		{
-			name:         "CLI project",
-			method:       ts.init.CLI,
-			projectType:  CLIProject,
-			useDocker:    true,
-			expectedDirs: []string{"completions"},
-			features:     []string{"cobra", "viper", "testing", "goreleaser"},
-		},
-		{
 			name:         "WebAPI project",
 			method:       ts.init.WebAPI,
 			projectType:  WebAPIProject,

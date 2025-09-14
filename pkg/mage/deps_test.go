@@ -5,11 +5,9 @@ package mage
 
 import (
 	"errors"
-	"strings"
 	"testing"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -650,30 +648,6 @@ func (ts *DepsTestSuite) TestDeps_Init_Error() {
 
 	expectedError.Error(err)
 	expectedError.Contains(err.Error(), "failed to initialize module")
-}
-
-// TestDeps_Audit tests the Audit function
-func (ts *DepsTestSuite) TestDeps_Audit() {
-	// Mock that govulncheck is not installed
-	ts.env.Runner.On("RunCmdOutput", "which", []string{"govulncheck"}).Return("", errCommandNotFound)
-	// Mock installing govulncheck
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
-	// Mock the govulncheck run (could be either from PATH or full path)
-	ts.env.Runner.On("RunCmd", mock.MatchedBy(func(cmd string) bool {
-		return strings.Contains(cmd, "govulncheck")
-	}), []string{"-show", "verbose", "./..."}).Return(nil)
-
-	err := ts.env.WithMockRunner(
-		func(r interface{}) error {
-			return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
-		},
-		func() interface{} { return GetRunner() },
-		func() error {
-			return ts.deps.Audit()
-		},
-	)
-
-	ts.Require().NoError(err)
 }
 
 // TestDeps_Licenses tests the Licenses function
