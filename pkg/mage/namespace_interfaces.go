@@ -222,6 +222,9 @@ type DepsNamespace interface {
 
 	// Check checks for updates
 	Check() error
+
+	// Audit performs dependency audit
+	Audit() error
 }
 
 // GitNamespace interface defines the contract for git operations

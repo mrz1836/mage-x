@@ -650,4 +650,33 @@ func TestInterfaceEvolutionTracking(t *testing.T) {
 			// The actual verification is done at compile time through imports and usage
 		}
 	})
+
+	t.Run("verify DepsNamespace.Audit method exists", func(t *testing.T) {
+		t.Parallel()
+
+		// This test ensures the Audit method exists on DepsNamespace interface
+		// and is not accidentally removed during refactoring
+		depsInterface := reflect.TypeOf((*DepsNamespace)(nil)).Elem()
+
+		// Check if Audit method exists
+		auditMethod, found := depsInterface.MethodByName("Audit")
+		assert.True(t, found, "DepsNamespace interface must have an Audit method")
+
+		if found {
+			// Verify method signature: func() error
+			methodType := auditMethod.Type
+			assert.Equal(t, 0, methodType.NumIn(), "Audit method should have 0 inputs (interface method)")
+			assert.Equal(t, 1, methodType.NumOut(), "Audit method should have 1 output (error)")
+
+			// Check return type is error
+			errorType := reflect.TypeOf((*error)(nil)).Elem()
+			assert.True(t, methodType.Out(0).Implements(errorType), "Audit method should return error")
+		}
+
+		// Also verify the implementation exists
+		deps := NewDepsNamespace()
+		depsValue := reflect.ValueOf(deps)
+		auditMethodValue := depsValue.MethodByName("Audit")
+		assert.True(t, auditMethodValue.IsValid(), "Deps implementation must have Audit method")
+	})
 }

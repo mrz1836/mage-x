@@ -3,6 +3,8 @@ package mage
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -643,4 +645,67 @@ func showUpdateSummary(initial, final map[string]dependencyInfo, directUpdates, 
 			}
 		}
 	}
+}
+
+// Audit performs comprehensive dependency audit
+func (Deps) Audit() error {
+	utils.Header("Auditing Dependencies for Vulnerabilities")
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	// Ensure govulncheck is installed
+	if !utils.CommandExists("govulncheck") {
+		utils.Info("Installing govulncheck...")
+
+		vulnVersion := config.Tools.GoVulnCheck
+		if vulnVersion == "" || vulnVersion == VersionLatest {
+			vulnVersion = VersionAtLatest
+		} else if !strings.HasPrefix(vulnVersion, "@") {
+			vulnVersion = "@" + vulnVersion
+		}
+
+		if err := GetRunner().RunCmd("go", "install", "golang.org/x/vuln/cmd/govulncheck"+vulnVersion); err != nil {
+			return fmt.Errorf("failed to install govulncheck: %w", err)
+		}
+	}
+
+	// Run vulnerability check on dependencies
+	utils.Info("Scanning dependencies for known vulnerabilities...")
+
+	// Try to use govulncheck from PATH first, then fall back to GOPATH/bin
+	govulncheckCmd := findGovulncheckCommand()
+
+	if err := GetRunner().RunCmd(govulncheckCmd, "-show", "verbose", "./..."); err != nil {
+		return fmt.Errorf("vulnerability check failed: %w", err)
+	}
+
+	utils.Success("Dependency audit completed")
+	return nil
+}
+
+// findGovulncheckCommand finds the govulncheck command, trying PATH first, then GOPATH/bin
+func findGovulncheckCommand() string {
+	if utils.CommandExists("govulncheck") {
+		return "govulncheck"
+	}
+
+	// Check if it's in GOPATH/bin
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		// Default GOPATH
+		home, err := os.UserHomeDir()
+		if err == nil {
+			gopath = filepath.Join(home, "go")
+		}
+	}
+
+	govulncheckPath := filepath.Join(gopath, "bin", "govulncheck")
+	if _, err := os.Stat(govulncheckPath); err == nil {
+		return govulncheckPath
+	}
+
+	return "govulncheck" // Fall back to default
 }

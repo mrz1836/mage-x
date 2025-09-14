@@ -858,6 +858,63 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_PreReleaseToNewer() {
 	ts.Require().NoError(err)
 }
 
+// TestDeps_Audit tests the Audit function
+func (ts *DepsTestSuite) TestDeps_Audit() {
+	// Mock config loading
+	cfg := Config{
+		Tools: ToolsConfig{
+			GoVulnCheck: "latest",
+		},
+	}
+	TestSetConfig(&cfg)
+
+	// Mock command exists check (govulncheck not installed)
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
+
+	err := ts.env.WithMockRunner(
+		func(r interface{}) error {
+			return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
+		},
+		func() interface{} { return GetRunner() },
+		func() error {
+			return ts.deps.Audit()
+		},
+	)
+
+	ts.Require().NoError(err)
+}
+
+// TestDeps_Audit_Error tests Audit function with govulncheck failure
+func (ts *DepsTestSuite) TestDeps_Audit_Error() {
+	// Mock config loading
+	cfg := Config{
+		Tools: ToolsConfig{
+			GoVulnCheck: "latest",
+		},
+	}
+	TestSetConfig(&cfg)
+
+	expectedError := require.New(ts.T())
+
+	// Mock govulncheck failure
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
+	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(errors.New("vulnerability check failed"))
+
+	err := ts.env.WithMockRunner(
+		func(r interface{}) error {
+			return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
+		},
+		func() interface{} { return GetRunner() },
+		func() error {
+			return ts.deps.Audit()
+		},
+	)
+
+	expectedError.Error(err)
+	expectedError.Contains(err.Error(), "vulnerability check failed")
+}
+
 // TestDepsTestSuite runs the test suite
 func TestDepsTestSuite(t *testing.T) {
 	suite.Run(t, new(DepsTestSuite))

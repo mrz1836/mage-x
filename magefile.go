@@ -184,6 +184,12 @@ func DepsOutdated() error {
 	return d.Outdated()
 }
 
+// DepsAudit performs dependency vulnerability audit
+func DepsAudit() error {
+	var d mage.Deps
+	return d.Audit()
+}
+
 // ToolsUpdate updates all development tools
 func ToolsUpdate() error {
 	var t mage.Tools
@@ -930,6 +936,11 @@ func (d Deps) Licenses() error {
 func (d Deps) Check() error {
 	var impl mage.Deps
 	return impl.Check()
+}
+
+func (d Deps) Audit() error {
+	var impl mage.Deps
+	return impl.Audit()
 }
 
 // Tools namespace methods
