@@ -15,17 +15,16 @@ import (
 
 // Config represents the mage configuration
 type Config struct {
-	Build      BuildConfig              `yaml:"build"`
-	Docker     DockerConfig             `yaml:"docker"`
-	Docs       DocsConfig               `yaml:"docs"`
-	Download   DownloadConfig           `yaml:"download"`
-	Enterprise *EnterpriseConfiguration `yaml:"enterprise,omitempty"`
-	Lint       LintConfig               `yaml:"lint"`
-	Metadata   map[string]string        `yaml:"metadata,omitempty"`
-	Project    ProjectConfig            `yaml:"project"`
-	Release    ReleaseConfig            `yaml:"release"`
-	Test       TestConfig               `yaml:"test"`
-	Tools      ToolsConfig              `yaml:"tools"`
+	Build    BuildConfig       `yaml:"build"`
+	Docker   DockerConfig      `yaml:"docker"`
+	Docs     DocsConfig        `yaml:"docs"`
+	Download DownloadConfig    `yaml:"download"`
+	Lint     LintConfig        `yaml:"lint"`
+	Metadata map[string]string `yaml:"metadata,omitempty"`
+	Project  ProjectConfig     `yaml:"project"`
+	Release  ReleaseConfig     `yaml:"release"`
+	Test     TestConfig        `yaml:"test"`
+	Tools    ToolsConfig       `yaml:"tools"`
 }
 
 // ProjectConfig contains project-specific settings
@@ -144,8 +143,7 @@ type DocsConfig struct {
 
 // Static errors for err113 compliance
 var (
-	ErrEnterpriseConfigExists = errors.New("enterprise configuration already exists")
-	ErrMissingToolVersions    = errors.New("missing required tool versions")
+	ErrMissingToolVersions = errors.New("missing required tool versions")
 )
 
 // GetConfig returns the current configuration using the active ConfigProvider
@@ -475,13 +473,13 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Verbose override
-	if v := cleanEnvValue(os.Getenv("MAGE_X_VERBOSE")); v == approvalTrue || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_VERBOSE")); v == trueValue || v == "1" {
 		c.Build.Verbose = true
 		c.Test.Verbose = true
 	}
 
 	// Test race override
-	if v := cleanEnvValue(os.Getenv("MAGE_X_TEST_RACE")); v == approvalTrue || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_TEST_RACE")); v == "true" || v == "1" {
 		c.Test.Race = true
 	}
 
@@ -494,7 +492,7 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Auto discover build tags override
-	if v := cleanEnvValue(os.Getenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")); v == approvalTrue || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")); v == "true" || v == "1" {
 		c.Test.AutoDiscoverBuildTags = true
 	} else if v == "false" || v == "0" {
 		c.Test.AutoDiscoverBuildTags = false
@@ -514,11 +512,6 @@ func applyEnvOverrides(c *Config) {
 
 	// Tool version overrides
 	applyToolVersionEnvOverrides(&c.Tools)
-
-	// Enterprise overrides
-	if c.Enterprise != nil {
-		applyEnterpriseEnvOverrides(c.Enterprise)
-	}
 }
 
 // applyDownloadEnvOverrides applies environment variable overrides to download config
@@ -564,7 +557,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Resume override
-	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_RESUME")); v == approvalTrue || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_RESUME")); v == "true" || v == "1" {
 		cfg.EnableResume = true
 	} else if v == "false" || v == "0" {
 		cfg.EnableResume = false
@@ -603,30 +596,6 @@ func applyToolVersionEnvOverrides(cfg *ToolsConfig) {
 	}
 }
 
-// applyEnterpriseEnvOverrides applies environment variable overrides to enterprise config
-func applyEnterpriseEnvOverrides(cfg *EnterpriseConfiguration) {
-	// Organization overrides
-	if v := cleanEnvValue(os.Getenv("MAGE_X_ORG_NAME")); v != "" {
-		cfg.Organization.Name = v
-	}
-	if v := cleanEnvValue(os.Getenv("MAGE_X_ORG_DOMAIN")); v != "" {
-		cfg.Organization.Domain = v
-	}
-
-	// Security configuration environment variables are reserved for future implementation.
-	// When Security field is added to Config, these will be processed:
-	_ = cleanEnvValue(os.Getenv("MAGE_X_SECURITY_LEVEL")) // placeholder for security level
-	// Vault integration is reserved for future implementation.
-	// When Security field is added to Config, these will be processed:
-	_ = cleanEnvValue(os.Getenv("MAGE_X_ENABLE_VAULT")) // placeholder for vault enabled
-	_ = cleanEnvValue(GetMageXEnv("VAULT_ADDR"))        // placeholder for vault address
-
-	// Analytics configuration is reserved for future implementation.
-	// When Analytics field is added to Config, these will be processed:
-	_ = cleanEnvValue(os.Getenv("MAGE_X_ANALYTICS_ENABLED")) // placeholder for analytics enabled
-	_ = cleanEnvValue(os.Getenv("MAGE_X_METRICS_INTERVAL"))  // placeholder for metrics interval
-}
-
 // BinaryName returns the configured binary name
 func BinaryName() string {
 	c, err := GetConfig()
@@ -660,29 +629,6 @@ func IsVerbose() bool {
 	return c.Build.Verbose || c.Test.Verbose
 }
 
-// HasEnterpriseConfig returns whether enterprise configuration is enabled
-func HasEnterpriseConfig() bool {
-	c, err := GetConfig()
-	if err != nil {
-		// Return false if config loading fails
-		return false
-	}
-	return c.Enterprise != nil
-}
-
-// GetEnterpriseConfig returns the enterprise configuration if available
-func GetEnterpriseConfig() *EnterpriseConfiguration {
-	c, err := GetConfig()
-	if err != nil {
-		// Return nil if config loading fails
-		return nil
-	}
-	if c.Enterprise != nil {
-		return c.Enterprise
-	}
-	return nil
-}
-
 // SaveConfig saves the configuration to file
 func SaveConfig(cfg *Config) error {
 	fileOps := fileops.New()
@@ -699,29 +645,6 @@ func getConfigFilePath() string {
 		}
 	}
 	return ".mage.yaml" // default
-}
-
-// SaveEnterpriseConfig saves the enterprise configuration to a separate file
-func SaveEnterpriseConfig(cfg *EnterpriseConfiguration) error {
-	enterpriseConfigFile := ".mage.enterprise.yaml"
-	fileOps := fileops.New()
-	return fileOps.SaveConfig(enterpriseConfigFile, cfg, "yaml")
-}
-
-// SetupEnterpriseConfig initializes enterprise configuration
-func SetupEnterpriseConfig() error {
-	// Check if enterprise config already exists
-	if HasEnterpriseConfig() {
-		return ErrEnterpriseConfigExists
-	}
-
-	// Run the enterprise setup wizard
-	wizard := &EnterpriseWizard{}
-	if err := wizard.Run(); err != nil {
-		return fmt.Errorf("failed to run enterprise setup wizard: %w", err)
-	}
-
-	return nil
 }
 
 // Methods for Config struct required by tests

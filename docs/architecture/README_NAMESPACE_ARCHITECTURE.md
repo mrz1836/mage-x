@@ -77,9 +77,8 @@ err := build.Default()
 </details>
 
 <details>
-<summary><strong>Quality & Security (4 namespaces)</strong></summary>
+<summary><strong>Quality & Security (3 namespaces)</strong></summary>
 
-- **Audit** - Security auditing
 - **Security** - Security operations
 - **Bench** - Benchmarking
 - **Metrics** - Code metrics
@@ -87,32 +86,19 @@ err := build.Default()
 </details>
 
 <details>
-<summary><strong>Integration & Workflow (4 namespaces)</strong></summary>
+<summary><strong>Release Management (2 namespaces)</strong></summary>
 
-- **Integrations** - Third-party integrations
-- **Workflow** - Workflow automation
 - **Releases** - Advanced release management
 - **Operations** - DevOps operations
 
 </details>
 
-<details>
-<summary><strong>Enterprise Features (4 namespaces)</strong></summary>
-
-- **Enterprise** - Enterprise features
-- **EnterpriseConfig** - Enterprise configuration
-- **Analytics** - Analytics and reporting
-- **Database** - Database operations
-
-</details>
 
 <details>
-<summary><strong>Utilities (6 namespaces)</strong></summary>
+<summary><strong>Utilities (4 namespaces)</strong></summary>
 
-- **CLI** - Command-line operations
 - **Help** - Help and documentation
 - **YAML** - YAML processing
-- **Wizard** - Interactive setup
 - **Common** - Common utilities
 - **Recipes** - Predefined task recipes
 

@@ -175,8 +175,8 @@ func (d *CommandDiscovery) isLikelyNamespaceWrapper(funcName string) bool {
 	// Try to split CamelCase into namespace:method patterns
 	commonNamespaces := []string{
 		"build", "test", "lint", "format", "deps", "git", "release", "docs",
-		"tools", "generate", "mod", "audit", "help", "version", "install",
-		"enterprise", "configure", "init", "workflow", "bench", "vet",
+		"tools", "generate", "mod", "help", "version", "install",
+		"configure", "init", "bench", "vet",
 	}
 
 	for _, ns := range commonNamespaces {

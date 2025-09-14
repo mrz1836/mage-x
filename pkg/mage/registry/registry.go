@@ -411,11 +411,9 @@ func (r *Registry) getStandardCategoryInfo(category string) CategoryInfo {
 		"git":      {Name: "Git Operations", Icon: "🔀", Order: 9},
 		"version":  {Name: "Version Management", Icon: "🏷️", Order: 10},
 		"metrics":  {Name: "Code Analysis & Metrics", Icon: "📊", Order: 11},
-		"audit":    {Name: "Security & Audit", Icon: "🛡️", Order: 12},
 		"config":   {Name: "Configuration Management", Icon: "⚙️", Order: 13},
 		"generate": {Name: "Code Generation", Icon: "🏗️", Order: 14},
 		"init":     {Name: "Project Initialization", Icon: "🚀", Order: 15},
-		"recipes":  {Name: "Recipe Management", Icon: "📋", Order: 16},
 		"update":   {Name: "Update Management", Icon: "🔄", Order: 17},
 		"help":     {Name: "Help System", Icon: "📖", Order: 18},
 	}

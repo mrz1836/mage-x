@@ -358,12 +358,9 @@ func TestNamespaceRegistry(t *testing.T) {
 	assert.NotNil(t, registry.Docs())
 	assert.NotNil(t, registry.Tools())
 	assert.NotNil(t, registry.Generate())
-	assert.NotNil(t, registry.CLI())
 	assert.NotNil(t, registry.Update())
 	assert.NotNil(t, registry.Mod())
-	assert.NotNil(t, registry.Recipes())
 	assert.NotNil(t, registry.Metrics())
-	assert.NotNil(t, registry.Workflow())
 }
 
 func TestFactoryFunctions(t *testing.T) {
@@ -379,12 +376,9 @@ func TestFactoryFunctions(t *testing.T) {
 	assert.NotNil(t, NewToolsNamespace())
 	// assert.NotNil(t, NewSecurityNamespace()) // Temporarily disabled
 	assert.NotNil(t, NewGenerateNamespace())
-	assert.NotNil(t, NewCLINamespace())
 	assert.NotNil(t, NewUpdateNamespace())
 	assert.NotNil(t, NewModNamespace())
-	assert.NotNil(t, NewRecipesNamespace())
 	assert.NotNil(t, NewMetricsNamespace())
-	assert.NotNil(t, NewWorkflowNamespace())
 }
 
 func TestSecureCommandRunner_Integration(t *testing.T) {

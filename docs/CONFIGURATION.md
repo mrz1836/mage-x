@@ -659,7 +659,6 @@ project:
 ## 🔗 Related Documentation
 
 - [Quick Start Guide](QUICK_START.md)
-- [Enterprise Features](ENTERPRISE.md)
 - [API Reference](API_REFERENCE.md)
 - [Namespace Interfaces](NAMESPACE_INTERFACES.md)
 

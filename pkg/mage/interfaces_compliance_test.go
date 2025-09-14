@@ -90,11 +90,6 @@ func (suite *InterfaceComplianceTestSuite) TestNamespaceFactoryFunctions() {
 			interfaceType: reflect.TypeOf((*GenerateNamespace)(nil)).Elem(),
 		},
 		{
-			name:          "NewCLINamespace",
-			factory:       func() interface{} { return NewCLINamespace() },
-			interfaceType: reflect.TypeOf((*CLINamespace)(nil)).Elem(),
-		},
-		{
 			name:          "NewUpdateNamespace",
 			factory:       func() interface{} { return NewUpdateNamespace() },
 			interfaceType: reflect.TypeOf((*UpdateNamespace)(nil)).Elem(),
@@ -105,19 +100,9 @@ func (suite *InterfaceComplianceTestSuite) TestNamespaceFactoryFunctions() {
 			interfaceType: reflect.TypeOf((*ModNamespace)(nil)).Elem(),
 		},
 		{
-			name:          "NewRecipesNamespace",
-			factory:       func() interface{} { return NewRecipesNamespace() },
-			interfaceType: reflect.TypeOf((*RecipesNamespace)(nil)).Elem(),
-		},
-		{
 			name:          "NewMetricsNamespace",
 			factory:       func() interface{} { return NewMetricsNamespace() },
 			interfaceType: reflect.TypeOf((*MetricsNamespace)(nil)).Elem(),
-		},
-		{
-			name:          "NewWorkflowNamespace",
-			factory:       func() interface{} { return NewWorkflowNamespace() },
-			interfaceType: reflect.TypeOf((*WorkflowNamespace)(nil)).Elem(),
 		},
 	}
 
@@ -302,12 +287,9 @@ func (suite *InterfaceComplianceTestSuite) TestInterfaceContractValidation() {
 		_ = suite.registry.Docs()
 		_ = suite.registry.Tools()
 		_ = suite.registry.Generate()
-		_ = suite.registry.CLI()
 		_ = suite.registry.Update()
 		_ = suite.registry.Mod()
-		_ = suite.registry.Recipes()
 		_ = suite.registry.Metrics()
-		_ = suite.registry.Workflow()
 	})
 }
 
@@ -632,12 +614,9 @@ func TestInterfaceEvolutionTracking(t *testing.T) {
 			"Docs":     registry.Docs(),
 			"Tools":    registry.Tools(),
 			"Generate": registry.Generate(),
-			"CLI":      registry.CLI(),
 			"Update":   registry.Update(),
 			"Mod":      registry.Mod(),
-			"Recipes":  registry.Recipes(),
 			"Metrics":  registry.Metrics(),
-			"Workflow": registry.Workflow(),
 		}
 
 		for name, ns := range interfaceCounts {
@@ -663,8 +642,6 @@ func TestInterfaceEvolutionTracking(t *testing.T) {
 			"BuildNamespace", "TestNamespace", "LintNamespace", "FormatNamespace",
 			"DepsNamespace", "GitNamespace", "ReleaseNamespace", "DocsNamespace",
 			"DeployNamespace", "ToolsNamespace", "SecurityNamespace", "GenerateNamespace",
-			"CLINamespace", "UpdateNamespace", "ModNamespace", "RecipesNamespace",
-			"MetricsNamespace", "WorkflowNamespace", "NamespaceRegistry",
 		}
 
 		for _, interfaceName := range expectedInterfaces {

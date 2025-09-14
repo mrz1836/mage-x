@@ -209,15 +209,6 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			description: "Generate should be aliased to mage.Generate",
 		},
 		{
-			name:     "CLI type alias",
-			autoType: CLI{},
-			mageType: mage.CLI{},
-			testCreation: func() (interface{}, interface{}) {
-				return CLI{}, mage.CLI{}
-			},
-			description: "CLI should be aliased to mage.CLI",
-		},
-		{
 			name:     "Update type alias",
 			autoType: Update{},
 			mageType: mage.Update{},
@@ -236,15 +227,6 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			description: "Mod should be aliased to mage.Mod",
 		},
 		{
-			name:     "Recipes type alias",
-			autoType: Recipes{},
-			mageType: mage.Recipes{},
-			testCreation: func() (interface{}, interface{}) {
-				return Recipes{}, mage.Recipes{}
-			},
-			description: "Recipes should be aliased to mage.Recipes",
-		},
-		{
 			name:     "Metrics type alias",
 			autoType: Metrics{},
 			mageType: mage.Metrics{},
@@ -252,15 +234,6 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 				return Metrics{}, mage.Metrics{}
 			},
 			description: "Metrics should be aliased to mage.Metrics",
-		},
-		{
-			name:     "Workflow type alias",
-			autoType: Workflow{},
-			mageType: mage.Workflow{},
-			testCreation: func() (interface{}, interface{}) {
-				return Workflow{}, mage.Workflow{}
-			},
-			description: "Workflow should be aliased to mage.Workflow",
 		},
 		{
 			name:     "Bench type alias",
@@ -297,33 +270,6 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 				return Init{}, mage.Init{}
 			},
 			description: "Init should be aliased to mage.Init",
-		},
-		{
-			name:     "Enterprise type alias",
-			autoType: Enterprise{},
-			mageType: mage.Enterprise{},
-			testCreation: func() (interface{}, interface{}) {
-				return Enterprise{}, mage.Enterprise{}
-			},
-			description: "Enterprise should be aliased to mage.Enterprise",
-		},
-		{
-			name:     "Integrations type alias",
-			autoType: Integrations{},
-			mageType: mage.Integrations{},
-			testCreation: func() (interface{}, interface{}) {
-				return Integrations{}, mage.Integrations{}
-			},
-			description: "Integrations should be aliased to mage.Integrations",
-		},
-		{
-			name:     "Wizard type alias",
-			autoType: Wizard{},
-			mageType: mage.Wizard{},
-			testCreation: func() (interface{}, interface{}) {
-				return Wizard{}, mage.Wizard{}
-			},
-			description: "Wizard should be aliased to mage.Wizard",
 		},
 		{
 			name:     "Help type alias",
@@ -449,23 +395,17 @@ func (suite *AutoRegistrationTestSuite) TestBackwardCompatibilityComprehensive()
 			Docs{},
 			Tools{},
 			Generate{},
-			CLI{},
 			Update{},
 			Mod{},
-			Recipes{},
 			Metrics{},
-			Workflow{},
 			Bench{},
 			Vet{},
 			Configure{},
 			Init{},
-			Enterprise{},
-			Integrations{},
-			Wizard{},
 			Help{},
 		}
 
-		suite.Len(typeAliases, 24, "Should have exactly 24 type aliases")
+		suite.Len(typeAliases, 18, "Should have exactly 18 type aliases")
 
 		for i, alias := range typeAliases {
 			suite.NotNil(alias, "Type alias at index %d should not be nil", i)
@@ -688,7 +628,7 @@ func (suite *AutoRegistrationTestSuite) TestPackageDocumentationCompliance() {
 		// Package comments mention magex binary for zero-boilerplate
 		// Test that auto package provides the import-based alternative
 		convenienceFunctions := 8 // As documented
-		typeAliases := 24         // As counted in tests
+		typeAliases := 18         // As counted in tests
 
 		functions := []func() error{
 			BuildCmd, TestCmd, LintCmd, FormatCmd,
@@ -706,19 +646,13 @@ func (suite *AutoRegistrationTestSuite) TestPackageDocumentationCompliance() {
 			Docs{},
 			Tools{},
 			Generate{},
-			CLI{},
 			Update{},
 			Mod{},
-			Recipes{},
 			Metrics{},
-			Workflow{},
 			Bench{},
 			Vet{},
 			Configure{},
 			Init{},
-			Enterprise{},
-			Integrations{},
-			Wizard{},
 			Help{},
 		}
 
@@ -825,19 +759,13 @@ func TestAutoPackageCompileTimeChecks(t *testing.T) {
 	_ = Docs{}
 	_ = Tools{}
 	_ = Generate{}
-	_ = CLI{}
 	_ = Update{}
 	_ = Mod{}
-	_ = Recipes{}
 	_ = Metrics{}
-	_ = Workflow{}
 	_ = Bench{}
 	_ = Vet{}
 	_ = Configure{}
 	_ = Init{}
-	_ = Enterprise{}
-	_ = Integrations{}
-	_ = Wizard{}
 	_ = Help{}
 
 	// Test passes if it compiles - no assertion needed
@@ -887,19 +815,13 @@ func TestAutoPackageTypeAliasEquivalence(t *testing.T) {
 		{"Docs", Docs{}, mage.Docs{}},
 		{"Tools", Tools{}, mage.Tools{}},
 		{"Generate", Generate{}, mage.Generate{}},
-		{"CLI", CLI{}, mage.CLI{}},
 		{"Update", Update{}, mage.Update{}},
 		{"Mod", Mod{}, mage.Mod{}},
-		{"Recipes", Recipes{}, mage.Recipes{}},
 		{"Metrics", Metrics{}, mage.Metrics{}},
-		{"Workflow", Workflow{}, mage.Workflow{}},
 		{"Bench", Bench{}, mage.Bench{}},
 		{"Vet", Vet{}, mage.Vet{}},
 		{"Configure", Configure{}, mage.Configure{}},
 		{"Init", Init{}, mage.Init{}},
-		{"Enterprise", Enterprise{}, mage.Enterprise{}},
-		{"Integrations", Integrations{}, mage.Integrations{}},
-		{"Wizard", Wizard{}, mage.Wizard{}},
 		{"Help", Help{}, mage.Help{}},
 	}
 

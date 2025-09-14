@@ -458,7 +458,7 @@ func (Bench) RegressionWithArgs(argsList ...string) error {
 		utils.Info("Update baseline with current results? (set UPDATE_BASELINE=true or use update-baseline=true parameter)")
 		updateBaseline = GetMageXEnv("UPDATE_BASELINE")
 	}
-	if updateBaseline == approvalTrue || utils.IsParamTrue(params, "update-baseline") {
+	if updateBaseline == trueValue || utils.IsParamTrue(params, "update-baseline") {
 		if err := os.Rename(currentFile, baseline); err != nil {
 			return fmt.Errorf("failed to update baseline: %w", err)
 		}

@@ -63,7 +63,7 @@ $ magex -l
   lint:fix           lint:ci            lint:fast
   format             format:check       format:fix
   deps               deps:update        deps:tidy
-  deps:audit         git:status         git:commit
+  git:status         git:commit
   release            release:multi      docs:build
   tools:install      ... and many more!
 ```

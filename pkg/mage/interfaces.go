@@ -137,7 +137,7 @@ type CloudProvider interface {
 	Name() string
 
 	// Deploy deploys an application to the cloud
-	Deploy(ctx context.Context, app Application, env Environment) (*Deployment, error)
+	Deploy(ctx context.Context, app Application, env IEnvironment) (*Deployment, error)
 
 	// GetStatus retrieves deployment status
 	GetStatus(ctx context.Context, deployment *Deployment) (*DeploymentStatus, error)

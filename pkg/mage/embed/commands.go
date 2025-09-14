@@ -50,23 +50,14 @@ func RegisterAll(reg *registry.Registry) {
 	// Register Generate namespace commands
 	registerGenerateCommands(reg)
 
-	// Register CLI namespace commands
-	registerCLICommands(reg)
-
 	// Register Update namespace commands
 	registerUpdateCommands(reg)
 
 	// Register Mod namespace commands
 	registerModCommands(reg)
 
-	// Register Recipes namespace commands
-	registerRecipesCommands(reg)
-
 	// Register Metrics namespace commands
 	registerMetricsCommands(reg)
-
-	// Register Workflow namespace commands
-	registerWorkflowCommands(reg)
 
 	// Register Bench namespace commands
 	registerBenchCommands(reg)
@@ -80,15 +71,6 @@ func RegisterAll(reg *registry.Registry) {
 	// Register Init namespace commands
 	registerInitCommands(reg)
 
-	// Register Enterprise namespace commands
-	registerEnterpriseCommands(reg)
-
-	// Register Integrations namespace commands
-	registerIntegrationsCommands(reg)
-
-	// Register Wizard namespace commands
-	registerWizardCommands(reg)
-
 	// Register Help namespace commands
 	registerHelpCommands(reg)
 
@@ -98,14 +80,8 @@ func RegisterAll(reg *registry.Registry) {
 	// Register Install namespace commands
 	registerInstallCommands(reg)
 
-	// Register Audit namespace commands
-	registerAuditCommands(reg)
-
 	// Register Yaml namespace commands
 	registerYamlCommands(reg)
-
-	// Register EnterpriseConfig namespace commands
-	registerEnterpriseConfigCommands(reg)
 
 	// Register top-level convenience commands
 	registerTopLevelCommands(reg)
@@ -539,14 +515,6 @@ func registerDepsCommands(reg *registry.Registry) {
 		registry.NewNamespaceCommand("deps", "verify").
 			WithDescription("Verify dependencies").
 			WithFunc(func() error { return d.Verify() }).
-			WithCategory("Dependencies").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "audit").
-			WithDescription("Security audit of dependencies").
-			WithFunc(func() error { return d.Audit() }).
 			WithCategory("Dependencies").
 			MustBuild(),
 	)
@@ -1000,122 +968,6 @@ func registerGenerateCommands(reg *registry.Registry) {
 	)
 }
 
-func registerCLICommands(reg *registry.Registry) {
-	c := mage.CLI{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "default").
-			WithDescription("Default CLI operations").
-			WithFunc(func() error { return c.Default() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "bulk").
-			WithDescription("Execute commands across multiple repositories").
-			WithFunc(func() error { return c.Bulk() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "query").
-			WithDescription("Query project information and metadata").
-			WithFunc(func() error { return c.Query() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "dashboard").
-			WithDescription("Display project dashboard and status").
-			WithFunc(func() error { return c.Dashboard() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "batch").
-			WithDescription("Execute batch operations from file").
-			WithFunc(func() error { return c.Batch() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "monitor").
-			WithDescription("Monitor build and test execution").
-			WithFunc(func() error { return c.Monitor() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "workspace").
-			WithDescription("Manage workspace configuration").
-			WithFunc(func() error { return c.Workspace() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "pipeline").
-			WithDescription("Execute pipeline operations").
-			WithFunc(func() error { return c.Pipeline() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "compliance").
-			WithDescription("Run compliance checks and reports").
-			WithFunc(func() error { return c.Compliance() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "help").
-			WithDescription("Display help for CLI commands").
-			WithFunc(func() error { return c.Help() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "version").
-			WithDescription("Display CLI version information").
-			WithFunc(func() error { return c.Version() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "completion").
-			WithDescription("Generate shell completion scripts").
-			WithFunc(func() error { return c.Completion() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "config").
-			WithDescription("Manage CLI configuration").
-			WithFunc(func() error { return c.Config() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("cli", "update").
-			WithDescription("Update CLI to latest version").
-			WithFunc(func() error { return c.Update() }).
-			WithCategory("CLI").
-			MustBuild(),
-	)
-}
-
 func registerUpdateCommands(reg *registry.Registry) {
 	u := mage.Update{}
 
@@ -1225,77 +1077,6 @@ func registerModCommands(reg *registry.Registry) {
 	)
 }
 
-func registerRecipesCommands(reg *registry.Registry) {
-	r := mage.Recipes{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("recipes", "default").
-			WithDescription("Show recipes menu").
-			WithFunc(func() error { return r.Default() }).
-			WithCategory("Recipes").
-			WithAliases("recipes").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("recipes", "list").
-			WithDescription("List available recipes").
-			WithFunc(func() error { return r.List() }).
-			WithCategory("Recipes").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("recipes", "show").
-			WithDescription("Show recipe details with recipe parameter").
-			WithArgsFunc(func(args ...string) error { return r.ShowWithArgs(args...) }).
-			WithCategory("Recipes").
-			WithUsage("magex recipes:show recipe=<name>").
-			WithExamples("magex recipes:show recipe=fresh-start").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("recipes", "run").
-			WithDescription("Run a recipe with recipe parameter").
-			WithArgsFunc(func(args ...string) error { return r.RunWithArgs(args...) }).
-			WithCategory("Recipes").
-			WithUsage("magex recipes:run recipe=<name>").
-			WithExamples("magex recipes:run recipe=fresh-start").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("recipes", "search").
-			WithDescription("Search recipes with term parameter").
-			WithArgsFunc(func(args ...string) error { return r.SearchWithArgs(args...) }).
-			WithCategory("Recipes").
-			WithUsage("magex recipes:search term=<search>").
-			WithExamples("magex recipes:search term=ci").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("recipes", "create").
-			WithDescription("Create a new recipe with recipe parameter").
-			WithArgsFunc(func(args ...string) error { return r.CreateWithArgs(args...) }).
-			WithCategory("Recipes").
-			WithUsage("magex recipes:create recipe=<name>").
-			WithExamples("magex recipes:create recipe=my-recipe").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("recipes", "install").
-			WithDescription("Install a recipe with source parameter").
-			WithArgsFunc(func(args ...string) error { return r.InstallWithArgs(args...) }).
-			WithCategory("Recipes").
-			WithUsage("magex recipes:install source=<url|file>").
-			WithExamples("magex recipes:install source=./recipe.yaml").
-			MustBuild(),
-	)
-}
-
 func registerMetricsCommands(reg *registry.Registry) {
 	m := mage.Metrics{}
 
@@ -1344,88 +1125,6 @@ func registerMetricsCommands(reg *registry.Registry) {
 			WithDescription("Analyze import dependencies").
 			WithFunc(func() error { return m.Imports() }).
 			WithCategory("Metrics").
-			MustBuild(),
-	)
-}
-
-func registerWorkflowCommands(reg *registry.Registry) {
-	w := mage.Workflow{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("workflow", "execute").
-			WithDescription("Execute a workflow with workflow parameter").
-			WithArgsFunc(func(args ...string) error { return w.ExecuteWithArgs(args...) }).
-			WithCategory("Workflow").
-			WithUsage("magex workflow:execute workflow=<name>").
-			WithExamples("magex workflow:execute workflow=ci-pipeline").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("workflow", "list").
-			WithDescription("List workflows").
-			WithFunc(func() error { return w.List() }).
-			WithCategory("Workflow").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("workflow", "status").
-			WithDescription("Show workflow status with optional execution-id parameter").
-			WithArgsFunc(func(args ...string) error { return w.StatusWithArgs(args...) }).
-			WithCategory("Workflow").
-			WithUsage("magex workflow:status [execution-id=<id>]").
-			WithExamples("magex workflow:status", "magex workflow:status execution-id=abc123").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("workflow", "create").
-			WithDescription("Create a new workflow with name parameter").
-			WithArgsFunc(func(args ...string) error { return w.CreateWithArgs(args...) }).
-			WithCategory("Workflow").
-			WithUsage("magex workflow:create name=<workflow-name> [template=<type>]").
-			WithExamples("magex workflow:create name=my-workflow", "magex workflow:create name=ci-workflow template=advanced").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("workflow", "validate").
-			WithDescription("Validate workflow configuration with optional workflow parameter").
-			WithArgsFunc(func(args ...string) error { return w.ValidateWithArgs(args...) }).
-			WithCategory("Workflow").
-			WithUsage("magex workflow:validate [workflow=<name>]").
-			WithExamples("magex workflow:validate", "magex workflow:validate workflow=ci-build").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("workflow", "schedule").
-			WithDescription("Schedule workflow execution with operation parameter").
-			WithArgsFunc(func(args ...string) error { return w.ScheduleWithArgs(args...) }).
-			WithCategory("Workflow").
-			WithUsage("magex workflow:schedule [operation=<list|add|remove|update>]").
-			WithExamples("magex workflow:schedule", "magex workflow:schedule operation=add").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("workflow", "template").
-			WithDescription("Manage workflow templates with operation parameter").
-			WithArgsFunc(func(args ...string) error { return w.TemplateWithArgs(args...) }).
-			WithCategory("Workflow").
-			WithUsage("magex workflow:template [operation=<list|create|update|delete>]").
-			WithExamples("magex workflow:template", "magex workflow:template operation=create").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("workflow", "history").
-			WithDescription("Show workflow execution history with optional filters").
-			WithArgsFunc(func(args ...string) error { return w.HistoryWithArgs(args...) }).
-			WithCategory("Workflow").
-			WithUsage("magex workflow:history [workflow=<name>] [limit=<number>]").
-			WithExamples("magex workflow:history", "magex workflow:history workflow=ci-build limit=5").
 			MustBuild(),
 	)
 }
@@ -1557,14 +1256,6 @@ func registerConfigureCommands(reg *registry.Registry) {
 	)
 
 	reg.MustRegister(
-		registry.NewNamespaceCommand("configure", "enterprise").
-			WithDescription("Configure enterprise features").
-			WithFunc(func() error { return c.Enterprise() }).
-			WithCategory("Configure").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
 		registry.NewNamespaceCommand("configure", "export").
 			WithDescription("Export configuration").
 			WithFunc(func() error { return c.Export() }).
@@ -1626,14 +1317,6 @@ func registerInitCommands(reg *registry.Registry) {
 	)
 
 	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "cli").
-			WithDescription("Initialize CLI application").
-			WithFunc(func() error { return i.CLI() }).
-			WithCategory("Init").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
 		registry.NewNamespaceCommand("init", "webapi").
 			WithDescription("Initialize web API project").
 			WithFunc(func() error { return i.WebAPI() }).
@@ -1678,208 +1361,6 @@ func registerInitCommands(reg *registry.Registry) {
 			WithDescription("Initialize Docker configuration").
 			WithFunc(func() error { return i.Docker() }).
 			WithCategory("Init").
-			MustBuild(),
-	)
-}
-
-func registerEnterpriseCommands(reg *registry.Registry) {
-	e := mage.Enterprise{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterprise", "init").
-			WithDescription("Initialize enterprise features").
-			WithFunc(func() error { return e.Init() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterprise", "config").
-			WithDescription("Configure enterprise settings").
-			WithFunc(func() error { return e.Config() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterprise", "deploy").
-			WithDescription("Enterprise deployment").
-			WithFunc(func() error { return e.Deploy() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterprise", "rollback").
-			WithDescription("Rollback enterprise deployment").
-			WithFunc(func() error { return e.Rollback() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterprise", "promote").
-			WithDescription("Promote between environments").
-			WithFunc(func() error { return e.Promote() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterprise", "status").
-			WithDescription("Show enterprise deployment status").
-			WithFunc(func() error { return e.Status() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterprise", "backup").
-			WithDescription("Backup enterprise data").
-			WithFunc(func() error { return e.Backup() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterprise", "restore").
-			WithDescription("Restore enterprise data").
-			WithFunc(func() error { return e.Restore() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-}
-
-func registerIntegrationsCommands(reg *registry.Registry) {
-	i := mage.Integrations{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("integrations", "setup").
-			WithDescription("Setup integrations with type parameter").
-			WithArgsFunc(func(args ...string) error { return i.Setup(args...) }).
-			WithCategory("Integrations").
-			WithUsage("magex integrations:setup type=<integration-type>").
-			WithExamples("magex integrations:setup type=slack").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("integrations", "test").
-			WithDescription("Test integrations with optional service filter").
-			WithArgsFunc(func(args ...string) error { return i.Test(args...) }).
-			WithCategory("Integrations").
-			WithUsage("magex integrations:test [service=<name>] [output=<file>]").
-			WithExamples("magex integrations:test", "magex integrations:test service=slack").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("integrations", "sync").
-			WithDescription("Sync integration data with operation parameter").
-			WithArgsFunc(func(args ...string) error { return i.Sync(args...) }).
-			WithCategory("Integrations").
-			WithUsage("magex integrations:sync [operation=<all|issues|users|repositories|metrics>]").
-			WithExamples("magex integrations:sync", "magex integrations:sync operation=issues").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("integrations", "notify").
-			WithDescription("Send notifications with channel and message parameters").
-			WithArgsFunc(func(args ...string) error { return i.Notify(args...) }).
-			WithCategory("Integrations").
-			WithUsage("magex integrations:notify channel=<name> message=\"<text>\" [level=<level>]").
-			WithExamples("magex integrations:notify channel=general message=\"Build completed\"").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("integrations", "status").
-			WithDescription("Show integration status").
-			WithFunc(func() error { return i.Status() }).
-			WithCategory("Integrations").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("integrations", "webhook").
-			WithDescription("Configure webhooks with operation parameter").
-			WithArgsFunc(func(args ...string) error { return i.Webhook(args...) }).
-			WithCategory("Integrations").
-			WithUsage("magex integrations:webhook [operation=<list|create|update|delete|test>]").
-			WithExamples("magex integrations:webhook", "magex integrations:webhook operation=create").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("integrations", "export").
-			WithDescription("Export integration configuration with type parameter").
-			WithArgsFunc(func(args ...string) error { return i.Export(args...) }).
-			WithCategory("Integrations").
-			WithUsage("magex integrations:export type=<type> [format=<format>] [output=<file>]").
-			WithExamples("magex integrations:export type=slack").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("integrations", "import").
-			WithDescription("Import integration configuration with type and input parameters").
-			WithArgsFunc(func(args ...string) error { return i.Import(args...) }).
-			WithCategory("Integrations").
-			WithUsage("magex integrations:import type=<type> input=<file>").
-			WithExamples("magex integrations:import type=slack input=./config.json").
-			MustBuild(),
-	)
-}
-
-func registerWizardCommands(reg *registry.Registry) {
-	w := mage.Wizard{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("wizard", "setup").
-			WithDescription("Interactive setup wizard").
-			WithFunc(func() error { return w.Setup() }).
-			WithCategory("Wizard").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("wizard", "project").
-			WithDescription("Project configuration wizard").
-			WithFunc(func() error { return w.Project() }).
-			WithCategory("Wizard").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("wizard", "integration").
-			WithDescription("Integration setup wizard").
-			WithFunc(func() error { return w.Integration() }).
-			WithCategory("Wizard").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("wizard", "security").
-			WithDescription("Security configuration wizard").
-			WithFunc(func() error { return w.Security() }).
-			WithCategory("Wizard").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("wizard", "workflow").
-			WithDescription("Workflow setup wizard").
-			WithFunc(func() error { return w.Workflow() }).
-			WithCategory("Wizard").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("wizard", "deployment").
-			WithDescription("Deployment configuration wizard").
-			WithFunc(func() error { return w.Deployment() }).
-			WithCategory("Wizard").
 			MustBuild(),
 	)
 }
@@ -2143,67 +1624,6 @@ func registerInstallCommands(reg *registry.Registry) {
 	)
 }
 
-// registerAuditCommands registers all Audit namespace commands
-func registerAuditCommands(reg *registry.Registry) {
-	var a mage.Audit
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("audit", "show").
-			WithDescription("Display audit events with optional filtering").
-			WithFunc(func() error { return a.Show() }).
-			WithCategory("Audit & Security").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("audit", "stats").
-			WithDescription("Show audit statistics and summaries").
-			WithFunc(func() error { return a.Stats() }).
-			WithCategory("Audit & Security").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("audit", "export").
-			WithDescription("Export audit data to various formats").
-			WithFunc(func() error { return a.Export() }).
-			WithCategory("Audit & Security").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("audit", "cleanup").
-			WithDescription("Clean up old audit entries").
-			WithFunc(func() error { return a.Cleanup() }).
-			WithCategory("Audit & Security").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("audit", "enable").
-			WithDescription("Enable audit logging").
-			WithFunc(func() error { return a.Enable() }).
-			WithCategory("Audit & Security").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("audit", "disable").
-			WithDescription("Disable audit logging").
-			WithFunc(func() error { return a.Disable() }).
-			WithCategory("Audit & Security").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("audit", "report").
-			WithDescription("Generate comprehensive audit reports").
-			WithFunc(func() error { return a.Report() }).
-			WithCategory("Audit & Security").
-			MustBuild(),
-	)
-}
-
 // registerYamlCommands registers all Yaml namespace commands
 func registerYamlCommands(reg *registry.Registry) {
 	var y mage.Yaml
@@ -2245,59 +1665,6 @@ func registerYamlCommands(reg *registry.Registry) {
 			WithDescription("Generate YAML templates").
 			WithFunc(func() error { return y.Template() }).
 			WithCategory("Configuration").
-			MustBuild(),
-	)
-}
-
-// registerEnterpriseConfigCommands registers all EnterpriseConfig namespace commands
-func registerEnterpriseConfigCommands(reg *registry.Registry) {
-	var ec mage.EnterpriseConfigNamespace
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterpriseconfig", "init").
-			WithDescription("Initialize enterprise configuration").
-			WithFunc(func() error { return ec.Init() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterpriseconfig", "validate").
-			WithDescription("Validate enterprise configuration").
-			WithFunc(func() error { return ec.Validate() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterpriseconfig", "update").
-			WithDescription("Update enterprise configuration").
-			WithFunc(func() error { return ec.Update() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterpriseconfig", "export").
-			WithDescription("Export enterprise configuration").
-			WithFunc(func() error { return ec.Export() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterpriseconfig", "import").
-			WithDescription("Import enterprise configuration").
-			WithFunc(func() error { return ec.Import() }).
-			WithCategory("Enterprise").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("enterpriseconfig", "schema").
-			WithDescription("Show enterprise configuration schema").
-			WithFunc(func() error { return ec.Schema() }).
-			WithCategory("Enterprise").
 			MustBuild(),
 	)
 }

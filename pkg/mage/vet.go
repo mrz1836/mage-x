@@ -80,7 +80,7 @@ func (Vet) Default() error {
 	args := []string{"vet"}
 
 	// Add verbose flag if requested
-	if verbose := utils.GetEnv("VERBOSE", ""); verbose == approvalTrue {
+	if verbose := utils.GetEnv("VERBOSE", ""); verbose == trueValue {
 		args = append(args, "-v")
 	}
 
@@ -108,7 +108,7 @@ func (Vet) All() error {
 	args := []string{"vet"}
 
 	// Add verbose flag if requested
-	if verbose := utils.GetEnv("VERBOSE", ""); verbose == approvalTrue {
+	if verbose := utils.GetEnv("VERBOSE", ""); verbose == trueValue {
 		args = append(args, "-v")
 	}
 

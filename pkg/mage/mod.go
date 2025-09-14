@@ -126,7 +126,7 @@ func (Mod) Clean() error {
 	utils.Info("Module cache location: %s", getModCache())
 
 	// Check if FORCE is set
-	if GetMageXEnv("FORCE") != approvalTrue {
+	if GetMageXEnv("FORCE") != trueValue {
 		utils.Error("Set MAGE_X_FORCE=true to confirm module cache deletion")
 		return errOperationCanceled
 	}
@@ -154,7 +154,7 @@ func (Mod) Graph(args ...string) error {
 			depth = d
 		}
 	}
-	showVersions := utils.GetParam(params, "show_versions", approvalTrue) == approvalTrue
+	showVersions := utils.GetParam(params, "show_versions", trueValue) == trueValue
 	filter := utils.GetParam(params, "filter", "")
 	format := strings.ToLower(utils.GetParam(params, "format", "tree"))
 

@@ -248,34 +248,22 @@ func NewConfigureNamespace() ConfigureNamespace
 
 ### Quality & Security
 ```go
-func NewAuditNamespace() AuditNamespace
 func NewSecurityNamespace() SecurityNamespace
 func NewBenchNamespace() BenchNamespace
 func NewMetricsNamespace() MetricsNamespace
 ```
 
-### Integration & Workflow
+### Release & Operations
 ```go
-func NewIntegrationsNamespace() IntegrationsNamespace
-func NewWorkflowNamespace() WorkflowNamespace
 func NewReleaseManagerNamespace() ReleaseManagerNamespace
 func NewOperationsNamespace() OperationsNamespace
 ```
 
-### Enterprise Features
-```go
-func NewEnterpriseNamespace() EnterpriseNamespace
-func NewEnterpriseConfigNamespace() EnterpriseConfigNamespace
-func NewAnalytics() AnalyticsNamespace
-func NewDatabaseNamespace() DatabaseNamespace
-```
 
 ### Utilities
 ```go
-func NewCLINamespace() CLINamespace
 func NewHelpNamespace() HelpNamespace
 func NewYAMLNamespace() YAMLNamespace
-func NewWizardNamespace() WizardNamespace
 func NewCommonNamespace() CommonNamespace
 func NewRecipesNamespace() RecipesNamespace
 ```
@@ -459,7 +447,6 @@ The following mage targets are available through the exposed wrapper functions i
 | `mage depsTidy` | Clean up go.mod and go.sum | `go mod tidy` |
 | `mage depsDownload` | Download all dependencies | `go mod download` |
 | `mage depsOutdated` | Show outdated dependencies | `go list -u -m all` |
-| `mage depsAudit` | Audit dependencies for vulnerabilities | `govulncheck ./...` |
 
 ### Tools Management Targets
 

@@ -49,28 +49,18 @@ MAGE-X provides 37 built-in namespaces organized by functionality:
 - **Configure** (`ConfigureNamespace`) - Configuration management
 
 #### Quality & Security
-- **Audit** (`AuditNamespace`) - Security auditing
 - **Security** (`SecurityNamespace`) - Security operations
 - **Bench** (`BenchNamespace`) - Benchmarking
 - **Metrics** (`MetricsNamespace`) - Code metrics
 
-#### Integration & Workflow
-- **Integrations** (`IntegrationsNamespace`) - Third-party integrations
-- **Workflow** (`WorkflowNamespace`) - Workflow automation
+#### Release & Operations
 - **Releases** (`ReleaseManagerNamespace`) - Advanced release management
 - **Operations** (`OperationsNamespace`) - DevOps operations
 
-#### Enterprise Features
-- **Enterprise** (`EnterpriseNamespace`) - Enterprise features
-- **EnterpriseConfig** (`EnterpriseConfigNamespace`) - Enterprise configuration
-- **Analytics** (`AnalyticsNamespace`) - Analytics and reporting
-- **Database** (`DatabaseNamespace`) - Database operations
 
 #### Utilities
-- **CLI** (`CLINamespace`) - CLI operations
 - **Help** (`HelpNamespace`) - Help and documentation
 - **YAML** (`YAMLNamespace`) - YAML processing
-- **Wizard** (`WizardNamespace`) - Interactive setup
 - **Common** (`CommonNamespace`) - Common utilities
 - **Recipes** (`RecipesNamespace`) - Predefined task recipes
 

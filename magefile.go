@@ -25,35 +25,28 @@ func getMageArgs() []string {
 // Namespace types - these enable namespace:method syntax in mage
 // Each type must be defined as mg.Namespace for mage to recognize it
 type (
-	Audit            mg.Namespace
-	Bench            mg.Namespace
-	Build            mg.Namespace
-	CLI              mg.Namespace
-	Configure        mg.Namespace
-	Deps             mg.Namespace
-	Docs             mg.Namespace
-	Enterprise       mg.Namespace
-	EnterpriseConfig mg.Namespace
-	Format           mg.Namespace
-	Generate         mg.Namespace
-	Git              mg.Namespace
-	Help             mg.Namespace
-	Init             mg.Namespace
-	Install          mg.Namespace
-	Integrations     mg.Namespace
-	Lint             mg.Namespace
-	Metrics          mg.Namespace
-	Mod              mg.Namespace
-	Recipes          mg.Namespace
-	Release          mg.Namespace
-	Test             mg.Namespace
-	Tools            mg.Namespace
-	Update           mg.Namespace
-	Version          mg.Namespace
-	Vet              mg.Namespace
-	Wizard           mg.Namespace
-	Workflow         mg.Namespace
-	Yaml             mg.Namespace
+	Bench     mg.Namespace
+	Build     mg.Namespace
+	Configure mg.Namespace
+	Deps      mg.Namespace
+	Docs      mg.Namespace
+	Format    mg.Namespace
+	Generate  mg.Namespace
+	Git       mg.Namespace
+	Help      mg.Namespace
+	Init      mg.Namespace
+	Install   mg.Namespace
+	Lint      mg.Namespace
+	Metrics   mg.Namespace
+	Mod       mg.Namespace
+	Recipes   mg.Namespace
+	Release   mg.Namespace
+	Test      mg.Namespace
+	Tools     mg.Namespace
+	Update    mg.Namespace
+	Version   mg.Namespace
+	Vet       mg.Namespace
+	Yaml      mg.Namespace
 )
 
 // Aliases provides short command names for common operations
@@ -189,12 +182,6 @@ func DepsDownload() error {
 func DepsOutdated() error {
 	var d mage.Deps
 	return d.Outdated()
-}
-
-// DepsAudit audits dependencies for vulnerabilities
-func DepsAudit() error {
-	var d mage.Deps
-	return d.Audit()
 }
 
 // ToolsUpdate updates all development tools
@@ -480,12 +467,6 @@ func LintFumpt() error {
 	return l.Fumpt()
 }
 
-// AuditShow displays audit events with optional filtering
-func AuditShow() error {
-	var a mage.Audit
-	return a.Show()
-}
-
 // ConfigureInit initializes a new mage configuration
 func ConfigureInit() error {
 	var c mage.Configure
@@ -534,28 +515,10 @@ func InitProject() error {
 	return i.Project()
 }
 
-// InitCLI initializes a CLI project
-func InitCLI() error {
-	var i mage.Init
-	return i.CLI()
-}
-
 // InitLibrary initializes a library project
 func InitLibrary() error {
 	var i mage.Init
 	return i.Library()
-}
-
-// RecipesList lists available recipes
-func RecipesList() error {
-	var r mage.Recipes
-	return r.List()
-}
-
-// RecipesRun runs a specific recipe
-func RecipesRun() error {
-	var r mage.Recipes
-	return r.Run()
 }
 
 // UpdateCheck checks for updates
@@ -957,12 +920,6 @@ func (d Deps) Outdated() error {
 func (d Deps) Vendor() error {
 	var impl mage.Deps
 	return impl.Vendor()
-}
-
-// Init method requires parameters, not suitable for namespace syntax
-func (d Deps) Audit() error {
-	var impl mage.Deps
-	return impl.Audit()
 }
 
 func (d Deps) Licenses() error {
@@ -1437,42 +1394,6 @@ func (i Install) All() error {
 	return impl.All()
 }
 
-// Audit namespace methods
-func (a Audit) Show() error {
-	var impl mage.Audit
-	return impl.Show()
-}
-
-func (a Audit) Stats() error {
-	var impl mage.Audit
-	return impl.Stats()
-}
-
-func (a Audit) Export() error {
-	var impl mage.Audit
-	return impl.Export()
-}
-
-func (a Audit) Cleanup() error {
-	var impl mage.Audit
-	return impl.Cleanup()
-}
-
-func (a Audit) Enable() error {
-	var impl mage.Audit
-	return impl.Enable()
-}
-
-func (a Audit) Disable() error {
-	var impl mage.Audit
-	return impl.Disable()
-}
-
-func (a Audit) Report() error {
-	var impl mage.Audit
-	return impl.Report()
-}
-
 // Configure namespace methods
 func (c Configure) Init() error {
 	var impl mage.Configure
@@ -1487,11 +1408,6 @@ func (c Configure) Show() error {
 func (c Configure) Update() error {
 	var impl mage.Configure
 	return impl.Update()
-}
-
-func (c Configure) Enterprise() error {
-	var impl mage.Configure
-	return impl.Enterprise()
 }
 
 func (c Configure) Export() error {
@@ -1688,11 +1604,6 @@ func (i Init) Library() error {
 	return impl.Library()
 }
 
-func (i Init) CLI() error {
-	var impl mage.Init
-	return impl.CLI()
-}
-
 func (i Init) WebAPI() error {
 	var impl mage.Init
 	return impl.WebAPI()
@@ -1766,83 +1677,6 @@ func (i Init) Makefile() error {
 func (i Init) Editorconfig() error {
 	var impl mage.Init
 	return impl.Editorconfig()
-}
-
-// Integrations namespace methods
-func (i Integrations) Setup() error {
-	var impl mage.Integrations
-	return impl.Setup()
-}
-
-func (i Integrations) Test() error {
-	var impl mage.Integrations
-	return impl.Test()
-}
-
-func (i Integrations) Sync() error {
-	var impl mage.Integrations
-	return impl.Sync()
-}
-
-func (i Integrations) Notify() error {
-	var impl mage.Integrations
-	return impl.Notify()
-}
-
-func (i Integrations) Status() error {
-	var impl mage.Integrations
-	return impl.Status()
-}
-
-func (i Integrations) Webhook() error {
-	var impl mage.Integrations
-	return impl.Webhook()
-}
-
-func (i Integrations) Export() error {
-	var impl mage.Integrations
-	return impl.Export()
-}
-
-func (i Integrations) Import() error {
-	var impl mage.Integrations
-	return impl.Import()
-}
-
-// Recipes namespace methods
-func (r Recipes) Default() error {
-	var impl mage.Recipes
-	return impl.Default()
-}
-
-func (r Recipes) List() error {
-	var impl mage.Recipes
-	return impl.List()
-}
-
-func (r Recipes) Show() error {
-	var impl mage.Recipes
-	return impl.Show()
-}
-
-func (r Recipes) Run() error {
-	var impl mage.Recipes
-	return impl.Run()
-}
-
-func (r Recipes) Search() error {
-	var impl mage.Recipes
-	return impl.Search()
-}
-
-func (r Recipes) Create() error {
-	var impl mage.Recipes
-	return impl.Create()
-}
-
-func (r Recipes) Install() error {
-	var impl mage.Recipes
-	return impl.Install()
 }
 
 // Update namespace methods
@@ -1921,225 +1755,6 @@ func (b Bench) Trace() error {
 func (b Bench) Regression() error {
 	var impl mage.Bench
 	return impl.Regression()
-}
-
-// CLI namespace methods
-func (c CLI) Bulk() error {
-	var impl mage.CLI
-	return impl.Bulk()
-}
-
-func (c CLI) Query() error {
-	var impl mage.CLI
-	return impl.Query()
-}
-
-func (c CLI) Dashboard() error {
-	var impl mage.CLI
-	return impl.Dashboard()
-}
-
-func (c CLI) Batch() error {
-	var impl mage.CLI
-	return impl.Batch()
-}
-
-func (c CLI) Monitor() error {
-	var impl mage.CLI
-	return impl.Monitor()
-}
-
-func (c CLI) Workspace() error {
-	var impl mage.CLI
-	return impl.Workspace()
-}
-
-func (c CLI) Pipeline() error {
-	var impl mage.CLI
-	return impl.Pipeline()
-}
-
-func (c CLI) Compliance() error {
-	var impl mage.CLI
-	return impl.Compliance()
-}
-
-func (c CLI) Default() error {
-	var impl mage.CLI
-	return impl.Default()
-}
-
-func (c CLI) Help() error {
-	var impl mage.CLI
-	return impl.Help()
-}
-
-func (c CLI) Version() error {
-	var impl mage.CLI
-	return impl.Version()
-}
-
-func (c CLI) Completion() error {
-	var impl mage.CLI
-	return impl.Completion()
-}
-
-func (c CLI) Config() error {
-	var impl mage.CLI
-	return impl.Config()
-}
-
-func (c CLI) Update() error {
-	var impl mage.CLI
-	return impl.Update()
-}
-
-// Enterprise namespace methods
-func (e Enterprise) Init() error {
-	var impl mage.Enterprise
-	return impl.Init()
-}
-
-func (e Enterprise) Config() error {
-	var impl mage.Enterprise
-	return impl.Config()
-}
-
-func (e Enterprise) Deploy() error {
-	var impl mage.Enterprise
-	return impl.Deploy()
-}
-
-func (e Enterprise) Rollback() error {
-	var impl mage.Enterprise
-	return impl.Rollback()
-}
-
-func (e Enterprise) Promote() error {
-	var impl mage.Enterprise
-	return impl.Promote()
-}
-
-func (e Enterprise) Status() error {
-	var impl mage.Enterprise
-	return impl.Status()
-}
-
-func (e Enterprise) Backup() error {
-	var impl mage.Enterprise
-	return impl.Backup()
-}
-
-func (e Enterprise) Restore() error {
-	var impl mage.Enterprise
-	return impl.Restore()
-}
-
-// EnterpriseConfig namespace methods
-func (e EnterpriseConfig) Init() error {
-	var impl mage.EnterpriseConfigNamespace
-	return impl.Init()
-}
-
-func (e EnterpriseConfig) Validate() error {
-	var impl mage.EnterpriseConfigNamespace
-	return impl.Validate()
-}
-
-func (e EnterpriseConfig) Update() error {
-	var impl mage.EnterpriseConfigNamespace
-	return impl.Update()
-}
-
-func (e EnterpriseConfig) Export() error {
-	var impl mage.EnterpriseConfigNamespace
-	return impl.Export()
-}
-
-func (e EnterpriseConfig) Import() error {
-	var impl mage.EnterpriseConfigNamespace
-	return impl.Import()
-}
-
-func (e EnterpriseConfig) Schema() error {
-	var impl mage.EnterpriseConfigNamespace
-	return impl.Schema()
-}
-
-// Wizard namespace methods
-func (w Wizard) Setup() error {
-	var impl mage.Wizard
-	return impl.Setup()
-}
-
-func (w Wizard) Project() error {
-	var impl mage.Wizard
-	return impl.Project()
-}
-
-func (w Wizard) Integration() error {
-	var impl mage.Wizard
-	return impl.Integration()
-}
-
-func (w Wizard) Security() error {
-	var impl mage.Wizard
-	return impl.Security()
-}
-
-func (w Wizard) Workflow() error {
-	var impl mage.Wizard
-	return impl.Workflow()
-}
-
-func (w Wizard) Deployment() error {
-	var impl mage.Wizard
-	return impl.Deployment()
-}
-
-// Run method not available in wizard namespace
-// GetName method not available in wizard namespace
-// GetDescription method not available in wizard namespace
-
-// Workflow namespace methods
-func (w Workflow) Execute() error {
-	var impl mage.Workflow
-	return impl.Execute()
-}
-
-func (w Workflow) List() error {
-	var impl mage.Workflow
-	return impl.List()
-}
-
-func (w Workflow) Status() error {
-	var impl mage.Workflow
-	return impl.Status()
-}
-
-func (w Workflow) Create() error {
-	var impl mage.Workflow
-	return impl.Create()
-}
-
-func (w Workflow) Validate() error {
-	var impl mage.Workflow
-	return impl.Validate()
-}
-
-func (w Workflow) Schedule() error {
-	var impl mage.Workflow
-	return impl.Schedule()
-}
-
-func (w Workflow) Template() error {
-	var impl mage.Workflow
-	return impl.Template()
-}
-
-func (w Workflow) History() error {
-	var impl mage.Workflow
-	return impl.History()
 }
 
 // Yaml namespace methods

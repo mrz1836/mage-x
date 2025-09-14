@@ -23,6 +23,11 @@ var (
 	errFixFailed     = errors.New("fix failed")
 )
 
+// Constants for common string values
+const (
+	trueValue = "true"
+)
+
 // Lint namespace for linting and formatting tasks
 type Lint mg.Namespace
 
@@ -1499,12 +1504,12 @@ func shouldUseVerboseMode(config *Config) bool {
 	// Check command-line parameter first (highest priority)
 	params := utils.ParseParams(targetArgs)
 	if verboseParam := utils.GetParam(params, "verbose", ""); verboseParam != "" {
-		return verboseParam == approvalTrue || verboseParam == "1"
+		return verboseParam == trueValue || verboseParam == "1"
 	}
 
 	// Check environment variable
 	if verboseEnv := utils.GetEnv("MAGE_X_LINT_VERBOSE", ""); verboseEnv != "" {
-		return verboseEnv == approvalTrue || verboseEnv == "1"
+		return verboseEnv == trueValue || verboseEnv == "1"
 	}
 
 	// Default: use config setting or false

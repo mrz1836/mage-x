@@ -147,14 +147,10 @@ graph TD
 | mod | 9 | Module operations |
 | recipes | 7 | Recipe system |
 | metrics | 6 | Metrics and analytics |
-| workflow | 8 | Workflow management |
 | bench | 8 | Benchmarking |
 | vet | 5 | Go vet operations |
 | configure | 8 | Configuration |
 | init | 10 | Project initialization |
-| enterprise | 8 | Enterprise features |
-| integrations | 8 | Third-party integrations |
-| wizard | 6 | Interactive wizards |
 | help | 7 | Help system |
 
 ### Command Syntax
@@ -490,7 +486,6 @@ MAGEX_VERBOSE=true MAGEX_DEBUG=true magex build
 ### Security
 - **Validate inputs** in custom commands
 - Use **environment variables** for sensitive data
-- **Audit** magefile.go for security issues
 - Keep **dependencies updated**
 
 ## 🔮 Future Enhancements
@@ -505,7 +500,6 @@ MAGEX_VERBOSE=true MAGEX_DEBUG=true magex build
 
 ### Experimental Features
 - **AI-powered command suggestions**
-- **Workflow templates**
 - **Visual command builder**
 - **Cloud integration**
 

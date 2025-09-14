@@ -1,5 +1,5 @@
 ---
-allowed-tools: Task(mage-x-gh), Task(mage-x-workflow), Task(mage-x-security), Task(mage-x-tools), Bash(gh workflow:*), Bash(gh run:*), Bash(gh api:*), Read, Grep, Glob, LS
+allowed-tools: Task(mage-x-gh), Task(mage-x-security), Task(mage-x-tools), Bash(gh workflow:*), Bash(gh run:*), Bash(gh api:*), Read, Grep, Glob, LS
 argument-hint: [workflow-name|run-id|all]
 description: Diagnose CI/CD issues in GitHub workflows with intelligent analysis
 model: claude-sonnet-4-20250514

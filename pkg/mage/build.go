@@ -46,7 +46,7 @@ func NewDefaultCacheManagerProvider() *DefaultCacheManagerProvider {
 		// Future enhancement: integrate with main Config struct for customization.
 
 		// Check if cache is disabled via environment
-		if os.Getenv("MAGE_X_CACHE_DISABLED") == "true" {
+		if os.Getenv("MAGE_X_CACHE_DISABLED") == trueValue {
 			config.Enabled = false
 		}
 

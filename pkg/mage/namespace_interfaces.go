@@ -220,9 +220,6 @@ type DepsNamespace interface {
 	// Licenses shows dependency licenses
 	Licenses() error
 
-	// Audit performs comprehensive dependency audit
-	Audit() error
-
 	// Check checks for updates
 	Check() error
 }
@@ -401,27 +398,6 @@ type GenerateNamespace interface {
 	Clean() error
 }
 
-// CLINamespace interface defines the contract for CLI operations
-type CLINamespace interface {
-	// Default shows CLI help
-	Default() error
-
-	// Help shows help information
-	Help() error
-
-	// Version shows version information
-	Version() error
-
-	// Completion generates shell completion
-	Completion() error
-
-	// Config manages CLI configuration
-	Config() error
-
-	// Update updates CLI
-	Update() error
-}
-
 // UpdateNamespace interface defines the contract for update operations
 type UpdateNamespace interface {
 	// Check checks for available updates
@@ -470,30 +446,6 @@ type ModNamespace interface {
 	List(pattern ...string) error
 }
 
-// RecipesNamespace interface defines the contract for recipe operations
-type RecipesNamespace interface {
-	// Default lists available recipes
-	Default() error
-
-	// List shows all available recipes
-	List() error
-
-	// Show displays details of a specific recipe
-	Show() error
-
-	// Run executes a recipe
-	Run() error
-
-	// Search searches for recipes by keyword
-	Search() error
-
-	// Create creates a new custom recipe
-	Create() error
-
-	// Install installs a recipe from a repository
-	Install() error
-}
-
 // MetricsNamespace interface defines the contract for metrics operations
 type MetricsNamespace interface {
 	// LOC displays lines of code statistics
@@ -513,33 +465,6 @@ type MetricsNamespace interface {
 
 	// Imports analyzes import dependencies
 	Imports() error
-}
-
-// WorkflowNamespace interface defines the contract for workflow operations
-type WorkflowNamespace interface {
-	// Execute runs a predefined workflow
-	Execute() error
-
-	// List displays available workflows
-	List() error
-
-	// Status shows workflow status
-	Status() error
-
-	// Create creates a new workflow
-	Create() error
-
-	// Validate validates workflow definitions
-	Validate() error
-
-	// Schedule schedules workflow execution
-	Schedule() error
-
-	// Template creates workflow from template
-	Template() error
-
-	// History shows workflow execution history
-	History() error
 }
 
 // NamespaceRegistry provides access to all namespace implementations
@@ -580,23 +505,14 @@ type NamespaceRegistry interface {
 	// Generate returns the generate namespace
 	Generate() GenerateNamespace
 
-	// CLI returns the CLI namespace
-	CLI() CLINamespace
-
 	// Update returns the update namespace
 	Update() UpdateNamespace
 
 	// Mod returns the mod namespace
 	Mod() ModNamespace
 
-	// Recipes returns the recipes namespace
-	Recipes() RecipesNamespace
-
 	// Metrics returns the metrics namespace
 	Metrics() MetricsNamespace
-
-	// Workflow returns the workflow namespace
-	Workflow() WorkflowNamespace
 }
 
 // DefaultNamespaceRegistry provides the default namespace implementations
@@ -615,12 +531,9 @@ type DefaultNamespaceRegistry struct {
 	tools    ToolsNamespace
 	security SecurityNamespace
 	generate GenerateNamespace
-	cli      CLINamespace
 	update   UpdateNamespace
 	mod      ModNamespace
-	recipes  RecipesNamespace
 	metrics  MetricsNamespace
-	workflow WorkflowNamespace
 }
 
 // NewNamespaceRegistry creates a new namespace registry with default implementations
@@ -814,23 +727,6 @@ func (r *DefaultNamespaceRegistry) Generate() GenerateNamespace {
 	return r.generate
 }
 
-// CLI returns the CLI namespace
-func (r *DefaultNamespaceRegistry) CLI() CLINamespace {
-	r.mu.RLock()
-	if r.cli != nil {
-		defer r.mu.RUnlock()
-		return r.cli
-	}
-	r.mu.RUnlock()
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.cli == nil {
-		r.cli = NewCLINamespace()
-	}
-	return r.cli
-}
-
 // SetBuild sets a custom build namespace implementation
 func (r *DefaultNamespaceRegistry) SetBuild(build BuildNamespace) {
 	r.mu.Lock()
@@ -916,13 +812,6 @@ func (r *DefaultNamespaceRegistry) SetGenerate(generate GenerateNamespace) {
 	r.generate = generate
 }
 
-// SetCLI sets a custom CLI namespace implementation
-func (r *DefaultNamespaceRegistry) SetCLI(cli CLINamespace) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.cli = cli
-}
-
 // Update returns the update namespace
 func (r *DefaultNamespaceRegistry) Update() UpdateNamespace {
 	r.mu.RLock()
@@ -971,30 +860,6 @@ func (r *DefaultNamespaceRegistry) SetMod(mod ModNamespace) {
 	r.mod = mod
 }
 
-// Recipes returns the recipes namespace
-func (r *DefaultNamespaceRegistry) Recipes() RecipesNamespace {
-	r.mu.RLock()
-	if r.recipes != nil {
-		defer r.mu.RUnlock()
-		return r.recipes
-	}
-	r.mu.RUnlock()
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.recipes == nil {
-		r.recipes = NewRecipesNamespace()
-	}
-	return r.recipes
-}
-
-// SetRecipes sets a custom recipes namespace implementation
-func (r *DefaultNamespaceRegistry) SetRecipes(recipes RecipesNamespace) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.recipes = recipes
-}
-
 // Metrics returns the metrics namespace
 func (r *DefaultNamespaceRegistry) Metrics() MetricsNamespace {
 	r.mu.RLock()
@@ -1017,30 +882,6 @@ func (r *DefaultNamespaceRegistry) SetMetrics(metrics MetricsNamespace) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.metrics = metrics
-}
-
-// Workflow returns the workflow namespace
-func (r *DefaultNamespaceRegistry) Workflow() WorkflowNamespace {
-	r.mu.RLock()
-	if r.workflow != nil {
-		defer r.mu.RUnlock()
-		return r.workflow
-	}
-	r.mu.RUnlock()
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.workflow == nil {
-		r.workflow = NewWorkflowNamespace()
-	}
-	return r.workflow
-}
-
-// SetWorkflow sets a custom workflow namespace implementation
-func (r *DefaultNamespaceRegistry) SetWorkflow(workflow WorkflowNamespace) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.workflow = workflow
 }
 
 // GetNamespaceRegistry returns the package-level namespace registry with thread-safe lazy initialization

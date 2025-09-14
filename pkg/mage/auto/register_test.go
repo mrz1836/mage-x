@@ -162,14 +162,6 @@ func TestNamespaceTypeAliases(t *testing.T) {
 			},
 		},
 		{
-			name: "CLI type alias",
-			testFunc: func(t *testing.T) {
-				var cli CLI
-				var mcli mage.CLI
-				assert.IsType(t, mcli, cli)
-			},
-		},
-		{
 			name: "Update type alias",
 			testFunc: func(t *testing.T) {
 				var update Update
@@ -186,27 +178,11 @@ func TestNamespaceTypeAliases(t *testing.T) {
 			},
 		},
 		{
-			name: "Recipes type alias",
-			testFunc: func(t *testing.T) {
-				var recipes Recipes
-				var mrecipes mage.Recipes
-				assert.IsType(t, mrecipes, recipes)
-			},
-		},
-		{
 			name: "Metrics type alias",
 			testFunc: func(t *testing.T) {
 				var metrics Metrics
 				var mmetrics mage.Metrics
 				assert.IsType(t, mmetrics, metrics)
-			},
-		},
-		{
-			name: "Workflow type alias",
-			testFunc: func(t *testing.T) {
-				var workflow Workflow
-				var mworkflow mage.Workflow
-				assert.IsType(t, mworkflow, workflow)
 			},
 		},
 		{
@@ -239,30 +215,6 @@ func TestNamespaceTypeAliases(t *testing.T) {
 				var init Init
 				var minit mage.Init
 				assert.IsType(t, minit, init)
-			},
-		},
-		{
-			name: "Enterprise type alias",
-			testFunc: func(t *testing.T) {
-				var enterprise Enterprise
-				var menterprise mage.Enterprise
-				assert.IsType(t, menterprise, enterprise)
-			},
-		},
-		{
-			name: "Integrations type alias",
-			testFunc: func(t *testing.T) {
-				var integrations Integrations
-				var mintegrations mage.Integrations
-				assert.IsType(t, mintegrations, integrations)
-			},
-		},
-		{
-			name: "Wizard type alias",
-			testFunc: func(t *testing.T) {
-				var wizard Wizard
-				var mwizard mage.Wizard
-				assert.IsType(t, mwizard, wizard)
 			},
 		},
 		{
@@ -486,23 +438,17 @@ func TestNamespaceInstantiation(t *testing.T) {
 			Docs{},
 			Tools{},
 			Generate{},
-			CLI{},
 			Update{},
 			Mod{},
-			Recipes{},
 			Metrics{},
-			Workflow{},
 			Bench{},
 			Vet{},
 			Configure{},
 			Init{},
-			Enterprise{},
-			Integrations{},
-			Wizard{},
 			Help{},
 		}
 
-		assert.Len(t, typeAliases, 24, "Should have exactly 24 type aliases")
+		assert.Len(t, typeAliases, 18, "Should have exactly 18 type aliases")
 
 		for i, alias := range typeAliases {
 			assert.NotNil(t, alias, "Type alias at index %d should not be nil", i)

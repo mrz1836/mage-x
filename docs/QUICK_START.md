@@ -428,8 +428,7 @@ integrations:
 1. **Explore Commands**: `magex -l` to see all available commands
 2. **Namespace Deep-Dive**: `magex -n` to see commands by category
 3. **Search & Discovery**: `magex -search <term>` to find specific commands
-4. **Advanced Features**: Check out [enterprise features](ENTERPRISE.md)
-5. **Customization**: Learn about [configuration options](CONFIGURATION.md)
+4. **Customization**: Learn about [configuration options](CONFIGURATION.md)
 
 ## 🚀 Pro Tips
 
@@ -443,6 +442,5 @@ integrations:
 
 - 📚 [Full Documentation](../README.md)
 - 🏗️ [Architecture Guide](NAMESPACE_INTERFACES.md)
-- 🏢 [Enterprise Features](ENTERPRISE.md)
 - 🤖 [AI Agent System](SUB_AGENTS.md)
 - 💬 [GitHub Issues](https://github.com/mrz1836/mage-x/issues)

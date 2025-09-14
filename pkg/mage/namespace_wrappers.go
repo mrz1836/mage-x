@@ -106,16 +106,6 @@ type generateNamespaceWrapper struct {
 // Ensure generateNamespaceWrapper implements GenerateNamespace
 var _ GenerateNamespace = (*generateNamespaceWrapper)(nil)
 
-// cliNamespaceWrapper wraps the CLI namespace to implement CLINamespace interface
-type cliNamespaceWrapper struct {
-	CLI
-
-	instanceID int64 // Unique identifier to ensure different instances
-}
-
-// Ensure cliNamespaceWrapper implements CLINamespace
-var _ CLINamespace = (*cliNamespaceWrapper)(nil)
-
 // updateNamespaceWrapper wraps the Update namespace to implement UpdateNamespace interface
 type updateNamespaceWrapper struct {
 	Update
@@ -136,16 +126,6 @@ type modNamespaceWrapper struct {
 // Ensure modNamespaceWrapper implements ModNamespace
 var _ ModNamespace = (*modNamespaceWrapper)(nil)
 
-// recipesNamespaceWrapper wraps the Recipes namespace to implement RecipesNamespace interface
-type recipesNamespaceWrapper struct {
-	Recipes
-
-	instanceID int64 // Unique identifier to ensure different instances
-}
-
-// Ensure recipesNamespaceWrapper implements RecipesNamespace
-var _ RecipesNamespace = (*recipesNamespaceWrapper)(nil)
-
 // metricsNamespaceWrapper wraps the Metrics to implement MetricsNamespace interface
 type metricsNamespaceWrapper struct {
 	Metrics
@@ -155,16 +135,6 @@ type metricsNamespaceWrapper struct {
 
 // Ensure metricsNamespaceWrapper implements MetricsNamespace
 var _ MetricsNamespace = (*metricsNamespaceWrapper)(nil)
-
-// workflowNamespaceWrapper wraps the Workflow namespace to implement WorkflowNamespace interface
-type workflowNamespaceWrapper struct {
-	Workflow
-
-	instanceID int64 // Unique identifier to ensure different instances
-}
-
-// Ensure workflowNamespaceWrapper implements WorkflowNamespace
-var _ WorkflowNamespace = (*workflowNamespaceWrapper)(nil)
 
 // Factory functions for creating namespace implementations
 // These maintain the exact same API but use consolidated implementation
@@ -255,14 +225,6 @@ func NewGenerateNamespace() GenerateNamespace {
 	}
 }
 
-// NewCLINamespace creates a new CLINamespace implementation
-func NewCLINamespace() CLINamespace {
-	return &cliNamespaceWrapper{
-		CLI:        CLI{},
-		instanceID: atomic.AddInt64(&instanceCounter, 1),
-	}
-}
-
 // NewUpdateNamespace creates a new UpdateNamespace implementation
 func NewUpdateNamespace() UpdateNamespace {
 	return &updateNamespaceWrapper{
@@ -279,26 +241,10 @@ func NewModNamespace() ModNamespace {
 	}
 }
 
-// NewRecipesNamespace creates a new RecipesNamespace implementation
-func NewRecipesNamespace() RecipesNamespace {
-	return &recipesNamespaceWrapper{
-		Recipes:    Recipes{},
-		instanceID: atomic.AddInt64(&instanceCounter, 1),
-	}
-}
-
 // NewMetricsNamespace creates a new MetricsNamespace implementation
 func NewMetricsNamespace() MetricsNamespace {
 	return &metricsNamespaceWrapper{
 		Metrics:    Metrics{},
-		instanceID: atomic.AddInt64(&instanceCounter, 1),
-	}
-}
-
-// NewWorkflowNamespace creates a new WorkflowNamespace implementation
-func NewWorkflowNamespace() WorkflowNamespace {
-	return &workflowNamespaceWrapper{
-		Workflow:   Workflow{},
 		instanceID: atomic.AddInt64(&instanceCounter, 1),
 	}
 }

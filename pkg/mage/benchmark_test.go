@@ -133,11 +133,9 @@ func BenchmarkNamespaceCreation(b *testing.B) {
 		{"Git", func() interface{} { return NewGitNamespace() }},
 		{"Tools", func() interface{} { return NewToolsNamespace() }},
 		{"Generate", func() interface{} { return NewGenerateNamespace() }},
-		{"CLI", func() interface{} { return NewCLINamespace() }},
 		{"Update", func() interface{} { return NewUpdateNamespace() }},
 		{"Mod", func() interface{} { return NewModNamespace() }},
 		{"Metrics", func() interface{} { return NewMetricsNamespace() }},
-		{"Workflow", func() interface{} { return NewWorkflowNamespace() }},
 	}
 
 	for _, bm := range benchmarks {
@@ -397,25 +395,6 @@ func BenchmarkCLIOperations(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_ = formatter.formatStatus(true)
 			_ = formatter.formatStatus(false)
-		}
-	})
-}
-
-// BenchmarkEnterpriseOperations benchmarks enterprise config operations
-func BenchmarkEnterpriseOperations(b *testing.B) {
-	config := NewEnterpriseConfiguration()
-
-	b.Run("NewEnterpriseConfiguration", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = NewEnterpriseConfiguration()
-		}
-	})
-
-	b.Run("ValidateConfiguration", func(b *testing.B) {
-		validator := NewConfigurationValidator()
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_ = validator.Validate(config)
 		}
 	})
 }

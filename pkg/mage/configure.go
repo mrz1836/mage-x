@@ -20,16 +20,14 @@ const (
 
 // Static errors for err113 compliance
 var (
-	ErrConfigFileExists            = errors.New("configuration file already exists")
-	ErrUnsupportedFormat           = errors.New("unsupported format")
-	ErrFileEnvRequired             = errors.New("FILE environment variable is required")
-	ErrImportFileNotFound          = errors.New("import file not found")
-	ErrUnsupportedFileFormat       = errors.New("unsupported file format")
-	ErrProjectNameRequired         = errors.New("project name is required")
-	ErrBinaryNameRequired          = errors.New("binary name is required")
-	ErrModulePathRequired          = errors.New("module path is required")
-	ErrEnterpriseOrgNameRequired   = errors.New("enterprise organization name is required")
-	ErrEnterpriseOrgDomainRequired = errors.New("enterprise organization domain is required")
+	ErrConfigFileExists      = errors.New("configuration file already exists")
+	ErrUnsupportedFormat     = errors.New("unsupported format")
+	ErrFileEnvRequired       = errors.New("FILE environment variable is required")
+	ErrImportFileNotFound    = errors.New("import file not found")
+	ErrUnsupportedFileFormat = errors.New("unsupported file format")
+	ErrProjectNameRequired   = errors.New("project name is required")
+	ErrBinaryNameRequired    = errors.New("binary name is required")
+	ErrModulePathRequired    = errors.New("module path is required")
 )
 
 // Configure namespace for configuration management
@@ -92,16 +90,6 @@ func (Configure) Show() error {
 	utils.Info("  Cover Mode: %s", config.Test.CoverMode)
 	utils.Info("  Race Detection: %v", config.Test.Race)
 
-	// Display enterprise configuration if available
-	if config.Enterprise != nil {
-		utils.Info("🏢 Enterprise Configuration:")
-		utils.Info("  Organization: %s", config.Enterprise.Organization.Name)
-		utils.Info("  Domain: %s", config.Enterprise.Organization.Domain)
-		utils.Info("  Security Level: %s", config.Enterprise.Security.Level)
-		utils.Info("  Analytics: %v", config.Enterprise.Analytics.Enabled)
-		utils.Info("  Integrations: %d configured", len(config.Enterprise.Integrations.Providers))
-	}
-
 	return nil
 }
 
@@ -114,41 +102,17 @@ func (Configure) Update() error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// Interactive update wizard
-	wizard := &ConfigurationWizard{
+	// Interactive configuration helper
+	configurator := &ConfigurationHelper{
 		Config: config,
 	}
 
-	if err := wizard.Run(); err != nil {
-		return fmt.Errorf("failed to run configuration wizard: %w", err)
+	if err := configurator.Run(); err != nil {
+		return fmt.Errorf("failed to run configuration helper: %w", err)
 	}
 
 	utils.Success("✅ Configuration updated successfully")
 	return nil
-}
-
-// Enterprise initializes enterprise configuration
-func (Configure) Enterprise() error {
-	utils.Header("🏢 Enterprise Configuration Setup")
-
-	// Check if enterprise config already exists
-	if HasEnterpriseConfig() {
-		utils.Info("Enterprise configuration already exists")
-
-		// Ask if user wants to update
-		fmt.Print("Would you like to update the existing configuration? (y/N): ")
-		var response string
-		if _, err := fmt.Scanln(&response); err != nil && err.Error() != errUnexpectedNewline {
-			return fmt.Errorf("failed to read response: %w", err)
-		}
-
-		if !strings.EqualFold(response, "y") && !strings.EqualFold(response, "yes") {
-			return nil
-		}
-	}
-
-	// Run enterprise setup wizard
-	return SetupEnterpriseConfig()
 }
 
 // Export exports configuration to different formats
@@ -295,14 +259,14 @@ func (Configure) Schema() error {
 
 // Supporting types and functions
 
-// ConfigurationWizard provides interactive configuration updates
-type ConfigurationWizard struct {
+// ConfigurationHelper provides interactive configuration updates
+type ConfigurationHelper struct {
 	Config *Config
 }
 
-// Run executes the configuration wizard
-func (w *ConfigurationWizard) Run() error {
-	utils.Info("🧙 Configuration Update Wizard")
+// Run executes the configuration helper
+func (w *ConfigurationHelper) Run() error {
+	utils.Info("🔧 Updating Configuration")
 
 	// Update project configuration
 	if err := w.updateProjectConfig(); err != nil {
@@ -323,7 +287,7 @@ func (w *ConfigurationWizard) Run() error {
 	return SaveConfig(w.Config)
 }
 
-func (w *ConfigurationWizard) updateProjectConfig() error {
+func (w *ConfigurationHelper) updateProjectConfig() error {
 	utils.Info("📁 Project Configuration")
 
 	fmt.Printf("Project Name [%s]: ", w.Config.Project.Name)
@@ -362,7 +326,7 @@ func (w *ConfigurationWizard) updateProjectConfig() error {
 	return nil
 }
 
-func (w *ConfigurationWizard) updateBuildConfig() error {
+func (w *ConfigurationHelper) updateBuildConfig() error {
 	utils.Info("🏗️  Build Configuration")
 
 	fmt.Printf("Output Directory [%s]: ", w.Config.Build.Output)
@@ -389,7 +353,7 @@ func (w *ConfigurationWizard) updateBuildConfig() error {
 	return nil
 }
 
-func (w *ConfigurationWizard) updateTestConfig() error {
+func (w *ConfigurationHelper) updateTestConfig() error {
 	utils.Info("🧪 Test Configuration")
 
 	fmt.Printf("Test Timeout [%s]: ", w.Config.Test.Timeout)
@@ -439,22 +403,6 @@ func validateConfiguration(cfg *Config) error {
 		return ErrModulePathRequired
 	}
 
-	// Validate enterprise configuration if present
-	if cfg.Enterprise != nil {
-		return validateEnterpriseConfiguration(cfg.Enterprise)
-	}
-
-	return nil
-}
-
-// validateEnterpriseConfiguration validates enterprise configuration settings
-func validateEnterpriseConfiguration(cfg *EnterpriseConfiguration) error {
-	if cfg.Organization.Name == "" {
-		return ErrEnterpriseOrgNameRequired
-	}
-	if cfg.Organization.Domain == "" {
-		return ErrEnterpriseOrgDomainRequired
-	}
 	return nil
 }
 
@@ -507,10 +455,6 @@ func generateConfigurationSchema() string {
         "tags": {"type": "array", "items": {"type": "string"}},
         "skip_fuzz": {"type": "boolean"}
       }
-    },
-    "enterprise": {
-      "type": "object",
-      "description": "Enterprise configuration for advanced features"
     }
   },
   "required": ["project", "build", "test"]

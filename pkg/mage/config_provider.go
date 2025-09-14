@@ -71,17 +71,8 @@ func (p *DefaultConfigProvider) GetConfig() (*Config, error) {
 			}
 		}
 
-		// Check for enterprise configuration file
-		enterpriseConfigFile := ".mage.enterprise.yaml"
+		// Load configuration file if it exists
 		fileOps := fileops.New()
-		if fileOps.File.Exists(enterpriseConfigFile) {
-			// Load enterprise configuration
-			var enterpriseConfig EnterpriseConfiguration
-			if err := fileOps.YAML.ReadYAML(enterpriseConfigFile, &enterpriseConfig); err == nil {
-				p.config.Enterprise = &enterpriseConfig
-			}
-		}
-
 		if fileOps.File.Exists(configFile) {
 			// Config file exists, read and parse it
 			data, err := fileOps.File.ReadFile(configFile)

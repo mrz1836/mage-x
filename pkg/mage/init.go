@@ -108,21 +108,6 @@ func (Init) Library() error {
 	return initializeProject(config)
 }
 
-// CLI initializes a CLI application project
-func (Init) CLI() error {
-	utils.Header("⚡ Creating CLI Application Project")
-
-	config := &InitProjectConfig{
-		Type:      CLIProject,
-		UseMage:   true,
-		UseDocker: true,
-		UseCI:     true,
-		Features:  []string{"cobra", "viper", "testing", "goreleaser"},
-	}
-
-	return initializeProject(config)
-}
-
 // WebAPI initializes a web API project
 func (Init) WebAPI() error {
 	utils.Header("🌐 Creating Web API Project")

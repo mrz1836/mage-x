@@ -1,8 +1,0 @@
-{
-    "description": "Staging environment",
-    "endpoint": "https://staging.example.com",
-    "health_check": "/health",
-    "name": "staging",
-    "secrets": [],
-    "variables": {}
-}

@@ -11,30 +11,24 @@ import (
 
 // All namespace types are re-exported for Mage visibility
 type (
-	Build        = mage.Build
-	Test         = mage.Test
-	Lint         = mage.Lint
-	Format       = mage.Format
-	Deps         = mage.Deps
-	Git          = mage.Git
-	Release      = mage.Release
-	Docs         = mage.Docs
-	Tools        = mage.Tools
-	Generate     = mage.Generate
-	CLI          = mage.CLI
-	Update       = mage.Update
-	Mod          = mage.Mod
-	Recipes      = mage.Recipes
-	Metrics      = mage.Metrics
-	Workflow     = mage.Workflow
-	Bench        = mage.Bench
-	Vet          = mage.Vet
-	Configure    = mage.Configure
-	Init         = mage.Init
-	Enterprise   = mage.Enterprise
-	Integrations = mage.Integrations
-	Wizard       = mage.Wizard
-	Help         = mage.Help
+	Build     = mage.Build
+	Test      = mage.Test
+	Lint      = mage.Lint
+	Format    = mage.Format
+	Deps      = mage.Deps
+	Git       = mage.Git
+	Release   = mage.Release
+	Docs      = mage.Docs
+	Tools     = mage.Tools
+	Generate  = mage.Generate
+	Update    = mage.Update
+	Mod       = mage.Mod
+	Metrics   = mage.Metrics
+	Bench     = mage.Bench
+	Vet       = mage.Vet
+	Configure = mage.Configure
+	Init      = mage.Init
+	Help      = mage.Help
 )
 
 // Convenience wrapper functions for the most common commands

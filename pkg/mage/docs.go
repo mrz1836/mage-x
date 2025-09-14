@@ -659,7 +659,7 @@ func getPortFromConfig(config *Config, defaultPort int) int {
 // isCI detects if running in CI environment
 func isCI() bool {
 	ci := os.Getenv("CI")
-	return ci == approvalTrue || ci == "1"
+	return ci == "true" || ci == "1"
 }
 
 // isTestEnvironment detects if code is running under go test

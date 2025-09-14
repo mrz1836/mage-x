@@ -1,6 +1,6 @@
 # 📚 MAGE-X Documentation
 
-Welcome to the comprehensive documentation for MAGE-X, the enterprise-grade build automation toolkit for Go projects.
+Welcome to the comprehensive documentation for MAGE-X, the build automation toolkit for Go projects.
 
 ## 📖 Documentation Structure
 
@@ -20,13 +20,6 @@ Welcome to the comprehensive documentation for MAGE-X, the enterprise-grade buil
 - [API Reference](API_REFERENCE.md) - Complete interface and API documentation
 - [Provider Pattern](PROVIDER_PATTERN.md) - Dependency injection and provider system
 
-### Enterprise Features
-- [Enterprise Overview](ENTERPRISE.md) - Complete enterprise features guide
-- [Audit Logging](AUDIT.md) - Comprehensive audit and compliance
-- [Team Management](TEAM.md) - Role-based access and collaboration
-- [Analytics & Metrics](ANALYTICS.md) - Performance tracking and optimization
-- [Workflow Engine](WORKFLOWS.md) - Advanced workflow automation
-- [Integration Hub](INTEGRATIONS.md) - Third-party tool integrations
 
 ### Advanced Topics
 - [API Reference](API_REFERENCE.md) - Complete interface and API documentation
@@ -50,22 +43,14 @@ Welcome to the comprehensive documentation for MAGE-X, the enterprise-grade buil
 - [Testing](TESTING.md) - Test automation
 
 ### For DevOps Engineers
-- [Enterprise Setup](ENTERPRISE.md) - Enterprise feature configuration
 - [Security Scanning](SECURITY.md) - Security and compliance
-- [Workflow Automation](WORKFLOWS.md) - CI/CD workflow management
-- [Integrations](INTEGRATIONS.md) - Tool integrations
+- [Build System](BUILD.md) - Advanced build automation
+- [Release Management](RELEASE.md) - Multi-channel releases
 
-### For Engineering Managers
-- [Team Management](TEAM.md) - Managing teams and permissions
-- [Analytics Dashboard](ANALYTICS.md) - Performance metrics and insights
-- [Audit Logging](AUDIT.md) - Compliance and audit reporting
-- [Enterprise Features](ENTERPRISE.md) - Full enterprise capabilities
 
 ### For Security Teams
 - [Security Overview](SECURITY.md) - Security features and policies
-- [Compliance Frameworks](ENTERPRISE.md#compliance-frameworks) - SOC2, ISO27001, etc.
-- [Vulnerability Management](ENTERPRISE.md#security-scanning--policy-enforcement) - Vulnerability scanning and remediation
-- [Audit Trails](AUDIT.md) - Complete audit logging
+- [Security Scanning](SECURITY.md) - Vulnerability scanning and remediation
 
 ## 🛠️ Interactive Help
 

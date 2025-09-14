@@ -122,16 +122,6 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates GenerateNamespace implementation",
 		},
 		{
-			name:         "NewCLINamespace",
-			factory:      func() interface{} { return NewCLINamespace() },
-			expectedType: (*cliNamespaceWrapper)(nil),
-			interfaceCheck: func(i interface{}) bool {
-				_, ok := i.(CLINamespace)
-				return ok
-			},
-			description: "creates CLINamespace implementation",
-		},
-		{
 			name:         "NewUpdateNamespace",
 			factory:      func() interface{} { return NewUpdateNamespace() },
 			expectedType: (*updateNamespaceWrapper)(nil),
@@ -152,16 +142,6 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 			description: "creates ModNamespace implementation",
 		},
 		{
-			name:         "NewRecipesNamespace",
-			factory:      func() interface{} { return NewRecipesNamespace() },
-			expectedType: (*recipesNamespaceWrapper)(nil),
-			interfaceCheck: func(i interface{}) bool {
-				_, ok := i.(RecipesNamespace)
-				return ok
-			},
-			description: "creates RecipesNamespace implementation",
-		},
-		{
 			name:         "NewMetricsNamespace",
 			factory:      func() interface{} { return NewMetricsNamespace() },
 			expectedType: (*metricsNamespaceWrapper)(nil),
@@ -170,16 +150,6 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctions() {
 				return ok
 			},
 			description: "creates MetricsNamespace implementation",
-		},
-		{
-			name:         "NewWorkflowNamespace",
-			factory:      func() interface{} { return NewWorkflowNamespace() },
-			expectedType: (*workflowNamespaceWrapper)(nil),
-			interfaceCheck: func(i interface{}) bool {
-				_, ok := i.(WorkflowNamespace)
-				return ok
-			},
-			description: "creates WorkflowNamespace implementation",
 		},
 	}
 
@@ -286,12 +256,9 @@ func (suite *FactoryFunctionsTestSuite) TestFactoryFunctionErrorHandling() {
 	suite.NotPanics(func() { NewToolsNamespace() }, "NewToolsNamespace should not panic")
 	suite.NotPanics(func() { NewSecurityNamespace() }, "NewSecurityNamespace should not panic")
 	suite.NotPanics(func() { NewGenerateNamespace() }, "NewGenerateNamespace should not panic")
-	suite.NotPanics(func() { NewCLINamespace() }, "NewCLINamespace should not panic")
 	suite.NotPanics(func() { NewUpdateNamespace() }, "NewUpdateNamespace should not panic")
 	suite.NotPanics(func() { NewModNamespace() }, "NewModNamespace should not panic")
-	suite.NotPanics(func() { NewRecipesNamespace() }, "NewRecipesNamespace should not panic")
 	suite.NotPanics(func() { NewMetricsNamespace() }, "NewMetricsNamespace should not panic")
-	suite.NotPanics(func() { NewWorkflowNamespace() }, "NewWorkflowNamespace should not panic")
 }
 
 // TestRunFactoryFunctionsTestSuite runs the factory functions test suite
@@ -315,12 +282,9 @@ func BenchmarkFactoryFunctions(b *testing.B) {
 		{"NewDocsNamespace", func() interface{} { return NewDocsNamespace() }},
 		{"NewToolsNamespace", func() interface{} { return NewToolsNamespace() }},
 		{"NewGenerateNamespace", func() interface{} { return NewGenerateNamespace() }},
-		{"NewCLINamespace", func() interface{} { return NewCLINamespace() }},
 		{"NewUpdateNamespace", func() interface{} { return NewUpdateNamespace() }},
 		{"NewModNamespace", func() interface{} { return NewModNamespace() }},
-		{"NewRecipesNamespace", func() interface{} { return NewRecipesNamespace() }},
 		{"NewMetricsNamespace", func() interface{} { return NewMetricsNamespace() }},
-		{"NewWorkflowNamespace", func() interface{} { return NewWorkflowNamespace() }},
 	}
 
 	for _, tt := range tests {

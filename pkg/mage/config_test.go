@@ -329,57 +329,6 @@ func (ts *ConfigTestSuite) TestEnvironmentOverrides() {
 	})
 }
 
-// TestEnterpriseEnvironmentOverrides tests enterprise-specific environment overrides
-func (ts *ConfigTestSuite) TestEnterpriseEnvironmentOverrides() {
-	ts.Run("OrganizationOverrides", func() {
-		enterpriseConfig := &EnterpriseConfiguration{
-			Organization: OrganizationConfig{
-				Name:   "Original Org",
-				Domain: "original.com",
-			},
-		}
-
-		ts.Require().NoError(os.Setenv("MAGE_X_ORG_NAME", "New Org"))
-		ts.Require().NoError(os.Setenv("MAGE_X_ORG_DOMAIN", "new.com"))
-
-		applyEnterpriseEnvOverrides(enterpriseConfig)
-
-		ts.Require().Equal("New Org", enterpriseConfig.Organization.Name)
-		ts.Require().Equal("new.com", enterpriseConfig.Organization.Domain)
-	})
-
-	ts.Run("PlaceholderEnvironmentVariables", func() {
-		// Test that placeholder environment variables don't cause errors
-		ts.Require().NoError(os.Setenv("MAGE_X_SECURITY_LEVEL", "high"))
-		ts.Require().NoError(os.Setenv("MAGE_X_ENABLE_VAULT", "true"))
-		ts.Require().NoError(os.Setenv("VAULT_ADDR", "https://vault.example.com"))
-		ts.Require().NoError(os.Setenv("MAGE_X_ANALYTICS_ENABLED", "true"))
-		ts.Require().NoError(os.Setenv("MAGE_X_METRICS_INTERVAL", "30s"))
-
-		enterpriseConfig := &EnterpriseConfiguration{}
-
-		// Should not panic or error
-		ts.Require().NotPanics(func() {
-			applyEnterpriseEnvOverrides(enterpriseConfig)
-		})
-	})
-
-	ts.Run("EnterpriseOverridesWithMainConfig", func() {
-		config := defaultConfig()
-		config.Enterprise = &EnterpriseConfiguration{
-			Organization: OrganizationConfig{
-				Name:   "Test Org",
-				Domain: "test.com",
-			},
-		}
-
-		ts.Require().NoError(os.Setenv("MAGE_X_ORG_NAME", "Updated Org"))
-		applyEnvOverrides(config)
-
-		ts.Require().Equal("Updated Org", config.Enterprise.Organization.Name)
-	})
-}
-
 // TestConfigFunctions tests the main configuration functions
 func (ts *ConfigTestSuite) TestConfigFunctions() {
 	ts.Run("GetConfig", func() {
@@ -439,43 +388,6 @@ func (ts *ConfigTestSuite) TestConfigFunctions() {
 		TestSetConfig(customConfig)
 		ts.Require().True(IsVerbose())
 	})
-
-	ts.Run("HasEnterpriseConfig", func() {
-		// Test without enterprise config
-		ts.Require().False(HasEnterpriseConfig())
-
-		// Test with enterprise config
-		customConfig := defaultConfig()
-		customConfig.Enterprise = &EnterpriseConfiguration{}
-		TestSetConfig(customConfig)
-		ts.Require().True(HasEnterpriseConfig())
-	})
-
-	ts.Run("GetEnterpriseConfig", func() {
-		// Test without enterprise config
-		TestResetConfig()
-		enterpriseConfig := GetEnterpriseConfig()
-
-		// Enterprise config might exist due to default configuration
-		// We test that the function returns without error
-		if enterpriseConfig != nil {
-			ts.Require().NotNil(enterpriseConfig)
-		}
-
-		// Test with custom enterprise config
-		customConfig := defaultConfig()
-		expectedEnterprise := &EnterpriseConfiguration{
-			Organization: OrganizationConfig{
-				Name: "Test Org",
-			},
-		}
-		customConfig.Enterprise = expectedEnterprise
-		TestSetConfig(customConfig)
-
-		enterpriseConfig = GetEnterpriseConfig()
-		ts.Require().NotNil(enterpriseConfig)
-		ts.Require().Equal("Test Org", enterpriseConfig.Organization.Name)
-	})
 }
 
 // TestConfigPersistence tests configuration saving and loading
@@ -506,50 +418,6 @@ func (ts *ConfigTestSuite) TestConfigPersistence() {
 		configPath := getConfigFilePath()
 		_, err = os.Stat(configPath)
 		ts.Require().NoError(err)
-	})
-
-	ts.Run("SaveEnterpriseConfig", func() {
-		// Change to temp directory for this test
-		originalDir, err := os.Getwd()
-		ts.Require().NoError(err)
-		defer func() {
-			ts.Require().NoError(os.Chdir(originalDir))
-		}()
-
-		ts.Require().NoError(os.Chdir(ts.tempDir))
-
-		enterpriseConfig := &EnterpriseConfiguration{
-			Organization: OrganizationConfig{
-				Name:   "Test Enterprise",
-				Domain: "test.enterprise.com",
-			},
-		}
-
-		err = SaveEnterpriseConfig(enterpriseConfig)
-		ts.Require().NoError(err)
-
-		// Check that file was created
-		_, err = os.Stat(".mage.enterprise.yaml")
-		ts.Require().NoError(err)
-	})
-}
-
-// TestEnterpriseSetup tests enterprise configuration setup
-func (ts *ConfigTestSuite) TestEnterpriseSetup() {
-	ts.Run("SetupEnterpriseConfigWhenExists", func() {
-		// Set up config with enterprise already configured
-		customConfig := defaultConfig()
-		customConfig.Enterprise = &EnterpriseConfiguration{}
-		TestSetConfig(customConfig)
-
-		err := SetupEnterpriseConfig()
-		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, ErrEnterpriseConfigExists)
-	})
-
-	ts.Run("SetupEnterpriseConfigWhenNotExists", func() {
-		// Skip this test as it causes nil pointer panics due to interactive wizard
-		ts.T().Skip("Skipping interactive wizard test - causes nil pointer panic without input")
 	})
 }
 
@@ -629,12 +497,6 @@ func (ts *ConfigTestSuite) TestConfigErrorHandling() {
 
 		verbose := IsVerbose()
 		ts.Require().False(verbose) // Should return false on error
-
-		hasEnterprise := HasEnterpriseConfig()
-		ts.Require().False(hasEnterprise) // Should return false on error
-
-		enterpriseConfig := GetEnterpriseConfig()
-		ts.Require().Nil(enterpriseConfig) // Should return nil on error
 	})
 }
 

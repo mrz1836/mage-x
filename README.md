@@ -95,16 +95,13 @@
   _No magefile.go needed. No imports. No wrappers. Just install `magex` and all built-in and custom commands work immediately in any Go project._
   <br/><br/>
 - **Drop-in Mage Replacement**<br/>
-  _`magex` is a superset of `mage` with all MAGE-X commands built-in. Your existing magefiles still work, now enhanced with 241+ professional commands._
+  _`magex` is a superset of `mage` with all MAGE-X commands built-in. Your existing magefiles still work, now enhanced with 190+ professional commands._
   <br/><br/>
 - **Cross-Platform Excellence**<br/>
   _Full support for Linux, macOS, and Windows with multi-architecture builds, parallel execution, and CPU-aware optimization._
   <br/><br/>
 - **Security-First Architecture**<br/>
   _Input validation, secure command execution, and minimal dependencies. Built for environments where security matters._
-  <br/><br/>
-- **Advanced Recipe System**<br/>
-  _Pre-built development patterns with templates and automation—from fresh project setup to complete CI/CD workflows._
   <br/><br/>
 - **Professional Release Management**<br/>
   _Multi-platform asset building, automated versioning, GitHub integration, GoDocs proxy sync, and release automation for production deployments._
@@ -229,12 +226,10 @@ This means:
 - **Project Templates**: CLI, library, web API, and microservice templates
 - **Release Automation**: Multi-platform asset building with GitHub integration
 - **Configuration Management**: Flexible mage.yaml with smart defaults
-- **Recipe System**: Pre-built patterns and templates for common scenarios
 
 ### User Experience Features
 - **Command Discovery**: Comprehensive CLI with intuitive command structure
 - **Help System**: Built-in documentation and usage examples
-- **Recipe System**: Common patterns and best practices library
 - **Project Templates**: Ready-made configurations for different project types
 
 ### Enterprise Features
@@ -391,7 +386,7 @@ For comprehensive documentation, visit the [docs](docs) directory:
 
 ### Available Commands
 
-MAGE-X provides 241+ commands organized by functionality. All commands work instantly through the `magex` CLI.
+MAGE-X provides 190+ commands organized by functionality. All commands work instantly through the `magex` CLI.
 
 <details>
 <summary>🎯 <strong>Essential Commands</strong></summary>
@@ -444,12 +439,6 @@ magex init:license        # Add license file
 magex init:makefile       # Create Makefile
 magex init:editorconfig   # Create .editorconfig
 
-# Recipe Management
-magex recipes:list                    # List available recipes
-magex recipes:show recipe=fresh-start # Show recipe details
-magex recipes:run recipe=fresh-start  # Run the fresh-start recipe
-magex recipes:search term=docker      # Search for recipes
-magex recipes:create recipe=my-recipe # Create a custom recipe
 ```
 
 </details>
@@ -723,80 +712,7 @@ magex yaml:schema         # Show YAML schema
 
 </details>
 
-<details>
-<summary>🛡️ <strong>Security & Audit</strong></summary>
 
-```bash
-magex audit:show          # Display audit events with optional filtering
-magex audit:stats         # Show audit statistics and summaries
-magex audit:export        # Export audit data to various formats
-magex audit:cleanup       # Clean up old audit entries
-magex audit:enable        # Enable audit logging
-magex audit:disable       # Disable audit logging
-magex audit:report        # Generate comprehensive audit reports
-```
-
-</details>
-
-<details>
-<summary>🏢 <strong>Enterprise & Advanced Features</strong></summary>
-
-```bash
-# Enterprise Management
-magex enterprise:init     # Initialize enterprise features
-magex enterprise:config   # Configure enterprise settings
-magex enterprise:deploy   # Deploy enterprise version
-magex enterprise:rollback # Rollback deployment
-magex enterprise:promote  # Promote deployment
-magex enterprise:status   # Show deployment status
-magex enterprise:backup   # Backup enterprise data
-magex enterprise:restore  # Restore enterprise data
-
-# Workflow Automation
-magex workflow:execute    # Execute workflow
-magex workflow:list       # List workflows
-magex workflow:status     # Show workflow status
-magex workflow:create     # Create workflow
-magex workflow:validate   # Validate workflow
-magex workflow:schedule   # Schedule workflow
-magex workflow:template   # Workflow templates
-magex workflow:history    # Show workflow history
-
-# Integration Management
-magex integrations:setup    # Setup integrations
-magex integrations:test     # Test integrations
-magex integrations:sync     # Sync integrations
-magex integrations:notify   # Send notifications
-magex integrations:status   # Show integration status
-magex integrations:webhook  # Webhook operations
-magex integrations:export   # Export integration data
-magex integrations:import   # Import integration data
-
-# CLI Operations
-magex cli:default         # Default CLI operation
-magex cli:help            # CLI help
-magex cli:version         # Show CLI version
-magex cli:completion      # Generate completions
-magex cli:config          # CLI configuration
-magex cli:update          # Update CLI
-magex cli:bulk            # Bulk operations
-magex cli:query           # Query operations
-magex cli:dashboard       # CLI dashboard
-magex cli:batch           # Batch operations
-magex cli:monitor         # Monitoring
-magex cli:workspace       # Workspace management
-magex cli:pipeline        # Pipeline operations
-magex cli:compliance      # Compliance checking
-
-# Interactive Wizards
-magex wizard:setup         # Interactive setup wizard
-magex wizard:config        # Configuration wizard
-magex wizard:project       # Project setup wizard
-magex wizard:deploy        # Deployment wizard
-magex wizard:troubleshoot  # Troubleshooting wizard
-```
-
-</details>
 
 <details>
 <summary>📖 <strong>Help & Updates</strong></summary>
@@ -838,7 +754,7 @@ magex uninstall           # Remove installation
 
 ### 📋 Complete Command List
 
-Run `magex -l` to see a plain list of all available commands (241+ commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
+Run `magex -l` to see a plain list of all available commands (190+ commands), or use `magex help` for a beautiful categorized view with descriptions and usage tips.
 
 <br/>
 

@@ -56,12 +56,9 @@ func (suite *NamespaceIntegrationTestSuite) TestNamespaceDiscovery() {
 		{"Tools", func() interface{} { return registry.Tools() }, true},
 		{"Security", func() interface{} { return registry.Security() }, false}, // Disabled
 		{"Generate", func() interface{} { return registry.Generate() }, true},
-		{"CLI", func() interface{} { return registry.CLI() }, true},
 		{"Update", func() interface{} { return registry.Update() }, true},
 		{"Mod", func() interface{} { return registry.Mod() }, true},
-		{"Recipes", func() interface{} { return registry.Recipes() }, true},
 		{"Metrics", func() interface{} { return registry.Metrics() }, true},
-		{"Workflow", func() interface{} { return registry.Workflow() }, true},
 	}
 
 	for _, ns := range namespaces {
@@ -223,12 +220,9 @@ func (suite *NamespaceIntegrationTestSuite) TestNamespaceInterfaceCompliance() {
 		{"Docs", registry.Docs(), (*DocsNamespace)(nil)},
 		{"Tools", registry.Tools(), (*ToolsNamespace)(nil)},
 		{"Generate", registry.Generate(), (*GenerateNamespace)(nil)},
-		{"CLI", registry.CLI(), (*CLINamespace)(nil)},
 		{"Update", registry.Update(), (*UpdateNamespace)(nil)},
 		{"Mod", registry.Mod(), (*ModNamespace)(nil)},
-		{"Recipes", registry.Recipes(), (*RecipesNamespace)(nil)},
 		{"Metrics", registry.Metrics(), (*MetricsNamespace)(nil)},
-		{"Workflow", registry.Workflow(), (*WorkflowNamespace)(nil)},
 	}
 
 	for _, tt := range tests {
@@ -542,10 +536,10 @@ func BenchmarkNamespaceIntegrationConcurrent(b *testing.B) {
 // FuzzNamespaceIntegration fuzz tests namespace integration
 func FuzzNamespaceIntegration(f *testing.F) {
 	// Add seed values for different namespace access patterns
-	f.Add(0, 1, 2, 3)     // Build, Test, Lint, Format
-	f.Add(4, 5, 6, 7)     // Deps, Git, Release, Docs
-	f.Add(8, 9, 10, 11)   // Tools, Generate, CLI, Update
-	f.Add(12, 13, 14, 15) // Mod, Recipes, Metrics, Workflow
+	f.Add(0, 1, 2, 3)   // Build, Test, Lint, Format
+	f.Add(4, 5, 6, 7)   // Deps, Git, Release, Docs
+	f.Add(8, 9, 10, 11) // Tools, Generate, CLI, Update
+	f.Add(12, 13, 0, 1) // Mod, Metrics
 
 	f.Fuzz(func(t *testing.T, ns1, ns2, ns3, ns4 int) {
 		registry := GetNamespaceRegistry()
@@ -563,12 +557,9 @@ func FuzzNamespaceIntegration(f *testing.F) {
 			func() interface{} { return registry.Docs() },
 			func() interface{} { return registry.Tools() },
 			func() interface{} { return registry.Generate() },
-			func() interface{} { return registry.CLI() },
 			func() interface{} { return registry.Update() },
 			func() interface{} { return registry.Mod() },
-			func() interface{} { return registry.Recipes() },
 			func() interface{} { return registry.Metrics() },
-			func() interface{} { return registry.Workflow() },
 		}
 
 		// Access namespaces based on fuzz input

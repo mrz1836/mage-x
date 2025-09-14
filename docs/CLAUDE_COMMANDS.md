@@ -112,7 +112,7 @@ Validates documentation:
 
 #### `/ci-diagnose [workflow-name|run-id|all]`
 **Purpose**: Diagnose CI/CD issues in GitHub workflows
-**Agents**: gh, workflow, security, tools
+**Agents**: gh, security, tools
 **Example**: `/ci-diagnose fortress.yml`
 
 Analyzes and fixes:
@@ -148,7 +148,7 @@ Provides architectural:
 
 #### `/security [full|deps|code|secrets|fix]`
 **Purpose**: Comprehensive security audit and fixes
-**Agents**: security, deps, workflow, refactor
+**Agents**: security, deps, refactor
 **Example**: `/security full`
 
 Performs security:
@@ -161,7 +161,7 @@ Performs security:
 
 #### `/prd [feature-name]`
 **Purpose**: Generate product requirement documents
-**Agents**: wizard, architect, analyzer, docs
+**Agents**: architect, analyzer, docs
 **Example**: `/prd authentication-system`
 
 Creates comprehensive PRDs:
@@ -300,7 +300,7 @@ Some commands require specific tool access. Check error messages for required pe
 ## Future Enhancements
 
 Planned improvements:
-- Custom command creation wizard
+- Custom command creation tools
 - Command composition and pipelines
 - Performance metrics tracking
 - Team collaboration features

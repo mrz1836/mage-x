@@ -102,12 +102,9 @@ func (suite *NamespaceInterfacesTestSuite) TestNamespaceRegistryMethods() {
 	suite.NotPanics(func() { registry.Tools() })
 	suite.NotPanics(func() { registry.Security() })
 	suite.NotPanics(func() { registry.Generate() })
-	suite.NotPanics(func() { registry.CLI() })
 	suite.NotPanics(func() { registry.Update() })
 	suite.NotPanics(func() { registry.Mod() })
-	suite.NotPanics(func() { registry.Recipes() })
 	suite.NotPanics(func() { registry.Metrics() })
-	suite.NotPanics(func() { registry.Workflow() })
 }
 
 // TestConcurrentAccess tests thread-safety of the provider pattern

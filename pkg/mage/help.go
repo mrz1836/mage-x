@@ -54,7 +54,7 @@ func (Help) Default() error {
 	fmt.Printf(`🎯 MAGE-X: Write Once, Mage Everywhere
 
 MAGE-X is a comprehensive Go build automation toolkit that provides
-enterprise-grade development tools with a friendly user experience.
+powerful development tools with a friendly user experience.
 
 Quick Start:
   magex build              # Build your project
@@ -277,9 +277,7 @@ func (Help) Examples() error {
 			Category: "Interactive Mode",
 			Examples: []string{
 				"mage help  # Show help",
-				"mage configure:update  # Start configuration wizard",
-				"mage recipes:list  # List available recipes",
-				"mage recipes:run recipe=fresh-start",
+				"mage configure:update  # Update configuration settings",
 			},
 		},
 		{
@@ -330,7 +328,7 @@ powerful Go build automation toolkit.
 🎯 What is MAGE-X?
 
 MAGE-X is a comprehensive build automation toolkit for Go projects that
-provides enterprise-grade development tools with a friendly user experience.
+provides powerful development tools with a friendly user experience.
 It follows the philosophy of "Write Once, Mage Everywhere" - create your
 build configuration once and use it across all your projects.
 
@@ -372,15 +370,7 @@ For a guided experience:
 Or show help:
   mage help
 
-📚 Step 6: Explore Recipes
-
-Discover pre-built patterns:
-  mage recipes:list
-
-Run a recipe:
-  mage recipes:run recipe=fresh-start
-
-🚀 Step 7: Advanced Features
+🚀 Step 6: Advanced Features
 
 - Releases: mage release
 - Code quality: mage lint
@@ -390,8 +380,8 @@ Run a recipe:
 📖 Next Steps
 
 1. Read the documentation: mage help:commands
-2. Try the configuration wizard: mage configure:update
-3. Set up CI/CD: mage recipes:run recipe=ci-setup
+2. Try the configuration: mage configure:update
+3. Set up CI/CD: mage test:ci && mage lint:ci
 4. Show version: mage version:show
 
 🆘 Getting Help
@@ -436,7 +426,6 @@ func (Help) Topics() error {
 		{"getting-started", "Getting started guide", "mage help:gettingstarted"},
 		{"commands", "List all commands", "mage help:commands"},
 		{"examples", "Usage examples", "mage help:examples"},
-		{"recipes", "Recipe system", "mage recipes:list"},
 		{"configuration", "Configuration management", "mage configure:show"},
 		{"version", "Version management", "mage version:show"},
 		{"completions", "Shell completions", "mage help:completions"},
@@ -589,7 +578,7 @@ _mage_completions() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     # All available commands (300+ commands organized by namespace)
-    opts="build:default build:all build:docker build:clean build:generate build:linux build:darwin build:windows build:install build:prebuild test:default test:full test:unit test:race test:cover test:bench test:benchshort test:fuzz test:fuzzshort test:integration test:short test:coverrace test:ci lint:default lint:all lint:fix lint:vet lint:fumpt lint:version lint:go lint:yaml lint:json format:default format:all format:gofmt format:fumpt format:imports format:go format:yaml format:json format:fix format:check vet:default vet:all vet:parallel vet:shadow vet:strict release:default deps:default deps:update deps:tidy deps:download deps:outdated deps:audit deps:clean deps:graph deps:why deps:verify tools:default tools:install tools:update tools:check tools:vulncheck tools:verify install:default install:local install:binary install:tools install:go install:stdlib install:systemwide install:deps install:mage install:docker install:githooks install:ci install:certs install:package install:all uninstall mod:update mod:tidy mod:verify mod:download mod:clean mod:graph mod:why mod:vendor mod:init docs:default docs:generate docs:serve docs:build docs:check docs:examples docs:lint docs:spell docs:links docs:api docs:markdown docs:readme docs:changelog docs:clean docs:godocs git:status git:diff git:tag git:log git:branch git:pull git:commit git:init git:add git:clone git:push version:show version:check version:update version:bump version:changelog version:tag version:compare version:validate metrics:loc metrics:coverage metrics:complexity audit:show audit:stats audit:export audit:cleanup audit:enable audit:disable audit:report configure:init configure:show configure:update configure:enterprise configure:export configure:import configure:validate configure:schema generate:default generate:clean init:default init:project init:library init:cli init:webapi init:microservice init:tool init:upgrade init:templates init:config init:git init:mage init:ci init:docker init:docs init:license init:makefile init:editorconfig recipes:default recipes:list recipes:run recipes:show recipes:search recipes:create recipes:install recipes:update recipes:categories recipes:interactive update:check update:install help:default help:commands help:command help:examples help:gettingstarted help:completions help:topics enterprise:init enterprise:config enterprise:deploy enterprise:rollback enterprise:promote enterprise:status enterprise:backup enterprise:restore workflow:execute workflow:list workflow:status workflow:create workflow:validate workflow:schedule workflow:template workflow:history integrations:setup integrations:test integrations:sync integrations:notify integrations:status integrations:webhook integrations:export integrations:import bench:default bench:run bench:profile bench:compare bench:report bench:regression bench:memory bench:cpu yaml:init yaml:validate yaml:show yaml:template yaml:format yaml:check yaml:merge yaml:convert yaml:schema cli:default cli:help cli:version cli:completion cli:config cli:update cli:bulk cli:query cli:dashboard cli:batch cli:monitor cli:workspace cli:pipeline cli:compliance wizard:setup wizard:config wizard:project wizard:deploy wizard:troubleshoot"
+    opts="build:default build:all build:docker build:clean build:generate build:linux build:darwin build:windows build:install build:prebuild test:default test:full test:unit test:race test:cover test:bench test:benchshort test:fuzz test:fuzzshort test:integration test:short test:coverrace test:ci lint:default lint:all lint:fix lint:vet lint:fumpt lint:version lint:go lint:yaml lint:json format:default format:all format:gofmt format:fumpt format:imports format:go format:yaml format:json format:fix format:check vet:default vet:all vet:parallel vet:shadow vet:strict release:default deps:default deps:update deps:tidy deps:download deps:outdated deps:clean deps:graph deps:why deps:verify tools:default tools:install tools:update tools:check tools:vulncheck tools:verify install:default install:local install:binary install:tools install:go install:stdlib install:systemwide install:deps install:mage install:docker install:githooks install:ci install:certs install:package install:all uninstall mod:update mod:tidy mod:verify mod:download mod:clean mod:graph mod:why mod:vendor mod:init docs:default docs:generate docs:serve docs:build docs:check docs:examples docs:lint docs:spell docs:links docs:api docs:markdown docs:readme docs:changelog docs:clean docs:godocs git:status git:diff git:tag git:log git:branch git:pull git:commit git:init git:add git:clone git:push version:show version:check version:update version:bump version:changelog version:tag version:compare version:validate metrics:loc metrics:coverage metrics:complexity configure:init configure:show configure:update configure:export configure:import configure:validate configure:schema generate:default generate:clean init:default init:project init:library init:cli init:webapi init:microservice init:tool init:upgrade init:templates init:config init:git init:mage init:ci init:docker init:docs init:license init:makefile init:editorconfig update:check update:install help:default help:commands help:command help:examples help:gettingstarted help:completions help:topics bench:default bench:run bench:profile bench:compare bench:report bench:regression bench:memory bench:cpu yaml:init yaml:validate yaml:show yaml:template yaml:format yaml:check yaml:merge yaml:convert yaml:schema"
 
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
     return 0
@@ -634,7 +623,6 @@ _mage() {
                 'lint:Run linter'
                 'format:Format code'
                 'interactive:Start interactive mode'
-                'recipes:Recipe system'
                 'release:Create releases'
                 'init:Initialize projects'
                 'yaml:Configuration management'
@@ -695,7 +683,6 @@ complete -c mage -n '__fish_use_subcommand' -a 'test' -d 'Run tests'
 complete -c mage -n '__fish_use_subcommand' -a 'lint' -d 'Run linter'
 complete -c mage -n '__fish_use_subcommand' -a 'format' -d 'Format code'
 complete -c mage -n '__fish_use_subcommand' -a 'interactive' -d 'Start interactive mode'
-complete -c mage -n '__fish_use_subcommand' -a 'recipes' -d 'Recipe system'
 complete -c mage -n '__fish_use_subcommand' -a 'release' -d 'Create releases'
 complete -c mage -n '__fish_use_subcommand' -a 'init' -d 'Initialize projects'
 complete -c mage -n '__fish_use_subcommand' -a 'yaml' -d 'Configuration management'

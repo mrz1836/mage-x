@@ -192,30 +192,19 @@ func QualityGate() error {
 	metrics := mage.NewMetricsNamespace()
 	if err := metrics.LOC(); err != nil {
 		utils.Warn("⚠️  Code metrics analysis failed")
+		return fmt.Errorf("code metrics analysis failed: %w", err)
 	}
 
 	// Complexity analysis
 	if err := metrics.Complexity(); err != nil {
 		utils.Warn("⚠️  Complexity analysis failed")
+		return fmt.Errorf("complexity analysis failed: %w", err)
 	}
 
 	// Quality analysis
 	if err := metrics.Quality(); err != nil {
 		utils.Warn("⚠️  Quality analysis failed")
-	}
-
-	// Security audit
-	utils.Info("🔒 Running security audit...")
-	security := mage.NewSecurityNamespace()
-	if err := security.Audit(); err != nil {
-		utils.Warn("⚠️  Security audit failed")
-	}
-
-	// Dependency audit
-	utils.Info("📦 Auditing dependencies...")
-	deps := mage.NewDepsNamespace()
-	if err := deps.Audit(); err != nil {
-		return fmt.Errorf("dependency audit failed: %w", err)
+		return fmt.Errorf("quality analysis failed: %w", err)
 	}
 
 	utils.Info("✅ Quality gate passed!")

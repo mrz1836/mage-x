@@ -9,7 +9,6 @@ This example demonstrates how to use `.mage.yaml` configuration files to customi
 - **Test Configuration**: Custom test timeouts, coverage, and parallel execution
 - **Tool Management**: Version control for development tools
 - **Environment Overrides**: How environment variables can override file settings
-- **Enterprise Features**: Configuration for advanced features
 
 ## 🗂️ Files in This Example
 
@@ -198,20 +197,6 @@ magex configure:init
 
 ## 🔧 Advanced Features
 
-### Enterprise Configuration
-
-For advanced features, you can also create a `.mage.enterprise.yaml` file:
-
-```bash
-# Initialize enterprise configuration
-magex configure:enterprise
-
-# This creates a separate enterprise config file with:
-# - Audit logging
-# - Analytics
-# - Security policies
-# - Integration settings
-```
 
 ### Docker Integration
 

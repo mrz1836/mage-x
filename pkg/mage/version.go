@@ -39,6 +39,9 @@ var (
 	errUnexpectedlyLargeVersionJump = errors.New("unexpectedly large version jump")
 )
 
+// statusUnknown represents an unknown status
+const statusUnknown = "unknown"
+
 // Version namespace for version management tasks
 type Version mg.Namespace
 

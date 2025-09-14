@@ -376,58 +376,6 @@ func main() {
 	its.T().Logf("First build: %v, Second build: %v", duration1, duration2)
 }
 
-// TestEnterpriseFeatures tests enterprise configuration features
-func (its *IntegrationTestSuite) TestEnterpriseFeatures() {
-	if testing.Short() {
-		its.T().Skip("Skipping integration test in short mode")
-	}
-
-	// Create enterprise config
-	enterpriseConfig := &EnterpriseConfiguration{
-		Metadata: ECConfigMetadata{
-			Version:   "1.0.0",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		},
-		Organization: OrganizationConfig{
-			Name:   "Test Corp",
-			Domain: "test.com",
-		},
-	}
-
-	// Save enterprise config
-	err := SaveEnterpriseConfig(enterpriseConfig)
-	its.AssertNoError(err)
-
-	// Verify file exists
-	_, err = os.Stat(".mage.enterprise.yaml")
-	its.AssertNoError(err)
-
-	// Load and verify
-	TestResetConfig()
-	config, err := GetConfig()
-	its.AssertNoError(err)
-	its.NotNil(config.Enterprise)
-	its.Equal("Test Corp", config.Enterprise.Organization.Name)
-}
-
-// TestWorkflowExecution tests workflow execution
-func TestWorkflowExecution(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	workflow := Workflow{}
-
-	// Test listing workflows
-	t.Run("list workflows", func(t *testing.T) {
-		// This should work even without workflows defined
-		err := workflow.List()
-		// Should not error, just show empty or default list
-		assert.NoError(t, err)
-	})
-}
-
 // TestErrorHandling tests error handling across namespaces
 func (its *IntegrationTestSuite) TestErrorHandling() {
 	if testing.Short() {

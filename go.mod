@@ -4,7 +4,6 @@ go 1.24.0
 
 require (
 	github.com/magefile/mage v1.15.0
-	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
 	golang.org/x/text v0.29.0

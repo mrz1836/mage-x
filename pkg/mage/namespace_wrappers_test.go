@@ -82,12 +82,6 @@ func (suite *NamespaceWrappersTestSuite) TestWrapperTypeImplementations() {
 			createWrapper: func() interface{} { return &generateNamespaceWrapper{} },
 		},
 		{
-			name:          "cliNamespaceWrapper implements CLINamespace",
-			wrapperType:   (*cliNamespaceWrapper)(nil),
-			interfaceType: (*CLINamespace)(nil),
-			createWrapper: func() interface{} { return &cliNamespaceWrapper{} },
-		},
-		{
 			name:          "updateNamespaceWrapper implements UpdateNamespace",
 			wrapperType:   (*updateNamespaceWrapper)(nil),
 			interfaceType: (*UpdateNamespace)(nil),
@@ -100,22 +94,10 @@ func (suite *NamespaceWrappersTestSuite) TestWrapperTypeImplementations() {
 			createWrapper: func() interface{} { return &modNamespaceWrapper{} },
 		},
 		{
-			name:          "recipesNamespaceWrapper implements RecipesNamespace",
-			wrapperType:   (*recipesNamespaceWrapper)(nil),
-			interfaceType: (*RecipesNamespace)(nil),
-			createWrapper: func() interface{} { return &recipesNamespaceWrapper{} },
-		},
-		{
 			name:          "metricsNamespaceWrapper implements MetricsNamespace",
 			wrapperType:   (*metricsNamespaceWrapper)(nil),
 			interfaceType: (*MetricsNamespace)(nil),
 			createWrapper: func() interface{} { return &metricsNamespaceWrapper{} },
-		},
-		{
-			name:          "workflowNamespaceWrapper implements WorkflowNamespace",
-			wrapperType:   (*workflowNamespaceWrapper)(nil),
-			interfaceType: (*WorkflowNamespace)(nil),
-			createWrapper: func() interface{} { return &workflowNamespaceWrapper{} },
 		},
 	}
 
@@ -189,11 +171,6 @@ func (suite *NamespaceWrappersTestSuite) TestWrapperStructEmbedding() {
 			expectedField: Generate{},
 		},
 		{
-			name:          "cliNamespaceWrapper embeds CLI",
-			createWrapper: func() interface{} { return &cliNamespaceWrapper{CLI: CLI{}, instanceID: 1} },
-			expectedField: CLI{},
-		},
-		{
 			name:          "updateNamespaceWrapper embeds Update",
 			createWrapper: func() interface{} { return &updateNamespaceWrapper{Update: Update{}, instanceID: 1} },
 			expectedField: Update{},
@@ -204,19 +181,9 @@ func (suite *NamespaceWrappersTestSuite) TestWrapperStructEmbedding() {
 			expectedField: Mod{},
 		},
 		{
-			name:          "recipesNamespaceWrapper embeds Recipes",
-			createWrapper: func() interface{} { return &recipesNamespaceWrapper{Recipes: Recipes{}, instanceID: 1} },
-			expectedField: Recipes{},
-		},
-		{
 			name:          "metricsNamespaceWrapper embeds Metrics",
 			createWrapper: func() interface{} { return &metricsNamespaceWrapper{Metrics: Metrics{}, instanceID: 1} },
 			expectedField: Metrics{},
-		},
-		{
-			name:          "workflowNamespaceWrapper embeds Workflow",
-			createWrapper: func() interface{} { return &workflowNamespaceWrapper{Workflow: Workflow{}, instanceID: 1} },
-			expectedField: Workflow{},
 		},
 	}
 
@@ -299,12 +266,6 @@ func (suite *NamespaceWrappersTestSuite) TestFactoryFunctionWrapperConsistency()
 			interfaceType: (*GenerateNamespace)(nil),
 		},
 		{
-			name:          "NewCLINamespace creates cliNamespaceWrapper",
-			factory:       func() interface{} { return NewCLINamespace() },
-			expectedType:  (*cliNamespaceWrapper)(nil),
-			interfaceType: (*CLINamespace)(nil),
-		},
-		{
 			name:          "NewUpdateNamespace creates updateNamespaceWrapper",
 			factory:       func() interface{} { return NewUpdateNamespace() },
 			expectedType:  (*updateNamespaceWrapper)(nil),
@@ -317,22 +278,10 @@ func (suite *NamespaceWrappersTestSuite) TestFactoryFunctionWrapperConsistency()
 			interfaceType: (*ModNamespace)(nil),
 		},
 		{
-			name:          "NewRecipesNamespace creates recipesNamespaceWrapper",
-			factory:       func() interface{} { return NewRecipesNamespace() },
-			expectedType:  (*recipesNamespaceWrapper)(nil),
-			interfaceType: (*RecipesNamespace)(nil),
-		},
-		{
 			name:          "NewMetricsNamespace creates metricsNamespaceWrapper",
 			factory:       func() interface{} { return NewMetricsNamespace() },
 			expectedType:  (*metricsNamespaceWrapper)(nil),
 			interfaceType: (*MetricsNamespace)(nil),
-		},
-		{
-			name:          "NewWorkflowNamespace creates workflowNamespaceWrapper",
-			factory:       func() interface{} { return NewWorkflowNamespace() },
-			expectedType:  (*workflowNamespaceWrapper)(nil),
-			interfaceType: (*WorkflowNamespace)(nil),
 		},
 	}
 
@@ -433,12 +382,9 @@ func TestWrapperCompileTimeInterfaceCompliance(t *testing.T) {
 	var _ DocsNamespace = (*docsNamespaceWrapper)(nil)
 	var _ ToolsNamespace = (*toolsNamespaceWrapper)(nil)
 	var _ GenerateNamespace = (*generateNamespaceWrapper)(nil)
-	var _ CLINamespace = (*cliNamespaceWrapper)(nil)
 	var _ UpdateNamespace = (*updateNamespaceWrapper)(nil)
 	var _ ModNamespace = (*modNamespaceWrapper)(nil)
-	var _ RecipesNamespace = (*recipesNamespaceWrapper)(nil)
 	var _ MetricsNamespace = (*metricsNamespaceWrapper)(nil)
-	var _ WorkflowNamespace = (*workflowNamespaceWrapper)(nil)
 
 	// Test passes if it compiles - no assertion needed
 }

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v3"
 )
@@ -193,37 +192,6 @@ func (ts *ConfigureTestSuite) TestConfigureShow() {
 		ts.Require().NoError(err)
 	})
 
-	ts.Run("ShowWithEnterpriseConfig", func() {
-		config := defaultConfig()
-		config.Enterprise = &EnterpriseConfiguration{
-			Organization: OrganizationConfig{
-				Name:   "Test Enterprise",
-				Domain: "test.enterprise.com",
-			},
-			Security: SecurityConfig{
-				Level: "high",
-			},
-			Analytics: AnalyticsConfig{
-				Enabled: true,
-			},
-			Integrations: IntegrationsConfig{
-				Providers: map[string]IntegrationProvider{
-					"aws": {
-						Type:        "cloud",
-						Enabled:     true,
-						Settings:    map[string]string{"region": "us-east-1"},
-						Credentials: make(map[string]string),
-						Endpoints:   make(map[string]string),
-					},
-				},
-			},
-		}
-		TestSetConfig(config)
-
-		err := configure.Show()
-		ts.Require().NoError(err)
-	})
-
 	ts.Run("ShowWithConfigLoadError", func() {
 		// Reset config to force error
 		TestResetConfig()
@@ -248,28 +216,6 @@ func (ts *ConfigureTestSuite) TestConfigureUpdate() {
 		err := configure.Update()
 		// May succeed if no interactive input is required, or fail due to input requirements
 		ts.Require().True(err == nil || err != nil)
-	})
-}
-
-// TestConfigureEnterprise tests the Configure.Enterprise method
-func (ts *ConfigureTestSuite) TestConfigureEnterprise() {
-	configure := Configure{}
-
-	ts.Run("EnterpriseWithExistingConfig", func() {
-		// Set up config with existing enterprise configuration
-		config := defaultConfig()
-		config.Enterprise = &EnterpriseConfiguration{}
-		TestSetConfig(config)
-
-		// This test would require mocking user input
-		err := configure.Enterprise()
-		// May fail due to interactive requirements, but we test the logic path
-		ts.Require().True(err == nil || err != nil)
-	})
-
-	ts.Run("EnterpriseWithoutExistingConfig", func() {
-		// Skip this test as it causes nil pointer panics due to interactive wizard
-		ts.T().Skip("Skipping interactive wizard test - causes nil pointer panic without input")
 	})
 }
 
@@ -609,87 +555,6 @@ func (ts *ConfigureTestSuite) TestConfigurationValidation() {
 		ts.Require().Error(err)
 		ts.Require().ErrorIs(err, ErrModulePathRequired)
 	})
-
-	ts.Run("ValidateEnterpriseConfiguration", func() {
-		config := defaultConfig()
-		config.Enterprise = &EnterpriseConfiguration{
-			Organization: OrganizationConfig{
-				Name:   "Test Org",
-				Domain: "test.com",
-			},
-		}
-
-		err := validateConfiguration(config)
-		ts.Require().NoError(err)
-	})
-
-	ts.Run("ValidateEnterpriseConfigurationMissingName", func() {
-		config := defaultConfig()
-		config.Enterprise = &EnterpriseConfiguration{
-			Organization: OrganizationConfig{
-				Domain: "test.com",
-			},
-		}
-
-		err := validateConfiguration(config)
-		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, ErrEnterpriseOrgNameRequired)
-	})
-
-	ts.Run("ValidateEnterpriseConfigurationMissingDomain", func() {
-		config := defaultConfig()
-		config.Enterprise = &EnterpriseConfiguration{
-			Organization: OrganizationConfig{
-				Name: "Test Org",
-			},
-		}
-
-		err := validateConfiguration(config)
-		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, ErrEnterpriseOrgDomainRequired)
-	})
-}
-
-// TestConfigurationWizard tests the ConfigurationWizard functionality
-func (ts *ConfigureTestSuite) TestConfigurationWizard() {
-	ts.Run("WizardStructure", func() {
-		config := defaultConfig()
-		wizard := &ConfigurationWizard{
-			Config: config,
-		}
-
-		ts.Require().NotNil(wizard)
-		ts.Require().Equal(config, wizard.Config)
-	})
-
-	ts.Run("WizardRun", func() {
-		config := defaultConfig()
-		wizard := &ConfigurationWizard{
-			Config: config,
-		}
-
-		// This will fail without interactive input, but we test the method signature
-		err := wizard.Run()
-		// May succeed if no interactive input is required, or fail due to input requirements
-		ts.Require().True(err == nil || err != nil)
-	})
-
-	ts.Run("WizardUpdateMethods", func() {
-		config := defaultConfig()
-		wizard := &ConfigurationWizard{
-			Config: config,
-		}
-
-		// Test individual update methods (they may fail without input but test signatures)
-		err := wizard.updateProjectConfig()
-		ts.Require().True(err == nil || err != nil) // May succeed or fail
-
-		err = wizard.updateBuildConfig()
-		ts.Require().True(err == nil || err != nil) // May succeed or fail
-
-		err = wizard.updateTestConfig()
-		ts.Require().True(err == nil || err != nil) // May succeed or fail
-	})
 }
 
 // TestJSONMarshalUnmarshal tests JSON marshaling/unmarshaling functions
@@ -792,8 +657,6 @@ func (ts *ConfigureTestSuite) TestErrorMessages() {
 		ts.Require().Error(ErrProjectNameRequired)
 		ts.Require().Error(ErrBinaryNameRequired)
 		ts.Require().Error(ErrModulePathRequired)
-		ts.Require().Error(ErrEnterpriseOrgNameRequired)
-		ts.Require().Error(ErrEnterpriseOrgDomainRequired)
 
 		// Test error messages are meaningful
 		ts.Require().Contains(ErrConfigFileExists.Error(), "configuration file already exists")
@@ -804,8 +667,6 @@ func (ts *ConfigureTestSuite) TestErrorMessages() {
 		ts.Require().Contains(ErrProjectNameRequired.Error(), "project name is required")
 		ts.Require().Contains(ErrBinaryNameRequired.Error(), "binary name is required")
 		ts.Require().Contains(ErrModulePathRequired.Error(), "module path is required")
-		ts.Require().Contains(ErrEnterpriseOrgNameRequired.Error(), "enterprise organization name is required")
-		ts.Require().Contains(ErrEnterpriseOrgDomainRequired.Error(), "enterprise organization domain is required")
 	})
 
 	ts.Run("ErrorConstants", func() {
@@ -942,43 +803,5 @@ func BenchmarkConfigurationOperations(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_ = generateConfigurationSchema()
 		}
-	})
-}
-
-// Test input handling and error recovery
-func TestInputHandling(t *testing.T) {
-	t.Run("ScanlineErrorHandling", func(t *testing.T) {
-		// Test that scanline errors are handled gracefully
-		// This tests the error handling in wizard update methods
-
-		config := defaultConfig()
-		wizard := &ConfigurationWizard{
-			Config: config,
-		}
-
-		// Redirect stdin to simulate no input
-		r, w, err := os.Pipe()
-		require.NoError(t, err)
-		defer func() {
-			_ = r.Close() //nolint:errcheck // Test cleanup, error not critical
-			_ = w.Close() //nolint:errcheck // Test cleanup, error not critical
-		}()
-
-		originalStdin := os.Stdin
-		os.Stdin = r
-		defer func() { os.Stdin = originalStdin }()
-
-		// Close write end to simulate EOF
-		_ = w.Close() //nolint:errcheck // Test setup, error not critical
-
-		// These should handle the EOF/scan errors gracefully
-		err = wizard.updateProjectConfig()
-		require.Error(t, err) // Will fail due to no input, but shouldn't panic
-
-		err = wizard.updateBuildConfig()
-		require.Error(t, err) // Will fail due to no input, but shouldn't panic
-
-		err = wizard.updateTestConfig()
-		require.Error(t, err) // Will fail due to no input, but shouldn't panic
 	})
 }
