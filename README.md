@@ -506,6 +506,8 @@ magex build:windows       # Build for Windows amd64
 magex build:install       # Install binary to $GOPATH/bin
 magex build:dev           # Build and install development version (forced 'dev' version)
 magex build:prebuild      # Pre-build all packages to warm cache
+magex build:prebuild parallel=2  # Pre-build with 2 parallel processes
+magex build:prebuild p=4         # Pre-build with 4 parallel processes (short form)
 ```
 
 </details>

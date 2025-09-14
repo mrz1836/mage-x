@@ -521,12 +521,20 @@ func main() {}`)
 
 // TestBuildPreBuild tests the PreBuild method
 func (ts *BuildTestSuite) TestBuildPreBuild() {
-	ts.Run("runs pre-build tasks", func() {
-		// Mock go mod tidy
-		ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
-		// Mock go build with flexible args
+	ts.Run("runs pre-build tasks without parallel flag", func() {
+		// Mock go build with flexible args (no parallel flag expected)
 		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-			return len(args) >= 2 && args[0] == "build" && args[len(args)-1] == "./..."
+			// Should be ["build", "./..."] or ["build", "-v", "./..."]
+			if len(args) < 2 || args[0] != "build" || args[len(args)-1] != "./..." {
+				return false
+			}
+			// Should NOT contain -p flag
+			for i, arg := range args {
+				if arg == "-p" && i+1 < len(args) {
+					return false // Found -p flag, which shouldn't be there
+				}
+			}
+			return true
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
@@ -536,7 +544,138 @@ func (ts *BuildTestSuite) TestBuildPreBuild() {
 				return ts.build.PreBuild()
 			},
 		)
+		ts.Require().NoError(err)
+	})
+}
 
+// TestBuildPreBuildWithArgs tests the PreBuildWithArgs method
+func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
+	ts.Run("runs pre-build with parallel=2", func() {
+		// Set up os.Args to simulate command line arguments
+		originalArgs := os.Args
+		defer func() { os.Args = originalArgs }()
+		os.Args = []string{"magex", "build:prebuild", "parallel=2"}
+
+		// Mock go build with -p 2 flag
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			// Should contain ["build", "-p", "2", "./..."]
+			expectedArgs := []string{"build", "-p", "2", "./..."}
+			if len(args) != len(expectedArgs) {
+				return false
+			}
+			for i, expected := range expectedArgs {
+				if args[i] != expected {
+					return false
+				}
+			}
+			return true
+		})).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.PreBuildWithArgs()
+			},
+		)
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("runs pre-build with p=4 (short form)", func() {
+		// Set up os.Args to simulate command line arguments
+		originalArgs := os.Args
+		defer func() { os.Args = originalArgs }()
+		os.Args = []string{"magex", "build:prebuild", "p=4"}
+
+		// Mock go build with -p 4 flag
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			// Should contain ["build", "-p", "4", "./..."]
+			expectedArgs := []string{"build", "-p", "4", "./..."}
+			if len(args) != len(expectedArgs) {
+				return false
+			}
+			for i, expected := range expectedArgs {
+				if args[i] != expected {
+					return false
+				}
+			}
+			return true
+		})).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.PreBuildWithArgs()
+			},
+		)
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("runs pre-build without parallel flag when not specified", func() {
+		// Set up os.Args to simulate command line arguments without parallel flag
+		originalArgs := os.Args
+		defer func() { os.Args = originalArgs }()
+		os.Args = []string{"magex", "build:prebuild"}
+
+		// Mock go build without -p flag
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			// Should be ["build", "./..."] or ["build", "-v", "./..."]
+			if len(args) < 2 || args[0] != "build" || args[len(args)-1] != "./..." {
+				return false
+			}
+			// Should NOT contain -p flag
+			for i, arg := range args {
+				if arg == "-p" && i+1 < len(args) {
+					return false // Found -p flag, which shouldn't be there
+				}
+			}
+			return true
+		})).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.PreBuildWithArgs()
+			},
+		)
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("runs pre-build with verbose and parallel flags", func() {
+		// Set up os.Args and configuration
+		originalArgs := os.Args
+		defer func() { os.Args = originalArgs }()
+		os.Args = []string{"magex", "build:prebuild", "parallel=1"}
+
+		// Override config to enable verbose
+		config := defaultConfig()
+		config.Build.Verbose = true
+		TestSetConfig(config)
+
+		// Mock go build with -v and -p 1 flags
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			// Should contain ["build", "-v", "-p", "1", "./..."]
+			expectedArgs := []string{"build", "-v", "-p", "1", "./..."}
+			if len(args) != len(expectedArgs) {
+				return false
+			}
+			for i, expected := range expectedArgs {
+				if args[i] != expected {
+					return false
+				}
+			}
+			return true
+		})).Return(nil)
+
+		err := ts.env.WithMockRunner(
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.PreBuildWithArgs()
+			},
+		)
 		ts.Require().NoError(err)
 	})
 }

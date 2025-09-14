@@ -705,6 +705,11 @@ func (Build) Generate() error {
 
 // PreBuild pre-builds all packages to warm cache
 func (Build) PreBuild() error {
+	return Build{}.PreBuildWithArgs()
+}
+
+// PreBuildWithArgs pre-builds all packages to warm cache with configurable parallel execution
+func (Build) PreBuildWithArgs(argsList ...string) error {
 	utils.Header("Pre-building Packages")
 
 	config, err := GetConfig()
@@ -712,13 +717,38 @@ func (Build) PreBuild() error {
 		return err
 	}
 
+	// Parse command-line parameters from os.Args
+	// Find arguments after the target name
+	var targetArgs []string
+	for i, arg := range os.Args {
+		if strings.Contains(arg, "build:prebuild") {
+			targetArgs = os.Args[i+1:]
+			break
+		}
+	}
+	params := utils.ParseParams(targetArgs)
+
 	args := []string{"build"}
 
 	if config.Build.Verbose {
 		args = append(args, "-v")
 	}
 
+	// Add parallel build flag if specified
+	// Support both 'parallel=N' and 'p=N' formats
+	parallelFlag := utils.GetParam(params, "parallel", "")
+	if parallelFlag == "" {
+		parallelFlag = utils.GetParam(params, "p", "")
+	}
+	if parallelFlag != "" {
+		args = append(args, "-p", parallelFlag)
+		utils.Info("Using parallel build with %s processes", parallelFlag)
+	}
+
 	args = append(args, "./...")
+
+	// Show the command being run for transparency
+	utils.Info("Running: go %s", strings.Join(args, " "))
 
 	start := time.Now()
 	if err := GetRunner().RunCmd("go", args...); err != nil {
