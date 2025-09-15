@@ -15,6 +15,35 @@ const (
 	secureFilePerm = 0o600
 )
 
+// isCI detects if we're running in a CI environment
+func isCI() bool {
+	return os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+}
+
+// runMagexCommand executes a magex command with appropriate error handling for CI/local environments
+func runMagexCommand(t *testing.T, magexPath, workingDir string, args ...string) ([]byte, error) {
+	t.Helper()
+
+	// #nosec G204 -- magexPath and args are controlled in tests
+	cmd := exec.CommandContext(context.Background(), magexPath, args...)
+	cmd.Dir = workingDir
+
+	// Only add verbose output in CI when we need debugging
+	if isCI() {
+		cmd.Env = append(os.Environ(), "MAGEX_VERBOSE=true")
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil && isCI() {
+		// In CI, provide detailed context for failures
+		t.Logf("INTEGRATION_TEST_FAILURE: magex %v failed in %s", args, workingDir)
+		t.Logf("INTEGRATION_TEST_FAILURE: Command output: %s", string(output))
+		t.Logf("INTEGRATION_TEST_FAILURE: Error: %v", err)
+	}
+
+	return output, err
+}
+
 func TestIntegration_MagefilesDirectory(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -120,42 +149,34 @@ func (Deploy) Production() error {
 
 	// Test command listing
 	t.Run("ListCommands", func(t *testing.T) {
-		// #nosec G204 -- magexPath is controlled in tests
-		cmd := exec.CommandContext(context.Background(), magexPath, "-l")
-		cmd.Dir = tmpDir
-		output, err := cmd.CombinedOutput()
+		output, err := runMagexCommand(t, magexPath, tmpDir, "-l")
 		if err != nil {
-			t.Logf("Command output: %s", output)
-			t.Fatalf("Failed to list commands: %v", err)
+			t.Fatalf("INTEGRATION_TEST_FAILURE: Failed to list commands: %v", err)
 		}
 
 		outputStr := string(output)
 		// Should contain commands from magefiles directory
 		if !strings.Contains(outputStr, "BuildProject") && !strings.Contains(outputStr, "buildproject") {
-			t.Errorf("Output should contain BuildProject command, got: %s", outputStr)
+			t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain BuildProject command, got: %s", outputStr)
 		}
 		if !strings.Contains(outputStr, "TestProject") && !strings.Contains(outputStr, "testproject") {
-			t.Errorf("Output should contain TestProject command, got: %s", outputStr)
+			t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain TestProject command, got: %s", outputStr)
 		}
 		if !strings.Contains(outputStr, "Deploy:Staging") && !strings.Contains(outputStr, "deploy:staging") {
-			t.Errorf("Output should contain Deploy:Staging command, got: %s", outputStr)
+			t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain Deploy:Staging command, got: %s", outputStr)
 		}
 	})
 
 	// Test command execution
 	t.Run("ExecuteCommand", func(t *testing.T) {
-		// #nosec G204 -- magexPath is controlled in tests
-		cmd := exec.CommandContext(context.Background(), magexPath, "BuildProject")
-		cmd.Dir = tmpDir
-		output, err := cmd.CombinedOutput()
+		output, err := runMagexCommand(t, magexPath, tmpDir, "BuildProject")
 		if err != nil {
-			t.Logf("Command output: %s", output)
-			t.Fatalf("Failed to execute BuildProject: %v", err)
+			t.Fatalf("INTEGRATION_TEST_FAILURE: Failed to execute BuildProject: %v", err)
 		}
 
 		outputStr := string(output)
 		if !strings.Contains(outputStr, "Building project from magefiles directory") {
-			t.Errorf("Output should contain build message, got: %s", outputStr)
+			t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain build message, got: %s", outputStr)
 		}
 	})
 
@@ -180,23 +201,19 @@ func (Deploy) Production() error {
 
 	// Test parameter passing
 	t.Run("ParameterPassing", func(t *testing.T) {
-		// #nosec G204 -- magexPath is controlled in tests
-		cmd := exec.CommandContext(context.Background(), magexPath, "paramstest", "value1", "value2")
-		cmd.Dir = tmpDir
-		output, err := cmd.CombinedOutput()
+		output, err := runMagexCommand(t, magexPath, tmpDir, "paramstest", "value1", "value2")
 		if err != nil {
-			t.Logf("Command output: %s", output)
-			t.Fatalf("Failed to execute ParamsTest: %v", err)
+			t.Fatalf("INTEGRATION_TEST_FAILURE: Failed to execute ParamsTest: %v", err)
 		}
 
 		outputStr := string(output)
 		// Parameters should be passed and visible in output
 		if !strings.Contains(outputStr, "key1=value1") || !strings.Contains(outputStr, "key2=value2") {
-			t.Errorf("Output should contain parameters, got: %s", outputStr)
+			t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain parameters, got: %s", outputStr)
 		}
 		// Should NOT contain "Unknown target specified" warnings
 		if strings.Contains(outputStr, "Unknown target specified:") {
-			t.Errorf("Output should not contain 'Unknown target specified' warnings, got: %s", outputStr)
+			t.Errorf("INTEGRATION_TEST_FAILURE: Output should not contain 'Unknown target specified' warnings, got: %s", outputStr)
 		}
 	})
 }
@@ -281,38 +298,30 @@ func RootCommand() error {
 	}
 
 	// Test that commands from directory are found, not from root file
-	// #nosec G204 -- magexPath is controlled in tests
-	cmd := exec.CommandContext(context.Background(), magexPath, "-l")
-	cmd.Dir = tmpDir
-	output, err := cmd.CombinedOutput()
+	output, err := runMagexCommand(t, magexPath, tmpDir, "-l")
 	if err != nil {
-		t.Logf("Command output: %s", output)
-		t.Fatalf("Failed to list commands: %v", err)
+		t.Fatalf("INTEGRATION_TEST_FAILURE: Failed to list commands: %v", err)
 	}
 
 	outputStr := string(output)
 	// Should contain command from directory
 	if !strings.Contains(outputStr, "DirCommand") && !strings.Contains(outputStr, "dircommand") {
-		t.Errorf("Output should contain DirCommand from directory, got: %s", outputStr)
+		t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain DirCommand from directory, got: %s", outputStr)
 	}
 	// Should NOT contain command from root file
 	if strings.Contains(outputStr, "RootCommand") {
-		t.Errorf("Output should not contain RootCommand from root file, got: %s", outputStr)
+		t.Errorf("INTEGRATION_TEST_FAILURE: Output should not contain RootCommand from root file, got: %s", outputStr)
 	}
 
 	// Test executing the directory command
-	// #nosec G204 -- magexPath is controlled in tests
-	cmd = exec.CommandContext(context.Background(), magexPath, "dircommand")
-	cmd.Dir = tmpDir
-	output, err = cmd.CombinedOutput()
+	output, err = runMagexCommand(t, magexPath, tmpDir, "dircommand")
 	if err != nil {
-		t.Logf("Command output: %s", output)
-		t.Fatalf("Failed to execute DirCommand: %v", err)
+		t.Fatalf("INTEGRATION_TEST_FAILURE: Failed to execute DirCommand: %v", err)
 	}
 
 	outputStr = string(output)
 	if !strings.Contains(outputStr, "Command from magefiles directory") {
-		t.Errorf("Output should contain directory command message, got: %s", outputStr)
+		t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain directory command message, got: %s", outputStr)
 	}
 }
 
@@ -428,20 +437,16 @@ func (Deploy) Dev() error {
 	}
 
 	// Test that all commands from all files are discovered
-	// #nosec G204 -- magexPath is controlled in tests
-	cmd := exec.CommandContext(context.Background(), magexPath, "-l")
-	cmd.Dir = tmpDir
-	output, err := cmd.CombinedOutput()
+	output, err := runMagexCommand(t, magexPath, tmpDir, "-l")
 	if err != nil {
-		t.Logf("Command output: %s", output)
-		t.Fatalf("Failed to list commands: %v", err)
+		t.Fatalf("INTEGRATION_TEST_FAILURE: Failed to list commands: %v", err)
 	}
 
 	outputStr := string(output)
 	expectedCommands := []string{"Build", "Clean", "Test", "Lint"}
 	for _, cmdName := range expectedCommands {
 		if !strings.Contains(outputStr, cmdName) && !strings.Contains(outputStr, strings.ToLower(cmdName)) {
-			t.Errorf("Output should contain %s command, got: %s", cmdName, outputStr)
+			t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain %s command, got: %s", cmdName, outputStr)
 		}
 	}
 
@@ -457,18 +462,14 @@ func (Deploy) Dev() error {
 
 	for _, tc := range testCommands {
 		t.Run(fmt.Sprintf("Execute_%s", tc.name), func(t *testing.T) {
-			// #nosec G204 -- magexPath and tc.name are controlled in tests
-			cmd := exec.CommandContext(context.Background(), magexPath, tc.name)
-			cmd.Dir = tmpDir
-			output, err := cmd.CombinedOutput()
+			output, err := runMagexCommand(t, magexPath, tmpDir, tc.name)
 			if err != nil {
-				t.Logf("Command output: %s", output)
-				t.Fatalf("Failed to execute %s: %v", tc.name, err)
+				t.Fatalf("INTEGRATION_TEST_FAILURE: Failed to execute %s: %v", tc.name, err)
 			}
 
 			outputStr := string(output)
 			if !strings.Contains(outputStr, tc.expected) {
-				t.Errorf("Output should contain %q, got: %s", tc.expected, outputStr)
+				t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain %q, got: %s", tc.expected, outputStr)
 			}
 		})
 	}
@@ -488,8 +489,17 @@ func getMagexBinary(t *testing.T) string {
 
 	// #nosec G204 -- controlled paths in tests
 	cmd := exec.CommandContext(context.Background(), "go", "build", "-o", magexBinary, magexSource)
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to build magex binary: %v", err)
+	cmd.Dir = projectRoot // Ensure we build from project root
+
+	// Capture output for failure diagnosis
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("INTEGRATION_TEST_FAILURE: Failed to build magex binary from %s: %v\nBuild output: %s", magexSource, err, string(output))
+	}
+
+	// Verify binary was created and is executable
+	if _, err := os.Stat(magexBinary); err != nil {
+		t.Fatalf("INTEGRATION_TEST_FAILURE: Built magex binary does not exist at %s: %v", magexBinary, err)
 	}
 
 	return magexBinary

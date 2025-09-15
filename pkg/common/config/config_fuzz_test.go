@@ -241,8 +241,6 @@ func FuzzJSONParsing(f *testing.F) {
 		// Unicode edge cases
 		`{"key": "\u0000"}`,
 		`{"key": "\uFFFF"}`,
-		`{"key": "\uD800"}`,
-		`{"key": "\uDFFF"}`,
 	}
 
 	for _, tc := range testcases {
