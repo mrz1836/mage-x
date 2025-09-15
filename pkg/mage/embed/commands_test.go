@@ -629,7 +629,7 @@ func TestIndividualNamespaceRegistration(t *testing.T) {
 		{"TestCommands", registerTestCommands, "test:", 15},
 		{"LintCommands", registerLintCommands, "lint:", 4},
 		{"FormatCommands", registerFormatCommands, "format:", 3},
-		{"DepsCommands", registerDepsCommands, "deps:", 8},
+		{"DepsCommands", registerDepsCommands, "deps:", 10},
 		{"GitCommands", registerGitCommands, "git:", 8},
 		{"ReleaseCommands", registerReleaseCommands, "release:", 6},
 		{"DocsCommands", registerDocsCommands, "docs:", 8},
@@ -728,6 +728,46 @@ func TestCommandUsageAndExamples(t *testing.T) {
 					t.Logf("Command %s has ArgsFunc but no usage/examples - this might be acceptable", cmdName)
 				}
 			}
+		})
+	}
+}
+
+// TestCriticalCommandsExist ensures that critical commands are always registered
+func TestCriticalCommandsExist(t *testing.T) {
+	t.Parallel()
+
+	// These are critical commands that should never be accidentally removed
+	criticalCommands := []string{
+		"build:default",
+		"test:default",
+		"lint:default",
+		"deps:audit",
+		"deps:update",
+		"deps:tidy",
+		"git:status",
+		"release:default",
+		"docs:serve",
+		"tools:install",
+		"generate:mocks",
+		"configure:init",
+		"init:project",
+		"help:default",
+		"version:show",
+	}
+
+	mockReg := NewMockRegistry()
+	RegisterAll(mockReg.Registry)
+
+	commands := mockReg.GetRegisteredCommands()
+
+	for _, cmdName := range criticalCommands {
+		t.Run(fmt.Sprintf("Critical_%s", cmdName), func(t *testing.T) {
+			cmd, exists := commands[cmdName]
+			require.True(t, exists, "Critical command %s must be registered", cmdName)
+
+			// Command should have either Func or FuncWithArgs
+			hasFunc := cmd.Func != nil || cmd.FuncWithArgs != nil
+			require.True(t, hasFunc, "Critical command %s must have a function (Func or FuncWithArgs)", cmdName)
 		})
 	}
 }

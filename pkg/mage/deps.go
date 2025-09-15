@@ -18,6 +18,9 @@ var (
 	errDependencyNameRequired = errors.New("dependency name required: mage deps:why github.com/pkg/errors")
 	errModuleNameRequired     = errors.New("module name required: mage deps:init github.com/user/project")
 	errGoModAlreadyExists     = errors.New("go.mod already exists")
+	errNoGoModFound           = errors.New("no go.mod file found - govulncheck requires a Go module. Run 'go mod init <module-name>' to initialize a module, or navigate to a directory with a go.mod file")
+	errNoGoModFoundSimple     = errors.New("no go.mod file found - govulncheck requires a Go module. Run 'go mod init <module-name>' to initialize a module")
+	errNoGoPackagesFound      = errors.New("no Go packages found in current directory. Ensure you're in a directory with Go source files")
 )
 
 // Deps namespace for dependency management tasks
@@ -672,6 +675,11 @@ func (Deps) Audit() error {
 		}
 	}
 
+	// Check if we're in a Go module directory
+	if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
+		return errNoGoModFound
+	}
+
 	// Run vulnerability check on dependencies
 	utils.Info("Scanning dependencies for known vulnerabilities...")
 
@@ -679,6 +687,14 @@ func (Deps) Audit() error {
 	govulncheckCmd := findGovulncheckCommand()
 
 	if err := GetRunner().RunCmd(govulncheckCmd, "-show", "verbose", "./..."); err != nil {
+		// Provide more helpful error messages for common failures
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "no go.mod file") {
+			return errNoGoModFoundSimple
+		}
+		if strings.Contains(errMsg, "no packages") {
+			return errNoGoPackagesFound
+		}
 		return fmt.Errorf("vulnerability check failed: %w", err)
 	}
 
