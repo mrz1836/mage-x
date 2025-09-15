@@ -630,12 +630,7 @@ MAGEX_LOG_LEVEL=debug magex lint    # Environment variable control
 # Command-specific help
 magex help build                    # Help for build commands
 magex build --help                  # Detailed build options
-magex --help                        # Global help and options
-
-# List all available commands
-magex list                          # All 240+ commands
-magex list:namespaces              # Available namespaces
-magex list:build                   # Commands in build namespace
+magex --help                        # Global help and options and list all commands
 ```
 
 <br><br>
