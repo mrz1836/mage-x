@@ -37,15 +37,23 @@ on:
         description: "Whether static analysis is enabled"
         required: true
         type: string
+      go-sum-file:
+        description: "Path to go.sum file for dependency verification"
+        required: true
+        type: string
     outputs:
       golangci-lint-version:
         description: "Version of golangci-lint used in the workflow"
         value: ${{ jobs.lint.outputs.golangci-lint-version }}
+      yamlfmt-version:
+        description: "Version of yamlfmt used in the workflow"
+        value: ${{ jobs.yaml-format.outputs.yamlfmt-version }}
     secrets:
       github-token:
         description: "GitHub token for API access"
         required: true
 
+# Security: Restrictive default permissions with job-level overrides for least privilege access
 permissions:
   contents: read
 
@@ -58,91 +66,110 @@ jobs:
     if: ${{ inputs.static-analysis-enabled == 'true' }}
     runs-on: ${{ inputs.primary-runner }}
     steps:
-      # ————————————————————————————————————————————————————————————————
-      # Parse environment variables
-      # ————————————————————————————————————————————————————————————————
-      - name: 🔧 Parse environment variables
-        env:
-          ENV_JSON: ${{ inputs.env-json }}
-        run: |
-          echo "📋 Setting environment variables..."
-          echo "$ENV_JSON" | jq -r 'to_entries | .[] | "\(.key)=\(.value)"' | while IFS='=' read -r key value; do
-            echo "$key=$value" >> $GITHUB_ENV
-          done
-
-      # ————————————————————————————————————————————————————————————————
-      # Checkout code and set up Go environment
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
+      # Checkout code (required for local actions)
+      # --------------------------------------------------------------------
       - name: 📥 Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: 🔧 Set Go cache paths (cross-platform)
-        run: |
-          echo "🔧 Setting up Go cache paths..."
-          echo "GOCACHE=$HOME/.cache/go-build"        >> $GITHUB_ENV
-          echo "GOMODCACHE=$HOME/go/pkg/mod"          >> $GITHUB_ENV
-          echo "GOLANGCI_LINT_CACHE=$HOME/.cache/golangci-lint" >> $GITHUB_ENV
-
-      # ————————————————————————————————————————————————————————————————
-      # Restore Go module and build caches
-      # ————————————————————————————————————————————————————————————————
-      - name: 💾 Restore Go module cache
-        id: restore-gomod
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      # --------------------------------------------------------------------
+      # Parse environment variables
+      # --------------------------------------------------------------------
+      - name: 🔧 Parse environment variables
+        uses: ./.github/actions/parse-env
         with:
-          path: ~/go/pkg/mod
-          key: ${{ inputs.primary-runner }}-gomod-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ inputs.primary-runner }}-gomod-
+          env-json: ${{ inputs.env-json }}
 
-      # ————————————————————————————————————————————————————————————————
-      # # Restore the build cache and test cache
-      # ————————————————————————————————————————————————————————————————
-      - name: 💾 Restore Go build cache
-        id: restore-gobuild
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/.cache/go-build/test
-          key: ${{ inputs.primary-runner }}-gobuild-${{ inputs.go-primary-version }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ inputs.primary-runner }}-gobuild-${{ inputs.go-primary-version }}-
-
-      # ————————————————————————————————————————————————————————————————
-      # Set up Go environment
-      # ————————————————————————————————————————————————————————————————
-      - name: 🏗️ Set up Go
+      # --------------------------------------------------------------------
+      # Setup Go with caching and version management
+      # --------------------------------------------------------------------
+      - name: 🏗️ Setup Go with Cache
         id: setup-go-vet
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        uses: ./.github/actions/setup-go-with-cache
         with:
           go-version: ${{ inputs.go-primary-version }}
-          cache: false # we handle caches ourselves
+          matrix-os: ${{ inputs.primary-runner }}
+          go-primary-version: ${{ inputs.go-primary-version }}
+          go-secondary-version: ${{ inputs.go-primary-version }}
+          go-sum-file: ${{ env.GO_SUM_FILE }}
 
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
+      # Extract Go module directory from GO_SUM_FILE path
+      # --------------------------------------------------------------------
+      - name: 🔧 Extract Go module directory
+        uses: ./.github/actions/extract-module-dir
+        with:
+          go-sum-file: ${{ env.GO_SUM_FILE }}
+
+      # --------------------------------------------------------------------
+      # Setup MAGE-X (required for magex lint command)
+      # --------------------------------------------------------------------
+      - name: 🔧 Setup MAGE-X
+        uses: ./.github/actions/setup-magex
+        with:
+          magex-version: ${{ env.MAGE_X_VERSION }}
+          runner-os: ${{ inputs.primary-runner }}
+
+      # --------------------------------------------------------------------
       # Run go vet with parallel execution
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
       - name: 🔍 Go vet (parallel)
         run: |
           echo "🚀 Running static analysis with go vet (parallel mode)..."
-          go vet ./...
+          GO_MODULE_DIR="${{ env.GO_MODULE_DIR }}"
+
+          if [ -n "$GO_MODULE_DIR" ]; then
+            echo "🔧 Running magex vet from directory: $GO_MODULE_DIR"
+            (cd "$GO_MODULE_DIR" && magex vet)
+          else
+            echo "🔧 Running magex vet from repository root"
+            magex vet
+          fi
+
           echo "✅ Static analysis completed successfully"
 
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
       # Summary of Go vet results
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
       - name: 📊 Job Summary
         run: |
           echo "## 📊 Go Vet Static Analysis Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| 🔍 Analysis Details | ✅ Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| Analysis Details | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| **Tool** | go vet (Official Go Static Analyzer) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Execution** | 🚀 Project packages only |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Execution** | Project packages only |" >> $GITHUB_STEP_SUMMARY
           echo "| **Scope** | ./... (excludes dependencies) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Result** | ✅ No issues found |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🎯 **All packages passed static analysis checks.**" >> $GITHUB_STEP_SUMMARY
+
+      # --------------------------------------------------------------------
+      # Collect cache statistics
+      # --------------------------------------------------------------------
+      - name: 📊 Collect cache statistics
+        id: cache-stats-govet
+        if: always()
+        uses: ./.github/actions/collect-cache-stats
+        with:
+          workflow-name: govet
+          job-name: govet
+          os: ${{ inputs.primary-runner }}
+          go-version: ${{ inputs.go-primary-version }}
+          cache-prefix: cache-stats
+          gomod-cache-hit: ${{ steps.setup-go-vet.outputs.module-cache-hit }}
+          gobuild-cache-hit: ${{ steps.setup-go-vet.outputs.build-cache-hit }}
+
+      # --------------------------------------------------------------------
+      # Upload infrastructure cache statistics
+      # --------------------------------------------------------------------
+      - name: 📤 Upload infrastructure cache statistics
+        if: always()
+        uses: ./.github/actions/upload-statistics
+        with:
+          artifact-name: cache-stats-govet
+          artifact-path: cache-stats-govet.json
+          retention-days: 1
 
   # ----------------------------------------------------------------------------------
   # Lint (Code Linting)
@@ -154,23 +181,19 @@ jobs:
     outputs:
       golangci-lint-version: ${{ steps.golangci-lint-version.outputs.version }}
     steps:
-      # ————————————————————————————————————————————————————————————————
-      # Parse environment variables
-      # ————————————————————————————————————————————————————————————————
-      - name: 🔧 Parse environment variables
-        env:
-          ENV_JSON: ${{ inputs.env-json }}
-        run: |
-          echo "📋 Setting environment variables..."
-          echo "$ENV_JSON" | jq -r 'to_entries | .[] | "\(.key)=\(.value)"' | while IFS='=' read -r key value; do
-            echo "$key=$value" >> $GITHUB_ENV
-          done
-
-      # ————————————————————————————————————————————————————————————————
-      # Checkout code and set up Go environment
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
+      # Checkout code (required for local actions)
+      # --------------------------------------------------------------------
       - name: 📥 Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      # --------------------------------------------------------------------
+      # Parse environment variables
+      # --------------------------------------------------------------------
+      - name: 🔧 Parse environment variables
+        uses: ./.github/actions/parse-env
+        with:
+          env-json: ${{ inputs.env-json }}
 
       - name: 🔧 Set Go cache paths (cross-platform)
         run: |
@@ -179,74 +202,55 @@ jobs:
           echo "GOMODCACHE=$HOME/go/pkg/mod"          >> $GITHUB_ENV
           echo "GOLANGCI_LINT_CACHE=$HOME/.cache/golangci-lint" >> $GITHUB_ENV
 
-      # ————————————————————————————————————————————————————————————————
-      # Install Mage
-      # ————————————————————————————————————————————————————————————————
-      - name: 🔧 Install Mage
-        run: |
-          echo "📦 Installing Mage..."
-          go install github.com/magefile/mage@latest
-          echo "✅ Mage installed successfully"
-
-      # ————————————————————————————————————————————————————————————————
-      # Extract golangci-lint version from Mage
-      # ————————————————————————————————————————————————————————————————
-      - name: 🔍 Extract golangci-lint version from Mage
+      # --------------------------------------------------------------------
+      # Extract golangci-lint version (MAGE-X managed)
+      # --------------------------------------------------------------------
+      - name: 🔍 Use MAGE-X managed golangci-lint version
         id: golangci-lint-version
         run: |
-          # Default golangci-lint version
-          VERSION="v1.55.2"
-          echo "✅ Using golangci-lint version: $VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # MAGE-X handles golangci-lint version automatically
+          echo "✅ Using MAGE-X managed golangci-lint version"
+          echo "version=${{ env.MAGE_X_GOLANGCI_LINT_VERSION }}" >> $GITHUB_OUTPUT
 
-      # ————————————————————————————————————————————————————————————————
-      # Restore Go module and build caches
-      # ————————————————————————————————————————————————————————————————
-      - name: 💾 Restore Go module cache
-        id: restore-gomod
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ inputs.primary-runner }}-gomod-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ inputs.primary-runner }}-gomod-
-
-      # ————————————————————————————————————————————————————————————————
-      # Restore the build cache and test cache
-      # ————————————————————————————————————————————————————————————————
-      - name: 💾 Restore Go build cache
-        id: restore-gobuild
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/.cache/go-build/test
-          key: ${{ inputs.primary-runner }}-gobuild-${{ inputs.go-primary-version }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ inputs.primary-runner }}-gobuild-${{ inputs.go-primary-version }}-
-
-      # ————————————————————————————————————————————————————————————————
-      # Set up Go environment
-      # ————————————————————————————————————————————————————————————————
-      - name: 🏗️ Set up Go
+      # --------------------------------------------------------------------
+      # Setup Go with caching and version management
+      # --------------------------------------------------------------------
+      - name: 🏗️ Setup Go with Cache
         id: setup-go-lint
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        uses: ./.github/actions/setup-go-with-cache
         with:
           go-version: ${{ inputs.go-primary-version }}
-          cache: false
+          matrix-os: ${{ inputs.primary-runner }}
+          go-primary-version: ${{ inputs.go-primary-version }}
+          go-secondary-version: ${{ inputs.go-primary-version }}
+          go-sum-file: ${{ env.GO_SUM_FILE }}
 
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
+      # Extract Go module directory from GO_SUM_FILE path
+      # --------------------------------------------------------------------
+      - name: 🔧 Extract Go module directory
+        uses: ./.github/actions/extract-module-dir
+        with:
+          go-sum-file: ${{ env.GO_SUM_FILE }}
+
+      # --------------------------------------------------------------------
+      # Setup MAGE-X (required for magex lint command)
+      # --------------------------------------------------------------------
+      - name: 🔧 Setup MAGE-X
+        uses: ./.github/actions/setup-magex
+        with:
+          magex-version: ${{ env.MAGE_X_VERSION }}
+          runner-os: ${{ inputs.primary-runner }}
+
+      # --------------------------------------------------------------------
       # Restore Cache golangci-lint
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
       - name: 💾 Cache golangci-lint analysis
         id: cache-golangci-lint
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: ${{ env.GOLANGCI_LINT_CACHE }}
-          key: ${{ inputs.primary-runner }}-golangci-lint-analysis-${{ hashFiles('.golangci.json', '**/go.sum') }}-${{ steps.golangci-lint-version.outputs.version }}
-          restore-keys: |
-            ${{ inputs.primary-runner }}-golangci-lint-analysis-${{ hashFiles('.golangci.json', '**/go.sum') }}
-            ${{ inputs.primary-runner }}-golangci-lint-analysis-
+          key: ${{ inputs.primary-runner }}-golangci-lint-analysis-${{ hashFiles('.golangci.json', env.GO_SUM_FILE) }}-${{ steps.golangci-lint-version.outputs.version }}
 
       - name: 🔍 Debug cache usage
         run: |
@@ -255,9 +259,9 @@ jobs:
           echo "🔍 Lint cache size: $(du -sh $GOLANGCI_LINT_CACHE 2>/dev/null | cut -f1 || echo 'N/A')"
           echo "🔍 Checking if vendor directory exists: $(ls -la | grep vendor || echo 'No vendor directory')"
 
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
       # Run golangci-lint
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
       - name: ✨ Run golangci-lint
         run: |
           echo "🧹 Running code linting with golangci-lint..."
@@ -267,22 +271,26 @@ jobs:
           # Export the cache directory for golangci-lint
           export GOLANGCI_LINT_CACHE=$GOLANGCI_LINT_CACHE
 
-          # Running lint with version from Mage
-          echo "🔧 Using golangci-lint version: ${{ steps.golangci-lint-version.outputs.version }}"
+          GO_MODULE_DIR="${{ env.GO_MODULE_DIR }}"
 
-          # Run with mage
-          mage lintDefault
+          if [ -n "$GO_MODULE_DIR" ]; then
+            echo "🔧 Running magex lint from directory: $GO_MODULE_DIR"
+            (cd "$GO_MODULE_DIR" && magex lint)
+          else
+            echo "🔧 Running magex lint from repository root"
+            magex lint
+          fi
 
           echo "✅ Code linting completed successfully"
 
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
       # Summary of golangci-lint results
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
       - name: 📊 Job Summary
         run: |
           echo "## ✨ Code Linting Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| 🧹 Linting Details | ✅ Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linting Details | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| **Configuration** | Custom ruleset via .golangci.json |" >> $GITHUB_STEP_SUMMARY
           echo "| **Version** | ${{ steps.golangci-lint-version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
@@ -291,174 +299,197 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🎯 **Code quality standards met - no linting issues found.**" >> $GITHUB_STEP_SUMMARY
 
+      # --------------------------------------------------------------------
+      # Collect cache statistics
+      # --------------------------------------------------------------------
+      - name: 📊 Collect cache statistics
+        id: cache-stats-lint
+        if: always()
+        uses: ./.github/actions/collect-cache-stats
+        with:
+          workflow-name: lint
+          job-name: lint
+          os: ${{ inputs.primary-runner }}
+          go-version: ${{ inputs.go-primary-version }}
+          cache-prefix: cache-stats
+          gomod-cache-hit: ${{ steps.setup-go-lint.outputs.module-cache-hit }}
+          gobuild-cache-hit: ${{ steps.setup-go-lint.outputs.build-cache-hit }}
+          include-golangci: true
+
+      # --------------------------------------------------------------------
+      # Upload infrastructure cache statistics
+      # --------------------------------------------------------------------
+      - name: 📤 Upload infrastructure cache statistics
+        if: always()
+        uses: ./.github/actions/upload-statistics
+        with:
+          artifact-name: cache-stats-lint
+          artifact-path: cache-stats-lint.json
+          retention-days: 1
+
   # ----------------------------------------------------------------------------------
-  # YAML Validation (Linting)
+  # YAML/JSON Format Validation (MAGE-X)
   # ----------------------------------------------------------------------------------
-  yaml-lint:
-    name: 📐 YAML Format Validation
+  yaml-format:
+    name: 📐 YAML/JSON Format Validation
     if: ${{ inputs.yaml-lint-enabled == 'true' }}
     runs-on: ${{ inputs.primary-runner }}
     outputs:
       yamlfmt-version: ${{ steps.yamlfmt-version.outputs.version }}
     steps:
-      # ————————————————————————————————————————————————————————————————
-      # Parse environment variables
-      # ————————————————————————————————————————————————————————————————
-      - name: 🔧 Parse environment variables
-        env:
-          ENV_JSON: ${{ inputs.env-json }}
-        run: |
-          echo "📋 Setting environment variables..."
-          echo "$ENV_JSON" | jq -r 'to_entries | .[] | "\(.key)=\(.value)"' | while IFS='=' read -r key value; do
-            echo "$key=$value" >> $GITHUB_ENV
-          done
-
-      # ————————————————————————————————————————————————————————————————
-      # Checkout code
-      # ————————————————————————————————————————————————————————————————
+      # --------------------------------------------------------------------
+      # Checkout code (required for local actions)
+      # --------------------------------------------------------------------
       - name: 📥 Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      # --------------------------------------------------------------------
+      # Parse environment variables
+      # --------------------------------------------------------------------
+      - name: 🔧 Parse environment variables
+        uses: ./.github/actions/parse-env
         with:
-          fetch-depth: 1 # Shallow fetch is sufficient for yamlfmt
+          env-json: ${{ inputs.env-json }}
 
-      # ————————————————————————————————————————————————————————————————
-      # Set up Go for yamlfmt
-      # ————————————————————————————————————————————————————————————————
-      - name: 🏗️ Set up Go
-        uses: actions/setup-go@c50f1e6b426a8a5e16c5d83226b1b0b0e0b17fba # v5.1.0
+      # --------------------------------------------------------------------
+      # Setup Go with caching and version management
+      # --------------------------------------------------------------------
+      - name: 🏗️ Setup Go with Cache
+        id: setup-go-yaml
+        uses: ./.github/actions/setup-go-with-cache
         with:
-          go-version: ${{ env.GO_PRIMARY_VERSION }}
-          check-latest: true
+          go-version: ${{ inputs.go-primary-version }}
+          matrix-os: ${{ inputs.primary-runner }}
+          go-primary-version: ${{ inputs.go-primary-version }}
+          go-secondary-version: ${{ inputs.go-primary-version }}
+          go-sum-file: ${{ env.GO_SUM_FILE }}
 
-      # ————————————————————————————————————————————————————————————————
-      # Install yamlfmt
-      # ————————————————————————————————————————————————————————————————
-      - name: 📦 Install yamlfmt
-        run: |
-          echo "📦 Installing yamlfmt..."
-          go install github.com/google/yamlfmt/cmd/yamlfmt@latest
+      # --------------------------------------------------------------------
+      # Extract Go module directory from GO_SUM_FILE path
+      # --------------------------------------------------------------------
+      - name: 🔧 Extract Go module directory
+        uses: ./.github/actions/extract-module-dir
+        with:
+          go-sum-file: ${{ env.GO_SUM_FILE }}
 
-          # Capture version for output
-          YAMLFMT_VERSION=$(yamlfmt --version)
-          echo "📌 yamlfmt version: $YAMLFMT_VERSION"
-          echo "version=$YAMLFMT_VERSION" >> $GITHUB_OUTPUT
+      # --------------------------------------------------------------------
+      # Setup MAGE-X (required for magex format:fix command)
+      # --------------------------------------------------------------------
+      - name: 🔧 Setup MAGE-X
+        uses: ./.github/actions/setup-magex
+        with:
+          magex-version: ${{ env.MAGE_X_VERSION }}
+          runner-os: ${{ inputs.primary-runner }}
+
+      # --------------------------------------------------------------------
+      # Get yamlfmt version from MAGE-X
+      # --------------------------------------------------------------------
+      - name: 🔍 Get yamlfmt version
         id: yamlfmt-version
-
-      # ————————————————————————————————————————————————————————————————
-      # List YAML files to be checked (for transparency)
-      # ————————————————————————————————————————————————————————————————
-      - name: 📋 List YAML files to check
         run: |
-          echo "📋 Using yamlfmt config file: .github/.yamlfmt"
-          echo ""
-          echo "📊 YAML files found:"
-          find . -type f \( -name "*.yml" -o -name "*.yaml" \) -not -path "./.git/*" | sort
+          echo "✅ Using MAGE-X managed yamlfmt version"
+          echo "version=${{ env.MAGE_X_YAMLFMT_VERSION }}" >> $GITHUB_OUTPUT
 
-          TOTAL_YAML=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) -not -path "./.git/*" | wc -l | xargs)
-
-          echo ""
-          echo "📈 Summary:"
-          echo "   • Total YAML files found: $TOTAL_YAML"
-
-      # ————————————————————————————————————————————————————————————————
-      # Run yamlfmt in dry-run mode to check formatting
-      # ————————————————————————————————————————————————————————————————
-      - name: 🔍 Verify YAML formatting
-        id: yamlfmt-check
+      # --------------------------------------------------------------------
+      # List YAML/JSON files to be formatted (for transparency)
+      # --------------------------------------------------------------------
+      - name: 📋 List YAML/JSON files to check
         run: |
-          echo "🔍 Checking YAML file formatting with yamlfmt..."
-          set +e  # Don't exit on error immediately
-
-          if [ -f .github/.yamlfmt ]; then
-            yamlfmt -conf .github/.yamlfmt -dry .
-          else
-            yamlfmt -dry .
-          fi
-          YAMLFMT_EXIT_CODE=$?
-
-          if [ $YAMLFMT_EXIT_CODE -eq 0 ]; then
-            echo "✅ All YAML files are properly formatted"
-            echo "check_passed=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ YAML formatting issues detected"
-            echo "check_passed=false" >> $GITHUB_OUTPUT
-          fi
-
-          exit $YAMLFMT_EXIT_CODE
-
-      # ————————————————————————————————————————————————————————————————
-      # Show detailed diff when check fails (helpful for debugging)
-      # ————————————————————————————————————————————————————————————————
-      - name: 📝 Show formatting diff
-        if: failure() && steps.yamlfmt-check.outputs.check_passed == 'false'
-        run: |
-          echo "❌ YAML files not formatted according to yamlfmt configuration"
-          echo ""
-          echo "📋 Required formatting changes:"
-          echo "================================"
-
-          # Create a temporary directory for formatted files
-          mkdir -p .formatted_yaml
-
-          # Copy files and format them to show differences
-          find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
+          echo "📊 YAML/JSON files that will be validated:"
+          find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.json" \) \
             -not -path "./.git/*" \
             -not -path "./vendor/*" \
-            -not -path "./node_modules/*" | while read -r file; do
+            -not -path "./node_modules/*" \
+            -not -path "./dist/*" \
+            -not -path "./build/*" \
+            -not -path "./coverage/*" | sort || true
 
-            # Copy original file
-            cp "$file" ".formatted_yaml/$(basename "$file").orig"
+          TOTAL_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.json" \) \
+            -not -path "./.git/*" \
+            -not -path "./vendor/*" \
+            -not -path "./node_modules/*" \
+            -not -path "./dist/*" \
+            -not -path "./build/*" \
+            -not -path "./coverage/*" | wc -l | xargs)
 
-            # Format the copy
-            if [ -f .github/.yamlfmt ]; then
-              yamlfmt -conf .github/.yamlfmt ".formatted_yaml/$(basename "$file").orig"
-            else
-              yamlfmt ".formatted_yaml/$(basename "$file").orig"
-            fi
-
-            # Show diff if files differ
-            if ! diff -q "$file" ".formatted_yaml/$(basename "$file").orig" >/dev/null 2>&1; then
-              echo ""
-              echo "📄 File: $file"
-              echo "---"
-              diff -u "$file" ".formatted_yaml/$(basename "$file").orig" | sed '1,2d' || true
-            fi
-          done
-
+          echo "TOTAL_FILES=$TOTAL_FILES" >> $GITHUB_ENV
           echo ""
-          echo "================================"
-          echo ""
-          echo "🔧 To fix these issues locally, run:"
-          echo "    go install github.com/google/yamlfmt/cmd/yamlfmt@latest"
-          echo "    yamlfmt -conf .github/.yamlfmt ."
-          echo ""
-          echo "📚 yamlfmt formatting rules:"
-          echo "    • Indent style: 2 spaces"
-          echo "    • Line ending: LF"
-          echo "    • Max line length: 120 characters"
-          echo "    • Comments preserved with proper spacing"
+          echo "📈 Total YAML/JSON files found: $TOTAL_FILES"
 
-          # Clean up
-          rm -rf .formatted_yaml
-
-          # Exit with failure
-          exit 1
-
-      # ————————————————————————————————————————————————————————————————
-      # Job Summary
-      # ————————————————————————————————————————————————————————————————
-      - name: 📊 Job Summary
-        if: success()
-        run: "echo \"## 📐 YAML Validation Summary\" >> $GITHUB_STEP_SUMMARY\necho \"\" >> $GITHUB_STEP_SUMMARY\necho \"| 🔍 Validation Details | ✅ Status |\" >> $GITHUB_STEP_SUMMARY\necho \"|---|---|\" >> $GITHUB_STEP_SUMMARY\necho \"| **Tool** | yamlfmt (EditorConfig-aware) |\" >> $GITHUB_STEP_SUMMARY\necho \"| **Version** | ${{ steps.yamlfmt-version.outputs.version }} |\" >> $GITHUB_STEP_SUMMARY\necho \"| **Configuration** | .editorconfig rules |\" >> $GITHUB_STEP_SUMMARY\necho \"| **Scope** | All .yml and .yaml files |\" >> $GITHUB_STEP_SUMMARY\necho \"| **Result** | ✅ All files properly formatted |\" >> $GITHUB_STEP_SUMMARY\necho \"\" >> $GITHUB_STEP_SUMMARY\necho \"### 📊 File Processing Statistics\" >> $GITHUB_STEP_SUMMARY\necho \"- **Total YAML files found**: ${{ env.TOTAL_YAML }}\" >> $GITHUB_STEP_SUMMARY\necho \"- **Files processed by yamlfmt**: ${{ env.PROCESSED_YAML }}\" >> $GITHUB_STEP_SUMMARY  \necho \"- **Files needing formatting**: ${{ env.CHECKED_YAML }}\" >> $GITHUB_STEP_SUMMARY\necho \"- **Files ignored by yamlfmt**: $((${{ env.TOTAL_YAML }} - ${{ env.PROCESSED_YAML }}))\" >> $GITHUB_STEP_SUMMARY\necho \"\" >> $GITHUB_STEP_SUMMARY\necho \"### 📋 EditorConfig YAML Rules Applied\" >> $GITHUB_STEP_SUMMARY\necho \"- **Indent Style**: Spaces\" >> $GITHUB_STEP_SUMMARY\necho \"- **Indent Size**: 2\" >> $GITHUB_STEP_SUMMARY\necho \"- **Line Endings**: LF\" >> $GITHUB_STEP_SUMMARY\necho \"- **Final Newline**: Required\" >> $GITHUB_STEP_SUMMARY\necho \"- **Trailing Whitespace**: Trimmed\" >> $GITHUB_STEP_SUMMARY\necho \"\" >> $GITHUB_STEP_SUMMARY\necho \"🎯 **All YAML files meet formatting standards.**\" >> $GITHUB_STEP_SUMMARY\n    #magic___^_^___line\n"
-      # ————————————————————————————————————————————————————————————————
-      # Cleanup
-      # ————————————————————————————————————————————————————————————————
-      - name: 🧹 Cleanup
-        if: always()
+      # --------------------------------------------------------------------
+      # Run MAGE-X format:check to validate formatting
+      # --------------------------------------------------------------------
+      - name: 🔍 Check YAML/JSON formatting with MAGE-X
         run: |
-          rm -f package.json
-          # Only remove node_modules if we created it (not if it was linked)
-          if [ ! -L node_modules ]; then
-            rm -rf node_modules
+          echo "🔍 Checking YAML/JSON file formatting with MAGE-X format:check..."
+          echo "📄 Configuration file: .github/.yamlfmt"
+          echo "🔧 yamlfmt version: ${{ steps.yamlfmt-version.outputs.version }}"
+          echo ""
+
+          GO_MODULE_DIR="${{ env.GO_MODULE_DIR }}"
+
+          # Run magex format:check to validate formatting without modifying files
+          if [ -n "$GO_MODULE_DIR" ]; then
+            echo "🔧 Running magex format:check from directory: $GO_MODULE_DIR"
+            if (cd "$GO_MODULE_DIR" && magex format:check); then
+              echo "✅ All YAML/JSON files are properly formatted"
+            else
+              echo "❌ YAML/JSON formatting issues detected"
+              echo ""
+              echo "🔧 To fix these issues locally, run:"
+              echo "    cd $GO_MODULE_DIR && magex format:fix"
+              echo ""
+              echo "📚 yamlfmt Configuration (.github/.yamlfmt):"
+              echo "    • Indent style: spaces (2 spaces)"
+              echo "    • End of line: LF"
+              echo "    • Final newline: required"
+              echo "    • Line breaks: preserved where sensible"
+              echo "    • Comment padding: 1 space after #"
+              exit 1
+            fi
+          else
+            echo "🔧 Running magex format:check from repository root"
+            if magex format:check; then
+              echo "✅ All YAML/JSON files are properly formatted"
+            else
+              echo "❌ YAML/JSON formatting issues detected"
+              echo ""
+              echo "🔧 To fix these issues locally, run:"
+              echo "    magex format:fix"
+              echo ""
+              echo "📚 yamlfmt Configuration (.github/.yamlfmt):"
+              echo "    • Indent style: spaces (2 spaces)"
+              echo "    • End of line: LF"
+              echo "    • Final newline: required"
+              echo "    • Line breaks: preserved where sensible"
+              echo "    • Comment padding: 1 space after #"
+              exit 1
+            fi
           fi
-          echo "✅ Cleanup completed"
+
+      # --------------------------------------------------------------------
+      # Job Summary
+      # --------------------------------------------------------------------
+      - name: 📊 Job Summary
+        run: |
+          echo "## 📐 YAML/JSON Format Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Validation Details | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tool** | MAGE-X format:fix (yamlfmt) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ steps.yamlfmt-version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Configuration** | .github/.yamlfmt |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Scope** | All .yml, .yaml, and .json files |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Result** | ✅ All files properly formatted |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### File Processing Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total files processed**: ${{ env.TOTAL_FILES }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### yamlfmt Configuration Applied" >> $GITHUB_STEP_SUMMARY
+          echo "- **Indent Style**: Spaces (2 spaces)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Line Endings**: LF" >> $GITHUB_STEP_SUMMARY
+          echo "- **Final Newline**: Required" >> $GITHUB_STEP_SUMMARY
+          echo "- **Line Breaks**: Preserved where sensible" >> $GITHUB_STEP_SUMMARY
+          echo "- **Comment Padding**: 1 space after #" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎯 **All YAML/JSON files meet formatting standards via MAGE-X.**" >> $GITHUB_STEP_SUMMARY
