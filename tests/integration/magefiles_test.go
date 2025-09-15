@@ -285,6 +285,9 @@ package main
 
 import "fmt"
 
+// main is required for go run even though mage doesn't use it
+func main() {}
+
 // RootCommand is from root magefile
 func RootCommand() error {
 	fmt.Println("Command from root magefile")
