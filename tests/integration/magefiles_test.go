@@ -43,7 +43,7 @@ func TestIntegration_MagefilesDirectory(t *testing.T) {
 	// Create go.mod file
 	goModContent := `module testintegration
 
-go 1.21
+go 1.24
 `
 	err = os.WriteFile("go.mod", []byte(goModContent), secureFilePerm)
 	if err != nil {
@@ -229,7 +229,7 @@ func TestIntegration_MagefilePreference(t *testing.T) {
 	// Create go.mod file
 	goModContent := `module testpreference
 
-go 1.21
+go 1.24
 `
 	err = os.WriteFile("go.mod", []byte(goModContent), secureFilePerm)
 	if err != nil {
@@ -344,7 +344,7 @@ func TestIntegration_MultipleFiles(t *testing.T) {
 	// Create go.mod file
 	goModContent := `module testmultiple
 
-go 1.21
+go 1.24
 `
 	err = os.WriteFile("go.mod", []byte(goModContent), secureFilePerm)
 	if err != nil {
@@ -573,7 +573,7 @@ func setupTestProject(t testing.TB, dir string) {
 	// Create go.mod
 	goModContent := `module testbench
 
-go 1.21
+go 1.24
 `
 	err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goModContent), secureFilePerm)
 	if err != nil {
