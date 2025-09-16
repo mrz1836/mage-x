@@ -408,9 +408,17 @@ func FuzzConfigSecurityMaliciousContent(f *testing.F) {
 			return
 		}
 
+		// Sanitize format to prevent invalid filename characters
+		// Only allow alphanumeric characters and common config file extensions
+		validFormat := regexp.MustCompile(`[^a-zA-Z0-9]`).ReplaceAllString(format, "")
+		if validFormat == "" {
+			// If format becomes empty after sanitization, use a default
+			validFormat = "txt"
+		}
+
 		// Create temporary file
 		tmpDir := t.TempDir()
-		configPath := filepath.Join(tmpDir, "fuzz_config."+format)
+		configPath := filepath.Join(tmpDir, "fuzz_config."+validFormat)
 
 		err := os.WriteFile(configPath, []byte(content), 0o600)
 		require.NoError(t, err, "Failed to write test config")
