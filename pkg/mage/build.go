@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -708,10 +709,8 @@ func (Build) PreBuild() error {
 	return Build{}.PreBuildWithArgs()
 }
 
-// PreBuildWithArgs pre-builds all packages to warm cache with configurable parallel execution
-func (Build) PreBuildWithArgs(argsList ...string) error {
-	utils.Header("Pre-building Packages")
-
+// PreBuildWithArgs pre-builds all packages to warm cache with configurable strategies and parallel execution
+func (b Build) PreBuildWithArgs(argsList ...string) error {
 	config, err := GetConfig()
 	if err != nil {
 		return err
@@ -728,34 +727,428 @@ func (Build) PreBuildWithArgs(argsList ...string) error {
 	}
 	params := utils.ParseParams(targetArgs)
 
+	// Parse strategy parameters with environment variable fallback
+	strategy := utils.GetParam(params, "strategy", os.Getenv("MAGE_X_BUILD_STRATEGY"))
+	if strategy == "" {
+		strategy = config.Build.PreBuild.Strategy
+	}
+	if strategy == "" {
+		strategy = "smart" // Default to smart strategy
+	}
+
+	// Parse batch parameters
+	batchSizeStr := utils.GetParam(params, "batch", os.Getenv("MAGE_X_BUILD_BATCH_SIZE"))
+	if batchSizeStr == "" && config.Build.PreBuild.BatchSize > 0 {
+		batchSizeStr = fmt.Sprintf("%d", config.Build.PreBuild.BatchSize)
+	}
+	batchSize := 10 // Default
+	if batchSizeStr != "" {
+		if bs, err := strconv.Atoi(batchSizeStr); err == nil && bs > 0 {
+			batchSize = bs
+		}
+	}
+
+	// Parse delay parameter
+	delayStr := utils.GetParam(params, "delay", os.Getenv("MAGE_X_BUILD_BATCH_DELAY_MS"))
+	if delayStr == "" && config.Build.PreBuild.BatchDelay > 0 {
+		delayStr = fmt.Sprintf("%d", config.Build.PreBuild.BatchDelay)
+	}
+	delayMs := 0 // Default: no delay
+	if delayStr != "" {
+		if d, err := strconv.Atoi(delayStr); err == nil && d >= 0 {
+			delayMs = d
+		}
+	}
+
+	// Parse memory limit
+	memoryLimit := utils.GetParam(params, "memory_limit", os.Getenv("MAGE_X_BUILD_MEMORY_LIMIT"))
+	if memoryLimit == "" {
+		memoryLimit = config.Build.PreBuild.MemoryLimit
+	}
+
+	// Parse exclusion pattern
+	exclude := utils.GetParam(params, "exclude", os.Getenv("MAGE_X_BUILD_EXCLUDE_PATTERN"))
+	if exclude == "" {
+		exclude = config.Build.PreBuild.Exclude
+	}
+
+	// Parse priority pattern (currently unused but preserved for future use)
+	_ = utils.GetParam(params, "priority", os.Getenv("MAGE_X_BUILD_PRIORITY_PATTERN"))
+
+	// Parse verbose flag
+	verbose := utils.IsParamTrue(params, "verbose") ||
+		config.Build.Verbose ||
+		config.Build.PreBuild.Verbose ||
+		os.Getenv("MAGE_X_BUILD_VERBOSE") == trueValue
+
+	// Parse parallelism (maintain backward compatibility)
+	parallelism := utils.GetParam(params, "parallel", "")
+	if parallelism == "" {
+		parallelism = utils.GetParam(params, "p", "")
+	}
+	if parallelism == "" && config.Build.Parallel > 0 {
+		parallelism = fmt.Sprintf("%d", config.Build.Parallel)
+	}
+
+	// Parse mains-only flag for mains-first strategy
+	mainsOnly := utils.IsParamTrue(params, "mains-only") ||
+		utils.IsParamTrue(params, "mains_only")
+
+	// Apply memory limit if specified
+	if memoryLimit != "" && memoryLimit != "auto" {
+		strategy = b.applyMemoryLimit(memoryLimit, strategy)
+	}
+
+	// Execute the selected strategy
+	start := time.Now()
+	var buildErr error
+
+	switch strings.ToLower(strategy) {
+	case "incremental":
+		buildErr = b.buildIncremental(batchSize, delayMs, exclude, verbose, parallelism)
+
+	case "mains-first", "mains_first", "mainsfirst":
+		buildErr = b.buildMainsFirst(batchSize, mainsOnly, exclude, verbose, parallelism)
+
+	case "smart", "auto":
+		buildErr = b.buildSmart(exclude, verbose, parallelism)
+
+	case "full", "traditional", "legacy":
+		buildErr = b.buildFull(parallelism, config.Build.Verbose)
+
+	default:
+		utils.Warn("Unknown strategy %q, using smart strategy", strategy)
+		buildErr = b.buildSmart(exclude, verbose, parallelism)
+	}
+
+	if buildErr != nil {
+		return buildErr
+	}
+
+	utils.Success("Pre-build completed in %s", utils.FormatDuration(time.Since(start)))
+	return nil
+}
+
+// Package discovery and batching utilities
+
+// discoverPackages returns a list of all Go packages in the project
+func (b Build) discoverPackages(pattern, exclude string) ([]string, error) {
+	// Get list of all packages
+	packages, err := utils.GoList(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list packages: %w", err)
+	}
+
+	// Filter out packages
+	filtered := make([]string, 0, len(packages))
+	for _, pkg := range packages {
+		// Skip the root package if it's just a magefile (has build constraints that exclude it)
+		if pkg == "github.com/mrz1836/mage-x" {
+			continue
+		}
+
+		// Skip test packages that typically only have test files
+		if strings.Contains(pkg, "/tests/") || strings.Contains(pkg, "/test/") {
+			continue
+		}
+
+		// Apply exclusion filter if provided
+		if exclude != "" {
+			matched, err := filepath.Match(exclude, pkg)
+			if err != nil {
+				// If pattern is invalid, treat as substring match
+				if strings.Contains(pkg, exclude) {
+					continue
+				}
+			} else if matched {
+				continue
+			}
+		}
+
+		filtered = append(filtered, pkg)
+	}
+
+	return filtered, nil
+}
+
+// findMainPackages identifies packages containing main functions
+func (b Build) findMainPackages() ([]string, error) {
+	// Use go list with JSON output to find main packages
+	output, err := GetRunner().RunCmdOutput("go", "list", "-json", "./...")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list packages: %w", err)
+	}
+
+	var mainPackages []string
+	lines := strings.Split(output, "\n{")
+
+	for _, line := range lines {
+		if !strings.HasPrefix(line, "{") {
+			line = "{" + line
+		}
+
+		// Check for main package indicator and extract import path
+		if pkg := extractMainPackageFromLine(line); pkg != "" {
+			mainPackages = append(mainPackages, pkg)
+		}
+	}
+
+	return mainPackages, nil
+}
+
+// splitIntoBatches divides a slice of packages into smaller batches
+func (b Build) splitIntoBatches(packages []string, batchSize int) [][]string {
+	if batchSize <= 0 {
+		batchSize = 10 // Default batch size
+	}
+
+	var batches [][]string
+	for i := 0; i < len(packages); i += batchSize {
+		end := i + batchSize
+		if end > len(packages) {
+			end = len(packages)
+		}
+		batches = append(batches, packages[i:end])
+	}
+
+	return batches
+}
+
+// buildPackageBatch builds a single batch of packages
+func (b Build) buildPackageBatch(packages []string, parallelism string, verbose bool) error {
 	args := []string{"build"}
 
-	if config.Build.Verbose {
+	if parallelism != "" {
+		args = append(args, "-p", parallelism)
+	}
+
+	if verbose {
 		args = append(args, "-v")
 	}
 
-	// Add parallel build flag if specified
-	// Support both 'parallel=N' and 'p=N' formats
-	parallelFlag := utils.GetParam(params, "parallel", "")
-	if parallelFlag == "" {
-		parallelFlag = utils.GetParam(params, "p", "")
+	args = append(args, packages...)
+
+	return GetRunner().RunCmd("go", args...)
+}
+
+// Build strategies
+
+// buildIncremental builds packages in small batches to manage memory usage
+func (b Build) buildIncremental(batchSize, delayMs int, exclude string, verbose bool, parallelism string) error {
+	utils.Header("Pre-building Packages (Incremental Strategy)")
+
+	// Discover packages
+	packages, err := b.discoverPackages("./...", exclude)
+	if err != nil {
+		return err
 	}
-	if parallelFlag != "" {
-		args = append(args, "-p", parallelFlag)
-		utils.Info("Using parallel build with %s processes", parallelFlag)
+
+	if len(packages) == 0 {
+		utils.Info("No packages to build")
+		return nil
+	}
+
+	// Set default batch size if not specified
+	if batchSize <= 0 {
+		batchSize = 10
+	}
+
+	// Split into batches
+	batches := b.splitIntoBatches(packages, batchSize)
+	totalPackages := len(packages)
+
+	utils.Info("Building %d packages in %d batches (batch size: %d)", totalPackages, len(batches), batchSize)
+
+	// Build each batch
+	start := time.Now()
+	for i, batch := range batches {
+		batchStart := time.Now()
+
+		if verbose {
+			utils.Info("Building batch %d/%d (%d packages)", i+1, len(batches), len(batch))
+		}
+
+		if err := b.buildPackageBatch(batch, parallelism, false); err != nil {
+			return fmt.Errorf("batch %d failed: %w", i+1, err)
+		}
+
+		if verbose {
+			utils.Success("Batch %d completed in %s", i+1, utils.FormatDuration(time.Since(batchStart)))
+		}
+
+		// Add delay between batches if specified (except after last batch)
+		if delayMs > 0 && i < len(batches)-1 {
+			time.Sleep(time.Duration(delayMs) * time.Millisecond)
+		}
+	}
+
+	utils.Success("Incremental build completed in %s", utils.FormatDuration(time.Since(start)))
+	return nil
+}
+
+// buildMainsFirst builds main packages first, then other packages
+func (b Build) buildMainsFirst(batchSize int, mainsOnly bool, exclude string, verbose bool, parallelism string) error {
+	utils.Header("Pre-building Packages (Mains-First Strategy)")
+
+	// Phase 1: Build main packages
+	utils.Info("Phase 1: Building main packages...")
+	mainPackages, err := b.findMainPackages()
+	if err != nil {
+		utils.Warn("Failed to identify main packages: %v", err)
+		mainPackages = []string{}
+	}
+
+	if len(mainPackages) > 0 {
+		utils.Info("Found %d main packages", len(mainPackages))
+
+		// Build main packages (these typically pull in most dependencies)
+		if buildErr := b.buildPackageBatch(mainPackages, parallelism, verbose); buildErr != nil {
+			return fmt.Errorf("failed to build main packages: %w", buildErr)
+		}
+
+		utils.Success("Main packages built successfully")
+	} else {
+		utils.Info("No main packages found")
+	}
+
+	// If mains-only flag is set, stop here
+	if mainsOnly {
+		utils.Success("Mains-only build completed")
+		return nil
+	}
+
+	// Phase 2: Build remaining packages
+	utils.Info("Phase 2: Building remaining packages...")
+
+	// Get all packages
+	allPackages, err := b.discoverPackages("./...", exclude)
+	if err != nil {
+		return err
+	}
+
+	// Filter out main packages that were already built
+	mainSet := make(map[string]bool)
+	for _, pkg := range mainPackages {
+		mainSet[pkg] = true
+	}
+
+	var remainingPackages []string
+	for _, pkg := range allPackages {
+		if !mainSet[pkg] {
+			remainingPackages = append(remainingPackages, pkg)
+		}
+	}
+
+	if len(remainingPackages) == 0 {
+		utils.Success("All packages already built with main packages")
+		return nil
+	}
+
+	// Build remaining packages in batches
+	if batchSize <= 0 {
+		batchSize = 10
+	}
+
+	batches := b.splitIntoBatches(remainingPackages, batchSize)
+	utils.Info("Building %d remaining packages in %d batches", len(remainingPackages), len(batches))
+
+	for i, batch := range batches {
+		if verbose {
+			utils.Info("Building batch %d/%d (%d packages)", i+1, len(batches), len(batch))
+		}
+
+		if err := b.buildPackageBatch(batch, parallelism, false); err != nil {
+			return fmt.Errorf("batch %d failed: %w", i+1, err)
+		}
+	}
+
+	utils.Success("Mains-first build completed")
+	return nil
+}
+
+// buildSmart automatically selects the best strategy based on available resources
+func (b Build) buildSmart(exclude string, verbose bool, parallelism string) error {
+	utils.Header("Pre-building Packages (Smart Strategy)")
+
+	// Get system memory information
+	memInfo, err := utils.GetSystemMemoryInfo()
+	if err != nil {
+		utils.Warn("Failed to detect system memory: %v", err)
+		utils.Info("Falling back to incremental strategy with small batches")
+		return b.buildIncremental(5, 500, exclude, verbose, parallelism)
+	}
+
+	availableMemoryMB := memInfo.AvailableMemory / (1024 * 1024)
+	utils.Info("Available memory: %s", utils.FormatMemory(memInfo.AvailableMemory))
+
+	// Count packages to determine best strategy
+	packages, err := b.discoverPackages("./...", exclude)
+	if err != nil {
+		return err
+	}
+	packageCount := len(packages)
+	utils.Info("Found %d packages to build", packageCount)
+
+	// Estimate memory requirements
+	estimatedMemory := utils.EstimatePackageBuildMemory(packageCount)
+	estimatedMemoryMB := estimatedMemory / (1024 * 1024)
+	utils.Info("Estimated memory requirement: %s", utils.FormatMemory(estimatedMemory))
+
+	// Select strategy based on heuristics
+	var strategy string
+	var batchSize int
+	var delayMs int
+
+	switch {
+	case availableMemoryMB < 4000 || packageCount > 500:
+		// Low memory or many packages: Use small batches
+		strategy = "incremental (low memory/high package count)"
+		batchSize = 5
+		delayMs = 500
+
+	case availableMemoryMB < 8000 || packageCount > 200:
+		// Medium resources: Use medium batches
+		strategy = "incremental (medium resources)"
+		batchSize = 20
+		delayMs = 200
+
+	case packageCount > 50 && estimatedMemoryMB > availableMemoryMB*80/100:
+		// Memory usage would be close to limit: Use mains-first
+		strategy = "mains-first (optimize memory usage)"
+		utils.Info("Selected strategy: %s", strategy)
+		return b.buildMainsFirst(10, false, exclude, verbose, parallelism)
+
+	default:
+		// Sufficient resources: Use full build
+		strategy = "full (sufficient resources)"
+		utils.Info("Selected strategy: %s", strategy)
+		return b.buildFull(parallelism, verbose)
+	}
+
+	utils.Info("Selected strategy: %s", strategy)
+	return b.buildIncremental(batchSize, delayMs, exclude, verbose, parallelism)
+}
+
+// buildFull performs a traditional full build (backward compatibility)
+func (b Build) buildFull(parallelism string, verbose bool) error {
+	args := []string{"build"}
+
+	if parallelism != "" {
+		args = append(args, "-p", parallelism)
+	}
+
+	if verbose {
+		args = append(args, "-v")
 	}
 
 	args = append(args, "./...")
 
-	// Show the command being run for transparency
 	utils.Info("Running: go %s", strings.Join(args, " "))
 
-	start := time.Now()
 	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("pre-build failed: %w", err)
+		return fmt.Errorf("full pre-build failed: %w", err)
 	}
 
-	utils.Success("Pre-build completed in %s", utils.FormatDuration(time.Since(start)))
 	return nil
 }
 
@@ -876,6 +1269,62 @@ func findMainInCmdDir() string {
 	}
 
 	return ""
+}
+
+// extractMainPackageFromLine extracts the import path from a line containing main package info
+func extractMainPackageFromLine(line string) string {
+	// Check for main package indicator (handle both formats with/without spaces)
+	if !strings.Contains(line, `"Name": "main"`) && !strings.Contains(line, `"Name":"main"`) {
+		return ""
+	}
+
+	// Extract ImportPath (handle both formats)
+	var pkg string
+	if idx := strings.Index(line, `"ImportPath": "`); idx != -1 {
+		start := idx + len(`"ImportPath": "`)
+		end := strings.Index(line[start:], `"`)
+		if end != -1 {
+			pkg = line[start : start+end]
+		}
+	} else if idx := strings.Index(line, `"ImportPath":"`); idx != -1 {
+		start := idx + len(`"ImportPath":"`)
+		end := strings.Index(line[start:], `"`)
+		if end != -1 {
+			pkg = line[start : start+end]
+		}
+	}
+
+	// Skip the root package if it's just a magefile
+	if pkg != "" && pkg != "github.com/mrz1836/mage-x" {
+		return pkg
+	}
+	return ""
+}
+
+// applyMemoryLimit parses memory limit and adjusts strategy if needed
+func (b Build) applyMemoryLimit(memoryLimit, strategy string) string {
+	// Parse memory limit (e.g., "4G", "4096M")
+	var limitBytes uint64
+	if strings.HasSuffix(memoryLimit, "G") {
+		if gb, err := strconv.ParseUint(strings.TrimSuffix(memoryLimit, "G"), 10, 64); err == nil {
+			limitBytes = gb * 1024 * 1024 * 1024
+		}
+	} else if strings.HasSuffix(memoryLimit, "M") {
+		if mb, err := strconv.ParseUint(strings.TrimSuffix(memoryLimit, "M"), 10, 64); err == nil {
+			limitBytes = mb * 1024 * 1024
+		}
+	}
+
+	if limitBytes > 0 {
+		// Check if we have enough memory for the selected strategy
+		memInfo, err := utils.GetSystemMemoryInfo()
+		if err == nil && memInfo.AvailableMemory < limitBytes {
+			utils.Warn("Available memory (%s) is less than limit (%s), using incremental strategy",
+				utils.FormatMemory(memInfo.AvailableMemory), memoryLimit)
+			return "incremental"
+		}
+	}
+	return strategy
 }
 
 // isMainPackage checks if a Go file contains a main package declaration

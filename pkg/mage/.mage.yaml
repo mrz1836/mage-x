@@ -11,6 +11,14 @@ build:
   tags: []
   trimpath: true
   verbose: false
+  prebuild:
+    strategy: ""
+    batch_size: 0
+    batch_delay: 0
+    memory_limit: ""
+    exclude: ""
+    priority: ""
+    verbose: false
 docker:
   build_args: {}
   cache_from: []

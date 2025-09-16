@@ -44,14 +44,26 @@ type ProjectConfig struct {
 
 // BuildConfig contains build-specific settings
 type BuildConfig struct {
-	GoFlags   []string `yaml:"goflags"`
-	LDFlags   []string `yaml:"ldflags"`
-	Output    string   `yaml:"output"`
-	Parallel  int      `yaml:"parallel"`
-	Platforms []string `yaml:"platforms"`
-	Tags      []string `yaml:"tags"`
-	TrimPath  bool     `yaml:"trimpath"`
-	Verbose   bool     `yaml:"verbose"`
+	GoFlags   []string       `yaml:"goflags"`
+	LDFlags   []string       `yaml:"ldflags"`
+	Output    string         `yaml:"output"`
+	Parallel  int            `yaml:"parallel"`
+	Platforms []string       `yaml:"platforms"`
+	Tags      []string       `yaml:"tags"`
+	TrimPath  bool           `yaml:"trimpath"`
+	Verbose   bool           `yaml:"verbose"`
+	PreBuild  PreBuildConfig `yaml:"prebuild"`
+}
+
+// PreBuildConfig contains pre-build specific settings
+type PreBuildConfig struct {
+	Strategy    string `yaml:"strategy"`     // Strategy: incremental, mains-first, smart, full
+	BatchSize   int    `yaml:"batch_size"`   // Number of packages per batch
+	BatchDelay  int    `yaml:"batch_delay"`  // Milliseconds between batches
+	MemoryLimit string `yaml:"memory_limit"` // Memory limit (e.g., "4G", "auto")
+	Exclude     string `yaml:"exclude"`      // Regex pattern for packages to exclude
+	Priority    string `yaml:"priority"`     // Regex pattern for priority packages
+	Verbose     bool   `yaml:"verbose"`      // Show detailed progress
 }
 
 // TestConfig contains test-specific settings

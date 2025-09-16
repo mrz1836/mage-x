@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
@@ -742,6 +743,174 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 
 		// Restore original runner
 		ts.Require().NoError(SetRunner(originalRunner))
+	})
+}
+
+// TestBuildStrategies tests the new build strategy methods
+func (ts *BuildTestSuite) TestBuildStrategies() {
+	ts.Run("incremental strategy", func() {
+		// Mock package listing
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
+			"github.com/test/pkg1\ngithub.com/test/pkg2\ngithub.com/test/pkg3", nil)
+
+		// Mock batch builds - expect 2 batches with batch size 2
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			// First batch: ["build", "-p", "1", "github.com/test/pkg1", "github.com/test/pkg2"]
+			return len(args) >= 4 && args[0] == "build" &&
+				strings.Contains(strings.Join(args, " "), "github.com/test/pkg1")
+		})).Return(nil).Once()
+
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			// Second batch: ["build", "-p", "1", "github.com/test/pkg3"]
+			return len(args) >= 3 && args[0] == "build" &&
+				strings.Contains(strings.Join(args, " "), "github.com/test/pkg3")
+		})).Return(nil).Once()
+
+		err := utils.WithIsolatedRunner(
+			ts.env.Runner,
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.buildIncremental(2, 0, "", false, "1")
+			},
+		)
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("mains-first strategy", func() {
+		// Mock finding main packages
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-json", "./..."}).Return(
+			`{"ImportPath":"github.com/test/cmd/app","Name":"main"}
+{"ImportPath":"github.com/test/pkg1","Name":"pkg1"}`, nil)
+
+		// Mock listing all packages
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
+			"github.com/test/cmd/app\ngithub.com/test/pkg1", nil)
+
+		// Expect main package to be built first
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			return len(args) >= 2 && args[0] == "build" &&
+				strings.Contains(strings.Join(args, " "), "github.com/test/cmd/app")
+		})).Return(nil).Once()
+
+		// Then remaining packages
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			return len(args) >= 2 && args[0] == "build" &&
+				strings.Contains(strings.Join(args, " "), "github.com/test/pkg1")
+		})).Return(nil).Once()
+
+		err := utils.WithIsolatedRunner(
+			ts.env.Runner,
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.buildMainsFirst(10, false, "", false, "")
+			},
+		)
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("smart strategy selects appropriate method", func() {
+		// Mock package listing for smart strategy
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
+			"github.com/test/pkg1\ngithub.com/test/pkg2", nil)
+
+		// Mock build command - smart strategy should choose based on memory
+		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+			return args[0] == "build"
+		})).Return(nil)
+
+		err := utils.WithIsolatedRunner(
+			ts.env.Runner,
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+			func() interface{} { return GetRunner() },
+			func() error {
+				// Smart strategy will select based on available memory
+				return ts.build.buildSmart("", false, "")
+			},
+		)
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("full strategy uses traditional build", func() {
+		// Mock traditional full build
+		ts.env.Runner.On("RunCmd", "go", []string{"build", "-p", "4", "./..."}).Return(nil)
+
+		err := utils.WithIsolatedRunner(
+			ts.env.Runner,
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+			func() interface{} { return GetRunner() },
+			func() error {
+				return ts.build.buildFull("4", false)
+			},
+		)
+		ts.Require().NoError(err)
+	})
+}
+
+// TestPackageDiscoveryUtilities tests package discovery and batching utilities
+func (ts *BuildTestSuite) TestPackageDiscoveryUtilities() {
+	ts.Run("discoverPackages lists all packages", func() {
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
+			"github.com/test/pkg1\ngithub.com/test/pkg2\ngithub.com/test/pkg3", nil)
+
+		err := utils.WithIsolatedRunner(
+			ts.env.Runner,
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+			func() interface{} { return GetRunner() },
+			func() error {
+				packages, err := ts.build.discoverPackages("./...", "")
+				ts.Require().NoError(err)
+				ts.Require().Len(packages, 3)
+				ts.Assert().Contains(packages, "github.com/test/pkg1")
+				return nil
+			},
+		)
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("findMainPackages identifies main packages", func() {
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-json", "./..."}).Return(
+			`{"ImportPath":"github.com/test/cmd/app","Name":"main"}
+{"ImportPath":"github.com/test/pkg1","Name":"pkg1"}
+{"ImportPath":"github.com/test/cmd/tool","Name":"main"}`, nil)
+
+		err := utils.WithIsolatedRunner(
+			ts.env.Runner,
+			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+			func() interface{} { return GetRunner() },
+			func() error {
+				mainPkgs, err := ts.build.findMainPackages()
+				ts.Require().NoError(err)
+				ts.Require().Len(mainPkgs, 2)
+				ts.Assert().Contains(mainPkgs, "github.com/test/cmd/app")
+				ts.Assert().Contains(mainPkgs, "github.com/test/cmd/tool")
+				return nil
+			},
+		)
+		ts.Require().NoError(err)
+	})
+
+	ts.Run("splitIntoBatches divides packages correctly", func() {
+		packages := []string{"pkg1", "pkg2", "pkg3", "pkg4", "pkg5"}
+
+		// Test batch size 2
+		batches := ts.build.splitIntoBatches(packages, 2)
+		ts.Require().Len(batches, 3) // 5 packages / 2 per batch = 3 batches
+		ts.Assert().Len(batches[0], 2)
+		ts.Assert().Len(batches[1], 2)
+		ts.Assert().Len(batches[2], 1) // Last batch has remainder
+
+		// Test batch size 3
+		batches = ts.build.splitIntoBatches(packages, 3)
+		ts.Require().Len(batches, 2) // 5 packages / 3 per batch = 2 batches
+		ts.Assert().Len(batches[0], 3)
+		ts.Assert().Len(batches[1], 2)
+
+		// Test invalid batch size (should default to 10)
+		batches = ts.build.splitIntoBatches(packages, 0)
+		ts.Require().Len(batches, 1) // All in one batch since we have fewer than 10
+		ts.Assert().Len(batches[0], 5)
 	})
 }
 
