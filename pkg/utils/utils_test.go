@@ -24,10 +24,6 @@ var (
 	errError2    = errors.New("error 2")
 )
 
-const (
-	osWindows = "windows"
-)
-
 func TestGetEnv(t *testing.T) {
 	tests := []struct {
 		name         string
