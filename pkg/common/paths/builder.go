@@ -595,25 +595,18 @@ func (pb *DefaultPathBuilder) isWindowsSafe(path string) bool {
 		return false
 	}
 
-	// Check for Windows reserved device names
-	// First check if the path contains reserved names anywhere (conservative security check)
-	upperPath := strings.ToUpper(path)
-	basicReserved := []string{"CON", "PRN", "AUX", "NUL"}
-	for _, reserved := range basicReserved {
-		if strings.Contains(upperPath, reserved) {
-			return false
-		}
-	}
-
-	// Also check for exact matches in base name for specific device names
+	// Check for Windows reserved device names in the base name only
+	// These names are reserved on Windows regardless of extension
 	reservedNames := []string{"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "CONIN$", "CONOUT$"}
 	baseName := strings.ToUpper(filepath.Base(path))
 	// Remove extension for checking
+	baseWithoutExt := baseName
 	if idx := strings.LastIndex(baseName, "."); idx > 0 {
-		baseName = baseName[:idx]
+		baseWithoutExt = baseName[:idx]
 	}
 	for _, reserved := range reservedNames {
-		if baseName == reserved {
+		// Check both with and without extension (e.g., both "CON" and "CON.txt" are reserved)
+		if baseWithoutExt == reserved || baseName == reserved {
 			return false
 		}
 	}

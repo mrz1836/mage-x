@@ -400,6 +400,21 @@ func FuzzSecurityBypass(f *testing.F) {
 		pb := NewPathBuilder(path)
 
 		// All potentially dangerous paths should be marked as unsafe
+		// Check for Windows reserved names (must be exact matches in base name)
+		baseName := strings.ToUpper(filepath.Base(path))
+		baseWithoutExt := baseName
+		if idx := strings.LastIndex(baseName, "."); idx > 0 {
+			baseWithoutExt = baseName[:idx]
+		}
+		hasWindowsReserved := false
+		windowsReserved := []string{"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "CONIN$", "CONOUT$"}
+		for _, reserved := range windowsReserved {
+			if baseWithoutExt == reserved || baseName == reserved {
+				hasWindowsReserved = true
+				break
+			}
+		}
+
 		hasBypassAttempt := strings.Contains(path, "..") ||
 			strings.Contains(path, "%2e") ||
 			strings.Contains(path, "%2f") ||
@@ -411,10 +426,7 @@ func FuzzSecurityBypass(f *testing.F) {
 			strings.Contains(path, "/dev/") ||
 			strings.Contains(path, "\\\\?\\") ||
 			strings.Contains(path, ":$DATA") ||
-			strings.Contains(path, "CON") ||
-			strings.Contains(path, "PRN") ||
-			strings.Contains(path, "AUX") ||
-			strings.Contains(path, "NUL") ||
+			hasWindowsReserved ||
 			strings.HasSuffix(path, ".") ||
 			strings.HasSuffix(path, " ")
 
