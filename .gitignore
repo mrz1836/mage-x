@@ -67,3 +67,6 @@ tests/.mage-cache/
 /mgx
 /pkg/common/config/testdata
 /pkg/common/paths/testdata
+
+# Plans
+.plans
