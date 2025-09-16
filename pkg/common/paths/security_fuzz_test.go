@@ -217,7 +217,8 @@ func FuzzValidationRules(f *testing.F) {
 
 		// Test extension validation
 		ext := filepath.Ext(path)
-		if ext != "" {
+		if ext != "" && ext != "." {
+			// Skip validation when extension is just a dot (current directory or hidden file edge case)
 			extValidator := NewPathValidator().RequireExtension(ext[1:]) // Remove the dot
 			extErrors := extValidator.ValidatePath(pb)
 			if len(extErrors) > 0 {

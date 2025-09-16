@@ -604,7 +604,8 @@ func (r *MaxLengthRule) Validate(path string) error {
 
 // ValidatePath validates that the given PathBuilder path does not exceed maximum length
 func (r *MaxLengthRule) ValidatePath(path PathBuilder) error {
-	return r.Validate(path.String())
+	// Use the original path for length validation to prevent bypasses through path cleaning
+	return r.Validate(path.Original())
 }
 
 // PatternRule validates that a path matches or doesn't match a pattern
