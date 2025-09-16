@@ -351,8 +351,20 @@ jobs:
                 ]' test-failures-summary.json)
               fi
 
-              echo "$SIGNATURE_ENTRIES" > fuzz-failures-signatures.json
-              echo "✅ Updated signatures file with $(echo "$SIGNATURE_ENTRIES" | jq 'length') entries"
+              # Deduplicate signature entries by test name (handle any remaining duplicates)
+              SIGNATURE_ENTRIES_DEDUP=$(echo "$SIGNATURE_ENTRIES" | jq '[
+                group_by(.test) |
+                .[] |
+                sort_by(.package |
+                  if test("^[0-9.]+[a-z]*$") then 0
+                  else 1
+                  end
+                ) |
+                .[-1]
+              ]')
+
+              echo "$SIGNATURE_ENTRIES_DEDUP" > fuzz-failures-signatures.json
+              echo "✅ Updated signatures file with $(echo "$SIGNATURE_ENTRIES_DEDUP" | jq 'length') deduplicated entries"
             fi
 
             echo "✅ Structured failure summary created with $(jq 'length' test-failures-summary.json 2>/dev/null || echo "0") fuzz test packages"
