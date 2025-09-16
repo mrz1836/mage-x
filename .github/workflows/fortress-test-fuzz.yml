@@ -286,27 +286,34 @@ jobs:
               if [[ -f test-failures-summary.json ]] && [[ -s test-failures-summary.json ]]; then
                 echo "🔄 Deduplicating fuzz test failures within each package..."
 
-                # Create a deduplicated version by grouping by Package+Test name and keeping the longest duration
-                jq '[
-                  .[] |
-                  {
-                    Package: .Package,
-                    Type: .Type,
-                    failures: [
-                      .failures |
-                      group_by(.Test) |
-                      .[] |
-                      sort_by(.Elapsed |
-                        if . == "unknown" then -1
-                        elif test("^[0-9.]+[a-z]*$") then
-                          (. | gsub("[a-z]"; "") | tonumber)
-                        else 0
-                        end
-                      ) |
-                      .[-1]
-                    ]
-                  }
-                ]' test-failures-summary.json > test-failures-summary.json.dedup
+                # Create a deduplicated version by flattening all failures and grouping by test name only
+                jq '
+                  # First, flatten all failures from all packages
+                  [.[] | {Package: .Package, Type: .Type} as $parent | .failures[] | . + {PackageName: $parent.Package, Type: $parent.Type}] |
+
+                  # Then group by test name across all packages
+                  group_by(.Test) |
+
+                  # For each test name, pick the entry with longest elapsed time
+                  map(
+                    sort_by(.Elapsed |
+                      if . == "unknown" then -1
+                      elif test("^[0-9.]+[a-z]*$") then
+                        (. | gsub("[a-z]"; "") | tonumber)
+                      else 0
+                      end
+                    ) |
+                    .[-1]
+                  ) |
+
+                  # Reconstruct the package structure
+                  group_by(.PackageName) |
+                  map({
+                    Package: .[0].PackageName,
+                    Type: .[0].Type,
+                    failures: [.[] | {Test: .Test, Elapsed: .Elapsed, Output: .Output}]
+                  })
+                ' test-failures-summary.json > test-failures-summary.json.dedup
 
                 mv test-failures-summary.json.dedup test-failures-summary.json
                 echo "✅ Deduplicated fuzz test failures - kept entries with longest elapsed time"
