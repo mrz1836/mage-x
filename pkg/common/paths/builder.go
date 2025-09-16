@@ -565,7 +565,7 @@ func (pb *DefaultPathBuilder) IsSafe() bool {
 // isWindowsSafe checks Windows-specific security issues
 func (pb *DefaultPathBuilder) isWindowsSafe(path string) bool {
 	// Check for Windows UNC paths
-	if strings.HasPrefix(path, "\\\\") {
+	if strings.Contains(path, "\\\\") {
 		return false
 	}
 
