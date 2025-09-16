@@ -117,8 +117,8 @@ func (c *Config) expandPath(path string) string {
 	}
 
 	// Check for path traversal patterns in both original and decoded paths
-	if strings.Contains(decoded, "../") || strings.Contains(decoded, "..\\") ||
-		strings.HasSuffix(decoded, "..") || decoded == ".." {
+	// Reject any path containing ".." anywhere for security
+	if strings.Contains(decoded, "..") {
 		// Return the original path without expansion as a security measure
 		return path
 	}

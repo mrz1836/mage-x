@@ -87,8 +87,8 @@ func validatePathSecurityFuzz(path string) error {
 	}
 
 	// Check for path traversal BEFORE cleaning (Unix and Windows styles)
-	if strings.Contains(path, "../") || strings.Contains(path, "..\\") ||
-		strings.HasSuffix(path, "..") || path == ".." {
+	// Reject any path containing ".." anywhere for security
+	if strings.Contains(path, "..") {
 		return ErrPathTraversalFuzz
 	}
 

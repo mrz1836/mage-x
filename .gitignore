@@ -67,3 +67,4 @@ tests/.mage-cache/
 /pkg/security/testdata/
 /tests/compatibility/magex
 /mgx
+/pkg/common/config/testdata
