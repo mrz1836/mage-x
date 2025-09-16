@@ -446,7 +446,7 @@ jobs:
               fi
 
               # Show test failures with enhanced details
-              TEST_FAILURES=$(jq -r '.[] | select(.type == "test") |
+              TEST_FAILURES=$(jq -r '.[] | select(.type == "test" and (.test | startswith("Fuzz") | not)) |
                 "  📦 " + (.package | split("/") | .[-1] // .[-2] // .) + ": " + .test + " (" + (.occurrences | tostring) + " matrix jobs)"' deduplicated-failures.json 2>/dev/null)
               if [[ -n "$TEST_FAILURES" ]]; then
                 echo ""
@@ -458,7 +458,7 @@ jobs:
                 echo ""
                 echo "📝 Test Error Details:"
                 echo "---------------------"
-                jq -r '.[] | select(.type == "test") |
+                jq -r '.[] | select(.type == "test" and (.test | startswith("Fuzz") | not)) |
                   "❌ " + .test + " (" + (.package | split("/") | .[-1] // .[-2] // .) + "):" +
                   "\n" + (.output // "No error output available")' deduplicated-failures.json 2>/dev/null | head -c 3000
               fi
