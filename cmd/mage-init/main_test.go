@@ -350,7 +350,6 @@ func (suite *MageInitTestSuite) TestGetAvailableTemplates() {
 	suite.True(exists)
 	suite.Equal("advanced", advanced.Name)
 	suite.NotEmpty(advanced.Dependencies)
-
 }
 
 // Test template file generation functions
@@ -439,7 +438,6 @@ func (suite *MageInitTestSuite) TestGetDockerComposeContent() {
 	suite.Contains(content, "{{.ProjectName}}:")
 	suite.Contains(content, "healthcheck:")
 }
-
 
 // Test CLI template functions
 func (suite *MageInitTestSuite) TestGetCLITemplateFiles() {

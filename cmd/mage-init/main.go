@@ -690,7 +690,6 @@ func getAdvancedTemplateFiles() map[string]string {
 	return files
 }
 
-
 // getCLITemplateFiles returns files for the CLI template
 func getCLITemplateFiles() map[string]string {
 	files := getBasicTemplateFiles()

@@ -2,9 +2,6 @@ package main
 
 // Additional template functions that were missing
 
-
-
-
 // getWebMagefileContent returns web magefile content
 func getWebMagefileContent() string {
 	return `//go:build mage
