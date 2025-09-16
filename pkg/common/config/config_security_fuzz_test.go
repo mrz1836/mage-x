@@ -415,6 +415,10 @@ func FuzzConfigSecurityMaliciousContent(f *testing.F) {
 			// If format becomes empty after sanitization, use a default
 			validFormat = "txt"
 		}
+		// Limit extension length to prevent file name too long errors
+		if len(validFormat) > 20 {
+			validFormat = validFormat[:20]
+		}
 
 		// Create temporary file
 		tmpDir := t.TempDir()

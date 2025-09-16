@@ -409,23 +409,29 @@ func (pb *DefaultPathBuilder) isPathSafe(path string) bool {
 		return false
 	}
 
+	// Check for Windows extended path prefix
+	if strings.Contains(path, "\\\\?\\") {
+		return false
+	}
+
 	// Check for URL encoded patterns
-	if strings.Contains(path, "%2e%2e") || strings.Contains(path, "%252e%252e") {
+	if strings.Contains(path, "%2e") || strings.Contains(path, "%2f") ||
+		strings.Contains(path, "%2e%2e") || strings.Contains(path, "%252e%252e") {
 		return false
 	}
 
 	// Check for Unicode encoded patterns
-	if strings.Contains(path, "\u002e\u002e") {
+	if strings.Contains(path, "\\u") || strings.Contains(path, "\u002e\u002e") {
 		return false
 	}
 
 	// Check for hex encoded patterns
-	if strings.Contains(path, "\x2e\x2e") {
+	if strings.Contains(path, "\\x") || strings.Contains(path, "\x2e\x2e") {
 		return false
 	}
 
 	// Check for null bytes
-	if strings.Contains(path, "\x00") {
+	if strings.Contains(path, "\x00") || strings.Contains(path, "%00") {
 		return false
 	}
 
@@ -539,8 +545,18 @@ func (pb *DefaultPathBuilder) isBasePathViolation() bool {
 // IsSafe returns true if the path is considered safe
 func (pb *DefaultPathBuilder) IsSafe() bool {
 	// Check the original path first for security issues that might be cleaned away
-	if pb.originalPath != "" && !pb.isPathSafe(pb.originalPath) {
-		return false
+	if pb.originalPath != "" {
+		if !pb.isPathSafe(pb.originalPath) {
+			return false
+		}
+		// Check Windows-specific issues on original path (catches trailing dots/spaces)
+		if !pb.isWindowsSafe(pb.originalPath) {
+			return false
+		}
+		// Check Unix-specific issues on original path
+		if !pb.isUnixSafe(pb.originalPath) {
+			return false
+		}
 	}
 
 	// Check the cleaned path for basic safety
@@ -580,6 +596,16 @@ func (pb *DefaultPathBuilder) isWindowsSafe(path string) bool {
 	}
 
 	// Check for Windows reserved device names
+	// First check if the path contains reserved names anywhere (conservative security check)
+	upperPath := strings.ToUpper(path)
+	basicReserved := []string{"CON", "PRN", "AUX", "NUL"}
+	for _, reserved := range basicReserved {
+		if strings.Contains(upperPath, reserved) {
+			return false
+		}
+	}
+
+	// Also check for exact matches in base name for specific device names
 	reservedNames := []string{"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "CONIN$", "CONOUT$"}
 	baseName := strings.ToUpper(filepath.Base(path))
 	// Remove extension for checking
