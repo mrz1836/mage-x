@@ -188,8 +188,10 @@ jobs:
             # Pattern: --- FAIL: FuzzTestName (0.34s)
             # Use process substitution to avoid the pipeline subshell issue
             # Filter out nested/indented failures to avoid duplicate counting
+            # Only capture top-level fuzz test failures, not nested test failures
             FAILED_TESTS_LIST=$(mktemp)
-            grep -E "^--- FAIL: Fuzz[A-Za-z0-9_]+" fuzz-output.log > "$FAILED_TESTS_LIST" || true
+            # Match pattern: "--- FAIL: FuzzTestName" but exclude lines that contain "#01" or similar nested indicators
+            grep -E "^--- FAIL: Fuzz[A-Za-z0-9_]+ \(" fuzz-output.log | grep -v "#[0-9]\+" > "$FAILED_TESTS_LIST" || true
 
             if [[ -s "$FAILED_TESTS_LIST" ]]; then
               echo "📋 Found $(wc -l < "$FAILED_TESTS_LIST") failed fuzz tests to process"
@@ -457,11 +459,11 @@ jobs:
               FAIL_COUNT=$(wc -l < fuzz-failures.txt 2>/dev/null || echo "0")
               echo "🔍 Using robust fuzz failure detection: $FAIL_COUNT"
             else
-              # Fallback: use enhanced patterns with numeric validation
-              FAIL_COUNT=$(grep -c -E "^(FAIL|---[[:space:]]*FAIL|--[[:space:]]*FAIL|\[?FAIL\]?)[[:space:]:.]" fuzz-output.log 2>/dev/null || echo "0")
+              # Fallback: use refined patterns that only match actual test failures
+              FAIL_COUNT=$(grep -c -E "^---[[:space:]]*FAIL:[[:space:]]*[A-Za-z][A-Za-z0-9_]*" fuzz-output.log 2>/dev/null || echo "0")
               FAIL_COUNT=$(echo "$FAIL_COUNT" | tr -d '\n\r' | xargs)
               [[ "$FAIL_COUNT" =~ ^[0-9]+$ ]] || FAIL_COUNT=0
-              echo "⚠️ Using enhanced patterns for fuzz failure detection: $FAIL_COUNT"
+              echo "⚠️ Using refined patterns for fuzz failure detection: $FAIL_COUNT"
             fi
 
             # Enhanced panic detection with numeric validation
@@ -479,8 +481,8 @@ jobs:
               if [[ -f fuzz-failures.txt ]] && [[ -s fuzz-failures.txt ]]; then
                 head -5 fuzz-failures.txt >> $GITHUB_STEP_SUMMARY
               else
-                # Fallback: use enhanced patterns
-                grep -E "^(FAIL|---[[:space:]]*FAIL|--[[:space:]]*FAIL|\[?FAIL\]?)[[:space:]:.]" fuzz-output.log | head -5 >> $GITHUB_STEP_SUMMARY
+                # Fallback: use refined patterns that only match test failures
+                grep -E "^---[[:space:]]*FAIL:[[:space:]]*[A-Za-z][A-Za-z0-9_]*" fuzz-output.log | head -5 >> $GITHUB_STEP_SUMMARY
               fi
               echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
@@ -511,11 +513,11 @@ jobs:
               FAIL_COUNT=$(wc -l < fuzz-failures.txt 2>/dev/null || echo "0")
               echo "🔍 Using robust fuzz failure count for annotation: $FAIL_COUNT"
             else
-              # Fallback: use enhanced patterns with numeric validation
-              FAIL_COUNT=$(grep -c -E "^(FAIL|---[[:space:]]*FAIL|--[[:space:]]*FAIL|\[?FAIL\]?)[[:space:]:.]" fuzz-output.log 2>/dev/null || echo "0")
+              # Fallback: use refined patterns that only match test failures
+              FAIL_COUNT=$(grep -c -E "^---[[:space:]]*FAIL:[[:space:]]*[A-Za-z][A-Za-z0-9_]*" fuzz-output.log 2>/dev/null || echo "0")
               FAIL_COUNT=$(echo "$FAIL_COUNT" | tr -d '\n\r' | xargs)
               [[ "$FAIL_COUNT" =~ ^[0-9]+$ ]] || FAIL_COUNT=0
-              echo "⚠️ Using enhanced patterns for fuzz annotation: $FAIL_COUNT"
+              echo "⚠️ Using refined patterns for fuzz annotation: $FAIL_COUNT"
             fi
 
             # Enhanced panic detection with numeric validation
@@ -532,8 +534,8 @@ jobs:
                   echo "::error title=Failed Fuzz Test::$line"
                 done
               else
-                # Fallback: use enhanced patterns
-                grep -E "^(FAIL|---[[:space:]]*FAIL|--[[:space:]]*FAIL|\[?FAIL\]?)[[:space:]:.]" fuzz-output.log | head -3 | while IFS= read -r line; do
+                # Fallback: use refined patterns that only match test failures
+                grep -E "^---[[:space:]]*FAIL:[[:space:]]*[A-Za-z][A-Za-z0-9_]*" fuzz-output.log | head -3 | while IFS= read -r line; do
                   echo "::error title=Failed Fuzz Test::$line"
                 done
               fi
