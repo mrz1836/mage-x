@@ -313,8 +313,8 @@ jobs:
                   echo "📄 Processing summary file: $summary_file for failure counting"
 
                   # Count test failures - handle both regular test format and fuzz test format
-                  # Regular test format: .failures array contains individual test failures
-                  LEGACY_TEST_COUNT=$(jq '[.[] | select(.failures) | .failures[]] | length' "$summary_file" 2>/dev/null || echo "0")
+                  # Regular test format: .failures array contains individual test failures (excluding fuzz tests)
+                  LEGACY_TEST_COUNT=$(jq '[.[] | select(.failures and ((.Type // null) != "test")) | .failures[]] | length' "$summary_file" 2>/dev/null || echo "0")
 
                   # Count fuzz test failures - fuzz tests have Type field and failures array
                   # This counts the number of individual test failures within fuzz test entries

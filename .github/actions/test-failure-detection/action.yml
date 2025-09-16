@@ -376,17 +376,34 @@ runs:
                       unique_id: (($pkg + ":" + $test) | gsub("[^a-zA-Z0-9_/.-]"; "_"))
                     }' >> "$temp_signatures.items"
                   else
-                    # Regular test failure
-                    if [[ -n "$test_name" && -n "$package_name" && "$test_name" != "$package_name" ]]; then
-                      jq -n --arg pkg "$package_name" --arg test "$test_name" --arg output "$failure_line" '{
-                        type: "test",
-                        package: $pkg,
-                        test: $test,
-                        output: $output,
-                        line_number: null,
-                        signature: ($pkg + ":" + $test),
-                        unique_id: (($pkg + ":" + $test) | gsub("[^a-zA-Z0-9_/.-]"; "_"))
-                      }' >> "$temp_signatures.items"
+                    # Handle fuzz test failures specifically
+                    if [[ "$test_name" =~ ^Fuzz[A-Za-z0-9_]+ ]]; then
+                      # For fuzz tests, create a more specific signature to avoid duplicates
+                      # Only count the main fuzz test, not nested failures
+                      if [[ ! "$failure_line" =~ "#[0-9]+" ]]; then
+                        jq -n --arg pkg "$package_name" --arg test "$test_name" --arg output "$failure_line" '{
+                          type: "fuzz_test",
+                          package: $pkg,
+                          test: $test,
+                          output: $output,
+                          line_number: null,
+                          signature: ($pkg + ":" + $test + ":fuzz"),
+                          unique_id: (($pkg + ":" + $test + ":fuzz") | gsub("[^a-zA-Z0-9_/.-]"; "_"))
+                        }' >> "$temp_signatures.items"
+                      fi
+                    else
+                      # Regular test failure
+                      if [[ -n "$test_name" && -n "$package_name" && "$test_name" != "$package_name" ]]; then
+                        jq -n --arg pkg "$package_name" --arg test "$test_name" --arg output "$failure_line" '{
+                          type: "test",
+                          package: $pkg,
+                          test: $test,
+                          output: $output,
+                          line_number: null,
+                          signature: ($pkg + ":" + $test),
+                          unique_id: (($pkg + ":" + $test) | gsub("[^a-zA-Z0-9_/.-]"; "_"))
+                        }' >> "$temp_signatures.items"
+                      fi
                     fi
                   fi
                 fi
