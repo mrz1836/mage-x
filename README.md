@@ -233,7 +233,6 @@ This means:
 - **Project Templates**: Ready-made configurations for different project types
 
 ### Production Features
-- **Audit Logging**: Activity tracking and compliance reporting foundation
 - **Security Scanning**: Vulnerability detection with govulncheck integration
 - **Configuration Management**: Centralized project configuration and validation
 - **Extensible Architecture**: Plugin-ready foundation for custom production needs
@@ -249,18 +248,12 @@ MAGE-X includes production-ready capabilities and extensible architecture for or
 Available production functionality:
 
 ```bash
-# Audit logging and compliance
-magex audit:show          # View audit events
-magex audit:stats         # Audit statistics
-magex audit:export        # Export audit data
-
 # Configuration management
 magex configure:show      # Display configuration
 magex configure:validate  # Validate configuration
 ```
 
 **Production-Ready Features:**
-- **Audit System**: Track build activities with export capabilities
 - **Configuration Validation**: Schema-based configuration management
 - **Security Integration**: govulncheck and policy enforcement
 - **Extensible Architecture**: Plugin-ready foundation for custom production needs
