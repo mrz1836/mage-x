@@ -72,7 +72,6 @@
 * [What's Inside](#-whats-inside)
 * [Quick Start](#-quick-start)
 * [Features](#-features)
-* [Advanced Features](#-advanced-features)
 * [Configuration](#-configuration)
 * [Documentation](#-documentation)
 * [Examples & Tests](#-examples--tests)
@@ -461,6 +460,17 @@ magex build:dev           # Build and install development version (forced 'dev' 
 magex build:prebuild      # Pre-build all packages to warm cache
 magex build:prebuild parallel=2  # Pre-build with 2 parallel processes
 magex build:prebuild p=4         # Pre-build with 4 parallel processes (short form)
+
+# Memory-efficient prebuild strategies (great for CI/CD environments)
+magex build:prebuild strategy=incremental batch=10  # Build in batches of 10 packages
+magex build:prebuild strategy=mains-first           # Build main packages first, then dependencies
+magex build:prebuild strategy=smart                 # Auto-select best strategy based on available memory
+magex build:prebuild strategy=full p=8              # Traditional full build with 8 parallel jobs
+
+# Advanced prebuild options
+magex build:prebuild strategy=incremental batch=5 delay=100   # 100ms delay between batches
+magex build:prebuild strategy=mains-first mains-only=true     # Only build main packages
+magex build:prebuild exclude=test verbose=true                # Exclude test packages, verbose output
 ```
 
 </details>
