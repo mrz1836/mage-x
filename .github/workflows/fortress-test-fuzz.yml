@@ -186,14 +186,21 @@ jobs:
 
             # Extract failed fuzz tests from output log
             # Pattern: --- FAIL: FuzzTestName (0.34s)
-            grep -E "^--- FAIL: Fuzz[A-Za-z0-9_]+" fuzz-output.log | while IFS= read -r fail_line; do
-              echo "📄 Processing failure line: $fail_line"
+            # Use process substitution to avoid the pipeline subshell issue
+            FAILED_TESTS_LIST=$(mktemp)
+            grep -E "^--- FAIL: Fuzz[A-Za-z0-9_]+" fuzz-output.log > "$FAILED_TESTS_LIST" || true
 
-              # Extract test name from the failure line
-              # Format: --- FAIL: FuzzGetTokenFromHeader (0.34s)
-              if [[ "$fail_line" =~ ^---[[:space:]]*FAIL:[[:space:]]*([^[:space:]]+) ]]; then
-                FUZZ_TEST_NAME="${BASH_REMATCH[1]}"
-                echo "📋 Found failed fuzz test: $FUZZ_TEST_NAME"
+            if [[ -s "$FAILED_TESTS_LIST" ]]; then
+              echo "📋 Found $(wc -l < "$FAILED_TESTS_LIST") failed fuzz tests to process"
+
+              while IFS= read -r fail_line; do
+                echo "📄 Processing failure line: $fail_line"
+
+                # Extract test name from the failure line
+                # Format: --- FAIL: FuzzGetTokenFromHeader (0.34s)
+                if [[ "$fail_line" =~ ^---[[:space:]]*FAIL:[[:space:]]*([^[:space:]]+) ]]; then
+                  FUZZ_TEST_NAME="${BASH_REMATCH[1]}"
+                  echo "📋 Found failed fuzz test: $FUZZ_TEST_NAME"
 
                 # Extract detailed error output for this specific test
                 # Start from the failure line and capture subsequent error details
@@ -270,8 +277,14 @@ jobs:
                 # Add to summary file
                 jq --argjson new_entry "$FUZZ_JSON" '. += [$new_entry]' test-failures-summary.json > test-failures-summary.json.tmp
                 mv test-failures-summary.json.tmp test-failures-summary.json
-              fi
-            done
+                fi
+              done < "$FAILED_TESTS_LIST"
+
+              # Cleanup temp file
+              rm -f "$FAILED_TESTS_LIST"
+            else
+              echo "⚠️ No failed fuzz tests found in fuzz-output.log"
+            fi
 
             # Also update the signatures file if it exists but is empty
             if [[ -f fuzz-failures-signatures.json ]] && [[ $(jq 'length' fuzz-failures-signatures.json 2>/dev/null || echo "0") -eq 0 ]]; then
@@ -316,6 +329,35 @@ jobs:
             if [[ -f test-failures-summary.json ]]; then
               echo "📊 Final fuzz failure summary:"
               jq . test-failures-summary.json
+            fi
+
+            # If no structured failures were found but exit code indicates failure, add generic entry
+            if [[ $(jq 'length' test-failures-summary.json 2>/dev/null || echo "0") -eq 0 ]] && [[ "${{ steps.run-fuzz-tests.outputs.fuzz-exit-code }}" != "0" ]]; then
+              echo "⚠️ Exit code indicates failure but no structured failures found - adding generic fuzz failure entry"
+
+              # Get package name from go.mod or use git context fallback
+              PACKAGE_NAME="${{ github.repository }}"
+              if [[ -f go.mod ]]; then
+                PACKAGE_NAME=$(head -1 go.mod | awk '{print $2}')
+              elif [[ -n "${{ github.server_url }}" && -n "${{ github.repository }}" ]]; then
+                PACKAGE_NAME="${{ github.server_url }}/${{ github.repository }}"
+                PACKAGE_NAME=${PACKAGE_NAME#https://}
+              fi
+
+              # Capture last 20 lines of output as error context
+              LAST_OUTPUT=$(tail -20 fuzz-output.log 2>/dev/null || echo "No output available")
+
+              jq -n --arg pkg "$PACKAGE_NAME" --arg output "$LAST_OUTPUT" '[{
+                Package: $pkg,
+                Type: "test",
+                failures: [{
+                  Test: "fuzz_test_generic_failure",
+                  Elapsed: "unknown",
+                  Output: $output
+                }]
+              }]' > test-failures-summary.json
+
+              echo "✅ Added generic fuzz failure entry to summary"
             fi
           else
             echo "⚠️ No fuzz-output.log found, creating minimal failure entry"
