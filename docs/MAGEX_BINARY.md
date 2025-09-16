@@ -145,7 +145,6 @@ graph TD
 | cli | 14 | CLI operations |
 | update | 5 | Update operations |
 | mod | 9 | Module operations |
-| recipes | 7 | Recipe system |
 | metrics | 6 | Metrics and analytics |
 | bench | 8 | Benchmarking |
 | vet | 5 | Go vet operations |

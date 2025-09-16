@@ -35,7 +35,7 @@ When invoked, you must follow these steps:
    - Coordinate operations across 30+ repositories when required
    - Ensure consistent branching strategies
    - Handle synchronized releases and tagging
-   - Support enterprise git workflows
+   - Support advanced git workflows
 
 5. **Validation and Quality Control**
    - Validate commit messages follow conventional commit format

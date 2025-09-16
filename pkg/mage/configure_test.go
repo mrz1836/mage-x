@@ -620,7 +620,6 @@ func (ts *ConfigureTestSuite) TestConfigurationSchema() {
 		ts.Require().Contains(properties, "project")
 		ts.Require().Contains(properties, "build")
 		ts.Require().Contains(properties, "test")
-		ts.Require().Contains(properties, "enterprise")
 	})
 
 	ts.Run("SchemaStructure", func() {

@@ -327,7 +327,7 @@ func (suite *MageInitTestSuite) TestGetTemplateNames() {
 	suite.NotEmpty(names)
 
 	// Should contain expected template names
-	expectedTemplates := []string{"basic", "advanced", "enterprise", "cli", "web", "microservice"}
+	expectedTemplates := []string{"basic", "advanced", "cli", "web", "microservice"}
 	for _, expected := range expectedTemplates {
 		suite.Contains(names, expected)
 	}
@@ -351,10 +351,6 @@ func (suite *MageInitTestSuite) TestGetAvailableTemplates() {
 	suite.Equal("advanced", advanced.Name)
 	suite.NotEmpty(advanced.Dependencies)
 
-	enterprise, exists := templates["enterprise"]
-	suite.True(exists)
-	suite.Equal("enterprise", enterprise.Name)
-	suite.NotEmpty(enterprise.Dependencies)
 }
 
 // Test template file generation functions
@@ -444,15 +440,6 @@ func (suite *MageInitTestSuite) TestGetDockerComposeContent() {
 	suite.Contains(content, "healthcheck:")
 }
 
-// Test enterprise template functions
-func (suite *MageInitTestSuite) TestGetEnterpriseTemplateFiles() {
-	files := getEnterpriseTemplateFiles()
-	suite.NotEmpty(files)
-
-	// Should include advanced files plus security/compliance
-	suite.Contains(files, "security/security.yaml")
-	suite.Contains(files, "compliance/compliance.yaml")
-}
 
 // Test CLI template functions
 func (suite *MageInitTestSuite) TestGetCLITemplateFiles() {

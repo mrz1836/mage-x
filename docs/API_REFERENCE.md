@@ -265,7 +265,6 @@ func NewOperationsNamespace() OperationsNamespace
 func NewHelpNamespace() HelpNamespace
 func NewYAMLNamespace() YAMLNamespace
 func NewCommonNamespace() CommonNamespace
-func NewRecipesNamespace() RecipesNamespace
 ```
 
 ## Error Types

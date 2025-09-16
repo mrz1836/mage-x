@@ -39,7 +39,6 @@ type (
 	Lint      mg.Namespace
 	Metrics   mg.Namespace
 	Mod       mg.Namespace
-	Recipes   mg.Namespace
 	Release   mg.Namespace
 	Test      mg.Namespace
 	Tools     mg.Namespace

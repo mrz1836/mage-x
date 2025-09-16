@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**mage-x** is a comprehensive build automation framework built on top of Magefile, designed to provide a complete set of build tools, workflows, and development operations for Go projects. The project provides both a library of reusable build tasks and advanced tooling for enterprise-level development.
+**mage-x** is a comprehensive build automation framework built on top of Magefile, designed to provide a complete set of build tools, workflows, and development operations for Go projects. The project provides both a library of reusable build tasks and advanced tooling for production-level development.
 
 ### AI Agent Ecosystem
 
@@ -12,14 +12,14 @@ MAGE-X features a sophisticated ecosystem of **19 specialized AI agents** design
 - **🧪 Testing & Quality (2)**: mage-x-test-finder, mage-x-test-writer
 - **🚀 Release & CI/CD (3)**: mage-x-releaser, mage-x-git, mage-x-gh
 - **🏗️ Architecture & Performance (4)**: mage-x-architect, mage-x-refactor, mage-x-analyzer, mage-x-benchmark
-- **🏢 Enterprise & Workflow (3)**: mage-x-enterprise, mage-x-workflow, mage-x-wizard
+- **🛠️ Workflow & Automation (2)**: mage-x-workflow, mage-x-wizard
 - **⚙️ Infrastructure (2)**: mage-x-config, mage-x-tools
 
 **Key Features:**
 - **Strategic Collaboration**: Agents coordinate intelligently for complex workflows
 - **Parallel Execution**: Multiple agents work simultaneously for maximum efficiency
 - **Security Integration**: All agents follow mage-x security-first patterns
-- **Enterprise Scale**: Built for managing 30+ repositories with governance
+- **Production Scale**: Built for managing 30+ repositories with governance
 
 See **[docs/SUB_AGENTS.md](../docs/SUB_AGENTS.md)** for complete agent documentation and collaboration patterns.
 
@@ -28,7 +28,7 @@ See **[docs/SUB_AGENTS.md](../docs/SUB_AGENTS.md)** for complete agent documenta
 ### Namespace Architecture
 - **30+ namespace interfaces**: The project contains over 30 namespaces including:
   - **Core Namespaces (13)**: Build, Test, Lint, Tools, Deps, Mod, Docs, Git, Release, Metrics, Version, Install, Audit
-  - **Advanced Namespaces (17+)**: Workflow, Enterprise, Wizard, Init, Releases, Help, CLI, Recipes, Bench, Yaml, Integrations, Vet, Update, Format, Configure, Generate, EnterpriseConfig
+  - **Advanced Namespaces (10+)**: Help, Init, Releases, Bench, Yaml, Integrations, Vet, Update, Format, Configure, Generate
 - **Interface-based design**: Each namespace has a corresponding interface (e.g., `BuildNamespace`)
 - **Factory functions**: `NewBuildNamespace()`, `NewTestNamespace()`, etc.
 - **Registry pattern**: `DefaultNamespaceRegistry` for centralized access
@@ -437,8 +437,6 @@ While the main magefile exposes 59 common commands, the pkg/mage package contain
 - **Test**: CI(), CINoRace(), CoverReport(), CoverHTML(), Parallel(), NoLint()
 - **Format**: All(), Check(), Fix(), Go(), JSON(), YAML()
 - **Workflow**: Create(), Execute(), History(), Schedule(), Status(), Template()
-- **Enterprise**: Backup(), Deploy(), Promote(), Restore(), Rollback()
-- **Recipes**: Create(), Install(), List(), Run(), Search(), Show()
 - **Generate**: All(), Code(), Config(), Docs(), GraphQL(), Mocks(), OpenAPI()
 
 ## Contributing
@@ -488,7 +486,7 @@ Agents automatically coordinate when their domains overlap:
 
 ### Hybrid Documentation Server
 
-MAGE-X includes a sophisticated hybrid documentation system with enterprise-grade capabilities:
+MAGE-X includes a sophisticated hybrid documentation system with production-grade capabilities:
 
 - **Smart Tool Detection**: Automatically detects and uses the best available documentation tool (`pkgsite` or `godoc`)
 - **Auto-Installation**: Automatically installs missing documentation tools when needed

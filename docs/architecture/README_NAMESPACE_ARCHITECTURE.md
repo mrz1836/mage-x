@@ -100,7 +100,6 @@ err := build.Default()
 - **Help** - Help and documentation
 - **YAML** - YAML processing
 - **Common** - Common utilities
-- **Recipes** - Predefined task recipes
 
 </details>
 

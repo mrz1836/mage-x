@@ -67,7 +67,6 @@ mage interactive
 
 # Configuration wizard
 mage configure:init
-mage configure:enterprise
 ```
 
 ## 📊 Command Reference
@@ -87,30 +86,12 @@ mage format         # Format code
 mage deps           # Manage dependencies
 ```
 
-### Enterprise Commands
-```bash
-# Enterprise setup
-mage configure:enterprise  # Initialize enterprise features
-mage team:setup           # Set up team management
-mage audit:enable         # Enable audit logging
-
-# Security and compliance
-mage security:scan        # Run security scan
-mage security:report      # Generate security report
-mage audit:export         # Export audit logs
-
-# Analytics and monitoring
-mage analytics:dashboard  # View analytics dashboard
-mage analytics:export     # Export metrics data
-mage workflow:execute     # Execute workflows
-```
 
 ## 🔗 External Resources
 
 - [Official Website](https://mage-x.com)
 - [GitHub Repository](https://github.com/mrz1836/mage-x)
 - [Community Discord](https://discord.gg/mage-x)
-- [Enterprise Support](mailto:enterprise@mage-x.com)
 
 ## 🤝 Community and Support
 

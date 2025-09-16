@@ -511,7 +511,6 @@ func FuzzRegistryAccess(f *testing.F) {
 	f.Add(10)  // CLI
 	f.Add(11)  // Update
 	f.Add(12)  // Mod
-	f.Add(13)  // Recipes
 	f.Add(14)  // Metrics
 	f.Add(15)  // Workflow
 	f.Add(100) // Out of range

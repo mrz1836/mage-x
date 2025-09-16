@@ -62,7 +62,6 @@ MAGE-X provides 37 built-in namespaces organized by functionality:
 - **Help** (`HelpNamespace`) - Help and documentation
 - **YAML** (`YAMLNamespace`) - YAML processing
 - **Common** (`CommonNamespace`) - Common utilities
-- **Recipes** (`RecipesNamespace`) - Predefined task recipes
 
 ## Core Concepts
 

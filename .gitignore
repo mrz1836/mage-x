@@ -60,8 +60,6 @@ tests/.mage-cache/
 /examples/basic/test-build
 /examples/override-commands/override-commands
 /magex
-/pkg/mage/.mage/enterprise/backups/
-/pkg/mage/.mage/enterprise/deployments
 /pkg/mage/.mage/profiles
 /pkg/mage/docs
 /pkg/security/testdata/

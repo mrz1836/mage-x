@@ -74,7 +74,7 @@ func main() {
 	var opts InitOptions
 	flag.StringVar(&opts.ProjectName, "name", "", "Project name")
 	flag.StringVar(&opts.ProjectPath, "path", ".", "Project path (default: current directory)")
-	flag.StringVar(&opts.Template, "template", "basic", "Project template (basic, advanced, enterprise, cli, web, microservice)")
+	flag.StringVar(&opts.Template, "template", "basic", "Project template (basic, advanced, cli, web, microservice)")
 	flag.StringVar(&opts.GoVersion, "go-version", getDefaultGoVersion(), "Go version to use")
 	flag.StringVar(&opts.ModulePath, "module", "", "Go module path (e.g., github.com/user/project)")
 	flag.BoolVar(&opts.Force, "force", false, "Force initialization even if directory is not empty")
@@ -401,7 +401,6 @@ OPTIONS:
 TEMPLATES:
     basic         Simple project with basic mage targets
     advanced      Advanced project with comprehensive targets
-    enterprise    Enterprise project with security and compliance
     cli           Command-line application project
     web           Web application project
     microservice  Microservice project
@@ -461,13 +460,6 @@ func getAvailableTemplates() map[string]ProjectTemplate {
 			Directories:  []string{"cmd", "pkg", "internal", "scripts", "docs", "tests", "deployments"},
 			Files:        getAdvancedTemplateFiles(),
 			Dependencies: []string{"docker", "kubernetes"},
-		},
-		"enterprise": {
-			Name:         "enterprise",
-			Description:  "Enterprise project with security and compliance features",
-			Directories:  []string{"cmd", "pkg", "internal", "scripts", "docs", "tests", "deployments", "security", "compliance"},
-			Files:        getEnterpriseTemplateFiles(),
-			Dependencies: []string{"docker", "kubernetes", "vault", "prometheus"},
 		},
 		"cli": {
 			Name:        "cli",
@@ -698,14 +690,6 @@ func getAdvancedTemplateFiles() map[string]string {
 	return files
 }
 
-// getEnterpriseTemplateFiles returns files for the enterprise template
-func getEnterpriseTemplateFiles() map[string]string {
-	files := getAdvancedTemplateFiles()
-	files["magefile.go"] = getEnterpriseMagefileContent()
-	files["security/security.yaml"] = getSecurityConfigContent()
-	files["compliance/compliance.yaml"] = getComplianceConfigContent()
-	return files
-}
 
 // getCLITemplateFiles returns files for the CLI template
 func getCLITemplateFiles() map[string]string {

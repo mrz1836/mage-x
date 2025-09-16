@@ -112,8 +112,8 @@
 - **AI Development Integration**<br/>
   _19 specialized AI agents and 13 Claude Code slash commands for intelligent workflows, code analysis, and automated development tasks._
   <br/><br/>
-- **Enterprise Foundation**<br/>
-  _Audit logging, configuration management, and extensible architecture ready for organizational governance and compliance needs._
+- **Production Foundation**<br/>
+  _Audit logging, configuration management, and extensible architecture ready for organizational deployment and compliance needs._
 
 <br/>
 
@@ -232,21 +232,21 @@ This means:
 - **Help System**: Built-in documentation and usage examples
 - **Project Templates**: Ready-made configurations for different project types
 
-### Enterprise Features
+### Production Features
 - **Audit Logging**: Activity tracking and compliance reporting foundation
 - **Security Scanning**: Vulnerability detection with govulncheck integration
 - **Configuration Management**: Centralized project configuration and validation
-- **Extensible Architecture**: Plugin-ready foundation for custom enterprise needs
+- **Extensible Architecture**: Plugin-ready foundation for custom production needs
 
 <br/>
 
 ## 🏢 Advanced Features
 
-MAGE-X includes enterprise-ready capabilities and extensible architecture for organizations.
+MAGE-X includes production-ready capabilities and extensible architecture for organizations.
 
-### Enterprise Capabilities
+### Production Capabilities
 
-Available enterprise functionality:
+Available production functionality:
 
 ```bash
 # Audit logging and compliance
@@ -263,7 +263,7 @@ magex configure:validate  # Validate configuration
 - **Audit System**: Track build activities with export capabilities
 - **Configuration Validation**: Schema-based configuration management
 - **Security Integration**: govulncheck and policy enforcement
-- **Extensible Architecture**: Plugin-ready foundation for custom enterprise needs
+- **Extensible Architecture**: Plugin-ready foundation for custom production needs
 
 <br/>
 
@@ -378,7 +378,6 @@ For comprehensive documentation, visit the [docs](docs) directory:
 - **[Claude Code Commands](docs/CLAUDE_COMMANDS.md)** - 13 optimized slash commands for agent orchestration
 - **[Namespace Interface Architecture](docs/NAMESPACE_INTERFACES.md)** - Modern interface-based namespace system
 - **[API Reference](docs/API_REFERENCE.md)** - Complete interface and API documentation
-- **[Enterprise Features](docs/ENTERPRISE.md)** - Enterprise capabilities guide
 - **[Quick Start](docs/QUICK_START.md)** - Get up and running in minutes
 - **[Configuration Reference](docs/CONFIGURATION.md)** - Complete configuration guide
 
@@ -692,7 +691,6 @@ magex uninstall           # Remove installed binary
 magex configure:init      # Initialize a new mage configuration
 magex configure:show      # Display the current configuration
 magex configure:update    # Update configuration values interactively
-magex configure:enterprise # Configure enterprise settings
 magex configure:export    # Export configuration to file
 magex configure:import    # Import configuration from file
 magex configure:validate  # Validate configuration integrity
@@ -793,7 +791,7 @@ magex docs:readme        # README documentation
 
 <br/>
 
-### 🏢 Enterprise Namespaces
+### 🔧 Advanced Namespaces
 
 MAGE-X includes specialized namespaces for power users. These are opt-in to keep the core installation lightweight.
 
@@ -801,15 +799,11 @@ MAGE-X includes specialized namespaces for power users. These are opt-in to keep
 <summary>🔧 <strong>Advanced Namespace Configuration</strong></summary>
 
 **Available Specialized Namespaces:**
-- **CLI** - Advanced command-line operations and bulk processing
-- **Wizard** - Interactive setup and configuration wizards
-- **Enterprise** - Audit logging and enterprise management
-- **Workflow** - Build automation and pipeline orchestration
 - **Bench** - Performance benchmarking and profiling
 - **Releases** - Release creation and asset distribution
 - **Yaml** - YAML configuration management and validation
 
-**To enable enterprise features in your magefile:**
+**To enable advanced features in your magefile:**
 ```go
 //go:build mage
 
@@ -824,12 +818,8 @@ type (
     // ... other default namespaces
 )
 
-// Add enterprise namespaces as needed
+// Add advanced namespaces as needed
 type (
-    CLI          = mage.CLI
-    Wizard       = mage.Wizard
-    Enterprise   = mage.Enterprise
-    Workflow     = mage.Workflow
     Integrations = mage.Integrations
     Bench        = mage.Bench
     Releases     = mage.Releases
@@ -838,14 +828,8 @@ type (
 
 This approach keeps the default installation lightweight while allowing power users to access advanced features when needed.
 
-**Example: Enterprise Operations**
+**Example: Production Operations**
 ```go
-// Enable audit logging and compliance
-func AuditReport() error {
-    var enterprise Enterprise
-    return enterprise.Audit()
-}
-
 // Run benchmarking and performance analysis
 func PerformanceTest() error {
     var bench Bench
@@ -908,7 +892,6 @@ Performance benchmarks for core MAGE-X operations:
 | Build Detection       | 1.2ms | 256KB  | Project type and configuration    |
 | Command Execution     | 0.8ms | 128KB  | Secure command validation         |
 | Configuration Loading | 2.1ms | 512KB  | YAML parsing and validation       |
-| Recipe Processing     | 3.5ms | 1MB    | Template expansion and validation |
 
 > Benchmarks run on Apple M1 Pro (ARM64) with Go 1.24+
 > All operations show consistent sub-5ms performance with minimal memory allocation
@@ -938,7 +921,7 @@ MAGE-X features a comprehensive ecosystem of 19 specialized Claude Code AI agent
 - **Testing & Quality (2)**: Coverage analysis and comprehensive test implementation
 - **Release & CI/CD (3)**: Version management, git operations, GitHub automation
 - **Architecture & Performance (4)**: Code architecture, refactoring, analysis, benchmarking
-- **Enterprise & Workflow (3)**: Governance, automation pipelines, interactive guidance
+- **Workflow & Pipeline (3)**: Automation pipelines, interactive guidance, orchestration
 - **Infrastructure (2)**: Configuration management, development environment setup
 
 <br/>
@@ -947,7 +930,7 @@ MAGE-X features a comprehensive ecosystem of 19 specialized Claude Code AI agent
 - **Strategic Collaboration**: Agents coordinate intelligently for complex workflows
 - **Parallel Execution**: Multiple agents work simultaneously for maximum efficiency
 - **Security Integration**: All agents follow mage-x security-first patterns
-- **Enterprise Scale**: Built for managing 30+ repositories with governance and compliance
+- **Production Scale**: Built for managing 30+ repositories with governance and compliance
 
 <br/>
 
