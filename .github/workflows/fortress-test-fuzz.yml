@@ -352,15 +352,17 @@ jobs:
               fi
 
               # Deduplicate signature entries by test name (handle any remaining duplicates)
+              # Group by test name only and prefer entries with valid package names
               SIGNATURE_ENTRIES_DEDUP=$(echo "$SIGNATURE_ENTRIES" | jq '[
                 group_by(.test) |
                 .[] |
+                # Sort by package validity: valid package names last (highest priority)
                 sort_by(.package |
-                  if test("^[0-9.]+[a-z]*$") then 0
-                  else 1
+                  if test("^[0-9.]+[a-z]*$") then 0    # Elapsed time pattern (lowest priority)
+                  else 1                               # Valid package name (highest priority)
                   end
                 ) |
-                .[-1]
+                .[-1]  # Take the last entry (valid package name if available)
               ]')
 
               echo "$SIGNATURE_ENTRIES_DEDUP" > fuzz-failures-signatures.json
