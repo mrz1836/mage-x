@@ -191,7 +191,7 @@ jobs:
             # Only capture top-level fuzz test failures, not nested test failures
             FAILED_TESTS_LIST=$(mktemp)
             # Match pattern: "--- FAIL: FuzzTestName" but exclude lines that contain "#01" or similar nested indicators
-            grep -E "^--- FAIL: Fuzz[A-Za-z0-9_]+ \(" fuzz-output.log | grep -v "#[0-9]\+" > "$FAILED_TESTS_LIST" || true
+            grep -E "^--- FAIL: Fuzz[A-Za-z0-9_]+[[:space:]]*\(" fuzz-output.log | grep -E -v "#[0-9]+" > "$FAILED_TESTS_LIST" || true
 
             if [[ -s "$FAILED_TESTS_LIST" ]]; then
               echo "📋 Found $(wc -l < "$FAILED_TESTS_LIST") failed fuzz tests to process"

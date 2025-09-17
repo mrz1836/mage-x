@@ -353,7 +353,7 @@ runs:
               # Skip empty lines and generic failures
               if [[ -n "$failure_line" && "$failure_line" != *"Generic test failure"* ]]; then
                 # Skip standalone FAIL lines, package summaries, and exit status indicators
-                if [[ "$failure_line" =~ ^FAIL[[:space:]]*$ ]] || [[ "$failure_line" =~ ^FAIL[[:space:]]+github\.com ]] || [[ "$failure_line" =~ ^exit[[:space:]]+status ]]; then
+                if [[ "$failure_line" =~ ^(FAIL[[:space:]]*$|FAIL[[:space:]]+github\.com|exit[[:space:]]+status) ]]; then
                   continue
                 fi
 
