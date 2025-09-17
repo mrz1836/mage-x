@@ -216,17 +216,21 @@ runs:
         echo "=== Pre-building Packages ==="
         echo "============================================================"
 
+        # Use MAGE_X_PARALLEL from env if set, otherwise default to 1 for memory safety
+        PARALLEL_JOBS="${MAGE_X_PARALLEL:-1}"
+        echo "🔧 Using parallelism level: $PARALLEL_JOBS (from MAGE_X_PARALLEL env var)"
+
         if [ -n "$GO_MODULE_DIR" ]; then
           echo "🔧 Running build commands from directory: $GO_MODULE_DIR"
-          # Limit parallelism to avoid OOM on GitHub Actions runners
-          (cd "$GO_MODULE_DIR" && magex build:prebuild p=2)
+          # Use configured parallelism to avoid OOM on GitHub Actions runners
+          (cd "$GO_MODULE_DIR" && magex build:prebuild p="$PARALLEL_JOBS" strategy=smart)
 
           echo "🏗️ Building stdlib for host platform..."
           (cd "$GO_MODULE_DIR" && magex install:stdlib)
         else
           echo "🔧 Running build commands from repository root"
-          # Limit parallelism to avoid OOM on GitHub Actions runners
-          magex build:prebuild p=2
+          # Use configured parallelism to avoid OOM on GitHub Actions runners
+          magex build:prebuild p="$PARALLEL_JOBS" strategy=smart
 
           echo "🏗️ Building stdlib for host platform..."
           magex install:stdlib

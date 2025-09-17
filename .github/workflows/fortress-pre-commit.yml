@@ -183,9 +183,31 @@ jobs:
 
       - name: 🎯 Set go-pre-commit binary path
         run: |
-          # Set the binary path for both cache hit and cache miss scenarios
+          # Set the binary path for both cache hit and cache miss scenarios with validation
+          set -euo pipefail
           GO_BIN="$(go env GOPATH)/bin"
-          echo "GO_PRE_COMMIT_BINARY=$GO_BIN/go-pre-commit" >> $GITHUB_ENV
+
+          # Validate GOPATH is set, exists, and is writable
+          if [[ -z "$GO_BIN" || "$GO_BIN" == "/bin" ]]; then
+            echo "❌ Invalid GOPATH detected: $GO_BIN"
+            exit 1
+          fi
+
+          if [[ ! -d "$GO_BIN" ]]; then
+            echo "❌ GOPATH bin directory does not exist: $GO_BIN"
+            exit 1
+          fi
+
+          if [[ ! -w "$GO_BIN" ]]; then
+            echo "❌ GOPATH bin directory is not writable: $GO_BIN"
+            exit 1
+          fi
+
+          GO_PRE_COMMIT_PATH="$GO_BIN/go-pre-commit"
+
+          # Store the validated binary path
+          echo "GO_PRE_COMMIT_BINARY=$GO_PRE_COMMIT_PATH" >> $GITHUB_ENV
+          echo "🔒 Binary path validated: $GO_PRE_COMMIT_PATH"
 
       # --------------------------------------------------------------------
       # Display pre-commit configuration
@@ -284,8 +306,10 @@ jobs:
             mkdir -p "$(go env GOPATH)/bin"
             cp /tmp/go-pre-commit "$(go env GOPATH)/bin/go-pre-commit"
 
-            # Store the binary path
-            echo "GO_PRE_COMMIT_BINARY=$(go env GOPATH)/bin/go-pre-commit" >> $GITHUB_ENV
+            # Store the validated binary path
+            GO_BIN="$(go env GOPATH)/bin"
+            GO_PRE_COMMIT_PATH="$GO_BIN/go-pre-commit"
+            echo "GO_PRE_COMMIT_BINARY=$GO_PRE_COMMIT_PATH" >> $GITHUB_ENV
 
             # Show version info
             echo "✅ Local go-pre-commit built and stored in cache"
@@ -305,9 +329,10 @@ jobs:
             mkdir -p ~/.cache/go-pre-commit-bin
             cp "$(go env GOPATH)/bin/go-pre-commit" ~/.cache/go-pre-commit-bin/
 
-            # Store the binary path
+            # Store the validated binary path
             GO_BIN="$(go env GOPATH)/bin"
-            echo "GO_PRE_COMMIT_BINARY=$GO_BIN/go-pre-commit" >> $GITHUB_ENV
+            GO_PRE_COMMIT_PATH="$GO_BIN/go-pre-commit"
+            echo "GO_PRE_COMMIT_BINARY=$GO_PRE_COMMIT_PATH" >> $GITHUB_ENV
 
             # Verify installation
             echo "✅ go-pre-commit installed and stored in cache"
@@ -360,6 +385,7 @@ jobs:
         if: env.GO_PRE_COMMIT_ALL_FILES != 'true' && (steps.install-pre-commit.outputs.install_success == 'true' || steps.install-pre-commit-cached.outputs.install_success == 'true')
         id: detect-files
         run: |
+          set -euo pipefail  # Enable strict error handling
           echo "🔍 Detecting changed files for CI execution..."
           echo "=============================================="
 
@@ -457,13 +483,14 @@ jobs:
             echo ""
 
             # Filter files: only include files that still exist
+            # Use newline-separated format for safer file handling
             FILTERED_FILES=""
             while IFS= read -r file; do
               if [[ -f "$file" ]]; then
                 if [[ -z "$FILTERED_FILES" ]]; then
                   FILTERED_FILES="$file"
                 else
-                  FILTERED_FILES="$FILTERED_FILES,$file"
+                  FILTERED_FILES="$FILTERED_FILES"$'\n'"$file"
                 fi
                 echo "  ✅ Including $file"
               else
@@ -479,13 +506,18 @@ jobs:
           echo "📊 File Detection Results:"
           echo "=========================="
           if [[ -n "$CHANGED_FILES" ]]; then
-            FILE_COUNT=$(echo "$CHANGED_FILES" | tr ',' '\n' | wc -l | tr -d ' ')
+            FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
             echo "✅ Detection successful!"
             echo "  • Method used: $DETECTION_METHOD"
             echo "  • Files found: $FILE_COUNT"
-            echo "  • Files: $CHANGED_FILES"
+            echo "  • Files: $(echo "$CHANGED_FILES" | tr '\n' ',' | sed 's/,$//')"
             echo ""
-            echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+            # Store files in newline-separated format for safer handling
+            {
+              echo "changed_files<<EOF_CHANGED_FILES"
+              echo "$CHANGED_FILES"
+              echo "EOF_CHANGED_FILES"
+            } >> $GITHUB_OUTPUT
             echo "detection_method=$DETECTION_METHOD" >> $GITHUB_OUTPUT
             echo "files_found=true" >> $GITHUB_OUTPUT
           else
@@ -508,6 +540,7 @@ jobs:
         if: steps.install-pre-commit.outputs.install_success == 'true' || steps.install-pre-commit-cached.outputs.install_success == 'true'
         id: run-checks
         run: |
+          set -euo pipefail  # Enable strict error handling
           echo "🚀 Running pre-commit checks..."
           echo "================================"
 
@@ -522,6 +555,12 @@ jobs:
           # The external tool will read environment variables from the merged configuration
           # that we've already loaded into the environment
 
+          # Validate the go-pre-commit binary exists and is executable before using it
+          if [[ ! -x "${{ env.GO_PRE_COMMIT_BINARY }}" ]]; then
+            echo "❌ go-pre-commit binary not found or not executable at: ${{ env.GO_PRE_COMMIT_BINARY }}"
+            exit 1
+          fi
+
           # Build command based on GO_PRE_COMMIT_ALL_FILES configuration
           if [[ "${{ env.GO_PRE_COMMIT_ALL_FILES }}" == "true" ]]; then
             echo "🔍 Mode: All Files"
@@ -535,10 +574,44 @@ jobs:
 
             echo "🔍 Mode: Changed Files Only"
             echo "  • Detection method: $DETECTION_METHOD"
-            echo "  • Files to check: $CHANGED_FILES"
-            echo "  • Command: go-pre-commit run --files $CHANGED_FILES"
+
+            # Count files for display (newline-separated format)
+            FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
+            echo "  • Files to check: $FILE_COUNT files"
+
+            # Create a temporary file list for secure file passing
+            TEMP_FILE_LIST=$(mktemp)
+            echo "$CHANGED_FILES" > "$TEMP_FILE_LIST"
+
+            echo "  • Using temporary file list for secure file passing"
             echo ""
-            CHECKS_OUTPUT=$("${{ env.GO_PRE_COMMIT_BINARY }}" run --files "$CHANGED_FILES" 2>&1) || CHECKS_EXIT=$?
+
+            # Use a safer approach: create a comma-separated list in a controlled way
+            # by reading each line and properly escaping it
+            SAFE_FILE_LIST=""
+            while IFS= read -r file; do
+              if [[ -n "$file" ]]; then
+                # Escape the file name for safe shell usage
+                ESCAPED_FILE=$(printf '%q' "$file")
+                if [[ -z "$SAFE_FILE_LIST" ]]; then
+                  SAFE_FILE_LIST="$ESCAPED_FILE"
+                else
+                  SAFE_FILE_LIST="$SAFE_FILE_LIST,$ESCAPED_FILE"
+                fi
+              fi
+            done < "$TEMP_FILE_LIST"
+
+            if [[ -n "$SAFE_FILE_LIST" ]]; then
+              echo "  • Command: go-pre-commit run --files <escaped_file_list>"
+              CHECKS_OUTPUT=$("${{ env.GO_PRE_COMMIT_BINARY }}" run --files "$SAFE_FILE_LIST" 2>&1) || CHECKS_EXIT=$?
+            else
+              echo "  • No valid files to process, skipping"
+              CHECKS_OUTPUT="No files to process"
+              CHECKS_EXIT=0
+            fi
+
+            # Clean up temporary file
+            rm -f "$TEMP_FILE_LIST"
           else
             echo "🔍 Mode: Staged Files (Fallback)"
             echo "  • No changed files detected, falling back to staged files"
@@ -580,6 +653,7 @@ jobs:
       - name: 💾 Cache go-pre-commit tools after installation
         if: steps.go-pre-commit-tools-cache.outputs.cache-hit != 'true' && (steps.install-pre-commit.outputs.install_success == 'true' || steps.install-pre-commit-cached.outputs.install_success == 'true')
         run: |
+          set -euo pipefail  # Enable strict error handling
           echo "💾 Caching go-pre-commit tools..."
           TOOLS_DIR="$HOME/.cache/go-pre-commit-tools"
           GOPATH_BIN="$(go env GOPATH)/bin"
@@ -605,6 +679,7 @@ jobs:
       - name: 📊 Job Summary
         if: always()
         run: |
+          set -euo pipefail  # Enable strict error handling
           echo "## 🪝 Pre-commit Checks Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -635,11 +710,11 @@ jobs:
             if [[ "${{ env.GO_PRE_COMMIT_ALL_FILES }}" != "true" && "${{ steps.detect-files.outputs.files_found }}" == "true" ]]; then
               echo "### 📁 Files Processed" >> $GITHUB_STEP_SUMMARY
               CHANGED_FILES="${{ steps.detect-files.outputs.changed_files }}"
-              FILE_COUNT=$(echo "$CHANGED_FILES" | tr ',' '\n' | wc -l | tr -d ' ')
+              FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
               echo "**$FILE_COUNT changed files detected and processed:**" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
-              echo "$CHANGED_FILES" | tr ',' '\n' | while read file; do
-                if [ -n "$file" ]; then
+              echo "$CHANGED_FILES" | while IFS= read -r file; do
+                if [[ -n "$file" ]]; then
                   echo "- 📄 \`$file\`" >> $GITHUB_STEP_SUMMARY
                 fi
               done
@@ -657,7 +732,7 @@ jobs:
             if [[ "${{ env.GO_PRE_COMMIT_ALL_FILES }}" == "true" ]]; then
               echo "🎯 **All pre-commit checks passed successfully on all repository files.**" >> $GITHUB_STEP_SUMMARY
             elif [[ "${{ steps.detect-files.outputs.files_found }}" == "true" ]]; then
-              FILE_COUNT=$(echo "${{ steps.detect-files.outputs.changed_files }}" | tr ',' '\n' | wc -l | tr -d ' ')
+              FILE_COUNT=$(echo "${{ steps.detect-files.outputs.changed_files }}" | wc -l | tr -d ' ')
               echo "🎯 **All pre-commit checks passed successfully on $FILE_COUNT changed files.**" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "⚡ **Performance**: Fast CI execution by checking only changed files instead of entire repository." >> $GITHUB_STEP_SUMMARY

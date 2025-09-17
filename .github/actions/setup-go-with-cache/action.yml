@@ -118,6 +118,49 @@ runs:
         echo "✅ Go.sum found at $GO_SUM_FILE - cache keys will work correctly"
 
     # --------------------------------------------------------------------
+    # DEBUG: Module cache key components
+    # --------------------------------------------------------------------
+    - name: "🔍 Debug: Module cache key components"
+      shell: bash
+      run: |
+        echo "============================================================"
+        echo "🔍 DEBUG: MODULE CACHE KEY COMPONENTS"
+        echo "============================================================"
+
+        # Show input components
+        echo "📋 Input Values:"
+        echo "  matrix-os: '${{ inputs.matrix-os }}'"
+        echo "  go-sum-file: '${{ inputs.go-sum-file }}'"
+
+        # Verify go.sum file details
+        GO_SUM_FILE="${{ inputs.go-sum-file }}"
+        if [ -f "$GO_SUM_FILE" ]; then
+          echo ""
+          echo "📄 Go.sum File Analysis:"
+          echo "  Path: $GO_SUM_FILE"
+          echo "  Size: $(wc -c < "$GO_SUM_FILE") bytes"
+          echo "  Lines: $(wc -l < "$GO_SUM_FILE") lines"
+          echo "  SHA256: $(sha256sum "$GO_SUM_FILE" | cut -d' ' -f1)"
+          echo ""
+          echo "🔍 First 5 lines of go.sum:"
+          head -5 "$GO_SUM_FILE" | sed 's/^/    /'
+          echo ""
+          echo "🔍 Last 3 lines of go.sum:"
+          tail -3 "$GO_SUM_FILE" | sed 's/^/    /'
+        else
+          echo "❌ ERROR: go.sum file not found at: $GO_SUM_FILE"
+        fi
+
+        # Show expected cache key pattern
+        echo ""
+        echo "🔑 Expected Module Cache Key Pattern:"
+        echo "  Pattern: ${{ inputs.matrix-os }}-gomod-[hash-of-go.sum]"
+        echo "  Actual hash: ${{ hashFiles(inputs.go-sum-file) }}"
+        echo "  Complete key: ${{ inputs.matrix-os }}-gomod-${{ hashFiles(inputs.go-sum-file) }}"
+        echo ""
+        echo "============================================================"
+
+    # --------------------------------------------------------------------
     # Restore Go module cache (shared across versions)
     # --------------------------------------------------------------------
     - name: 💾 Restore Go module cache
@@ -126,6 +169,53 @@ runs:
       with:
         path: ~/go/pkg/mod
         key: ${{ inputs.matrix-os }}-gomod-${{ hashFiles(inputs.go-sum-file) }}
+
+    # --------------------------------------------------------------------
+    # DEBUG: Build cache key components
+    # --------------------------------------------------------------------
+    - name: "🔍 Debug: Build cache key components"
+      shell: bash
+      run: |
+        echo "============================================================"
+        echo "🔍 DEBUG: BUILD CACHE KEY COMPONENTS"
+        echo "============================================================"
+
+        # Show input components
+        echo "📋 Input Values:"
+        echo "  matrix-os: '${{ inputs.matrix-os }}'"
+        echo "  go-version: '${{ inputs.go-version }}'"
+        echo "  go-sum-file: '${{ inputs.go-sum-file }}'"
+
+        # Verify go.sum file details (for build cache key)
+        GO_SUM_FILE="${{ inputs.go-sum-file }}"
+        if [ -f "$GO_SUM_FILE" ]; then
+          echo ""
+          echo "📄 Go.sum File Analysis (for build cache):"
+          echo "  Path: $GO_SUM_FILE"
+          echo "  Size: $(wc -c < "$GO_SUM_FILE") bytes"
+          echo "  SHA256: $(sha256sum "$GO_SUM_FILE" | cut -d' ' -f1)"
+          echo "  Last Modified: $(stat -c %y "$GO_SUM_FILE" 2>/dev/null || stat -f %Sm "$GO_SUM_FILE" 2>/dev/null || echo 'Unknown')"
+        else
+          echo "❌ ERROR: go.sum file not found at: $GO_SUM_FILE"
+        fi
+
+        # Show cache paths that will be used
+        echo ""
+        echo "📁 Build Cache Paths:"
+        echo "  ~/.cache/go-build"
+        echo "  ~/.cache/go-build/test"
+        echo "  Resolved paths:"
+        echo "    $(realpath ~/.cache/go-build 2>/dev/null || echo "~/.cache/go-build (will be created)")"
+        echo "    $(realpath ~/.cache/go-build/test 2>/dev/null || echo "~/.cache/go-build/test (will be created)")"
+
+        # Show expected cache key pattern
+        echo ""
+        echo "🔑 Expected Build Cache Key Pattern:"
+        echo "  Pattern: ${{ inputs.matrix-os }}-gobuild-${{ inputs.go-version }}-[hash-of-go.sum]"
+        echo "  Actual hash: ${{ hashFiles(inputs.go-sum-file) }}"
+        echo "  Complete key: ${{ inputs.matrix-os }}-gobuild-${{ inputs.go-version }}-${{ hashFiles(inputs.go-sum-file) }}"
+        echo ""
+        echo "============================================================"
 
     # --------------------------------------------------------------------
     # Restore Go build cache (per-version)
@@ -138,6 +228,61 @@ runs:
           ~/.cache/go-build
           ~/.cache/go-build/test
         key: ${{ inputs.matrix-os }}-gobuild-${{ inputs.go-version }}-${{ hashFiles(inputs.go-sum-file) }}
+
+    # --------------------------------------------------------------------
+    # DEBUG: Cache restoration summary
+    # --------------------------------------------------------------------
+    - name: "📊 Debug: Cache restoration summary"
+      shell: bash
+      run: |
+        echo "============================================================"
+        echo "📊 DEBUG: CACHE RESTORATION SUMMARY"
+        echo "============================================================"
+
+        # Show cache hit/miss results
+        echo "🎯 Cache Results:"
+        echo "  Module cache hit: ${{ steps.restore-gomod.outputs.cache-hit }}"
+        echo "  Build cache hit:  ${{ steps.restore-gobuild.outputs.cache-hit }}"
+
+        # Show the actual keys that were used
+        echo ""
+        echo "🔑 Actual Cache Keys Used:"
+        MODULE_KEY="${{ inputs.matrix-os }}-gomod-${{ hashFiles(inputs.go-sum-file) }}"
+        BUILD_KEY="${{ inputs.matrix-os }}-gobuild-${{ inputs.go-version }}-${{ hashFiles(inputs.go-sum-file) }}"
+        echo "  Module: $MODULE_KEY"
+        echo "  Build:  $BUILD_KEY"
+
+        # Break down the keys for analysis
+        echo ""
+        echo "🔍 Key Component Analysis:"
+        echo "  OS component: '${{ inputs.matrix-os }}'"
+        echo "  Go version component: '${{ inputs.go-version }}'"
+        echo "  Go.sum hash component: '${{ hashFiles(inputs.go-sum-file) }}'"
+
+        # Cache effectiveness summary
+        echo ""
+        echo "💡 Cache Effectiveness:"
+        if [[ "${{ steps.restore-gomod.outputs.cache-hit }}" == "true" ]]; then
+          echo "  ✅ Module cache: HIT - Dependencies will load quickly"
+        else
+          echo "  ❌ Module cache: MISS - Will download dependencies fresh"
+        fi
+
+        if [[ "${{ steps.restore-gobuild.outputs.cache-hit }}" == "true" ]]; then
+          echo "  ✅ Build cache: HIT - Builds will be faster"
+        else
+          echo "  ❌ Build cache: MISS - Will rebuild everything fresh"
+        fi
+
+        # Debugging hints for cache misses
+        echo ""
+        echo "🛠️ If experiencing frequent cache misses, check:"
+        echo "  1. go.sum file changes (different dependencies)"
+        echo "  2. OS matrix differences (ubuntu-latest vs ubuntu-22.04)"
+        echo "  3. Go version changes or format differences"
+        echo "  4. Repository checkout differences affecting file paths"
+        echo ""
+        echo "============================================================"
 
     # --------------------------------------------------------------------
     # Check go.mod required version before setting up Go
