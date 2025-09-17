@@ -6,7 +6,7 @@ version: 2
 
 before:
   hooks:
-    - magex test
+    - sh -c 'if [ "$SKIP_GORELEASER_TESTS" = "true" ]; then echo "Skipping tests (SKIP_GORELEASER_TESTS=true)"; else magex test; fi'
 changelog:
   sort: asc
   filters:
