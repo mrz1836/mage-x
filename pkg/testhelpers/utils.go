@@ -89,19 +89,6 @@ func RequireNetwork(t *testing.T) {
 	}
 }
 
-// RequireDocker skips the test if Docker is not available
-func RequireDocker(t *testing.T) {
-	t.Helper()
-
-	RequireCommand(t, "docker")
-
-	// Check if Docker daemon is running
-	cmd := exec.CommandContext(context.Background(), "docker", "info")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Docker daemon not running")
-	}
-}
-
 // RequireGit skips the test if Git is not available
 func RequireGit(t *testing.T) {
 	t.Helper()

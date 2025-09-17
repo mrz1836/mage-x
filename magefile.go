@@ -334,12 +334,6 @@ func VersionCheck() error {
 	return v.Check()
 }
 
-// BuildDocker builds Docker containers
-func BuildDocker() error {
-	var b mage.Build
-	return b.Docker()
-}
-
 // BuildClean cleans build artifacts
 func BuildClean() error {
 	var b mage.Build
@@ -671,11 +665,6 @@ func (b Build) Darwin() error {
 func (b Build) Windows() error {
 	var impl mage.Build
 	return impl.Windows()
-}
-
-func (b Build) Docker() error {
-	var impl mage.Build
-	return impl.Docker()
 }
 
 func (b Build) Clean() error {
@@ -1374,11 +1363,6 @@ func (i Install) Mage() error {
 	return impl.Mage()
 }
 
-func (i Install) Docker() error {
-	var impl mage.Install
-	return impl.Docker()
-}
-
 func (i Install) GitHooks() error {
 	var impl mage.Install
 	return impl.GitHooks()
@@ -1662,11 +1646,6 @@ func (i Init) Mage() error {
 func (i Init) CI() error {
 	var impl mage.Init
 	return impl.CI()
-}
-
-func (i Init) Docker() error {
-	var impl mage.Init
-	return impl.Docker()
 }
 
 func (i Init) Docs() error {

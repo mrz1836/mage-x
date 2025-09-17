@@ -67,9 +67,8 @@ err := build.Default()
 </details>
 
 <details>
-<summary><strong>Infrastructure (4 namespaces)</strong></summary>
+<summary><strong>Infrastructure (3 namespaces)</strong></summary>
 
-- **Docker** - Container operations
 - **K8s** - Kubernetes deployment
 - **Install** - Installation tasks
 - **Configure** - Configuration management
@@ -117,7 +116,6 @@ type BuildNamespace interface {
     Linux() error
     Darwin() error
     Windows() error
-    Docker() error
     Clean() error
     Install() error
     Generate() error
@@ -374,14 +372,9 @@ func BuildAllPlatforms() error {
 func Deploy() error {
     registry := mage.NewNamespaceRegistry()
 
-    // Choose deployment method based on environment
-    if os.Getenv("USE_DOCKER") == "true" {
-        docker := registry.Get("docker").(mage.DockerNamespace)
-        return docker.Deploy()
-    } else {
-        build := registry.Get("build").(mage.BuildNamespace)
-        return build.Install()
-    }
+    // Use standard build and install
+    build := registry.Get("build").(mage.BuildNamespace)
+    return build.Install()
 }
 ```
 

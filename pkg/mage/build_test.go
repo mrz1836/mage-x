@@ -6,7 +6,6 @@ package mage
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -51,9 +50,6 @@ func (ts *BuildTestSuite) TearDownTest() {
 	}
 	if err := os.Unsetenv("CGO_ENABLED"); err != nil {
 		ts.T().Logf("Failed to unset CGO_ENABLED: %v", err)
-	}
-	if err := os.Unsetenv("DOCKER_BUILDKIT"); err != nil {
-		ts.T().Logf("Failed to unset DOCKER_BUILDKIT: %v", err)
 	}
 	if err := os.Unsetenv("MAGE_X_CACHE_DISABLED"); err != nil {
 		ts.T().Logf("Failed to unset MAGE_X_CACHE_DISABLED: %v", err)
@@ -362,54 +358,6 @@ func main() {
 		)
 
 		ts.Require().NoError(err)
-	})
-}
-
-// TestBuildDocker tests the Docker method
-func (ts *BuildTestSuite) TestBuildDocker() {
-	ts.Run("builds docker image with default settings", func() {
-		// Create Dockerfile
-		ts.env.CreateFile("Dockerfile", `FROM golang:1.24-alpine
-WORKDIR /app
-COPY . .
-RUN go build -o app .
-CMD ["./app"]`)
-
-		// Mock git commands needed for version info
-		ts.mockGitCommands()
-
-		// Mock docker build command with flexible matching
-		ts.env.Runner.On("RunCmd", "docker", mock.MatchedBy(func(args []string) bool {
-			return len(args) >= 4 && args[0] == "build" && args[1] == "-t" && args[len(args)-1] == "."
-		})).Return(nil)
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.build.Docker()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
-
-	ts.Run("handles missing Dockerfile", func() {
-		// Ensure the Dockerfile doesn't exist
-		if err := os.RemoveAll(filepath.Join(ts.env.TempDir, "Dockerfile")); err != nil {
-			ts.T().Logf("Failed to remove Dockerfile: %v", err)
-		}
-
-		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
-			func() error {
-				return ts.build.Docker()
-			},
-		)
-
-		ts.Require().Error(err)
-		ts.Require().Contains(err.Error(), "dockerfile not found")
 	})
 }
 

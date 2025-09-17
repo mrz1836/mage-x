@@ -110,29 +110,6 @@ func TestTestFixtures_CreateMageProject(t *testing.T) {
 	require.Equal(t, "myapp", build["binary"])
 }
 
-func TestTestFixtures_CreateDockerfile(t *testing.T) {
-	env := NewTestEnvironment(t)
-	tf := NewTestFixtures(t, env)
-
-	tf.CreateDockerfile("testapp")
-
-	env.AssertFileExists("Dockerfile")
-	content := env.ReadFile("Dockerfile")
-
-	// Check multi-stage build
-	require.Contains(t, content, "FROM golang:1.24-alpine AS builder")
-	require.Contains(t, content, "FROM alpine:latest")
-
-	// Check build commands
-	require.Contains(t, content, "go mod download")
-	require.Contains(t, content, "go build -o testapp")
-
-	// Check runtime
-	require.Contains(t, content, "COPY --from=builder /app/testapp")
-	require.Contains(t, content, "EXPOSE 8080")
-	require.Contains(t, content, "CMD [\"./testapp\"]")
-}
-
 func TestTestFixtures_CreateKubernetesManifests(t *testing.T) {
 	env := NewTestEnvironment(t)
 	tf := NewTestFixtures(t, env)
@@ -460,14 +437,12 @@ func TestTestFixtures_ComplexScenario(t *testing.T) {
 
 	// Create a complex project with multiple components
 	tf.CreateMageProject()
-	tf.CreateDockerfile("myapp")
 	tf.CreateKubernetesManifests("myapp")
 	tf.CreateGitHubActions()
 	tf.CreateTestData()
 
 	// Verify everything was created correctly
 	env.AssertFileExists("magefile.go")
-	env.AssertFileExists("Dockerfile")
 	env.AssertFileExists("k8s/deployment.yaml")
 	env.AssertFileExists("k8s/service.yaml")
 	env.AssertFileExists(".github/workflows/ci.yml")

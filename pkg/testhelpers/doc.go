@@ -45,8 +45,8 @@
 //	    fixtures := testhelpers.NewTestFixtures(t, env)
 //
 //	    fixtures.CreateGoProject("myapp")
-//	    fixtures.CreateDockerfile("myapp")
-//	    fixtures.CreateGitHubActions()
+//
+// //	    fixtures.CreateGitHubActions()
 //
 //	    // Test your project generation logic
 //	}
@@ -69,8 +69,9 @@
 // The package also provides various utility functions:
 //
 //	// Skip tests based on conditions
-//	testhelpers.RequireDocker(t)
-//	testhelpers.RequireNetwork(t)
+//
+// //	testhelpers.RequireNetwork(t)
+//
 //	testhelpers.SkipIfShort(t)
 //
 //	// Assertions

@@ -459,7 +459,7 @@ func getAvailableTemplates() map[string]ProjectTemplate {
 			Description:  "Advanced project with comprehensive build automation",
 			Directories:  []string{"cmd", "pkg", "internal", "scripts", "docs", "tests", "deployments"},
 			Files:        getAdvancedTemplateFiles(),
-			Dependencies: []string{"docker", "kubernetes"},
+			Dependencies: []string{"kubernetes"},
 		},
 		"cli": {
 			Name:        "cli",
@@ -472,14 +472,14 @@ func getAvailableTemplates() map[string]ProjectTemplate {
 			Description:  "Web application project",
 			Directories:  []string{"cmd", "pkg", "web", "static", "templates", "scripts", "docs"},
 			Files:        getWebTemplateFiles(),
-			Dependencies: []string{"docker"},
+			Dependencies: []string{},
 		},
 		"microservice": {
 			Name:         "microservice",
 			Description:  "Microservice project with containerization",
 			Directories:  []string{"cmd", "pkg", "internal", "scripts", "docs", "deployments"},
 			Files:        getMicroserviceTemplateFiles(),
-			Dependencies: []string{"docker", "kubernetes"},
+			Dependencies: []string{"kubernetes"},
 		},
 	}
 }
@@ -684,8 +684,6 @@ func run() error {
 func getAdvancedTemplateFiles() map[string]string {
 	files := getBasicTemplateFiles()
 	files["magefile.go"] = getAdvancedMagefileContent()
-	files["Dockerfile"] = getDockerfileContent()
-	files["docker-compose.yml"] = getDockerComposeContent()
 	files["Makefile"] = getMakefileContent()
 	return files
 }
@@ -738,7 +736,6 @@ const (
 	binaryName = "{{.ProjectName}}"
 	buildDir   = "bin"
 	distDir    = "dist"
-	dockerRepo = "{{.ProjectName}}"
 	kubeNamespace = "{{.ProjectName}}"
 )
 
@@ -784,15 +781,9 @@ func Clean() error {
 	return nil
 }
 
-// Docker builds Docker image
-func Docker() error {
-	fmt.Println("Building Docker image...")
-	return sh.Run("docker", "build", "-t", dockerRepo+":latest", ".")
-}
 
 // K8sDeploy deploys to Kubernetes
 func K8sDeploy() error {
-	mg.Deps(Docker)
 	fmt.Println("Deploying to Kubernetes...")
 	return sh.Run("kubectl", "apply", "-f", "deployments/", "-n", kubeNamespace)
 }
@@ -995,7 +986,6 @@ const (
 	binaryName = "{{.ProjectName}}"
 	buildDir   = "bin"
 	distDir    = "dist"
-	dockerRepo = "{{.ProjectName}}"
 )
 
 var Default = Build
@@ -1057,18 +1047,7 @@ func Install() error {
 	return sh.Run("go", "install", "./cmd")
 }
 
-// Docker builds Docker image
-func Docker() error {
-	fmt.Println("Building Docker image...")
-	return sh.Run("docker", "build", "-t", dockerRepo+":latest", ".")
-}
 
-// DockerRun runs the Docker container
-func DockerRun() error {
-	mg.Deps(Docker)
-	fmt.Println("Running Docker container...")
-	return sh.Run("docker", "run", "--rm", "-p", "8080:8080", dockerRepo+":latest")
-}
 
 // Release builds release artifacts
 func Release() error {
@@ -1159,97 +1138,9 @@ func getBuildTime() string {
 `
 }
 
-// getDockerfileContent returns Dockerfile content
-func getDockerfileContent() string {
-	return `# Build stage
-FROM golang:{{.GoVersion}}-alpine AS builder
-
-WORKDIR /app
-
-# Install dependencies
-RUN apk add --no-cache git ca-certificates tzdata
-
-# Copy go mod files
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o bin/{{.ProjectName}} ./cmd
-
-# Final stage
-FROM alpine:latest
-
-WORKDIR /root/
-
-# Install ca-certificates for HTTPS
-RUN apk --no-cache add ca-certificates tzdata
-
-# Copy the binary from builder stage
-COPY --from=builder /app/bin/{{.ProjectName}} .
-
-# Create non-root user
-RUN addgroup -g 1001 -S {{.ProjectName}} && \
-    adduser -u 1001 -S {{.ProjectName}} -G {{.ProjectName}}
-
-USER {{.ProjectName}}
-
-EXPOSE 8080
-
-CMD ["./{{.ProjectName}}"]
-`
-}
-
-// getDockerComposeContent returns docker-compose.yml content
-func getDockerComposeContent() string {
-	return `version: '3.8'
-
-services:
-  {{.ProjectName}}:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - ENV=docker
-    volumes:
-      - ./config:/app/config:ro
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Add other services as needed
-  # redis:
-  #   image: redis:7-alpine
-  #   ports:
-  #     - "6379:6379"
-  #   restart: unless-stopped
-
-  # postgres:
-  #   image: postgres:15-alpine
-  #   environment:
-  #     POSTGRES_DB: {{.ProjectName}}
-  #     POSTGRES_USER: user
-  #     POSTGRES_PASSWORD: password
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   restart: unless-stopped
-
-# volumes:
-#   postgres_data:
-`
-}
-
 // getMakefileContent returns Makefile content
 func getMakefileContent() string {
-	return `.PHONY: build test clean install lint format docker help
+	return `.PHONY: build test clean install lint format help
 
 # Default target
 .DEFAULT_GOAL := help
@@ -1289,10 +1180,6 @@ format:
 	@echo "Formatting code..."
 	@mage format
 
-## Build Docker image
-docker:
-	@echo "Building Docker image..."
-	@mage docker
 
 ## Run in development mode
 dev:

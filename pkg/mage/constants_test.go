@@ -54,7 +54,6 @@ func (ts *ConstantsTestSuite) TestGoToolchainCommands() {
 func (ts *ConstantsTestSuite) TestExternalToolCommands() {
 	// Verify external tool commands
 	ts.Require().Equal("git", CmdGit)
-	ts.Require().Equal("docker", CmdDocker)
 	ts.Require().Equal("golangci-lint", CmdGolangciLint)
 	ts.Require().Equal("gofumpt", CmdGofumpt)
 	ts.Require().Equal("golangci-lint", LintTool) // Should match CmdGolangciLint
@@ -67,7 +66,7 @@ func (ts *ConstantsTestSuite) TestExternalToolCommands() {
 
 	// Ensure none are empty
 	externalCommands := []string{
-		CmdGit, CmdDocker, CmdGolangciLint, CmdGofumpt,
+		CmdGit, CmdGolangciLint, CmdGofumpt,
 		LintTool, CmdGoVulnCheck, CmdMockgen, CmdSwag,
 	}
 	for _, cmd := range externalCommands {
@@ -163,7 +162,6 @@ func (ts *ConstantsTestSuite) TestFileAndDirectoryNames() {
 		"FileMageYAML":     FileMageYAML,
 		"FileMageYML":      FileMageYML,
 		"FileGitignore":    FileGitignore,
-		"FileDockerfile":   FileDockerfile,
 		"FileVersion":      FileVersion,
 		"FileCoverageOut":  FileCoverageOut,
 		"FileCoverageHTML": FileCoverageHTML,

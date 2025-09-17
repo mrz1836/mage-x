@@ -20,7 +20,7 @@ var errWorkerPanic = errors.New("worker panicked")
 // Test constants
 const (
 	testTimeout         = 5 * 1000 // 5 seconds in milliseconds for timeout tests
-	expectedMinCommands = 173      // Minimum expected number of registered commands
+	expectedMinCommands = 171      // Minimum expected number of registered commands
 	concurrentWorkers   = 10       // Number of concurrent workers for parallel tests
 )
 
@@ -265,7 +265,6 @@ func TestBuildNamespaceCommands(t *testing.T) {
 		{"linux", "Build for Linux (amd64)", "Build", false},
 		{"darwin", "Build for macOS (amd64 and arm64)", "Build", true},
 		{"windows", "Build for Windows (amd64)", "Build", false},
-		{"docker", "Build a Docker image", "Build", false},
 		{"clean", "Remove build artifacts", "Build", true},
 		{"install", "Install the binary to $GOPATH/bin", "Build", true},
 		{"generate", "Run go generate", "Build", false},

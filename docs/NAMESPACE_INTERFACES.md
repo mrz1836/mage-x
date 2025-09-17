@@ -43,7 +43,6 @@ MAGE-X provides 37 built-in namespaces organized by functionality:
 - **Vet** (`VetNamespace`) - Go vet operations
 
 #### Deployment & Infrastructure
-- **Docker** (`DockerNamespace`) - Docker operations
 - **K8s** (`K8sNamespace`) - Kubernetes operations
 - **Install** (`InstallNamespace`) - Installation tasks
 - **Configure** (`ConfigureNamespace`) - Configuration management
@@ -77,7 +76,6 @@ type BuildNamespace interface {
     Linux() error
     Darwin() error
     Windows() error
-    Docker() error
     Clean() error
     Install() error
     Generate() error

@@ -198,13 +198,13 @@ magex configure:init
 ## 🔧 Advanced Features
 
 
-### Docker Integration
+### Build Integration
 
-The configuration includes Docker settings:
+The configuration includes build optimization settings:
 
 ```bash
-# Build Docker image using config settings
-magex build:docker
+# Build using optimized config settings
+magex build:all
 
 # Uses registry, repository, and build_args from .mage.yaml
 ```

@@ -53,7 +53,7 @@ $ magex -l
 🎯 Available Commands (94 total):
 
   build              build:all          build:linux
-  build:darwin       build:windows      build:docker
+  build:darwin       build:windows      build:prebuild
   build:clean        build:install      build:generate
   build:prebuild     test               test:unit
   test:short         test:race          test:cover
@@ -76,7 +76,7 @@ Commands are organized in logical namespaces:
 # Build namespace
 magex build           # Default build
 magex build:linux     # Linux build
-magex build:docker    # Docker build
+magex build:all       # All platforms
 
 # Test namespace
 magex test            # Default tests

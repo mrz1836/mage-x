@@ -221,7 +221,6 @@ type BuildNamespace interface {
     Linux() error
     Darwin() error
     Windows() error
-    Docker() error
     Clean() error
     Install() error
     Generate() error

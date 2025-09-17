@@ -73,11 +73,6 @@ func Dev() error {
 	return sh.Run("go", "run", "./cmd/server", "-dev")
 }
 
-// Docker builds Docker image for web app
-func Docker() error {
-	fmt.Println("Building Docker image...")
-	return sh.Run("docker", "build", "-t", binaryName+":latest", ".")
-}
 `
 }
 

@@ -19,20 +19,6 @@ build:
     exclude: ""
     priority: ""
     verbose: false
-docker:
-  build_args: {}
-  cache_from: []
-  default_registry: docker.io
-  dockerfile: Dockerfile
-  enable_buildkit: true
-  labels: {}
-  network_mode: ""
-  platforms:
-    - linux/amd64
-    - linux/arm64
-  registry: ""
-  repository: ""
-  security_opts: []
 docs:
   tool: ""
   port: 0

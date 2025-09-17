@@ -52,7 +52,6 @@ type InitProjectConfig struct {
 	License     string
 	GoVersion   string
 	UseMage     bool
-	UseDocker   bool
 	UseCI       bool
 	Features    []string
 }
@@ -98,11 +97,10 @@ func (Init) Library() error {
 	utils.Header("📚 Creating Go Library Project")
 
 	config := &InitProjectConfig{
-		Type:      LibraryProject,
-		UseMage:   true,
-		UseDocker: false,
-		UseCI:     true,
-		Features:  []string{"testing", "benchmarks", "docs"},
+		Type:     LibraryProject,
+		UseMage:  true,
+		UseCI:    true,
+		Features: []string{"testing", "benchmarks", "docs"},
 	}
 
 	return initializeProject(config)
@@ -113,11 +111,10 @@ func (Init) WebAPI() error {
 	utils.Header("🌐 Creating Web API Project")
 
 	config := &InitProjectConfig{
-		Type:      WebAPIProject,
-		UseMage:   true,
-		UseDocker: true,
-		UseCI:     true,
-		Features:  []string{"gin", "gorm", "swagger", "testing", "migrations"},
+		Type:     WebAPIProject,
+		UseMage:  true,
+		UseCI:    true,
+		Features: []string{"gin", "gorm", "swagger", "testing", "migrations"},
 	}
 
 	return initializeProject(config)
@@ -128,11 +125,10 @@ func (Init) Microservice() error {
 	utils.Header("🔧 Creating Microservice Project")
 
 	config := &InitProjectConfig{
-		Type:      MicroserviceProject,
-		UseMage:   true,
-		UseDocker: true,
-		UseCI:     true,
-		Features:  []string{"grpc", "prometheus", "tracing", "testing", "kubernetes"},
+		Type:     MicroserviceProject,
+		UseMage:  true,
+		UseCI:    true,
+		Features: []string{"grpc", "prometheus", "tracing", "testing", "kubernetes"},
 	}
 
 	return initializeProject(config)
@@ -143,11 +139,10 @@ func (Init) Tool() error {
 	utils.Header("🔨 Creating Developer Tool Project")
 
 	config := &InitProjectConfig{
-		Type:      ToolProject,
-		UseMage:   true,
-		UseDocker: true,
-		UseCI:     true,
-		Features:  []string{"cobra", "testing", "goreleaser", "homebrew"},
+		Type:     ToolProject,
+		UseMage:  true,
+		UseCI:    true,
+		Features: []string{"cobra", "testing", "goreleaser", "homebrew"},
 	}
 
 	return initializeProject(config)
@@ -289,7 +284,6 @@ func initializeProject(config *InitProjectConfig) error {
 	// Merge with provided config
 	fullConfig.Type = config.Type
 	fullConfig.UseMage = config.UseMage
-	fullConfig.UseDocker = config.UseDocker
 	fullConfig.UseCI = config.UseCI
 	fullConfig.Features = config.Features
 
@@ -388,11 +382,6 @@ func initializeProjectFiles(config *InitProjectConfig) error {
 	}
 
 	// Create Docker files
-	if config.UseDocker {
-		if err := createDockerFiles(config); err != nil {
-			return err
-		}
-	}
 
 	// Create CI files
 	if config.UseCI {
@@ -550,8 +539,6 @@ build/
 .env.local
 .env.*.local
 
-# Docker
-.dockerignore
 
 # Temporary files
 tmp/
@@ -767,67 +754,6 @@ func main() {
 `
 }
 
-// createDockerFiles creates Dockerfile and docker-compose.yml
-func createDockerFiles(config *InitProjectConfig) error {
-	// Create Dockerfile
-	dockerfile := `FROM golang:1.24-alpine AS builder
-
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
-
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/main .
-CMD ["./main"]
-`
-
-	fileOps := fileops.New()
-	if err := fileOps.File.WriteFile("Dockerfile", []byte(dockerfile), 0o644); err != nil {
-		return err
-	}
-
-	// Create docker-compose.yml for web services
-	if config.Type == WebAPIProject || config.Type == MicroserviceProject {
-		compose := `version: '3.8'
-
-services:
-  ` + config.Name + `:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - ENV=development
-    depends_on:
-      - db
-
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: ` + config.Name + `
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-`
-
-		if err := fileOps.File.WriteFile("docker-compose.yml", []byte(compose), 0o644); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // createCIFiles creates GitHub Actions workflow
 func createCIFiles() error {
 	workflow := `name: CI
@@ -930,10 +856,6 @@ func showCompletionMessage(config *InitProjectConfig) {
 	fmt.Printf("  3. mage test        # Run tests\n")
 	fmt.Printf("  4. mage build       # Build project\n")
 
-	if config.UseDocker {
-		fmt.Printf("  5. docker-compose up  # Run with Docker\n")
-	}
-
 	fmt.Printf("\n✨ Happy coding with MAGE-X!\n")
 }
 
@@ -967,12 +889,6 @@ func (Init) Mage() error {
 func (Init) CI() error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Initializing CI")
-}
-
-// Docker initializes Docker configuration
-func (Init) Docker() error {
-	runner := GetRunner()
-	return runner.RunCmd("echo", "Initializing Docker")
 }
 
 // Docs initializes documentation

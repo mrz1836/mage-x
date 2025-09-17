@@ -21,12 +21,10 @@ type Build mg.Namespace
 
 // Static errors for err113 compliance
 var (
-	ErrBuildFailedError   = errors.New("build failed")
-	ErrBuildErrors        = errors.New("build errors")
-	ErrDockerNotFound     = errors.New("docker command not found")
-	ErrDockerfileNotFound = errors.New("dockerfile not found")
-	ErrNoMainPackage      = errors.New("no main package found for binary build")
-	ErrInvalidMainPath    = errors.New("configured main path is invalid")
+	ErrBuildFailedError = errors.New("build failed")
+	ErrBuildErrors      = errors.New("build errors")
+	ErrNoMainPackage    = errors.New("no main package found for binary build")
+	ErrInvalidMainPath  = errors.New("configured main path is invalid")
 )
 
 // CacheManagerProvider defines the interface for providing cache manager instances
@@ -514,41 +512,6 @@ func (b Build) Darwin() error {
 // Windows builds for Windows (amd64)
 func (b Build) Windows() error {
 	return b.Platform("windows/amd64")
-}
-
-// Docker builds a Docker image
-func (Build) Docker() error {
-	utils.Header("Building Docker Image")
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	if !utils.CommandExists("docker") {
-		return ErrDockerNotFound
-	}
-
-	// Check if Dockerfile exists
-	if _, err := os.Stat(config.Docker.Dockerfile); os.IsNotExist(err) {
-		return ErrDockerfileNotFound
-	}
-
-	tag := fmt.Sprintf("%s/%s:%s",
-		config.Docker.Registry,
-		config.Docker.Repository,
-		getVersion())
-
-	args := []string{"build", "-t", tag}
-
-	// Add build args
-	for k, v := range config.Docker.BuildArgs {
-		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, v))
-	}
-
-	args = append(args, "-f", config.Docker.Dockerfile, ".")
-
-	return GetRunner().RunCmd("docker", args...)
 }
 
 // Clean removes build artifacts

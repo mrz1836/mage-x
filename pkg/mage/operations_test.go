@@ -541,83 +541,6 @@ func TestServe_Operations(t *testing.T) {
 	})
 }
 
-func TestDockerOps_Operations(t *testing.T) {
-	helper := NewOperationsTestHelper()
-	helper.SetupMockRunner(t)
-	defer helper.TeardownMockRunner()
-
-	docker := DockerOps{}
-
-	t.Run("Build", func(t *testing.T) {
-		mockRunner := helper.GetMockRunner()
-		mockRunner.Reset()
-		err := docker.Build("test-app")
-		require.NoError(t, err)
-
-		lastCmd := mockRunner.GetLastCommand()
-		require.NotNil(t, lastCmd)
-		assert.Equal(t, "docker", lastCmd[0])
-		assert.Equal(t, "build", lastCmd[1])
-		assert.Equal(t, "-t", lastCmd[2])
-		assert.Equal(t, "test-app", lastCmd[3])
-		assert.Equal(t, ".", lastCmd[4])
-	})
-
-	t.Run("Run", func(t *testing.T) {
-		mockRunner := helper.GetMockRunner()
-		mockRunner.Reset()
-		err := docker.Run("test-app")
-		require.NoError(t, err)
-
-		lastCmd := mockRunner.GetLastCommand()
-		require.NotNil(t, lastCmd)
-		assert.Equal(t, "docker", lastCmd[0])
-		assert.Equal(t, "run", lastCmd[1])
-		assert.Equal(t, "test-app", lastCmd[2])
-	})
-
-	t.Run("Push", func(t *testing.T) {
-		mockRunner := helper.GetMockRunner()
-		mockRunner.Reset()
-		err := docker.Push("test-app")
-		require.NoError(t, err)
-
-		lastCmd := mockRunner.GetLastCommand()
-		require.NotNil(t, lastCmd)
-		assert.Equal(t, "docker", lastCmd[0])
-		assert.Equal(t, "push", lastCmd[1])
-		assert.Equal(t, "test-app", lastCmd[2])
-	})
-
-	t.Run("Stop", func(t *testing.T) {
-		mockRunner := helper.GetMockRunner()
-		mockRunner.Reset()
-		err := docker.Stop("test-app")
-		require.NoError(t, err)
-
-		lastCmd := mockRunner.GetLastCommand()
-		require.NotNil(t, lastCmd)
-		assert.Equal(t, "docker", lastCmd[0])
-		assert.Equal(t, "stop", lastCmd[1])
-		assert.Equal(t, "test-app", lastCmd[2])
-	})
-
-	t.Run("Clean", func(t *testing.T) {
-		mockRunner := helper.GetMockRunner()
-		mockRunner.Reset()
-		err := docker.Clean()
-		require.NoError(t, err)
-
-		commands := mockRunner.GetAllCommands()
-		require.GreaterOrEqual(t, len(commands), 1)
-
-		// Should run docker cleanup commands
-		for _, cmd := range commands {
-			assert.Equal(t, "docker", cmd[0])
-		}
-	})
-}
-
 func TestCommon_Operations(t *testing.T) {
 	helper := NewOperationsTestHelper()
 	helper.SetupMockRunner(t)
@@ -663,7 +586,6 @@ func TestOperationStructs(t *testing.T) {
 		clean := Clean{}
 		run := Run{}
 		serve := Serve{}
-		docker := DockerOps{}
 		common := Common{}
 
 		// Test that structs can be instantiated
@@ -675,17 +597,7 @@ func TestOperationStructs(t *testing.T) {
 		assert.NotNil(t, clean)
 		assert.NotNil(t, run)
 		assert.NotNil(t, serve)
-		assert.NotNil(t, docker)
 		assert.NotNil(t, common)
-	})
-
-	t.Run("Docker alias", func(t *testing.T) {
-		// Test that Docker is an alias for DockerOps
-		var docker Docker
-		var dockerOps DockerOps
-
-		// Should be the same type
-		assert.IsType(t, dockerOps, docker)
 	})
 }
 
@@ -722,22 +634,6 @@ func BenchmarkCI_Test(b *testing.B) {
 	}
 }
 
-func BenchmarkDocker_Build(b *testing.B) {
-	helper := NewOperationsTestHelper()
-	helper.SetupMockRunner(b)
-	defer helper.TeardownMockRunner()
-
-	docker := DockerOps{}
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		mockRunner := helper.GetMockRunner()
-		mockRunner.Reset()
-		err := docker.Build("test")
-		_ = err // Ignore errors in benchmark - we're testing performance
-	}
-}
-
 // Test error propagation
 func TestOperations_ErrorHandling(t *testing.T) {
 	helper := NewOperationsTestHelper()
@@ -761,13 +657,5 @@ func TestOperations_ErrorHandling(t *testing.T) {
 		require.Error(t, ci.Validate())
 		require.Error(t, ci.Status("main"))
 		assert.Error(t, ci.Cache("clear"))
-	})
-
-	t.Run("Docker operations error handling", func(t *testing.T) {
-		docker := DockerOps{}
-		require.Error(t, docker.Build("test"))
-		require.Error(t, docker.Run("test"))
-		require.Error(t, docker.Push("test"))
-		assert.Error(t, docker.Stop("test"))
 	})
 }

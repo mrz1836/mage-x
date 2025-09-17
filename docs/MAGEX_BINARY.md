@@ -43,14 +43,6 @@ cd mage-x
 go build -o magex ./cmd/magex
 ```
 
-#### Docker
-```bash
-# Run in container
-docker run --rm -v $(pwd):/workspace ghcr.io/mrz1836/magex:latest build
-
-# Build Docker image locally
-docker build -t magex .
-```
 
 ## 🎮 Usage
 
@@ -193,8 +185,6 @@ test:
 github:
   token: "${GITHUB_TOKEN}"
 
-docker:
-  registry: "ghcr.io"
 ```
 
 ### Project Configuration

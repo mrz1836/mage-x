@@ -86,14 +86,6 @@ func TestRequireNetwork(t *testing.T) {
 	// Either it skips or it doesn't, both are valid
 }
 
-func TestRequireDocker(t *testing.T) {
-	// Test in a subtest to allow skipping
-	t.Run("docker check", func(t *testing.T) {
-		RequireDocker(t)
-		// If we get here, Docker is available
-	})
-}
-
 func TestRequireGit(t *testing.T) {
 	// Test in a subtest to allow skipping
 	t.Run("git check", func(t *testing.T) {

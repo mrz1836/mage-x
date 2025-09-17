@@ -396,7 +396,6 @@ magex init:config         # Initialize configuration
 magex init:git            # Initialize git repository
 magex init:mage           # Initialize mage files
 magex init:ci             # Initialize CI/CD files
-magex init:docker         # Initialize Docker files
 magex init:docs           # Initialize documentation
 magex init:license        # Add license file
 magex init:makefile       # Create Makefile
@@ -449,7 +448,6 @@ magex mod:why github.com/pkg/errors golang.org/x/sync  # Analyze multiple module
 ```bash
 magex build:default       # Build for current platform
 magex build:all           # Build for all configured platforms
-magex build:docker        # Build Docker containers
 magex build:clean         # Clean build artifacts
 magex build:generate      # Generate code before building
 magex build:linux         # Build for Linux amd64
@@ -711,7 +709,6 @@ magex install:stdlib      # Install Go standard library
 magex install:systemwide  # Install system-wide
 magex install:deps        # Install dependencies
 magex install:mage        # Install mage
-magex install:docker      # Install Docker components
 magex install:githooks    # Install git hooks
 magex install:ci          # Install CI components
 magex install:certs       # Install certificates

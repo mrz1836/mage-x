@@ -31,7 +31,6 @@ type YamlConfig struct {
 	Test    TestYamlConfig    `yaml:"test"`
 	Lint    LintYamlConfig    `yaml:"lint"`
 	Release ReleaseYamlConfig `yaml:"release"`
-	Docker  DockerYamlConfig  `yaml:"docker"`
 	CI      CIYamlConfig      `yaml:"ci"`
 }
 
@@ -117,16 +116,6 @@ type GitHubReleaseConfig struct {
 	Owner      string `yaml:"owner"`
 	Repository string `yaml:"repository"`
 	Token      string `yaml:"token"`
-}
-
-// DockerYamlConfig contains Docker configuration
-type DockerYamlConfig struct {
-	Enabled    bool     `yaml:"enabled"`
-	Dockerfile string   `yaml:"dockerfile"`
-	Image      string   `yaml:"image"`
-	Tags       []string `yaml:"tags"`
-	Registry   string   `yaml:"registry"`
-	BuildArgs  []string `yaml:"build_args"`
 }
 
 // CIYamlConfig contains CI/CD configuration
@@ -329,14 +318,6 @@ func createDefaultConfig() *YamlConfig {
 				Token:      "GITHUB_TOKEN",
 			},
 		},
-		Docker: DockerYamlConfig{
-			Enabled:    false,
-			Dockerfile: "Dockerfile",
-			Image:      "my-project",
-			Tags:       []string{"latest"},
-			Registry:   "docker.io",
-			BuildArgs:  []string{},
-		},
 		CI: CIYamlConfig{
 			Enabled:   true,
 			Provider:  "github",
@@ -355,7 +336,6 @@ func createLibraryTemplate() *YamlConfig {
 	config.Project.Description = "A Go library built with MAGE-X"
 	config.Build.Platforms = []string{"linux/amd64", "darwin/amd64", "windows/amd64"}
 	config.Test.Benchmarks = true
-	config.Docker.Enabled = false
 	return config
 }
 
@@ -365,7 +345,6 @@ func createCLITemplate() *YamlConfig {
 	config.Project.Description = "A CLI application built with MAGE-X"
 	config.Build.Platforms = []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64", "windows/amd64"}
 	config.Release.Assets = []string{"completions/*", "docs/*"}
-	config.Docker.Enabled = true
 	return config
 }
 
@@ -375,8 +354,6 @@ func createWebAPITemplate() *YamlConfig {
 	config.Project.Description = "A web API built with MAGE-X"
 	config.Build.Tags = []string{"netgo"}
 	config.Test.Tags = []string{"integration"}
-	config.Docker.Enabled = true
-	config.Docker.BuildArgs = []string{"--target=production"}
 	return config
 }
 
@@ -386,8 +363,6 @@ func createMicroserviceTemplate() *YamlConfig {
 	config.Project.Description = "A microservice built with MAGE-X"
 	config.Build.Tags = []string{"netgo"}
 	config.Test.Tags = []string{"integration", "e2e"}
-	config.Docker.Enabled = true
-	config.Docker.Tags = []string{"latest", "v1.0.0"}
 	return config
 }
 
@@ -397,7 +372,6 @@ func createToolTemplate() *YamlConfig {
 	config.Project.Description = "A developer tool built with MAGE-X"
 	config.Build.Platforms = []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64", "windows/amd64"}
 	config.Release.Assets = []string{"LICENSE", "README.md"}
-	config.Docker.Enabled = false
 	return config
 }
 
@@ -439,10 +413,6 @@ func populateFromProject(config *YamlConfig) {
 		// LICENSE parsing for license detection is reserved for future implementation.
 		// When implemented, this will detect license type from LICENSE file content.
 		_ = "LICENSE" // Future feature placeholder
-	}
-
-	if utils.FileExists("Dockerfile") {
-		config.Docker.Enabled = true
 	}
 
 	if utils.FileExists(".github/workflows") {
@@ -559,11 +529,6 @@ func displayConfig(config *YamlConfig) {
 	fmt.Printf("  Enabled: %t\n", config.Release.Enabled)
 	fmt.Printf("  Channel: %s\n", config.Release.Channel)
 	fmt.Printf("  Prerelease: %t\n", config.Release.Prerelease)
-
-	fmt.Printf("\n🐳 Docker Configuration:\n")
-	fmt.Printf("  Enabled: %t\n", config.Docker.Enabled)
-	fmt.Printf("  Image: %s\n", config.Docker.Image)
-	fmt.Printf("  Registry: %s\n", config.Docker.Registry)
 
 	fmt.Printf("\n⚙️  CI Configuration:\n")
 	fmt.Printf("  Enabled: %t\n", config.CI.Enabled)

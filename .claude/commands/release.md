@@ -60,7 +60,6 @@ Execute simultaneously for comprehensive validation:
 3. **Build Validation** (Parallel):
    - Cross-platform builds
    - Binary generation
-   - Docker image creation
    - Archive preparation
 
 ### Phase 3: Release Execution
@@ -110,10 +109,9 @@ Execute simultaneously for comprehensive validation:
   - darwin/arm64: mage-x-darwin-arm64
   - windows/amd64: mage-x-windows-amd64.exe
 
-🐳 Docker Images:
-  - mage-x:latest
-  - mage-x:[version]
-  - mage-x:[channel]
+📦 Release Assets:
+  - Source code archives
+  - Checksums for verification
 ```
 
 ### Release Notes

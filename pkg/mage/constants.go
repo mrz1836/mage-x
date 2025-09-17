@@ -75,7 +75,6 @@ const (
 	FileMageYAML     = ".mage.yaml"
 	FileMageYML      = ".mage.yml"
 	FileGitignore    = ".gitignore"
-	FileDockerfile   = "Dockerfile"
 	FileVersion      = "VERSION"
 	FileCoverageOut  = "coverage.out"
 	FileCoverageHTML = "coverage.html"

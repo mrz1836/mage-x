@@ -284,10 +284,6 @@ lint:
       command: go
       args: [vet, ./...]
 
-docker:
-  registry: docker.io/example
-  image: myapp
-  dockerfile: Dockerfile
 
 release:
   changelog: true
@@ -300,38 +296,6 @@ release:
         - darwin/arm64
         - windows/amd64
 `)
-}
-
-// CreateDockerfile creates a Dockerfile
-func (tf *TestFixtures) CreateDockerfile(app string) {
-	tf.t.Helper()
-
-	tf.env.WriteFile("Dockerfile", fmt.Sprintf(`# Build stage
-FROM golang:1.24-alpine AS builder
-
-RUN apk add --no-cache git ca-certificates
-
-WORKDIR /app
-
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
-RUN go build -o %s -ldflags="-w -s" ./cmd/%s
-
-# Runtime stage
-FROM alpine:latest
-
-RUN apk add --no-cache ca-certificates
-
-WORKDIR /app
-
-COPY --from=builder /app/%s .
-
-EXPOSE 8080
-
-CMD ["./%s"]
-`, app, app, app, app))
 }
 
 // CreateKubernetesManifests creates k8s manifests

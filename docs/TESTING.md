@@ -452,11 +452,11 @@ func TestParallelSafe(t *testing.T) {
 ### 5. Skip Conditions
 
 ```go
-func TestRequiresDocker(t *testing.T) {
-    if !utils.CommandExists("docker") {
-        t.Skip("Docker not available")
+func TestRequiresGit(t *testing.T) {
+    if !utils.CommandExists("git") {
+        t.Skip("Git not available")
     }
-    // Test docker functionality
+    // Test git functionality
 }
 ```
 

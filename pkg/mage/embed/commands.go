@@ -134,14 +134,6 @@ func registerBuildCommands(reg *registry.Registry) {
 	)
 
 	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "docker").
-			WithDescription("Build a Docker image").
-			WithFunc(func() error { return b.Docker() }).
-			WithCategory("Build").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
 		registry.NewNamespaceCommand("build", "clean").
 			WithDescription("Remove build artifacts").
 			WithFunc(func() error { return b.Clean() }).
@@ -1363,14 +1355,6 @@ func registerInitCommands(reg *registry.Registry) {
 			WithCategory("Init").
 			MustBuild(),
 	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "docker").
-			WithDescription("Initialize Docker configuration").
-			WithFunc(func() error { return i.Docker() }).
-			WithCategory("Init").
-			MustBuild(),
-	)
 }
 
 func registerHelpCommands(reg *registry.Registry) {
@@ -1571,14 +1555,6 @@ func registerInstallCommands(reg *registry.Registry) {
 		registry.NewNamespaceCommand("install", "mage").
 			WithDescription("Install mage").
 			WithFunc(func() error { return i.Mage() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "docker").
-			WithDescription("Install Docker components").
-			WithFunc(func() error { return i.Docker() }).
 			WithCategory("Installation").
 			MustBuild(),
 	)

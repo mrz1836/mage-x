@@ -150,15 +150,6 @@ func Deploy() error {
 		return fmt.Errorf("production build failed: %w", err)
 	}
 
-	// Build Docker image if Dockerfile exists
-	if hasDockerfile() {
-		utils.Info("🐳 Building Docker image...")
-		build := mage.NewBuildNamespace()
-		if err := build.Docker(); err != nil {
-			return fmt.Errorf("docker build failed: %w", err)
-		}
-	}
-
 	// Generate docs
 	utils.Info("📚 Generating documentation...")
 	docs := mage.NewDocsNamespace()
@@ -222,11 +213,6 @@ func hasIntegrationTests() bool {
 		return true
 	}
 	return false
-}
-
-func hasDockerfile() bool {
-	_, err := os.Stat("Dockerfile")
-	return err == nil
 }
 
 // Individual namespace examples

@@ -184,7 +184,6 @@ type Pipeline struct {
     test     mage.TestNamespace
     lint     mage.LintNamespace
     security mage.SecurityNamespace
-    docker   mage.DockerNamespace
 }
 
 // NewPipeline creates a new build pipeline
@@ -194,7 +193,6 @@ func NewPipeline() *Pipeline {
         test:     mage.NewTestNamespace(),
         lint:     mage.NewLintNamespace(),
         security: mage.NewSecurityNamespace(),
-        docker:   mage.NewDockerNamespace(),
     }
 }
 
@@ -208,7 +206,6 @@ func (p *Pipeline) Execute() error {
         {"test", p.test.Unit},
         {"build", p.build.Default},
         {"security-scan", p.security.Scan},
-        {"docker-build", p.docker.Build},
     }
 
     for _, step := range steps {
@@ -311,7 +308,6 @@ func (p *ProductionBuild) Platform(platform string) error { return nil }
 func (p *ProductionBuild) Linux() error { return nil }
 func (p *ProductionBuild) Darwin() error { return nil }
 func (p *ProductionBuild) Windows() error { return nil }
-func (p *ProductionBuild) Docker() error { return nil }
 func (p *ProductionBuild) Clean() error { return nil }
 func (p *ProductionBuild) Install() error { return nil }
 func (p *ProductionBuild) Generate() error { return nil }
@@ -331,7 +327,6 @@ func (d *DevelopmentBuild) Platform(platform string) error { return nil }
 func (d *DevelopmentBuild) Linux() error { return nil }
 func (d *DevelopmentBuild) Darwin() error { return nil }
 func (d *DevelopmentBuild) Windows() error { return nil }
-func (d *DevelopmentBuild) Docker() error { return nil }
 func (d *DevelopmentBuild) Clean() error { return nil }
 func (d *DevelopmentBuild) Install() error { return nil }
 func (d *DevelopmentBuild) Generate() error { return nil }
@@ -574,7 +569,6 @@ func (m *MockBuild) All() error { return nil }
 func (m *MockBuild) Linux() error { return nil }
 func (m *MockBuild) Darwin() error { return nil }
 func (m *MockBuild) Windows() error { return nil }
-func (m *MockBuild) Docker() error { return nil }
 func (m *MockBuild) Clean() error { return nil }
 func (m *MockBuild) Install() error { return nil }
 func (m *MockBuild) Generate() error { return nil }
@@ -805,22 +799,7 @@ func DeployAll() error {
         return err
     }
 
-    // Then build Docker images
-    docker := mage.NewDockerNamespace()
-
-    for _, service := range services {
-        fmt.Printf("🐳 Building Docker image for %s...\n", service.Name)
-
-        originalDir, _ := os.Getwd()
-        os.Chdir(service.Path)
-
-        if err := docker.Build(); err != nil {
-            os.Chdir(originalDir)
-            return fmt.Errorf("failed to build Docker image for %s: %w", service.Name, err)
-        }
-
-        os.Chdir(originalDir)
-    }
+    // All services built successfully
 
     fmt.Println("✅ All microservices deployed!")
     return nil

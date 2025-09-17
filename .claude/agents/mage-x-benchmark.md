@@ -63,7 +63,7 @@ When invoked, you must follow these steps:
 - Generate trend analysis and performance regression detection
 - Focus on real-world performance scenarios, not just micro-benchmarks
 - Consider build system performance (magex command execution times)
-- Analyze cross-platform compilation performance and Docker build optimization
+- Analyze cross-platform compilation performance and build optimization
 - Monitor memory usage patterns and garbage collection frequency
 - Use appropriate benchmark flags: `-benchmem` for memory, `-cpu` for CPU scaling
 - Run benchmarks in isolated environments to avoid interference
@@ -82,7 +82,7 @@ When invoked, you must follow these steps:
 - Build system performance (magex command execution times)
 - Cross-platform compilation performance
 - Test execution performance and parallelization
-- Docker build optimization
+- Build process optimization
 - Memory usage patterns and optimization
 - Goroutine efficiency and concurrency patterns
 

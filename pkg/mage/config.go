@@ -16,7 +16,6 @@ import (
 // Config represents the mage configuration
 type Config struct {
 	Build    BuildConfig       `yaml:"build"`
-	Docker   DockerConfig      `yaml:"docker"`
 	Docs     DocsConfig        `yaml:"docs"`
 	Download DownloadConfig    `yaml:"download"`
 	Lint     LintConfig        `yaml:"lint"`
@@ -109,21 +108,6 @@ type ToolsConfig struct {
 	GolangciLint string            `yaml:"golangci_lint"`
 	Mockgen      string            `yaml:"mockgen"`
 	Swag         string            `yaml:"swag"`
-}
-
-// DockerConfig contains Docker settings
-type DockerConfig struct {
-	BuildArgs       map[string]string `yaml:"build_args"`
-	CacheFrom       []string          `yaml:"cache_from"`
-	DefaultRegistry string            `yaml:"default_registry"`
-	Dockerfile      string            `yaml:"dockerfile"`
-	EnableBuildKit  bool              `yaml:"enable_buildkit"`
-	Labels          map[string]string `yaml:"labels"`
-	NetworkMode     string            `yaml:"network_mode"`
-	Platforms       []string          `yaml:"platforms"`
-	Registry        string            `yaml:"registry"`
-	Repository      string            `yaml:"repository"`
-	SecurityOpts    []string          `yaml:"security_opts"`
 }
 
 // ReleaseConfig contains release settings
@@ -332,28 +316,6 @@ func cleanConfigValues(config *Config) {
 		config.Tools.Custom[k] = cleanEnvValue(v)
 	}
 
-	// Clean Docker config strings
-	config.Docker.Registry = cleanEnvValue(config.Docker.Registry)
-	config.Docker.Repository = cleanEnvValue(config.Docker.Repository)
-	config.Docker.Dockerfile = cleanEnvValue(config.Docker.Dockerfile)
-	config.Docker.NetworkMode = cleanEnvValue(config.Docker.NetworkMode)
-	config.Docker.DefaultRegistry = cleanEnvValue(config.Docker.DefaultRegistry)
-	for k, v := range config.Docker.BuildArgs {
-		config.Docker.BuildArgs[k] = cleanEnvValue(v)
-	}
-	for k, v := range config.Docker.Labels {
-		config.Docker.Labels[k] = cleanEnvValue(v)
-	}
-	for i, platform := range config.Docker.Platforms {
-		config.Docker.Platforms[i] = cleanEnvValue(platform)
-	}
-	for i, cache := range config.Docker.CacheFrom {
-		config.Docker.CacheFrom[i] = cleanEnvValue(cache)
-	}
-	for i, opt := range config.Docker.SecurityOpts {
-		config.Docker.SecurityOpts[i] = cleanEnvValue(opt)
-	}
-
 	// Clean Release config strings
 	config.Release.GitHubToken = cleanEnvValue(config.Release.GitHubToken)
 	config.Release.NameTmpl = cleanEnvValue(config.Release.NameTmpl)
@@ -428,14 +390,6 @@ func defaultConfig() *Config {
 			Mockgen:      VersionLatest,
 			Swag:         VersionLatest,
 			Custom:       make(map[string]string),
-		},
-		Docker: DockerConfig{
-			Dockerfile:      "Dockerfile",
-			Platforms:       []string{"linux/amd64", "linux/arm64"},
-			EnableBuildKit:  true,
-			DefaultRegistry: "docker.io",
-			BuildArgs:       make(map[string]string),
-			Labels:          make(map[string]string),
 		},
 		Release: ReleaseConfig{
 			GitHubToken: "GITHUB_TOKEN",

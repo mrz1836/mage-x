@@ -28,9 +28,6 @@ type BuildNamespace interface {
 	// Windows builds for Windows (amd64)
 	Windows() error
 
-	// Docker builds a Docker image
-	Docker() error
-
 	// Clean removes build artifacts
 	Clean() error
 

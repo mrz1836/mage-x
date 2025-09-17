@@ -129,7 +129,7 @@ func (suite *InterfaceComplianceTestSuite) TestNamespaceInterfaceMethods() {
 		// Test all BuildNamespace methods exist and are callable
 		methods := []string{
 			"Default", "All", "Platform", "Linux", "Darwin", "Windows",
-			"Docker", "Clean", "Install", "Generate", "PreBuild",
+			"Clean", "Install", "Generate", "PreBuild",
 		}
 
 		for _, method := range methods {
@@ -469,7 +469,7 @@ func (suite *InterfaceComplianceTestSuite) TestInterfaceStabilityAndEvolution() 
 	suite.Run("interface method count stability", func() {
 		// Track expected method counts to detect interface changes
 		expectedCounts := map[string]int{
-			"BuildNamespace":   11, // Default, All, Platform, Linux, Darwin, Windows, Docker, Clean, Install, Generate, PreBuild
+			"BuildNamespace":   10, // Default, All, Platform, Linux, Darwin, Windows, Clean, Install, Generate, PreBuild
 			"TestNamespace":    21, // All test-related methods
 			"LintNamespace":    11, // All lint-related methods
 			"ReleaseNamespace": 9,  // All release-related methods

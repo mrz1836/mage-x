@@ -149,7 +149,6 @@ func (ts *InitTestSuite) TestInitProjectTypes() {
 		name         string
 		method       func() error
 		projectType  ProjectType
-		useDocker    bool
 		expectedDirs []string
 		features     []string
 	}{
@@ -157,7 +156,6 @@ func (ts *InitTestSuite) TestInitProjectTypes() {
 			name:         "Library project",
 			method:       ts.init.Library,
 			projectType:  LibraryProject,
-			useDocker:    false,
 			expectedDirs: []string{"examples"},
 			features:     []string{"testing", "benchmarks", "docs"},
 		},
@@ -165,7 +163,6 @@ func (ts *InitTestSuite) TestInitProjectTypes() {
 			name:         "WebAPI project",
 			method:       ts.init.WebAPI,
 			projectType:  WebAPIProject,
-			useDocker:    true,
 			expectedDirs: []string{"api", "migrations", "deployments"},
 			features:     []string{"gin", "gorm", "swagger", "testing", "migrations"},
 		},
@@ -173,7 +170,6 @@ func (ts *InitTestSuite) TestInitProjectTypes() {
 			name:         "Microservice project",
 			method:       ts.init.Microservice,
 			projectType:  MicroserviceProject,
-			useDocker:    true,
 			expectedDirs: []string{"api", "migrations", "deployments"},
 			features:     []string{"grpc", "prometheus", "tracing", "testing", "kubernetes"},
 		},
@@ -181,7 +177,6 @@ func (ts *InitTestSuite) TestInitProjectTypes() {
 			name:         "Tool project",
 			method:       ts.init.Tool,
 			projectType:  ToolProject,
-			useDocker:    true,
 			expectedDirs: []string{"completions"},
 			features:     []string{"cobra", "testing", "goreleaser", "homebrew"},
 		},
@@ -225,14 +220,6 @@ func (ts *InitTestSuite) TestInitProjectTypes() {
 			for _, dir := range tc.expectedDirs {
 				_, err := os.Stat(dir)
 				ts.Require().NoError(err, "Type-specific directory %s should exist for %s", dir, tc.name)
-			}
-
-			// Verify Docker files if expected
-			if tc.useDocker {
-				ts.Require().True(env.FileExists("Dockerfile"))
-				if tc.projectType == WebAPIProject || tc.projectType == MicroserviceProject {
-					ts.Require().True(env.FileExists("docker-compose.yml"))
-				}
 			}
 		})
 	}
@@ -469,7 +456,6 @@ func (ts *InitTestSuite) TestInitializeProjectFiles() {
 			GoVersion:   "go1.24",
 			Type:        GenericProject,
 			UseMage:     true,
-			UseDocker:   true,
 			UseCI:       true,
 		}
 
@@ -488,7 +474,6 @@ func (ts *InitTestSuite) TestInitializeProjectFiles() {
 			".gitignore",
 			"LICENSE",
 			"magefile.go",
-			"Dockerfile",
 			".github/workflows/ci.yml",
 		}
 
@@ -508,7 +493,6 @@ func (ts *InitTestSuite) TestInitializeProjectFiles() {
 			Description: "Minimal application",
 			Type:        GenericProject,
 			UseMage:     false,
-			UseDocker:   false,
 			UseCI:       false,
 		}
 
@@ -524,7 +508,6 @@ func (ts *InitTestSuite) TestInitializeProjectFiles() {
 
 		// Verify optional files don't exist
 		ts.Require().False(env.FileExists("magefile.go"))
-		ts.Require().False(env.FileExists("Dockerfile"))
 		ts.Require().False(env.FileExists(".github/workflows/ci.yml"))
 	})
 }
@@ -697,45 +680,8 @@ func (ts *InitTestSuite) TestTemplateGeneration() {
 	})
 }
 
-// TestDockerAndCIFiles tests Docker and CI file creation
-func (ts *InitTestSuite) TestDockerAndCIFiles() {
-	ts.Run("createDockerFiles creates Dockerfile", func() {
-		config := &InitProjectConfig{
-			Name: "docker-app",
-			Type: GenericProject,
-		}
-
-		err := createDockerFiles(config)
-		ts.Require().NoError(err)
-
-		content := ts.env.ReadFile("Dockerfile")
-		ts.Require().Contains(content, "FROM golang:")
-		ts.Require().Contains(content, "WORKDIR /app")
-		ts.Require().Contains(content, "go build")
-	})
-
-	ts.Run("createDockerFiles creates docker-compose for web projects", func() {
-		testCases := []ProjectType{WebAPIProject, MicroserviceProject}
-
-		for _, projectType := range testCases {
-			ts.Run(string(projectType), func() {
-				config := &InitProjectConfig{
-					Name: "web-app",
-					Type: projectType,
-				}
-
-				err := createDockerFiles(config)
-				ts.Require().NoError(err)
-
-				ts.Require().True(ts.env.FileExists("docker-compose.yml"))
-				content := ts.env.ReadFile("docker-compose.yml")
-				ts.Require().Contains(content, "version: '3.8'")
-				ts.Require().Contains(content, "postgres")
-				ts.Require().Contains(content, "web-app")
-			})
-		}
-	})
-
+// TestCIFiles tests CI file creation
+func (ts *InitTestSuite) TestCIFiles() {
 	ts.Run("createCIFiles creates GitHub Actions workflow", func() {
 		// Create the directory first
 		err := os.MkdirAll(".github/workflows", 0o750)
@@ -815,11 +761,10 @@ func (ts *InitTestSuite) TestGitAndDependencies() {
 func (ts *InitTestSuite) TestUtilityFunctions() {
 	ts.Run("showCompletionMessage displays project info", func() {
 		config := &InitProjectConfig{
-			Name:      "test-project",
-			Module:    "github.com/test/test-project",
-			Type:      CLIProject,
-			Features:  []string{"cobra", "viper"},
-			UseDocker: true,
+			Name:     "test-project",
+			Module:   "github.com/test/test-project",
+			Type:     CLIProject,
+			Features: []string{"cobra", "viper"},
 		}
 
 		// Should not panic or error
@@ -837,11 +782,10 @@ func (ts *InitTestSuite) TestInitializeProject() {
 		ts.Require().NoError(os.Setenv("PROJECT_AUTHOR", "Env Author"))
 
 		config := &InitProjectConfig{
-			Type:      CLIProject,
-			UseMage:   true,
-			UseDocker: true,
-			UseCI:     true,
-			Features:  []string{"cobra", "viper"},
+			Type:     CLIProject,
+			UseMage:  true,
+			UseCI:    true,
+			Features: []string{"cobra", "viper"},
 		}
 
 		// Mock successful commands
@@ -867,7 +811,6 @@ func (ts *InitTestSuite) TestInitializeProject() {
 		ts.Require().True(ts.env.FileExists("go.mod"))
 		ts.Require().True(ts.env.FileExists("main.go"))
 		ts.Require().True(ts.env.FileExists("magefile.go"))
-		ts.Require().True(ts.env.FileExists("Dockerfile"))
 		ts.Require().True(ts.env.FileExists(".github/workflows/ci.yml"))
 	})
 }
@@ -883,7 +826,6 @@ func (ts *InitTestSuite) TestAdditionalMethods() {
 		{"Git", ts.init.Git},
 		{"Mage", ts.init.Mage},
 		{"CI", ts.init.CI},
-		{"Docker", ts.init.Docker},
 		{"Docs", ts.init.Docs},
 		{"License", ts.init.License},
 		{"Makefile", ts.init.Makefile},
@@ -948,7 +890,6 @@ func (ts *InitTestSuite) TestTableDrivenProjectTypes() {
 		name             string
 		projectType      ProjectType
 		useMage          bool
-		useDocker        bool
 		useCI            bool
 		expectedFeatures []string
 		expectedFiles    []string
@@ -959,7 +900,6 @@ func (ts *InitTestSuite) TestTableDrivenProjectTypes() {
 			name:             "Library Project Complete",
 			projectType:      LibraryProject,
 			useMage:          true,
-			useDocker:        false,
 			useCI:            true,
 			expectedFeatures: []string{"testing", "benchmarks", "docs"},
 			expectedFiles:    []string{"go.mod", "main.go", "README.md", ".gitignore", "LICENSE", "magefile.go", ".github/workflows/ci.yml"},
@@ -970,10 +910,9 @@ func (ts *InitTestSuite) TestTableDrivenProjectTypes() {
 			name:             "CLI Project Complete",
 			projectType:      CLIProject,
 			useMage:          true,
-			useDocker:        true,
 			useCI:            true,
 			expectedFeatures: []string{"cobra", "viper", "testing", "goreleaser"},
-			expectedFiles:    []string{"go.mod", "main.go", "README.md", "magefile.go", "Dockerfile", ".github/workflows/ci.yml"},
+			expectedFiles:    []string{"go.mod", "main.go", "README.md", "magefile.go", ".github/workflows/ci.yml"},
 			expectedDirs:     []string{"cmd", "pkg", "internal", "test", "docs", "scripts", "completions"},
 			mainFileContains: []string{"package main", "os.Args", "version"},
 		},
@@ -981,10 +920,9 @@ func (ts *InitTestSuite) TestTableDrivenProjectTypes() {
 			name:             "WebAPI Project Complete",
 			projectType:      WebAPIProject,
 			useMage:          true,
-			useDocker:        true,
 			useCI:            true,
 			expectedFeatures: []string{"gin", "gorm", "swagger", "testing", "migrations"},
-			expectedFiles:    []string{"go.mod", "main.go", "README.md", "magefile.go", "Dockerfile", "docker-compose.yml", ".github/workflows/ci.yml"},
+			expectedFiles:    []string{"go.mod", "main.go", "README.md", "magefile.go", ".github/workflows/ci.yml"},
 			expectedDirs:     []string{"cmd", "pkg", "internal", "test", "docs", "scripts", "api", "migrations", "deployments"},
 			mainFileContains: []string{"package main", "http.HandleFunc", ":8080"},
 		},
@@ -992,10 +930,9 @@ func (ts *InitTestSuite) TestTableDrivenProjectTypes() {
 			name:             "Microservice Project Complete",
 			projectType:      MicroserviceProject,
 			useMage:          true,
-			useDocker:        true,
 			useCI:            true,
 			expectedFeatures: []string{"grpc", "prometheus", "tracing", "testing", "kubernetes"},
-			expectedFiles:    []string{"go.mod", "main.go", "README.md", "magefile.go", "Dockerfile", "docker-compose.yml", ".github/workflows/ci.yml"},
+			expectedFiles:    []string{"go.mod", "main.go", "README.md", "magefile.go", ".github/workflows/ci.yml"},
 			expectedDirs:     []string{"cmd", "pkg", "internal", "test", "docs", "scripts", "api", "migrations", "deployments"},
 			mainFileContains: []string{"package main", "http.Server", "Shutting down"},
 		},
@@ -1003,10 +940,9 @@ func (ts *InitTestSuite) TestTableDrivenProjectTypes() {
 			name:             "Tool Project Complete",
 			projectType:      ToolProject,
 			useMage:          true,
-			useDocker:        true,
 			useCI:            true,
 			expectedFeatures: []string{"cobra", "testing", "goreleaser", "homebrew"},
-			expectedFiles:    []string{"go.mod", "main.go", "README.md", "magefile.go", "Dockerfile", ".github/workflows/ci.yml"},
+			expectedFiles:    []string{"go.mod", "main.go", "README.md", "magefile.go", ".github/workflows/ci.yml"},
 			expectedDirs:     []string{"cmd", "pkg", "internal", "test", "docs", "scripts", "completions"},
 			mainFileContains: []string{"package main", "os.Args", "version"},
 		},
@@ -1026,7 +962,6 @@ func (ts *InitTestSuite) TestTableDrivenProjectTypes() {
 				License:     "MIT",
 				Type:        tc.projectType,
 				UseMage:     tc.useMage,
-				UseDocker:   tc.useDocker,
 				UseCI:       tc.useCI,
 				Features:    tc.expectedFeatures,
 			}
@@ -1054,16 +989,6 @@ func (ts *InitTestSuite) TestTableDrivenProjectTypes() {
 				mainContent := env.ReadFile("main.go")
 				for _, expected := range tc.mainFileContains {
 					ts.Require().Contains(mainContent, expected, "main.go should contain %s for %s project", expected, tc.projectType)
-				}
-			}
-
-			// Verify Docker files for projects that use Docker
-			if tc.useDocker {
-				ts.Require().True(env.FileExists("Dockerfile"), "Dockerfile should exist when useDocker is true")
-
-				// WebAPI and Microservice projects should have docker-compose.yml
-				if tc.projectType == WebAPIProject || tc.projectType == MicroserviceProject {
-					ts.Require().True(env.FileExists("docker-compose.yml"), "docker-compose.yml should exist for %s project", tc.projectType)
 				}
 			}
 

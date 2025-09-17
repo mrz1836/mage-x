@@ -408,8 +408,6 @@ func (suite *MageInitTestSuite) TestGetAdvancedTemplateFiles() {
 
 	// Should include basic files plus additional ones
 	suite.Contains(files, "magefile.go")
-	suite.Contains(files, "Dockerfile")
-	suite.Contains(files, "docker-compose.yml")
 	suite.Contains(files, "Makefile")
 }
 
@@ -417,26 +415,8 @@ func (suite *MageInitTestSuite) TestGetAdvancedMagefileContent() {
 	content := getAdvancedMagefileContent()
 	suite.NotEmpty(content)
 	suite.Contains(content, "func TestCoverage() error")
-	suite.Contains(content, "func Docker() error")
 	suite.Contains(content, "func Release() error")
 	suite.Contains(content, "buildForPlatform")
-}
-
-func (suite *MageInitTestSuite) TestGetDockerfileContent() {
-	content := getDockerfileContent()
-	suite.NotEmpty(content)
-	suite.Contains(content, "FROM golang:{{.GoVersion}}")
-	suite.Contains(content, "COPY --from=builder")
-	suite.Contains(content, "{{.ProjectName}}")
-	suite.Contains(content, "EXPOSE 8080")
-}
-
-func (suite *MageInitTestSuite) TestGetDockerComposeContent() {
-	content := getDockerComposeContent()
-	suite.NotEmpty(content)
-	suite.Contains(content, "version: '3.8'")
-	suite.Contains(content, "{{.ProjectName}}:")
-	suite.Contains(content, "healthcheck:")
 }
 
 // Test CLI template functions
@@ -473,7 +453,6 @@ func (suite *MageInitTestSuite) TestGetMicroserviceMagefileContent() {
 	suite.NotEmpty(content)
 	suite.Contains(content, "func K8sDeploy() error")
 	suite.Contains(content, "kubeNamespace")
-	suite.Contains(content, "dockerRepo")
 }
 
 func (suite *MageInitTestSuite) TestGetKubernetesContent() {
@@ -559,8 +538,6 @@ func (suite *MageInitTestSuite) TestInitializeProjectAdvanced() {
 	suite.Require().NoError(err)
 
 	// Verify advanced template files were created
-	suite.FileExists(filepath.Join(projectPath, "Dockerfile"))
-	suite.FileExists(filepath.Join(projectPath, "docker-compose.yml"))
 	suite.FileExists(filepath.Join(projectPath, "Makefile"))
 	suite.DirExists(filepath.Join(projectPath, "deployments"))
 	suite.DirExists(filepath.Join(projectPath, "tests"))
@@ -637,14 +614,14 @@ func (suite *MageInitTestSuite) TestProjectTemplateStruct() {
 		Description:  "Test template",
 		Files:        map[string]string{"test.go": "package main"},
 		Directories:  []string{"cmd", "pkg"},
-		Dependencies: []string{"docker"},
+		Dependencies: []string{},
 	}
 
 	suite.Equal("test", template.Name)
 	suite.Equal("Test template", template.Description)
 	suite.Contains(template.Files, "test.go")
 	suite.Contains(template.Directories, "cmd")
-	suite.Contains(template.Dependencies, "docker")
+	suite.Empty(template.Dependencies)
 }
 
 // Test InitOptions struct

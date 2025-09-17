@@ -149,13 +149,6 @@ func (ts *ConfigTestSuite) TestDefaultConfig() {
 		ts.Require().Equal(VersionLatest, config.Tools.Fumpt)
 		ts.Require().Equal(GetDefaultGoVulnCheckVersion(), config.Tools.GoVulnCheck)
 
-		// Test docker defaults
-		ts.Require().Equal("Dockerfile", config.Docker.Dockerfile)
-		ts.Require().True(config.Docker.EnableBuildKit)
-		ts.Require().Equal("docker.io", config.Docker.DefaultRegistry)
-		ts.Require().NotNil(config.Docker.BuildArgs)
-		ts.Require().NotNil(config.Docker.Labels)
-
 		// Test release defaults
 		ts.Require().Equal("GITHUB_TOKEN", config.Release.GitHubToken)
 		ts.Require().True(config.Release.Changelog)
@@ -543,12 +536,9 @@ func (ts *ConfigTestSuite) TestConfigStructValidation() {
 		ts.Require().NotZero(config.Test)
 		ts.Require().NotZero(config.Lint)
 		ts.Require().NotZero(config.Tools)
-		ts.Require().NotZero(config.Docker)
 		ts.Require().NotZero(config.Release)
 
 		// Test that maps are initialized
-		ts.Require().NotNil(config.Docker.BuildArgs)
-		ts.Require().NotNil(config.Docker.Labels)
 	})
 
 	ts.Run("DefaultValuesAreReasonable", func() {
@@ -559,7 +549,6 @@ func (ts *ConfigTestSuite) TestConfigStructValidation() {
 		ts.Require().NotEmpty(config.Test.Timeout)
 		ts.Require().NotEmpty(config.Lint.Timeout)
 		ts.Require().NotEmpty(config.Build.Platforms)
-		ts.Require().NotEmpty(config.Docker.Platforms)
 		ts.Require().NotEmpty(config.Release.Formats)
 	})
 }
@@ -695,22 +684,6 @@ func (ts *ConfigTestSuite) TestCleanConfigValues() {
 					"tool1": "version1 # custom tool",
 				},
 			},
-			Docker: DockerConfig{
-				Registry:        "registry.com # docker registry",
-				Repository:      "  repo  ",
-				Dockerfile:      "Dockerfile # dockerfile comment",
-				NetworkMode:     "bridge # network mode",
-				DefaultRegistry: "docker.io # default registry",
-				BuildArgs: map[string]string{
-					"ARG1": "value1 # build arg",
-				},
-				Labels: map[string]string{
-					"label1": "value1 # label",
-				},
-				Platforms:    []string{"linux/amd64 # platform"},
-				CacheFrom:    []string{"image:latest # cache"},
-				SecurityOpts: []string{"no-new-privileges # security"},
-			},
 			Release: ReleaseConfig{
 				GitHubToken: "GITHUB_TOKEN # token env",
 				NameTmpl:    "  template  ",
@@ -776,18 +749,6 @@ func (ts *ConfigTestSuite) TestCleanConfigValues() {
 		ts.Equal("v1.16.6", config.Tools.Swag)
 		ts.Equal("version1", config.Tools.Custom["tool1"])
 
-		// Check Docker fields
-		ts.Equal("registry.com", config.Docker.Registry)
-		ts.Equal("repo", config.Docker.Repository)
-		ts.Equal("Dockerfile", config.Docker.Dockerfile)
-		ts.Equal("bridge", config.Docker.NetworkMode)
-		ts.Equal("docker.io", config.Docker.DefaultRegistry)
-		ts.Equal("value1", config.Docker.BuildArgs["ARG1"])
-		ts.Equal("value1", config.Docker.Labels["label1"])
-		ts.Equal("linux/amd64", config.Docker.Platforms[0])
-		ts.Equal("image:latest", config.Docker.CacheFrom[0])
-		ts.Equal("no-new-privileges", config.Docker.SecurityOpts[0])
-
 		// Check Release fields
 		ts.Equal("GITHUB_TOKEN", config.Release.GitHubToken)
 		ts.Equal("template", config.Release.NameTmpl)
@@ -817,10 +778,6 @@ func (ts *ConfigTestSuite) TestCleanConfigValues() {
 			},
 			Tools: ToolsConfig{
 				Custom: make(map[string]string),
-			},
-			Docker: DockerConfig{
-				BuildArgs: make(map[string]string),
-				Labels:    make(map[string]string),
 			},
 			Metadata: make(map[string]string),
 		}

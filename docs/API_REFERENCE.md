@@ -14,7 +14,6 @@ type BuildNamespace interface {
     Linux() error          // Build for Linux
     Darwin() error         // Build for macOS
     Windows() error        // Build for Windows
-    Docker() error         // Build Docker image
     Clean() error          // Clean build artifacts
     Install() error        // Install built binary
     Generate() error       // Generate build files
@@ -240,7 +239,6 @@ func NewVetNamespace() VetNamespace
 
 ### Deployment & Infrastructure
 ```go
-func NewDockerNamespace() DockerNamespace
 func NewK8sNamespace() K8sNamespace
 func NewInstallNamespace() InstallNamespace
 func NewConfigureNamespace() ConfigureNamespace
@@ -420,7 +418,6 @@ The following mage targets are available through the exposed wrapper functions i
 |--------|-------------|-------------------|
 | `mage build` | Build for current platform (default) | `go build` |
 | `mage buildDefault` | Same as above | `go build` |
-| `mage buildDocker` | Build Docker containers | `docker build` |
 | `mage buildClean` | Clean build artifacts | `rm -rf bin/` |
 | `mage buildGenerate` | Generate code before building | `go generate` |
 

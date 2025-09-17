@@ -66,22 +66,17 @@ func ExampleTestFixtures() {
 	// Create a complete Go project
 	fixtures.CreateGoProject("myapp")
 
-	// Add Docker support
-	fixtures.CreateDockerfile("myapp")
-
 	// Add CI/CD
 	fixtures.CreateGitHubActions()
 
 	// Verify structure
 	fmt.Println("Project created with:")
 	fmt.Println("- Go module and source files")
-	fmt.Println("- Dockerfile")
 	fmt.Println("- GitHub Actions workflows")
 
 	// Output:
 	// Project created with:
 	// - Go module and source files
-	// - Dockerfile
 	// - GitHub Actions workflows
 }
 

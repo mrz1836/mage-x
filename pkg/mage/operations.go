@@ -37,12 +37,6 @@ type Run struct{}
 // Serve provides server operations
 type Serve struct{}
 
-// DockerOps provides Docker operations
-type DockerOps struct{}
-
-// Docker is an alias for DockerOps for compatibility
-type Docker = DockerOps
-
 // Common provides common operations
 type Common struct{}
 
@@ -433,12 +427,6 @@ func (c Clean) Generated() error {
 	return runner.RunCmd("rm", "-rf", "generated/")
 }
 
-// Docker cleans Docker system resources
-func (c Clean) Docker() error {
-	runner := GetRunner()
-	return runner.RunCmd("docker", "system", "prune", "-f")
-}
-
 // Dist removes the distribution directory
 func (c Clean) Dist() error {
 	runner := GetRunner()
@@ -580,73 +568,6 @@ func (s Serve) WebSocket(_ ...interface{}) error {
 func (s Serve) HealthCheck(_ ...interface{}) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving health check")
-}
-
-// Build builds a Docker image with the specified tag
-func (d DockerOps) Build(tag string) error {
-	runner := GetRunner()
-	if tag == "" {
-		tag = defaultBinaryName
-	}
-	return runner.RunCmd("docker", "build", "-t", tag, ".")
-}
-
-// Push pushes a Docker image to the registry
-func (d DockerOps) Push(tag string) error {
-	runner := GetRunner()
-	if tag == "" {
-		tag = defaultBinaryName
-	}
-	return runner.RunCmd("docker", "push", tag)
-}
-
-// Run runs a Docker container from the specified image
-func (d DockerOps) Run(image string, args ...string) error {
-	runner := GetRunner()
-	cmdArgs := append([]string{"run", image}, args...)
-	return runner.RunCmd("docker", cmdArgs...)
-}
-
-// Stop stops a running Docker container
-func (d DockerOps) Stop(container string) error {
-	runner := GetRunner()
-	if container == "" {
-		container = "app"
-	}
-	return runner.RunCmd("docker", "stop", container)
-}
-
-// Logs retrieves logs from a Docker container
-func (d DockerOps) Logs(container string) error {
-	runner := GetRunner()
-	if container == "" {
-		container = "app"
-	}
-	return runner.RunCmd("docker", "logs", container)
-}
-
-// Clean removes unused Docker resources
-func (d DockerOps) Clean() error {
-	runner := GetRunner()
-	return runner.RunCmd("docker", "system", "prune", "-f")
-}
-
-// Compose runs docker-compose with the given command
-func (d DockerOps) Compose(command string) error {
-	runner := GetRunner()
-	return runner.RunCmd("docker-compose", command)
-}
-
-// Tag tags a Docker image from source to target
-func (d DockerOps) Tag(source, target string) error {
-	runner := GetRunner()
-	return runner.RunCmd("docker", "tag", source, target)
-}
-
-// Pull pulls a Docker image
-func (d DockerOps) Pull(image string) error {
-	runner := GetRunner()
-	return runner.RunCmd("docker", "pull", image)
 }
 
 // Version displays version information for common operations
