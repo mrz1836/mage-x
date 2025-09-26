@@ -1448,14 +1448,16 @@ func registerVersionCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("version", "bump").
-			WithDescription("Bump version with parameters: bump=<major|minor|patch> push dry-run force major-confirm").
+			WithDescription("Bump version with parameters: bump=<major|minor|patch> branch=<branch-name> push dry-run force major-confirm").
 			WithArgsFunc(func(args ...string) error { return v.Bump(args...) }).
 			WithCategory("Version Management").
-			WithUsage("magex version:bump [bump=<type>] [push] [dry-run] [force] [major-confirm]").
+			WithUsage("magex version:bump [bump=<type>] [branch=<branch-name>] [push] [dry-run] [force] [major-confirm]").
 			WithExamples(
-				"magex version:bump bump=patch push",
-				"magex version:bump bump=minor dry-run",
-				"magex version:bump bump=major major-confirm push",
+				"magex version:bump bump=patch branch=master push",
+				"magex version:bump bump=minor branch=main",
+				"magex version:bump bump=major major-confirm branch=master push",
+				"magex version:bump bump=patch dry-run",
+				"magex version:bump bump=patch",
 			).
 			MustBuild(),
 	)
