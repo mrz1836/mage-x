@@ -37,6 +37,7 @@ var (
 	errVersionBumpBlocked           = errors.New("version bump blocked due to safety check - use FORCE_VERSION_BUMP=true to override")
 	errUnexpectedMajorVersionJump   = errors.New("unexpected major version jump")
 	errUnexpectedlyLargeVersionJump = errors.New("unexpectedly large version jump")
+	errBranchNotFound               = errors.New("branch does not exist locally or remotely")
 )
 
 // statusUnknown represents an unknown status
@@ -281,6 +282,9 @@ func (Version) Bump(args ...string) error {
 	// Check for dry-run mode
 	dryRun := utils.IsParamTrue(params, "dry-run")
 
+	// Get branch parameter
+	targetBranch := utils.GetParam(params, "branch", "")
+
 	// Get bump type from parameters with default
 	bumpType := utils.GetParam(params, "bump", "patch")
 	bumpType = strings.TrimSpace(strings.ToLower(bumpType))
@@ -303,13 +307,24 @@ func (Version) Bump(args ...string) error {
 		utils.Info("🔍 Running in DRY-RUN mode - no changes will be made")
 	}
 
-	// Check for uncommitted changes first
+	// Check for uncommitted changes FIRST (before any branch operations)
 	if dirty := isGitDirty(); dirty {
 		if dryRun {
 			utils.Warn("Working directory has uncommitted changes (would fail in normal mode)")
 		} else {
+			utils.Error("❌ Cannot proceed: Working directory has uncommitted changes")
+			utils.Info("Please commit or stash your changes before bumping version")
 			return errVersionUncommittedChanges
 		}
+	}
+
+	// Handle branch switching logic with helper function
+	cleanup, err := handleBranchSwitch(targetBranch, bumpType, dryRun)
+	if cleanup != nil {
+		defer cleanup()
+	}
+	if err != nil {
+		return err
 	}
 
 	// Check if current commit already has version tags
@@ -387,6 +402,8 @@ func (Version) Bump(args ...string) error {
 			utils.Info("  To push: git push origin %s", newVersion)
 			utils.Info("  Or add 'push' parameter to push automatically")
 		}
+
+		// Branch switching information is shown by helper functions during dry-run
 
 		utils.Success("✅ DRY-RUN completed - no changes made")
 		return nil
@@ -1024,6 +1041,161 @@ func checkForUnexpectedVersionJump(current, newVersion, bumpType string) error {
 	}
 
 	return nil
+}
+
+// Branch helper functions
+
+// getCurrentBranch returns the name of the current Git branch
+func getCurrentBranch() (string, error) {
+	output, err := GetRunner().RunCmdOutput("git", "branch", "--show-current")
+	if err != nil {
+		return "", fmt.Errorf("failed to get current branch: %w", err)
+	}
+	return strings.TrimSpace(output), nil
+}
+
+// isValidBranch checks if the specified branch exists
+func isValidBranch(branch string) error {
+	// Check if branch exists locally or remotely
+	output, err := GetRunner().RunCmdOutput("git", "branch", "-a")
+	if err != nil {
+		return fmt.Errorf("failed to list branches: %w", err)
+	}
+
+	// Check for local branch (e.g., "  main")
+	localBranchPattern := fmt.Sprintf("  %s", branch)
+	currentBranchPattern := fmt.Sprintf("* %s", branch)
+	remoteBranchPattern := fmt.Sprintf("remotes/origin/%s", branch)
+
+	if strings.Contains(output, localBranchPattern) ||
+		strings.Contains(output, currentBranchPattern) ||
+		strings.Contains(output, remoteBranchPattern) {
+		return nil
+	}
+
+	return fmt.Errorf("%w: '%s'", errBranchNotFound, branch)
+}
+
+// checkoutBranch switches to the specified branch
+func checkoutBranch(branch string) error {
+	utils.Info("Switching to branch '%s'...", branch)
+
+	// First try to checkout local branch
+	err := GetRunner().RunCmd("git", "checkout", branch)
+	if err != nil {
+		// If local checkout fails, try to checkout from remote
+		utils.Info("Local branch not found, trying to checkout from remote...")
+		remoteErr := GetRunner().RunCmd("git", "checkout", "-b", branch, fmt.Sprintf("origin/%s", branch))
+		if remoteErr != nil {
+			// Provide more specific error information
+			return fmt.Errorf("failed to checkout branch '%s': local branch not found (%w) and remote checkout failed (%w)", branch, err, remoteErr)
+		}
+	}
+
+	utils.Success("Switched to branch '%s'", branch)
+	return nil
+}
+
+// pullLatestBranch pulls the latest changes for the current branch
+func pullLatestBranch() error {
+	utils.Info("Pulling latest changes...")
+
+	// Fetch first to get latest remote changes
+	if err := GetRunner().RunCmd("git", "fetch", "origin"); err != nil {
+		return fmt.Errorf("failed to fetch from origin: %w", err)
+	}
+
+	// Pull with rebase to keep clean history
+	if err := GetRunner().RunCmd("git", "pull", "--rebase", "origin"); err != nil {
+		return fmt.Errorf("failed to pull latest changes: %w", err)
+	}
+
+	utils.Success("Successfully pulled latest changes")
+	return nil
+}
+
+// handleBranchSwitch handles the branch switching logic and returns cleanup function if needed
+func handleBranchSwitch(targetBranch, bumpType string, dryRun bool) (func(), error) {
+	if targetBranch == "" {
+		return handleNoBranchSpecified(bumpType)
+	}
+
+	// Get current branch
+	originalBranch, err := getCurrentBranch()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current branch: %w", err)
+	}
+
+	// Check if target branch is different from current
+	if targetBranch != originalBranch {
+		return handleDifferentBranch(targetBranch, originalBranch, dryRun)
+	}
+
+	return handleSameBranch(targetBranch, dryRun)
+}
+
+// handleNoBranchSpecified handles the case when no branch parameter is provided
+func handleNoBranchSpecified(bumpType string) (func(), error) {
+	current, err := getCurrentBranch()
+	if err != nil {
+		utils.Warn("Could not determine current branch")
+	} else {
+		utils.Warn("⚠️  No branch parameter specified - performing version bump on current branch: '%s'", current)
+		utils.Warn("💡 For GitButler users, consider using: magex version:bump branch=master bump=%s", bumpType)
+		utils.Info("To proceed with version bump on current branch, this is normal behavior")
+	}
+	return func() {}, nil // no-op cleanup function
+}
+
+// handleDifferentBranch handles switching to a different branch
+func handleDifferentBranch(targetBranch, originalBranch string, dryRun bool) (func(), error) {
+	if !dryRun {
+		// Validate target branch exists
+		if err := isValidBranch(targetBranch); err != nil {
+			return nil, err
+		}
+
+		// Switch to target branch
+		if err := checkoutBranch(targetBranch); err != nil {
+			return nil, err
+		}
+
+		// Create cleanup function
+		cleanup := func() {
+			if err := checkoutBranch(originalBranch); err != nil {
+				utils.Error("⚠️  Failed to switch back to original branch '%s': %v", originalBranch, err)
+				utils.Info("You are currently on branch '%s'", targetBranch)
+				utils.Info("To switch back manually: git checkout %s", originalBranch)
+			} else {
+				utils.Success("✅ Switched back to original branch '%s'", originalBranch)
+			}
+		}
+
+		// Pull latest changes to ensure we're up to date
+		if err := pullLatestBranch(); err != nil {
+			return cleanup, fmt.Errorf("failed to pull latest changes on branch '%s': %w", targetBranch, err)
+		}
+
+		return cleanup, nil
+	}
+
+	utils.Info("🔧 DRY-RUN: Would switch from branch '%s' to '%s'", originalBranch, targetBranch)
+	utils.Info("🔧 DRY-RUN: Would pull latest changes on '%s'", targetBranch)
+	return func() {}, nil // no-op cleanup function for dry-run
+}
+
+// handleSameBranch handles the case when already on the target branch
+func handleSameBranch(targetBranch string, dryRun bool) (func(), error) {
+	utils.Info("Already on target branch '%s'", targetBranch)
+	if !dryRun {
+		// Still pull latest changes even if we're on the right branch
+		if err := pullLatestBranch(); err != nil {
+			return nil, err
+		}
+	} else {
+		utils.Info("🔧 DRY-RUN: Would pull latest changes on current branch '%s'", targetBranch)
+	}
+	return func() {}, nil // no-op cleanup function
 }
 
 // Additional methods for Version namespace required by tests

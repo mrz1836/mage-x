@@ -325,6 +325,7 @@ magex bench time=2s count=5   # With custom count parameter
 # Version management examples with new parameter format
 magex version:bump bump=patch              # Bump patch version
 magex version:bump bump=minor push         # Bump minor and push
+magex version:bump bump=patch branch=master push  # Switch to master, bump, and push
 magex git:tag version=1.2.3                # Create git tag
 magex git:commit message="fix: bug fix"    # Commit with message
 ```
@@ -611,10 +612,22 @@ magex version:bump bump=minor               # Bump minor version
 magex version:bump bump=major major-confirm # Bump major version with confirmation
 magex version:bump bump=minor push          # Bump minor and push to remote
 
+# Branch Parameter Examples (recommended for GitButler users)
+magex version:bump bump=patch branch=master push    # Switch to master, bump patch, and push
+magex version:bump bump=minor branch=main           # Switch to main branch before bumping
+magex version:bump bump=major branch=master major-confirm push  # Major bump on master with push
+
 # Dry-run mode (preview changes without making them)
 magex version:bump dry-run                 # Preview patch bump
 magex version:bump bump=minor dry-run      # Preview minor bump
 magex version:bump bump=major major-confirm push dry-run  # Preview major bump with push
+magex version:bump bump=patch branch=master dry-run      # Preview branch switch and bump
+
+# Important Notes:
+# - Uncommitted changes will block version bump operation (safety check)
+# - When using branch parameter, you will ALWAYS return to your original branch after completion
+# - Branch switch-back happens even if tag creation or push fails (guaranteed cleanup)
+# - If network issues occur during pull, operation stops but still switches back to original branch
 ```
 
 </details>
