@@ -62,13 +62,15 @@ func findAllModules() ([]ModuleInfo, error) {
 		// Look for go.mod files
 		if !info.IsDir() && info.Name() == "go.mod" {
 			dir := filepath.Dir(path)
-			relPath, err := filepath.Rel(root, dir)
+			var relPath string
+			relPath, err = filepath.Rel(root, dir)
 			if err != nil {
 				relPath = dir
 			}
 
 			// Read module name from go.mod
-			moduleName, err := getModuleNameFromFile(path)
+			var moduleName string
+			moduleName, err = getModuleNameFromFile(path)
 			if err != nil {
 				utils.Warn("Failed to read module name from %s: %v", path, err)
 				moduleName = relPath
@@ -150,14 +152,14 @@ func runCommandInModule(module ModuleInfo, command string, args ...string) error
 	}
 
 	// Change to module directory
-	if err := os.Chdir(module.Path); err != nil {
+	if err = os.Chdir(module.Path); err != nil {
 		return fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
 	}
 
 	// Ensure we change back to original directory
 	defer func() {
-		if err := os.Chdir(originalDir); err != nil {
-			utils.Error("Failed to change back to original directory: %v", err)
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			utils.Error("Failed to change back to original directory: %v", chErr)
 		}
 	}()
 
