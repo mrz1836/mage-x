@@ -41,7 +41,8 @@ func (Lint) Default() error {
 	}
 
 	// Discover all modules
-	modules, err := findAllModules()
+	var modules []ModuleInfo
+	modules, err = findAllModules()
 	if err != nil {
 		return fmt.Errorf("failed to find modules: %w", err)
 	}
@@ -162,7 +163,8 @@ func (Lint) Fix() error {
 	}
 
 	// Discover all modules
-	modules, err := findAllModules()
+	var modules []ModuleInfo
+	modules, err = findAllModules()
 	if err != nil {
 		return fmt.Errorf("failed to find modules: %w", err)
 	}
@@ -185,7 +187,7 @@ func (Lint) Fix() error {
 
 	// Ensure golangci-lint is installed
 	utils.Info("Checking golangci-lint installation...")
-	if err := ensureGolangciLint(config); err != nil {
+	if err = ensureGolangciLint(config); err != nil {
 		return err
 	}
 
@@ -208,7 +210,8 @@ func (Lint) Fix() error {
 			rootConfig := ".golangci.json"
 			if utils.FileExists(rootConfig) {
 				// Use absolute path to root config
-				absPath, err := filepath.Abs(rootConfig)
+				var absPath string
+				absPath, err = filepath.Abs(rootConfig)
 				if err != nil {
 					utils.Warn("Failed to get absolute path for config: %v", err)
 					absPath = rootConfig
@@ -233,7 +236,7 @@ func (Lint) Fix() error {
 			args = append(args, "--verbose")
 		}
 
-		err := runCommandInModule(module, "golangci-lint", args...)
+		err = runCommandInModule(module, "golangci-lint", args...)
 		if err != nil {
 			hasError = true
 			utils.Error("golangci-lint fix failed for %s", module.Relative)
@@ -243,7 +246,7 @@ func (Lint) Fix() error {
 
 		// Apply code formatting in module
 		utils.Info("Applying code formatting...")
-		if err := applyCodeFormattingInModule(module, Lint{}); err != nil {
+		if err = applyCodeFormattingInModule(module, Lint{}); err != nil {
 			hasError = true
 			utils.Error("Formatting failed for %s: %v", module.Relative, err)
 		} else {
@@ -284,7 +287,8 @@ func (Lint) Fmt() error {
 	// Check formatting
 	var unformatted []string
 	for _, pkg := range packages {
-		output, err := GetRunner().RunCmdOutput("gofmt", "-l", pkg)
+		var output string
+		output, err = GetRunner().RunCmdOutput("gofmt", "-l", pkg)
 		if err != nil {
 			continue
 		}
@@ -303,7 +307,7 @@ func (Lint) Fmt() error {
 
 		// Fix formatting
 		utils.Info("Fixing formatting...")
-		if err := GetRunner().RunCmd("gofmt", "-w", "."); err != nil {
+		if err = GetRunner().RunCmd("gofmt", "-w", "."); err != nil {
 			return fmt.Errorf("formatting failed: %w", err)
 		}
 	}
@@ -326,14 +330,14 @@ func (Lint) Fumpt() error {
 	// Ensure gofumpt is installed with retry logic
 
 	if !utils.CommandExists("gofumpt") {
-		if err := installGofumpt(config); err != nil {
+		if err = installGofumpt(config); err != nil {
 			return err
 		}
 	}
 
 	// Run gofumpt
 	utils.Info("Running gofumpt %s...", gofumptVersion)
-	if err := GetRunner().RunCmd("gofumpt", "-w", "-extra", "."); err != nil {
+	if err = GetRunner().RunCmd("gofumpt", "-w", "-extra", "."); err != nil {
 		return fmt.Errorf("gofumpt failed: %w", err)
 	}
 
@@ -372,7 +376,7 @@ func installGofumpt(config *Config) error {
 		utils.Warn("Installation failed: %v, trying direct proxy...", err)
 
 		env := []string{"GOPROXY=direct"}
-		if err := executor.ExecuteWithEnv(ctx, env, "go", "install", moduleWithVersion); err != nil {
+		if err = executor.ExecuteWithEnv(ctx, env, "go", "install", moduleWithVersion); err != nil {
 			return fmt.Errorf("failed to install gofumpt after %d retries and fallback: %w", maxRetries, err)
 		}
 	}
@@ -413,7 +417,7 @@ func (Lint) Vet() error {
 
 		moduleStart := time.Now()
 
-		err := runVetInModule(module, config)
+		err = runVetInModule(module, config)
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
 			utils.Error("Vet failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
@@ -441,7 +445,8 @@ func (Lint) VetParallel() error {
 		return err
 	}
 
-	module, err := utils.GetModuleName()
+	var module string
+	module, err = utils.GetModuleName()
 	if err != nil {
 		return err
 	}
@@ -692,7 +697,7 @@ func ensureGolangciLint(cfg *Config) error {
 			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 		}
 		executor := secureRunner.executor
-		if err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, shell, append(shellArgs, cmd)...); err != nil {
+		if err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, shell, append(shellArgs, cmd)...); err != nil {
 			return fmt.Errorf("failed to install golangci-lint after %d retries: %w", maxRetries, err)
 		}
 	}
@@ -745,11 +750,11 @@ func (Lint) Go() error {
 	displayLinterConfig()
 
 	// Ensure golangci-lint is installed
-	if err := ensureGolangciLint(config); err != nil {
+	if err = ensureGolangciLint(config); err != nil {
 		return err
 	}
 
-	if err := GetRunner().RunCmd("golangci-lint", "run"); err != nil {
+	if err = GetRunner().RunCmd("golangci-lint", "run"); err != nil {
 		return fmt.Errorf("go linting failed: %w", err)
 	}
 
@@ -780,7 +785,7 @@ func (Lint) YAML() error {
 	}
 
 	utils.Info("Running yamllint %s...", yamllintVersion)
-	if err := GetRunner().RunCmd("yamllint", "."); err != nil {
+	if err = GetRunner().RunCmd("yamllint", "."); err != nil {
 		return fmt.Errorf("yaml linting failed: %w", err)
 	}
 
@@ -803,7 +808,7 @@ func validateJSONFile(file string) error {
 
 	// Parse JSON to validate syntax
 	var jsonData interface{}
-	if err := json.Unmarshal(data, &jsonData); err != nil {
+	if err = json.Unmarshal(data, &jsonData); err != nil {
 		return fmt.Errorf("invalid JSON syntax: %w", err)
 	}
 
@@ -950,7 +955,7 @@ func getLinterConfigInfo() (configFile string, enabledCount, disabledCount int) 
 			} `json:"linters"`
 		}
 
-		if err := json.Unmarshal(data, &config); err == nil {
+		if err = json.Unmarshal(data, &config); err == nil {
 			enabledCount = len(config.Linters.Enable)
 			disabledCount = len(config.Linters.Disable)
 		}
@@ -1027,7 +1032,7 @@ func applyCodeFormattingInModule(module ModuleInfo, _ Lint) error {
 
 	// Ensure we change back to original directory
 	defer func() {
-		if err := os.Chdir(originalDir); err != nil {
+		if err = os.Chdir(originalDir); err != nil {
 			utils.Error("Failed to change back to original directory: %v", err)
 		}
 	}()
