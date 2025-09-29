@@ -641,148 +641,178 @@ type CommandInfo struct {
 // ============================================================================
 
 // Build namespace methods
+
+// Default builds the application for the current platform
 func (b Build) Default() error {
 	var impl mage.Build
 	return impl.Default()
 }
 
+// All builds for all configured platforms
 func (b Build) All() error {
 	var impl mage.Build
 	return impl.All()
 }
 
-// Platform method requires parameters, not suitable for namespace syntax
+// Linux builds for Linux (amd64)
 func (b Build) Linux() error {
 	var impl mage.Build
 	return impl.Linux()
 }
 
+// Darwin builds for macOS (amd64 and arm64)
 func (b Build) Darwin() error {
 	var impl mage.Build
 	return impl.Darwin()
 }
 
+// Windows builds for Windows (amd64)
 func (b Build) Windows() error {
 	var impl mage.Build
 	return impl.Windows()
 }
 
+// Clean removes build artifacts
 func (b Build) Clean() error {
 	var impl mage.Build
 	return impl.Clean()
 }
 
+// Generate runs go generate
 func (b Build) Generate() error {
 	var impl mage.Build
 	return impl.Generate()
 }
 
+// Install installs the binary to $GOPATH/bin
 func (b Build) Install() error {
 	var impl mage.Build
 	return impl.Install()
 }
 
+// Dev builds and installs the binary with forced dev version for local development
 func (b Build) Dev() error {
 	var impl mage.Build
 	return impl.Dev()
 }
 
 // Test namespace methods
+
+// Default runs the default test suite (unit tests only)
 func (t Test) Default() error {
 	var impl mage.Test
 	return impl.Default(getMageArgs()...)
 }
 
+// Full runs the complete test suite with linting
 func (t Test) Full() error {
 	var impl mage.Test
 	return impl.Full(getMageArgs()...)
 }
 
+// Unit runs unit tests
 func (t Test) Unit() error {
 	var impl mage.Test
 	return impl.Unit(getMageArgs()...)
 }
 
+// Short runs short tests (excludes integration tests)
 func (t Test) Short() error {
 	var impl mage.Test
 	return impl.Short(getMageArgs()...)
 }
 
+// Race runs tests with race detector
 func (t Test) Race() error {
 	var impl mage.Test
 	return impl.Race(getMageArgs()...)
 }
 
+// Cover runs tests with coverage
 func (t Test) Cover() error {
 	var impl mage.Test
 	return impl.Cover(getMageArgs()...)
 }
 
+// CoverRace runs tests with both coverage and race detector
 func (t Test) CoverRace() error {
 	var impl mage.Test
 	return impl.CoverRace(getMageArgs()...)
 }
 
+// CoverReport shows coverage report
 func (t Test) CoverReport() error {
 	var impl mage.Test
 	return impl.CoverReport()
 }
 
+// CoverHTML generates HTML coverage report
 func (t Test) CoverHTML() error {
 	var impl mage.Test
 	return impl.CoverHTML()
 }
 
+// Fuzz runs fuzz tests with configurable time
 func (t Test) Fuzz() error {
 	var impl mage.Test
 	return impl.Fuzz(getMageArgs()...)
 }
 
+// FuzzShort runs fuzz tests with configurable time (default: 5s for quick feedback)
 func (t Test) FuzzShort() error {
 	var impl mage.Test
 	return impl.FuzzShort(getMageArgs()...)
 }
 
+// Bench runs benchmarks
 func (t Test) Bench() error {
 	var impl mage.Test
 	return impl.Bench(getMageArgs()...)
 }
 
+// BenchShort runs benchmarks with shorter duration for quick feedback
 func (t Test) BenchShort() error {
 	var impl mage.Test
 	return impl.BenchShort(getMageArgs()...)
 }
 
+// Integration runs integration tests
 func (t Test) Integration() error {
 	var impl mage.Test
 	return impl.Integration()
 }
 
+// CI runs the CI test suite
 func (t Test) CI() error {
 	var impl mage.Test
 	return impl.CI()
 }
 
+// Parallel runs tests in parallel (faster for large repos)
 func (t Test) Parallel() error {
 	var impl mage.Test
 	return impl.Parallel()
 }
 
+// NoLint runs tests without linting
 func (t Test) NoLint() error {
 	var impl mage.Test
 	return impl.NoLint()
 }
 
+// CINoRace runs CI tests without race detector
 func (t Test) CINoRace() error {
 	var impl mage.Test
 	return impl.CINoRace()
 }
 
+// Run runs tests
 func (t Test) Run() error {
 	var impl mage.Test
 	return impl.Run()
 }
 
+// Coverage generates test coverage
 func (t Test) Coverage() error {
 	var impl mage.Test
 	return impl.Coverage(getMageArgs()...)
@@ -794,69 +824,94 @@ func (l Lint) Default() error {
 	return impl.Default()
 }
 
+// Fix runs golangci-lint with auto-fix and applies code formatting
 func (l Lint) Fix() error {
 	var impl mage.Lint
 	return impl.Fix()
 }
 
+// Fmt runs go fmt
 func (l Lint) Fmt() error {
 	var impl mage.Lint
 	return impl.Fmt()
 }
 
+// Fumpt runs gofumpt for stricter formatting with retry logic
 func (l Lint) Fumpt() error {
 	var impl mage.Lint
 	return impl.Fumpt()
 }
 
+// Vet runs go vet
 func (l Lint) Vet() error {
 	var impl mage.Lint
 	return impl.Vet()
 }
 
+// VetParallel runs go vet in parallel
 func (l Lint) VetParallel() error {
 	var impl mage.Lint
 	return impl.VetParallel()
 }
 
+// Version shows golangci-lint version
 func (l Lint) Version() error {
 	var impl mage.Lint
 	return impl.Version()
 }
 
+// All runs all linters
 func (l Lint) All() error {
 	var impl mage.Lint
 	return impl.All()
 }
 
+// Go runs Go-specific linters
 func (l Lint) Go() error {
 	var impl mage.Lint
 	return impl.Go()
 }
 
+// YAML runs YAML linters
 func (l Lint) YAML() error {
 	var impl mage.Lint
 	return impl.YAML()
 }
 
+// JSON runs JSON linters
 func (l Lint) JSON() error {
 	var impl mage.Lint
 	return impl.JSON()
 }
 
+// Config runs configuration linters
 func (l Lint) Config() error {
 	var impl mage.Lint
 	return impl.Config()
 }
 
+// CI runs linters for CI environment
 func (l Lint) CI() error {
 	var impl mage.Lint
 	return impl.CI()
 }
 
+// Fast runs fast linters only
 func (l Lint) Fast() error {
 	var impl mage.Lint
 	return impl.Fast()
+}
+
+// Issues scans the codebase for TODOs, FIXMEs, HACKs, nolint directives, test skips, and disabled files
+func (l Lint) Issues() error {
+	var impl mage.Lint
+	return impl.Issues()
+}
+
+// Verbose runs the default linting with explicit verbose output control
+func (l Lint) Verbose() error {
+	var impl mage.Lint
+	return impl.Verbose()
 }
 
 // Deps namespace methods
