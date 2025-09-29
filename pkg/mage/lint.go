@@ -64,7 +64,7 @@ func (Lint) Default() error {
 
 	// Ensure golangci-lint is installed
 	utils.Info("Checking golangci-lint installation...")
-	if err := ensureGolangciLint(config); err != nil {
+	if err = ensureGolangciLint(config); err != nil {
 		return err
 	}
 
@@ -87,7 +87,8 @@ func (Lint) Default() error {
 			rootConfig := ".golangci.json"
 			if utils.FileExists(rootConfig) {
 				// Use absolute path to root config
-				absPath, err := filepath.Abs(rootConfig)
+				var absPath string
+				absPath, err = filepath.Abs(rootConfig)
 				if err != nil {
 					utils.Warn("Failed to get absolute path for config: %v", err)
 					absPath = rootConfig
@@ -112,7 +113,7 @@ func (Lint) Default() error {
 			args = append(args, "--verbose")
 		}
 
-		err := runCommandInModule(module, "golangci-lint", args...)
+		err = runCommandInModule(module, "golangci-lint", args...)
 		if err != nil {
 			hasError = true
 			utils.Error("golangci-lint failed for %s", module.Relative)
@@ -123,7 +124,7 @@ func (Lint) Default() error {
 		// Run go vet
 		goVersion := getLinterVersion("go", "version")
 		utils.Info("Running go vet (%s)...", goVersion)
-		if err := runVetInModule(module, config); err != nil {
+		if err = runVetInModule(module, config); err != nil {
 			hasError = true
 			utils.Error("go vet failed for %s", module.Relative)
 		} else {
