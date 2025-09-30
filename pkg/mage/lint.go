@@ -537,10 +537,26 @@ func (Lint) Version() error {
 		}
 	}
 
-	fmt.Printf("\nConfigured version: %s\n", config.Lint.GolangciVersion)
+	// Get versions
+	configuredEnvVersion := GetToolVersion("golangci-lint")
+	installedVersion := getLinterVersion("golangci-lint")
+
+	fmt.Printf("\nVersion Information:\n")
+	if configuredEnvVersion != "" {
+		fmt.Printf("  Configured (.env.base): %s\n", configuredEnvVersion)
+	} else {
+		fmt.Printf("  Configured (.env.base): not set (source .github/.env.base)\n")
+	}
+
+	fmt.Printf("  Configured (mage.yaml): %s\n", config.Lint.GolangciVersion)
 
 	if utils.CommandExists("golangci-lint") {
-		utils.Info("Installed version:")
+		fmt.Printf("  Installed: %s\n", installedVersion)
+
+		// Check for version mismatch
+		checkLinterVersionMismatch(installedVersion)
+
+		fmt.Printf("\nFull version details:\n")
 		return GetRunner().RunCmd("golangci-lint", "--version")
 	}
 
@@ -964,6 +980,34 @@ func getLinterConfigInfo() (configFile string, enabledCount, disabledCount int) 
 	return configFile, enabledCount, disabledCount
 }
 
+// checkLinterVersionMismatch checks if the installed linter version matches the configured version
+func checkLinterVersionMismatch(installedVersion string) {
+	// Get configured version from environment
+	configuredVersion := GetToolVersion("golangci-lint")
+
+	// Skip check if no configured version is set
+	if configuredVersion == "" {
+		return
+	}
+
+	// Skip check if linter is not installed
+	if installedVersion == "not installed" || installedVersion == statusUnknown {
+		return
+	}
+
+	// Normalize versions for comparison (remove 'v' prefix if present)
+	normalizedConfigured := strings.TrimPrefix(configuredVersion, "v")
+	normalizedInstalled := strings.TrimPrefix(installedVersion, "v")
+
+	// Compare versions
+	if normalizedConfigured != normalizedInstalled {
+		utils.Warn("⚠️  Version mismatch detected:")
+		utils.Warn("    Configured version (MAGE_X_GOLANGCI_LINT_VERSION): %s", configuredVersion)
+		utils.Warn("    Installed version: %s", installedVersion)
+		utils.Warn("    💡 To fix: source .github/.env.base or reinstall golangci-lint")
+	}
+}
+
 // displayLinterConfig displays linter configuration information
 func displayLinterConfig() {
 	configFile, enabledCount, disabledCount := getLinterConfigInfo()
@@ -983,6 +1027,9 @@ func displayLinterConfig() {
 			utils.Info("Using golangci-lint %s", golangciVersion)
 		}
 	}
+
+	// Check for version mismatch
+	checkLinterVersionMismatch(golangciVersion)
 
 	// Display build tags information and verbose mode status
 	config, err := GetConfig()
