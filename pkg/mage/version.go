@@ -39,6 +39,7 @@ var (
 	errUnexpectedlyLargeVersionJump = errors.New("unexpectedly large version jump")
 	errBranchNotFound               = errors.New("branch does not exist locally or remotely")
 	errTagAlreadyExistsOnRemote     = errors.New("tag already exists on remote")
+	errMaxAutoIncrementAttempts     = errors.New("could not find available version after 100 attempts")
 )
 
 // statusUnknown represents an unknown status
@@ -357,21 +358,40 @@ func (Version) Bump(args ...string) error {
 		return fmt.Errorf("failed to bump version: %w", err)
 	}
 
+	// Find next available version (auto-increment if tag exists from different branch)
+	finalVersion, skippedVersions, err := findNextAvailableVersion(newVersion, bumpType)
+	if err != nil {
+		return fmt.Errorf("failed to find available version: %w", err)
+	}
+
+	// If we skipped versions, inform the user
+	if len(skippedVersions) > 0 {
+		utils.Warn("⚠️  Skipped versions (exist from other branches): %s", strings.Join(skippedVersions, ", "))
+		utils.Info("Using next available version: %s", finalVersion)
+	}
+
+	// Use the final available version
+	newVersion = finalVersion
+
 	// Check for version gaps and warn about them
 	gapWarnings := detectVersionGaps(current, newVersion)
 	for _, warning := range gapWarnings {
 		utils.Warn("⚠️  %s", warning)
 	}
 
-	// Validate version progression
-	if err := validateVersionProgression(current, newVersion, bumpType); err != nil {
-		return err
+	// Validate version progression (skip if we auto-incremented due to conflicts)
+	if len(skippedVersions) == 0 {
+		if validationErr := validateVersionProgression(current, newVersion, bumpType); validationErr != nil {
+			return validationErr
+		}
+	} else {
+		utils.Info("Version validation skipped (auto-incremented due to existing tags)")
 	}
 
-	// Additional check for unexpected version jumps (beyond validation errors)
-	if !dryRun {
-		if err := checkForUnexpectedVersionJump(current, newVersion, bumpType); err != nil {
-			utils.Warn("⚠️  %s", err.Error())
+	// Additional check for unexpected version jumps (skip if we auto-incremented)
+	if !dryRun && len(skippedVersions) == 0 {
+		if jumpErr := checkForUnexpectedVersionJump(current, newVersion, bumpType); jumpErr != nil {
+			utils.Warn("⚠️  %s", jumpErr.Error())
 			if !utils.IsParamTrue(params, "force") {
 				utils.Warn("To proceed anyway, add 'force' parameter")
 				utils.Warn("Or use 'dry-run' to preview the change first")
@@ -410,13 +430,24 @@ func (Version) Bump(args ...string) error {
 		return nil
 	}
 
-	// Create annotated tag
-	message := fmt.Sprintf("GitHubRelease %s", newVersion)
-	if err := GetRunner().RunCmd("git", "tag", "-a", newVersion, "-m", message); err != nil {
-		return fmt.Errorf("failed to create tag: %w", err)
+	// Check if tag already exists on HEAD (from findNextAvailableVersion check)
+	exists, pointsToHEAD, err := checkLocalTagExists(newVersion)
+	if err != nil {
+		return fmt.Errorf("failed to check tag existence: %w", err)
 	}
 
-	utils.Success("✅ Created tag: %s", newVersion)
+	// Only create tag if it doesn't already exist on HEAD
+	if exists && pointsToHEAD {
+		utils.Success("✅ Tag %s already exists on current commit", newVersion)
+	} else {
+		// Create annotated tag
+		message := fmt.Sprintf("GitHubRelease %s", newVersion)
+		if err := GetRunner().RunCmd("git", "tag", "-a", newVersion, "-m", message); err != nil {
+			return fmt.Errorf("failed to create tag: %w", err)
+		}
+
+		utils.Success("✅ Created tag: %s", newVersion)
+	}
 
 	// Push if requested
 	shouldPush := utils.IsParamTrue(params, "push")
@@ -476,6 +507,73 @@ func handlePushTag(newVersion string) error {
 	}
 	utils.Success("✅ Tag pushed to remote")
 	return nil
+}
+
+// checkLocalTagExists checks if a tag exists locally and whether it points to HEAD
+func checkLocalTagExists(tagName string) (exists, pointsToHEAD bool, err error) {
+	// Check if tag exists locally
+	output, err := GetRunner().RunCmdOutput("git", "tag", "-l", tagName)
+	if err != nil {
+		return false, false, fmt.Errorf("failed to check local tag: %w", err)
+	}
+
+	// If output is empty, tag doesn't exist
+	if strings.TrimSpace(output) == "" {
+		return false, false, nil
+	}
+
+	// Tag exists, now check if it points to HEAD
+	tagCommit, err := GetRunner().RunCmdOutput("git", "rev-parse", tagName)
+	if err != nil {
+		return true, false, fmt.Errorf("failed to get tag commit: %w", err)
+	}
+
+	headCommit, err := GetRunner().RunCmdOutput("git", "rev-parse", "HEAD")
+	if err != nil {
+		return true, false, fmt.Errorf("failed to get HEAD commit: %w", err)
+	}
+
+	pointsToHEAD = strings.TrimSpace(tagCommit) == strings.TrimSpace(headCommit)
+	return true, pointsToHEAD, nil
+}
+
+// findNextAvailableVersion finds the next available version tag by auto-incrementing
+func findNextAvailableVersion(initialVersion, bumpType string) (string, []string, error) {
+	skippedVersions := []string{}
+	currentVersion := initialVersion
+
+	// Try up to 100 times to find an available version (safety limit)
+	for i := 0; i < 100; i++ {
+		exists, pointsToHEAD, err := checkLocalTagExists(currentVersion)
+		if err != nil {
+			return "", nil, err
+		}
+
+		// If tag doesn't exist, we found our version
+		if !exists {
+			return currentVersion, skippedVersions, nil
+		}
+
+		// If tag exists and points to HEAD, we're done (tag already on this commit)
+		if pointsToHEAD {
+			utils.Info("Tag %s already exists on current commit", currentVersion)
+			return currentVersion, skippedVersions, nil
+		}
+
+		// Tag exists but points elsewhere - skip it and increment using the same bump type
+		// This ensures v1.3.0 → minor → v1.4.0 (exists) → v1.5.0 (not v1.4.1)
+		skippedVersions = append(skippedVersions, currentVersion)
+		utils.Warn("Tag %s already exists (from different branch), trying next version...", currentVersion)
+
+		// Auto-increment using the same bump type to maintain semantic versioning
+		nextVersion, err := bumpVersion(currentVersion, bumpType)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to auto-increment version: %w", err)
+		}
+		currentVersion = nextVersion
+	}
+
+	return "", nil, errMaxAutoIncrementAttempts
 }
 
 // Changelog generates a changelog for the current version
