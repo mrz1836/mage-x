@@ -38,6 +38,7 @@ var (
 	errUnexpectedMajorVersionJump   = errors.New("unexpected major version jump")
 	errUnexpectedlyLargeVersionJump = errors.New("unexpectedly large version jump")
 	errBranchNotFound               = errors.New("branch does not exist locally or remotely")
+	errTagAlreadyExistsOnRemote     = errors.New("tag already exists on remote")
 )
 
 // statusUnknown represents an unknown status
@@ -438,6 +439,20 @@ func handlePushTag(newVersion string) error {
 		utils.Warn("⚠️  Git remote validation failed: %s", err.Error())
 		utils.Info("To push manually later, run: git push origin %s", newVersion)
 		return nil // Don't fail the entire operation, just skip the push
+	}
+
+	// Check if tag already exists on remote to provide a better error message
+	remoteTagCheck, err := GetRunner().RunCmdOutput("git", "ls-remote", "--tags", "origin", newVersion)
+	if err == nil && strings.Contains(remoteTagCheck, newVersion) {
+		utils.Error("❌ Tag %s already exists on remote", newVersion)
+		utils.Warn("💡 This usually means:")
+		utils.Warn("   • The tag was created from a different branch")
+		utils.Warn("   • Another developer created this tag")
+		utils.Warn("   • Your local tags were out of sync with remote")
+		utils.Info("To see all remote tags: git ls-remote --tags origin")
+		utils.Info("To fetch all remote tags: git fetch --tags origin")
+		utils.Info("To see where the remote tag points: git ls-remote --tags origin %s", newVersion)
+		return fmt.Errorf("%w: %s", errTagAlreadyExistsOnRemote, newVersion)
 	}
 
 	utils.Info("Pushing tag to remote...")
@@ -1100,8 +1115,9 @@ func checkoutBranch(branch string) error {
 func pullLatestBranch() error {
 	utils.Info("Pulling latest changes...")
 
-	// Fetch first to get latest remote changes
-	if err := GetRunner().RunCmd("git", "fetch", "origin"); err != nil {
+	// Fetch first to get latest remote changes AND all tags
+	// Using --tags ensures we fetch tags from all branches, not just the current one
+	if err := GetRunner().RunCmd("git", "fetch", "--tags", "origin"); err != nil {
 		return fmt.Errorf("failed to fetch from origin: %w", err)
 	}
 

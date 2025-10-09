@@ -42,6 +42,7 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
+		mockRunner.SetOutput("git ls-remote --tags origin v1.3.28", "")                                                                    // Tag doesn't exist on remote yet
 
 		version := Version{}
 
@@ -66,10 +67,10 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		require.True(t, mockRunner.HasCommand(expectedCheckoutCmd),
 			"Expected checkout command not found. Commands: %v", commands)
 
-		// Check that we fetched and pulled latest changes
-		expectedFetchCmd := []string{"git", "fetch", "origin"}
+		// Check that we fetched and pulled latest changes (with --tags to get all remote tags)
+		expectedFetchCmd := []string{"git", "fetch", "--tags", "origin"}
 		require.True(t, mockRunner.HasCommand(expectedFetchCmd),
-			"Expected fetch command not found. Commands: %v", commands)
+			"Expected fetch --tags command not found. Commands: %v", commands)
 
 		expectedPullCmd := []string{"git", "pull", "--rebase", "origin"}
 		require.True(t, mockRunner.HasCommand(expectedPullCmd),
@@ -116,10 +117,10 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		require.False(t, mockRunner.HasCommand(expectedCheckoutCmd),
 			"Should not checkout when already on target branch. Commands: %v", commands)
 
-		// Should still pull latest changes
-		expectedFetchCmd := []string{"git", "fetch", "origin"}
+		// Should still pull latest changes (with --tags to get all remote tags)
+		expectedFetchCmd := []string{"git", "fetch", "--tags", "origin"}
 		require.True(t, mockRunner.HasCommand(expectedFetchCmd),
-			"Expected fetch command not found. Commands: %v", commands)
+			"Expected fetch --tags command not found. Commands: %v", commands)
 
 		expectedPullCmd := []string{"git", "pull", "--rebase", "origin"}
 		require.True(t, mockRunner.HasCommand(expectedPullCmd),
@@ -234,7 +235,7 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		// Should NOT have actual checkout, fetch, pull, tag, or push commands in dry-run
 		forbiddenCommands := [][]string{
 			{"git", "checkout", "master"},
-			{"git", "fetch", "origin"},
+			{"git", "fetch", "--tags", "origin"},
 			{"git", "pull", "--rebase", "origin"},
 			{"git", "tag", "-a", "v1.3.28", "-m", "GitHubRelease v1.3.28"},
 			{"git", "push", "origin", "v1.3.28"},
