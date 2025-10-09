@@ -1117,8 +1117,23 @@ func pullLatestBranch() error {
 
 	// Fetch first to get latest remote changes AND all tags
 	// Using --tags ensures we fetch tags from all branches, not just the current one
-	if err := GetRunner().RunCmd("git", "fetch", "--tags", "origin"); err != nil {
-		return fmt.Errorf("failed to fetch from origin: %w", err)
+	err := GetRunner().RunCmd("git", "fetch", "--tags", "origin")
+	if err != nil {
+		// Check if error is due to tag conflicts (would clobber existing tag)
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "would clobber") {
+			utils.Warn("⚠️  Local tags conflict with remote tags - updating local tags to match remote")
+			utils.Info("This happens when local tags point to different commits than remote tags")
+
+			// Retry with --force to update local tags to match remote
+			// This is safe because we're only fetching, not pushing
+			if forceErr := GetRunner().RunCmd("git", "fetch", "--tags", "--force", "origin"); forceErr != nil {
+				return fmt.Errorf("failed to force-fetch tags from origin: %w", forceErr)
+			}
+			utils.Info("✅ Local tags updated to match remote")
+		} else {
+			return fmt.Errorf("failed to fetch from origin: %w", err)
+		}
 	}
 
 	// Pull with rebase to keep clean history

@@ -7,7 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var errNetworkError = errors.New("network error")
+var (
+	errNetworkError    = errors.New("network error")
+	errWouldClobberTag = errors.New("! [rejected] v1.4.0 -> v1.4.0 (would clobber existing tag)")
+)
 
 // TestVersionBumpWithRemoteTagsNotFetched tests version bump when remote has tags not fetched locally
 func TestVersionBumpWithRemoteTagsNotFetched(t *testing.T) {
@@ -182,6 +185,35 @@ func TestPullLatestBranchFetchesTags(t *testing.T) {
 		err := pullLatestBranch()
 		require.Error(t, err, "Should return error when fetch fails")
 		require.Contains(t, err.Error(), "failed to fetch from origin", "Error should indicate fetch failure")
+	})
+
+	t.Run("TagConflictRetryWithForce", func(t *testing.T) {
+		mockRunner := NewVersionBumpMockRunner()
+		require.NoError(t, SetRunner(mockRunner))
+
+		// Mock initial fetch failure with "would clobber" error
+		mockRunner.SetError("git fetch --tags origin", errWouldClobberTag)
+
+		// Mock successful force fetch
+		mockRunner.SetOutput("git fetch --tags --force origin", "")
+		mockRunner.SetOutput("git pull --rebase origin", "Already up to date.")
+
+		// Call pullLatestBranch directly
+		err := pullLatestBranch()
+		require.NoError(t, err, "Should succeed when retrying with --force")
+
+		// Verify both commands were called in sequence
+		commands := mockRunner.GetCommands()
+
+		// Should have tried normal fetch first
+		expectedFetchCmd := []string{"git", "fetch", "--tags", "origin"}
+		require.True(t, mockRunner.HasCommand(expectedFetchCmd),
+			"Expected 'git fetch --tags origin' to be tried first. Commands: %v", commands)
+
+		// Should have retried with force
+		expectedForceFetchCmd := []string{"git", "fetch", "--tags", "--force", "origin"}
+		require.True(t, mockRunner.HasCommand(expectedForceFetchCmd),
+			"Expected 'git fetch --tags --force origin' to be called after failure. Commands: %v", commands)
 	})
 }
 
