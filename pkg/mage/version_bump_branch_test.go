@@ -67,10 +67,10 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		require.True(t, mockRunner.HasCommand(expectedCheckoutCmd),
 			"Expected checkout command not found. Commands: %v", commands)
 
-		// Check that we fetched and pulled latest changes (with --tags to get all remote tags)
-		expectedFetchCmd := []string{"git", "fetch", "--tags", "origin"}
+		// Check that we fetched and pulled latest changes (with --tags --force to get all remote tags)
+		expectedFetchCmd := []string{"git", "fetch", "--tags", "--force", "origin"}
 		require.True(t, mockRunner.HasCommand(expectedFetchCmd),
-			"Expected fetch --tags command not found. Commands: %v", commands)
+			"Expected fetch --tags --force command not found. Commands: %v", commands)
 
 		expectedPullCmd := []string{"git", "pull", "--rebase", "origin"}
 		require.True(t, mockRunner.HasCommand(expectedPullCmd),
@@ -117,10 +117,10 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		require.False(t, mockRunner.HasCommand(expectedCheckoutCmd),
 			"Should not checkout when already on target branch. Commands: %v", commands)
 
-		// Should still pull latest changes (with --tags to get all remote tags)
-		expectedFetchCmd := []string{"git", "fetch", "--tags", "origin"}
+		// Should still pull latest changes (with --tags --force to get all remote tags)
+		expectedFetchCmd := []string{"git", "fetch", "--tags", "--force", "origin"}
 		require.True(t, mockRunner.HasCommand(expectedFetchCmd),
-			"Expected fetch --tags command not found. Commands: %v", commands)
+			"Expected fetch --tags --force command not found. Commands: %v", commands)
 
 		expectedPullCmd := []string{"git", "pull", "--rebase", "origin"}
 		require.True(t, mockRunner.HasCommand(expectedPullCmd),
@@ -235,7 +235,7 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		// Should NOT have actual checkout, fetch, pull, tag, or push commands in dry-run
 		forbiddenCommands := [][]string{
 			{"git", "checkout", "master"},
-			{"git", "fetch", "--tags", "origin"},
+			{"git", "fetch", "--tags", "--force", "origin"},
 			{"git", "pull", "--rebase", "origin"},
 			{"git", "tag", "-a", "v1.3.28", "-m", "GitHubRelease v1.3.28"},
 			{"git", "push", "origin", "v1.3.28"},
