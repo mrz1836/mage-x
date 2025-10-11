@@ -932,7 +932,7 @@ func (d Deps) Tidy() error {
 
 func (d Deps) Update() error {
 	var impl mage.Deps
-	return impl.Update()
+	return impl.UpdateWithArgs(getMageArgs()...)
 }
 
 func (d Deps) Clean() error {

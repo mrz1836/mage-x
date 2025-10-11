@@ -180,6 +180,12 @@ func (Deps) UpdateWithArgs(argsList ...string) error {
 		}
 	}
 
+	// Update indirect dependencies
+	utils.Info("Updating indirect dependencies...")
+	if err = GetRunner().RunCmd("go", "get", "-u", "./..."); err != nil {
+		utils.Warn("Failed to update indirect dependencies: %v", err)
+	}
+
 	// Tidy after updates
 	if tidyErr := (Deps{}).Tidy(); tidyErr != nil {
 		return tidyErr
