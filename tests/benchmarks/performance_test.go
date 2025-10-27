@@ -677,4 +677,3 @@ func BenchmarkWithMetrics(b *testing.B) {
 	duration := time.Since(start)
 	reportPerformanceMetrics(b, "string_formatting", duration)
 }
-
