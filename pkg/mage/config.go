@@ -539,7 +539,12 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 func applyToolVersionEnvOverrides(cfg *ToolsConfig) {
 	// Core linting tools
 	if v := utils.GetEnvClean("MAGE_X_GOLANGCI_LINT_VERSION"); v != "" {
+		fmt.Printf("🔍 DEBUG: MAGE_X_GOLANGCI_LINT_VERSION from env: %q\n", v)
 		cfg.GolangciLint = v
+		fmt.Printf("🔍 DEBUG: cfg.Tools.GolangciLint set to: %q\n", cfg.GolangciLint)
+	} else {
+		fmt.Printf("🔍 DEBUG: MAGE_X_GOLANGCI_LINT_VERSION is empty or not set\n")
+		fmt.Printf("🔍 DEBUG: cfg.Tools.GolangciLint will remain: %q\n", cfg.GolangciLint)
 	}
 	if v := utils.GetEnvClean("MAGE_X_GOFUMPT_VERSION"); v != "" {
 		cfg.Fumpt = v
