@@ -694,8 +694,15 @@ func ensureGolangciLint(cfg *Config) error {
 		UserAgent:         cfg.Download.UserAgent,
 	}
 
+	// Determine the correct golangci-lint version to install
+	// Use cfg.Tools.GolangciLint (populated from env) instead of cfg.Lint.GolangciVersion (defaults to "latest")
+	golangciVersion := cfg.Tools.GolangciLint
+	if golangciVersion == "" || golangciVersion == VersionLatest {
+		golangciVersion = GetDefaultGolangciLintVersion()
+	}
+
 	installScriptURL := "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
-	scriptArgs := fmt.Sprintf("-- -b %s %s", binPath, cfg.Lint.GolangciVersion)
+	scriptArgs := fmt.Sprintf("-- -b %s %s", binPath, golangciVersion)
 
 	// Download and execute the installation script with retry logic
 	err := utils.DownloadScript(ctx, installScriptURL, scriptArgs, downloadConfig)
@@ -703,7 +710,7 @@ func ensureGolangciLint(cfg *Config) error {
 		// Fallback to direct command execution with retry
 		utils.Warn("Script download failed: %v, trying direct curl command...", err)
 
-		cmd := fmt.Sprintf("curl -sSfL %s | sh -s -- -b %s %s", installScriptURL, binPath, cfg.Lint.GolangciVersion)
+		cmd := fmt.Sprintf("curl -sSfL %s | sh -s -- -b %s %s", installScriptURL, binPath, golangciVersion)
 		shell, shellArgs := utils.GetShell()
 
 		// Get the secure executor with retry capabilities
