@@ -336,6 +336,17 @@ func TestYamlfmtConfigPathHandling(t *testing.T) {
 		err = os.WriteFile(".github/.yamlfmt", []byte(configContent), 0o600)
 		require.NoError(t, err)
 
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+
 		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
@@ -366,6 +377,17 @@ func TestYamlfmtConfigPathHandling(t *testing.T) {
 
 		err = os.Chdir(tmpDir)
 		require.NoError(t, err)
+
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
 
 		// Save original runner
 		originalRunner := GetRunner()

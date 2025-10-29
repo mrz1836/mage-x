@@ -397,6 +397,17 @@ func checkColonSpacing(t *testing.T, line, filename string, lineNum int) {
 // TestYamlfmtMockScenarios tests yamlfmt with mock command runner scenarios
 func TestYamlfmtMockScenarios(t *testing.T) {
 	t.Run("successful yamlfmt formatting", func(t *testing.T) {
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+
 		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
@@ -429,6 +440,17 @@ func TestYamlfmtMockScenarios(t *testing.T) {
 		require.NoError(t, err)
 		err = os.WriteFile(".github/.yamlfmt", []byte("formatter:\n  type: basic\n"), 0o600)
 		require.NoError(t, err)
+
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
 
 		// Save original runner
 		originalRunner := GetRunner()
@@ -483,6 +505,17 @@ func TestYamlfmtMockScenarios(t *testing.T) {
 	})
 
 	t.Run("yamlfmt execution fails", func(t *testing.T) {
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+
 		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
@@ -517,6 +550,17 @@ func TestYamlfmtMockScenarios(t *testing.T) {
 		err = os.WriteFile(".github/.yamlfmt", []byte("formatter:\n  type: basic\n"), 0o600)
 		require.NoError(t, err)
 
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+
 		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
@@ -539,6 +583,17 @@ func TestYamlfmtMockScenarios(t *testing.T) {
 // TestYamlfmtMockInstallationScenarios tests yamlfmt installation scenarios with mocks
 func TestYamlfmtMockInstallationScenarios(t *testing.T) {
 	t.Run("yamlfmt installation success", func(t *testing.T) {
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+
 		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
@@ -612,6 +667,17 @@ func TestYamlfmtEdgeCases(t *testing.T) {
 	})
 
 	t.Run("yaml alias method", func(t *testing.T) {
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+
 		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
@@ -630,6 +696,17 @@ func TestYamlfmtEdgeCases(t *testing.T) {
 	})
 
 	t.Run("exclude paths handling", func(t *testing.T) {
+		// Disable YAML validation for this test
+		originalValidation := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalValidation == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalValidation) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+
 		// Test that exclude paths are properly applied to YAML find command
 		originalEnv := os.Getenv("MAGE_X_FORMAT_EXCLUDE_PATHS")
 		defer func() {
@@ -664,6 +741,17 @@ func TestYamlfmtEdgeCases(t *testing.T) {
 // TestYamlfmtWithDifferentRunners tests yamlfmt with different types of command runners
 func TestYamlfmtWithDifferentRunners(t *testing.T) {
 	t.Run("with mock command runner", func(t *testing.T) {
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+
 		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
@@ -681,6 +769,17 @@ func TestYamlfmtWithDifferentRunners(t *testing.T) {
 	})
 
 	t.Run("with mock secure command runner", func(t *testing.T) {
+		// Disable YAML validation for this test
+		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
+		defer func() {
+			if originalEnv == "" {
+				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
+			}
+		}()
+		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+
 		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup

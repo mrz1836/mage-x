@@ -417,6 +417,57 @@ func (Format) Go() error {
 	return runner.RunCmd("gofmt", "-w", ".")
 }
 
+// validateYAMLFiles checks YAML files for potential issues before formatting
+// Returns lists of safe and problematic files
+func validateYAMLFiles(files []string, maxLineLen int) (safeFiles, problematicFiles []string) {
+	for _, file := range files {
+		hasLongLines, lineNum, lineLen, err := utils.CheckFileLineLength(file, maxLineLen)
+		if err != nil {
+			utils.Warn("Error checking %s: %v (skipping)", file, err)
+			problematicFiles = append(problematicFiles, fmt.Sprintf("%s (error: %v)", file, err))
+			continue
+		}
+
+		if hasLongLines {
+			utils.Warn("Skipping %s: line %d exceeds safe length (%s bytes)",
+				file, lineNum, utils.FormatBytes(int64(lineLen)))
+			problematicFiles = append(problematicFiles,
+				fmt.Sprintf("%s (line %d: %s)", file, lineNum, utils.FormatBytes(int64(lineLen))))
+		} else {
+			safeFiles = append(safeFiles, file)
+		}
+	}
+	return safeFiles, problematicFiles
+}
+
+// formatYAMLFile formats a single YAML file with yamlfmt
+func formatYAMLFile(file, configPath string) error {
+	if utils.FileExists(configPath) {
+		return GetRunner().RunCmd("yamlfmt", "-conf", configPath, file)
+	}
+	return GetRunner().RunCmd("yamlfmt", file)
+}
+
+// formatYAMLFilesIndividually formats each YAML file individually
+func formatYAMLFilesIndividually(files []string, configPath string) error {
+	var lastErr error
+	for _, file := range files {
+		if err := formatYAMLFile(file, configPath); err != nil {
+			utils.Warn("Failed to format %s: %v", file, err)
+			lastErr = err
+		}
+	}
+	return lastErr
+}
+
+// formatAllYAMLFiles formats all YAML files at once
+func formatAllYAMLFiles(configPath string) error {
+	if utils.FileExists(configPath) {
+		return GetRunner().RunCmd("yamlfmt", "-conf", configPath, ".")
+	}
+	return GetRunner().RunCmd("yamlfmt", ".")
+}
+
 // YAML formats YAML files
 func (Format) YAML() error {
 	utils.Header("Formatting YAML Files")
@@ -424,37 +475,84 @@ func (Format) YAML() error {
 	// Find YAML files
 	findArgs := []string{".", "-name", "*.yml", "-o", "-name", "*.yaml"}
 	findArgs = append(findArgs, buildFindExcludeArgs()...)
-	yamlFiles, err := GetRunner().RunCmdOutput("find", findArgs...)
+	yamlFilesOutput, err := GetRunner().RunCmdOutput("find", findArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to find YAML files: %w", err)
 	}
 
-	if yamlFiles == "" {
+	if yamlFilesOutput == "" {
 		utils.Info("No YAML files found")
 		return nil
 	}
+
+	// Parse file list
+	yamlFiles := strings.Split(strings.TrimSpace(yamlFilesOutput), "\n")
+	yamlFiles = filterEmpty(yamlFiles)
+
+	if len(yamlFiles) == 0 {
+		utils.Info("No YAML files found")
+		return nil
+	}
+
+	utils.Info("Found %d YAML files", len(yamlFiles))
 
 	// Ensure yamlfmt is available for YAML formatting
 	if err = ensureYamlfmt(); err != nil {
 		return fmt.Errorf("failed to ensure yamlfmt is available: %w", err)
 	}
 
-	utils.Info("Formatting YAML files with yamlfmt...")
+	// Check if validation is enabled (default: true)
+	validationEnabled := utils.GetEnvBool(EnvYAMLValidation, true)
+
+	var safeFiles, problematicFiles []string
+
+	if validationEnabled {
+		utils.Info("Pre-validating YAML files for line length issues...")
+		safeFiles, problematicFiles = validateYAMLFiles(yamlFiles, MaxYAMLLineLength)
+
+		if len(problematicFiles) > 0 {
+			utils.Warn("Skipped %d files with line length issues:", len(problematicFiles))
+			for _, file := range problematicFiles {
+				utils.Warn("  - %s", file)
+			}
+			utils.Info("Suggestion: Split long lines, use yamlfmt exclude list, or set %s=false", EnvYAMLValidation)
+		}
+
+		if len(safeFiles) == 0 {
+			utils.Warn("No safe YAML files to format")
+			return nil
+		}
+
+		utils.Info("Formatting %d safe YAML files...", len(safeFiles))
+	} else {
+		utils.Info("YAML validation disabled - formatting all files with yamlfmt...")
+		safeFiles = yamlFiles
+	}
 
 	// Use yamlfmt with config file
 	configPath := ".github/.yamlfmt"
-	if utils.FileExists(configPath) {
-		if err := GetRunner().RunCmd("yamlfmt", "-conf", configPath, "."); err != nil {
-			return fmt.Errorf("yamlfmt formatting failed: %w", err)
-		}
+	var yamlfmtErr error
+
+	// Choose formatting strategy based on whether we have problematic files
+	needsIndividualFormatting := validationEnabled && len(safeFiles) < len(yamlFiles)
+	if needsIndividualFormatting {
+		// Format only safe files individually to avoid yamlfmt processing problematic ones
+		yamlfmtErr = formatYAMLFilesIndividually(safeFiles, configPath)
 	} else {
-		// Fallback to default yamlfmt behavior
-		if err := GetRunner().RunCmd("yamlfmt", "."); err != nil {
-			return fmt.Errorf("yamlfmt formatting failed: %w", err)
-		}
+		// Format all files at once (original behavior)
+		yamlfmtErr = formatAllYAMLFiles(configPath)
 	}
 
-	utils.Success("YAML files formatted")
+	if yamlfmtErr != nil {
+		return fmt.Errorf("yamlfmt formatting failed: %w", yamlfmtErr)
+	}
+
+	if len(problematicFiles) > 0 {
+		utils.Success("YAML files formatted (%d formatted, %d skipped)", len(safeFiles), len(problematicFiles))
+	} else {
+		utils.Success("YAML files formatted (%d files)", len(safeFiles))
+	}
+
 	return nil
 }
 

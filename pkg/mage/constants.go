@@ -137,6 +137,17 @@ const (
 	CoverModeAtomic = "atomic"
 )
 
+// YAML formatting constants
+const (
+	// MaxYAMLLineLength is the maximum safe line length for YAML files
+	// Set to 60KB to stay safely under bufio.Scanner's 64KB token limit
+	MaxYAMLLineLength = 60000
+
+	// EnvYAMLValidation is the environment variable to disable YAML validation
+	// Set to "false" to skip pre-validation checks
+	EnvYAMLValidation = "MAGE_X_YAML_VALIDATION"
+)
+
 // GetMageXEnv returns the value of a MAGE-X environment variable with the proper prefix
 func GetMageXEnv(suffix string) string {
 	return os.Getenv(EnvPrefix + suffix)
