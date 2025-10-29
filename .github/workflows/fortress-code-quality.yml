@@ -232,16 +232,6 @@ jobs:
           echo "GOLANGCI_LINT_CACHE=$HOME/.cache/golangci-lint" >> $GITHUB_ENV
 
       # --------------------------------------------------------------------
-      # Extract golangci-lint version (MAGE-X managed)
-      # --------------------------------------------------------------------
-      - name: 🔍 Use MAGE-X managed golangci-lint version
-        id: golangci-lint-version
-        run: |
-          # MAGE-X handles golangci-lint version automatically
-          echo "✅ Using MAGE-X managed golangci-lint version"
-          echo "version=${{ env.MAGE_X_GOLANGCI_LINT_VERSION }}" >> $GITHUB_OUTPUT
-
-      # --------------------------------------------------------------------
       # Setup Go with caching and version management
       # --------------------------------------------------------------------
       - name: 🏗️ Setup Go with Cache
@@ -279,7 +269,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ env.GOLANGCI_LINT_CACHE }}
-          key: ${{ inputs.primary-runner }}-golangci-lint-analysis-${{ hashFiles('.golangci.json', env.GO_SUM_FILE) }}-${{ steps.golangci-lint-version.outputs.version }}
+          key: ${{ inputs.primary-runner }}-golangci-lint-analysis-${{ hashFiles('.golangci.json', env.GO_SUM_FILE) }}
 
       - name: 🔍 Debug cache usage
         run: |
@@ -296,6 +286,7 @@ jobs:
           echo "🧹 Running code linting with golangci-lint..."
           echo "💾 Golangci-lint cache location: $GOLANGCI_LINT_CACHE"
           echo "📁 Module cache path: $GOMODCACHE"
+          echo "🔍 MAGE_X_GOLANGCI_LINT_VERSION: ${MAGE_X_GOLANGCI_LINT_VERSION:-not set}"
 
           # Export the cache directory for golangci-lint
           export GOLANGCI_LINT_CACHE=$GOLANGCI_LINT_CACHE
