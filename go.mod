@@ -1,6 +1,6 @@
 module github.com/mrz1836/mage-x
 
-go 1.24.0
+go 1.24.9
 
 require (
 	github.com/magefile/mage v1.15.0

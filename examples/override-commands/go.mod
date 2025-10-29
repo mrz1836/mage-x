@@ -1,6 +1,6 @@
 module github.com/mrz1836/mage-x/examples/override-commands
 
-go 1.24.0
+go 1.24.9
 
 require github.com/mrz1836/mage-x v1.7.5
 
