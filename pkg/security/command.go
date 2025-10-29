@@ -585,14 +585,15 @@ func isRetriableCommandError(err error) bool {
 	// Syscall errors that are retriable
 	var syscallErr syscall.Errno
 	if errors.As(err, &syscallErr) {
-		//nolint:exhaustive // Only specific network-related syscall errors are retriable
+		//nolint:exhaustive // Only specific network-related errors are retriable
 		switch syscallErr {
 		case syscall.ECONNRESET, syscall.ECONNREFUSED, syscall.ETIMEDOUT,
 			syscall.EHOSTUNREACH, syscall.ENETUNREACH:
 			return true
+		default:
+			// All other syscall errors are not retriable for security reasons
+			return false
 		}
-		// All other syscall errors are not retriable for security reasons
-		return false
 	}
 
 	// Exit errors with specific codes that may be network-related
