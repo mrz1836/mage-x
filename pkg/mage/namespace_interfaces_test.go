@@ -158,7 +158,7 @@ func (suite *NamespaceInterfacesTestSuite) TestConcurrentProviderSwitch() {
 
 	// Now test concurrent reads after setting a provider
 	// Set the last provider
-	SetNamespaceRegistryProvider(providers[len(providers)-1]) //nolint:gosec // G602: providers slice has fixed size of 3, cannot be empty
+	SetNamespaceRegistryProvider(providers[len(providers)-1])
 
 	results := make([]*DefaultNamespaceRegistry, numReaders)
 
@@ -175,7 +175,7 @@ func (suite *NamespaceInterfacesTestSuite) TestConcurrentProviderSwitch() {
 	wg.Wait()
 
 	// Verify all results are valid and the same
-	expectedRegistry := providers[len(providers)-1].registry //nolint:gosec // G602: providers slice has fixed size of 3, cannot be empty
+	expectedRegistry := providers[len(providers)-1].registry
 	for i, result := range results {
 		suite.NotNil(result, "Result %d should not be nil", i)
 		suite.Same(expectedRegistry, result, "All readers should get the same registry instance")
