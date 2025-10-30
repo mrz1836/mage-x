@@ -697,20 +697,9 @@ func ensureGolangciLint(cfg *Config) error {
 	// Determine the correct golangci-lint version to install
 	// Use cfg.Tools.GolangciLint (populated from env) instead of cfg.Lint.GolangciVersion (defaults to "latest")
 	golangciVersion := cfg.Tools.GolangciLint
-	fmt.Printf("🔍 DEBUG [lint.go]: cfg.Tools.GolangciLint = %q\n", golangciVersion)
-	fmt.Printf("🔍 DEBUG [lint.go]: VersionLatest constant = %q\n", VersionLatest)
-	fmt.Printf("🔍 DEBUG [lint.go]: Check - empty=%v, equals_latest=%v\n",
-		golangciVersion == "", golangciVersion == VersionLatest)
-
 	if golangciVersion == "" || golangciVersion == VersionLatest {
-		fmt.Printf("🔍 DEBUG [lint.go]: Condition TRUE - calling GetDefaultGolangciLintVersion()\n")
 		golangciVersion = GetDefaultGolangciLintVersion()
-		fmt.Printf("🔍 DEBUG [lint.go]: GetDefaultGolangciLintVersion() returned: %q\n", golangciVersion)
-	} else {
-		fmt.Printf("🔍 DEBUG [lint.go]: Condition FALSE - using cfg.Tools.GolangciLint value\n")
 	}
-
-	fmt.Printf("🔍 DEBUG [lint.go]: Final golangciVersion for installation: %q\n", golangciVersion)
 
 	installScriptURL := "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
 	scriptArgs := fmt.Sprintf("-- -b %s %s", binPath, golangciVersion)

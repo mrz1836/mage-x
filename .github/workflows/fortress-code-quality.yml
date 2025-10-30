@@ -288,11 +288,6 @@ jobs:
           echo "🧹 Running code linting with golangci-lint..."
           echo "💾 Golangci-lint cache location: $GOLANGCI_LINT_CACHE"
           echo "📁 Module cache path: $GOMODCACHE"
-          echo "🔍 MAGE_X_GOLANGCI_LINT_VERSION: ${MAGE_X_GOLANGCI_LINT_VERSION:-not set}"
-          echo ""
-          echo "🔍 All MAGE_X_* environment variables:"
-          env | grep '^MAGE_X_' | sort || echo "  No MAGE_X_* variables found"
-          echo ""
 
           # Export the cache directory for golangci-lint
           export GOLANGCI_LINT_CACHE=$GOLANGCI_LINT_CACHE
