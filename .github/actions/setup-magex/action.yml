@@ -70,8 +70,7 @@ runs:
         path: |
           ~/.cache/magex-local
         key: ${{ inputs.runner-os }}-local-magex-${{ github.sha }}
-        restore-keys: |
-          ${{ inputs.runner-os }}-local-magex-
+        # No restore-keys: local builds are commit-specific only to prevent stale cache issues
 
     # --------------------------------------------------------------------
     # Make cached magex usable by copying to GOPATH/bin and adding to PATH
