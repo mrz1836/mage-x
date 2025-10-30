@@ -60,6 +60,23 @@ runs:
         key: ${{ inputs.runner-os }}-magex-${{ inputs.magex-version }}
 
     # --------------------------------------------------------------------
+    # Install cached binary to PATH when remote cache hits
+    # --------------------------------------------------------------------
+    - name: 📦 Install cached MAGE-X to PATH (remote mode)
+      if: inputs.use-local != 'true' && steps.magex-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        echo "📦 Installing cached MAGE-X binary to PATH..."
+
+        # Copy cached binary to GOPATH and add to PATH
+        mkdir -p "$(go env GOPATH)/bin"
+        cp ~/.cache/magex-bin/magex "$(go env GOPATH)/bin/magex"
+        chmod +x "$(go env GOPATH)/bin/magex"
+        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+        echo "✅ Cached MAGE-X binary installed to PATH"
+
+    # --------------------------------------------------------------------
     # Restore local build cache (commit-specific for local builds)
     # --------------------------------------------------------------------
     - name: 💾 Restore magex binary cache (local)
@@ -71,6 +88,23 @@ runs:
           ~/.cache/magex-local
         key: ${{ inputs.runner-os }}-local-magex-${{ github.sha }}
         # No restore-keys: local builds are commit-specific only to prevent stale cache issues
+
+    # --------------------------------------------------------------------
+    # Install cached binary to PATH when local cache hits
+    # --------------------------------------------------------------------
+    - name: 📦 Install cached MAGE-X to PATH (local mode)
+      if: inputs.use-local == 'true' && steps.magex-local-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        echo "📦 Installing cached MAGE-X binary to PATH..."
+
+        # Copy cached binary to GOPATH and add to PATH
+        mkdir -p "$(go env GOPATH)/bin"
+        cp ~/.cache/magex-local/magex "$(go env GOPATH)/bin/magex"
+        chmod +x "$(go env GOPATH)/bin/magex"
+        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+        echo "✅ Cached MAGE-X binary installed to PATH"
 
     # --------------------------------------------------------------------
     # Download MAGE-X binary for remote mode when cache misses
