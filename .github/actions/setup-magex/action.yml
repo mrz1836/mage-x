@@ -105,7 +105,7 @@ runs:
     # Detect platform and download MAGE-X binary *only* when the cache was empty.
     # --------------------------------------------------------------------
     - name: ✅ Download MAGE-X binary (cache miss or local build skipped)
-      if: steps.magex-cache.outputs.cache-hit != 'true' && (inputs.use-local != 'true' || steps.build-local.outputs.success == 'false')
+      if: steps.magex-cache.outputs.cache-hit != 'true' && (inputs.use-local != 'true' || steps.build-local.outputs.success != 'true')
       shell: bash
       run: |
         echo "⬇️ Cache miss – downloading MAGE-X binary..."
