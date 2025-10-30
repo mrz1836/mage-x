@@ -104,8 +104,8 @@ runs:
     # --------------------------------------------------------------------
     # Detect platform and download MAGE-X binary *only* when the cache was empty.
     # --------------------------------------------------------------------
-    - name: ✅ Download MAGE-X binary (cache miss)
-      if: steps.magex-cache.outputs.cache-hit != 'true' && inputs.use-local != 'true'
+    - name: ✅ Download MAGE-X binary (cache miss or local build skipped)
+      if: steps.magex-cache.outputs.cache-hit != 'true' && (inputs.use-local != 'true' || steps.build-local.outputs.success == 'false')
       shell: bash
       run: |
         echo "⬇️ Cache miss – downloading MAGE-X binary..."
@@ -188,11 +188,21 @@ runs:
     # Build MAGE-X from local source (when use-local is true)
     # --------------------------------------------------------------------
     - name: 🔨 Build MAGE-X from local source
+      id: build-local
       if: inputs.use-local == 'true' && steps.magex-local-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         echo "📦 Building local development version of MAGE-X"
         cd "$GITHUB_WORKSPACE"
+
+        # Check if source directory exists (we're in mage-x repo with full checkout)
+        if [ ! -d "./cmd/magex" ]; then
+          echo "⚠️  ./cmd/magex directory not found - skipping local build"
+          echo "⚠️  This likely means use-local=true but not in mage-x repository or sparse checkout"
+          echo "⚠️  Will fall back to downloading from releases"
+          echo "success=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
 
         # Build from local source
         echo "🔨 Building magex from ./cmd/magex..."
@@ -210,6 +220,7 @@ runs:
         mkdir -p ~/.cache/magex-local
         cp /tmp/magex ~/.cache/magex-local/magex
 
+        echo "success=true" >> $GITHUB_OUTPUT
         echo "✅ MAGE-X built from local source and cached"
 
     # --------------------------------------------------------------------
