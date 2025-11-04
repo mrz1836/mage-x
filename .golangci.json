@@ -290,6 +290,7 @@
         "build-tags": [
             "mage"
         ],
+        "cache": true,
         "concurrency": 8,
         "exclude-dirs": [
             "vendor",
@@ -301,7 +302,7 @@
         ],
         "issues-exit-code": 1,
         "tests": true,
-        "timeout": "5m"
+        "timeout": "15m"
     },
     "severity": {
         "default": "warning",
