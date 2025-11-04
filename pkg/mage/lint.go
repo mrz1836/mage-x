@@ -124,6 +124,9 @@ func (Lint) Default() error {
 			args = append(args, "--verbose")
 		}
 
+		// Debug: Log the exact command being executed
+		utils.Info("Executing: golangci-lint %s", strings.Join(args, " "))
+
 		err = runCommandInModule(module, "golangci-lint", args...)
 		if err != nil {
 			hasError = true
@@ -255,6 +258,9 @@ func (Lint) Fix() error {
 		if shouldUseVerboseMode(config) {
 			args = append(args, "--verbose")
 		}
+
+		// Debug: Log the exact command being executed
+		utils.Info("Executing: golangci-lint %s", strings.Join(args, " "))
 
 		err = runCommandInModule(module, "golangci-lint", args...)
 		if err != nil {
