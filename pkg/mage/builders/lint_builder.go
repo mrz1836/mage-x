@@ -1,7 +1,9 @@
 package builders
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -54,15 +56,22 @@ func (b *LintCommandBuilder) BuildGolangciArgs(module Module, options LintOption
 	args := []string{"run"}
 
 	// Check for config file
+	var configPath string
 	if !options.NoConfig {
-		configPath := b.findLintConfig(module)
+		configPath = b.findLintConfig(module)
 		if configPath != "" {
 			args = append(args, "--config", configPath)
 		}
 	}
 
-	// Add timeout
-	if timeout := b.config.GetLint().GetTimeout(); timeout != "" {
+	// Add timeout - prefer config file timeout over mage config timeout
+	timeout := b.config.GetLint().GetTimeout()
+	if !options.NoConfig && configPath != "" {
+		if configTimeout, err := parseConfigTimeout(configPath); err == nil && configTimeout != "" {
+			timeout = configTimeout
+		}
+	}
+	if timeout != "" {
 		args = append(args, "--timeout", timeout)
 	}
 
@@ -219,4 +228,25 @@ func (b *LintCommandBuilder) findLintConfig(module Module) string {
 	}
 
 	return ""
+}
+
+// parseConfigTimeout reads timeout from golangci config file
+func parseConfigTimeout(configPath string) (string, error) {
+	cleanPath := filepath.Clean(configPath)
+	data, err := os.ReadFile(cleanPath)
+	if err != nil {
+		return "", err
+	}
+
+	var config struct {
+		Run struct {
+			Timeout string `json:"timeout"`
+		} `json:"run"`
+	}
+
+	if err = json.Unmarshal(data, &config); err != nil {
+		return "", err
+	}
+
+	return config.Run.Timeout, nil
 }

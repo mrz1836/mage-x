@@ -83,6 +83,7 @@ func (Lint) Default() error {
 
 		// Check for config file in root directory
 		configPath := filepath.Join(module.Path, ".golangci.json")
+		var actualConfigPath string
 		if !utils.FileExists(configPath) {
 			// Check in root directory
 			rootConfig := ".golangci.json"
@@ -95,13 +96,22 @@ func (Lint) Default() error {
 					absPath = rootConfig
 				}
 				args = append(args, "--config", absPath)
+				actualConfigPath = absPath
 			}
 		} else {
 			args = append(args, "--config", ".golangci.json")
+			actualConfigPath = configPath
 		}
 
-		if config.Lint.Timeout != "" {
-			args = append(args, "--timeout", config.Lint.Timeout)
+		// Use timeout from config file if available, otherwise use mage config
+		timeout := config.Lint.Timeout
+		if actualConfigPath != "" && utils.FileExists(actualConfigPath) {
+			if configTimeout, parseErr := parseGolangciTimeout(actualConfigPath); parseErr == nil && configTimeout != "" {
+				timeout = configTimeout
+			}
+		}
+		if timeout != "" {
+			args = append(args, "--timeout", timeout)
 		}
 
 		// Add build tags if configured
@@ -205,6 +215,7 @@ func (Lint) Fix() error {
 
 		// Check for config file
 		configPath := filepath.Join(module.Path, ".golangci.json")
+		var actualConfigPath string
 		if !utils.FileExists(configPath) {
 			// Check in root directory
 			rootConfig := ".golangci.json"
@@ -217,13 +228,22 @@ func (Lint) Fix() error {
 					absPath = rootConfig
 				}
 				args = append(args, "--config", absPath)
+				actualConfigPath = absPath
 			}
 		} else {
 			args = append(args, "--config", ".golangci.json")
+			actualConfigPath = configPath
 		}
 
-		if config.Lint.Timeout != "" {
-			args = append(args, "--timeout", config.Lint.Timeout)
+		// Use timeout from config file if available, otherwise use mage config
+		timeout := config.Lint.Timeout
+		if actualConfigPath != "" && utils.FileExists(actualConfigPath) {
+			if configTimeout, parseErr := parseGolangciTimeout(actualConfigPath); parseErr == nil && configTimeout != "" {
+				timeout = configTimeout
+			}
+		}
+		if timeout != "" {
+			args = append(args, "--timeout", timeout)
 		}
 
 		// Add build tags if configured
@@ -634,6 +654,27 @@ func parseVersionFromOutput(output string) string {
 	}
 
 	return strings.TrimSpace(firstLine)
+}
+
+// parseGolangciTimeout reads timeout from .golangci.json config file
+func parseGolangciTimeout(configPath string) (string, error) {
+	cleanPath := filepath.Clean(configPath)
+	data, err := os.ReadFile(cleanPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var config struct {
+		Run struct {
+			Timeout string `json:"timeout"`
+		} `json:"run"`
+	}
+
+	if err = json.Unmarshal(data, &config); err != nil {
+		return "", fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	return config.Run.Timeout, nil
 }
 
 // ensureGolangciLint ensures golangci-lint is installed with retry logic
