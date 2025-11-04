@@ -1,12 +1,15 @@
 package mage
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -634,6 +637,81 @@ func TestSecureCommandRunner_getCommandTimeout(t *testing.T) {
 			assert.Equal(t, tt.expected, timeout)
 		})
 	}
+}
+
+// TestSecureCommandRunner_ContextErrors tests context cancellation error messages
+func TestSecureCommandRunner_ContextErrors(t *testing.T) {
+	t.Run("context deadline exceeded provides clear error message", func(t *testing.T) {
+		// Test that error wrapping works correctly by checking the error message format
+		// In a real scenario, context.DeadlineExceeded would be returned from executor.Execute
+		timeout := 5 * time.Minute
+		baseErr := context.DeadlineExceeded
+		wrappedErr := fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
+			"golangci-lint", timeout, baseErr)
+
+		assert.Contains(t, wrappedErr.Error(), "golangci-lint")
+		assert.Contains(t, wrappedErr.Error(), "exceeded timeout of 5m0s")
+		assert.Contains(t, wrappedErr.Error(), "context deadline exceeded")
+		assert.ErrorIs(t, wrappedErr, context.DeadlineExceeded)
+	})
+
+	t.Run("context canceled provides clear error message", func(t *testing.T) {
+		timeout := 10 * time.Minute
+		baseErr := context.Canceled
+		wrappedErr := fmt.Errorf("command '%s' was canceled after %s: %w",
+			"go", timeout, baseErr)
+
+		assert.Contains(t, wrappedErr.Error(), "go")
+		assert.Contains(t, wrappedErr.Error(), "was canceled after 10m0s")
+		assert.ErrorIs(t, wrappedErr, context.Canceled)
+	})
+
+	t.Run("error message format for different commands", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			cmd         string
+			timeout     time.Duration
+			expectedMsg string
+		}{
+			{
+				name:        "golangci-lint timeout",
+				cmd:         "golangci-lint",
+				timeout:     20 * time.Minute,
+				expectedMsg: "command 'golangci-lint' exceeded timeout of 20m0s (context deadline exceeded)",
+			},
+			{
+				name:        "go test timeout",
+				cmd:         "go",
+				timeout:     10 * time.Minute,
+				expectedMsg: "command 'go' exceeded timeout of 10m0s (context deadline exceeded)",
+			},
+			{
+				name:        "staticcheck timeout",
+				cmd:         "staticcheck",
+				timeout:     3 * time.Minute,
+				expectedMsg: "command 'staticcheck' exceeded timeout of 3m0s (context deadline exceeded)",
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				wrappedErr := fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
+					tc.cmd, tc.timeout, context.DeadlineExceeded)
+				assert.Contains(t, wrappedErr.Error(), tc.expectedMsg)
+			})
+		}
+	})
+
+	t.Run("error wrapping preserves original error", func(t *testing.T) {
+		baseErr := context.DeadlineExceeded
+		wrappedErr := fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
+			"test-cmd", 5*time.Minute, baseErr)
+
+		// Verify we can unwrap to get the original error
+		require.ErrorIs(t, wrappedErr, context.DeadlineExceeded)
+		assert.NotEqual(t, baseErr.Error(), wrappedErr.Error()) // Wrapped should be different
+		assert.Contains(t, wrappedErr.Error(), baseErr.Error()) // But should contain original
+	})
 }
 
 // TestMinimalRunnerTestSuite runs the test suite

@@ -35,7 +35,20 @@ func (r *SecureCommandRunner) RunCmd(name string, args ...string) error {
 	timeout := r.getCommandTimeout(name, args)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	return r.executor.Execute(ctx, name, args...)
+
+	err := r.executor.Execute(ctx, name, args...)
+	if err != nil {
+		// Check if the error is due to context cancellation/timeout
+		if errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
+				name, timeout, err)
+		}
+		if errors.Is(err, context.Canceled) {
+			return fmt.Errorf("command '%s' was canceled after %s: %w",
+				name, timeout, err)
+		}
+	}
+	return err
 }
 
 // RunCmdOutput executes a command and returns its output
@@ -45,7 +58,19 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 	timeout := r.getCommandTimeout(name, args)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
 	output, err := r.executor.ExecuteOutput(ctx, name, args...)
+	if err != nil {
+		// Check if the error is due to context cancellation/timeout
+		if errors.Is(err, context.DeadlineExceeded) {
+			return strings.TrimSpace(output), fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
+				name, timeout, err)
+		}
+		if errors.Is(err, context.Canceled) {
+			return strings.TrimSpace(output), fmt.Errorf("command '%s' was canceled after %s: %w",
+				name, timeout, err)
+		}
+	}
 	return strings.TrimSpace(output), err
 }
 
