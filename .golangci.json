@@ -215,6 +215,9 @@
             },
             "govet": {
                 "check-shadowing": true,
+                "disable": [
+                    "buildtag"
+                ],
                 "enable": [
                     "atomicalign",
                     "shadow"
