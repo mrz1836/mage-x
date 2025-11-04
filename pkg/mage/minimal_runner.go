@@ -51,6 +51,22 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 
 // getCommandTimeout returns appropriate timeout based on command type
 func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time.Duration {
+	// For golangci-lint, check if --timeout flag is provided in args
+	if name == "golangci-lint" {
+		for i := 0; i < len(args)-1; i++ {
+			if args[i] == "--timeout" {
+				// Parse the timeout value from the next argument
+				if duration, err := time.ParseDuration(args[i+1]); err == nil {
+					// Add 5 minutes buffer to the configured timeout to prevent context cancellation
+					// before golangci-lint's own timeout
+					return duration + 5*time.Minute
+				}
+			}
+		}
+		// Default golangci-lint timeout if not specified (increased from 5m to 20m)
+		return 20 * time.Minute
+	}
+
 	// For go commands, use longer timeouts
 	if name == "go" {
 		if len(args) > 0 {
@@ -97,8 +113,6 @@ func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time
 	case "goreleaser":
 		// Allow 30 minutes for goreleaser (builds, tests, uploads)
 		return 30 * time.Minute
-	case "golangci-lint":
-		return 5 * time.Minute
 	case "staticcheck", "gosec", "govulncheck":
 		return 3 * time.Minute
 	default:

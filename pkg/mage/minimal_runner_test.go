@@ -542,10 +542,46 @@ func TestSecureCommandRunner_getCommandTimeout(t *testing.T) {
 			expected: 30 * time.Minute,
 		},
 		{
-			name:     "golangci-lint gets 5 minutes",
+			name:     "golangci-lint without --timeout flag gets 20 minutes default",
 			cmd:      "golangci-lint",
 			args:     []string{"run", "./..."},
-			expected: 5 * time.Minute,
+			expected: 20 * time.Minute,
+		},
+		{
+			name:     "golangci-lint with --timeout 15m gets 15m + 5m buffer",
+			cmd:      "golangci-lint",
+			args:     []string{"run", "./...", "--timeout", "15m"},
+			expected: 20 * time.Minute, // 15m + 5m buffer
+		},
+		{
+			name:     "golangci-lint with --timeout 10m gets 10m + 5m buffer",
+			cmd:      "golangci-lint",
+			args:     []string{"run", "./...", "--config", ".golangci.json", "--timeout", "10m"},
+			expected: 15 * time.Minute, // 10m + 5m buffer
+		},
+		{
+			name:     "golangci-lint with --timeout 30m gets 30m + 5m buffer",
+			cmd:      "golangci-lint",
+			args:     []string{"run", "--timeout", "30m", "./..."},
+			expected: 35 * time.Minute, // 30m + 5m buffer
+		},
+		{
+			name:     "golangci-lint with --timeout 1h gets 1h + 5m buffer",
+			cmd:      "golangci-lint",
+			args:     []string{"run", "./...", "--timeout", "1h"},
+			expected: 65 * time.Minute, // 1h + 5m buffer
+		},
+		{
+			name:     "golangci-lint with invalid --timeout falls back to default",
+			cmd:      "golangci-lint",
+			args:     []string{"run", "./...", "--timeout", "invalid"},
+			expected: 20 * time.Minute, // Falls back to default
+		},
+		{
+			name:     "golangci-lint with --timeout at end of args (no value)",
+			cmd:      "golangci-lint",
+			args:     []string{"run", "./...", "--timeout"},
+			expected: 20 * time.Minute, // Falls back to default (no value after flag)
 		},
 		{
 			name:     "staticcheck gets 3 minutes",
