@@ -404,8 +404,9 @@ func (pb *DefaultPathBuilder) isPathSafe(path string) bool {
 		return false
 	}
 
-	// Check for suspicious Unix paths (but only after path traversal check above)
-	if strings.HasPrefix(path, "/proc/") || strings.HasPrefix(path, "/dev/") {
+	// Check for suspicious Unix paths anywhere in the path (not just as prefix)
+	// This catches both absolute paths (/proc/...) and relative paths (0/proc/...)
+	if strings.Contains(path, "/proc/") || strings.Contains(path, "/dev/") {
 		return false
 	}
 
@@ -621,8 +622,9 @@ func (pb *DefaultPathBuilder) isWindowsSafe(path string) bool {
 
 // isUnixSafe checks Unix-specific security issues
 func (pb *DefaultPathBuilder) isUnixSafe(path string) bool {
-	// Check for suspicious Unix paths
-	return !strings.HasPrefix(path, "/proc/") && !strings.HasPrefix(path, "/dev/")
+	// Check for suspicious Unix paths anywhere in the path (not just as prefix)
+	// This catches both absolute paths (/proc/...) and relative paths (0/proc/...)
+	return !strings.Contains(path, "/proc/") && !strings.Contains(path, "/dev/")
 }
 
 // isLengthSafe checks if path length is safe
