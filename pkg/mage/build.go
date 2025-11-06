@@ -1128,7 +1128,9 @@ func buildFlags(cfg *Config) []string {
 
 	// Add ldflags
 	if len(cfg.Build.LDFlags) > 0 {
-		flags = append(flags, "-ldflags", strings.Join(cfg.Build.LDFlags, " "))
+		// Expand template variables in ldflags
+		expandedLDFlags := expandLDFlagsTemplates(cfg.Build.LDFlags)
+		flags = append(flags, "-ldflags", strings.Join(expandedLDFlags, " "))
 	} else {
 		// Default ldflags
 		ldflags := []string{
@@ -1162,6 +1164,28 @@ func buildFlags(cfg *Config) []string {
 	}
 
 	return flags
+}
+
+// expandLDFlagsTemplates expands template variables in ldflags
+func expandLDFlagsTemplates(ldflags []string) []string {
+	expanded := make([]string, len(ldflags))
+
+	// Get template values
+	version := getVersion()
+	commit := getCommit()
+	date := time.Now().Format(time.RFC3339)
+
+	// Expand each ldflag
+	for i, flag := range ldflags {
+		expanded[i] = flag
+		expanded[i] = strings.ReplaceAll(expanded[i], "{{.Version}}", version)
+		expanded[i] = strings.ReplaceAll(expanded[i], "{{.Commit}}", commit)
+		expanded[i] = strings.ReplaceAll(expanded[i], "{{.Date}}", date)
+		expanded[i] = strings.ReplaceAll(expanded[i], "{{.BuildDate}}", date)
+		expanded[i] = strings.ReplaceAll(expanded[i], "{{.BuildTime}}", date)
+	}
+
+	return expanded
 }
 
 // getVersion returns the current version

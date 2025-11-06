@@ -46,7 +46,7 @@ func (Install) Uninstall() error {
 	binaryName := config.Project.Binary
 	if binaryName == "" {
 		// Try to get from module name
-		if module, err := utils.GetModuleName(); err == nil {
+		if module, moduleErr := utils.GetModuleName(); moduleErr == nil {
 			parts := strings.Split(module, "/")
 			binaryName = parts[len(parts)-1]
 		} else {
@@ -92,7 +92,7 @@ func (Install) Default() error {
 	binaryName := config.Project.Binary
 	if binaryName == "" {
 		// Try to get from module name
-		if module, err := utils.GetModuleName(); err == nil {
+		if module, moduleErr := utils.GetModuleName(); moduleErr == nil {
 			parts := strings.Split(module, "/")
 			binaryName = parts[len(parts)-1]
 		} else {
@@ -114,22 +114,21 @@ func (Install) Default() error {
 
 	utils.Info("Installing to: %s", installPath)
 
+	// Determine package path using Build logic
+	builder := Build{}
+	packagePath, err := builder.determinePackagePath(config, installPath, true)
+	if err != nil {
+		return mageErrors.WrapError(err, "failed to determine package path")
+	}
+
 	// Build with installation flags
 	args := []string{"build", "-o", installPath}
 
-	// Add build flags
-	args = append(args, "-trimpath")
-
-	if len(config.Build.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
-	}
-
-	if len(config.Build.LDFlags) > 0 {
-		args = append(args, "-ldflags", strings.Join(config.Build.LDFlags, " "))
-	}
+	// Add build flags using the shared helper (handles template expansion)
+	args = append(args, buildFlags(config)...)
 
 	// Add main package
-	args = append(args, ".")
+	args = append(args, packagePath)
 
 	// Build and install
 	if err := GetRunner().RunCmd("go", args...); err != nil {
@@ -281,7 +280,7 @@ func (Install) SystemWide() error {
 	// Get binary name
 	binaryName := config.Project.Binary
 	if binaryName == "" {
-		if module, err := utils.GetModuleName(); err == nil {
+		if module, moduleErr := utils.GetModuleName(); moduleErr == nil {
 			parts := strings.Split(module, "/")
 			binaryName = parts[len(parts)-1]
 		} else {
@@ -294,18 +293,19 @@ func (Install) SystemWide() error {
 
 	utils.Info("Building binary...")
 
+	// Determine package path using Build logic
+	builder := Build{}
+	packagePath, err := builder.determinePackagePath(config, tempBinary, true)
+	if err != nil {
+		return mageErrors.WrapError(err, "failed to determine package path")
+	}
+
 	args := []string{"build", "-o", tempBinary}
-	args = append(args, "-trimpath")
 
-	if len(config.Build.Tags) > 0 {
-		args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
-	}
+	// Add build flags using the shared helper (handles template expansion)
+	args = append(args, buildFlags(config)...)
 
-	if len(config.Build.LDFlags) > 0 {
-		args = append(args, "-ldflags", strings.Join(config.Build.LDFlags, " "))
-	}
-
-	args = append(args, ".")
+	args = append(args, packagePath)
 
 	if err := GetRunner().RunCmd("go", args...); err != nil {
 		return mageErrors.WrapError(err, "build failed")
