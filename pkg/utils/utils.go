@@ -262,6 +262,10 @@ func ParsePlatform(s string) (Platform, error) {
 	if len(parts) != 2 {
 		return Platform{}, fmt.Errorf("%w: %s", errInvalidPlatformFormat, s)
 	}
+	// Validate that both OS and Arch are non-empty
+	if parts[0] == "" || parts[1] == "" {
+		return Platform{}, fmt.Errorf("%w: %s", errInvalidPlatformFormat, s)
+	}
 	return Platform{OS: parts[0], Arch: parts[1]}, nil
 }
 

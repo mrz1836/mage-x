@@ -126,12 +126,17 @@ func (d *BuildTagsDiscovery) parseBuildExpression(expr string) []string {
 	re := regexp.MustCompile(`\b[a-zA-Z][a-zA-Z0-9_]*\b`)
 	matches := re.FindAllString(expr, -1)
 
-	var tags []string
+	tags := make([]string, 0, len(matches))
 	for _, match := range matches {
 		// Skip logical operators
-		if match != "and" && match != "or" && match != "not" {
-			tags = append(tags, match)
+		if match == "and" || match == "or" || match == "not" {
+			continue
 		}
+		// Skip Go version tags (go1, go2, etc) as they're version constraints, not build tags
+		if strings.HasPrefix(match, "go") && len(match) >= 3 && match[2] >= '0' && match[2] <= '9' {
+			continue
+		}
+		tags = append(tags, match)
 	}
 
 	// Ensure we return an empty slice instead of nil for empty results
@@ -152,8 +157,8 @@ func (d *BuildTagsDiscovery) parseLegacyBuildExpression(expr string) []string {
 		commaParts := strings.Split(part, ",")
 
 		for _, commaPart := range commaParts {
-			// Remove negation prefix
-			tag := strings.TrimPrefix(commaPart, "!")
+			// Remove all leading negation prefixes (handle multiple ! like !! or !!!)
+			tag := strings.TrimLeft(commaPart, "!")
 			if tag != "" {
 				tags = append(tags, tag)
 			}
