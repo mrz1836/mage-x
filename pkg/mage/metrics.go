@@ -139,7 +139,7 @@ func (Metrics) Size() error {
 	utils.Info("Building binary...")
 	binaryName := "temp-size-check"
 	if runtime.GOOS == OSWindows {
-		binaryName += ".exe"
+		binaryName += windowsExeExt
 	}
 
 	if err := GetRunner().RunCmd("go", "build", "-o", binaryName); err != nil {

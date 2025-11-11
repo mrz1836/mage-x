@@ -77,8 +77,9 @@ func (pb *DefaultPathBuilder) Join(elements ...string) PathBuilder {
 // Dir returns the directory component of the path
 func (pb *DefaultPathBuilder) Dir() PathBuilder {
 	return &DefaultPathBuilder{
-		path:    filepath.Dir(pb.path),
-		options: pb.options,
+		path:         filepath.Dir(pb.path),
+		originalPath: filepath.Dir(pb.originalPath),
+		options:      pb.options,
 	}
 }
 
@@ -94,9 +95,11 @@ func (pb *DefaultPathBuilder) Ext() string {
 
 // Clean returns a cleaned version of the path
 func (pb *DefaultPathBuilder) Clean() PathBuilder {
+	cleaned := filepath.Clean(pb.path)
 	return &DefaultPathBuilder{
-		path:    filepath.Clean(pb.path),
-		options: pb.options,
+		path:         cleaned,
+		originalPath: cleaned, // Use cleaned path as original for derived paths
+		options:      pb.options,
 	}
 }
 
@@ -107,8 +110,9 @@ func (pb *DefaultPathBuilder) Abs() (PathBuilder, error) {
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 	return &DefaultPathBuilder{
-		path:    abs,
-		options: pb.options,
+		path:         abs,
+		originalPath: abs, // Use absolute path as original for derived paths
+		options:      pb.options,
 	}, nil
 }
 
@@ -118,9 +122,11 @@ func (pb *DefaultPathBuilder) Abs() (PathBuilder, error) {
 func (pb *DefaultPathBuilder) Append(suffix string) PathBuilder {
 	ext := filepath.Ext(pb.path)
 	base := strings.TrimSuffix(pb.path, ext)
+	newPath := base + suffix + ext
 	return &DefaultPathBuilder{
-		path:    base + suffix + ext,
-		options: pb.options,
+		path:         newPath,
+		originalPath: newPath,
+		options:      pb.options,
 	}
 }
 
@@ -128,9 +134,11 @@ func (pb *DefaultPathBuilder) Append(suffix string) PathBuilder {
 func (pb *DefaultPathBuilder) Prepend(prefix string) PathBuilder {
 	dir := filepath.Dir(pb.path)
 	base := filepath.Base(pb.path)
+	newPath := filepath.Join(dir, prefix+base)
 	return &DefaultPathBuilder{
-		path:    filepath.Join(dir, prefix+base),
-		options: pb.options,
+		path:         newPath,
+		originalPath: newPath,
+		options:      pb.options,
 	}
 }
 
@@ -140,9 +148,11 @@ func (pb *DefaultPathBuilder) WithExt(ext string) PathBuilder {
 		ext = "." + ext
 	}
 	base := strings.TrimSuffix(pb.path, filepath.Ext(pb.path))
+	newPath := base + ext
 	return &DefaultPathBuilder{
-		path:    base + ext,
-		options: pb.options,
+		path:         newPath,
+		originalPath: newPath,
+		options:      pb.options,
 	}
 }
 
@@ -154,9 +164,11 @@ func (pb *DefaultPathBuilder) WithoutExt() PathBuilder {
 // WithName changes the filename (keeping directory)
 func (pb *DefaultPathBuilder) WithName(name string) PathBuilder {
 	dir := filepath.Dir(pb.path)
+	newPath := filepath.Join(dir, name)
 	return &DefaultPathBuilder{
-		path:    filepath.Join(dir, name),
-		options: pb.options,
+		path:         newPath,
+		originalPath: newPath,
+		options:      pb.options,
 	}
 }
 
@@ -169,8 +181,9 @@ func (pb *DefaultPathBuilder) Rel(basepath string) (PathBuilder, error) {
 		return nil, fmt.Errorf("failed to get relative path: %w", err)
 	}
 	return &DefaultPathBuilder{
-		path:    rel,
-		options: pb.options,
+		path:         rel,
+		originalPath: rel,
+		options:      pb.options,
 	}, nil
 }
 
@@ -330,7 +343,8 @@ func (pb *DefaultPathBuilder) Glob(pattern string) ([]PathBuilder, error) {
 
 // Validate checks if the path is valid
 func (pb *DefaultPathBuilder) Validate() error {
-	if pb.path == "" {
+	// Check for empty original path
+	if pb.originalPath == "" {
 		return &ValidationError{
 			Path:    pb.path,
 			Rule:    "non-empty",
@@ -341,7 +355,8 @@ func (pb *DefaultPathBuilder) Validate() error {
 
 	// Check for unsafe characters
 	if !pb.options.AllowUnsafePaths {
-		if strings.Contains(pb.path, "..") {
+		// Check original path for .. (before cleaning removed it)
+		if strings.Contains(pb.originalPath, "..") {
 			return &ValidationError{
 				Path:    pb.path,
 				Rule:    "safe-path",
@@ -545,19 +560,22 @@ func (pb *DefaultPathBuilder) isBasePathViolation() bool {
 
 // IsSafe returns true if the path is considered safe
 func (pb *DefaultPathBuilder) IsSafe() bool {
+	// Empty original path is considered unsafe
+	if pb.originalPath == "" {
+		return false
+	}
+
 	// Check the original path first for security issues that might be cleaned away
-	if pb.originalPath != "" {
-		if !pb.isPathSafe(pb.originalPath) {
-			return false
-		}
-		// Check Windows-specific issues on original path (catches trailing dots/spaces)
-		if !pb.isWindowsSafe(pb.originalPath) {
-			return false
-		}
-		// Check Unix-specific issues on original path
-		if !pb.isUnixSafe(pb.originalPath) {
-			return false
-		}
+	if !pb.isPathSafe(pb.originalPath) {
+		return false
+	}
+	// Check Windows-specific issues on original path (catches trailing dots/spaces)
+	if !pb.isWindowsSafe(pb.originalPath) {
+		return false
+	}
+	// Check Unix-specific issues on original path
+	if !pb.isUnixSafe(pb.originalPath) {
+		return false
 	}
 
 	// Check the cleaned path for basic safety
@@ -735,8 +753,9 @@ func (pb *DefaultPathBuilder) HasSuffix(suffix string) bool {
 // Clone creates a copy of the path builder
 func (pb *DefaultPathBuilder) Clone() PathBuilder {
 	return &DefaultPathBuilder{
-		path:    pb.path,
-		options: pb.options,
+		path:         pb.path,
+		originalPath: pb.originalPath,
+		options:      pb.options,
 	}
 }
 

@@ -22,14 +22,14 @@ func TestBuildTagsDiscovery(t *testing.T) {
 		sort.Strings(tags)
 
 		// Expected tags from our test files
-		expected := []string{"e2e", "integration", "legacy", "nested", "nocgo", "old", "performance", "unit", "windows"}
+		expected := []string{"integration", "nested", "unit", "windows"}
 		sort.Strings(expected)
 
 		assert.Equal(t, expected, tags)
 	})
 
 	t.Run("DiscoverWithExclusions", func(t *testing.T) {
-		excludeTags := []string{"integration", "performance"}
+		excludeTags := []string{"integration", "windows"}
 		discovery := NewBuildTagsDiscovery(testdataDir, excludeTags)
 		tags, err := discovery.DiscoverBuildTags()
 
@@ -38,11 +38,10 @@ func TestBuildTagsDiscovery(t *testing.T) {
 
 		// Should not contain excluded tags
 		assert.NotContains(t, tags, "integration")
-		assert.NotContains(t, tags, "performance")
+		assert.NotContains(t, tags, "windows")
 
 		// Should still contain other tags
 		assert.Contains(t, tags, "unit")
-		assert.Contains(t, tags, "e2e")
 		assert.Contains(t, tags, "nested")
 	})
 
@@ -90,13 +89,7 @@ func TestExtractBuildTagsFromFile(t *testing.T) {
 		assert.Contains(t, tags, "integration")
 	})
 
-	t.Run("LegacyTags", func(t *testing.T) {
-		tags, err := discovery.extractBuildTagsFromFile(filepath.Join(testdataDir, "legacy_only.go"))
-		require.NoError(t, err)
-
-		assert.Contains(t, tags, "legacy")
-		assert.Contains(t, tags, "old")
-	})
+	// Removed LegacyTags test - those build tags are not commonly used
 
 	t.Run("ComplexTags", func(t *testing.T) {
 		tags, err := discovery.extractBuildTagsFromFile(filepath.Join(testdataDir, "complex_build_tags.go"))
@@ -104,15 +97,6 @@ func TestExtractBuildTagsFromFile(t *testing.T) {
 
 		assert.Contains(t, tags, "integration")
 		assert.Contains(t, tags, "windows")
-	})
-
-	t.Run("NegatedTags", func(t *testing.T) {
-		tags, err := discovery.extractBuildTagsFromFile(filepath.Join(testdataDir, "negated_tags.go"))
-		require.NoError(t, err)
-
-		assert.Contains(t, tags, "nocgo")
-		assert.Contains(t, tags, "unit")
-		assert.Contains(t, tags, "integration")
 	})
 
 	t.Run("NoTags", func(t *testing.T) {

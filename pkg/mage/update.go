@@ -510,6 +510,11 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 // validateExtractPath validates that a file path stays within the destination directory
 // and prevents directory traversal attacks (Zip Slip vulnerability)
 func validateExtractPath(destDir, tarPath string) (string, error) {
+	// Reject absolute paths in tar entries (Zip Slip defense)
+	if filepath.IsAbs(tarPath) {
+		return "", fmt.Errorf("%w: absolute path not allowed: %s", errPathTraversal, tarPath)
+	}
+
 	// Clean the destination directory path
 	destDir = filepath.Clean(destDir)
 

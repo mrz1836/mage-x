@@ -1,0 +1,11 @@
+test:
+  auto_discover_build_tags: true
+  auto_discover_build_tags_exclude:
+    - integration
+    - mage
+    - windows
+    - go1.18
+    - go1
+    - nocgo
+    - performance
+  timeout: "5m"
