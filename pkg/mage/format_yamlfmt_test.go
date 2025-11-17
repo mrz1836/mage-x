@@ -8,9 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 var (

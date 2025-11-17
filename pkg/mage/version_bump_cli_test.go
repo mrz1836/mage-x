@@ -4,8 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/mage/registry"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/mage/registry"
 )
 
 const (

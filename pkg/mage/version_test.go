@@ -11,9 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mrz1836/mage-x/pkg/utils"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // VersionTestSuite provides a comprehensive test suite for version management functionality

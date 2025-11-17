@@ -3,9 +3,10 @@ package auto
 import (
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // TestConvenienceWrapperFunctions tests all wrapper functions to ensure they can be called

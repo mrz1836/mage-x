@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mrz1836/mage-x/pkg/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 // Types are already defined in interfaces.go

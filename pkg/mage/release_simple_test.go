@@ -4,9 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 // ReleaseSimpleTestSuite provides simplified release testing

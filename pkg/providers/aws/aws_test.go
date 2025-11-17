@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mrz1836/mage-x/pkg/providers"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/providers"
 )
 
 // AWSProviderTestSuite defines the test suite for AWS provider

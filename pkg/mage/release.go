@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/magefile/mage/mg"
+
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 

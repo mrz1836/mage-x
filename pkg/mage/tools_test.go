@@ -8,10 +8,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
 // Static test errors to satisfy err113 linter

@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mrz1836/mage-x/pkg/providers"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/providers"
 )
 
 // AzureProviderTestSuite defines the test suite for Azure provider

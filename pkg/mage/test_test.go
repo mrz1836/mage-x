@@ -6,9 +6,10 @@ package mage
 import (
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
 func TestTestRun(t *testing.T) {

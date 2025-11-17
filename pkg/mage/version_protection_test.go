@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/utils"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // VersionProtectionTestSuite provides comprehensive tests to prevent unexpected version bumps

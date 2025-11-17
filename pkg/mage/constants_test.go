@@ -5,8 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
 // ConstantsTestSuite defines the test suite for constants

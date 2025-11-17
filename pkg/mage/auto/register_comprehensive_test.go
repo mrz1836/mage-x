@@ -5,10 +5,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/mage"
 )
 
 // AutoRegistrationTestSuite provides comprehensive tests for auto registration

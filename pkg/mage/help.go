@@ -9,10 +9,10 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/magefile/mage/mg"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/magefile/mage/mg"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 	"github.com/mrz1836/mage-x/pkg/utils"
