@@ -9,9 +9,10 @@ import (
 	"strings"
 
 	"github.com/magefile/mage/mg"
+	"gopkg.in/yaml.v3"
+
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
-	"gopkg.in/yaml.v3"
 )
 
 const (

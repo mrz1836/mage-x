@@ -11,9 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 	"github.com/mrz1836/mage-x/pkg/utils"
-	"github.com/stretchr/testify/suite"
 )
 
 // Static test errors to satisfy err113 linter

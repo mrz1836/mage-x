@@ -7,8 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
 // BenchTestSuite defines the test suite for Bench namespace methods

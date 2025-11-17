@@ -3,8 +3,9 @@ package mage
 import (
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/common/cache"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/common/cache"
 )
 
 // MockCacheManagerProvider is a mock implementation of CacheManagerProvider for testing

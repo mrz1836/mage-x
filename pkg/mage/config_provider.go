@@ -8,9 +8,10 @@ import (
 	"strings"
 	"sync"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
-	"gopkg.in/yaml.v3"
 )
 
 // ConfigProvider interface defines methods for configuration management
