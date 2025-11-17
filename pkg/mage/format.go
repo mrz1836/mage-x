@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/magefile/mage/mg"
+
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -35,6 +36,7 @@ func (Format) Default() error {
 	}{
 		{"gofmt", Format{}.Gofmt},
 		{"gofumpt", Format{}.Fumpt},
+		{"gci", Format{}.Gci},
 		{"goimports", Format{}.Imports},
 	}
 
@@ -129,6 +131,73 @@ func (Format) Imports() error {
 	return nil
 }
 
+// Gci organizes imports with gci (Go import organizer)
+func (Format) Gci() error {
+	utils.Header("Organizing Imports with gci")
+
+	// Ensure gci is installed
+	if err := ensureGci(); err != nil {
+		return err
+	}
+
+	// Build gci arguments
+	args := []string{"write", "--skip-generated"}
+
+	// Try to read gci configuration from .golangci.json
+	gciSections := getGciSectionsFromConfig()
+	if len(gciSections) > 0 {
+		utils.Info("Using gci sections from .golangci.json: %v", gciSections)
+		for _, section := range gciSections {
+			args = append(args, "-s", section)
+		}
+	} else {
+		// Default sections if no config found
+		utils.Info("Using default gci sections")
+		args = append(args, "-s", "standard", "-s", "default")
+	}
+
+	// Add current directory
+	args = append(args, ".")
+
+	// Run gci
+	utils.Info("Running gci...")
+	if err := GetRunner().RunCmd("gci", args...); err != nil {
+		return fmt.Errorf("gci failed: %w", err)
+	}
+
+	utils.Success("Import organization with gci complete")
+	return nil
+}
+
+// getGciSectionsFromConfig reads gci sections from .golangci.json
+func getGciSectionsFromConfig() []string {
+	configPath := ".golangci.json"
+	if !utils.FileExists(configPath) {
+		return nil
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil
+	}
+
+	var config struct {
+		Formatters struct {
+			Settings struct {
+				Gci struct {
+					Sections []string `json:"sections"`
+				} `json:"gci"`
+			} `json:"settings"`
+		} `json:"formatters"`
+	}
+
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil
+	}
+
+	return config.Formatters.Settings.Gci.Sections
+}
+
 // Check verifies formatting without making changes
 func (Format) Check() error {
 	utils.Header("Checking Code Format")
@@ -188,6 +257,7 @@ func (Format) InstallTools() error {
 		install func() error
 	}{
 		{"gofumpt", "mvdan.cc/gofumpt@latest", ensureGofumpt},
+		{"gci", "github.com/daixiang0/gci@latest", ensureGci},
 		{"goimports", "golang.org/x/tools/cmd/goimports@latest", ensureGoimports},
 		{"yamlfmt", "github.com/google/yamlfmt/cmd/yamlfmt@" + GetDefaultYamlfmtVersion(), ensureYamlfmt},
 	}
@@ -282,6 +352,46 @@ func ensureGoimports() error {
 	}
 
 	utils.Success("goimports installed successfully")
+	return nil
+}
+
+// ensureGci checks if gci is installed with retry logic
+func ensureGci() error {
+	if utils.CommandExists("gci") {
+		return nil
+	}
+
+	utils.Info("gci not found, installing with retry logic...")
+
+	config, err := GetConfig()
+	if err != nil {
+		// Use default config if loading fails
+		config = defaultConfig()
+	}
+
+	ctx := context.Background()
+	maxRetries := config.Download.MaxRetries
+	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
+
+	// Get the secure executor with retry capabilities
+	runner := GetRunner()
+	secureRunner, ok := runner.(*SecureCommandRunner)
+	if !ok {
+		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+	}
+	executor := secureRunner.executor
+	err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", "github.com/daixiang0/gci@latest")
+	if err != nil {
+		// Try with direct proxy as fallback
+		utils.Warn("Installation failed: %v, trying direct proxy...", err)
+
+		env := []string{"GOPROXY=direct"}
+		if err := executor.ExecuteWithEnv(ctx, env, "go", "install", "github.com/daixiang0/gci@latest"); err != nil {
+			return fmt.Errorf("failed to install gci after %d retries and fallback: %w", maxRetries, err)
+		}
+	}
+
+	utils.Success("gci installed successfully")
 	return nil
 }
 
@@ -665,6 +775,12 @@ func (Format) Fix() error {
 
 	if err := formatter.Fumpt(); err != nil {
 		utils.Warn("gofumpt failed: %v", err)
+	}
+
+	// Run gci BEFORE goimports to establish correct import order
+	// gci sets the order, goimports adds/removes imports while preserving it
+	if err := formatter.Gci(); err != nil {
+		utils.Warn("gci failed: %v", err)
 	}
 
 	if err := formatter.Imports(); err != nil {
