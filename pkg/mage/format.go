@@ -170,6 +170,7 @@ func (Format) Gci() error {
 }
 
 // getGciSectionsFromConfig reads gci sections from .golangci.json
+// and ensures required sections (standard, default) are present
 func getGciSectionsFromConfig() []string {
 	configPath := ".golangci.json"
 	if !utils.FileExists(configPath) {
@@ -195,7 +196,35 @@ func getGciSectionsFromConfig() []string {
 		return nil
 	}
 
-	return config.Formatters.Settings.Gci.Sections
+	sections := config.Formatters.Settings.Gci.Sections
+	if len(sections) == 0 {
+		return nil
+	}
+
+	// Check which required sections are already present
+	hasStandard := false
+	hasDefault := false
+	for _, section := range sections {
+		if section == "standard" {
+			hasStandard = true
+		}
+		if section == "default" {
+			hasDefault = true
+		}
+	}
+
+	// Build complete section list by prepending missing required sections
+	// This ensures gci can categorize all import types properly
+	var result []string
+	if !hasStandard {
+		result = append(result, "standard")
+	}
+	if !hasDefault {
+		result = append(result, "default")
+	}
+	result = append(result, sections...)
+
+	return result
 }
 
 // Check verifies formatting without making changes
