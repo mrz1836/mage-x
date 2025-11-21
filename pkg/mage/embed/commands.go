@@ -472,8 +472,16 @@ func registerDepsCommands(reg *registry.Registry) {
 	reg.MustRegister(
 		registry.NewNamespaceCommand("deps", "update").
 			WithDescription("Update all dependencies").
-			WithFunc(func() error { return d.Update() }).
+			WithArgsFunc(func(args ...string) error { return d.UpdateWithArgs(args...) }).
 			WithCategory("Dependencies").
+			WithUsage("magex deps:update [all-modules] [dry-run] [fail-fast] [allow-major] [stable-only] [verbose]").
+			WithExamples(
+				"magex deps:update",
+				"magex deps:update all-modules",
+				"magex deps:update all-modules dry-run",
+				"magex deps:update all-modules fail-fast verbose",
+				"magex deps:update all-modules allow-major stable-only verbose",
+			).
 			MustBuild(),
 	)
 

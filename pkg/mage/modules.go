@@ -198,3 +198,277 @@ func formatModuleErrors(errors []moduleError) error {
 
 	return fmt.Errorf("%w: errors in %d module(s):\n%s", errMultipleModuleErrors, len(errors), strings.Join(messages, "\n"))
 }
+
+// ModuleDependencies represents a module with its local dependencies
+type ModuleDependencies struct {
+	Module       ModuleInfo
+	Dependencies []string // Module paths this module depends on
+}
+
+// parseModuleDependencies reads a go.mod file and extracts local replace directives
+// to identify dependencies on other modules in the workspace
+func parseModuleDependencies(module ModuleInfo, allModulePaths map[string]bool) ([]string, error) {
+	goModPath := filepath.Join(module.Path, "go.mod")
+	content, err := os.ReadFile(goModPath) // #nosec G304 -- go.mod path from controlled module discovery
+	if err != nil {
+		return nil, fmt.Errorf("failed to read go.mod: %w", err)
+	}
+
+	var dependencies []string
+	lines := strings.Split(string(content), "\n")
+	inReplaceBlock := false
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Handle replace block
+		if strings.HasPrefix(line, "replace (") || strings.HasPrefix(line, "replace(") {
+			inReplaceBlock = true
+			continue
+		}
+		if inReplaceBlock && line == ")" {
+			inReplaceBlock = false
+			continue
+		}
+
+		// Parse replace directives (both single-line and block format)
+		var replaceLine string
+		if strings.HasPrefix(line, "replace ") && !inReplaceBlock {
+			replaceLine = strings.TrimPrefix(line, "replace ")
+		} else if inReplaceBlock && strings.Contains(line, "=>") {
+			replaceLine = line
+		}
+
+		if replaceLine != "" {
+			dep := parseReplaceDirective(replaceLine, allModulePaths)
+			if dep != "" {
+				dependencies = append(dependencies, dep)
+			}
+		}
+
+		// Also check require directives for direct dependencies on workspace modules
+		if strings.HasPrefix(line, "require ") || inRequireBlock(line, lines) {
+			dep := parseRequireDirective(line, allModulePaths)
+			if dep != "" && !contains(dependencies, dep) {
+				dependencies = append(dependencies, dep)
+			}
+		}
+	}
+
+	return dependencies, nil
+}
+
+// inRequireBlock is a helper that would need proper state tracking
+// For simplicity, we focus on replace directives which are the primary way
+// to link local modules
+func inRequireBlock(_ string, _ []string) bool {
+	return false // Replace directives are sufficient for local module ordering
+}
+
+// parseReplaceDirective extracts module path from a replace directive if it points to a local path
+// Format: "module/path => ../relative/path" or "module/path => /absolute/path"
+func parseReplaceDirective(line string, allModulePaths map[string]bool) string {
+	parts := strings.Split(line, "=>")
+	if len(parts) != 2 {
+		return ""
+	}
+
+	// Get the original module path (left side)
+	originalModule := strings.TrimSpace(strings.Fields(parts[0])[0])
+
+	// Get the replacement (right side)
+	replacement := strings.TrimSpace(parts[1])
+	replacementParts := strings.Fields(replacement)
+	if len(replacementParts) == 0 {
+		return ""
+	}
+	replacementPath := replacementParts[0]
+
+	// Check if this is a local path replacement (starts with . or /)
+	if strings.HasPrefix(replacementPath, ".") || strings.HasPrefix(replacementPath, "/") {
+		// This module depends on a local module
+		// Check if the original module is in our workspace
+		if allModulePaths[originalModule] {
+			return originalModule
+		}
+	}
+
+	return ""
+}
+
+// parseRequireDirective extracts module path from a require directive if it's a workspace module
+func parseRequireDirective(line string, allModulePaths map[string]bool) string {
+	line = strings.TrimPrefix(line, "require ")
+	parts := strings.Fields(line)
+	if len(parts) == 0 {
+		return ""
+	}
+
+	modulePath := parts[0]
+	if allModulePaths[modulePath] {
+		return modulePath
+	}
+	return ""
+}
+
+// contains checks if a slice contains a string
+func contains(slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
+}
+
+// sortModulesByDependency performs a topological sort of modules based on their dependencies
+// Modules that depend on others are processed after their dependencies
+// Falls back to root-first ordering if no inter-module dependencies exist
+func sortModulesByDependency(modules []ModuleInfo) ([]ModuleInfo, error) {
+	if len(modules) <= 1 {
+		return modules, nil
+	}
+
+	// Build a map of module paths for quick lookup
+	allModulePaths := make(map[string]bool)
+	moduleByPath := make(map[string]ModuleInfo)
+	for _, m := range modules {
+		allModulePaths[m.Module] = true
+		moduleByPath[m.Module] = m
+	}
+
+	// Parse dependencies for each module
+	moduleDeps := make(map[string][]string)
+	hasAnyDeps := false
+	for _, m := range modules {
+		deps, err := parseModuleDependencies(m, allModulePaths)
+		if err != nil {
+			utils.Warn("Failed to parse dependencies for %s: %v", m.Module, err)
+			deps = []string{}
+		}
+		moduleDeps[m.Module] = deps
+		if len(deps) > 0 {
+			hasAnyDeps = true
+		}
+	}
+
+	// If no inter-module dependencies, use root-first ordering
+	if !hasAnyDeps {
+		sortModules(modules)
+		return modules, nil
+	}
+
+	// Perform topological sort using Kahn's algorithm
+	// Calculate in-degree (number of dependencies) for each module
+	inDegree := make(map[string]int)
+	for _, m := range modules {
+		if _, exists := inDegree[m.Module]; !exists {
+			inDegree[m.Module] = 0
+		}
+		for _, dep := range moduleDeps[m.Module] {
+			// Ensure dep is initialized in the map (zero value if not present)
+			if _, exists := inDegree[dep]; !exists {
+				inDegree[dep] = 0
+			}
+		}
+	}
+
+	// For topological sort, we need reverse dependency tracking
+	// If A depends on B, B should come before A
+	// So we track: for each module, which modules depend on it
+	dependents := make(map[string][]string)
+	for modulePath, deps := range moduleDeps {
+		for _, dep := range deps {
+			dependents[dep] = append(dependents[dep], modulePath)
+		}
+	}
+
+	// Recalculate in-degree based on dependencies
+	for modulePath := range inDegree {
+		inDegree[modulePath] = len(moduleDeps[modulePath])
+	}
+
+	// Start with modules that have no dependencies
+	var queue []string
+	for _, m := range modules {
+		if inDegree[m.Module] == 0 {
+			queue = append(queue, m.Module)
+		}
+	}
+
+	var sorted []ModuleInfo
+	for len(queue) > 0 {
+		// Sort queue to ensure deterministic order (root first within same level)
+		sortQueue(queue, moduleByPath)
+
+		// Pop first element
+		current := queue[0]
+		queue = queue[1:]
+
+		sorted = append(sorted, moduleByPath[current])
+
+		// Reduce in-degree for modules that depend on this one
+		for _, dependent := range dependents[current] {
+			inDegree[dependent]--
+			if inDegree[dependent] == 0 {
+				queue = append(queue, dependent)
+			}
+		}
+	}
+
+	// Check for cycles
+	if len(sorted) != len(modules) {
+		utils.Warn("Circular dependencies detected, falling back to root-first ordering")
+		sortModules(modules)
+		return modules, nil
+	}
+
+	return sorted, nil
+}
+
+// sortQueue sorts the queue with root module first, then alphabetically
+func sortQueue(queue []string, moduleByPath map[string]ModuleInfo) {
+	for i := 0; i < len(queue); i++ {
+		for j := i + 1; j < len(queue); j++ {
+			mi := moduleByPath[queue[i]]
+			mj := moduleByPath[queue[j]]
+			// Root module first
+			if mj.IsRoot {
+				queue[i], queue[j] = queue[j], queue[i]
+			} else if !mi.IsRoot && queue[i] > queue[j] {
+				queue[i], queue[j] = queue[j], queue[i]
+			}
+		}
+	}
+}
+
+// displayModuleSummary displays a summary of found modules in dependency order
+func displayModuleSummary(modules []ModuleInfo, moduleDeps map[string][]string) {
+	utils.Info("\nFound %d modules (dependency order):", len(modules))
+
+	for i, m := range modules {
+		location := m.Relative
+		if location == "." {
+			location = "./"
+		} else {
+			location = "./" + location
+		}
+
+		deps := moduleDeps[m.Module]
+		if len(deps) > 0 {
+			// Show short dependency names
+			shortDeps := make([]string, len(deps))
+			for j, dep := range deps {
+				if idx := strings.LastIndex(dep, "/"); idx >= 0 {
+					shortDeps[j] = dep[idx+1:]
+				} else {
+					shortDeps[j] = dep
+				}
+			}
+			utils.Info("  %d. %-20s (%s) → depends on: %s", i+1, location, m.Module, strings.Join(shortDeps, ", "))
+		} else {
+			utils.Info("  %d. %-20s (%s)", i+1, location, m.Module)
+		}
+	}
+	utils.Info("")
+}

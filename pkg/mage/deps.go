@@ -66,14 +66,136 @@ func (Deps) Update() error {
 
 // UpdateWithArgs updates all dependencies with optional parameters
 // Supports:
+//   - all-modules: Update dependencies in all Go modules found in subdirectories (default: false)
+//   - dry-run: Preview which modules would be updated without executing (default: false)
+//   - fail-fast: Stop on first module error instead of continuing (default: false, continues all)
 //   - allow-major: Allow major version updates (default: false)
 //   - stable-only: Force downgrade from pre-release to stable versions (default: false)
 //   - verbose: Show detailed output for all package updates (default: false)
 func (Deps) UpdateWithArgs(argsList ...string) error {
-	utils.Header("Updating Dependencies")
-
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
+	allModules := utils.IsParamTrue(params, "all-modules")
+	dryRun := utils.IsParamTrue(params, "dry-run")
+	failFast := utils.IsParamTrue(params, "fail-fast")
+
+	if allModules {
+		return updateAllModules(params, dryRun, failFast)
+	}
+
+	return updateSingleModule(params)
+}
+
+// updateAllModules updates dependencies in all Go modules found in the workspace
+func updateAllModules(params map[string]string, dryRun, failFast bool) error {
+	utils.Header("Updating Dependencies (All Modules)")
+
+	// Find all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Info("No Go modules found in current directory")
+		return nil
+	}
+
+	// Build module path map for dependency analysis
+	allModulePaths := make(map[string]bool)
+	for _, m := range modules {
+		allModulePaths[m.Module] = true
+	}
+
+	// Parse dependencies for each module (for display)
+	moduleDeps := make(map[string][]string)
+	for _, m := range modules {
+		deps, parseErr := parseModuleDependencies(m, allModulePaths)
+		if parseErr != nil {
+			utils.Warn("Failed to parse dependencies for %s: %v", m.Module, parseErr)
+			deps = []string{}
+		}
+		moduleDeps[m.Module] = deps
+	}
+
+	// Sort modules by dependency order
+	sortedModules, err := sortModulesByDependency(modules)
+	if err != nil {
+		utils.Warn("Failed to sort modules by dependency: %v", err)
+		sortedModules = modules
+	}
+
+	// Display summary
+	displayModuleSummary(sortedModules, moduleDeps)
+
+	// If dry-run, stop here
+	if dryRun {
+		utils.Info("Dry-run mode: No updates will be performed")
+		return nil
+	}
+
+	// Process each module
+	var moduleErrors []moduleError
+	for _, module := range sortedModules {
+		displayModuleHeader(module, "Updating dependencies in")
+
+		// Save current directory
+		originalDir, dirErr := os.Getwd()
+		if dirErr != nil {
+			err := fmt.Errorf("failed to get current directory: %w", dirErr)
+			if failFast {
+				return err
+			}
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			continue
+		}
+
+		// Change to module directory
+		if chErr := os.Chdir(module.Path); chErr != nil {
+			err := fmt.Errorf("failed to change to directory %s: %w", module.Path, chErr)
+			if failFast {
+				return err
+			}
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			continue
+		}
+
+		// Update the module
+		updateErr := updateSingleModule(params)
+
+		// Change back to original directory
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			utils.Error("Failed to change back to original directory: %v", chErr)
+		}
+
+		if updateErr != nil {
+			if failFast {
+				return fmt.Errorf("failed to update %s: %w", module.Relative, updateErr)
+			}
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: updateErr})
+		}
+	}
+
+	// Report summary
+	if len(moduleErrors) > 0 {
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("\nSuccessfully updated dependencies in %d module(s)", len(sortedModules))
+	return nil
+}
+
+// updateSingleModule updates dependencies in the current module
+func updateSingleModule(params map[string]string) error {
+	utils.Header("Updating Dependencies")
+
+	// Ensure module is in a consistent state before capturing dependencies
+	// This handles modules with replace directives that may have drifted out of sync
+	if tidyErr := GetRunner().RunCmd("go", "mod", "tidy"); tidyErr != nil {
+		utils.Warn("Failed to pre-tidy module: %v", tidyErr)
+		// Continue anyway - captureAllDependencies may still work
+	}
+
 	allowMajor := utils.IsParamTrue(params, "allow-major")
 	stableOnly := utils.IsParamTrue(params, "stable-only")
 	verbose := utils.IsParamTrue(params, "verbose")
@@ -210,9 +332,9 @@ func (Deps) UpdateWithArgs(argsList ...string) error {
 	}
 
 	if skippedMajorCount > 0 {
-		utils.Info("\n📋 Skipped %d major version updates:", skippedMajorCount)
+		utils.Info("\n Skipped %d major version updates:", skippedMajorCount)
 		for _, update := range skippedMajorUpdates {
-			utils.Info("  • %s", update)
+			utils.Info("  - %s", update)
 		}
 		utils.Info("\nTo allow major version updates, run: magex deps:update allow-major")
 	}

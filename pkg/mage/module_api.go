@@ -20,3 +20,18 @@ func RunCommandInModule(module Module, command string, args ...string) error {
 func FormatModuleErrors(errors []ModuleError) error {
 	return formatModuleErrors(errors)
 }
+
+// SortModulesByDependency performs a topological sort of modules based on their dependencies
+func SortModulesByDependency(modules []Module) ([]Module, error) {
+	return sortModulesByDependency(modules)
+}
+
+// ParseModuleDependencies reads a go.mod file and extracts local replace directives
+func ParseModuleDependencies(module Module, allModulePaths map[string]bool) ([]string, error) {
+	return parseModuleDependencies(module, allModulePaths)
+}
+
+// DisplayModuleSummary displays a summary of found modules in dependency order
+func DisplayModuleSummary(modules []Module, moduleDeps map[string][]string) {
+	displayModuleSummary(modules, moduleDeps)
+}

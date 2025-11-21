@@ -418,6 +418,13 @@ magex deps:download       # Download all dependencies
 magex deps:outdated       # Show outdated dependencies
 magex deps:audit          # Audit dependencies for vulnerabilities
 
+# Multi-Module Update (for monorepos with multiple go.mod files)
+magex deps:update all-modules                    # Update all modules in workspace
+magex deps:update all-modules dry-run            # Preview modules without updating
+magex deps:update all-modules fail-fast          # Stop on first module error
+magex deps:update all-modules verbose            # Show detailed update info
+magex deps:update all-modules allow-major stable-only verbose fail-fast  # All options
+
 # Module Management
 magex mod:update          # Update go.mod file
 magex mod:tidy            # Tidy the go.mod file
