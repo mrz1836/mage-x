@@ -592,6 +592,33 @@ func (Test) Bench(argsList ...string) error {
 
 	displayTestHeader("benchmark", config)
 
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Filter out magefiles modules (they have special build constraints)
+	benchModules := make([]ModuleInfo, 0, len(modules))
+	for _, m := range modules {
+		if m.Name == "magefiles" {
+			utils.Info("Skipping module %s (excluded from benchmarks)", m.Name)
+			continue
+		}
+		benchModules = append(benchModules, m)
+	}
+
+	if len(benchModules) == 0 {
+		utils.Warn("No modules to benchmark after exclusions")
+		return nil
+	}
+
+	// Build base benchmark args
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
 	if config.Test.Verbose {
@@ -614,12 +641,30 @@ func (Test) Bench(argsList ...string) error {
 
 	args = append(args, "./...")
 
-	start := time.Now()
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("benchmarks failed: %w", err)
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	// Run benchmarks for each module
+	for _, module := range benchModules {
+		displayModuleHeader(module, "Running benchmarks for")
+
+		moduleStart := time.Now()
+		err := runCommandInModule(module, "go", args...)
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Benchmarks failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("Benchmarks passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
 	}
 
-	utils.Success("Benchmarks completed in %s", utils.FormatDuration(time.Since(start)))
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("Benchmarks failed in %d/%d modules", len(moduleErrors), len(benchModules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("All benchmarks completed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
@@ -635,6 +680,33 @@ func (Test) BenchShort(argsList ...string) error {
 
 	displayTestHeader("benchmark-short", config)
 
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Filter out magefiles modules (they have special build constraints)
+	benchModules := make([]ModuleInfo, 0, len(modules))
+	for _, m := range modules {
+		if m.Name == "magefiles" {
+			utils.Info("Skipping module %s (excluded from benchmarks)", m.Name)
+			continue
+		}
+		benchModules = append(benchModules, m)
+	}
+
+	if len(benchModules) == 0 {
+		utils.Warn("No modules to benchmark after exclusions")
+		return nil
+	}
+
+	// Build base benchmark args
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
 	if config.Test.Verbose {
@@ -657,12 +729,30 @@ func (Test) BenchShort(argsList ...string) error {
 
 	args = append(args, "./...")
 
-	start := time.Now()
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("short benchmarks failed: %w", err)
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	// Run benchmarks for each module
+	for _, module := range benchModules {
+		displayModuleHeader(module, "Running short benchmarks for")
+
+		moduleStart := time.Now()
+		err := runCommandInModule(module, "go", args...)
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Short benchmarks failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("Short benchmarks passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
 	}
 
-	utils.Success("Short benchmarks completed in %s", utils.FormatDuration(time.Since(start)))
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("Short benchmarks failed in %d/%d modules", len(moduleErrors), len(benchModules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("All short benchmarks completed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 

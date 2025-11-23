@@ -21,6 +21,19 @@ var (
 	ErrNewBenchFileNotFound = errors.New("new benchmark file not found")
 )
 
+// getExcludedBenchModules returns module names that should be skipped during benchmarks.
+// These are typically modules with special build constraints (e.g., magefiles with //go:build mage).
+func getExcludedBenchModules() map[string]bool {
+	return map[string]bool{
+		"magefiles": true,
+	}
+}
+
+// shouldExcludeFromBenchmarks checks if a module should be excluded from benchmark runs
+func shouldExcludeFromBenchmarks(module ModuleInfo) bool {
+	return getExcludedBenchModules()[module.Name]
+}
+
 // Bench namespace for benchmark-related tasks
 type Bench mg.Namespace
 
@@ -44,6 +57,38 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 	}
 	params := utils.ParseParams(targetArgs)
 
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Filter out excluded modules
+	benchModules := make([]ModuleInfo, 0, len(modules))
+	for _, m := range modules {
+		if shouldExcludeFromBenchmarks(m) {
+			utils.Info("Skipping module %s (excluded from benchmarks)", m.Name)
+			continue
+		}
+		benchModules = append(benchModules, m)
+	}
+
+	if len(benchModules) == 0 {
+		utils.Warn("No modules to benchmark after exclusions")
+		return nil
+	}
+
+	// Show modules found
+	if len(benchModules) > 1 {
+		utils.Info("Found %d Go modules to benchmark", len(benchModules))
+	}
+
+	// Build base benchmark args
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
 	// Add bench time from parameter or default
@@ -79,19 +124,38 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 		utils.Info("Memory profile will be saved to: %s", memProfile)
 	}
 
-	// Add package filter from parameter or default to all packages
+	// Add package filter - use ./... for each module
 	pkg := utils.GetParam(params, "pkg", "./...")
 	args = append(args, pkg)
 
-	// Show the command being run for transparency
-	utils.Info("Running: go %s", strings.Join(args, " "))
+	totalStart := time.Now()
+	var moduleErrors []moduleError
 
-	start := time.Now()
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("benchmarks failed: %w", err)
+	// Run benchmarks for each module
+	for _, module := range benchModules {
+		displayModuleHeader(module, "Running benchmarks for")
+
+		moduleStart := time.Now()
+
+		// Show the command being run for transparency
+		utils.Info("Running: go %s", strings.Join(args, " "))
+
+		err := runCommandInModule(module, "go", args...)
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Benchmarks failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("Benchmarks passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
 	}
 
-	utils.Success("Benchmarks completed in %s", utils.FormatDuration(time.Since(start)))
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("Benchmarks failed in %d/%d modules", len(moduleErrors), len(benchModules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("All benchmarks completed in %s", utils.FormatDuration(time.Since(totalStart)))
 
 	// Show how to analyze profiles if created
 	if cpuProfile := GetMageXEnv("BENCH_CPU_PROFILE"); cpuProfile != "" {
@@ -190,7 +254,33 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 		}
 	}
 
-	// Run benchmarks and save output
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Filter out excluded modules
+	benchModules := make([]ModuleInfo, 0, len(modules))
+	for _, m := range modules {
+		if shouldExcludeFromBenchmarks(m) {
+			utils.Info("Skipping module %s (excluded from benchmarks)", m.Name)
+			continue
+		}
+		benchModules = append(benchModules, m)
+	}
+
+	if len(benchModules) == 0 {
+		utils.Warn("No modules to benchmark after exclusions")
+		return nil
+	}
+
+	// Build base benchmark args
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
 	benchTime := utils.GetParam(params, "time", "3s")
@@ -213,20 +303,55 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 		args = append(args, "-skip", skip)
 	}
 
-	// Add package filter from parameter or default to all packages
+	// Add package filter - use ./... for each module
 	pkg := utils.GetParam(params, "pkg", "./...")
 	args = append(args, pkg)
 
-	utils.Info("Running: go %s", strings.Join(args, " "))
+	// Collect all benchmark outputs
+	var allOutputs []string
 
-	// Execute and capture output
-	output2, err := GetRunner().RunCmdOutput("go", args...)
-	if err != nil {
-		return fmt.Errorf("benchmarks failed: %w", err)
+	// Run benchmarks for each module and capture output
+	for _, module := range benchModules {
+		displayModuleHeader(module, "Running benchmarks for")
+
+		utils.Info("Running: go %s", strings.Join(args, " "))
+
+		// Save current directory
+		originalDir, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current directory: %w", err)
+		}
+
+		// Change to module directory
+		if err = os.Chdir(module.Path); err != nil {
+			return fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
+		}
+
+		// Execute and capture output
+		moduleOutput, err := GetRunner().RunCmdOutput("go", args...)
+
+		// Change back to original directory
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			utils.Error("Failed to change back to original directory: %v", chErr)
+		}
+
+		if err != nil {
+			return fmt.Errorf("benchmarks failed for %s: %w", module.Relative, err)
+		}
+
+		// Add module header to output
+		if module.Relative == "." {
+			allOutputs = append(allOutputs, fmt.Sprintf("# Module: main\n%s", moduleOutput))
+		} else {
+			allOutputs = append(allOutputs, fmt.Sprintf("# Module: %s\n%s", module.Relative, moduleOutput))
+		}
 	}
 
+	// Combine all outputs
+	combinedOutput := strings.Join(allOutputs, "\n")
+
 	// Write output
-	if err := fileOps.File.WriteFile(output, []byte(output2), 0o644); err != nil {
+	if err := fileOps.File.WriteFile(output, []byte(combinedOutput), 0o644); err != nil {
 		return fmt.Errorf("failed to write results: %w", err)
 	}
 
@@ -370,36 +495,99 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 		trace = utils.GetEnv("TRACE_FILE", "trace.out")
 	}
 
-	args := []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", trace}
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Filter out excluded modules
+	benchModules := make([]ModuleInfo, 0, len(modules))
+	for _, m := range modules {
+		if shouldExcludeFromBenchmarks(m) {
+			utils.Info("Skipping module %s (excluded from benchmarks)", m.Name)
+			continue
+		}
+		benchModules = append(benchModules, m)
+	}
+
+	if len(benchModules) == 0 {
+		utils.Warn("No modules to benchmark after exclusions")
+		return nil
+	}
 
 	benchTime := utils.GetParam(params, "time", "3s")
-	args = append(args, "-benchtime", benchTime)
-
-	// Add verbose flag if requested
-	if utils.IsParamTrue(params, "verbose") {
-		args = append(args, "-v")
-	}
 
 	// Add skip pattern if specified
 	skip := utils.GetParam(params, "skip", "")
-	if skip != "" {
-		args = append(args, "-skip", skip)
-	}
 
-	// Add package filter from parameter or default to all packages
+	// Add package filter - use ./... for each module
 	pkg := utils.GetParam(params, "pkg", "./...")
-	args = append(args, pkg)
 
-	utils.Info("Trace will be saved to: %s", trace)
+	totalStart := time.Now()
+	var moduleErrors []moduleError
 
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("benchmarks failed: %w", err)
+	// Run benchmarks for each module
+	for i, module := range benchModules {
+		displayModuleHeader(module, "Running benchmarks with trace for")
+
+		// Create unique trace file for each module
+		moduleTrace := trace
+		if len(benchModules) > 1 {
+			ext := filepath.Ext(trace)
+			base := strings.TrimSuffix(trace, ext)
+			if module.Relative == "." {
+				moduleTrace = fmt.Sprintf("%s_main%s", base, ext)
+			} else {
+				sanitized := strings.ReplaceAll(module.Relative, "/", "_")
+				moduleTrace = fmt.Sprintf("%s_%s%s", base, sanitized, ext)
+			}
+		}
+
+		args := []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", moduleTrace}
+		args = append(args, "-benchtime", benchTime)
+
+		// Add verbose flag if requested
+		if utils.IsParamTrue(params, "verbose") {
+			args = append(args, "-v")
+		}
+
+		if skip != "" {
+			args = append(args, "-skip", skip)
+		}
+
+		args = append(args, pkg)
+
+		utils.Info("Trace will be saved to: %s", moduleTrace)
+
+		moduleStart := time.Now()
+		err := runCommandInModule(module, "go", args...)
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("Benchmarks with trace failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("Trace saved for %s to: %s in %s", module.Relative, moduleTrace, utils.FormatDuration(time.Since(moduleStart)))
+		}
+
+		// Show trace analysis hint for first successful module
+		if err == nil && i == 0 {
+			utils.Info("Analyze trace with:")
+			utils.Info("  go tool trace %s", moduleTrace)
+		}
 	}
 
-	utils.Success("Trace saved to: %s", trace)
-	utils.Info("Analyze trace with:")
-	utils.Info("  go tool trace %s", trace)
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("Benchmarks with trace failed in %d/%d modules", len(moduleErrors), len(benchModules))
+		return formatModuleErrors(moduleErrors)
+	}
 
+	utils.Success("All benchmarks with trace completed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
