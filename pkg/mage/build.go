@@ -22,10 +22,11 @@ type Build mg.Namespace
 
 // Static errors for err113 compliance
 var (
-	ErrBuildFailedError = errors.New("build failed")
-	ErrBuildErrors      = errors.New("build errors")
-	ErrNoMainPackage    = errors.New("no main package found for binary build")
-	ErrInvalidMainPath  = errors.New("configured main path is invalid")
+	ErrBuildFailedError      = errors.New("build failed")
+	ErrBuildErrors           = errors.New("build errors")
+	ErrNoMainPackage         = errors.New("no main package found for binary build")
+	ErrInvalidMainPath       = errors.New("configured main path is invalid")
+	ErrNoPackagesInWorkspace = errors.New("no packages found in workspace modules")
 )
 
 // CacheManagerProvider defines the interface for providing cache manager instances
@@ -795,12 +796,65 @@ func (b Build) PreBuildWithArgs(argsList ...string) error {
 
 // Package discovery and batching utilities
 
-// discoverPackages returns a list of all Go packages in the project
-func (b Build) discoverPackages(pattern, exclude string) ([]string, error) {
-	// Get list of all packages
-	packages, err := utils.GoList(pattern)
+// getWorkspaceModuleDirs returns workspace module directories if go.work exists.
+// Returns nil and false if not in workspace mode or if discovery fails.
+func (b Build) getWorkspaceModuleDirs() ([]string, bool) {
+	if _, err := os.Stat("go.work"); os.IsNotExist(err) {
+		return nil, false // No workspace file
+	}
+
+	// Get workspace module directories using go list -m
+	output, err := GetRunner().RunCmdOutput("go", "list", "-m", "-f", "{{.Dir}}")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list packages: %w", err)
+		utils.Warn("Failed to list workspace modules: %v", err)
+		return nil, false
+	}
+
+	var modules []string
+	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			modules = append(modules, line)
+		}
+	}
+
+	if len(modules) > 0 {
+		utils.Debug("Workspace mode detected with %d modules", len(modules))
+	}
+
+	return modules, len(modules) > 0
+}
+
+// discoverPackages returns a list of all Go packages in the project.
+// In workspace mode (go.work exists), it discovers packages from each workspace
+// module to avoid errors from modules that exist but aren't in the workspace.
+func (b Build) discoverPackages(pattern, exclude string) ([]string, error) {
+	var packages []string
+	var err error
+
+	// In workspace mode, list packages per workspace module to avoid errors
+	// from modules that exist but aren't listed in go.work (e.g., magefiles)
+	if moduleDirs, isWorkspace := b.getWorkspaceModuleDirs(); isWorkspace {
+		utils.Debug("Discovering packages from %d workspace modules", len(moduleDirs))
+		for _, modDir := range moduleDirs {
+			// Build pattern relative to module directory
+			modPattern := filepath.Join(modDir, "...")
+			pkgs, listErr := utils.GoList(modPattern)
+			if listErr != nil {
+				// Skip modules that fail (e.g., modules with build constraints like magefiles)
+				utils.Debug("Skipping module %s: %v", modDir, listErr)
+				continue
+			}
+			packages = append(packages, pkgs...)
+		}
+		if len(packages) == 0 {
+			return nil, ErrNoPackagesInWorkspace
+		}
+	} else {
+		// Standard mode: list all packages using the pattern
+		packages, err = utils.GoList(pattern)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list packages: %w", err)
+		}
 	}
 
 	// Filter out packages
@@ -831,25 +885,43 @@ func (b Build) discoverPackages(pattern, exclude string) ([]string, error) {
 	return filtered, nil
 }
 
-// findMainPackages identifies packages containing main functions
+// findMainPackages identifies packages containing main functions.
+// In workspace mode, it searches each workspace module separately.
 func (b Build) findMainPackages() ([]string, error) {
-	// Use go list with JSON output to find main packages
-	output, err := GetRunner().RunCmdOutput("go", "list", "-json", "./...")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list packages: %w", err)
+	var mainPackages []string
+
+	// Determine patterns to search based on workspace mode
+	patterns := []string{"./..."}
+	if moduleDirs, isWorkspace := b.getWorkspaceModuleDirs(); isWorkspace {
+		patterns = make([]string, 0, len(moduleDirs))
+		for _, modDir := range moduleDirs {
+			patterns = append(patterns, filepath.Join(modDir, "..."))
+		}
+		utils.Debug("Searching for main packages in %d workspace modules", len(patterns))
 	}
 
-	var mainPackages []string
-	lines := strings.Split(output, "\n{")
-
-	for _, line := range lines {
-		if !strings.HasPrefix(line, "{") {
-			line = "{" + line
+	// Search each pattern for main packages
+	for _, pattern := range patterns {
+		output, err := GetRunner().RunCmdOutput("go", "list", "-json", pattern)
+		if err != nil {
+			// In workspace mode, skip modules that fail (e.g., build constraints)
+			if len(patterns) > 1 {
+				utils.Debug("Skipping pattern %s: %v", pattern, err)
+				continue
+			}
+			return nil, fmt.Errorf("failed to list packages: %w", err)
 		}
 
-		// Check for main package indicator and extract import path
-		if pkg := extractMainPackageFromLine(line); pkg != "" {
-			mainPackages = append(mainPackages, pkg)
+		lines := strings.Split(output, "\n{")
+		for _, line := range lines {
+			if !strings.HasPrefix(line, "{") {
+				line = "{" + line
+			}
+
+			// Check for main package indicator and extract import path
+			if pkg := extractMainPackageFromLine(line); pkg != "" {
+				mainPackages = append(mainPackages, pkg)
+			}
 		}
 	}
 
