@@ -960,6 +960,26 @@ func (b Build) buildPackageBatch(packages []string, parallelism string, verbose 
 
 	args = append(args, packages...)
 
+	// Disable workspace mode for build to avoid validation errors
+	// with modules that exist but aren't in go.work (e.g., magefiles).
+	// This is safe for prebuild/cache warming since we already discovered
+	// the correct packages from workspace modules.
+	origGowork := os.Getenv("GOWORK")
+	if err := os.Setenv("GOWORK", "off"); err != nil {
+		utils.Warn("Failed to set GOWORK=off: %v", err)
+	}
+	defer func() {
+		if origGowork != "" {
+			if err := os.Setenv("GOWORK", origGowork); err != nil {
+				utils.Warn("Failed to restore GOWORK: %v", err)
+			}
+		} else {
+			if err := os.Unsetenv("GOWORK"); err != nil {
+				utils.Warn("Failed to unset GOWORK: %v", err)
+			}
+		}
+	}()
+
 	return GetRunner().RunCmd("go", args...)
 }
 
