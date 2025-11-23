@@ -819,12 +819,8 @@ func (b Build) discoverPackages(pattern, exclude string) ([]string, error) {
 		// Apply exclusion filter if provided
 		if exclude != "" {
 			matched, err := filepath.Match(exclude, pkg)
-			if err != nil {
-				// If pattern is invalid, treat as substring match
-				if strings.Contains(pkg, exclude) {
-					continue
-				}
-			} else if matched {
+			// Exclude if glob matched, or always try substring match as fallback
+			if (err == nil && matched) || strings.Contains(pkg, exclude) {
 				continue
 			}
 		}
