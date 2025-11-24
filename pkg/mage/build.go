@@ -27,6 +27,7 @@ var (
 	ErrNoMainPackage         = errors.New("no main package found for binary build")
 	ErrInvalidMainPath       = errors.New("configured main path is invalid")
 	ErrNoPackagesInWorkspace = errors.New("no packages found in workspace modules")
+	ErrNotInWorkspaceMode    = errors.New("buildWorkspaceModules called but not in workspace mode")
 )
 
 // CacheManagerProvider defines the interface for providing cache manager instances
@@ -824,6 +825,56 @@ func (b Build) getWorkspaceModuleDirs() ([]string, bool) {
 	return modules, len(modules) > 0
 }
 
+// buildWorkspaceModules builds all packages in each workspace module by running
+// go build ./... from within each module directory. This avoids workspace validation
+// errors that occur when running from the repository root with modules that exist
+// but aren't listed in go.work (e.g., magefiles with build constraints).
+func (b Build) buildWorkspaceModules(verbose bool, parallelism string) error {
+	moduleDirs, isWorkspace := b.getWorkspaceModuleDirs()
+	if !isWorkspace {
+		return ErrNotInWorkspaceMode
+	}
+
+	originalDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	for _, modDir := range moduleDirs {
+		modName := filepath.Base(modDir)
+		utils.Info("Building packages in module: %s", modName)
+
+		if err := os.Chdir(modDir); err != nil {
+			utils.Warn("Failed to change to module directory %s: %v", modDir, err)
+			continue
+		}
+
+		args := []string{"build"}
+		if parallelism != "" {
+			args = append(args, "-p", parallelism)
+		}
+		if verbose {
+			args = append(args, "-v")
+		}
+		args = append(args, "./...")
+
+		if err := GetRunner().RunCmd("go", args...); err != nil {
+			// Change back to original directory before returning error
+			if chErr := os.Chdir(originalDir); chErr != nil {
+				utils.Warn("Failed to restore original directory: %v", chErr)
+			}
+			return fmt.Errorf("failed to build module %s: %w", modName, err)
+		}
+	}
+
+	// Restore original directory
+	if err := os.Chdir(originalDir); err != nil {
+		return fmt.Errorf("failed to restore original directory: %w", err)
+	}
+
+	return nil
+}
+
 // discoverPackages returns a list of all Go packages in the project.
 // In workspace mode (go.work exists), it discovers packages from each workspace
 // module to avoid errors from modules that exist but aren't in the workspace.
@@ -946,7 +997,7 @@ func (b Build) splitIntoBatches(packages []string, batchSize int) [][]string {
 	return batches
 }
 
-// buildPackageBatch builds a single batch of packages
+// buildPackageBatch builds a single batch of packages (used in non-workspace mode)
 func (b Build) buildPackageBatch(packages []string, parallelism string, verbose bool) error {
 	args := []string{"build"}
 
@@ -960,26 +1011,6 @@ func (b Build) buildPackageBatch(packages []string, parallelism string, verbose 
 
 	args = append(args, packages...)
 
-	// Disable workspace mode for build to avoid validation errors
-	// with modules that exist but aren't in go.work (e.g., magefiles).
-	// This is safe for prebuild/cache warming since we already discovered
-	// the correct packages from workspace modules.
-	origGowork := os.Getenv("GOWORK")
-	if err := os.Setenv("GOWORK", "off"); err != nil {
-		utils.Warn("Failed to set GOWORK=off: %v", err)
-	}
-	defer func() {
-		if origGowork != "" {
-			if err := os.Setenv("GOWORK", origGowork); err != nil {
-				utils.Warn("Failed to restore GOWORK: %v", err)
-			}
-		} else {
-			if err := os.Unsetenv("GOWORK"); err != nil {
-				utils.Warn("Failed to unset GOWORK: %v", err)
-			}
-		}
-	}()
-
 	return GetRunner().RunCmd("go", args...)
 }
 
@@ -988,6 +1019,12 @@ func (b Build) buildPackageBatch(packages []string, parallelism string, verbose 
 // buildIncremental builds packages in small batches to manage memory usage
 func (b Build) buildIncremental(batchSize, delayMs int, exclude string, verbose bool, parallelism string) error {
 	utils.Header("Pre-building Packages (Incremental Strategy)")
+
+	// In workspace mode, use per-module building to avoid validation issues
+	if _, isWorkspace := b.getWorkspaceModuleDirs(); isWorkspace {
+		utils.Info("Workspace mode detected - building each module separately")
+		return b.buildWorkspaceModules(verbose, parallelism)
+	}
 
 	// Discover packages
 	packages, err := b.discoverPackages("./...", exclude)
@@ -1132,6 +1169,13 @@ func (b Build) buildSmart(exclude string, verbose bool, parallelism string) erro
 
 	availableMemoryMB := memInfo.AvailableMemory / (1024 * 1024)
 	utils.Info("Available memory: %s", utils.FormatMemory(memInfo.AvailableMemory))
+
+	// Check if we're in workspace mode - if so, use per-module building
+	// to avoid issues with modules that exist but aren't in go.work
+	if _, isWorkspace := b.getWorkspaceModuleDirs(); isWorkspace {
+		utils.Info("Workspace mode detected - building each module separately")
+		return b.buildWorkspaceModules(verbose, parallelism)
+	}
 
 	// Count packages to determine best strategy
 	packages, err := b.discoverPackages("./...", exclude)
