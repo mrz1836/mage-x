@@ -76,6 +76,7 @@ type TestConfig struct {
 	CoverMode                    string   `yaml:"covermode"`
 	CoverPkg                     []string `yaml:"coverpkg"`
 	CoverageExclude              []string `yaml:"coverage_exclude"`
+	ExcludeModules               []string `yaml:"exclude_modules"`
 	IntegrationTag               string   `yaml:"integration_tag"`
 	IntegrationTimeout           string   `yaml:"integration_timeout"`
 	Parallel                     int      `yaml:"parallel"`
@@ -377,6 +378,7 @@ func defaultConfig() *Config {
 			Timeout:            "10m",
 			IntegrationTimeout: "30m",
 			CoverMode:          "atomic",
+			ExcludeModules:     []string{"magefiles"},
 		},
 		Lint: LintConfig{
 			GolangciVersion: VersionLatest,
@@ -470,6 +472,15 @@ func applyEnvOverrides(c *Config) {
 		// Trim whitespace from each tag
 		for i, tag := range c.Test.AutoDiscoverBuildTagsExclude {
 			c.Test.AutoDiscoverBuildTagsExclude[i] = strings.TrimSpace(tag)
+		}
+	}
+
+	// Test exclude modules override
+	if v := cleanEnvValue(os.Getenv("MAGE_X_TEST_EXCLUDE_MODULES")); v != "" {
+		c.Test.ExcludeModules = strings.Split(v, ",")
+		// Trim whitespace from each module name
+		for i, mod := range c.Test.ExcludeModules {
+			c.Test.ExcludeModules[i] = strings.TrimSpace(mod)
 		}
 	}
 

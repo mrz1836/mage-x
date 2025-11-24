@@ -21,6 +21,37 @@ var (
 	errFlagNotAllowed         = errors.New("flag not allowed for security reasons")
 )
 
+// shouldExcludeFromTests checks if a module should be excluded from testing
+// based on the configured exclusion list. By default, "magefiles" modules are excluded
+// because they have special build constraints (//go:build mage).
+func shouldExcludeFromTests(module ModuleInfo, config *Config) bool {
+	if config == nil || len(config.Test.ExcludeModules) == 0 {
+		return false
+	}
+	for _, excludedName := range config.Test.ExcludeModules {
+		if module.Name == excludedName {
+			return true
+		}
+	}
+	return false
+}
+
+// filterModulesForTesting filters modules based on the test exclusion configuration
+func filterModulesForTesting(modules []ModuleInfo, config *Config) []ModuleInfo {
+	if config == nil || len(config.Test.ExcludeModules) == 0 {
+		return modules
+	}
+	filtered := make([]ModuleInfo, 0, len(modules))
+	for _, m := range modules {
+		if shouldExcludeFromTests(m, config) {
+			utils.Info("Skipping module %s (excluded from tests)", m.Name)
+			continue
+		}
+		filtered = append(filtered, m)
+	}
+	return filtered
+}
+
 // Test namespace for test-related tasks
 type Test mg.Namespace
 
@@ -603,16 +634,8 @@ func (Test) Bench(argsList ...string) error {
 		return nil
 	}
 
-	// Filter out magefiles modules (they have special build constraints)
-	benchModules := make([]ModuleInfo, 0, len(modules))
-	for _, m := range modules {
-		if m.Name == "magefiles" {
-			utils.Info("Skipping module %s (excluded from benchmarks)", m.Name)
-			continue
-		}
-		benchModules = append(benchModules, m)
-	}
-
+	// Filter modules based on exclusion configuration
+	benchModules := filterModulesForTesting(modules, config)
 	if len(benchModules) == 0 {
 		utils.Warn("No modules to benchmark after exclusions")
 		return nil
@@ -691,16 +714,8 @@ func (Test) BenchShort(argsList ...string) error {
 		return nil
 	}
 
-	// Filter out magefiles modules (they have special build constraints)
-	benchModules := make([]ModuleInfo, 0, len(modules))
-	for _, m := range modules {
-		if m.Name == "magefiles" {
-			utils.Info("Skipping module %s (excluded from benchmarks)", m.Name)
-			continue
-		}
-		benchModules = append(benchModules, m)
-	}
-
+	// Filter modules based on exclusion configuration
+	benchModules := filterModulesForTesting(modules, config)
 	if len(benchModules) == 0 {
 		utils.Warn("No modules to benchmark after exclusions")
 		return nil
@@ -1190,8 +1205,15 @@ func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool,
 		tagSuffix = fmt.Sprintf("_%s", buildTag)
 	}
 
+	// Filter modules based on exclusion configuration
+	filteredModules := filterModulesForTesting(modules, config)
+	if len(filteredModules) == 0 {
+		utils.Warn("No modules to test after exclusions")
+		return nil
+	}
+
 	// Run tests for each module
-	for i, module := range modules {
+	for i, module := range filteredModules {
 		tagInfo := ""
 		if buildTag != "" {
 			tagInfo = fmt.Sprintf(" (tag: %s)", buildTag)
@@ -1252,7 +1274,7 @@ func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool,
 	// Report overall results
 	if len(moduleErrors) > 0 {
 		tagInfo := getTagInfo(buildTag)
-		utils.Error("Coverage tests%s failed in %d/%d modules", tagInfo, len(moduleErrors), len(modules))
+		utils.Error("Coverage tests%s failed in %d/%d modules", tagInfo, len(moduleErrors), len(filteredModules))
 		return formatModuleErrors(moduleErrors)
 	}
 
@@ -1266,7 +1288,14 @@ func runTestsForModules(config *Config, modules []ModuleInfo, race, cover bool, 
 	var moduleErrors []moduleError
 	totalStart := time.Now()
 
-	for _, module := range modules {
+	// Filter modules based on exclusion configuration
+	filteredModules := filterModulesForTesting(modules, config)
+	if len(filteredModules) == 0 {
+		utils.Warn("No modules to test after exclusions")
+		return nil
+	}
+
+	for _, module := range filteredModules {
 		tagSuffix := ""
 		if buildTag != "" {
 			tagSuffix = fmt.Sprintf(" (tag: %s)", buildTag)
@@ -1307,7 +1336,7 @@ func runTestsForModules(config *Config, modules []ModuleInfo, race, cover bool, 
 	// Report overall results
 	if len(moduleErrors) > 0 {
 		tagInfo := getTagInfo(buildTag)
-		utils.Error("%s tests%s failed in %d/%d modules", titleCase(testType), tagInfo, len(moduleErrors), len(modules))
+		utils.Error("%s tests%s failed in %d/%d modules", titleCase(testType), tagInfo, len(moduleErrors), len(filteredModules))
 		return formatModuleErrors(moduleErrors)
 	}
 

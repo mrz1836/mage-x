@@ -68,6 +68,8 @@ test:
   covermode: atomic
   coverpkg: []
   coverage_exclude: []
+  exclude_modules:
+    - magefiles
   integration_tag: ""
   integration_timeout: 30m
   parallel: 10
