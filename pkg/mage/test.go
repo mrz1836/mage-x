@@ -21,10 +21,10 @@ var (
 	errFlagNotAllowed         = errors.New("flag not allowed for security reasons")
 )
 
-// shouldExcludeFromTests checks if a module should be excluded from testing
+// shouldExcludeModule checks if a module should be excluded from processing
 // based on the configured exclusion list. By default, "magefiles" modules are excluded
 // because they have special build constraints (//go:build mage).
-func shouldExcludeFromTests(module ModuleInfo, config *Config) bool {
+func shouldExcludeModule(module ModuleInfo, config *Config) bool {
 	if config == nil || len(config.Test.ExcludeModules) == 0 {
 		return false
 	}
@@ -36,15 +36,17 @@ func shouldExcludeFromTests(module ModuleInfo, config *Config) bool {
 	return false
 }
 
-// filterModulesForTesting filters modules based on the test exclusion configuration
-func filterModulesForTesting(modules []ModuleInfo, config *Config) []ModuleInfo {
+// filterModulesForProcessing filters modules based on the exclusion configuration.
+// This is used by test, lint, and deps commands to skip modules like "magefiles"
+// that have special build constraints.
+func filterModulesForProcessing(modules []ModuleInfo, config *Config, operation string) []ModuleInfo {
 	if config == nil || len(config.Test.ExcludeModules) == 0 {
 		return modules
 	}
 	filtered := make([]ModuleInfo, 0, len(modules))
 	for _, m := range modules {
-		if shouldExcludeFromTests(m, config) {
-			utils.Info("Skipping module %s (excluded from tests)", m.Name)
+		if shouldExcludeModule(m, config) {
+			utils.Info("Skipping module %s (excluded from %s)", m.Name, operation)
 			continue
 		}
 		filtered = append(filtered, m)
@@ -635,7 +637,7 @@ func (Test) Bench(argsList ...string) error {
 	}
 
 	// Filter modules based on exclusion configuration
-	benchModules := filterModulesForTesting(modules, config)
+	benchModules := filterModulesForProcessing(modules, config, "benchmarks")
 	if len(benchModules) == 0 {
 		utils.Warn("No modules to benchmark after exclusions")
 		return nil
@@ -715,7 +717,7 @@ func (Test) BenchShort(argsList ...string) error {
 	}
 
 	// Filter modules based on exclusion configuration
-	benchModules := filterModulesForTesting(modules, config)
+	benchModules := filterModulesForProcessing(modules, config, "benchmarks")
 	if len(benchModules) == 0 {
 		utils.Warn("No modules to benchmark after exclusions")
 		return nil
@@ -1206,7 +1208,7 @@ func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool,
 	}
 
 	// Filter modules based on exclusion configuration
-	filteredModules := filterModulesForTesting(modules, config)
+	filteredModules := filterModulesForProcessing(modules, config, "coverage tests")
 	if len(filteredModules) == 0 {
 		utils.Warn("No modules to test after exclusions")
 		return nil
@@ -1289,7 +1291,7 @@ func runTestsForModules(config *Config, modules []ModuleInfo, race, cover bool, 
 	totalStart := time.Now()
 
 	// Filter modules based on exclusion configuration
-	filteredModules := filterModulesForTesting(modules, config)
+	filteredModules := filterModulesForProcessing(modules, config, testType+" tests")
 	if len(filteredModules) == 0 {
 		utils.Warn("No modules to test after exclusions")
 		return nil

@@ -58,6 +58,13 @@ func (Lint) Default() error {
 		fmt.Printf("📦 Found %d Go modules\n", len(modules))
 	}
 
+	// Filter modules based on exclusion configuration
+	modules = filterModulesForProcessing(modules, config, "linting")
+	if len(modules) == 0 {
+		utils.Warn("No modules to lint after exclusions")
+		return nil
+	}
+
 	totalStart := time.Now()
 	var moduleErrors []moduleError
 
@@ -191,6 +198,13 @@ func (Lint) Fix() error {
 	// Show modules found
 	if len(modules) > 1 {
 		fmt.Printf("📦 Found %d Go modules\n", len(modules))
+	}
+
+	// Filter modules based on exclusion configuration
+	modules = filterModulesForProcessing(modules, config, "lint fix")
+	if len(modules) == 0 {
+		utils.Warn("No modules to fix after exclusions")
+		return nil
 	}
 
 	totalStart := time.Now()
@@ -433,6 +447,13 @@ func (Lint) Vet() error {
 	// Show modules found
 	if len(modules) > 1 {
 		fmt.Printf("📦 Found %d Go modules\n", len(modules))
+	}
+
+	// Filter modules based on exclusion configuration
+	modules = filterModulesForProcessing(modules, config, "go vet")
+	if len(modules) == 0 {
+		utils.Warn("No modules to vet after exclusions")
+		return nil
 	}
 
 	totalStart := time.Now()

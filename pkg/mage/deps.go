@@ -21,7 +21,6 @@ var (
 	errGoModAlreadyExists     = errors.New("go.mod already exists")
 	errNoGoModFound           = errors.New("no go.mod file found - govulncheck requires a Go module. Run 'go mod init <module-name>' to initialize a module, or navigate to a directory with a go.mod file")
 	errNoGoModFoundSimple     = errors.New("no go.mod file found - govulncheck requires a Go module. Run 'go mod init <module-name>' to initialize a module")
-	errNoGoPackagesFound      = errors.New("no Go packages found in current directory. Ensure you're in a directory with Go source files")
 )
 
 // Deps namespace for dependency management tasks
@@ -799,14 +798,30 @@ func (Deps) Audit() error {
 			vulnVersion = "@" + vulnVersion
 		}
 
-		if err := GetRunner().RunCmd("go", "install", "golang.org/x/vuln/cmd/govulncheck"+vulnVersion); err != nil {
-			return fmt.Errorf("failed to install govulncheck: %w", err)
+		if installErr := GetRunner().RunCmd("go", "install", "golang.org/x/vuln/cmd/govulncheck"+vulnVersion); installErr != nil {
+			return fmt.Errorf("failed to install govulncheck: %w", installErr)
 		}
 	}
 
-	// Check if we're in a Go module directory
-	if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
-		return errNoGoModFound
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		// Fall back to single-module check
+		if _, statErr := os.Stat("go.mod"); os.IsNotExist(statErr) {
+			return errNoGoModFound
+		}
+		modules = []ModuleInfo{{Path: ".", Relative: ".", Name: "."}}
+	}
+
+	// Filter modules based on exclusion configuration
+	modules = filterModulesForProcessing(modules, config, "vulnerability scan")
+	if len(modules) == 0 {
+		utils.Warn("No modules to audit after exclusions")
+		return nil
 	}
 
 	// Run vulnerability check on dependencies
@@ -815,19 +830,38 @@ func (Deps) Audit() error {
 	// Try to use govulncheck from PATH first, then fall back to GOPATH/bin
 	govulncheckCmd := findGovulncheckCommand()
 
-	if err := GetRunner().RunCmd(govulncheckCmd, "-show", "verbose", "./..."); err != nil {
-		// Provide more helpful error messages for common failures
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "no go.mod file") {
-			return errNoGoModFoundSimple
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	// Run govulncheck for each module
+	for _, module := range modules {
+		displayModuleHeader(module, "Auditing")
+
+		moduleStart := time.Now()
+		if runErr := runCommandInModule(module, govulncheckCmd, "-show", "verbose", "./..."); runErr != nil {
+			// Provide more helpful error messages for common failures
+			errMsg := runErr.Error()
+			if strings.Contains(errMsg, "no go.mod file") {
+				moduleErrors = append(moduleErrors, moduleError{Module: module, Error: errNoGoModFoundSimple})
+			} else if strings.Contains(errMsg, "no packages") {
+				// Skip modules with no packages (like empty modules)
+				utils.Warn("No packages found in %s, skipping", module.Relative)
+			} else {
+				moduleErrors = append(moduleErrors, moduleError{Module: module, Error: runErr})
+				utils.Error("Vulnerability scan failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+			}
+		} else {
+			utils.Success("Vulnerability scan passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
 		}
-		if strings.Contains(errMsg, "no packages") {
-			return errNoGoPackagesFound
-		}
-		return fmt.Errorf("vulnerability check failed: %w", err)
 	}
 
-	utils.Success("Dependency audit completed")
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("Vulnerability scan failed in %d/%d modules", len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("Dependency audit completed in %s", utils.FormatDuration(time.Since(totalStart)))
 	return nil
 }
 
