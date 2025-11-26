@@ -1,86 +1,99 @@
- # 🪄 MAGE-X
-> Write Once, Mage Everywhere: Zero-Boilerplate Build Automation for Go
+<div align="center">
 
-<table>
-  <thead>
-    <tr>
-      <th>CI&nbsp;/&nbsp;CD</th>
-      <th>Quality&nbsp;&amp;&nbsp;Security</th>
-      <th>Docs&nbsp;&amp;&nbsp;Meta</th>
-      <th>Community</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td valign="top" align="left">
-        <a href="https://github.com/mrz1836/mage-x/releases">
-          <img src="https://img.shields.io/github/release-pre/mrz1836/mage-x?logo=github&style=flat&v=1" alt="Latest Release">
-        </a><br/>
-        <a href="https://github.com/mrz1836/mage-x/actions">
-          <img src="https://img.shields.io/github/actions/workflow/status/mrz1836/mage-x/fortress.yml?branch=master&logo=github&style=flat" alt="Build Status">
-        </a><br/>
-        <a href="https://github.com/mrz1836/mage-x/commits/master">
-          <img src="https://img.shields.io/github/last-commit/mrz1836/mage-x?style=flat&logo=clockify&logoColor=white" alt="Last commit">
-        </a>
-      </td>
-      <td valign="top" align="left">
-        <a href="https://goreportcard.com/report/github.com/mrz1836/mage-x">
-          <img src="https://goreportcard.com/badge/github.com/mrz1836/mage-x?style=flat&v=1" alt="Go Report Card">
-        </a><br/>
-        <a href="https://app.codecov.io/gh/mrz1836/mage-x/tree/master">
-          <img src="https://codecov.io/gh/mrz1836/mage-x/branch/master/graph/badge.svg?style=flat" alt="Code Coverage">
-        </a><br/>
-        <a href="https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck">
-          <img src="https://img.shields.io/badge/security-govulncheck-blue?style=flat&logo=springsecurity&logoColor=white" alt="Security Scanning">
-        </a><br/>
-        <a href=".github/SECURITY.md">
-          <img src="https://img.shields.io/badge/security-policy-blue?style=flat&logo=springsecurity&logoColor=white" alt="Security Policy">
-        </a>
-      </td>
-      <td valign="top" align="left">
-        <a href="https://golang.org/">
-          <img src="https://img.shields.io/github/go-mod/go-version/mrz1836/mage-x?style=flat" alt="Go version">
-        </a><br/>
-        <a href="https://pkg.go.dev/github.com/mrz1836/mage-x">
-          <img src="https://pkg.go.dev/badge/github.com/mrz1836/mage-x.svg?style=flat" alt="Go docs">
-        </a><br/>
-        <a href=".github/AGENTS.md">
-          <img src="https://img.shields.io/badge/AGENTS.md-found-40b814?style=flat&logo=openai" alt="AI Agent Rules">
-        </a><br/>
-        <a href="https://magefile.org/">
-          <img src="https://img.shields.io/badge/mage-powered-brightgreen?style=flat&logo=probot&logoColor=white" alt="Mage Powered">
-        </a>
-      </td>
-      <td valign="top" align="left">
-        <a href="https://github.com/mrz1836/mage-x/graphs/contributors">
-          <img src="https://img.shields.io/github/contributors/mrz1836/mage-x?style=flat&logo=contentful&logoColor=white" alt="Contributors">
-        </a><br/>
-        <a href="https://github.com/sponsors/mrz">
-          <img src="https://img.shields.io/badge/sponsor-mrz-181717.svg?logo=github&style=flat" alt="Sponsor">
-        </a><br/>
-        <a href="https://github.com/mrz1836/mage-x/stargazers">
-          <img src="https://img.shields.io/github/stars/mrz1836/mage-x?style=social?v=1" alt="Stars">
-        </a>
-      </td>
-    </tr>
-  </tbody>
-</table>
+# 🪄&nbsp;&nbsp;MAGE-X
+
+**Write Once, Mage Everywhere: Zero-Boilerplate Build Automation for Go.**
 
 <br/>
 
-## 🗂️ Table of Contents
-* [What's Inside](#-whats-inside)
-* [Quick Start](#-quick-start)
-* [Features](#-features)
-* [Configuration](#-configuration)
-* [Documentation](#-documentation)
-* [Examples & Tests](#-examples--tests)
-* [Benchmarks](#-benchmarks)
-* [Code Standards](#-code-standards)
-* [AI Agent Ecosystem](#-ai-agent-ecosystem)
-* [Maintainers](#-maintainers)
-* [Contributing](#-contributing)
-* [License](#-license)
+<a href="https://github.com/mrz1836/mage-x/releases"><img src="https://img.shields.io/github/release-pre/mrz1836/mage-x?include_prereleases&style=flat-square&logo=github&color=black" alt="Release"></a>
+<a href="https://golang.org/"><img src="https://img.shields.io/github/go-mod/go-version/mrz1836/mage-x?style=flat-square&logo=go&color=00ADD8" alt="Go Version"></a>
+<a href="https://github.com/mrz1836/mage-x/blob/master/LICENSE"><img src="https://img.shields.io/github/license/mrz1836/mage-x?style=flat-square&color=blue" alt="License"></a>
+
+<br/>
+
+<table align="center" border="0">
+  <tr>
+    <td align="right">
+       <code>CI / CD</code> &nbsp;&nbsp;
+    </td>
+    <td align="left">
+       <a href="https://github.com/mrz1836/mage-x/actions"><img src="https://img.shields.io/github/actions/workflow/status/mrz1836/mage-x/fortress.yml?branch=master&label=build&logo=github&style=flat-square" alt="Build"></a>
+       <a href="https://github.com/mrz1836/mage-x/commits/master"><img src="https://img.shields.io/github/last-commit/mrz1836/mage-x?style=flat-square&logo=git&logoColor=white&label=last%20update" alt="Last Commit"></a>
+    </td>
+    <td align="right">
+       &nbsp;&nbsp;&nbsp;&nbsp; <code>Quality</code> &nbsp;&nbsp;
+    </td>
+    <td align="left">
+       <a href="https://goreportcard.com/report/github.com/mrz1836/mage-x"><img src="https://goreportcard.com/badge/github.com/mrz1836/mage-x?style=flat-square" alt="Go Report"></a>
+       <a href="https://app.codecov.io/gh/mrz1836/mage-x/tree/master"><img src="https://codecov.io/gh/mrz1836/mage-x/branch/master/graph/badge.svg?style=flat-square" alt="Coverage"></a>
+    </td>
+  </tr>
+
+  <tr>
+    <td align="right">
+       <code>Security</code> &nbsp;&nbsp;
+    </td>
+    <td align="left">
+       <a href="https://scorecard.dev/viewer/?uri=github.com/mrz1836/mage-x"><img src="https://api.scorecard.dev/projects/github.com/mrz1836/mage-x/badge?style=flat-square" alt="Scorecard"></a>
+       <a href=".github/SECURITY.md"><img src="https://img.shields.io/badge/policy-active-success?style=flat-square&logo=security&logoColor=white" alt="Security"></a>
+    </td>
+    <td align="right">
+       &nbsp;&nbsp;&nbsp;&nbsp; <code>Community</code> &nbsp;&nbsp;
+    </td>
+    <td align="left">
+       <a href="https://github.com/mrz1836/mage-x/graphs/contributors"><img src="https://img.shields.io/github/contributors/mrz1836/mage-x?style=flat-square&color=orange" alt="Contributors"></a>
+       <a href="https://github.com/sponsors/mrz"><img src="https://img.shields.io/badge/sponsor-mrz-181717.svg?logo=github&style=flat-square" alt="Sponsor"></a>
+    </td>
+  </tr>
+</table>
+
+</div>
+
+<br/>
+<br/>
+
+<div align="center">
+
+### <code>Project Navigation</code>
+
+</div>
+
+<table align="center">
+  <tr>
+    <td align="center" width="33%">
+       🚀&nbsp;<a href="#-quick-start"><code>Quick&nbsp;Start</code></a>
+    </td>
+    <td align="center" width="33%">
+       🧪&nbsp;<a href="#-examples--tests"><code>Examples&nbsp;&&nbsp;Tests</code></a>
+    </td>
+    <td align="center" width="33%">
+       📚&nbsp;<a href="#-documentation"><code>Documentation</code></a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+       🤝&nbsp;<a href="#-contributing"><code>Contributing</code></a>
+    </td>
+    <td align="center">
+      🛠️&nbsp;<a href="#-code-standards"><code>Code&nbsp;Standards</code></a>
+    </td>
+    <td align="center">
+      ⚡&nbsp;<a href="#-benchmarks"><code>Benchmarks</code></a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      🤖&nbsp;<a href="#-ai-agent-ecosystem"><code>AI&nbsp;Agent&nbsp;Ecosystem</code></a>
+    </td>
+    <td align="center">
+       ⚖️&nbsp;<a href="#-license"><code>License</code></a>
+    </td>
+    <td align="center">
+       👥&nbsp;<a href="#-maintainers"><code>Maintainers</code></a>
+    </td>
+  </tr>
+</table>
 
 <br/>
 
