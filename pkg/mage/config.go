@@ -378,7 +378,7 @@ func defaultConfig() *Config {
 			Timeout:            "10m",
 			IntegrationTimeout: "30m",
 			CoverMode:          "atomic",
-			ExcludeModules:     []string{"magefiles"},
+			ExcludeModules:     []string{""},
 		},
 		Lint: LintConfig{
 			GolangciVersion: VersionLatest,
