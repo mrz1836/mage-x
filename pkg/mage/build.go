@@ -825,6 +825,21 @@ func (b Build) getWorkspaceModuleDirs() ([]string, bool) {
 	return modules, len(modules) > 0
 }
 
+// shouldExcludeModuleByName checks if a module name is in the exclusion list.
+// This allows modules like "magefiles" to be excluded from prebuild using the
+// same MAGE_X_TEST_EXCLUDE_MODULES configuration used for tests.
+func shouldExcludeModuleByName(moduleName string, config *Config) bool {
+	if config == nil || len(config.Test.ExcludeModules) == 0 {
+		return false
+	}
+	for _, excludedName := range config.Test.ExcludeModules {
+		if moduleName == excludedName {
+			return true
+		}
+	}
+	return false
+}
+
 // buildWorkspaceModules builds all packages in each workspace module by running
 // go build ./... from within each module directory. This avoids workspace validation
 // errors that occur when running from the repository root with modules that exist
@@ -835,6 +850,14 @@ func (b Build) buildWorkspaceModules(verbose bool, parallelism string) error {
 		return ErrNotInWorkspaceMode
 	}
 
+	// Load config to check exclusion list
+	config, err := GetConfig()
+	if err != nil {
+		utils.Warn("Failed to load config for exclusion check: %v", err)
+		// Continue without filtering - don't fail the build
+		config = nil
+	}
+
 	originalDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -842,6 +865,13 @@ func (b Build) buildWorkspaceModules(verbose bool, parallelism string) error {
 
 	for _, modDir := range moduleDirs {
 		modName := filepath.Base(modDir)
+
+		// Check if module should be excluded
+		if shouldExcludeModuleByName(modName, config) {
+			utils.Info("Skipping module %s (excluded from prebuild)", modName)
+			continue
+		}
+
 		utils.Info("Building packages in module: %s", modName)
 
 		if err := os.Chdir(modDir); err != nil {
