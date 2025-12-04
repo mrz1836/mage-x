@@ -252,7 +252,6 @@ func EstimatePackageBuildMemory(packageCount int) uint64 {
 		estimatedMB = baseMemoryMB
 	}
 
-	//nolint:gosec // G115: estimatedMB guaranteed in [0, 8000] - false positive for CI golangci-lint 2.6.2
 	return uint64(estimatedMB) * 1024 * 1024
 }
 
