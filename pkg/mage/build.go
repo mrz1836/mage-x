@@ -780,7 +780,7 @@ func (b Build) PreBuildWithArgs(argsList ...string) error {
 		buildErr = b.buildSmart(exclude, verbose, parallelism)
 
 	case "full", "traditional", "legacy":
-		buildErr = b.buildFull(parallelism, config.Build.Verbose)
+		buildErr = b.buildFull(parallelism, config.Build.Verbose, exclude)
 
 	default:
 		utils.Warn("Unknown strategy %q, using smart strategy", strategy)
@@ -844,7 +844,8 @@ func shouldExcludeModuleByName(moduleName string, config *Config) bool {
 // go build ./... from within each module directory. This avoids workspace validation
 // errors that occur when running from the repository root with modules that exist
 // but aren't listed in go.work (e.g., magefiles with build constraints).
-func (b Build) buildWorkspaceModules(verbose bool, parallelism string) error {
+// When exclude is provided, it filters packages within each module using the exclude pattern.
+func (b Build) buildWorkspaceModules(verbose bool, parallelism, exclude string) error {
 	moduleDirs, isWorkspace := b.getWorkspaceModuleDirs()
 	if !isWorkspace {
 		return ErrNotInWorkspaceMode
@@ -866,9 +867,15 @@ func (b Build) buildWorkspaceModules(verbose bool, parallelism string) error {
 	for _, modDir := range moduleDirs {
 		modName := filepath.Base(modDir)
 
-		// Check if module should be excluded
+		// Check if module should be excluded by name (using config.Test.ExcludeModules)
 		if shouldExcludeModuleByName(modName, config) {
 			utils.Info("Skipping module %s (excluded from prebuild)", modName)
+			continue
+		}
+
+		// Also check if module matches the exclude pattern
+		if exclude != "" && strings.Contains(modName, exclude) {
+			utils.Info("Skipping module %s (matches exclude pattern: %s)", modName, exclude)
 			continue
 		}
 
@@ -886,7 +893,23 @@ func (b Build) buildWorkspaceModules(verbose bool, parallelism string) error {
 		if verbose {
 			args = append(args, "-v")
 		}
-		args = append(args, "./...")
+
+		// If exclude pattern provided, discover and filter packages within this module
+		if exclude != "" {
+			packages, discoverErr := b.discoverPackages(exclude)
+			if discoverErr != nil {
+				utils.Warn("Failed to discover packages in %s: %v", modDir, discoverErr)
+				// Fall back to ./... without filtering
+				args = append(args, "./...")
+			} else if len(packages) == 0 {
+				utils.Info("No packages to build in %s after filtering", modName)
+				continue
+			} else {
+				args = append(args, packages...)
+			}
+		} else {
+			args = append(args, "./...")
+		}
 
 		if err := GetRunner().RunCmd("go", args...); err != nil {
 			// Change back to original directory before returning error
@@ -908,7 +931,7 @@ func (b Build) buildWorkspaceModules(verbose bool, parallelism string) error {
 // discoverPackages returns a list of all Go packages in the project.
 // In workspace mode (go.work exists), it discovers packages from each workspace
 // module to avoid errors from modules that exist but aren't in the workspace.
-func (b Build) discoverPackages(pattern, exclude string) ([]string, error) {
+func (b Build) discoverPackages(exclude string) ([]string, error) {
 	var packages []string
 	var err error
 
@@ -931,8 +954,8 @@ func (b Build) discoverPackages(pattern, exclude string) ([]string, error) {
 			return nil, ErrNoPackagesInWorkspace
 		}
 	} else {
-		// Standard mode: list all packages using the pattern
-		packages, err = utils.GoList(pattern)
+		// Standard mode: list all packages
+		packages, err = utils.GoList("./...")
 		if err != nil {
 			return nil, fmt.Errorf("failed to list packages: %w", err)
 		}
@@ -1053,11 +1076,11 @@ func (b Build) buildIncremental(batchSize, delayMs int, exclude string, verbose 
 	// In workspace mode, use per-module building to avoid validation issues
 	if _, isWorkspace := b.getWorkspaceModuleDirs(); isWorkspace {
 		utils.Info("Workspace mode detected - building each module separately")
-		return b.buildWorkspaceModules(verbose, parallelism)
+		return b.buildWorkspaceModules(verbose, parallelism, exclude)
 	}
 
 	// Discover packages
-	packages, err := b.discoverPackages("./...", exclude)
+	packages, err := b.discoverPackages(exclude)
 	if err != nil {
 		return err
 	}
@@ -1140,7 +1163,7 @@ func (b Build) buildMainsFirst(batchSize int, mainsOnly bool, exclude string, ve
 	utils.Info("Phase 2: Building remaining packages...")
 
 	// Get all packages
-	allPackages, err := b.discoverPackages("./...", exclude)
+	allPackages, err := b.discoverPackages(exclude)
 	if err != nil {
 		return err
 	}
@@ -1204,11 +1227,11 @@ func (b Build) buildSmart(exclude string, verbose bool, parallelism string) erro
 	// to avoid issues with modules that exist but aren't in go.work
 	if _, isWorkspace := b.getWorkspaceModuleDirs(); isWorkspace {
 		utils.Info("Workspace mode detected - building each module separately")
-		return b.buildWorkspaceModules(verbose, parallelism)
+		return b.buildWorkspaceModules(verbose, parallelism, exclude)
 	}
 
 	// Count packages to determine best strategy
-	packages, err := b.discoverPackages("./...", exclude)
+	packages, err := b.discoverPackages(exclude)
 	if err != nil {
 		return err
 	}
@@ -1248,7 +1271,7 @@ func (b Build) buildSmart(exclude string, verbose bool, parallelism string) erro
 		// Sufficient resources: Use full build
 		strategy = "full (sufficient resources)"
 		utils.Info("Selected strategy: %s", strategy)
-		return b.buildFull(parallelism, verbose)
+		return b.buildFull(parallelism, verbose, exclude)
 	}
 
 	utils.Info("Selected strategy: %s", strategy)
@@ -1256,7 +1279,40 @@ func (b Build) buildSmart(exclude string, verbose bool, parallelism string) erro
 }
 
 // buildFull performs a traditional full build (backward compatibility)
-func (b Build) buildFull(parallelism string, verbose bool) error {
+// When exclude is provided, it uses package discovery to filter excluded packages
+func (b Build) buildFull(parallelism string, verbose bool, exclude string) error {
+	// If exclude pattern provided, use filtered package list instead of ./...
+	if exclude != "" {
+		packages, err := b.discoverPackages(exclude)
+		if err != nil {
+			return fmt.Errorf("failed to discover packages: %w", err)
+		}
+
+		if len(packages) == 0 {
+			utils.Info("No packages to build after filtering")
+			return nil
+		}
+
+		utils.Info("Building %d packages (excluded: %s)", len(packages), exclude)
+
+		args := []string{"build"}
+		if parallelism != "" {
+			args = append(args, "-p", parallelism)
+		}
+		if verbose {
+			args = append(args, "-v")
+		}
+		args = append(args, packages...)
+
+		utils.Info("Running: go %s", strings.Join(args, " "))
+
+		if err := GetRunner().RunCmd("go", args...); err != nil {
+			return fmt.Errorf("full pre-build failed: %w", err)
+		}
+		return nil
+	}
+
+	// Original behavior when no exclusion
 	args := []string{"build"}
 
 	if parallelism != "" {

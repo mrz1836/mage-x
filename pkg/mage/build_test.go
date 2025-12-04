@@ -808,7 +808,7 @@ func (ts *BuildTestSuite) TestPackageDiscoveryUtilities() {
 			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
 			func() interface{} { return GetRunner() },
 			func() error {
-				packages, err := ts.build.discoverPackages("./...", "")
+				packages, err := ts.build.discoverPackages("")
 				ts.Require().NoError(err)
 				ts.Require().Len(packages, 3)
 				ts.Assert().Contains(packages, "github.com/test/pkg1")
