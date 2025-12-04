@@ -252,11 +252,7 @@ func EstimatePackageBuildMemory(packageCount int) uint64 {
 		estimatedMB = baseMemoryMB
 	}
 
-	// Ensure non-negative value before conversion to prevent overflow
-	if estimatedMB < 0 {
-		estimatedMB = 0
-	}
-	return uint64(estimatedMB) * 1024 * 1024
+	return uint64(estimatedMB) * 1024 * 1024 //nolint:gosec // G115: estimatedMB guaranteed in [0, 8000]
 }
 
 // parseVmStatOutput parses vm_stat output to extract page size and memory stats
