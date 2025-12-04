@@ -292,11 +292,14 @@ func main() {
 	// Try built-in command first to ensure parameters work correctly
 	// Built-in commands have proper parameter handling
 	if err := reg.Execute(command, commandArgs...); err != nil {
-		// If built-in command not found, try custom command
-		if tryCustomCommand(command, commandArgs, discovery) {
-			return // Success
+		// Only try custom command if built-in command doesn't exist
+		// Don't try custom commands when built-in command fails during execution
+		if errors.Is(err, registry.ErrUnknownCommand) {
+			if tryCustomCommand(command, commandArgs, discovery) {
+				return // Success
+			}
 		}
-		// Neither built-in nor custom command found
+		// Command execution failed OR custom command also failed
 		_, printErr := fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
 		if printErr != nil {
 			return
