@@ -461,8 +461,25 @@ func FuzzConfigManager(f *testing.F) {
 	f.Fuzz(func(t *testing.T, format, data string) {
 		manager := NewDefaultConfigManager()
 
+		// Sanitize format to create a valid filename extension
+		// Only allow alphanumeric characters to avoid filesystem issues
+		var sanitizedFormat strings.Builder
+		for _, r := range format {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+				sanitizedFormat.WriteRune(r)
+				if sanitizedFormat.Len() >= 10 {
+					break
+				}
+			}
+		}
+		// Ensure format is not empty
+		ext := sanitizedFormat.String()
+		if ext == "" {
+			ext = "txt"
+		}
+
 		// Create a file source
-		tempFile := t.TempDir() + "/config." + format
+		tempFile := t.TempDir() + "/config." + ext
 		err := writeFile(tempFile, []byte(data))
 		require.NoError(t, err, "Failed to write temp file")
 
