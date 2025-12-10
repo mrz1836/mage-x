@@ -611,11 +611,11 @@ magex docs:godocs        # Update GoDocs proxy (alias for docs:update)
 
 ```bash
 # Git Operations
-magex git:status                           # Show git repository status
+magex git:status                                # Show git repository status
 magex git:commit message="fix: commit message"  # Commit changes with message parameter
-magex git:tag version=1.2.3                # Create and push a new tag with version parameter
-magex git:tagremove version=1.2.3          # Remove a tag
-magex git:tagupdate version=1.2.3          # Force update a tag
+magex git:tag version=1.2.3                     # Create and push a new tag with version parameter
+magex git:tagremove version=1.2.3               # Remove a tag
+magex git:tagupdate version=1.2.3               # Force update a tag
 
 # Version Management
 magex version:show         # Display current version information
