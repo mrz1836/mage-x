@@ -5,6 +5,9 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -55,6 +58,130 @@ func (Metrics) LOC() error {
 
 	total := testCount + goCount
 	utils.Success("Total lines of code: %s", formatNumberWithCommas(total))
+
+	return nil
+}
+
+// Mage scans for magefiles and reports found targets
+func (Metrics) Mage() error {
+	utils.Header("Magefile Analysis")
+
+	// Check for magefiles directory
+	magefilesDir := "magefiles"
+	hasMagefilesDir := false
+	if info, err := os.Stat(magefilesDir); err == nil && info.IsDir() {
+		hasMagefilesDir = true
+	}
+
+	utils.Println("")
+	utils.Print("Magefiles Directory Found: ")
+	if hasMagefilesDir {
+		utils.Success("Yes")
+	} else {
+		utils.Warn("No")
+	}
+	utils.Println("")
+
+	// Find magefile sources
+	type mageFile struct {
+		Path      string
+		Functions int
+		Targets   []string
+	}
+	var files []mageFile
+	totalFuncs := 0
+
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip hidden directories and common vendor dirs
+		if info.IsDir() {
+			if strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+				return filepath.SkipDir
+			}
+			if info.Name() == "vendor" || info.Name() == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+
+		// Check if file is a magefile
+		isMage := strings.HasPrefix(path, magefilesDir+string(filepath.Separator))
+
+		// 1. Check strict location (magefiles directory)
+
+		// 2. Check build tags if not already confirmed
+		// Also parse to get function counts regardless
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if err != nil {
+			utils.Debug("Failed to parse file %s: %v", path, err)
+			return nil
+		}
+
+		if !isMage {
+			// Check build tags in comments
+			for _, comment := range node.Comments {
+				if strings.Contains(comment.Text(), "+build mage") ||
+					strings.Contains(comment.Text(), "go:build mage") {
+					isMage = true
+					break
+				}
+			}
+		}
+
+		if isMage {
+			funcCount := 0
+			var targets []string
+
+			for _, decl := range node.Decls {
+				if fn, ok := decl.(*ast.FuncDecl); ok {
+					if fn.Name.IsExported() {
+						funcCount++
+						targets = append(targets, fn.Name.Name)
+					}
+				}
+			}
+
+			if funcCount > 0 || isMage {
+				files = append(files, mageFile{
+					Path:      path,
+					Functions: funcCount,
+					Targets:   targets,
+				})
+				totalFuncs += funcCount
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to scan for magefiles: %w", err)
+	}
+
+	// Display results
+	if len(files) > 0 {
+		utils.Println("| File Path                                        | Functions |")
+		utils.Println("|--------------------------------------------------|-----------|")
+		for _, f := range files {
+			// Truncate path if too long
+			displayPath := f.Path
+			if len(displayPath) > 48 {
+				displayPath = "..." + displayPath[len(displayPath)-45:]
+			}
+			utils.Print("| %-48s | %-9d |\n", displayPath, f.Functions)
+		}
+		utils.Println("")
+		utils.Success("Total functions found: %d", totalFuncs)
+	} else {
+		utils.Warn("No magefiles or mage targets found.")
+	}
 
 	return nil
 }

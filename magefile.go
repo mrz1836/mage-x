@@ -401,10 +401,21 @@ func MetricsLOC() error {
 	return m.LOC()
 }
 
+func (m Metrics) Mage() error {
+	var impl mage.Metrics
+	return impl.Mage()
+}
+
 // MetricsCoverage generates coverage reports
 func MetricsCoverage() error {
 	var m mage.Metrics
 	return m.Coverage()
+}
+
+// MetricsMage scans for magefiles and reports found targets
+func MetricsMage() error {
+	var m mage.Metrics
+	return m.Mage()
 }
 
 // MetricsComplexity analyzes code complexity

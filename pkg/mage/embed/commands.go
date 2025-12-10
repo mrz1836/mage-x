@@ -1135,6 +1135,14 @@ func registerMetricsCommands(reg *registry.Registry) {
 			WithCategory("Metrics").
 			MustBuild(),
 	)
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("metrics", "mage").
+			WithDescription("Analyze magefiles and targets").
+			WithFunc(func() error { return m.Mage() }).
+			WithCategory("Metrics").
+			MustBuild(),
+	)
 }
 
 func registerBenchCommands(reg *registry.Registry) {

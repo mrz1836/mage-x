@@ -573,6 +573,7 @@ magex format:check        # Check if files are properly formatted
 
 ```bash
 magex metrics:loc         # Analyze lines of code
+magex metrics:mage        # Analyze magefiles and targets
 magex metrics:coverage    # Generate coverage reports
 magex metrics:complexity  # Analyze code complexity
 
