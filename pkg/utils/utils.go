@@ -41,7 +41,10 @@ func RunCmd(name string, args ...string) error {
 		Info("➤ %s %s", name, strings.Join(args, " "))
 	}
 
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("command failed [%s %s]: %w", name, strings.Join(args, " "), err)
+	}
+	return nil
 }
 
 // RunCmdV executes a command with verbose output
@@ -60,7 +63,14 @@ func RunCmdOutput(name string, args ...string) (string, error) {
 	}
 
 	output, err := cmd.CombinedOutput()
-	return string(output), err
+	if err != nil {
+		// Include command output in error for better diagnostics
+		if trimmed := strings.TrimSpace(string(output)); trimmed != "" {
+			return "", fmt.Errorf("command failed [%s %s]: %w\n%s", name, strings.Join(args, " "), err, trimmed)
+		}
+		return "", fmt.Errorf("command failed [%s %s]: %w", name, strings.Join(args, " "), err)
+	}
+	return string(output), nil
 }
 
 // RunCmdPipe executes commands in a pipeline
@@ -81,15 +91,15 @@ func RunCmdPipe(cmds ...*exec.Cmd) error {
 		cmd.Stderr = os.Stderr
 	}
 
-	for _, cmd := range cmds {
+	for i, cmd := range cmds {
 		if err := cmd.Start(); err != nil {
-			return err
+			return fmt.Errorf("failed to start pipeline command %d [%s]: %w", i+1, cmd.Path, err)
 		}
 	}
 
-	for _, cmd := range cmds {
+	for i, cmd := range cmds {
 		if err := cmd.Wait(); err != nil {
-			return err
+			return fmt.Errorf("pipeline command %d [%s] failed: %w", i+1, cmd.Path, err)
 		}
 	}
 
@@ -313,6 +323,10 @@ func GoList(args ...string) ([]string, error) {
 	cmdArgs := append([]string{"list"}, args...)
 	output, err := RunCmdOutput("go", cmdArgs...)
 	if err != nil {
+		// Include command output in error for better diagnostics (e.g., dependency conflicts)
+		if output = strings.TrimSpace(output); output != "" {
+			return nil, fmt.Errorf("%w\n%s", err, output)
+		}
 		return nil, err
 	}
 
@@ -331,7 +345,7 @@ func GoList(args ...string) ([]string, error) {
 func GetModuleName() (string, error) {
 	output, err := RunCmdOutput("go", "list", "-m")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get module name: %w", err)
 	}
 	return strings.TrimSpace(output), nil
 }
@@ -340,7 +354,7 @@ func GetModuleName() (string, error) {
 func GetGoVersion() (string, error) {
 	output, err := RunCmdOutput("go", "version")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get Go version: %w", err)
 	}
 
 	// Parse version from output like "go version go1.24.0 darwin/amd64"
