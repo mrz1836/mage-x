@@ -283,45 +283,63 @@ func TestFindGoFiles(t *testing.T) {
 }
 
 // TestFormatDefaultWithPartialFailures tests Format.Default() with some formatters failing
+// This test runs in a temp directory to avoid modifying actual project files.
 func TestFormatDefaultWithPartialFailures(t *testing.T) {
-	// This test is complex because Default() calls ensureGofumpt() and ensureGoimports()
-	// which try to type-assert to SecureCommandRunner to install tools if missing
-	// For now, we'll just test that Default() can be called without panicking
+	// Create temp directory and change to it
+	tmpDir := t.TempDir()
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(origDir) }() //nolint:errcheck // test cleanup
 
-	// Save original runner
-	originalRunner := GetRunner()
-	defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create minimal Go files for formatters to work on
+	err = os.WriteFile("go.mod", []byte("module testformat\n\ngo 1.21\n"), 0o600)
+	require.NoError(t, err)
+
+	err = os.WriteFile("main.go", []byte("package main\n\nfunc main() {}\n"), 0o600)
+	require.NoError(t, err)
 
 	format := Format{}
 
-	// Test Default() method - it should run without panic even if some formatters fail
-	// In a real scenario this would format code, but we just verify it doesn't crash
-	err := format.Default()
+	// Test Default() method - should complete without error in an isolated environment
+	// This verifies the code path works without modifying real project files
+	err = format.Default()
 
-	// The result depends on whether gofmt, gofumpt, and goimports are available
-	// We just verify no panic occurs - the actual success/failure is environment dependent
-	_ = err // Don't assert on error since tools may or may not be available
-
-	// If we got here without panic, the test passes
+	// The result depends on whether formatting tools are available
+	// We just verify no panic occurs and the function completes
+	_ = err
 }
 
 // TestFormatCheckWithMultipleIssues tests Format.Check() with various formatting issues
+// This test runs in a temp directory to avoid modifying actual project files.
 func TestFormatCheckWithMultipleIssues(t *testing.T) {
-	// Save original runner
-	originalRunner := GetRunner()
-	defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
+	// Create temp directory and change to it
+	tmpDir := t.TempDir()
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(origDir) }() //nolint:errcheck // test cleanup
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create minimal Go files for formatters to check
+	err = os.WriteFile("go.mod", []byte("module testformat\n\ngo 1.21\n"), 0o600)
+	require.NoError(t, err)
+
+	err = os.WriteFile("main.go", []byte("package main\n\nfunc main() {}\n"), 0o600)
+	require.NoError(t, err)
 
 	format := Format{}
 
-	// Test Check() method - it should run without panic even if formatters aren't available
-	// In a real scenario this would check formatting issues, but we just verify it doesn't crash
-	err := format.Check()
+	// Test Check() method - should complete without error in an isolated environment
+	// This verifies the code path works without checking real project files
+	err = format.Check()
 
 	// The result depends on whether formatting tools are available and files need formatting
-	// We just verify no panic occurs - the actual success/failure is environment dependent
-	_ = err // Don't assert on error since tools may or may not be available
-
-	// If we got here without panic, the test passes
+	// We just verify no panic occurs and the function completes
+	_ = err
 }
 
 // TestFormatGofmtEdgeCases tests Format.Gofmt() edge cases
