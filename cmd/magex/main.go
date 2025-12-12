@@ -130,7 +130,7 @@ func tryCustomCommand(command string, commandArgs []string, discovery *CommandDi
 	}
 
 	if delegateErr := DelegateToMage(originalCommand, commandArgs...); delegateErr != nil {
-		_, printErr := fmt.Fprintf(os.Stderr, "❌ Error executing custom command '%s': %v\n", command, delegateErr)
+		_, printErr := fmt.Fprintf(os.Stderr, "❌ %v\n", delegateErr)
 		if printErr != nil {
 			return false
 		}
