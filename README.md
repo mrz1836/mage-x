@@ -687,6 +687,11 @@ magex build:install       # Install the project binary
 magex build:dev           # Build and install development version (forced 'dev' version)
 magex install:stdlib      # Install Go standard library for cross-compilation
 magex uninstall           # Remove installed binary
+
+# Spec-Kit CLI Management (requires speckit.enabled: true in .mage.yaml)
+magex speckit:install     # Install spec-kit prerequisites (uv, uvx, specify-cli)
+magex speckit:check       # Verify spec-kit installation and report version info
+magex speckit:upgrade     # Upgrade spec-kit with automatic constitution backup/restore
 ```
 
 </details>
@@ -851,6 +856,135 @@ func QuickBench() error {
 </details>
 
 See the [examples directory](examples) for more custom magefile implementations.
+
+<br/>
+
+## 📐 Spec-Driven Development
+
+This project uses [Spec-Kit](https://github.com/github/spec-kit) for spec-driven development, enabling executable specifications that directly generate working implementations. All feature specifications live in the [`specs/`](specs/) directory.
+
+<details>
+<summary><strong><code>Creating a New Feature Spec</code></strong></summary>
+<br/>
+
+Follow the spec-kit workflow to create and implement new features:
+
+### 1. **Constitution** (One-time setup)
+```bash
+/speckit.constitution
+```
+Establish project principles and development guidelines.
+
+### 2. **Specify** (Define requirements)
+```bash
+/speckit.specify
+```
+Describe *what* and *why*, not the technology. Focus on requirements and user stories.
+
+### 3. **Clarify** (Optional but recommended)
+```bash
+/speckit.clarify
+```
+Address underspecified areas with targeted questions.
+
+### 4. **Plan** (Design implementation)
+```bash
+/speckit.plan
+```
+Create technical implementation strategy with your chosen tech stack.
+
+### 5. **Tasks** (Generate action items)
+```bash
+/speckit.tasks
+```
+Generate actionable, dependency-ordered task lists.
+
+### 6. **Analyze** (Validate consistency)
+```bash
+/speckit.analyze
+```
+Validate cross-artifact consistency before implementation.
+
+### 7. **Implement** (Build the feature)
+```bash
+/speckit.implement
+```
+Execute all tasks to build the feature according to the plan.
+
+**Pro tip:** Run `/speckit.checklist` anytime to generate custom validation criteria.
+
+</details>
+
+<details>
+<summary><strong><code>Upgrading Spec-Kit</code></strong></summary>
+<br/>
+
+### Automated Commands (Recommended)
+
+MAGE-X provides a `speckit` namespace for managing the spec-kit CLI:
+
+```bash
+# Install spec-kit prerequisites (uv, uvx, specify-cli)
+magex speckit:install
+
+# Check spec-kit installation and version
+magex speckit:check
+
+# Upgrade spec-kit with automatic backup/restore
+magex speckit:upgrade
+```
+
+The `speckit:upgrade` command automatically:
+- ✅ Backs up your constitution to `.specify/backups/` with timestamp
+- ✅ Upgrades the spec-kit CLI using `uv tool upgrade`
+- ✅ Updates project configuration with `--force` flag
+- ✅ Restores your constitution from backup
+- ✅ Tracks version history in `.specify/version.txt`
+- ✅ Cleans old backups (keeps last 5)
+- ✅ Verifies the upgrade with `specify check`
+
+**Configuration** (in `.mage.yaml`):
+```yaml
+speckit:
+  enabled: true                                    # Enable speckit commands (opt-in)
+  constitution_path: ".specify/memory/constitution.md"
+  backup_dir: ".specify/backups"
+  backups_to_keep: 5
+  ai_provider: "claude"
+```
+
+### Manual Upgrade (Alternative)
+
+If you prefer manual control, follow these steps:
+
+#### Step 1: Backup Your Constitution
+```bash
+cp .specify/memory/constitution.md ~/constitution.backup.md
+```
+
+#### Step 2: Upgrade the CLI
+
+**If using persistent installation:**
+```bash
+uv tool upgrade specify-cli
+```
+
+**Verify the upgrade:**
+```bash
+specify check
+```
+
+#### Step 3: Upgrade the Project Configuration
+```bash
+uvx --from git+https://github.com/github/spec-kit.git specify init --here --ai claude --force
+```
+
+The `--force` flag safely merges updated configuration into your existing project.
+
+#### Step 4: Restore Custom Constitution (if needed)
+If you have custom constitution changes, carefully merge them back from your backup.
+
+</details>
 
 <br/>
 
