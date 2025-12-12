@@ -2,7 +2,7 @@ build:
   goflags: []
   ldflags: []
   output: bin
-  parallel: 10
+  parallel: 4
   platforms:
     - linux/amd64
     - darwin/amd64
@@ -81,7 +81,7 @@ test:
     - ""
   integration_tag: ""
   integration_timeout: 30m
-  parallel: 10
+  parallel: 4
   race: false
   short: false
   shuffle: false

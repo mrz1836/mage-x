@@ -34,6 +34,31 @@ func shouldExcludeFromBenchmarks(module ModuleInfo) bool {
 	return getExcludedBenchModules()[module.Name]
 }
 
+// parseBenchArgs parses arguments from argsList or os.Args
+func parseBenchArgs(argsList []string, targetNames ...string) map[string]string {
+	if len(argsList) > 0 {
+		return utils.ParseParams(argsList)
+	}
+
+	// Parse command-line parameters from os.Args
+	// Find arguments after the target name
+	var targetArgs []string
+	for i, arg := range os.Args {
+		found := false
+		for _, name := range targetNames {
+			if strings.Contains(arg, name) {
+				found = true
+				break
+			}
+		}
+		if found {
+			targetArgs = os.Args[i+1:]
+			break
+		}
+	}
+	return utils.ParseParams(targetArgs)
+}
+
 // Bench namespace for benchmark-related tasks
 type Bench mg.Namespace
 
@@ -46,16 +71,8 @@ func (Bench) Default() error {
 func (Bench) DefaultWithArgs(argsList ...string) error {
 	utils.Header("Running Benchmarks")
 
-	// Parse command-line parameters from os.Args
-	// Find arguments after the target name
-	var targetArgs []string
-	for i, arg := range os.Args {
-		if strings.Contains(arg, "bench:default") || strings.Contains(arg, "bench") {
-			targetArgs = os.Args[i+1:]
-			break
-		}
-	}
-	params := utils.ParseParams(targetArgs)
+	// Parse command-line parameters
+	params := parseBenchArgs(argsList, "bench:default", "bench")
 
 	// Discover all modules
 	modules, err := findAllModules()
@@ -223,16 +240,8 @@ func (Bench) Save() error {
 func (Bench) SaveWithArgs(argsList ...string) error {
 	utils.Header("Saving Benchmark Results")
 
-	// Parse command-line parameters from os.Args
-	// Find arguments after the target name
-	var targetArgs []string
-	for i, arg := range os.Args {
-		if strings.Contains(arg, "bench:save") {
-			targetArgs = os.Args[i+1:]
-			break
-		}
-	}
-	params := utils.ParseParams(targetArgs)
+	// Parse command-line parameters
+	params := parseBenchArgs(argsList, "bench:save")
 
 	// Determine output file
 	output := utils.GetParam(params, "output", "")
@@ -479,16 +488,8 @@ func (Bench) Trace() error {
 func (Bench) TraceWithArgs(argsList ...string) error {
 	utils.Header("Running Benchmarks with Execution Trace")
 
-	// Parse command-line parameters from os.Args
-	// Find arguments after the target name
-	var targetArgs []string
-	for i, arg := range os.Args {
-		if strings.Contains(arg, "bench:trace") {
-			targetArgs = os.Args[i+1:]
-			break
-		}
-	}
-	params := utils.ParseParams(targetArgs)
+	// Parse command-line parameters
+	params := parseBenchArgs(argsList, "bench:trace")
 
 	trace := utils.GetParam(params, "trace", "trace.out")
 	if trace == "" {
