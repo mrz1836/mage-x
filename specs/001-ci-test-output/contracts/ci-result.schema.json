@@ -1,0 +1,230 @@
+{
+    "$id": "https://mage-x/schemas/ci-result.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "FailureEvent": {
+            "additionalProperties": false,
+            "description": "Reports a single test failure",
+            "properties": {
+                "failure": {
+                    "$ref": "#/definitions/TestFailure"
+                },
+                "type": {
+                    "const": "failure"
+                }
+            },
+            "required": [
+                "type",
+                "failure"
+            ],
+            "type": "object"
+        },
+        "Metadata": {
+            "additionalProperties": false,
+            "description": "Execution context metadata",
+            "properties": {
+                "branch": {
+                    "description": "Git branch name",
+                    "type": "string"
+                },
+                "commit": {
+                    "description": "Git commit SHA",
+                    "type": "string"
+                },
+                "go_version": {
+                    "description": "Go version used for testing",
+                    "type": "string"
+                },
+                "platform": {
+                    "description": "OS/architecture (e.g., 'linux/amd64')",
+                    "type": "string"
+                },
+                "run_id": {
+                    "description": "CI run identifier",
+                    "type": "string"
+                },
+                "workflow": {
+                    "description": "CI workflow name",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "StartEvent": {
+            "additionalProperties": false,
+            "description": "Marks the start of a test run",
+            "properties": {
+                "metadata": {
+                    "$ref": "#/definitions/Metadata"
+                },
+                "timestamp": {
+                    "description": "RFC3339 timestamp when tests started",
+                    "format": "date-time",
+                    "type": "string"
+                },
+                "type": {
+                    "const": "start"
+                }
+            },
+            "required": [
+                "type",
+                "timestamp"
+            ],
+            "type": "object"
+        },
+        "Summary": {
+            "additionalProperties": false,
+            "description": "Test run summary statistics",
+            "properties": {
+                "duration": {
+                    "description": "Total duration (e.g., '2m15s')",
+                    "type": "string"
+                },
+                "failed": {
+                    "description": "Tests failed",
+                    "minimum": 0,
+                    "type": "integer"
+                },
+                "passed": {
+                    "description": "Tests passed",
+                    "minimum": 0,
+                    "type": "integer"
+                },
+                "skipped": {
+                    "description": "Tests skipped",
+                    "minimum": 0,
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "Overall test run status",
+                    "enum": [
+                        "passed",
+                        "failed",
+                        "error"
+                    ],
+                    "type": "string"
+                },
+                "total": {
+                    "description": "Total tests run",
+                    "minimum": 0,
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "status",
+                "total",
+                "passed",
+                "failed",
+                "skipped",
+                "duration"
+            ],
+            "type": "object"
+        },
+        "SummaryEvent": {
+            "additionalProperties": false,
+            "description": "Final summary of test run",
+            "properties": {
+                "summary": {
+                    "$ref": "#/definitions/Summary"
+                },
+                "type": {
+                    "const": "summary"
+                }
+            },
+            "required": [
+                "type",
+                "summary"
+            ],
+            "type": "object"
+        },
+        "TestFailure": {
+            "additionalProperties": false,
+            "description": "Detailed information about a test failure",
+            "properties": {
+                "column": {
+                    "description": "Column number (primarily for build errors)",
+                    "minimum": 0,
+                    "type": "integer"
+                },
+                "context": {
+                    "description": "Surrounding lines of source code",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "duration": {
+                    "description": "Test duration (e.g., '0.003s')",
+                    "type": "string"
+                },
+                "error": {
+                    "description": "Error message",
+                    "type": "string"
+                },
+                "file": {
+                    "description": "Source file path (relative to project root)",
+                    "type": "string"
+                },
+                "line": {
+                    "description": "Line number",
+                    "minimum": 1,
+                    "type": "integer"
+                },
+                "output": {
+                    "description": "Full test output (may be truncated)",
+                    "type": "string"
+                },
+                "package": {
+                    "description": "Go package path",
+                    "pattern": "^[a-zA-Z0-9./_-]+$",
+                    "type": "string"
+                },
+                "signature": {
+                    "description": "Deduplication key (Package:Test:File:Line)",
+                    "type": "string"
+                },
+                "stack": {
+                    "description": "Stack trace (for panic failures)",
+                    "type": "string"
+                },
+                "test": {
+                    "description": "Test name (may include subtest path like Parent/Child)",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Failure classification",
+                    "enum": [
+                        "test",
+                        "build",
+                        "panic",
+                        "race",
+                        "fuzz",
+                        "timeout"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "package",
+                "test",
+                "type",
+                "file",
+                "line"
+            ],
+            "type": "object"
+        }
+    },
+    "description": "JSON Lines format for CI test output. Each line is one of: start, failure, or summary event.",
+    "oneOf": [
+        {
+            "$ref": "#/definitions/StartEvent"
+        },
+        {
+            "$ref": "#/definitions/FailureEvent"
+        },
+        {
+            "$ref": "#/definitions/SummaryEvent"
+        }
+    ],
+    "title": "CI Test Result"
+}
