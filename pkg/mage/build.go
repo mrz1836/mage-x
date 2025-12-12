@@ -1414,7 +1414,7 @@ func getCommit() string {
 	if commit, err := GetRunner().RunCmdOutput("git", "rev-parse", "--short", "HEAD"); err == nil {
 		return strings.TrimSpace(commit)
 	}
-	return "unknown"
+	return statusUnknown
 }
 
 // findSourceFiles finds Go source files for cache hashing
