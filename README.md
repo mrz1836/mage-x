@@ -79,7 +79,7 @@
        📚&nbsp;<a href="#-documentation"><code>Documentation</code></a>
     </td>
     <td align="center">
-       📐&nbsp;<a href="#-spec-driven-development"><code>Spec-Driven&nbsp;Dev</code></a>
+       📐&nbsp;<a href="#-spec-driven-development"><code>SDD</code></a>
     </td>
     <td align="center">
        🧪&nbsp;<a href="#-examples--tests"><code>Examples&nbsp;&&nbsp;Tests</code></a>
