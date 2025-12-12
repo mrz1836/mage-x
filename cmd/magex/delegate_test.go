@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -419,8 +420,10 @@ Unknown target specified: anothercommand
 Final message
 `
 
-	// Use a channel to coordinate the goroutines
-	done := make(chan bool, 1)
+	// Create buffer and WaitGroup for the new function signature
+	var buf strings.Builder
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	// Write data and close the writer
 	go func() {
@@ -435,13 +438,10 @@ Final message
 	}()
 
 	// Filter stderr in a goroutine
-	go func() {
-		filterStderr(r)
-		done <- true
-	}()
+	go filterStderr(r, &buf, &wg)
 
 	// Wait for filtering to complete
-	<-done
+	wg.Wait()
 
 	// Close the stderr writer to signal end
 	if closeErr := stderrW.Close(); closeErr != nil {
@@ -461,7 +461,7 @@ Final message
 
 	result := output.String()
 
-	// Check that normal messages are preserved
+	// Check that normal messages are preserved in stderr output
 	if !strings.Contains(result, "Normal error message") {
 		t.Errorf("Normal error messages should be preserved, got: %q", result)
 	}
@@ -475,6 +475,47 @@ Final message
 	// Check that "Unknown target specified" messages are filtered out
 	if strings.Contains(result, "Unknown target specified:") {
 		t.Errorf("'Unknown target specified' messages should be filtered out, got: %q", result)
+	}
+
+	// Check that buffer captured ALL messages (including filtered ones) for error reporting
+	captured := buf.String()
+	if !strings.Contains(captured, "Normal error message") {
+		t.Errorf("Buffer should capture normal messages, got: %q", captured)
+	}
+	// Buffer SHOULD capture filtered messages - they're needed for error reporting
+	if !strings.Contains(captured, "Unknown target specified:") {
+		t.Errorf("Buffer should capture all messages for error reporting, got: %q", captured)
+	}
+}
+
+func TestConvertToMageFormat(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Colon-separated namespace commands
+		{"Speckit:Install", "speckitinstall"},
+		{"Pipeline:CI", "pipelinecI"},
+		{"Build:Default", "builddefault"},
+		{"Test:Unit", "testunit"},
+
+		// Simple commands (no conversion needed)
+		{"Deploy", "Deploy"},
+		{"build", "build"},
+
+		// Edge cases
+		{":", ""}, // Empty parts result in empty string
+		{"Namespace:", "namespace"},
+		{":Method", "method"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := convertToMageFormat(tt.input)
+			if result != tt.expected {
+				t.Errorf("convertToMageFormat(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
 	}
 }
 

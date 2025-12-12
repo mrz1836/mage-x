@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 const (
@@ -21,11 +22,41 @@ var (
 	ErrCommandNotFound = errors.New("command not found and no magefile.go exists")
 	// ErrGoCommandNotFound is returned when go command is not available for delegation
 	ErrGoCommandNotFound = errors.New("go command not found - required for custom magefile.go commands")
+	// ErrCommandFailed is returned when a custom command execution fails
+	ErrCommandFailed = errors.New("custom command failed")
 )
+
+// convertToMageFormat converts colon-separated command names to mage's camelCase format
+// e.g., "Speckit:Install" -> "speckitInstall", "Pipeline:CI" -> "pipelineCI"
+func convertToMageFormat(command string) string {
+	if !strings.Contains(command, ":") {
+		return command // Already in simple format
+	}
+
+	parts := strings.SplitN(command, ":", 2)
+	if len(parts) != 2 {
+		return command
+	}
+
+	// Mage uses lowercase namespace + method (preserving method case)
+	// e.g., Speckit:Install -> speckitInstall
+	namespace := strings.ToLower(parts[0])
+	method := parts[1]
+
+	// First letter of method should be lowercase to form camelCase
+	if len(method) > 0 {
+		method = strings.ToLower(method[:1]) + method[1:]
+	}
+
+	return namespace + method
+}
 
 // DelegateToMage executes a custom command using mage or go run
 // This provides seamless execution of user-defined commands without plugin compilation
 func DelegateToMage(command string, args ...string) error {
+	// Convert colon-separated format to mage's camelCase format
+	mageCommand := convertToMageFormat(command)
+
 	// Check for magefiles/ directory first (preferred by standard mage)
 	magefilesDir := "magefiles"
 	var targetPath string
@@ -73,7 +104,7 @@ func DelegateToMage(command string, args ...string) error {
 		// Use mage binary - mage handles both directory and file automatically
 		// NOTE: mage binary does NOT support command-line arguments for custom functions
 		// Arguments must be passed via environment variables (MAGE_ARGS)
-		cmdArgs := []string{command}
+		cmdArgs := []string{mageCommand}
 		// #nosec G204 -- This is necessary for dynamic command execution with user-defined commands
 		cmd = exec.CommandContext(ctx, magePath, cmdArgs...)
 	} else {
@@ -81,7 +112,7 @@ func DelegateToMage(command string, args ...string) error {
 		var cmdArgs []string
 		if useDirectory {
 			// For directory, we need to run from within the directory using go run .
-			cmdArgs = []string{"run", "-tags=mage", ".", command}
+			cmdArgs = []string{"run", "-tags=mage", ".", mageCommand}
 			cmdArgs = append(cmdArgs, args...)
 			// #nosec G204 -- This is necessary for dynamic command execution with user-defined commands
 			cmd = exec.CommandContext(ctx, "go", cmdArgs...)
@@ -89,7 +120,7 @@ func DelegateToMage(command string, args ...string) error {
 			cmd.Dir = targetPath
 		} else {
 			// For single file, specify the file path
-			cmdArgs = []string{"run", "-tags=mage", targetPath, command}
+			cmdArgs = []string{"run", "-tags=mage", targetPath, mageCommand}
 			cmdArgs = append(cmdArgs, args...)
 			// #nosec G204 -- This is necessary for dynamic command execution with user-defined commands
 			cmd = exec.CommandContext(ctx, "go", cmdArgs...)
@@ -115,6 +146,11 @@ func DelegateToMage(command string, args ...string) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 
+	// Create buffer and WaitGroup for stderr capture
+	var stderrBuf strings.Builder
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	// Create a pipe to capture stderr for filtering
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
@@ -126,21 +162,30 @@ func DelegateToMage(command string, args ...string) error {
 		return fmt.Errorf("failed to start custom command '%s': %w", command, err)
 	}
 
-	// Filter stderr output in a goroutine
-	go filterStderr(stderrPipe)
+	// Filter stderr output in a goroutine, capturing content for error reporting
+	go filterStderr(stderrPipe, &stderrBuf, &wg)
 
 	// Wait for the command to finish
-	if err := cmd.Wait(); err != nil {
-		// Return the error instead of calling os.Exit
-		// This allows the caller to decide how to handle the exit status
-		return fmt.Errorf("failed to execute custom command '%s': %w", command, err)
+	waitErr := cmd.Wait()
+
+	// Wait for stderr to be fully captured before returning
+	wg.Wait()
+
+	if waitErr != nil {
+		// Include captured stderr in the error message if available
+		if stderrContent := strings.TrimSpace(stderrBuf.String()); stderrContent != "" {
+			return fmt.Errorf("%w '%s':\n%s", ErrCommandFailed, command, stderrContent)
+		}
+		return fmt.Errorf("%w '%s': %w", ErrCommandFailed, command, waitErr)
 	}
 
 	return nil
 }
 
-// filterStderr filters stderr output to suppress spurious "Unknown target specified" messages
-func filterStderr(stderrPipe io.ReadCloser) {
+// filterStderr filters stderr output for real-time display while capturing all content for error reporting
+// The "Unknown target specified" messages are filtered from display to avoid duplication when shown in error
+func filterStderr(stderrPipe io.ReadCloser, buf *strings.Builder, wg *sync.WaitGroup) {
+	defer wg.Done()
 	defer func() {
 		if err := stderrPipe.Close(); err != nil {
 			// Log error but don't fail the operation
@@ -152,12 +197,17 @@ func filterStderr(stderrPipe io.ReadCloser) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Filter out spurious "Unknown target specified" warnings
+		// Always capture to buffer for error message (we need the full context)
+		buf.WriteString(line)
+		buf.WriteString("\n")
+
+		// Filter "Unknown target specified" from real-time display to avoid duplication
+		// (it will still appear in the error message if command fails)
 		if strings.Contains(line, "Unknown target specified:") {
-			continue // Skip this line
+			continue // Skip displaying this line
 		}
 
-		// Pass through all other stderr output
+		// Pass through all other stderr output to user in real-time
 		fmt.Fprintln(os.Stderr, line)
 	}
 }
