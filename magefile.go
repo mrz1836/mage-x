@@ -41,6 +41,7 @@ type (
 	Metrics   mg.Namespace
 	Mod       mg.Namespace
 	Release   mg.Namespace
+	Speckit   mg.Namespace
 	Test      mg.Namespace
 	Tools     mg.Namespace
 	Update    mg.Namespace
@@ -158,6 +159,24 @@ func Uninstall() error {
 func ReleaseDefault() error {
 	var r mage.Release
 	return r.Default()
+}
+
+// SpeckitInstall installs spec-kit prerequisites (uv, uvx, specify-cli)
+func SpeckitInstall() error {
+	var s mage.Speckit
+	return s.Install()
+}
+
+// SpeckitCheck verifies spec-kit installation and reports version info
+func SpeckitCheck() error {
+	var s mage.Speckit
+	return s.Check()
+}
+
+// SpeckitUpgrade safely upgrades spec-kit with automatic constitution backup
+func SpeckitUpgrade() error {
+	var s mage.Speckit
+	return s.Upgrade()
 }
 
 // DepsUpdate updates all dependencies (equivalent to "make update")

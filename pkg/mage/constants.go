@@ -312,3 +312,21 @@ const (
 	FmtDuration    = "Duration: %s"
 	FmtCoverage    = "Coverage: %.1f%%"
 )
+
+// Speckit command names
+const (
+	CmdUV      = "uv"
+	CmdUVX     = "uvx"
+	CmdSpecify = "specify"
+)
+
+// Speckit default configuration values
+const (
+	DefaultSpeckitConstitutionPath = ".specify/memory/constitution.md"
+	DefaultSpeckitVersionFile      = ".specify/version.txt"
+	DefaultSpeckitBackupDir        = ".specify/backups"
+	DefaultSpeckitBackupsToKeep    = 5
+	DefaultSpeckitCLIName          = "specify-cli"
+	DefaultSpeckitGitHubRepo       = "git+https://github.com/github/spec-kit.git"
+	DefaultSpeckitAIProvider       = "claude"
+)

@@ -22,6 +22,7 @@ type Config struct {
 	Metadata map[string]string `yaml:"metadata,omitempty"`
 	Project  ProjectConfig     `yaml:"project"`
 	Release  ReleaseConfig     `yaml:"release"`
+	Speckit  SpeckitConfig     `yaml:"speckit"`
 	Test     TestConfig        `yaml:"test"`
 	Tools    ToolsConfig       `yaml:"tools"`
 }
@@ -136,6 +137,18 @@ type DownloadConfig struct {
 type DocsConfig struct {
 	Tool string `yaml:"tool"` // "pkgsite", "godoc", or "" for auto-detect
 	Port int    `yaml:"port"` // 0 for default port
+}
+
+// SpeckitConfig contains spec-kit CLI management settings
+type SpeckitConfig struct {
+	Enabled          bool   `yaml:"enabled"`           // Whether speckit commands are available (default: false, opt-in)
+	ConstitutionPath string `yaml:"constitution_path"` // Path to constitution file (default: ".specify/memory/constitution.md")
+	VersionFile      string `yaml:"version_file"`      // Path to version tracking file (default: ".specify/version.txt")
+	BackupDir        string `yaml:"backup_dir"`        // Directory for constitution backups (default: ".specify/backups")
+	BackupsToKeep    int    `yaml:"backups_to_keep"`   // Number of backups to retain (default: 5)
+	CLIName          string `yaml:"cli_name"`          // Package name for spec-kit CLI (default: "specify-cli")
+	GitHubRepo       string `yaml:"github_repo"`       // GitHub repository URL for spec-kit
+	AIProvider       string `yaml:"ai_provider"`       // AI provider for spec-kit initialization (default: "claude")
 }
 
 // Static errors for err113 compliance
@@ -334,6 +347,14 @@ func cleanConfigValues(config *Config) {
 	for k, v := range config.Metadata {
 		config.Metadata[k] = cleanEnvValue(v)
 	}
+
+	// Clean Speckit config strings
+	config.Speckit.ConstitutionPath = cleanEnvValue(config.Speckit.ConstitutionPath)
+	config.Speckit.VersionFile = cleanEnvValue(config.Speckit.VersionFile)
+	config.Speckit.BackupDir = cleanEnvValue(config.Speckit.BackupDir)
+	config.Speckit.CLIName = cleanEnvValue(config.Speckit.CLIName)
+	config.Speckit.GitHubRepo = cleanEnvValue(config.Speckit.GitHubRepo)
+	config.Speckit.AIProvider = cleanEnvValue(config.Speckit.AIProvider)
 }
 
 // defaultConfig returns the default configuration
@@ -406,6 +427,16 @@ func defaultConfig() *Config {
 			BackoffMultiplier: 2.0,
 			EnableResume:      true,
 			UserAgent:         "mage-x-downloader/1.0",
+		},
+		Speckit: SpeckitConfig{
+			Enabled:          false, // Opt-in, disabled by default
+			ConstitutionPath: DefaultSpeckitConstitutionPath,
+			VersionFile:      DefaultSpeckitVersionFile,
+			BackupDir:        DefaultSpeckitBackupDir,
+			BackupsToKeep:    DefaultSpeckitBackupsToKeep,
+			CLIName:          DefaultSpeckitCLIName,
+			GitHubRepo:       DefaultSpeckitGitHubRepo,
+			AIProvider:       DefaultSpeckitAIProvider,
 		},
 	}
 

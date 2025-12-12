@@ -58,6 +58,15 @@ release:
   github_token_env: GITHUB_TOKEN
   name_template: ""
   prerelease: false
+speckit:
+  enabled: false
+  constitution_path: .specify/memory/constitution.md
+  version_file: .specify/version.txt
+  backup_dir: .specify/backups
+  backups_to_keep: 5
+  cli_name: specify-cli
+  github_repo: git+https://github.com/github/spec-kit.git
+  ai_provider: claude
 test:
   auto_discover_build_tags: false
   auto_discover_build_tags_exclude: []
