@@ -61,36 +61,45 @@
 
 <table align="center">
   <tr>
-    <td align="center" width="33%">
-       🚀&nbsp;<a href="#-quick-start"><code>Quick&nbsp;Start</code></a>
+    <td align="center" width="25%">
+       🧩&nbsp;<a href="#-whats-inside"><code>What's&nbsp;Inside</code></a>
     </td>
-    <td align="center" width="33%">
-       🧪&nbsp;<a href="#-examples--tests"><code>Examples&nbsp;&&nbsp;Tests</code></a>
+    <td align="center" width="25%">
+       ⚡&nbsp;<a href="#-quick-start"><code>Quick&nbsp;Start</code></a>
     </td>
-    <td align="center" width="33%">
-       📚&nbsp;<a href="#-documentation"><code>Documentation</code></a>
+    <td align="center" width="25%">
+       🚀&nbsp;<a href="#-features"><code>Features</code></a>
+    </td>
+    <td align="center" width="25%">
+       ⚙️&nbsp;<a href="#-configuration"><code>Configuration</code></a>
     </td>
   </tr>
   <tr>
+    <td align="center">
+       📚&nbsp;<a href="#-documentation"><code>Documentation</code></a>
+    </td>
+    <td align="center">
+       📐&nbsp;<a href="#-spec-driven-development"><code>Spec-Driven&nbsp;Dev</code></a>
+    </td>
+    <td align="center">
+       🧪&nbsp;<a href="#-examples--tests"><code>Examples&nbsp;&&nbsp;Tests</code></a>
+    </td>
+    <td align="center">
+       ⚡&nbsp;<a href="#-benchmarks"><code>Benchmarks</code></a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+       🛠️&nbsp;<a href="#-code-standards"><code>Code&nbsp;Standards</code></a>
+    </td>
+    <td align="center">
+       🤖&nbsp;<a href="#-ai-agent-ecosystem"><code>AI&nbsp;Agents</code></a>
+    </td>
     <td align="center">
        🤝&nbsp;<a href="#-contributing"><code>Contributing</code></a>
     </td>
     <td align="center">
-      🛠️&nbsp;<a href="#-code-standards"><code>Code&nbsp;Standards</code></a>
-    </td>
-    <td align="center">
-      ⚡&nbsp;<a href="#-benchmarks"><code>Benchmarks</code></a>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      🤖&nbsp;<a href="#-ai-agent-ecosystem"><code>AI&nbsp;Agent&nbsp;Ecosystem</code></a>
-    </td>
-    <td align="center">
-       ⚖️&nbsp;<a href="#-license"><code>License</code></a>
-    </td>
-    <td align="center">
-       👥&nbsp;<a href="#-maintainers"><code>Maintainers</code></a>
+       📝&nbsp;<a href="#-license"><code>License</code></a>
     </td>
   </tr>
 </table>
