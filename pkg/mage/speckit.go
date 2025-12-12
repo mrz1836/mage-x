@@ -22,7 +22,6 @@ var (
 	errConstitutionNotFound = errors.New("constitution file not found")
 	errBackupFailed         = errors.New("failed to backup constitution")
 	errVersionParseFailed   = errors.New("failed to parse spec-kit version")
-	errSpeckitNotEnabled    = errors.New("speckit is not enabled in configuration")
 	errSpeckitInstallFailed = errors.New("failed to install speckit prerequisites")
 )
 
@@ -38,16 +37,8 @@ func (Speckit) Install() error {
 		return err
 	}
 
-	if !config.Speckit.Enabled {
-		utils.Warn("Speckit is not enabled in configuration")
-		utils.Info("Enable it in .mage.yaml:")
-		utils.Info("  speckit:")
-		utils.Info("    enabled: true")
-		return nil
-	}
-
 	// Step 1: Check for uv
-	utils.Info("Step 1/3: Checking for uv package manager...")
+	utils.Info("Step 1/4: Checking for uv package manager...")
 	if !utils.CommandExists(CmdUV) {
 		utils.Warn("uv package manager not found")
 		utils.Info("Install uv with: curl -LsSf https://astral.sh/uv/install.sh | sh")
@@ -57,7 +48,7 @@ func (Speckit) Install() error {
 	utils.Success("uv package manager found")
 
 	// Step 2: Check for uvx (included with uv)
-	utils.Info("Step 2/3: Checking for uvx command runner...")
+	utils.Info("Step 2/4: Checking for uvx command runner...")
 	if !utils.CommandExists(CmdUVX) {
 		utils.Warn("uvx command runner not found")
 		utils.Info("uvx should be included with uv installation")
@@ -67,19 +58,27 @@ func (Speckit) Install() error {
 	utils.Success("uvx command runner found")
 
 	// Step 3: Install/update specify-cli
-	utils.Info("Step 3/3: Installing/updating specify-cli...")
+	utils.Info("Step 3/4: Installing/updating specify-cli...")
 	if err := installSpeckitCLI(config); err != nil {
 		utils.Error("Failed to install specify-cli: %v", err)
 		return fmt.Errorf("%w: %w", errSpeckitInstallFailed, err)
 	}
 	utils.Success("specify-cli installed successfully")
 
-	utils.Success("All Spec-Kit prerequisites installed!")
+	// Step 4: Initialize project configuration
+	utils.Info("Step 4/4: Initializing project configuration...")
+	if err := upgradeSpeckitProjectConfig(config); err != nil {
+		utils.Error("Failed to initialize project: %v", err)
+		return fmt.Errorf("failed to initialize speckit project: %w", err)
+	}
+	utils.Success("Project configuration initialized")
+
+	utils.Success("Spec-Kit fully installed and configured!")
 	utils.Info("")
 	utils.Info("You can now use spec-kit commands:")
-	utils.Info("  specify check      - Verify installation")
-	utils.Info("  specify init       - Initialize spec-kit in your project")
+	utils.Info("  specify check        - Verify installation")
 	utils.Info("  specify constitution - Manage project constitution")
+	utils.Info("  magex speckit:check  - Check installation status")
 	return nil
 }
 
@@ -90,12 +89,6 @@ func (Speckit) Check() error {
 	config, err := GetConfig()
 	if err != nil {
 		return err
-	}
-
-	if !config.Speckit.Enabled {
-		utils.Warn("Speckit is not enabled in configuration")
-		utils.Info("Enable it in .mage.yaml: speckit.enabled: true")
-		return nil
 	}
 
 	// Check prerequisites
@@ -145,12 +138,6 @@ func (Speckit) Upgrade() error {
 		return err
 	}
 
-	if !config.Speckit.Enabled {
-		utils.Warn("Speckit is not enabled in configuration")
-		utils.Info("Enable it in .mage.yaml: speckit.enabled: true")
-		return errSpeckitNotEnabled
-	}
-
 	// Step 1: Check prerequisites
 	utils.Info("Step 1/10: Checking prerequisites...")
 	if prereqErr := checkSpeckitPrerequisites(); prereqErr != nil {
@@ -163,7 +150,7 @@ func (Speckit) Upgrade() error {
 	oldVersion, versionErr := getSpeckitVersion(config)
 	if versionErr != nil {
 		utils.Warn("Could not determine current version: %v", versionErr)
-		oldVersion = "unknown" //nolint:goconst // Using literal for clarity in version tracking
+		oldVersion = statusUnknown
 	} else {
 		utils.Success("Current version: %s", oldVersion)
 	}
@@ -389,7 +376,7 @@ func performSpeckitUpgradeActions(config *Config) (string, error) {
 	newVersion, versionErr := getSpeckitVersion(config)
 	if versionErr != nil {
 		utils.Warn("Could not determine new version: %v", versionErr)
-		newVersion = "unknown"
+		newVersion = statusUnknown
 	} else {
 		utils.Success("New version: %s", newVersion)
 	}
@@ -416,6 +403,7 @@ func upgradeSpeckitUVTool(config *Config) error {
 }
 
 // upgradeSpeckitProjectConfig upgrades the project configuration using uvx
+// It attempts to use gh CLI for authentication first to avoid rate limits
 func upgradeSpeckitProjectConfig(config *Config) error {
 	gitHubRepo := config.Speckit.GitHubRepo
 	if gitHubRepo == "" {
@@ -438,7 +426,36 @@ func upgradeSpeckitProjectConfig(config *Config) error {
 		"--force",
 	}
 
+	// Try to get GitHub token from gh CLI for higher rate limits
+	// Only set if GH_TOKEN/GITHUB_TOKEN not already set
+	if os.Getenv("GH_TOKEN") == "" && os.Getenv("GITHUB_TOKEN") == "" {
+		if ghToken := getGitHubTokenFromGH(); ghToken != "" {
+			utils.Info("Using GitHub CLI authentication for higher rate limits")
+			os.Setenv("GH_TOKEN", ghToken) //nolint:errcheck,gosec // Best effort, G104 acknowledged
+			defer os.Unsetenv("GH_TOKEN")  //nolint:errcheck // Cleanup
+		} else {
+			utils.Warn("GitHub CLI not available - using unauthenticated access (60 requests/hour)")
+			utils.Info("Install gh CLI and run 'gh auth login' for higher rate limits")
+		}
+	}
+
 	return GetRunner().RunCmd(CmdUVX, args...)
+}
+
+// getGitHubTokenFromGH attempts to get a GitHub token from the gh CLI
+func getGitHubTokenFromGH() string {
+	// Check if gh is available
+	if !utils.CommandExists("gh") {
+		return ""
+	}
+
+	// Try to get the auth token
+	output, err := GetRunner().RunCmdOutput("gh", "auth", "token")
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(output)
 }
 
 // updateSpeckitVersionFile writes version tracking information to the version file

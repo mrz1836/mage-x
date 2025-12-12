@@ -34,66 +34,6 @@ func (ts *SpeckitTestSuite) TearDownTest() {
 	ts.env.Cleanup()
 }
 
-// TestSpeckit_Install_NotEnabled tests Install when speckit is disabled
-func (ts *SpeckitTestSuite) TestSpeckit_Install_NotEnabled() {
-	TestSetConfig(&Config{
-		Speckit: SpeckitConfig{
-			Enabled: false,
-		},
-	})
-
-	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
-		func() interface{} { return GetRunner() },
-		func() error {
-			return ts.speckit.Install()
-		},
-	)
-
-	// Should not error when disabled, just warn
-	ts.Require().NoError(err)
-}
-
-// TestSpeckit_Check_NotEnabled tests Check when speckit is disabled
-func (ts *SpeckitTestSuite) TestSpeckit_Check_NotEnabled() {
-	TestSetConfig(&Config{
-		Speckit: SpeckitConfig{
-			Enabled: false,
-		},
-	})
-
-	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
-		func() interface{} { return GetRunner() },
-		func() error {
-			return ts.speckit.Check()
-		},
-	)
-
-	// Should not error when disabled, just warn
-	ts.Require().NoError(err)
-}
-
-// TestSpeckit_Upgrade_NotEnabled tests Upgrade when speckit is disabled
-func (ts *SpeckitTestSuite) TestSpeckit_Upgrade_NotEnabled() {
-	TestSetConfig(&Config{
-		Speckit: SpeckitConfig{
-			Enabled: false,
-		},
-	})
-
-	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
-		func() interface{} { return GetRunner() },
-		func() error {
-			return ts.speckit.Upgrade()
-		},
-	)
-
-	// Should return error when disabled and trying to upgrade
-	ts.Require().ErrorIs(err, errSpeckitNotEnabled)
-}
-
 // TestBackupSpeckitConstitution tests the constitution backup functionality
 func (ts *SpeckitTestSuite) TestBackupSpeckitConstitution() {
 	ts.setupSpeckitConfig()
