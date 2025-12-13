@@ -47,6 +47,7 @@ temp/
 # Mage specific
 mage_output_file.go
 .mage-cache/
+.mage-x/
 test-results/
 tests/.mage-cache/
 /pkg/utils/.mage/
