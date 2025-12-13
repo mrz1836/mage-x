@@ -608,6 +608,7 @@ jobs:
         with:
           name: test-results-fuzz-${{ inputs.primary-runner }}-${{ inputs.go-primary-version }}
           path: |
+            .mage-x/ci-results-fuzz.jsonl
             fuzz-output.log
             fuzz-failures.txt
             fuzz-failures-detailed.txt
