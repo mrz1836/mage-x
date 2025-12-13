@@ -49,6 +49,7 @@ type ciRunner struct {
 	startTime time.Time
 	mu        sync.Mutex
 	getCtx    func() context.Context // Function to retrieve context instead of storing it
+	started   bool                   // Track if reporter has been started (prevents duplicate start entries)
 }
 
 // NewCIRunner wraps a CommandRunner with CI capabilities
@@ -112,8 +113,8 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 	// Print CI mode startup banner
 	printCIModeBanner(r.detector.Platform(), r.mode)
 
-	// Start the reporter
-	if r.reporter != nil {
+	// Start the reporter (only once - prevents duplicate start entries when tests run multiple times)
+	if r.reporter != nil && !r.started {
 		if d, ok := r.detector.(*ciDetector); ok {
 			metadata := d.GetMetadata()
 			if err := r.reporter.Start(metadata); err != nil {
@@ -121,6 +122,7 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 				fmt.Fprintf(os.Stderr, "Warning: Failed to start CI reporter: %v\n", err)
 			}
 		}
+		r.started = true
 	}
 
 	// Ensure -json flag is present for output parsing
@@ -166,14 +168,8 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 	// Collect results
 	r.collectResults()
 
-	// Report failures
-	if r.reporter != nil {
-		for _, failure := range r.results.Failures {
-			if err := r.reporter.ReportFailure(failure); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: Failed to report failure: %v\n", err)
-			}
-		}
-	}
+	// Note: Failures are reported in GenerateReport() to avoid duplicates
+	// when tests run multiple times (e.g., with different build tags)
 
 	// Handle stderr for crashes
 	if stderrBuf.Len() > 0 && cmdErr != nil {
@@ -311,6 +307,14 @@ func (r *ciRunner) GenerateReport() error {
 
 	// Print CI mode completion summary to stdout
 	printCIModeSummary(results, r.mode.OutputPath)
+
+	// Report failures to JSONL (done here to ensure each failure is written only once,
+	// even when tests run multiple times with different build tags)
+	for _, failure := range results.Failures {
+		if err := r.reporter.ReportFailure(failure); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to report failure: %v\n", err)
+		}
+	}
 
 	if err := r.reporter.WriteSummary(results); err != nil {
 		return fmt.Errorf("failed to write summary: %w", err)
