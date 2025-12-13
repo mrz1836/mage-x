@@ -215,7 +215,7 @@ func (r *ciRunner) collectResults() {
 			Status:   status,
 			Total:    total,
 			Passed:   passed,
-			Failed:   failed,
+			Failed:   len(failures), // Use deduplicated count, not raw count which includes parent tests
 			Skipped:  skipped,
 			Duration: formatDurationForSummary(duration),
 		},
