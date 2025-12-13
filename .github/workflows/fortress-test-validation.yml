@@ -106,6 +106,47 @@ jobs:
           TOTAL_FAILURES=0
           TOTAL_TESTS=0
 
+          # Helper function to generate human-readable test labels
+          # Usage: parse_test_label "artifact-name" "jsonl-filename"
+          # Output: "Unit Tests (Ubuntu, Go 1.22)" or similar
+          parse_test_label() {
+            local artifact_name="$1"
+            local jsonl_name="$2"
+
+            # Determine test type from artifact prefix or JSONL name
+            local test_type="Tests"
+            if [[ "$artifact_name" == test-results-fuzz-* ]] || [[ "$jsonl_name" == *fuzz* ]]; then
+              test_type="Fuzz Tests"
+            elif [[ "$artifact_name" == ci-results-* ]]; then
+              test_type="Unit Tests"
+            fi
+
+            # Extract OS from artifact name
+            local os_name=""
+            if [[ "$artifact_name" =~ ubuntu ]]; then
+              os_name="Ubuntu"
+            elif [[ "$artifact_name" =~ windows ]]; then
+              os_name="Windows"
+            elif [[ "$artifact_name" =~ macos ]]; then
+              os_name="macOS"
+            fi
+
+            # Extract Go version (last segment like "1.22" or "go1.22")
+            local go_version=""
+            go_version=$(echo "$artifact_name" | grep -oE '[0-9]+\.[0-9]+$' || echo "")
+
+            # Build label
+            if [[ -n "$os_name" && -n "$go_version" ]]; then
+              echo "$test_type ($os_name, Go $go_version)"
+            elif [[ -n "$os_name" ]]; then
+              echo "$test_type ($os_name)"
+            elif [[ -n "$go_version" ]]; then
+              echo "$test_type (Go $go_version)"
+            else
+              echo "$test_type"
+            fi
+          }
+
           # Find all CI results files
           echo "📋 Looking for CI results files..."
           find ci-results/ -name "ci-results.jsonl" -o -name "*.jsonl" 2>/dev/null | head -20
@@ -116,8 +157,14 @@ jobs:
             echo "✅ Found CI results JSONL files"
 
             for jsonl_file in $(find ci-results/ -name "*.jsonl" 2>/dev/null); do
+              # Extract artifact directory name (grandparent of JSONL file)
+              # Path: ci-results/ARTIFACT_NAME/.mage-x/ci-results.jsonl
+              ARTIFACT_DIR=$(dirname "$(dirname "$jsonl_file")" | xargs basename)
+              JSONL_NAME=$(basename "$jsonl_file")
+              TEST_LABEL=$(parse_test_label "$ARTIFACT_DIR" "$JSONL_NAME")
+
               echo ""
-              echo "📄 Processing: $jsonl_file"
+              echo "📄 Processing: $TEST_LABEL"
 
               # Extract summary line (type: summary)
               SUMMARY=$(grep '"type":"summary"' "$jsonl_file" 2>/dev/null | head -1 || echo "")
@@ -218,6 +265,47 @@ jobs:
       - name: 📊 Create validation summary
         if: always()
         run: |
+          # Helper function to generate human-readable test labels
+          # Usage: parse_test_label "artifact-name" "jsonl-filename"
+          # Output: "Unit Tests (Ubuntu, Go 1.22)" or similar
+          parse_test_label() {
+            local artifact_name="$1"
+            local jsonl_name="$2"
+
+            # Determine test type from artifact prefix or JSONL name
+            local test_type="Tests"
+            if [[ "$artifact_name" == test-results-fuzz-* ]] || [[ "$jsonl_name" == *fuzz* ]]; then
+              test_type="Fuzz Tests"
+            elif [[ "$artifact_name" == ci-results-* ]]; then
+              test_type="Unit Tests"
+            fi
+
+            # Extract OS from artifact name
+            local os_name=""
+            if [[ "$artifact_name" =~ ubuntu ]]; then
+              os_name="Ubuntu"
+            elif [[ "$artifact_name" =~ windows ]]; then
+              os_name="Windows"
+            elif [[ "$artifact_name" =~ macos ]]; then
+              os_name="macOS"
+            fi
+
+            # Extract Go version (last segment like "1.22" or "go1.22")
+            local go_version=""
+            go_version=$(echo "$artifact_name" | grep -oE '[0-9]+\.[0-9]+$' || echo "")
+
+            # Build label
+            if [[ -n "$os_name" && -n "$go_version" ]]; then
+              echo "$test_type ($os_name, Go $go_version)"
+            elif [[ -n "$os_name" ]]; then
+              echo "$test_type ($os_name)"
+            elif [[ -n "$go_version" ]]; then
+              echo "$test_type (Go $go_version)"
+            else
+              echo "$test_type"
+            fi
+          }
+
           echo "## 🔍 Test Validation Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -259,7 +347,12 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
 
             for jsonl_file in $(find ci-results/ -name "*.jsonl" 2>/dev/null); do
-              JOB_NAME=$(dirname "$jsonl_file" | xargs basename)
+              # Extract artifact directory name (grandparent of JSONL file)
+              # Path: ci-results/ARTIFACT_NAME/.mage-x/ci-results.jsonl
+              ARTIFACT_DIR=$(dirname "$(dirname "$jsonl_file")" | xargs basename)
+              JSONL_NAME=$(basename "$jsonl_file")
+              TEST_LABEL=$(parse_test_label "$ARTIFACT_DIR" "$JSONL_NAME")
+
               SUMMARY=$(grep '"type":"summary"' "$jsonl_file" 2>/dev/null | head -1 || echo "")
 
               if [[ -n "$SUMMARY" ]]; then
@@ -268,9 +361,9 @@ jobs:
                 FAILED=$(echo "$SUMMARY" | jq -r '.summary.failed // 0')
 
                 if [[ "$STATUS" == "passed" ]]; then
-                  echo "- ✅ **$JOB_NAME**: $PASSED tests passed" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ **$TEST_LABEL**: $PASSED tests passed" >> $GITHUB_STEP_SUMMARY
                 else
-                  echo "- ❌ **$JOB_NAME**: $FAILED failures" >> $GITHUB_STEP_SUMMARY
+                  echo "- ❌ **$TEST_LABEL**: $FAILED failures" >> $GITHUB_STEP_SUMMARY
                 fi
               fi
             done
