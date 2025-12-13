@@ -19,7 +19,16 @@ var (
 	errNoCoverageFile         = errors.New("no coverage file found. Run 'magex test:cover' first")
 	errNoCoverageFilesToMerge = errors.New("no coverage files to merge")
 	errFlagNotAllowed         = errors.New("flag not allowed for security reasons")
+	errFuzzTestFailed         = errors.New("fuzz test(s) failed")
 )
+
+// fuzzTestResult captures the result of a single fuzz test run
+type fuzzTestResult struct {
+	Package  string
+	Test     string
+	Duration time.Duration
+	Error    error
+}
 
 // getCIParams extracts CI-related parameters from args and returns the remaining args
 func getCIParams(args []string) (params map[string]string, remainingArgs []string) {
@@ -466,34 +475,15 @@ func (Test) Fuzz(argsList ...string) error {
 		return fmt.Errorf("invalid time parameter: %w", err)
 	}
 
-	for _, pkg := range packages {
-		// List fuzz tests in package
-		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
-		if err != nil {
-			continue
-		}
+	// Run all fuzz tests and collect results (continues on failure)
+	results, totalDuration := runFuzzTestsWithResults(config, fuzzTime, packages)
 
-		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
-		for _, test := range fuzzTests {
-			if !strings.HasPrefix(test, "Fuzz") {
-				continue
-			}
+	// Print CI summary if enabled
+	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
 
-			utils.Info("Fuzzing %s.%s", pkg, test)
-
-			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTime.String())
-
-			if config.Test.Verbose {
-				args = append(args, "-v")
-			}
-
-			args = append(args, pkg)
-
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				return fmt.Errorf("fuzz test %s failed: %w", test, err)
-			}
-		}
+	// Return aggregated error if any failures
+	if err := fuzzResultsToError(results); err != nil {
+		return err
 	}
 
 	utils.Success("Fuzz tests completed")
@@ -525,37 +515,15 @@ func (Test) FuzzWithTime(fuzzTime time.Duration) error {
 		return nil
 	}
 
-	// Use provided duration
-	fuzzTimeStr := fuzzTime.String()
+	// Run all fuzz tests and collect results (continues on failure)
+	results, totalDuration := runFuzzTestsWithResults(config, fuzzTime, packages)
 
-	for _, pkg := range packages {
-		// List fuzz tests in package
-		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
-		if err != nil {
-			continue
-		}
+	// Print CI summary if enabled (nil params relies on config/environment detection)
+	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
 
-		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
-		for _, test := range fuzzTests {
-			if !strings.HasPrefix(test, "Fuzz") {
-				continue
-			}
-
-			utils.Info("Fuzzing %s.%s", pkg, test)
-
-			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTimeStr)
-
-			if config.Test.Verbose {
-				args = append(args, "-v")
-			}
-
-			args = append(args, pkg)
-
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				return fmt.Errorf("fuzz test %s failed: %w", test, err)
-			}
-		}
+	// Return aggregated error if any failures
+	if err := fuzzResultsToError(results); err != nil {
+		return err
 	}
 
 	utils.Success("Fuzz tests completed")
@@ -600,34 +568,15 @@ func (Test) FuzzShort(argsList ...string) error {
 		return fmt.Errorf("invalid time parameter: %w", err)
 	}
 
-	for _, pkg := range packages {
-		// List fuzz tests in package
-		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
-		if err != nil {
-			continue
-		}
+	// Run all fuzz tests and collect results (continues on failure)
+	results, totalDuration := runFuzzTestsWithResults(config, fuzzTime, packages)
 
-		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
-		for _, test := range fuzzTests {
-			if !strings.HasPrefix(test, "Fuzz") {
-				continue
-			}
+	// Print CI summary if enabled
+	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
 
-			utils.Info("Fuzzing %s.%s", pkg, test)
-
-			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTime.String())
-
-			if config.Test.Verbose {
-				args = append(args, "-v")
-			}
-
-			args = append(args, pkg)
-
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				return fmt.Errorf("short fuzz test %s failed: %w", test, err)
-			}
-		}
+	// Return aggregated error if any failures
+	if err := fuzzResultsToError(results); err != nil {
+		return err
 	}
 
 	utils.Success("Short fuzz tests completed")
@@ -659,37 +608,15 @@ func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 		return nil
 	}
 
-	// Use provided duration
-	fuzzTimeStr := fuzzTime.String()
+	// Run all fuzz tests and collect results (continues on failure)
+	results, totalDuration := runFuzzTestsWithResults(config, fuzzTime, packages)
 
-	for _, pkg := range packages {
-		// List fuzz tests in package
-		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
-		if err != nil {
-			continue
-		}
+	// Print CI summary if enabled (nil params relies on config/environment detection)
+	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
 
-		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
-		for _, test := range fuzzTests {
-			if !strings.HasPrefix(test, "Fuzz") {
-				continue
-			}
-
-			utils.Info("Fuzzing %s.%s", pkg, test)
-
-			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTimeStr)
-
-			if config.Test.Verbose {
-				args = append(args, "-v")
-			}
-
-			args = append(args, pkg)
-
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				return fmt.Errorf("short fuzz test %s failed: %w", test, err)
-			}
-		}
+	// Return aggregated error if any failures
+	if err := fuzzResultsToError(results); err != nil {
+		return err
 	}
 
 	utils.Success("Short fuzz tests completed")
@@ -1652,6 +1579,79 @@ func findFuzzPackages() []string {
 	}
 
 	return packages
+}
+
+// runFuzzTestsWithResults runs all fuzz tests and returns collected results.
+// It continues running all tests even after failures, allowing for complete result collection.
+func runFuzzTestsWithResults(config *Config, fuzzTime time.Duration, packages []string) ([]fuzzTestResult, time.Duration) {
+	startTime := time.Now()
+	var results []fuzzTestResult
+
+	fuzzTimeStr := fuzzTime.String()
+
+	for _, pkg := range packages {
+		// List fuzz tests in package
+		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
+		if err != nil {
+			continue
+		}
+
+		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
+		for _, test := range fuzzTests {
+			if !strings.HasPrefix(test, "Fuzz") {
+				continue
+			}
+
+			utils.Info("Fuzzing %s.%s", pkg, test)
+
+			testStart := time.Now()
+			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
+			args = append(args, "-fuzztime", fuzzTimeStr)
+
+			if config.Test.Verbose {
+				args = append(args, "-v")
+			}
+			args = append(args, pkg)
+
+			err := GetRunner().RunCmd("go", args...)
+			testDuration := time.Since(testStart)
+
+			results = append(results, fuzzTestResult{
+				Package:  pkg,
+				Test:     test,
+				Duration: testDuration,
+				Error:    err,
+			})
+		}
+	}
+
+	return results, time.Since(startTime)
+}
+
+// printCIFuzzSummaryIfEnabled prints the fuzz summary if CI mode is enabled
+func printCIFuzzSummaryIfEnabled(params map[string]string, config *Config, results []fuzzTestResult, totalDuration time.Duration) {
+	if IsCIEnabled(params, config) {
+		printCIFuzzSummary(results, totalDuration)
+	}
+}
+
+// fuzzResultsToError converts fuzz test results to an aggregated error
+func fuzzResultsToError(results []fuzzTestResult) error {
+	var failures []string
+	for _, r := range results {
+		if r.Error != nil {
+			failures = append(failures, fmt.Sprintf("%s.%s", r.Package, r.Test))
+		}
+	}
+
+	if len(failures) == 0 {
+		return nil
+	}
+
+	if len(failures) == 1 {
+		return fmt.Errorf("%w: %s", errFuzzTestFailed, failures[0])
+	}
+	return fmt.Errorf("%w: %d tests (%s)", errFuzzTestFailed, len(failures), strings.Join(failures, ", "))
 }
 
 // Additional methods for Test namespace required by tests

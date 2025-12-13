@@ -387,6 +387,45 @@ func printCIModeSummary(results *CIResult, outputPath string) {
 	}
 }
 
+// printCIFuzzSummary outputs fuzz test results summary to stdout
+func printCIFuzzSummary(results []fuzzTestResult, totalDuration time.Duration) {
+	total := len(results)
+	passed := 0
+	failed := 0
+	var failures []fuzzTestResult
+
+	for _, r := range results {
+		if r.Error == nil {
+			passed++
+		} else {
+			failed++
+			failures = append(failures, r)
+		}
+	}
+
+	lines := []string{
+		"",
+		"============================================================",
+		"📊 MAGE-X CI FUZZ TEST SUMMARY",
+		"============================================================",
+		fmt.Sprintf("Total Fuzz Tests:  %d", total),
+		fmt.Sprintf("├── Passed:        %d", passed),
+		fmt.Sprintf("└── Failed:        %d", failed),
+		fmt.Sprintf("Duration:          %s", formatDurationForSummary(totalDuration)),
+		fmt.Sprintf("Failures Detected: %d", len(failures)),
+	}
+	for _, f := range failures {
+		lines = append(lines, fmt.Sprintf("  └── %s (%s)", f.Test, f.Package))
+	}
+	lines = append(lines, "============================================================", "")
+
+	for _, line := range lines {
+		if _, err := fmt.Fprintln(os.Stdout, line); err != nil {
+			return
+		}
+	}
+}
+
 // IsCIEnabled checks if CI mode should be enabled
 func IsCIEnabled(params map[string]string, cfg *Config) bool {
 	detector := NewCIDetector()
