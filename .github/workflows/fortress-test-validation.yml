@@ -111,7 +111,8 @@ jobs:
           find ci-results/ -name "ci-results.jsonl" -o -name "*.jsonl" 2>/dev/null | head -20
 
           # Process each CI results file
-          if compgen -G "ci-results/**/*.jsonl" >/dev/null 2>&1 || compgen -G "ci-results/*.jsonl" >/dev/null 2>&1; then
+          # Note: Using find instead of compgen -G because ** glob requires shopt -s globstar
+          if find ci-results/ -name "*.jsonl" 2>/dev/null | grep -q .; then
             echo "✅ Found CI results JSONL files"
 
             for jsonl_file in $(find ci-results/ -name "*.jsonl" 2>/dev/null); do
