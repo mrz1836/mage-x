@@ -149,14 +149,22 @@ jobs:
                     TEST=$(echo "$line" | jq -r '.failure.test // "unknown"')
                     PKG=$(echo "$line" | jq -r '.failure.package // "unknown"' | sed 's|.*/||')
                     FILE=$(echo "$line" | jq -r '.failure.file // ""')
-                    LINE=$(echo "$line" | jq -r '.failure.line // ""')
+                    LINE_NUM=$(echo "$line" | jq -r '.failure.line // ""')
+                    FAIL_TYPE=$(echo "$line" | jq -r '.failure.type // "test"')
+                    ERROR_MSG=$(echo "$line" | jq -r '.failure.error // ""')
 
-                    if [[ -n "$FILE" && -n "$LINE" ]]; then
-                      echo "    ❌ $TEST ($PKG) at $FILE:$LINE"
+                    # Show test name with type and location
+                    if [[ -n "$FILE" && -n "$LINE_NUM" && "$LINE_NUM" != "0" ]]; then
+                      echo "    ❌ [$FAIL_TYPE] $TEST ($PKG) at $FILE:$LINE_NUM"
                     else
-                      echo "    ❌ $TEST ($PKG)"
+                      echo "    ❌ [$FAIL_TYPE] $TEST ($PKG)"
                     fi
-                  done | head -20
+
+                    # Show error message if available (truncated for readability)
+                    if [[ -n "$ERROR_MSG" && "$ERROR_MSG" != "null" ]]; then
+                      echo "       → ${ERROR_MSG:0:200}"
+                    fi
+                  done | head -30
                 fi
               else
                 echo "  ⚠️ No summary found in JSONL file"
@@ -265,6 +273,80 @@ jobs:
                   echo "- ❌ **$JOB_NAME**: $FAILED failures" >> $GITHUB_STEP_SUMMARY
                 fi
               fi
+            done
+          fi
+
+          # Add detailed failure section if there are failures
+          if [[ $TOTAL_FAILED -gt 0 ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🚨 Failure Details" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "_Expand each failure to see full output and stack traces_" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            FAILURE_COUNT=0
+            for jsonl_file in $(find ci-results/ -name "*.jsonl" 2>/dev/null); do
+              grep '"type":"failure"' "$jsonl_file" 2>/dev/null | while read -r line; do
+                # Limit total failures shown
+                FAILURE_COUNT=$((FAILURE_COUNT + 1))
+                if [[ $FAILURE_COUNT -gt 20 ]]; then
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "_... additional failures truncated_" >> $GITHUB_STEP_SUMMARY
+                  break 2
+                fi
+
+                TEST=$(echo "$line" | jq -r '.failure.test // "unknown"')
+                PKG=$(echo "$line" | jq -r '.failure.package // "unknown"' | sed 's|.*/||')
+                FAIL_TYPE=$(echo "$line" | jq -r '.failure.type // "test"')
+                ERROR_MSG=$(echo "$line" | jq -r '.failure.error // ""')
+                OUTPUT=$(echo "$line" | jq -r '.failure.output // ""')
+                STACK=$(echo "$line" | jq -r '.failure.stack // ""')
+
+                echo "<details>" >> $GITHUB_STEP_SUMMARY
+                echo "<summary>❌ <code>$TEST</code> ($PKG) - $FAIL_TYPE</summary>" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+
+                if [[ -n "$ERROR_MSG" && "$ERROR_MSG" != "null" ]]; then
+                  echo "**Error:** \`$ERROR_MSG\`" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                fi
+
+                if [[ -n "$OUTPUT" && "$OUTPUT" != "null" && "$OUTPUT" != "" ]]; then
+                  echo "**Output:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  # Truncate output to avoid massive summaries
+                  echo "${OUTPUT:0:2000}" >> $GITHUB_STEP_SUMMARY
+                  if [[ ${#OUTPUT} -gt 2000 ]]; then
+                    echo "... (truncated)" >> $GITHUB_STEP_SUMMARY
+                  fi
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                fi
+
+                if [[ -n "$STACK" && "$STACK" != "null" && "$STACK" != "" ]]; then
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Stack Trace:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "${STACK:0:1500}" >> $GITHUB_STEP_SUMMARY
+                  if [[ ${#STACK} -gt 1500 ]]; then
+                    echo "... (truncated)" >> $GITHUB_STEP_SUMMARY
+                  fi
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                fi
+
+                # For fuzz tests, show fuzz-specific info
+                FUZZ_INFO=$(echo "$line" | jq -r '.failure.fuzz_info // null')
+                if [[ "$FUZZ_INFO" != "null" && -n "$FUZZ_INFO" ]]; then
+                  CORPUS=$(echo "$FUZZ_INFO" | jq -r '.corpus_path // ""')
+                  if [[ -n "$CORPUS" && "$CORPUS" != "null" ]]; then
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "**Fuzz Corpus:** \`$CORPUS\`" >> $GITHUB_STEP_SUMMARY
+                  fi
+                fi
+
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "</details>" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+              done
             done
           fi
 
