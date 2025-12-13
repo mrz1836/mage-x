@@ -690,6 +690,33 @@ example.com/pkg.(*Handler).ServeHTTP(0x0, {0x6a9f20, 0xc0000a8000}, 0xc000098200
 			t.Errorf("failure.Error should contain 'panic:', got %q", failures[0].Error)
 		}
 	})
+
+	// T055b: Test panic detection when output comes line-by-line (real-world scenario)
+	t.Run("panic with line-by-line output", func(t *testing.T) {
+		t.Parallel()
+		parser := NewStreamParser(20, true)
+
+		// Simulate real go test -json output where each line is a separate event
+		mustParseLine(t, parser, []byte(`{"Action":"run","Package":"pkg/mage","Test":"TestCI_PanicFailure"}`))
+		mustParseLine(t, parser, []byte(`{"Action":"output","Package":"pkg/mage","Test":"TestCI_PanicFailure","Output":"=== RUN   TestCI_PanicFailure\n"}`))
+		mustParseLine(t, parser, []byte(`{"Action":"output","Package":"pkg/mage","Test":"TestCI_PanicFailure","Output":"--- FAIL: TestCI_PanicFailure (0.00s)\n"}`))
+		mustParseLine(t, parser, []byte(`{"Action":"output","Package":"pkg/mage","Test":"TestCI_PanicFailure","Output":"panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]\n"}`))
+		mustParseLine(t, parser, []byte(`{"Action":"output","Package":"pkg/mage","Test":"TestCI_PanicFailure","Output":"[signal SIGSEGV: segmentation violation code=0x2 addr=0x0 pc=0x100e8ccf4]\n"}`))
+		mustParseLine(t, parser, []byte(`{"Action":"output","Package":"pkg/mage","Test":"TestCI_PanicFailure","Output":"\n"}`))
+		mustParseLine(t, parser, []byte(`{"Action":"output","Package":"pkg/mage","Test":"TestCI_PanicFailure","Output":"goroutine 4 [running]:\n"}`))
+		mustParseLine(t, parser, []byte(`{"Action":"output","Package":"pkg/mage","Test":"TestCI_PanicFailure","Output":"testing.tRunner.func1.2({0x1011f3640, 0x101822be0})\n"}`))
+		mustParseLine(t, parser, []byte(`{"Action":"output","Package":"pkg/mage","Test":"TestCI_PanicFailure","Output":"\t/opt/homebrew/Cellar/go/1.25.5/libexec/src/testing/testing.go:1872 +0x190\n"}`))
+		mustParseLine(t, parser, []byte(`{"Action":"fail","Package":"pkg/mage","Test":"TestCI_PanicFailure","Elapsed":0}`))
+
+		failures := parser.GetFailures()
+		if len(failures) != 1 {
+			t.Fatalf("GetFailures() returned %d failures, want 1", len(failures))
+		}
+
+		if failures[0].Type != FailureTypePanic {
+			t.Errorf("failure.Type = %v, want %v (output: %q)", failures[0].Type, FailureTypePanic, failures[0].Output)
+		}
+	})
 }
 
 // T056: Comprehensive tests for race detection
@@ -1826,6 +1853,110 @@ func FuzzFormatDurationSeconds(f *testing.F) {
 		// Result should be non-empty
 		if result == "" {
 			t.Error("formatDurationSeconds returned empty string")
+		}
+	})
+}
+
+// TestFilterParentTests tests the parent test filtering for nested subtests
+func TestFilterParentTests(t *testing.T) {
+	t.Parallel()
+
+	t.Run("filters nested subtest parents", func(t *testing.T) {
+		t.Parallel()
+		failures := []CITestFailure{
+			{Package: "pkg/mage", Test: "TestParent/Level1/Level2/Leaf", Type: FailureTypeTest},
+			{Package: "pkg/mage", Test: "TestParent/Level1/Level2", Type: FailureTypeTest},
+			{Package: "pkg/mage", Test: "TestParent/Level1", Type: FailureTypeTest},
+			{Package: "pkg/mage", Test: "TestParent", Type: FailureTypeTest},
+		}
+
+		result := filterParentTests(failures)
+
+		if len(result) != 1 {
+			t.Errorf("filterParentTests() returned %d failures, want 1", len(result))
+		}
+		if result[0].Test != "TestParent/Level1/Level2/Leaf" {
+			t.Errorf("filterParentTests() kept wrong test: %s", result[0].Test)
+		}
+	})
+
+	t.Run("keeps independent tests", func(t *testing.T) {
+		t.Parallel()
+		failures := []CITestFailure{
+			{Package: "pkg/mage", Test: "TestA", Type: FailureTypeTest},
+			{Package: "pkg/mage", Test: "TestB", Type: FailureTypePanic},
+		}
+
+		result := filterParentTests(failures)
+
+		if len(result) != 2 {
+			t.Errorf("filterParentTests() returned %d failures, want 2", len(result))
+		}
+	})
+
+	t.Run("handles mixed nested and independent", func(t *testing.T) {
+		t.Parallel()
+		failures := []CITestFailure{
+			{Package: "pkg/mage", Test: "TestNested/Child", Type: FailureTypeTest},
+			{Package: "pkg/mage", Test: "TestNested", Type: FailureTypeTest},
+			{Package: "pkg/mage", Test: "TestIndependent", Type: FailureTypePanic},
+		}
+
+		result := filterParentTests(failures)
+
+		if len(result) != 2 {
+			t.Errorf("filterParentTests() returned %d failures, want 2", len(result))
+		}
+
+		// Should have the leaf and the independent test
+		testNames := make(map[string]bool)
+		for _, f := range result {
+			testNames[f.Test] = true
+		}
+
+		if !testNames["TestNested/Child"] {
+			t.Error("filterParentTests() should keep TestNested/Child")
+		}
+		if !testNames["TestIndependent"] {
+			t.Error("filterParentTests() should keep TestIndependent")
+		}
+	})
+
+	t.Run("handles different packages", func(t *testing.T) {
+		t.Parallel()
+		failures := []CITestFailure{
+			{Package: "pkg/a", Test: "TestX/Child", Type: FailureTypeTest},
+			{Package: "pkg/a", Test: "TestX", Type: FailureTypeTest},
+			{Package: "pkg/b", Test: "TestX/Child", Type: FailureTypeTest},
+			{Package: "pkg/b", Test: "TestX", Type: FailureTypeTest},
+		}
+
+		result := filterParentTests(failures)
+
+		if len(result) != 2 {
+			t.Errorf("filterParentTests() returned %d failures, want 2", len(result))
+		}
+	})
+
+	t.Run("empty list", func(t *testing.T) {
+		t.Parallel()
+		result := filterParentTests([]CITestFailure{})
+
+		if len(result) != 0 {
+			t.Errorf("filterParentTests() returned %d failures, want 0", len(result))
+		}
+	})
+
+	t.Run("single failure", func(t *testing.T) {
+		t.Parallel()
+		failures := []CITestFailure{
+			{Package: "pkg", Test: "TestSingle", Type: FailureTypeTest},
+		}
+
+		result := filterParentTests(failures)
+
+		if len(result) != 1 {
+			t.Errorf("filterParentTests() returned %d failures, want 1", len(result))
 		}
 	})
 }

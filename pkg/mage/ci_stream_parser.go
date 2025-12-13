@@ -392,13 +392,48 @@ func (p *streamParser) OnOutput(pkg, test, output string) {
 	}
 }
 
-// GetFailures returns all collected failures
+// GetFailures returns all collected failures with parent tests filtered out
 func (p *streamParser) GetFailures() []CITestFailure {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	result := make([]CITestFailure, len(p.failures))
-	copy(result, p.failures)
+	// Filter out parent tests to avoid duplicate reporting of nested subtests
+	return filterParentTests(p.failures)
+}
+
+// filterParentTests removes parent test failures, keeping only leaf failures.
+// When TestParent/Child fails, Go reports both as failed - we only want the child.
+// This prevents inflated failure counts from nested subtests.
+func filterParentTests(failures []CITestFailure) []CITestFailure {
+	if len(failures) <= 1 {
+		return failures
+	}
+
+	// Build set of all test names (per package) for quick lookup
+	testNames := make(map[string]bool) // key: "pkg:test"
+	for _, f := range failures {
+		testNames[f.Package+":"+f.Test] = true
+	}
+
+	// Filter out parents - a test is a parent if another test starts with its name + "/"
+	result := make([]CITestFailure, 0, len(failures))
+	for _, f := range failures {
+		key := f.Package + ":" + f.Test
+		isParent := false
+
+		// Check if any other test starts with this test + "/"
+		for otherKey := range testNames {
+			if otherKey != key && strings.HasPrefix(otherKey, key+"/") {
+				isParent = true
+				break
+			}
+		}
+
+		if !isParent {
+			result = append(result, f)
+		}
+	}
+
 	return result
 }
 
