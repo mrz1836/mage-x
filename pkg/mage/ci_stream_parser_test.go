@@ -1226,6 +1226,7 @@ func TestStreamParser_StrategyAffectsContextSize(t *testing.T) {
 		state := parser.currentTest["pkg:TestContext"]
 		if state == nil {
 			t.Fatal("Expected test state to exist")
+			return
 		}
 		// RingBuffer size should be min(50*2, 10) = 10
 		if state.output.size != 10 {
@@ -1249,6 +1250,7 @@ func TestStreamParser_StrategyAffectsContextSize(t *testing.T) {
 		state := parser.currentTest["pkg:TestContext"]
 		if state == nil {
 			t.Fatal("Expected test state to exist")
+			return
 		}
 		// RingBuffer size should be min(50*2, 5) = 5
 		if state.output.size != 5 {
@@ -1686,6 +1688,7 @@ func FuzzRingBuffer(f *testing.F) {
 		rb := NewRingBuffer(size)
 		if rb == nil {
 			t.Fatal("NewRingBuffer returned nil")
+			return
 		}
 
 		// Add operations should never panic
