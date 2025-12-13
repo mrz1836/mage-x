@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -78,14 +79,36 @@ func RequireEnv(t *testing.T, key string) string {
 	return value
 }
 
-// RequireNetwork skips the test if network is not available
+// RequireNetwork skips the test if network is not available.
+// This checks for active non-loopback network interfaces locally,
+// without making any external network connections.
 func RequireNetwork(t *testing.T) {
 	t.Helper()
 
-	// Try to resolve a well-known domain
-	cmd := exec.CommandContext(context.Background(), "ping", "-c", "1", "-W", "1", "google.com")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Network not available")
+	// Check if we have any non-loopback network interfaces with addresses
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		t.Skip("Network not available: cannot list interfaces")
+	}
+
+	hasNetwork := false
+	for _, iface := range interfaces {
+		// Skip loopback and down interfaces
+		if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil || len(addrs) == 0 {
+			continue
+		}
+
+		hasNetwork = true
+		break
+	}
+
+	if !hasNetwork {
+		t.Skip("Network not available: no active network interfaces")
 	}
 }
 
