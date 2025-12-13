@@ -440,3 +440,15 @@ func GetCIRunner(base CommandRunner, params map[string]string, cfg *Config) Comm
 		Detector: detector,
 	})
 }
+
+// PrintCIBannerIfEnabled prints CI mode banner if CI is enabled.
+// This is useful for test functions that don't use the full CI runner
+// (e.g., fuzz tests which have non-JSON output that can't be parsed).
+func PrintCIBannerIfEnabled(params map[string]string, cfg *Config) {
+	detector := NewCIDetector()
+	mode := detector.GetConfig(params, cfg)
+
+	if mode.Enabled {
+		printCIModeBanner(detector.Platform(), mode)
+	}
+}

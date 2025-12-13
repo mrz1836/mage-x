@@ -433,12 +433,18 @@ func (Test) Fuzz(argsList ...string) error {
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
+	// Extract CI params from arguments
+	ciParams, _ := getCIParams(argsList)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	displayTestHeader("fuzz", config)
+
+	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	PrintCIBannerIfEnabled(ciParams, config)
 
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
@@ -503,6 +509,9 @@ func (Test) FuzzWithTime(fuzzTime time.Duration) error {
 		return err
 	}
 
+	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	PrintCIBannerIfEnabled(nil, config)
+
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
 		return nil
@@ -558,12 +567,18 @@ func (Test) FuzzShort(argsList ...string) error {
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
+	// Extract CI params from arguments
+	ciParams, _ := getCIParams(argsList)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	displayTestHeader("fuzz-short", config)
+
+	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	PrintCIBannerIfEnabled(ciParams, config)
 
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
@@ -627,6 +642,9 @@ func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 	if err != nil {
 		return err
 	}
+
+	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	PrintCIBannerIfEnabled(nil, config)
 
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
