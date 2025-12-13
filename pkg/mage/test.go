@@ -1,9 +1,13 @@
 package mage
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -28,6 +32,7 @@ type fuzzTestResult struct {
 	Test     string
 	Duration time.Duration
 	Error    error
+	Output   string // Captured stdout output for text parsing
 }
 
 // getCIParams extracts CI-related parameters from args and returns the remaining args
@@ -476,7 +481,9 @@ func (Test) Fuzz(argsList ...string) error {
 	}
 
 	// Run all fuzz tests and collect results (continues on failure)
-	results, totalDuration := runFuzzTestsWithResults(config, fuzzTime, packages)
+	// In CI mode, capture output for text parsing to extract detailed failure info
+	ciEnabled := IsCIEnabled(ciParams, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
 	// Print CI summary if enabled
 	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
@@ -519,7 +526,9 @@ func (Test) FuzzWithTime(fuzzTime time.Duration) error {
 	}
 
 	// Run all fuzz tests and collect results (continues on failure)
-	results, totalDuration := runFuzzTestsWithResults(config, fuzzTime, packages)
+	// In CI mode, capture output for text parsing to extract detailed failure info
+	ciEnabled := IsCIEnabled(nil, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
 	// Print CI summary if enabled (nil params relies on config/environment detection)
 	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
@@ -575,7 +584,9 @@ func (Test) FuzzShort(argsList ...string) error {
 	}
 
 	// Run all fuzz tests and collect results (continues on failure)
-	results, totalDuration := runFuzzTestsWithResults(config, fuzzTime, packages)
+	// In CI mode, capture output for text parsing to extract detailed failure info
+	ciEnabled := IsCIEnabled(ciParams, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
 	// Print CI summary if enabled
 	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
@@ -618,7 +629,9 @@ func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 	}
 
 	// Run all fuzz tests and collect results (continues on failure)
-	results, totalDuration := runFuzzTestsWithResults(config, fuzzTime, packages)
+	// In CI mode, capture output for text parsing to extract detailed failure info
+	ciEnabled := IsCIEnabled(nil, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
 	// Print CI summary if enabled (nil params relies on config/environment detection)
 	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
@@ -1593,9 +1606,9 @@ func findFuzzPackages() []string {
 	return packages
 }
 
-// runFuzzTestsWithResults runs all fuzz tests and returns collected results.
-// It continues running all tests even after failures, allowing for complete result collection.
-func runFuzzTestsWithResults(config *Config, fuzzTime time.Duration, packages []string) ([]fuzzTestResult, time.Duration) {
+// runFuzzTestsWithResultsCI runs fuzz tests with optional CI output capture.
+// When ciEnabled is true, stdout is captured for text parsing to extract detailed failure info.
+func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages []string, ciEnabled bool) ([]fuzzTestResult, time.Duration) {
 	startTime := time.Now()
 	var results []fuzzTestResult
 
@@ -1625,19 +1638,46 @@ func runFuzzTestsWithResults(config *Config, fuzzTime time.Duration, packages []
 			}
 			args = append(args, pkg)
 
-			err := GetRunner().RunCmd("go", args...)
+			var testErr error
+			var testOutput string
+
+			if ciEnabled {
+				// Capture output for CI text parsing
+				testOutput, testErr = runFuzzTestWithOutput("go", args...)
+			} else {
+				// Standard execution without output capture
+				testErr = GetRunner().RunCmd("go", args...)
+			}
 			testDuration := time.Since(testStart)
 
 			results = append(results, fuzzTestResult{
 				Package:  pkg,
 				Test:     test,
 				Duration: testDuration,
-				Error:    err,
+				Error:    testErr,
+				Output:   testOutput,
 			})
 		}
 	}
 
 	return results, time.Since(startTime)
+}
+
+// runFuzzTestWithOutput executes a fuzz test command and captures stdout/stderr.
+// This is used in CI mode to capture output for text parsing.
+func runFuzzTestWithOutput(name string, args ...string) (string, error) {
+	ctx := context.Background()
+
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Env = os.Environ()
+
+	// Capture both stdout and stderr
+	var outputBuf bytes.Buffer
+	cmd.Stdout = io.MultiWriter(os.Stdout, &outputBuf) // Tee to stdout for live display
+	cmd.Stderr = io.MultiWriter(os.Stderr, &outputBuf) // Capture stderr too
+
+	err := cmd.Run()
+	return outputBuf.String(), err
 }
 
 // printCIFuzzSummaryIfEnabled prints the fuzz summary if CI mode is enabled
@@ -1650,6 +1690,9 @@ func printCIFuzzSummaryIfEnabled(params map[string]string, config *Config, resul
 // writeFuzzCIResultsIfEnabled writes fuzz test results to JSONL format when CI mode is enabled.
 // This produces output in the same format as regular tests, allowing the validation workflow
 // to process fuzz results uniformly with unit test results.
+//
+// When fuzz test output is captured, it uses TextStreamParser to extract detailed failure info
+// including file:line locations, error messages, and fuzz corpus paths.
 func writeFuzzCIResultsIfEnabled(params map[string]string, config *Config, results []fuzzTestResult, totalDuration time.Duration) {
 	if !IsCIEnabled(params, config) {
 		return
@@ -1673,29 +1716,38 @@ func writeFuzzCIResultsIfEnabled(params map[string]string, config *Config, resul
 		}
 	}()
 
+	// Also add GitHub reporter if running in GitHub Actions
+	var reporters []CIReporter
+	reporters = append(reporters, reporter)
+	if mode.Format == CIFormatGitHub || (mode.Format == CIFormatAuto && detector.Platform() == string(CIFormatGitHub)) {
+		reporters = append(reporters, NewGitHubReporter())
+	}
+	multiReporter := NewMultiReporter(reporters...)
+
 	// Write metadata
 	if d, ok := detector.(*ciDetector); ok {
-		if startErr := reporter.Start(d.GetMetadata()); startErr != nil {
+		if startErr := multiReporter.Start(d.GetMetadata()); startErr != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to write fuzz CI start: %v\n", startErr)
 		}
 	}
 
-	// Convert fuzz results to CITestFailure format and write failures
+	// Parse fuzz output with text parser to extract detailed failure info
+	failures := parseFuzzResultsWithTextParser(results, mode.ContextLines, mode.Dedup)
+
+	// Count results
 	total, passed, failed := len(results), 0, 0
 	for _, r := range results {
 		if r.Error != nil {
 			failed++
-			failure := CITestFailure{
-				Package: r.Package,
-				Test:    r.Test,
-				Type:    FailureTypeFuzz,
-				Error:   r.Error.Error(),
-			}
-			if reportErr := reporter.ReportFailure(failure); reportErr != nil {
-				fmt.Fprintf(os.Stderr, "Warning: Failed to report fuzz failure: %v\n", reportErr)
-			}
 		} else {
 			passed++
+		}
+	}
+
+	// Report failures
+	for _, failure := range failures {
+		if reportErr := multiReporter.ReportFailure(failure); reportErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to report fuzz failure: %v\n", reportErr)
 		}
 	}
 
@@ -1710,17 +1762,53 @@ func writeFuzzCIResultsIfEnabled(params map[string]string, config *Config, resul
 			Status:   status,
 			Total:    total,
 			Passed:   passed,
-			Failed:   failed,
+			Failed:   len(failures), // Use deduplicated count from parser
 			Skipped:  0,
 			Duration: formatDurationForSummary(totalDuration),
 		},
+		Failures:  failures,
 		Timestamp: time.Now(),
 		Duration:  totalDuration,
 	}
 
-	if summaryErr := reporter.WriteSummary(result); summaryErr != nil {
+	if summaryErr := multiReporter.WriteSummary(result); summaryErr != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to write fuzz CI summary: %v\n", summaryErr)
 	}
+
+	if closeErr := multiReporter.Close(); closeErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to close fuzz CI multi reporter: %v\n", closeErr)
+	}
+}
+
+// parseFuzzResultsWithTextParser extracts detailed failure information from fuzz test output
+// using the TextStreamParser. This provides file:line locations, error messages, and fuzz corpus paths.
+func parseFuzzResultsWithTextParser(results []fuzzTestResult, contextLines int, dedup bool) []CITestFailure {
+	parser := NewTextStreamParser(contextLines, dedup)
+
+	// Combine all output and parse
+	for _, r := range results {
+		if r.Output == "" {
+			// No output captured, create basic failure from error
+			if r.Error != nil {
+				// Parse the basic failure line
+				failLine := fmt.Sprintf("--- FAIL: %s (%.2fs)", r.Test, r.Duration.Seconds())
+				_ = parser.ParseLine(failLine) //nolint:errcheck // Best effort parsing
+
+				// Add package info
+				pkgLine := fmt.Sprintf("FAIL %s %.3fs", r.Package, r.Duration.Seconds())
+				_ = parser.ParseLine(pkgLine) //nolint:errcheck // Best effort parsing
+			}
+			continue
+		}
+
+		// Parse the captured output line by line
+		lines := strings.Split(r.Output, "\n")
+		for _, line := range lines {
+			_ = parser.ParseLine(line) //nolint:errcheck // Best effort parsing
+		}
+	}
+
+	return parser.Flush()
 }
 
 // fuzzResultsToError converts fuzz test results to an aggregated error
