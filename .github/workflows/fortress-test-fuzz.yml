@@ -133,6 +133,15 @@ jobs:
         id: run-fuzz-tests
         continue-on-error: true
         run: |
+          echo ""
+          echo "============================================================"
+          echo "🤖 MAGE-X CI MODE ACTIVE"
+          echo "============================================================"
+          echo "📍 Platform: GitHub Actions"
+          echo "📋 Output: GitHub Annotations + Step Summary + JSONL"
+          echo "🔍 Auto-detected from GITHUB_ACTIONS environment variable"
+          echo "============================================================"
+          echo ""
           echo "🧪 Running fuzz tests in parallel..."
           FUZZ_TIMEOUT="${TEST_TIMEOUT_FUZZ:-5m}"
           GO_MODULE_DIR="${{ env.GO_MODULE_DIR }}"
@@ -627,3 +636,17 @@ jobs:
           artifact-path: ${{ steps.fuzz-summary.outputs.statistics-file }}
           retention-days: "1"
           if-no-files-found: "ignore"
+
+      # --------------------------------------------------------------------
+      # Fail job if fuzz tests failed (must be last step)
+      # This step ensures the job properly fails after all analysis/upload
+      # steps have completed when fuzz tests had failures.
+      # --------------------------------------------------------------------
+      - name: 🚨 Fail job if fuzz tests failed
+        if: always() && steps.run-fuzz-tests.outputs.fuzz-exit-code != '0'
+        run: |
+          echo "❌ Fuzz tests failed with exit code ${{ steps.run-fuzz-tests.outputs.fuzz-exit-code }}"
+          echo ""
+          echo "📋 Review the fuzz test output and failure analysis above for details."
+          echo "🔧 To reproduce locally, run: magex test:fuzz time=5s"
+          exit 1

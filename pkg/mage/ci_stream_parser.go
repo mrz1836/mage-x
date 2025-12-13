@@ -628,7 +628,11 @@ func extractErrorMessage(output string) string {
 			// Extract just the message part after file:line:
 			parts := strings.SplitN(line, ":", 3)
 			if len(parts) >= 3 {
-				return strings.TrimSpace(parts[2])
+				msg := strings.TrimSpace(parts[2])
+				if msg != "" {
+					return msg
+				}
+				// Fall through to continue searching if message is empty
 			}
 		}
 	}
