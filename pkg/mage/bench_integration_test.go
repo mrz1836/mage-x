@@ -19,7 +19,7 @@ func setupBenchTest(t *testing.T) (string, func()) {
 	tmpDir := t.TempDir()
 
 	// Create go.mod
-	err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module example.com/test"), 0o644)
+	err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module example.com/test"), 0o600)
 	require.NoError(t, err)
 
 	// Save original directory
@@ -31,7 +31,7 @@ func setupBenchTest(t *testing.T) (string, func()) {
 	require.NoError(t, err)
 
 	return tmpDir, func() {
-		os.Chdir(originalDir)
+		_ = os.Chdir(originalDir)
 	}
 }
 
@@ -44,17 +44,20 @@ func TestBench_DefaultWithArgs(t *testing.T) {
 
 	// Save original runner
 	originalRunner := mage.GetRunner()
-	defer mage.SetRunner(originalRunner)
+	defer func() {
+		_ = mage.SetRunner(originalRunner)
+	}()
 
-	mage.SetRunner(runner)
+	err := mage.SetRunner(runner)
+	require.NoError(t, err)
 
 	// Expectation: go test -bench=. -benchmem -run=^$ -benchtime 3s ./...
 	builder.ExpectGoCommand("test", nil)
 
 	b := mage.Bench{}
-	err := b.DefaultWithArgs() // Uses default args
+	err = b.DefaultWithArgs() // Uses default args
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	runner.AssertExpectations(t)
 }
 
@@ -66,9 +69,12 @@ func TestBench_DefaultWithArgs_Custom(t *testing.T) {
 	runner, builder := testutil.NewMockRunner()
 
 	originalRunner := mage.GetRunner()
-	defer mage.SetRunner(originalRunner)
+	defer func() {
+		_ = mage.SetRunner(originalRunner)
+	}()
 
-	mage.SetRunner(runner)
+	err := mage.SetRunner(runner)
+	require.NoError(t, err)
 
 	// We expect arguments to contain custom values
 	// time=1s -> -benchtime 1s
@@ -77,9 +83,9 @@ func TestBench_DefaultWithArgs_Custom(t *testing.T) {
 	builder.ExpectGoCommand("test", nil)
 
 	b := mage.Bench{}
-	err := b.DefaultWithArgs("time=1s", "count=2", "verbose=true")
+	err = b.DefaultWithArgs("time=1s", "count=2", "verbose=true")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	runner.AssertExpectations(t)
 }
 
@@ -90,9 +96,12 @@ func TestBench_SaveWithArgs(t *testing.T) {
 	runner, _ := testutil.NewMockRunner()
 
 	originalRunner := mage.GetRunner()
-	defer mage.SetRunner(originalRunner)
+	defer func() {
+		_ = mage.SetRunner(originalRunner)
+	}()
 
-	mage.SetRunner(runner)
+	err := mage.SetRunner(runner)
+	require.NoError(t, err)
 
 	// Expect go test execution, returning some output
 	runner.On("RunCmdOutput", "go", mock.MatchedBy(func(args []string) bool {
@@ -101,13 +110,13 @@ func TestBench_SaveWithArgs(t *testing.T) {
 
 	outputFile := filepath.Join(tmpDir, "results.txt")
 	b := mage.Bench{}
-	err := b.SaveWithArgs("output="+outputFile)
+	err = b.SaveWithArgs("output="+outputFile)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	runner.AssertExpectations(t)
 
 	// Verify file content
-	content, err := os.ReadFile(outputFile)
+	content, err := os.ReadFile(outputFile) // #nosec G304 -- test file path
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "BenchmarkResult")
 }
@@ -119,15 +128,20 @@ func TestBench_CompareWithArgs(t *testing.T) {
 	// Create dummy benchmark files
 	oldFile := filepath.Join(tmpDir, "old.txt")
 	newFile := filepath.Join(tmpDir, "new.txt")
-	os.WriteFile(oldFile, []byte("old"), 0o644)
-	os.WriteFile(newFile, []byte("new"), 0o644)
+	err := os.WriteFile(oldFile, []byte("old"), 0o644)
+	require.NoError(t, err)
+	err = os.WriteFile(newFile, []byte("new"), 0o644)
+	require.NoError(t, err)
 
 	runner, _ := testutil.NewMockRunner()
 
 	originalRunner := mage.GetRunner()
-	defer mage.SetRunner(originalRunner)
+	defer func() {
+		_ = mage.SetRunner(originalRunner)
+	}()
 
-	mage.SetRunner(runner)
+	err = mage.SetRunner(runner)
+	require.NoError(t, err)
 
 	// Expect benchstat installation if needed
 	// The code checks if benchstat exists using utils.CommandExists.
@@ -143,9 +157,9 @@ func TestBench_CompareWithArgs(t *testing.T) {
 	runner.On("RunCmd", "benchstat", []string{oldFile, newFile}).Return(nil)
 
 	b := mage.Bench{}
-	err := b.CompareWithArgs("old="+oldFile, "new="+newFile)
+	err = b.CompareWithArgs("old="+oldFile, "new="+newFile)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	runner.AssertExpectations(t)
 }
 
@@ -156,9 +170,12 @@ func TestBench_CPUWithArgs(t *testing.T) {
 	runner, builder := testutil.NewMockRunner()
 
 	originalRunner := mage.GetRunner()
-	defer mage.SetRunner(originalRunner)
+	defer func() {
+		_ = mage.SetRunner(originalRunner)
+	}()
 
-	mage.SetRunner(runner)
+	err := mage.SetRunner(runner)
+	require.NoError(t, err)
 
 	// Expect go test
 	builder.ExpectGoCommand("test", nil)
@@ -168,14 +185,14 @@ func TestBench_CPUWithArgs(t *testing.T) {
 
 	b := mage.Bench{}
 	// Run
-	err := b.CPUWithArgs()
+	err = b.CPUWithArgs()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	runner.AssertExpectations(t)
 
 	// Check env var
 	assert.Equal(t, "cpu.prof", os.Getenv("MAGE_X_BENCH_CPU_PROFILE"))
-	os.Unsetenv("MAGE_X_BENCH_CPU_PROFILE")
+	_ = os.Unsetenv("MAGE_X_BENCH_CPU_PROFILE")
 }
 
 func TestBench_MemWithArgs(t *testing.T) {
@@ -185,9 +202,12 @@ func TestBench_MemWithArgs(t *testing.T) {
 	runner, builder := testutil.NewMockRunner()
 
 	originalRunner := mage.GetRunner()
-	defer mage.SetRunner(originalRunner)
+	defer func() {
+		_ = mage.SetRunner(originalRunner)
+	}()
 
-	mage.SetRunner(runner)
+	err := mage.SetRunner(runner)
+	require.NoError(t, err)
 
 	// Expect go test
 	builder.ExpectGoCommand("test", nil)
@@ -197,14 +217,14 @@ func TestBench_MemWithArgs(t *testing.T) {
 
 	b := mage.Bench{}
 	// Run
-	err := b.MemWithArgs()
+	err = b.MemWithArgs()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	runner.AssertExpectations(t)
 
 	// Check env var
 	assert.Equal(t, "mem.prof", os.Getenv("MAGE_X_BENCH_MEM_PROFILE"))
-	os.Unsetenv("MAGE_X_BENCH_MEM_PROFILE")
+	_ = os.Unsetenv("MAGE_X_BENCH_MEM_PROFILE")
 }
 
 func TestBench_TraceWithArgs(t *testing.T) {
@@ -214,9 +234,12 @@ func TestBench_TraceWithArgs(t *testing.T) {
 	runner, _ := testutil.NewMockRunner()
 
 	originalRunner := mage.GetRunner()
-	defer mage.SetRunner(originalRunner)
+	defer func() {
+		_ = mage.SetRunner(originalRunner)
+	}()
 
-	mage.SetRunner(runner)
+	err := mage.SetRunner(runner)
+	require.NoError(t, err)
 
 	runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 		if len(args) == 0 || args[0] != "test" { return false }
@@ -233,8 +256,8 @@ func TestBench_TraceWithArgs(t *testing.T) {
 	})).Return(nil)
 
 	b := mage.Bench{}
-	err := b.TraceWithArgs("trace=trace.out")
+	err = b.TraceWithArgs("trace=trace.out")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	runner.AssertExpectations(t)
 }

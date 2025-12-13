@@ -26,16 +26,17 @@ func TestFileConfigLoader_Load(t *testing.T) {
 
 	// Create a dummy config file
 	configData := FileLoaderTestConfig{Name: "test", Version: 1}
-	jsonContent, _ := json.Marshal(configData)
+	jsonContent, err := json.Marshal(configData)
+	require.NoError(t, err)
 	configPath := filepath.Join(tmpDir, "config.json")
-	err := os.WriteFile(configPath, jsonContent, 0o600)
+	err = os.WriteFile(configPath, jsonContent, 0o600)
 	require.NoError(t, err)
 
 	t.Run("success with explicit path", func(t *testing.T) {
 		loader := NewFileLoader("")
 		var dest FileLoaderTestConfig
 		path, err := loader.Load([]string{configPath}, &dest)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, configPath, path)
 		assert.Equal(t, configData, dest)
 	})
@@ -44,7 +45,7 @@ func TestFileConfigLoader_Load(t *testing.T) {
 		loader := NewFileLoader(configPath)
 		var dest FileLoaderTestConfig
 		path, err := loader.Load([]string{}, &dest)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, configPath, path)
 		assert.Equal(t, configData, dest)
 	})
@@ -53,7 +54,7 @@ func TestFileConfigLoader_Load(t *testing.T) {
 		loader := NewFileLoader("")
 		var dest FileLoaderTestConfig
 		path, err := loader.Load([]string{filepath.Join(tmpDir, "nonexistent.json")}, &dest)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, "", path)
 		assert.ErrorIs(t, err, errNoConfigFileFound)
 	})
@@ -64,57 +65,61 @@ func TestFileConfigLoader_LoadFrom(t *testing.T) {
 
 	t.Run("load json", func(t *testing.T) {
 		configData := FileLoaderTestConfig{Name: "json", Version: 1}
-		jsonContent, _ := json.Marshal(configData)
+		jsonContent, err := json.Marshal(configData)
+		require.NoError(t, err)
 		configPath := filepath.Join(tmpDir, "config.json")
-		err := os.WriteFile(configPath, jsonContent, 0o600)
+		err = os.WriteFile(configPath, jsonContent, 0o600)
 		require.NoError(t, err)
 
 		loader := NewFileLoader("")
 		var dest FileLoaderTestConfig
 		err = loader.LoadFrom(configPath, &dest)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, configData, dest)
 	})
 
 	t.Run("load yaml", func(t *testing.T) {
 		configData := FileLoaderTestConfig{Name: "yaml", Version: 2}
-		yamlContent, _ := yaml.Marshal(configData)
+		yamlContent, err := yaml.Marshal(configData)
+		require.NoError(t, err)
 		configPath := filepath.Join(tmpDir, "config.yaml")
-		err := os.WriteFile(configPath, yamlContent, 0o600)
+		err = os.WriteFile(configPath, yamlContent, 0o600)
 		require.NoError(t, err)
 
 		loader := NewFileLoader("")
 		var dest FileLoaderTestConfig
 		err = loader.LoadFrom(configPath, &dest)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, configData, dest)
 	})
 
 	t.Run("load unknown extension - fallback to json", func(t *testing.T) {
 		configData := FileLoaderTestConfig{Name: "fallback_json", Version: 3}
-		jsonContent, _ := json.Marshal(configData)
+		jsonContent, err := json.Marshal(configData)
+		require.NoError(t, err)
 		configPath := filepath.Join(tmpDir, "config.unknown")
-		err := os.WriteFile(configPath, jsonContent, 0o600)
+		err = os.WriteFile(configPath, jsonContent, 0o600)
 		require.NoError(t, err)
 
 		loader := NewFileLoader("")
 		var dest FileLoaderTestConfig
 		err = loader.LoadFrom(configPath, &dest)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, configData, dest)
 	})
 
 	t.Run("load unknown extension - fallback to yaml", func(t *testing.T) {
 		configData := FileLoaderTestConfig{Name: "fallback_yaml", Version: 4}
-		yamlContent, _ := yaml.Marshal(configData)
+		yamlContent, err := yaml.Marshal(configData)
+		require.NoError(t, err)
 		configPath := filepath.Join(tmpDir, "config.unknown_yaml")
-		err := os.WriteFile(configPath, yamlContent, 0o600)
+		err = os.WriteFile(configPath, yamlContent, 0o600)
 		require.NoError(t, err)
 
 		loader := NewFileLoader("")
 		var dest FileLoaderTestConfig
 		err = loader.LoadFrom(configPath, &dest)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, configData, dest)
 	})
 
@@ -122,7 +127,7 @@ func TestFileConfigLoader_LoadFrom(t *testing.T) {
 		loader := NewFileLoader("")
 		var dest FileLoaderTestConfig
 		err := loader.LoadFrom("relative/path/config.json", &dest)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.ErrorIs(t, err, errConfigPathNotAbs)
 	})
 
@@ -131,7 +136,7 @@ func TestFileConfigLoader_LoadFrom(t *testing.T) {
 		var dest FileLoaderTestConfig
 		absPath := filepath.Join(tmpDir, "nonexistent.json")
 		err := loader.LoadFrom(absPath, &dest)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to read config file")
 	})
 
@@ -143,7 +148,7 @@ func TestFileConfigLoader_LoadFrom(t *testing.T) {
 		loader := NewFileLoader("")
 		var dest FileLoaderTestConfig
 		err = loader.LoadFrom(configPath, &dest)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.ErrorIs(t, err, errUnsupportedFileExt)
 	})
 }
@@ -157,9 +162,9 @@ func TestFileConfigLoader_Save(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "saved.json")
 
 		err := loader.Save(configPath, configData, "json")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		content, err := os.ReadFile(configPath)
+		content, err := os.ReadFile(configPath) // #nosec G304 -- test file path
 		require.NoError(t, err)
 
 		var dest FileLoaderTestConfig
@@ -173,9 +178,9 @@ func TestFileConfigLoader_Save(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "saved.yaml")
 
 		err := loader.Save(configPath, configData, "yaml")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		content, err := os.ReadFile(configPath)
+		content, err := os.ReadFile(configPath) // #nosec G304 -- test file path
 		require.NoError(t, err)
 
 		var dest FileLoaderTestConfig
@@ -189,7 +194,7 @@ func TestFileConfigLoader_Save(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "fail.txt")
 
 		err := loader.Save(configPath, configData, "txt")
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.ErrorIs(t, err, errUnsupportedFormat)
 	})
 
@@ -203,7 +208,7 @@ func TestFileConfigLoader_Save(t *testing.T) {
 		configPath := filepath.Join(pathAsFile, "config.json")
 
 		err = loader.Save(configPath, configData, "json")
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to create directory")
 	})
 
@@ -213,7 +218,7 @@ func TestFileConfigLoader_Save(t *testing.T) {
             "foo": make(chan int),
         }
         err := loader.Save(filepath.Join(tmpDir, "whatever.json"), data, "json")
-        assert.Error(t, err)
+        require.Error(t, err)
         assert.Contains(t, err.Error(), "failed to marshal data")
     })
 }
@@ -224,12 +229,12 @@ func TestFileConfigLoader_Validate(t *testing.T) {
 	t.Run("valid data", func(t *testing.T) {
 		data := FileLoaderTestConfig{Name: "valid", Version: 1}
 		err := loader.Validate(data)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("nil data", func(t *testing.T) {
 		err := loader.Validate(nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.ErrorIs(t, err, errConfigDataNil)
 	})
 }
