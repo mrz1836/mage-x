@@ -481,6 +481,9 @@ func (Test) Fuzz(argsList ...string) error {
 	// Print CI summary if enabled
 	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
 
+	// Write CI results to JSONL format if enabled (standardized output for validation)
+	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
+
 	// Return aggregated error if any failures
 	if err := fuzzResultsToError(results); err != nil {
 		return err
@@ -520,6 +523,9 @@ func (Test) FuzzWithTime(fuzzTime time.Duration) error {
 
 	// Print CI summary if enabled (nil params relies on config/environment detection)
 	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
+
+	// Write CI results to JSONL format if enabled (standardized output for validation)
+	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
 
 	// Return aggregated error if any failures
 	if err := fuzzResultsToError(results); err != nil {
@@ -574,6 +580,9 @@ func (Test) FuzzShort(argsList ...string) error {
 	// Print CI summary if enabled
 	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
 
+	// Write CI results to JSONL format if enabled (standardized output for validation)
+	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
+
 	// Return aggregated error if any failures
 	if err := fuzzResultsToError(results); err != nil {
 		return err
@@ -613,6 +622,9 @@ func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 
 	// Print CI summary if enabled (nil params relies on config/environment detection)
 	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
+
+	// Write CI results to JSONL format if enabled (standardized output for validation)
+	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
 
 	// Return aggregated error if any failures
 	if err := fuzzResultsToError(results); err != nil {
@@ -1632,6 +1644,82 @@ func runFuzzTestsWithResults(config *Config, fuzzTime time.Duration, packages []
 func printCIFuzzSummaryIfEnabled(params map[string]string, config *Config, results []fuzzTestResult, totalDuration time.Duration) {
 	if IsCIEnabled(params, config) {
 		printCIFuzzSummary(results, totalDuration)
+	}
+}
+
+// writeFuzzCIResultsIfEnabled writes fuzz test results to JSONL format when CI mode is enabled.
+// This produces output in the same format as regular tests, allowing the validation workflow
+// to process fuzz results uniformly with unit test results.
+func writeFuzzCIResultsIfEnabled(params map[string]string, config *Config, results []fuzzTestResult, totalDuration time.Duration) {
+	if !IsCIEnabled(params, config) {
+		return
+	}
+
+	detector := NewCIDetector()
+	mode := detector.GetConfig(params, config)
+
+	// Use a separate file for fuzz results to avoid overwriting regular test results
+	// The path is based on mode.OutputPath but with "-fuzz" suffix
+	fuzzOutputPath := strings.TrimSuffix(mode.OutputPath, ".jsonl") + "-fuzz.jsonl"
+
+	reporter, err := NewJSONReporter(fuzzOutputPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to create fuzz CI reporter: %v\n", err)
+		return
+	}
+	defer func() {
+		if closeErr := reporter.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to close fuzz CI reporter: %v\n", closeErr)
+		}
+	}()
+
+	// Write metadata
+	if d, ok := detector.(*ciDetector); ok {
+		if startErr := reporter.Start(d.GetMetadata()); startErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to write fuzz CI start: %v\n", startErr)
+		}
+	}
+
+	// Convert fuzz results to CITestFailure format and write failures
+	total, passed, failed := len(results), 0, 0
+	for _, r := range results {
+		if r.Error != nil {
+			failed++
+			failure := CITestFailure{
+				Package: r.Package,
+				Test:    r.Test,
+				Type:    FailureTypeFuzz,
+				Error:   r.Error.Error(),
+			}
+			if reportErr := reporter.ReportFailure(failure); reportErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: Failed to report fuzz failure: %v\n", reportErr)
+			}
+		} else {
+			passed++
+		}
+	}
+
+	// Write summary
+	status := TestStatusPassed
+	if failed > 0 {
+		status = TestStatusFailed
+	}
+
+	result := &CIResult{
+		Summary: CISummary{
+			Status:   status,
+			Total:    total,
+			Passed:   passed,
+			Failed:   failed,
+			Skipped:  0,
+			Duration: formatDurationForSummary(totalDuration),
+		},
+		Timestamp: time.Now(),
+		Duration:  totalDuration,
+	}
+
+	if summaryErr := reporter.WriteSummary(result); summaryErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to write fuzz CI summary: %v\n", summaryErr)
 	}
 }
 
