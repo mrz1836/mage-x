@@ -1,7 +1,21 @@
 # ------------------------------------------------------------------------------------
 #  Test Failure Detection (Composite Action)
 #
-#  Purpose: Define and provide reusable test failure detection functions for
+#  ⚠️ DEPRECATED: This action is deprecated in favor of magex native CI mode.
+#
+#  magex CI mode automatically:
+#    - Parses test output in real-time
+#    - Generates GitHub annotations with file:line locations
+#    - Writes structured JSONL output to .mage-x/ci-results.jsonl
+#    - Creates step summaries
+#
+#  Usage: Simply run `magex test:*` commands - CI mode auto-detects GitHub Actions.
+#
+#  This action is kept for backwards compatibility but will be removed in a future release.
+#
+#  ---------------------------------------------------------------------------------
+#
+#  Original Purpose: Define and provide reusable test failure detection functions for
 #  robust test output parsing across different formats and test types.
 #
 #  This action provides sophisticated failure detection capabilities:
