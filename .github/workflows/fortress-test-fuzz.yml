@@ -133,15 +133,6 @@ jobs:
         id: run-fuzz-tests
         continue-on-error: true
         run: |
-          echo ""
-          echo "============================================================"
-          echo "🤖 MAGE-X CI MODE ACTIVE"
-          echo "============================================================"
-          echo "📍 Platform: GitHub Actions"
-          echo "📋 Output: GitHub Annotations + Step Summary + JSONL"
-          echo "🔍 Auto-detected from GITHUB_ACTIONS environment variable"
-          echo "============================================================"
-          echo ""
           echo "🧪 Running fuzz tests in parallel..."
           FUZZ_TIMEOUT="${TEST_TIMEOUT_FUZZ:-5m}"
           GO_MODULE_DIR="${{ env.GO_MODULE_DIR }}"

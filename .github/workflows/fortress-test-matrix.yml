@@ -211,15 +211,6 @@ jobs:
           RACE="${{ inputs.race-detection-enabled || 'false' }}"
           COVER="${{ inputs.code-coverage-enabled || 'false' }}"
 
-          echo ""
-          echo "============================================================"
-          echo "🤖 MAGE-X CI MODE ACTIVE"
-          echo "============================================================"
-          echo "📍 Platform: GitHub Actions"
-          echo "📋 Output: GitHub Annotations + Step Summary + JSONL"
-          echo "🔍 Auto-detected from GITHUB_ACTIONS environment variable"
-          echo "============================================================"
-          echo ""
           echo "🔍 Race Detection Enabled: $RACE"
           echo "🔍 Code Coverage Enabled: $COVER"
 

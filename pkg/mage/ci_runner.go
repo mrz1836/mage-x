@@ -109,6 +109,9 @@ func (r *ciRunner) RunCmdOutput(name string, args ...string) (string, error) {
 func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...string) error {
 	r.startTime = time.Now()
 
+	// Print CI mode startup banner
+	printCIModeBanner(r.detector.Platform(), r.mode)
+
 	// Start the reporter
 	if r.reporter != nil {
 		if d, ok := r.detector.(*ciDetector); ok {
@@ -306,6 +309,9 @@ func (r *ciRunner) GenerateReport() error {
 	results := r.results
 	r.mu.Unlock()
 
+	// Print CI mode completion summary to stdout
+	printCIModeSummary(results, r.mode.OutputPath)
+
 	if err := r.reporter.WriteSummary(results); err != nil {
 		return fmt.Errorf("failed to write summary: %w", err)
 	}
@@ -322,6 +328,63 @@ func formatDurationForSummary(d time.Duration) string {
 		return fmt.Sprintf("%.1fs", d.Seconds())
 	}
 	return fmt.Sprintf("%dm%ds", int(d.Minutes()), int(d.Seconds())%60)
+}
+
+// printCIModeBanner outputs CI mode configuration to stdout
+func printCIModeBanner(platform string, mode CIMode) {
+	dedupStatus := "disabled"
+	if mode.Dedup {
+		dedupStatus = "enabled"
+	}
+
+	lines := []string{
+		"",
+		"============================================================",
+		"🤖 MAGE-X CI MODE ACTIVE",
+		"============================================================",
+		fmt.Sprintf("📍 Platform:       %s", platform),
+		fmt.Sprintf("📋 Format:         %s", mode.Format),
+		fmt.Sprintf("📊 Output File:    %s", mode.OutputPath),
+		fmt.Sprintf("🔍 Context Lines:  %d", mode.ContextLines),
+		fmt.Sprintf("💾 Max Memory:     %dMB", mode.MaxMemoryMB),
+		fmt.Sprintf("🔄 Deduplication:  %s", dedupStatus),
+		"============================================================",
+		"",
+	}
+	for _, line := range lines {
+		if _, err := fmt.Fprintln(os.Stdout, line); err != nil {
+			return
+		}
+	}
+}
+
+// printCIModeSummary outputs test results summary to stdout
+func printCIModeSummary(results *CIResult, outputPath string) {
+	lines := []string{
+		"",
+		"============================================================",
+		"📊 MAGE-X CI TEST SUMMARY",
+		"============================================================",
+		fmt.Sprintf("Total Tests:       %d", results.Summary.Total),
+		fmt.Sprintf("├── Passed:        %d", results.Summary.Passed),
+		fmt.Sprintf("├── Failed:        %d", results.Summary.Failed),
+		fmt.Sprintf("└── Skipped:       %d", results.Summary.Skipped),
+		fmt.Sprintf("Duration:          %s", results.Summary.Duration),
+		fmt.Sprintf("Failures Detected: %d", len(results.Failures)),
+	}
+	for _, f := range results.Failures {
+		lines = append(lines, fmt.Sprintf("  └── %s (%s) - %s", f.Test, f.Package, f.Type))
+	}
+	lines = append(lines,
+		fmt.Sprintf("Output Written:    %s", outputPath),
+		"============================================================",
+		"",
+	)
+	for _, line := range lines {
+		if _, err := fmt.Fprintln(os.Stdout, line); err != nil {
+			return
+		}
+	}
 }
 
 // IsCIEnabled checks if CI mode should be enabled
