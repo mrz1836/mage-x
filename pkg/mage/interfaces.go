@@ -261,10 +261,22 @@ type CoverageInfo struct {
 
 // TestFailure represents a failed test
 type TestFailure struct {
-	Package string
-	Test    string
-	Error   string
-	Output  string
+	// Core fields (backwards compatible)
+	Package string `json:"package"`
+	Test    string `json:"test"`
+	Error   string `json:"error"`
+	Output  string `json:"output"`
+
+	// CI-specific fields (extended)
+	Type        string   `json:"type,omitempty"`         // Failure classification (test, build, panic, race, fuzz, timeout, fatal)
+	File        string   `json:"file,omitempty"`         // Source file path (relative)
+	Line        int      `json:"line,omitempty"`         // Line number
+	Column      int      `json:"column,omitempty"`       // Column (for build errors)
+	Stack       string   `json:"stack,omitempty"`        // Stack trace (for panics)
+	Context     []string `json:"context,omitempty"`      // Surrounding lines of code
+	Signature   string   `json:"signature,omitempty"`    // Deduplication key (pkg:test:file:line:type)
+	Duration    string   `json:"duration,omitempty"`     // Test duration
+	RaceRelated bool     `json:"race_related,omitempty"` // True if panic was triggered by race detector
 }
 
 // IBenchmarkOptions contains benchmark configuration

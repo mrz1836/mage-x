@@ -116,7 +116,7 @@ func (c Check) Docs() error {
 func (ci CI) Setup(provider string) error {
 	runner := GetRunner()
 	switch provider {
-	case "github", "gitlab", "jenkins", "circleci":
+	case string(CIFormatGitHub), "gitlab", "jenkins", "circleci":
 		return runner.RunCmd("echo", "Setting up CI for", provider)
 	default:
 		return fmt.Errorf("%w: %s", errUnsupportedCIProvider, provider)

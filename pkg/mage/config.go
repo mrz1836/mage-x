@@ -73,6 +73,7 @@ type TestConfig struct {
 	BenchCPU                     int      `yaml:"bench_cpu"`
 	BenchMem                     bool     `yaml:"bench_mem"`
 	BenchTime                    string   `yaml:"bench_time"`
+	CIMode                       CIMode   `yaml:"ci_mode"`
 	Cover                        bool     `yaml:"cover"`
 	CoverMode                    string   `yaml:"covermode"`
 	CoverPkg                     []string `yaml:"coverpkg"`
@@ -400,6 +401,7 @@ func defaultConfig() *Config {
 			IntegrationTimeout: "30m",
 			CoverMode:          "atomic",
 			ExcludeModules:     []string{""},
+			CIMode:             DefaultCIMode(),
 		},
 		Lint: LintConfig{
 			GolangciVersion: VersionLatest,
@@ -478,7 +480,7 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Test race override
-	if v := cleanEnvValue(os.Getenv("MAGE_X_TEST_RACE")); v == "true" || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_TEST_RACE")); v == trueValue || v == "1" {
 		c.Test.Race = true
 	}
 
@@ -491,9 +493,9 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Auto discover build tags override
-	if v := cleanEnvValue(os.Getenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")); v == "true" || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")); v == trueValue || v == "1" {
 		c.Test.AutoDiscoverBuildTags = true
-	} else if v == "false" || v == "0" {
+	} else if v == falseValue || v == "0" {
 		c.Test.AutoDiscoverBuildTags = false
 	}
 
@@ -565,9 +567,9 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Resume override
-	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_RESUME")); v == "true" || v == "1" {
+	if v := cleanEnvValue(os.Getenv("MAGE_X_DOWNLOAD_RESUME")); v == trueValue || v == "1" {
 		cfg.EnableResume = true
-	} else if v == "false" || v == "0" {
+	} else if v == falseValue || v == "0" {
 		cfg.EnableResume = false
 	}
 

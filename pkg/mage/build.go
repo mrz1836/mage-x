@@ -761,7 +761,7 @@ func (b Build) PreBuildWithArgs(argsList ...string) error {
 		utils.IsParamTrue(params, "mains_only")
 
 	// Apply memory limit if specified
-	if memoryLimit != "" && memoryLimit != "auto" {
+	if memoryLimit != "" && memoryLimit != string(CIFormatAuto) {
 		strategy = b.applyMemoryLimit(memoryLimit, strategy)
 	}
 

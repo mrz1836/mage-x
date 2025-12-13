@@ -231,7 +231,7 @@ func TestRunTestsWithBuildTagDiscoveryTags(t *testing.T) {
 		mockRunner.On("RunCmd", mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(3) // Base + 2 discovered tags
 
 		discoveredTags := []string{"unit", "integration"}
-		err := runTestsWithBuildTagDiscoveryTags(config, modules, false, []string{}, "unit", discoveredTags)
+		err := runTestsWithBuildTagDiscoveryTags(config, modules, []string{}, "unit", discoveredTags)
 
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
@@ -244,7 +244,7 @@ func TestRunTestsWithBuildTagDiscoveryTags(t *testing.T) {
 		mockRunner.On("RunCmd", mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 
 		config.Test.AutoDiscoverBuildTags = false
-		err := runTestsWithBuildTagDiscoveryTags(config, modules, false, []string{}, "unit", nil)
+		err := runTestsWithBuildTagDiscoveryTags(config, modules, []string{}, "unit", nil)
 
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
@@ -258,7 +258,7 @@ func TestRunTestsWithBuildTagDiscoveryTags(t *testing.T) {
 
 		config.Test.AutoDiscoverBuildTags = true
 		discoveredTags := []string{"unit"}
-		err := runTestsWithBuildTagDiscoveryTags(config, modules, false, []string{}, "unit", discoveredTags)
+		err := runTestsWithBuildTagDiscoveryTags(config, modules, []string{}, "unit", discoveredTags)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "base tests failed")
@@ -275,7 +275,7 @@ func TestRunTestsWithBuildTagDiscoveryTags(t *testing.T) {
 
 		config.Test.AutoDiscoverBuildTags = true
 		discoveredTags := []string{"unit"}
-		err := runTestsWithBuildTagDiscoveryTags(config, modules, false, []string{}, "unit", discoveredTags)
+		err := runTestsWithBuildTagDiscoveryTags(config, modules, []string{}, "unit", discoveredTags)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "tests with tag 'unit' failed")

@@ -21,6 +21,36 @@ var (
 	errFlagNotAllowed         = errors.New("flag not allowed for security reasons")
 )
 
+// getCIParams extracts CI-related parameters from args and returns the remaining args
+func getCIParams(args []string) (params map[string]string, remainingArgs []string) {
+	params = make(map[string]string)
+	for _, arg := range args {
+		// Check for ci parameter (ci=true, ci=false, etc.)
+		if strings.HasPrefix(arg, "ci=") {
+			params["ci"] = strings.TrimPrefix(arg, "ci=")
+		} else if arg == "ci" {
+			params["ci"] = trueValue
+		} else {
+			remainingArgs = append(remainingArgs, arg)
+		}
+	}
+	return params, remainingArgs
+}
+
+// getTestRunner returns a CI-wrapped runner if CI mode is enabled, otherwise the standard runner
+func getTestRunner(params map[string]string, config *Config) CommandRunner {
+	return GetCIRunner(GetRunner(), params, config)
+}
+
+// generateCIReport generates the final CI report if using a CI runner
+func generateCIReport(runner CommandRunner) {
+	if ciRunner, ok := runner.(CIRunner); ok {
+		if err := ciRunner.GenerateReport(); err != nil {
+			utils.Warn("Failed to generate CI report: %v", err)
+		}
+	}
+}
+
 // shouldExcludeModule checks if a module should be excluded from processing
 // based on the configured exclusion list. By default, "magefiles" modules are excluded
 // because they have special build constraints (//go:build mage).
@@ -86,10 +116,17 @@ func (Test) Full(args ...string) error {
 
 // Unit runs unit tests
 func (Test) Unit(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("unit", config)
@@ -111,15 +148,22 @@ func (Test) Unit(args ...string) error {
 	}
 
 	// Use new build tag discovery if enabled, passing pre-discovered tags
-	return runTestsWithBuildTagDiscoveryTags(config, modules, false, args, "unit", discoveredTags)
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, "unit", discoveredTags, runner)
 }
 
 // Short runs short tests (excludes integration tests)
 func (Test) Short(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("short", config)
@@ -141,15 +185,22 @@ func (Test) Short(args ...string) error {
 	}
 
 	// Use new build tag discovery if enabled (explicitly disable race for speed)
-	return runTestsWithBuildTagDiscoveryTags(config, modules, false, args, "short", discoveredTags)
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, "short", discoveredTags, runner)
 }
 
 // Race runs tests with race detector
 func (Test) Race(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("race", config)
@@ -171,15 +222,22 @@ func (Test) Race(args ...string) error {
 	}
 
 	// Use new build tag discovery if enabled (with race detector)
-	return runTestsWithBuildTagDiscoveryTags(config, modules, true, args, "race", discoveredTags)
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, true, remainingArgs, "race", discoveredTags, runner)
 }
 
 // Cover runs tests with coverage
 func (Test) Cover(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("coverage", config)
@@ -201,15 +259,22 @@ func (Test) Cover(args ...string) error {
 	}
 
 	// Use build tag discovery for coverage tests
-	return runCoverageTestsWithBuildTagDiscoveryTags(config, modules, false, args, discoveredTags)
+	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, discoveredTags, runner)
 }
 
 // CoverRace runs tests with both coverage and race detector
 func (Test) CoverRace(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("coverage+race", config)
@@ -231,7 +296,7 @@ func (Test) CoverRace(args ...string) error {
 	}
 
 	// Use build tag discovery for coverage+race tests
-	return runCoverageTestsWithBuildTagDiscoveryTags(config, modules, true, args, discoveredTags)
+	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, true, remainingArgs, discoveredTags, runner)
 }
 
 // CoverReport shows coverage report
@@ -1145,22 +1210,29 @@ func mergeAndCleanupCoverageFiles(coverageFiles []string, taggedCoverageFile, bu
 }
 
 // runTestsWithBuildTagDiscoveryTags runs tests with pre-discovered build tags
-func runTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, testType string, discoveredTags []string) error {
+//
+//nolint:unparam // testType kept for API consistency with WithRunner variant, even though currently only called with "unit"
+func runTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, additionalArgs []string, testType string, discoveredTags []string) error {
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, additionalArgs, testType, discoveredTags, GetRunner())
+}
+
+// runTestsWithBuildTagDiscoveryTagsWithRunner runs tests with pre-discovered build tags using provided runner
+func runTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, testType string, discoveredTags []string, runner CommandRunner) error {
 	if !config.Test.AutoDiscoverBuildTags || len(discoveredTags) == 0 {
 		// Run tests normally without build tag discovery
-		return runTestsForModules(config, modules, race, false, additionalArgs, testType, "")
+		return runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, "", runner)
 	}
 
 	// Run base tests (no build tags)
 	utils.Info("Running %s tests without build tags", testType)
-	if err := runTestsForModules(config, modules, race, false, additionalArgs, testType, ""); err != nil {
+	if err := runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, "", runner); err != nil {
 		return fmt.Errorf("base tests failed: %w", err)
 	}
 
 	// Run tests for each discovered build tag
 	for _, tag := range discoveredTags {
 		utils.Info("Running %s tests with build tag: %s", testType, tag)
-		if err := runTestsForModules(config, modules, race, false, additionalArgs, testType, tag); err != nil {
+		if err := runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, tag, runner); err != nil {
 			return fmt.Errorf("tests with tag '%s' failed: %w", tag, err)
 		}
 	}
@@ -1170,21 +1242,26 @@ func runTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, rac
 
 // runCoverageTestsWithBuildTagDiscoveryTags runs coverage tests with pre-discovered build tags
 func runCoverageTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, race bool, additionalArgs, discoveredTags []string) error {
+	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, race, additionalArgs, discoveredTags, GetRunner())
+}
+
+// runCoverageTestsWithBuildTagDiscoveryTagsWithRunner runs coverage tests with pre-discovered build tags using provided runner
+func runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs, discoveredTags []string, runner CommandRunner) error {
 	if !config.Test.AutoDiscoverBuildTags || len(discoveredTags) == 0 {
 		// Run coverage tests normally without build tag discovery
-		return runCoverageTestsForModules(config, modules, race, additionalArgs, "")
+		return runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, "", runner)
 	}
 
 	// Run base coverage tests (no build tags)
 	utils.Info("Running coverage tests without build tags")
-	if err := runCoverageTestsForModules(config, modules, race, additionalArgs, ""); err != nil {
+	if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, "", runner); err != nil {
 		return fmt.Errorf("base coverage tests failed: %w", err)
 	}
 
 	// Run coverage tests for each discovered build tag
 	for _, tag := range discoveredTags {
 		utils.Info("Running coverage tests with build tag: %s", tag)
-		if err := runCoverageTestsForModules(config, modules, race, additionalArgs, tag); err != nil {
+		if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, tag, runner); err != nil {
 			return fmt.Errorf("coverage tests with tag '%s' failed: %w", tag, err)
 		}
 	}
@@ -1196,8 +1273,8 @@ func runCoverageTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleI
 	return nil
 }
 
-// runCoverageTestsForModules runs coverage tests for all modules with the specified build tag
-func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, buildTag string) error {
+// runCoverageTestsForModulesWithRunner runs coverage tests for all modules with the specified build tag using provided runner
+func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, buildTag string, runner CommandRunner) error {
 	totalStart := time.Now()
 	var moduleErrors []moduleError
 	var coverageFiles []string
@@ -1256,8 +1333,8 @@ func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool,
 
 		testArgs = append(testArgs, "./...")
 
-		// Run tests in module directory
-		err := runCommandInModule(module, "go", testArgs...)
+		// Run tests in module directory using provided runner
+		err := runCommandInModuleWithRunner(module, runner, "go", testArgs...)
 
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
@@ -1285,8 +1362,8 @@ func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool,
 	return nil
 }
 
-// runTestsForModules runs tests for all modules with the specified configuration
-func runTestsForModules(config *Config, modules []ModuleInfo, race, cover bool, additionalArgs []string, testType, buildTag string) error {
+// runTestsForModulesWithRunner runs tests for all modules with the specified configuration using provided runner
+func runTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race, cover bool, additionalArgs []string, testType, buildTag string, runner CommandRunner) error {
 	var moduleErrors []moduleError
 	totalStart := time.Now()
 
@@ -1322,8 +1399,8 @@ func runTestsForModules(config *Config, modules []ModuleInfo, race, cover bool, 
 		}
 		testArgs = append(testArgs, "./...")
 
-		// Run tests in module directory
-		err := runCommandInModule(module, "go", testArgs...)
+		// Run tests in module directory using provided runner
+		err := runCommandInModuleWithRunner(module, runner, "go", testArgs...)
 
 		if err != nil {
 			tagInfo := getTagInfo(buildTag)

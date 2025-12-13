@@ -26,7 +26,8 @@ var (
 
 // Constants for common string values
 const (
-	trueValue = "true"
+	trueValue  = "true"
+	falseValue = "false"
 )
 
 // Lint namespace for linting and formatting tasks

@@ -145,6 +145,11 @@ func sortModules(modules []ModuleInfo) {
 
 // runCommandInModule runs a command in a specific module directory
 func runCommandInModule(module ModuleInfo, command string, args ...string) error {
+	return runCommandInModuleWithRunner(module, GetRunner(), command, args...)
+}
+
+// runCommandInModuleWithRunner runs a command in a specific module directory using the provided runner
+func runCommandInModuleWithRunner(module ModuleInfo, runner CommandRunner, command string, args ...string) error {
 	// Save current directory
 	originalDir, err := os.Getwd()
 	if err != nil {
@@ -164,7 +169,7 @@ func runCommandInModule(module ModuleInfo, command string, args ...string) error
 	}()
 
 	// Run the command
-	return GetRunner().RunCmd(command, args...)
+	return runner.RunCmd(command, args...)
 }
 
 // displayModuleHeader displays a header for the current module being processed
