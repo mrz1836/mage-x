@@ -467,16 +467,10 @@ func TestCalculateFuzzTimeout(t *testing.T) {
 
 func TestFindFuzzPackages(t *testing.T) {
 	// This test verifies findFuzzPackages uses native Go instead of grep
+	// Uses findFuzzPackagesInDir to avoid race conditions from os.Chdir
 
 	// Create temp directory with test files
 	tmpDir := t.TempDir()
-
-	// Save and change directory
-	originalDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer func() {
-		_ = os.Chdir(originalDir) //nolint:errcheck // Best effort cleanup in test
-	}()
 
 	// Create go.mod
 	goModContent := "module github.com/test/fuzztest\n\ngo 1.24\n"
@@ -544,11 +538,9 @@ func FuzzVendored(f *testing.F) {
 `
 	require.NoError(t, os.WriteFile(filepath.Join(vendorDir, "vendor_fuzz_test.go"), []byte(vendorFuzzContent), 0o600))
 
-	// Change to temp directory for test
-	require.NoError(t, os.Chdir(tmpDir))
-
-	// Run findFuzzPackages
-	packages := findFuzzPackages()
+	// Run findFuzzPackagesInDir with the temp directory directly
+	// This avoids os.Chdir which causes race conditions in parallel tests
+	packages := findFuzzPackagesInDir(tmpDir)
 
 	// Should find packages with fuzz tests
 	assert.NotEmpty(t, packages, "Should find at least one fuzz package")

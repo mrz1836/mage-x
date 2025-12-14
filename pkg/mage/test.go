@@ -1576,28 +1576,34 @@ func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool, 
 	return args
 }
 
-// findFuzzPackages finds packages containing fuzz tests
-// findFuzzPackages discovers packages containing fuzz tests using native Go.
+// findFuzzPackages finds packages containing fuzz tests in the current directory.
+// This is a convenience wrapper around findFuzzPackagesInDir.
+func findFuzzPackages() []string {
+	return findFuzzPackagesInDir(".")
+}
+
+// findFuzzPackagesInDir discovers packages containing fuzz tests using native Go.
 // This replaces the previous grep-based implementation to ensure cross-platform
 // compatibility (BSD grep vs GNU grep behavior differs, Windows lacks grep).
-func findFuzzPackages() []string {
+// The dir parameter specifies the root directory to search (use "." for current directory).
+func findFuzzPackagesInDir(dir string) []string {
 	// fuzzFuncPattern matches "func Fuzz" at the start of a line in Go test files
 	fuzzFuncPattern := []byte("\nfunc Fuzz")
 	packageMap := make(map[string]bool)
 
-	module, err := utils.GetModuleName()
+	module, err := utils.GetModuleNameInDir(dir)
 	if err != nil {
 		// If we can't get module name, we can't construct package paths
 		return nil
 	}
 
 	// Walk directory tree looking for *_test.go files with fuzz tests
-	err = filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return nil //nolint:nilerr // Skip directories we can't access silently
 		}
 
-		// Skip hidden directories and vendor (but not the root "." directory)
+		// Skip hidden directories and vendor (but not the root directory)
 		if d.IsDir() {
 			name := d.Name()
 			// Skip vendor, testdata, and hidden directories (names starting with .)
@@ -1623,14 +1629,18 @@ func findFuzzPackages() []string {
 		// Check for "func Fuzz" pattern (prefixed with newline to match line start)
 		// Also check at file start in case func Fuzz is first in file
 		if bytes.Contains(content, fuzzFuncPattern) || bytes.HasPrefix(content, []byte("func Fuzz")) {
-			dir := filepath.Dir(path)
-			pkg := strings.TrimPrefix(dir, "./")
-			pkg = strings.TrimPrefix(pkg, ".") // Handle current directory
+			// Get relative path from the search directory
+			relPath, relErr := filepath.Rel(dir, path)
+			if relErr != nil {
+				relPath = path // Fallback to original path if Rel fails
+			}
+			pkgDir := filepath.Dir(relPath)
 
-			if pkg == "" {
+			// Handle root directory case
+			if pkgDir == "." {
 				packageMap[module] = true
 			} else {
-				packageMap[filepath.Join(module, pkg)] = true
+				packageMap[filepath.Join(module, pkgDir)] = true
 			}
 		}
 
