@@ -6,9 +6,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
+
+// chdirMu protects os.Chdir calls when DirRunner interface is not available.
+// This is a fallback safety mechanism - prefer using DirRunner implementations.
+//
+//nolint:gochecknoglobals // Required for process-wide directory change synchronization
+var chdirMu sync.Mutex
 
 // Static errors for module operations
 var (
@@ -148,8 +155,20 @@ func runCommandInModule(module ModuleInfo, command string, args ...string) error
 	return runCommandInModuleWithRunner(module, GetRunner(), command, args...)
 }
 
-// runCommandInModuleWithRunner runs a command in a specific module directory using the provided runner
+// runCommandInModuleWithRunner runs a command in a specific module directory using the provided runner.
+// If the runner implements DirRunner, it uses the goroutine-safe RunCmdInDir method.
+// Otherwise, falls back to os.Chdir with mutex protection for safety.
 func runCommandInModuleWithRunner(module ModuleInfo, runner CommandRunner, command string, args ...string) error {
+	// Prefer DirRunner interface - it's goroutine-safe
+	if dirRunner, ok := runner.(DirRunner); ok {
+		return dirRunner.RunCmdInDir(module.Path, command, args...)
+	}
+
+	// Fallback: Use os.Chdir with mutex protection
+	// WARNING: This is not ideal for high parallelism but provides safety for legacy runners
+	chdirMu.Lock()
+	defer chdirMu.Unlock()
+
 	// Save current directory
 	originalDir, err := os.Getwd()
 	if err != nil {
