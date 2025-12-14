@@ -517,6 +517,11 @@ func applyEnvOverrides(c *Config) {
 		}
 	}
 
+	// Test timeout override
+	if v := cleanEnvValue(os.Getenv("MAGE_X_TEST_TIMEOUT")); v != "" {
+		c.Test.Timeout = v
+	}
+
 	// Download config overrides
 	applyDownloadEnvOverrides(&c.Download)
 
