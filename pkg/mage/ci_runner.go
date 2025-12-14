@@ -17,6 +17,52 @@ import (
 // ErrCIOutputProcessingPanic is returned when a panic occurs during CI output processing
 var ErrCIOutputProcessingPanic = errors.New("panic during CI output processing")
 
+// maxStderrSize limits stderr buffer to 10MB to prevent OOM from massive stack dumps
+const maxStderrSize = 10 * 1024 * 1024
+
+// limitedBuffer is a size-bounded buffer that prevents unbounded memory growth.
+// When the limit is exceeded, additional writes are silently discarded and the
+// truncated flag is set.
+type limitedBuffer struct {
+	buf       bytes.Buffer
+	limit     int
+	truncated bool
+}
+
+// newLimitedBuffer creates a new size-limited buffer
+func newLimitedBuffer(limit int) *limitedBuffer {
+	return &limitedBuffer{limit: limit}
+}
+
+// Write implements io.Writer with size limiting
+func (lb *limitedBuffer) Write(p []byte) (n int, err error) {
+	if lb.buf.Len() >= lb.limit {
+		lb.truncated = true
+		return len(p), nil // Report full write to avoid broken pipe
+	}
+	remaining := lb.limit - lb.buf.Len()
+	if len(p) > remaining {
+		lb.truncated = true
+		_, err = lb.buf.Write(p[:remaining])
+		return len(p), err // Report full write
+	}
+	return lb.buf.Write(p)
+}
+
+// String returns the buffer contents as a string
+func (lb *limitedBuffer) String() string {
+	s := lb.buf.String()
+	if lb.truncated {
+		s += "\n...[stderr truncated - exceeded " + fmt.Sprintf("%dMB", lb.limit/(1024*1024)) + " limit]..."
+	}
+	return s
+}
+
+// Len returns the current buffer size
+func (lb *limitedBuffer) Len() int {
+	return lb.buf.Len()
+}
+
 // CIRunner wraps CommandRunner to intercept test output for CI mode
 type CIRunner interface {
 	CommandRunner
@@ -134,7 +180,12 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 		}
 	}
 	if !hasJSON {
-		args = append(args[:1], append([]string{"-json"}, args[1:]...)...)
+		// Create a new slice to avoid modifying the caller's slice
+		// The original code could corrupt the caller's data if the slice had spare capacity
+		newArgs := make([]string, 0, len(args)+1)
+		newArgs = append(newArgs, args[0], "-json")
+		newArgs = append(newArgs, args[1:]...)
+		args = newArgs
 	}
 
 	// Create command
@@ -147,14 +198,24 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
-	// Capture stderr
-	var stderrBuf bytes.Buffer
-	cmd.Stderr = &stderrBuf
+	// Track if we need to clean up the pipe on early error
+	pipeNeedsClose := true
+	defer func() {
+		// Close pipe only if Start() failed - otherwise Wait() handles it
+		if pipeNeedsClose && stdout != nil {
+			_ = stdout.Close() //nolint:errcheck // Best effort cleanup, error doesn't affect logic
+		}
+	}()
+
+	// Capture stderr with bounded buffer to prevent OOM from massive stack dumps
+	stderrBuf := newLimitedBuffer(maxStderrSize)
+	cmd.Stderr = stderrBuf
 
 	// Start command
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
+	pipeNeedsClose = false // Wait() will handle pipe cleanup
 
 	// Process output in real-time with tee to stdout
 	if err := r.processOutput(stdout); err != nil {
@@ -182,8 +243,12 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 // processOutput reads and parses test output, teeing to stdout for terminal display
 func (r *ciRunner) processOutput(stdout io.Reader) (retErr error) {
 	// Recovery handler for panics in parsing - ensures test output still displays
+	// and prevents deadlock from undrained pipe
 	defer func() {
 		if p := recover(); p != nil {
+			// CRITICAL: Drain remaining pipe data to prevent subprocess deadlock
+			// The subprocess may block on write if the pipe buffer is full
+			_, _ = io.Copy(io.Discard, stdout) //nolint:errcheck // Best effort drain, error doesn't affect recovery
 			retErr = fmt.Errorf("%w: %v", ErrCIOutputProcessingPanic, p)
 		}
 	}()

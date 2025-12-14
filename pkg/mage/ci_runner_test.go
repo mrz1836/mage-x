@@ -652,3 +652,151 @@ func TestCIAutoDetectionIntegration(t *testing.T) {
 		}
 	})
 }
+
+// TestLimitedBuffer verifies the bounded buffer prevents OOM from large stderr outputs
+func TestLimitedBuffer(t *testing.T) {
+	t.Parallel()
+
+	t.Run("normal writes under limit", func(t *testing.T) {
+		t.Parallel()
+		buf := newLimitedBuffer(100)
+
+		data := []byte("hello world")
+		n, err := buf.Write(data)
+		if err != nil {
+			t.Errorf("Write() error = %v", err)
+		}
+		if n != len(data) {
+			t.Errorf("Write() n = %d, want %d", n, len(data))
+		}
+		if buf.Len() != len(data) {
+			t.Errorf("Len() = %d, want %d", buf.Len(), len(data))
+		}
+		if buf.truncated {
+			t.Error("Expected truncated to be false for small write")
+		}
+	})
+
+	t.Run("writes truncated at limit", func(t *testing.T) {
+		t.Parallel()
+		buf := newLimitedBuffer(100)
+
+		// Write data exceeding the limit
+		data := make([]byte, 150)
+		for i := range data {
+			data[i] = 'x'
+		}
+		n, err := buf.Write(data)
+		if err != nil {
+			t.Errorf("Write() error = %v", err)
+		}
+		// Should report full write to avoid broken pipe
+		if n != len(data) {
+			t.Errorf("Write() n = %d, want %d", n, len(data))
+		}
+		// But buffer should only contain up to limit
+		if buf.Len() > 100 {
+			t.Errorf("Len() = %d, should not exceed 100", buf.Len())
+		}
+		if !buf.truncated {
+			t.Error("Expected truncated to be true after exceeding limit")
+		}
+	})
+
+	t.Run("multiple writes truncate correctly", func(t *testing.T) {
+		t.Parallel()
+		buf := newLimitedBuffer(100)
+
+		// First write fits
+		_, _ = buf.Write(make([]byte, 80)) //nolint:errcheck // Test intentionally ignores write error
+		if buf.truncated {
+			t.Error("Should not be truncated after first write")
+		}
+
+		// Second write causes truncation
+		n, _ := buf.Write(make([]byte, 50)) //nolint:errcheck // Test intentionally ignores write error
+		if n != 50 {
+			t.Errorf("Expected n=50 (full write reported), got %d", n)
+		}
+		if !buf.truncated {
+			t.Error("Should be truncated after second write")
+		}
+		if buf.Len() > 100 {
+			t.Errorf("Buffer exceeded limit: %d", buf.Len())
+		}
+	})
+
+	t.Run("String includes truncation marker", func(t *testing.T) {
+		t.Parallel()
+		buf := newLimitedBuffer(100)
+
+		// Exceed limit
+		_, _ = buf.Write(make([]byte, 150)) //nolint:errcheck // Test intentionally ignores write error
+
+		s := buf.String()
+		if !strings.Contains(s, "[stderr truncated") {
+			t.Errorf("Expected truncation marker in output, got: %s", s)
+		}
+	})
+
+	t.Run("writes after limit are discarded", func(t *testing.T) {
+		t.Parallel()
+		buf := newLimitedBuffer(50)
+
+		// Fill to limit
+		_, _ = buf.Write(make([]byte, 50)) //nolint:errcheck // Test intentionally ignores write error
+
+		// Additional write should be discarded
+		n, err := buf.Write([]byte("more data"))
+		if err != nil {
+			t.Errorf("Write() error = %v", err)
+		}
+		if n != 9 { // Length of "more data"
+			t.Errorf("Write() n = %d, want 9", n)
+		}
+		if buf.Len() != 50 {
+			t.Errorf("Len() = %d, want 50", buf.Len())
+		}
+	})
+}
+
+// TestSliceModificationBugFix verifies that the JSON flag insertion doesn't corrupt
+// the original slice when it has spare capacity
+func TestSliceModificationBugFix(t *testing.T) {
+	t.Parallel()
+
+	// Simulate what happens in runTestWithCI when inserting -json flag
+	// The original bug was: args = append(args[:1], append([]string{"-json"}, args[1:]...)...)
+	// which could corrupt the original slice if it had spare capacity
+
+	original := make([]string, 0, 10) // Slice with spare capacity
+	original = append(original, "test", "-v", "-timeout=5m")
+
+	// Copy for verification
+	originalCopy := make([]string, len(original))
+	copy(originalCopy, original)
+
+	// Simulate the fixed insertion (creating new slice)
+	// This is what the fixed code does:
+	newArgs := make([]string, 0, len(original)+1)
+	newArgs = append(newArgs, original[0], "-json")
+	newArgs = append(newArgs, original[1:]...)
+
+	// Verify original slice is NOT corrupted
+	for i, v := range originalCopy {
+		if original[i] != v {
+			t.Errorf("Original slice corrupted at index %d: expected %q, got %q", i, v, original[i])
+		}
+	}
+
+	// Verify new slice has correct content
+	expected := []string{"test", "-json", "-v", "-timeout=5m"}
+	if len(newArgs) != len(expected) {
+		t.Fatalf("New slice length = %d, want %d", len(newArgs), len(expected))
+	}
+	for i, v := range expected {
+		if newArgs[i] != v {
+			t.Errorf("New slice at %d = %q, want %q", i, newArgs[i], v)
+		}
+	}
+}

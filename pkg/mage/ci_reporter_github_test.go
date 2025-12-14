@@ -139,6 +139,7 @@ func TestGitHubReporter_WriteStepSummary(t *testing.T) {
 	tmpDir := t.TempDir()
 	summaryFile := filepath.Join(tmpDir, "summary.md")
 	t.Setenv("GITHUB_STEP_SUMMARY", summaryFile)
+	t.Setenv("MAGE_X_CI_SKIP_STEP_SUMMARY", "") // Clear CI skip env var
 
 	r := NewGitHubReporter()
 	_, ok := r.(*githubReporter)
@@ -228,6 +229,7 @@ func TestGitHubReporter_WriteStepSummary_SkipsEmpty(t *testing.T) {
 	tmpDir := t.TempDir()
 	summaryFile := filepath.Join(tmpDir, "summary.md")
 	t.Setenv("GITHUB_STEP_SUMMARY", summaryFile)
+	t.Setenv("MAGE_X_CI_SKIP_STEP_SUMMARY", "") // Clear CI skip env var
 
 	reporter := &githubReporter{
 		stepSummaryFile: summaryFile,
@@ -451,6 +453,7 @@ func TestGitHubReporter_WriteSummary(t *testing.T) {
 	tmpDir := t.TempDir()
 	summaryFile := filepath.Join(tmpDir, "summary.md")
 	t.Setenv("GITHUB_STEP_SUMMARY", summaryFile)
+	t.Setenv("MAGE_X_CI_SKIP_STEP_SUMMARY", "") // Clear CI skip env var
 
 	reporter := &githubReporter{
 		stepSummaryFile: summaryFile,
