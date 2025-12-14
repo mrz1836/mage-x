@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +25,7 @@ var (
 	errNoCoverageFilesToMerge = errors.New("no coverage files to merge")
 	errFlagNotAllowed         = errors.New("flag not allowed for security reasons")
 	errFuzzTestFailed         = errors.New("fuzz test(s) failed")
+	errConfigNil              = errors.New("config cannot be nil")
 )
 
 // fuzzTestResult captures the result of a single fuzz test run
@@ -1245,6 +1247,10 @@ func runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules
 
 // runCoverageTestsForModulesWithRunner runs coverage tests for all modules with the specified build tag using provided runner
 func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, buildTag string, runner CommandRunner) error {
+	if config == nil {
+		return errConfigNil
+	}
+
 	totalStart := time.Now()
 	var moduleErrors []moduleError
 	var coverageFiles []string
@@ -1333,7 +1339,13 @@ func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, 
 }
 
 // runTestsForModulesWithRunner runs tests for all modules with the specified configuration using provided runner
+//
+//nolint:unparam // cover parameter is used by buildTestArgs; all callers currently pass false but API preserved for consistency
 func runTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race, cover bool, additionalArgs []string, testType, buildTag string, runner CommandRunner) error {
+	if config == nil {
+		return errConfigNil
+	}
+
 	var moduleErrors []moduleError
 	totalStart := time.Now()
 
@@ -1565,37 +1577,65 @@ func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool, 
 }
 
 // findFuzzPackages finds packages containing fuzz tests
+// findFuzzPackages discovers packages containing fuzz tests using native Go.
+// This replaces the previous grep-based implementation to ensure cross-platform
+// compatibility (BSD grep vs GNU grep behavior differs, Windows lacks grep).
 func findFuzzPackages() []string {
-	output, err := GetRunner().RunCmdOutput("grep", "-r", "-l", "^func Fuzz", "--include=*_test.go", ".")
+	// fuzzFuncPattern matches "func Fuzz" at the start of a line in Go test files
+	fuzzFuncPattern := []byte("\nfunc Fuzz")
+	packageMap := make(map[string]bool)
+
+	module, err := utils.GetModuleName()
 	if err != nil {
-		// grep returns error if no matches found
+		// If we can't get module name, we can't construct package paths
 		return nil
 	}
 
-	files := strings.Split(strings.TrimSpace(output), "\n")
-	packageMap := make(map[string]bool)
-
-	for _, file := range files {
-		if file == "" {
-			continue
+	// Walk directory tree looking for *_test.go files with fuzz tests
+	err = filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return nil //nolint:nilerr // Skip directories we can't access silently
 		}
 
-		dir := filepath.Dir(file)
-		pkg := strings.TrimPrefix(dir, "./")
-		if pkg == "." {
-			pkg = ""
+		// Skip hidden directories and vendor
+		if d.IsDir() {
+			name := d.Name()
+			if name == "vendor" || name == "testdata" || (len(name) > 0 && name[0] == '.') {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 
-		module, err := utils.GetModuleName()
-		if err != nil {
-			// If we can't get module name, skip this package
-			continue
+		// Only check *_test.go files
+		if !strings.HasSuffix(path, "_test.go") {
+			return nil
 		}
-		if module != "" && pkg != "" {
-			packageMap[filepath.Join(module, pkg)] = true
-		} else if module != "" {
-			packageMap[module] = true
+
+		// Read file and check for fuzz test pattern
+		// G304 safe: path comes from filepath.WalkDir on local project directory
+		content, readErr := os.ReadFile(path) //nolint:gosec // G304 safe - path from trusted WalkDir traversal
+		if readErr != nil {
+			return nil //nolint:nilerr // Skip unreadable files silently
 		}
+
+		// Check for "func Fuzz" pattern (prefixed with newline to match line start)
+		// Also check at file start in case func Fuzz is first in file
+		if bytes.Contains(content, fuzzFuncPattern) || bytes.HasPrefix(content, []byte("func Fuzz")) {
+			dir := filepath.Dir(path)
+			pkg := strings.TrimPrefix(dir, "./")
+			pkg = strings.TrimPrefix(pkg, ".") // Handle current directory
+
+			if pkg == "" {
+				packageMap[module] = true
+			} else {
+				packageMap[filepath.Join(module, pkg)] = true
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil
 	}
 
 	packages := make([]string, 0, len(packageMap))
@@ -1663,10 +1703,19 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 	return results, time.Since(startTime)
 }
 
+// maxFuzzTimeout is the absolute maximum time to wait for a fuzz test.
+// This prevents indefinite hangs if -fuzztime is corrupted or ignored.
+const maxFuzzTimeout = 30 * time.Minute
+
 // runFuzzTestWithOutput executes a fuzz test command and captures stdout/stderr.
 // This is used in CI mode to capture output for text parsing.
+// A timeout is applied to prevent indefinite hangs.
 func runFuzzTestWithOutput(name string, args ...string) (string, error) {
-	ctx := context.Background()
+	// Parse -fuzztime from args to determine appropriate timeout
+	timeout := calculateFuzzTimeout(args)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = os.Environ()
@@ -1677,7 +1726,32 @@ func runFuzzTestWithOutput(name string, args ...string) (string, error) {
 	cmd.Stderr = io.MultiWriter(os.Stderr, &outputBuf) // Capture stderr too
 
 	err := cmd.Run()
+
+	// Check if we hit the context deadline
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return outputBuf.String(), fmt.Errorf("fuzz test exceeded timeout of %s: %w", timeout, ctx.Err())
+	}
+
 	return outputBuf.String(), err
+}
+
+// calculateFuzzTimeout parses -fuzztime from args and adds safety margin.
+// Returns maxFuzzTimeout if parsing fails or duration is excessive.
+func calculateFuzzTimeout(args []string) time.Duration {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == "-fuzztime" {
+			if d, err := time.ParseDuration(args[i+1]); err == nil {
+				// Add 5 minute buffer for test setup/teardown
+				timeout := d + 5*time.Minute
+				if timeout > maxFuzzTimeout {
+					return maxFuzzTimeout
+				}
+				return timeout
+			}
+		}
+	}
+	// Default fallback - 15 minutes should cover most fuzz tests
+	return 15 * time.Minute
 }
 
 // printCIFuzzSummaryIfEnabled prints the fuzz summary if CI mode is enabled
