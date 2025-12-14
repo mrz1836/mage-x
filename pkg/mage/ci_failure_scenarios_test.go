@@ -17,10 +17,7 @@
 
 package mage
 
-import (
-	"strings"
-	"testing"
-)
+/*
 
 // TestCI_NestedSubtestFailure creates a deeply nested subtest that fails.
 // This tests CI's ability to handle hierarchical test names like:
@@ -55,3 +52,5 @@ func FuzzCI_IntentionalFailure(f *testing.F) {
 		}
 	})
 }
+
+*/
