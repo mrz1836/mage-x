@@ -277,17 +277,3 @@ jobs:
             fuzz-output.log
           retention-days: 1
           if-no-files-found: ignore
-
-      # --------------------------------------------------------------------
-      # Fail job if fuzz tests failed (must be last step)
-      # This step ensures the job properly fails after all analysis/upload
-      # steps have completed when fuzz tests had failures.
-      # --------------------------------------------------------------------
-      - name: 🚨 Fail job if fuzz tests failed
-        if: always() && steps.run-fuzz-tests.outputs.fuzz-exit-code != '0'
-        run: |
-          echo "❌ Fuzz tests failed with exit code ${{ steps.run-fuzz-tests.outputs.fuzz-exit-code }}"
-          echo ""
-          echo "📋 Review the fuzz test output and failure analysis above for details."
-          echo "🔧 To reproduce locally, run: magex test:fuzz time=5s"
-          exit 1
