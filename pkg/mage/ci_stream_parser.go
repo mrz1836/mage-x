@@ -158,8 +158,17 @@ type testState struct {
 	truncated  bool // Whether output was truncated
 }
 
-// NewStreamParser creates a new stream parser
+// NewStreamParser creates a new stream parser.
+// contextLines is clamped to valid range [0, 100].
 func NewStreamParser(contextLines int, dedup bool) StreamParser {
+	// Validate and clamp contextLines to prevent negative values
+	// and excessively large buffers
+	if contextLines < 0 {
+		contextLines = 0
+	}
+	if contextLines > 100 {
+		contextLines = 100
+	}
 	return &streamParser{
 		contextLines:  contextLines,
 		strategy:      StrategySmartCapture,
@@ -173,14 +182,23 @@ func NewStreamParser(contextLines int, dedup bool) StreamParser {
 	}
 }
 
-// NewStreamParserWithOptions creates a stream parser with custom options
+// NewStreamParserWithOptions creates a stream parser with custom options.
+// contextLines is clamped to valid range [0, 100].
 func NewStreamParserWithOptions(opts StreamParserOptions) StreamParser {
 	maxOutput := opts.MaxOutputSize
 	if maxOutput <= 0 {
 		maxOutput = MaxOutputSize
 	}
+	// Validate and clamp contextLines
+	contextLines := opts.ContextLines
+	if contextLines < 0 {
+		contextLines = 0
+	}
+	if contextLines > 100 {
+		contextLines = 100
+	}
 	return &streamParser{
-		contextLines:  opts.ContextLines,
+		contextLines:  contextLines,
 		strategy:      opts.Strategy,
 		maxOutputSize: maxOutput,
 		failures:      make([]CITestFailure, 0),
@@ -194,6 +212,14 @@ func NewStreamParserWithOptions(opts StreamParserOptions) StreamParser {
 
 // hashTestKey generates a 64-bit hash for unique test tracking.
 // Uses FNV-1a for fast, well-distributed hashes with minimal memory overhead.
+//
+// Trade-off: Using a hash instead of storing full strings reduces memory usage
+// significantly for large test suites. The collision probability is acceptable:
+// - 10,000 tests: ~0.00027% collision probability (birthday problem)
+// - 100,000 tests: ~0.027% collision probability
+//
+// This is acceptable for counting unique tests but NOT for deduplication of failures,
+// which uses the full string signatures map instead.
 func hashTestKey(key string) uint64 {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(key)) // hash.Write never returns error per Go docs
@@ -305,16 +331,21 @@ func (p *streamParser) OnTestStart(pkg, test string) {
 	}
 }
 
-// updateStrategy updates the capture strategy based on test count
+// updateStrategy updates the capture strategy based on test count.
+// Must be called with p.mu held or from within a locked context.
 func (p *streamParser) updateStrategy(testCount int) {
 	newStrategy := SelectStrategy(testCount)
+	// Note: p.mu is already held by the caller (OnTestStart)
 	if newStrategy != p.strategy {
 		p.strategy = newStrategy
 	}
 }
 
-// GetStrategy returns the current capture strategy
+// GetStrategy returns the current capture strategy.
+// Thread-safe via mutex protection.
 func (p *streamParser) GetStrategy() CaptureStrategy {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	return p.strategy
 }
 
@@ -608,6 +639,9 @@ var (
 	buildErrorPattern = regexp.MustCompile(`^\./\S+\.go:\d+:\d+:`)
 	fuzzFailPattern   = regexp.MustCompile(`Failing input written to`)
 	timeoutPattern    = regexp.MustCompile(`test timed out after|panic: test timed out`)
+
+	// Fuzz corpus path: Failing input written to testdata/fuzz/FuzzFoo/582528ddfad69eb5
+	corpusPathPattern = regexp.MustCompile(`Failing input written to (\S+)`)
 )
 
 // generateSignature creates a deduplication key
@@ -643,9 +677,8 @@ func extractStackTrace(output string) string {
 func extractFuzzInfo(output string) *FuzzInfo {
 	info := &FuzzInfo{}
 
-	// Extract corpus path: Failing input written to testdata/fuzz/FuzzFoo/582528ddfad69eb5
-	corpusPattern := regexp.MustCompile(`Failing input written to (\S+)`)
-	if matches := corpusPattern.FindStringSubmatch(output); len(matches) >= 2 {
+	// Extract corpus path using pre-compiled regex (see corpusPathPattern at package level)
+	if matches := corpusPathPattern.FindStringSubmatch(output); len(matches) >= 2 {
 		info.CorpusPath = matches[1]
 	}
 

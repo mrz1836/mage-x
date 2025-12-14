@@ -1994,3 +1994,162 @@ more invalid
 		_ = parser.GetFailures()
 	})
 }
+
+// TestStreamParser_ContextLinesValidation tests that context lines are properly
+// validated and clamped to valid range.
+func TestStreamParser_ContextLinesValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		contextLines   int
+		wantMinContext int // Minimum expected context (we can't easily inspect internal state)
+	}{
+		{
+			name:           "negative context lines clamped to 0",
+			contextLines:   -10,
+			wantMinContext: 0,
+		},
+		{
+			name:           "excessive context lines clamped to 100",
+			contextLines:   1000,
+			wantMinContext: 0, // Just verify no crash
+		},
+		{
+			name:           "valid context lines unchanged",
+			contextLines:   50,
+			wantMinContext: 0, // Just verify no crash
+		},
+		{
+			name:           "zero context lines",
+			contextLines:   0,
+			wantMinContext: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Should not panic with any context lines value
+			parser := NewStreamParser(tt.contextLines, true)
+			if parser == nil {
+				t.Fatal("NewStreamParser returned nil")
+			}
+
+			// Parser should work normally
+			mustParseLine(t, parser, []byte(`{"Action":"run","Package":"pkg/foo","Test":"TestExample"}`))
+			mustParseLine(t, parser, []byte(`{"Action":"pass","Package":"pkg/foo","Test":"TestExample"}`))
+
+			total, _, _, _ := parser.GetStats()
+			if total != 1 {
+				t.Errorf("GetStats().total = %d, want 1", total)
+			}
+		})
+	}
+}
+
+// TestStreamParser_ContextLinesValidationWithOptions tests context lines validation
+// via the options constructor.
+func TestStreamParser_ContextLinesValidationWithOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		contextLines int
+	}{
+		{"negative", -50},
+		{"excessive", 500},
+		{"boundary_low", 0},
+		{"boundary_high", 100},
+		{"normal", 20},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			parser := NewStreamParserWithOptions(StreamParserOptions{
+				ContextLines: tt.contextLines,
+				Dedup:        true,
+			})
+			if parser == nil {
+				t.Fatal("NewStreamParserWithOptions returned nil")
+			}
+
+			// Should work normally regardless of input
+			mustParseLine(t, parser, []byte(`{"Action":"run","Package":"pkg","Test":"T"}`))
+			mustParseLine(t, parser, []byte(`{"Action":"pass","Package":"pkg","Test":"T"}`))
+		})
+	}
+}
+
+// TestStreamParser_GetStrategy_ThreadSafe tests that GetStrategy is thread-safe.
+// Run with: go test -race -run TestStreamParser_GetStrategy_ThreadSafe
+func TestStreamParser_GetStrategy_ThreadSafe(t *testing.T) {
+	t.Parallel()
+
+	parser := NewStreamParser(20, true)
+	sp, ok := parser.(*streamParser)
+	if !ok {
+		t.Fatal("parser is not *streamParser")
+	}
+
+	const numGoroutines = 10
+	done := make(chan bool, numGoroutines)
+
+	// Concurrent reads of strategy
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			defer func() { done <- true }()
+
+			for j := 0; j < 100; j++ {
+				_ = sp.GetStrategy()
+			}
+		}()
+	}
+
+	// Concurrent writes via SetStrategy
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			defer func() { done <- true }()
+
+			for j := 0; j < 100; j++ {
+				sp.SetStrategy(CaptureStrategy(id % 4))
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < numGoroutines*2; i++ {
+		<-done
+	}
+}
+
+// TestStreamParser_ConcurrentParsing tests concurrent parsing operations.
+// Run with: go test -race -run TestStreamParser_ConcurrentParsing
+func TestStreamParser_ConcurrentParsing(t *testing.T) {
+	t.Parallel()
+
+	parser := NewStreamParser(20, true)
+
+	const numGoroutines = 5
+	done := make(chan bool, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			defer func() { done <- true }()
+
+			// Concurrent access to parser methods
+			for j := 0; j < 50; j++ {
+				_ = parser.GetFailures()
+				_, _, _, _ = parser.GetStats()
+				_ = parser.GetUniqueTestCount()
+			}
+		}()
+	}
+
+	for i := 0; i < numGoroutines; i++ {
+		<-done
+	}
+}

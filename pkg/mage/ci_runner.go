@@ -116,17 +116,18 @@ func NewCIRunner(base CommandRunner, opts CIRunnerOptions) CIRunner {
 	}
 }
 
-// WithContext returns a context-aware runner
+// WithContext returns a context-aware runner.
+// Each runner created via WithContext has its own parser and results
+// to prevent race conditions when multiple runners execute concurrently.
+// The reporter is shared (it has its own mutex for thread safety).
 func (r *ciRunner) WithContext(ctx context.Context) CIRunner {
-	// Create a new runner with a different context getter
-	// Don't copy the mutex - create a fresh one
 	return &ciRunner{
 		base:     r.base,
 		mode:     r.mode,
-		parser:   r.parser,
-		reporter: r.reporter,
+		parser:   NewStreamParser(r.mode.ContextLines, r.mode.Dedup), // Fresh parser to avoid race
+		reporter: r.reporter,                                         // Reporter has its own mutex - safe to share
 		detector: r.detector,
-		results:  r.results,
+		results:  &CIResult{}, // Fresh results to avoid race
 		getCtx:   func() context.Context { return ctx },
 	}
 }
@@ -160,7 +161,15 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 	printCIModeBanner(r.detector.Platform(), r.mode)
 
 	// Start the reporter (only once - prevents duplicate start entries when tests run multiple times)
-	if r.reporter != nil && !r.started {
+	// Use mutex to avoid race condition on the started flag
+	r.mu.Lock()
+	shouldStart := r.reporter != nil && !r.started
+	if shouldStart {
+		r.started = true
+	}
+	r.mu.Unlock()
+
+	if shouldStart {
 		if d, ok := r.detector.(*ciDetector); ok {
 			metadata := d.GetMetadata()
 			if err := r.reporter.Start(metadata); err != nil {
@@ -168,7 +177,6 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 				fmt.Fprintf(os.Stderr, "Warning: Failed to start CI reporter: %v\n", err)
 			}
 		}
-		r.started = true
 	}
 
 	// Ensure -json flag is present for output parsing
@@ -368,8 +376,12 @@ func (r *ciRunner) GenerateReport() error {
 		return nil
 	}
 
+	// Create a defensive copy of failures under lock to avoid race condition
+	// with handleCrash which may append to results.Failures concurrently
 	r.mu.Lock()
 	results := r.results
+	failures := make([]CITestFailure, len(results.Failures))
+	copy(failures, results.Failures)
 	r.mu.Unlock()
 
 	// Print CI mode completion summary to stdout
@@ -377,7 +389,7 @@ func (r *ciRunner) GenerateReport() error {
 
 	// Report failures to JSONL (done here to ensure each failure is written only once,
 	// even when tests run multiple times with different build tags)
-	for _, failure := range results.Failures {
+	for _, failure := range failures {
 		if err := r.reporter.ReportFailure(failure); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to report failure: %v\n", err)
 		}
@@ -424,6 +436,8 @@ func printCIModeBanner(platform string, mode CIMode) {
 	}
 	for _, line := range lines {
 		if _, err := fmt.Fprintln(os.Stdout, line); err != nil {
+			// Log to stderr so users know the banner was truncated
+			fmt.Fprintf(os.Stderr, "Warning: failed to write CI banner: %v\n", err)
 			return
 		}
 	}
@@ -453,6 +467,8 @@ func printCIModeSummary(results *CIResult, outputPath string) {
 	)
 	for _, line := range lines {
 		if _, err := fmt.Fprintln(os.Stdout, line); err != nil {
+			// Log to stderr so users know the summary was truncated
+			fmt.Fprintf(os.Stderr, "Warning: failed to write CI summary: %v\n", err)
 			return
 		}
 	}
@@ -492,6 +508,8 @@ func printCIFuzzSummary(results []fuzzTestResult, totalDuration time.Duration) {
 
 	for _, line := range lines {
 		if _, err := fmt.Fprintln(os.Stdout, line); err != nil {
+			// Log to stderr so users know the fuzz summary was truncated
+			fmt.Fprintf(os.Stderr, "Warning: failed to write CI fuzz summary: %v\n", err)
 			return
 		}
 	}
