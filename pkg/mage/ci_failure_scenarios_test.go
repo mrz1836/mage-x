@@ -19,11 +19,6 @@
 
 package mage
 
-import (
-	"sync"
-	"testing"
-)
-
 /*
 
 // TestCI_NestedSubtestFailure creates a deeply nested subtest that fails.
@@ -60,7 +55,7 @@ func FuzzCI_IntentionalFailure(f *testing.F) {
 	})
 }
 
-*/
+
 
 // TestCI_RaceConditionFailure creates an intentional data race.
 // This tests CI's race detection via the "WARNING: DATA RACE" pattern.
@@ -80,3 +75,4 @@ func TestCI_RaceConditionFailure(t *testing.T) {
 	}
 	wg.Wait()
 }
+*/
