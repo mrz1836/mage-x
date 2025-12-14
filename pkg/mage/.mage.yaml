@@ -73,6 +73,13 @@ test:
   bench_cpu: 0
   bench_mem: false
   bench_time: ""
+  ci_mode:
+    enabled: false
+    format: auto
+    context_lines: 20
+    max_memory_mb: 100
+    dedup: true
+    output_path: .mage-x/ci-results.jsonl
   cover: false
   covermode: atomic
   coverpkg: []

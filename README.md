@@ -552,6 +552,56 @@ magex tools:verify             # Show tool version information
 </details>
 
 <details>
+<summary>🤖 <strong>CI Test Output Mode</strong></summary>
+
+MAGE-X automatically detects CI environments and produces structured test output with precise file:line locations for failures. This eliminates complex bash/jq parsing in CI workflows.
+
+**Automatic Detection** (Zero Configuration):
+```bash
+# In GitHub Actions (or any CI with CI=true) - works automatically!
+magex test:unit    # Produces GitHub annotations + JSONL output
+
+# Locally - unchanged behavior
+magex test:unit    # Standard terminal output
+```
+
+**Explicit CI Mode**:
+```bash
+magex test:unit ci          # Force CI mode locally (preview CI output)
+magex test:unit ci=false    # Disable CI mode in CI environment
+```
+
+**All test commands support CI mode**:
+- `magex test:unit ci`
+- `magex test:race ci`
+- `magex test:cover ci`
+- `magex test:fuzz ci`
+
+**Output in CI**:
+- **GitHub Annotations**: Clickable file:line links in PR sidebar
+- **Step Summary**: Markdown table in `$GITHUB_STEP_SUMMARY`
+- **Structured Output**: `.mage-x/ci-results.jsonl` for automation
+
+**Configuration** (optional in `.mage.yaml`):
+```yaml
+test:
+  ci_mode:
+    enabled: auto          # auto (default), on, or off
+    format: github         # auto, github, or json
+    context_lines: 20      # Lines of code context around failures
+    output_path: ".mage-x/ci-results.jsonl"
+```
+
+**Environment Variables**:
+```bash
+export MAGE_X_CI_MODE=auto      # auto/on/off
+export MAGE_X_CI_FORMAT=github  # github/json/auto
+export MAGE_X_CI_CONTEXT=20     # Context lines (0-100)
+```
+
+</details>
+
+<details>
 <summary>✅ <strong>Code Validation & Formatting</strong></summary>
 
 ```bash

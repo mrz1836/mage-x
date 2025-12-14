@@ -1,0 +1,74 @@
+{
+    "$id": "https://mage-x/schemas/ci-config.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "description": "Configuration schema for CI mode in .mage.yaml test.ci_mode section",
+    "examples": [
+        {
+            "context_lines": 20,
+            "enabled": "auto",
+            "format": "github"
+        },
+        {
+            "dedup": false,
+            "enabled": true,
+            "format": "json",
+            "output_path": "test-results.jsonl"
+        }
+    ],
+    "properties": {
+        "context_lines": {
+            "default": 20,
+            "description": "Number of source code lines to capture around each failure",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+        },
+        "dedup": {
+            "default": true,
+            "description": "Enable deduplication of identical failures (same Package:Test:File:Line)",
+            "type": "boolean"
+        },
+        "enabled": {
+            "default": "auto",
+            "description": "CI mode activation: auto (detect from environment), on (always enabled), off (always disabled)",
+            "oneOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "enum": [
+                        "auto",
+                        "on",
+                        "off"
+                    ],
+                    "type": "string"
+                }
+            ]
+        },
+        "format": {
+            "default": "auto",
+            "description": "Output format: auto (GitHub in GHA, JSON otherwise), github (annotations + summary), json (JSONL file only)",
+            "enum": [
+                "auto",
+                "github",
+                "json"
+            ],
+            "type": "string"
+        },
+        "max_memory_mb": {
+            "default": 100,
+            "description": "Maximum memory usage in megabytes for output buffering",
+            "maximum": 1000,
+            "minimum": 10,
+            "type": "integer"
+        },
+        "output_path": {
+            "default": ".mage-x/ci-results.jsonl",
+            "description": "Path for JSON Lines output file",
+            "type": "string"
+        }
+    },
+    "title": "CI Mode Configuration",
+    "type": "object"
+}

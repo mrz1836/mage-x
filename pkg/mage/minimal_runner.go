@@ -74,6 +74,68 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 	return strings.TrimSpace(output), err
 }
 
+// RunCmdInDir executes a command in the specified working directory.
+// This is goroutine-safe unlike os.Chdir() - each command runs with its own cmd.Dir.
+func (r *SecureCommandRunner) RunCmdInDir(dir, name string, args ...string) error {
+	ctx := context.Background()
+	timeout := r.getCommandTimeout(name, args)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Create a new executor with the specified working directory
+	dirExecutor := &security.SecureExecutor{
+		AllowedCommands: r.executor.AllowedCommands,
+		WorkingDir:      dir, // Set the working directory
+		Timeout:         r.executor.Timeout,
+		DryRun:          r.executor.DryRun,
+		EnvWhitelist:    r.executor.EnvWhitelist,
+	}
+
+	err := dirExecutor.Execute(ctx, name, args...)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("command '%s' in '%s' exceeded timeout of %s: %w",
+				name, dir, timeout, err)
+		}
+		if errors.Is(err, context.Canceled) {
+			return fmt.Errorf("command '%s' in '%s' was canceled: %w",
+				name, dir, err)
+		}
+	}
+	return err
+}
+
+// RunCmdOutputInDir executes a command in the specified directory and returns output.
+// This is goroutine-safe unlike os.Chdir() - each command runs with its own cmd.Dir.
+func (r *SecureCommandRunner) RunCmdOutputInDir(dir, name string, args ...string) (string, error) {
+	ctx := context.Background()
+	timeout := r.getCommandTimeout(name, args)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Create a new executor with the specified working directory
+	dirExecutor := &security.SecureExecutor{
+		AllowedCommands: r.executor.AllowedCommands,
+		WorkingDir:      dir, // Set the working directory
+		Timeout:         r.executor.Timeout,
+		DryRun:          r.executor.DryRun,
+		EnvWhitelist:    r.executor.EnvWhitelist,
+	}
+
+	output, err := dirExecutor.ExecuteOutput(ctx, name, args...)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return strings.TrimSpace(output), fmt.Errorf("command '%s' in '%s' exceeded timeout: %w",
+				name, dir, err)
+		}
+		if errors.Is(err, context.Canceled) {
+			return strings.TrimSpace(output), fmt.Errorf("command '%s' in '%s' was canceled: %w",
+				name, dir, err)
+		}
+	}
+	return strings.TrimSpace(output), err
+}
+
 // getCommandTimeout returns appropriate timeout based on command type
 func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time.Duration {
 	// For golangci-lint, check if --timeout flag is provided in args

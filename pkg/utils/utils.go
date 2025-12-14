@@ -350,6 +350,16 @@ func GetModuleName() (string, error) {
 	return strings.TrimSpace(output), nil
 }
 
+// GetModuleNameInDir returns the module name from go.mod in the specified directory.
+// Uses the -C flag (Go 1.20+) to change directory before running the command.
+func GetModuleNameInDir(dir string) (string, error) {
+	output, err := RunCmdOutput("go", "-C", dir, "list", "-m")
+	if err != nil {
+		return "", fmt.Errorf("failed to get module name in %s: %w", dir, err)
+	}
+	return strings.TrimSpace(output), nil
+}
+
 // GetGoVersion returns the Go version
 func GetGoVersion() (string, error) {
 	output, err := RunCmdOutput("go", "version")

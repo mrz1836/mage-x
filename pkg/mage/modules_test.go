@@ -539,3 +539,140 @@ func TestContains(t *testing.T) {
 		t.Error("Expected contains(nil, 'a') to be false")
 	}
 }
+
+// TestRunCommandInModuleWithRunner_DirRunner verifies that the DirRunner interface
+// is used when available, avoiding the goroutine-unsafe os.Chdir().
+func TestRunCommandInModuleWithRunner_DirRunner(t *testing.T) {
+	t.Parallel()
+
+	// Create a mock DirRunner that tracks the directory passed
+	mock := &mockDirRunner{
+		runCmdCalls:      make([]string, 0),
+		runCmdInDirCalls: make([]mockDirCall, 0),
+	}
+
+	module := ModuleInfo{
+		Path:     "/test/module/path",
+		Module:   "github.com/test/module",
+		Relative: "module",
+	}
+
+	// Run command - should use RunCmdInDir, not RunCmd
+	err := runCommandInModuleWithRunner(module, mock, "go", "test", "./...")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Verify RunCmdInDir was called, not RunCmd
+	if len(mock.runCmdInDirCalls) != 1 {
+		t.Errorf("Expected 1 RunCmdInDir call, got %d", len(mock.runCmdInDirCalls))
+	}
+	if len(mock.runCmdCalls) != 0 {
+		t.Errorf("Expected 0 RunCmd calls, got %d", len(mock.runCmdCalls))
+	}
+
+	// Verify correct directory was passed
+	if len(mock.runCmdInDirCalls) > 0 {
+		call := mock.runCmdInDirCalls[0]
+		if call.dir != "/test/module/path" {
+			t.Errorf("Expected dir '/test/module/path', got '%s'", call.dir)
+		}
+		if call.cmd != "go" {
+			t.Errorf("Expected cmd 'go', got '%s'", call.cmd)
+		}
+	}
+}
+
+// TestRunCommandInModuleWithRunner_FallbackMutex verifies that a mutex is used
+// for runners that don't implement DirRunner.
+func TestRunCommandInModuleWithRunner_FallbackMutex(t *testing.T) {
+	// Note: This test cannot truly verify mutex behavior without race detector,
+	// but it validates that the fallback path works correctly.
+
+	tmpDir := t.TempDir()
+
+	// Create a simple runner that doesn't implement DirRunner
+	mock := &simpleRunner{
+		runCmdCalls: make([]string, 0),
+	}
+
+	module := ModuleInfo{
+		Path:     tmpDir,
+		Module:   "github.com/test/module",
+		Relative: ".",
+	}
+
+	// Save original directory
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer func() {
+		_ = os.Chdir(originalDir) //nolint:errcheck // Best effort cleanup in test
+	}()
+
+	// Run command - should use RunCmd with directory change
+	err = runCommandInModuleWithRunner(module, mock, "echo", "test")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Verify RunCmd was called
+	if len(mock.runCmdCalls) != 1 {
+		t.Errorf("Expected 1 RunCmd call, got %d", len(mock.runCmdCalls))
+	}
+
+	// Verify we're back in the original directory
+	currentDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory after test: %v", err)
+	}
+	if currentDir != originalDir {
+		t.Errorf("Working directory not restored: expected %s, got %s", originalDir, currentDir)
+	}
+}
+
+// mockDirCall records a call to RunCmdInDir
+type mockDirCall struct {
+	dir  string
+	cmd  string
+	args []string
+}
+
+// mockDirRunner implements both CommandRunner and DirRunner for testing
+type mockDirRunner struct {
+	runCmdCalls      []string
+	runCmdInDirCalls []mockDirCall
+}
+
+func (m *mockDirRunner) RunCmd(name string, args ...string) error {
+	m.runCmdCalls = append(m.runCmdCalls, name)
+	return nil
+}
+
+func (m *mockDirRunner) RunCmdOutput(name string, _ ...string) (string, error) {
+	return name, nil
+}
+
+func (m *mockDirRunner) RunCmdInDir(dir, name string, args ...string) error {
+	m.runCmdInDirCalls = append(m.runCmdInDirCalls, mockDirCall{dir: dir, cmd: name, args: args})
+	return nil
+}
+
+func (m *mockDirRunner) RunCmdOutputInDir(dir, name string, _ ...string) (string, error) {
+	return dir + ":" + name, nil
+}
+
+// simpleRunner implements only CommandRunner (not DirRunner) for testing fallback
+type simpleRunner struct {
+	runCmdCalls []string
+}
+
+func (s *simpleRunner) RunCmd(name string, _ ...string) error {
+	s.runCmdCalls = append(s.runCmdCalls, name)
+	return nil
+}
+
+func (s *simpleRunner) RunCmdOutput(name string, _ ...string) (string, error) {
+	return name, nil
+}

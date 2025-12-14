@@ -1,9 +1,14 @@
 package mage
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -19,7 +24,48 @@ var (
 	errNoCoverageFile         = errors.New("no coverage file found. Run 'magex test:cover' first")
 	errNoCoverageFilesToMerge = errors.New("no coverage files to merge")
 	errFlagNotAllowed         = errors.New("flag not allowed for security reasons")
+	errFuzzTestFailed         = errors.New("fuzz test(s) failed")
+	errConfigNil              = errors.New("config cannot be nil")
 )
+
+// fuzzTestResult captures the result of a single fuzz test run
+type fuzzTestResult struct {
+	Package  string
+	Test     string
+	Duration time.Duration
+	Error    error
+	Output   string // Captured stdout output for text parsing
+}
+
+// getCIParams extracts CI-related parameters from args and returns the remaining args
+func getCIParams(args []string) (params map[string]string, remainingArgs []string) {
+	params = make(map[string]string)
+	for _, arg := range args {
+		// Check for ci parameter (ci=true, ci=false, etc.)
+		if strings.HasPrefix(arg, "ci=") {
+			params["ci"] = strings.TrimPrefix(arg, "ci=")
+		} else if arg == "ci" {
+			params["ci"] = trueValue
+		} else {
+			remainingArgs = append(remainingArgs, arg)
+		}
+	}
+	return params, remainingArgs
+}
+
+// getTestRunner returns a CI-wrapped runner if CI mode is enabled, otherwise the standard runner
+func getTestRunner(params map[string]string, config *Config) CommandRunner {
+	return GetCIRunner(GetRunner(), params, config)
+}
+
+// generateCIReport generates the final CI report if using a CI runner
+func generateCIReport(runner CommandRunner) {
+	if ciRunner, ok := runner.(CIRunner); ok {
+		if err := ciRunner.GenerateReport(); err != nil {
+			utils.Warn("Failed to generate CI report: %v", err)
+		}
+	}
+}
 
 // shouldExcludeModule checks if a module should be excluded from processing
 // based on the configured exclusion list. By default, "magefiles" modules are excluded
@@ -86,10 +132,17 @@ func (Test) Full(args ...string) error {
 
 // Unit runs unit tests
 func (Test) Unit(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("unit", config)
@@ -111,15 +164,22 @@ func (Test) Unit(args ...string) error {
 	}
 
 	// Use new build tag discovery if enabled, passing pre-discovered tags
-	return runTestsWithBuildTagDiscoveryTags(config, modules, false, args, "unit", discoveredTags)
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, "unit", discoveredTags, runner)
 }
 
 // Short runs short tests (excludes integration tests)
 func (Test) Short(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("short", config)
@@ -141,15 +201,22 @@ func (Test) Short(args ...string) error {
 	}
 
 	// Use new build tag discovery if enabled (explicitly disable race for speed)
-	return runTestsWithBuildTagDiscoveryTags(config, modules, false, args, "short", discoveredTags)
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, "short", discoveredTags, runner)
 }
 
 // Race runs tests with race detector
 func (Test) Race(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("race", config)
@@ -171,15 +238,22 @@ func (Test) Race(args ...string) error {
 	}
 
 	// Use new build tag discovery if enabled (with race detector)
-	return runTestsWithBuildTagDiscoveryTags(config, modules, true, args, "race", discoveredTags)
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, true, remainingArgs, "race", discoveredTags, runner)
 }
 
 // Cover runs tests with coverage
 func (Test) Cover(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("coverage", config)
@@ -201,15 +275,22 @@ func (Test) Cover(args ...string) error {
 	}
 
 	// Use build tag discovery for coverage tests
-	return runCoverageTestsWithBuildTagDiscoveryTags(config, modules, false, args, discoveredTags)
+	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, discoveredTags, runner)
 }
 
 // CoverRace runs tests with both coverage and race detector
 func (Test) CoverRace(args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
 
 	// Display header with build tag information
 	discoveredTags := displayTestHeader("coverage+race", config)
@@ -231,7 +312,7 @@ func (Test) CoverRace(args ...string) error {
 	}
 
 	// Use build tag discovery for coverage+race tests
-	return runCoverageTestsWithBuildTagDiscoveryTags(config, modules, true, args, discoveredTags)
+	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, true, remainingArgs, discoveredTags, runner)
 }
 
 // CoverReport shows coverage report
@@ -368,12 +449,18 @@ func (Test) Fuzz(argsList ...string) error {
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
+	// Extract CI params from arguments
+	ciParams, _ := getCIParams(argsList)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	displayTestHeader("fuzz", config)
+
+	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	PrintCIBannerIfEnabled(ciParams, config)
 
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
@@ -395,34 +482,20 @@ func (Test) Fuzz(argsList ...string) error {
 		return fmt.Errorf("invalid time parameter: %w", err)
 	}
 
-	for _, pkg := range packages {
-		// List fuzz tests in package
-		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
-		if err != nil {
-			continue
-		}
+	// Run all fuzz tests and collect results (continues on failure)
+	// In CI mode, capture output for text parsing to extract detailed failure info
+	ciEnabled := IsCIEnabled(ciParams, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
-		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
-		for _, test := range fuzzTests {
-			if !strings.HasPrefix(test, "Fuzz") {
-				continue
-			}
+	// Print CI summary if enabled
+	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
 
-			utils.Info("Fuzzing %s.%s", pkg, test)
+	// Write CI results to JSONL format if enabled (standardized output for validation)
+	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
 
-			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTime.String())
-
-			if config.Test.Verbose {
-				args = append(args, "-v")
-			}
-
-			args = append(args, pkg)
-
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				return fmt.Errorf("fuzz test %s failed: %w", test, err)
-			}
-		}
+	// Return aggregated error if any failures
+	if err := fuzzResultsToError(results); err != nil {
+		return err
 	}
 
 	utils.Success("Fuzz tests completed")
@@ -438,6 +511,9 @@ func (Test) FuzzWithTime(fuzzTime time.Duration) error {
 		return err
 	}
 
+	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	PrintCIBannerIfEnabled(nil, config)
+
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
 		return nil
@@ -451,37 +527,20 @@ func (Test) FuzzWithTime(fuzzTime time.Duration) error {
 		return nil
 	}
 
-	// Use provided duration
-	fuzzTimeStr := fuzzTime.String()
+	// Run all fuzz tests and collect results (continues on failure)
+	// In CI mode, capture output for text parsing to extract detailed failure info
+	ciEnabled := IsCIEnabled(nil, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
-	for _, pkg := range packages {
-		// List fuzz tests in package
-		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
-		if err != nil {
-			continue
-		}
+	// Print CI summary if enabled (nil params relies on config/environment detection)
+	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
 
-		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
-		for _, test := range fuzzTests {
-			if !strings.HasPrefix(test, "Fuzz") {
-				continue
-			}
+	// Write CI results to JSONL format if enabled (standardized output for validation)
+	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
 
-			utils.Info("Fuzzing %s.%s", pkg, test)
-
-			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTimeStr)
-
-			if config.Test.Verbose {
-				args = append(args, "-v")
-			}
-
-			args = append(args, pkg)
-
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				return fmt.Errorf("fuzz test %s failed: %w", test, err)
-			}
-		}
+	// Return aggregated error if any failures
+	if err := fuzzResultsToError(results); err != nil {
+		return err
 	}
 
 	utils.Success("Fuzz tests completed")
@@ -493,12 +552,18 @@ func (Test) FuzzShort(argsList ...string) error {
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
+	// Extract CI params from arguments
+	ciParams, _ := getCIParams(argsList)
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
 	}
 
 	displayTestHeader("fuzz-short", config)
+
+	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	PrintCIBannerIfEnabled(ciParams, config)
 
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
@@ -520,34 +585,20 @@ func (Test) FuzzShort(argsList ...string) error {
 		return fmt.Errorf("invalid time parameter: %w", err)
 	}
 
-	for _, pkg := range packages {
-		// List fuzz tests in package
-		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
-		if err != nil {
-			continue
-		}
+	// Run all fuzz tests and collect results (continues on failure)
+	// In CI mode, capture output for text parsing to extract detailed failure info
+	ciEnabled := IsCIEnabled(ciParams, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
-		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
-		for _, test := range fuzzTests {
-			if !strings.HasPrefix(test, "Fuzz") {
-				continue
-			}
+	// Print CI summary if enabled
+	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
 
-			utils.Info("Fuzzing %s.%s", pkg, test)
+	// Write CI results to JSONL format if enabled (standardized output for validation)
+	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
 
-			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTime.String())
-
-			if config.Test.Verbose {
-				args = append(args, "-v")
-			}
-
-			args = append(args, pkg)
-
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				return fmt.Errorf("short fuzz test %s failed: %w", test, err)
-			}
-		}
+	// Return aggregated error if any failures
+	if err := fuzzResultsToError(results); err != nil {
+		return err
 	}
 
 	utils.Success("Short fuzz tests completed")
@@ -563,6 +614,9 @@ func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 		return err
 	}
 
+	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	PrintCIBannerIfEnabled(nil, config)
+
 	if config.Test.SkipFuzz {
 		utils.Info("Fuzz tests skipped")
 		return nil
@@ -576,37 +630,20 @@ func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 		return nil
 	}
 
-	// Use provided duration
-	fuzzTimeStr := fuzzTime.String()
+	// Run all fuzz tests and collect results (continues on failure)
+	// In CI mode, capture output for text parsing to extract detailed failure info
+	ciEnabled := IsCIEnabled(nil, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
-	for _, pkg := range packages {
-		// List fuzz tests in package
-		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
-		if err != nil {
-			continue
-		}
+	// Print CI summary if enabled (nil params relies on config/environment detection)
+	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
 
-		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
-		for _, test := range fuzzTests {
-			if !strings.HasPrefix(test, "Fuzz") {
-				continue
-			}
+	// Write CI results to JSONL format if enabled (standardized output for validation)
+	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
 
-			utils.Info("Fuzzing %s.%s", pkg, test)
-
-			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTimeStr)
-
-			if config.Test.Verbose {
-				args = append(args, "-v")
-			}
-
-			args = append(args, pkg)
-
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				return fmt.Errorf("short fuzz test %s failed: %w", test, err)
-			}
-		}
+	// Return aggregated error if any failures
+	if err := fuzzResultsToError(results); err != nil {
+		return err
 	}
 
 	utils.Success("Short fuzz tests completed")
@@ -1145,22 +1182,29 @@ func mergeAndCleanupCoverageFiles(coverageFiles []string, taggedCoverageFile, bu
 }
 
 // runTestsWithBuildTagDiscoveryTags runs tests with pre-discovered build tags
-func runTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, testType string, discoveredTags []string) error {
+//
+//nolint:unparam // testType kept for API consistency with WithRunner variant, even though currently only called with "unit"
+func runTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, additionalArgs []string, testType string, discoveredTags []string) error {
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, additionalArgs, testType, discoveredTags, GetRunner())
+}
+
+// runTestsWithBuildTagDiscoveryTagsWithRunner runs tests with pre-discovered build tags using provided runner
+func runTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, testType string, discoveredTags []string, runner CommandRunner) error {
 	if !config.Test.AutoDiscoverBuildTags || len(discoveredTags) == 0 {
 		// Run tests normally without build tag discovery
-		return runTestsForModules(config, modules, race, false, additionalArgs, testType, "")
+		return runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, "", runner)
 	}
 
 	// Run base tests (no build tags)
 	utils.Info("Running %s tests without build tags", testType)
-	if err := runTestsForModules(config, modules, race, false, additionalArgs, testType, ""); err != nil {
+	if err := runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, "", runner); err != nil {
 		return fmt.Errorf("base tests failed: %w", err)
 	}
 
 	// Run tests for each discovered build tag
 	for _, tag := range discoveredTags {
 		utils.Info("Running %s tests with build tag: %s", testType, tag)
-		if err := runTestsForModules(config, modules, race, false, additionalArgs, testType, tag); err != nil {
+		if err := runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, tag, runner); err != nil {
 			return fmt.Errorf("tests with tag '%s' failed: %w", tag, err)
 		}
 	}
@@ -1170,21 +1214,26 @@ func runTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, rac
 
 // runCoverageTestsWithBuildTagDiscoveryTags runs coverage tests with pre-discovered build tags
 func runCoverageTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleInfo, race bool, additionalArgs, discoveredTags []string) error {
+	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, race, additionalArgs, discoveredTags, GetRunner())
+}
+
+// runCoverageTestsWithBuildTagDiscoveryTagsWithRunner runs coverage tests with pre-discovered build tags using provided runner
+func runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs, discoveredTags []string, runner CommandRunner) error {
 	if !config.Test.AutoDiscoverBuildTags || len(discoveredTags) == 0 {
 		// Run coverage tests normally without build tag discovery
-		return runCoverageTestsForModules(config, modules, race, additionalArgs, "")
+		return runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, "", runner)
 	}
 
 	// Run base coverage tests (no build tags)
 	utils.Info("Running coverage tests without build tags")
-	if err := runCoverageTestsForModules(config, modules, race, additionalArgs, ""); err != nil {
+	if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, "", runner); err != nil {
 		return fmt.Errorf("base coverage tests failed: %w", err)
 	}
 
 	// Run coverage tests for each discovered build tag
 	for _, tag := range discoveredTags {
 		utils.Info("Running coverage tests with build tag: %s", tag)
-		if err := runCoverageTestsForModules(config, modules, race, additionalArgs, tag); err != nil {
+		if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, tag, runner); err != nil {
 			return fmt.Errorf("coverage tests with tag '%s' failed: %w", tag, err)
 		}
 	}
@@ -1196,8 +1245,12 @@ func runCoverageTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleI
 	return nil
 }
 
-// runCoverageTestsForModules runs coverage tests for all modules with the specified build tag
-func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, buildTag string) error {
+// runCoverageTestsForModulesWithRunner runs coverage tests for all modules with the specified build tag using provided runner
+func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, buildTag string, runner CommandRunner) error {
+	if config == nil {
+		return errConfigNil
+	}
+
 	totalStart := time.Now()
 	var moduleErrors []moduleError
 	var coverageFiles []string
@@ -1256,8 +1309,8 @@ func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool,
 
 		testArgs = append(testArgs, "./...")
 
-		// Run tests in module directory
-		err := runCommandInModule(module, "go", testArgs...)
+		// Run tests in module directory using provided runner
+		err := runCommandInModuleWithRunner(module, runner, "go", testArgs...)
 
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
@@ -1285,8 +1338,14 @@ func runCoverageTestsForModules(config *Config, modules []ModuleInfo, race bool,
 	return nil
 }
 
-// runTestsForModules runs tests for all modules with the specified configuration
-func runTestsForModules(config *Config, modules []ModuleInfo, race, cover bool, additionalArgs []string, testType, buildTag string) error {
+// runTestsForModulesWithRunner runs tests for all modules with the specified configuration using provided runner
+//
+//nolint:unparam // cover parameter is used by buildTestArgs; all callers currently pass false but API preserved for consistency
+func runTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race, cover bool, additionalArgs []string, testType, buildTag string, runner CommandRunner) error {
+	if config == nil {
+		return errConfigNil
+	}
+
 	var moduleErrors []moduleError
 	totalStart := time.Now()
 
@@ -1322,8 +1381,8 @@ func runTestsForModules(config *Config, modules []ModuleInfo, race, cover bool, 
 		}
 		testArgs = append(testArgs, "./...")
 
-		// Run tests in module directory
-		err := runCommandInModule(module, "go", testArgs...)
+		// Run tests in module directory using provided runner
+		err := runCommandInModuleWithRunner(module, runner, "go", testArgs...)
 
 		if err != nil {
 			tagInfo := getTagInfo(buildTag)
@@ -1517,38 +1576,78 @@ func buildTestArgsWithOverrides(cfg *Config, raceOverride, coverOverride *bool, 
 	return args
 }
 
-// findFuzzPackages finds packages containing fuzz tests
+// findFuzzPackages finds packages containing fuzz tests in the current directory.
+// This is a convenience wrapper around findFuzzPackagesInDir.
 func findFuzzPackages() []string {
-	output, err := GetRunner().RunCmdOutput("grep", "-r", "-l", "^func Fuzz", "--include=*_test.go", ".")
+	return findFuzzPackagesInDir(".")
+}
+
+// findFuzzPackagesInDir discovers packages containing fuzz tests using native Go.
+// This replaces the previous grep-based implementation to ensure cross-platform
+// compatibility (BSD grep vs GNU grep behavior differs, Windows lacks grep).
+// The dir parameter specifies the root directory to search (use "." for current directory).
+func findFuzzPackagesInDir(dir string) []string {
+	// fuzzFuncPattern matches "func Fuzz" at the start of a line in Go test files
+	fuzzFuncPattern := []byte("\nfunc Fuzz")
+	packageMap := make(map[string]bool)
+
+	module, err := utils.GetModuleNameInDir(dir)
 	if err != nil {
-		// grep returns error if no matches found
+		// If we can't get module name, we can't construct package paths
 		return nil
 	}
 
-	files := strings.Split(strings.TrimSpace(output), "\n")
-	packageMap := make(map[string]bool)
-
-	for _, file := range files {
-		if file == "" {
-			continue
+	// Walk directory tree looking for *_test.go files with fuzz tests
+	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return nil //nolint:nilerr // Skip directories we can't access silently
 		}
 
-		dir := filepath.Dir(file)
-		pkg := strings.TrimPrefix(dir, "./")
-		if pkg == "." {
-			pkg = ""
+		// Skip hidden directories and vendor (but not the root directory)
+		if d.IsDir() {
+			name := d.Name()
+			// Skip vendor, testdata, and hidden directories (names starting with .)
+			// BUT don't skip "." or ".." as they're special path components
+			if name == "vendor" || name == "testdata" || (len(name) > 1 && name[0] == '.') {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 
-		module, err := utils.GetModuleName()
-		if err != nil {
-			// If we can't get module name, skip this package
-			continue
+		// Only check *_test.go files
+		if !strings.HasSuffix(path, "_test.go") {
+			return nil
 		}
-		if module != "" && pkg != "" {
-			packageMap[filepath.Join(module, pkg)] = true
-		} else if module != "" {
-			packageMap[module] = true
+
+		// Read file and check for fuzz test pattern
+		// G304 safe: path comes from filepath.WalkDir on local project directory
+		content, readErr := os.ReadFile(path) //nolint:gosec // G304 safe - path from trusted WalkDir traversal
+		if readErr != nil {
+			return nil //nolint:nilerr // Skip unreadable files silently
 		}
+
+		// Check for "func Fuzz" pattern (prefixed with newline to match line start)
+		// Also check at file start in case func Fuzz is first in file
+		if bytes.Contains(content, fuzzFuncPattern) || bytes.HasPrefix(content, []byte("func Fuzz")) {
+			// Get relative path from the search directory
+			relPath, relErr := filepath.Rel(dir, path)
+			if relErr != nil {
+				relPath = path // Fallback to original path if Rel fails
+			}
+			pkgDir := filepath.Dir(relPath)
+
+			// Handle root directory case
+			if pkgDir == "." {
+				packageMap[module] = true
+			} else {
+				packageMap[filepath.Join(module, pkgDir)] = true
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil
 	}
 
 	packages := make([]string, 0, len(packageMap))
@@ -1557,6 +1656,264 @@ func findFuzzPackages() []string {
 	}
 
 	return packages
+}
+
+// runFuzzTestsWithResultsCI runs fuzz tests with optional CI output capture.
+// When ciEnabled is true, stdout is captured for text parsing to extract detailed failure info.
+func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages []string, ciEnabled bool) ([]fuzzTestResult, time.Duration) {
+	startTime := time.Now()
+	var results []fuzzTestResult
+
+	fuzzTimeStr := fuzzTime.String()
+
+	for _, pkg := range packages {
+		// List fuzz tests in package
+		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
+		if err != nil {
+			continue
+		}
+
+		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
+		for _, test := range fuzzTests {
+			if !strings.HasPrefix(test, "Fuzz") {
+				continue
+			}
+
+			utils.Info("Fuzzing %s.%s", pkg, test)
+
+			testStart := time.Now()
+			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
+			args = append(args, "-fuzztime", fuzzTimeStr)
+
+			if config.Test.Verbose {
+				args = append(args, "-v")
+			}
+			args = append(args, pkg)
+
+			var testErr error
+			var testOutput string
+
+			if ciEnabled {
+				// Capture output for CI text parsing
+				testOutput, testErr = runFuzzTestWithOutput("go", args...)
+			} else {
+				// Standard execution without output capture
+				testErr = GetRunner().RunCmd("go", args...)
+			}
+			testDuration := time.Since(testStart)
+
+			results = append(results, fuzzTestResult{
+				Package:  pkg,
+				Test:     test,
+				Duration: testDuration,
+				Error:    testErr,
+				Output:   testOutput,
+			})
+		}
+	}
+
+	return results, time.Since(startTime)
+}
+
+// maxFuzzTimeout is the absolute maximum time to wait for a fuzz test.
+// This prevents indefinite hangs if -fuzztime is corrupted or ignored.
+const maxFuzzTimeout = 30 * time.Minute
+
+// runFuzzTestWithOutput executes a fuzz test command and captures stdout/stderr.
+// This is used in CI mode to capture output for text parsing.
+// A timeout is applied to prevent indefinite hangs.
+func runFuzzTestWithOutput(name string, args ...string) (string, error) {
+	// Parse -fuzztime from args to determine appropriate timeout
+	timeout := calculateFuzzTimeout(args)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Env = os.Environ()
+
+	// Capture both stdout and stderr
+	var outputBuf bytes.Buffer
+	cmd.Stdout = io.MultiWriter(os.Stdout, &outputBuf) // Tee to stdout for live display
+	cmd.Stderr = io.MultiWriter(os.Stderr, &outputBuf) // Capture stderr too
+
+	err := cmd.Run()
+
+	// Check if we hit the context deadline
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return outputBuf.String(), fmt.Errorf("fuzz test exceeded timeout of %s: %w", timeout, ctx.Err())
+	}
+
+	return outputBuf.String(), err
+}
+
+// calculateFuzzTimeout parses -fuzztime from args and adds safety margin.
+// Returns maxFuzzTimeout if parsing fails or duration is excessive.
+func calculateFuzzTimeout(args []string) time.Duration {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == "-fuzztime" {
+			if d, err := time.ParseDuration(args[i+1]); err == nil {
+				// Add 5 minute buffer for test setup/teardown
+				timeout := d + 5*time.Minute
+				if timeout > maxFuzzTimeout {
+					return maxFuzzTimeout
+				}
+				return timeout
+			}
+		}
+	}
+	// Default fallback - 15 minutes should cover most fuzz tests
+	return 15 * time.Minute
+}
+
+// printCIFuzzSummaryIfEnabled prints the fuzz summary if CI mode is enabled
+func printCIFuzzSummaryIfEnabled(params map[string]string, config *Config, results []fuzzTestResult, totalDuration time.Duration) {
+	if IsCIEnabled(params, config) {
+		printCIFuzzSummary(results, totalDuration)
+	}
+}
+
+// writeFuzzCIResultsIfEnabled writes fuzz test results to JSONL format when CI mode is enabled.
+// This produces output in the same format as regular tests, allowing the validation workflow
+// to process fuzz results uniformly with unit test results.
+//
+// When fuzz test output is captured, it uses TextStreamParser to extract detailed failure info
+// including file:line locations, error messages, and fuzz corpus paths.
+func writeFuzzCIResultsIfEnabled(params map[string]string, config *Config, results []fuzzTestResult, totalDuration time.Duration) {
+	if !IsCIEnabled(params, config) {
+		return
+	}
+
+	detector := NewCIDetector()
+	mode := detector.GetConfig(params, config)
+
+	// Use a separate file for fuzz results to avoid overwriting regular test results
+	// The path is based on mode.OutputPath but with "-fuzz" suffix
+	fuzzOutputPath := strings.TrimSuffix(mode.OutputPath, ".jsonl") + "-fuzz.jsonl"
+
+	reporter, err := NewJSONReporter(fuzzOutputPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to create fuzz CI reporter: %v\n", err)
+		return
+	}
+	defer func() {
+		if closeErr := reporter.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to close fuzz CI reporter: %v\n", closeErr)
+		}
+	}()
+
+	// Also add GitHub reporter if running in GitHub Actions
+	var reporters []CIReporter
+	reporters = append(reporters, reporter)
+	if mode.Format == CIFormatGitHub || (mode.Format == CIFormatAuto && detector.Platform() == string(CIFormatGitHub)) {
+		reporters = append(reporters, NewGitHubReporter())
+	}
+	multiReporter := NewMultiReporter(reporters...)
+
+	// Write metadata
+	if d, ok := detector.(*ciDetector); ok {
+		if startErr := multiReporter.Start(d.GetMetadata()); startErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to write fuzz CI start: %v\n", startErr)
+		}
+	}
+
+	// Parse fuzz output with text parser to extract detailed failure info
+	failures := parseFuzzResultsWithTextParser(results, mode.ContextLines, mode.Dedup)
+
+	// Count results
+	total, passed, failed := len(results), 0, 0
+	for _, r := range results {
+		if r.Error != nil {
+			failed++
+		} else {
+			passed++
+		}
+	}
+
+	// Report failures
+	for _, failure := range failures {
+		if reportErr := multiReporter.ReportFailure(failure); reportErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to report fuzz failure: %v\n", reportErr)
+		}
+	}
+
+	// Write summary
+	status := TestStatusPassed
+	if failed > 0 {
+		status = TestStatusFailed
+	}
+
+	result := &CIResult{
+		Summary: CISummary{
+			Status:   status,
+			Total:    total,
+			Passed:   passed,
+			Failed:   len(failures), // Use deduplicated count from parser
+			Skipped:  0,
+			Duration: formatDurationForSummary(totalDuration),
+		},
+		Failures:  failures,
+		Timestamp: time.Now(),
+		Duration:  totalDuration,
+	}
+
+	if summaryErr := multiReporter.WriteSummary(result); summaryErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to write fuzz CI summary: %v\n", summaryErr)
+	}
+
+	if closeErr := multiReporter.Close(); closeErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to close fuzz CI multi reporter: %v\n", closeErr)
+	}
+}
+
+// parseFuzzResultsWithTextParser extracts detailed failure information from fuzz test output
+// using the TextStreamParser. This provides file:line locations, error messages, and fuzz corpus paths.
+func parseFuzzResultsWithTextParser(results []fuzzTestResult, contextLines int, dedup bool) []CITestFailure {
+	parser := NewTextStreamParser(contextLines, dedup)
+
+	// Combine all output and parse
+	for _, r := range results {
+		if r.Output == "" {
+			// No output captured, create basic failure from error
+			if r.Error != nil {
+				// Parse the basic failure line
+				failLine := fmt.Sprintf("--- FAIL: %s (%.2fs)", r.Test, r.Duration.Seconds())
+				_ = parser.ParseLine(failLine) //nolint:errcheck // Best effort parsing
+
+				// Add package info
+				pkgLine := fmt.Sprintf("FAIL %s %.3fs", r.Package, r.Duration.Seconds())
+				_ = parser.ParseLine(pkgLine) //nolint:errcheck // Best effort parsing
+			}
+			continue
+		}
+
+		// Parse the captured output line by line
+		lines := strings.Split(r.Output, "\n")
+		for _, line := range lines {
+			_ = parser.ParseLine(line) //nolint:errcheck // Best effort parsing
+		}
+	}
+
+	return parser.Flush()
+}
+
+// fuzzResultsToError converts fuzz test results to an aggregated error
+func fuzzResultsToError(results []fuzzTestResult) error {
+	var failures []string
+	for _, r := range results {
+		if r.Error != nil {
+			failures = append(failures, fmt.Sprintf("%s.%s", r.Package, r.Test))
+		}
+	}
+
+	if len(failures) == 0 {
+		return nil
+	}
+
+	if len(failures) == 1 {
+		return fmt.Errorf("%w: %s", errFuzzTestFailed, failures[0])
+	}
+	return fmt.Errorf("%w: %d tests (%s)", errFuzzTestFailed, len(failures), strings.Join(failures, ", "))
 }
 
 // Additional methods for Test namespace required by tests
