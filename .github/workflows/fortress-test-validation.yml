@@ -106,6 +106,7 @@ jobs:
           TOTAL_FAILURES=0
           TOTAL_UNIQUE=0
           TOTAL_TESTS=0
+          TOTAL_SKIPPED=0
 
           # Helper function to generate human-readable test labels
           # Usage: parse_test_label "artifact-name" "jsonl-filename"
@@ -175,6 +176,7 @@ jobs:
                 STATUS=$(echo "$SUMMARY" | jq -r '.summary.status // "unknown"')
                 PASSED=$(echo "$SUMMARY" | jq -r '.summary.passed // 0')
                 FAILED=$(echo "$SUMMARY" | jq -r '.summary.failed // 0')
+                SKIPPED=$(echo "$SUMMARY" | jq -r '.summary.skipped // 0')
                 UNIQUE=$(echo "$SUMMARY" | jq -r '.summary.unique_total // 0')
                 TOTAL=$(echo "$SUMMARY" | jq -r '.summary.total // 0')
                 DURATION=$(echo "$SUMMARY" | jq -r '.summary.duration // "unknown"')
@@ -182,12 +184,14 @@ jobs:
                 echo "  • Status: $STATUS"
                 echo "  • Passed: $PASSED"
                 echo "  • Failed: $FAILED"
+                echo "  • Skipped: $SKIPPED"
                 echo "  • Unique Tests: $UNIQUE"
                 echo "  • Test Runs: $TOTAL"
                 echo "  • Duration: $DURATION"
 
                 TOTAL_UNIQUE=$((TOTAL_UNIQUE + UNIQUE))
                 TOTAL_TESTS=$((TOTAL_TESTS + TOTAL))
+                TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
 
                 if [[ "$STATUS" == "failed" ]] || [[ "$FAILED" -gt 0 ]]; then
                   VALIDATION_FAILED=true
@@ -252,6 +256,7 @@ jobs:
           echo "  • Unique Tests: $TOTAL_UNIQUE"
           echo "  • Test Runs: $TOTAL_TESTS"
           echo "  • Total Failures: $TOTAL_FAILURES"
+          echo "  • Total Skipped: $TOTAL_SKIPPED"
           echo "  • Validation Status: $(if [[ "$VALIDATION_FAILED" == "true" ]]; then echo "FAILED"; else echo "PASSED"; fi)"
 
           if [[ "$VALIDATION_FAILED" == "true" ]]; then
@@ -321,6 +326,7 @@ jobs:
           # Aggregate results from JSONL files
           TOTAL_PASSED=0
           TOTAL_FAILED=0
+          TOTAL_SKIPPED=0
           TOTAL_UNIQUE=0
           TOTAL_TESTS=0
 
@@ -329,10 +335,12 @@ jobs:
             if [[ -n "$SUMMARY" ]]; then
               PASSED=$(echo "$SUMMARY" | jq -r '.summary.passed // 0')
               FAILED=$(echo "$SUMMARY" | jq -r '.summary.failed // 0')
+              SKIPPED=$(echo "$SUMMARY" | jq -r '.summary.skipped // 0')
               UNIQUE=$(echo "$SUMMARY" | jq -r '.summary.unique_total // 0')
               TOTAL=$(echo "$SUMMARY" | jq -r '.summary.total // 0')
               TOTAL_PASSED=$((TOTAL_PASSED + PASSED))
               TOTAL_FAILED=$((TOTAL_FAILED + FAILED))
+              TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
               TOTAL_UNIQUE=$((TOTAL_UNIQUE + UNIQUE))
               TOTAL_TESTS=$((TOTAL_TESTS + TOTAL))
             fi
@@ -342,6 +350,7 @@ jobs:
           echo "- **Test Runs**: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
           echo "- **Passed**: $TOTAL_PASSED" >> $GITHUB_STEP_SUMMARY
           echo "- **Failed**: $TOTAL_FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "- **Skipped**: $TOTAL_SKIPPED" >> $GITHUB_STEP_SUMMARY
           echo "- **Validation Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
 
           if [[ "${{ inputs.fuzz-testing-enabled }}" == "true" ]]; then
