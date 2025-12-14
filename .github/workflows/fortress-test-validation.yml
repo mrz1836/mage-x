@@ -104,6 +104,7 @@ jobs:
           echo "🔍 Validating test results from CI mode output..."
           VALIDATION_FAILED=false
           TOTAL_FAILURES=0
+          TOTAL_UNIQUE=0
           TOTAL_TESTS=0
 
           # Helper function to generate human-readable test labels
@@ -174,15 +175,18 @@ jobs:
                 STATUS=$(echo "$SUMMARY" | jq -r '.summary.status // "unknown"')
                 PASSED=$(echo "$SUMMARY" | jq -r '.summary.passed // 0')
                 FAILED=$(echo "$SUMMARY" | jq -r '.summary.failed // 0')
+                UNIQUE=$(echo "$SUMMARY" | jq -r '.summary.unique_total // 0')
                 TOTAL=$(echo "$SUMMARY" | jq -r '.summary.total // 0')
                 DURATION=$(echo "$SUMMARY" | jq -r '.summary.duration // "unknown"')
 
                 echo "  • Status: $STATUS"
                 echo "  • Passed: $PASSED"
                 echo "  • Failed: $FAILED"
-                echo "  • Total: $TOTAL"
+                echo "  • Unique Tests: $UNIQUE"
+                echo "  • Test Runs: $TOTAL"
                 echo "  • Duration: $DURATION"
 
+                TOTAL_UNIQUE=$((TOTAL_UNIQUE + UNIQUE))
                 TOTAL_TESTS=$((TOTAL_TESTS + TOTAL))
 
                 if [[ "$STATUS" == "failed" ]] || [[ "$FAILED" -gt 0 ]]; then
@@ -245,7 +249,8 @@ jobs:
           # Final validation result
           echo ""
           echo "🏁 Validation Summary:"
-          echo "  • Total Tests: $TOTAL_TESTS"
+          echo "  • Unique Tests: $TOTAL_UNIQUE"
+          echo "  • Test Runs: $TOTAL_TESTS"
           echo "  • Total Failures: $TOTAL_FAILURES"
           echo "  • Validation Status: $(if [[ "$VALIDATION_FAILED" == "true" ]]; then echo "FAILED"; else echo "PASSED"; fi)"
 
@@ -316,6 +321,7 @@ jobs:
           # Aggregate results from JSONL files
           TOTAL_PASSED=0
           TOTAL_FAILED=0
+          TOTAL_UNIQUE=0
           TOTAL_TESTS=0
 
           for jsonl_file in $(find ci-results/ -name "*.jsonl" 2>/dev/null); do
@@ -323,14 +329,17 @@ jobs:
             if [[ -n "$SUMMARY" ]]; then
               PASSED=$(echo "$SUMMARY" | jq -r '.summary.passed // 0')
               FAILED=$(echo "$SUMMARY" | jq -r '.summary.failed // 0')
+              UNIQUE=$(echo "$SUMMARY" | jq -r '.summary.unique_total // 0')
               TOTAL=$(echo "$SUMMARY" | jq -r '.summary.total // 0')
               TOTAL_PASSED=$((TOTAL_PASSED + PASSED))
               TOTAL_FAILED=$((TOTAL_FAILED + FAILED))
+              TOTAL_UNIQUE=$((TOTAL_UNIQUE + UNIQUE))
               TOTAL_TESTS=$((TOTAL_TESTS + TOTAL))
             fi
           done
 
-          echo "- **Total Tests**: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Unique Tests**: $TOTAL_UNIQUE" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Runs**: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
           echo "- **Passed**: $TOTAL_PASSED" >> $GITHUB_STEP_SUMMARY
           echo "- **Failed**: $TOTAL_FAILED" >> $GITHUB_STEP_SUMMARY
           echo "- **Validation Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
