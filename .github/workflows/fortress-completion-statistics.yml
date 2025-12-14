@@ -99,18 +99,6 @@ jobs:
       # --------------------------------------------------------------------
       # Download specific artifacts needed for statistics processing
       # --------------------------------------------------------------------
-      - name: 📥 Download test statistics
-        if: always() && env.ENABLE_GO_TESTS == 'true'
-        uses: ./.github/actions/download-artifact-resilient
-        with:
-          pattern: "test-stats-*"
-          path: ./artifacts/
-          merge-multiple: true
-          max-retries: ${{ env.ARTIFACT_DOWNLOAD_RETRIES }}
-          retry-delay: ${{ env.ARTIFACT_DOWNLOAD_RETRY_DELAY }}
-          timeout: ${{ env.ARTIFACT_DOWNLOAD_TIMEOUT }}
-          continue-on-error: ${{ env.ARTIFACT_DOWNLOAD_CONTINUE_ON_ERROR }}
-
       - name: 📥 Download benchmark statistics
         if: always()
         uses: ./.github/actions/download-artifact-resilient
