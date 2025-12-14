@@ -1597,10 +1597,12 @@ func findFuzzPackages() []string {
 			return nil //nolint:nilerr // Skip directories we can't access silently
 		}
 
-		// Skip hidden directories and vendor
+		// Skip hidden directories and vendor (but not the root "." directory)
 		if d.IsDir() {
 			name := d.Name()
-			if name == "vendor" || name == "testdata" || (len(name) > 0 && name[0] == '.') {
+			// Skip vendor, testdata, and hidden directories (names starting with .)
+			// BUT don't skip "." or ".." as they're special path components
+			if name == "vendor" || name == "testdata" || (len(name) > 1 && name[0] == '.') {
 				return filepath.SkipDir
 			}
 			return nil
