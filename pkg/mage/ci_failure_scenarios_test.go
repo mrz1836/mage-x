@@ -6,16 +6,23 @@
 // 1. Nested subtest failure - tests hierarchical test name handling
 // 2. Panic - tests panic detection and stack trace capture
 // 3. Fuzz test failure - tests fuzz failure detection
+// 4. Race condition - tests data race detection (requires -race flag)
 //
 // Run individually:
 //   go test -run TestCI_NestedSubtestFailure ./pkg/mage/...
 //   go test -run TestCI_PanicFailure ./pkg/mage/...
 //   go test -fuzz=FuzzCI_IntentionalFailure -fuzztime=5s ./pkg/mage/...
+//   go test -race -run TestCI_RaceConditionFailure ./pkg/mage/...
 //
 // Run with CI mode:
 //   CI=true mage test:unit ./pkg/mage/...
 
 package mage
+
+import (
+	"sync"
+	"testing"
+)
 
 /*
 
@@ -54,3 +61,22 @@ func FuzzCI_IntentionalFailure(f *testing.F) {
 }
 
 */
+
+// TestCI_RaceConditionFailure creates an intentional data race.
+// This tests CI's race detection via the "WARNING: DATA RACE" pattern.
+// Run with: go test -race -run TestCI_RaceConditionFailure ./pkg/mage/...
+func TestCI_RaceConditionFailure(t *testing.T) {
+	counter := 0
+	var wg sync.WaitGroup
+
+	// Spawn goroutines that concurrently access 'counter' without synchronization
+	for range 10 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			counter++   // DATA RACE: concurrent read/write without sync
+			_ = counter // Additional read to increase race detection probability
+		}()
+	}
+	wg.Wait()
+}
