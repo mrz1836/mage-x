@@ -279,18 +279,6 @@ jobs:
           if-no-files-found: ignore
 
       # --------------------------------------------------------------------
-      # Upload fuzz test statistics for completion report
-      # --------------------------------------------------------------------
-      - name: 📤 Upload fuzz test statistics
-        if: always() && steps.fuzz-summary.outputs.statistics-file != ''
-        uses: ./.github/actions/upload-statistics
-        with:
-          artifact-name: test-stats-fuzz-${{ inputs.primary-runner }}-${{ inputs.go-primary-version }}
-          artifact-path: ${{ steps.fuzz-summary.outputs.statistics-file }}
-          retention-days: "1"
-          if-no-files-found: "ignore"
-
-      # --------------------------------------------------------------------
       # Fail job if fuzz tests failed (must be last step)
       # This step ensures the job properly fails after all analysis/upload
       # steps have completed when fuzz tests had failures.
