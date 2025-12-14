@@ -33,6 +33,9 @@ type JSONReporterInterface interface {
 
 	// Flush forces any buffered output to be written
 	Flush() error
+
+	// GetOutputPath returns the path to the output file
+	GetOutputPath() string
 }
 
 // MultiReporter combines multiple reporters into one
