@@ -101,18 +101,6 @@ jobs:
           timeout: ${{ env.ARTIFACT_DOWNLOAD_TIMEOUT }}
           continue-on-error: ${{ env.ARTIFACT_DOWNLOAD_CONTINUE_ON_ERROR }}
 
-      - name: 📥 Download test failure artifacts
-        if: always() && env.ENABLE_GO_TESTS == 'true'
-        uses: ./.github/actions/download-artifact-resilient
-        with:
-          pattern: "test-results-unit-*"
-          path: ./test-artifacts/
-          merge-multiple: true
-          max-retries: ${{ env.ARTIFACT_DOWNLOAD_RETRIES }}
-          retry-delay: ${{ env.ARTIFACT_DOWNLOAD_RETRY_DELAY }}
-          timeout: ${{ env.ARTIFACT_DOWNLOAD_TIMEOUT }}
-          continue-on-error: ${{ env.ARTIFACT_DOWNLOAD_CONTINUE_ON_ERROR }}
-
       - name: 📥 Download fuzz test failure artifacts
         if: always() && env.ENABLE_GO_TESTS == 'true' && env.ENABLE_FUZZ_TESTING == 'true'
         uses: ./.github/actions/download-artifact-resilient
