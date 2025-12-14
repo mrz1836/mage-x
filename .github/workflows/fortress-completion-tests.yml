@@ -230,6 +230,7 @@ jobs:
           TOTAL_TESTS=0
           TOTAL_FAILURES=0
           TOTAL_PASSED=0
+          TOTAL_SKIPPED=0
           SUITE_COUNT=0
           HAS_DATA=false
 
@@ -242,8 +243,8 @@ jobs:
               echo ""
               echo ""
               echo "### 🧪 Test Results Summary"
-              echo "| Test Suite | Duration | Tests | Runs | Passed | Failed | Status |"
-              echo "|------------|----------|-------|------|--------|--------|--------|"
+              echo "| Test Suite | Duration | Tests | Runs | Passed | Failed | Skipped | Status |"
+              echo "|------------|----------|-------|------|--------|--------|---------|--------|"
             } >> tests-section.md
 
             # Process each JSONL file
@@ -260,18 +261,20 @@ jobs:
                   STATUS=$(echo "$SUMMARY" | jq -r '.summary.status // "unknown"')
                   PASSED=$(echo "$SUMMARY" | jq -r '.summary.passed // 0')
                   FAILED=$(echo "$SUMMARY" | jq -r '.summary.failed // 0')
+                  SKIPPED=$(echo "$SUMMARY" | jq -r '.summary.skipped // 0')
                   TOTAL=$(echo "$SUMMARY" | jq -r '.summary.total // 0')
                   UNIQUE=$(echo "$SUMMARY" | jq -r '.summary.unique_total // .summary.total // 0')
                   DURATION=$(echo "$SUMMARY" | jq -r '.summary.duration // "0s"')
 
                   STATUS_ICON=$([[ "$STATUS" == "passed" ]] && echo "✅" || echo "❌")
 
-                  echo "| $SUITE_LABEL | $DURATION | $UNIQUE | $TOTAL | $PASSED | $FAILED | $STATUS_ICON |" >> tests-section.md
+                  echo "| $SUITE_LABEL | $DURATION | $UNIQUE | $TOTAL | $PASSED | $FAILED | $SKIPPED | $STATUS_ICON |" >> tests-section.md
 
                   # Accumulate totals (use unique for primary test count)
                   TOTAL_TESTS=$((TOTAL_TESTS + UNIQUE))
                   TOTAL_PASSED=$((TOTAL_PASSED + PASSED))
                   TOTAL_FAILURES=$((TOTAL_FAILURES + FAILED))
+                  TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
                   SUITE_COUNT=$((SUITE_COUNT + 1))
                 fi
               fi
