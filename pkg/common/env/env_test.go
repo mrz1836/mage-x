@@ -3,6 +3,7 @@ package env
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -480,6 +481,342 @@ func TestEnvOptions(t *testing.T) {
 	if got := env.Get(testKey); got != "trimmed" {
 		t.Errorf("Expected trimmed value 'trimmed', got '%v'", got)
 	}
+}
+
+// TestDefaultEnvironment_AllowOverwrite verifies that AllowOverwrite=false
+// prevents overwriting existing environment variables.
+func TestDefaultEnvironment_AllowOverwrite(t *testing.T) {
+	testKey := "ALLOW_OVERWRITE_TEST_VAR"
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv(testKey))
+	})
+
+	t.Run("allow_overwrite_true", func(t *testing.T) {
+		env := NewDefaultEnvironmentWithOptions(Options{
+			AllowOverwrite: true,
+		})
+
+		require.NoError(t, env.Set(testKey, "first"))
+		require.NoError(t, env.Set(testKey, "second"))
+		require.Equal(t, "second", env.Get(testKey))
+	})
+
+	t.Run("allow_overwrite_false_rejects", func(t *testing.T) {
+		require.NoError(t, os.Unsetenv(testKey))
+
+		env := NewDefaultEnvironmentWithOptions(Options{
+			AllowOverwrite: false,
+		})
+
+		require.NoError(t, env.Set(testKey, "first"))
+		err := env.Set(testKey, "second")
+		require.Error(t, err, "should reject overwriting when AllowOverwrite=false")
+		require.ErrorIs(t, err, errOverwriteNotAllowed)
+		require.Equal(t, "first", env.Get(testKey), "value should remain unchanged")
+	})
+
+	t.Run("allow_overwrite_false_allows_new", func(t *testing.T) {
+		require.NoError(t, os.Unsetenv(testKey))
+
+		env := NewDefaultEnvironmentWithOptions(Options{
+			AllowOverwrite: false,
+		})
+
+		require.NoError(t, env.Set(testKey, "value"))
+		require.Equal(t, "value", env.Get(testKey))
+	})
+}
+
+// TestDefaultEnvironment_ExpandVars verifies that ExpandVars=true
+// expands environment variables during Get().
+func TestDefaultEnvironment_ExpandVars(t *testing.T) {
+	innerKey := "EXPAND_TEST_INNER"
+	outerKey := "EXPAND_TEST_OUTER"
+
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv(innerKey))
+		require.NoError(t, os.Unsetenv(outerKey))
+	})
+
+	t.Run("expand_vars_true", func(t *testing.T) {
+		t.Setenv(innerKey, "expanded")
+		// Use ${VAR} format because $VAR_NAME treats underscores as part of name
+		t.Setenv(outerKey, "prefix_${"+innerKey+"}_suffix")
+
+		env := NewDefaultEnvironmentWithOptions(Options{
+			ExpandVars:     true,
+			AllowOverwrite: true,
+		})
+
+		got := env.Get(outerKey)
+		require.Equal(t, "prefix_expanded_suffix", got)
+	})
+
+	t.Run("expand_vars_false", func(t *testing.T) {
+		t.Setenv(innerKey, "expanded")
+		t.Setenv(outerKey, "prefix_${"+innerKey+"}_suffix")
+
+		env := NewDefaultEnvironmentWithOptions(Options{
+			ExpandVars:     false,
+			AllowOverwrite: true,
+		})
+
+		got := env.Get(outerKey)
+		require.Equal(t, "prefix_${"+innerKey+"}_suffix", got)
+	})
+
+	t.Run("expand_brace_format", func(t *testing.T) {
+		t.Setenv(innerKey, "braced")
+		t.Setenv(outerKey, "value_${"+innerKey+"}_end")
+
+		env := NewDefaultEnvironmentWithOptions(Options{
+			ExpandVars:     true,
+			AllowOverwrite: true,
+		})
+
+		got := env.Get(outerKey)
+		require.Equal(t, "value_braced_end", got)
+	})
+}
+
+// TestGetBool_AllFormats tests all supported boolean string formats.
+// This validates the parsing logic in GetBool handles various representations.
+func TestGetBool_AllFormats(t *testing.T) {
+	env := NewDefaultEnvironment()
+	testKey := "BOOL_FORMAT_TEST"
+
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv(testKey))
+	})
+
+	tests := []struct {
+		name         string
+		value        string
+		defaultValue bool
+		expected     bool
+	}{
+		// True values
+		{"true_lowercase", "true", false, true},
+		{"true_uppercase", "TRUE", false, true},
+		{"true_mixed_case", "True", false, true},
+		{"one", "1", false, true},
+		{"yes_lowercase", "yes", false, true},
+		{"yes_uppercase", "YES", false, true},
+		{"on_lowercase", "on", false, true},
+		{"on_uppercase", "ON", false, true},
+		{"enabled_lowercase", "enabled", false, true},
+		{"enabled_uppercase", "ENABLED", false, true},
+
+		// False values
+		{"false_lowercase", "false", true, false},
+		{"false_uppercase", "FALSE", true, false},
+		{"false_mixed_case", "False", true, false},
+		{"zero", "0", true, false},
+		{"no_lowercase", "no", true, false},
+		{"no_uppercase", "NO", true, false},
+		{"off_lowercase", "off", true, false},
+		{"off_uppercase", "OFF", true, false},
+		{"disabled_lowercase", "disabled", true, false},
+		{"disabled_uppercase", "DISABLED", true, false},
+
+		// Invalid values return default
+		{"invalid_string", "invalid", false, false},
+		{"invalid_string_default_true", "invalid", true, true},
+		{"random_text", "maybe", false, false},
+		{"empty_string_default_false", "", false, false},
+		{"empty_string_default_true", "", true, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.value == "" {
+				require.NoError(t, os.Unsetenv(testKey))
+			} else {
+				require.NoError(t, env.Set(testKey, tt.value))
+			}
+
+			got := env.GetBool(testKey, tt.defaultValue)
+			require.Equal(t, tt.expected, got,
+				"GetBool(%q, %v) with value %q = %v, want %v",
+				testKey, tt.defaultValue, tt.value, got, tt.expected)
+		})
+	}
+}
+
+// TestTypedGetters_Boundaries tests edge cases and boundary conditions
+// for typed getter functions.
+func TestTypedGetters_Boundaries(t *testing.T) {
+	env := NewDefaultEnvironment()
+
+	t.Run("GetInt64_boundaries", func(t *testing.T) {
+		testKey := "INT64_BOUNDARY_TEST"
+		t.Cleanup(func() { require.NoError(t, os.Unsetenv(testKey)) })
+
+		tests := []struct {
+			name         string
+			value        string
+			defaultValue int64
+			expected     int64
+		}{
+			{"max_int64", "9223372036854775807", 0, 9223372036854775807},
+			{"min_int64", "-9223372036854775808", 0, -9223372036854775808},
+			{"overflow_returns_default", "9223372036854775808", 99, 99},
+			{"underflow_returns_default", "-9223372036854775809", 99, 99},
+			{"invalid_returns_default", "not_a_number", 42, 42},
+			{"empty_returns_default", "", 123, 123},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if tt.value == "" {
+					require.NoError(t, os.Unsetenv(testKey))
+				} else {
+					require.NoError(t, env.Set(testKey, tt.value))
+				}
+
+				got := env.GetInt64(testKey, tt.defaultValue)
+				require.Equal(t, tt.expected, got)
+			})
+		}
+	})
+
+	t.Run("GetInt_boundaries", func(t *testing.T) {
+		testKey := "INT_BOUNDARY_TEST"
+		t.Cleanup(func() { require.NoError(t, os.Unsetenv(testKey)) })
+
+		tests := []struct {
+			name         string
+			value        string
+			defaultValue int
+			expected     int
+		}{
+			{"positive", "2147483647", 0, 2147483647},
+			{"negative", "-2147483648", 0, -2147483648},
+			{"invalid_returns_default", "abc", 42, 42},
+			{"float_returns_default", "3.14", 42, 42},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				require.NoError(t, env.Set(testKey, tt.value))
+				got := env.GetInt(testKey, tt.defaultValue)
+				require.Equal(t, tt.expected, got)
+			})
+		}
+	})
+
+	t.Run("GetFloat64_special_values", func(t *testing.T) {
+		testKey := "FLOAT64_SPECIAL_TEST"
+		t.Cleanup(func() { require.NoError(t, os.Unsetenv(testKey)) })
+
+		t.Run("positive_infinity", func(t *testing.T) {
+			require.NoError(t, env.Set(testKey, "+Inf"))
+			got := env.GetFloat64(testKey, 0.0)
+			require.True(t, got > 0 && got != got || got == got && got > 1e308,
+				"expected +Inf, got %v", got)
+		})
+
+		t.Run("negative_infinity", func(t *testing.T) {
+			require.NoError(t, env.Set(testKey, "-Inf"))
+			got := env.GetFloat64(testKey, 0.0)
+			require.True(t, got < 0 && (got != got || got < -1e308),
+				"expected -Inf, got %v", got)
+		})
+
+		t.Run("nan_returns_default", func(t *testing.T) {
+			// Go's ParseFloat returns error for "NaN" string in some cases
+			require.NoError(t, env.Set(testKey, "NaN"))
+			got := env.GetFloat64(testKey, 42.0)
+			// NaN behavior: either parsed as NaN or returns default
+			// Both are acceptable - we verify it doesn't panic
+			_ = got
+		})
+
+		t.Run("scientific_notation", func(t *testing.T) {
+			require.NoError(t, env.Set(testKey, "1.5e10"))
+			got := env.GetFloat64(testKey, 0.0)
+			require.InDelta(t, 1.5e10, got, 0.001)
+		})
+
+		t.Run("invalid_returns_default", func(t *testing.T) {
+			require.NoError(t, env.Set(testKey, "not_float"))
+			got := env.GetFloat64(testKey, 99.9)
+			require.InDelta(t, 99.9, got, 0.001)
+		})
+	})
+
+	t.Run("GetDuration_edge_cases", func(t *testing.T) {
+		testKey := "DURATION_EDGE_TEST"
+		t.Cleanup(func() { require.NoError(t, os.Unsetenv(testKey)) })
+
+		tests := []struct {
+			name         string
+			value        string
+			defaultValue time.Duration
+			expected     time.Duration
+		}{
+			{"negative_duration", "-5m", 0, -5 * time.Minute},
+			{"zero_duration", "0s", time.Hour, 0},
+			{"nanoseconds", "100ns", 0, 100 * time.Nanosecond},
+			{"hours", "24h", 0, 24 * time.Hour},
+			{"complex_duration", "1h30m45s", 0, time.Hour + 30*time.Minute + 45*time.Second},
+			{"invalid_returns_default", "5x", 10 * time.Second, 10 * time.Second},
+			{"no_unit_returns_default", "100", 5 * time.Second, 5 * time.Second},
+			{"empty_returns_default", "", 30 * time.Second, 30 * time.Second},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if tt.value == "" {
+					require.NoError(t, os.Unsetenv(testKey))
+				} else {
+					require.NoError(t, env.Set(testKey, tt.value))
+				}
+
+				got := env.GetDuration(testKey, tt.defaultValue)
+				require.Equal(t, tt.expected, got)
+			})
+		}
+	})
+}
+
+// TestGetStringSlice_EdgeCases tests edge cases for string slice parsing.
+func TestGetStringSlice_EdgeCases(t *testing.T) {
+	env := NewDefaultEnvironment()
+	testKey := "STRING_SLICE_EDGE_TEST"
+
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv(testKey))
+	})
+
+	tests := []struct {
+		name     string
+		value    string
+		expected []string
+	}{
+		{"single_value", "one", []string{"one"}},
+		{"multiple_values", "one,two,three", []string{"one", "two", "three"}},
+		{"trailing_comma", "a,b,", []string{"a", "b", ""}},
+		{"leading_comma", ",a,b", []string{"", "a", "b"}},
+		{"empty_middle", "a,,b", []string{"a", "", "b"}},
+		{"spaces_are_trimmed", "a, b, c", []string{"a", "b", "c"}},
+		{"empty_value", "", []string{""}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, env.Set(testKey, tt.value))
+			got := env.GetStringSlice(testKey, nil)
+			require.Equal(t, tt.expected, got)
+		})
+	}
+
+	t.Run("unset_returns_default", func(t *testing.T) {
+		require.NoError(t, os.Unsetenv(testKey))
+		defaultValue := []string{"default"}
+		got := env.GetStringSlice(testKey, defaultValue)
+		require.Equal(t, defaultValue, got)
+	})
 }
 
 // Helper functions

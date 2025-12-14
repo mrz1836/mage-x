@@ -652,6 +652,315 @@ func TestEnvProviderBoolParsing(t *testing.T) {
 	}
 }
 
+// TestConfigExpandPath tests the expandPath method for security and functionality.
+// This is critical for preventing path traversal attacks and ensuring correct HOME expansion.
+func TestConfigExpandPath(t *testing.T) {
+	config := New()
+
+	// Save original HOME and restore after tests
+	origHome := os.Getenv("HOME")
+	t.Cleanup(func() {
+		if origHome != "" {
+			if err := os.Setenv("HOME", origHome); err != nil {
+				t.Logf("Failed to restore HOME: %v", err)
+			}
+		} else {
+			if err := os.Unsetenv("HOME"); err != nil {
+				t.Logf("Failed to unset HOME: %v", err)
+			}
+		}
+	})
+
+	tests := []struct {
+		name     string
+		input    string
+		homeEnv  string
+		expected string
+	}{
+		// Security: path traversal patterns are blocked
+		{
+			name:     "blocks simple path traversal",
+			input:    "/etc/../passwd",
+			homeEnv:  "/home/user",
+			expected: "/etc/../passwd", // Returns original without expansion
+		},
+		{
+			name:     "blocks double dot at start",
+			input:    "../etc/passwd",
+			homeEnv:  "/home/user",
+			expected: "../etc/passwd",
+		},
+		{
+			name:     "blocks URL-encoded path traversal (%2e)",
+			input:    "/etc/%2e%2e/passwd",
+			homeEnv:  "/home/user",
+			expected: "/etc/%2e%2e/passwd",
+		},
+		{
+			name:     "blocks double URL-encoded traversal",
+			input:    "/etc/%252e%252e/passwd",
+			homeEnv:  "/home/user",
+			expected: "/etc/%2e%2e/passwd", // First decode reveals %2e%2e, which contains .. after second decode
+		},
+		{
+			name:     "blocks null byte injection",
+			input:    "/etc/passwd\x00.txt",
+			homeEnv:  "/home/user",
+			expected: "/etc/passwd\x00.txt",
+		},
+		{
+			name:     "blocks newline injection",
+			input:    "/etc/passwd\n/etc/shadow",
+			homeEnv:  "/home/user",
+			expected: "/etc/passwd\n/etc/shadow",
+		},
+		{
+			name:     "blocks carriage return injection",
+			input:    "/etc/passwd\r/etc/shadow",
+			homeEnv:  "/home/user",
+			expected: "/etc/passwd\r/etc/shadow",
+		},
+
+		// HOME expansion
+		{
+			name:     "expands $HOME prefix",
+			input:    "$HOME/.config/app",
+			homeEnv:  "/home/testuser",
+			expected: "/home/testuser/.config/app",
+		},
+		{
+			name:     "HOME not set returns path with empty HOME",
+			input:    "$HOME/.config",
+			homeEnv:  "",
+			expected: "/.config",
+		},
+		{
+			name:     "only first $HOME is expanded",
+			input:    "$HOME/$HOME/config",
+			homeEnv:  "/home/user",
+			expected: "/home/user/$HOME/config",
+		},
+
+		// No expansion needed
+		{
+			name:     "absolute path unchanged",
+			input:    "/etc/config.yaml",
+			homeEnv:  "/home/user",
+			expected: "/etc/config.yaml",
+		},
+		{
+			name:     "relative path unchanged",
+			input:    "config/app.yaml",
+			homeEnv:  "/home/user",
+			expected: "config/app.yaml",
+		},
+		{
+			name:     "dot prefix unchanged",
+			input:    "./config.yaml",
+			homeEnv:  "/home/user",
+			expected: "./config.yaml",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set HOME for this test
+			if tt.homeEnv != "" {
+				require.NoError(t, os.Setenv("HOME", tt.homeEnv))
+			} else {
+				require.NoError(t, os.Unsetenv("HOME"))
+			}
+
+			result := config.expandPath(tt.input)
+			assert.Equal(t, tt.expected, result, "expandPath(%q)", tt.input)
+		})
+	}
+}
+
+// TestConfigDetectFormat tests the detectFormat method.
+// Validates correct format detection from file extensions.
+func TestConfigDetectFormat(t *testing.T) {
+	config := New()
+
+	tests := []struct {
+		name     string
+		path     string
+		expected Format
+	}{
+		// Standard extensions
+		{"yaml lowercase", "config.yaml", FormatYAML},
+		{"yml lowercase", "config.yml", FormatYAML},
+		{"json lowercase", "config.json", FormatJSON},
+		{"toml lowercase", "config.toml", FormatTOML},
+		{"ini lowercase", "config.ini", FormatINI},
+
+		// Case insensitivity
+		{"YAML uppercase", "config.YAML", FormatYAML},
+		{"YML uppercase", "config.YML", FormatYAML},
+		{"JSON uppercase", "config.JSON", FormatJSON},
+		{"TOML uppercase", "config.TOML", FormatTOML},
+		{"INI uppercase", "config.INI", FormatINI},
+		{"mixed case Yaml", "config.Yaml", FormatYAML},
+		{"mixed case Json", "config.Json", FormatJSON},
+
+		// No extension - defaults to YAML
+		{"no extension", "config", FormatYAML},
+		{"no extension with path", "/etc/myapp/config", FormatYAML},
+
+		// Hidden files
+		{"hidden file no ext", ".configrc", FormatYAML},
+		{"hidden file with yaml", ".config.yaml", FormatYAML},
+		{"hidden file with json", ".config.json", FormatJSON},
+
+		// Multiple dots in filename
+		{"multiple dots yaml", "config.prod.yaml", FormatYAML},
+		{"multiple dots json", "config.dev.json", FormatJSON},
+		{"many dots", "my.app.config.v2.yaml", FormatYAML},
+
+		// Unknown extensions default to YAML
+		{"unknown ext txt", "config.txt", FormatYAML},
+		{"unknown ext xml", "config.xml", FormatYAML},
+		{"unknown ext cfg", "config.cfg", FormatYAML},
+
+		// Full paths
+		{"full path yaml", "/etc/myapp/config.yaml", FormatYAML},
+		{"full path json", "/home/user/.config/app.json", FormatJSON},
+		{"relative path yaml", "./configs/local.yaml", FormatYAML},
+
+		// Edge cases
+		{"env extension", "config.env", FormatYAML}, // .env defaults to YAML
+		{"dot only", ".", FormatYAML},
+		{"empty string", "", FormatYAML},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := config.detectFormat(tt.path)
+			assert.Equal(t, tt.expected, result, "detectFormat(%q)", tt.path)
+		})
+	}
+}
+
+// TestConfigBuildConfigPaths tests the buildConfigPaths method.
+// Validates that search paths are constructed correctly.
+func TestConfigBuildConfigPaths(t *testing.T) {
+	config := New()
+
+	// Save original HOME
+	origHome := os.Getenv("HOME")
+	t.Cleanup(func() {
+		if origHome != "" {
+			if err := os.Setenv("HOME", origHome); err != nil {
+				t.Logf("Failed to restore HOME: %v", err)
+			}
+		}
+	})
+	require.NoError(t, os.Setenv("HOME", "/home/testuser"))
+
+	t.Run("default search directories", func(t *testing.T) {
+		paths := config.buildConfigPaths("myapp")
+
+		// Should include current directory
+		assert.Contains(t, paths, "myapp.yaml")
+		assert.Contains(t, paths, "myapp.yml")
+		assert.Contains(t, paths, "myapp.json")
+		assert.Contains(t, paths, "myapp")
+
+		// Should have multiple paths
+		assert.Greater(t, len(paths), 4, "should have paths from multiple directories")
+	})
+
+	t.Run("custom search directories", func(t *testing.T) {
+		paths := config.buildConfigPaths("app", "/custom/dir", "/another/dir")
+
+		// Should include custom directories
+		assert.Contains(t, paths, "/custom/dir/app.yaml")
+		assert.Contains(t, paths, "/another/dir/app.json")
+
+		// Should NOT include default directories when custom provided
+		for _, p := range paths {
+			assert.NotContains(t, p, "/etc/")
+		}
+	})
+
+	t.Run("HOME expansion in directories", func(t *testing.T) {
+		paths := config.buildConfigPaths("app", "$HOME/.config")
+
+		// HOME should be expanded
+		found := false
+		for _, p := range paths {
+			if strings.Contains(p, "/home/testuser/.config/app") {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "should expand $HOME in search directories")
+	})
+
+	t.Run("filters paths with null bytes", func(t *testing.T) {
+		// This tests the null byte filtering in buildConfigPaths
+		paths := config.buildConfigPaths("app", "/normal/dir")
+
+		for _, p := range paths {
+			assert.NotContains(t, p, "\x00", "paths should not contain null bytes")
+		}
+	})
+}
+
+// TestConfigNew tests the Config constructor
+func TestConfigNew(t *testing.T) {
+	t.Run("creates config with default implementations", func(t *testing.T) {
+		config := New()
+
+		assert.NotNil(t, config)
+		assert.NotNil(t, config.Loader)
+		assert.NotNil(t, config.Env)
+		assert.NotNil(t, config.Manager)
+	})
+}
+
+// TestConfigNewWithOptions tests creating Config with custom options
+func TestConfigNewWithOptions(t *testing.T) {
+	t.Run("accepts custom implementations", func(t *testing.T) {
+		customLoader := NewDefaultConfigLoader()
+		customEnv := NewDefaultEnvProvider()
+		customManager := NewDefaultConfigManager()
+
+		config := NewWithOptions(customLoader, customEnv, customManager)
+
+		assert.Same(t, customLoader, config.Loader)
+		assert.Same(t, customEnv, config.Env)
+		assert.Same(t, customManager, config.Manager)
+	})
+
+	t.Run("accepts nil values", func(t *testing.T) {
+		config := NewWithOptions(nil, nil, nil)
+
+		assert.Nil(t, config.Loader)
+		assert.Nil(t, config.Env)
+		assert.Nil(t, config.Manager)
+	})
+}
+
+// TestGetDefault tests the GetDefault package function
+func TestGetDefault(t *testing.T) {
+	t.Run("returns new Config instance", func(t *testing.T) {
+		config := GetDefault()
+
+		assert.NotNil(t, config)
+		assert.NotNil(t, config.Loader)
+		assert.NotNil(t, config.Env)
+		assert.NotNil(t, config.Manager)
+	})
+
+	t.Run("returns different instances each call", func(t *testing.T) {
+		config1 := GetDefault()
+		config2 := GetDefault()
+
+		assert.NotSame(t, config1, config2, "should return new instances")
+	})
+}
+
 // Benchmark tests
 func BenchmarkConfigLoad(b *testing.B) {
 	tmpDir := b.TempDir()

@@ -1,0 +1,387 @@
+package env
+
+import (
+	"os"
+	"path/filepath"
+	"runtime"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+// TestDefaultPathResolver_EnsureDir_Errors tests error handling in EnsureDir.
+func TestDefaultPathResolver_EnsureDir_Errors(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("creates_nested_directories", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		nestedPath := filepath.Join(tmpDir, "level1", "level2", "level3")
+
+		err := resolver.EnsureDir(nestedPath)
+		require.NoError(t, err)
+
+		info, err := os.Stat(nestedPath)
+		require.NoError(t, err)
+		require.True(t, info.IsDir())
+	})
+
+	t.Run("file_exists_at_path", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		filePath := filepath.Join(tmpDir, "file_not_dir")
+
+		// Create a file at the path
+		err := os.WriteFile(filePath, []byte("content"), 0o600)
+		require.NoError(t, err)
+
+		// EnsureDir should not error if path already exists (even if it's a file)
+		// The function only creates if not exists
+		err = resolver.EnsureDir(filePath)
+		require.NoError(t, err) // Does not error because Stat succeeds
+
+		// Verify it's still a file
+		info, err := os.Stat(filePath)
+		require.NoError(t, err)
+		require.False(t, info.IsDir(), "path should still be a file")
+	})
+
+	t.Run("already_exists_as_directory", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// tmpDir already exists
+		err := resolver.EnsureDir(tmpDir)
+		require.NoError(t, err)
+
+		info, err := os.Stat(tmpDir)
+		require.NoError(t, err)
+		require.True(t, info.IsDir())
+	})
+
+	t.Run("custom_mode", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows does not support Unix file modes")
+		}
+
+		tmpDir := t.TempDir()
+		customPath := filepath.Join(tmpDir, "custom_mode_dir")
+
+		err := resolver.EnsureDirWithMode(customPath, 0o700)
+		require.NoError(t, err)
+
+		info, err := os.Stat(customPath)
+		require.NoError(t, err)
+		require.True(t, info.IsDir())
+		// Check mode (mask with 0777 to ignore extra bits)
+		actualMode := info.Mode().Perm() & 0o777
+		require.Equal(t, os.FileMode(0o700), actualMode)
+	})
+}
+
+// TestDefaultPathResolver_Symlinks tests symlink resolution.
+func TestDefaultPathResolver_Symlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Symlink tests require Unix-like system or elevated privileges on Windows")
+	}
+
+	t.Run("resolve_follows_symlink", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create target directory
+		targetDir := filepath.Join(tmpDir, "target")
+		err := os.MkdirAll(targetDir, 0o750)
+		require.NoError(t, err)
+
+		// Create symlink to target
+		linkPath := filepath.Join(tmpDir, "link")
+		err = os.Symlink(targetDir, linkPath)
+		require.NoError(t, err)
+
+		// Resolver with FollowSymlinks=true (default)
+		resolver := NewDefaultPathResolver()
+		resolved, err := resolver.Resolve(linkPath)
+		require.NoError(t, err)
+
+		// The resolved path should be the target, not the link
+		expectedTarget, err := filepath.EvalSymlinks(targetDir)
+		require.NoError(t, err)
+		require.Equal(t, expectedTarget, resolved)
+	})
+
+	t.Run("resolve_without_follow_symlinks", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create target directory
+		targetDir := filepath.Join(tmpDir, "target")
+		err := os.MkdirAll(targetDir, 0o750)
+		require.NoError(t, err)
+
+		// Create symlink to target
+		linkPath := filepath.Join(tmpDir, "link")
+		err = os.Symlink(targetDir, linkPath)
+		require.NoError(t, err)
+
+		// Resolver with FollowSymlinks=false
+		resolver := NewDefaultPathResolverWithOptions(PathOptions{
+			FollowSymlinks: false,
+			ResolveEnvVars: true,
+		})
+		resolved, err := resolver.Resolve(linkPath)
+		require.NoError(t, err)
+
+		// The resolved path should be the link path itself (absolute)
+		absLinkPath, err := filepath.Abs(linkPath)
+		require.NoError(t, err)
+		require.Equal(t, absLinkPath, resolved)
+	})
+
+	t.Run("broken_symlink_follows", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create symlink to non-existent target
+		linkPath := filepath.Join(tmpDir, "broken_link")
+		nonExistentTarget := filepath.Join(tmpDir, "does_not_exist")
+		err := os.Symlink(nonExistentTarget, linkPath)
+		require.NoError(t, err)
+
+		// Resolver with FollowSymlinks=true
+		resolver := NewDefaultPathResolver()
+		resolved, err := resolver.Resolve(linkPath)
+		// EvalSymlinks fails for broken symlinks, so it falls back
+		// to the original path and then makes it absolute
+		require.NoError(t, err)
+		// Should still return a valid absolute path
+		require.True(t, filepath.IsAbs(resolved))
+	})
+
+	t.Run("nested_symlinks", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create target
+		targetDir := filepath.Join(tmpDir, "target")
+		err := os.MkdirAll(targetDir, 0o750)
+		require.NoError(t, err)
+
+		// Create first symlink
+		link1 := filepath.Join(tmpDir, "link1")
+		err = os.Symlink(targetDir, link1)
+		require.NoError(t, err)
+
+		// Create second symlink pointing to first
+		link2 := filepath.Join(tmpDir, "link2")
+		err = os.Symlink(link1, link2)
+		require.NoError(t, err)
+
+		resolver := NewDefaultPathResolver()
+		resolved, err := resolver.Resolve(link2)
+		require.NoError(t, err)
+
+		// Should resolve all the way to the target
+		expectedTarget, err := filepath.EvalSymlinks(targetDir)
+		require.NoError(t, err)
+		require.Equal(t, expectedTarget, resolved)
+	})
+}
+
+// TestDefaultPathResolver_GOROOT_Fallbacks tests GOROOT resolution.
+func TestDefaultPathResolver_GOROOT_Fallbacks(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("uses_env_var_when_set", func(t *testing.T) {
+		t.Setenv("GOROOT", "/custom/goroot")
+		got := resolver.GOROOT()
+		require.Equal(t, "/custom/goroot", got)
+	})
+
+	t.Run("falls_back_to_go_env_command", func(t *testing.T) {
+		// Save and unset GOROOT to force fallback
+		originalGoroot := os.Getenv("GOROOT")
+		require.NoError(t, os.Unsetenv("GOROOT"))
+		t.Cleanup(func() {
+			if originalGoroot != "" {
+				require.NoError(t, os.Setenv("GOROOT", originalGoroot))
+			}
+		})
+
+		got := resolver.GOROOT()
+		// Should get a valid path from 'go env GOROOT'
+		// If go is not installed, it will return empty string
+		if got != "" {
+			require.True(t, filepath.IsAbs(got), "GOROOT should be absolute path")
+		}
+	})
+}
+
+// TestDefaultPathResolver_Expand tests path expansion.
+func TestDefaultPathResolver_Expand(t *testing.T) {
+	t.Run("tilde_expansion", func(t *testing.T) {
+		resolver := NewDefaultPathResolver()
+		t.Setenv("HOME", "/home/testuser")
+
+		expanded := resolver.Expand("~/documents")
+		expected := filepath.Join("/home/testuser", "documents")
+		require.Equal(t, expected, expanded)
+	})
+
+	t.Run("env_var_expansion", func(t *testing.T) {
+		resolver := NewDefaultPathResolver()
+		t.Setenv("TEST_EXPAND_PATH", "/test/path")
+
+		expanded := resolver.Expand("${TEST_EXPAND_PATH}/subdir")
+		require.Equal(t, "/test/path/subdir", expanded)
+	})
+
+	t.Run("no_expansion_when_disabled", func(t *testing.T) {
+		resolver := NewDefaultPathResolverWithOptions(PathOptions{
+			ResolveEnvVars: false,
+		})
+		t.Setenv("TEST_NO_EXPAND", "value")
+
+		// Tilde and env vars should not be expanded
+		input := "~/path/${TEST_NO_EXPAND}"
+		expanded := resolver.Expand(input)
+		// Note: tilde expansion is tied to ResolveEnvVars option
+		require.Equal(t, input, expanded)
+	})
+}
+
+// TestDefaultPathResolver_MakeAbsolute tests absolute path conversion.
+func TestDefaultPathResolver_MakeAbsolute(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("already_absolute", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			absPath := "C:\\absolute\\path"
+			got, err := resolver.MakeAbsolute(absPath)
+			require.NoError(t, err)
+			require.Equal(t, absPath, got)
+		} else {
+			absPath := "/absolute/path"
+			got, err := resolver.MakeAbsolute(absPath)
+			require.NoError(t, err)
+			require.Equal(t, absPath, got)
+		}
+	})
+
+	t.Run("relative_path", func(t *testing.T) {
+		relativePath := "relative/path"
+		got, err := resolver.MakeAbsolute(relativePath)
+		require.NoError(t, err)
+		require.True(t, filepath.IsAbs(got))
+		require.Contains(t, got, "relative/path")
+	})
+}
+
+// TestDefaultPathResolver_Home tests home directory resolution.
+func TestDefaultPathResolver_Home(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("returns_HOME_when_set", func(t *testing.T) {
+		t.Setenv("HOME", "/custom/home")
+		got := resolver.Home()
+		require.Equal(t, "/custom/home", got)
+	})
+
+	t.Run("windows_fallbacks", func(t *testing.T) {
+		if runtime.GOOS != "windows" {
+			t.Skip("Windows-specific test")
+		}
+
+		// Test USERPROFILE fallback - need to unset HOME first
+		originalHome := os.Getenv("HOME")
+		require.NoError(t, os.Unsetenv("HOME"))
+		t.Setenv("USERPROFILE", "C:\\Users\\TestUser")
+		t.Cleanup(func() {
+			if originalHome != "" {
+				require.NoError(t, os.Setenv("HOME", originalHome))
+			}
+		})
+
+		got := resolver.Home()
+		require.Equal(t, "C:\\Users\\TestUser", got)
+	})
+}
+
+// TestDefaultPathResolver_XDG tests XDG base directory support.
+func TestDefaultPathResolver_XDG(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("xdg_config_home", func(t *testing.T) {
+		t.Setenv("XDG_CONFIG_HOME", "/custom/config")
+		got := resolver.ConfigDir("myapp")
+		require.Equal(t, "/custom/config/myapp", got)
+	})
+
+	t.Run("xdg_data_home", func(t *testing.T) {
+		t.Setenv("XDG_DATA_HOME", "/custom/data")
+		got := resolver.DataDir("myapp")
+		require.Equal(t, "/custom/data/myapp", got)
+	})
+
+	t.Run("xdg_cache_home", func(t *testing.T) {
+		t.Setenv("XDG_CACHE_HOME", "/custom/cache")
+		got := resolver.CacheDir("myapp")
+		require.Equal(t, "/custom/cache/myapp", got)
+	})
+}
+
+// TestDefaultPathResolver_GOPATH tests GOPATH resolution.
+func TestDefaultPathResolver_GOPATH(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("uses_env_var_when_set", func(t *testing.T) {
+		t.Setenv("GOPATH", "/custom/gopath")
+		got := resolver.GOPATH()
+		require.Equal(t, "/custom/gopath", got)
+	})
+
+	t.Run("defaults_to_home_go", func(t *testing.T) {
+		// Unset GOPATH to force fallback
+		originalGopath := os.Getenv("GOPATH")
+		require.NoError(t, os.Unsetenv("GOPATH"))
+		t.Setenv("HOME", "/home/testuser")
+		t.Cleanup(func() {
+			if originalGopath != "" {
+				require.NoError(t, os.Setenv("GOPATH", originalGopath))
+			}
+		})
+
+		got := resolver.GOPATH()
+		require.Equal(t, "/home/testuser/go", got)
+	})
+}
+
+// TestDefaultPathResolver_GOCACHE tests GOCACHE resolution.
+func TestDefaultPathResolver_GOCACHE(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("uses_env_var_when_set", func(t *testing.T) {
+		t.Setenv("GOCACHE", "/custom/go-build")
+		got := resolver.GOCACHE()
+		require.Equal(t, "/custom/go-build", got)
+	})
+}
+
+// TestDefaultPathResolver_GOMODCACHE tests GOMODCACHE resolution.
+func TestDefaultPathResolver_GOMODCACHE(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("uses_env_var_when_set", func(t *testing.T) {
+		t.Setenv("GOMODCACHE", "/custom/mod")
+		got := resolver.GOMODCACHE()
+		require.Equal(t, "/custom/mod", got)
+	})
+
+	t.Run("defaults_to_gopath_pkg_mod", func(t *testing.T) {
+		// Unset GOMODCACHE to force fallback
+		originalGomodcache := os.Getenv("GOMODCACHE")
+		require.NoError(t, os.Unsetenv("GOMODCACHE"))
+		t.Setenv("GOPATH", "/custom/gopath")
+		t.Cleanup(func() {
+			if originalGomodcache != "" {
+				require.NoError(t, os.Setenv("GOMODCACHE", originalGomodcache))
+			}
+		})
+
+		got := resolver.GOMODCACHE()
+		require.Equal(t, "/custom/gopath/pkg/mod", got)
+	})
+}

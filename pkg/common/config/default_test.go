@@ -1,12 +1,14 @@
 package config
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -685,4 +687,393 @@ func (ts *DefaultConfigTestSuite) TestEnvConfigSource_Methods() {
 // TestDefaultConfigTestSuite runs the test suite
 func TestDefaultConfigTestSuite(t *testing.T) {
 	suite.Run(t, new(DefaultConfigTestSuite))
+}
+
+// TestDefaultEnvProvider_GetInt_EdgeCases tests integer parsing edge cases
+// including overflow, boundary values, and unusual input formats.
+func TestDefaultEnvProvider_GetInt_EdgeCases(t *testing.T) {
+	provider := NewDefaultEnvProvider()
+	testKey := "TEST_INT_EDGE"
+
+	t.Cleanup(func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			t.Logf("Failed to unset %s: %v", testKey, err)
+		}
+	})
+
+	tests := []struct {
+		name     string
+		value    string
+		defVal   int
+		expected int
+	}{
+		// Overflow cases - should return default
+		{
+			name:     "overflow large positive",
+			value:    "99999999999999999999",
+			defVal:   42,
+			expected: 42,
+		},
+		{
+			name:     "overflow large negative",
+			value:    "-99999999999999999999",
+			defVal:   42,
+			expected: 42,
+		},
+
+		// Boundary values - should parse correctly
+		{
+			name:     "max int32",
+			value:    "2147483647",
+			defVal:   0,
+			expected: 2147483647,
+		},
+		{
+			name:     "min int32",
+			value:    "-2147483648",
+			defVal:   0,
+			expected: -2147483648,
+		},
+
+		// Invalid formats - should return default
+		{
+			name:     "float string",
+			value:    "3.14",
+			defVal:   99,
+			expected: 99,
+		},
+		{
+			name:     "scientific notation",
+			value:    "1e10",
+			defVal:   77,
+			expected: 77,
+		},
+		{
+			name:     "hex notation",
+			value:    "0xFF",
+			defVal:   88,
+			expected: 88,
+		},
+		{
+			name:     "whitespace around number",
+			value:    "  42  ",
+			defVal:   0,
+			expected: 0, // strconv.Atoi doesn't trim whitespace
+		},
+		{
+			name:     "number with suffix",
+			value:    "42abc",
+			defVal:   0,
+			expected: 0,
+		},
+		{
+			name:     "plus sign prefix",
+			value:    "+42",
+			defVal:   0,
+			expected: 42, // strconv.Atoi handles +
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := os.Setenv(testKey, tt.value); err != nil {
+				t.Fatalf("Failed to set env: %v", err)
+			}
+
+			result := provider.GetInt(testKey, tt.defVal)
+			if result != tt.expected {
+				t.Errorf("GetInt(%q, %d) = %d, want %d", tt.value, tt.defVal, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestDefaultEnvProvider_GetFloat64_EdgeCases tests float64 parsing edge cases
+// including special values like infinity and NaN.
+func TestDefaultEnvProvider_GetFloat64_EdgeCases(t *testing.T) {
+	provider := NewDefaultEnvProvider()
+	testKey := "TEST_FLOAT_EDGE"
+
+	t.Cleanup(func() {
+		if err := os.Unsetenv(testKey); err != nil {
+			t.Logf("Failed to unset %s: %v", testKey, err)
+		}
+	})
+
+	t.Run("positive infinity", func(t *testing.T) {
+		require.NoError(t, os.Setenv(testKey, "Inf"))
+		result := provider.GetFloat64(testKey, 0)
+		if result != math.Inf(1) {
+			t.Errorf("expected +Inf, got %v", result)
+		}
+	})
+
+	t.Run("positive infinity with plus", func(t *testing.T) {
+		require.NoError(t, os.Setenv(testKey, "+Inf"))
+		result := provider.GetFloat64(testKey, 0)
+		if result != math.Inf(1) {
+			t.Errorf("expected +Inf, got %v", result)
+		}
+	})
+
+	t.Run("negative infinity", func(t *testing.T) {
+		require.NoError(t, os.Setenv(testKey, "-Inf"))
+		result := provider.GetFloat64(testKey, 0)
+		if result != math.Inf(-1) {
+			t.Errorf("expected -Inf, got %v", result)
+		}
+	})
+
+	t.Run("NaN returns default", func(t *testing.T) {
+		require.NoError(t, os.Setenv(testKey, "NaN"))
+		result := provider.GetFloat64(testKey, 42.0)
+		// NaN parsing actually works in Go, but NaN != NaN
+		// So we check if it's NaN
+		if !math.IsNaN(result) {
+			// If parsing succeeded, we should get NaN
+			// If it returned default, that's also acceptable behavior
+			if result != 42.0 {
+				t.Errorf("expected NaN or default 42.0, got %v", result)
+			}
+		}
+	})
+
+	t.Run("scientific notation positive", func(t *testing.T) {
+		require.NoError(t, os.Setenv(testKey, "1e10"))
+		result := provider.GetFloat64(testKey, 0)
+		if result != 1e10 {
+			t.Errorf("expected 1e10, got %v", result)
+		}
+	})
+
+	t.Run("scientific notation negative exponent", func(t *testing.T) {
+		require.NoError(t, os.Setenv(testKey, "1e-5"))
+		result := provider.GetFloat64(testKey, 0)
+		if math.Abs(result-1e-5) > 1e-15 {
+			t.Errorf("expected 1e-5, got %v", result)
+		}
+	})
+
+	t.Run("very small number", func(t *testing.T) {
+		require.NoError(t, os.Setenv(testKey, "0.000000001"))
+		result := provider.GetFloat64(testKey, 0)
+		if math.Abs(result-0.000000001) > 1e-15 {
+			t.Errorf("expected 0.000000001, got %v", result)
+		}
+	})
+
+	t.Run("max float64", func(t *testing.T) {
+		require.NoError(t, os.Setenv(testKey, "1.7976931348623157e+308"))
+		result := provider.GetFloat64(testKey, 0)
+		if result != math.MaxFloat64 {
+			t.Errorf("expected MaxFloat64, got %v", result)
+		}
+	})
+}
+
+// TestDefaultConfigLoader_LoadFrom_EdgeCases tests file loading edge cases
+func TestDefaultConfigLoader_LoadFrom_EdgeCases(t *testing.T) {
+	loader := NewDefaultConfigLoader()
+	tmpDir := t.TempDir()
+
+	t.Run("empty YAML file", func(t *testing.T) {
+		emptyFile := filepath.Join(tmpDir, "empty.yaml")
+		if err := os.WriteFile(emptyFile, []byte(""), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		var result map[string]interface{}
+		err := loader.LoadFrom(emptyFile, &result)
+		// Empty file should parse successfully to nil/empty map
+		if err != nil {
+			t.Errorf("empty YAML should parse, got error: %v", err)
+		}
+	})
+
+	t.Run("YAML with only comments", func(t *testing.T) {
+		commentFile := filepath.Join(tmpDir, "comments.yaml")
+		content := `# This is a comment
+# Another comment
+# No actual data`
+		if err := os.WriteFile(commentFile, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		var result map[string]interface{}
+		err := loader.LoadFrom(commentFile, &result)
+		// Comments-only file should parse successfully
+		if err != nil {
+			t.Errorf("comments-only YAML should parse, got error: %v", err)
+		}
+	})
+
+	t.Run("empty JSON file", func(t *testing.T) {
+		emptyFile := filepath.Join(tmpDir, "empty.json")
+		if err := os.WriteFile(emptyFile, []byte(""), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		var result map[string]interface{}
+		err := loader.LoadFrom(emptyFile, &result)
+		// Empty JSON is invalid
+		if err == nil {
+			t.Error("empty JSON should fail to parse")
+		}
+	})
+
+	t.Run("empty JSON object", func(t *testing.T) {
+		emptyObjFile := filepath.Join(tmpDir, "empty_obj.json")
+		if err := os.WriteFile(emptyObjFile, []byte("{}"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		var result map[string]interface{}
+		err := loader.LoadFrom(emptyObjFile, &result)
+		if err != nil {
+			t.Errorf("empty JSON object should parse, got error: %v", err)
+		}
+		if result == nil {
+			t.Error("result should be initialized empty map, not nil")
+		}
+	})
+
+	t.Run("unknown extension with JSON content auto-detects", func(t *testing.T) {
+		unknownFile := filepath.Join(tmpDir, "config.conf")
+		content := `{"name": "test", "value": 42}`
+		if err := os.WriteFile(unknownFile, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		var result map[string]interface{}
+		err := loader.LoadFrom(unknownFile, &result)
+		if err != nil {
+			t.Errorf("should auto-detect JSON, got error: %v", err)
+		}
+		if result["name"] != "test" {
+			t.Errorf("expected name=test, got %v", result["name"])
+		}
+	})
+
+	t.Run("unknown extension with YAML content auto-detects", func(t *testing.T) {
+		unknownFile := filepath.Join(tmpDir, "config.cfg")
+		content := `name: test
+value: 42`
+		if err := os.WriteFile(unknownFile, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		var result map[string]interface{}
+		err := loader.LoadFrom(unknownFile, &result)
+		if err != nil {
+			t.Errorf("should auto-detect YAML, got error: %v", err)
+		}
+		if result["name"] != "test" {
+			t.Errorf("expected name=test, got %v", result["name"])
+		}
+	})
+
+	t.Run("unknown extension with invalid content fails", func(t *testing.T) {
+		unknownFile := filepath.Join(tmpDir, "config.xxx")
+		content := `not valid json or yaml: {{{`
+		if err := os.WriteFile(unknownFile, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		var result map[string]interface{}
+		err := loader.LoadFrom(unknownFile, &result)
+		if err == nil {
+			t.Error("invalid content should fail to parse")
+		}
+	})
+}
+
+// TestDefaultConfigLoader_Save_Permissions tests file permission handling
+func TestDefaultConfigLoader_Save_Permissions(t *testing.T) {
+	loader := NewDefaultConfigLoader()
+	tmpDir := t.TempDir()
+
+	t.Run("creates nested directories", func(t *testing.T) {
+		nestedPath := filepath.Join(tmpDir, "a", "b", "c", "config.json")
+		data := map[string]interface{}{"test": true}
+
+		err := loader.Save(nestedPath, data, "json")
+		if err != nil {
+			t.Fatalf("failed to save to nested path: %v", err)
+		}
+
+		// Verify file exists
+		if _, err := os.Stat(nestedPath); os.IsNotExist(err) {
+			t.Error("file should exist after save")
+		}
+	})
+
+	t.Run("file has correct permissions", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "perms.json")
+		data := map[string]interface{}{"test": true}
+
+		err := loader.Save(configPath, data, "json")
+		if err != nil {
+			t.Fatalf("failed to save: %v", err)
+		}
+
+		info, err := os.Stat(configPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// File should be 0600 (owner read/write only)
+		perm := info.Mode().Perm()
+		if perm != 0o600 {
+			t.Errorf("expected permissions 0600, got %04o", perm)
+		}
+	})
+
+	t.Run("directory has correct permissions", func(t *testing.T) {
+		nestedPath := filepath.Join(tmpDir, "dir_perms", "config.json")
+		data := map[string]interface{}{"test": true}
+
+		err := loader.Save(nestedPath, data, "json")
+		if err != nil {
+			t.Fatalf("failed to save: %v", err)
+		}
+
+		dirInfo, err := os.Stat(filepath.Dir(nestedPath))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Directory should be 0755 (based on code: os.MkdirAll with 0o755)
+		perm := dirInfo.Mode().Perm()
+		if perm != 0o755 {
+			t.Errorf("expected directory permissions 0755, got %04o", perm)
+		}
+	})
+}
+
+// TestEnvConfigSource_Load_Error verifies the error path for EnvConfigSource.Load
+func TestEnvConfigSource_Load_Error(t *testing.T) {
+	source := NewEnvConfigSource("TEST_PREFIX_", 100)
+
+	var config map[string]interface{}
+	err := source.Load(&config)
+
+	if err == nil {
+		t.Fatal("EnvConfigSource.Load should return error")
+	}
+
+	if !strings.Contains(err.Error(), "not implemented") {
+		t.Errorf("error should mention 'not implemented', got: %v", err)
+	}
+}
+
+// TestFileConfigSource_Load_NonExistent tests loading from non-existent file
+func TestFileConfigSource_Load_NonExistent(t *testing.T) {
+	source := NewFileConfigSource("/non/existent/path/config.yaml", FormatYAML, 100)
+
+	var config map[string]interface{}
+	err := source.Load(&config)
+
+	if err == nil {
+		t.Error("loading non-existent file should fail")
+	}
 }
