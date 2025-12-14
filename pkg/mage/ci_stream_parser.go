@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"os"
 	"regexp"
@@ -61,6 +62,9 @@ type StreamParser interface {
 
 	// Flush finalizes parsing and returns any pending failures
 	Flush() []CITestFailure
+
+	// GetUniqueTestCount returns the number of unique tests seen
+	GetUniqueTestCount() int
 }
 
 // RingBuffer implements a fixed-size circular buffer for context lines
@@ -133,7 +137,8 @@ type streamParser struct {
 	maxOutputSize int
 	mu            sync.Mutex
 	failures      []CITestFailure
-	signatures    map[string]bool // for deduplication
+	signatures    map[string]bool     // for deduplication
+	uniqueTests   map[uint64]struct{} // hash-based unique test tracking (memory efficient)
 	testCount     atomic.Int32
 	passCount     atomic.Int32
 	failCount     atomic.Int32
@@ -161,6 +166,7 @@ func NewStreamParser(contextLines int, dedup bool) StreamParser {
 		maxOutputSize: MaxOutputSize,
 		failures:      make([]CITestFailure, 0),
 		signatures:    make(map[string]bool),
+		uniqueTests:   make(map[uint64]struct{}),
 		currentTest:   make(map[string]*testState),
 		dedup:         dedup,
 		adaptiveMode:  true,
@@ -179,10 +185,19 @@ func NewStreamParserWithOptions(opts StreamParserOptions) StreamParser {
 		maxOutputSize: maxOutput,
 		failures:      make([]CITestFailure, 0),
 		signatures:    make(map[string]bool),
+		uniqueTests:   make(map[uint64]struct{}),
 		currentTest:   make(map[string]*testState),
 		dedup:         opts.Dedup,
 		adaptiveMode:  opts.AdaptiveMode,
 	}
+}
+
+// hashTestKey generates a 64-bit hash for unique test tracking.
+// Uses FNV-1a for fast, well-distributed hashes with minimal memory overhead.
+func hashTestKey(key string) uint64 {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(key)) // hash.Write never returns error per Go docs
+	return h.Sum64()
 }
 
 // StreamParserOptions contains options for creating a StreamParser
@@ -277,6 +292,12 @@ func (p *streamParser) OnTestStart(pkg, test string) {
 		started: true,
 	}
 	newCount := p.testCount.Add(1)
+
+	// Track unique tests using hash for memory efficiency
+	hash := hashTestKey(key)
+	if _, exists := p.uniqueTests[hash]; !exists {
+		p.uniqueTests[hash] = struct{}{}
+	}
 
 	// Adaptive strategy selection: re-evaluate at thresholds
 	if p.adaptiveMode && newCount%AdaptiveStrategyThreshold == 0 {
@@ -440,6 +461,15 @@ func filterParentTests(failures []CITestFailure) []CITestFailure {
 // GetStats returns test statistics
 func (p *streamParser) GetStats() (total, passed, failed, skipped int) {
 	return int(p.testCount.Load()), int(p.passCount.Load()), int(p.failCount.Load()), int(p.skipCount.Load())
+}
+
+// GetUniqueTestCount returns the number of unique tests seen.
+// This counts each test only once, even if it runs multiple times
+// (e.g., with different build tags).
+func (p *streamParser) GetUniqueTestCount() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.uniqueTests)
 }
 
 // Flush finalizes parsing and returns any pending failures

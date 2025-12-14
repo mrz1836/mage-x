@@ -76,6 +76,20 @@ func (r *githubReporter) WriteStepSummary(result *CIResult) error {
 		return nil // Not running in GitHub Actions
 	}
 
+	// Allow workflows to skip step summary writing to avoid duplicate "Test Results" blocks.
+	// The completion report workflow writes a single consolidated summary instead.
+	// Check both env var names for flexibility (workflow uses MAGE_X_ prefix)
+	if os.Getenv("MAGE_X_CI_SKIP_STEP_SUMMARY") == "true" || os.Getenv("MAGEX_CI_SKIP_STEP_SUMMARY") == "true" {
+		return nil
+	}
+
+	// Skip writing empty summaries - these create confusing duplicate blocks with zeros
+	// A valid summary must have either: test results (Total > 0), a defined status, or failures
+	if result == nil ||
+		(result.Summary.Total == 0 && result.Summary.Status == "" && len(result.Failures) == 0) {
+		return nil
+	}
+
 	// Open file in append mode
 	f, err := os.OpenFile(r.stepSummaryFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {

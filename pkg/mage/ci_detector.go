@@ -157,7 +157,7 @@ func (d *ciDetector) applyEnvOverrides(mode *CIMode) {
 	// CI mode enable/disable
 	if v := d.envGetter("MAGE_X_CI_MODE"); v != "" {
 		switch strings.ToLower(v) {
-		case "true", "on", "1", "auto":
+		case trueValue, "on", "1", "auto":
 			mode.Enabled = true
 		case "false", "off", "0":
 			mode.Enabled = false
@@ -202,7 +202,7 @@ func (d *ciDetector) applyEnvOverrides(mode *CIMode) {
 	// Dedup override
 	if v := d.envGetter("MAGE_X_CI_DEDUP"); v != "" {
 		switch strings.ToLower(v) {
-		case "true", "on", "1":
+		case trueValue, "on", "1":
 			mode.Dedup = true
 		case "false", "off", "0":
 			mode.Dedup = false
@@ -219,7 +219,7 @@ func (d *ciDetector) applyParamOverrides(mode *CIMode, params map[string]string)
 	// CI mode enable/disable
 	if v, ok := params["ci"]; ok {
 		switch strings.ToLower(v) {
-		case "true", "on", "1", "":
+		case trueValue, "on", "1", "":
 			// Empty string means `ci` was passed without value (e.g., `magex test:unit ci`)
 			mode.Enabled = true
 		case "false", "off", "0":

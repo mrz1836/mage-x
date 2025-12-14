@@ -223,6 +223,103 @@ func TestGitHubReporter_WriteStepSummary_NoFile(t *testing.T) {
 	}
 }
 
+func TestGitHubReporter_WriteStepSummary_SkipsEmpty(t *testing.T) {
+	// Create temp file for GITHUB_STEP_SUMMARY
+	tmpDir := t.TempDir()
+	summaryFile := filepath.Join(tmpDir, "summary.md")
+	t.Setenv("GITHUB_STEP_SUMMARY", summaryFile)
+
+	reporter := &githubReporter{
+		stepSummaryFile: summaryFile,
+	}
+
+	// Empty result should be skipped - no file should be created
+	emptyResult := &CIResult{}
+	err := reporter.WriteStepSummary(emptyResult)
+	if err != nil {
+		t.Errorf("WriteStepSummary() error = %v", err)
+	}
+
+	// File should not exist because empty summary was skipped
+	if _, statErr := os.Stat(summaryFile); !os.IsNotExist(statErr) {
+		t.Error("Expected summary file to not be created for empty result")
+	}
+
+	// Nil result should also be skipped
+	err = reporter.WriteStepSummary(nil)
+	if err != nil {
+		t.Errorf("WriteStepSummary(nil) error = %v", err)
+	}
+
+	// Result with zeros but no status should be skipped
+	zeroResult := &CIResult{
+		Summary: CISummary{
+			Total:   0,
+			Passed:  0,
+			Failed:  0,
+			Skipped: 0,
+			Status:  "",
+		},
+	}
+	err = reporter.WriteStepSummary(zeroResult)
+	if err != nil {
+		t.Errorf("WriteStepSummary() error = %v", err)
+	}
+
+	// File should still not exist
+	if _, statErr := os.Stat(summaryFile); !os.IsNotExist(statErr) {
+		t.Error("Expected summary file to not be created for zero result with no status")
+	}
+
+	// Result with status but zero tests should be written (has meaningful status)
+	statusOnlyResult := &CIResult{
+		Summary: CISummary{
+			Status: TestStatusPassed,
+		},
+	}
+	err = reporter.WriteStepSummary(statusOnlyResult)
+	if err != nil {
+		t.Errorf("WriteStepSummary() error = %v", err)
+	}
+
+	// File should now exist because we had a valid status
+	if _, statErr := os.Stat(summaryFile); os.IsNotExist(statErr) {
+		t.Error("Expected summary file to be created for result with valid status")
+	}
+}
+
+func TestGitHubReporter_WriteStepSummary_EnvSkip(t *testing.T) {
+	// Create temp file for GITHUB_STEP_SUMMARY
+	tmpDir := t.TempDir()
+	summaryFile := filepath.Join(tmpDir, "summary.md")
+	t.Setenv("GITHUB_STEP_SUMMARY", summaryFile)
+	t.Setenv("MAGE_X_CI_SKIP_STEP_SUMMARY", "true")
+
+	reporter := &githubReporter{
+		stepSummaryFile: summaryFile,
+	}
+
+	// Result with valid data should still be skipped due to env var
+	result := &CIResult{
+		Summary: CISummary{
+			Status:  TestStatusPassed,
+			Total:   10,
+			Passed:  10,
+			Failed:  0,
+			Skipped: 0,
+		},
+	}
+	err := reporter.WriteStepSummary(result)
+	if err != nil {
+		t.Errorf("WriteStepSummary() error = %v", err)
+	}
+
+	// File should not exist because env var skipped writing
+	if _, statErr := os.Stat(summaryFile); !os.IsNotExist(statErr) {
+		t.Error("Expected summary file to not be created when MAGE_X_CI_SKIP_STEP_SUMMARY is set")
+	}
+}
+
 func TestGitHubReporter_WriteOutputs(t *testing.T) {
 	// Create temp file for GITHUB_OUTPUT
 	tmpDir := t.TempDir()

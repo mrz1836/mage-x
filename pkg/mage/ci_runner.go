@@ -200,6 +200,7 @@ func (r *ciRunner) collectResults() {
 	defer r.mu.Unlock()
 
 	total, passed, failed, skipped := r.parser.GetStats()
+	uniqueTotal := r.parser.GetUniqueTestCount()
 	failures := r.parser.GetFailures()
 
 	// Determine status
@@ -212,12 +213,13 @@ func (r *ciRunner) collectResults() {
 
 	r.results = &CIResult{
 		Summary: CISummary{
-			Status:   status,
-			Total:    total,
-			Passed:   passed,
-			Failed:   len(failures), // Use deduplicated count, not raw count which includes parent tests
-			Skipped:  skipped,
-			Duration: formatDurationForSummary(duration),
+			Status:      status,
+			Total:       total,
+			UniqueTotal: uniqueTotal,
+			Passed:      passed,
+			Failed:      len(failures), // Use deduplicated count, not raw count which includes parent tests
+			Skipped:     skipped,
+			Duration:    formatDurationForSummary(duration),
 		},
 		Failures:  failures,
 		Timestamp: r.startTime,
