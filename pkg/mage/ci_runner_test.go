@@ -3,6 +3,7 @@ package mage
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -27,8 +28,9 @@ func (m *mockCommandRunner) RunCmdOutput(name string, args ...string) (string, e
 	return m.output, m.err
 }
 
-// mockReporter for testing
+// mockReporter for testing (thread-safe for concurrent tests)
 type mockReporter struct {
+	mu            sync.Mutex
 	started       bool
 	failures      []CITestFailure
 	summaryCalled bool
@@ -36,21 +38,29 @@ type mockReporter struct {
 }
 
 func (m *mockReporter) Start(_ CIMetadata) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.started = true
 	return nil
 }
 
 func (m *mockReporter) ReportFailure(f CITestFailure) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.failures = append(m.failures, f)
 	return nil
 }
 
 func (m *mockReporter) WriteSummary(_ *CIResult) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.summaryCalled = true
 	return nil
 }
 
 func (m *mockReporter) Close() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.closed = true
 	return nil
 }
@@ -798,5 +808,122 @@ func TestSliceModificationBugFix(t *testing.T) {
 		if newArgs[i] != v {
 			t.Errorf("New slice at %d = %q, want %q", i, newArgs[i], v)
 		}
+	}
+}
+
+// TestCIRunner_WithContext_FreshState verifies that WithContext creates independent
+// parser and results to avoid race conditions when multiple runners execute concurrently.
+func TestCIRunner_WithContext_FreshState(t *testing.T) {
+	t.Parallel()
+
+	base := &mockCommandRunner{}
+	mode := DefaultCIMode()
+	mode.Enabled = true
+
+	runner := NewCIRunner(base, CIRunnerOptions{
+		Mode: mode,
+	})
+
+	ctx1 := context.Background()
+	ctx2 := context.Background()
+
+	runner1 := runner.WithContext(ctx1)
+	runner2 := runner.WithContext(ctx2)
+
+	// Verify they are different instances
+	r1, ok1 := runner1.(*ciRunner)
+	r2, ok2 := runner2.(*ciRunner)
+	if !ok1 || !ok2 {
+		t.Fatal("WithContext did not return ciRunner instances")
+	}
+
+	// Verify they have independent parsers
+	if r1.parser == r2.parser {
+		t.Error("WithContext should create independent parsers to avoid race conditions")
+	}
+
+	// Verify they have independent results
+	if r1.results == r2.results {
+		t.Error("WithContext should create independent results to avoid race conditions")
+	}
+
+	// Verify they share the same reporter (which has its own mutex)
+	if r1.reporter != r2.reporter {
+		t.Error("WithContext should share the reporter (reporters have internal mutex)")
+	}
+}
+
+// TestCIRunner_ConcurrentWithContext tests that multiple runners created via
+// WithContext can be used concurrently without race conditions.
+// Run with: go test -race -run TestCIRunner_ConcurrentWithContext
+func TestCIRunner_ConcurrentWithContext(t *testing.T) {
+	t.Parallel()
+
+	base := &mockCommandRunner{}
+	mode := DefaultCIMode()
+	mode.Enabled = true
+
+	runner := NewCIRunner(base, CIRunnerOptions{
+		Mode: mode,
+	})
+
+	const numGoroutines = 10
+	done := make(chan bool, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			defer func() { done <- true }()
+
+			ctx := context.Background()
+			ctxRunner := runner.WithContext(ctx)
+
+			// Access results concurrently
+			results := ctxRunner.GetResults()
+			if results == nil {
+				t.Errorf("goroutine %d: GetResults returned nil", id)
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < numGoroutines; i++ {
+		<-done
+	}
+}
+
+// TestCIRunner_StartedFlagRace tests that the started flag is properly protected
+// against race conditions.
+// Run with: go test -race -run TestCIRunner_StartedFlagRace
+func TestCIRunner_StartedFlagRace(t *testing.T) {
+	t.Parallel()
+
+	base := &mockCommandRunner{}
+	reporter := &mockReporter{}
+	mode := DefaultCIMode()
+	mode.Enabled = true
+
+	runner, ok := NewCIRunner(base, CIRunnerOptions{
+		Mode:     mode,
+		Reporter: reporter,
+	}).(*ciRunner)
+	if !ok {
+		t.Fatal("NewCIRunner did not return ciRunner")
+	}
+
+	// Concurrent access to started flag via GenerateReport
+	const numGoroutines = 5
+	done := make(chan bool, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			defer func() { done <- true }()
+			// This should not race thanks to mutex protection
+			//nolint:errcheck,gosec // Errors are acceptable in concurrency test
+			runner.GenerateReport()
+		}()
+	}
+
+	for i := 0; i < numGoroutines; i++ {
+		<-done
 	}
 }
