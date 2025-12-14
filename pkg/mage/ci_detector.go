@@ -93,6 +93,8 @@ func (d *ciDetector) Platform() string {
 	if d.envGetter("JENKINS_URL") != "" {
 		return "jenkins"
 	}
+	// Azure Pipelines sets TF_BUILD to "True" (capital T), unlike other CI systems
+	// that typically use lowercase "true". This is documented behavior from Microsoft.
 	if d.envGetter("TF_BUILD") == "True" {
 		return "azure"
 	}
