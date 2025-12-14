@@ -189,9 +189,13 @@ func (r *jsonReporter) Close() error {
 	return nil
 }
 
-// writeLine writes a single JSON line to the output
+// writeLine writes a single JSON line to the output.
+// IMPORTANT: Caller MUST hold r.mu before calling this method.
+// All public methods (Start, ReportFailure, WriteSummary) acquire the lock
+// before calling writeLine.
 func (r *jsonReporter) writeLine(line jsonLine) error {
 	// Skip writing if disk error already occurred
+	// (r.diskError is safe to read here since caller holds r.mu)
 	if r.diskError {
 		return nil // Silently skip - already warned user
 	}
