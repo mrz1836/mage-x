@@ -1,0 +1,173 @@
+// Package mage CI mode interface contracts
+// This file documents the Go interfaces that will be implemented.
+// It is NOT executable code - it serves as a contract specification.
+
+package mage
+
+import (
+	"context"
+	"io"
+	"time"
+)
+
+// =============================================================================
+// Fuzz Info Struct (for fuzz test failures)
+// =============================================================================
+
+// FuzzInfo contains fuzz test specific failure details
+type FuzzInfo struct {
+	CorpusPath string `json:"corpus_path,omitempty"` // Path to failing input file
+	Input      string `json:"input,omitempty"`       // Failing input (base64 if binary)
+	IsBinary   bool   `json:"is_binary,omitempty"`   // True if input is binary
+	FromSeed   bool   `json:"from_seed,omitempty"`   // True if from seed corpus
+}
+
+// =============================================================================
+// CI Detection Contract
+// =============================================================================
+
+// CIDetector detects CI environment and determines mode
+type CIDetector interface {
+	// IsCI returns true if running in a CI environment
+	IsCI() bool
+
+	// Platform returns the detected CI platform (github, gitlab, etc.)
+	Platform() string
+
+	// GetConfig returns the effective CI configuration
+	// Priority: explicit param > environment > config > default
+	GetConfig(params map[string]string, cfg *Config) CIMode
+}
+
+// =============================================================================
+// Stream Parser Contract
+// =============================================================================
+
+// TestEventHandler processes test events from go test -json
+type TestEventHandler interface {
+	// OnTestStart called when a test begins
+	OnTestStart(pkg, test string)
+
+	// OnTestPass called when a test passes
+	OnTestPass(pkg, test string, elapsed float64)
+
+	// OnTestFail called when a test fails
+	OnTestFail(pkg, test string, elapsed float64, output string)
+
+	// OnTestSkip called when a test is skipped
+	OnTestSkip(pkg, test string, elapsed float64)
+
+	// OnOutput called for each output line
+	OnOutput(pkg, test string, output string)
+
+	// GetFailures returns all collected failures
+	GetFailures() []TestFailure
+
+	// GetStats returns test statistics
+	GetStats() (total, passed, failed, skipped int)
+}
+
+// StreamParser parses go test -json output line by line
+type StreamParser interface {
+	TestEventHandler
+
+	// ParseLine processes a single line of JSON output
+	ParseLine(line []byte) error
+
+	// Flush finalizes parsing and returns any pending failures
+	Flush() []TestFailure
+}
+
+// =============================================================================
+// Reporter Contract
+// =============================================================================
+
+// CIReporter writes CI output in various formats
+type CIReporter interface {
+	// Start begins the test run report
+	Start(metadata CIMetadata) error
+
+	// ReportFailure reports a single test failure
+	ReportFailure(failure TestFailure) error
+
+	// WriteSummary writes the final summary
+	WriteSummary(result *CIResult) error
+
+	// Close finalizes and closes the reporter
+	Close() error
+}
+
+// GitHubReporter outputs GitHub Actions workflow commands
+type GitHubReporter interface {
+	CIReporter
+
+	// WriteStepSummary writes markdown to GITHUB_STEP_SUMMARY
+	WriteStepSummary(result *CIResult) error
+
+	// WriteOutputs writes key-value pairs to GITHUB_OUTPUT
+	WriteOutputs(outputs map[string]string) error
+}
+
+// JSONReporter outputs JSON Lines format
+type JSONReporter interface {
+	CIReporter
+
+	// SetWriter allows redirecting output
+	SetWriter(w io.Writer)
+}
+
+// =============================================================================
+// CI Runner Contract
+// =============================================================================
+
+// CIRunnerOptions configures CI runner behavior
+type CIRunnerOptions struct {
+	Mode     CIMode
+	Reporter CIReporter
+}
+
+// CIRunner wraps CommandRunner for CI output interception
+type CIRunner interface {
+	CommandRunner
+
+	// WithContext returns a context-aware runner
+	WithContext(ctx context.Context) CIRunner
+
+	// GetResults returns the collected CI results
+	GetResults() *CIResult
+
+	// GenerateReport writes the final report
+	GenerateReport() error
+}
+
+// =============================================================================
+// Factory Functions Contract
+// =============================================================================
+
+// NewCIDetector creates a new CI detector
+// func NewCIDetector() CIDetector
+
+// NewStreamParser creates a new stream parser
+// func NewStreamParser(contextLines int) StreamParser
+
+// NewGitHubReporter creates a GitHub Actions reporter
+// func NewGitHubReporter() GitHubReporter
+
+// NewJSONReporter creates a JSON Lines reporter
+// func NewJSONReporter(path string) (JSONReporter, error)
+
+// NewCIRunner wraps a CommandRunner with CI capabilities
+// func NewCIRunner(base CommandRunner, opts CIRunnerOptions) CIRunner
+
+// =============================================================================
+// Internal Helpers (not part of public contract)
+// =============================================================================
+
+// extractLocation extracts file:line from test output
+// func extractLocation(output string) (file string, line int, col int, ok bool)
+
+// generateSignature creates deduplication key
+// func generateSignature(pkg, test, file string, line int) string
+
+// captureContext reads surrounding lines from source file
+// func captureContext(file string, line, contextLines int) ([]string, error)

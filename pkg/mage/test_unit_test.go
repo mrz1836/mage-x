@@ -1,7 +1,10 @@
 package mage
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -411,4 +414,175 @@ func TestBuildTestArgsWithOverridesTimeoutHandling(t *testing.T) {
 // Helper function to create bool pointers for tests
 func boolPtr(b bool) *bool {
 	return &b
+}
+
+func TestCalculateFuzzTimeout(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		args     []string
+		expected time.Duration
+	}{
+		{
+			name:     "default timeout when no fuzztime",
+			args:     []string{"test", "-fuzz=FuzzFoo"},
+			expected: 15 * time.Minute,
+		},
+		{
+			name:     "parses fuzztime with 5 minute buffer",
+			args:     []string{"test", "-fuzz=FuzzFoo", "-fuzztime", "10s"},
+			expected: 10*time.Second + 5*time.Minute,
+		},
+		{
+			name:     "parses longer fuzztime",
+			args:     []string{"test", "-fuzztime", "5m", "-fuzz=FuzzBar"},
+			expected: 5*time.Minute + 5*time.Minute,
+		},
+		{
+			name:     "caps at maxFuzzTimeout",
+			args:     []string{"test", "-fuzztime", "1h"},
+			expected: maxFuzzTimeout, // Should be capped at 30 minutes
+		},
+		{
+			name:     "handles invalid duration format",
+			args:     []string{"test", "-fuzztime", "invalid"},
+			expected: 15 * time.Minute, // Falls back to default
+		},
+		{
+			name:     "handles fuzztime at end of args",
+			args:     []string{"test", "-fuzz=FuzzFoo", "-fuzztime"},
+			expected: 15 * time.Minute, // Missing value, falls back
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := calculateFuzzTimeout(tt.args)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFindFuzzPackages(t *testing.T) {
+	// This test verifies findFuzzPackages uses native Go instead of grep
+	// Uses findFuzzPackagesInDir to avoid race conditions from os.Chdir
+
+	// Create temp directory with test files
+	tmpDir := t.TempDir()
+
+	// Create go.mod
+	goModContent := "module github.com/test/fuzztest\n\ngo 1.24\n"
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goModContent), 0o600))
+
+	// Create a test file WITH fuzz test
+	fuzzTestContent := `package fuzztest
+
+import "testing"
+
+func FuzzMyFunction(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// fuzz logic
+	})
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "fuzz_test.go"), []byte(fuzzTestContent), 0o600))
+
+	// Create a test file WITHOUT fuzz test
+	normalTestContent := `package fuzztest
+
+import "testing"
+
+func TestNormalFunction(t *testing.T) {
+	// normal test
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "normal_test.go"), []byte(normalTestContent), 0o600))
+
+	// Create a non-test file
+	nonTestContent := `package fuzztest
+
+func RegularFunction() {
+	// not a test
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "regular.go"), []byte(nonTestContent), 0o600))
+
+	// Create subdirectory with fuzz test
+	subDir := filepath.Join(tmpDir, "subpkg")
+	require.NoError(t, os.MkdirAll(subDir, 0o750))
+
+	subFuzzContent := `package subpkg
+
+import "testing"
+
+func FuzzSubFunction(f *testing.F) {
+	f.Add([]byte("seed"))
+	f.Fuzz(func(t *testing.T, data []byte) {})
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(subDir, "sub_fuzz_test.go"), []byte(subFuzzContent), 0o600))
+
+	// Create vendor directory that should be skipped
+	vendorDir := filepath.Join(tmpDir, "vendor", "example")
+	require.NoError(t, os.MkdirAll(vendorDir, 0o750))
+
+	vendorFuzzContent := `package example
+
+import "testing"
+
+func FuzzVendored(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {})
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(vendorDir, "vendor_fuzz_test.go"), []byte(vendorFuzzContent), 0o600))
+
+	// Run findFuzzPackagesInDir with the temp directory directly
+	// This avoids os.Chdir which causes race conditions in parallel tests
+	packages := findFuzzPackagesInDir(tmpDir)
+
+	// Should find packages with fuzz tests
+	assert.NotEmpty(t, packages, "Should find at least one fuzz package")
+
+	// Should include root package
+	foundRoot := false
+	for _, pkg := range packages {
+		if pkg == "github.com/test/fuzztest" {
+			foundRoot = true
+			break
+		}
+	}
+	assert.True(t, foundRoot, "Should find fuzz test in root package")
+
+	// Should include subpkg
+	foundSubpkg := false
+	for _, pkg := range packages {
+		if pkg == "github.com/test/fuzztest/subpkg" {
+			foundSubpkg = true
+			break
+		}
+	}
+	assert.True(t, foundSubpkg, "Should find fuzz test in subpkg")
+
+	// Should NOT include vendor directory
+	for _, pkg := range packages {
+		assert.NotContains(t, pkg, "vendor", "Should not include vendor directory")
+	}
+}
+
+func TestRunCoverageTestsForModulesWithRunner_NilConfig(t *testing.T) {
+	t.Parallel()
+
+	// Test that nil config returns appropriate error
+	err := runCoverageTestsForModulesWithRunner(nil, nil, false, nil, "", nil)
+	assert.ErrorIs(t, err, errConfigNil)
+}
+
+func TestRunTestsForModulesWithRunner_NilConfig(t *testing.T) {
+	t.Parallel()
+
+	// Test that nil config returns appropriate error
+	err := runTestsForModulesWithRunner(nil, nil, false, false, nil, "unit", "", nil)
+	assert.ErrorIs(t, err, errConfigNil)
 }

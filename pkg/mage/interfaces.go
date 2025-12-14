@@ -179,6 +179,17 @@ type CommandRunner interface {
 	RunCmdOutput(name string, args ...string) (string, error)
 }
 
+// DirRunner is an optional interface for command runners that support
+// executing commands in a specific working directory. This avoids
+// the goroutine-unsafe os.Chdir() when running commands in different directories.
+type DirRunner interface {
+	CommandRunner
+	// RunCmdInDir executes a command in the specified directory
+	RunCmdInDir(dir, name string, args ...string) error
+	// RunCmdOutputInDir executes a command in the specified directory and returns output
+	RunCmdOutputInDir(dir, name string, args ...string) (string, error)
+}
+
 // ContextCommandRunner provides enhanced CommandRunner with context support
 type ContextCommandRunner interface {
 	CommandRunner // Embed existing interface for backward compatibility
@@ -261,10 +272,22 @@ type CoverageInfo struct {
 
 // TestFailure represents a failed test
 type TestFailure struct {
-	Package string
-	Test    string
-	Error   string
-	Output  string
+	// Core fields (backwards compatible)
+	Package string `json:"package"`
+	Test    string `json:"test"`
+	Error   string `json:"error"`
+	Output  string `json:"output"`
+
+	// CI-specific fields (extended)
+	Type        string   `json:"type,omitempty"`         // Failure classification (test, build, panic, race, fuzz, timeout, fatal)
+	File        string   `json:"file,omitempty"`         // Source file path (relative)
+	Line        int      `json:"line,omitempty"`         // Line number
+	Column      int      `json:"column,omitempty"`       // Column (for build errors)
+	Stack       string   `json:"stack,omitempty"`        // Stack trace (for panics)
+	Context     []string `json:"context,omitempty"`      // Surrounding lines of code
+	Signature   string   `json:"signature,omitempty"`    // Deduplication key (pkg:test:file:line:type)
+	Duration    string   `json:"duration,omitempty"`     // Test duration
+	RaceRelated bool     `json:"race_related,omitempty"` // True if panic was triggered by race detector
 }
 
 // IBenchmarkOptions contains benchmark configuration

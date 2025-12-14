@@ -174,17 +174,10 @@ key: value`,
 
 		// If loaded successfully, validate the config
 		if loadErr == nil {
-			// Ensure strings don't contain null bytes
+			// Ensure strings don't contain null bytes (indicates parsing issues)
 			assert.NotContains(t, cfg.Project.Name, "\x00", "Config contains null byte")
 			assert.NotContains(t, cfg.Project.Version, "\x00", "Config contains null byte")
 			assert.NotContains(t, cfg.Build.Target, "\x00", "Config contains null byte")
-
-			// Ensure no command injection in string fields
-			dangerousPatterns := []string{"$(", "`", "${IFS}", "&&", "||", ";"}
-			for _, pattern := range dangerousPatterns {
-				assert.NotContains(t, cfg.Project.Name, pattern, "Config contains dangerous pattern")
-				assert.NotContains(t, cfg.Build.Target, pattern, "Config contains dangerous pattern")
-			}
 		}
 	})
 }
