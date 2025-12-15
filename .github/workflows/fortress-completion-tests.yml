@@ -130,6 +130,9 @@ jobs:
         run: |
           echo "🗂️ Flattening downloaded artifacts..."
 
+          # Source shared helper functions for artifact processing
+          source .github/scripts/parse-test-label.sh
+
           # Process stats artifacts (bench-stats, cache-stats JSON files)
           if [ -d "./artifacts/" ]; then
             find ./artifacts/ -name "*.json" -type f | while read -r file; do
@@ -147,14 +150,7 @@ jobs:
           if [ -d "./ci-artifacts/" ]; then
             echo "📋 Processing unit test CI results..."
             find ./ci-artifacts/ -name "*.jsonl" -type f | while read -r file; do
-              # Extract artifact directory name for unique naming
-              # Path structure: ci-artifacts/ARTIFACT_NAME/.mage-x/ci-results.jsonl
-              parent_dir=$(dirname "$file")
-              artifact_dir=$(dirname "$parent_dir" 2>/dev/null | xargs basename 2>/dev/null || basename "$parent_dir")
-              filename=$(basename "$file")
-              dest="ci-${artifact_dir}-${filename}"
-              echo "Copying CI results $file to ./$dest"
-              cp "$file" "./$dest"
+              copy_ci_artifact "$file" "ci"
             done
           fi
 
@@ -162,14 +158,7 @@ jobs:
           if [ -d "./test-artifacts/" ]; then
             echo "📋 Processing fuzz test CI results..."
             find ./test-artifacts/ -name "*.jsonl" -type f | while read -r file; do
-              # Extract artifact directory name for unique naming
-              # Path structure: test-artifacts/ARTIFACT_NAME/.mage-x/ci-results-fuzz.jsonl
-              parent_dir=$(dirname "$file")
-              artifact_dir=$(dirname "$parent_dir" 2>/dev/null | xargs basename 2>/dev/null || basename "$parent_dir")
-              filename=$(basename "$file")
-              dest="ci-${artifact_dir}-${filename}"
-              echo "Copying fuzz CI results $file to ./$dest"
-              cp "$file" "./$dest"
+              copy_ci_artifact "$file" "ci"
             done
           fi
 
@@ -190,41 +179,8 @@ jobs:
       - name: 🧪 Process Test Statistics
         id: process-tests
         run: |
-          # Helper function to generate human-readable test labels from artifact names
-          parse_test_label() {
-            local artifact_name="$1"
-
-            # Determine test type
-            local test_type="Unit Tests"
-            if [[ "$artifact_name" == *fuzz* ]]; then
-              test_type="Fuzz Tests"
-            fi
-
-            # Extract OS from artifact name
-            local os_name=""
-            if [[ "$artifact_name" =~ ubuntu ]]; then
-              os_name="Ubuntu"
-            elif [[ "$artifact_name" =~ windows ]]; then
-              os_name="Windows"
-            elif [[ "$artifact_name" =~ macos ]]; then
-              os_name="macOS"
-            fi
-
-            # Extract Go version (pattern like "1.24.x" or "1.22")
-            local go_version=""
-            go_version=$(echo "$artifact_name" | grep -oE '[0-9]+\.[0-9]+(\.[x0-9]+)?' | tail -1 || echo "")
-
-            # Build label
-            if [[ -n "$os_name" && -n "$go_version" ]]; then
-              echo "$test_type ($os_name, Go $go_version)"
-            elif [[ -n "$os_name" ]]; then
-              echo "$test_type ($os_name)"
-            elif [[ -n "$go_version" ]]; then
-              echo "$test_type (Go $go_version)"
-            else
-              echo "$test_type"
-            fi
-          }
+          # Source shared helper function for generating test labels
+          source .github/scripts/parse-test-label.sh
 
           # Initialize totals for summary
           TOTAL_TESTS=0
@@ -324,7 +280,7 @@ jobs:
               FAILURE_COUNT=0
               for jsonl_file in ci-*.jsonl; do
                 if [ -f "$jsonl_file" ] && [[ $FAILURE_COUNT -lt 20 ]]; then
-                  grep '"type":"failure"' "$jsonl_file" 2>/dev/null | while read -r line; do
+                  while read -r line; do
                     if [[ $FAILURE_COUNT -ge 20 ]]; then
                       break
                     fi
@@ -340,7 +296,7 @@ jobs:
 
                     echo "| \`$TEST\` | $PKG | ${ERROR:-_no message_} |"
                     FAILURE_COUNT=$((FAILURE_COUNT + 1))
-                  done >> tests-section.md || true
+                  done < <(grep '"type":"failure"' "$jsonl_file" 2>/dev/null) >> tests-section.md || true
                 fi
               done
 

@@ -102,52 +102,13 @@ jobs:
       - name: 🔍 Validate test results
         run: |
           echo "🔍 Validating test results from CI mode output..."
+          source .github/scripts/parse-test-label.sh
+
           VALIDATION_FAILED=false
           TOTAL_FAILURES=0
           TOTAL_UNIQUE=0
           TOTAL_TESTS=0
           TOTAL_SKIPPED=0
-
-          # Helper function to generate human-readable test labels
-          # Usage: parse_test_label "artifact-name" "jsonl-filename"
-          # Output: "Unit Tests (Ubuntu, Go 1.22)" or similar
-          parse_test_label() {
-            local artifact_name="$1"
-            local jsonl_name="$2"
-
-            # Determine test type from artifact prefix or JSONL name
-            local test_type="Tests"
-            if [[ "$artifact_name" == test-results-fuzz-* ]] || [[ "$jsonl_name" == *fuzz* ]]; then
-              test_type="Fuzz Tests"
-            elif [[ "$artifact_name" == ci-results-* ]]; then
-              test_type="Unit Tests"
-            fi
-
-            # Extract OS from artifact name
-            local os_name=""
-            if [[ "$artifact_name" =~ ubuntu ]]; then
-              os_name="Ubuntu"
-            elif [[ "$artifact_name" =~ windows ]]; then
-              os_name="Windows"
-            elif [[ "$artifact_name" =~ macos ]]; then
-              os_name="macOS"
-            fi
-
-            # Extract Go version (last segment like "1.22" or "go1.22")
-            local go_version=""
-            go_version=$(echo "$artifact_name" | grep -oE '[0-9]+\.[0-9]+$' || echo "")
-
-            # Build label
-            if [[ -n "$os_name" && -n "$go_version" ]]; then
-              echo "$test_type ($os_name, Go $go_version)"
-            elif [[ -n "$os_name" ]]; then
-              echo "$test_type ($os_name)"
-            elif [[ -n "$go_version" ]]; then
-              echo "$test_type (Go $go_version)"
-            else
-              echo "$test_type"
-            fi
-          }
 
           # Find all CI results files
           echo "📋 Looking for CI results files..."
@@ -163,6 +124,16 @@ jobs:
               # Path: ci-results/ARTIFACT_NAME/.mage-x/ci-results.jsonl
               ARTIFACT_DIR=$(dirname "$(dirname "$jsonl_file")" | xargs basename)
               JSONL_NAME=$(basename "$jsonl_file")
+
+              # Validate expected structure - warn but continue with fallback
+              PARENT_DIR=$(basename "$(dirname "$jsonl_file")")
+              if [[ "$PARENT_DIR" != ".mage-x" ]]; then
+                echo "  Warning: Unexpected artifact structure for: $jsonl_file"
+                echo "  Expected: ci-results/ARTIFACT_NAME/.mage-x/ci-results.jsonl"
+                # Fallback: use parent directory name as artifact identifier
+                ARTIFACT_DIR=$(basename "$(dirname "$jsonl_file")")
+              fi
+
               TEST_LABEL=$(parse_test_label "$ARTIFACT_DIR" "$JSONL_NAME")
 
               echo ""
@@ -275,46 +246,7 @@ jobs:
       - name: 📊 Create validation summary
         if: always()
         run: |
-          # Helper function to generate human-readable test labels
-          # Usage: parse_test_label "artifact-name" "jsonl-filename"
-          # Output: "Unit Tests (Ubuntu, Go 1.22)" or similar
-          parse_test_label() {
-            local artifact_name="$1"
-            local jsonl_name="$2"
-
-            # Determine test type from artifact prefix or JSONL name
-            local test_type="Tests"
-            if [[ "$artifact_name" == test-results-fuzz-* ]] || [[ "$jsonl_name" == *fuzz* ]]; then
-              test_type="Fuzz Tests"
-            elif [[ "$artifact_name" == ci-results-* ]]; then
-              test_type="Unit Tests"
-            fi
-
-            # Extract OS from artifact name
-            local os_name=""
-            if [[ "$artifact_name" =~ ubuntu ]]; then
-              os_name="Ubuntu"
-            elif [[ "$artifact_name" =~ windows ]]; then
-              os_name="Windows"
-            elif [[ "$artifact_name" =~ macos ]]; then
-              os_name="macOS"
-            fi
-
-            # Extract Go version (last segment like "1.22" or "go1.22")
-            local go_version=""
-            go_version=$(echo "$artifact_name" | grep -oE '[0-9]+\.[0-9]+$' || echo "")
-
-            # Build label
-            if [[ -n "$os_name" && -n "$go_version" ]]; then
-              echo "$test_type ($os_name, Go $go_version)"
-            elif [[ -n "$os_name" ]]; then
-              echo "$test_type ($os_name)"
-            elif [[ -n "$go_version" ]]; then
-              echo "$test_type (Go $go_version)"
-            else
-              echo "$test_type"
-            fi
-          }
+          source .github/scripts/parse-test-label.sh
 
           echo "## 🔍 Test Validation Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -369,6 +301,13 @@ jobs:
               # Path: ci-results/ARTIFACT_NAME/.mage-x/ci-results.jsonl
               ARTIFACT_DIR=$(dirname "$(dirname "$jsonl_file")" | xargs basename)
               JSONL_NAME=$(basename "$jsonl_file")
+
+              # Validate expected structure - use fallback if unexpected
+              PARENT_DIR=$(basename "$(dirname "$jsonl_file")")
+              if [[ "$PARENT_DIR" != ".mage-x" ]]; then
+                ARTIFACT_DIR=$(basename "$(dirname "$jsonl_file")")
+              fi
+
               TEST_LABEL=$(parse_test_label "$ARTIFACT_DIR" "$JSONL_NAME")
 
               SUMMARY=$(grep '"type":"summary"' "$jsonl_file" 2>/dev/null | head -1 || echo "")
@@ -397,7 +336,7 @@ jobs:
 
             FAILURE_COUNT=0
             for jsonl_file in $(find ci-results/ -name "*.jsonl" 2>/dev/null); do
-              grep '"type":"failure"' "$jsonl_file" 2>/dev/null | while read -r line; do
+              while read -r line; do
                 # Limit total failures shown
                 FAILURE_COUNT=$((FAILURE_COUNT + 1))
                 if [[ $FAILURE_COUNT -gt 20 ]]; then
@@ -457,7 +396,7 @@ jobs:
                 echo "" >> $GITHUB_STEP_SUMMARY
                 echo "</details>" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
-              done
+              done < <(grep '"type":"failure"' "$jsonl_file" 2>/dev/null)
             done
           fi
 
