@@ -1,0 +1,5 @@
+# Gitleaks ignore file - false positives
+# Format: commit:file:rule:line
+
+# Test variable name in env_test.go (not a real secret)
+160eab38cb1bf95613efb70c12e15ee30583f2dd:pkg/common/env/env_test.go:generic-api-key:652
