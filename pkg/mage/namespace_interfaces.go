@@ -448,8 +448,8 @@ type ModNamespace interface {
 
 // MetricsNamespace interface defines the contract for metrics operations
 type MetricsNamespace interface {
-	// LOC displays lines of code statistics
-	LOC() error
+	// LOC displays lines of code statistics (use json for JSON output)
+	LOC(args ...string) error
 
 	// Coverage analyzes test coverage across the codebase
 	Coverage() error

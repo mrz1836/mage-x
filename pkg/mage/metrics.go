@@ -3,6 +3,7 @@ package mage
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -28,36 +29,86 @@ var (
 // Metrics namespace for code metrics and analysis tasks
 type Metrics mg.Namespace
 
-// LOC displays lines of code statistics
-func (Metrics) LOC() error {
-	utils.Header("Lines of Code Statistics")
+// LOCResult represents JSON output for LOC statistics
+type LOCResult struct {
+	TestFilesLOC    int      `json:"test_files_loc"`
+	TestFilesCount  int      `json:"test_files_count"`
+	GoFilesLOC      int      `json:"go_files_loc"`
+	GoFilesCount    int      `json:"go_files_count"`
+	TotalLOC        int      `json:"total_loc"`
+	TotalFilesCount int      `json:"total_files_count"`
+	Date            string   `json:"date"`
+	ExcludedDirs    []string `json:"excluded_dirs"`
+}
 
-	// Count lines in test files
-	testCount, err := countLines("*_test.go", []string{"vendor", "third_party"})
+// LOCStats holds line and file counts
+type LOCStats struct {
+	Lines int
+	Files int
+}
+
+// LOC displays lines of code statistics (use json for JSON output)
+func (Metrics) LOC(args ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(args)
+	jsonOutput := utils.IsParamTrue(params, "json")
+
+	excludeDirs := []string{"vendor", "third_party"}
+
+	// Count lines and files in test files
+	testStats, err := countLinesWithStats("*_test.go", excludeDirs)
 	if err != nil {
-		utils.Warn("Failed to count test files: %v", err)
-		testCount = 0
+		if !jsonOutput {
+			utils.Warn("Failed to count test files: %v", err)
+		}
+		testStats = LOCStats{}
 	}
 
-	// Count lines in non-test Go files
-	goCount, err := countGoLines([]string{"vendor", "third_party"})
+	// Count lines and files in non-test Go files
+	goStats, err := countGoLinesWithStats(excludeDirs)
 	if err != nil {
-		utils.Warn("Failed to count Go files: %v", err)
-		goCount = 0
+		if !jsonOutput {
+			utils.Warn("Failed to count Go files: %v", err)
+		}
+		goStats = LOCStats{}
 	}
 
-	// Display table
 	date := time.Now().Format("2006-01-02")
+	totalLOC := testStats.Lines + goStats.Lines
+	totalFiles := testStats.Files + goStats.Files
+
+	if jsonOutput {
+		// JSON output - no headers, no success messages, just JSON
+		result := LOCResult{
+			TestFilesLOC:    testStats.Lines,
+			TestFilesCount:  testStats.Files,
+			GoFilesLOC:      goStats.Lines,
+			GoFilesCount:    goStats.Files,
+			TotalLOC:        totalLOC,
+			TotalFilesCount: totalFiles,
+			Date:            date,
+			ExcludedDirs:    excludeDirs,
+		}
+
+		jsonBytes, err := json.Marshal(result)
+		if err != nil {
+			return fmt.Errorf("failed to marshal JSON: %w", err)
+		}
+		utils.Println(string(jsonBytes))
+		return nil
+	}
+
+	// Default markdown table output
+	utils.Header("Lines of Code Statistics")
 
 	utils.Println("")
 	utils.Println("| Type       | Total Lines | Date       |")
 	utils.Println("|------------|-------------|------------|")
-	utils.Print("| Test Files | %-11s | %s |\n", formatNumberWithCommas(testCount), date)
-	utils.Print("| Go Files   | %-11s | %s |\n", formatNumberWithCommas(goCount), date)
+	utils.Print("| Test Files | %-11s | %s |\n", formatNumberWithCommas(testStats.Lines), date)
+	utils.Print("| Go Files   | %-11s | %s |\n", formatNumberWithCommas(goStats.Lines), date)
 	utils.Println("")
 
-	total := testCount + goCount
-	utils.Success("Total lines of code: %s", formatNumberWithCommas(total))
+	utils.Success("Total lines of code: %s", formatNumberWithCommas(totalLOC))
 
 	return nil
 }
@@ -314,7 +365,7 @@ func (Metrics) Quality() error {
 		name string
 		fn   func() error
 	}{
-		{"Lines of Code", Metrics{}.LOC},
+		{"Lines of Code", func() error { return Metrics{}.LOC() }},
 		{"Test Coverage", Metrics{}.Coverage},
 		{"Complexity", Metrics{}.Complexity},
 	}
@@ -404,9 +455,9 @@ func formatNumberWithCommas(n int) string {
 	return result
 }
 
-// countLines counts lines in files matching pattern
-func countLines(pattern string, excludeDirs []string) (int, error) {
-	count := 0
+// countLinesWithStats counts lines and files matching pattern
+func countLinesWithStats(pattern string, excludeDirs []string) (LOCStats, error) {
+	stats := LOCStats{}
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -426,7 +477,6 @@ func countLines(pattern string, excludeDirs []string) (int, error) {
 		// Check if file matches pattern
 		matched, err := filepath.Match(pattern, filepath.Base(path))
 		if err != nil {
-			// Log error but continue to check other files
 			utils.Debug("line count: failed to match pattern for %s: %v", path, err)
 			return nil
 		}
@@ -434,11 +484,13 @@ func countLines(pattern string, excludeDirs []string) (int, error) {
 			return nil
 		}
 
+		// Count this file
+		stats.Files++
+
 		// Count lines
 		fileOps := fileops.New()
 		content, err := fileOps.File.ReadFile(path)
 		if err != nil {
-			// Log error but continue to count other files
 			utils.Debug("line count: failed to read file %s: %v", path, err)
 			return nil
 		}
@@ -446,21 +498,20 @@ func countLines(pattern string, excludeDirs []string) (int, error) {
 		scanner := bufio.NewScanner(strings.NewReader(string(content)))
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
-			// Skip empty lines and full-line comments
 			if line != "" && !strings.HasPrefix(line, "//") {
-				count++
+				stats.Lines++
 			}
 		}
 
 		return nil
 	})
 
-	return count, err
+	return stats, err
 }
 
-// countGoLines counts lines in non-test Go files
-func countGoLines(excludeDirs []string) (int, error) {
-	count := 0
+// countGoLinesWithStats counts lines and files in non-test Go files
+func countGoLinesWithStats(excludeDirs []string) (LOCStats, error) {
+	stats := LOCStats{}
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -482,11 +533,13 @@ func countGoLines(excludeDirs []string) (int, error) {
 			return nil
 		}
 
+		// Count this file
+		stats.Files++
+
 		// Count lines
 		fileOps := fileops.New()
 		content, err := fileOps.File.ReadFile(path)
 		if err != nil {
-			// Log error but continue to count other files
 			utils.Debug("line count: failed to read file %s: %v", path, err)
 			return nil
 		}
@@ -494,14 +547,13 @@ func countGoLines(excludeDirs []string) (int, error) {
 		scanner := bufio.NewScanner(strings.NewReader(string(content)))
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
-			// Skip empty lines and full-line comments
 			if line != "" && !strings.HasPrefix(line, "//") {
-				count++
+				stats.Lines++
 			}
 		}
 
 		return nil
 	})
 
-	return count, err
+	return stats, err
 }

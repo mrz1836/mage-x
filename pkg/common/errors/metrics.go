@@ -112,6 +112,12 @@ func (m *RealDefaultErrorMetrics) GetTopErrors(limit int) []ErrorStat {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	return m.getTopErrorsLocked(limit)
+}
+
+// getTopErrorsLocked returns the top N errors by count.
+// Caller must hold at least a read lock on m.mu.
+func (m *RealDefaultErrorMetrics) getTopErrorsLocked(limit int) []ErrorStat {
 	// Convert to slice for sorting
 	stats := make([]ErrorStat, 0, len(m.errorStats))
 	for code, stat := range m.errorStats {
@@ -251,7 +257,7 @@ func (m *RealDefaultErrorMetrics) GetSummary() MetricsSummary {
 		Duration:    time.Since(m.startTime),
 		ErrorCodes:  make(map[ErrorCode]int64),
 		Severities:  make(map[Severity]int64),
-		TopErrors:   m.GetTopErrors(10),
+		TopErrors:   m.getTopErrorsLocked(10),
 	}
 
 	// Collect error code counts

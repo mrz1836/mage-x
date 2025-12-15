@@ -1090,8 +1090,8 @@ func registerMetricsCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("metrics", "loc").
-			WithDescription("Count lines of code").
-			WithFunc(func() error { return m.LOC() }).
+			WithDescription("Count lines of code (use json for JSON output)").
+			WithArgsFunc(func(args ...string) error { return m.LOC(args...) }).
 			WithCategory("Metrics").
 			MustBuild(),
 	)
