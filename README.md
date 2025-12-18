@@ -93,8 +93,8 @@
        🛠️&nbsp;<a href="#-code-standards"><code>Code&nbsp;Standards</code></a>
     </td>
     <td align="center">
-       🤖&nbsp;<a href="#-ai-agent-ecosystem"><code>AI&nbsp;Agents</code></a>
     </td>
+       🤖&nbsp;<a href="#-ai-usage--assistant-guidelines"><code>AI&nbsp;Usage</code></a>
     <td align="center">
        🤝&nbsp;<a href="#-contributing"><code>Contributing</code></a>
     </td>
@@ -361,7 +361,6 @@ magex git:commit message="fix: bug fix"    # Commit with message
 For comprehensive documentation, visit the [docs](docs) directory:
 
 - **[Getting Started](docs/README.md)** - Complete documentation index
-- **[AI Agent Ecosystem](docs/SUB_AGENTS.md)** - 19 specialized agents for intelligent development workflows
 - **[Claude Code Commands](docs/CLAUDE_COMMANDS.md)** - 13 optimized slash commands for agent orchestration
 - **[Namespace Interface Architecture](docs/NAMESPACE_INTERFACES.md)** - Modern interface-based namespace system
 - **[API Reference](docs/API_REFERENCE.md)** - Complete interface and API documentation

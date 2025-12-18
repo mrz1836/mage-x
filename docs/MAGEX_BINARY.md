@@ -122,27 +122,27 @@ graph TD
 
 ### Built-in Namespaces (24 total)
 
-| Namespace | Commands | Description |
-|-----------|----------|-------------|
-| build | 14 | Building and compilation |
-| test | 18 | Testing and coverage |
-| lint | 7 | Code quality and linting |
-| format | 6 | Code formatting |
-| deps | 11 | Dependency management |
-| git | 12 | Git operations |
-| release | 21 | Release management |
-| docs | 10 | Documentation |
-| tools | 4 | Tool management |
-| generate | 5 | Code generation |
-| cli | 14 | CLI operations |
-| update | 5 | Update operations |
-| mod | 9 | Module operations |
-| metrics | 6 | Metrics and analytics |
-| bench | 8 | Benchmarking |
-| vet | 5 | Go vet operations |
-| configure | 8 | Configuration |
-| init | 10 | Project initialization |
-| help | 7 | Help system |
+| Namespace | Commands | Description              |
+|-----------|----------|--------------------------|
+| build     | 14       | Building and compilation |
+| test      | 18       | Testing and coverage     |
+| lint      | 7        | Code quality and linting |
+| format    | 6        | Code formatting          |
+| deps      | 11       | Dependency management    |
+| git       | 12       | Git operations           |
+| release   | 21       | Release management       |
+| docs      | 10       | Documentation            |
+| tools     | 4        | Tool management          |
+| generate  | 5        | Code generation          |
+| cli       | 14       | CLI operations           |
+| update    | 5        | Update operations        |
+| mod       | 9        | Module operations        |
+| metrics   | 6        | Metrics and analytics    |
+| bench     | 8        | Benchmarking             |
+| vet       | 5        | Go vet operations        |
+| configure | 8        | Configuration            |
+| init      | 10       | Project initialization   |
+| help      | 7        | Help system              |
 
 ### Command Syntax
 
