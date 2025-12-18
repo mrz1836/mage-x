@@ -854,7 +854,7 @@ magex docs:readme        # README documentation
 - **Cross-Platform**: Browser auto-opening on macOS, Linux, and Windows
 - **CI/CD Ready**: Detects CI environments and disables browser opening
 - **Comprehensive Generation**: Documents all packages with categorization
-- **Static Building**: Enhanced markdown with metadata and navigation
+- **Static Building**: Enhanced Markdown with metadata and navigation
 - **Build Artifacts**: JSON metadata and organized output structure
 
 </details>
@@ -921,7 +921,7 @@ See the [examples directory](examples) for more custom magefile implementations.
 
 ## 📐 Spec-Driven Development
 
-This project uses [Spec-Kit](https://github.com/github/spec-kit) for spec-driven development, enabling executable specifications that directly generate working implementations. All feature specifications live in the [`specs/`](specs/) directory.
+This project uses [Spec-Kit](https://github.com/github/spec-kit) for spec-driven development, enabling executable specifications that directly generate working implementations. All feature specifications live in the [`specs/`](specs) directory.
 
 <details>
 <summary><strong><code>Creating a New Feature Spec</code></strong></summary>
@@ -1111,47 +1111,8 @@ Read more about our [code standards](.github/CODE_STANDARDS.md) and [contributio
 
 <br/>
 
-## 🤖 AI Agent Ecosystem
-
-MAGE-X features a comprehensive ecosystem of 19 specialized Claude Code AI agents designed for intelligent development workflows:
-
-### Agent Categories
-- **Core Development (5)**: Build, lint, deps, docs, security specialists
-- **Testing & Quality (2)**: Coverage analysis and comprehensive test implementation
-- **Release & CI/CD (3)**: Version management, git operations, GitHub automation
-- **Architecture & Performance (4)**: Code architecture, refactoring, analysis, benchmarking
-- **Workflow & Pipeline (3)**: Automation pipelines, interactive guidance, orchestration
-- **Infrastructure (2)**: Configuration management, development environment setup
-
-<br/>
-
-### Key Features
-- **Strategic Collaboration**: Agents coordinate intelligently for complex workflows
-- **Parallel Execution**: Multiple agents work simultaneously for maximum efficiency
-- **Security Integration**: All agents follow mage-x security-first patterns
-- **Production Scale**: Built for managing 30+ repositories with governance and compliance
-
-<br/>
-
-### Claude Code Integration
-MAGE-X includes 13 optimized Claude Code slash commands that leverage the agent ecosystem:
-- **Testing & Quality**: `/test`, `/fix`, `/quality`
-- **Code Improvement**: `/dedupe`, `/explain`, `/optimize`
-- **Documentation**: `/docs-update`, `/docs-review`
-- **Development Workflow**: `/ci-diagnose`, `/release`
-- **Architecture & Security**: `/architect`, `/security`
-- **Planning**: `/prd`
-
-See [Claude Code Commands](docs/CLAUDE_COMMANDS.md) for complete documentation.
-
-<br/>
-
-### Documentation & Guidelines
-- **[AI Agent Ecosystem](docs/SUB_AGENTS.md)** — Complete agent directory and collaboration patterns
-- **[Claude Code Commands](docs/CLAUDE_COMMANDS.md)** — Optimized slash commands for agent orchestration
-- **[AGENTS.md](.github/AGENTS.md)** — Development rules and architectural guidelines
-- **[CLAUDE.md](.github/CLAUDE.md)** — AI assistant integration guidelines
-- **[.cursorrules](.cursorrules)** — Machine-readable policies for AI development tools
+## 🤖 AI Usage & Assistant Guidelines
+Read the [AI Usage & Assistant Guidelines](.github/tech-conventions/ai-compliance.md) for details on how AI is used in this project and how to interact with the AI assistants.
 
 <br/>
 

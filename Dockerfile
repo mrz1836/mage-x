@@ -20,8 +20,8 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
-    -o mage-x \
-    ./cmd/mage-init
+    -o magex \
+    ./cmd/magex
 
 # Runtime stage
 FROM scratch
@@ -30,10 +30,7 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy the binary
-COPY --from=builder /app/mage-x /mage-x
-
-# Expose port (if needed)
-EXPOSE 8080
+COPY --from=builder /app/magex /magex
 
 # Set entrypoint
-ENTRYPOINT ["/mage-x"]
+ENTRYPOINT ["/magex"]

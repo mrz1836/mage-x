@@ -236,9 +236,6 @@ func (b Build) findPackagePath(outputPath string, requireMain bool) (string, err
 	if utils.DirExists("cmd/magex") {
 		return "./cmd/magex", nil
 	}
-	if utils.DirExists("cmd/mage-init") {
-		return "./cmd/mage-init", nil
-	}
 	if utils.FileExists("main.go") {
 		return ".", nil
 	}

@@ -20,21 +20,6 @@ changelog:
 # Builder
 # ---------------------------
 builds:
-  - id: mage-init
-    main: ./cmd/mage-init
-    binary: mage-init
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - windows
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.buildDate={{.Date}} -X main.buildTime={{.Date}}
-
   - id: magex
     main: ./cmd/magex
     binary: magex

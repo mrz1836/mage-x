@@ -218,7 +218,7 @@ func (ts *DocsTestSuite) TestDocsHelperFunctions() {
 			{"github.com/test/project/pkg/security/validator", "Security"},
 			{"github.com/test/project/pkg/utils/logger", "Utils"},
 			{"github.com/test/project/pkg/testhelpers/mock", "Utils"},
-			{"github.com/test/project/cmd/mage-init", "Commands"},
+			{"github.com/test/project/cmd/magex", "Commands"},
 			{"github.com/test/project/internal/helper", "Other"},
 		}
 
@@ -253,7 +253,7 @@ func (ts *DocsTestSuite) TestDocsHelperFunctions() {
 		documented := []string{
 			"github.com/test/project/pkg/mage",
 			"github.com/test/project/pkg/common/config",
-			"github.com/test/project/cmd/mage-init",
+			"github.com/test/project/cmd/magex",
 		}
 		failed := []string{
 			"github.com/test/project/broken/package",
@@ -756,7 +756,7 @@ func BenchmarkDocsOperations(b *testing.B) {
 			"github.com/test/project/pkg/mage",
 			"github.com/test/project/pkg/common/config",
 			"github.com/test/project/pkg/providers/aws",
-			"github.com/test/project/cmd/mage-init",
+			"github.com/test/project/cmd/magex",
 		}
 
 		b.ResetTimer()
