@@ -35,7 +35,7 @@ mage-x/
 ```
 
 ### Key Namespaces (30+)
-bench, build, configure, deps, docs, format, generate, git, help, init, install, lint, metrics, mod, release, test, tools, version, vet, yaml
+bench, build, configure, deps, docs, format, generate, git, help, install, lint, metrics, mod, release, test, tools, version, vet, yaml
 
 Each namespace has an interface (e.g., `BuildNamespace`) and factory function (e.g., `NewBuildNamespace()`).
 

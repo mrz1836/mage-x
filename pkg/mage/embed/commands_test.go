@@ -20,7 +20,7 @@ var errWorkerPanic = errors.New("worker panicked")
 // Test constants
 const (
 	testTimeout         = 5 * 1000 // 5 seconds in milliseconds for timeout tests
-	expectedMinCommands = 171      // Minimum expected number of registered commands
+	expectedMinCommands = 163      // Minimum expected number of registered commands
 	concurrentWorkers   = 10       // Number of concurrent workers for parallel tests
 )
 
@@ -228,7 +228,7 @@ func TestRegisterAllNamespaces(t *testing.T) {
 	expectedNamespaces := []string{
 		"build", "test", "lint", "format", "deps", "git", "release",
 		"docs", "tools", "generate", "update", "mod",
-		"metrics", "bench", "vet", "configure", "init",
+		"metrics", "bench", "vet", "configure",
 		"help", "version", "install", "yaml",
 	}
 
@@ -575,7 +575,6 @@ func TestCommandCategories(t *testing.T) {
 		"Benchmark":          {"bench:"},
 		"Vet":                {"vet:"},
 		"Configure":          {"configure:"},
-		"Init":               {"init:"},
 		"Help":               {"help:"},
 		"Version Management": {"version:"},
 		"Installation":       {"install:"},
@@ -640,7 +639,6 @@ func TestIndividualNamespaceRegistration(t *testing.T) {
 		{"BenchCommands", registerBenchCommands, "bench:", 6},
 		{"VetCommands", registerVetCommands, "vet:", 1},
 		{"ConfigureCommands", registerConfigureCommands, "configure:", 6},
-		{"InitCommands", registerInitCommands, "init:", 8},
 		{"HelpCommands", registerHelpCommands, "help:", 6},
 		{"VersionCommands", registerVersionCommands, "version:", 5},
 		{"InstallCommands", registerInstallCommands, "install:", 12},
@@ -749,7 +747,6 @@ func TestCriticalCommandsExist(t *testing.T) {
 		"tools:install",
 		"generate:mocks",
 		"configure:init",
-		"init:project",
 		"help:default",
 		"version:show",
 	}
@@ -919,7 +916,6 @@ func TestMageNamespaceTypes(t *testing.T) {
 		"Bench":     mage.Bench{},
 		"Vet":       mage.Vet{},
 		"Configure": mage.Configure{},
-		"Init":      mage.Init{},
 		"Help":      mage.Help{},
 		"Version":   mage.Version{},
 		"Install":   mage.Install{},

@@ -222,7 +222,6 @@ func NewDocNamespace() DocNamespace
 
 ### Project Management
 ```go
-func NewInitNamespace() InitNamespace
 func NewGenerateNamespace() GenerateNamespace
 func NewReleaseNamespace() ReleaseNamespace
 func NewVersionNamespace() VersionNamespace

@@ -49,10 +49,7 @@ magex update:install
 ### Project Setup
 
 ```bash
-# Initialize new project (creates .mage.yaml)
-magex init
-
-# Or start using immediately - no initialization required!
+# Start using immediately - no initialization required!
 magex build    # Automatically detects and builds your Go project
 magex test     # Runs complete test suite
 magex lint     # Executes 60+ linters
@@ -588,7 +585,6 @@ magex config:validate               # Validate configuration syntax
 magex config:show                   # Display current configuration
 
 # Missing project detection
-magex init                          # Create basic .mage.yaml
 magex project:info                  # Show detected project information
 ```
 

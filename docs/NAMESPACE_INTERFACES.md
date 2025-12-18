@@ -30,7 +30,6 @@ MAGE-X provides 37 built-in namespaces organized by functionality:
 - **Docs** (`DocNamespace`) - Documentation generation
 
 #### Project Management
-- **Init** (`InitNamespace`) - Project initialization
 - **Generate** (`GenerateNamespace`) - Code generation
 - **Release** (`ReleaseNamespace`) - Release management
 - **Version** (`VersionNamespace`) - Version management

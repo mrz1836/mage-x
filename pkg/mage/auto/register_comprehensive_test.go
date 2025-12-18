@@ -264,15 +264,6 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			description: "Configure should be aliased to mage.Configure",
 		},
 		{
-			name:     "Init type alias",
-			autoType: Init{},
-			mageType: mage.Init{},
-			testCreation: func() (interface{}, interface{}) {
-				return Init{}, mage.Init{}
-			},
-			description: "Init should be aliased to mage.Init",
-		},
-		{
 			name:     "Help type alias",
 			autoType: Help{},
 			mageType: mage.Help{},
@@ -402,11 +393,10 @@ func (suite *AutoRegistrationTestSuite) TestBackwardCompatibilityComprehensive()
 			Bench{},
 			Vet{},
 			Configure{},
-			Init{},
 			Help{},
 		}
 
-		suite.Len(typeAliases, 18, "Should have exactly 18 type aliases")
+		suite.Len(typeAliases, 17, "Should have exactly 17 type aliases")
 
 		for i, alias := range typeAliases {
 			suite.NotNil(alias, "Type alias at index %d should not be nil", i)
@@ -629,7 +619,7 @@ func (suite *AutoRegistrationTestSuite) TestPackageDocumentationCompliance() {
 		// Package comments mention magex binary for zero-boilerplate
 		// Test that auto package provides the import-based alternative
 		convenienceFunctions := 8 // As documented
-		typeAliases := 18         // As counted in tests
+		typeAliases := 17         // As counted in tests
 
 		functions := []func() error{
 			BuildCmd, TestCmd, LintCmd, FormatCmd,
@@ -653,7 +643,6 @@ func (suite *AutoRegistrationTestSuite) TestPackageDocumentationCompliance() {
 			Bench{},
 			Vet{},
 			Configure{},
-			Init{},
 			Help{},
 		}
 
@@ -766,7 +755,6 @@ func TestAutoPackageCompileTimeChecks(t *testing.T) {
 	_ = Bench{}
 	_ = Vet{}
 	_ = Configure{}
-	_ = Init{}
 	_ = Help{}
 
 	// Test passes if it compiles - no assertion needed
@@ -822,7 +810,6 @@ func TestAutoPackageTypeAliasEquivalence(t *testing.T) {
 		{"Bench", Bench{}, mage.Bench{}},
 		{"Vet", Vet{}, mage.Vet{}},
 		{"Configure", Configure{}, mage.Configure{}},
-		{"Init", Init{}, mage.Init{}},
 		{"Help", Help{}, mage.Help{}},
 	}
 

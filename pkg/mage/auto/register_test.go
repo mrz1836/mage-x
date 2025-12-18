@@ -211,14 +211,6 @@ func TestNamespaceTypeAliases(t *testing.T) {
 			},
 		},
 		{
-			name: "Init type alias",
-			testFunc: func(t *testing.T) {
-				var init Init
-				var minit mage.Init
-				assert.IsType(t, minit, init)
-			},
-		},
-		{
 			name: "Help type alias",
 			testFunc: func(t *testing.T) {
 				var help Help
@@ -445,11 +437,10 @@ func TestNamespaceInstantiation(t *testing.T) {
 			Bench{},
 			Vet{},
 			Configure{},
-			Init{},
 			Help{},
 		}
 
-		assert.Len(t, typeAliases, 18, "Should have exactly 18 type aliases")
+		assert.Len(t, typeAliases, 17, "Should have exactly 17 type aliases")
 
 		for i, alias := range typeAliases {
 			assert.NotNil(t, alias, "Type alias at index %d should not be nil", i)

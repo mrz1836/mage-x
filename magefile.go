@@ -35,7 +35,6 @@ type (
 	Generate  mg.Namespace
 	Git       mg.Namespace
 	Help      mg.Namespace
-	Init      mg.Namespace
 	Install   mg.Namespace
 	Lint      mg.Namespace
 	Metrics   mg.Namespace
@@ -537,18 +536,6 @@ func GenerateDefault() error {
 func GenerateClean() error {
 	var g mage.Generate
 	return g.Clean()
-}
-
-// InitProject initializes a new project
-func InitProject() error {
-	var i mage.Init
-	return i.Project()
-}
-
-// InitLibrary initializes a library project
-func InitLibrary() error {
-	var i mage.Init
-	return i.Library()
 }
 
 // UpdateCheck checks for updates
@@ -1671,87 +1658,6 @@ func (h Help) Completions() error {
 func (h Help) Topics() error {
 	var impl mage.Help
 	return impl.Topics()
-}
-
-// Init namespace methods
-func (i Init) Default() error {
-	var impl mage.Init
-	return impl.Default()
-}
-
-func (i Init) Library() error {
-	var impl mage.Init
-	return impl.Library()
-}
-
-func (i Init) WebAPI() error {
-	var impl mage.Init
-	return impl.WebAPI()
-}
-
-func (i Init) Microservice() error {
-	var impl mage.Init
-	return impl.Microservice()
-}
-
-func (i Init) Tool() error {
-	var impl mage.Init
-	return impl.Tool()
-}
-
-func (i Init) Upgrade() error {
-	var impl mage.Init
-	return impl.Upgrade()
-}
-
-func (i Init) Templates() error {
-	var impl mage.Init
-	return impl.Templates()
-}
-
-func (i Init) Project() error {
-	var impl mage.Init
-	return impl.Project()
-}
-
-func (i Init) Config() error {
-	var impl mage.Init
-	return impl.Config()
-}
-
-func (i Init) Git() error {
-	var impl mage.Init
-	return impl.Git()
-}
-
-func (i Init) Mage() error {
-	var impl mage.Init
-	return impl.Mage()
-}
-
-func (i Init) CI() error {
-	var impl mage.Init
-	return impl.CI()
-}
-
-func (i Init) Docs() error {
-	var impl mage.Init
-	return impl.Docs()
-}
-
-func (i Init) License() error {
-	var impl mage.Init
-	return impl.License()
-}
-
-func (i Init) Makefile() error {
-	var impl mage.Init
-	return impl.Makefile()
-}
-
-func (i Init) Editorconfig() error {
-	var impl mage.Init
-	return impl.Editorconfig()
 }
 
 // Update namespace methods

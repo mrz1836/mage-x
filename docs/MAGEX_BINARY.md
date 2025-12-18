@@ -141,7 +141,6 @@ graph TD
 | bench     | 8        | Benchmarking             |
 | vet       | 5        | Go vet operations        |
 | configure | 8        | Configuration            |
-| init      | 10       | Project initialization   |
 | help      | 7        | Help system              |
 
 ### Command Syntax

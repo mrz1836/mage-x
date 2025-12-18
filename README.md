@@ -130,8 +130,6 @@
 - **Smart Documentation System**<br/>
   _Hybrid pkgsite/godoc support with auto-detection, port management, and cross-platform browser integration._
   <br/><br/>
-- **AI Development Integration**<br/>
-  _19 specialized AI agents and 13 Claude Code slash commands for intelligent workflows, code analysis, and automated development tasks._
 
 <br/>
 
@@ -397,32 +395,11 @@ magex version:bump 	     # Bump version (patch, minor, major)
 </details>
 
 <details>
-<summary>🏗️ <strong>Project Setup & Initialization</strong></summary>
+<summary>🏗️ <strong>Code Generation</strong></summary>
 
 ```bash
-# Code Generation
 magex generate:default    # Run go generate
 magex generate:clean      # Remove generated files
-
-# Project Initialization
-magex init:default        # Default initialization
-magex init:project        # Initialize a new project
-magex init:library        # Initialize a library project
-magex init:cli            # Initialize a CLI project
-magex init:webapi         # Initialize a web API project
-magex init:microservice   # Initialize a microservice project
-magex init:tool           # Initialize a tool project
-magex init:upgrade        # Upgrade existing project
-magex init:templates      # Show available templates
-magex init:config         # Initialize configuration
-magex init:git            # Initialize git repository
-magex init:mage           # Initialize mage files
-magex init:ci             # Initialize CI/CD files
-magex init:docs           # Initialize documentation
-magex init:license        # Add license file
-magex init:makefile       # Create Makefile
-magex init:editorconfig   # Create .editorconfig
-
 ```
 
 </details>

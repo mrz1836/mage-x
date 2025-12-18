@@ -27,7 +27,6 @@ type (
 	Bench     = mage.Bench
 	Vet       = mage.Vet
 	Configure = mage.Configure
-	Init      = mage.Init
 	Help      = mage.Help
 )
 

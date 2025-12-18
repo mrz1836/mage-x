@@ -68,9 +68,6 @@ func RegisterAll(reg *registry.Registry) {
 	// Register Configure namespace commands
 	registerConfigureCommands(reg)
 
-	// Register Init namespace commands
-	registerInitCommands(reg)
-
 	// Register Help namespace commands
 	registerHelpCommands(reg)
 
@@ -1300,75 +1297,6 @@ func registerConfigureCommands(reg *registry.Registry) {
 			WithDescription("Show configuration schema").
 			WithFunc(func() error { return c.Schema() }).
 			WithCategory("Configure").
-			MustBuild(),
-	)
-}
-
-func registerInitCommands(reg *registry.Registry) {
-	i := mage.Init{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "default").
-			WithDescription("Initialize new project with smart defaults").
-			WithFunc(func() error { return i.Default() }).
-			WithCategory("Init").
-			WithAliases("init").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "project").
-			WithDescription("Initialize new project").
-			WithFunc(func() error { return i.Project() }).
-			WithCategory("Init").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "library").
-			WithDescription("Initialize library project").
-			WithFunc(func() error { return i.Library() }).
-			WithCategory("Init").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "webapi").
-			WithDescription("Initialize web API project").
-			WithFunc(func() error { return i.WebAPI() }).
-			WithCategory("Init").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "microservice").
-			WithDescription("Initialize microservice project").
-			WithFunc(func() error { return i.Microservice() }).
-			WithCategory("Init").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "config").
-			WithDescription("Initialize configuration files").
-			WithFunc(func() error { return i.Config() }).
-			WithCategory("Init").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "git").
-			WithDescription("Initialize git repository").
-			WithFunc(func() error { return i.Git() }).
-			WithCategory("Init").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("init", "ci").
-			WithDescription("Initialize CI/CD configuration").
-			WithFunc(func() error { return i.CI() }).
-			WithCategory("Init").
 			MustBuild(),
 	)
 }

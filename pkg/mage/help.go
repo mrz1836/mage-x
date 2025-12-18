@@ -235,14 +235,6 @@ func (Help) Examples() error {
 		Examples []string
 	}{
 		{
-			Category: "Project Setup",
-			Examples: []string{
-				"mage init:cli --name=myapp --module=github.com/user/myapp",
-				"mage init:library --name=mylib",
-				"mage configure:init  # Create mage.yaml configuration",
-			},
-		},
-		{
 			Category: "Building & Testing",
 			Examples: []string{
 				"mage build",
@@ -339,22 +331,7 @@ First, install MAGE-X in your Go project:
   go get github.com/mrz1836/mage-x
   go install github.com/magefile/mage@latest
 
-🏗️ Step 2: Initialize Your Project
-
-For a new project:
-  mage init:cli --name=myapp --module=github.com/user/myapp
-
-For an existing project:
-  mage init:project
-
-🔧 Step 3: Basic Configuration
-
-Create a mage configuration:
-  mage configure:init
-
-Edit the configuration to match your project needs.
-
-🏃 Step 4: Your First Build
+🏗️ Step 2: Your First Build
 
 Build your project:
   mage build
@@ -578,7 +555,7 @@ _mage_completions() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     # All available commands (300+ commands organized by namespace)
-    opts="build:default build:all build:clean build:generate build:linux build:darwin build:windows build:install build:prebuild test:default test:full test:unit test:race test:cover test:bench test:benchshort test:fuzz test:fuzzshort test:integration test:short test:coverrace test:ci lint:default lint:all lint:fix lint:vet lint:fumpt lint:version lint:go lint:yaml lint:json format:default format:all format:gofmt format:fumpt format:imports format:go format:yaml format:json format:fix format:check vet:default vet:all vet:parallel vet:shadow vet:strict release:default deps:default deps:update deps:tidy deps:download deps:outdated deps:clean deps:graph deps:why deps:verify tools:default tools:install tools:update tools:check tools:vulncheck tools:verify install:default install:local install:binary install:tools install:go install:stdlib install:systemwide install:deps install:mage install:githooks install:ci install:certs install:package install:all uninstall mod:update mod:tidy mod:verify mod:download mod:clean mod:graph mod:why mod:vendor mod:init docs:default docs:generate docs:serve docs:build docs:check docs:examples docs:lint docs:spell docs:links docs:api docs:markdown docs:readme docs:changelog docs:clean docs:godocs git:status git:diff git:tag git:log git:branch git:pull git:commit git:init git:add git:clone git:push version:show version:check version:update version:bump version:changelog version:tag version:compare version:validate metrics:loc metrics:coverage metrics:complexity configure:init configure:show configure:update configure:export configure:import configure:validate configure:schema generate:default generate:clean init:default init:project init:library init:cli init:webapi init:microservice init:tool init:upgrade init:templates init:config init:git init:mage init:ci init:docs init:license init:makefile init:editorconfig update:check update:install help:default help:commands help:command help:examples help:gettingstarted help:completions help:topics bench:default bench:run bench:profile bench:compare bench:report bench:regression bench:memory bench:cpu yaml:init yaml:validate yaml:show yaml:template yaml:format yaml:check yaml:merge yaml:convert yaml:schema"
+    opts="build:default build:all build:clean build:generate build:linux build:darwin build:windows build:install build:prebuild test:default test:full test:unit test:race test:cover test:bench test:benchshort test:fuzz test:fuzzshort test:integration test:short test:coverrace test:ci lint:default lint:all lint:fix lint:vet lint:fumpt lint:version lint:go lint:yaml lint:json format:default format:all format:gofmt format:fumpt format:imports format:go format:yaml format:json format:fix format:check vet:default vet:all vet:parallel vet:shadow vet:strict release:default deps:default deps:update deps:tidy deps:download deps:outdated deps:clean deps:graph deps:why deps:verify tools:default tools:install tools:update tools:check tools:vulncheck tools:verify install:default install:local install:binary install:tools install:go install:stdlib install:systemwide install:deps install:mage install:githooks install:ci install:certs install:package install:all uninstall mod:update mod:tidy mod:verify mod:download mod:clean mod:graph mod:why mod:vendor mod:init docs:default docs:generate docs:serve docs:build docs:check docs:examples docs:lint docs:spell docs:links docs:api docs:markdown docs:readme docs:changelog docs:clean docs:godocs git:status git:diff git:tag git:log git:branch git:pull git:commit git:init git:add git:clone git:push version:show version:check version:update version:bump version:changelog version:tag version:compare version:validate metrics:loc metrics:coverage metrics:complexity configure:init configure:show configure:update configure:export configure:import configure:validate configure:schema generate:default generate:clean update:check update:install help:default help:commands help:command help:examples help:gettingstarted help:completions help:topics bench:default bench:run bench:profile bench:compare bench:report bench:regression bench:memory bench:cpu yaml:init yaml:validate yaml:show yaml:template yaml:format yaml:check yaml:merge yaml:convert yaml:schema"
 
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
     return 0
@@ -624,7 +601,6 @@ _mage() {
                 'format:Format code'
                 'interactive:Start interactive mode'
                 'release:Create releases'
-                'init:Initialize projects'
                 'yaml:Configuration management'
                 'version:Version management'
                 'help:Help system'
@@ -684,7 +660,6 @@ complete -c mage -n '__fish_use_subcommand' -a 'lint' -d 'Run linter'
 complete -c mage -n '__fish_use_subcommand' -a 'format' -d 'Format code'
 complete -c mage -n '__fish_use_subcommand' -a 'interactive' -d 'Start interactive mode'
 complete -c mage -n '__fish_use_subcommand' -a 'release' -d 'Create releases'
-complete -c mage -n '__fish_use_subcommand' -a 'init' -d 'Initialize projects'
 complete -c mage -n '__fish_use_subcommand' -a 'yaml' -d 'Configuration management'
 complete -c mage -n '__fish_use_subcommand' -a 'version' -d 'Version management'
 complete -c mage -n '__fish_use_subcommand' -a 'help' -d 'Help system'
@@ -693,7 +668,6 @@ complete -c mage -n '__fish_use_subcommand' -a 'help' -d 'Help system'
 complete -c mage -n '__fish_seen_subcommand_from build' -a 'default all clean'
 complete -c mage -n '__fish_seen_subcommand_from test' -a 'default unit race cover bench'
 complete -c mage -n '__fish_seen_subcommand_from release' -a 'stable beta edge'
-complete -c mage -n '__fish_seen_subcommand_from init' -a 'library cli webapi microservice tool'
 `
 
 	configDir := filepath.Join(os.Getenv("HOME"), ".config", "fish", "completions")
