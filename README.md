@@ -93,8 +93,8 @@
        🛠️&nbsp;<a href="#-code-standards"><code>Code&nbsp;Standards</code></a>
     </td>
     <td align="center">
+      🤖&nbsp;<a href="#-ai-usage--assistant-guidelines"><code>AI&nbsp;Usage</code></a>
     </td>
-       🤖&nbsp;<a href="#-ai-usage--assistant-guidelines"><code>AI&nbsp;Usage</code></a>
     <td align="center">
        🤝&nbsp;<a href="#-contributing"><code>Contributing</code></a>
     </td>
