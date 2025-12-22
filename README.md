@@ -415,6 +415,7 @@ magex deps:tidy           # Clean up go.mod and go.sum
 magex deps:download       # Download all dependencies
 magex deps:outdated       # Show outdated dependencies
 magex deps:audit          # Audit dependencies for vulnerabilities
+magex deps:audit exclude=CVE-2024-38513,CVE-2023-45142  # Exclude specific CVEs from audit
 
 # Multi-Module Update (for monorepos with multiple go.mod files)
 magex deps:update all-modules                    # Update all modules in workspace
