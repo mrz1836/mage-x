@@ -663,9 +663,9 @@ func TestInterfaceEvolutionTracking(t *testing.T) {
 		assert.True(t, found, "DepsNamespace interface must have an Audit method")
 
 		if found {
-			// Verify method signature: func() error
+			// Verify method signature: func(args ...string) error
 			methodType := auditMethod.Type
-			assert.Equal(t, 0, methodType.NumIn(), "Audit method should have 0 inputs (interface method)")
+			assert.Equal(t, 1, methodType.NumIn(), "Audit method should have 1 input (variadic args)")
 			assert.Equal(t, 1, methodType.NumOut(), "Audit method should have 1 output (error)")
 
 			// Check return type is error

@@ -542,9 +542,34 @@ func registerDepsCommands(reg *registry.Registry) {
 
 	reg.MustRegister(
 		registry.NewNamespaceCommand("deps", "audit").
-			WithDescription("Security audit of dependencies").
-			WithFunc(func() error { return d.Audit() }).
+			WithDescription("Security audit of dependencies (govulncheck)").
+			WithLongDescription("Run govulncheck to scan dependencies for known vulnerabilities.\n\n"+
+				"Supports CVE exclusions for known/accepted vulnerabilities via:\n"+
+				"  - Environment variable: MAGE_X_CVE_EXCLUDES (comma-separated CVE IDs)\n"+
+				"  - Command parameter: exclude=CVE-2024-38513,CVE-2023-45142\n\n"+
+				"When exclusions are specified, the scan will only fail if non-excluded\n"+
+				"vulnerabilities are found. Excluded CVEs are reported as warnings.").
+			WithArgsFunc(func(args ...string) error { return d.Audit(args...) }).
 			WithCategory("Dependencies").
+			WithUsage("magex deps:audit [exclude=CVE-ID,...]").
+			WithExamples(
+				"magex deps:audit",
+				"magex deps:audit exclude=CVE-2024-38513",
+				"magex deps:audit exclude=CVE-2024-38513,CVE-2023-45142",
+				"MAGE_X_CVE_EXCLUDES=CVE-2024-38513 magex deps:audit",
+			).
+			WithOptions(
+				registry.CommandOption{
+					Name:        "exclude",
+					Description: "Comma-separated CVE IDs to exclude (e.g., CVE-2024-38513,CVE-2023-45142)",
+					Default:     "",
+				},
+				registry.CommandOption{
+					Name:        "MAGE_X_CVE_EXCLUDES",
+					Description: "Environment variable with comma-separated CVE IDs to exclude",
+					Default:     "",
+				},
+			).
 			MustBuild(),
 	)
 }

@@ -220,8 +220,9 @@ type DepsNamespace interface {
 	// Check checks for updates
 	Check() error
 
-	// Audit performs dependency audit
-	Audit() error
+	// Audit performs dependency audit with optional CVE exclusions
+	// Supports exclude=CVE-ID,... parameter and MAGE_X_CVE_EXCLUDES env var
+	Audit(args ...string) error
 }
 
 // GitNamespace interface defines the contract for git operations

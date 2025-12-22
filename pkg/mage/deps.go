@@ -21,6 +21,7 @@ var (
 	errGoModAlreadyExists     = errors.New("go.mod already exists")
 	errNoGoModFound           = errors.New("no go.mod file found - govulncheck requires a Go module. Run 'go mod init <module-name>' to initialize a module, or navigate to a directory with a go.mod file")
 	errNoGoModFoundSimple     = errors.New("no go.mod file found - govulncheck requires a Go module. Run 'go mod init <module-name>' to initialize a module")
+	errVulnerabilitiesFound   = errors.New("vulnerabilities found after exclusions")
 )
 
 // Deps namespace for dependency management tasks
@@ -778,9 +779,22 @@ func showUpdateSummary(initial, final map[string]dependencyInfo, directUpdates, 
 	}
 }
 
-// Audit performs comprehensive dependency audit
-func (Deps) Audit() error {
+// Audit performs comprehensive dependency audit with optional CVE exclusions.
+// Supports CVE exclusions via:
+//   - Environment variable: MAGE_X_CVE_EXCLUDES (comma-separated)
+//   - Parameter: exclude=CVE-2024-38513,CVE-2023-45142
+//
+// Example: magex deps:audit exclude=CVE-2024-38513
+func (Deps) Audit(args ...string) error {
 	utils.Header("Auditing Dependencies for Vulnerabilities")
+
+	// Parse parameters for CVE exclusions
+	params := utils.ParseParams(args)
+	cveExclusions := ParseCVEExclusions(params)
+
+	if len(cveExclusions) > 0 {
+		utils.Info("CVE exclusions configured: %s", strings.Join(cveExclusions, ", "))
+	}
 
 	config, err := GetConfig()
 	if err != nil {
@@ -832,24 +846,64 @@ func (Deps) Audit() error {
 
 	totalStart := time.Now()
 	var moduleErrors []moduleError
+	totalExcluded := 0
+	totalRemaining := 0
 
 	// Run govulncheck for each module
 	for _, module := range modules {
 		displayModuleHeader(module, "Auditing")
 
 		moduleStart := time.Now()
-		if runErr := runCommandInModule(module, govulncheckCmd, "-show", "verbose", "./..."); runErr != nil {
-			// Provide more helpful error messages for common failures
+
+		// Run govulncheck with JSON output for parsing
+		jsonOutput, runErr := runCommandInModuleOutput(module, govulncheckCmd, "-format", "json", "./...")
+
+		// Note: govulncheck in JSON mode returns exit code 0 even when vulnerabilities are found
+		if runErr != nil {
+			// Check for common non-vulnerability errors
 			errMsg := runErr.Error()
 			if strings.Contains(errMsg, "no go.mod file") {
 				moduleErrors = append(moduleErrors, moduleError{Module: module, Error: errNoGoModFoundSimple})
+				continue
 			} else if strings.Contains(errMsg, "no packages") {
-				// Skip modules with no packages (like empty modules)
 				utils.Warn("No packages found in %s, skipping", module.Relative)
-			} else {
-				moduleErrors = append(moduleErrors, moduleError{Module: module, Error: runErr})
-				utils.Error("Vulnerability scan failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+				continue
 			}
+			// For other errors, try to parse any JSON output we got
+		}
+
+		// Parse JSON output
+		scanResult, parseErr := ParseGovulncheckJSON(jsonOutput)
+		if parseErr != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: fmt.Errorf("failed to parse govulncheck output: %w", parseErr)})
+			continue
+		}
+
+		// Filter excluded CVEs
+		filterResult := FilterExcludedVulns(scanResult, cveExclusions)
+
+		// Report excluded CVEs
+		if len(filterResult.ExcludedCVEs) > 0 {
+			utils.Warn("Excluded %d known vulnerabilities: %s", len(filterResult.ExcludedCVEs), strings.Join(filterResult.ExcludedCVEs, ", "))
+			totalExcluded += len(filterResult.ExcludedCVEs)
+		}
+
+		// Check for remaining vulnerabilities
+		if len(filterResult.RemainingFindings) > 0 {
+			// Count unique vulnerabilities (not findings)
+			uniqueVulns := make(map[string]bool)
+			for _, f := range filterResult.RemainingFindings {
+				uniqueVulns[f.OSV] = true
+			}
+			vulnCount := len(uniqueVulns)
+			totalRemaining += vulnCount
+
+			utils.Error("Found %d vulnerabilities in %s:", vulnCount, module.Relative)
+			ReportVulnerabilities(filterResult, scanResult.OSVEntries)
+			moduleErrors = append(moduleErrors, moduleError{
+				Module: module,
+				Error:  fmt.Errorf("%w: %d in module", errVulnerabilitiesFound, vulnCount),
+			})
 		} else {
 			utils.Success("Vulnerability scan passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
 		}
@@ -857,11 +911,17 @@ func (Deps) Audit() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("Vulnerability scan failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Vulnerability scan failed in %d/%d modules (%d excluded, %d remaining)",
+			len(moduleErrors), len(modules), totalExcluded, totalRemaining)
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("Dependency audit completed in %s", utils.FormatDuration(time.Since(totalStart)))
+	if totalExcluded > 0 {
+		utils.Success("Dependency audit completed in %s (%d excluded, 0 remaining)",
+			utils.FormatDuration(time.Since(totalStart)), totalExcluded)
+	} else {
+		utils.Success("Dependency audit completed in %s", utils.FormatDuration(time.Since(totalStart)))
+	}
 	return nil
 }
 
