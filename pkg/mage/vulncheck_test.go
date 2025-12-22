@@ -383,3 +383,140 @@ func TestParseCVEExclusions_EnvVar(t *testing.T) {
 	assert.Contains(t, excludes, "CVE-2024-38513")
 	assert.Contains(t, excludes, "CVE-2023-45142")
 }
+
+// TestDisplayScanConfig tests the scan config display function
+func (s *VulncheckTestSuite) TestDisplayScanConfig() {
+	tests := []struct {
+		name   string
+		config *VulnConfig
+	}{
+		{
+			name:   "nil config",
+			config: nil,
+		},
+		{
+			name: "full config",
+			config: &VulnConfig{
+				ProtocolVersion: "v1.0.0",
+				ScannerName:     "govulncheck",
+				ScannerVersion:  "v1.1.4",
+				DB:              "https://vuln.go.dev",
+				DBLastModified:  "2025-12-20T15:04:05Z",
+				GoVersion:       "go1.23.4",
+				ScanLevel:       "symbol",
+			},
+		},
+		{
+			name: "minimal config",
+			config: &VulnConfig{
+				ScannerVersion: "v1.1.4",
+			},
+		},
+		{
+			name: "config with only scanner name",
+			config: &VulnConfig{
+				ScannerName:    "govulncheck",
+				ScannerVersion: "v1.1.4",
+			},
+		},
+		{
+			name:   "empty config",
+			config: &VulnConfig{},
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			// Should not panic
+			s.NotPanics(func() {
+				DisplayScanConfig(tt.config)
+			})
+		})
+	}
+}
+
+// TestDisplayScanConfig_DateTruncation tests that long dates are truncated
+func (s *VulncheckTestSuite) TestDisplayScanConfig_DateTruncation() {
+	config := &VulnConfig{
+		ScannerName:    "govulncheck",
+		ScannerVersion: "v1.1.4",
+		DBLastModified: "2025-12-20T15:04:05Z", // Full timestamp
+	}
+
+	// Should not panic when truncating date
+	s.NotPanics(func() {
+		DisplayScanConfig(config)
+	})
+}
+
+// TestDisplayScannedModules tests the module display function
+func (s *VulncheckTestSuite) TestDisplayScannedModules() {
+	tests := []struct {
+		name string
+		deps []ModuleDep
+	}{
+		{
+			name: "empty deps",
+			deps: []ModuleDep{},
+		},
+		{
+			name: "nil deps",
+			deps: nil,
+		},
+		{
+			name: "single dep with version",
+			deps: []ModuleDep{
+				{Path: "github.com/example/dep", Version: "v1.0.0"},
+			},
+		},
+		{
+			name: "single dep without version",
+			deps: []ModuleDep{
+				{Path: "github.com/example/dep"},
+			},
+		},
+		{
+			name: "multiple deps",
+			deps: []ModuleDep{
+				{Path: "github.com/example/dep1", Version: "v1.0.0"},
+				{Path: "github.com/example/dep2", Version: "v2.0.0"},
+				{Path: "github.com/example/dep3", Version: "v3.0.0"},
+			},
+		},
+		{
+			name: "mixed deps with and without versions",
+			deps: []ModuleDep{
+				{Path: "github.com/example/main"},
+				{Path: "github.com/example/dep1", Version: "v1.0.0"},
+				{Path: "github.com/example/dep2", Version: "v2.0.0"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			// Should not panic
+			s.NotPanics(func() {
+				DisplayScannedModules(tt.deps)
+			})
+		})
+	}
+}
+
+// TestDisplayScanConfigFromParsedJSON tests displaying config parsed from JSON
+func (s *VulncheckTestSuite) TestDisplayScanConfigFromParsedJSON() {
+	result, err := ParseGovulncheckJSON(sampleGovulncheckJSON)
+	s.Require().NoError(err)
+	s.Require().NotNil(result.Config)
+
+	// Should not panic when displaying parsed config
+	s.NotPanics(func() {
+		DisplayScanConfig(result.Config)
+	})
+
+	// Verify config fields were parsed correctly
+	s.Equal("govulncheck", result.Config.ScannerName)
+	s.Equal("v1.1.4", result.Config.ScannerVersion)
+	s.Equal("go1.21.0", result.Config.GoVersion)
+	s.Equal("symbol", result.Config.ScanLevel)
+}

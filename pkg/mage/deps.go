@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -855,6 +856,14 @@ func (Deps) Audit(args ...string) error {
 
 		moduleStart := time.Now()
 
+		// List and display module dependencies before scanning
+		deps, depsErr := listModuleDependencies(module)
+		if depsErr != nil {
+			utils.Warn("Could not list dependencies: %v", depsErr)
+		} else {
+			DisplayScannedModules(deps)
+		}
+
 		// Run govulncheck with JSON output for parsing
 		jsonOutput, runErr := runCommandInModuleOutput(module, govulncheckCmd, "-format", "json", "./...")
 
@@ -878,6 +887,9 @@ func (Deps) Audit(args ...string) error {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: fmt.Errorf("failed to parse govulncheck output: %w", parseErr)})
 			continue
 		}
+
+		// Display scan configuration (scanner version, DB info, etc.)
+		DisplayScanConfig(scanResult.Config)
 
 		// Filter excluded CVEs
 		filterResult := FilterExcludedVulns(scanResult, cveExclusions)
@@ -947,4 +959,40 @@ func findGovulncheckCommand() string {
 	}
 
 	return "govulncheck" // Fall back to default
+}
+
+// ModuleDep represents a module dependency with its version.
+type ModuleDep struct {
+	Path    string
+	Version string
+}
+
+// listModuleDependencies runs `go list -m all` in the given module directory
+// and returns all module dependencies.
+func listModuleDependencies(module ModuleInfo) ([]ModuleDep, error) {
+	output, err := runCommandInModuleOutput(module, "go", "list", "-m", "all")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list module dependencies: %w", err)
+	}
+
+	var deps []ModuleDep
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		// Format: "module/path version" or just "module/path" for main module
+		parts := strings.Fields(line)
+		if len(parts) >= 1 {
+			dep := ModuleDep{Path: parts[0]}
+			if len(parts) >= 2 {
+				dep.Version = parts[1]
+			}
+			deps = append(deps, dep)
+		}
+	}
+
+	return deps, scanner.Err()
 }

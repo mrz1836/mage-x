@@ -1,8 +1,8 @@
 package mage
 
 import (
-	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
@@ -90,24 +90,24 @@ type VulnFilterResult struct {
 	AllOSVEntries map[string]*VulnOSV
 }
 
-// ParseGovulncheckJSON parses govulncheck's streaming JSON output.
-// It reads line-by-line as each line is a complete JSON message.
+// ParseGovulncheckJSON parses govulncheck's JSON output.
+// It handles both NDJSON (newline-delimited) and pretty-printed multi-line JSON formats.
 func ParseGovulncheckJSON(jsonOutput string) (*VulnScanResult, error) {
 	result := &VulnScanResult{
 		OSVEntries: make(map[string]*VulnOSV),
 		Findings:   make([]*VulnFinding, 0),
 	}
 
-	scanner := bufio.NewScanner(strings.NewReader(jsonOutput))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
+	// Use json.Decoder to handle multiple JSON documents in the stream
+	decoder := json.NewDecoder(strings.NewReader(jsonOutput))
 
+	for {
 		var msg VulnMessage
-		if err := json.Unmarshal([]byte(line), &msg); err != nil {
-			// Skip lines that aren't valid JSON (might be progress output)
+		if err := decoder.Decode(&msg); err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			// Try to continue parsing even if one document fails
 			continue
 		}
 
@@ -123,7 +123,7 @@ func ParseGovulncheckJSON(jsonOutput string) (*VulnScanResult, error) {
 		}
 	}
 
-	return result, scanner.Err()
+	return result, nil
 }
 
 // FilterExcludedVulns filters out vulnerabilities whose CVE aliases match the exclusion list.
@@ -264,4 +264,58 @@ func dedupStrings(strs []string) []string {
 		}
 	}
 	return result
+}
+
+// DisplayScanConfig outputs the govulncheck scan configuration in a concise format.
+func DisplayScanConfig(config *VulnConfig) {
+	if config == nil {
+		return
+	}
+
+	// Format: "govulncheck v1.1.4 | DB: 2025-12-20 | Go: 1.23.4 | Level: symbol"
+	parts := []string{}
+
+	if config.ScannerName != "" && config.ScannerVersion != "" {
+		parts = append(parts, fmt.Sprintf("%s %s", config.ScannerName, config.ScannerVersion))
+	} else if config.ScannerVersion != "" {
+		parts = append(parts, fmt.Sprintf("govulncheck %s", config.ScannerVersion))
+	}
+
+	if config.DBLastModified != "" {
+		// Try to format the date nicely (truncate time portion if present)
+		dbDate := config.DBLastModified
+		if len(dbDate) >= 10 {
+			dbDate = dbDate[:10] // Take just YYYY-MM-DD
+		}
+		parts = append(parts, fmt.Sprintf("DB: %s", dbDate))
+	}
+
+	if config.GoVersion != "" {
+		parts = append(parts, fmt.Sprintf("Go: %s", config.GoVersion))
+	}
+
+	if config.ScanLevel != "" {
+		parts = append(parts, fmt.Sprintf("Level: %s", config.ScanLevel))
+	}
+
+	if len(parts) > 0 {
+		utils.Info("%s", strings.Join(parts, " | "))
+	}
+}
+
+// DisplayScannedModules outputs the list of scanned module dependencies with a summary.
+func DisplayScannedModules(deps []ModuleDep) {
+	if len(deps) == 0 {
+		return
+	}
+
+	utils.Info("Scanned dependencies:")
+	for _, dep := range deps {
+		if dep.Version != "" {
+			fmt.Printf("  %s %s\n", dep.Path, dep.Version)
+		} else {
+			fmt.Printf("  %s\n", dep.Path)
+		}
+	}
+	utils.Info("Summary: %d modules scanned", len(deps))
 }
