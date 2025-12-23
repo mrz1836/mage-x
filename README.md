@@ -359,7 +359,6 @@ magex git:commit message="fix: bug fix"    # Commit with message
 For comprehensive documentation, visit the [docs](docs) directory:
 
 - **[Getting Started](docs/README.md)** - Complete documentation index
-- **[Claude Code Commands](docs/CLAUDE_COMMANDS.md)** - 13 optimized slash commands for agent orchestration
 - **[Namespace Interface Architecture](docs/NAMESPACE_INTERFACES.md)** - Modern interface-based namespace system
 - **[API Reference](docs/API_REFERENCE.md)** - Complete interface and API documentation
 - **[Quick Start](docs/QUICK_START.md)** - Get up and running in minutes
