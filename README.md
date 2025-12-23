@@ -904,80 +904,185 @@ See the [examples directory](examples) for more custom magefile implementations.
 
 ## 📐 Spec-Driven Development
 
-This project uses [Spec-Kit](https://github.com/github/spec-kit) for spec-driven development, enabling executable specifications that directly generate working implementations. All feature specifications live in the [`specs/`](specs) directory.
+Two powerful approaches to AI-driven development. **Choose your style:**
+
+| | 📋 **Spec-Kit** (Recommended) | 🚀 **BMAD** |
+|---|---|---|
+| **Philosophy** | Executable specifications | Agile workflows with AI agents |
+| **Interface** | CLI slash commands (`/commands`) | IDE-based agents (`*commands`) |
+| **Workflow** | Specify → Plan → Tasks → Implement | PRD → Tech Spec → Architecture → Sprint |
+| **Package** | Python (`specify-cli`) | npm (`bmad-method`) |
+| **Complexity** | Simple, streamlined | Full agile methodology |
+| **Best for** | Quick start, precise requirements | Large projects, team workflows |
+
+---
 
 <details>
-<summary><strong><code>Creating a New Feature Spec</code></strong></summary>
+<summary><strong>📋 Spec-Kit - Executable Specifications (Recommended)</strong></summary>
 <br/>
+
+[Spec-Kit](https://github.com/github/spec-kit) transforms specifications into working implementations. Simple, streamlined, and perfect for getting started quickly. All feature specs live in [`specs/`](specs).
+
+### Quick Start
+
+```bash
+# Install spec-kit prerequisites
+magex speckit:install
+```
+
+### Development Workflow
 
 Follow the spec-kit workflow to create and implement new features:
 
-### 1. **Constitution** (One-time setup)
+#### 1. **Constitution** (One-time setup)
 ```bash
 /speckit.constitution
 ```
 Establish project principles and development guidelines.
 
-### 2. **Specify** (Define requirements)
+#### 2. **Specify** (Define requirements)
 ```bash
 /speckit.specify
 ```
 Describe *what* and *why*, not the technology. Focus on requirements and user stories.
 
-### 3. **Clarify** (Optional but recommended)
+#### 3. **Clarify** (Optional but recommended)
 ```bash
 /speckit.clarify
 ```
 Address underspecified areas with targeted questions.
 
-### 4. **Plan** (Design implementation)
+#### 4. **Plan** (Design implementation)
 ```bash
 /speckit.plan
 ```
 Create technical implementation strategy with your chosen tech stack.
 
-### 5. **Tasks** (Generate action items)
+#### 5. **Tasks** (Generate action items)
 ```bash
 /speckit.tasks
 ```
 Generate actionable, dependency-ordered task lists.
 
-### 6. **Analyze** (Validate consistency)
+#### 6. **Analyze** (Validate consistency)
 ```bash
 /speckit.analyze
 ```
 Validate cross-artifact consistency before implementation.
 
-### 7. **Implement** (Build the feature)
+#### 7. **Implement** (Build the feature)
 ```bash
 /speckit.implement
 ```
 Execute all tasks to build the feature according to the plan.
 
-**Pro tip:** Run `/speckit.checklist` anytime to generate custom validation criteria.
+### Management Commands
+
+```bash
+magex speckit:install   # Install spec-kit prerequisites
+magex speckit:check     # Check installation and version
+magex speckit:upgrade   # Upgrade with automatic backup/restore
+```
+
+**Configuration** (`.mage.yaml`):
+```yaml
+speckit:
+  enabled: true
+  constitution_path: ".specify/memory/constitution.md"
+  backup_dir: ".specify/backups"
+  backups_to_keep: 5
+  ai_provider: "claude"
+```
+
+> **Pro tip:** Run `/speckit.checklist` anytime to generate custom validation criteria.
 
 </details>
 
 <details>
-<summary><strong><code>Upgrading Spec-Kit</code></strong></summary>
+<summary><strong>🚀 BMAD - AI-Driven Agile Development</strong></summary>
 <br/>
 
-### Automated Commands (Recommended)
+[BMAD](https://github.com/bmad-code-org/BMAD-METHOD) (Build More, Architect Dreams) provides a full agile methodology with AI agents. Best for larger projects or teams wanting structured agile workflows.
 
-MAGE-X provides a `speckit` namespace for managing the spec-kit CLI:
+### Quick Start
 
 ```bash
-# Install spec-kit prerequisites (uv, uvx, specify-cli)
-magex speckit:install
+# Install BMAD with interactive setup
+magex bmad:install
+```
 
-# Check spec-kit installation and version
-magex speckit:check
+### Development Workflow
 
-# Upgrade spec-kit with automatic backup/restore
+After installation, work with BMAD agents in your IDE:
+
+#### 1. **Initialize** (Set up project)
+```
+*workflow-init
+```
+Select your development track (greenfield, brownfield, or legacy).
+
+#### 2. **PRD** (Product Requirements)
+```
+*prd
+```
+Create a comprehensive Product Requirements Document with the PM agent.
+
+#### 3. **Tech Spec** (Technical Design)
+```
+*tech-spec
+```
+Define technical approach, APIs, and data models.
+
+#### 4. **Architecture** (System Design)
+```
+*create-architecture
+```
+Design system architecture with the Architect agent.
+
+#### 5. **Sprint Planning** (Plan iterations)
+```
+*sprint-planning
+```
+Break work into sprints and prioritize stories.
+
+#### 6. **Dev Story** (Build features)
+```
+*dev-story
+```
+Implement stories with the DEV agent guiding you through the code.
+
+### Management Commands
+
+```bash
+magex bmad:install   # Install BMAD prerequisites
+magex bmad:check     # Verify installation and version
+magex bmad:upgrade   # Upgrade to latest version
+magex bmad:status    # Show workflow status and next steps
+```
+
+**Configuration** (`.mage.yaml`):
+```yaml
+bmad:
+  enabled: true
+  project_dir: "_bmad"
+  version_tag: "@alpha"
+```
+
+> **Pro tip:** Run `magex bmad:status` anytime to see where you are in the workflow!
+
+</details>
+
+<details>
+<summary><strong>Upgrading Spec-Kit</strong></summary>
+<br/>
+
+### Automated Upgrade (Recommended)
+
+```bash
 magex speckit:upgrade
 ```
 
-The `speckit:upgrade` command automatically:
+The upgrade command automatically:
 - ✅ Backs up your constitution to `.specify/backups/` with timestamp
 - ✅ Upgrades the spec-kit CLI using `uv tool upgrade`
 - ✅ Updates project configuration with `--force` flag
@@ -986,19 +1091,9 @@ The `speckit:upgrade` command automatically:
 - ✅ Cleans old backups (keeps last 5)
 - ✅ Verifies the upgrade with `specify check`
 
-**Configuration** (in `.mage.yaml`):
-```yaml
-speckit:
-  enabled: true                                    # Enable speckit commands (opt-in)
-  constitution_path: ".specify/memory/constitution.md"
-  backup_dir: ".specify/backups"
-  backups_to_keep: 5
-  ai_provider: "claude"
-```
-
 ### Manual Upgrade (Alternative)
 
-If you prefer manual control, follow these steps:
+If you prefer manual control:
 
 #### Step 1: Backup Your Constitution
 ```bash
@@ -1006,87 +1101,18 @@ cp .specify/memory/constitution.md ~/constitution.backup.md
 ```
 
 #### Step 2: Upgrade the CLI
-
-**If using persistent installation:**
 ```bash
 uv tool upgrade specify-cli
-```
-
-**Verify the upgrade:**
-```bash
 specify check
 ```
 
-#### Step 3: Upgrade the Project Configuration
+#### Step 3: Upgrade Project Configuration
 ```bash
 uvx --from git+https://github.com/github/spec-kit.git specify init --here --ai claude --force
 ```
 
-The `--force` flag safely merges updated configuration into your existing project.
-
-#### Step 4: Restore Custom Constitution (if needed)
+#### Step 4: Restore Custom Constitution
 If you have custom constitution changes, carefully merge them back from your backup.
-
-</details>
-
-<details>
-<summary><strong><code>BMAD CLI Management</code></strong></summary>
-<br/>
-
-### BMAD (Build More, Architect Dreams)
-
-BMAD is an AI-driven agile development framework that automates software development workflows. MAGE-X provides commands for installing and managing BMAD in your projects.
-
-### CLI Commands
-
-```bash
-# Install BMAD prerequisites (npm, npx, bmad-method)
-magex bmad:install
-
-# Check BMAD installation and version
-magex bmad:check
-
-# Upgrade BMAD to the latest alpha version
-magex bmad:upgrade
-
-# Display current workflow status and next steps
-magex bmad:status
-```
-
-The BMAD installer creates a `_bmad/` folder containing agents and workflows for AI-assisted development.
-
-**Configuration** (in `.mage.yaml`):
-```yaml
-bmad:
-  enabled: true                  # Enable bmad commands (opt-in)
-  project_dir: "_bmad"           # Directory for BMAD project files
-  version_tag: "@alpha"          # npm version tag (v6 alpha)
-  package_name: "bmad-method"    # npm package name
-```
-
-### IDE Workflow Commands
-
-BMAD workflows are invoked **within your IDE** through AI agents, not via the command line:
-
-| Command | Purpose |
-|---------|---------|
-| `*workflow-init` | Initialize project workflow and select track |
-| `*prd` | Create Product Requirements Document |
-| `*tech-spec` | Create Technical Specification |
-| `*create-architecture` | Design system architecture |
-| `*sprint-planning` | Initialize sprint tracking |
-| `*dev-story` | Implement a story |
-
-> **Note:** Load the appropriate BMAD agent in your IDE (Analyst, PM, Architect, SM, or DEV), then invoke these commands via the agent.
-
-### Getting Started with BMAD
-
-After installation:
-1. Load an agent (e.g., Analyst) in your IDE
-2. Run `*workflow-init` to initialize your project
-3. Follow the guided workflow to plan and build
-
-For more info: https://github.com/bmad-code-org/BMAD-METHOD
 
 </details>
 
