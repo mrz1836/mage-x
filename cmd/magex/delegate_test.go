@@ -495,6 +495,10 @@ func TestConvertToMageFormat(t *testing.T) {
 	}{
 		// Colon-separated namespace commands
 		{"Speckit:Install", "speckitinstall"},
+		{"Bmad:Install", "bmadinstall"},
+		{"Bmad:Check", "bmadcheck"},
+		{"Bmad:Upgrade", "bmadupgrade"},
+		{"Bmad:Status", "bmadstatus"},
 		{"Pipeline:CI", "pipelinecI"},
 		{"Build:Default", "builddefault"},
 		{"Test:Unit", "testunit"},

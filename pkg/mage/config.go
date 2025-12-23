@@ -15,6 +15,7 @@ import (
 
 // Config represents the mage configuration
 type Config struct {
+	Bmad     BmadConfig        `yaml:"bmad"`
 	Build    BuildConfig       `yaml:"build"`
 	Docs     DocsConfig        `yaml:"docs"`
 	Download DownloadConfig    `yaml:"download"`
@@ -150,6 +151,14 @@ type SpeckitConfig struct {
 	CLIName          string `yaml:"cli_name"`          // Package name for spec-kit CLI (default: "specify-cli")
 	GitHubRepo       string `yaml:"github_repo"`       // GitHub repository URL for spec-kit
 	AIProvider       string `yaml:"ai_provider"`       // AI provider for spec-kit initialization (default: "claude")
+}
+
+// BmadConfig contains BMAD (Build More, Architect Dreams) CLI management settings
+type BmadConfig struct {
+	Enabled     bool   `yaml:"enabled"`      // Whether bmad commands are available (default: false, opt-in)
+	ProjectDir  string `yaml:"project_dir"`  // Directory for BMAD project files (default: "_bmad")
+	VersionTag  string `yaml:"version_tag"`  // npm version tag to use (default: "@alpha" for v6)
+	PackageName string `yaml:"package_name"` // npm package name (default: "bmad-method")
 }
 
 // Static errors for err113 compliance
@@ -356,6 +365,11 @@ func cleanConfigValues(config *Config) {
 	config.Speckit.CLIName = cleanEnvValue(config.Speckit.CLIName)
 	config.Speckit.GitHubRepo = cleanEnvValue(config.Speckit.GitHubRepo)
 	config.Speckit.AIProvider = cleanEnvValue(config.Speckit.AIProvider)
+
+	// Clean Bmad config strings
+	config.Bmad.ProjectDir = cleanEnvValue(config.Bmad.ProjectDir)
+	config.Bmad.VersionTag = cleanEnvValue(config.Bmad.VersionTag)
+	config.Bmad.PackageName = cleanEnvValue(config.Bmad.PackageName)
 }
 
 // defaultConfig returns the default configuration
@@ -429,6 +443,12 @@ func defaultConfig() *Config {
 			BackoffMultiplier: 2.0,
 			EnableResume:      true,
 			UserAgent:         "mage-x-downloader/1.0",
+		},
+		Bmad: BmadConfig{
+			Enabled:     false, // Opt-in, disabled by default
+			ProjectDir:  DefaultBmadProjectDir,
+			VersionTag:  DefaultBmadVersionTag,
+			PackageName: DefaultBmadPackageName,
 		},
 		Speckit: SpeckitConfig{
 			Enabled:          false, // Opt-in, disabled by default

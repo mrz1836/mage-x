@@ -729,6 +729,12 @@ magex uninstall           # Remove installed binary
 magex speckit:install     # Install spec-kit prerequisites (uv, uvx, specify-cli)
 magex speckit:check       # Verify spec-kit installation and report version info
 magex speckit:upgrade     # Upgrade spec-kit with automatic constitution backup/restore
+
+# BMAD CLI Management (requires bmad.enabled: true in .mage.yaml)
+magex bmad:install        # Install BMAD prerequisites (npm, npx, bmad-method)
+magex bmad:check          # Verify BMAD installation and report version info
+magex bmad:upgrade        # Upgrade BMAD to the latest alpha version
+magex bmad:status         # Display current workflow status and next steps
 ```
 
 </details>
@@ -1020,6 +1026,67 @@ The `--force` flag safely merges updated configuration into your existing projec
 
 #### Step 4: Restore Custom Constitution (if needed)
 If you have custom constitution changes, carefully merge them back from your backup.
+
+</details>
+
+<details>
+<summary><strong><code>BMAD CLI Management</code></strong></summary>
+<br/>
+
+### BMAD (Build More, Architect Dreams)
+
+BMAD is an AI-driven agile development framework that automates software development workflows. MAGE-X provides commands for installing and managing BMAD in your projects.
+
+### CLI Commands
+
+```bash
+# Install BMAD prerequisites (npm, npx, bmad-method)
+magex bmad:install
+
+# Check BMAD installation and version
+magex bmad:check
+
+# Upgrade BMAD to the latest alpha version
+magex bmad:upgrade
+
+# Display current workflow status and next steps
+magex bmad:status
+```
+
+The BMAD installer creates a `_bmad/` folder containing agents and workflows for AI-assisted development.
+
+**Configuration** (in `.mage.yaml`):
+```yaml
+bmad:
+  enabled: true                  # Enable bmad commands (opt-in)
+  project_dir: "_bmad"           # Directory for BMAD project files
+  version_tag: "@alpha"          # npm version tag (v6 alpha)
+  package_name: "bmad-method"    # npm package name
+```
+
+### IDE Workflow Commands
+
+BMAD workflows are invoked **within your IDE** through AI agents, not via the command line:
+
+| Command | Purpose |
+|---------|---------|
+| `*workflow-init` | Initialize project workflow and select track |
+| `*prd` | Create Product Requirements Document |
+| `*tech-spec` | Create Technical Specification |
+| `*create-architecture` | Design system architecture |
+| `*sprint-planning` | Initialize sprint tracking |
+| `*dev-story` | Implement a story |
+
+> **Note:** Load the appropriate BMAD agent in your IDE (Analyst, PM, Architect, SM, or DEV), then invoke these commands via the agent.
+
+### Getting Started with BMAD
+
+After installation:
+1. Load an agent (e.g., Analyst) in your IDE
+2. Run `*workflow-init` to initialize your project
+3. Follow the guided workflow to plan and build
+
+For more info: https://github.com/bmad-code-org/BMAD-METHOD
 
 </details>
 

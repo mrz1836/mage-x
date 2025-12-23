@@ -330,3 +330,18 @@ const (
 	DefaultSpeckitGitHubRepo       = "git+https://github.com/github/spec-kit.git"
 	DefaultSpeckitAIProvider       = "claude"
 )
+
+// BMAD command names
+const (
+	CmdNpm  = "npm"
+	CmdNpx  = "npx"
+	CmdBmad = "bmad-method"
+)
+
+// BMAD default configuration values
+const (
+	DefaultBmadProjectDir  = "_bmad"
+	DefaultBmadVersionTag  = "@alpha"
+	DefaultBmadPackageName = "bmad-method"
+	DefaultBmadStatusFile  = "bmm-workflow-status.yaml"
+)

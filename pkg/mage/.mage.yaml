@@ -1,3 +1,8 @@
+bmad:
+  enabled: false
+  project_dir: _bmad
+  version_tag: '@alpha'
+  package_name: bmad-method
 build:
   goflags: []
   ldflags: []

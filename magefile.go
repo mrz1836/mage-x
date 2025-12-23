@@ -27,6 +27,7 @@ func getMageArgs() []string {
 // Each type must be defined as mg.Namespace for mage to recognize it
 type (
 	Bench     mg.Namespace
+	Bmad      mg.Namespace
 	Build     mg.Namespace
 	Configure mg.Namespace
 	Deps      mg.Namespace
@@ -176,6 +177,30 @@ func SpeckitCheck() error {
 func SpeckitUpgrade() error {
 	var s mage.Speckit
 	return s.Upgrade()
+}
+
+// BmadInstall installs BMAD prerequisites (npm, npx, bmad-method)
+func BmadInstall() error {
+	var b mage.Bmad
+	return b.Install()
+}
+
+// BmadCheck verifies BMAD installation and reports version info
+func BmadCheck() error {
+	var b mage.Bmad
+	return b.Check()
+}
+
+// BmadUpgrade upgrades BMAD to the latest alpha version
+func BmadUpgrade() error {
+	var b mage.Bmad
+	return b.Upgrade()
+}
+
+// BmadStatus displays the current BMAD workflow status
+func BmadStatus() error {
+	var b mage.Bmad
+	return b.Status()
 }
 
 // DepsUpdate updates all dependencies (equivalent to "make update")
