@@ -80,6 +80,9 @@ func RegisterAll(reg *registry.Registry) {
 	// Register Yaml namespace commands
 	registerYamlCommands(reg)
 
+	// Register Bmad namespace commands
+	registerBmadCommands(reg)
+
 	// Register top-level convenience commands
 	registerTopLevelCommands(reg)
 }
@@ -1620,6 +1623,43 @@ func registerYamlCommands(reg *registry.Registry) {
 			WithDescription("Generate YAML templates").
 			WithFunc(func() error { return y.Template() }).
 			WithCategory("Configuration").
+			MustBuild(),
+	)
+}
+
+// registerBmadCommands registers all Bmad namespace commands
+func registerBmadCommands(reg *registry.Registry) {
+	var bmad mage.Bmad
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("bmad", "install").
+			WithDescription("Install BMAD prerequisites (npm, npx, bmad-method)").
+			WithFunc(func() error { return bmad.Install() }).
+			WithCategory("AI/ML").
+			MustBuild(),
+	)
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("bmad", "check").
+			WithDescription("Verify BMAD installation and version").
+			WithFunc(func() error { return bmad.Check() }).
+			WithCategory("AI/ML").
+			MustBuild(),
+	)
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("bmad", "upgrade").
+			WithDescription("Upgrade BMAD to latest version").
+			WithFunc(func() error { return bmad.Upgrade() }).
+			WithCategory("AI/ML").
+			MustBuild(),
+	)
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("bmad", "status").
+			WithDescription("Show BMAD workflow status").
+			WithFunc(func() error { return bmad.Status() }).
+			WithCategory("AI/ML").
 			MustBuild(),
 	)
 }
