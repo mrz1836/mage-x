@@ -933,46 +933,46 @@ magex speckit:install
 Follow the spec-kit workflow to create and implement new features:
 
 #### 1. **Constitution** (One-time setup)
+Establish project principles and development guidelines.
 ```bash
 /speckit.constitution
 ```
-Establish project principles and development guidelines.
 
 #### 2. **Specify** (Define requirements)
+Describe *what* and *why*, not the technology. Focus on requirements and user stories.
 ```bash
 /speckit.specify
 ```
-Describe *what* and *why*, not the technology. Focus on requirements and user stories.
 
 #### 3. **Clarify** (Optional but recommended)
+Address underspecified areas with targeted questions.
 ```bash
 /speckit.clarify
 ```
-Address underspecified areas with targeted questions.
 
 #### 4. **Plan** (Design implementation)
+Create technical implementation strategy with your chosen tech stack.
 ```bash
 /speckit.plan
 ```
-Create technical implementation strategy with your chosen tech stack.
 
 #### 5. **Tasks** (Generate action items)
+Generate actionable, dependency-ordered task lists.
 ```bash
 /speckit.tasks
 ```
-Generate actionable, dependency-ordered task lists.
 
 #### 6. **Analyze** (Validate consistency)
+Validate cross-artifact consistency before implementation.
 ```bash
 /speckit.analyze
 ```
-Validate cross-artifact consistency before implementation.
 
 #### 7. **Implement** (Build the feature)
+Execute all tasks to build the feature according to the plan.
 ```bash
 /speckit.implement
 ```
-Execute all tasks to build the feature according to the plan.
 
 ### Management Commands
 
@@ -1014,42 +1014,81 @@ magex bmad:install
 After installation, work with BMAD agents in your IDE:
 
 #### 1. **Initialize** (Set up project)
+Select your development track (greenfield, brownfield, or legacy).
 ```
 *workflow-init
 ```
-Select your development track (greenfield, brownfield, or legacy).
 
-#### 2. **PRD** (Product Requirements)
+#### 2a. **Product Brief** (Product Requirements)
+Create a comprehensive product brief with the PM agent.
 ```
-*prd
-or
 *create-product-brief
 ```
-Create a comprehensive Product Requirements Document with the PM agent.
 
-#### 3. **Tech Spec** (Technical Design)
+#### 3a. **PRD** (Product Requirements)
+Create a comprehensive Product Requirements Document with the PM agent.
 ```
-*tech-spec
+*prd
 ```
-Define technical approach, APIs, and data models.
+
+#### 3b. **UX Design** (Optional)
+Design user flows and wireframes with the UX agent.
+```
+*create-ux-design
+```
 
 #### 4. **Architecture** (System Design)
+Design system architecture with the Architect agent.
 ```
 *create-architecture
 ```
-Design system architecture with the Architect agent.
 
-#### 5. **Sprint Planning** (Plan iterations)
+#### 5. **Create Epics & Stories** (Sprint Planning)
+Break work into epics, sprints and prioritize stories.
+```
+*create-epics-and-stories
+```
+
+#### 6. **Test Design** (Test Engineering Architect)
+Design test plans and cases with the TEA agent.
+```
+*testarch-test-design
+```
+
+#### 7. **Check Implementation Readiness** (Final validation)
+Validate all artifacts before development begins.
+```
+*check-implementation-readiness
+```
+
+#### 8. **Start Sprint Planning** (Development)
+Design sprints and get started with development.
 ```
 *sprint-planning
 ```
-Break work into sprints and prioritize stories.
 
-#### 6. **Dev Story** (Build features)
+Check the status of your sprints anytime:
+```
+*sprint-status
+```
+
+#### 9. **Create Story** (Individual tasks) (1 of 3)
+Create individual user stories for implementation inside each sprint.
+```
+*create-story
+```
+
+#### 10. **Implement Stories** (Development) (2 of 3)
+Implement individual user story.
 ```
 *dev-story
 ```
-Implement stories with the DEV agent guiding you through the code.
+
+#### 11. **Code Review & Testing** (Quality Assurance) (3 of 3)
+Review and test completed user story.
+```
+*code-review
+```
 
 ### Management Commands
 
