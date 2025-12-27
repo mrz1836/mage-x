@@ -197,12 +197,6 @@ func BmadUpgrade() error {
 	return b.Upgrade()
 }
 
-// BmadStatus displays the current BMAD workflow status
-func BmadStatus() error {
-	var b mage.Bmad
-	return b.Status()
-}
-
 // DepsUpdate updates all dependencies (equivalent to "make update")
 func DepsUpdate() error {
 	var d mage.Deps
