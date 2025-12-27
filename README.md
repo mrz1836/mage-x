@@ -733,7 +733,6 @@ magex speckit:upgrade     # Upgrade spec-kit with automatic constitution backup/
 magex bmad:install        # Install BMAD prerequisites (npm, npx, bmad-method)
 magex bmad:check          # Verify BMAD installation and report version info
 magex bmad:upgrade        # Upgrade BMAD to the latest alpha version
-magex bmad:status         # Display current workflow status and next steps
 ```
 
 </details>
@@ -1023,6 +1022,8 @@ Select your development track (greenfield, brownfield, or legacy).
 #### 2. **PRD** (Product Requirements)
 ```
 *prd
+or
+*create-product-brief
 ```
 Create a comprehensive Product Requirements Document with the PM agent.
 
@@ -1056,7 +1057,6 @@ Implement stories with the DEV agent guiding you through the code.
 magex bmad:install   # Install BMAD prerequisites
 magex bmad:check     # Verify installation and version
 magex bmad:upgrade   # Upgrade to latest version
-magex bmad:status    # Show workflow status and next steps
 ```
 
 **Configuration** (`.mage.yaml`):
@@ -1066,8 +1066,6 @@ bmad:
   project_dir: "_bmad"
   version_tag: "@alpha"
 ```
-
-> **Pro tip:** Run `magex bmad:status` anytime to see where you are in the workflow!
 
 </details>
 

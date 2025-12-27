@@ -343,5 +343,4 @@ const (
 	DefaultBmadProjectDir  = "_bmad"
 	DefaultBmadVersionTag  = "@alpha"
 	DefaultBmadPackageName = "bmad-method"
-	DefaultBmadStatusFile  = "bmm-workflow-status.yaml"
 )

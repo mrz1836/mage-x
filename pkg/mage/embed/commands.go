@@ -1654,12 +1654,4 @@ func registerBmadCommands(reg *registry.Registry) {
 			WithCategory("AI/ML").
 			MustBuild(),
 	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bmad", "status").
-			WithDescription("Show BMAD workflow status").
-			WithFunc(func() error { return bmad.Status() }).
-			WithCategory("AI/ML").
-			MustBuild(),
-	)
 }
