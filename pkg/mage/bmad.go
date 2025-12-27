@@ -298,4 +298,3 @@ func printBmadUpgradeSummary(oldVersion, newVersion string) {
 	utils.Info("Note: BMAD configuration files in _bmad/ are preserved during upgrades")
 	utils.Info("")
 }
-
