@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -374,7 +375,7 @@ func TestConfigManagerMerge(t *testing.T) {
 	})
 }
 
-// TestCleanEnvValue tests the cleanEnvValue helper function.
+// TestCleanEnvValue tests the env.CleanValue helper function.
 // This function removes inline comments and trims whitespace from env values.
 func TestCleanEnvValue(t *testing.T) {
 	tests := []struct {
@@ -441,7 +442,7 @@ func TestCleanEnvValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := cleanEnvValue(tt.input)
+			result := env.CleanValue(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

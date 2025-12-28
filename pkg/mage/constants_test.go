@@ -603,12 +603,13 @@ func TestConstantsTestSuite(t *testing.T) {
 // TestGetToolVersionFromRegistry tests the unified getToolVersionFromRegistry function
 func TestGetToolVersionFromRegistry(t *testing.T) {
 	tests := []struct {
-		name         string
-		toolName     string
-		envVarName   string
-		envVarValue  string
-		expectResult string
-		isKnownTool  bool
+		name            string
+		toolName        string
+		envVarName      string
+		envVarValue     string
+		unsetPrimaryVar string // primary env var to unset for testing legacy fallback
+		expectResult    string
+		isKnownTool     bool
 	}{
 		{
 			name:         "golangci-lint from env",
@@ -619,12 +620,13 @@ func TestGetToolVersionFromRegistry(t *testing.T) {
 			isKnownTool:  true,
 		},
 		{
-			name:         "gofumpt from legacy env",
-			toolName:     CmdGofumpt,
-			envVarName:   "GOFUMPT_VERSION",
-			envVarValue:  "v0.5.0",
-			expectResult: "v0.5.0",
-			isKnownTool:  true,
+			name:            "gofumpt from legacy env",
+			toolName:        CmdGofumpt,
+			envVarName:      "GOFUMPT_VERSION",
+			envVarValue:     "v0.5.0",
+			unsetPrimaryVar: "MAGE_X_GOFUMPT_VERSION", // unset primary to test legacy fallback
+			expectResult:    "v0.5.0",
+			isKnownTool:     true,
 		},
 		{
 			name:         "unknown tool returns latest",
@@ -636,6 +638,17 @@ func TestGetToolVersionFromRegistry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Unset primary env var if testing legacy fallback
+			if tt.unsetPrimaryVar != "" {
+				originalPrimary := os.Getenv(tt.unsetPrimaryVar)
+				_ = os.Unsetenv(tt.unsetPrimaryVar) //nolint:errcheck // test setup
+				defer func() {
+					if originalPrimary != "" {
+						_ = os.Setenv(tt.unsetPrimaryVar, originalPrimary) //nolint:errcheck // test cleanup
+					}
+				}()
+			}
+
 			// Save and restore env
 			if tt.envVarName != "" {
 				original := os.Getenv(tt.envVarName)

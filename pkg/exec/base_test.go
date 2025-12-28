@@ -185,3 +185,155 @@ func TestBase_Verbose(t *testing.T) {
 		t.Error("Expected verbose logging to be called")
 	}
 }
+
+func TestBase_logVerbose(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		verbose    bool
+		logger     func(string, ...interface{})
+		wantLogged bool
+	}{
+		{
+			name:       "verbose enabled with logger logs message",
+			verbose:    true,
+			logger:     func(string, ...interface{}) {},
+			wantLogged: true,
+		},
+		{
+			name:       "verbose disabled does not log",
+			verbose:    false,
+			logger:     func(string, ...interface{}) {},
+			wantLogged: false,
+		},
+		{
+			name:       "verbose enabled with nil logger does not panic",
+			verbose:    true,
+			logger:     nil,
+			wantLogged: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var logged bool
+			var loggedMsg string
+			var wrappedLogger func(string, ...interface{})
+			if tt.logger != nil {
+				wrappedLogger = func(format string, args ...interface{}) {
+					logged = true
+					loggedMsg = format
+				}
+			}
+
+			b := &Base{
+				Verbose: tt.verbose,
+				logger:  wrappedLogger,
+			}
+
+			b.logVerbose("test message: %s", "arg")
+
+			if logged != tt.wantLogged {
+				t.Errorf("logged = %v, want %v", logged, tt.wantLogged)
+			}
+			if tt.wantLogged && !strings.Contains(loggedMsg, "test message") {
+				t.Errorf("loggedMsg = %q, want to contain 'test message'", loggedMsg)
+			}
+		})
+	}
+}
+
+func TestBase_checkDryRun(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		dryRun     bool
+		logger     func(string, ...interface{})
+		wantReturn bool
+		wantLogged bool
+	}{
+		{
+			name:       "dryRun enabled with logger returns true and logs",
+			dryRun:     true,
+			logger:     func(string, ...interface{}) {},
+			wantReturn: true,
+			wantLogged: true,
+		},
+		{
+			name:       "dryRun disabled returns false",
+			dryRun:     false,
+			logger:     func(string, ...interface{}) {},
+			wantReturn: false,
+			wantLogged: false,
+		},
+		{
+			name:       "dryRun enabled with nil logger returns true without panic",
+			dryRun:     true,
+			logger:     nil,
+			wantReturn: true,
+			wantLogged: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var logged bool
+			var wrappedLogger func(string, ...interface{})
+			if tt.logger != nil {
+				wrappedLogger = func(format string, args ...interface{}) {
+					logged = true
+				}
+			}
+
+			b := &Base{
+				DryRun: tt.dryRun,
+				logger: wrappedLogger,
+			}
+
+			result := b.checkDryRun("[DRY RUN] test: %s", "arg")
+
+			if result != tt.wantReturn {
+				t.Errorf("checkDryRun() = %v, want %v", result, tt.wantReturn)
+			}
+			if logged != tt.wantLogged {
+				t.Errorf("logged = %v, want %v", logged, tt.wantLogged)
+			}
+		})
+	}
+}
+
+func TestBase_DryRunSkipsExecution(t *testing.T) {
+	t.Parallel()
+
+	var logMessages []string
+	logger := func(format string, args ...interface{}) {
+		logMessages = append(logMessages, format)
+	}
+
+	b := NewBase(
+		WithDryRun(true),
+		WithVerbose(true),
+		WithLogger(logger),
+	)
+	ctx := context.Background()
+
+	// DryRun should return early without executing
+	output, err := b.ExecuteOutput(ctx, "echo", "should_not_run")
+	if err != nil {
+		t.Errorf("ExecuteOutput() with DryRun error = %v, want nil", err)
+	}
+	if output != "" {
+		t.Errorf("ExecuteOutput() with DryRun output = %q, want empty", output)
+	}
+
+	// Should have logged verbose and dry-run messages
+	if len(logMessages) != 2 {
+		t.Errorf("Expected 2 log messages, got %d: %v", len(logMessages), logMessages)
+	}
+}

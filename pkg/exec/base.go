@@ -79,6 +79,25 @@ func NewBase(opts ...Option) *Base {
 	return b
 }
 
+// logVerbose logs a message if verbose mode is enabled and logger is set.
+func (b *Base) logVerbose(format string, args ...interface{}) {
+	if b.Verbose && b.logger != nil {
+		b.logger(format, args...)
+	}
+}
+
+// checkDryRun checks if dry-run mode is enabled. If so, it logs the message
+// and returns true (caller should return early). Otherwise returns false.
+func (b *Base) checkDryRun(format string, args ...interface{}) bool {
+	if b.DryRun {
+		if b.logger != nil {
+			b.logger(format, args...)
+		}
+		return true
+	}
+	return false
+}
+
 // Execute runs a command with stdout/stderr connected to os.Stdout/os.Stderr
 func (b *Base) Execute(ctx context.Context, name string, args ...string) error {
 	return b.ExecuteStreaming(ctx, os.Stdout, os.Stderr, name, args...)
@@ -86,14 +105,8 @@ func (b *Base) Execute(ctx context.Context, name string, args ...string) error {
 
 // ExecuteOutput runs a command and returns its combined output
 func (b *Base) ExecuteOutput(ctx context.Context, name string, args ...string) (string, error) {
-	if b.Verbose && b.logger != nil {
-		b.logger("➤ %s %s", name, strings.Join(args, " "))
-	}
-
-	if b.DryRun {
-		if b.logger != nil {
-			b.logger("[DRY RUN] Would execute: %s %s", name, strings.Join(args, " "))
-		}
+	b.logVerbose("➤ %s %s", name, strings.Join(args, " "))
+	if b.checkDryRun("[DRY RUN] Would execute: %s %s", name, strings.Join(args, " ")) {
 		return "", nil
 	}
 
@@ -112,14 +125,8 @@ func (b *Base) ExecuteOutput(ctx context.Context, name string, args ...string) (
 
 // ExecuteWithEnv runs a command with additional environment variables
 func (b *Base) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
-	if b.Verbose && b.logger != nil {
-		b.logger("➤ %s %s (with env)", name, strings.Join(args, " "))
-	}
-
-	if b.DryRun {
-		if b.logger != nil {
-			b.logger("[DRY RUN] Would execute: %s %s (with env)", name, strings.Join(args, " "))
-		}
+	b.logVerbose("➤ %s %s (with env)", name, strings.Join(args, " "))
+	if b.checkDryRun("[DRY RUN] Would execute: %s %s (with env)", name, strings.Join(args, " ")) {
 		return nil
 	}
 
@@ -140,14 +147,8 @@ func (b *Base) ExecuteWithEnv(ctx context.Context, env []string, name string, ar
 
 // ExecuteInDir runs a command in the specified directory
 func (b *Base) ExecuteInDir(ctx context.Context, dir, name string, args ...string) error {
-	if b.Verbose && b.logger != nil {
-		b.logger("➤ [%s] %s %s", dir, name, strings.Join(args, " "))
-	}
-
-	if b.DryRun {
-		if b.logger != nil {
-			b.logger("[DRY RUN] Would execute in %s: %s %s", dir, name, strings.Join(args, " "))
-		}
+	b.logVerbose("➤ [%s] %s %s", dir, name, strings.Join(args, " "))
+	if b.checkDryRun("[DRY RUN] Would execute in %s: %s %s", dir, name, strings.Join(args, " ")) {
 		return nil
 	}
 
@@ -166,14 +167,8 @@ func (b *Base) ExecuteInDir(ctx context.Context, dir, name string, args ...strin
 
 // ExecuteOutputInDir runs a command in the specified directory and returns output
 func (b *Base) ExecuteOutputInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
-	if b.Verbose && b.logger != nil {
-		b.logger("➤ [%s] %s %s", dir, name, strings.Join(args, " "))
-	}
-
-	if b.DryRun {
-		if b.logger != nil {
-			b.logger("[DRY RUN] Would execute in %s: %s %s", dir, name, strings.Join(args, " "))
-		}
+	b.logVerbose("➤ [%s] %s %s", dir, name, strings.Join(args, " "))
+	if b.checkDryRun("[DRY RUN] Would execute in %s: %s %s", dir, name, strings.Join(args, " ")) {
 		return "", nil
 	}
 
@@ -193,14 +188,8 @@ func (b *Base) ExecuteOutputInDir(ctx context.Context, dir, name string, args ..
 
 // ExecuteStreaming runs a command with custom stdout/stderr
 func (b *Base) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error {
-	if b.Verbose && b.logger != nil {
-		b.logger("➤ %s %s", name, strings.Join(args, " "))
-	}
-
-	if b.DryRun {
-		if b.logger != nil {
-			b.logger("[DRY RUN] Would execute: %s %s", name, strings.Join(args, " "))
-		}
+	b.logVerbose("➤ %s %s", name, strings.Join(args, " "))
+	if b.checkDryRun("[DRY RUN] Would execute: %s %s", name, strings.Join(args, " ")) {
 		return nil
 	}
 

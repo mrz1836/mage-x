@@ -264,7 +264,7 @@ func TestStructuredAdapter_WithFields(t *testing.T) {
 }
 
 func TestPackageLevelFunctions(t *testing.T) {
-	t.Parallel()
+	// Not parallel: test modifies global default logger
 
 	// Save and restore default logger
 	oldDefault := Default()
@@ -296,7 +296,7 @@ func TestPackageLevelFunctions(t *testing.T) {
 }
 
 func TestGlobalLevelSetting(t *testing.T) {
-	t.Parallel()
+	// Not parallel: test modifies global log level
 
 	// Save and restore
 	oldLevel := GetLevel()
