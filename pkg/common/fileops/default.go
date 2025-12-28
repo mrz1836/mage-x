@@ -118,6 +118,11 @@ func (d *DefaultFileOperator) Copy(src, dst string) error {
 		return fmt.Errorf("failed to copy file: %w", copyErr)
 	}
 
+	// Sync to ensure durability on power failure (consistent with WriteFileAtomic)
+	if syncErr := destFile.Sync(); syncErr != nil {
+		return fmt.Errorf("failed to sync destination file: %w", syncErr)
+	}
+
 	// Copy file permissions
 	sourceInfo, err := os.Stat(src)
 	if err != nil {

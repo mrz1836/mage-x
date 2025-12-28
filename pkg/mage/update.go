@@ -5,6 +5,8 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +28,13 @@ import (
 const (
 	// magexModule is the module path for the magex binary
 	magexModule = "github.com/mrz1836/mage-x"
+
+	// maxUpdateFileSize is the maximum allowed size for extracted files (500MB)
+	// This prevents zip bomb attacks during update extraction
+	maxUpdateFileSize = 500 * 1024 * 1024
+
+	// downloadTimeout is the maximum time allowed for downloading update files
+	downloadTimeout = 5 * time.Minute
 )
 
 // Static errors to satisfy err113 linter
@@ -35,6 +44,11 @@ var (
 	errNoTarGzFound        = errors.New("no tar.gz file found in update directory")
 	errMagexBinaryNotFound = errors.New("magex binary not found in extracted files")
 	errPathTraversal       = errors.New("path traversal attempt detected")
+	errChecksumMismatch    = errors.New("checksum verification failed")
+	errFileTooLarge        = errors.New("file exceeds maximum allowed size")
+	errChecksumFetchFailed = errors.New("failed to fetch checksums file")
+	errChecksumNotFound    = errors.New("checksum not found in checksums file")
+	errDownloadFailed      = errors.New("download failed")
 )
 
 // Update namespace for auto-update functionality
@@ -60,6 +74,7 @@ type UpdateInfo struct {
 	UpdateAvailable bool
 	ReleaseNotes    string
 	DownloadURL     string
+	ChecksumSHA256  string // Expected SHA256 checksum of the downloaded file (hex-encoded)
 }
 
 // Check checks for available updates in the specified channel
@@ -108,9 +123,10 @@ func (Update) Install() error {
 
 	utils.Info("Updating from %s to %s", info.CurrentVersion, info.LatestVersion)
 
-	// Create update directory
-	updateDir := filepath.Join(os.TempDir(), "mage-update")
-	if err := os.MkdirAll(updateDir, 0o750); err != nil {
+	// Create update directory with random suffix for security
+	// Using MkdirTemp prevents symlink race attacks on predictable paths
+	updateDir, err := os.MkdirTemp("", "mage-update-*")
+	if err != nil {
 		return fmt.Errorf("failed to create update directory: %w", err)
 	}
 	defer func() {
@@ -185,10 +201,23 @@ func checkForUpdates(channel UpdateChannel) (*UpdateInfo, error) {
 
 	// Find appropriate asset - pattern: mage-x_VERSION_OS_ARCH.tar.gz
 	assetPattern := fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
+	var checksumURL string
+
 	for _, asset := range release.Assets {
 		if strings.Contains(asset.Name, assetPattern) {
 			info.DownloadURL = asset.BrowserDownloadURL
-			break
+		}
+		// Look for checksums file (goreleaser convention: checksums.txt)
+		if strings.HasSuffix(asset.Name, "checksums.txt") {
+			checksumURL = asset.BrowserDownloadURL
+		}
+	}
+
+	// Try to fetch and parse the checksum for our asset
+	if checksumURL != "" && info.DownloadURL != "" {
+		assetName := filepath.Base(info.DownloadURL)
+		if checksum, err := fetchChecksumForAsset(checksumURL, assetName); err == nil {
+			info.ChecksumSHA256 = checksum
 		}
 	}
 
@@ -322,7 +351,8 @@ func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
 	return getLatestBetaReleaseViaAPI(owner, repo)
 }
 
-// getLatestBetaReleaseViaGH gets the latest beta release using gh CLI
+// getLatestBetaReleaseViaGH gets the latest beta release using gh CLI.
+// Beta channel prioritizes prereleases but falls back to stable if none exist.
 func getLatestBetaReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 	repoName := fmt.Sprintf("%s/%s", owner, repo)
 
@@ -337,9 +367,16 @@ func getLatestBetaReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 		return nil, fmt.Errorf("failed to parse gh CLI response: %w", err)
 	}
 
-	// Find latest beta or stable (same logic as API version)
+	// First pass: look for the latest prerelease (beta/alpha/rc)
 	for _, ghRelease := range ghReleases {
-		if !ghRelease.IsDraft && (ghRelease.IsPrerelease || !ghRelease.IsPrerelease) {
+		if !ghRelease.IsDraft && ghRelease.IsPrerelease {
+			return convertGHReleaseToGitHubRelease(&ghRelease)
+		}
+	}
+
+	// Fallback: if no prerelease found, return the latest stable
+	for _, ghRelease := range ghReleases {
+		if !ghRelease.IsDraft {
 			return convertGHReleaseToGitHubRelease(&ghRelease)
 		}
 	}
@@ -347,7 +384,8 @@ func getLatestBetaReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 	return nil, errNoBetaReleasesFound
 }
 
-// getLatestBetaReleaseViaAPI gets the latest beta release using GitHub API
+// getLatestBetaReleaseViaAPI gets the latest beta release using GitHub API.
+// Beta channel prioritizes prereleases but falls back to stable if none exist.
 func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
 
@@ -381,9 +419,16 @@ func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 		return nil, err
 	}
 
-	// Find latest beta or stable
+	// First pass: look for the latest prerelease (beta/alpha/rc)
 	for _, release := range releases {
-		if !release.Draft && (release.Prerelease || !release.Prerelease) {
+		if !release.Draft && release.Prerelease {
+			return &release, nil
+		}
+	}
+
+	// Fallback: if no prerelease found, return the latest stable
+	for _, release := range releases {
+		if !release.Draft {
 			return &release, nil
 		}
 	}
@@ -468,7 +513,54 @@ func getLatestEdgeReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	return nil, errNoReleasesFound
 }
 
-// downloadUpdate downloads the update
+// fetchChecksumForAsset fetches the checksums file and extracts the checksum for the specified asset.
+// Returns the hex-encoded SHA256 checksum or an error if not found.
+func fetchChecksumForAsset(checksumURL, assetName string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", checksumURL, http.NoBody)
+	if err != nil {
+		return "", err
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Printf("failed to close checksum response body: %v", closeErr)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("%w: status %d", errChecksumFetchFailed, resp.StatusCode)
+	}
+
+	// Limit read to 1MB (checksums file should be small)
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
+	if err != nil {
+		return "", err
+	}
+
+	// Parse checksums file (goreleaser format: "checksum  filename")
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) >= 2 && parts[1] == assetName {
+			// Validate it looks like a hex SHA256 (64 chars)
+			if len(parts[0]) == 64 {
+				return parts[0], nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("%w: %s", errChecksumNotFound, assetName)
+}
+
+// downloadUpdate downloads the update with security verification
 func downloadUpdate(info *UpdateInfo, dir string) error {
 	if info.DownloadURL == "" {
 		// No binary asset, use go install
@@ -477,12 +569,24 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 
 	utils.Info("Downloading update...")
 
-	// Download binary
-	req, err := http.NewRequestWithContext(context.Background(), "GET", info.DownloadURL, http.NoBody)
+	// Create HTTP client with explicit timeout to prevent hanging downloads
+	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", info.DownloadURL, http.NoBody)
 	if err != nil {
 		return err
 	}
-	resp, err := http.DefaultClient.Do(req)
+
+	client := &http.Client{
+		Timeout: downloadTimeout,
+		Transport: &http.Transport{
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+		},
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -494,6 +598,10 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 		}
 	}()
 
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%w: status %d", errDownloadFailed, resp.StatusCode)
+	}
+
 	// Save to file
 	filename := filepath.Base(info.DownloadURL)
 	targetPath := filepath.Join(dir, filename)
@@ -502,6 +610,20 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+
+	// Verify checksum if provided (security: prevent MITM attacks)
+	if info.ChecksumSHA256 != "" {
+		actualHash := sha256.Sum256(data)
+		actualHashHex := hex.EncodeToString(actualHash[:])
+
+		if !strings.EqualFold(actualHashHex, info.ChecksumSHA256) {
+			return fmt.Errorf("%w: expected %s, got %s",
+				errChecksumMismatch, info.ChecksumSHA256, actualHashHex)
+		}
+		utils.Info("Checksum verified: %s", actualHashHex[:16]+"...")
+	} else {
+		utils.Warn("No checksum available for verification - proceeding with caution")
 	}
 
 	fileOps := fileops.New()
@@ -597,17 +719,33 @@ func extractTarGz(src, dest string) error {
 			return fmt.Errorf("failed to create destination directory for %s: %w", destPath, dirErr)
 		}
 
-		// Create the file
+		// Normalize file permissions for security
+		// Executables get 0o755, regular files get 0o644
+		// This prevents malicious tar files from setting dangerous permissions (e.g., 0o777, setuid)
+		// Mask to standard permission bits to avoid overflow when converting int64 to FileMode
+		//nolint:gosec // G115: Mode is intentionally masked to valid permission bits
+		mode := normalizeFileMode(os.FileMode(header.Mode & 0o7777))
+
+		// Create the file with normalized permissions
 		//nolint:gosec // G304: destPath validated by validateExtractPath function
-		destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(header.Mode))
+		destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
 		if err != nil {
 			return fmt.Errorf("failed to create destination file %s: %w", destPath, err)
 		}
 
-		// Copy file content
-		//nolint:gosec // G110: tar extraction from trusted source
-		_, copyErr := io.Copy(destFile, tarReader)
+		// Copy file content with size limit to prevent zip bomb attacks
+		limitedReader := io.LimitReader(tarReader, maxUpdateFileSize)
+		n, copyErr := io.Copy(destFile, limitedReader)
 		closeErr := destFile.Close()
+
+		// Check if file exceeded size limit
+		if n >= maxUpdateFileSize {
+			// Clean up the oversized file
+			if rmErr := os.Remove(destPath); rmErr != nil {
+				log.Printf("failed to remove oversized file %s: %v", destPath, rmErr)
+			}
+			return fmt.Errorf("%w: %s exceeds %d bytes", errFileTooLarge, header.Name, maxUpdateFileSize)
+		}
 
 		if copyErr != nil {
 			return fmt.Errorf("failed to extract file %s: %w", destPath, copyErr)
@@ -620,6 +758,20 @@ func extractTarGz(src, dest string) error {
 	}
 
 	return nil
+}
+
+// normalizeFileMode normalizes file permissions for security.
+// Executables get 0o755, regular files get 0o644.
+// This strips dangerous bits like setuid/setgid and prevents overly permissive modes.
+func normalizeFileMode(mode os.FileMode) os.FileMode {
+	// Clear setuid, setgid, and sticky bits for security
+	mode &^= os.ModeSetuid | os.ModeSetgid | os.ModeSticky
+
+	// If file has any execute bit, make it 0o755, otherwise 0o644
+	if mode&0o111 != 0 {
+		return 0o755
+	}
+	return 0o644
 }
 
 // copyFile copies a file from src to dst
