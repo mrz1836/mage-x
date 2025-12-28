@@ -5,32 +5,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"os"
-	"os/exec"
-	"os/user"
-	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
-	"unicode/utf8"
 
-	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
-	"github.com/mrz1836/mage-x/pkg/log"
-	"github.com/mrz1836/mage-x/pkg/utils"
+	mageExec "github.com/mrz1836/mage-x/pkg/exec"
+	"github.com/mrz1836/mage-x/pkg/retry"
 )
 
-// Static errors for err113 compliance
+// Re-export validation errors from exec package for backwards compatibility
 var (
-	ErrCommandNotAllowed      = errors.New("command is not in allowed list")
-	ErrPathTraversal          = errors.New("path traversal detected")
-	ErrCommandPathTraversal   = errors.New("command name contains path traversal")
-	ErrInvalidUTF8            = errors.New("argument contains invalid UTF-8")
-	ErrDangerousPipePattern   = errors.New("potentially dangerous pattern '|' detected")
-	ErrDangerousPattern       = errors.New("potentially dangerous pattern detected")
-	ErrPathContainsNull       = errors.New("path contains null byte")
-	ErrPathContainsControl    = errors.New("path contains control character")
-	ErrAbsolutePathNotAllowed = errors.New("absolute paths not allowed outside of /tmp")
+	ErrCommandNotAllowed      = mageExec.ErrCommandNotAllowed
+	ErrPathTraversal          = mageExec.ErrPathTraversal
+	ErrCommandPathTraversal   = mageExec.ErrCommandPathTraversal
+	ErrInvalidUTF8            = mageExec.ErrInvalidUTF8
+	ErrDangerousPipePattern   = mageExec.ErrDangerousPipePattern
+	ErrDangerousPattern       = mageExec.ErrDangerousPattern
+	ErrPathContainsNull       = mageExec.ErrPathContainsNull
+	ErrPathContainsControl    = mageExec.ErrPathContainsControl
+	ErrAbsolutePathNotAllowed = mageExec.ErrAbsolutePathNotAllowed
 	ErrCommandFailed          = errors.New("command failed")
 )
 
@@ -44,7 +36,8 @@ type CommandExecutor interface {
 	ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error
 }
 
-// SecureExecutor implements CommandExecutor with security checks
+// SecureExecutor implements CommandExecutor with security checks.
+// This is a thin wrapper around pkg/exec that provides a familiar API.
 type SecureExecutor struct {
 	// AllowedCommands is a whitelist of allowed commands (empty means allow all)
 	AllowedCommands map[string]bool
@@ -70,189 +63,78 @@ func NewSecureExecutor() *SecureExecutor {
 	}
 }
 
+// getExecutor returns the underlying executor, building it if necessary
+func (e *SecureExecutor) getExecutor() mageExec.Executor {
+	// Build executor on demand based on current configuration
+	builder := mageExec.NewBuilder()
+
+	// Set working directory
+	if e.WorkingDir != "" {
+		builder = builder.WithWorkingDirectory(e.WorkingDir)
+	}
+
+	// Set dry run mode
+	builder = builder.WithDryRun(e.DryRun)
+
+	// Add validation if allowed commands are set
+	if len(e.AllowedCommands) > 0 {
+		allowedList := make([]string, 0, len(e.AllowedCommands))
+		for cmd := range e.AllowedCommands {
+			allowedList = append(allowedList, cmd)
+		}
+		builder = builder.WithValidation(mageExec.WithAllowedCommands(allowedList))
+	} else {
+		// Still add validation for argument checking, just without command whitelist
+		builder = builder.WithValidation()
+	}
+
+	// Add environment filtering
+	builder = builder.WithEnvFiltering(mageExec.WithEnvWhitelist(e.EnvWhitelist))
+
+	// Add timeout
+	builder = builder.WithTimeout(e.Timeout)
+
+	return builder.Build()
+}
+
 // Execute runs a command with security checks
 func (e *SecureExecutor) Execute(ctx context.Context, name string, args ...string) error {
-	// Start timing for audit
-	startTime := time.Now()
-	var exitCode int
-	var success bool
-
-	// Defer audit logging
-	defer func() {
-		duration := time.Since(startTime)
-		e.logAuditEvent(name, args, startTime, duration, exitCode, success)
-	}()
-
-	// Validate the command
-	if err := e.validateCommand(name, args); err != nil {
-		return fmt.Errorf("command validation failed: %w", err)
-	}
-
-	// Create command with timeout
-	ctx, cancel := e.contextWithTimeout(ctx)
-	defer cancel()
-
-	// Log what we're doing (dry run mode)
-	if e.DryRun {
-		utils.Info("[DRY RUN] Would execute: %s %s", name, strings.Join(args, " "))
-		success = true
-		return nil
-	}
-
-	// Create the command
-	cmd := exec.CommandContext(ctx, name, args...)
-
-	// Set working directory if specified
-	if e.WorkingDir != "" {
-		cmd.Dir = e.WorkingDir
-	}
-
-	// Inherit environment but filter sensitive variables
-	cmd.Env = e.filterEnvironment(os.Environ(), name)
-
-	// Connect output
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	// Execute
-	if err := cmd.Run(); err != nil {
-		exitError := &exec.ExitError{}
-		if errors.As(err, &exitError) {
-			exitCode = exitError.ExitCode()
-		} else {
-			exitCode = 1
-		}
-		success = false
-		return mageErrors.CommandFailed(name, args, err)
-	}
-
-	exitCode = 0
-	success = true
-	return nil
+	return e.getExecutor().Execute(ctx, name, args...)
 }
 
 // ExecuteOutput runs a command and returns its output
 func (e *SecureExecutor) ExecuteOutput(ctx context.Context, name string, args ...string) (string, error) {
-	// Start timing for audit
-	startTime := time.Now()
-	var exitCode int
-	var success bool
-
-	// Defer audit logging
-	defer func() {
-		duration := time.Since(startTime)
-		e.logAuditEvent(name, args, startTime, duration, exitCode, success)
-	}()
-
-	// Validate the command
-	if err := e.validateCommand(name, args); err != nil {
-		return "", fmt.Errorf("command validation failed: %w", err)
-	}
-
-	// Create command with timeout
-	ctx, cancel := e.contextWithTimeout(ctx)
-	defer cancel()
-
-	// Log what we're doing (dry run mode)
-	if e.DryRun {
-		success = true
-		return fmt.Sprintf("[DRY RUN] Would execute: %s %s", name, strings.Join(args, " ")), nil
-	}
-
-	// Create the command
-	cmd := exec.CommandContext(ctx, name, args...)
-
-	// Set working directory if specified
-	if e.WorkingDir != "" {
-		cmd.Dir = e.WorkingDir
-	}
-
-	// Inherit environment but filter sensitive variables
-	cmd.Env = e.filterEnvironment(os.Environ(), name)
-
-	// Execute and capture output
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		exitError := &exec.ExitError{}
-		if errors.As(err, &exitError) {
-			exitCode = exitError.ExitCode()
-		} else {
-			exitCode = 1
-		}
-		success = false
-		return string(output), fmt.Errorf("command failed: %w", err)
-	}
-
-	exitCode = 0
-	success = true
-	return string(output), nil
+	return e.getExecutor().ExecuteOutput(ctx, name, args...)
 }
 
 // ExecuteWithEnv runs a command with custom environment variables
 func (e *SecureExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
-	// Start timing for audit
-	startTime := time.Now()
-	var exitCode int
-	var success bool
+	executor := e.getExecutor()
 
-	// Defer audit logging
-	defer func() {
-		duration := time.Since(startTime)
-		e.logAuditEvent(name, args, startTime, duration, exitCode, success)
-	}()
-
-	// Validate the command
-	if err := e.validateCommand(name, args); err != nil {
-		return fmt.Errorf("command validation failed: %w", err)
+	// Try to use ExecutorWithEnv interface
+	if envExecutor, ok := executor.(mageExec.ExecutorWithEnv); ok {
+		return envExecutor.ExecuteWithEnv(ctx, env, name, args...)
 	}
 
-	// Create command with timeout
-	ctx, cancel := e.contextWithTimeout(ctx)
-	defer cancel()
-
-	// Log what we're doing (dry run mode)
-	if e.DryRun {
-		utils.Info("[DRY RUN] Would execute with env: %s %s", name, strings.Join(args, " "))
-		success = true
-		return nil
-	}
-
-	// Create the command
-	cmd := exec.CommandContext(ctx, name, args...)
-
-	// Set working directory if specified
-	if e.WorkingDir != "" {
-		cmd.Dir = e.WorkingDir
-	}
-
-	// Merge provided environment with filtered base environment
-	baseEnv := e.filterEnvironment(os.Environ(), name)
-	cmd.Env = make([]string, 0, len(baseEnv)+len(env))
-	cmd.Env = append(cmd.Env, baseEnv...)
-	cmd.Env = append(cmd.Env, env...)
-
-	// Connect output
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	// Execute
-	if err := cmd.Run(); err != nil {
-		exitError := &exec.ExitError{}
-		if errors.As(err, &exitError) {
-			exitCode = exitError.ExitCode()
-		} else {
-			exitCode = 1
-		}
-		success = false
-		return mageErrors.CommandFailed(name, args, err)
-	}
-
-	exitCode = 0
-	success = true
-	return nil
+	// Fallback to regular execute (env will be ignored, but this shouldn't happen)
+	return executor.Execute(ctx, name, args...)
 }
 
-// validateCommand checks if a command is allowed to run
+// ExecuteWithRetry executes a command with retry logic for network-related commands
+func (e *SecureExecutor) ExecuteWithRetry(ctx context.Context, maxRetries int, initialDelay time.Duration,
+	name string, args ...string,
+) error {
+	return mageExec.ExecuteWithRetry(ctx, e.getExecutor(), maxRetries, initialDelay, name, args...)
+}
+
+// ExecuteOutputWithRetry executes a command with retry logic and returns output
+func (e *SecureExecutor) ExecuteOutputWithRetry(ctx context.Context, maxRetries int, initialDelay time.Duration,
+	name string, args ...string,
+) (string, error) {
+	return mageExec.ExecuteOutputWithRetry(ctx, e.getExecutor(), maxRetries, initialDelay, name, args...)
+}
+
+// validateCommand checks if a command is allowed to run (for testing backwards compatibility)
 func (e *SecureExecutor) validateCommand(name string, args []string) error {
 	// Check if command is in allowed list (if list is not empty)
 	if len(e.AllowedCommands) > 0 {
@@ -266,7 +148,7 @@ func (e *SecureExecutor) validateCommand(name string, args []string) error {
 		return ErrCommandPathTraversal
 	}
 
-	// Validate arguments don't contain dangerous patterns
+	// Validate arguments
 	for _, arg := range args {
 		if err := ValidateCommandArg(arg); err != nil {
 			return fmt.Errorf("invalid argument '%s': %w", arg, err)
@@ -276,299 +158,44 @@ func (e *SecureExecutor) validateCommand(name string, args []string) error {
 	return nil
 }
 
-// contextWithTimeout creates a context with timeout if not already present.
-// Always returns a context that can be canceled, even if input already has a deadline.
-func (e *SecureExecutor) contextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
-	if _, ok := ctx.Deadline(); ok {
-		// Context already has a deadline, but still wrap with cancel capability
-		// so the caller can cancel early if needed
-		return context.WithCancel(ctx)
-	}
-	return context.WithTimeout(ctx, e.Timeout)
-}
-
 // FilterEnvironment removes sensitive environment variables (exported for testing)
-func (se *SecureExecutor) FilterEnvironment(env []string, commandName string) []string {
-	return se.filterEnvironment(env, commandName)
+func (e *SecureExecutor) FilterEnvironment(env []string, commandName string) []string {
+	return e.filterEnvironment(env, commandName)
 }
 
 // filterEnvironment removes sensitive environment variables
-func (se *SecureExecutor) filterEnvironment(env []string, commandName string) []string {
-	// List of environment variable prefixes to filter out
-	sensitivePrefix := []string{
-		"AWS_SECRET",
-		"GITHUB_TOKEN",
-		"GITLAB_TOKEN",
-		"NPM_TOKEN",
-		"DOCKER_PASSWORD",
-		"DATABASE_PASSWORD",
-		"API_KEY",
-		"SECRET",
-		"PRIVATE_KEY",
-	}
-
-	filtered := make([]string, 0, len(env))
-	for _, e := range env {
-		keep := true
-
-		// Extract the variable name part (before =)
-		parts := strings.SplitN(e, "=", 2)
-		if len(parts) < 2 {
-			// Malformed env var (no =), include it as is
-			filtered = append(filtered, e)
-			continue
-		}
-
-		varName := strings.ToUpper(parts[0])
-
-		// Check if this environment variable contains sensitive data
-		for _, prefix := range sensitivePrefix {
-			if !strings.HasPrefix(varName, prefix) {
-				continue
-			}
-			if len(varName) != len(prefix) && varName[len(prefix)] != '_' {
-				continue
-			}
-
-			// Check if this variable is whitelisted for this command
-			if whitelistedVars, ok := se.EnvWhitelist[commandName]; ok {
-				for _, whitelistedVar := range whitelistedVars {
-					if varName == whitelistedVar {
-						// This sensitive variable is whitelisted for this command
-						keep = true
-						goto nextVar
-					}
-				}
-			}
-			// Only filter if it's an exact match or followed by underscore
-			keep = false
-			break
-		}
-	nextVar:
-
-		if keep {
-			filtered = append(filtered, e)
-		}
-	}
-
-	return filtered
+func (e *SecureExecutor) filterEnvironment(env []string, commandName string) []string {
+	// Use exec package's env filter logic
+	filter := mageExec.NewEnvFilteringExecutor(nil, mageExec.WithEnvWhitelist(e.EnvWhitelist))
+	return filter.FilterEnvironment(env, commandName)
 }
 
 // ValidateCommandArg validates a command argument for security issues
+// Re-exported from exec package for backwards compatibility
 func ValidateCommandArg(arg string) error {
-	// Check for valid UTF-8
-	if !utf8.ValidString(arg) {
-		return ErrInvalidUTF8
-	}
-
-	// Check for shell injection attempts
-	dangerousPatterns := []string{
-		"$(",     // Command substitution
-		"`",      // Command substitution
-		"&&",     // Command chaining
-		"||",     // Command chaining
-		";",      // Command separator
-		">",      // Redirect
-		"<",      // Redirect
-		"$(echo", // Common injection pattern
-		"${IFS}", // Shell variable manipulation
-	}
-
-	// Special cases where pipe is dangerous (not in regex or URLs)
-	// Pipe is ONLY allowed if the argument contains regex metacharacters OR is a URL
-	// This is a conservative check that errs on the side of caution
-	if strings.Contains(arg, "|") {
-		isRegex := strings.ContainsAny(arg, "^$[]()+*?.{}\\")
-		isURL := strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://")
-
-		if !isRegex && !isURL {
-			return ErrDangerousPipePattern
-		}
-
-		// Additional check: even with regex chars, reject suspicious command patterns
-		// This prevents bypass attempts like "test | cat /etc/passwd ^"
-		if isRegex && containsSuspiciousPipeCommand(arg) {
-			return ErrDangerousPipePattern
-		}
-	}
-
-	for _, pattern := range dangerousPatterns {
-		if strings.Contains(arg, pattern) {
-			return fmt.Errorf("%w: '%s'", ErrDangerousPattern, pattern)
-		}
-	}
-
-	return nil
-}
-
-// containsSuspiciousPipeCommand checks if an argument containing a pipe has suspicious
-// command patterns that suggest shell injection rather than legitimate regex use.
-func containsSuspiciousPipeCommand(arg string) bool {
-	pipeIdx := strings.Index(arg, "|")
-	if pipeIdx == -1 {
-		return false
-	}
-
-	// Get content after the pipe
-	after := arg[pipeIdx+1:]
-	afterTrimmed := strings.TrimSpace(after)
-
-	// Check for common command names after pipe
-	suspiciousCommands := []string{
-		"cat", "rm", "wget", "curl", "bash", "sh", "nc", "python", "perl", "ruby",
-		"chmod", "chown", "mv", "cp", "dd", "head", "tail", "grep", "awk", "sed",
-		"xargs", "find", "exec", "eval", "source", "env", "sudo",
-	}
-	for _, cmd := range suspiciousCommands {
-		// Check for "| cmd" or "|cmd" followed by space or end
-		if strings.HasPrefix(afterTrimmed, cmd+" ") || afterTrimmed == cmd {
-			return true
-		}
-	}
-
-	return false
+	return mageExec.ValidateCommandArg(arg)
 }
 
 // ValidatePath validates a file path for security issues
+// Re-exported from exec package for backwards compatibility
 func ValidatePath(path string) error {
-	// Check for control characters and dangerous patterns first
-	if strings.Contains(path, "\x00") {
-		return ErrPathContainsNull
-	}
-	if strings.Contains(path, "\n") || strings.Contains(path, "\r") {
-		return ErrPathContainsControl
-	}
-
-	// Check for path traversal BEFORE cleaning (Unix and Windows styles)
-	if strings.Contains(path, "../") || strings.Contains(path, "..\\") ||
-		strings.HasSuffix(path, "..") || path == ".." {
-		return ErrPathTraversal
-	}
-
-	// Clean the path
-	cleaned := filepath.Clean(path)
-
-	// Check for Windows-style paths (which should be rejected on Unix systems)
-	if strings.Contains(path, ":") && len(path) > 1 && path[1] == ':' {
-		// This looks like a Windows drive path (C:, D:, etc.)
-		return ErrAbsolutePathNotAllowed
-	}
-
-	// Check for UNC paths
-	if strings.HasPrefix(path, "\\\\") {
-		return ErrAbsolutePathNotAllowed
-	}
-
-	// Check if path is absolute when it shouldn't be
-	if filepath.IsAbs(cleaned) && !strings.HasPrefix(cleaned, "/tmp") {
-		// Allow absolute paths only in /tmp for now
-		return ErrAbsolutePathNotAllowed
-	}
-
-	return nil
-}
-
-// ExecuteWithRetry executes a command with retry logic for network-related commands
-func (e *SecureExecutor) ExecuteWithRetry(ctx context.Context, maxRetries int, initialDelay time.Duration,
-	name string, args ...string,
-) error {
-	var lastErr error
-	delay := initialDelay
-	backoffMultiplier := 2.0
-	maxDelay := 30 * time.Second
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		err := e.Execute(ctx, name, args...)
-		if err == nil {
-			return nil
-		}
-
-		lastErr = err
-
-		// Check if this is a retriable error for command execution
-		if !isRetriableCommandError(err) {
-			return fmt.Errorf("permanent command error: %w", err)
-		}
-
-		// Don't sleep after the last attempt
-		if attempt < maxRetries {
-			// Log retry attempt
-			utils.Warn("Command %s attempt %d/%d failed: %v. Retrying in %v...",
-				name, attempt+1, maxRetries+1, err, delay)
-
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(delay):
-			}
-
-			// Exponential backoff
-			delay = time.Duration(float64(delay) * backoffMultiplier)
-			if delay > maxDelay {
-				delay = maxDelay
-			}
-		}
-	}
-
-	return fmt.Errorf("command failed after %d attempts: %w", maxRetries+1, lastErr)
-}
-
-// ExecuteOutputWithRetry executes a command with retry logic and returns output
-func (e *SecureExecutor) ExecuteOutputWithRetry(ctx context.Context, maxRetries int, initialDelay time.Duration,
-	name string, args ...string,
-) (string, error) {
-	var lastErr error
-	var lastOutput string
-	delay := initialDelay
-	backoffMultiplier := 2.0
-	maxDelay := 30 * time.Second
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		output, err := e.ExecuteOutput(ctx, name, args...)
-		if err == nil {
-			return output, nil
-		}
-
-		lastErr = err
-		lastOutput = output
-
-		// Check if this is a retriable error for command execution
-		if !isRetriableCommandError(err) {
-			return lastOutput, fmt.Errorf("permanent command error: %w", err)
-		}
-
-		// Don't sleep after the last attempt
-		if attempt < maxRetries {
-			// Log retry attempt
-			utils.Warn("Command %s (with output) attempt %d/%d failed: %v. Retrying in %v...",
-				name, attempt+1, maxRetries+1, err, delay)
-
-			select {
-			case <-ctx.Done():
-				return lastOutput, ctx.Err()
-			case <-time.After(delay):
-			}
-
-			// Exponential backoff
-			delay = time.Duration(float64(delay) * backoffMultiplier)
-			if delay > maxDelay {
-				delay = maxDelay
-			}
-		}
-	}
-
-	return lastOutput, fmt.Errorf("command failed after %d attempts: %w", maxRetries+1, lastErr)
+	return mageExec.ValidatePath(path)
 }
 
 // isRetriableCommandError determines if a command error should trigger a retry
+// Re-exported for backwards compatibility
 func isRetriableCommandError(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	errorStr := strings.ToLower(err.Error())
+	// First try the retry package's command classifier
+	if retry.NewCommandClassifier().IsRetriable(err) {
+		return true
+	}
 
-	// Network-related errors that are retriable
+	// Also check error string for patterns (backwards compatibility)
+	errorStr := strings.ToLower(err.Error())
 	retriablePatterns := []string{
 		"connection refused",
 		"connection reset",
@@ -585,70 +212,16 @@ func isRetriableCommandError(err error) bool {
 		"tls handshake timeout",
 		"dial tcp",
 		"proxyconnect tcp",
-		// Go install specific errors
 		"go: downloading",
 		"go: module",
 		"verifying module",
 		"getting requirements",
 		"sumdb verification",
+		"network timeout",
 	}
 
 	for _, pattern := range retriablePatterns {
 		if strings.Contains(errorStr, pattern) {
-			return true
-		}
-	}
-
-	// Check for specific network error types
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return netErr.Timeout()
-	}
-
-	// DNS errors are retriable for specific cases
-	var dnsErr *net.DNSError
-	if errors.As(err, &dnsErr) {
-		// DNS errors are generally retriable unless they indicate permanent failures
-		return !strings.Contains(strings.ToLower(dnsErr.Err), "no such host") ||
-			strings.Contains(strings.ToLower(dnsErr.Err), "temporary failure")
-	}
-
-	// Connection errors are retriable
-	var opErr *net.OpError
-	if errors.As(err, &opErr) {
-		return true
-	}
-
-	// Syscall errors that are retriable
-	var syscallErr syscall.Errno
-	if errors.As(err, &syscallErr) {
-		//nolint:exhaustive // Only specific network-related errors are retriable
-		switch syscallErr {
-		case syscall.ECONNRESET, syscall.ECONNREFUSED, syscall.ETIMEDOUT,
-			syscall.EHOSTUNREACH, syscall.ENETUNREACH:
-			return true
-		default:
-			// All other syscall errors are not retriable for security reasons
-			return false
-		}
-	}
-
-	// Exit errors with specific codes that may be network-related
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		// Some exit codes are retriable (network issues, temporary failures)
-		switch exitErr.ExitCode() {
-		case 1: // Generic failure - could be network
-			// Check if the error message contains network-related keywords
-			if exitErr.Stderr != nil {
-				stderrStr := strings.ToLower(string(exitErr.Stderr))
-				for _, pattern := range retriablePatterns {
-					if strings.Contains(stderrStr, pattern) {
-						return true
-					}
-				}
-			}
-		case 124: // timeout command exit code
 			return true
 		}
 	}
@@ -740,87 +313,4 @@ func (m *MockExecutor) SetResponse(command, output string, err error) {
 		Output: output,
 		Error:  err,
 	}
-}
-
-// logAuditEvent logs command execution for audit purposes
-func (e *SecureExecutor) logAuditEvent(command string, args []string, startTime time.Time, duration time.Duration, exitCode int, success bool) {
-	// Skip audit logging if not available (to avoid import cycles)
-	// This will be handled by the audit package when imported
-	auditLogger := getAuditLogger()
-	if auditLogger == nil {
-		return
-	}
-
-	// Get current user
-	currentUser := "unknown"
-	if usr, err := user.Current(); err == nil {
-		currentUser = usr.Username
-	}
-
-	// Get current working directory
-	workingDir := e.WorkingDir
-	if workingDir == "" {
-		var err error
-		workingDir, err = os.Getwd()
-		if err != nil {
-			workingDir = "."
-		}
-	}
-
-	// Create filtered environment map
-	env := make(map[string]string)
-	for _, envVar := range []string{"MAGE_VERBOSE", "MAGE_AUDIT_ENABLED", "GO_VERSION", "GOOS", "GOARCH"} {
-		if value := os.Getenv(envVar); value != "" {
-			env[envVar] = value
-		}
-	}
-
-	// Create audit event
-	event := AuditEvent{
-		Timestamp:   startTime,
-		User:        currentUser,
-		Command:     command,
-		Args:        args,
-		WorkingDir:  workingDir,
-		Duration:    duration,
-		ExitCode:    exitCode,
-		Success:     success,
-		Environment: env,
-		Metadata: map[string]string{
-			"executor_type": "SecureExecutor",
-			"dry_run":       fmt.Sprintf("%v", e.DryRun),
-		},
-	}
-
-	// Log the event (ignore errors to avoid breaking command execution)
-	if err := auditLogger.LogEvent(event); err != nil {
-		// Audit logging failure should not break command execution
-		log.Warn("failed to log audit event: %v", err)
-	}
-}
-
-// AuditEvent represents an audit event (minimal definition to avoid circular imports)
-type AuditEvent struct {
-	Timestamp   time.Time
-	User        string
-	Command     string
-	Args        []string
-	WorkingDir  string
-	Duration    time.Duration
-	ExitCode    int
-	Success     bool
-	Environment map[string]string
-	Metadata    map[string]string
-}
-
-// AuditLogger interface (minimal definition to avoid circular imports)
-type AuditLogger interface {
-	LogEvent(event AuditEvent) error
-}
-
-// getAuditLogger returns the audit logger if available
-func getAuditLogger() AuditLogger {
-	// This is a placeholder - the actual implementation will be provided
-	// by the utils package when it's imported
-	return nil
 }
