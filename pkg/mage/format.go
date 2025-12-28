@@ -13,6 +13,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/exec"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -329,7 +330,7 @@ func ensureGofumpt() error {
 		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 	}
 	executor := secureRunner.executor
-	err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", "mvdan.cc/gofumpt@latest")
+	err = exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", "mvdan.cc/gofumpt@latest")
 	if err != nil {
 		// Try with direct proxy as fallback
 		utils.Warn("Installation failed: %v, trying direct proxy...", err)
@@ -369,7 +370,7 @@ func ensureGoimports() error {
 		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 	}
 	executor := secureRunner.executor
-	err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", "golang.org/x/tools/cmd/goimports@latest")
+	err = exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", "golang.org/x/tools/cmd/goimports@latest")
 	if err != nil {
 		// Try with direct proxy as fallback
 		utils.Warn("Installation failed: %v, trying direct proxy...", err)
@@ -409,7 +410,7 @@ func ensureGci() error {
 		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 	}
 	executor := secureRunner.executor
-	err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", "github.com/daixiang0/gci@latest")
+	err = exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", "github.com/daixiang0/gci@latest")
 	if err != nil {
 		// Try with direct proxy as fallback
 		utils.Warn("Installation failed: %v, trying direct proxy...", err)
@@ -455,7 +456,7 @@ func ensureYamlfmt() error {
 	}
 	installCmd := "github.com/google/yamlfmt/cmd/yamlfmt@" + yamlfmtVersion
 
-	err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", installCmd)
+	err = exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", installCmd)
 	if err != nil {
 		// Try with direct proxy as fallback
 		utils.Warn("Installation failed: %v, trying direct proxy...", err)

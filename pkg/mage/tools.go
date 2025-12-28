@@ -9,6 +9,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/exec"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -79,7 +80,7 @@ func (Tools) Update() error {
 			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 		}
 		executor := secureRunner.executor
-		err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "brew", "upgrade", "golangci-lint")
+		err := exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "brew", "upgrade", "golangci-lint")
 		if err != nil {
 			utils.Warn("Failed to update golangci-lint via brew: %v", err)
 		}
@@ -120,7 +121,7 @@ func (Tools) Update() error {
 			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 		}
 		executor := secureRunner.executor
-		err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", moduleWithVersion)
+		err := exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", moduleWithVersion)
 
 		if err != nil {
 			// Try with direct proxy as fallback
@@ -265,7 +266,7 @@ func installGovulncheck(ctx context.Context, config *Config, maxRetries int, ini
 		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 	}
 	executor := secureRunner.executor
-	err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", moduleWithVersion)
+	err := exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", moduleWithVersion)
 	if err != nil {
 		// Try with direct proxy as fallback
 		utils.Warn("Installation failed: %v, trying direct proxy...", err)
@@ -307,7 +308,7 @@ func installToolFromModule(ctx context.Context, tool ToolDefinition, _ *Config, 
 		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 	}
 	executor := secureRunner.executor
-	err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", moduleWithVersion)
+	err := exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", moduleWithVersion)
 	if err != nil {
 		// Try with different module proxy settings as fallback
 		utils.Warn("Installation failed: %v, trying with direct module proxy...", err)

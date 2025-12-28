@@ -3,7 +3,6 @@ package cache
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/log"
 )
 
 // Manager coordinates different cache types and provides unified cache operations
@@ -258,7 +258,7 @@ func (m *Manager) WarmCache(operations []string) error {
 
 	// This would trigger common operations to populate cache
 	// Implementation depends on specific warming strategies
-	log.Printf("[INFO] Warming cache for operations: %v", operations)
+	log.Info("Warming cache for operations: %v", operations)
 	return nil
 }
 
@@ -337,7 +337,7 @@ func (m *Manager) generateTimestampBasedHash(sourceFiles, configFiles []string, 
 // performSizeBasedCleanup removes old cache entries to free space
 func (m *Manager) performSizeBasedCleanup(bytesToFree int64) error {
 	// Implementation would remove oldest cache entries until target size is reached
-	log.Printf("[INFO] Performing size-based cleanup: freeing %d bytes", bytesToFree)
+	log.Info("Performing size-based cleanup: freeing %d bytes", bytesToFree)
 
 	// This is a simplified implementation - in practice, you'd:
 	// 1. Collect all cache entries with their timestamps

@@ -3,7 +3,6 @@ package paths
 import (
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/log"
 )
 
 // DefaultPathBuilder implements PathBuilder using standard library
@@ -27,7 +27,7 @@ func NewPathBuilder(path string) *DefaultPathBuilder {
 	cleanPath := filepath.Clean(path)
 	// Additional security check for path traversal
 	if strings.Contains(cleanPath, "..") {
-		log.Printf("Warning: path contains '..' elements: %s", path)
+		log.Warn("path contains '..' elements: %s", path)
 	}
 
 	return &DefaultPathBuilder{
@@ -47,7 +47,7 @@ func NewPathBuilderWithOptions(path string, options PathOptions) *DefaultPathBui
 	cleanPath := filepath.Clean(path)
 	// Additional security check for path traversal
 	if strings.Contains(cleanPath, "..") {
-		log.Printf("Warning: path contains '..' elements: %s", path)
+		log.Warn("path contains '..' elements: %s", path)
 	}
 
 	return &DefaultPathBuilder{
@@ -787,7 +787,7 @@ func (pb *DefaultPathBuilder) copyFile(src, dst string, srcInfo fs.FileInfo) err
 	defer func() {
 		if closeErr := srcFile.Close(); closeErr != nil {
 			// Log the error but don't fail the operation
-			log.Printf("failed to close source file %s: %v", cleanSrc, closeErr)
+			log.Warn("failed to close source file %s: %v", cleanSrc, closeErr)
 		}
 	}()
 
@@ -806,7 +806,7 @@ func (pb *DefaultPathBuilder) copyFile(src, dst string, srcInfo fs.FileInfo) err
 	defer func() {
 		if closeErr := dstFile.Close(); closeErr != nil {
 			// Log the error but don't fail the operation
-			log.Printf("failed to close destination file %s: %v", cleanDst, closeErr)
+			log.Warn("failed to close destination file %s: %v", cleanDst, closeErr)
 		}
 	}()
 

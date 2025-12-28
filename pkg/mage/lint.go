@@ -14,6 +14,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/exec"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -412,7 +413,7 @@ func installGofumpt(config *Config) error {
 		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 	}
 	executor := secureRunner.executor
-	err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", moduleWithVersion)
+	err := exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", moduleWithVersion)
 	if err != nil {
 		// Try with direct proxy as fallback
 		utils.Warn("Installation failed: %v, trying direct proxy...", err)
@@ -729,7 +730,7 @@ func ensureGolangciLint(cfg *Config) error {
 			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 		}
 		executor := secureRunner.executor
-		err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "brew", "install", "golangci-lint")
+		err := exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "brew", "install", "golangci-lint")
 
 		if err == nil {
 			utils.Success("golangci-lint installed successfully via Homebrew")
@@ -790,7 +791,7 @@ func ensureGolangciLint(cfg *Config) error {
 			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 		}
 		executor := secureRunner.executor
-		if err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, shell, append(shellArgs, cmd)...); err != nil {
+		if err = exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, shell, append(shellArgs, cmd)...); err != nil {
 			return fmt.Errorf("failed to install golangci-lint after %d retries: %w", maxRetries, err)
 		}
 	}

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/providers"
-	"github.com/mrz1836/mage-x/pkg/security"
+	"github.com/mrz1836/mage-x/pkg/exec"
 )
 
 // Static errors to satisfy err113 linter
@@ -16,15 +16,20 @@ var (
 	errRunnerNil = errors.New("runner cannot be nil")
 )
 
-// SecureCommandRunner provides a secure implementation of CommandRunner using SecureExecutor
+// SecureCommandRunner provides a secure implementation of CommandRunner using pkg/exec
 type SecureCommandRunner struct {
-	executor *security.SecureExecutor
+	executor  exec.FullExecutor // Base executor for dir-specific operations
+	validated exec.Executor     // Validated executor for regular operations
 }
 
 // NewSecureCommandRunner creates a new secure command runner
 func NewSecureCommandRunner() CommandRunner {
+	base := exec.NewBase(
+		exec.WithVerbose(false), // Set via environment if needed
+	)
 	return &SecureCommandRunner{
-		executor: security.NewSecureExecutor(),
+		executor:  base,
+		validated: exec.NewValidatingExecutor(base),
 	}
 }
 
@@ -36,7 +41,7 @@ func (r *SecureCommandRunner) RunCmd(name string, args ...string) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err := r.executor.Execute(ctx, name, args...)
+	err := r.validated.Execute(ctx, name, args...)
 	if err != nil {
 		// Check if the error is due to context cancellation/timeout
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -59,7 +64,7 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	output, err := r.executor.ExecuteOutput(ctx, name, args...)
+	output, err := r.validated.ExecuteOutput(ctx, name, args...)
 	if err != nil {
 		// Check if the error is due to context cancellation/timeout
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -82,16 +87,7 @@ func (r *SecureCommandRunner) RunCmdInDir(dir, name string, args ...string) erro
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Create a new executor with the specified working directory
-	dirExecutor := &security.SecureExecutor{
-		AllowedCommands: r.executor.AllowedCommands,
-		WorkingDir:      dir, // Set the working directory
-		Timeout:         r.executor.Timeout,
-		DryRun:          r.executor.DryRun,
-		EnvWhitelist:    r.executor.EnvWhitelist,
-	}
-
-	err := dirExecutor.Execute(ctx, name, args...)
+	err := r.executor.ExecuteInDir(ctx, dir, name, args...)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return fmt.Errorf("command '%s' in '%s' exceeded timeout of %s: %w",
@@ -113,16 +109,7 @@ func (r *SecureCommandRunner) RunCmdOutputInDir(dir, name string, args ...string
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Create a new executor with the specified working directory
-	dirExecutor := &security.SecureExecutor{
-		AllowedCommands: r.executor.AllowedCommands,
-		WorkingDir:      dir, // Set the working directory
-		Timeout:         r.executor.Timeout,
-		DryRun:          r.executor.DryRun,
-		EnvWhitelist:    r.executor.EnvWhitelist,
-	}
-
-	output, err := dirExecutor.ExecuteOutput(ctx, name, args...)
+	output, err := r.executor.ExecuteOutputInDir(ctx, dir, name, args...)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return strings.TrimSpace(output), fmt.Errorf("command '%s' in '%s' exceeded timeout: %w",

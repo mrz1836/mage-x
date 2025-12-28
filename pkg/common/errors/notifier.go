@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/smtp"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/log"
 )
 
 // Static errors to comply with err113 linter
@@ -433,7 +434,7 @@ func (c *ConsoleChannel) Send(_ context.Context, notification *ErrorNotification
 	}
 
 	formatted := c.formatter.Format(notification.Error)
-	log.Printf("[INFO] [NOTIFICATION] %s: %s", notification.Timestamp.Format("15:04:05"), formatted)
+	log.Info("[NOTIFICATION] %s: %s", notification.Timestamp.Format("15:04:05"), formatted)
 
 	return nil
 }

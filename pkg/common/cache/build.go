@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"log"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/log"
 )
 
 // BuildCache provides caching for build operations
@@ -194,7 +194,7 @@ func (c *BuildCache) getCacheResult(hash, subdir, entryType string, result inter
 
 	if time.Since(timestamp) > c.ttl {
 		if err := c.removeCacheEntry(path); err != nil {
-			log.Printf("[WARN] Failed to remove expired %s cache entry %s: %v", entryType, path, err)
+			log.Warn("Failed to remove expired %s cache entry %s: %v", entryType, path, err)
 		}
 		return nil, false
 	}
@@ -214,7 +214,7 @@ func (c *BuildCache) GetBuildResult(hash string) (*BuildResult, bool) {
 		if buildResult.Success && !c.fileOps.File.Exists(buildResult.Binary) {
 			path := filepath.Join(c.cacheDir, "builds", hash+".json")
 			if err := c.removeCacheEntry(path); err != nil {
-				log.Printf("[WARN] Failed to remove cache entry with missing binary %s: %v", path, err)
+				log.Warn("Failed to remove cache entry with missing binary %s: %v", path, err)
 			}
 			return nil, false
 		}
@@ -363,7 +363,7 @@ func (c *BuildCache) GetStats() (*Stats, error) {
 	err := filepath.WalkDir(c.cacheDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			// Log error but continue walking to gather partial stats
-			log.Printf("[DEBUG] cache stats: skipping path %s due to error: %v", path, err)
+			log.Debug("cache stats: skipping path %s due to error: %v", path, err)
 			return nil
 		}
 		if !d.IsDir() {
@@ -397,7 +397,7 @@ func (c *BuildCache) Cleanup() error {
 	err := filepath.WalkDir(c.cacheDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			// Log error but continue cleanup to remove what we can
-			log.Printf("[DEBUG] cache cleanup: skipping path %s due to error: %v", path, err)
+			log.Debug("cache cleanup: skipping path %s due to error: %v", path, err)
 			return nil
 		}
 
@@ -415,7 +415,7 @@ func (c *BuildCache) Cleanup() error {
 		return err
 	}
 
-	log.Printf("[INFO] Cache cleanup completed: removed %d expired entries", removed)
+	log.Info("Cache cleanup completed: removed %d expired entries", removed)
 	return nil
 }
 

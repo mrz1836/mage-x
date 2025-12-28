@@ -365,21 +365,21 @@ func (ts *ConfigTestSuite) TestConfigFunctions() {
 		ts.Require().Equal("tag1,tag2", tags)
 	})
 
-	ts.Run("IsVerbose", func() {
+	ts.Run("IsConfigVerbose", func() {
 		// Test default (should be false)
-		ts.Require().False(IsVerbose())
+		ts.Require().False(IsConfigVerbose())
 
 		// Test with verbose build
 		customConfig := defaultConfig()
 		customConfig.Build.Verbose = true
 		TestSetConfig(customConfig)
-		ts.Require().True(IsVerbose())
+		ts.Require().True(IsConfigVerbose())
 
 		// Test with verbose test
 		customConfig = defaultConfig()
 		customConfig.Test.Verbose = true
 		TestSetConfig(customConfig)
-		ts.Require().True(IsVerbose())
+		ts.Require().True(IsConfigVerbose())
 	})
 }
 
@@ -488,7 +488,7 @@ func (ts *ConfigTestSuite) TestConfigErrorHandling() {
 		tags := BuildTags()
 		ts.Require().Empty(tags) // Should return empty string on error
 
-		verbose := IsVerbose()
+		verbose := IsConfigVerbose()
 		ts.Require().False(verbose) // Should return false on error
 	})
 }

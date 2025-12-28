@@ -654,8 +654,10 @@ func BuildTags() string {
 	return strings.Join(c.Build.Tags, ",")
 }
 
-// IsVerbose returns whether verbose mode is enabled
-func IsVerbose() bool {
+// IsConfigVerbose returns whether verbose mode is enabled in the config file.
+// This checks the Build.Verbose and Test.Verbose settings in the config file.
+// For environment-based verbose detection, use env.IsVerbose() or utils.IsVerbose().
+func IsConfigVerbose() bool {
 	c, err := GetConfig()
 	if err != nil {
 		// Return false if config loading fails

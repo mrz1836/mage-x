@@ -13,9 +13,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
-	"syscall"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/retry"
 )
 
 // Static errors for err113 compliance
@@ -90,58 +90,45 @@ func DownloadWithRetry(ctx context.Context, url, destPath string, config *Downlo
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
-	var lastErr error
-	delay := config.InitialDelay
-
-	for attempt := 0; attempt <= config.MaxRetries; attempt++ {
-		// Add attempt-specific context with timeout
-		attemptCtx, cancel := context.WithTimeout(ctx, config.Timeout)
-
-		err := downloadFile(attemptCtx, url, destPath, config)
-		cancel()
-
-		//nolint:nestif // Complex download retry logic with checksum verification
-		if err == nil {
-			// Success! Verify checksum if provided
-			if config.ChecksumSHA256 != "" {
-				if checksumErr := verifyChecksum(destPath, config.ChecksumSHA256); checksumErr != nil {
-					// Remove corrupted file
-					if removeErr := os.Remove(destPath); removeErr != nil {
-						return fmt.Errorf("checksum verification failed and could not remove corrupted file: %w, original error: %w", removeErr, checksumErr)
-					}
-					return fmt.Errorf("checksum verification failed: %w", checksumErr)
-				}
-			}
-			return nil
-		}
-
-		lastErr = err
-
-		// Check if this is a permanent error that shouldn't be retried
-		if !isRetriableError(err) {
-			return fmt.Errorf("permanent download error: %w", err)
-		}
-
-		// Don't sleep after the last attempt
-		if attempt < config.MaxRetries {
+	// Configure retry using pkg/retry
+	retryCfg := &retry.Config{
+		MaxAttempts: config.MaxRetries + 1, // MaxRetries + 1 = total attempts
+		Classifier:  retry.NewNetworkClassifier(),
+		Backoff: &retry.ExponentialBackoff{
+			Initial:    config.InitialDelay,
+			Max:        config.MaxDelay,
+			Multiplier: config.BackoffMultiplier,
+		},
+		OnRetry: func(attempt int, err error, delay time.Duration) {
 			Info("Download attempt %d/%d failed: %v. Retrying in %v...",
 				attempt+1, config.MaxRetries+1, err, delay)
+		},
+	}
 
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(delay):
-			}
+	// Execute download with retry
+	err := retry.Do(ctx, retryCfg, func() error {
+		// Add attempt-specific context with timeout
+		attemptCtx, cancel := context.WithTimeout(ctx, config.Timeout)
+		defer cancel()
 
-			// Exponential backoff with jitter
-			delay = time.Duration(float64(delay) * config.BackoffMultiplier)
-			if delay > config.MaxDelay {
-				delay = config.MaxDelay
+		return downloadFile(attemptCtx, url, destPath, config)
+	})
+	if err != nil {
+		return err
+	}
+
+	// Verify checksum if provided (only after successful download)
+	if config.ChecksumSHA256 != "" {
+		if checksumErr := verifyChecksum(destPath, config.ChecksumSHA256); checksumErr != nil {
+			// Remove corrupted file
+			if removeErr := os.Remove(destPath); removeErr != nil {
+				return fmt.Errorf("checksum verification failed and could not remove corrupted file: %w, original error: %w", removeErr, checksumErr)
 			}
+			return fmt.Errorf("checksum verification failed: %w", checksumErr)
 		}
 	}
 
-	return fmt.Errorf("download failed after %d attempts: %w", config.MaxRetries+1, lastErr)
+	return nil
 }
 
 // downloadFile performs a single download attempt with resume support
@@ -326,102 +313,8 @@ func verifyChecksum(filePath, expectedSHA256 string) error {
 	return nil
 }
 
-// isRetriableError determines if an error should trigger a retry
-func isRetriableError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	// Network errors are usually retriable
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return netErr.Timeout()
-	}
-
-	// DNS errors are retriable for specific cases
-	var dnsErr *net.DNSError
-	if errors.As(err, &dnsErr) {
-		// DNS errors are generally retriable unless they indicate permanent failures
-		return !strings.Contains(strings.ToLower(dnsErr.Err), "no such host") ||
-			strings.Contains(strings.ToLower(dnsErr.Err), "temporary failure")
-	}
-
-	// Connection errors are retriable
-	var opErr *net.OpError
-	if errors.As(err, &opErr) {
-		return true
-	}
-
-	// Syscall errors that are retriable
-	var syscallErr syscall.Errno
-	if errors.As(err, &syscallErr) {
-		//nolint:exhaustive // Only specific network-related errors are retriable
-		switch syscallErr {
-		case syscall.ECONNRESET, syscall.ECONNREFUSED, syscall.ETIMEDOUT,
-			syscall.EHOSTUNREACH, syscall.ENETUNREACH:
-			return true
-		default:
-			// All other syscall errors are not retriable to avoid infinite loops
-			return false
-		}
-	}
-
-	// Context timeout/cancellation errors are not retriable
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return false
-	}
-
-	// IO errors that indicate connection issues are retriable
-	if errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF) {
-		return true
-	}
-
-	// HTTP status code errors
-	errorStr := err.Error()
-	// 5xx server errors are retriable, 4xx client errors are not
-	if contains(errorStr, "status 5") || contains(errorStr, "timeout") ||
-		contains(errorStr, "connection reset") || contains(errorStr, "connection refused") ||
-		contains(errorStr, "no such host") || contains(errorStr, "unexpected EOF") {
-		return true
-	}
-
-	// Default to not retriable for unknown errors
-	return false
-}
-
-// contains checks if a string contains a substring (helper function)
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) &&
-		(len(substr) == 0 || findIndex(s, substr) >= 0)
-}
-
-// findIndex finds the index of substring in string (helper function)
-func findIndex(s, substr string) int {
-	n := len(substr)
-	switch {
-	case n == 0:
-		return 0
-	case n == 1:
-		return findByte(s, substr[0])
-	case n <= len(s):
-		for i := 0; i <= len(s)-n; i++ {
-			if s[i:i+n] == substr {
-				return i
-			}
-		}
-	}
-	return -1
-}
-
-// findByte finds the index of byte in string (helper function)
-func findByte(s string, c byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == c {
-			return i
-		}
-	}
-	return -1
-}
+// NOTE: isRetriableError has been replaced by retry.NewNetworkClassifier().IsRetriable()
+// from pkg/retry. The classifier provides comprehensive network error classification.
 
 // DownloadScript downloads and executes a shell script with retry logic
 func DownloadScript(ctx context.Context, url, scriptArgs string, config *DownloadConfig) error {

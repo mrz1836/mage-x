@@ -418,7 +418,7 @@ func BenchmarkConcurrentOperations(b *testing.B) {
 			for pb.Next() {
 				_, _ = GetConfig() //nolint:errcheck // Benchmark ignores errors
 				_ = BinaryName()
-				_ = IsVerbose()
+				_ = IsConfigVerbose()
 			}
 		})
 	})

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -17,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
+	"github.com/mrz1836/mage-x/pkg/log"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -795,7 +795,7 @@ func (e *SecureExecutor) logAuditEvent(command string, args []string, startTime 
 	// Log the event (ignore errors to avoid breaking command execution)
 	if err := auditLogger.LogEvent(event); err != nil {
 		// Audit logging failure should not break command execution
-		log.Printf("failed to log audit event: %v", err)
+		log.Warn("failed to log audit event: %v", err)
 	}
 }
 
