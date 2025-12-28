@@ -200,6 +200,12 @@ func (r *Registry) Namespaces() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
+	return r.namespacesLocked()
+}
+
+// namespacesLocked returns all registered namespaces without acquiring the lock.
+// Caller must hold at least RLock.
+func (r *Registry) namespacesLocked() []string {
 	namespaceMap := make(map[string]bool)
 	for _, cmd := range r.commands {
 		if cmd.Namespace != "" {
@@ -355,16 +361,33 @@ func (r *Registry) Execute(name string, args ...string) error {
 	return cmd.Execute(args...)
 }
 
-// Metadata returns registry metadata
+// Metadata returns registry metadata with deep-copied maps to prevent race conditions
 func (r *Registry) Metadata() CommandMetadata {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	meta := r.metadata
-	meta.TotalCommands = len(r.commands)
-	meta.Namespaces = r.Namespaces()
+	// Deep copy Categories map to prevent shared reference issues
+	categories := make(map[string]int, len(r.metadata.Categories))
+	for k, v := range r.metadata.Categories {
+		categories[k] = v
+	}
 
-	return meta
+	// Deep copy CategoryInfo map
+	categoryInfo := make(map[string]CategoryInfo, len(r.metadata.CategoryInfo))
+	for k, v := range r.metadata.CategoryInfo {
+		categoryInfo[k] = v
+	}
+
+	// Get namespaces without re-acquiring lock
+	namespaces := r.namespacesLocked()
+
+	return CommandMetadata{
+		TotalCommands: len(r.commands),
+		Namespaces:    namespaces,
+		Categories:    categories,
+		CategoryInfo:  categoryInfo,
+		Version:       r.metadata.Version,
+	}
 }
 
 // Clear removes all registered commands (useful for testing)

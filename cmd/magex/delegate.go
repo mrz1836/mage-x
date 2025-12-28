@@ -11,10 +11,13 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
 	magefileFilename = "magefile.go"
+	// DefaultDelegateTimeout is the default timeout for delegated mage commands
+	DefaultDelegateTimeout = 10 * time.Minute
 )
 
 var (
@@ -24,7 +27,19 @@ var (
 	ErrGoCommandNotFound = errors.New("go command not found - required for custom magefile.go commands")
 	// ErrCommandFailed is returned when a custom command execution fails
 	ErrCommandFailed = errors.New("custom command failed")
+	// ErrMagefileRestoreFailed is returned when the temporary magefile.go cannot be restored
+	ErrMagefileRestoreFailed = errors.New("failed to restore magefile.go after command execution")
+	// ErrCommandTimeout is returned when a delegated command times out
+	ErrCommandTimeout = errors.New("command timed out")
 )
+
+// DelegateResult contains the result of a delegated mage command execution
+type DelegateResult struct {
+	// ExitCode is the exit code from the delegated command (0 for success)
+	ExitCode int
+	// Err contains any error that occurred during execution
+	Err error
+}
 
 // convertToMageFormat converts colon-separated command names to mage's camelCase format
 // e.g., "Speckit:Install" -> "speckitInstall", "Pipeline:CI" -> "pipelineCI"
@@ -51,9 +66,16 @@ func convertToMageFormat(command string) string {
 	return namespace + method
 }
 
-// DelegateToMage executes a custom command using mage or go run
-// This provides seamless execution of user-defined commands without plugin compilation
-func DelegateToMage(command string, args ...string) error {
+// DelegateToMage executes a custom command using mage or go run.
+// Returns DelegateResult with the exit code and any error.
+// This provides seamless execution of user-defined commands without plugin compilation.
+func DelegateToMage(command string, args ...string) (result DelegateResult) {
+	return DelegateToMageWithTimeout(command, DefaultDelegateTimeout, args...)
+}
+
+// DelegateToMageWithTimeout executes a custom command with a configurable timeout.
+// Returns DelegateResult with the exit code and any error.
+func DelegateToMageWithTimeout(command string, timeout time.Duration, args ...string) (result DelegateResult) {
 	// Convert colon-separated format to mage's camelCase format
 	mageCommand := convertToMageFormat(command)
 
@@ -69,14 +91,16 @@ func DelegateToMage(command string, args ...string) error {
 		// Fallback to root magefile.go
 		magefilePath := magefileFilename
 		if _, err := os.Stat(magefilePath); os.IsNotExist(err) {
-			return fmt.Errorf("%w: %s", ErrCommandNotFound, command)
+			return DelegateResult{ExitCode: 1, Err: fmt.Errorf("%w: %s", ErrCommandNotFound, command)}
 		}
 		targetPath = magefilePath
 		useDirectory = false
 	}
 
 	var cmd *exec.Cmd
-	ctx := context.Background()
+	// Create context with timeout to prevent hanging commands
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
 	// Check if we have both magefiles/ directory and magefile.go (conflict situation)
 	hasRootMagefile := false
@@ -90,11 +114,19 @@ func DelegateToMage(command string, args ...string) error {
 	if hasConflict {
 		tempName = magefileFilename + ".tmp"
 		if err := os.Rename(magefileFilename, tempName); err != nil {
-			return fmt.Errorf("failed to temporarily rename magefile.go: %w", err)
+			return DelegateResult{ExitCode: 1, Err: fmt.Errorf("failed to temporarily rename magefile.go: %w", err)}
 		}
+		// Use named return to properly capture restore errors
 		defer func() {
-			if err := os.Rename(tempName, magefileFilename); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to restore magefile.go: %v\n", err)
+			if restoreErr := os.Rename(tempName, magefileFilename); restoreErr != nil {
+				// Combine errors if command also failed
+				if result.Err != nil {
+					result.Err = fmt.Errorf("%w; additionally, %w: %w", result.Err, ErrMagefileRestoreFailed, restoreErr)
+				} else {
+					// Command succeeded but restore failed - this is still an error
+					result.Err = fmt.Errorf("%w: %w", ErrMagefileRestoreFailed, restoreErr)
+					result.ExitCode = 1
+				}
 			}
 		}()
 	}
@@ -154,12 +186,12 @@ func DelegateToMage(command string, args ...string) error {
 	// Create a pipe to capture stderr for filtering
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("failed to create stderr pipe: %w", err)
+		return DelegateResult{ExitCode: 1, Err: fmt.Errorf("failed to create stderr pipe: %w", err)}
 	}
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start custom command '%s': %w", command, err)
+		return DelegateResult{ExitCode: 1, Err: fmt.Errorf("failed to start custom command '%s': %w", command, err)}
 	}
 
 	// Filter stderr output in a goroutine, capturing content for error reporting
@@ -172,14 +204,35 @@ func DelegateToMage(command string, args ...string) error {
 	wg.Wait()
 
 	if waitErr != nil {
+		// Extract actual exit code from the error
+		exitCode := 1
+		var exitErr *exec.ExitError
+		if errors.As(waitErr, &exitErr) {
+			exitCode = exitErr.ExitCode()
+		}
+
+		// Check for context deadline exceeded (timeout)
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return DelegateResult{
+				ExitCode: 124, // Standard timeout exit code
+				Err:      fmt.Errorf("%w: '%s' after %v", ErrCommandTimeout, command, timeout),
+			}
+		}
+
 		// Include captured stderr in the error message if available
 		if stderrContent := strings.TrimSpace(stderrBuf.String()); stderrContent != "" {
-			return fmt.Errorf("%w '%s':\n%s", ErrCommandFailed, command, stderrContent)
+			return DelegateResult{
+				ExitCode: exitCode,
+				Err:      fmt.Errorf("%w '%s':\n%s", ErrCommandFailed, command, stderrContent),
+			}
 		}
-		return fmt.Errorf("%w '%s': %w", ErrCommandFailed, command, waitErr)
+		return DelegateResult{
+			ExitCode: exitCode,
+			Err:      fmt.Errorf("%w '%s': %w", ErrCommandFailed, command, waitErr),
+		}
 	}
 
-	return nil
+	return DelegateResult{ExitCode: 0, Err: nil}
 }
 
 // filterStderr filters stderr output for real-time display while capturing all content for error reporting

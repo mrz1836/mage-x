@@ -217,12 +217,12 @@ func TestDelegateToMage_CommandNotFound(t *testing.T) {
 	}
 
 	// Test that DelegateToMage returns appropriate error
-	err = DelegateToMage("nonexistent")
-	if err == nil {
+	result := DelegateToMage("nonexistent")
+	if result.Err == nil {
 		t.Error("DelegateToMage should return error when no magefile exists")
 	}
-	if !errors.Is(err, ErrCommandNotFound) {
-		t.Errorf("DelegateToMage should return ErrCommandNotFound, got: %v", err)
+	if !errors.Is(result.Err, ErrCommandNotFound) {
+		t.Errorf("DelegateToMage should return ErrCommandNotFound, got: %v", result.Err)
 	}
 }
 
@@ -592,11 +592,11 @@ func ParamsTest() error {
 
 	// Test that the command can be executed
 	// Note: This will use "go run" since mage might not be available
-	err = DelegateToMage("TestCommand")
-	if err != nil {
+	result := DelegateToMage("TestCommand")
+	if result.Err != nil {
 		// This is expected to work in a real environment with Go
 		// but might fail in test environment, so we'll log rather than fail
-		t.Logf("DelegateToMage execution failed (expected in test environment): %v", err)
+		t.Logf("DelegateToMage execution failed (expected in test environment): %v", result.Err)
 	}
 }
 

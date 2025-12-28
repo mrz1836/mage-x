@@ -268,7 +268,8 @@ func NewDefaultSafeFileOperator() *DefaultSafeFileOperator {
 	}
 }
 
-// WriteFileAtomic writes a file atomically using a temporary file
+// WriteFileAtomic writes a file atomically using a temporary file.
+// Data is synced to disk before the atomic rename to prevent data loss on power failure.
 func (d *DefaultSafeFileOperator) WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(path)
 
@@ -296,6 +297,14 @@ func (d *DefaultSafeFileOperator) WriteFileAtomic(path string, data []byte, perm
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 
+	// Sync to disk before close to ensure data durability on power failure
+	if err = tmpFile.Sync(); err != nil {
+		if closeErr := tmpFile.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close temp file: %v\n", closeErr)
+		}
+		return fmt.Errorf("failed to sync temp file: %w", err)
+	}
+
 	if err = tmpFile.Close(); err != nil {
 		return fmt.Errorf("failed to close temp file: %w", err)
 	}
@@ -313,15 +322,24 @@ func (d *DefaultSafeFileOperator) WriteFileAtomic(path string, data []byte, perm
 	return nil
 }
 
-// WriteFileWithBackup writes a file and keeps a backup of the original
+// WriteFileWithBackup writes a file and keeps a backup of the original.
+// Avoids TOCTOU by attempting the copy directly and handling non-existence gracefully.
 func (d *DefaultSafeFileOperator) WriteFileWithBackup(path string, data []byte, perm os.FileMode) error {
-	// Check if file exists
-	if d.Exists(path) {
-		// Create backup
-		backupPath := path + ".bak"
-		if err := d.Copy(path, backupPath); err != nil {
-			return fmt.Errorf("failed to create backup: %w", err)
+	backupPath := path + ".bak"
+
+	// Try to create backup directly - handles non-existence gracefully
+	// This avoids TOCTOU race between Exists() check and Copy()
+	if err := d.Copy(path, backupPath); err != nil {
+		// Only fail if source exists but copy failed for other reason
+		// Use errors.Is to handle wrapped errors (Copy wraps os errors)
+		if !errors.Is(err, os.ErrNotExist) && !os.IsNotExist(err) {
+			// Also check the underlying error message for "no such file"
+			// since the error might be wrapped in a way that loses the type
+			if !strings.Contains(err.Error(), "no such file") {
+				return fmt.Errorf("failed to create backup: %w", err)
+			}
 		}
+		// Source doesn't exist, no backup needed - continue to write
 	}
 
 	// Write the file

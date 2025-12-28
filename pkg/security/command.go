@@ -276,11 +276,13 @@ func (e *SecureExecutor) validateCommand(name string, args []string) error {
 	return nil
 }
 
-// contextWithTimeout creates a context with timeout if not already present
+// contextWithTimeout creates a context with timeout if not already present.
+// Always returns a context that can be canceled, even if input already has a deadline.
 func (e *SecureExecutor) contextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
 	if _, ok := ctx.Deadline(); ok {
-		// Context already has a deadline
-		return ctx, func() {}
+		// Context already has a deadline, but still wrap with cancel capability
+		// so the caller can cancel early if needed
+		return context.WithCancel(ctx)
 	}
 	return context.WithTimeout(ctx, e.Timeout)
 }
@@ -373,13 +375,20 @@ func ValidateCommandArg(arg string) error {
 	}
 
 	// Special cases where pipe is dangerous (not in regex or URLs)
+	// Pipe is ONLY allowed if the argument contains regex metacharacters OR is a URL
+	// This is a conservative check that errs on the side of caution
 	if strings.Contains(arg, "|") {
-		// Allow pipe in regex patterns (contains regex metacharacters)
-		if !strings.ContainsAny(arg, "^$[]()+*?.{}\\") {
-			// Allow pipe in URLs
-			if !strings.HasPrefix(arg, "http://") && !strings.HasPrefix(arg, "https://") {
-				return ErrDangerousPipePattern
-			}
+		isRegex := strings.ContainsAny(arg, "^$[]()+*?.{}\\")
+		isURL := strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://")
+
+		if !isRegex && !isURL {
+			return ErrDangerousPipePattern
+		}
+
+		// Additional check: even with regex chars, reject suspicious command patterns
+		// This prevents bypass attempts like "test | cat /etc/passwd ^"
+		if isRegex && containsSuspiciousPipeCommand(arg) {
+			return ErrDangerousPipePattern
 		}
 	}
 
@@ -390,6 +399,34 @@ func ValidateCommandArg(arg string) error {
 	}
 
 	return nil
+}
+
+// containsSuspiciousPipeCommand checks if an argument containing a pipe has suspicious
+// command patterns that suggest shell injection rather than legitimate regex use.
+func containsSuspiciousPipeCommand(arg string) bool {
+	pipeIdx := strings.Index(arg, "|")
+	if pipeIdx == -1 {
+		return false
+	}
+
+	// Get content after the pipe
+	after := arg[pipeIdx+1:]
+	afterTrimmed := strings.TrimSpace(after)
+
+	// Check for common command names after pipe
+	suspiciousCommands := []string{
+		"cat", "rm", "wget", "curl", "bash", "sh", "nc", "python", "perl", "ruby",
+		"chmod", "chown", "mv", "cp", "dd", "head", "tail", "grep", "awk", "sed",
+		"xargs", "find", "exec", "eval", "source", "env", "sudo",
+	}
+	for _, cmd := range suspiciousCommands {
+		// Check for "| cmd" or "|cmd" followed by space or end
+		if strings.HasPrefix(afterTrimmed, cmd+" ") || afterTrimmed == cmd {
+			return true
+		}
+	}
+
+	return false
 }
 
 // ValidatePath validates a file path for security issues

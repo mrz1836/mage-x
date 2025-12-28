@@ -116,6 +116,8 @@ func initFlags() *Flags {
 }
 
 // tryCustomCommand attempts to execute a custom command via delegation
+// Returns true if the command was found and executed (regardless of success)
+// Returns false if the command was not found
 func tryCustomCommand(command string, commandArgs []string, discovery *CommandDiscovery) bool {
 	// Check if we have a magefile with this command
 	if !HasMagefile() {
@@ -129,12 +131,10 @@ func tryCustomCommand(command string, commandArgs []string, discovery *CommandDi
 		originalCommand = discoveredCmd.OriginalName
 	}
 
-	if delegateErr := DelegateToMage(originalCommand, commandArgs...); delegateErr != nil {
-		_, printErr := fmt.Fprintf(os.Stderr, "❌ %v\n", delegateErr)
-		if printErr != nil {
-			return false
-		}
-		os.Exit(1)
+	result := DelegateToMage(originalCommand, commandArgs...)
+	if result.Err != nil {
+		fmt.Fprintf(os.Stderr, "❌ %v\n", result.Err)
+		os.Exit(result.ExitCode) // Use actual exit code from mage
 	}
 	return true
 }
@@ -182,11 +182,10 @@ func main() {
 	// Always try to discover commands early, regardless of verbose mode
 	// This ensures custom commands are available for listing and execution
 	if err := discovery.Discover(); err != nil {
+		// Always warn about discovery issues so users know why their commands may not work
+		fmt.Fprintf(os.Stderr, "Warning: failed to discover custom commands: %v\n", err)
 		if *flags.Debug {
-			_, err = fmt.Fprintf(os.Stderr, "Debug: failed to discover custom commands: %v\n", err)
-			if err != nil {
-				return
-			}
+			fmt.Fprintf(os.Stderr, "  This may affect custom command availability from magefile.go or magefiles/\n")
 		}
 		// Continue even if discovery fails - we can still run built-in commands
 	}
