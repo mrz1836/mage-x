@@ -115,10 +115,7 @@ func (b *Base) ExecuteOutput(ctx context.Context, name string, args ...string) (
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		if trimmed := strings.TrimSpace(string(output)); trimmed != "" {
-			return "", fmt.Errorf("command failed [%s %s]: %w\n%s", name, strings.Join(args, " "), err, trimmed)
-		}
-		return "", fmt.Errorf("command failed [%s %s]: %w", name, strings.Join(args, " "), err)
+		return "", CommandErrorWithOutput(name, args, err, string(output))
 	}
 	return string(output), nil
 }
@@ -140,7 +137,7 @@ func (b *Base) ExecuteWithEnv(ctx context.Context, env []string, name string, ar
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command failed [%s %s]: %w", name, strings.Join(args, " "), err)
+		return CommandError(name, args, err)
 	}
 	return nil
 }
@@ -160,7 +157,7 @@ func (b *Base) ExecuteInDir(ctx context.Context, dir, name string, args ...strin
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command failed [%s %s] in %s: %w", name, strings.Join(args, " "), dir, err)
+		return CommandErrorInDir(name, args, dir, err)
 	}
 	return nil
 }
@@ -178,10 +175,7 @@ func (b *Base) ExecuteOutputInDir(ctx context.Context, dir, name string, args ..
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		if trimmed := strings.TrimSpace(string(output)); trimmed != "" {
-			return "", fmt.Errorf("command failed [%s %s] in %s: %w\n%s", name, strings.Join(args, " "), dir, err, trimmed)
-		}
-		return "", fmt.Errorf("command failed [%s %s] in %s: %w", name, strings.Join(args, " "), dir, err)
+		return "", CommandErrorInDirWithOutput(name, args, dir, err, string(output))
 	}
 	return string(output), nil
 }
@@ -200,7 +194,7 @@ func (b *Base) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, n
 	cmd.Stderr = stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command failed [%s %s]: %w", name, strings.Join(args, " "), err)
+		return CommandError(name, args, err)
 	}
 	return nil
 }

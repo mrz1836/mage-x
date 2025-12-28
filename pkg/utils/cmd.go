@@ -23,7 +23,7 @@ func RunCmd(name string, args ...string) error {
 	}
 
 	if err := defaultExecutor.Execute(context.Background(), name, args...); err != nil {
-		return fmt.Errorf("command failed [%s %s]: %w", name, strings.Join(args, " "), err)
+		return pkgexec.CommandError(name, args, err)
 	}
 	return nil
 }
@@ -43,11 +43,7 @@ func RunCmdOutput(name string, args ...string) (string, error) {
 
 	output, err := defaultExecutor.ExecuteOutput(context.Background(), name, args...)
 	if err != nil {
-		// Include command output in error for better diagnostics
-		if trimmed := strings.TrimSpace(output); trimmed != "" {
-			return "", fmt.Errorf("command failed [%s %s]: %w\n%s", name, strings.Join(args, " "), err, trimmed)
-		}
-		return "", fmt.Errorf("command failed [%s %s]: %w", name, strings.Join(args, " "), err)
+		return "", pkgexec.CommandErrorWithOutput(name, args, err, output)
 	}
 	return output, nil
 }
