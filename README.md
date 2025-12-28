@@ -1090,6 +1090,12 @@ Review and test completed user story.
 *code-review
 ```
 
+#### 12. **Retrospective** (Sprint Review)
+Reflect on sprint performance and identify improvements.
+```
+*retrospective
+```
+
 ### Management Commands
 
 ```bash
