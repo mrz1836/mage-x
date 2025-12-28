@@ -196,34 +196,22 @@ func getToolVersionOrWarn(envVar, legacyEnvVar, toolName string) string {
 }
 
 // GetDefaultGolangciLintVersion returns the default golangci-lint version from env or fallback
-func GetDefaultGolangciLintVersion() string {
-	return getToolVersionOrWarn("MAGE_X_GOLANGCI_LINT_VERSION", "GOLANGCI_LINT_VERSION", CmdGolangciLint)
-}
+func GetDefaultGolangciLintVersion() string { return getToolVersionFromRegistry(CmdGolangciLint) }
 
 // GetDefaultGofumptVersion returns the default gofumpt version from env or fallback
-func GetDefaultGofumptVersion() string {
-	return getToolVersionOrWarn("MAGE_X_GOFUMPT_VERSION", "GOFUMPT_VERSION", CmdGofumpt)
-}
+func GetDefaultGofumptVersion() string { return getToolVersionFromRegistry(CmdGofumpt) }
 
 // GetDefaultYamlfmtVersion returns the default yamlfmt version from env or fallback
-func GetDefaultYamlfmtVersion() string {
-	return getToolVersionOrWarn("MAGE_X_YAMLFMT_VERSION", "YAMLFMT_VERSION", CmdYamlfmt)
-}
+func GetDefaultYamlfmtVersion() string { return getToolVersionFromRegistry(CmdYamlfmt) }
 
 // GetDefaultGoVulnCheckVersion returns the default govulncheck version from env or fallback
-func GetDefaultGoVulnCheckVersion() string {
-	return getToolVersionOrWarn("MAGE_X_GOVULNCHECK_VERSION", "GOVULNCHECK_VERSION", CmdGoVulnCheck)
-}
+func GetDefaultGoVulnCheckVersion() string { return getToolVersionFromRegistry(CmdGoVulnCheck) }
 
 // GetDefaultMockgenVersion returns the default mockgen version from env or fallback
-func GetDefaultMockgenVersion() string {
-	return getToolVersionOrWarn("MAGE_X_MOCKGEN_VERSION", "MOCKGEN_VERSION", CmdMockgen)
-}
+func GetDefaultMockgenVersion() string { return getToolVersionFromRegistry(CmdMockgen) }
 
 // GetDefaultSwagVersion returns the default swag version from env or fallback
-func GetDefaultSwagVersion() string {
-	return getToolVersionOrWarn("MAGE_X_SWAG_VERSION", "SWAG_VERSION", CmdSwag)
-}
+func GetDefaultSwagVersion() string { return getToolVersionFromRegistry(CmdSwag) }
 
 // GetDefaultGoVersion returns the default Go version from env or fallback
 func GetDefaultGoVersion() string {
@@ -250,6 +238,60 @@ const (
 	VersionLatest   = "latest"
 	VersionAtLatest = "@latest"
 )
+
+// toolVersionConfig holds configuration for tool version lookup
+type toolVersionConfig struct {
+	mageXEnvVar  string // Primary env var (e.g., "MAGE_X_GOLANGCI_LINT_VERSION")
+	legacyEnvVar string // Legacy env var (e.g., "GOLANGCI_LINT_VERSION")
+	toolName     string // Tool command name (e.g., "golangci-lint")
+}
+
+// toolVersionRegistry maps tool names to their version configuration
+//
+//nolint:gochecknoglobals // Required for package-level configuration registry
+var toolVersionRegistry = map[string]toolVersionConfig{
+	CmdGolangciLint: {
+		mageXEnvVar:  "MAGE_X_GOLANGCI_LINT_VERSION",
+		legacyEnvVar: "GOLANGCI_LINT_VERSION",
+		toolName:     CmdGolangciLint,
+	},
+	CmdGofumpt: {
+		mageXEnvVar:  "MAGE_X_GOFUMPT_VERSION",
+		legacyEnvVar: "GOFUMPT_VERSION",
+		toolName:     CmdGofumpt,
+	},
+	CmdYamlfmt: {
+		mageXEnvVar:  "MAGE_X_YAMLFMT_VERSION",
+		legacyEnvVar: "YAMLFMT_VERSION",
+		toolName:     CmdYamlfmt,
+	},
+	CmdGoVulnCheck: {
+		mageXEnvVar:  "MAGE_X_GOVULNCHECK_VERSION",
+		legacyEnvVar: "GOVULNCHECK_VERSION",
+		toolName:     CmdGoVulnCheck,
+	},
+	CmdMockgen: {
+		mageXEnvVar:  "MAGE_X_MOCKGEN_VERSION",
+		legacyEnvVar: "MOCKGEN_VERSION",
+		toolName:     CmdMockgen,
+	},
+	CmdSwag: {
+		mageXEnvVar:  "MAGE_X_SWAG_VERSION",
+		legacyEnvVar: "SWAG_VERSION",
+		toolName:     CmdSwag,
+	},
+}
+
+// getToolVersionFromRegistry returns the version for a tool using the registry.
+// This is the internal unified function used by GetDefault* functions.
+func getToolVersionFromRegistry(toolName string) string {
+	cfg, ok := toolVersionRegistry[toolName]
+	if !ok {
+		utils.Warn("Unknown tool: %s, using 'latest'", toolName)
+		return VersionLatest
+	}
+	return getToolVersionOrWarn(cfg.mageXEnvVar, cfg.legacyEnvVar, cfg.toolName)
+}
 
 // Error messages
 const (
