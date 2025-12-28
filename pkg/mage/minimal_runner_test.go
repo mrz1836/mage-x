@@ -19,6 +19,7 @@ var (
 	errMinimalCommandFailed       = errors.New("command failed")
 	errMinimalCommandOutputFailed = errors.New("command output failed")
 	errMinimalExecutionFailed     = errors.New("execution failed")
+	errMinimalOtherError          = errors.New("some other error")
 )
 
 // MinimalRunnerTestSuite defines the test suite for minimal runner functions
@@ -718,4 +719,115 @@ func TestSecureCommandRunner_ContextErrors(t *testing.T) {
 // TestMinimalRunnerTestSuite runs the test suite
 func TestMinimalRunnerTestSuite(t *testing.T) {
 	suite.Run(t, new(MinimalRunnerTestSuite))
+}
+
+// TestWrapTimeoutError tests the wrapTimeoutError helper function
+func TestWrapTimeoutError(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputErr       error
+		ctx            CommandContext
+		expectNil      bool
+		expectContains []string
+		expectErrorIs  error
+	}{
+		{
+			name:      "nil error returns nil",
+			inputErr:  nil,
+			ctx:       CommandContext{Name: "test", Timeout: 5 * time.Minute},
+			expectNil: true,
+		},
+		{
+			name:     "DeadlineExceeded without dir",
+			inputErr: context.DeadlineExceeded,
+			ctx:      CommandContext{Name: "golangci-lint", Timeout: 20 * time.Minute},
+			expectContains: []string{
+				"golangci-lint",
+				"exceeded timeout of 20m0s",
+				"context deadline exceeded",
+			},
+			expectErrorIs: context.DeadlineExceeded,
+		},
+		{
+			name:     "DeadlineExceeded with dir",
+			inputErr: context.DeadlineExceeded,
+			ctx:      CommandContext{Name: "go", Dir: "/project", Timeout: 10 * time.Minute},
+			expectContains: []string{
+				"go",
+				"in '/project'",
+				"exceeded timeout of 10m0s",
+			},
+			expectErrorIs: context.DeadlineExceeded,
+		},
+		{
+			name:     "Canceled without dir",
+			inputErr: context.Canceled,
+			ctx:      CommandContext{Name: "go", Timeout: 5 * time.Minute},
+			expectContains: []string{
+				"go",
+				"was canceled after 5m0s",
+			},
+			expectErrorIs: context.Canceled,
+		},
+		{
+			name:     "Canceled with dir",
+			inputErr: context.Canceled,
+			ctx:      CommandContext{Name: "go", Dir: "/project", Timeout: 5 * time.Minute},
+			expectContains: []string{
+				"go",
+				"in '/project'",
+				"was canceled",
+			},
+			expectErrorIs: context.Canceled,
+		},
+		{
+			name:           "other error passes through unchanged",
+			inputErr:       errMinimalOtherError,
+			ctx:            CommandContext{Name: "test", Timeout: 5 * time.Minute},
+			expectContains: []string{"some other error"},
+		},
+		{
+			name:     "wrapped DeadlineExceeded detected",
+			inputErr: fmt.Errorf("wrapped: %w", context.DeadlineExceeded),
+			ctx:      CommandContext{Name: "test", Timeout: 5 * time.Minute},
+			expectContains: []string{
+				"exceeded timeout",
+			},
+			expectErrorIs: context.DeadlineExceeded,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := wrapTimeoutError(tt.inputErr, tt.ctx)
+
+			if tt.expectNil {
+				assert.NoError(t, result)
+				return
+			}
+
+			require.Error(t, result)
+			for _, contains := range tt.expectContains {
+				assert.Contains(t, result.Error(), contains)
+			}
+
+			if tt.expectErrorIs != nil {
+				assert.ErrorIs(t, result, tt.expectErrorIs)
+			}
+		})
+	}
+}
+
+// TestWrapTimeoutErrorPreservesOriginal verifies that errors.Is works correctly
+func TestWrapTimeoutErrorPreservesOriginal(t *testing.T) {
+	baseErr := context.DeadlineExceeded
+	wrappedErr := wrapTimeoutError(baseErr, CommandContext{
+		Name:    "test-cmd",
+		Timeout: 5 * time.Minute,
+	})
+
+	// Verify we can unwrap to get the original error
+	require.ErrorIs(t, wrappedErr, context.DeadlineExceeded)
+	assert.NotEqual(t, baseErr.Error(), wrappedErr.Error()) // Wrapped should be different
+	assert.Contains(t, wrappedErr.Error(), baseErr.Error()) // But should contain original
 }

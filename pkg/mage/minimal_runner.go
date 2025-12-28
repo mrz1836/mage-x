@@ -42,18 +42,7 @@ func (r *SecureCommandRunner) RunCmd(name string, args ...string) error {
 	defer cancel()
 
 	err := r.validated.Execute(ctx, name, args...)
-	if err != nil {
-		// Check if the error is due to context cancellation/timeout
-		if errors.Is(err, context.DeadlineExceeded) {
-			return fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
-				name, timeout, err)
-		}
-		if errors.Is(err, context.Canceled) {
-			return fmt.Errorf("command '%s' was canceled after %s: %w",
-				name, timeout, err)
-		}
-	}
-	return err
+	return wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
 }
 
 // RunCmdOutput executes a command and returns its output
@@ -65,18 +54,7 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 	defer cancel()
 
 	output, err := r.validated.ExecuteOutput(ctx, name, args...)
-	if err != nil {
-		// Check if the error is due to context cancellation/timeout
-		if errors.Is(err, context.DeadlineExceeded) {
-			return strings.TrimSpace(output), fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
-				name, timeout, err)
-		}
-		if errors.Is(err, context.Canceled) {
-			return strings.TrimSpace(output), fmt.Errorf("command '%s' was canceled after %s: %w",
-				name, timeout, err)
-		}
-	}
-	return strings.TrimSpace(output), err
+	return strings.TrimSpace(output), wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
 }
 
 // RunCmdInDir executes a command in the specified working directory.
@@ -88,17 +66,7 @@ func (r *SecureCommandRunner) RunCmdInDir(dir, name string, args ...string) erro
 	defer cancel()
 
 	err := r.executor.ExecuteInDir(ctx, dir, name, args...)
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			return fmt.Errorf("command '%s' in '%s' exceeded timeout of %s: %w",
-				name, dir, timeout, err)
-		}
-		if errors.Is(err, context.Canceled) {
-			return fmt.Errorf("command '%s' in '%s' was canceled: %w",
-				name, dir, err)
-		}
-	}
-	return err
+	return wrapTimeoutError(err, CommandContext{Name: name, Dir: dir, Timeout: timeout})
 }
 
 // RunCmdOutputInDir executes a command in the specified directory and returns output.
@@ -110,17 +78,7 @@ func (r *SecureCommandRunner) RunCmdOutputInDir(dir, name string, args ...string
 	defer cancel()
 
 	output, err := r.executor.ExecuteOutputInDir(ctx, dir, name, args...)
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			return strings.TrimSpace(output), fmt.Errorf("command '%s' in '%s' exceeded timeout: %w",
-				name, dir, err)
-		}
-		if errors.Is(err, context.Canceled) {
-			return strings.TrimSpace(output), fmt.Errorf("command '%s' in '%s' was canceled: %w",
-				name, dir, err)
-		}
-	}
-	return strings.TrimSpace(output), err
+	return strings.TrimSpace(output), wrapTimeoutError(err, CommandContext{Name: name, Dir: dir, Timeout: timeout})
 }
 
 // getCommandTimeout returns appropriate timeout based on command type
@@ -214,6 +172,41 @@ func SetRunner(r CommandRunner) error {
 	}
 	packageCommandRunnerProvider.Set(r)
 	return nil
+}
+
+// CommandContext holds context information for timeout error formatting
+type CommandContext struct {
+	Name    string
+	Dir     string // empty for non-dir commands
+	Timeout time.Duration
+}
+
+// wrapTimeoutError wraps context timeout/cancellation errors with descriptive messages.
+// Returns the original error unchanged if it's not a timeout or cancellation error.
+func wrapTimeoutError(err error, ctx CommandContext) error {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		if ctx.Dir != "" {
+			return fmt.Errorf("command '%s' in '%s' exceeded timeout of %s: %w",
+				ctx.Name, ctx.Dir, ctx.Timeout, err)
+		}
+		return fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
+			ctx.Name, ctx.Timeout, err)
+	}
+
+	if errors.Is(err, context.Canceled) {
+		if ctx.Dir != "" {
+			return fmt.Errorf("command '%s' in '%s' was canceled: %w",
+				ctx.Name, ctx.Dir, err)
+		}
+		return fmt.Errorf("command '%s' was canceled after %s: %w",
+			ctx.Name, ctx.Timeout, err)
+	}
+
+	return err
 }
 
 // truncateString truncates a string to the specified length
