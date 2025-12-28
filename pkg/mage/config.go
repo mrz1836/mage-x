@@ -456,7 +456,7 @@ func getDefaultAliases(binary string) []string {
 // applyEnvOverrides applies environment variable overrides to config
 func applyEnvOverrides(c *Config) {
 	// Binary name override
-	if v := env.CleanValue(os.Getenv("MAGE_X_BINARY_NAME")); v != "" {
+	if v := env.MustGet("MAGE_X_BINARY_NAME"); v != "" {
 		c.Project.Binary = v
 	}
 	if v := env.CleanValue(GetMageXEnv("CUSTOM_BINARY_NAME")); v != "" {
@@ -464,23 +464,23 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Build tags override
-	if v := env.CleanValue(os.Getenv("MAGE_X_BUILD_TAGS")); v != "" {
+	if v := env.MustGet("MAGE_X_BUILD_TAGS"); v != "" {
 		c.Build.Tags = strings.Split(v, ",")
 	}
 
 	// Verbose override
-	if v := env.CleanValue(os.Getenv("MAGE_X_VERBOSE")); v == trueValue || v == "1" {
+	if v := env.MustGet("MAGE_X_VERBOSE"); v == trueValue || v == "1" {
 		c.Build.Verbose = true
 		c.Test.Verbose = true
 	}
 
 	// Test race override
-	if v := env.CleanValue(os.Getenv("MAGE_X_TEST_RACE")); v == trueValue || v == "1" {
+	if v := env.MustGet("MAGE_X_TEST_RACE"); v == trueValue || v == "1" {
 		c.Test.Race = true
 	}
 
 	// Parallel override
-	if v := env.CleanValue(os.Getenv("MAGE_X_PARALLEL")); v != "" {
+	if v := env.MustGet("MAGE_X_PARALLEL"); v != "" {
 		var parallel int
 		if _, err := fmt.Sscanf(v, "%d", &parallel); err == nil && parallel > 0 {
 			c.Build.Parallel = parallel
@@ -488,14 +488,14 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Auto discover build tags override
-	if v := env.CleanValue(os.Getenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")); v == trueValue || v == "1" {
+	if v := env.MustGet("MAGE_X_AUTO_DISCOVER_BUILD_TAGS"); v == trueValue || v == "1" {
 		c.Test.AutoDiscoverBuildTags = true
 	} else if v == falseValue || v == "0" {
 		c.Test.AutoDiscoverBuildTags = false
 	}
 
 	// Auto discover build tags exclude override
-	if v := env.CleanValue(os.Getenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")); v != "" {
+	if v := env.MustGet("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE"); v != "" {
 		c.Test.AutoDiscoverBuildTagsExclude = strings.Split(v, ",")
 		// Trim whitespace from each tag
 		for i, tag := range c.Test.AutoDiscoverBuildTagsExclude {
@@ -504,7 +504,7 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Test exclude modules override
-	if v := env.CleanValue(os.Getenv("MAGE_X_TEST_EXCLUDE_MODULES")); v != "" {
+	if v := env.MustGet("MAGE_X_TEST_EXCLUDE_MODULES"); v != "" {
 		c.Test.ExcludeModules = strings.Split(v, ",")
 		// Trim whitespace from each module name
 		for i, mod := range c.Test.ExcludeModules {
@@ -513,7 +513,7 @@ func applyEnvOverrides(c *Config) {
 	}
 
 	// Test timeout override
-	if v := env.CleanValue(os.Getenv("MAGE_X_TEST_TIMEOUT")); v != "" {
+	if v := env.MustGet("MAGE_X_TEST_TIMEOUT"); v != "" {
 		c.Test.Timeout = v
 	}
 
@@ -527,7 +527,7 @@ func applyEnvOverrides(c *Config) {
 // applyDownloadEnvOverrides applies environment variable overrides to download config
 func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	// Max retries override
-	if v := env.CleanValue(os.Getenv("MAGE_X_DOWNLOAD_RETRIES")); v != "" {
+	if v := env.MustGet("MAGE_X_DOWNLOAD_RETRIES"); v != "" {
 		var retries int
 		if _, err := fmt.Sscanf(v, "%d", &retries); err == nil && retries >= 0 {
 			cfg.MaxRetries = retries
@@ -535,7 +535,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Timeout override
-	if v := env.CleanValue(os.Getenv("MAGE_X_DOWNLOAD_TIMEOUT")); v != "" {
+	if v := env.MustGet("MAGE_X_DOWNLOAD_TIMEOUT"); v != "" {
 		var timeout int
 		if _, err := fmt.Sscanf(v, "%d", &timeout); err == nil && timeout > 0 {
 			cfg.TimeoutMs = timeout
@@ -543,7 +543,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Initial delay override
-	if v := env.CleanValue(os.Getenv("MAGE_X_DOWNLOAD_INITIAL_DELAY")); v != "" {
+	if v := env.MustGet("MAGE_X_DOWNLOAD_INITIAL_DELAY"); v != "" {
 		var delay int
 		if _, err := fmt.Sscanf(v, "%d", &delay); err == nil && delay > 0 {
 			cfg.InitialDelayMs = delay
@@ -551,7 +551,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Max delay override
-	if v := env.CleanValue(os.Getenv("MAGE_X_DOWNLOAD_MAX_DELAY")); v != "" {
+	if v := env.MustGet("MAGE_X_DOWNLOAD_MAX_DELAY"); v != "" {
 		var delay int
 		if _, err := fmt.Sscanf(v, "%d", &delay); err == nil && delay > 0 {
 			cfg.MaxDelayMs = delay
@@ -559,7 +559,7 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Backoff multiplier override
-	if v := env.CleanValue(os.Getenv("MAGE_X_DOWNLOAD_BACKOFF")); v != "" {
+	if v := env.MustGet("MAGE_X_DOWNLOAD_BACKOFF"); v != "" {
 		var backoff float64
 		if _, err := fmt.Sscanf(v, "%f", &backoff); err == nil && backoff > 0 {
 			cfg.BackoffMultiplier = backoff
@@ -567,14 +567,14 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 	}
 
 	// Resume override
-	if v := env.CleanValue(os.Getenv("MAGE_X_DOWNLOAD_RESUME")); v == trueValue || v == "1" {
+	if v := env.MustGet("MAGE_X_DOWNLOAD_RESUME"); v == trueValue || v == "1" {
 		cfg.EnableResume = true
 	} else if v == falseValue || v == "0" {
 		cfg.EnableResume = false
 	}
 
 	// User agent override
-	if v := env.CleanValue(os.Getenv("MAGE_X_DOWNLOAD_USER_AGENT")); v != "" {
+	if v := env.MustGet("MAGE_X_DOWNLOAD_USER_AGENT"); v != "" {
 		cfg.UserAgent = v
 	}
 }
