@@ -38,6 +38,14 @@ func isCI() bool {
 	return os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
 }
 
+// hasMageBinary checks if the mage binary is installed and available in PATH.
+// Custom magefile execution requires mage because the go run fallback doesn't work
+// with standard magefiles (they need mage's code generation to create main()).
+func hasMageBinary() bool {
+	_, err := exec.LookPath("mage")
+	return err == nil
+}
+
 // runMagexCommand executes a magex command with appropriate error handling for CI/local environments
 func runMagexCommand(t *testing.T, magexPath, workingDir string, args ...string) ([]byte, error) {
 	t.Helper()
@@ -66,12 +74,8 @@ func TestIntegration_MagefilesDirectory(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
-	// NOTE: Temporarily disabled in CI due to environment-specific failures
-	// Tests pass locally but fail in CI with magex binary execution issues
-	// Need investigation of CI environment differences vs local execution
-	if isCI() {
-		t.Skip("Temporarily disabled in CI - needs investigation of environment differences")
+	if !hasMageBinary() {
+		t.Skip("Skipping: mage binary not installed (required for custom magefile execution)")
 	}
 
 	// Check if magex binary exists or can be built
@@ -247,12 +251,8 @@ func TestIntegration_MagefilePreference(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
-	// NOTE: Temporarily disabled in CI due to environment-specific failures
-	// Tests pass locally but fail in CI with magex binary execution issues
-	// Need investigation of CI environment differences vs local execution
-	if isCI() {
-		t.Skip("Temporarily disabled in CI - needs investigation of environment differences")
+	if !hasMageBinary() {
+		t.Skip("Skipping: mage binary not installed (required for custom magefile execution)")
 	}
 
 	// Check if magex binary exists or can be built
@@ -363,6 +363,9 @@ func RootCommand() error {
 func TestIntegration_MultipleFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
+	}
+	if !hasMageBinary() {
+		t.Skip("Skipping: mage binary not installed (required for custom magefile execution)")
 	}
 
 	// Check if magex binary exists or can be built
