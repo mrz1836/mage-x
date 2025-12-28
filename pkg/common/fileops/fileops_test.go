@@ -19,10 +19,13 @@ import (
 
 // Static errors for fileops tests
 var (
-	errTestDataMismatch = errors.New("goroutine data mismatch")
-	errTestMarshalError = errors.New("marshal error")
-	errTestYAMLError    = errors.New("yaml error")
-	errTestRemoveError  = errors.New("remove error")
+	errTestDataMismatch  = errors.New("goroutine data mismatch")
+	errTestMarshalError  = errors.New("marshal error")
+	errTestYAMLError     = errors.New("yaml error")
+	errTestRemoveError   = errors.New("remove error")
+	errTestCloseFailed   = errors.New("close failed")
+	errTestCloseError    = errors.New("error")
+	errTestSpecificClose = errors.New("specific error")
 )
 
 // FileOpsTestSuite tests file operations
@@ -1557,5 +1560,104 @@ func TestGlobalConvenienceFunctions(t *testing.T) {
 			t.Errorf("Expected JSON data path %s, got %s", jsonDataPath, foundPath)
 		}
 		assert.Equal(t, testConfig, result, "JSON data should match")
+	})
+}
+
+// mockCloser implements io.Closer for testing deferClose
+type mockCloser struct {
+	closeErr error
+	closed   bool
+}
+
+func (m *mockCloser) Close() error {
+	m.closed = true
+	return m.closeErr
+}
+
+// TestDeferClose tests the deferClose helper function
+func TestDeferClose(t *testing.T) {
+	t.Run("successful close does not print warning", func(t *testing.T) {
+		// Capture stderr
+		oldStderr := os.Stderr
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stderr = w
+
+		closer := &mockCloser{}
+		closeFn := deferClose(closer, "test file")
+		closeFn()
+
+		_ = w.Close() //nolint:errcheck // test cleanup
+		os.Stderr = oldStderr
+
+		var buf bytes.Buffer
+		_, _ = buf.ReadFrom(r) //nolint:errcheck // test read
+
+		assert.True(t, closer.closed, "Closer should be called")
+		assert.Empty(t, buf.String(), "No warning should be printed on success")
+	})
+
+	t.Run("failed close prints warning", func(t *testing.T) {
+		// Capture stderr
+		oldStderr := os.Stderr
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stderr = w
+
+		closer := &mockCloser{closeErr: errTestCloseFailed}
+		closeFn := deferClose(closer, "test file")
+		closeFn()
+
+		_ = w.Close() //nolint:errcheck // test cleanup
+		os.Stderr = oldStderr
+
+		var buf bytes.Buffer
+		_, _ = buf.ReadFrom(r) //nolint:errcheck // test read
+
+		assert.True(t, closer.closed, "Closer should be called")
+		assert.Contains(t, buf.String(), "Warning: failed to close test file")
+		assert.Contains(t, buf.String(), "close failed")
+	})
+
+	t.Run("description appears in warning", func(t *testing.T) {
+		// Capture stderr
+		oldStderr := os.Stderr
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stderr = w
+
+		closer := &mockCloser{closeErr: errTestCloseError}
+		closeFn := deferClose(closer, "source file")
+		closeFn()
+
+		_ = w.Close() //nolint:errcheck // test cleanup
+		os.Stderr = oldStderr
+
+		var buf bytes.Buffer
+		_, _ = buf.ReadFrom(r) //nolint:errcheck // test read
+
+		assert.Contains(t, buf.String(), "source file")
+	})
+
+	t.Run("warning format matches expected pattern", func(t *testing.T) {
+		// Capture stderr
+		oldStderr := os.Stderr
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stderr = w
+
+		closer := &mockCloser{closeErr: errTestSpecificClose}
+		closeFn := deferClose(closer, "destination file")
+		closeFn()
+
+		_ = w.Close() //nolint:errcheck // test cleanup
+		os.Stderr = oldStderr
+
+		var buf bytes.Buffer
+		_, _ = buf.ReadFrom(r) //nolint:errcheck // test read
+
+		// Verify the exact format matches the original pattern
+		expected := "Warning: failed to close destination file: specific error\n"
+		assert.Equal(t, expected, buf.String(), "Warning format should match expected pattern")
 	})
 }

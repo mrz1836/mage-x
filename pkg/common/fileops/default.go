@@ -96,23 +96,13 @@ func (d *DefaultFileOperator) Copy(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
-	defer func() {
-		if closeErr := sourceFile.Close(); closeErr != nil {
-			// Log error but don't override the main operation error
-			fmt.Fprintf(os.Stderr, "Warning: failed to close source file: %v\n", closeErr)
-		}
-	}()
+	defer deferClose(sourceFile, "source file")()
 
 	destFile, err := os.Create(cleanDst)
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer func() {
-		if closeErr := destFile.Close(); closeErr != nil {
-			// Log error but don't override the main operation error
-			fmt.Fprintf(os.Stderr, "Warning: failed to close destination file: %v\n", closeErr)
-		}
-	}()
+	defer deferClose(destFile, "destination file")()
 
 	if _, copyErr := io.Copy(destFile, sourceFile); copyErr != nil {
 		return fmt.Errorf("failed to copy file: %w", copyErr)
@@ -349,4 +339,15 @@ func (d *DefaultSafeFileOperator) WriteFileWithBackup(path string, data []byte, 
 
 	// Write the file
 	return d.WriteFile(path, data, perm)
+}
+
+// deferClose returns a function suitable for deferred file closing.
+// It logs a warning to stderr if the close fails, but does not fail the main operation.
+// Usage: defer deferClose(file, "source file")()
+func deferClose(closer io.Closer, description string) func() {
+	return func() {
+		if err := closer.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close %s: %v\n", description, err)
+		}
+	}
 }
