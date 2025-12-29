@@ -586,3 +586,228 @@ func TestRunTestsForModulesWithRunner_NilConfig(t *testing.T) {
 	err := runTestsForModulesWithRunner(nil, nil, false, false, nil, "unit", "", nil)
 	assert.ErrorIs(t, err, errConfigNil)
 }
+
+func TestTestRunnerOptionsValues(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		opts       testRunnerOptions
+		expectType string
+		expectRace bool
+		expectCov  bool
+	}{
+		{
+			name:       "unit test options",
+			opts:       testRunnerOptions{testType: "unit", race: false, isCoverage: false},
+			expectType: "unit",
+			expectRace: false,
+			expectCov:  false,
+		},
+		{
+			name:       "short test options",
+			opts:       testRunnerOptions{testType: "short", race: false, isCoverage: false},
+			expectType: "short",
+			expectRace: false,
+			expectCov:  false,
+		},
+		{
+			name:       "race test options",
+			opts:       testRunnerOptions{testType: "race", race: true, isCoverage: false},
+			expectType: "race",
+			expectRace: true,
+			expectCov:  false,
+		},
+		{
+			name:       "coverage test options",
+			opts:       testRunnerOptions{testType: "coverage", race: false, isCoverage: true},
+			expectType: "coverage",
+			expectRace: false,
+			expectCov:  true,
+		},
+		{
+			name:       "coverage+race test options",
+			opts:       testRunnerOptions{testType: "coverage+race", race: true, isCoverage: true},
+			expectType: "coverage+race",
+			expectRace: true,
+			expectCov:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expectType, tt.opts.testType)
+			assert.Equal(t, tt.expectRace, tt.opts.race)
+			assert.Equal(t, tt.expectCov, tt.opts.isCoverage)
+		})
+	}
+}
+
+func TestBenchmarkOptionsValues(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		opts            benchmarkOptions
+		expectType      string
+		expectBenchTime string
+		expectLogPrefix string
+	}{
+		{
+			name: "benchmark options",
+			opts: benchmarkOptions{
+				testType:         "benchmark",
+				defaultBenchTime: "10s",
+				logPrefix:        "Benchmarks",
+			},
+			expectType:      "benchmark",
+			expectBenchTime: "10s",
+			expectLogPrefix: "Benchmarks",
+		},
+		{
+			name: "benchmark-short options",
+			opts: benchmarkOptions{
+				testType:         "benchmark-short",
+				defaultBenchTime: "1s",
+				logPrefix:        "Short benchmarks",
+			},
+			expectType:      "benchmark-short",
+			expectBenchTime: "1s",
+			expectLogPrefix: "Short benchmarks",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expectType, tt.opts.testType)
+			assert.Equal(t, tt.expectBenchTime, tt.opts.defaultBenchTime)
+			assert.Equal(t, tt.expectLogPrefix, tt.opts.logPrefix)
+		})
+	}
+}
+
+func TestFuzzOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                 string
+		opts                 fuzzOptions
+		expectHeaderName     string
+		expectHeaderText     string
+		expectDefaultTime    string
+		expectSuccessMessage string
+	}{
+		{
+			name: "fuzz options",
+			opts: fuzzOptions{
+				headerName:     "fuzz",
+				headerText:     "Running Fuzz Tests",
+				defaultTime:    "10s",
+				successMessage: "Fuzz tests completed",
+			},
+			expectHeaderName:     "fuzz",
+			expectHeaderText:     "Running Fuzz Tests",
+			expectDefaultTime:    "10s",
+			expectSuccessMessage: "Fuzz tests completed",
+		},
+		{
+			name: "fuzz-short options",
+			opts: fuzzOptions{
+				headerName:     "fuzz-short",
+				headerText:     "Running Short Fuzz Tests",
+				defaultTime:    "5s",
+				successMessage: "Short fuzz tests completed",
+			},
+			expectHeaderName:     "fuzz-short",
+			expectHeaderText:     "Running Short Fuzz Tests",
+			expectDefaultTime:    "5s",
+			expectSuccessMessage: "Short fuzz tests completed",
+		},
+		{
+			name: "minimal fuzz options for duration-based methods",
+			opts: fuzzOptions{
+				headerText:     "Running Fuzz Tests",
+				successMessage: "Fuzz tests completed",
+			},
+			expectHeaderName:     "",
+			expectHeaderText:     "Running Fuzz Tests",
+			expectDefaultTime:    "",
+			expectSuccessMessage: "Fuzz tests completed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expectHeaderName, tt.opts.headerName)
+			assert.Equal(t, tt.expectHeaderText, tt.opts.headerText)
+			assert.Equal(t, tt.expectDefaultTime, tt.opts.defaultTime)
+			assert.Equal(t, tt.expectSuccessMessage, tt.opts.successMessage)
+		})
+	}
+}
+
+func TestFuzzOptionsConsistency(t *testing.T) {
+	t.Parallel()
+
+	// Test that Fuzz and FuzzShort use correct options
+	fuzzOpts := fuzzOptions{
+		headerName:     "fuzz",
+		defaultTime:    "10s",
+		successMessage: "Fuzz tests completed",
+	}
+
+	fuzzShortOpts := fuzzOptions{
+		headerName:     "fuzz-short",
+		defaultTime:    "5s",
+		successMessage: "Short fuzz tests completed",
+	}
+
+	// Verify the default times are different
+	assert.NotEqual(t, fuzzOpts.defaultTime, fuzzShortOpts.defaultTime,
+		"Fuzz and FuzzShort should have different default times")
+
+	// Verify header names are different
+	assert.NotEqual(t, fuzzOpts.headerName, fuzzShortOpts.headerName,
+		"Fuzz and FuzzShort should have different header names")
+
+	// Verify success messages are different
+	assert.NotEqual(t, fuzzOpts.successMessage, fuzzShortOpts.successMessage,
+		"Fuzz and FuzzShort should have different success messages")
+
+	// Verify the durations are parseable
+	_, err := time.ParseDuration(fuzzOpts.defaultTime)
+	require.NoError(t, err, "Fuzz default time should be parseable")
+
+	_, err = time.ParseDuration(fuzzShortOpts.defaultTime)
+	require.NoError(t, err, "FuzzShort default time should be parseable")
+}
+
+func TestFuzzWithTimeOptions(t *testing.T) {
+	t.Parallel()
+
+	// Test that FuzzWithTime and FuzzShortWithTime use correct options
+	fuzzWithTimeOpts := fuzzOptions{
+		headerText:     "Running Fuzz Tests",
+		successMessage: "Fuzz tests completed",
+	}
+
+	fuzzShortWithTimeOpts := fuzzOptions{
+		headerText:     "Running Short Fuzz Tests",
+		successMessage: "Short fuzz tests completed",
+	}
+
+	// Verify header texts are different
+	assert.NotEqual(t, fuzzWithTimeOpts.headerText, fuzzShortWithTimeOpts.headerText,
+		"FuzzWithTime and FuzzShortWithTime should have different header texts")
+
+	// Verify success messages are different
+	assert.NotEqual(t, fuzzWithTimeOpts.successMessage, fuzzShortWithTimeOpts.successMessage,
+		"FuzzWithTime and FuzzShortWithTime should have different success messages")
+
+	// Verify header text contains expected keywords
+	assert.Contains(t, fuzzWithTimeOpts.headerText, "Fuzz")
+	assert.Contains(t, fuzzShortWithTimeOpts.headerText, "Short")
+}

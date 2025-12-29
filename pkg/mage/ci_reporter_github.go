@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // githubReporter implements GitHubReporterInterface for GitHub Actions
@@ -91,7 +93,7 @@ func (r *githubReporter) WriteStepSummary(result *CIResult) error {
 	}
 
 	// Open file in append mode
-	f, err := os.OpenFile(r.stepSummaryFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	f, err := os.OpenFile(r.stepSummaryFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileops.PermFileSensitive)
 	if err != nil {
 		return fmt.Errorf("failed to open step summary file: %w", err)
 	}
@@ -169,7 +171,7 @@ func (r *githubReporter) WriteOutputs(outputs map[string]string) error {
 	}
 
 	// Open file in append mode
-	f, err := os.OpenFile(r.outputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	f, err := os.OpenFile(r.outputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileops.PermFileSensitive)
 	if err != nil {
 		return fmt.Errorf("failed to open output file: %w", err)
 	}

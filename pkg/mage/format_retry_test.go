@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mrz1836/mage-x/pkg/security"
+	"github.com/mrz1836/mage-x/pkg/exec"
 )
 
 // MockSecureCommandRunner is a mock implementation of CommandRunner that simulates SecureCommandRunner behavior
@@ -22,7 +22,7 @@ type MockSecureCommandRunner struct {
 	executor *MockSecureExecutor //nolint:unused // field reserved for future use
 }
 
-// MockSecureExecutor is a mock for security.SecureExecutor methods needed for retry testing
+// MockSecureExecutor is a mock for executor methods needed for retry testing
 type MockSecureExecutor struct {
 	mock.Mock
 }
@@ -186,33 +186,34 @@ func TestSecureCommandRunnerTypeAssertion(t *testing.T) {
 	})
 }
 
-// TestRetryBehaviorWithSecureExecutor tests retry behavior using the actual SecureExecutor
-func TestRetryBehaviorWithSecureExecutor(t *testing.T) {
+// TestRetryBehaviorWithExecutor tests retry behavior using pkg/exec
+func TestRetryBehaviorWithExecutor(t *testing.T) {
 	t.Run("retry logic with actual executor", func(t *testing.T) {
-		// Create a SecureExecutor instance
-		executor := security.NewSecureExecutor()
+		// Create an executor instance
+		executor := exec.NewBase()
 
 		// Test the retry logic directly
 		ctx := context.Background()
 
 		// This should fail quickly for a non-existent command
-		err := executor.ExecuteWithRetry(ctx, 2, 10*time.Millisecond, "nonexistentcommandxyz123", "arg1")
+		err := exec.ExecuteWithRetry(ctx, executor, 2, 10*time.Millisecond, "nonexistentcommandxyz123", "arg1")
 		require.Error(t, err)
 		// Should contain information about the error (either retry attempts or permanent error)
 		assert.True(t, strings.Contains(err.Error(), "command failed after") ||
 			strings.Contains(err.Error(), "permanent command error") ||
-			strings.Contains(err.Error(), "executable file not found"),
+			strings.Contains(err.Error(), "executable file not found") ||
+			strings.Contains(err.Error(), "max retries"),
 			"Error should indicate command failure: %v", err)
 	})
 
 	t.Run("successful execution with retry", func(t *testing.T) {
-		// Create a SecureExecutor instance
-		executor := security.NewSecureExecutor()
+		// Create an executor instance
+		executor := exec.NewBase()
 
 		// Test with a command that should exist (echo)
 		ctx := context.Background()
 
-		err := executor.ExecuteWithRetry(ctx, 1, 10*time.Millisecond, "echo", "test")
+		err := exec.ExecuteWithRetry(ctx, executor, 1, 10*time.Millisecond, "echo", "test")
 		// This should succeed on the first try
 		assert.NoError(t, err)
 	})
@@ -226,10 +227,14 @@ func TestInstallToolsWithSecureRunner(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 
-		runner := &SecureCommandRunner{executor: executor}
+		runner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(runner) //nolint:errcheck // test setup
 
 		format := Format{}
@@ -268,10 +273,14 @@ download:
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with dry run
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 
-		runner := &SecureCommandRunner{executor: executor}
+		runner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(runner) //nolint:errcheck // test setup
 
 		// This should use the custom configuration
@@ -284,28 +293,29 @@ download:
 func TestErrorWrapping(t *testing.T) {
 	t.Run("error messages from retry logic", func(t *testing.T) {
 		// Test that ExecuteWithRetry properly wraps errors
-		executor := security.NewSecureExecutor()
+		executor := exec.NewBase()
 		ctx := context.Background()
 
 		// Use a command that will fail
-		err := executor.ExecuteWithRetry(ctx, 1, 10*time.Millisecond, "falsecmdthatdoesnotexist")
+		err := exec.ExecuteWithRetry(ctx, executor, 1, 10*time.Millisecond, "falsecmdthatdoesnotexist")
 		require.Error(t, err)
 
 		// Should contain information about the error (either retry attempts or permanent error)
 		assert.True(t, strings.Contains(err.Error(), "command failed after") ||
 			strings.Contains(err.Error(), "permanent command error") ||
-			strings.Contains(err.Error(), "executable file not found"),
+			strings.Contains(err.Error(), "executable file not found") ||
+			strings.Contains(err.Error(), "max retries"),
 			"Error should indicate command failure: %v", err)
 	})
 
 	t.Run("context cancellation during retry", func(t *testing.T) {
-		executor := security.NewSecureExecutor()
+		executor := exec.NewBase()
 
 		// Create a context that will be canceled
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
 		defer cancel()
 
-		err := executor.ExecuteWithRetry(ctx, 5, 100*time.Millisecond, "sleep", "10")
+		err := exec.ExecuteWithRetry(ctx, executor, 5, 100*time.Millisecond, "sleep", "10")
 		require.Error(t, err)
 
 		// Check for context error or command termination due to timeout

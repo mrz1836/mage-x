@@ -60,7 +60,7 @@ func (f *FileOps) WriteJSONSafe(path string, data interface{}) error {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	return f.Safe.WriteFileAtomic(path, jsonData, 0o644)
+	return f.Safe.WriteFileAtomic(path, jsonData, PermFile)
 }
 
 // WriteYAMLSafe writes YAML data atomically with directory creation
@@ -74,7 +74,7 @@ func (f *FileOps) WriteYAMLSafe(path string, data interface{}) error {
 		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}
 
-	return f.Safe.WriteFileAtomic(path, yamlData, 0o600)
+	return f.Safe.WriteFileAtomic(path, yamlData, PermFileSensitive)
 }
 
 // LoadConfig loads configuration from file with fallback to multiple paths and formats
@@ -168,7 +168,7 @@ func (f *FileOps) ensureDir(path string) error {
 	}
 
 	if !f.File.Exists(dir) {
-		return f.File.MkdirAll(dir, 0o755)
+		return f.File.MkdirAll(dir, PermDir)
 	}
 
 	return nil

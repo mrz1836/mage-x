@@ -16,6 +16,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/mage/embed"
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -1084,7 +1085,7 @@ func Deploy() error {
 	}
 
 	// Write the file
-	if err := os.WriteFile(filename, []byte(content), 0o600); err != nil {
+	if err := os.WriteFile(filename, []byte(content), fileops.PermFileSensitive); err != nil {
 		fmt.Printf("❌ Error creating magefile: %v\n", err)
 		return fmt.Errorf("failed to create magefile: %w", err)
 	}
@@ -1160,7 +1161,7 @@ func TestCover() error { var t mage.Test; return t.Cover() }
 // Add more commands as needed...
 `
 
-	if err := os.WriteFile(output, []byte(content), 0o600); err != nil {
+	if err := os.WriteFile(output, []byte(content), fileops.PermFileSensitive); err != nil {
 		fmt.Printf("❌ Error: %v\n", err)
 		os.Exit(1)
 	}

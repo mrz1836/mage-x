@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // Static errors for environment operations
@@ -286,7 +288,7 @@ func NewDefaultPathResolver() *DefaultPathResolver {
 	return &DefaultPathResolver{
 		options: PathOptions{
 			CreateMissing:  false,
-			Mode:           0o755,
+			Mode:           uint32(fileops.PermDir),
 			FollowSymlinks: true,
 			ResolveEnvVars: true,
 		},

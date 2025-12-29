@@ -189,8 +189,7 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseCheckWithoutConfig() {
 	}()
 
 	// Ensure no config files exist
-	configFiles := []string{".goreleaser.yml", ".goreleaser.yaml", "goreleaser.yml", "goreleaser.yaml"}
-	for _, file := range configFiles {
+	for _, file := range GoreleaserConfigFiles() {
 		if err := os.Remove(file); err != nil && !os.IsNotExist(err) {
 			suite.T().Logf("Warning: failed to remove config file %s: %v", file, err)
 		}
@@ -218,8 +217,7 @@ func (suite *ReleaseSimpleTestSuite) TestReleaseInitSuccess() {
 	}()
 
 	// Ensure no existing config files
-	configFiles := []string{".goreleaser.yml", ".goreleaser.yaml", "goreleaser.yml", "goreleaser.yaml"}
-	for _, file := range configFiles {
+	for _, file := range GoreleaserConfigFiles() {
 		if err := os.Remove(file); err != nil && !os.IsNotExist(err) {
 			suite.T().Logf("Warning: failed to remove config file %s: %v", file, err)
 		}

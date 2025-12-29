@@ -16,6 +16,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -35,6 +36,32 @@ type fuzzTestResult struct {
 	Duration time.Duration
 	Error    error
 	Output   string // Captured stdout output for text parsing
+}
+
+// testRunnerOptions configures the common test runner setup.
+// This struct enables consolidation of the Unit, Short, Race, Cover, and CoverRace methods
+// which all follow the same pattern with minor variations.
+type testRunnerOptions struct {
+	testType   string // "unit", "short", "race", "coverage", or "coverage+race"
+	race       bool   // whether to enable race detection
+	isCoverage bool   // whether this is a coverage test (uses different underlying function)
+}
+
+// benchmarkOptions configures the common benchmark runner setup.
+// This struct enables consolidation of the Bench and BenchShort methods
+// which follow the same pattern with minor variations.
+type benchmarkOptions struct {
+	testType         string // "benchmark" or "benchmark-short"
+	defaultBenchTime string // default benchmark time ("10s" or "1s")
+	logPrefix        string // prefix for log messages
+}
+
+// fuzzOptions configures fuzz test execution
+type fuzzOptions struct {
+	headerName     string // "fuzz" or "fuzz-short" for displayTestHeader
+	headerText     string // header text for duration-based methods (e.g., "Running Fuzz Tests")
+	defaultTime    string // default fuzz time ("10s" or "5s")
+	successMessage string // message to display on success
 }
 
 // getCIParams extracts CI-related parameters from args and returns the remaining args
@@ -67,37 +94,104 @@ func generateCIReport(runner CommandRunner) {
 	}
 }
 
-// shouldExcludeModule checks if a module should be excluded from processing
-// based on the configured exclusion list. By default, "magefiles" modules are excluded
-// because they have special build constraints (//go:build mage).
-func shouldExcludeModule(module ModuleInfo, config *Config) bool {
-	if config == nil || len(config.Test.ExcludeModules) == 0 {
-		return false
+// runWithStandardSetup executes the common test runner setup pattern used by
+// Unit, Short, Race, Cover, and CoverRace methods. This consolidates the
+// duplicated boilerplate into a single function.
+func runWithStandardSetup(opts testRunnerOptions, args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
 	}
-	for _, excludedName := range config.Test.ExcludeModules {
-		if module.Name == excludedName {
-			return true
-		}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
+
+	// Display header with build tag information
+	discoveredTags := displayTestHeader(opts.testType, config)
+
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
 	}
-	return false
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
+	// Call the appropriate underlying function based on coverage mode
+	if opts.isCoverage {
+		return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, opts.race, remainingArgs, discoveredTags, runner)
+	}
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, opts.race, remainingArgs, opts.testType, discoveredTags, runner)
 }
 
-// filterModulesForProcessing filters modules based on the exclusion configuration.
-// This is used by test, lint, and deps commands to skip modules like "magefiles"
-// that have special build constraints.
-func filterModulesForProcessing(modules []ModuleInfo, config *Config, operation string) []ModuleInfo {
-	if config == nil || len(config.Test.ExcludeModules) == 0 {
-		return modules
+// runBenchmarkWithOptions executes the common benchmark setup pattern used by
+// Bench and BenchShort methods. This consolidates the duplicated boilerplate
+// into a single function.
+func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
 	}
-	filtered := make([]ModuleInfo, 0, len(modules))
-	for _, m := range modules {
-		if shouldExcludeModule(m, config) {
-			utils.Info("Skipping module %s (excluded from %s)", m.Name, operation)
-			continue
-		}
-		filtered = append(filtered, m)
+
+	displayTestHeader(opts.testType, config)
+
+	// Discover and filter modules
+	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+		Operation: "benchmarks",
+		Quiet:     true, // Header already shown by displayTestHeader
+	})
+	if err != nil {
+		return err
 	}
-	return filtered
+	if result.Empty || result.Skipped {
+		return nil
+	}
+
+	// Build base benchmark args
+	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
+
+	if config.Test.Verbose {
+		args = append(args, "-v")
+	}
+
+	if config.Test.Tags != "" {
+		args = append(args, "-tags", config.Test.Tags)
+	}
+
+	// Get benchmark time from parameter or use default
+	benchTime := utils.GetParam(params, "time", opts.defaultBenchTime)
+	args = append(args, "-benchtime", benchTime)
+
+	// Get count from parameter
+	count := utils.GetParam(params, "count", "")
+	if count != "" {
+		args = append(args, "-count", count)
+	}
+
+	args = append(args, "./...")
+
+	// Run benchmarks for each module
+	return forEachModule(result.Modules, ModuleIteratorOptions{
+		Operation: opts.logPrefix,
+		Verb:      "completed",
+	}, func(module ModuleInfo) error {
+		return runCommandInModule(module, "go", args...)
+	})
 }
 
 // Test namespace for test-related tasks
@@ -132,187 +226,47 @@ func (Test) Full(args ...string) error {
 
 // Unit runs unit tests
 func (Test) Unit(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("unit", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use new build tag discovery if enabled, passing pre-discovered tags
-	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, "unit", discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "unit",
+		race:       false,
+		isCoverage: false,
+	}, args...)
 }
 
 // Short runs short tests (excludes integration tests)
 func (Test) Short(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("short", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use new build tag discovery if enabled (explicitly disable race for speed)
-	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, "short", discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "short",
+		race:       false,
+		isCoverage: false,
+	}, args...)
 }
 
 // Race runs tests with race detector
 func (Test) Race(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("race", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use new build tag discovery if enabled (with race detector)
-	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, true, remainingArgs, "race", discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "race",
+		race:       true,
+		isCoverage: false,
+	}, args...)
 }
 
 // Cover runs tests with coverage
 func (Test) Cover(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("coverage", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use build tag discovery for coverage tests
-	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "coverage",
+		race:       false,
+		isCoverage: true,
+	}, args...)
 }
 
 // CoverRace runs tests with both coverage and race detector
 func (Test) CoverRace(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("coverage+race", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use build tag discovery for coverage+race tests
-	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, true, remainingArgs, discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "coverage+race",
+		race:       true,
+		isCoverage: true,
+	}, args...)
 }
 
 // CoverReport shows coverage report
@@ -444,12 +398,10 @@ func isMultiModuleCoverage(coverageFile string) bool {
 	return false
 }
 
-// Fuzz runs fuzz tests with configurable time
-func (Test) Fuzz(argsList ...string) error {
-	// Parse command-line parameters
+// runFuzzWithOptions runs fuzz tests with configurable options from command-line args.
+// This consolidates the common logic shared by Fuzz and FuzzShort methods.
+func runFuzzWithOptions(opts fuzzOptions, argsList ...string) error {
 	params := utils.ParseParams(argsList)
-
-	// Extract CI params from arguments
 	ciParams, _ := getCIParams(argsList)
 
 	config, err := GetConfig()
@@ -457,9 +409,7 @@ func (Test) Fuzz(argsList ...string) error {
 		return err
 	}
 
-	displayTestHeader("fuzz", config)
-
-	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	displayTestHeader(opts.headerName, config)
 	PrintCIBannerIfEnabled(ciParams, config)
 
 	if config.Test.SkipFuzz {
@@ -467,347 +417,119 @@ func (Test) Fuzz(argsList ...string) error {
 		return nil
 	}
 
-	// Find packages with fuzz tests
 	packages := findFuzzPackages()
-
 	if len(packages) == 0 {
 		utils.Info("No fuzz tests found")
 		return nil
 	}
 
-	// Get fuzz time from parameter or use default (10s)
-	fuzzTimeStr := utils.GetParam(params, "time", "10s")
+	fuzzTimeStr := utils.GetParam(params, "time", opts.defaultTime)
 	fuzzTime, err := time.ParseDuration(fuzzTimeStr)
 	if err != nil {
 		return fmt.Errorf("invalid time parameter: %w", err)
 	}
 
-	// Run all fuzz tests and collect results (continues on failure)
-	// In CI mode, capture output for text parsing to extract detailed failure info
 	ciEnabled := IsCIEnabled(ciParams, config)
 	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
-	// Print CI summary if enabled
 	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
-
-	// Write CI results to JSONL format if enabled (standardized output for validation)
 	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
 
-	// Return aggregated error if any failures
 	if err := fuzzResultsToError(results); err != nil {
 		return err
 	}
 
-	utils.Success("Fuzz tests completed")
+	utils.Success(opts.successMessage)
 	return nil
+}
+
+// runFuzzWithDuration runs fuzz tests with a specified duration.
+// This consolidates the common logic shared by FuzzWithTime and FuzzShortWithTime methods.
+func runFuzzWithDuration(fuzzTime time.Duration, opts fuzzOptions) error {
+	utils.Header(opts.headerText)
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	PrintCIBannerIfEnabled(nil, config)
+
+	if config.Test.SkipFuzz {
+		utils.Info("Fuzz tests skipped")
+		return nil
+	}
+
+	packages := findFuzzPackages()
+	if len(packages) == 0 {
+		utils.Info("No fuzz tests found")
+		return nil
+	}
+
+	ciEnabled := IsCIEnabled(nil, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
+
+	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
+	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
+
+	if err := fuzzResultsToError(results); err != nil {
+		return err
+	}
+
+	utils.Success(opts.successMessage)
+	return nil
+}
+
+// Fuzz runs fuzz tests with configurable time
+func (Test) Fuzz(argsList ...string) error {
+	return runFuzzWithOptions(fuzzOptions{
+		headerName:     "fuzz",
+		defaultTime:    "10s",
+		successMessage: "Fuzz tests completed",
+	}, argsList...)
 }
 
 // FuzzWithTime runs fuzz tests with specified duration
 func (Test) FuzzWithTime(fuzzTime time.Duration) error {
-	utils.Header("Running Fuzz Tests")
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
-	PrintCIBannerIfEnabled(nil, config)
-
-	if config.Test.SkipFuzz {
-		utils.Info("Fuzz tests skipped")
-		return nil
-	}
-
-	// Find packages with fuzz tests
-	packages := findFuzzPackages()
-
-	if len(packages) == 0 {
-		utils.Info("No fuzz tests found")
-		return nil
-	}
-
-	// Run all fuzz tests and collect results (continues on failure)
-	// In CI mode, capture output for text parsing to extract detailed failure info
-	ciEnabled := IsCIEnabled(nil, config)
-	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
-
-	// Print CI summary if enabled (nil params relies on config/environment detection)
-	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
-
-	// Write CI results to JSONL format if enabled (standardized output for validation)
-	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
-
-	// Return aggregated error if any failures
-	if err := fuzzResultsToError(results); err != nil {
-		return err
-	}
-
-	utils.Success("Fuzz tests completed")
-	return nil
+	return runFuzzWithDuration(fuzzTime, fuzzOptions{
+		headerText:     "Running Fuzz Tests",
+		successMessage: "Fuzz tests completed",
+	})
 }
 
 // FuzzShort runs fuzz tests with configurable time (default: 5s for quick feedback)
 func (Test) FuzzShort(argsList ...string) error {
-	// Parse command-line parameters
-	params := utils.ParseParams(argsList)
-
-	// Extract CI params from arguments
-	ciParams, _ := getCIParams(argsList)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	displayTestHeader("fuzz-short", config)
-
-	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
-	PrintCIBannerIfEnabled(ciParams, config)
-
-	if config.Test.SkipFuzz {
-		utils.Info("Fuzz tests skipped")
-		return nil
-	}
-
-	// Find packages with fuzz tests
-	packages := findFuzzPackages()
-
-	if len(packages) == 0 {
-		utils.Info("No fuzz tests found")
-		return nil
-	}
-
-	// Get fuzz time from parameter or use default (5s for short)
-	fuzzTimeStr := utils.GetParam(params, "time", "5s")
-	fuzzTime, err := time.ParseDuration(fuzzTimeStr)
-	if err != nil {
-		return fmt.Errorf("invalid time parameter: %w", err)
-	}
-
-	// Run all fuzz tests and collect results (continues on failure)
-	// In CI mode, capture output for text parsing to extract detailed failure info
-	ciEnabled := IsCIEnabled(ciParams, config)
-	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
-
-	// Print CI summary if enabled
-	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
-
-	// Write CI results to JSONL format if enabled (standardized output for validation)
-	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
-
-	// Return aggregated error if any failures
-	if err := fuzzResultsToError(results); err != nil {
-		return err
-	}
-
-	utils.Success("Short fuzz tests completed")
-	return nil
+	return runFuzzWithOptions(fuzzOptions{
+		headerName:     "fuzz-short",
+		defaultTime:    "5s",
+		successMessage: "Short fuzz tests completed",
+	}, argsList...)
 }
 
 // FuzzShortWithTime runs fuzz tests with specified duration (optimized for quick feedback)
 func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
-	utils.Header("Running Short Fuzz Tests")
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
-	PrintCIBannerIfEnabled(nil, config)
-
-	if config.Test.SkipFuzz {
-		utils.Info("Fuzz tests skipped")
-		return nil
-	}
-
-	// Find packages with fuzz tests
-	packages := findFuzzPackages()
-
-	if len(packages) == 0 {
-		utils.Info("No fuzz tests found")
-		return nil
-	}
-
-	// Run all fuzz tests and collect results (continues on failure)
-	// In CI mode, capture output for text parsing to extract detailed failure info
-	ciEnabled := IsCIEnabled(nil, config)
-	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
-
-	// Print CI summary if enabled (nil params relies on config/environment detection)
-	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
-
-	// Write CI results to JSONL format if enabled (standardized output for validation)
-	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
-
-	// Return aggregated error if any failures
-	if err := fuzzResultsToError(results); err != nil {
-		return err
-	}
-
-	utils.Success("Short fuzz tests completed")
-	return nil
+	return runFuzzWithDuration(fuzzTime, fuzzOptions{
+		headerText:     "Running Short Fuzz Tests",
+		successMessage: "Short fuzz tests completed",
+	})
 }
 
 // Bench runs benchmarks
 func (Test) Bench(argsList ...string) error {
-	// Parse command-line parameters
-	params := utils.ParseParams(argsList)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	displayTestHeader("benchmark", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Filter modules based on exclusion configuration
-	benchModules := filterModulesForProcessing(modules, config, "benchmarks")
-	if len(benchModules) == 0 {
-		utils.Warn("No modules to benchmark after exclusions")
-		return nil
-	}
-
-	// Build base benchmark args
-	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
-
-	if config.Test.Verbose {
-		args = append(args, "-v")
-	}
-
-	if config.Test.Tags != "" {
-		args = append(args, "-tags", config.Test.Tags)
-	}
-
-	// Get benchmark time from parameter or use default
-	benchTime := utils.GetParam(params, "time", "10s")
-	args = append(args, "-benchtime", benchTime)
-
-	// Get count from parameter
-	count := utils.GetParam(params, "count", "")
-	if count != "" {
-		args = append(args, "-count", count)
-	}
-
-	args = append(args, "./...")
-
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-
-	// Run benchmarks for each module
-	for _, module := range benchModules {
-		displayModuleHeader(module, "Running benchmarks for")
-
-		moduleStart := time.Now()
-		err := runCommandInModule(module, "go", args...)
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Benchmarks failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Benchmarks passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Benchmarks failed in %d/%d modules", len(moduleErrors), len(benchModules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All benchmarks completed in %s", utils.FormatDuration(time.Since(totalStart)))
-	return nil
+	return runBenchmarkWithOptions(benchmarkOptions{
+		testType:         "benchmark",
+		defaultBenchTime: "10s",
+		logPrefix:        "Benchmarks",
+	}, argsList...)
 }
 
 // BenchShort runs benchmarks with shorter duration for quick feedback
 func (Test) BenchShort(argsList ...string) error {
-	// Parse command-line parameters
-	params := utils.ParseParams(argsList)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	displayTestHeader("benchmark-short", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Filter modules based on exclusion configuration
-	benchModules := filterModulesForProcessing(modules, config, "benchmarks")
-	if len(benchModules) == 0 {
-		utils.Warn("No modules to benchmark after exclusions")
-		return nil
-	}
-
-	// Build base benchmark args
-	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
-
-	if config.Test.Verbose {
-		args = append(args, "-v")
-	}
-
-	if config.Test.Tags != "" {
-		args = append(args, "-tags", config.Test.Tags)
-	}
-
-	// Get benchmark time from parameter or use default (1s for short)
-	benchTime := utils.GetParam(params, "time", "1s")
-	args = append(args, "-benchtime", benchTime)
-
-	// Get count from parameter
-	count := utils.GetParam(params, "count", "")
-	if count != "" {
-		args = append(args, "-count", count)
-	}
-
-	args = append(args, "./...")
-
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-
-	// Run benchmarks for each module
-	for _, module := range benchModules {
-		displayModuleHeader(module, "Running short benchmarks for")
-
-		moduleStart := time.Now()
-		err := runCommandInModule(module, "go", args...)
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Short benchmarks failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Short benchmarks passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Short benchmarks failed in %d/%d modules", len(moduleErrors), len(benchModules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All short benchmarks completed in %s", utils.FormatDuration(time.Since(totalStart)))
-	return nil
+	return runBenchmarkWithOptions(benchmarkOptions{
+		testType:         "benchmark-short",
+		defaultBenchTime: "1s",
+		logPrefix:        "Short benchmarks",
+	}, argsList...)
 }
 
 // Integration runs integration tests
@@ -1312,29 +1034,31 @@ func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, 
 		// Run tests in module directory using provided runner
 		err := runCommandInModuleWithRunner(module, runner, "go", testArgs...)
 
+		tagInfo = getTagInfo(buildTag)
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			tagInfo := getTagInfo(buildTag)
-			utils.Error("Coverage tests failed for %s%s in %s", module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
 		} else {
 			handleCoverageFileMove(module, coverFile, &coverageFiles)
-			tagInfo := getTagInfo(buildTag)
-			utils.Success("Coverage tests passed for %s%s in %s", module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletionWithSuffix(module, "Coverage tests", tagInfo, moduleStart, err)
 	}
 
 	// Handle coverage files
 	handleCoverageFilesWithBuildTag(coverageFiles, buildTag)
 
 	// Report overall results
+	tagInfo := getTagInfo(buildTag)
 	if len(moduleErrors) > 0 {
-		tagInfo := getTagInfo(buildTag)
 		utils.Error("Coverage tests%s failed in %d/%d modules", tagInfo, len(moduleErrors), len(filteredModules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	tagInfo := getTagInfo(buildTag)
-	utils.Success("All coverage tests%s passed in %s", tagInfo, utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletionWithOptions(OverallCompletionOptions{
+		Operation: "coverage tests",
+		Suffix:    tagInfo,
+		Verb:      "passed",
+		StartTime: totalStart,
+	})
 	return nil
 }
 
@@ -1384,25 +1108,26 @@ func runTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race, co
 		// Run tests in module directory using provided runner
 		err := runCommandInModuleWithRunner(module, runner, "go", testArgs...)
 
+		tagInfo := getTagInfo(buildTag)
 		if err != nil {
-			tagInfo := getTagInfo(buildTag)
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("%s tests failed for %s%s in %s", titleCase(testType), module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			tagInfo := getTagInfo(buildTag)
-			utils.Success("%s tests passed for %s%s in %s", titleCase(testType), module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletionWithSuffix(module, titleCase(testType)+" tests", tagInfo, moduleStart, err)
 	}
 
 	// Report overall results
+	tagInfo := getTagInfo(buildTag)
 	if len(moduleErrors) > 0 {
-		tagInfo := getTagInfo(buildTag)
 		utils.Error("%s tests%s failed in %d/%d modules", titleCase(testType), tagInfo, len(moduleErrors), len(filteredModules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	tagInfo := getTagInfo(buildTag)
-	utils.Success("All %s tests%s passed in %s", testType, tagInfo, utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletionWithOptions(OverallCompletionOptions{
+		Operation: testType + " tests",
+		Suffix:    tagInfo,
+		Verb:      "passed",
+		StartTime: totalStart,
+	})
 	return nil
 }
 
@@ -1994,7 +1719,7 @@ func mergeCoverageFiles(files []string, output string) error {
 
 	// Write merged coverage file
 	mergedContent := strings.Join(allLines, "\n")
-	if err := os.WriteFile(output, []byte(mergedContent), 0o600); err != nil { // #nosec G306 -- coverage output file permissions
+	if err := os.WriteFile(output, []byte(mergedContent), fileops.PermFileSensitive); err != nil { // #nosec G306 -- coverage output file permissions
 		return fmt.Errorf("failed to write merged coverage file: %w", err)
 	}
 

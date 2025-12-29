@@ -1,10 +1,6 @@
 package mage
 
-import (
-	"os"
-
-	"github.com/mrz1836/mage-x/pkg/utils"
-)
+import "os"
 
 // Command names
 const (
@@ -74,10 +70,25 @@ const (
 	FileGoSum        = "go.sum"
 	FileMageYAML     = ".mage.yaml"
 	FileMageYML      = ".mage.yml"
+	FileMageYAMLAlt  = "mage.yaml"
+	FileMageYMLAlt   = "mage.yml"
 	FileGitignore    = ".gitignore"
 	FileVersion      = "VERSION"
 	FileCoverageOut  = "coverage.out"
 	FileCoverageHTML = "coverage.html"
+
+	// Goreleaser configuration files
+	FileGoreleaserYML     = ".goreleaser.yml"
+	FileGoreleaserYAML    = ".goreleaser.yaml"
+	FileGoreleaserYMLAlt  = "goreleaser.yml"
+	FileGoreleaserYAMLAlt = "goreleaser.yaml"
+
+	// Golangci-lint configuration files
+	FileGolangciJSON    = ".golangci.json"
+	FileGolangciYML     = ".golangci.yml"
+	FileGolangciYAML    = ".golangci.yaml"
+	FileGolangciYMLAlt  = "golangci.yml"
+	FileGolangciYAMLAlt = "golangci.yaml"
 
 	DirBin      = "bin"
 	DirBuild    = "build"
@@ -153,96 +164,24 @@ func GetMageXEnv(suffix string) string {
 	return os.Getenv(EnvPrefix + suffix)
 }
 
-// getToolVersionOrWarn returns tool version from environment or warns if not found
-func getToolVersionOrWarn(envVar, legacyEnvVar, toolName string) string {
-	// Check primary environment variable
-	if value := os.Getenv(envVar); value != "" {
-		return value
-	}
+// Configuration file list functions
+// These return slices of configuration file names in search order.
+// Dot-prefixed files take precedence over non-prefixed ones.
 
-	// Check legacy environment variable for backward compatibility
-	if legacyEnvVar != "" {
-		if value := os.Getenv(legacyEnvVar); value != "" {
-			return value
-		}
-	}
-
-	// Provide fallback defaults for tools - all use latest to avoid hardcoded versions
-	var fallback string
-	switch toolName {
-	case CmdGolangciLint:
-		fallback = VersionLatest // Use latest if env vars not loaded
-	case CmdGofumpt:
-		fallback = VersionLatest
-	case CmdYamlfmt:
-		fallback = VersionLatest // Use latest if env vars not loaded
-	case CmdGoVulnCheck:
-		fallback = VersionLatest // Use latest if env vars not loaded
-	case CmdMockgen:
-		fallback = VersionLatest
-	case CmdSwag:
-		fallback = VersionLatest
-	case "go":
-		fallback = VersionLatest // Use latest if env vars not loaded
-	default:
-		fallback = VersionLatest
-	}
-
-	// Warn if not found but provide fallback
-	utils.Warn("Tool version for %s not found in environment variables (%s)", toolName, envVar)
-	utils.Warn("Consider sourcing .github/.env.base: source .github/.env.base")
-	utils.Warn("Using fallback version: %s", fallback)
-	return fallback
+// MageConfigFiles returns mage configuration file names in search order.
+// The order is important: dot-prefixed files take precedence.
+func MageConfigFiles() []string {
+	return []string{FileMageYAML, FileMageYML, FileMageYAMLAlt, FileMageYMLAlt}
 }
 
-// GetDefaultGolangciLintVersion returns the default golangci-lint version from env or fallback
-func GetDefaultGolangciLintVersion() string {
-	return getToolVersionOrWarn("MAGE_X_GOLANGCI_LINT_VERSION", "GOLANGCI_LINT_VERSION", CmdGolangciLint)
+// GoreleaserConfigFiles returns goreleaser configuration file names in search order.
+func GoreleaserConfigFiles() []string {
+	return []string{FileGoreleaserYML, FileGoreleaserYAML, FileGoreleaserYMLAlt, FileGoreleaserYAMLAlt}
 }
 
-// GetDefaultGofumptVersion returns the default gofumpt version from env or fallback
-func GetDefaultGofumptVersion() string {
-	return getToolVersionOrWarn("MAGE_X_GOFUMPT_VERSION", "GOFUMPT_VERSION", CmdGofumpt)
-}
-
-// GetDefaultYamlfmtVersion returns the default yamlfmt version from env or fallback
-func GetDefaultYamlfmtVersion() string {
-	return getToolVersionOrWarn("MAGE_X_YAMLFMT_VERSION", "YAMLFMT_VERSION", CmdYamlfmt)
-}
-
-// GetDefaultGoVulnCheckVersion returns the default govulncheck version from env or fallback
-func GetDefaultGoVulnCheckVersion() string {
-	return getToolVersionOrWarn("MAGE_X_GOVULNCHECK_VERSION", "GOVULNCHECK_VERSION", CmdGoVulnCheck)
-}
-
-// GetDefaultMockgenVersion returns the default mockgen version from env or fallback
-func GetDefaultMockgenVersion() string {
-	return getToolVersionOrWarn("MAGE_X_MOCKGEN_VERSION", "MOCKGEN_VERSION", CmdMockgen)
-}
-
-// GetDefaultSwagVersion returns the default swag version from env or fallback
-func GetDefaultSwagVersion() string {
-	return getToolVersionOrWarn("MAGE_X_SWAG_VERSION", "SWAG_VERSION", CmdSwag)
-}
-
-// GetDefaultGoVersion returns the default Go version from env or fallback
-func GetDefaultGoVersion() string {
-	goVersion := getToolVersionOrWarn("MAGE_X_GO_VERSION", "GO_PRIMARY_VERSION", "go")
-	// Clean up the version to remove any .x suffix for actual usage
-	if goVersion != "" && len(goVersion) > 2 && goVersion[len(goVersion)-2:] == ".x" {
-		return goVersion[:len(goVersion)-2]
-	}
-	return goVersion
-}
-
-// GetSecondaryGoVersion returns the secondary Go version from env or fallback
-func GetSecondaryGoVersion() string {
-	secondaryVersion := getToolVersionOrWarn("MAGE_X_GO_SECONDARY_VERSION", "GO_SECONDARY_VERSION", "go")
-	// Clean up the version to remove any .x suffix for actual usage
-	if secondaryVersion != "" && len(secondaryVersion) > 2 && secondaryVersion[len(secondaryVersion)-2:] == ".x" {
-		return secondaryVersion[:len(secondaryVersion)-2]
-	}
-	return secondaryVersion
+// GolangciLintConfigFiles returns golangci-lint configuration file names in search order.
+func GolangciLintConfigFiles() []string {
+	return []string{FileGolangciJSON, FileGolangciYML, FileGolangciYAML, FileGolangciYMLAlt, FileGolangciYAMLAlt}
 }
 
 // Version constants for consistency

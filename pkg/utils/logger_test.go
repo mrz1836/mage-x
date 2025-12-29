@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	pkglog "github.com/mrz1836/mage-x/pkg/log"
 )
 
 func TestLogger_Basic(t *testing.T) {
@@ -351,18 +353,19 @@ func TestProgress(t *testing.T) {
 }
 
 func TestPackageLevelFunctions(t *testing.T) {
-	// Test that package-level functions don't panic and use DefaultLogger
+	// Test that package-level functions don't panic and use pkg/log
 	t.Run("package functions use DefaultLogger", func(t *testing.T) {
-		// Capture output from default logger
+		// Capture output from pkg/log (which the package functions now delegate to)
 		var buf bytes.Buffer
-		originalLogger := GetDefaultLogger()
-		testLogger := NewLogger()
-		testLogger.SetOutput(&buf)
-		testLogger.SetColorEnabled(false)
-		SetDefaultLogger(testLogger)
-		defer func() { SetDefaultLogger(originalLogger) }()
+		originalCLI := pkglog.Default()
+		testCLI := pkglog.NewCLIAdapter()
+		testCLI.SetOutput(&buf)
+		testCLI.SetColorEnabled(false)
+		testCLI.SetLevel(pkglog.LevelDebug)
+		pkglog.SetDefault(testCLI)
+		defer func() { pkglog.SetDefault(originalCLI) }()
 
-		// Test various functions
+		// Test various functions - these now delegate to pkg/log
 		assert.NotPanics(t, func() {
 			Debug("debug test")
 			Info("info test")
@@ -380,7 +383,8 @@ func TestPackageLevelFunctions(t *testing.T) {
 		assert.Contains(t, output, "success test")
 		assert.Contains(t, output, "fail test")
 		assert.Contains(t, output, "Header test")
-		// Debug might not appear depending on log level
+		// Debug should now appear since we set level to Debug
+		assert.Contains(t, output, "debug test")
 	})
 
 	t.Run("spinner functions don't panic", func(t *testing.T) {

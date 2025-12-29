@@ -10,6 +10,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -81,12 +82,12 @@ func (Vet) Default() error {
 	args := []string{"vet"}
 
 	// Add verbose flag if requested
-	if verbose := utils.GetEnv("VERBOSE", ""); verbose == trueValue {
+	if verbose := env.GetString("VERBOSE", ""); verbose == trueValue {
 		args = append(args, "-v")
 	}
 
 	// Add build tags if specified
-	if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
+	if tags := env.GetString("MAGE_X_BUILD_TAGS", ""); tags != "" {
 		args = append(args, "-tags", tags)
 	}
 
@@ -109,12 +110,12 @@ func (Vet) All() error {
 	args := []string{"vet"}
 
 	// Add verbose flag if requested
-	if verbose := utils.GetEnv("VERBOSE", ""); verbose == trueValue {
+	if verbose := env.GetString("VERBOSE", ""); verbose == trueValue {
 		args = append(args, "-v")
 	}
 
 	// Add build tags if specified
-	if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
+	if tags := env.GetString("MAGE_X_BUILD_TAGS", ""); tags != "" {
 		args = append(args, "-tags", tags)
 	}
 
@@ -179,7 +180,7 @@ func (Vet) Parallel() error {
 			args := []string{"vet"}
 
 			// Add build tags if specified
-			if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
+			if tags := env.GetString("MAGE_X_BUILD_TAGS", ""); tags != "" {
 				args = append(args, "-tags", tags)
 			}
 
@@ -235,7 +236,7 @@ func (Vet) Shadow() error {
 	args := []string{"-test=false", "./..."}
 
 	// Add build tags if specified
-	if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
+	if tags := env.GetString("MAGE_X_BUILD_TAGS", ""); tags != "" {
 		args = append([]string{"-tags", tags}, args...)
 	}
 
@@ -310,69 +311,63 @@ func (Vet) Strict() error {
 
 // runStaticcheck runs the staticcheck tool
 func runStaticcheck() error {
-	staticcheckVersion := getLinterVersion("staticcheck")
-
-	// Check if staticcheck is installed
-	if !utils.CommandExists("staticcheck") {
-		utils.Info("Installing staticcheck...")
-		if err := GetRunner().RunCmd("go", "install", "honnef.co/go/tools/cmd/staticcheck@latest"); err != nil {
-			return fmt.Errorf("failed to install staticcheck: %w", err)
-		}
-		staticcheckVersion = getLinterVersion("staticcheck")
+	// Ensure tool is installed using consolidated helper
+	if err := installTool(ToolDefinition{
+		Name:   "staticcheck",
+		Module: "honnef.co/go/tools/cmd/staticcheck",
+		Check:  "staticcheck",
+	}); err != nil {
+		return err
 	}
 
-	// Run staticcheck
-	utils.Info("Running staticcheck %s...", staticcheckVersion)
+	version := getLinterVersion("staticcheck")
+	utils.Info("Running staticcheck %s...", version)
 	if err := GetRunner().RunCmd("staticcheck", "./..."); err != nil {
 		return fmt.Errorf("staticcheck found issues: %w", err)
 	}
 
-	utils.Success("staticcheck %s passed", staticcheckVersion)
+	utils.Success("staticcheck %s passed", version)
 	return nil
 }
 
 // runIneffassign checks for ineffectual assignments
 func runIneffassign() error {
-	ineffassignVersion := getLinterVersion("ineffassign")
-
-	// Check if ineffassign is installed
-	if !utils.CommandExists("ineffassign") {
-		utils.Info("Installing ineffassign...")
-		if err := GetRunner().RunCmd("go", "install", "github.com/gordonklaus/ineffassign@latest"); err != nil {
-			return fmt.Errorf("failed to install ineffassign: %w", err)
-		}
-		ineffassignVersion = getLinterVersion("ineffassign")
+	// Ensure tool is installed using consolidated helper
+	if err := installTool(ToolDefinition{
+		Name:   "ineffassign",
+		Module: "github.com/gordonklaus/ineffassign",
+		Check:  "ineffassign",
+	}); err != nil {
+		return err
 	}
 
-	// Run ineffassign
-	utils.Info("Running ineffassign %s...", ineffassignVersion)
+	version := getLinterVersion("ineffassign")
+	utils.Info("Running ineffassign %s...", version)
 	if err := GetRunner().RunCmd("ineffassign", "./..."); err != nil {
 		return fmt.Errorf("ineffassign found issues: %w", err)
 	}
 
-	utils.Success("ineffassign %s passed", ineffassignVersion)
+	utils.Success("ineffassign %s passed", version)
 	return nil
 }
 
 // runMisspell checks for misspelled words
 func runMisspell() error {
-	misspellVersion := getLinterVersion("misspell")
-
-	// Check if misspell is installed
-	if !utils.CommandExists("misspell") {
-		utils.Info("Installing misspell...")
-		if err := GetRunner().RunCmd("go", "install", "github.com/client9/misspell/cmd/misspell@latest"); err != nil {
-			return fmt.Errorf("failed to install misspell: %w", err)
-		}
-		misspellVersion = getLinterVersion("misspell")
+	// Ensure tool is installed using consolidated helper
+	if err := installTool(ToolDefinition{
+		Name:   "misspell",
+		Module: "github.com/client9/misspell/cmd/misspell",
+		Check:  "misspell",
+	}); err != nil {
+		return err
 	}
 
-	// Run misspell
-	utils.Info("Running misspell %s...", misspellVersion)
+	version := getLinterVersion("misspell")
+	utils.Info("Running misspell %s...", version)
 	if err := GetRunner().RunCmd("misspell", "-w", "."); err != nil {
 		return fmt.Errorf("misspell found issues: %w", err)
 	}
 
-	utils.Success("misspell %s passed", misspellVersion)
+	utils.Success("misspell %s passed", version)
 	return nil
 }

@@ -313,9 +313,8 @@ func (Release) Check() error {
 	}
 
 	// Check if .goreleaser.yml exists
-	configFiles := []string{".goreleaser.yml", ".goreleaser.yaml", "goreleaser.yml", "goreleaser.yaml"}
 	found := false
-	for _, file := range configFiles {
+	for _, file := range GoreleaserConfigFiles() {
 		if utils.FileExists(file) {
 			found = true
 			utils.Info("Found configuration: %s", file)
@@ -341,8 +340,7 @@ func (Release) Init() error {
 	utils.Header("Initializing GoReleaser Configuration")
 
 	// Check if config already exists
-	configFiles := []string{".goreleaser.yml", ".goreleaser.yaml", "goreleaser.yml", "goreleaser.yaml"}
-	for _, file := range configFiles {
+	for _, file := range GoreleaserConfigFiles() {
 		if utils.FileExists(file) {
 			return fmt.Errorf("%w: %s", errGoreleaserConfigExists, file)
 		}
@@ -469,9 +467,8 @@ func (Release) Validate() error {
 	utils.Success("Git tags found")
 
 	// Check if goreleaser config exists and is valid
-	configFiles := []string{".goreleaser.yml", ".goreleaser.yaml", "goreleaser.yml", "goreleaser.yaml"}
 	found := false
-	for _, file := range configFiles {
+	for _, file := range GoreleaserConfigFiles() {
 		if utils.FileExists(file) {
 			found = true
 			utils.Info("Found configuration: %s", file)

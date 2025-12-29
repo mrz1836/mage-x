@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mrz1836/mage-x/pkg/security"
+	"github.com/mrz1836/mage-x/pkg/exec"
 )
 
 // TestEnsureYamlfmtRetryLogicIntegration tests retry logic in integration with command execution
@@ -59,9 +59,13 @@ func TestEnsureYamlfmtRetryLogicIntegration(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a real SecureCommandRunner for testing version handling
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true // Enable dry run to avoid actual installation
-		secureRunner := &SecureCommandRunner{executor: executor}
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
+		secureRunner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
 		// Test with dry run - this should succeed without actual installation
@@ -102,9 +106,13 @@ func TestYamlfmtRetryBehaviorWithSecureExecutor(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true
-		secureRunner := &SecureCommandRunner{executor: executor}
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
+		secureRunner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
 		// Test the yamlfmt installation with dry run
@@ -138,9 +146,13 @@ func TestYamlfmtVersionHandling(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true
-		secureRunner := &SecureCommandRunner{executor: executor}
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
+		secureRunner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
 		// Test that ensureYamlfmt handles version fallback correctly
@@ -177,9 +189,13 @@ download:
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with dry run
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true
-		secureRunner := &SecureCommandRunner{executor: executor}
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
+		secureRunner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
 		// This should use the custom configuration
@@ -204,9 +220,13 @@ download:
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with dry run
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true
-		secureRunner := &SecureCommandRunner{executor: executor}
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
+		secureRunner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
 		// This should use default configuration
@@ -255,9 +275,13 @@ func TestYamlfmtInstallationScenarios(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true
-		secureRunner := &SecureCommandRunner{executor: executor}
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
+		secureRunner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
 		// Test successful installation scenario
@@ -271,9 +295,13 @@ func TestYamlfmtInstallationScenarios(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true
-		secureRunner := &SecureCommandRunner{executor: executor}
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
+		secureRunner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
 		// Test that the fallback proxy logic can be executed
@@ -290,9 +318,13 @@ func TestYamlfmtConcurrentInstallation(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := security.NewSecureExecutor()
-		executor.DryRun = true
-		secureRunner := &SecureCommandRunner{executor: executor}
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
+		secureRunner := &SecureCommandRunner{
+			executor: executor,
+		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
 		// Test concurrent installation attempts

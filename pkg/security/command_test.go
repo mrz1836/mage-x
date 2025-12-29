@@ -372,13 +372,13 @@ func TestSecureExecutor_ExecuteOutput(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name: "dry run returns mock output",
+			name: "dry run returns empty output",
 			setup: func(e *SecureExecutor) {
 				e.DryRun = true
 			},
 			command:    "echo",
 			args:       []string{"test"},
-			wantOutput: "[DRY RUN] Would execute: echo test",
+			wantOutput: "", // In dry run mode, no actual command runs so output is empty
 			wantErr:    false,
 		},
 		// Skip this test for now as output handling varies by platform

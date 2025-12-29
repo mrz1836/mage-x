@@ -11,6 +11,7 @@ import (
 	"github.com/magefile/mage/mg"
 	"gopkg.in/yaml.v3"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -39,8 +40,7 @@ func (Configure) Init() error {
 	utils.Header("🔧 Initialize Mage Configuration")
 
 	// Check if config already exists
-	configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
-	for _, cf := range configFiles {
+	for _, cf := range MageConfigFiles() {
 		if _, err := os.Stat(cf); err == nil {
 			return fmt.Errorf("%w: %s", ErrConfigFileExists, cf)
 		}
@@ -125,8 +125,8 @@ func (Configure) Export() error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	format := utils.GetEnv("FORMAT", "yaml")
-	output := utils.GetEnv("OUTPUT", "")
+	format := env.GetString("FORMAT", "yaml")
+	output := env.GetString("OUTPUT", "")
 
 	var data []byte
 	var ext string
@@ -156,7 +156,7 @@ func (Configure) Export() error {
 		}
 
 		fileOps := fileops.New()
-		if err := fileOps.File.WriteFile(output, data, 0o644); err != nil {
+		if err := fileOps.File.WriteFile(output, data, fileops.PermFile); err != nil {
 			return fmt.Errorf("failed to write configuration: %w", err)
 		}
 
@@ -170,7 +170,7 @@ func (Configure) Export() error {
 func (Configure) Import() error {
 	utils.Header("📥 Import Configuration")
 
-	importFile := utils.GetEnv("FILE", "")
+	importFile := env.GetString("FILE", "")
 	if importFile == "" {
 		return ErrFileEnvRequired
 	}
@@ -239,7 +239,7 @@ func (Configure) Validate() error {
 func (Configure) Schema() error {
 	utils.Header("📋 Configuration Schema")
 
-	output := utils.GetEnv("OUTPUT", "")
+	output := env.GetString("OUTPUT", "")
 
 	schema := generateConfigurationSchema()
 
@@ -248,7 +248,7 @@ func (Configure) Schema() error {
 		utils.Info("%s", schema)
 	} else {
 		fileOps := fileops.New()
-		if err := fileOps.File.WriteFile(output, []byte(schema), 0o644); err != nil {
+		if err := fileOps.File.WriteFile(output, []byte(schema), fileops.PermFile); err != nil {
 			return fmt.Errorf("failed to write schema: %w", err)
 		}
 

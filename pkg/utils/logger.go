@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	pkglog "github.com/mrz1836/mage-x/pkg/log"
 )
 
 // LogLevel represents the severity of a log message
@@ -751,66 +753,70 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%.1fm", d.Minutes())
 }
 
-// Package-level convenience functions that use the default logger
+// Package-level convenience functions that delegate to pkg/log
+// These provide backward compatibility while unifying logging through pkg/log
 
-// Debug logs a debug message using the default logger
+// Debug logs a debug message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Debug(format string, args ...interface{}) {
-	GetDefaultLogger().Debug(format, args...)
+	pkglog.Debug(format, args...)
 }
 
-// Info logs an informational message using the default logger
+// Info logs an informational message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Info(format string, args ...interface{}) {
-	GetDefaultLogger().Info(format, args...)
+	pkglog.Info(format, args...)
 }
 
-// Warn logs a warning message using the default logger
+// Warn logs a warning message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Warn(format string, args ...interface{}) {
-	GetDefaultLogger().Warn(format, args...)
+	pkglog.Warn(format, args...)
 }
 
-// Error logs an error message using the default logger
+// Error logs an error message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Error(format string, args ...interface{}) {
-	GetDefaultLogger().Error(format, args...)
+	pkglog.Error(format, args...)
 }
 
-// Success logs a success message using the default logger
+// Success logs a success message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Success(format string, args ...interface{}) {
-	GetDefaultLogger().Success(format, args...)
+	pkglog.Success(format, args...)
 }
 
-// Fail logs a failure message using the default logger
+// Fail logs a failure message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
 func Fail(format string, args ...interface{}) {
-	GetDefaultLogger().Fail(format, args...)
+	pkglog.Fail(format, args...)
 }
 
-// Header prints a formatted header using the default logger
+// Header prints a formatted header using the unified logger
 func Header(text string) {
-	GetDefaultLogger().Header(text)
+	pkglog.Header(text)
 }
 
 // StartSpinner starts a progress spinner using the default logger
+// Note: Spinner functionality is provided by utils.Logger, not pkg/log
 func StartSpinner(message string) {
 	GetDefaultLogger().StartSpinner(message)
 }
 
 // StopSpinner stops the current spinner using the default logger
+// Note: Spinner functionality is provided by utils.Logger, not pkg/log
 func StopSpinner() {
 	GetDefaultLogger().StopSpinner()
 }
 
 // UpdateSpinner updates the spinner message using the default logger
+// Note: Spinner functionality is provided by utils.Logger, not pkg/log
 func UpdateSpinner(message string) {
 	GetDefaultLogger().UpdateSpinner(message)
 }

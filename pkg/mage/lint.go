@@ -14,6 +14,8 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
+	"github.com/mrz1836/mage-x/pkg/exec"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -30,6 +32,95 @@ const (
 	falseValue = "false"
 )
 
+// golangciLintArgs holds the configuration for building golangci-lint arguments.
+// This consolidates the duplicated argument-building logic from Default() and Fix().
+type golangciLintArgs struct {
+	modulePath string  // absolute path to the module directory
+	config     *Config // mage configuration
+	withFix    bool    // whether to include --fix flag
+}
+
+// resolveConfigPath finds the golangci-lint config file, checking module directory first,
+// then falling back to the root directory. Returns the resolved config path and any
+// arguments to append.
+func (g *golangciLintArgs) resolveConfigPath() (configPath string, args []string) {
+	// Check for config file in module directory
+	moduleConfig := filepath.Join(g.modulePath, ".golangci.json")
+	if utils.FileExists(moduleConfig) {
+		return moduleConfig, []string{"--config", ".golangci.json"}
+	}
+
+	// Check in root directory
+	rootConfig := ".golangci.json"
+	if utils.FileExists(rootConfig) {
+		absPath, err := filepath.Abs(rootConfig)
+		if err != nil {
+			utils.Warn("Failed to get absolute path for config: %v", err)
+			absPath = rootConfig
+		}
+		return absPath, []string{"--config", absPath}
+	}
+
+	// No config file found
+	return "", nil
+}
+
+// timeoutArgs builds the timeout arguments, preferring the golangci config file
+// timeout if available, otherwise using the mage config timeout.
+func (g *golangciLintArgs) timeoutArgs(configPath string) []string {
+	timeout := g.config.Lint.Timeout
+
+	// Try to get timeout from golangci config file
+	if configPath != "" && utils.FileExists(configPath) {
+		if configTimeout, err := parseGolangciTimeout(configPath); err == nil && configTimeout != "" {
+			timeout = configTimeout
+		}
+	}
+
+	if timeout != "" {
+		return []string{"--timeout", timeout}
+	}
+	return nil
+}
+
+// commonFlags builds the common flags for build tags and verbose mode.
+func (g *golangciLintArgs) commonFlags() []string {
+	var args []string
+
+	// Add build tags if configured
+	if len(g.config.Build.Tags) > 0 {
+		args = append(args, "--build-tags", strings.Join(g.config.Build.Tags, ","))
+	}
+
+	// Add verbose flag if enabled via parameter, environment, or config
+	if shouldUseVerboseMode(g.config) {
+		args = append(args, "--verbose")
+	}
+
+	return args
+}
+
+// buildArgs constructs the complete argument list for golangci-lint.
+func (g *golangciLintArgs) buildArgs() []string {
+	args := []string{"run"}
+	if g.withFix {
+		args = append(args, "--fix")
+	}
+	args = append(args, "./...")
+
+	// Add config path arguments
+	configPath, configArgs := g.resolveConfigPath()
+	args = append(args, configArgs...)
+
+	// Add timeout arguments
+	args = append(args, g.timeoutArgs(configPath)...)
+
+	// Add common flags (build tags, verbose)
+	args = append(args, g.commonFlags()...)
+
+	return args
+}
+
 // Lint namespace for linting and formatting tasks
 type Lint mg.Namespace
 
@@ -42,27 +133,14 @@ func (Lint) Default() error {
 		return err
 	}
 
-	// Discover all modules
-	var modules []ModuleInfo
-	modules, err = findAllModules()
+	// Discover and filter modules
+	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+		Operation: "linting",
+	})
 	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
+		return err
 	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		fmt.Printf("📦 Found %d Go modules\n", len(modules))
-	}
-
-	// Filter modules based on exclusion configuration
-	modules = filterModulesForProcessing(modules, config, "linting")
-	if len(modules) == 0 {
-		utils.Warn("No modules to lint after exclusions")
+	if result.Empty || result.Skipped {
 		return nil
 	}
 
@@ -79,7 +157,7 @@ func (Lint) Default() error {
 	}
 
 	// Run linters for each module
-	for _, module := range modules {
+	for _, module := range result.Modules {
 		displayModuleHeader(module, "Linting")
 
 		moduleStart := time.Now()
@@ -88,50 +166,14 @@ func (Lint) Default() error {
 		// Run golangci-lint
 		golangciVersion := getLinterVersion("golangci-lint")
 		utils.Info("Running golangci-lint %s...", golangciVersion)
-		args := []string{"run", "./..."}
 
-		// Check for config file in root directory
-		configPath := filepath.Join(module.Path, ".golangci.json")
-		var actualConfigPath string
-		if !utils.FileExists(configPath) {
-			// Check in root directory
-			rootConfig := ".golangci.json"
-			if utils.FileExists(rootConfig) {
-				// Use absolute path to root config
-				var absPath string
-				absPath, err = filepath.Abs(rootConfig)
-				if err != nil {
-					utils.Warn("Failed to get absolute path for config: %v", err)
-					absPath = rootConfig
-				}
-				args = append(args, "--config", absPath)
-				actualConfigPath = absPath
-			}
-		} else {
-			args = append(args, "--config", ".golangci.json")
-			actualConfigPath = configPath
+		// Build arguments using consolidated helper
+		argBuilder := &golangciLintArgs{
+			modulePath: module.Path,
+			config:     config,
+			withFix:    false,
 		}
-
-		// Use timeout from config file if available, otherwise use mage config
-		timeout := config.Lint.Timeout
-		if actualConfigPath != "" && utils.FileExists(actualConfigPath) {
-			if configTimeout, parseErr := parseGolangciTimeout(actualConfigPath); parseErr == nil && configTimeout != "" {
-				timeout = configTimeout
-			}
-		}
-		if timeout != "" {
-			args = append(args, "--timeout", timeout)
-		}
-
-		// Add build tags if configured
-		if len(config.Build.Tags) > 0 {
-			args = append(args, "--build-tags", strings.Join(config.Build.Tags, ","))
-		}
-
-		// Add verbose flag if enabled via parameter, environment, or config
-		if shouldUseVerboseMode(config) {
-			args = append(args, "--verbose")
-		}
+		args := argBuilder.buildArgs()
 
 		// Debug: Log the exact command being executed
 		utils.Info("Executing: golangci-lint %s", strings.Join(args, " "))
@@ -154,24 +196,24 @@ func (Lint) Default() error {
 			utils.Success("go vet passed for %s", module.Relative)
 		}
 
+		var moduleErr error
 		if hasError {
+			moduleErr = errLintingFailed
 			moduleErrors = append(moduleErrors, moduleError{
 				Module: module,
-				Error:  errLintingFailed,
+				Error:  moduleErr,
 			})
-			utils.Error("Linting failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Linting passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletion(module, "Linting", moduleStart, moduleErr)
 	}
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("Linting failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Linting failed in %d/%d modules", len(moduleErrors), len(result.Modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("All linting passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletion("linting", "passed", totalStart)
 	return nil
 }
 
@@ -184,27 +226,14 @@ func (Lint) Fix() error {
 		return err
 	}
 
-	// Discover all modules
-	var modules []ModuleInfo
-	modules, err = findAllModules()
+	// Discover and filter modules
+	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+		Operation: "lint fix",
+	})
 	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
+		return err
 	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		fmt.Printf("📦 Found %d Go modules\n", len(modules))
-	}
-
-	// Filter modules based on exclusion configuration
-	modules = filterModulesForProcessing(modules, config, "lint fix")
-	if len(modules) == 0 {
-		utils.Warn("No modules to fix after exclusions")
+	if result.Empty || result.Skipped {
 		return nil
 	}
 
@@ -221,7 +250,7 @@ func (Lint) Fix() error {
 	}
 
 	// Run fix for each module
-	for _, module := range modules {
+	for _, module := range result.Modules {
 		displayModuleHeader(module, "Fixing lint issues in")
 
 		moduleStart := time.Now()
@@ -230,50 +259,14 @@ func (Lint) Fix() error {
 		// Run golangci-lint with auto-fix
 		golangciVersion := getLinterVersion("golangci-lint")
 		utils.Info("Running golangci-lint %s --fix...", golangciVersion)
-		args := []string{"run", "--fix", "./..."}
 
-		// Check for config file
-		configPath := filepath.Join(module.Path, ".golangci.json")
-		var actualConfigPath string
-		if !utils.FileExists(configPath) {
-			// Check in root directory
-			rootConfig := ".golangci.json"
-			if utils.FileExists(rootConfig) {
-				// Use absolute path to root config
-				var absPath string
-				absPath, err = filepath.Abs(rootConfig)
-				if err != nil {
-					utils.Warn("Failed to get absolute path for config: %v", err)
-					absPath = rootConfig
-				}
-				args = append(args, "--config", absPath)
-				actualConfigPath = absPath
-			}
-		} else {
-			args = append(args, "--config", ".golangci.json")
-			actualConfigPath = configPath
+		// Build arguments using consolidated helper
+		argBuilder := &golangciLintArgs{
+			modulePath: module.Path,
+			config:     config,
+			withFix:    true,
 		}
-
-		// Use timeout from config file if available, otherwise use mage config
-		timeout := config.Lint.Timeout
-		if actualConfigPath != "" && utils.FileExists(actualConfigPath) {
-			if configTimeout, parseErr := parseGolangciTimeout(actualConfigPath); parseErr == nil && configTimeout != "" {
-				timeout = configTimeout
-			}
-		}
-		if timeout != "" {
-			args = append(args, "--timeout", timeout)
-		}
-
-		// Add build tags if configured
-		if len(config.Build.Tags) > 0 {
-			args = append(args, "--build-tags", strings.Join(config.Build.Tags, ","))
-		}
-
-		// Add verbose flag if enabled via parameter, environment, or config
-		if shouldUseVerboseMode(config) {
-			args = append(args, "--verbose")
-		}
+		args := argBuilder.buildArgs()
 
 		// Debug: Log the exact command being executed
 		utils.Info("Executing: golangci-lint %s", strings.Join(args, " "))
@@ -295,24 +288,35 @@ func (Lint) Fix() error {
 			utils.Success("Code formatted for %s", module.Relative)
 		}
 
+		var moduleErr error
 		if hasError {
+			moduleErr = errFixFailed
 			moduleErrors = append(moduleErrors, moduleError{
 				Module: module,
-				Error:  errFixFailed,
+				Error:  moduleErr,
 			})
-			utils.Error("Fix failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("All issues fixed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletionWithOptions(ModuleCompletionOptions{
+			Module:      module,
+			Operation:   "All issues",
+			StartTime:   moduleStart,
+			Err:         moduleErr,
+			SuccessVerb: "fixed",
+		})
 	}
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("Fix failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Fix failed in %d/%d modules", len(moduleErrors), len(result.Modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("All lint issues fixed and code formatted in %s", utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletionWithOptions(OverallCompletionOptions{
+		Operation: "lint issues",
+		Suffix:    " and code formatted",
+		Verb:      "fixed",
+		StartTime: totalStart,
+	})
 	return nil
 }
 
@@ -388,41 +392,12 @@ func (Lint) Fumpt() error {
 }
 
 // installGofumpt installs gofumpt with retry and fallback logic
-func installGofumpt(config *Config) error {
-	utils.Info("Installing gofumpt with retry logic...")
-
-	ctx := context.Background()
-	maxRetries := config.Download.MaxRetries
-	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
-
-	fumptVersion := config.Tools.Fumpt
-	if fumptVersion == "" {
-		utils.Warn("Gofumpt version not available, using @latest")
-		fumptVersion = VersionAtLatest
-	} else if !strings.HasPrefix(fumptVersion, "@") {
-		fumptVersion = "@" + fumptVersion
-	}
-
-	moduleWithVersion := "mvdan.cc/gofumpt" + fumptVersion
-
-	// Get the secure executor with retry capabilities
-	runner := GetRunner()
-	secureRunner, ok := runner.(*SecureCommandRunner)
-	if !ok {
-		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
-	}
-	executor := secureRunner.executor
-	err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "go", "install", moduleWithVersion)
-	if err != nil {
-		// Try with direct proxy as fallback
-		utils.Warn("Installation failed: %v, trying direct proxy...", err)
-
-		env := []string{"GOPROXY=direct"}
-		if err = executor.ExecuteWithEnv(ctx, env, "go", "install", moduleWithVersion); err != nil {
-			return fmt.Errorf("failed to install gofumpt after %d retries and fallback: %w", maxRetries, err)
-		}
-	}
-	return nil
+func installGofumpt(_ *Config) error {
+	return installTool(ToolDefinition{
+		Name:   "gofumpt",
+		Module: "mvdan.cc/gofumpt",
+		Check:  "gofumpt",
+	})
 }
 
 // Vet runs go vet
@@ -434,55 +409,24 @@ func (Lint) Vet() error {
 		return err
 	}
 
-	// Discover all modules
-	modules, err := findAllModules()
+	// Discover and filter modules
+	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+		Operation: "go vet",
+	})
 	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
+		return err
 	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
+	if result.Empty || result.Skipped {
 		return nil
 	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		fmt.Printf("📦 Found %d Go modules\n", len(modules))
-	}
-
-	// Filter modules based on exclusion configuration
-	modules = filterModulesForProcessing(modules, config, "go vet")
-	if len(modules) == 0 {
-		utils.Warn("No modules to vet after exclusions")
-		return nil
-	}
-
-	totalStart := time.Now()
-	var moduleErrors []moduleError
 
 	// Run vet for each module
-	for _, module := range modules {
-		displayModuleHeader(module, "Running go vet in")
-
-		moduleStart := time.Now()
-
-		err = runVetInModule(module, config)
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Vet failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Vet passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Vet failed in %d/%d modules", len(moduleErrors), len(modules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All vet checks passed in %s", utils.FormatDuration(time.Since(totalStart)))
-	return nil
+	return forEachModule(result.Modules, ModuleIteratorOptions{
+		Operation: "Vet",
+		Verb:      "passed",
+	}, func(module ModuleInfo) error {
+		return runVetInModule(module, config)
+	})
 }
 
 // VetParallel runs go vet in parallel
@@ -729,7 +673,7 @@ func ensureGolangciLint(cfg *Config) error {
 			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 		}
 		executor := secureRunner.executor
-		err := executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, "brew", "install", "golangci-lint")
+		err := exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "brew", "install", "golangci-lint")
 
 		if err == nil {
 			utils.Success("golangci-lint installed successfully via Homebrew")
@@ -790,7 +734,7 @@ func ensureGolangciLint(cfg *Config) error {
 			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
 		}
 		executor := secureRunner.executor
-		if err = executor.ExecuteWithRetry(ctx, maxRetries, initialDelay, shell, append(shellArgs, cmd)...); err != nil {
+		if err = exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, shell, append(shellArgs, cmd)...); err != nil {
 			return fmt.Errorf("failed to install golangci-lint after %d retries: %w", maxRetries, err)
 		}
 	}
@@ -1019,9 +963,7 @@ func (Lint) Fast() error {
 // getLinterConfigInfo returns information about the golangci-lint configuration
 func getLinterConfigInfo() (configFile string, enabledCount, disabledCount int) {
 	// Check for config files in order of precedence
-	configFiles := []string{".golangci.json", ".golangci.yml", ".golangci.yaml", "golangci.yml", "golangci.yaml"}
-
-	for _, file := range configFiles {
+	for _, file := range GolangciLintConfigFiles() {
 		if utils.FileExists(file) {
 			configFile = file
 			break
@@ -1638,7 +1580,7 @@ func shouldUseVerboseMode(config *Config) bool {
 	}
 
 	// Check environment variable
-	if verboseEnv := utils.GetEnv("MAGE_X_LINT_VERBOSE", ""); verboseEnv != "" {
+	if verboseEnv := env.GetString("MAGE_X_LINT_VERBOSE", ""); verboseEnv != "" {
 		return verboseEnv == trueValue || verboseEnv == "1"
 	}
 

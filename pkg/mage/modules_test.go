@@ -4,7 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestFindAllModules(t *testing.T) {
@@ -675,4 +677,398 @@ func (s *simpleRunner) RunCmd(name string, _ ...string) error {
 
 func (s *simpleRunner) RunCmdOutput(name string, _ ...string) (string, error) {
 	return name, nil
+}
+
+// TestRunInModuleDir_InvalidPath verifies error handling when module path doesn't exist.
+func TestRunInModuleDir_InvalidPath(t *testing.T) {
+	t.Parallel()
+
+	// Use a simple runner (no DirRunner) to trigger the chdir fallback path
+	mock := &simpleRunner{
+		runCmdCalls: make([]string, 0),
+	}
+
+	module := ModuleInfo{
+		Path:     "/nonexistent/path/that/definitely/does/not/exist",
+		Module:   "github.com/test/module",
+		Relative: "nonexistent",
+	}
+
+	// Try to run command - should fail because directory doesn't exist
+	err := runCommandInModuleWithRunner(module, mock, "echo", "test")
+	if err == nil {
+		t.Fatal("Expected error for invalid path, got nil")
+	}
+
+	// Verify error message mentions the path
+	if !strings.Contains(err.Error(), "failed to change to directory") {
+		t.Errorf("Expected error about changing directory, got: %v", err)
+	}
+
+	// Verify command was not called
+	if len(mock.runCmdCalls) != 0 {
+		t.Errorf("Expected 0 RunCmd calls for invalid path, got %d", len(mock.runCmdCalls))
+	}
+}
+
+// TestRunCommandInModuleOutputWithRunner_DirRunner verifies output capture uses DirRunner.
+func TestRunCommandInModuleOutputWithRunner_DirRunner(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockDirRunner{
+		runCmdCalls:      make([]string, 0),
+		runCmdInDirCalls: make([]mockDirCall, 0),
+	}
+
+	module := ModuleInfo{
+		Path:     "/test/module/path",
+		Module:   "github.com/test/module",
+		Relative: "module",
+	}
+
+	// Run command with output capture
+	output, err := runCommandInModuleOutputWithRunner(module, mock, "go", "list", "./...")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// mockDirRunner.RunCmdOutputInDir returns "dir:name"
+	expectedOutput := "/test/module/path:go"
+	if output != expectedOutput {
+		t.Errorf("Expected output '%s', got '%s'", expectedOutput, output)
+	}
+
+	// Verify no RunCmd calls were made (only DirRunner methods should be used)
+	if len(mock.runCmdCalls) != 0 {
+		t.Errorf("Expected 0 RunCmd calls, got %d", len(mock.runCmdCalls))
+	}
+}
+
+// TestRunInModuleDir_DirectoryRestored verifies directory is restored after command execution.
+func TestRunInModuleDir_DirectoryRestored(t *testing.T) {
+	// This test must not run in parallel since it changes the working directory
+	tmpDir := t.TempDir()
+
+	mock := &simpleRunner{
+		runCmdCalls: make([]string, 0),
+	}
+
+	module := ModuleInfo{
+		Path:     tmpDir,
+		Module:   "github.com/test/module",
+		Relative: ".",
+	}
+
+	// Get original directory
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get original directory: %v", err)
+	}
+	defer func() {
+		_ = os.Chdir(originalDir) //nolint:errcheck // Best effort cleanup
+	}()
+
+	// Run multiple commands to ensure directory is always restored
+	for i := 0; i < 3; i++ {
+		err = runCommandInModuleWithRunner(module, mock, "echo", "test")
+		if err != nil {
+			t.Fatalf("Iteration %d: Unexpected error: %v", i, err)
+		}
+
+		currentDir, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Iteration %d: Failed to get current directory: %v", i, err)
+		}
+		if currentDir != originalDir {
+			t.Errorf("Iteration %d: Directory not restored: expected %s, got %s", i, originalDir, currentDir)
+		}
+	}
+}
+
+// TestRunInModuleDir_ConcurrentSafety verifies mutex protects concurrent chdir calls.
+func TestRunInModuleDir_ConcurrentSafety(t *testing.T) {
+	t.Parallel()
+
+	// Create multiple temp directories
+	dirs := make([]string, 5)
+	for i := range dirs {
+		dirs[i] = t.TempDir()
+	}
+
+	// Run concurrent commands to different directories
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(dirs)*2)
+
+	for _, dir := range dirs {
+		for j := 0; j < 2; j++ {
+			wg.Add(1)
+			go func(path string) {
+				defer wg.Done()
+
+				module := ModuleInfo{
+					Path:     path,
+					Module:   "github.com/test/module",
+					Relative: ".",
+				}
+
+				// Use runInModuleDir directly to test the generic function
+				_, err := runInModuleDir(module, &simpleRunner{},
+					func(_ DirRunner, _ string) (struct{}, error) {
+						return struct{}{}, nil
+					},
+					func() (struct{}, error) {
+						// Simulate some work in the fallback path
+						time.Sleep(time.Millisecond)
+						return struct{}{}, nil
+					},
+				)
+				if err != nil {
+					errChan <- err
+				}
+			}(dir)
+		}
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	// Check for any errors
+	for err := range errChan {
+		t.Errorf("Concurrent execution error: %v", err)
+	}
+}
+
+func TestDisplayModuleCompletion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		module    ModuleInfo
+		operation string
+		err       error
+	}{
+		{
+			name:      "success for root module",
+			module:    ModuleInfo{Relative: "."},
+			operation: "Linting",
+			err:       nil,
+		},
+		{
+			name:      "success for submodule",
+			module:    ModuleInfo{Relative: "pkg/utils"},
+			operation: "Tests",
+			err:       nil,
+		},
+		{
+			name:      "error for module",
+			module:    ModuleInfo{Relative: "pkg/api"},
+			operation: "Benchmarks",
+			err:       os.ErrNotExist,
+		},
+		{
+			name:      "error for root module",
+			module:    ModuleInfo{Relative: "."},
+			operation: "Vet",
+			err:       os.ErrPermission,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayModuleCompletion(tt.module, tt.operation, fakeStartTime(), tt.err)
+		})
+	}
+}
+
+func TestDisplayModuleCompletionWithSuffix(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		module    ModuleInfo
+		operation string
+		suffix    string
+		err       error
+	}{
+		{
+			name:      "with build tag suffix",
+			module:    ModuleInfo{Relative: "pkg/api"},
+			operation: "Coverage tests",
+			suffix:    " [integration]",
+			err:       nil,
+		},
+		{
+			name:      "with empty suffix",
+			module:    ModuleInfo{Relative: "."},
+			operation: "Tests",
+			suffix:    "",
+			err:       nil,
+		},
+		{
+			name:      "error with suffix",
+			module:    ModuleInfo{Relative: "pkg/core"},
+			operation: "Unit tests",
+			suffix:    " (tag: unit)",
+			err:       os.ErrNotExist,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayModuleCompletionWithSuffix(tt.module, tt.operation, tt.suffix, fakeStartTime(), tt.err)
+		})
+	}
+}
+
+func TestDisplayModuleCompletionWithOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		opts ModuleCompletionOptions
+	}{
+		{
+			name: "default success verb",
+			opts: ModuleCompletionOptions{
+				Module:    ModuleInfo{Relative: "pkg/api"},
+				Operation: "Linting",
+				StartTime: fakeStartTime(),
+				Err:       nil,
+			},
+		},
+		{
+			name: "custom success verb - fixed",
+			opts: ModuleCompletionOptions{
+				Module:      ModuleInfo{Relative: "pkg/api"},
+				Operation:   "All issues",
+				StartTime:   fakeStartTime(),
+				Err:         nil,
+				SuccessVerb: "fixed",
+			},
+		},
+		{
+			name: "with suffix and custom verb",
+			opts: ModuleCompletionOptions{
+				Module:      ModuleInfo{Relative: "."},
+				Operation:   "Format",
+				Suffix:      " [yaml]",
+				StartTime:   fakeStartTime(),
+				Err:         nil,
+				SuccessVerb: "applied",
+			},
+		},
+		{
+			name: "error ignores success verb",
+			opts: ModuleCompletionOptions{
+				Module:      ModuleInfo{Relative: "pkg/core"},
+				Operation:   "Build",
+				StartTime:   fakeStartTime(),
+				Err:         os.ErrNotExist,
+				SuccessVerb: "completed", // Should be ignored for errors
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayModuleCompletionWithOptions(tt.opts)
+		})
+	}
+}
+
+func TestDisplayOverallCompletion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		operation string
+		verb      string
+	}{
+		{name: "linting passed", operation: "linting", verb: "passed"},
+		{name: "benchmarks completed", operation: "benchmarks", verb: "completed"},
+		{name: "vet checks passed", operation: "vet checks", verb: "passed"},
+		{name: "tests completed", operation: "tests", verb: "completed"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayOverallCompletion(tt.operation, tt.verb, fakeStartTime())
+		})
+	}
+}
+
+func TestDisplayOverallCompletionWithOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		opts OverallCompletionOptions
+	}{
+		{
+			name: "simple operation",
+			opts: OverallCompletionOptions{
+				Operation: "linting",
+				Verb:      "passed",
+				StartTime: fakeStartTime(),
+			},
+		},
+		{
+			name: "with prefix",
+			opts: OverallCompletionOptions{
+				Prefix:    "Unit ",
+				Operation: "tests",
+				Verb:      "passed",
+				StartTime: fakeStartTime(),
+			},
+		},
+		{
+			name: "with suffix",
+			opts: OverallCompletionOptions{
+				Operation: "coverage tests",
+				Suffix:    " [integration]",
+				Verb:      "passed",
+				StartTime: fakeStartTime(),
+			},
+		},
+		{
+			name: "with prefix and suffix",
+			opts: OverallCompletionOptions{
+				Prefix:    "Short ",
+				Operation: "tests",
+				Suffix:    " (tag: unit)",
+				Verb:      "completed",
+				StartTime: fakeStartTime(),
+			},
+		},
+		{
+			name: "lint issues fixed with suffix",
+			opts: OverallCompletionOptions{
+				Operation: "lint issues",
+				Suffix:    " and code formatted",
+				Verb:      "fixed",
+				StartTime: fakeStartTime(),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayOverallCompletionWithOptions(tt.opts)
+		})
+	}
+}
+
+// fakeStartTime returns a time in the past for duration formatting tests
+func fakeStartTime() time.Time {
+	return time.Now().Add(-100 * time.Millisecond)
 }

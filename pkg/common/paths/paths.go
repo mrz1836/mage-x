@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"sync"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // Global default instances - thread-safe singleton pattern
@@ -916,7 +918,7 @@ var (
 func getDefaultPathOptions() PathOptions {
 	defaultPathOptionsOnce.Do(func() {
 		defaultPathOptionsData = PathOptions{
-			CreateMode:    0o755,
+			CreateMode:    fileops.PermDir,
 			CreateParents: true,
 			BufferSize:    8192,
 		}

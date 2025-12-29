@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mrz1836/mage-x/pkg/common/env"
 )
 
 // ConfigTestSuite provides a comprehensive test suite for configuration functionality
@@ -365,21 +367,21 @@ func (ts *ConfigTestSuite) TestConfigFunctions() {
 		ts.Require().Equal("tag1,tag2", tags)
 	})
 
-	ts.Run("IsVerbose", func() {
+	ts.Run("IsConfigVerbose", func() {
 		// Test default (should be false)
-		ts.Require().False(IsVerbose())
+		ts.Require().False(IsConfigVerbose())
 
 		// Test with verbose build
 		customConfig := defaultConfig()
 		customConfig.Build.Verbose = true
 		TestSetConfig(customConfig)
-		ts.Require().True(IsVerbose())
+		ts.Require().True(IsConfigVerbose())
 
 		// Test with verbose test
 		customConfig = defaultConfig()
 		customConfig.Test.Verbose = true
 		TestSetConfig(customConfig)
-		ts.Require().True(IsVerbose())
+		ts.Require().True(IsConfigVerbose())
 	})
 }
 
@@ -488,7 +490,7 @@ func (ts *ConfigTestSuite) TestConfigErrorHandling() {
 		tags := BuildTags()
 		ts.Require().Empty(tags) // Should return empty string on error
 
-		verbose := IsVerbose()
+		verbose := IsConfigVerbose()
 		ts.Require().False(verbose) // Should return false on error
 	})
 }
@@ -506,9 +508,7 @@ func (ts *ConfigTestSuite) TestConfigFileDetection() {
 		ts.Require().NoError(os.Chdir(ts.tempDir))
 
 		// Test each possible config file name
-		configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
-
-		for _, configFile := range configFiles {
+		for _, configFile := range MageConfigFiles() {
 			// Create the config file
 			file, err := os.Create(configFile) //nolint:gosec // G304: configFile is from safe hardcoded test slice
 			ts.Require().NoError(err)
@@ -588,44 +588,44 @@ func BenchmarkGetConfig(b *testing.B) {
 // TestCleanEnvValue tests the cleanEnvValue function
 func (ts *ConfigTestSuite) TestCleanEnvValue() {
 	ts.Run("EmptyString", func() {
-		result := cleanEnvValue("")
+		result := env.CleanValue("")
 		ts.Empty(result)
 	})
 
 	ts.Run("NoComment", func() {
-		result := cleanEnvValue("v1.2.3")
+		result := env.CleanValue("v1.2.3")
 		ts.Equal("v1.2.3", result)
 	})
 
 	ts.Run("WithInlineComment", func() {
-		result := cleanEnvValue("v2.4.0 # https://github.com/golangci/golangci-lint/releases")
+		result := env.CleanValue("v2.4.0 # https://github.com/golangci/golangci-lint/releases")
 		ts.Equal("v2.4.0", result)
 	})
 
 	ts.Run("WithWhitespace", func() {
-		result := cleanEnvValue("  v1.0.0  ")
+		result := env.CleanValue("  v1.0.0  ")
 		ts.Equal("v1.0.0", result)
 	})
 
 	ts.Run("WithCommentAndWhitespace", func() {
-		result := cleanEnvValue("  v0.8.0           # https://github.com/mvdan/gofumpt/releases  ")
+		result := env.CleanValue("  v0.8.0           # https://github.com/mvdan/gofumpt/releases  ")
 		ts.Equal("v0.8.0", result)
 	})
 
 	ts.Run("OnlyComment", func() {
-		result := cleanEnvValue(" # just a comment")
+		result := env.CleanValue(" # just a comment")
 		ts.Empty(result)
 	})
 
 	ts.Run("HashInValue", func() {
 		// Hash not preceded by space should be preserved
-		result := cleanEnvValue("commit#abc123")
+		result := env.CleanValue("commit#abc123")
 		ts.Equal("commit#abc123", result)
 	})
 
 	ts.Run("MultipleSpaceHashes", func() {
 		// Only first space-hash should be treated as comment
-		result := cleanEnvValue("value # comment # more")
+		result := env.CleanValue("value # comment # more")
 		ts.Equal("value", result)
 	})
 }
@@ -897,7 +897,7 @@ func TestCleanEnvValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := cleanEnvValue(tt.input)
+			result := env.CleanValue(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

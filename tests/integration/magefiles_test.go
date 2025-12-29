@@ -38,6 +38,14 @@ func isCI() bool {
 	return os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
 }
 
+// hasMageBinary checks if the mage binary is installed and available in PATH.
+// Custom magefile execution requires mage because the go run fallback doesn't work
+// with standard magefiles (they need mage's code generation to create main()).
+func hasMageBinary() bool {
+	_, err := exec.LookPath("mage")
+	return err == nil
+}
+
 // runMagexCommand executes a magex command with appropriate error handling for CI/local environments
 func runMagexCommand(t *testing.T, magexPath, workingDir string, args ...string) ([]byte, error) {
 	t.Helper()
@@ -66,12 +74,8 @@ func TestIntegration_MagefilesDirectory(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
-	// NOTE: Temporarily disabled in CI due to environment-specific failures
-	// Tests pass locally but fail in CI with magex binary execution issues
-	// Need investigation of CI environment differences vs local execution
-	if isCI() {
-		t.Skip("Temporarily disabled in CI - needs investigation of environment differences")
+	if !hasMageBinary() {
+		t.Skip("Skipping: mage binary not installed (required for custom magefile execution)")
 	}
 
 	// Check if magex binary exists or can be built
@@ -247,12 +251,8 @@ func TestIntegration_MagefilePreference(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
-	// NOTE: Temporarily disabled in CI due to environment-specific failures
-	// Tests pass locally but fail in CI with magex binary execution issues
-	// Need investigation of CI environment differences vs local execution
-	if isCI() {
-		t.Skip("Temporarily disabled in CI - needs investigation of environment differences")
+	if !hasMageBinary() {
+		t.Skip("Skipping: mage binary not installed (required for custom magefile execution)")
 	}
 
 	// Check if magex binary exists or can be built
@@ -364,12 +364,8 @@ func TestIntegration_MultipleFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
-	// NOTE: Temporarily disabled in CI due to environment-specific failures
-	// Tests pass locally but fail in CI with magex binary execution issues
-	// Need investigation of CI environment differences vs local execution
-	if isCI() {
-		t.Skip("Temporarily disabled in CI - needs investigation of environment differences")
+	if !hasMageBinary() {
+		t.Skip("Skipping: mage binary not installed (required for custom magefile execution)")
 	}
 
 	// Check if magex binary exists or can be built
@@ -409,21 +405,22 @@ go 1.24
 	}
 
 	// Create multiple magefile files
+	// Note: Avoid names like Build, Test, Lint, Clean that conflict with magex built-ins
 	buildFile := filepath.Join("magefiles", "build.go")
 	buildContent := `//go:build mage
 package main
 
 import "fmt"
 
-// Build builds the project
-func Build() error {
-	fmt.Println("Building...")
+// Compile compiles the project
+func Compile() error {
+	fmt.Println("Compiling...")
 	return nil
 }
 
-// Clean cleans build artifacts
-func Clean() error {
-	fmt.Println("Cleaning...")
+// Cleanup cleans build artifacts
+func Cleanup() error {
+	fmt.Println("Cleaning up...")
 	return nil
 }
 `
@@ -434,15 +431,15 @@ package main
 
 import "fmt"
 
-// Test runs tests
-func Test() error {
-	fmt.Println("Testing...")
+// RunTests runs tests
+func RunTests() error {
+	fmt.Println("Running tests...")
 	return nil
 }
 
-// Lint runs linting
-func Lint() error {
-	fmt.Println("Linting...")
+// RunLint runs linting
+func RunLint() error {
+	fmt.Println("Running lint...")
 	return nil
 }
 `
@@ -485,7 +482,7 @@ func (Deploy) Dev() error {
 	}
 
 	outputStr := string(output)
-	expectedCommands := []string{"Build", "Clean", "Test", "Lint"}
+	expectedCommands := []string{"Compile", "Cleanup", "RunTests", "RunLint"}
 	for _, cmdName := range expectedCommands {
 		if !strings.Contains(outputStr, cmdName) && !strings.Contains(outputStr, strings.ToLower(cmdName)) {
 			t.Errorf("INTEGRATION_TEST_FAILURE: Output should contain %s command, got: %s", cmdName, outputStr)
@@ -497,9 +494,9 @@ func (Deploy) Dev() error {
 		name     string
 		expected string
 	}{
-		{"Build", "Building..."},
-		{"Test", "Testing..."},
-		{"Lint", "Linting..."},
+		{"Compile", "Compiling..."},
+		{"RunTests", "Running tests..."},
+		{"RunLint", "Running lint..."},
 	}
 
 	for _, tc := range testCommands {

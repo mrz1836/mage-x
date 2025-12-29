@@ -158,7 +158,7 @@ func (Docs) Generate() error {
 	fileOps := fileops.New()
 	if !utils.DirExists(docsDir) {
 		utils.Info("Creating docs directory...")
-		if err := fileOps.File.MkdirAll(docsDir, 0o755); err != nil {
+		if err := fileOps.File.MkdirAll(docsDir, fileops.PermDir); err != nil {
 			return fmt.Errorf("failed to create docs directory: %w", err)
 		}
 	}
@@ -167,7 +167,7 @@ func (Docs) Generate() error {
 	generatedDocsDir := filepath.Join(docsDir, "generated")
 	if !utils.DirExists(generatedDocsDir) {
 		utils.Info("Creating generated docs directory...")
-		if err := fileOps.File.MkdirAll(generatedDocsDir, 0o755); err != nil {
+		if err := fileOps.File.MkdirAll(generatedDocsDir, fileops.PermDir); err != nil {
 			return fmt.Errorf("failed to create generated docs directory: %w", err)
 		}
 	}
@@ -222,7 +222,7 @@ func (Docs) Generate() error {
 		content += "---\n\n"
 		content += output + "\n"
 
-		if err := fileOps.File.WriteFile(docFile, []byte(content), 0o644); err != nil {
+		if err := fileOps.File.WriteFile(docFile, []byte(content), fileops.PermFile); err != nil {
 			utils.Warn("Failed to write docs for %s: %v", packageName, err)
 			failedPackages = append(failedPackages, pkg)
 			continue
@@ -235,7 +235,7 @@ func (Docs) Generate() error {
 	indexFile := filepath.Join(generatedDocsDir, "README.md")
 	indexContent := generateDocumentationIndex(documentedPackages, failedPackages)
 
-	if err := fileOps.File.WriteFile(indexFile, []byte(indexContent), 0o644); err != nil {
+	if err := fileOps.File.WriteFile(indexFile, []byte(indexContent), fileops.PermFile); err != nil {
 		utils.Warn("Failed to write documentation index: %v", err)
 	}
 
@@ -336,8 +336,6 @@ func categorizePackage(pkg string) string {
 		return "Core"
 	case strings.Contains(pkg, "/pkg/common"):
 		return "Common"
-	case strings.Contains(pkg, "/pkg/providers"):
-		return "Providers"
 	case strings.Contains(pkg, "/pkg/security"):
 		return "Security"
 	case strings.Contains(pkg, "/pkg/utils") || strings.Contains(pkg, "/pkg/testhelpers"):
@@ -786,7 +784,7 @@ func (Docs) Build() error {
 	fileOps := fileops.New()
 	if !utils.DirExists(buildDir) {
 		utils.Info("Creating build directory...")
-		if err := fileOps.File.MkdirAll(buildDir, 0o755); err != nil {
+		if err := fileOps.File.MkdirAll(buildDir, fileops.PermDir); err != nil {
 			return fmt.Errorf("failed to create build directory: %w", err)
 		}
 	}
@@ -826,7 +824,7 @@ func (Docs) Build() error {
 
 		// Write to build directory
 		outputFile := filepath.Join(buildDir, filepath.Base(file))
-		if err := fileOps.File.WriteFile(outputFile, []byte(processedContent), 0o644); err != nil {
+		if err := fileOps.File.WriteFile(outputFile, []byte(processedContent), fileops.PermFile); err != nil {
 			utils.Warn("Failed to write processed file %s: %v", outputFile, err)
 			continue
 		}
@@ -838,14 +836,14 @@ func (Docs) Build() error {
 	utils.Info("Step 3: Creating build index...")
 	buildIndexContent := createBuildIndex(processedFiles)
 	buildIndexFile := filepath.Join(buildDir, "index.md")
-	if err := fileOps.File.WriteFile(buildIndexFile, []byte(buildIndexContent), 0o644); err != nil {
+	if err := fileOps.File.WriteFile(buildIndexFile, []byte(buildIndexContent), fileops.PermFile); err != nil {
 		utils.Warn("Failed to create build index: %v", err)
 	}
 
 	// Create build metadata
 	buildMetadata := createBuildMetadata(len(processedFiles))
 	metadataFile := filepath.Join(buildDir, "build-info.json")
-	if err := fileOps.File.WriteFile(metadataFile, []byte(buildMetadata), 0o644); err != nil {
+	if err := fileOps.File.WriteFile(metadataFile, []byte(buildMetadata), fileops.PermFile); err != nil {
 		utils.Warn("Failed to create build metadata: %v", err)
 	}
 
@@ -1075,7 +1073,7 @@ func (Docs) Examples() error {
 	fileOps := fileops.New()
 	if !utils.DirExists(docsExamplesDir) {
 		utils.Info("Creating docs/examples directory...")
-		if err := fileOps.File.MkdirAll(docsExamplesDir, 0o755); err != nil {
+		if err := fileOps.File.MkdirAll(docsExamplesDir, fileops.PermDir); err != nil {
 			return fmt.Errorf("failed to create docs/examples directory: %w", err)
 		}
 	}
@@ -1164,7 +1162,7 @@ func generateExampleDoc(exampleDir, exampleName, outputDir string) error {
 	}
 
 	// Write the documentation
-	if err := fileOps.File.WriteFile(outputFile, []byte(docContent), 0o644); err != nil {
+	if err := fileOps.File.WriteFile(outputFile, []byte(docContent), fileops.PermFile); err != nil {
 		return fmt.Errorf("failed to write example documentation: %w", err)
 	}
 

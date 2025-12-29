@@ -4,11 +4,12 @@ package security
 import (
 	"errors"
 	"fmt"
-	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/mrz1836/mage-x/pkg/log"
 )
 
 // Static errors for validation
@@ -265,7 +266,7 @@ func ValidatePort(port int) error {
 	if port < 1024 {
 		// This is just a warning, not an error
 		// The caller can decide what to do with privileged ports
-		log.Printf("warning: port %d is a privileged port (< 1024)", port)
+		log.Warn("port %d is a privileged port (< 1024)", port)
 	}
 
 	return nil

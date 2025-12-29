@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -150,6 +151,47 @@ func sortModules(modules []ModuleInfo) {
 	}
 }
 
+// runInModuleDir handles directory management for module commands using generics.
+// It prefers DirRunner if available, otherwise falls back to os.Chdir with mutex protection.
+// This consolidates the directory switching logic used by both runCommandInModuleWithRunner
+// and runCommandInModuleOutputWithRunner.
+func runInModuleDir[T any](module ModuleInfo, runner CommandRunner,
+	dirFn func(dirRunner DirRunner, path string) (T, error),
+	fallbackFn func() (T, error),
+) (T, error) {
+	// Prefer DirRunner interface - it's goroutine-safe
+	if dirRunner, ok := runner.(DirRunner); ok {
+		return dirFn(dirRunner, module.Path)
+	}
+
+	// Fallback: Use os.Chdir with mutex protection
+	// WARNING: This is not ideal for high parallelism but provides safety for legacy runners
+	chdirMu.Lock()
+	defer chdirMu.Unlock()
+
+	var zero T
+
+	// Save current directory
+	originalDir, err := os.Getwd()
+	if err != nil {
+		return zero, fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Change to module directory
+	if err = os.Chdir(module.Path); err != nil {
+		return zero, fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
+	}
+
+	// Ensure we change back to original directory
+	defer func() {
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			utils.Error("Failed to change back to original directory: %v", chErr)
+		}
+	}()
+
+	return fallbackFn()
+}
+
 // runCommandInModule runs a command in a specific module directory
 func runCommandInModule(module ModuleInfo, command string, args ...string) error {
 	return runCommandInModuleWithRunner(module, GetRunner(), command, args...)
@@ -164,72 +206,29 @@ func runCommandInModuleOutput(module ModuleInfo, command string, args ...string)
 // If the runner implements DirRunner, it uses the goroutine-safe RunCmdOutputInDir method.
 // Otherwise, falls back to os.Chdir with mutex protection for safety.
 func runCommandInModuleOutputWithRunner(module ModuleInfo, runner CommandRunner, command string, args ...string) (string, error) {
-	// Prefer DirRunner interface - it's goroutine-safe
-	if dirRunner, ok := runner.(DirRunner); ok {
-		return dirRunner.RunCmdOutputInDir(module.Path, command, args...)
-	}
-
-	// Fallback: Use os.Chdir with mutex protection
-	// WARNING: This is not ideal for high parallelism but provides safety for legacy runners
-	chdirMu.Lock()
-	defer chdirMu.Unlock()
-
-	// Save current directory
-	originalDir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get current directory: %w", err)
-	}
-
-	// Change to module directory
-	if err = os.Chdir(module.Path); err != nil {
-		return "", fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
-	}
-
-	// Ensure we change back to original directory
-	defer func() {
-		if chErr := os.Chdir(originalDir); chErr != nil {
-			utils.Error("Failed to change back to original directory: %v", chErr)
-		}
-	}()
-
-	// Run the command and capture output
-	return runner.RunCmdOutput(command, args...)
+	return runInModuleDir(module, runner,
+		func(dirRunner DirRunner, path string) (string, error) {
+			return dirRunner.RunCmdOutputInDir(path, command, args...)
+		},
+		func() (string, error) {
+			return runner.RunCmdOutput(command, args...)
+		},
+	)
 }
 
 // runCommandInModuleWithRunner runs a command in a specific module directory using the provided runner.
 // If the runner implements DirRunner, it uses the goroutine-safe RunCmdInDir method.
 // Otherwise, falls back to os.Chdir with mutex protection for safety.
 func runCommandInModuleWithRunner(module ModuleInfo, runner CommandRunner, command string, args ...string) error {
-	// Prefer DirRunner interface - it's goroutine-safe
-	if dirRunner, ok := runner.(DirRunner); ok {
-		return dirRunner.RunCmdInDir(module.Path, command, args...)
-	}
-
-	// Fallback: Use os.Chdir with mutex protection
-	// WARNING: This is not ideal for high parallelism but provides safety for legacy runners
-	chdirMu.Lock()
-	defer chdirMu.Unlock()
-
-	// Save current directory
-	originalDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
-	}
-
-	// Change to module directory
-	if err = os.Chdir(module.Path); err != nil {
-		return fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
-	}
-
-	// Ensure we change back to original directory
-	defer func() {
-		if chErr := os.Chdir(originalDir); chErr != nil {
-			utils.Error("Failed to change back to original directory: %v", chErr)
-		}
-	}()
-
-	// Run the command
-	return runner.RunCmd(command, args...)
+	_, err := runInModuleDir(module, runner,
+		func(dirRunner DirRunner, path string) (struct{}, error) {
+			return struct{}{}, dirRunner.RunCmdInDir(path, command, args...)
+		},
+		func() (struct{}, error) {
+			return struct{}{}, runner.RunCmd(command, args...)
+		},
+	)
+	return err
 }
 
 // displayModuleHeader displays a header for the current module being processed
@@ -239,6 +238,79 @@ func displayModuleHeader(module ModuleInfo, operation string) {
 	} else {
 		utils.Info("\n%s module in %s...", operation, module.Relative)
 	}
+}
+
+// ModuleCompletionOptions configures module completion messages.
+type ModuleCompletionOptions struct {
+	Module      ModuleInfo
+	Operation   string // e.g., "Linting", "Coverage tests"
+	Suffix      string // e.g., " [integration]" for build tags
+	StartTime   time.Time
+	Err         error
+	SuccessVerb string // Custom success verb (default: "passed")
+}
+
+// displayModuleCompletion displays a completion message for a module operation.
+// Uses "passed" for success and "failed" for error by default.
+func displayModuleCompletion(module ModuleInfo, operation string, startTime time.Time, err error) {
+	displayModuleCompletionWithOptions(ModuleCompletionOptions{
+		Module:    module,
+		Operation: operation,
+		StartTime: startTime,
+		Err:       err,
+	})
+}
+
+// displayModuleCompletionWithSuffix handles cases with build tags or other suffixes.
+func displayModuleCompletionWithSuffix(module ModuleInfo, operation, suffix string, startTime time.Time, err error) {
+	displayModuleCompletionWithOptions(ModuleCompletionOptions{
+		Module:    module,
+		Operation: operation,
+		Suffix:    suffix,
+		StartTime: startTime,
+		Err:       err,
+	})
+}
+
+// displayModuleCompletionWithOptions provides full control over completion messages.
+// Use this for edge cases like "All issues fixed" instead of "passed".
+func displayModuleCompletionWithOptions(opts ModuleCompletionOptions) {
+	duration := utils.FormatDuration(time.Since(opts.StartTime))
+	location := opts.Module.Relative + opts.Suffix
+	if opts.Err != nil {
+		utils.Error("%s failed for %s in %s", opts.Operation, location, duration)
+	} else {
+		verb := opts.SuccessVerb
+		if verb == "" {
+			verb = "passed"
+		}
+		utils.Success("%s %s for %s in %s", opts.Operation, verb, location, duration)
+	}
+}
+
+// OverallCompletionOptions configures overall completion messages.
+type OverallCompletionOptions struct {
+	Operation string // e.g., "linting", "coverage tests"
+	Prefix    string // e.g., "Unit " for "All Unit tests passed"
+	Suffix    string // e.g., " [integration]" for build tags
+	Verb      string // "passed" or "completed"
+	StartTime time.Time
+}
+
+// displayOverallCompletion displays overall completion for batch operations.
+func displayOverallCompletion(operation, verb string, startTime time.Time) {
+	displayOverallCompletionWithOptions(OverallCompletionOptions{
+		Operation: operation,
+		Verb:      verb,
+		StartTime: startTime,
+	})
+}
+
+// displayOverallCompletionWithOptions provides full control over overall completion messages.
+// Handles patterns like "All Unit tests [integration] passed in X"
+func displayOverallCompletionWithOptions(opts OverallCompletionOptions) {
+	duration := utils.FormatDuration(time.Since(opts.StartTime))
+	utils.Success("All %s%s%s %s in %s", opts.Prefix, opts.Operation, opts.Suffix, opts.Verb, duration)
 }
 
 // collectModuleErrors collects errors from multiple modules
@@ -536,4 +608,118 @@ func displayModuleSummary(modules []ModuleInfo, moduleDeps map[string][]string) 
 		}
 	}
 	utils.Info("")
+}
+
+// shouldExcludeModule checks if a module should be excluded from processing
+// based on the configured exclusion list. By default, "magefiles" modules are excluded
+// because they have special build constraints (//go:build mage).
+func shouldExcludeModule(module ModuleInfo, config *Config) bool {
+	if config == nil || len(config.Test.ExcludeModules) == 0 {
+		return false
+	}
+	for _, excludedName := range config.Test.ExcludeModules {
+		if module.Name == excludedName {
+			return true
+		}
+	}
+	return false
+}
+
+// filterModulesForProcessing filters modules based on the exclusion configuration.
+// This is used by test, lint, bench, and deps commands to skip modules like "magefiles"
+// that have special build constraints.
+func filterModulesForProcessing(modules []ModuleInfo, config *Config, operation string) []ModuleInfo {
+	if config == nil || len(config.Test.ExcludeModules) == 0 {
+		return modules
+	}
+	filtered := make([]ModuleInfo, 0, len(modules))
+	for _, m := range modules {
+		if shouldExcludeModule(m, config) {
+			utils.Info("Skipping module %s (excluded from %s)", m.Name, operation)
+			continue
+		}
+		filtered = append(filtered, m)
+	}
+	return filtered
+}
+
+// ModuleDiscoveryOptions configures module discovery and filtering behavior.
+type ModuleDiscoveryOptions struct {
+	Operation string // Description for logging (e.g., "benchmarks", "linting")
+	Quiet     bool   // If true, suppress "Found X modules" message
+}
+
+// ModuleDiscoveryResult contains the result of module discovery and filtering.
+type ModuleDiscoveryResult struct {
+	Modules []ModuleInfo
+	Empty   bool // True if no modules found at all
+	Skipped bool // True if all modules were filtered out
+}
+
+// discoverAndFilterModules discovers all modules and filters them based on configuration.
+// This consolidates the repeated pattern of findAllModules + filterModulesForProcessing.
+// Returns (result, nil) for success, even if result.Empty or result.Skipped is true.
+// Only returns error on actual discovery failure.
+func discoverAndFilterModules(config *Config, opts ModuleDiscoveryOptions) (*ModuleDiscoveryResult, error) {
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return nil, fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return &ModuleDiscoveryResult{Empty: true}, nil
+	}
+
+	// Show modules found (unless quiet mode)
+	if !opts.Quiet && len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
+	// Filter modules based on exclusion configuration
+	filtered := filterModulesForProcessing(modules, config, opts.Operation)
+	if len(filtered) == 0 {
+		utils.Warn("No modules to %s after exclusions", opts.Operation)
+		return &ModuleDiscoveryResult{Skipped: true}, nil
+	}
+
+	return &ModuleDiscoveryResult{Modules: filtered}, nil
+}
+
+// ModuleIteratorOptions configures the module iteration behavior.
+type ModuleIteratorOptions struct {
+	Operation string // Description for display (e.g., "Running benchmarks for")
+	Verb      string // Verb for completion message (e.g., "completed", "passed")
+}
+
+// ModuleAction is the function signature for per-module operations.
+// It receives the module and returns an error if the operation failed.
+type ModuleAction func(module ModuleInfo) error
+
+// forEachModule iterates over modules, running the action and collecting errors.
+// It handles displayModuleHeader, timing, displayModuleCompletion, and error aggregation.
+// Returns nil if all modules succeeded, or a formatted error summarizing failures.
+func forEachModule(modules []ModuleInfo, opts ModuleIteratorOptions, action ModuleAction) error {
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	for _, module := range modules {
+		displayModuleHeader(module, opts.Operation)
+
+		moduleStart := time.Now()
+		err := action(module)
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+		}
+		displayModuleCompletion(module, opts.Operation, moduleStart, err)
+	}
+
+	if len(moduleErrors) > 0 {
+		utils.Error("%s failed in %d/%d modules", opts.Operation, len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	displayOverallCompletion(opts.Operation, opts.Verb, totalStart)
+	return nil
 }

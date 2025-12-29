@@ -60,12 +60,10 @@ func (p *DefaultConfigProvider) GetConfig() (*Config, error) {
 		}
 
 		p.config = defaultConfig()
-		configFile := ".mage.yaml"
+		configFile := FileMageYAML
 
 		// Try multiple config file names
-		configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
-
-		for _, cf := range configFiles {
+		for _, cf := range MageConfigFiles() {
 			if _, err := os.Stat(cf); err == nil {
 				configFile = cf
 				break

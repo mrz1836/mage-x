@@ -11,7 +11,9 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -169,7 +171,7 @@ func (Install) Go() error {
 	}
 
 	// Get version
-	installVersion := utils.GetEnv("VERSION", getVersion())
+	installVersion := env.GetString("VERSION", getVersion())
 	if installVersion == versionDev || installVersion == "" {
 		installVersion = GetDefaultGoVulnCheckVersion()
 		if installVersion == "" {
@@ -427,7 +429,7 @@ func createWindowsBatchWrapper(aliasPath, installPath, aliasName string) {
 	// Create batch file content that forwards all arguments
 	batchContent := fmt.Sprintf("@echo off\n\"%s\" %%*\n", installPath)
 
-	if err := os.WriteFile(aliasPath, []byte(batchContent), 0o600); err != nil {
+	if err := os.WriteFile(aliasPath, []byte(batchContent), fileops.PermFileSensitive); err != nil {
 		utils.Warn("Failed to create alias '%s': %v", aliasName, err)
 	} else {
 		binaryName := filepath.Base(installPath)
@@ -520,7 +522,7 @@ if command -v golangci-lint >/dev/null 2>&1; then
 fi
 `
 
-	if err := os.WriteFile(preCommitPath, []byte(preCommitContent), 0o700); err != nil { //nolint:gosec // Git hooks need to be executable
+	if err := os.WriteFile(preCommitPath, []byte(preCommitContent), fileops.PermFileExecutablePrivate); err != nil {
 		return mageErrors.WrapError(err, "failed to write pre-commit hook")
 	}
 

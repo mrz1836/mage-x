@@ -13,6 +13,7 @@ import (
 	"github.com/magefile/mage/mg"
 
 	"github.com/mrz1836/mage-x/pkg/common/cache"
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/providers"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -283,7 +284,7 @@ func (b Build) determineLDFlags(cfg *Config) string {
 		fmt.Sprintf("-X main.buildDate=%s", time.Now().Format(time.RFC3339)),
 		fmt.Sprintf("-X main.buildTime=%s", time.Now().Format(time.RFC3339)),
 	}
-	if !utils.GetEnvBool("DEBUG", false) {
+	if !env.GetBool("DEBUG", false) {
 		defaultLDFlags = append(defaultLDFlags, "-s", "-w")
 	}
 	return strings.Join(defaultLDFlags, " ")
@@ -536,7 +537,7 @@ func (Build) Clean() error {
 	}
 
 	// Clean build cache if requested
-	if utils.GetEnvBool("CLEAN_CACHE", false) {
+	if env.GetBool("CLEAN_CACHE", false) {
 		utils.Info("Cleaning build cache")
 		if err := GetRunner().RunCmd("go", "clean", "-cache"); err != nil {
 			return fmt.Errorf("failed to clean build cache: %w", err)
@@ -1357,7 +1358,7 @@ func buildFlags(cfg *Config) []string {
 		}
 
 		// Add stripping flags for release builds
-		if !utils.GetEnvBool("DEBUG", false) {
+		if !env.GetBool("DEBUG", false) {
 			ldflags = append(ldflags, "-s", "-w")
 		}
 

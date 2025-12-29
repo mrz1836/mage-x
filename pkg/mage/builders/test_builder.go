@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mrz1836/mage-x/pkg/utils"
+	"github.com/mrz1836/mage-x/pkg/common/env"
 )
 
 // getMageXEnv returns the value of a MAGE-X environment variable with the proper prefix
@@ -159,7 +159,7 @@ func (b *TestCommandBuilder) buildBaseTestArgs(options TestOptions) []string {
 	args := []string{"test"}
 
 	// Add verbose flag
-	if b.config.GetBuild().GetVerbose() || utils.GetEnv("MAGE_X_VERBOSE", "") == "true" || utils.GetEnv("MAGE_X_TEST_VERBOSE", "") == "true" {
+	if b.config.GetBuild().GetVerbose() || env.GetString("MAGE_X_VERBOSE", "") == "true" || env.GetString("MAGE_X_TEST_VERBOSE", "") == "true" {
 		args = append(args, "-v")
 	}
 

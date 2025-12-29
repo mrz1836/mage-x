@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/providers"
-	"github.com/mrz1836/mage-x/pkg/security"
+	"github.com/mrz1836/mage-x/pkg/exec"
 )
 
 // Static errors to satisfy err113 linter
@@ -16,15 +16,21 @@ var (
 	errRunnerNil = errors.New("runner cannot be nil")
 )
 
-// SecureCommandRunner provides a secure implementation of CommandRunner using SecureExecutor
+// SecureCommandRunner provides a secure implementation of CommandRunner using pkg/exec
 type SecureCommandRunner struct {
-	executor *security.SecureExecutor
+	executor exec.FullExecutor // Single validated executor for all operations
 }
 
 // NewSecureCommandRunner creates a new secure command runner
 func NewSecureCommandRunner() CommandRunner {
+	// Build a single executor chain with validation
+	// All methods (Execute, ExecuteInDir, etc.) will be validated
+	executor := exec.NewBuilder().
+		WithValidation().
+		Build()
+
 	return &SecureCommandRunner{
-		executor: security.NewSecureExecutor(),
+		executor: executor,
 	}
 }
 
@@ -37,18 +43,7 @@ func (r *SecureCommandRunner) RunCmd(name string, args ...string) error {
 	defer cancel()
 
 	err := r.executor.Execute(ctx, name, args...)
-	if err != nil {
-		// Check if the error is due to context cancellation/timeout
-		if errors.Is(err, context.DeadlineExceeded) {
-			return fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
-				name, timeout, err)
-		}
-		if errors.Is(err, context.Canceled) {
-			return fmt.Errorf("command '%s' was canceled after %s: %w",
-				name, timeout, err)
-		}
-	}
-	return err
+	return wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
 }
 
 // RunCmdOutput executes a command and returns its output
@@ -60,18 +55,7 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 	defer cancel()
 
 	output, err := r.executor.ExecuteOutput(ctx, name, args...)
-	if err != nil {
-		// Check if the error is due to context cancellation/timeout
-		if errors.Is(err, context.DeadlineExceeded) {
-			return strings.TrimSpace(output), fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
-				name, timeout, err)
-		}
-		if errors.Is(err, context.Canceled) {
-			return strings.TrimSpace(output), fmt.Errorf("command '%s' was canceled after %s: %w",
-				name, timeout, err)
-		}
-	}
-	return strings.TrimSpace(output), err
+	return strings.TrimSpace(output), wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
 }
 
 // RunCmdInDir executes a command in the specified working directory.
@@ -82,27 +66,8 @@ func (r *SecureCommandRunner) RunCmdInDir(dir, name string, args ...string) erro
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Create a new executor with the specified working directory
-	dirExecutor := &security.SecureExecutor{
-		AllowedCommands: r.executor.AllowedCommands,
-		WorkingDir:      dir, // Set the working directory
-		Timeout:         r.executor.Timeout,
-		DryRun:          r.executor.DryRun,
-		EnvWhitelist:    r.executor.EnvWhitelist,
-	}
-
-	err := dirExecutor.Execute(ctx, name, args...)
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			return fmt.Errorf("command '%s' in '%s' exceeded timeout of %s: %w",
-				name, dir, timeout, err)
-		}
-		if errors.Is(err, context.Canceled) {
-			return fmt.Errorf("command '%s' in '%s' was canceled: %w",
-				name, dir, err)
-		}
-	}
-	return err
+	err := r.executor.ExecuteInDir(ctx, dir, name, args...)
+	return wrapTimeoutError(err, CommandContext{Name: name, Dir: dir, Timeout: timeout})
 }
 
 // RunCmdOutputInDir executes a command in the specified directory and returns output.
@@ -113,27 +78,8 @@ func (r *SecureCommandRunner) RunCmdOutputInDir(dir, name string, args ...string
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Create a new executor with the specified working directory
-	dirExecutor := &security.SecureExecutor{
-		AllowedCommands: r.executor.AllowedCommands,
-		WorkingDir:      dir, // Set the working directory
-		Timeout:         r.executor.Timeout,
-		DryRun:          r.executor.DryRun,
-		EnvWhitelist:    r.executor.EnvWhitelist,
-	}
-
-	output, err := dirExecutor.ExecuteOutput(ctx, name, args...)
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			return strings.TrimSpace(output), fmt.Errorf("command '%s' in '%s' exceeded timeout: %w",
-				name, dir, err)
-		}
-		if errors.Is(err, context.Canceled) {
-			return strings.TrimSpace(output), fmt.Errorf("command '%s' in '%s' was canceled: %w",
-				name, dir, err)
-		}
-	}
-	return strings.TrimSpace(output), err
+	output, err := r.executor.ExecuteOutputInDir(ctx, dir, name, args...)
+	return strings.TrimSpace(output), wrapTimeoutError(err, CommandContext{Name: name, Dir: dir, Timeout: timeout})
 }
 
 // getCommandTimeout returns appropriate timeout based on command type
@@ -227,6 +173,41 @@ func SetRunner(r CommandRunner) error {
 	}
 	packageCommandRunnerProvider.Set(r)
 	return nil
+}
+
+// CommandContext holds context information for timeout error formatting
+type CommandContext struct {
+	Name    string
+	Dir     string // empty for non-dir commands
+	Timeout time.Duration
+}
+
+// wrapTimeoutError wraps context timeout/cancellation errors with descriptive messages.
+// Returns the original error unchanged if it's not a timeout or cancellation error.
+func wrapTimeoutError(err error, ctx CommandContext) error {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		if ctx.Dir != "" {
+			return fmt.Errorf("command '%s' in '%s' exceeded timeout of %s: %w",
+				ctx.Name, ctx.Dir, ctx.Timeout, err)
+		}
+		return fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
+			ctx.Name, ctx.Timeout, err)
+	}
+
+	if errors.Is(err, context.Canceled) {
+		if ctx.Dir != "" {
+			return fmt.Errorf("command '%s' in '%s' was canceled: %w",
+				ctx.Name, ctx.Dir, err)
+		}
+		return fmt.Errorf("command '%s' was canceled after %s: %w",
+			ctx.Name, ctx.Timeout, err)
+	}
+
+	return err
 }
 
 // truncateString truncates a string to the specified length

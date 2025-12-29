@@ -583,6 +583,11 @@ func TestExtensionRule(t *testing.T) {
 		{"case insensitive mixed", []string{".txt"}, "file.Txt", false},
 		{"case insensitive lower", []string{".TXT"}, "file.txt", false},
 
+		// Unicode case folding (Turkish İ is distinct from ASCII i)
+		{"Turkish İ exact match", []string{".İ"}, "file.İ", false},
+		{"Turkish İ not equal to ASCII i", []string{".i"}, "file.İ", true},
+		{"ASCII i not equal to Turkish İ", []string{".İ"}, "file.i", true},
+
 		// Without leading dot
 		{"without dot match", []string{"txt"}, "file.txt", false},
 		{"without dot no match", []string{"txt"}, "file.md", true},

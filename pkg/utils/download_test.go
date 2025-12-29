@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/retry"
 )
 
 // Static error definitions for err113 compliance
@@ -233,7 +235,8 @@ func TestDownloadWithRetry_PermanentFailure(t *testing.T) {
 		t.Fatal("Expected download to fail permanently")
 	}
 
-	if !strings.Contains(err.Error(), "permanent download error") {
+	// Error message is now from retry package: "permanent error (not retriable)"
+	if !strings.Contains(err.Error(), "permanent error") && !strings.Contains(err.Error(), "not retriable") {
 		t.Errorf("Expected permanent error, got: %v", err)
 	}
 }
@@ -355,7 +358,12 @@ func TestDownloadWithRetry_Context_Cancellation(t *testing.T) {
 	}
 }
 
-func TestIsRetriableError(t *testing.T) {
+// TestNetworkClassifier tests that the retry.NetworkClassifier correctly
+// classifies errors. This validates the integration between download.go
+// and pkg/retry.
+func TestNetworkClassifier(t *testing.T) {
+	classifier := retry.NewNetworkClassifier()
+
 	testCases := []struct {
 		name      string
 		err       error
@@ -400,7 +408,7 @@ func TestIsRetriableError(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := isRetriableError(tc.err)
+			result := classifier.IsRetriable(tc.err)
 			if result != tc.retriable {
 				t.Errorf("Expected retriable=%v for error %q, got %v", tc.retriable, tc.err, result)
 			}
@@ -513,15 +521,6 @@ func TestProgressCallback(t *testing.T) {
 }
 
 func TestDownloadHelperFunctions(t *testing.T) {
-	// Test contains function
-	if !contains("hello world", "world") {
-		t.Error("contains should find substring")
-	}
-
-	if contains("hello", "xyz") {
-		t.Error("contains should not find non-existent substring")
-	}
-
 	// Test splitArgs function
 	args := splitArgs("arg1 arg2 \"quoted arg\" 'single quoted'")
 	expected := []string{"arg1", "arg2", "quoted arg", "single quoted"}

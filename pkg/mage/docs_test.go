@@ -214,7 +214,6 @@ func (ts *DocsTestSuite) TestDocsHelperFunctions() {
 		}{
 			{"github.com/test/project/pkg/mage", "Core"},
 			{"github.com/test/project/pkg/common/config", "Common"},
-			{"github.com/test/project/pkg/providers/aws", "Providers"},
 			{"github.com/test/project/pkg/security/validator", "Security"},
 			{"github.com/test/project/pkg/utils/logger", "Utils"},
 			{"github.com/test/project/pkg/testhelpers/mock", "Utils"},

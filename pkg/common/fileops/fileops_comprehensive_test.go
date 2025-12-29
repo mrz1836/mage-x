@@ -1454,6 +1454,113 @@ func TestMarshalUnmarshalRoundTrip(t *testing.T) {
 	})
 }
 
+// TestIsPathTraversal tests the path traversal detection helper function
+func TestIsPathTraversal(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected bool
+	}{
+		// Traversal patterns that should be detected
+		{"basic_traversal", "../etc/passwd", true},
+		{"traversal_in_middle", "foo/../../../etc", true},
+		{"double_dot", "..", true},
+		{"trailing_traversal", "safe/../..", true},
+		{"complex_traversal", "./foo/../bar/../../../etc", true},
+
+		// Safe paths that should not be detected as traversal
+		{"simple_relative", "foo/bar", false},
+		{"simple_absolute", "/usr/local/bin", false},
+		{"single_dot", ".", false},
+		{"dotfile", ".gitignore", false},
+		{"double_dotfile", "..gitignore", true}, // Files starting with ".." are rejected defensively
+		{"current_dir_prefix", "./foo/bar", false},
+		{"empty_path", "", false},
+		{"just_filename", "test.txt", false},
+		{"deeply_nested", "a/b/c/d/e/f/g", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isPathTraversal(tt.path)
+			assert.Equal(t, tt.expected, result, "isPathTraversal(%q) should be %v", tt.path, tt.expected)
+		})
+	}
+}
+
+// TestWriteFileWithBackupWrappedErrors verifies error handling works correctly
+// with wrapped errors (tests the simplified errors.Is check)
+func TestWriteFileWithBackupWrappedErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+	safeOps := NewDefaultSafeFileOperator()
+
+	t.Run("NonExistentSourceFile", func(t *testing.T) {
+		// Writing to a path where source doesn't exist should succeed
+		// (no backup needed, just write the new file)
+		newFile := filepath.Join(tmpDir, "new_file.txt")
+		err := safeOps.WriteFileWithBackup(newFile, []byte("content"), 0o644)
+		require.NoError(t, err, "Should succeed when source doesn't exist")
+
+		// Verify file was created
+		assert.True(t, safeOps.Exists(newFile), "File should exist after write")
+
+		// Verify no backup was created (since source didn't exist)
+		backupPath := newFile + ".bak"
+		assert.False(t, safeOps.Exists(backupPath), "No backup should exist for new file")
+	})
+
+	t.Run("ExistingSourceFile", func(t *testing.T) {
+		// Create an existing file
+		existingFile := filepath.Join(tmpDir, "existing.txt")
+		err := safeOps.WriteFile(existingFile, []byte("original"), 0o644)
+		require.NoError(t, err)
+
+		// Write with backup
+		err = safeOps.WriteFileWithBackup(existingFile, []byte("updated"), 0o644)
+		require.NoError(t, err, "Should succeed with backup")
+
+		// Verify backup exists with original content
+		backupPath := existingFile + ".bak"
+		assert.True(t, safeOps.Exists(backupPath), "Backup should exist")
+		backupData, err := safeOps.ReadFile(backupPath)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("original"), backupData, "Backup should contain original content")
+
+		// Verify new content
+		newData, err := safeOps.ReadFile(existingFile)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("updated"), newData, "File should contain new content")
+	})
+
+	t.Run("ReadOnlyBackupDirectory", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Skipping permission test on Windows")
+		}
+
+		// Create a subdirectory with a file
+		subDir := filepath.Join(tmpDir, "readonly_subdir")
+		err := os.MkdirAll(subDir, PermDirSensitive)
+		require.NoError(t, err)
+
+		testFile := filepath.Join(subDir, "test.txt")
+		err = safeOps.WriteFile(testFile, []byte("original"), 0o644)
+		require.NoError(t, err)
+
+		// Make directory read-only to prevent backup creation
+		err = os.Chmod(subDir, 0o555) //nolint:gosec // G302: intentionally testing read-only permissions
+		require.NoError(t, err)
+		defer func() {
+			// Restore permissions for cleanup
+			_ = os.Chmod(subDir, PermDir) //nolint:errcheck // Best effort cleanup
+		}()
+
+		// Attempt to write with backup - should fail due to permission denied
+		err = safeOps.WriteFileWithBackup(testFile, []byte("updated"), 0o644)
+		require.Error(t, err, "Should fail when backup cannot be created")
+		assert.Contains(t, err.Error(), "failed to create backup", "Error should mention backup failure")
+	})
+}
+
 // Ensure the error variable is used to avoid unused variable errors
 var (
 	_ = errTestConcurrentWrite

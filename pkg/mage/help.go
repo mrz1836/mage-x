@@ -13,6 +13,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -146,7 +147,7 @@ func (Help) Commands() error {
 
 // Command shows detailed help for a specific command or namespace
 func (Help) Command() error {
-	commandName := utils.GetEnv("COMMAND", "")
+	commandName := env.GetString("COMMAND", "")
 	if commandName == "" {
 		return errHelpCommandRequired
 	}
@@ -375,7 +376,7 @@ Happy coding with MAGE-X! 🎉`)
 
 // Completions generates shell completions
 func (Help) Completions() error {
-	shell := utils.GetEnv("SHELL", "bash")
+	shell := env.GetString("SHELL", "bash")
 
 	utils.Header("🔗 Shell Completions")
 
@@ -567,7 +568,7 @@ complete -F _mage_completions mage
 	completionFile := filepath.Join(os.Getenv("HOME"), ".mage_completion.bash")
 
 	fileOps := fileops.New()
-	if err := fileOps.File.WriteFile(completionFile, []byte(script), 0o644); err != nil {
+	if err := fileOps.File.WriteFile(completionFile, []byte(script), fileops.PermFile); err != nil {
 		return fmt.Errorf("failed to write bash completion: %w", err)
 	}
 
@@ -631,12 +632,12 @@ _mage "$@"
 	completionFile := filepath.Join(os.Getenv("HOME"), ".zsh", "completions", "_mage")
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(filepath.Dir(completionFile), 0o750); err != nil {
+	if err := os.MkdirAll(filepath.Dir(completionFile), fileops.PermDirSensitive); err != nil {
 		return fmt.Errorf("failed to create completion directory: %w", err)
 	}
 
 	fileOps := fileops.New()
-	if err := fileOps.File.WriteFile(completionFile, []byte(script), 0o644); err != nil {
+	if err := fileOps.File.WriteFile(completionFile, []byte(script), fileops.PermFile); err != nil {
 		return fmt.Errorf("failed to write zsh completion: %w", err)
 	}
 
@@ -674,12 +675,12 @@ complete -c mage -n '__fish_seen_subcommand_from release' -a 'stable beta edge'
 	completionFile := filepath.Join(configDir, "mage.fish")
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(configDir, 0o750); err != nil {
+	if err := os.MkdirAll(configDir, fileops.PermDirSensitive); err != nil {
 		return fmt.Errorf("failed to create completion directory: %w", err)
 	}
 
 	fileOps := fileops.New()
-	if err := fileOps.File.WriteFile(completionFile, []byte(script), 0o644); err != nil {
+	if err := fileOps.File.WriteFile(completionFile, []byte(script), fileops.PermFile); err != nil {
 		return fmt.Errorf("failed to write fish completion: %w", err)
 	}
 

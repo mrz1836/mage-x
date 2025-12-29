@@ -3,13 +3,14 @@ package env
 import (
 	"errors"
 	"fmt"
-	"log"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/log"
 )
 
 // Static errors for environment manager operations
@@ -78,7 +79,7 @@ func (m *DefaultEnvManager) WithScope(fn func(Scope) error) error {
 		if err := m.PopScope(); err != nil {
 			// Log the error but don't fail the operation
 			// as this is in a defer block
-			log.Printf("failed to pop environment scope: %v", err)
+			log.Warn("failed to pop environment scope: %v", err)
 		}
 	}()
 
@@ -230,18 +231,18 @@ func (s *DefaultEnvScope) Rollback() error {
 			if change.OldValue == "" {
 				if err := s.baseEnv.Unset(key); err != nil {
 					// Log error but continue reverting other changes
-					log.Printf("failed to unset environment variable %s during revert: %v", key, err)
+					log.Warn("failed to unset environment variable %s during revert: %v", key, err)
 				}
 			} else {
 				if err := s.baseEnv.Set(key, change.OldValue); err != nil {
 					// Log error but continue reverting other changes
-					log.Printf("failed to set environment variable %s to %s during revert: %v", key, change.OldValue, err)
+					log.Warn("failed to set environment variable %s to %s during revert: %v", key, change.OldValue, err)
 				}
 			}
 		case ActionUnset:
 			if err := s.baseEnv.Set(key, change.OldValue); err != nil {
 				// Log error but continue reverting other changes
-				log.Printf("failed to set environment variable %s to %s during revert: %v", key, change.OldValue, err)
+				log.Warn("failed to set environment variable %s to %s during revert: %v", key, change.OldValue, err)
 			}
 		}
 	}
@@ -448,7 +449,7 @@ func (v *DefaultEnvValidator) Required(keys ...string) Validator {
 	for _, key := range keys {
 		if err := v.AddRule(key, &RequiredRule{}); err != nil {
 			// Log error but continue with other keys
-			log.Printf("failed to add required rule for key %s: %v", key, err)
+			log.Warn("failed to add required rule for key %s: %v", key, err)
 		}
 	}
 	return v
@@ -459,7 +460,7 @@ func (v *DefaultEnvValidator) NotEmpty(keys ...string) Validator {
 	for _, key := range keys {
 		if err := v.AddRule(key, &NotEmptyRule{}); err != nil {
 			// Log error but continue with other keys
-			log.Printf("failed to add not-empty rule for key %s: %v", key, err)
+			log.Warn("failed to add not-empty rule for key %s: %v", key, err)
 		}
 	}
 	return v
@@ -469,7 +470,7 @@ func (v *DefaultEnvValidator) NotEmpty(keys ...string) Validator {
 func (v *DefaultEnvValidator) Pattern(key, pattern string) Validator {
 	if err := v.AddRule(key, &PatternRule{Pattern: pattern}); err != nil {
 		// Log error but continue
-		log.Printf("failed to add pattern rule for key %s with pattern %s: %v", key, pattern, err)
+		log.Warn("failed to add pattern rule for key %s with pattern %s: %v", key, pattern, err)
 	}
 	return v
 }
@@ -478,7 +479,7 @@ func (v *DefaultEnvValidator) Pattern(key, pattern string) Validator {
 func (v *DefaultEnvValidator) Range(key string, minValue, maxValue interface{}) Validator {
 	if err := v.AddRule(key, &RangeRule{Min: minValue, Max: maxValue}); err != nil {
 		// Log error but continue
-		log.Printf("failed to add range rule for key %s with range %v-%v: %v", key, minValue, maxValue, err)
+		log.Warn("failed to add range rule for key %s with range %v-%v: %v", key, minValue, maxValue, err)
 	}
 	return v
 }
@@ -487,7 +488,7 @@ func (v *DefaultEnvValidator) Range(key string, minValue, maxValue interface{}) 
 func (v *DefaultEnvValidator) OneOf(key string, values ...string) Validator {
 	if err := v.AddRule(key, &OneOfRule{Values: values}); err != nil {
 		// Log error but continue
-		log.Printf("failed to add one-of rule for key %s with values %v: %v", key, values, err)
+		log.Warn("failed to add one-of rule for key %s with values %v: %v", key, values, err)
 	}
 	return v
 }

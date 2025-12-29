@@ -7,8 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
-	"github.com/mrz1836/mage-x/pkg/security"
 )
 
 // Static test errors to satisfy err113 linter
@@ -424,15 +422,8 @@ func TestSecureCommandRunner_ValidatesCommands(t *testing.T) {
 
 // Test command validation through namespaces
 func TestNamespaceCommandValidation(t *testing.T) {
-	// Create a custom executor that tracks validation
-	executor := security.NewSecureExecutor()
-	executor.AllowedCommands = map[string]bool{
-		"go":   true,
-		"echo": true,
-	}
-
 	// This test verifies that namespace operations use secure execution
-	// In a real test, we'd inject the executor, but this demonstrates the concept
+	// The global secure runner validates commands via pkg/exec
 	t.Run("BuildNamespace respects security", func(t *testing.T) {
 		build := NewBuildNamespace()
 		// The build will use the global secure runner which validates commands

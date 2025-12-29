@@ -12,6 +12,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	pkglog "github.com/mrz1836/mage-x/pkg/log"
 )
 
 // Static errors for logger operations
@@ -172,33 +175,12 @@ func (l *DefaultErrorLogger) logMageError(ctx context.Context, err MageError) {
 	logLine := fmt.Sprintf("[%s] [%s] %s", timestamp, err.Severity().String(), formatted)
 
 	// Add context information if available
-	if requestID := getRequestIDFromContext(ctx); requestID != "" {
+	if requestID := pkglog.GetRequestIDFromContext(ctx); requestID != "" {
 		logLine = fmt.Sprintf("[req:%s] %s", requestID, logLine)
 	}
 
 	// Log the formatted error
 	l.logger.Println(logLine)
-}
-
-// getRequestIDFromContext extracts request ID from context
-func getRequestIDFromContext(ctx context.Context) string {
-	if ctx == nil {
-		return ""
-	}
-
-	if value := ctx.Value("request_id"); value != nil {
-		if requestID, ok := value.(string); ok {
-			return requestID
-		}
-	}
-
-	if value := ctx.Value("requestId"); value != nil {
-		if requestID, ok := value.(string); ok {
-			return requestID
-		}
-	}
-
-	return ""
 }
 
 // ErrorLoggerOptions holds configuration options for error loggers
@@ -303,7 +285,7 @@ func NewFileRotatingLogger(logPath string, maxSize int64, maxFiles int) (*FileRo
 		return nil, errPathTraversalDetected
 	}
 
-	file, err := os.OpenFile(cleanPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	file, err := os.OpenFile(cleanPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, fileops.PermFileSensitive)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}

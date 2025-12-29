@@ -3,7 +3,6 @@ package utils
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,460 +22,6 @@ var (
 	errError1    = errors.New("error 1")
 	errError2    = errors.New("error 2")
 )
-
-func TestGetEnv(t *testing.T) {
-	tests := []struct {
-		name         string
-		key          string
-		defaultValue string
-		envValue     string
-		expected     string
-	}{
-		{
-			name:         "returns environment value when set",
-			key:          "TEST_VAR",
-			defaultValue: "default",
-			envValue:     "custom",
-			expected:     "custom",
-		},
-		{
-			name:         "returns default when env var is empty",
-			key:          "TEST_VAR_EMPTY",
-			defaultValue: "default",
-			envValue:     "",
-			expected:     "default",
-		},
-		{
-			name:         "returns default when env var not set",
-			key:          "TEST_VAR_NOT_SET",
-			defaultValue: "default",
-			envValue:     "",
-			expected:     "default",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Clean up first
-			if err := os.Unsetenv(tt.key); err != nil {
-				t.Logf("Warning: failed to unset %s: %v", tt.key, err)
-			}
-
-			// Set environment variable if needed
-			if tt.envValue != "" {
-				if err := os.Setenv(tt.key, tt.envValue); err != nil {
-					t.Fatalf("Failed to set %s: %v", tt.key, err)
-				}
-				defer func() {
-					if err := os.Unsetenv(tt.key); err != nil {
-						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
-					}
-				}()
-			}
-
-			result := GetEnv(tt.key, tt.defaultValue)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestGetEnvBool(t *testing.T) {
-	tests := []struct {
-		name         string
-		key          string
-		defaultValue bool
-		envValue     string
-		expected     bool
-	}{
-		{
-			name:         "returns true for 'true'",
-			key:          "TEST_BOOL",
-			defaultValue: false,
-			envValue:     "true",
-			expected:     true,
-		},
-		{
-			name:         "returns true for '1'",
-			key:          "TEST_BOOL",
-			defaultValue: false,
-			envValue:     "1",
-			expected:     true,
-		},
-		{
-			name:         "returns true for 'yes'",
-			key:          "TEST_BOOL",
-			defaultValue: false,
-			envValue:     "yes",
-			expected:     true,
-		},
-		{
-			name:         "returns false for 'false'",
-			key:          "TEST_BOOL",
-			defaultValue: true,
-			envValue:     "false",
-			expected:     false,
-		},
-		{
-			name:         "returns false for '0'",
-			key:          "TEST_BOOL",
-			defaultValue: true,
-			envValue:     "0",
-			expected:     false,
-		},
-		{
-			name:         "returns false for 'no'",
-			key:          "TEST_BOOL",
-			defaultValue: true,
-			envValue:     "no",
-			expected:     false,
-		},
-		{
-			name:         "returns default when not set",
-			key:          "TEST_BOOL_NOT_SET",
-			defaultValue: true,
-			envValue:     "",
-			expected:     true,
-		},
-		{
-			name:         "returns false for random string",
-			key:          "TEST_BOOL",
-			defaultValue: true,
-			envValue:     "maybe",
-			expected:     false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Clean up first
-			if err := os.Unsetenv(tt.key); err != nil {
-				t.Logf("Warning: failed to unset %s: %v", tt.key, err)
-			}
-
-			// Set environment variable if needed
-			if tt.envValue != "" {
-				if err := os.Setenv(tt.key, tt.envValue); err != nil {
-					t.Fatalf("Failed to set %s: %v", tt.key, err)
-				}
-				defer func() {
-					if err := os.Unsetenv(tt.key); err != nil {
-						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
-					}
-				}()
-			}
-
-			result := GetEnvBool(tt.key, tt.defaultValue)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestGetEnvInt(t *testing.T) {
-	tests := []struct {
-		name         string
-		key          string
-		defaultValue int
-		envValue     string
-		expected     int
-	}{
-		{
-			name:         "returns parsed integer",
-			key:          "TEST_INT",
-			defaultValue: 10,
-			envValue:     "42",
-			expected:     42,
-		},
-		{
-			name:         "returns default for invalid number",
-			key:          "TEST_INT",
-			defaultValue: 10,
-			envValue:     "not-a-number",
-			expected:     10,
-		},
-		{
-			name:         "returns default when not set",
-			key:          "TEST_INT_NOT_SET",
-			defaultValue: 10,
-			envValue:     "",
-			expected:     10,
-		},
-		{
-			name:         "handles negative numbers",
-			key:          "TEST_INT",
-			defaultValue: 10,
-			envValue:     "-5",
-			expected:     -5,
-		},
-		{
-			name:         "handles zero",
-			key:          "TEST_INT",
-			defaultValue: 10,
-			envValue:     "0",
-			expected:     0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Clean up first
-			if err := os.Unsetenv(tt.key); err != nil {
-				t.Logf("Warning: failed to unset %s: %v", tt.key, err)
-			}
-
-			// Set environment variable if needed
-			if tt.envValue != "" {
-				if err := os.Setenv(tt.key, tt.envValue); err != nil {
-					t.Fatalf("Failed to set %s: %v", tt.key, err)
-				}
-				defer func() {
-					if err := os.Unsetenv(tt.key); err != nil {
-						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
-					}
-				}()
-			}
-
-			result := GetEnvInt(tt.key, tt.defaultValue)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestGetEnvClean(t *testing.T) {
-	tests := []struct {
-		name     string
-		key      string
-		envValue string
-		expected string
-	}{
-		{
-			name:     "returns clean value without comment",
-			key:      "TEST_CLEAN",
-			envValue: "v1.2.3",
-			expected: "v1.2.3",
-		},
-		{
-			name:     "strips inline comment with space",
-			key:      "TEST_CLEAN_COMMENT",
-			envValue: "v1.2.3 # this is a comment",
-			expected: "v1.2.3",
-		},
-		{
-			name:     "strips inline comment with multiple spaces",
-			key:      "TEST_CLEAN_SPACES",
-			envValue: "v1.2.3                  # https://github.com/example/releases",
-			expected: "v1.2.3",
-		},
-		{
-			name:     "trims leading and trailing whitespace",
-			key:      "TEST_CLEAN_TRIM",
-			envValue: "  v1.2.3  ",
-			expected: "v1.2.3",
-		},
-		{
-			name:     "trims whitespace and strips comment",
-			key:      "TEST_CLEAN_BOTH",
-			envValue: "  v1.2.3  # comment  ",
-			expected: "v1.2.3",
-		},
-		{
-			name:     "preserves # without preceding space",
-			key:      "TEST_CLEAN_NO_SPACE",
-			envValue: "value#notacomment",
-			expected: "value#notacomment",
-		},
-		{
-			name:     "handles multiple # symbols correctly",
-			key:      "TEST_CLEAN_MULTIPLE",
-			envValue: "value # comment # more",
-			expected: "value",
-		},
-		{
-			name:     "returns empty string for empty env var",
-			key:      "TEST_CLEAN_EMPTY",
-			envValue: "",
-			expected: "",
-		},
-		{
-			name:     "returns empty string for unset env var",
-			key:      "TEST_CLEAN_UNSET",
-			envValue: "", // This will not be set
-			expected: "",
-		},
-		{
-			name:     "handles only comment",
-			key:      "TEST_CLEAN_ONLY_COMMENT",
-			envValue: " # just a comment",
-			expected: "",
-		},
-		{
-			name:     "handles complex version string with URL",
-			key:      "TEST_CLEAN_COMPLEX",
-			envValue: "v1.2.19                  # https://github.com/mrz1836/mage-x/releases",
-			expected: "v1.2.19",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Clean up first
-			if err := os.Unsetenv(tt.key); err != nil {
-				t.Logf("Warning: failed to unset %s: %v", tt.key, err)
-			}
-
-			// Set environment variable if needed (skip for unset test)
-			if tt.name != "returns empty string for unset env var" && tt.envValue != "" {
-				if err := os.Setenv(tt.key, tt.envValue); err != nil {
-					t.Fatalf("Failed to set %s: %v", tt.key, err)
-				}
-				defer func() {
-					if err := os.Unsetenv(tt.key); err != nil {
-						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
-					}
-				}()
-			} else if tt.name == "handles only comment" {
-				// For the "only comment" test, we still need to set the env var
-				if err := os.Setenv(tt.key, tt.envValue); err != nil {
-					t.Fatalf("Failed to set %s: %v", tt.key, err)
-				}
-				defer func() {
-					if err := os.Unsetenv(tt.key); err != nil {
-						t.Logf("Warning: failed to unset %s: %v", tt.key, err)
-					}
-				}()
-			}
-
-			result := GetEnvClean(tt.key)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestIsVerbose(t *testing.T) {
-	tests := []struct {
-		name     string
-		verbose  string
-		v        string
-		expected bool
-	}{
-		{
-			name:     "returns true when VERBOSE=true",
-			verbose:  "true",
-			v:        "",
-			expected: true,
-		},
-		{
-			name:     "returns true when V=1",
-			verbose:  "",
-			v:        "1",
-			expected: true,
-		},
-		{
-			name:     "returns false when neither set",
-			verbose:  "",
-			v:        "",
-			expected: false,
-		},
-		{
-			name:     "returns false when VERBOSE=false",
-			verbose:  "false",
-			v:        "",
-			expected: false,
-		},
-		{
-			name:     "V takes precedence when both set",
-			verbose:  "false",
-			v:        "true",
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Clean up first
-			if err := os.Unsetenv("VERBOSE"); err != nil {
-				t.Logf("Warning: failed to unset VERBOSE: %v", err)
-			}
-			if err := os.Unsetenv("V"); err != nil {
-				t.Logf("Warning: failed to unset V: %v", err)
-			}
-
-			// Set environment variables
-			if tt.verbose != "" {
-				if err := os.Setenv("VERBOSE", tt.verbose); err != nil {
-					t.Fatalf("Failed to set VERBOSE: %v", err)
-				}
-				defer func() {
-					if err := os.Unsetenv("VERBOSE"); err != nil {
-						t.Logf("Warning: failed to unset VERBOSE: %v", err)
-					}
-				}()
-			}
-			if tt.v != "" {
-				if err := os.Setenv("V", tt.v); err != nil {
-					t.Fatalf("Failed to set V: %v", err)
-				}
-				defer func() {
-					if err := os.Unsetenv("V"); err != nil {
-						t.Logf("Warning: failed to unset V: %v", err)
-					}
-				}()
-			}
-
-			result := IsVerbose()
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestIsCI(t *testing.T) {
-	ciVars := []string{
-		"CI",
-		"CONTINUOUS_INTEGRATION",
-		"GITHUB_ACTIONS",
-		"GITLAB_CI",
-		"TRAVIS",
-		"CIRCLECI",
-		"JENKINS_URL",
-		"CODEBUILD_BUILD_ID",
-	}
-
-	// Test each CI variable
-	for _, ciVar := range ciVars {
-		t.Run(fmt.Sprintf("returns true for %s", ciVar), func(t *testing.T) {
-			// Clean up all CI vars first
-			for _, v := range ciVars {
-				if err := os.Unsetenv(v); err != nil {
-					t.Logf("Warning: failed to unset %s: %v", v, err)
-				}
-			}
-
-			// Set the test variable
-			if err := os.Setenv(ciVar, "true"); err != nil {
-				t.Fatalf("Failed to set %s: %v", ciVar, err)
-			}
-			defer func() {
-				if err := os.Unsetenv(ciVar); err != nil {
-					t.Logf("Warning: failed to unset %s: %v", ciVar, err)
-				}
-			}()
-
-			result := IsCI()
-			assert.True(t, result)
-		})
-	}
-
-	t.Run("returns false when no CI vars set", func(t *testing.T) {
-		// Clean up all CI vars
-		for _, v := range ciVars {
-			if err := os.Unsetenv(v); err != nil {
-				t.Logf("Warning: failed to unset %s: %v", v, err)
-			}
-		}
-
-		result := IsCI()
-		assert.False(t, result)
-	})
-}
 
 func TestPlatformFunctions(t *testing.T) {
 	t.Run("GetCurrentPlatform", func(t *testing.T) {
@@ -923,38 +468,6 @@ func TestCommandExecution(t *testing.T) {
 }
 
 // Benchmark tests
-func BenchmarkGetEnv(b *testing.B) {
-	if err := os.Setenv("BENCH_TEST", "value"); err != nil {
-		b.Fatalf("Failed to set BENCH_TEST: %v", err)
-	}
-	defer func() {
-		if err := os.Unsetenv("BENCH_TEST"); err != nil {
-			b.Logf("Warning: failed to unset BENCH_TEST: %v", err)
-		}
-	}()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		GetEnv("BENCH_TEST", "default")
-	}
-}
-
-func BenchmarkIsVerbose(b *testing.B) {
-	if err := os.Setenv("VERBOSE", "true"); err != nil {
-		b.Fatalf("Failed to set VERBOSE: %v", err)
-	}
-	defer func() {
-		if err := os.Unsetenv("VERBOSE"); err != nil {
-			b.Logf("Warning: failed to unset VERBOSE: %v", err)
-		}
-	}()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		IsVerbose()
-	}
-}
-
 func BenchmarkFormatBytes(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -976,4 +489,170 @@ func BenchmarkParallel(b *testing.B) {
 			b.Logf("Parallel error in benchmark: %v", err)
 		}
 	}
+}
+
+// TestCheckFileLineLength tests the CheckFileLineLength function
+func TestCheckFileLineLength(t *testing.T) {
+	t.Run("file within limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "short.txt")
+
+		content := "short line\nanother short line\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "should not have long lines")
+		assert.Equal(t, 0, lineNum, "line number should be 0 when no long lines found")
+		assert.Positive(t, lineLen, "max line length should be greater than 0")
+	})
+
+	t.Run("file exceeds limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "long.txt")
+
+		// Create file with a long line on line 2
+		content := "short\n" + strings.Repeat("x", 150) + "\nshort again\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong, "should have found long line")
+		assert.Equal(t, 2, lineNum, "long line should be on line 2")
+		assert.Equal(t, 150, lineLen, "line length should be 150")
+	})
+
+	t.Run("empty file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "empty.txt")
+
+		err := os.WriteFile(testFile, []byte{}, 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "empty file should not have long lines")
+		assert.Equal(t, 0, lineNum)
+		assert.Equal(t, 0, lineLen)
+	})
+
+	t.Run("non-existent file", func(t *testing.T) {
+		_, _, _, err := CheckFileLineLength("/nonexistent/file.txt", 100)
+		require.Error(t, err)
+	})
+
+	t.Run("first line exceeds limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "longfirst.txt")
+
+		content := strings.Repeat("x", 200) + "\nshort\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong)
+		assert.Equal(t, 1, lineNum, "long line should be on line 1")
+		assert.Equal(t, 200, lineLen)
+	})
+
+	t.Run("very long line larger than buffer", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "verylongline.txt")
+
+		// Create a line longer than the 128KB buffer
+		longLine := strings.Repeat("x", 200*1024) // 200KB line
+		content := "short\n" + longLine + "\nshort\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong, "should detect very long line")
+		assert.Equal(t, 2, lineNum, "long line should be on line 2")
+		assert.GreaterOrEqual(t, lineLen, 200*1024, "line length should be at least 200KB")
+	})
+}
+
+// TestRunCmdSecure tests the secure command execution
+func TestRunCmdSecure(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping secure command execution tests in short mode")
+	}
+
+	t.Run("success", func(t *testing.T) {
+		err := RunCmdSecure("echo", "secure test")
+		require.NoError(t, err)
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		err := RunCmdSecure("nonexistent-command-12345")
+		require.Error(t, err)
+	})
+}
+
+// TestRunCmdWithRetry tests the retry command execution
+func TestRunCmdWithRetry(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping retry command execution tests in short mode")
+	}
+
+	t.Run("success on first attempt", func(t *testing.T) {
+		err := RunCmdWithRetry(3, "echo", "retry test")
+		require.NoError(t, err)
+	})
+
+	t.Run("failure after retries", func(t *testing.T) {
+		err := RunCmdWithRetry(2, "nonexistent-command-12345")
+		require.Error(t, err)
+	})
+}
+
+// TestGetModuleNameInDir tests GetModuleNameInDir function
+func TestGetModuleNameInDir(t *testing.T) {
+	if !CommandExists("go") {
+		t.Skip("Go command not available")
+	}
+
+	t.Run("valid module directory", func(t *testing.T) {
+		// Test in the current project directory which should be a Go module
+		// Get the project root (go.mod should be there)
+		wd, err := os.Getwd()
+		require.NoError(t, err)
+
+		// Walk up to find go.mod
+		dir := wd
+		for !FileExists(filepath.Join(dir, "go.mod")) {
+
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				t.Skip("Could not find go.mod in parent directories")
+			}
+			dir = parent
+		}
+
+		moduleName, err := GetModuleNameInDir(dir)
+		require.NoError(t, err)
+		assert.NotEmpty(t, moduleName)
+		assert.Contains(t, moduleName, "mage-x", "module name should contain mage-x")
+	})
+
+	t.Run("invalid directory", func(t *testing.T) {
+		_, err := GetModuleNameInDir("/nonexistent/directory")
+		require.Error(t, err)
+	})
+
+	t.Run("directory without go.mod", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		moduleName, err := GetModuleNameInDir(tmpDir)
+		// Go returns "command-line-arguments" when not in a module
+		// This verifies the function handles non-module directories appropriately
+		if err == nil {
+			// Either returns empty or "command-line-arguments" for non-module directories
+			assert.True(t, moduleName == "" || moduleName == "command-line-arguments",
+				"should return empty or 'command-line-arguments' for non-module directory, got: %s", moduleName)
+		}
+	})
 }

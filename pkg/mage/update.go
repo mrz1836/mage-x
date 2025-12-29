@@ -21,6 +21,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -157,7 +158,7 @@ func (Update) Install() error {
 
 // getUpdateChannel returns the configured update channel
 func getUpdateChannel() UpdateChannel {
-	channel := strings.ToLower(utils.GetEnv("UPDATE_CHANNEL", "stable"))
+	channel := strings.ToLower(env.GetString("UPDATE_CHANNEL", "stable"))
 
 	switch channel {
 	case "beta":
@@ -303,38 +304,7 @@ func getLatestStableReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 // getLatestStableReleaseViaAPI gets the latest stable release using GitHub API
 func getLatestStableReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// Ignore error in defer cleanup
-		if err := resp.Body.Close(); err != nil {
-			// Best effort cleanup - ignore error
-			log.Printf("failed to close response body: %v", err)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read error response: %w", err)
-		}
-		return nil, fmt.Errorf("%w: %s", errGitHubAPIError, body)
-	}
-
-	var release GitHubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return nil, err
-	}
-
-	return &release, nil
+	return utils.HTTPGetJSON[GitHubRelease](url, 10*time.Second)
 }
 
 // getLatestBetaRelease gets the latest beta release
@@ -388,48 +358,24 @@ func getLatestBetaReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 // Beta channel prioritizes prereleases but falls back to stable if none exist.
 func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	releases, err := utils.HTTPGetJSON[[]GitHubRelease](url, 10*time.Second)
 	if err != nil {
-		return nil, err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// Ignore error in defer cleanup
-		if err := resp.Body.Close(); err != nil {
-			// Best effort cleanup - ignore error
-			log.Printf("failed to close response body: %v", err)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read error response: %w", err)
-		}
-		return nil, fmt.Errorf("%w: %s", errGitHubAPIError, body)
-	}
-
-	var releases []GitHubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
 		return nil, err
 	}
 
 	// First pass: look for the latest prerelease (beta/alpha/rc)
-	for _, release := range releases {
+	for i := range *releases {
+		release := &(*releases)[i]
 		if !release.Draft && release.Prerelease {
-			return &release, nil
+			return release, nil
 		}
 	}
 
 	// Fallback: if no prerelease found, return the latest stable
-	for _, release := range releases {
+	for i := range *releases {
+		release := &(*releases)[i]
 		if !release.Draft {
-			return &release, nil
+			return release, nil
 		}
 	}
 
@@ -475,41 +421,13 @@ func getLatestEdgeReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 // getLatestEdgeReleaseViaAPI gets the latest edge release using GitHub API
 func getLatestEdgeReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	releases, err := utils.HTTPGetJSON[[]GitHubRelease](url, 10*time.Second)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
+	if len(*releases) > 0 {
+		return &(*releases)[0], nil
 	}
-	defer func() {
-		// Ignore error in defer cleanup
-		if err := resp.Body.Close(); err != nil {
-			// Best effort cleanup - ignore error
-			log.Printf("failed to close response body: %v", err)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read error response: %w", err)
-		}
-		return nil, fmt.Errorf("%w: %s", errGitHubAPIError, body)
-	}
-
-	var releases []GitHubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
-		return nil, err
-	}
-
-	if len(releases) > 0 {
-		return &releases[0], nil
-	}
-
 	return nil, errNoReleasesFound
 }
 
@@ -627,7 +545,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	}
 
 	fileOps := fileops.New()
-	return fileOps.File.WriteFile(targetPath, data, 0o644)
+	return fileOps.File.WriteFile(targetPath, data, fileops.PermFile)
 }
 
 // validateExtractPath validates that a file path stays within the destination directory
@@ -715,7 +633,7 @@ func extractTarGz(src, dest string) error {
 		}
 
 		// Ensure the destination directory exists
-		if dirErr := os.MkdirAll(filepath.Dir(destPath), 0o750); dirErr != nil {
+		if dirErr := os.MkdirAll(filepath.Dir(destPath), fileops.PermDirSensitive); dirErr != nil {
 			return fmt.Errorf("failed to create destination directory for %s: %w", destPath, dirErr)
 		}
 
@@ -769,9 +687,9 @@ func normalizeFileMode(mode os.FileMode) os.FileMode {
 
 	// If file has any execute bit, make it 0o755, otherwise 0o644
 	if mode&0o111 != 0 {
-		return 0o755
+		return fileops.PermFileExecutable
 	}
-	return 0o644
+	return fileops.PermFile
 }
 
 // copyFile copies a file from src to dst
@@ -842,7 +760,7 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 
 	// Create temporary extraction directory
 	extractDir := filepath.Join(updateDir, "extract")
-	if mkdirErr := os.MkdirAll(extractDir, 0o750); mkdirErr != nil {
+	if mkdirErr := os.MkdirAll(extractDir, fileops.PermDirSensitive); mkdirErr != nil {
 		return fmt.Errorf("failed to create extraction directory: %w", mkdirErr)
 	}
 
@@ -881,8 +799,7 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 	}
 
 	// Ensure binary is executable
-	//nolint:gosec // G302: Binary files need execute permissions
-	if err := os.Chmod(outputPath, 0o755); err != nil {
+	if err := os.Chmod(outputPath, fileops.PermFileExecutable); err != nil {
 		return fmt.Errorf("failed to make binary executable: %w", err)
 	}
 
