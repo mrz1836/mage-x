@@ -151,6 +151,47 @@ func sortModules(modules []ModuleInfo) {
 	}
 }
 
+// runInModuleDir handles directory management for module commands using generics.
+// It prefers DirRunner if available, otherwise falls back to os.Chdir with mutex protection.
+// This consolidates the directory switching logic used by both runCommandInModuleWithRunner
+// and runCommandInModuleOutputWithRunner.
+func runInModuleDir[T any](module ModuleInfo, runner CommandRunner,
+	dirFn func(dirRunner DirRunner, path string) (T, error),
+	fallbackFn func() (T, error),
+) (T, error) {
+	// Prefer DirRunner interface - it's goroutine-safe
+	if dirRunner, ok := runner.(DirRunner); ok {
+		return dirFn(dirRunner, module.Path)
+	}
+
+	// Fallback: Use os.Chdir with mutex protection
+	// WARNING: This is not ideal for high parallelism but provides safety for legacy runners
+	chdirMu.Lock()
+	defer chdirMu.Unlock()
+
+	var zero T
+
+	// Save current directory
+	originalDir, err := os.Getwd()
+	if err != nil {
+		return zero, fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Change to module directory
+	if err = os.Chdir(module.Path); err != nil {
+		return zero, fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
+	}
+
+	// Ensure we change back to original directory
+	defer func() {
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			utils.Error("Failed to change back to original directory: %v", chErr)
+		}
+	}()
+
+	return fallbackFn()
+}
+
 // runCommandInModule runs a command in a specific module directory
 func runCommandInModule(module ModuleInfo, command string, args ...string) error {
 	return runCommandInModuleWithRunner(module, GetRunner(), command, args...)
@@ -165,72 +206,29 @@ func runCommandInModuleOutput(module ModuleInfo, command string, args ...string)
 // If the runner implements DirRunner, it uses the goroutine-safe RunCmdOutputInDir method.
 // Otherwise, falls back to os.Chdir with mutex protection for safety.
 func runCommandInModuleOutputWithRunner(module ModuleInfo, runner CommandRunner, command string, args ...string) (string, error) {
-	// Prefer DirRunner interface - it's goroutine-safe
-	if dirRunner, ok := runner.(DirRunner); ok {
-		return dirRunner.RunCmdOutputInDir(module.Path, command, args...)
-	}
-
-	// Fallback: Use os.Chdir with mutex protection
-	// WARNING: This is not ideal for high parallelism but provides safety for legacy runners
-	chdirMu.Lock()
-	defer chdirMu.Unlock()
-
-	// Save current directory
-	originalDir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get current directory: %w", err)
-	}
-
-	// Change to module directory
-	if err = os.Chdir(module.Path); err != nil {
-		return "", fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
-	}
-
-	// Ensure we change back to original directory
-	defer func() {
-		if chErr := os.Chdir(originalDir); chErr != nil {
-			utils.Error("Failed to change back to original directory: %v", chErr)
-		}
-	}()
-
-	// Run the command and capture output
-	return runner.RunCmdOutput(command, args...)
+	return runInModuleDir(module, runner,
+		func(dirRunner DirRunner, path string) (string, error) {
+			return dirRunner.RunCmdOutputInDir(path, command, args...)
+		},
+		func() (string, error) {
+			return runner.RunCmdOutput(command, args...)
+		},
+	)
 }
 
 // runCommandInModuleWithRunner runs a command in a specific module directory using the provided runner.
 // If the runner implements DirRunner, it uses the goroutine-safe RunCmdInDir method.
 // Otherwise, falls back to os.Chdir with mutex protection for safety.
 func runCommandInModuleWithRunner(module ModuleInfo, runner CommandRunner, command string, args ...string) error {
-	// Prefer DirRunner interface - it's goroutine-safe
-	if dirRunner, ok := runner.(DirRunner); ok {
-		return dirRunner.RunCmdInDir(module.Path, command, args...)
-	}
-
-	// Fallback: Use os.Chdir with mutex protection
-	// WARNING: This is not ideal for high parallelism but provides safety for legacy runners
-	chdirMu.Lock()
-	defer chdirMu.Unlock()
-
-	// Save current directory
-	originalDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
-	}
-
-	// Change to module directory
-	if err = os.Chdir(module.Path); err != nil {
-		return fmt.Errorf("failed to change to directory %s: %w", module.Path, err)
-	}
-
-	// Ensure we change back to original directory
-	defer func() {
-		if chErr := os.Chdir(originalDir); chErr != nil {
-			utils.Error("Failed to change back to original directory: %v", chErr)
-		}
-	}()
-
-	// Run the command
-	return runner.RunCmd(command, args...)
+	_, err := runInModuleDir(module, runner,
+		func(dirRunner DirRunner, path string) (struct{}, error) {
+			return struct{}{}, dirRunner.RunCmdInDir(path, command, args...)
+		},
+		func() (struct{}, error) {
+			return struct{}{}, runner.RunCmd(command, args...)
+		},
+	)
+	return err
 }
 
 // displayModuleHeader displays a header for the current module being processed
