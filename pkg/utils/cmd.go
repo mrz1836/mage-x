@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	pkgexec "github.com/mrz1836/mage-x/pkg/exec"
 )
 
@@ -18,7 +19,7 @@ var defaultExecutor = pkgexec.Simple() //nolint:gochecknoglobals // Package sing
 // RunCmd executes a command and returns its output
 // Uses the unified pkg/exec package under the hood
 func RunCmd(name string, args ...string) error {
-	if IsVerbose() {
+	if env.IsVerbose() {
 		Info("➤ %s %s", name, strings.Join(args, " "))
 	}
 
@@ -37,7 +38,7 @@ func RunCmdV(name string, args ...string) error {
 // RunCmdOutput executes a command and returns its output
 // Uses the unified pkg/exec package under the hood
 func RunCmdOutput(name string, args ...string) (string, error) {
-	if IsVerbose() {
+	if env.IsVerbose() {
 		Info("➤ %s %s", name, strings.Join(args, " "))
 	}
 
@@ -92,7 +93,7 @@ func CommandExists(cmd string) bool {
 // This is a convenience function for secure command execution
 func RunCmdSecure(name string, args ...string) error {
 	executor := pkgexec.Secure()
-	if IsVerbose() {
+	if env.IsVerbose() {
 		Info("➤ [secure] %s %s", name, strings.Join(args, " "))
 	}
 
@@ -105,7 +106,7 @@ func RunCmdSecure(name string, args ...string) error {
 // RunCmdWithRetry executes a command with retry support for transient failures
 func RunCmdWithRetry(maxRetries int, name string, args ...string) error {
 	executor := pkgexec.SecureWithRetry(maxRetries)
-	if IsVerbose() {
+	if env.IsVerbose() {
 		Info("➤ [retryable:%d] %s %s", maxRetries, name, strings.Join(args, " "))
 	}
 

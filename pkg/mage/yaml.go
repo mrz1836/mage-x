@@ -8,6 +8,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -221,7 +222,7 @@ func (Yaml) Update() error {
 func (Yaml) Template() error {
 	utils.Header("📄 Creating Configuration Template")
 
-	projectType := utils.GetEnv("MAGE_X_PROJECT_TYPE", "library")
+	projectType := env.GetString("MAGE_X_PROJECT_TYPE", "library")
 
 	var config *YamlConfig
 
@@ -424,39 +425,39 @@ func populateFromProject(config *YamlConfig) {
 // updateFromEnv updates configuration from environment variables
 func updateFromEnv(config *YamlConfig) {
 	// Update from environment variables
-	if name := utils.GetEnv("MAGE_X_PROJECT_NAME", ""); name != "" {
+	if name := env.GetString("MAGE_X_PROJECT_NAME", ""); name != "" {
 		config.Project.Name = name
 	}
 
-	if desc := utils.GetEnv("MAGE_X_PROJECT_DESCRIPTION", ""); desc != "" {
+	if desc := env.GetString("MAGE_X_PROJECT_DESCRIPTION", ""); desc != "" {
 		config.Project.Description = desc
 	}
 
-	if envVersion := utils.GetEnv("MAGE_X_PROJECT_VERSION", ""); envVersion != "" {
+	if envVersion := env.GetString("MAGE_X_PROJECT_VERSION", ""); envVersion != "" {
 		config.Project.Version = envVersion
 	}
 
-	if license := utils.GetEnv("MAGE_X_PROJECT_LICENSE", ""); license != "" {
+	if license := env.GetString("MAGE_X_PROJECT_LICENSE", ""); license != "" {
 		config.Project.License = license
 	}
 
 	// Build configuration
-	if ldflags := utils.GetEnv("MAGE_X_BUILD_LDFLAGS", ""); ldflags != "" {
+	if ldflags := env.GetString("MAGE_X_BUILD_LDFLAGS", ""); ldflags != "" {
 		config.Build.LDFlags = ldflags
 	}
 
-	if platforms := utils.GetEnv("MAGE_X_BUILD_PLATFORMS", ""); platforms != "" {
+	if platforms := env.GetString("MAGE_X_BUILD_PLATFORMS", ""); platforms != "" {
 		config.Build.Platforms = strings.Split(platforms, ",")
 	}
 
 	// Test configuration
-	if timeout := utils.GetEnv("MAGE_X_TEST_TIMEOUT", ""); timeout != "" {
+	if timeout := env.GetString("MAGE_X_TEST_TIMEOUT", ""); timeout != "" {
 		config.Test.Timeout = timeout
 	}
 
-	config.Test.Verbose = utils.GetEnvBool("TEST_VERBOSE", config.Test.Verbose)
-	config.Test.Race = utils.GetEnvBool("TEST_RACE", config.Test.Race)
-	config.Test.Cover = utils.GetEnvBool("TEST_COVER", config.Test.Cover)
+	config.Test.Verbose = env.GetBool("TEST_VERBOSE", config.Test.Verbose)
+	config.Test.Race = env.GetBool("TEST_RACE", config.Test.Race)
+	config.Test.Cover = env.GetBool("TEST_COVER", config.Test.Cover)
 }
 
 // loadConfig loads configuration from file

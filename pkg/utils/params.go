@@ -31,7 +31,7 @@ func ParseParams(args []string) map[string]string {
 			// Boolean flag format (key without value means true)
 			key := strings.TrimSpace(arg)
 			if key != "" {
-				params[key] = TrueValue
+				params[key] = "true"
 			}
 		}
 	}
@@ -62,7 +62,7 @@ func IsParamTrue(params map[string]string, key string) bool {
 	}
 
 	value = strings.ToLower(strings.TrimSpace(value))
-	return value == TrueValue || value == "1" || value == "yes" || value == "on"
+	return value == "true" || value == "1" || value == "yes" || value == "on"
 }
 
 // IsParamFalse checks if a parameter is explicitly set to a falsy value

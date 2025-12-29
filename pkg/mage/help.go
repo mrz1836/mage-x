@@ -13,6 +13,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -146,7 +147,7 @@ func (Help) Commands() error {
 
 // Command shows detailed help for a specific command or namespace
 func (Help) Command() error {
-	commandName := utils.GetEnv("COMMAND", "")
+	commandName := env.GetString("COMMAND", "")
 	if commandName == "" {
 		return errHelpCommandRequired
 	}
@@ -375,7 +376,7 @@ Happy coding with MAGE-X! 🎉`)
 
 // Completions generates shell completions
 func (Help) Completions() error {
-	shell := utils.GetEnv("SHELL", "bash")
+	shell := env.GetString("SHELL", "bash")
 
 	utils.Header("🔗 Shell Completions")
 

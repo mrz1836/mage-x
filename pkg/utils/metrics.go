@@ -236,7 +236,7 @@ func createDefaultCollector() *MetricsCollector {
 	config := DefaultMetricsConfig()
 
 	// Check if metrics are enabled via environment variable
-	if os.Getenv("MAGE_X_METRICS_ENABLED") == TrueValue {
+	if os.Getenv("MAGE_X_METRICS_ENABLED") == "true" {
 		config.Enabled = true
 	}
 

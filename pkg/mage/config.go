@@ -11,7 +11,6 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
-	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Config represents the mage configuration
@@ -170,56 +169,6 @@ var (
 // GetConfig returns the current configuration using the active ConfigProvider
 func GetConfig() (*Config, error) {
 	return GetConfigProvider().GetConfig()
-}
-
-// GetToolVersion returns the version for a given tool, reading from environment variables
-// with fallback to configuration or empty string if not found. This provides a centralized way to get tool versions.
-func GetToolVersion(toolName string) string {
-	// Define the mapping from tool names to environment variables
-	toolVersionMap := map[string]struct {
-		envVar       string
-		legacyEnvVar string
-	}{
-		"golangci-lint": {"MAGE_X_GOLANGCI_LINT_VERSION", "GOLANGCI_LINT_VERSION"},
-		"gofumpt":       {"MAGE_X_GOFUMPT_VERSION", "GOFUMPT_VERSION"},
-		"yamlfmt":       {"MAGE_X_YAMLFMT_VERSION", "YAMLFMT_VERSION"},
-		"govulncheck":   {"MAGE_X_GOVULNCHECK_VERSION", "GOVULNCHECK_VERSION"},
-		"mockgen":       {"MAGE_X_MOCKGEN_VERSION", "MOCKGEN_VERSION"},
-		"swag":          {"MAGE_X_SWAG_VERSION", "SWAG_VERSION"},
-		"staticcheck":   {"MAGE_X_STATICCHECK_VERSION", ""},
-		"nancy":         {"MAGE_X_NANCY_VERSION", "NANCY_VERSION"},
-		"gitleaks":      {"MAGE_X_GITLEAKS_VERSION", "GITLEAKS_VERSION"},
-		"goreleaser":    {"MAGE_X_GORELEASER_VERSION", "GORELEASER_VERSION"},
-	}
-
-	toolInfo, exists := toolVersionMap[toolName]
-	if !exists {
-		// For unknown tools, try to construct environment variable name
-		envVar := "MAGE_X_" + strings.ToUpper(strings.ReplaceAll(toolName, "-", "_")) + "_VERSION"
-		if version = os.Getenv(envVar); version != "" {
-			return version
-		}
-		utils.Warn("Tool version for %s not found in environment variables (%s)", toolName, envVar)
-		utils.Warn("Consider sourcing .github/.env.base: source .github/.env.base")
-		return ""
-	}
-
-	// Check primary environment variable first
-	if version = os.Getenv(toolInfo.envVar); version != "" {
-		return version
-	}
-
-	// Check legacy environment variable for backward compatibility
-	if toolInfo.legacyEnvVar != "" {
-		if version = os.Getenv(toolInfo.legacyEnvVar); version != "" {
-			return version
-		}
-	}
-
-	// Warn if not found and return empty string
-	utils.Warn("Tool version for %s not found in environment variables (%s)", toolName, toolInfo.envVar)
-	utils.Warn("Consider sourcing .github/.env.base: source .github/.env.base")
-	return ""
 }
 
 // TestResetConfig resets the config for testing purposes only
@@ -582,26 +531,26 @@ func applyDownloadEnvOverrides(cfg *DownloadConfig) {
 // applyToolVersionEnvOverrides applies environment variable overrides to tool versions
 func applyToolVersionEnvOverrides(cfg *ToolsConfig) {
 	// Core linting tools
-	if v := utils.GetEnvClean("MAGE_X_GOLANGCI_LINT_VERSION"); v != "" {
+	if v := env.MustGet("MAGE_X_GOLANGCI_LINT_VERSION"); v != "" {
 		cfg.GolangciLint = v
 	}
-	if v := utils.GetEnvClean("MAGE_X_GOFUMPT_VERSION"); v != "" {
+	if v := env.MustGet("MAGE_X_GOFUMPT_VERSION"); v != "" {
 		cfg.Fumpt = v
 	}
-	if v := utils.GetEnvClean("MAGE_X_YAMLFMT_VERSION"); v != "" {
+	if v := env.MustGet("MAGE_X_YAMLFMT_VERSION"); v != "" {
 		cfg.Yamlfmt = v
 	}
 
 	// Security scanning tools
-	if v := utils.GetEnvClean("MAGE_X_GOVULNCHECK_VERSION"); v != "" {
+	if v := env.MustGet("MAGE_X_GOVULNCHECK_VERSION"); v != "" {
 		cfg.GoVulnCheck = v
 	}
 
 	// Code generation tools
-	if v := utils.GetEnvClean("MAGE_X_MOCKGEN_VERSION"); v != "" {
+	if v := env.MustGet("MAGE_X_MOCKGEN_VERSION"); v != "" {
 		cfg.Mockgen = v
 	}
-	if v := utils.GetEnvClean("MAGE_X_SWAG_VERSION"); v != "" {
+	if v := env.MustGet("MAGE_X_SWAG_VERSION"); v != "" {
 		cfg.Swag = v
 	}
 }
@@ -631,7 +580,7 @@ func BuildTags() string {
 
 // IsConfigVerbose returns whether verbose mode is enabled in the config file.
 // This checks the Build.Verbose and Test.Verbose settings in the config file.
-// For environment-based verbose detection, use env.IsVerbose() or utils.IsVerbose().
+// For environment-based verbose detection, use env.IsVerbose().
 func IsConfigVerbose() bool {
 	c, err := GetConfig()
 	if err != nil {

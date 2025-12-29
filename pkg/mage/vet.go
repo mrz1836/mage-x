@@ -10,6 +10,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -81,12 +82,12 @@ func (Vet) Default() error {
 	args := []string{"vet"}
 
 	// Add verbose flag if requested
-	if verbose := utils.GetEnv("VERBOSE", ""); verbose == trueValue {
+	if verbose := env.GetString("VERBOSE", ""); verbose == trueValue {
 		args = append(args, "-v")
 	}
 
 	// Add build tags if specified
-	if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
+	if tags := env.GetString("MAGE_X_BUILD_TAGS", ""); tags != "" {
 		args = append(args, "-tags", tags)
 	}
 
@@ -109,12 +110,12 @@ func (Vet) All() error {
 	args := []string{"vet"}
 
 	// Add verbose flag if requested
-	if verbose := utils.GetEnv("VERBOSE", ""); verbose == trueValue {
+	if verbose := env.GetString("VERBOSE", ""); verbose == trueValue {
 		args = append(args, "-v")
 	}
 
 	// Add build tags if specified
-	if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
+	if tags := env.GetString("MAGE_X_BUILD_TAGS", ""); tags != "" {
 		args = append(args, "-tags", tags)
 	}
 
@@ -179,7 +180,7 @@ func (Vet) Parallel() error {
 			args := []string{"vet"}
 
 			// Add build tags if specified
-			if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
+			if tags := env.GetString("MAGE_X_BUILD_TAGS", ""); tags != "" {
 				args = append(args, "-tags", tags)
 			}
 
@@ -235,7 +236,7 @@ func (Vet) Shadow() error {
 	args := []string{"-test=false", "./..."}
 
 	// Add build tags if specified
-	if tags := utils.GetEnv("MAGE_X_BUILD_TAGS", ""); tags != "" {
+	if tags := env.GetString("MAGE_X_BUILD_TAGS", ""); tags != "" {
 		args = append([]string{"-tags", tags}, args...)
 	}
 

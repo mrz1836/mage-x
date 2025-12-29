@@ -177,7 +177,7 @@ func FuzzParseParams(f *testing.F) {
 				// Should parse as boolean flag
 				key := strings.TrimSpace(arg)
 				if key != "" {
-					expected[key] = TrueValue
+					expected[key] = "true"
 				}
 			}
 		}

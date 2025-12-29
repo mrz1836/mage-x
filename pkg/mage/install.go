@@ -11,6 +11,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	mageErrors "github.com/mrz1836/mage-x/pkg/common/errors"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -169,7 +170,7 @@ func (Install) Go() error {
 	}
 
 	// Get version
-	installVersion := utils.GetEnv("VERSION", getVersion())
+	installVersion := env.GetString("VERSION", getVersion())
 	if installVersion == versionDev || installVersion == "" {
 		installVersion = GetDefaultGoVulnCheckVersion()
 		if installVersion == "" {

@@ -14,6 +14,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/exec"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -1639,7 +1640,7 @@ func shouldUseVerboseMode(config *Config) bool {
 	}
 
 	// Check environment variable
-	if verboseEnv := utils.GetEnv("MAGE_X_LINT_VERBOSE", ""); verboseEnv != "" {
+	if verboseEnv := env.GetString("MAGE_X_LINT_VERBOSE", ""); verboseEnv != "" {
 		return verboseEnv == trueValue || verboseEnv == "1"
 	}
 

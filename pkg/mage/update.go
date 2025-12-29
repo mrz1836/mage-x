@@ -21,6 +21,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -157,7 +158,7 @@ func (Update) Install() error {
 
 // getUpdateChannel returns the configured update channel
 func getUpdateChannel() UpdateChannel {
-	channel := strings.ToLower(utils.GetEnv("UPDATE_CHANNEL", "stable"))
+	channel := strings.ToLower(env.GetString("UPDATE_CHANNEL", "stable"))
 
 	switch channel {
 	case "beta":

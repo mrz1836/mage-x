@@ -1,10 +1,6 @@
 package mage
 
-import (
-	"os"
-
-	"github.com/mrz1836/mage-x/pkg/utils"
-)
+import "os"
 
 // Command names
 const (
@@ -153,145 +149,11 @@ func GetMageXEnv(suffix string) string {
 	return os.Getenv(EnvPrefix + suffix)
 }
 
-// getToolVersionOrWarn returns tool version from environment or warns if not found
-func getToolVersionOrWarn(envVar, legacyEnvVar, toolName string) string {
-	// Check primary environment variable
-	if value := os.Getenv(envVar); value != "" {
-		return value
-	}
-
-	// Check legacy environment variable for backward compatibility
-	if legacyEnvVar != "" {
-		if value := os.Getenv(legacyEnvVar); value != "" {
-			return value
-		}
-	}
-
-	// Provide fallback defaults for tools - all use latest to avoid hardcoded versions
-	var fallback string
-	switch toolName {
-	case CmdGolangciLint:
-		fallback = VersionLatest // Use latest if env vars not loaded
-	case CmdGofumpt:
-		fallback = VersionLatest
-	case CmdYamlfmt:
-		fallback = VersionLatest // Use latest if env vars not loaded
-	case CmdGoVulnCheck:
-		fallback = VersionLatest // Use latest if env vars not loaded
-	case CmdMockgen:
-		fallback = VersionLatest
-	case CmdSwag:
-		fallback = VersionLatest
-	case "go":
-		fallback = VersionLatest // Use latest if env vars not loaded
-	default:
-		fallback = VersionLatest
-	}
-
-	// Warn if not found but provide fallback
-	utils.Warn("Tool version for %s not found in environment variables (%s)", toolName, envVar)
-	utils.Warn("Consider sourcing .github/.env.base: source .github/.env.base")
-	utils.Warn("Using fallback version: %s", fallback)
-	return fallback
-}
-
-// GetDefaultGolangciLintVersion returns the default golangci-lint version from env or fallback
-func GetDefaultGolangciLintVersion() string { return getToolVersionFromRegistry(CmdGolangciLint) }
-
-// GetDefaultGofumptVersion returns the default gofumpt version from env or fallback
-func GetDefaultGofumptVersion() string { return getToolVersionFromRegistry(CmdGofumpt) }
-
-// GetDefaultYamlfmtVersion returns the default yamlfmt version from env or fallback
-func GetDefaultYamlfmtVersion() string { return getToolVersionFromRegistry(CmdYamlfmt) }
-
-// GetDefaultGoVulnCheckVersion returns the default govulncheck version from env or fallback
-func GetDefaultGoVulnCheckVersion() string { return getToolVersionFromRegistry(CmdGoVulnCheck) }
-
-// GetDefaultMockgenVersion returns the default mockgen version from env or fallback
-func GetDefaultMockgenVersion() string { return getToolVersionFromRegistry(CmdMockgen) }
-
-// GetDefaultSwagVersion returns the default swag version from env or fallback
-func GetDefaultSwagVersion() string { return getToolVersionFromRegistry(CmdSwag) }
-
-// GetDefaultGoVersion returns the default Go version from env or fallback
-func GetDefaultGoVersion() string {
-	goVersion := getToolVersionOrWarn("MAGE_X_GO_VERSION", "GO_PRIMARY_VERSION", "go")
-	// Clean up the version to remove any .x suffix for actual usage
-	if goVersion != "" && len(goVersion) > 2 && goVersion[len(goVersion)-2:] == ".x" {
-		return goVersion[:len(goVersion)-2]
-	}
-	return goVersion
-}
-
-// GetSecondaryGoVersion returns the secondary Go version from env or fallback
-func GetSecondaryGoVersion() string {
-	secondaryVersion := getToolVersionOrWarn("MAGE_X_GO_SECONDARY_VERSION", "GO_SECONDARY_VERSION", "go")
-	// Clean up the version to remove any .x suffix for actual usage
-	if secondaryVersion != "" && len(secondaryVersion) > 2 && secondaryVersion[len(secondaryVersion)-2:] == ".x" {
-		return secondaryVersion[:len(secondaryVersion)-2]
-	}
-	return secondaryVersion
-}
-
 // Version constants for consistency
 const (
 	VersionLatest   = "latest"
 	VersionAtLatest = "@latest"
 )
-
-// toolVersionConfig holds configuration for tool version lookup
-type toolVersionConfig struct {
-	mageXEnvVar  string // Primary env var (e.g., "MAGE_X_GOLANGCI_LINT_VERSION")
-	legacyEnvVar string // Legacy env var (e.g., "GOLANGCI_LINT_VERSION")
-	toolName     string // Tool command name (e.g., "golangci-lint")
-}
-
-// toolVersionRegistry maps tool names to their version configuration
-//
-//nolint:gochecknoglobals // Required for package-level configuration registry
-var toolVersionRegistry = map[string]toolVersionConfig{
-	CmdGolangciLint: {
-		mageXEnvVar:  "MAGE_X_GOLANGCI_LINT_VERSION",
-		legacyEnvVar: "GOLANGCI_LINT_VERSION",
-		toolName:     CmdGolangciLint,
-	},
-	CmdGofumpt: {
-		mageXEnvVar:  "MAGE_X_GOFUMPT_VERSION",
-		legacyEnvVar: "GOFUMPT_VERSION",
-		toolName:     CmdGofumpt,
-	},
-	CmdYamlfmt: {
-		mageXEnvVar:  "MAGE_X_YAMLFMT_VERSION",
-		legacyEnvVar: "YAMLFMT_VERSION",
-		toolName:     CmdYamlfmt,
-	},
-	CmdGoVulnCheck: {
-		mageXEnvVar:  "MAGE_X_GOVULNCHECK_VERSION",
-		legacyEnvVar: "GOVULNCHECK_VERSION",
-		toolName:     CmdGoVulnCheck,
-	},
-	CmdMockgen: {
-		mageXEnvVar:  "MAGE_X_MOCKGEN_VERSION",
-		legacyEnvVar: "MOCKGEN_VERSION",
-		toolName:     CmdMockgen,
-	},
-	CmdSwag: {
-		mageXEnvVar:  "MAGE_X_SWAG_VERSION",
-		legacyEnvVar: "SWAG_VERSION",
-		toolName:     CmdSwag,
-	},
-}
-
-// getToolVersionFromRegistry returns the version for a tool using the registry.
-// This is the internal unified function used by GetDefault* functions.
-func getToolVersionFromRegistry(toolName string) string {
-	cfg, ok := toolVersionRegistry[toolName]
-	if !ok {
-		utils.Warn("Unknown tool: %s, using 'latest'", toolName)
-		return VersionLatest
-	}
-	return getToolVersionOrWarn(cfg.mageXEnvVar, cfg.legacyEnvVar, cfg.toolName)
-}
 
 // Error messages
 const (

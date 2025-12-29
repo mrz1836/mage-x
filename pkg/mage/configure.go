@@ -11,6 +11,7 @@ import (
 	"github.com/magefile/mage/mg"
 	"gopkg.in/yaml.v3"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -125,8 +126,8 @@ func (Configure) Export() error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	format := utils.GetEnv("FORMAT", "yaml")
-	output := utils.GetEnv("OUTPUT", "")
+	format := env.GetString("FORMAT", "yaml")
+	output := env.GetString("OUTPUT", "")
 
 	var data []byte
 	var ext string
@@ -170,7 +171,7 @@ func (Configure) Export() error {
 func (Configure) Import() error {
 	utils.Header("📥 Import Configuration")
 
-	importFile := utils.GetEnv("FILE", "")
+	importFile := env.GetString("FILE", "")
 	if importFile == "" {
 		return ErrFileEnvRequired
 	}
@@ -239,7 +240,7 @@ func (Configure) Validate() error {
 func (Configure) Schema() error {
 	utils.Header("📋 Configuration Schema")
 
-	output := utils.GetEnv("OUTPUT", "")
+	output := env.GetString("OUTPUT", "")
 
 	schema := generateConfigurationSchema()
 

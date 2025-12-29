@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -17,12 +18,12 @@ import (
 // getVersion returns the current version
 func getVersion() string {
 	// Check for release version override (used during release process)
-	if releaseVersion := utils.GetEnvClean("MAGE_X_RELEASE_VERSION"); releaseVersion != "" {
+	if releaseVersion := env.MustGet("MAGE_X_RELEASE_VERSION"); releaseVersion != "" {
 		return releaseVersion
 	}
 
 	// Check for environment variable override
-	if envVersion := utils.GetEnvClean("MAGE_X_VERSION"); envVersion != "" {
+	if envVersion := env.MustGet("MAGE_X_VERSION"); envVersion != "" {
 		return envVersion
 	}
 

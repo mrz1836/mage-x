@@ -5,9 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/common/env"
 )
 
 // cfgWithGoVersion creates a valid MageConfig with the specified Go version.

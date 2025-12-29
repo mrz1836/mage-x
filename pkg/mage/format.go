@@ -13,6 +13,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/exec"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -473,7 +474,7 @@ func ensureYamlfmt() error {
 
 // getFormatExcludePaths returns the list of paths to exclude from formatting
 func getFormatExcludePaths() []string {
-	excludePaths := utils.GetEnv("MAGE_X_FORMAT_EXCLUDE_PATHS", "vendor,node_modules,.git,.idea,.vscode")
+	excludePaths := env.GetString("MAGE_X_FORMAT_EXCLUDE_PATHS", "vendor,node_modules,.git,.idea,.vscode")
 	return strings.Split(excludePaths, ",")
 }
 
@@ -642,7 +643,7 @@ func (Format) YAML() error {
 	}
 
 	// Check if validation is enabled (default: true)
-	validationEnabled := utils.GetEnvBool(EnvYAMLValidation, true)
+	validationEnabled := env.GetBool(EnvYAMLValidation, true)
 
 	var safeFiles, problematicFiles []string
 

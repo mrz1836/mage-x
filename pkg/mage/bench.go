@@ -11,6 +11,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -193,11 +194,11 @@ func (Bench) CompareWithArgs(argsList ...string) error {
 	// Get benchmark files from parameters or environment
 	oldBenchFile := utils.GetParam(params, "old", "")
 	if oldBenchFile == "" {
-		oldBenchFile = utils.GetEnv("BENCH_OLD", "old.txt")
+		oldBenchFile = env.GetString("BENCH_OLD", "old.txt")
 	}
 	newBenchFile := utils.GetParam(params, "new", "")
 	if newBenchFile == "" {
-		newBenchFile = utils.GetEnv("BENCH_NEW", "new.txt")
+		newBenchFile = env.GetString("BENCH_NEW", "new.txt")
 	}
 
 	// Check if files exist
@@ -373,7 +374,7 @@ func (Bench) CPUWithArgs(argsList ...string) error {
 
 	profile := utils.GetParam(params, "profile", "cpu.prof")
 	if profile == "" {
-		profile = utils.GetEnv("CPU_PROFILE", "cpu.prof")
+		profile = env.GetString("CPU_PROFILE", "cpu.prof")
 	}
 	if err := os.Setenv("MAGE_X_BENCH_CPU_PROFILE", profile); err != nil {
 		return fmt.Errorf("failed to set MAGE_X_BENCH_CPU_PROFILE: %w", err)
@@ -411,7 +412,7 @@ func (Bench) MemWithArgs(argsList ...string) error {
 
 	profile := utils.GetParam(params, "profile", "mem.prof")
 	if profile == "" {
-		profile = utils.GetEnv("MEM_PROFILE", "mem.prof")
+		profile = env.GetString("MEM_PROFILE", "mem.prof")
 	}
 	if err := os.Setenv("MAGE_X_BENCH_MEM_PROFILE", profile); err != nil {
 		return fmt.Errorf("failed to set MAGE_X_BENCH_MEM_PROFILE: %w", err)
@@ -492,7 +493,7 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 
 	trace := utils.GetParam(params, "trace", "trace.out")
 	if trace == "" {
-		trace = utils.GetEnv("TRACE_FILE", "trace.out")
+		trace = env.GetString("TRACE_FILE", "trace.out")
 	}
 
 	// Discover all modules
@@ -614,7 +615,7 @@ func (Bench) RegressionWithArgs(argsList ...string) error {
 	}
 
 	// Check if we have a baseline
-	baseline := utils.GetEnv("BENCH_BASELINE", "bench-baseline.txt")
+	baseline := env.GetString("BENCH_BASELINE", "bench-baseline.txt")
 	if !utils.FileExists(baseline) {
 		utils.Warn("No baseline found at %s", baseline)
 		utils.Info("Creating baseline from current results...")
