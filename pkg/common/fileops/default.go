@@ -19,6 +19,13 @@ var (
 	ErrPathTraversalDetected = errors.New("invalid file path: path traversal detected")
 )
 
+// isPathTraversal checks if a path contains directory traversal patterns.
+// It cleans the path first to normalize it, then checks for ".." components.
+func isPathTraversal(path string) bool {
+	cleanPath := filepath.Clean(path)
+	return strings.Contains(cleanPath, "..")
+}
+
 // DefaultFileOperator implements FileOperator using standard library
 type DefaultFileOperator struct{}
 
@@ -29,13 +36,10 @@ func NewDefaultFileOperator() *DefaultFileOperator {
 
 // ReadFile reads the entire file and returns its contents
 func (d *DefaultFileOperator) ReadFile(path string) ([]byte, error) {
-	// Validate and clean the file path to prevent directory traversal
-	cleanPath := filepath.Clean(path)
-	if strings.Contains(cleanPath, "..") {
+	if isPathTraversal(path) {
 		return nil, ErrPathTraversalDetected
 	}
-
-	return os.ReadFile(cleanPath)
+	return os.ReadFile(filepath.Clean(path))
 }
 
 // WriteFile writes data to a file with the specified permissions
@@ -85,12 +89,12 @@ func (d *DefaultFileOperator) Chmod(path string, mode os.FileMode) error {
 
 // Copy copies a file from src to dst
 func (d *DefaultFileOperator) Copy(src, dst string) error {
-	// Validate and clean file paths to prevent directory traversal
-	cleanSrc := filepath.Clean(src)
-	cleanDst := filepath.Clean(dst)
-	if strings.Contains(cleanSrc, "..") || strings.Contains(cleanDst, "..") {
+	if isPathTraversal(src) || isPathTraversal(dst) {
 		return ErrPathTraversalDetected
 	}
+
+	cleanSrc := filepath.Clean(src)
+	cleanDst := filepath.Clean(dst)
 
 	sourceFile, err := os.Open(cleanSrc)
 	if err != nil {
@@ -114,12 +118,12 @@ func (d *DefaultFileOperator) Copy(src, dst string) error {
 	}
 
 	// Copy file permissions
-	sourceInfo, err := os.Stat(src)
+	sourceInfo, err := os.Stat(cleanSrc)
 	if err != nil {
 		return fmt.Errorf("failed to stat source file: %w", err)
 	}
 
-	return os.Chmod(dst, sourceInfo.Mode())
+	return os.Chmod(cleanDst, sourceInfo.Mode())
 }
 
 // ReadDir reads the directory and returns directory entries
@@ -322,22 +326,16 @@ func (d *DefaultSafeFileOperator) WriteFileAtomic(path string, data []byte, perm
 func (d *DefaultSafeFileOperator) WriteFileWithBackup(path string, data []byte, perm os.FileMode) error {
 	backupPath := path + ".bak"
 
-	// Try to create backup directly - handles non-existence gracefully
-	// This avoids TOCTOU race between Exists() check and Copy()
+	// Try to create backup directly - handles non-existence gracefully.
+	// This avoids TOCTOU race between Exists() check and Copy().
 	if err := d.Copy(path, backupPath); err != nil {
-		// Only fail if source exists but copy failed for other reason
-		// Use errors.Is to handle wrapped errors (Copy wraps os errors)
-		if !errors.Is(err, os.ErrNotExist) && !os.IsNotExist(err) {
-			// Also check the underlying error message for "no such file"
-			// since the error might be wrapped in a way that loses the type
-			if !strings.Contains(err.Error(), "no such file") {
-				return fmt.Errorf("failed to create backup: %w", err)
-			}
+		// errors.Is properly handles wrapped errors, so this single check is sufficient.
+		// If source doesn't exist, that's expected - no backup needed.
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("failed to create backup: %w", err)
 		}
-		// Source doesn't exist, no backup needed - continue to write
 	}
 
-	// Write the file
 	return d.WriteFile(path, data, perm)
 }
 
