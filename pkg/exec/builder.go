@@ -144,8 +144,8 @@ func (b *Builder) WithAuditMetadata(key, value string) *Builder {
 // Build constructs the executor chain
 // The order of decorators from innermost to outermost is:
 // Base -> EnvFilter -> Validation -> Audit -> Retry -> Timeout
-func (b *Builder) Build() Executor {
-	var executor Executor = b.base
+func (b *Builder) Build() FullExecutor {
+	var executor FullExecutor = b.base
 
 	// Apply env filtering first (closest to execution)
 	if b.useEnvFilter {
@@ -193,7 +193,7 @@ func (b *Builder) Build() Executor {
 // - Validation
 // - Environment filtering
 // - Adaptive timeouts
-func Secure() Executor {
+func Secure() FullExecutor {
 	return NewBuilder().
 		WithValidation().
 		WithEnvFiltering().
@@ -202,7 +202,7 @@ func Secure() Executor {
 }
 
 // SecureWithRetry creates a secure executor with retry support
-func SecureWithRetry(maxRetries int) Executor {
+func SecureWithRetry(maxRetries int) FullExecutor {
 	return NewBuilder().
 		WithValidation().
 		WithEnvFiltering().

@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 )
 
 // TimeoutExecutor wraps an executor with timeout support
 type TimeoutExecutor struct {
-	wrapped Executor
+	wrapped FullExecutor
 
 	// DefaultTimeout is the timeout for commands without a specified timeout
 	DefaultTimeout time.Duration
@@ -50,7 +51,7 @@ func WithTimeoutResolver(resolver TimeoutResolver) TimeoutOption {
 }
 
 // NewTimeoutExecutor creates a new timeout executor
-func NewTimeoutExecutor(wrapped Executor, opts ...TimeoutOption) *TimeoutExecutor {
+func NewTimeoutExecutor(wrapped FullExecutor, opts ...TimeoutOption) *TimeoutExecutor {
 	t := &TimeoutExecutor{
 		wrapped:        wrapped,
 		DefaultTimeout: 5 * time.Minute, // Default timeout
@@ -79,6 +80,46 @@ func (t *TimeoutExecutor) ExecuteOutput(ctx context.Context, name string, args .
 
 	output, err := t.wrapped.ExecuteOutput(ctx, name, args...)
 	return output, t.wrapTimeoutError(err, name, timeout)
+}
+
+// ExecuteWithEnv runs a command with additional environment variables and timeout
+func (t *TimeoutExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
+	timeout := t.getTimeout(name, args)
+	ctx, cancel := t.contextWithTimeout(ctx, timeout)
+	defer cancel()
+
+	err := t.wrapped.ExecuteWithEnv(ctx, env, name, args...)
+	return t.wrapTimeoutError(err, name, timeout)
+}
+
+// ExecuteInDir runs a command in the specified directory with timeout
+func (t *TimeoutExecutor) ExecuteInDir(ctx context.Context, dir, name string, args ...string) error {
+	timeout := t.getTimeout(name, args)
+	ctx, cancel := t.contextWithTimeout(ctx, timeout)
+	defer cancel()
+
+	err := t.wrapped.ExecuteInDir(ctx, dir, name, args...)
+	return t.wrapTimeoutError(err, name, timeout)
+}
+
+// ExecuteOutputInDir runs a command in the specified directory with timeout and returns output
+func (t *TimeoutExecutor) ExecuteOutputInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
+	timeout := t.getTimeout(name, args)
+	ctx, cancel := t.contextWithTimeout(ctx, timeout)
+	defer cancel()
+
+	output, err := t.wrapped.ExecuteOutputInDir(ctx, dir, name, args...)
+	return output, t.wrapTimeoutError(err, name, timeout)
+}
+
+// ExecuteStreaming runs a command with custom stdout/stderr and timeout
+func (t *TimeoutExecutor) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error {
+	timeout := t.getTimeout(name, args)
+	ctx, cancel := t.contextWithTimeout(ctx, timeout)
+	defer cancel()
+
+	err := t.wrapped.ExecuteStreaming(ctx, stdout, stderr, name, args...)
+	return t.wrapTimeoutError(err, name, timeout)
 }
 
 // getTimeout returns the timeout for a command
@@ -168,5 +209,5 @@ func (r *AdaptiveTimeoutResolver) GetTimeout(name string, args []string) time.Du
 	return r.DefaultTimeout
 }
 
-// Ensure TimeoutExecutor implements Executor
-var _ Executor = (*TimeoutExecutor)(nil)
+// Ensure TimeoutExecutor implements FullExecutor
+var _ FullExecutor = (*TimeoutExecutor)(nil)

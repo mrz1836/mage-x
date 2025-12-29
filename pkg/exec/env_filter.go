@@ -10,7 +10,7 @@ import (
 
 // EnvFilteringExecutor wraps an executor with environment variable filtering
 type EnvFilteringExecutor struct {
-	wrapped Executor
+	wrapped FullExecutor
 
 	// SensitivePrefixes are environment variable prefixes to filter out
 	SensitivePrefixes []string
@@ -60,7 +60,7 @@ var DefaultEnvWhitelist = map[string][]string{
 }
 
 // NewEnvFilteringExecutor creates a new environment filtering executor
-func NewEnvFilteringExecutor(wrapped Executor, opts ...EnvFilterOption) *EnvFilteringExecutor {
+func NewEnvFilteringExecutor(wrapped FullExecutor, opts ...EnvFilterOption) *EnvFilteringExecutor {
 	e := &EnvFilteringExecutor{
 		wrapped:           wrapped,
 		SensitivePrefixes: DefaultSensitivePrefixes,
@@ -121,6 +121,27 @@ func (e *EnvFilteringExecutor) ExecuteStreaming(ctx context.Context, stdout, std
 	return cmd.Run()
 }
 
+// ExecuteInDir runs a command in the specified directory with filtered environment
+func (e *EnvFilteringExecutor) ExecuteInDir(ctx context.Context, dir, name string, args ...string) error {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Env = e.FilterEnvironment(os.Environ(), name)
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+// ExecuteOutputInDir runs a command in the specified directory with filtered environment and returns output
+func (e *EnvFilteringExecutor) ExecuteOutputInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Env = e.FilterEnvironment(os.Environ(), name)
+	cmd.Dir = dir
+
+	output, err := cmd.CombinedOutput()
+	return string(output), err
+}
+
 // FilterEnvironment removes sensitive environment variables
 func (e *EnvFilteringExecutor) FilterEnvironment(env []string, commandName string) []string {
 	filtered := make([]string, 0, len(env))
@@ -170,9 +191,5 @@ func (e *EnvFilteringExecutor) FilterEnvironment(env []string, commandName strin
 	return filtered
 }
 
-// Ensure EnvFilteringExecutor implements interfaces
-var (
-	_ Executor          = (*EnvFilteringExecutor)(nil)
-	_ ExecutorWithEnv   = (*EnvFilteringExecutor)(nil)
-	_ StreamingExecutor = (*EnvFilteringExecutor)(nil)
-)
+// Ensure EnvFilteringExecutor implements FullExecutor
+var _ FullExecutor = (*EnvFilteringExecutor)(nil)

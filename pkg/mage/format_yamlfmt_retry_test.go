@@ -59,10 +59,12 @@ func TestEnsureYamlfmtRetryLogicIntegration(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a real SecureCommandRunner for testing version handling
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 		secureRunner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
@@ -104,10 +106,12 @@ func TestYamlfmtRetryBehaviorWithSecureExecutor(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 		secureRunner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
@@ -142,10 +146,12 @@ func TestYamlfmtVersionHandling(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 		secureRunner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
@@ -183,10 +189,12 @@ download:
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with dry run
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 		secureRunner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
@@ -212,10 +220,12 @@ download:
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with dry run
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 		secureRunner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
@@ -265,10 +275,12 @@ func TestYamlfmtInstallationScenarios(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 		secureRunner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
@@ -283,10 +295,12 @@ func TestYamlfmtInstallationScenarios(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 		secureRunner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 
@@ -304,10 +318,12 @@ func TestYamlfmtConcurrentInstallation(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 		secureRunner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(secureRunner) //nolint:errcheck // test setup
 

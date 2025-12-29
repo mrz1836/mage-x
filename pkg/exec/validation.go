@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
@@ -24,7 +25,7 @@ var (
 
 // ValidatingExecutor wraps an executor with security validation
 type ValidatingExecutor struct {
-	wrapped Executor
+	wrapped FullExecutor
 
 	// AllowedCommands is a whitelist of allowed commands (empty means allow all)
 	AllowedCommands map[string]bool
@@ -44,7 +45,7 @@ func WithAllowedCommands(commands []string) ValidatingOption {
 }
 
 // NewValidatingExecutor creates a new validating executor
-func NewValidatingExecutor(wrapped Executor, opts ...ValidatingOption) *ValidatingExecutor {
+func NewValidatingExecutor(wrapped FullExecutor, opts ...ValidatingOption) *ValidatingExecutor {
 	v := &ValidatingExecutor{
 		wrapped:         wrapped,
 		AllowedCommands: make(map[string]bool),
@@ -69,6 +70,38 @@ func (v *ValidatingExecutor) ExecuteOutput(ctx context.Context, name string, arg
 		return "", fmt.Errorf("command validation failed: %w", err)
 	}
 	return v.wrapped.ExecuteOutput(ctx, name, args...)
+}
+
+// ExecuteWithEnv validates and runs a command with additional environment variables
+func (v *ValidatingExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
+	if err := v.validate(name, args); err != nil {
+		return fmt.Errorf("command validation failed: %w", err)
+	}
+	return v.wrapped.ExecuteWithEnv(ctx, env, name, args...)
+}
+
+// ExecuteInDir validates and runs a command in the specified directory
+func (v *ValidatingExecutor) ExecuteInDir(ctx context.Context, dir, name string, args ...string) error {
+	if err := v.validate(name, args); err != nil {
+		return fmt.Errorf("command validation failed: %w", err)
+	}
+	return v.wrapped.ExecuteInDir(ctx, dir, name, args...)
+}
+
+// ExecuteOutputInDir validates and runs a command in the specified directory, returning output
+func (v *ValidatingExecutor) ExecuteOutputInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
+	if err := v.validate(name, args); err != nil {
+		return "", fmt.Errorf("command validation failed: %w", err)
+	}
+	return v.wrapped.ExecuteOutputInDir(ctx, dir, name, args...)
+}
+
+// ExecuteStreaming validates and runs a command with custom stdout/stderr
+func (v *ValidatingExecutor) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error {
+	if err := v.validate(name, args); err != nil {
+		return fmt.Errorf("command validation failed: %w", err)
+	}
+	return v.wrapped.ExecuteStreaming(ctx, stdout, stderr, name, args...)
 }
 
 // validate checks if a command is allowed to run
@@ -207,5 +240,5 @@ func ValidatePath(path string) error {
 	return nil
 }
 
-// Ensure ValidatingExecutor implements Executor
-var _ Executor = (*ValidatingExecutor)(nil)
+// Ensure ValidatingExecutor implements FullExecutor
+var _ FullExecutor = (*ValidatingExecutor)(nil)

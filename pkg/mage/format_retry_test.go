@@ -227,11 +227,13 @@ func TestInstallToolsWithSecureRunner(t *testing.T) {
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with DryRun enabled
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 
 		runner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(runner) //nolint:errcheck // test setup
 
@@ -271,11 +273,13 @@ download:
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create a SecureCommandRunner with dry run
-		executor := exec.NewBase(exec.WithDryRun(true))
+		executor := exec.NewBuilder().
+			WithDryRun(true).
+			WithValidation().
+			Build()
 
 		runner := &SecureCommandRunner{
-			executor:  executor,
-			validated: exec.NewValidatingExecutor(executor),
+			executor: executor,
 		}
 		_ = SetRunner(runner) //nolint:errcheck // test setup
 

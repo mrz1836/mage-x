@@ -2,6 +2,7 @@ package exec
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/retry"
@@ -9,7 +10,7 @@ import (
 
 // RetryingExecutor wraps an executor with retry support using the retry package
 type RetryingExecutor struct {
-	wrapped Executor
+	wrapped FullExecutor
 
 	// MaxRetries is the maximum number of retry attempts (not including the initial attempt)
 	MaxRetries int
@@ -56,7 +57,7 @@ func WithOnRetry(fn func(attempt int, err error, delay time.Duration)) RetryOpti
 }
 
 // NewRetryingExecutor creates a new retrying executor
-func NewRetryingExecutor(wrapped Executor, opts ...RetryOption) *RetryingExecutor {
+func NewRetryingExecutor(wrapped FullExecutor, opts ...RetryOption) *RetryingExecutor {
 	r := &RetryingExecutor{
 		wrapped:    wrapped,
 		MaxRetries: 3,
@@ -97,14 +98,70 @@ func (r *RetryingExecutor) ExecuteOutput(ctx context.Context, name string, args 
 	})
 }
 
+// ExecuteWithEnv runs a command with additional environment variables and retry support
+func (r *RetryingExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
+	cfg := &retry.Config{
+		MaxAttempts: r.MaxRetries + 1,
+		Classifier:  r.Classifier,
+		Backoff:     r.Backoff,
+		OnRetry:     r.OnRetry,
+	}
+
+	return retry.Do(ctx, cfg, func() error {
+		return r.wrapped.ExecuteWithEnv(ctx, env, name, args...)
+	})
+}
+
+// ExecuteInDir runs a command in the specified directory with retry support
+func (r *RetryingExecutor) ExecuteInDir(ctx context.Context, dir, name string, args ...string) error {
+	cfg := &retry.Config{
+		MaxAttempts: r.MaxRetries + 1,
+		Classifier:  r.Classifier,
+		Backoff:     r.Backoff,
+		OnRetry:     r.OnRetry,
+	}
+
+	return retry.Do(ctx, cfg, func() error {
+		return r.wrapped.ExecuteInDir(ctx, dir, name, args...)
+	})
+}
+
+// ExecuteOutputInDir runs a command in the specified directory with retry support and returns output
+func (r *RetryingExecutor) ExecuteOutputInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
+	cfg := &retry.Config{
+		MaxAttempts: r.MaxRetries + 1,
+		Classifier:  r.Classifier,
+		Backoff:     r.Backoff,
+		OnRetry:     r.OnRetry,
+	}
+
+	return retry.DoWithData(ctx, cfg, func() (string, error) {
+		return r.wrapped.ExecuteOutputInDir(ctx, dir, name, args...)
+	})
+}
+
+// ExecuteStreaming runs a command with custom stdout/stderr and retry support
+func (r *RetryingExecutor) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error {
+	cfg := &retry.Config{
+		MaxAttempts: r.MaxRetries + 1,
+		Classifier:  r.Classifier,
+		Backoff:     r.Backoff,
+		OnRetry:     r.OnRetry,
+	}
+
+	return retry.Do(ctx, cfg, func() error {
+		return r.wrapped.ExecuteStreaming(ctx, stdout, stderr, name, args...)
+	})
+}
+
 // CommandClassifier is a retry.Classifier specialized for command execution errors.
 // It extends the DefaultClassifier with additional command-specific patterns.
 //
 //nolint:gochecknoglobals // Intentional package-level singleton for convenience
 var CommandClassifier = retry.NewCommandClassifier()
 
-// Ensure RetryingExecutor implements Executor
-var _ Executor = (*RetryingExecutor)(nil)
+// Ensure RetryingExecutor implements FullExecutor
+var _ FullExecutor = (*RetryingExecutor)(nil)
 
 // ExecuteWithRetry executes a command with retry support, allowing per-call retry configuration.
 // This is a convenience function for cases where you need different retry settings per call.

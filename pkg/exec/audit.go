@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/user"
@@ -34,7 +35,7 @@ type AuditLogger interface {
 
 // AuditingExecutor wraps an executor with audit logging
 type AuditingExecutor struct {
-	wrapped    Executor
+	wrapped    FullExecutor
 	logger     AuditLogger
 	workingDir string
 	dryRun     bool
@@ -76,7 +77,7 @@ func WithAuditMetadata(key, value string) AuditingOption {
 }
 
 // NewAuditingExecutor creates a new auditing executor wrapper
-func NewAuditingExecutor(wrapped Executor, opts ...AuditingOption) *AuditingExecutor {
+func NewAuditingExecutor(wrapped FullExecutor, opts ...AuditingOption) *AuditingExecutor {
 	a := &AuditingExecutor{
 		wrapped:  wrapped,
 		metadata: make(map[string]string),
@@ -101,6 +102,38 @@ func (a *AuditingExecutor) ExecuteOutput(ctx context.Context, name string, args 
 	output, err := a.wrapped.ExecuteOutput(ctx, name, args...)
 	a.logAuditEvent(name, args, startTime, err)
 	return output, err
+}
+
+// ExecuteWithEnv runs a command with additional environment variables and audit logging
+func (a *AuditingExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
+	startTime := time.Now()
+	err := a.wrapped.ExecuteWithEnv(ctx, env, name, args...)
+	a.logAuditEvent(name, args, startTime, err)
+	return err
+}
+
+// ExecuteInDir runs a command in the specified directory with audit logging
+func (a *AuditingExecutor) ExecuteInDir(ctx context.Context, dir, name string, args ...string) error {
+	startTime := time.Now()
+	err := a.wrapped.ExecuteInDir(ctx, dir, name, args...)
+	a.logAuditEvent(name, args, startTime, err)
+	return err
+}
+
+// ExecuteOutputInDir runs a command in the specified directory with audit logging and returns output
+func (a *AuditingExecutor) ExecuteOutputInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
+	startTime := time.Now()
+	output, err := a.wrapped.ExecuteOutputInDir(ctx, dir, name, args...)
+	a.logAuditEvent(name, args, startTime, err)
+	return output, err
+}
+
+// ExecuteStreaming runs a command with custom stdout/stderr and audit logging
+func (a *AuditingExecutor) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error {
+	startTime := time.Now()
+	err := a.wrapped.ExecuteStreaming(ctx, stdout, stderr, name, args...)
+	a.logAuditEvent(name, args, startTime, err)
+	return err
 }
 
 // logAuditEvent creates and logs an audit event
@@ -191,5 +224,5 @@ func (d *DefaultAuditLogger) LogEvent(event AuditEvent) error {
 	return nil
 }
 
-// Ensure AuditingExecutor implements Executor
-var _ Executor = (*AuditingExecutor)(nil)
+// Ensure AuditingExecutor implements FullExecutor
+var _ FullExecutor = (*AuditingExecutor)(nil)

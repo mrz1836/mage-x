@@ -18,18 +18,19 @@ var (
 
 // SecureCommandRunner provides a secure implementation of CommandRunner using pkg/exec
 type SecureCommandRunner struct {
-	executor  exec.FullExecutor // Base executor for dir-specific operations
-	validated exec.Executor     // Validated executor for regular operations
+	executor exec.FullExecutor // Single validated executor for all operations
 }
 
 // NewSecureCommandRunner creates a new secure command runner
 func NewSecureCommandRunner() CommandRunner {
-	base := exec.NewBase(
-		exec.WithVerbose(false), // Set via environment if needed
-	)
+	// Build a single executor chain with validation
+	// All methods (Execute, ExecuteInDir, etc.) will be validated
+	executor := exec.NewBuilder().
+		WithValidation().
+		Build()
+
 	return &SecureCommandRunner{
-		executor:  base,
-		validated: exec.NewValidatingExecutor(base),
+		executor: executor,
 	}
 }
 
@@ -41,7 +42,7 @@ func (r *SecureCommandRunner) RunCmd(name string, args ...string) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err := r.validated.Execute(ctx, name, args...)
+	err := r.executor.Execute(ctx, name, args...)
 	return wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
 }
 
@@ -53,7 +54,7 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	output, err := r.validated.ExecuteOutput(ctx, name, args...)
+	output, err := r.executor.ExecuteOutput(ctx, name, args...)
 	return strings.TrimSpace(output), wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
 }
 
