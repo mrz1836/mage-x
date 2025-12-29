@@ -490,3 +490,169 @@ func BenchmarkParallel(b *testing.B) {
 		}
 	}
 }
+
+// TestCheckFileLineLength tests the CheckFileLineLength function
+func TestCheckFileLineLength(t *testing.T) {
+	t.Run("file within limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "short.txt")
+
+		content := "short line\nanother short line\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "should not have long lines")
+		assert.Equal(t, 0, lineNum, "line number should be 0 when no long lines found")
+		assert.Positive(t, lineLen, "max line length should be greater than 0")
+	})
+
+	t.Run("file exceeds limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "long.txt")
+
+		// Create file with a long line on line 2
+		content := "short\n" + strings.Repeat("x", 150) + "\nshort again\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong, "should have found long line")
+		assert.Equal(t, 2, lineNum, "long line should be on line 2")
+		assert.Equal(t, 150, lineLen, "line length should be 150")
+	})
+
+	t.Run("empty file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "empty.txt")
+
+		err := os.WriteFile(testFile, []byte{}, 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "empty file should not have long lines")
+		assert.Equal(t, 0, lineNum)
+		assert.Equal(t, 0, lineLen)
+	})
+
+	t.Run("non-existent file", func(t *testing.T) {
+		_, _, _, err := CheckFileLineLength("/nonexistent/file.txt", 100)
+		require.Error(t, err)
+	})
+
+	t.Run("first line exceeds limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "longfirst.txt")
+
+		content := strings.Repeat("x", 200) + "\nshort\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong)
+		assert.Equal(t, 1, lineNum, "long line should be on line 1")
+		assert.Equal(t, 200, lineLen)
+	})
+
+	t.Run("very long line larger than buffer", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "verylongline.txt")
+
+		// Create a line longer than the 128KB buffer
+		longLine := strings.Repeat("x", 200*1024) // 200KB line
+		content := "short\n" + longLine + "\nshort\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong, "should detect very long line")
+		assert.Equal(t, 2, lineNum, "long line should be on line 2")
+		assert.GreaterOrEqual(t, lineLen, 200*1024, "line length should be at least 200KB")
+	})
+}
+
+// TestRunCmdSecure tests the secure command execution
+func TestRunCmdSecure(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping secure command execution tests in short mode")
+	}
+
+	t.Run("success", func(t *testing.T) {
+		err := RunCmdSecure("echo", "secure test")
+		require.NoError(t, err)
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		err := RunCmdSecure("nonexistent-command-12345")
+		require.Error(t, err)
+	})
+}
+
+// TestRunCmdWithRetry tests the retry command execution
+func TestRunCmdWithRetry(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping retry command execution tests in short mode")
+	}
+
+	t.Run("success on first attempt", func(t *testing.T) {
+		err := RunCmdWithRetry(3, "echo", "retry test")
+		require.NoError(t, err)
+	})
+
+	t.Run("failure after retries", func(t *testing.T) {
+		err := RunCmdWithRetry(2, "nonexistent-command-12345")
+		require.Error(t, err)
+	})
+}
+
+// TestGetModuleNameInDir tests GetModuleNameInDir function
+func TestGetModuleNameInDir(t *testing.T) {
+	if !CommandExists("go") {
+		t.Skip("Go command not available")
+	}
+
+	t.Run("valid module directory", func(t *testing.T) {
+		// Test in the current project directory which should be a Go module
+		// Get the project root (go.mod should be there)
+		wd, err := os.Getwd()
+		require.NoError(t, err)
+
+		// Walk up to find go.mod
+		dir := wd
+		for !FileExists(filepath.Join(dir, "go.mod")) {
+
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				t.Skip("Could not find go.mod in parent directories")
+			}
+			dir = parent
+		}
+
+		moduleName, err := GetModuleNameInDir(dir)
+		require.NoError(t, err)
+		assert.NotEmpty(t, moduleName)
+		assert.Contains(t, moduleName, "mage-x", "module name should contain mage-x")
+	})
+
+	t.Run("invalid directory", func(t *testing.T) {
+		_, err := GetModuleNameInDir("/nonexistent/directory")
+		require.Error(t, err)
+	})
+
+	t.Run("directory without go.mod", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		moduleName, err := GetModuleNameInDir(tmpDir)
+		// Go returns "command-line-arguments" when not in a module
+		// This verifies the function handles non-module directories appropriately
+		if err == nil {
+			// Either returns empty or "command-line-arguments" for non-module directories
+			assert.True(t, moduleName == "" || moduleName == "command-line-arguments",
+				"should return empty or 'command-line-arguments' for non-module directory, got: %s", moduleName)
+		}
+	})
+}
