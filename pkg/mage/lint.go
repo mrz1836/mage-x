@@ -156,15 +156,15 @@ func (Lint) Default() error {
 			utils.Success("go vet passed for %s", module.Relative)
 		}
 
+		var moduleErr error
 		if hasError {
+			moduleErr = errLintingFailed
 			moduleErrors = append(moduleErrors, moduleError{
 				Module: module,
-				Error:  errLintingFailed,
+				Error:  moduleErr,
 			})
-			utils.Error("Linting failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Linting passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletion(module, "Linting", moduleStart, moduleErr)
 	}
 
 	// Report overall results
@@ -173,7 +173,7 @@ func (Lint) Default() error {
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("All linting passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletion("linting", "passed", totalStart)
 	return nil
 }
 
@@ -297,15 +297,21 @@ func (Lint) Fix() error {
 			utils.Success("Code formatted for %s", module.Relative)
 		}
 
+		var moduleErr error
 		if hasError {
+			moduleErr = errFixFailed
 			moduleErrors = append(moduleErrors, moduleError{
 				Module: module,
-				Error:  errFixFailed,
+				Error:  moduleErr,
 			})
-			utils.Error("Fix failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("All issues fixed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletionWithOptions(ModuleCompletionOptions{
+			Module:      module,
+			Operation:   "All issues",
+			StartTime:   moduleStart,
+			Err:         moduleErr,
+			SuccessVerb: "fixed",
+		})
 	}
 
 	// Report overall results
@@ -314,7 +320,12 @@ func (Lint) Fix() error {
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("All lint issues fixed and code formatted in %s", utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletionWithOptions(OverallCompletionOptions{
+		Operation: "lint issues",
+		Suffix:    " and code formatted",
+		Verb:      "fixed",
+		StartTime: totalStart,
+	})
 	return nil
 }
 
@@ -442,10 +453,8 @@ func (Lint) Vet() error {
 		err = runVetInModule(module, config)
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Vet failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Vet passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletion(module, "Vet", moduleStart, err)
 	}
 
 	// Report overall results
@@ -454,7 +463,7 @@ func (Lint) Vet() error {
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("All vet checks passed in %s", utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletion("vet checks", "passed", totalStart)
 	return nil
 }
 

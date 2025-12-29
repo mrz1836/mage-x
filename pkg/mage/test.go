@@ -193,10 +193,8 @@ func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
 		err := runCommandInModule(module, "go", args...)
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("%s failed for %s in %s", opts.logPrefix, module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("%s passed for %s in %s", opts.logPrefix, module.Relative, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletion(module, opts.logPrefix, moduleStart, err)
 	}
 
 	// Report overall results
@@ -205,7 +203,7 @@ func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("All %s completed in %s", opts.logPrefix, utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletion(opts.logPrefix, "completed", totalStart)
 	return nil
 }
 
@@ -1172,29 +1170,31 @@ func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, 
 		// Run tests in module directory using provided runner
 		err := runCommandInModuleWithRunner(module, runner, "go", testArgs...)
 
+		tagInfo = getTagInfo(buildTag)
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			tagInfo := getTagInfo(buildTag)
-			utils.Error("Coverage tests failed for %s%s in %s", module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
 		} else {
 			handleCoverageFileMove(module, coverFile, &coverageFiles)
-			tagInfo := getTagInfo(buildTag)
-			utils.Success("Coverage tests passed for %s%s in %s", module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletionWithSuffix(module, "Coverage tests", tagInfo, moduleStart, err)
 	}
 
 	// Handle coverage files
 	handleCoverageFilesWithBuildTag(coverageFiles, buildTag)
 
 	// Report overall results
+	tagInfo := getTagInfo(buildTag)
 	if len(moduleErrors) > 0 {
-		tagInfo := getTagInfo(buildTag)
 		utils.Error("Coverage tests%s failed in %d/%d modules", tagInfo, len(moduleErrors), len(filteredModules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	tagInfo := getTagInfo(buildTag)
-	utils.Success("All coverage tests%s passed in %s", tagInfo, utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletionWithOptions(OverallCompletionOptions{
+		Operation: "coverage tests",
+		Suffix:    tagInfo,
+		Verb:      "passed",
+		StartTime: totalStart,
+	})
 	return nil
 }
 
@@ -1244,25 +1244,26 @@ func runTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race, co
 		// Run tests in module directory using provided runner
 		err := runCommandInModuleWithRunner(module, runner, "go", testArgs...)
 
+		tagInfo := getTagInfo(buildTag)
 		if err != nil {
-			tagInfo := getTagInfo(buildTag)
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("%s tests failed for %s%s in %s", titleCase(testType), module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			tagInfo := getTagInfo(buildTag)
-			utils.Success("%s tests passed for %s%s in %s", titleCase(testType), module.Relative, tagInfo, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletionWithSuffix(module, titleCase(testType)+" tests", tagInfo, moduleStart, err)
 	}
 
 	// Report overall results
+	tagInfo := getTagInfo(buildTag)
 	if len(moduleErrors) > 0 {
-		tagInfo := getTagInfo(buildTag)
 		utils.Error("%s tests%s failed in %d/%d modules", titleCase(testType), tagInfo, len(moduleErrors), len(filteredModules))
 		return formatModuleErrors(moduleErrors)
 	}
 
-	tagInfo := getTagInfo(buildTag)
-	utils.Success("All %s tests%s passed in %s", testType, tagInfo, utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletionWithOptions(OverallCompletionOptions{
+		Operation: testType + " tests",
+		Suffix:    tagInfo,
+		Verb:      "passed",
+		StartTime: totalStart,
+	})
 	return nil
 }
 

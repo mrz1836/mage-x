@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFindAllModules(t *testing.T) {
@@ -675,4 +676,239 @@ func (s *simpleRunner) RunCmd(name string, _ ...string) error {
 
 func (s *simpleRunner) RunCmdOutput(name string, _ ...string) (string, error) {
 	return name, nil
+}
+
+func TestDisplayModuleCompletion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		module    ModuleInfo
+		operation string
+		err       error
+	}{
+		{
+			name:      "success for root module",
+			module:    ModuleInfo{Relative: "."},
+			operation: "Linting",
+			err:       nil,
+		},
+		{
+			name:      "success for submodule",
+			module:    ModuleInfo{Relative: "pkg/utils"},
+			operation: "Tests",
+			err:       nil,
+		},
+		{
+			name:      "error for module",
+			module:    ModuleInfo{Relative: "pkg/api"},
+			operation: "Benchmarks",
+			err:       os.ErrNotExist,
+		},
+		{
+			name:      "error for root module",
+			module:    ModuleInfo{Relative: "."},
+			operation: "Vet",
+			err:       os.ErrPermission,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayModuleCompletion(tt.module, tt.operation, fakeStartTime(), tt.err)
+		})
+	}
+}
+
+func TestDisplayModuleCompletionWithSuffix(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		module    ModuleInfo
+		operation string
+		suffix    string
+		err       error
+	}{
+		{
+			name:      "with build tag suffix",
+			module:    ModuleInfo{Relative: "pkg/api"},
+			operation: "Coverage tests",
+			suffix:    " [integration]",
+			err:       nil,
+		},
+		{
+			name:      "with empty suffix",
+			module:    ModuleInfo{Relative: "."},
+			operation: "Tests",
+			suffix:    "",
+			err:       nil,
+		},
+		{
+			name:      "error with suffix",
+			module:    ModuleInfo{Relative: "pkg/core"},
+			operation: "Unit tests",
+			suffix:    " (tag: unit)",
+			err:       os.ErrNotExist,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayModuleCompletionWithSuffix(tt.module, tt.operation, tt.suffix, fakeStartTime(), tt.err)
+		})
+	}
+}
+
+func TestDisplayModuleCompletionWithOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		opts ModuleCompletionOptions
+	}{
+		{
+			name: "default success verb",
+			opts: ModuleCompletionOptions{
+				Module:    ModuleInfo{Relative: "pkg/api"},
+				Operation: "Linting",
+				StartTime: fakeStartTime(),
+				Err:       nil,
+			},
+		},
+		{
+			name: "custom success verb - fixed",
+			opts: ModuleCompletionOptions{
+				Module:      ModuleInfo{Relative: "pkg/api"},
+				Operation:   "All issues",
+				StartTime:   fakeStartTime(),
+				Err:         nil,
+				SuccessVerb: "fixed",
+			},
+		},
+		{
+			name: "with suffix and custom verb",
+			opts: ModuleCompletionOptions{
+				Module:      ModuleInfo{Relative: "."},
+				Operation:   "Format",
+				Suffix:      " [yaml]",
+				StartTime:   fakeStartTime(),
+				Err:         nil,
+				SuccessVerb: "applied",
+			},
+		},
+		{
+			name: "error ignores success verb",
+			opts: ModuleCompletionOptions{
+				Module:      ModuleInfo{Relative: "pkg/core"},
+				Operation:   "Build",
+				StartTime:   fakeStartTime(),
+				Err:         os.ErrNotExist,
+				SuccessVerb: "completed", // Should be ignored for errors
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayModuleCompletionWithOptions(tt.opts)
+		})
+	}
+}
+
+func TestDisplayOverallCompletion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		operation string
+		verb      string
+	}{
+		{name: "linting passed", operation: "linting", verb: "passed"},
+		{name: "benchmarks completed", operation: "benchmarks", verb: "completed"},
+		{name: "vet checks passed", operation: "vet checks", verb: "passed"},
+		{name: "tests completed", operation: "tests", verb: "completed"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayOverallCompletion(tt.operation, tt.verb, fakeStartTime())
+		})
+	}
+}
+
+func TestDisplayOverallCompletionWithOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		opts OverallCompletionOptions
+	}{
+		{
+			name: "simple operation",
+			opts: OverallCompletionOptions{
+				Operation: "linting",
+				Verb:      "passed",
+				StartTime: fakeStartTime(),
+			},
+		},
+		{
+			name: "with prefix",
+			opts: OverallCompletionOptions{
+				Prefix:    "Unit ",
+				Operation: "tests",
+				Verb:      "passed",
+				StartTime: fakeStartTime(),
+			},
+		},
+		{
+			name: "with suffix",
+			opts: OverallCompletionOptions{
+				Operation: "coverage tests",
+				Suffix:    " [integration]",
+				Verb:      "passed",
+				StartTime: fakeStartTime(),
+			},
+		},
+		{
+			name: "with prefix and suffix",
+			opts: OverallCompletionOptions{
+				Prefix:    "Short ",
+				Operation: "tests",
+				Suffix:    " (tag: unit)",
+				Verb:      "completed",
+				StartTime: fakeStartTime(),
+			},
+		},
+		{
+			name: "lint issues fixed with suffix",
+			opts: OverallCompletionOptions{
+				Operation: "lint issues",
+				Suffix:    " and code formatted",
+				Verb:      "fixed",
+				StartTime: fakeStartTime(),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Just verify it doesn't panic - output goes to utils logger
+			displayOverallCompletionWithOptions(tt.opts)
+		})
+	}
+}
+
+// fakeStartTime returns a time in the past for duration formatting tests
+func fakeStartTime() time.Time {
+	return time.Now().Add(-100 * time.Millisecond)
 }

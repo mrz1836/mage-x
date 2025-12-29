@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -239,6 +240,79 @@ func displayModuleHeader(module ModuleInfo, operation string) {
 	} else {
 		utils.Info("\n%s module in %s...", operation, module.Relative)
 	}
+}
+
+// ModuleCompletionOptions configures module completion messages.
+type ModuleCompletionOptions struct {
+	Module      ModuleInfo
+	Operation   string // e.g., "Linting", "Coverage tests"
+	Suffix      string // e.g., " [integration]" for build tags
+	StartTime   time.Time
+	Err         error
+	SuccessVerb string // Custom success verb (default: "passed")
+}
+
+// displayModuleCompletion displays a completion message for a module operation.
+// Uses "passed" for success and "failed" for error by default.
+func displayModuleCompletion(module ModuleInfo, operation string, startTime time.Time, err error) {
+	displayModuleCompletionWithOptions(ModuleCompletionOptions{
+		Module:    module,
+		Operation: operation,
+		StartTime: startTime,
+		Err:       err,
+	})
+}
+
+// displayModuleCompletionWithSuffix handles cases with build tags or other suffixes.
+func displayModuleCompletionWithSuffix(module ModuleInfo, operation, suffix string, startTime time.Time, err error) {
+	displayModuleCompletionWithOptions(ModuleCompletionOptions{
+		Module:    module,
+		Operation: operation,
+		Suffix:    suffix,
+		StartTime: startTime,
+		Err:       err,
+	})
+}
+
+// displayModuleCompletionWithOptions provides full control over completion messages.
+// Use this for edge cases like "All issues fixed" instead of "passed".
+func displayModuleCompletionWithOptions(opts ModuleCompletionOptions) {
+	duration := utils.FormatDuration(time.Since(opts.StartTime))
+	location := opts.Module.Relative + opts.Suffix
+	if opts.Err != nil {
+		utils.Error("%s failed for %s in %s", opts.Operation, location, duration)
+	} else {
+		verb := opts.SuccessVerb
+		if verb == "" {
+			verb = "passed"
+		}
+		utils.Success("%s %s for %s in %s", opts.Operation, verb, location, duration)
+	}
+}
+
+// OverallCompletionOptions configures overall completion messages.
+type OverallCompletionOptions struct {
+	Operation string // e.g., "linting", "coverage tests"
+	Prefix    string // e.g., "Unit " for "All Unit tests passed"
+	Suffix    string // e.g., " [integration]" for build tags
+	Verb      string // "passed" or "completed"
+	StartTime time.Time
+}
+
+// displayOverallCompletion displays overall completion for batch operations.
+func displayOverallCompletion(operation, verb string, startTime time.Time) {
+	displayOverallCompletionWithOptions(OverallCompletionOptions{
+		Operation: operation,
+		Verb:      verb,
+		StartTime: startTime,
+	})
+}
+
+// displayOverallCompletionWithOptions provides full control over overall completion messages.
+// Handles patterns like "All Unit tests [integration] passed in X"
+func displayOverallCompletionWithOptions(opts OverallCompletionOptions) {
+	duration := utils.FormatDuration(time.Since(opts.StartTime))
+	utils.Success("All %s%s%s %s in %s", opts.Prefix, opts.Operation, opts.Suffix, opts.Verb, duration)
 }
 
 // collectModuleErrors collects errors from multiple modules

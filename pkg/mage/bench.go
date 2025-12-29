@@ -144,10 +144,8 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 		err := runCommandInModule(module, "go", args...)
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Benchmarks failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Benchmarks passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
 		}
+		displayModuleCompletion(module, "Benchmarks", moduleStart, err)
 	}
 
 	// Report overall results
@@ -156,7 +154,7 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("All benchmarks completed in %s", utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletion("benchmarks", "completed", totalStart)
 
 	// Show how to analyze profiles if created
 	if cpuProfile := GetMageXEnv("BENCH_CPU_PROFILE"); cpuProfile != "" {
@@ -571,8 +569,9 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 		err := runCommandInModule(module, "go", args...)
 		if err != nil {
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Benchmarks with trace failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+			displayModuleCompletion(module, "Benchmarks with trace", moduleStart, err)
 		} else {
+			// Custom message includes trace file path - keep as-is
 			utils.Success("Trace saved for %s to: %s in %s", module.Relative, moduleTrace, utils.FormatDuration(time.Since(moduleStart)))
 		}
 
@@ -589,7 +588,7 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 		return formatModuleErrors(moduleErrors)
 	}
 
-	utils.Success("All benchmarks with trace completed in %s", utils.FormatDuration(time.Since(totalStart)))
+	displayOverallCompletion("benchmarks with trace", "completed", totalStart)
 	return nil
 }
 
