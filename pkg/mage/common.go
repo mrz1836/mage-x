@@ -2,7 +2,6 @@
 package mage
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -75,36 +74,36 @@ func getCPUCount() int {
 
 // isNewer checks if version a is newer than version b
 func isNewer(a, b string) bool {
-	// Simple version comparison - in production use semver library
-	a = strings.TrimPrefix(a, "v")
-	b = strings.TrimPrefix(b, "v")
+	bClean := strings.TrimPrefix(b, "v")
 
-	if b == versionDev {
+	// Special case: any version is newer than dev or empty
+	if bClean == versionDev || bClean == "" {
 		return true
 	}
 
-	aParts := strings.Split(a, ".")
-	bParts := strings.Split(b, ".")
+	// Strip prerelease suffix (e.g., "-beta.1") for comparison
+	aClean := stripPrerelease(a)
+	bClean = stripPrerelease(b)
 
-	for i := 0; i < len(aParts) && i < len(bParts); i++ {
-		var aNum, bNum int
-		if _, err := fmt.Sscanf(aParts[i], "%d", &aNum); err != nil {
-			// Non-numeric parts are treated as 0
-			aNum = 0
-		}
-		if _, err := fmt.Sscanf(bParts[i], "%d", &bNum); err != nil {
-			// Non-numeric parts are treated as 0
-			bNum = 0
-		}
-
-		if aNum > bNum {
-			return true
-		} else if aNum < bNum {
-			return false
-		}
+	aV, err := ParseSemanticVersion(aClean)
+	if err != nil {
+		return false
 	}
 
-	return len(aParts) > len(bParts)
+	bV, err := ParseSemanticVersion(bClean)
+	if err != nil {
+		return false
+	}
+
+	return aV.IsNewerThan(bV)
+}
+
+// stripPrerelease removes prerelease suffix from version string
+func stripPrerelease(version string) string {
+	if idx := strings.Index(version, "-"); idx != -1 {
+		return version[:idx]
+	}
+	return version
 }
 
 // formatReleaseNotes formats release notes for display

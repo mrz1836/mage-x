@@ -884,39 +884,22 @@ func detectVersionGaps(currentVersion, newVersion string) []string {
 
 // isVersionBetween checks if middle version is between start and end versions
 func isVersionBetween(start, middle, end string) bool {
-	// Simple comparison - could be enhanced with proper semver parsing
-	startClean := strings.TrimPrefix(start, "v")
-	middleClean := strings.TrimPrefix(middle, "v")
-	endClean := strings.TrimPrefix(end, "v")
-
-	// Parse versions
-	startParts := strings.Split(startClean, ".")
-	middleParts := strings.Split(middleClean, ".")
-	endParts := strings.Split(endClean, ".")
-
-	if len(startParts) != 3 || len(middleParts) != 3 || len(endParts) != 3 {
+	startV, err := ParseSemanticVersion(start)
+	if err != nil {
 		return false
 	}
 
-	// Compare major.minor.patch
-	for i := 0; i < 3; i++ {
-		s, errS := strconv.Atoi(startParts[i])
-		m, errM := strconv.Atoi(middleParts[i])
-		e, errE := strconv.Atoi(endParts[i])
-
-		if errS != nil || errM != nil || errE != nil {
-			return false
-		}
-
-		if m > s && m < e {
-			return true
-		}
-		if m < s || m > e {
-			return false
-		}
+	middleV, err := ParseSemanticVersion(middle)
+	if err != nil {
+		return false
 	}
 
-	return false
+	endV, err := ParseSemanticVersion(end)
+	if err != nil {
+		return false
+	}
+
+	return middleV.IsBetween(startV, endV)
 }
 
 // getPreviousTag gets the previous git tag
@@ -974,39 +957,17 @@ func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
 
 // bumpVersion bumps the version according to type
 func bumpVersion(current, bumpType string) (string, error) {
-	current = strings.TrimPrefix(current, "v")
-	parts := strings.Split(current, ".")
-
-	if len(parts) != 3 {
-		return "", fmt.Errorf("%w: %s", errInvalidVersionFormat, current)
-	}
-
-	major, err := strconv.Atoi(parts[0])
+	sv, err := ParseSemanticVersion(current)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", errInvalidMajorVersion, parts[0])
-	}
-	minor, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return "", fmt.Errorf("%w: %s", errInvalidMinorVersion, parts[1])
-	}
-	patch, err := strconv.Atoi(parts[2])
-	if err != nil {
-		return "", fmt.Errorf("%w: %s", errInvalidPatchVersion, parts[2])
+		return "", err
 	}
 
-	switch bumpType {
-	case "major":
-		major++
-		minor = 0
-		patch = 0
-	case "minor":
-		minor++
-		patch = 0
-	case "patch":
-		patch++
+	bumped, err := sv.Bump(bumpType)
+	if err != nil {
+		return "", err
 	}
 
-	return fmt.Sprintf("v%d.%d.%d", major, minor, patch), nil
+	return bumped.String(), nil
 }
 
 // formatReleaseNotes formats release notes for display
@@ -1038,55 +999,24 @@ func getTagsOnCurrentCommit() ([]string, error) {
 
 // validateVersionProgression checks if the version bump is logical
 func validateVersionProgression(current, newVersion, bumpType string) error {
-	currentParts := strings.Split(strings.TrimPrefix(current, "v"), ".")
-	newParts := strings.Split(strings.TrimPrefix(newVersion, "v"), ".")
-
-	if len(currentParts) != 3 || len(newParts) != 3 {
-		return nil // Skip validation if format is unexpected
+	currV, err := ParseSemanticVersion(current)
+	if err != nil {
+		return nil //nolint:nilerr // Skip validation if format is unexpected
 	}
 
-	currMajor, err := strconv.Atoi(currentParts[0])
+	newV, err := ParseSemanticVersion(newVersion)
 	if err != nil {
-		return fmt.Errorf("failed to parse current major version: %w", err)
-	}
-	currMinor, err := strconv.Atoi(currentParts[1])
-	if err != nil {
-		return fmt.Errorf("failed to parse current minor version: %w", err)
-	}
-	currPatch, err := strconv.Atoi(currentParts[2])
-	if err != nil {
-		return fmt.Errorf("failed to parse current patch version: %w", err)
+		return nil //nolint:nilerr // Skip validation if format is unexpected
 	}
 
-	newMajor, err := strconv.Atoi(newParts[0])
+	expected, err := currV.Bump(bumpType)
 	if err != nil {
-		return fmt.Errorf("failed to parse new major version: %w", err)
-	}
-	newMinor, err := strconv.Atoi(newParts[1])
-	if err != nil {
-		return fmt.Errorf("failed to parse new minor version: %w", err)
-	}
-	newPatch, err := strconv.Atoi(newParts[2])
-	if err != nil {
-		return fmt.Errorf("failed to parse new patch version: %w", err)
+		return nil //nolint:nilerr // Skip validation for invalid bump type
 	}
 
-	switch bumpType {
-	case "patch":
-		if newMajor != currMajor || newMinor != currMinor || newPatch != currPatch+1 {
-			return fmt.Errorf("%w: expected %s → v%d.%d.%d, got %s",
-				errIllogicalVersionJump, current, currMajor, currMinor, currPatch+1, newVersion)
-		}
-	case "minor":
-		if newMajor != currMajor || newMinor != currMinor+1 || newPatch != 0 {
-			return fmt.Errorf("%w: expected %s → v%d.%d.0, got %s",
-				errIllogicalVersionJump, current, currMajor, currMinor+1, newVersion)
-		}
-	case "major":
-		if newMajor != currMajor+1 || newMinor != 0 || newPatch != 0 {
-			return fmt.Errorf("%w: expected %s → v%d.0.0, got %s",
-				errIllogicalVersionJump, current, currMajor+1, newVersion)
-		}
+	if newV.Compare(expected) != 0 {
+		return fmt.Errorf("%w: expected %s → %s, got %s",
+			errIllogicalVersionJump, current, expected.String(), newVersion)
 	}
 
 	return nil
@@ -1126,30 +1056,23 @@ func validateMajorVersionBump(params map[string]string) error {
 
 // checkForUnexpectedVersionJump provides additional safety checks beyond basic validation
 func checkForUnexpectedVersionJump(current, newVersion, bumpType string) error {
-	// Parse versions
-	currentParts := strings.Split(strings.TrimPrefix(current, "v"), ".")
-	newParts := strings.Split(strings.TrimPrefix(newVersion, "v"), ".")
-
-	if len(currentParts) != 3 || len(newParts) != 3 {
-		return nil // Skip check for malformed versions
-	}
-
-	currMajor, err := strconv.Atoi(currentParts[0])
+	currV, err := ParseSemanticVersion(current)
 	if err != nil {
 		return nil //nolint:nilerr // Skip check for malformed versions
 	}
-	newMajor, err := strconv.Atoi(newParts[0])
+
+	newV, err := ParseSemanticVersion(newVersion)
 	if err != nil {
 		return nil //nolint:nilerr // Skip check for malformed versions
 	}
 
 	// Check for unexpected major version jump when expecting patch
-	if bumpType == "patch" && newMajor > currMajor {
+	if bumpType == "patch" && newV.Major() > currV.Major() {
 		return fmt.Errorf("%w from %s to %s when BUMP=%s", errUnexpectedMajorVersionJump, current, newVersion, bumpType)
 	}
 
 	// Check for surprisingly large jumps that might indicate environment contamination
-	majorJump := newMajor - currMajor
+	majorJump := newV.Major() - currV.Major()
 	if majorJump > 1 {
 		return fmt.Errorf("%w from %s to %s (major version increased by %d)", errUnexpectedlyLargeVersionJump, current, newVersion, majorJump)
 	}
