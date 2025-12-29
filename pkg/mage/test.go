@@ -56,6 +56,14 @@ type benchmarkOptions struct {
 	logPrefix        string // prefix for log messages
 }
 
+// fuzzOptions configures fuzz test execution
+type fuzzOptions struct {
+	headerName     string // "fuzz" or "fuzz-short" for displayTestHeader
+	headerText     string // header text for duration-based methods (e.g., "Running Fuzz Tests")
+	defaultTime    string // default fuzz time ("10s" or "5s")
+	successMessage string // message to display on success
+}
+
 // getCIParams extracts CI-related parameters from args and returns the remaining args
 func getCIParams(args []string) (params map[string]string, remainingArgs []string) {
 	params = make(map[string]string)
@@ -390,12 +398,10 @@ func isMultiModuleCoverage(coverageFile string) bool {
 	return false
 }
 
-// Fuzz runs fuzz tests with configurable time
-func (Test) Fuzz(argsList ...string) error {
-	// Parse command-line parameters
+// runFuzzWithOptions runs fuzz tests with configurable options from command-line args.
+// This consolidates the common logic shared by Fuzz and FuzzShort methods.
+func runFuzzWithOptions(opts fuzzOptions, argsList ...string) error {
 	params := utils.ParseParams(argsList)
-
-	// Extract CI params from arguments
 	ciParams, _ := getCIParams(argsList)
 
 	config, err := GetConfig()
@@ -403,9 +409,7 @@ func (Test) Fuzz(argsList ...string) error {
 		return err
 	}
 
-	displayTestHeader("fuzz", config)
-
-	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
+	displayTestHeader(opts.headerName, config)
 	PrintCIBannerIfEnabled(ciParams, config)
 
 	if config.Test.SkipFuzz {
@@ -413,187 +417,101 @@ func (Test) Fuzz(argsList ...string) error {
 		return nil
 	}
 
-	// Find packages with fuzz tests
 	packages := findFuzzPackages()
-
 	if len(packages) == 0 {
 		utils.Info("No fuzz tests found")
 		return nil
 	}
 
-	// Get fuzz time from parameter or use default (10s)
-	fuzzTimeStr := utils.GetParam(params, "time", "10s")
+	fuzzTimeStr := utils.GetParam(params, "time", opts.defaultTime)
 	fuzzTime, err := time.ParseDuration(fuzzTimeStr)
 	if err != nil {
 		return fmt.Errorf("invalid time parameter: %w", err)
 	}
 
-	// Run all fuzz tests and collect results (continues on failure)
-	// In CI mode, capture output for text parsing to extract detailed failure info
 	ciEnabled := IsCIEnabled(ciParams, config)
 	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
 
-	// Print CI summary if enabled
 	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
-
-	// Write CI results to JSONL format if enabled (standardized output for validation)
 	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
 
-	// Return aggregated error if any failures
 	if err := fuzzResultsToError(results); err != nil {
 		return err
 	}
 
-	utils.Success("Fuzz tests completed")
+	utils.Success(opts.successMessage)
 	return nil
+}
+
+// runFuzzWithDuration runs fuzz tests with a specified duration.
+// This consolidates the common logic shared by FuzzWithTime and FuzzShortWithTime methods.
+func runFuzzWithDuration(fuzzTime time.Duration, opts fuzzOptions) error {
+	utils.Header(opts.headerText)
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	PrintCIBannerIfEnabled(nil, config)
+
+	if config.Test.SkipFuzz {
+		utils.Info("Fuzz tests skipped")
+		return nil
+	}
+
+	packages := findFuzzPackages()
+	if len(packages) == 0 {
+		utils.Info("No fuzz tests found")
+		return nil
+	}
+
+	ciEnabled := IsCIEnabled(nil, config)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
+
+	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
+	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
+
+	if err := fuzzResultsToError(results); err != nil {
+		return err
+	}
+
+	utils.Success(opts.successMessage)
+	return nil
+}
+
+// Fuzz runs fuzz tests with configurable time
+func (Test) Fuzz(argsList ...string) error {
+	return runFuzzWithOptions(fuzzOptions{
+		headerName:     "fuzz",
+		defaultTime:    "10s",
+		successMessage: "Fuzz tests completed",
+	}, argsList...)
 }
 
 // FuzzWithTime runs fuzz tests with specified duration
 func (Test) FuzzWithTime(fuzzTime time.Duration) error {
-	utils.Header("Running Fuzz Tests")
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
-	PrintCIBannerIfEnabled(nil, config)
-
-	if config.Test.SkipFuzz {
-		utils.Info("Fuzz tests skipped")
-		return nil
-	}
-
-	// Find packages with fuzz tests
-	packages := findFuzzPackages()
-
-	if len(packages) == 0 {
-		utils.Info("No fuzz tests found")
-		return nil
-	}
-
-	// Run all fuzz tests and collect results (continues on failure)
-	// In CI mode, capture output for text parsing to extract detailed failure info
-	ciEnabled := IsCIEnabled(nil, config)
-	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
-
-	// Print CI summary if enabled (nil params relies on config/environment detection)
-	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
-
-	// Write CI results to JSONL format if enabled (standardized output for validation)
-	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
-
-	// Return aggregated error if any failures
-	if err := fuzzResultsToError(results); err != nil {
-		return err
-	}
-
-	utils.Success("Fuzz tests completed")
-	return nil
+	return runFuzzWithDuration(fuzzTime, fuzzOptions{
+		headerText:     "Running Fuzz Tests",
+		successMessage: "Fuzz tests completed",
+	})
 }
 
 // FuzzShort runs fuzz tests with configurable time (default: 5s for quick feedback)
 func (Test) FuzzShort(argsList ...string) error {
-	// Parse command-line parameters
-	params := utils.ParseParams(argsList)
-
-	// Extract CI params from arguments
-	ciParams, _ := getCIParams(argsList)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	displayTestHeader("fuzz-short", config)
-
-	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
-	PrintCIBannerIfEnabled(ciParams, config)
-
-	if config.Test.SkipFuzz {
-		utils.Info("Fuzz tests skipped")
-		return nil
-	}
-
-	// Find packages with fuzz tests
-	packages := findFuzzPackages()
-
-	if len(packages) == 0 {
-		utils.Info("No fuzz tests found")
-		return nil
-	}
-
-	// Get fuzz time from parameter or use default (5s for short)
-	fuzzTimeStr := utils.GetParam(params, "time", "5s")
-	fuzzTime, err := time.ParseDuration(fuzzTimeStr)
-	if err != nil {
-		return fmt.Errorf("invalid time parameter: %w", err)
-	}
-
-	// Run all fuzz tests and collect results (continues on failure)
-	// In CI mode, capture output for text parsing to extract detailed failure info
-	ciEnabled := IsCIEnabled(ciParams, config)
-	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
-
-	// Print CI summary if enabled
-	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
-
-	// Write CI results to JSONL format if enabled (standardized output for validation)
-	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
-
-	// Return aggregated error if any failures
-	if err := fuzzResultsToError(results); err != nil {
-		return err
-	}
-
-	utils.Success("Short fuzz tests completed")
-	return nil
+	return runFuzzWithOptions(fuzzOptions{
+		headerName:     "fuzz-short",
+		defaultTime:    "5s",
+		successMessage: "Short fuzz tests completed",
+	}, argsList...)
 }
 
 // FuzzShortWithTime runs fuzz tests with specified duration (optimized for quick feedback)
 func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
-	utils.Header("Running Short Fuzz Tests")
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Print CI banner if CI mode is enabled (fuzz tests can't use full CI runner due to non-JSON output)
-	PrintCIBannerIfEnabled(nil, config)
-
-	if config.Test.SkipFuzz {
-		utils.Info("Fuzz tests skipped")
-		return nil
-	}
-
-	// Find packages with fuzz tests
-	packages := findFuzzPackages()
-
-	if len(packages) == 0 {
-		utils.Info("No fuzz tests found")
-		return nil
-	}
-
-	// Run all fuzz tests and collect results (continues on failure)
-	// In CI mode, capture output for text parsing to extract detailed failure info
-	ciEnabled := IsCIEnabled(nil, config)
-	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
-
-	// Print CI summary if enabled (nil params relies on config/environment detection)
-	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
-
-	// Write CI results to JSONL format if enabled (standardized output for validation)
-	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
-
-	// Return aggregated error if any failures
-	if err := fuzzResultsToError(results); err != nil {
-		return err
-	}
-
-	utils.Success("Short fuzz tests completed")
-	return nil
+	return runFuzzWithDuration(fuzzTime, fuzzOptions{
+		headerText:     "Running Short Fuzz Tests",
+		successMessage: "Short fuzz tests completed",
+	})
 }
 
 // Bench runs benchmarks
