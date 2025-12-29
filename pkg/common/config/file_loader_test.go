@@ -74,7 +74,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Load() {
 		loadedPath, err := ts.loader.Load([]string{jsonFile}, &result)
 
 		ts.Require().NoError(err)
-		ts.Require().Equal(jsonFile, loadedPath)
+		ts.Require().JSONEq(jsonFile, loadedPath)
 		ts.Require().Equal("test", result.Name)
 		ts.Require().Equal(42, result.Value)
 	})
@@ -87,7 +87,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Load() {
 		loadedPath, err := ts.loader.Load([]string{nonExistent, yamlFile}, &result)
 
 		ts.Require().NoError(err)
-		ts.Require().Equal(yamlFile, loadedPath)
+		ts.Require().YAMLEq(yamlFile, loadedPath)
 		ts.Require().Equal("test", result.Name)
 		ts.Require().Equal(42, result.Value)
 	})
@@ -100,7 +100,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Load() {
 		loadedPath, err := loader.Load([]string{}, &result)
 
 		ts.Require().NoError(err)
-		ts.Require().Equal(jsonFile, loadedPath)
+		ts.Require().JSONEq(jsonFile, loadedPath)
 		ts.Require().Equal("test", result.Name)
 	})
 
