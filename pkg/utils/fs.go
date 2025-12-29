@@ -19,7 +19,7 @@ func DirExists(path string) bool {
 
 // EnsureDir creates a directory if it doesn't exist
 func EnsureDir(path string) error {
-	return fileops.GetDefault().File.MkdirAll(path, 0o755)
+	return fileops.GetDefault().File.MkdirAll(path, fileops.PermDir)
 }
 
 // CleanDir removes and recreates a directory
@@ -30,7 +30,7 @@ func CleanDir(path string) error {
 			return err
 		}
 	}
-	return fileops.GetDefault().File.MkdirAll(path, 0o755)
+	return fileops.GetDefault().File.MkdirAll(path, fileops.PermDir)
 }
 
 // CopyFile copies a file from src to dst

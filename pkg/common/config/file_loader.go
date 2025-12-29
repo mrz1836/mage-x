@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // Static errors to comply with err113 linter
@@ -99,11 +101,11 @@ func (f *FileConfigLoader) Save(path string, data interface{}, format string) er
 
 	// Ensure directory exists
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
+	if err := os.MkdirAll(dir, fileops.PermDirSensitive); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	return os.WriteFile(path, content, 0o600)
+	return os.WriteFile(path, content, fileops.PermFileSensitive)
 }
 
 // Validate validates configuration data

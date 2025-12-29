@@ -162,7 +162,7 @@ func (d *DefaultJSONOperator) WriteJSON(path string, v interface{}) error {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	return d.fileOps.WriteFile(path, data, 0o644)
+	return d.fileOps.WriteFile(path, data, PermFile)
 }
 
 // WriteJSONIndent writes a value as formatted JSON to a file
@@ -172,7 +172,7 @@ func (d *DefaultJSONOperator) WriteJSONIndent(path string, v interface{}, prefix
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	return d.fileOps.WriteFile(path, data, 0o644)
+	return d.fileOps.WriteFile(path, data, PermFile)
 }
 
 // ReadJSON reads JSON from a file into a value
@@ -234,7 +234,7 @@ func (d *DefaultYAMLOperator) WriteYAML(path string, v interface{}) error {
 		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}
 
-	return d.fileOps.WriteFile(path, data, 0o600)
+	return d.fileOps.WriteFile(path, data, PermFileSensitive)
 }
 
 // ReadYAML reads YAML from a file into a value

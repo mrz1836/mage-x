@@ -579,7 +579,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	}
 
 	fileOps := fileops.New()
-	return fileOps.File.WriteFile(targetPath, data, 0o644)
+	return fileOps.File.WriteFile(targetPath, data, fileops.PermFile)
 }
 
 // validateExtractPath validates that a file path stays within the destination directory
@@ -667,7 +667,7 @@ func extractTarGz(src, dest string) error {
 		}
 
 		// Ensure the destination directory exists
-		if dirErr := os.MkdirAll(filepath.Dir(destPath), 0o750); dirErr != nil {
+		if dirErr := os.MkdirAll(filepath.Dir(destPath), fileops.PermDirSensitive); dirErr != nil {
 			return fmt.Errorf("failed to create destination directory for %s: %w", destPath, dirErr)
 		}
 
@@ -721,9 +721,9 @@ func normalizeFileMode(mode os.FileMode) os.FileMode {
 
 	// If file has any execute bit, make it 0o755, otherwise 0o644
 	if mode&0o111 != 0 {
-		return 0o755
+		return fileops.PermFileExecutable
 	}
-	return 0o644
+	return fileops.PermFile
 }
 
 // copyFile copies a file from src to dst
@@ -794,7 +794,7 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 
 	// Create temporary extraction directory
 	extractDir := filepath.Join(updateDir, "extract")
-	if mkdirErr := os.MkdirAll(extractDir, 0o750); mkdirErr != nil {
+	if mkdirErr := os.MkdirAll(extractDir, fileops.PermDirSensitive); mkdirErr != nil {
 		return fmt.Errorf("failed to create extraction directory: %w", mkdirErr)
 	}
 
@@ -833,8 +833,7 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 	}
 
 	// Ensure binary is executable
-	//nolint:gosec // G302: Binary files need execute permissions
-	if err := os.Chmod(outputPath, 0o755); err != nil {
+	if err := os.Chmod(outputPath, fileops.PermFileExecutable); err != nil {
 		return fmt.Errorf("failed to make binary executable: %w", err)
 	}
 

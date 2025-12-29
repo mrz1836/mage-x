@@ -204,7 +204,7 @@ func (m *MockPathBuilder) Mode() fs.FileMode {
 	if value, exists := m.GetMockData("mode"); exists {
 		return value.(fs.FileMode)
 	}
-	return 0o644
+	return 0o644 // Mock value - actual permissions use fileops constants
 }
 
 // Directory operations

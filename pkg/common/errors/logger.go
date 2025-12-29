@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	pkglog "github.com/mrz1836/mage-x/pkg/log"
 )
 
@@ -284,7 +285,7 @@ func NewFileRotatingLogger(logPath string, maxSize int64, maxFiles int) (*FileRo
 		return nil, errPathTraversalDetected
 	}
 
-	file, err := os.OpenFile(cleanPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	file, err := os.OpenFile(cleanPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, fileops.PermFileSensitive)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}

@@ -57,6 +57,7 @@ func TestGetRequestIDFromContext_AllKeys(t *testing.T) {
 func TestGetRequestIDFromContext_NilContext(t *testing.T) {
 	t.Parallel()
 
+	//nolint:staticcheck // SA1012: Intentionally testing nil context handling
 	got := GetRequestIDFromContext(nil)
 	if got != "" {
 		t.Errorf("GetRequestIDFromContext(nil) = %q, want empty string", got)

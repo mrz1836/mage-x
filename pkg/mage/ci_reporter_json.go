@@ -10,6 +10,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 var (
@@ -62,13 +64,13 @@ func NewJSONReporterWithFallback(path, fallbackDir string) (JSONReporterInterfac
 	// Ensure directory exists
 	dir := filepath.Dir(path)
 	if dir != "" && dir != "." {
-		err := os.MkdirAll(dir, 0o750)
+		err := os.MkdirAll(dir, fileops.PermDirSensitive)
 		if err == nil {
 			// Directory created successfully
 		} else if fallbackDir != "" {
 			// Try fallback directory if provided
 			fallbackPath := filepath.Join(fallbackDir, filepath.Base(path))
-			if mkdirErr := os.MkdirAll(fallbackDir, 0o750); mkdirErr != nil {
+			if mkdirErr := os.MkdirAll(fallbackDir, fileops.PermDirSensitive); mkdirErr != nil {
 				return nil, fmt.Errorf("failed to create fallback directory: %w", err)
 			}
 			reporter.path = fallbackPath
@@ -83,7 +85,7 @@ func NewJSONReporterWithFallback(path, fallbackDir string) (JSONReporterInterfac
 	if err != nil && fallbackDir != "" && reporter.path == path {
 		// Try fallback if primary fails
 		fallbackPath := filepath.Join(fallbackDir, filepath.Base(path))
-		mkdirErr := os.MkdirAll(fallbackDir, 0o750)
+		mkdirErr := os.MkdirAll(fallbackDir, fileops.PermDirSensitive)
 		if mkdirErr == nil {
 			f, err = os.Create(fallbackPath) //nolint:gosec // Fallback path is controlled
 			if err == nil {

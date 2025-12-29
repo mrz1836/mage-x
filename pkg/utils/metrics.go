@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/common/providers"
 )
 
@@ -939,7 +940,7 @@ type JSONStorage struct {
 
 // NewJSONStorage creates a new JSON storage instance
 func NewJSONStorage(storagePath string) (*JSONStorage, error) {
-	if err := os.MkdirAll(storagePath, 0o750); err != nil {
+	if err := os.MkdirAll(storagePath, fileops.PermDirSensitive); err != nil {
 		return nil, fmt.Errorf("failed to create storage directory: %w", err)
 	}
 
@@ -976,7 +977,7 @@ func (js *JSONStorage) Store(metric *Metric) error {
 		return fmt.Errorf("failed to marshal metrics: %w", err)
 	}
 
-	return os.WriteFile(filePath, data, 0o600)
+	return os.WriteFile(filePath, data, fileops.PermFileSensitive)
 }
 
 // Query queries metrics from JSON storage

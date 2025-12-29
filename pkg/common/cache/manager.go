@@ -85,7 +85,7 @@ func (m *Manager) Init() error {
 	}
 
 	// Create main cache directory
-	if err := m.fileOps.File.MkdirAll(m.cacheDir, 0o755); err != nil {
+	if err := m.fileOps.File.MkdirAll(m.cacheDir, fileops.PermDir); err != nil {
 		return fmt.Errorf("failed to create cache directory: %w", err)
 	}
 

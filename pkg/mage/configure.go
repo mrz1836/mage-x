@@ -156,7 +156,7 @@ func (Configure) Export() error {
 		}
 
 		fileOps := fileops.New()
-		if err := fileOps.File.WriteFile(output, data, 0o644); err != nil {
+		if err := fileOps.File.WriteFile(output, data, fileops.PermFile); err != nil {
 			return fmt.Errorf("failed to write configuration: %w", err)
 		}
 
@@ -248,7 +248,7 @@ func (Configure) Schema() error {
 		utils.Info("%s", schema)
 	} else {
 		fileOps := fileops.New()
-		if err := fileOps.File.WriteFile(output, []byte(schema), 0o644); err != nil {
+		if err := fileOps.File.WriteFile(output, []byte(schema), fileops.PermFile); err != nil {
 			return fmt.Errorf("failed to write schema: %w", err)
 		}
 

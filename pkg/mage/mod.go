@@ -201,7 +201,7 @@ func (Mod) Graph(args ...string) error {
 	// Save full graph if requested (standard env var)
 	if graphFile := GetMageXEnv("GRAPH_FILE"); graphFile != "" {
 		fileOps := fileops.New()
-		if err := fileOps.File.WriteFile(graphFile, []byte(output), 0o644); err != nil {
+		if err := fileOps.File.WriteFile(graphFile, []byte(output), fileops.PermFile); err != nil {
 			return fmt.Errorf("failed to write graph file: %w", err)
 		}
 		utils.Success("Full dependency graph saved to: %s", graphFile)

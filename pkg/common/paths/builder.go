@@ -34,7 +34,7 @@ func NewPathBuilder(path string) *DefaultPathBuilder {
 		path:         cleanPath,
 		originalPath: path, // Store original for security checks
 		options: PathOptions{
-			CreateMode:    0o755,
+			CreateMode:    fileops.PermDir,
 			CreateParents: true,
 			BufferSize:    8192,
 		},

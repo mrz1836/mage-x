@@ -12,6 +12,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -300,8 +301,7 @@ func backupSpeckitConstitution(config *Config) (string, error) {
 	}
 
 	// Create backup directory if it doesn't exist
-	//nolint:gosec // G301: Backup directory needs standard permissions for user access
-	if err := os.MkdirAll(backupDir, 0o755); err != nil {
+	if err := os.MkdirAll(backupDir, fileops.PermDir); err != nil {
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
@@ -318,8 +318,7 @@ func backupSpeckitConstitution(config *Config) (string, error) {
 	}
 
 	// Write backup
-	//nolint:gosec // G306: Constitution backups need to be readable for manual restoration
-	if err := os.WriteFile(backupPath, data, 0o644); err != nil {
+	if err := os.WriteFile(backupPath, data, fileops.PermFile); err != nil {
 		return "", fmt.Errorf("%w: %w", errBackupFailed, err)
 	}
 
@@ -339,14 +338,12 @@ func restoreSpeckitConstitution(config *Config, backupPath string) error {
 
 	// Ensure the directory exists
 	constitutionDir := filepath.Dir(constitutionPath)
-	//nolint:gosec // G301: Constitution directory needs standard permissions
-	if err := os.MkdirAll(constitutionDir, 0o755); err != nil {
+	if err := os.MkdirAll(constitutionDir, fileops.PermDir); err != nil {
 		return fmt.Errorf("failed to create constitution directory: %w", err)
 	}
 
 	// Write to constitution path
-	//nolint:gosec // G306: Constitution needs to be readable
-	if err := os.WriteFile(constitutionPath, data, 0o644); err != nil {
+	if err := os.WriteFile(constitutionPath, data, fileops.PermFile); err != nil {
 		return fmt.Errorf("failed to write constitution: %w", err)
 	}
 
@@ -467,8 +464,7 @@ func updateSpeckitVersionFile(config *Config, oldVersion, newVersion, backupPath
 
 	// Ensure the directory exists
 	versionDir := filepath.Dir(versionFile)
-	//nolint:gosec // G301: Version file directory needs standard permissions
-	if err := os.MkdirAll(versionDir, 0o755); err != nil {
+	if err := os.MkdirAll(versionDir, fileops.PermDir); err != nil {
 		return fmt.Errorf("failed to create version file directory: %w", err)
 	}
 
@@ -480,8 +476,7 @@ previous_version=%s
 upgrade_method=automated
 `, newVersion, timestamp, backupPath, oldVersion)
 
-	//nolint:gosec // G306: Version file needs to be readable for user inspection
-	if err := os.WriteFile(versionFile, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(versionFile, []byte(content), fileops.PermFile); err != nil {
 		return fmt.Errorf("failed to write version file: %w", err)
 	}
 

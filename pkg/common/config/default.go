@@ -87,7 +87,7 @@ func (d *DefaultConfigLoader) LoadFrom(path string, dest interface{}) error {
 func (d *DefaultConfigLoader) Save(path string, data interface{}, format string) error {
 	// Ensure directory exists
 	dir := filepath.Dir(path)
-	if err := d.fileOps.MkdirAll(dir, 0o755); err != nil {
+	if err := d.fileOps.MkdirAll(dir, fileops.PermDir); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -99,7 +99,7 @@ func (d *DefaultConfigLoader) Save(path string, data interface{}, format string)
 		if err != nil {
 			return fmt.Errorf("failed to marshal JSON: %w", err)
 		}
-		return d.fileOps.WriteFile(path, jsonData, 0o600)
+		return d.fileOps.WriteFile(path, jsonData, fileops.PermFileSensitive)
 	default:
 		return fmt.Errorf("%w: %s", ErrUnsupportedFormat, format)
 	}

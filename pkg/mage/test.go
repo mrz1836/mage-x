@@ -16,6 +16,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -1800,7 +1801,7 @@ func mergeCoverageFiles(files []string, output string) error {
 
 	// Write merged coverage file
 	mergedContent := strings.Join(allLines, "\n")
-	if err := os.WriteFile(output, []byte(mergedContent), 0o600); err != nil { // #nosec G306 -- coverage output file permissions
+	if err := os.WriteFile(output, []byte(mergedContent), fileops.PermFileSensitive); err != nil { // #nosec G306 -- coverage output file permissions
 		return fmt.Errorf("failed to write merged coverage file: %w", err)
 	}
 

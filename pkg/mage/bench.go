@@ -212,7 +212,7 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 	// Create output directory if needed
 	fileOps := fileops.New()
 	if dir := filepath.Dir(output); dir != "." && dir != "" {
-		if mkdirErr := fileOps.File.MkdirAll(dir, 0o755); mkdirErr != nil {
+		if mkdirErr := fileOps.File.MkdirAll(dir, fileops.PermDir); mkdirErr != nil {
 			return fmt.Errorf("failed to create directory: %w", mkdirErr)
 		}
 	}
@@ -283,7 +283,7 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 	combinedOutput := strings.Join(allOutputs, "\n")
 
 	// Write output
-	if err := fileOps.File.WriteFile(output, []byte(combinedOutput), 0o644); err != nil {
+	if err := fileOps.File.WriteFile(output, []byte(combinedOutput), fileops.PermFile); err != nil {
 		return fmt.Errorf("failed to write results: %w", err)
 	}
 

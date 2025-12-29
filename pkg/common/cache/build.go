@@ -151,7 +151,7 @@ func (c *BuildCache) Init() error {
 
 	for _, dir := range dirs {
 		dirPath := filepath.Join(c.cacheDir, dir)
-		if err := c.fileOps.File.MkdirAll(dirPath, 0o755); err != nil {
+		if err := c.fileOps.File.MkdirAll(dirPath, fileops.PermDir); err != nil {
 			return fmt.Errorf("failed to create cache directory %s: %w", dir, err)
 		}
 	}
@@ -251,7 +251,7 @@ func (c *BuildCache) storeCacheResult(hash, subdir string, result interface{}) e
 	}
 
 	path := filepath.Join(c.cacheDir, subdir, hash+".json")
-	return c.fileOps.File.WriteFile(path, data, 0o644)
+	return c.fileOps.File.WriteFile(path, data, fileops.PermFile)
 }
 
 // StoreBuildResult stores a build result in cache

@@ -12,6 +12,7 @@ import (
 	"github.com/magefile/mage/mg"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -608,7 +609,7 @@ func formatJSONFileNative(file string) bool {
 
 	// Write to temporary file first for atomic operation
 	tmpFile := file + ".tmp"
-	if err := os.WriteFile(tmpFile, formattedData, 0o600); err != nil {
+	if err := os.WriteFile(tmpFile, formattedData, fileops.PermFileSensitive); err != nil {
 		utils.Warn("Failed to write temporary file %s: %v", tmpFile, err)
 		return false
 	}

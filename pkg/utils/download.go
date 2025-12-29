@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/retry"
 )
 
@@ -142,7 +143,7 @@ func downloadFile(ctx context.Context, url, destPath string, config *DownloadCon
 		if stat, statErr := os.Stat(destPath); statErr == nil {
 			resumeOffset = stat.Size()
 			//nolint:gosec // G304: destPath validated by caller
-			file, err = os.OpenFile(destPath, os.O_WRONLY|os.O_APPEND, 0o644)
+			file, err = os.OpenFile(destPath, os.O_WRONLY|os.O_APPEND, fileops.PermFile)
 		}
 	}
 
@@ -347,9 +348,8 @@ func DownloadScript(ctx context.Context, url, scriptArgs string, config *Downloa
 		return fmt.Errorf("failed to download script: %w", err)
 	}
 
-	// Make executable - security exception: scripts need execute permission
-	//nolint:gosec // G302: Scripts require executable permissions (0755)
-	if err := os.Chmod(tmpFile.Name(), 0o755); err != nil {
+	// Make executable - scripts need execute permission
+	if err := os.Chmod(tmpFile.Name(), fileops.PermFileExecutable); err != nil {
 		return fmt.Errorf("failed to make script executable: %w", err)
 	}
 
