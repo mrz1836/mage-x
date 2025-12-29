@@ -565,7 +565,7 @@ func (r *ExtensionRule) Description() string { return "path must have allowed ex
 
 // Validate validates that the given path has an allowed extension
 func (r *ExtensionRule) Validate(path string) error {
-	ext := strings.ToLower(filepath.Ext(path))
+	ext := filepath.Ext(path)
 
 	for _, allowedExt := range r.Extensions {
 		if !strings.HasPrefix(allowedExt, ".") {
