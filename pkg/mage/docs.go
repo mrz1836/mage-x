@@ -336,8 +336,6 @@ func categorizePackage(pkg string) string {
 		return "Core"
 	case strings.Contains(pkg, "/pkg/common"):
 		return "Common"
-	case strings.Contains(pkg, "/pkg/providers"):
-		return "Providers"
 	case strings.Contains(pkg, "/pkg/security"):
 		return "Security"
 	case strings.Contains(pkg, "/pkg/utils") || strings.Contains(pkg, "/pkg/testhelpers"):

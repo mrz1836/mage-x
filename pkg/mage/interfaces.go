@@ -131,27 +131,6 @@ type ContainerProvider interface {
 	Stop(ctx context.Context, instance *ContainerInstance) error
 }
 
-// CloudProvider interface for cloud deployment operations
-type CloudProvider interface {
-	// Name returns the provider name (e.g., "aws", "gcp", "azure")
-	Name() string
-
-	// Deploy deploys an application to the cloud
-	Deploy(ctx context.Context, app Application, env IEnvironment) (*Deployment, error)
-
-	// GetStatus retrieves deployment status
-	GetStatus(ctx context.Context, deployment *Deployment) (*DeploymentStatus, error)
-
-	// Scale adjusts application scale
-	Scale(ctx context.Context, deployment *Deployment, replicas int) error
-
-	// Rollback rolls back to a previous version
-	Rollback(ctx context.Context, deployment *Deployment, version string) error
-
-	// GetLogs retrieves application logs
-	GetLogs(ctx context.Context, deployment *Deployment, opts LogOptions) ([]string, error)
-}
-
 // ToolProvider interface for external tool management
 type ToolProvider interface {
 	// Name returns the tool name
@@ -795,35 +774,4 @@ type IEnvironment struct {
 	Name   string
 	Region string
 	Config map[string]interface{}
-}
-
-// Deployment represents a cloud deployment
-type Deployment struct {
-	ID          string
-	Application *Application
-	Environment *IEnvironment
-	Status      string
-	Version     string
-	Replicas    int
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-// DeploymentStatus represents detailed deployment status
-type DeploymentStatus struct {
-	State       string
-	Ready       int
-	Total       int
-	Version     string
-	LastUpdated time.Time
-	Conditions  []StatusCondition
-	Events      []DeploymentEvent
-}
-
-// DeploymentEvent represents a deployment event
-type DeploymentEvent struct {
-	Type      string
-	Reason    string
-	Message   string
-	Timestamp time.Time
 }
