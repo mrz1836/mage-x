@@ -4,11 +4,14 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -653,4 +656,126 @@ func TestDownloadUpdateAssetPattern(t *testing.T) {
 			assert.Equal(t, tt.shouldMatch, matches)
 		})
 	}
+}
+
+// TestHttpGetJSON_Success tests successful JSON fetching and decoding
+func TestHttpGetJSON_Success(t *testing.T) {
+	// Create test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"tag_name":"v1.0.0","name":"Release 1.0.0","prerelease":false,"draft":false}`)) //nolint:errcheck // test server write never fails
+	}))
+	defer server.Close()
+
+	result, err := httpGetJSON[GitHubRelease](server.URL, 5*time.Second)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "v1.0.0", result.TagName)
+	assert.Equal(t, "Release 1.0.0", result.Name)
+	assert.False(t, result.Prerelease)
+	assert.False(t, result.Draft)
+}
+
+// TestHttpGetJSON_SliceResult tests fetching a slice of JSON objects
+func TestHttpGetJSON_SliceResult(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[{"tag_name":"v2.0.0","prerelease":true},{"tag_name":"v1.0.0","prerelease":false}]`)) //nolint:errcheck // test server write never fails
+	}))
+	defer server.Close()
+
+	result, err := httpGetJSON[[]GitHubRelease](server.URL, 5*time.Second)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Len(t, *result, 2)
+	assert.Equal(t, "v2.0.0", (*result)[0].TagName)
+	assert.True(t, (*result)[0].Prerelease)
+	assert.Equal(t, "v1.0.0", (*result)[1].TagName)
+	assert.False(t, (*result)[1].Prerelease)
+}
+
+// TestHttpGetJSON_HTTPError tests error handling for non-200 status codes
+func TestHttpGetJSON_HTTPError(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+	}{
+		{
+			name:       "404 Not Found",
+			statusCode: http.StatusNotFound,
+			body:       `{"message":"Not Found"}`,
+		},
+		{
+			name:       "500 Internal Server Error",
+			statusCode: http.StatusInternalServerError,
+			body:       `{"error":"server error"}`,
+		},
+		{
+			name:       "403 Forbidden",
+			statusCode: http.StatusForbidden,
+			body:       `{"message":"rate limit exceeded"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.statusCode)
+				_, _ = w.Write([]byte(tt.body)) //nolint:errcheck // test server write never fails
+			}))
+			defer server.Close()
+
+			result, err := httpGetJSON[GitHubRelease](server.URL, 5*time.Second)
+			require.Error(t, err)
+			assert.Nil(t, result)
+			require.ErrorIs(t, err, errGitHubAPIError)
+			assert.Contains(t, err.Error(), tt.body)
+		})
+	}
+}
+
+// TestHttpGetJSON_InvalidJSON tests error handling for malformed JSON
+func TestHttpGetJSON_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{invalid json`)) //nolint:errcheck // test server write never fails
+	}))
+	defer server.Close()
+
+	result, err := httpGetJSON[GitHubRelease](server.URL, 5*time.Second)
+	require.Error(t, err)
+	assert.Nil(t, result)
+}
+
+// TestHttpGetJSON_Timeout tests timeout handling
+func TestHttpGetJSON_Timeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Sleep longer than the timeout
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`)) //nolint:errcheck // test server write never fails
+	}))
+	defer server.Close()
+
+	result, err := httpGetJSON[GitHubRelease](server.URL, 50*time.Millisecond)
+	require.Error(t, err)
+	assert.Nil(t, result)
+}
+
+// TestHttpGetJSON_EmptyBody tests handling of empty response body
+func TestHttpGetJSON_EmptyBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		// Empty body - should fail to decode
+	}))
+	defer server.Close()
+
+	result, err := httpGetJSON[GitHubRelease](server.URL, 5*time.Second)
+	require.Error(t, err)
+	assert.Nil(t, result)
 }
