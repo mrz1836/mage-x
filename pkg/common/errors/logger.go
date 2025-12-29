@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	pkglog "github.com/mrz1836/mage-x/pkg/log"
 )
 
 // Static errors for logger operations
@@ -172,33 +174,12 @@ func (l *DefaultErrorLogger) logMageError(ctx context.Context, err MageError) {
 	logLine := fmt.Sprintf("[%s] [%s] %s", timestamp, err.Severity().String(), formatted)
 
 	// Add context information if available
-	if requestID := getRequestIDFromContext(ctx); requestID != "" {
+	if requestID := pkglog.GetRequestIDFromContext(ctx); requestID != "" {
 		logLine = fmt.Sprintf("[req:%s] %s", requestID, logLine)
 	}
 
 	// Log the formatted error
 	l.logger.Println(logLine)
-}
-
-// getRequestIDFromContext extracts request ID from context
-func getRequestIDFromContext(ctx context.Context) string {
-	if ctx == nil {
-		return ""
-	}
-
-	if value := ctx.Value("request_id"); value != nil {
-		if requestID, ok := value.(string); ok {
-			return requestID
-		}
-	}
-
-	if value := ctx.Value("requestId"); value != nil {
-		if requestID, ok := value.(string); ok {
-			return requestID
-		}
-	}
-
-	return ""
 }
 
 // ErrorLoggerOptions holds configuration options for error loggers

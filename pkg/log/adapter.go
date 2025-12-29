@@ -9,9 +9,21 @@ import (
 	"time"
 )
 
+// copyFields returns a deep copy of the fields map
+func copyFields(src Fields) Fields {
+	if src == nil {
+		return make(Fields)
+	}
+	dst := make(Fields, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
 // CLIAdapter wraps the utils.Logger to implement CLILogger
 type CLIAdapter struct {
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	level    Level
 	prefix   string
 	fields   Fields
@@ -105,8 +117,8 @@ func (a *CLIAdapter) SetLevel(level Level) {
 
 // GetLevel returns the current log level
 func (a *CLIAdapter) GetLevel() Level {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 	return a.level
 }
 
@@ -126,36 +138,30 @@ func (a *CLIAdapter) SetColorEnabled(enabled bool) {
 
 // WithPrefix creates a new logger with a prefix
 func (a *CLIAdapter) WithPrefix(prefix string) Logger {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
 	newAdapter := &CLIAdapter{
 		level:    a.level,
 		prefix:   prefix,
 		useColor: a.useColor,
 		output:   a.output,
-		fields:   make(Fields),
-	}
-	for k, v := range a.fields {
-		newAdapter.fields[k] = v
+		fields:   copyFields(a.fields),
 	}
 	return newAdapter
 }
 
 // WithField creates a new logger with an additional field
 func (a *CLIAdapter) WithField(key string, value interface{}) Logger {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
 	newAdapter := &CLIAdapter{
 		level:    a.level,
 		prefix:   a.prefix,
 		useColor: a.useColor,
 		output:   a.output,
-		fields:   make(Fields),
-	}
-	for k, v := range a.fields {
-		newAdapter.fields[k] = v
+		fields:   copyFields(a.fields),
 	}
 	newAdapter.fields[key] = value
 	return newAdapter
@@ -163,18 +169,15 @@ func (a *CLIAdapter) WithField(key string, value interface{}) Logger {
 
 // WithFields creates a new logger with additional fields
 func (a *CLIAdapter) WithFields(fields Fields) Logger {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
 	newAdapter := &CLIAdapter{
 		level:    a.level,
 		prefix:   a.prefix,
 		useColor: a.useColor,
 		output:   a.output,
-		fields:   make(Fields),
-	}
-	for k, v := range a.fields {
-		newAdapter.fields[k] = v
+		fields:   copyFields(a.fields),
 	}
 	for k, v := range fields {
 		newAdapter.fields[k] = v
@@ -266,7 +269,7 @@ func (a *CLIAdapter) logWithEmoji(level Level, emoji, format string, args ...int
 
 // StructuredAdapter provides structured logging capabilities
 type StructuredAdapter struct {
-	mu     sync.Mutex
+	mu     sync.RWMutex
 	level  Level
 	prefix string
 	fields Fields
@@ -331,8 +334,8 @@ func (a *StructuredAdapter) SetLevel(level Level) {
 
 // GetLevel returns the current log level
 func (a *StructuredAdapter) GetLevel() Level {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 	return a.level
 }
 
@@ -345,34 +348,27 @@ func (a *StructuredAdapter) SetOutput(w io.Writer) {
 
 // WithPrefix creates a new logger with a prefix
 func (a *StructuredAdapter) WithPrefix(prefix string) Logger {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
-	newAdapter := &StructuredAdapter{
+	return &StructuredAdapter{
 		level:  a.level,
 		prefix: prefix,
 		output: a.output,
-		fields: make(Fields),
+		fields: copyFields(a.fields),
 	}
-	for k, v := range a.fields {
-		newAdapter.fields[k] = v
-	}
-	return newAdapter
 }
 
 // WithField creates a new logger with an additional field
 func (a *StructuredAdapter) WithField(key string, value interface{}) Logger {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
 	newAdapter := &StructuredAdapter{
 		level:  a.level,
 		prefix: a.prefix,
 		output: a.output,
-		fields: make(Fields),
-	}
-	for k, v := range a.fields {
-		newAdapter.fields[k] = v
+		fields: copyFields(a.fields),
 	}
 	newAdapter.fields[key] = value
 	return newAdapter
@@ -380,17 +376,14 @@ func (a *StructuredAdapter) WithField(key string, value interface{}) Logger {
 
 // WithFields creates a new logger with additional fields
 func (a *StructuredAdapter) WithFields(fields Fields) Logger {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
 	newAdapter := &StructuredAdapter{
 		level:  a.level,
 		prefix: a.prefix,
 		output: a.output,
-		fields: make(Fields),
-	}
-	for k, v := range a.fields {
-		newAdapter.fields[k] = v
+		fields: copyFields(a.fields),
 	}
 	for k, v := range fields {
 		newAdapter.fields[k] = v
@@ -423,7 +416,7 @@ func (a *StructuredAdapter) logWithContext(ctx context.Context, level Level, for
 	logLine := fmt.Sprintf("[%s] [%s] %s", timestamp, level.String(), msg)
 
 	// Add context information if available
-	if requestID := getRequestIDFromContext(ctx); requestID != "" {
+	if requestID := GetRequestIDFromContext(ctx); requestID != "" {
 		logLine = fmt.Sprintf("[req:%s] %s", requestID, logLine)
 	}
 
@@ -443,25 +436,6 @@ func (a *StructuredAdapter) logWithContext(ctx context.Context, level Level, for
 
 	//nolint:errcheck // Log output errors are intentionally ignored
 	fmt.Fprintln(a.output, logLine)
-}
-
-// getRequestIDFromContext extracts request ID from context
-func getRequestIDFromContext(ctx context.Context) string {
-	if ctx == nil {
-		return ""
-	}
-
-	// Try common request ID keys
-	keys := []interface{}{"request_id", "requestId", "req_id", "trace_id"}
-	for _, key := range keys {
-		if value := ctx.Value(key); value != nil {
-			if requestID, ok := value.(string); ok && requestID != "" {
-				return requestID
-			}
-		}
-	}
-
-	return ""
 }
 
 // shouldUseColor determines if color output should be enabled
