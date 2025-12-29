@@ -28,6 +28,7 @@ const (
 var (
 	ErrCommandInjection = errors.New("potential command injection detected")
 	ErrInvalidInput     = errors.New("invalid input detected")
+	errTestBinding      = errors.New("test error")
 )
 
 // MockRegistry provides a test registry with enhanced security validation
@@ -1105,6 +1106,1078 @@ func TestFuzzCommandArguments(t *testing.T) {
 			assert.NotEmpty(t, cmd.Description, "Command %s should have description", cmdName)
 			assert.NotEmpty(t, cmd.Usage, "Command %s should have usage", cmdName)
 			assert.NotEmpty(t, cmd.Examples, "Command %s should have examples", cmdName)
+		})
+	}
+}
+
+// ============================================================================
+// Tests for Data-Driven Registration Infrastructure
+// ============================================================================
+
+// TestCommandDefStruct tests the CommandDef struct fields and usage
+func TestCommandDefStruct(t *testing.T) {
+	t.Parallel()
+
+	t.Run("BasicCommandDef", func(t *testing.T) {
+		t.Parallel()
+
+		def := CommandDef{
+			Method:   "test",
+			Desc:     "Test description",
+			Aliases:  []string{"t", "tst"},
+			Usage:    "magex test [flags]",
+			Examples: []string{"magex test", "magex test -v"},
+		}
+
+		assert.Equal(t, "test", def.Method)
+		assert.Equal(t, "Test description", def.Desc)
+		assert.Len(t, def.Aliases, 2)
+		assert.Equal(t, "magex test [flags]", def.Usage)
+		assert.Len(t, def.Examples, 2)
+	})
+
+	t.Run("MinimalCommandDef", func(t *testing.T) {
+		t.Parallel()
+
+		def := CommandDef{
+			Method: "simple",
+			Desc:   "Simple command",
+		}
+
+		assert.Equal(t, "simple", def.Method)
+		assert.Equal(t, "Simple command", def.Desc)
+		assert.Empty(t, def.Aliases)
+		assert.Empty(t, def.Usage)
+		assert.Empty(t, def.Examples)
+	})
+
+	t.Run("CommandDefWithExamples", func(t *testing.T) {
+		t.Parallel()
+
+		def := CommandDef{
+			Method:   "complex",
+			Desc:     "Complex command",
+			Examples: []string{"example1", "example2", "example3"},
+		}
+
+		assert.Len(t, def.Examples, 3)
+		assert.Contains(t, def.Examples, "example1")
+		assert.Contains(t, def.Examples, "example2")
+		assert.Contains(t, def.Examples, "example3")
+	})
+}
+
+// TestMethodBindingStruct tests the MethodBinding struct
+func TestMethodBindingStruct(t *testing.T) {
+	t.Parallel()
+
+	t.Run("NoArgsBinding", func(t *testing.T) {
+		t.Parallel()
+
+		called := false
+		binding := MethodBinding{
+			NoArgs: func() error {
+				called = true
+				return nil
+			},
+		}
+
+		assert.NotNil(t, binding.NoArgs)
+		assert.Nil(t, binding.WithArgs)
+
+		err := binding.NoArgs()
+		require.NoError(t, err)
+		assert.True(t, called)
+	})
+
+	t.Run("WithArgsBinding", func(t *testing.T) {
+		t.Parallel()
+
+		var receivedArgs []string
+		binding := MethodBinding{
+			WithArgs: func(args ...string) error {
+				receivedArgs = args
+				return nil
+			},
+		}
+
+		assert.Nil(t, binding.NoArgs)
+		assert.NotNil(t, binding.WithArgs)
+
+		err := binding.WithArgs("arg1", "arg2")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"arg1", "arg2"}, receivedArgs)
+	})
+
+	t.Run("DualFunctionBinding", func(t *testing.T) {
+		t.Parallel()
+
+		noArgsCalled := false
+		withArgsCalled := false
+
+		binding := MethodBinding{
+			NoArgs: func() error {
+				noArgsCalled = true
+				return nil
+			},
+			WithArgs: func(args ...string) error {
+				withArgsCalled = true
+				return nil
+			},
+		}
+
+		assert.NotNil(t, binding.NoArgs)
+		assert.NotNil(t, binding.WithArgs)
+
+		err := binding.NoArgs()
+		require.NoError(t, err)
+		assert.True(t, noArgsCalled)
+
+		err = binding.WithArgs("test")
+		require.NoError(t, err)
+		assert.True(t, withArgsCalled)
+	})
+
+	t.Run("ErrorReturning", func(t *testing.T) {
+		t.Parallel()
+
+		binding := MethodBinding{
+			NoArgs: func() error {
+				return errTestBinding
+			},
+		}
+
+		err := binding.NoArgs()
+		require.Error(t, err)
+		assert.Equal(t, errTestBinding, err)
+	})
+}
+
+// TestRegisterNamespaceCommandsHelper tests the helper function directly
+func TestRegisterNamespaceCommandsHelper(t *testing.T) {
+	t.Parallel()
+
+	t.Run("BasicRegistration", func(t *testing.T) {
+		t.Parallel()
+
+		mockReg := NewMockRegistry()
+		commands := []CommandDef{
+			{Method: "test1", Desc: "Test command 1"},
+			{Method: "test2", Desc: "Test command 2"},
+		}
+		bindings := map[string]MethodBinding{
+			"test1": {NoArgs: func() error { return nil }},
+			"test2": {NoArgs: func() error { return nil }},
+		}
+
+		registerNamespaceCommands(mockReg.Registry, "testns", "TestCategory", commands, bindings)
+
+		registeredCmds := mockReg.GetRegisteredCommands()
+		assert.Len(t, registeredCmds, 2)
+
+		cmd1, exists := registeredCmds["testns:test1"]
+		require.True(t, exists)
+		assert.Equal(t, "Test command 1", cmd1.Description)
+		assert.Equal(t, "TestCategory", cmd1.Category)
+		assert.NotNil(t, cmd1.Func)
+
+		cmd2, exists := registeredCmds["testns:test2"]
+		require.True(t, exists)
+		assert.Equal(t, "Test command 2", cmd2.Description)
+	})
+
+	t.Run("WithAliases", func(t *testing.T) {
+		t.Parallel()
+
+		mockReg := NewMockRegistry()
+		commands := []CommandDef{
+			{Method: "cmd", Desc: "Test command", Aliases: []string{"c", "command"}},
+		}
+		bindings := map[string]MethodBinding{
+			"cmd": {NoArgs: func() error { return nil }},
+		}
+
+		registerNamespaceCommands(mockReg.Registry, "ns", "Cat", commands, bindings)
+
+		registeredCmds := mockReg.GetRegisteredCommands()
+		cmd, exists := registeredCmds["ns:cmd"]
+		require.True(t, exists)
+		assert.Contains(t, cmd.Aliases, "c")
+		assert.Contains(t, cmd.Aliases, "command")
+	})
+
+	t.Run("WithUsageAndExamples", func(t *testing.T) {
+		t.Parallel()
+
+		mockReg := NewMockRegistry()
+		commands := []CommandDef{
+			{
+				Method:   "example",
+				Desc:     "Example command",
+				Usage:    "magex ns:example [flags]",
+				Examples: []string{"magex ns:example", "magex ns:example --flag"},
+			},
+		}
+		bindings := map[string]MethodBinding{
+			"example": {NoArgs: func() error { return nil }},
+		}
+
+		registerNamespaceCommands(mockReg.Registry, "ns", "Cat", commands, bindings)
+
+		registeredCmds := mockReg.GetRegisteredCommands()
+		cmd, exists := registeredCmds["ns:example"]
+		require.True(t, exists)
+		assert.Equal(t, "magex ns:example [flags]", cmd.Usage)
+		assert.Len(t, cmd.Examples, 2)
+	})
+
+	t.Run("WithArgsFunction", func(t *testing.T) {
+		t.Parallel()
+
+		mockReg := NewMockRegistry()
+		commands := []CommandDef{
+			{Method: "argcmd", Desc: "Command with args"},
+		}
+		bindings := map[string]MethodBinding{
+			"argcmd": {WithArgs: func(args ...string) error { return nil }},
+		}
+
+		registerNamespaceCommands(mockReg.Registry, "ns", "Cat", commands, bindings)
+
+		registeredCmds := mockReg.GetRegisteredCommands()
+		cmd, exists := registeredCmds["ns:argcmd"]
+		require.True(t, exists)
+		assert.NotNil(t, cmd.FuncWithArgs)
+		assert.Nil(t, cmd.Func)
+	})
+
+	t.Run("DualFunctionRegistration", func(t *testing.T) {
+		t.Parallel()
+
+		mockReg := NewMockRegistry()
+		commands := []CommandDef{
+			{Method: "dual", Desc: "Dual function command"},
+		}
+		bindings := map[string]MethodBinding{
+			"dual": {
+				NoArgs:   func() error { return nil },
+				WithArgs: func(args ...string) error { return nil },
+			},
+		}
+
+		registerNamespaceCommands(mockReg.Registry, "ns", "Cat", commands, bindings)
+
+		registeredCmds := mockReg.GetRegisteredCommands()
+		cmd, exists := registeredCmds["ns:dual"]
+		require.True(t, exists)
+		assert.NotNil(t, cmd.Func)
+		assert.NotNil(t, cmd.FuncWithArgs)
+	})
+}
+
+// TestDataTableIntegrity tests that all data tables are properly structured
+func TestDataTableIntegrity(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		commands []CommandDef
+		minCount int
+	}{
+		{"buildCommands", getBuildCommands(), 10},
+		{"testCommands", getTestCommands(), 20},
+		{"lintCommands", getLintCommands(), 5},
+		{"formatCommands", getFormatCommands(), 4},
+		{"depsCommands", getDepsCommands(), 9},
+		{"gitCommands", getGitCommands(), 12},
+		{"releaseCommands", getReleaseCommands(), 9},
+		{"docsCommands", getDocsCommands(), 10},
+		{"toolsCommands", getToolsCommands(), 4},
+		{"generateCommands", getGenerateCommands(), 5},
+		{"updateCommands", getUpdateCommands(), 2},
+		{"modCommands", getModCommands(), 9},
+		{"metricsCommands", getMetricsCommands(), 7},
+		{"benchCommands", getBenchCommands(), 8},
+		{"vetCommands", getVetCommands(), 1},
+		{"configureCommands", getConfigureCommands(), 7},
+		{"helpCommands", getHelpCommands(), 7},
+		{"versionCommands", getVersionCommands(), 6},
+		{"installCommands", getInstallCommands(), 15},
+		{"yamlCommands", getYamlCommands(), 5},
+		{"bmadCommands", getBmadCommands(), 3},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.GreaterOrEqual(t, len(tc.commands), tc.minCount,
+				"%s should have at least %d commands", tc.name, tc.minCount)
+
+			// Verify each command has required fields
+			for i, cmd := range tc.commands {
+				assert.NotEmpty(t, cmd.Method,
+					"%s[%d] should have Method", tc.name, i)
+				assert.NotEmpty(t, cmd.Desc,
+					"%s[%d] should have Desc", tc.name, i)
+			}
+
+			// Verify no duplicate methods
+			methods := make(map[string]bool)
+			for _, cmd := range tc.commands {
+				assert.False(t, methods[cmd.Method],
+					"%s has duplicate method: %s", tc.name, cmd.Method)
+				methods[cmd.Method] = true
+			}
+		})
+	}
+}
+
+// TestMethodBindingFactories tests all method binding factory functions
+func TestMethodBindingFactories(t *testing.T) {
+	t.Parallel()
+
+	t.Run("BuildMethodBindings", func(t *testing.T) {
+		t.Parallel()
+
+		b := mage.Build{}
+		bindings := buildMethodBindings(b)
+
+		assert.NotEmpty(t, bindings)
+		assert.NotNil(t, bindings["default"].NoArgs)
+		assert.NotNil(t, bindings["all"].NoArgs)
+		assert.NotNil(t, bindings["clean"].NoArgs)
+	})
+
+	t.Run("TestMethodBindings", func(t *testing.T) {
+		t.Parallel()
+
+		test := mage.Test{}
+		bindings := testMethodBindings(test)
+
+		assert.NotEmpty(t, bindings)
+		assert.NotNil(t, bindings["default"].WithArgs)
+		assert.NotNil(t, bindings["unit"].WithArgs)
+		assert.NotNil(t, bindings["ci"].NoArgs)
+	})
+
+	t.Run("BenchMethodBindings_DualFunction", func(t *testing.T) {
+		t.Parallel()
+
+		b := mage.Bench{}
+		bindings := benchMethodBindings(b)
+
+		assert.NotEmpty(t, bindings)
+
+		// Bench commands should have both NoArgs and WithArgs
+		for method, binding := range bindings {
+			assert.NotNil(t, binding.NoArgs,
+				"bench:%s should have NoArgs", method)
+			assert.NotNil(t, binding.WithArgs,
+				"bench:%s should have WithArgs", method)
+		}
+	})
+
+	t.Run("VersionMethodBindings", func(t *testing.T) {
+		t.Parallel()
+
+		v := mage.Version{}
+		bindings := versionMethodBindings(v)
+
+		assert.NotEmpty(t, bindings)
+		assert.NotNil(t, bindings["show"].NoArgs)
+		assert.NotNil(t, bindings["bump"].WithArgs)
+		assert.NotNil(t, bindings["changelog"].WithArgs)
+	})
+
+	t.Run("AllBindingFactoriesNonEmpty", func(t *testing.T) {
+		t.Parallel()
+
+		factories := []struct {
+			name    string
+			factory func() map[string]MethodBinding
+		}{
+			{"build", func() map[string]MethodBinding { return buildMethodBindings(mage.Build{}) }},
+			{"test", func() map[string]MethodBinding { return testMethodBindings(mage.Test{}) }},
+			{"lint", func() map[string]MethodBinding { return lintMethodBindings(mage.Lint{}) }},
+			{"format", func() map[string]MethodBinding { return formatMethodBindings(mage.Format{}) }},
+			{"deps", func() map[string]MethodBinding { return depsMethodBindings(mage.Deps{}) }},
+			{"git", func() map[string]MethodBinding { return gitMethodBindings(mage.Git{}) }},
+			{"release", func() map[string]MethodBinding { return releaseMethodBindings(mage.Release{}) }},
+			{"docs", func() map[string]MethodBinding { return docsMethodBindings(mage.Docs{}) }},
+			{"tools", func() map[string]MethodBinding { return toolsMethodBindings(mage.Tools{}) }},
+			{"generate", func() map[string]MethodBinding { return generateMethodBindings(mage.Generate{}) }},
+			{"update", func() map[string]MethodBinding { return updateMethodBindings(mage.Update{}) }},
+			{"mod", func() map[string]MethodBinding { return modMethodBindings(mage.Mod{}) }},
+			{"metrics", func() map[string]MethodBinding { return metricsMethodBindings(mage.Metrics{}) }},
+			{"bench", func() map[string]MethodBinding { return benchMethodBindings(mage.Bench{}) }},
+			{"vet", func() map[string]MethodBinding { return vetMethodBindings(mage.Vet{}) }},
+			{"configure", func() map[string]MethodBinding { return configureMethodBindings(mage.Configure{}) }},
+			{"help", func() map[string]MethodBinding { return helpMethodBindings(mage.Help{}) }},
+			{"version", func() map[string]MethodBinding { return versionMethodBindings(mage.Version{}) }},
+			{"install", func() map[string]MethodBinding { return installMethodBindings(mage.Install{}) }},
+			{"yaml", func() map[string]MethodBinding { return yamlMethodBindings(mage.Yaml{}) }},
+			{"bmad", func() map[string]MethodBinding { return bmadMethodBindings(mage.Bmad{}) }},
+		}
+
+		for _, f := range factories {
+			t.Run(f.name, func(t *testing.T) {
+				bindings := f.factory()
+				assert.NotEmpty(t, bindings,
+					"%s method bindings should not be empty", f.name)
+
+				// Each binding should have at least one function
+				for method, binding := range bindings {
+					hasFunc := binding.NoArgs != nil || binding.WithArgs != nil
+					assert.True(t, hasFunc,
+						"%s:%s should have at least one function", f.name, method)
+				}
+			})
+		}
+	})
+}
+
+// TestDepsAuditSpecialCase tests the deps:audit command with Options
+func TestDepsAuditSpecialCase(t *testing.T) {
+	t.Parallel()
+
+	mockReg := NewMockRegistry()
+	registerDepsCommands(mockReg.Registry)
+
+	commands := mockReg.GetRegisteredCommands()
+
+	// Verify deps:audit exists
+	auditCmd, exists := commands["deps:audit"]
+	require.True(t, exists, "deps:audit should be registered")
+
+	// Verify it has required fields
+	assert.Equal(t, "Security audit of dependencies (govulncheck)", auditCmd.Description)
+	assert.Equal(t, "Dependencies", auditCmd.Category)
+	assert.NotEmpty(t, auditCmd.LongDescription)
+	assert.NotNil(t, auditCmd.FuncWithArgs)
+	assert.NotEmpty(t, auditCmd.Usage)
+	assert.NotEmpty(t, auditCmd.Examples)
+
+	// Verify it has Options (special case)
+	assert.NotEmpty(t, auditCmd.Options, "deps:audit should have Options defined")
+
+	// Verify LongDescription contains expected content
+	assert.Contains(t, auditCmd.LongDescription, "govulncheck")
+	assert.Contains(t, auditCmd.LongDescription, "CVE")
+	assert.Contains(t, auditCmd.LongDescription, "MAGE_X_CVE_EXCLUDES")
+}
+
+// TestBenchNamespaceDualFunctions tests that bench commands have both functions
+func TestBenchNamespaceDualFunctions(t *testing.T) {
+	t.Parallel()
+
+	mockReg := NewMockRegistry()
+	registerBenchCommands(mockReg.Registry)
+
+	commands := mockReg.GetRegisteredCommands()
+
+	expectedDualCommands := []string{
+		"bench:default",
+		"bench:compare",
+		"bench:save",
+		"bench:cpu",
+		"bench:mem",
+		"bench:profile",
+		"bench:trace",
+		"bench:regression",
+	}
+
+	for _, cmdName := range expectedDualCommands {
+		t.Run(cmdName, func(t *testing.T) {
+			cmd, exists := commands[cmdName]
+			require.True(t, exists, "%s should be registered", cmdName)
+
+			// Bench commands should have BOTH Func and FuncWithArgs
+			assert.NotNil(t, cmd.Func, "%s should have Func", cmdName)
+			assert.NotNil(t, cmd.FuncWithArgs, "%s should have FuncWithArgs", cmdName)
+		})
+	}
+}
+
+// TestBindingsMatchDataTables ensures bindings match data tables
+func TestBindingsMatchDataTables(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		commands []CommandDef
+		bindings map[string]MethodBinding
+	}{
+		{"build", getBuildCommands(), buildMethodBindings(mage.Build{})},
+		{"test", getTestCommands(), testMethodBindings(mage.Test{})},
+		{"lint", getLintCommands(), lintMethodBindings(mage.Lint{})},
+		{"format", getFormatCommands(), formatMethodBindings(mage.Format{})},
+		{"deps", getDepsCommands(), depsMethodBindings(mage.Deps{})},
+		{"git", getGitCommands(), gitMethodBindings(mage.Git{})},
+		{"release", getReleaseCommands(), releaseMethodBindings(mage.Release{})},
+		{"docs", getDocsCommands(), docsMethodBindings(mage.Docs{})},
+		{"tools", getToolsCommands(), toolsMethodBindings(mage.Tools{})},
+		{"generate", getGenerateCommands(), generateMethodBindings(mage.Generate{})},
+		{"update", getUpdateCommands(), updateMethodBindings(mage.Update{})},
+		{"mod", getModCommands(), modMethodBindings(mage.Mod{})},
+		{"metrics", getMetricsCommands(), metricsMethodBindings(mage.Metrics{})},
+		{"bench", getBenchCommands(), benchMethodBindings(mage.Bench{})},
+		{"vet", getVetCommands(), vetMethodBindings(mage.Vet{})},
+		{"configure", getConfigureCommands(), configureMethodBindings(mage.Configure{})},
+		{"help", getHelpCommands(), helpMethodBindings(mage.Help{})},
+		{"version", getVersionCommands(), versionMethodBindings(mage.Version{})},
+		{"install", getInstallCommands(), installMethodBindings(mage.Install{})},
+		{"yaml", getYamlCommands(), yamlMethodBindings(mage.Yaml{})},
+		{"bmad", getBmadCommands(), bmadMethodBindings(mage.Bmad{})},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Every command in data table should have a binding
+			for _, cmd := range tc.commands {
+				binding, exists := tc.bindings[cmd.Method]
+				assert.True(t, exists,
+					"%s:%s should have a binding", tc.name, cmd.Method)
+
+				if exists {
+					// Binding should have at least one function
+					hasFunc := binding.NoArgs != nil || binding.WithArgs != nil
+					assert.True(t, hasFunc,
+						"%s:%s binding should have a function", tc.name, cmd.Method)
+				}
+			}
+
+			// Every binding should have a command in data table
+			for method := range tc.bindings {
+				found := false
+				for _, cmd := range tc.commands {
+					if cmd.Method == method {
+						found = true
+						break
+					}
+				}
+				assert.True(t, found,
+					"%s binding '%s' should have a command definition", tc.name, method)
+			}
+		})
+	}
+}
+
+// TestTotalCommandCount verifies the exact number of commands
+func TestTotalCommandCount(t *testing.T) {
+	t.Parallel()
+
+	mockReg := NewMockRegistry()
+	RegisterAll(mockReg.Registry)
+
+	commands := mockReg.GetRegisteredCommands()
+
+	// Count by type
+	namespaceCommands := 0
+	topLevelCommands := 0
+	for _, cmd := range commands {
+		if cmd.Namespace != "" {
+			namespaceCommands++
+		} else {
+			topLevelCommands++
+		}
+	}
+
+	// Expected: 159 data table + 1 deps:audit + 7 top-level = 167
+	assert.Equal(t, 160, namespaceCommands,
+		"Should have 160 namespace commands (159 from tables + 1 deps:audit)")
+	assert.Equal(t, 7, topLevelCommands,
+		"Should have 7 top-level commands")
+	assert.Len(t, commands, 167,
+		"Should have 167 total commands")
+}
+
+// TestMissingBindingPanics verifies commands without bindings cause panic
+func TestMissingBindingPanics(t *testing.T) {
+	t.Parallel()
+
+	t.Run("EmptyBindingPanics", func(t *testing.T) {
+		t.Parallel()
+
+		mockReg := NewMockRegistry()
+		commands := []CommandDef{
+			{Method: "nobinding", Desc: "Command with no binding"},
+		}
+		bindings := map[string]MethodBinding{
+			// Intentionally empty binding - no function set
+			"nobinding": {},
+		}
+
+		// This should panic because the registry requires at least one function
+		assert.Panics(t, func() {
+			registerNamespaceCommands(mockReg.Registry, "test", "Test", commands, bindings)
+		}, "Should panic when command has no function")
+	})
+
+	t.Run("MissingBindingEntryPanics", func(t *testing.T) {
+		t.Parallel()
+
+		mockReg := NewMockRegistry()
+		commands := []CommandDef{
+			{Method: "exists", Desc: "Command that exists"},
+			{Method: "missing", Desc: "Command with missing binding"},
+		}
+		bindings := map[string]MethodBinding{
+			"exists": {NoArgs: func() error { return nil }},
+			// "missing" is not in bindings map
+		}
+
+		// This should panic because the binding lookup returns zero value
+		assert.Panics(t, func() {
+			registerNamespaceCommands(mockReg.Registry, "test", "Test", commands, bindings)
+		}, "Should panic when binding is missing")
+	})
+}
+
+// TestCommandExamplesFormat verifies examples are properly formatted
+func TestCommandExamplesFormat(t *testing.T) {
+	t.Parallel()
+
+	mockReg := NewMockRegistry()
+	RegisterAll(mockReg.Registry)
+
+	commands := mockReg.GetRegisteredCommands()
+
+	for cmdName, cmd := range commands {
+		if len(cmd.Examples) > 0 {
+			t.Run(fmt.Sprintf("Examples_%s", cmdName), func(t *testing.T) {
+				for i, example := range cmd.Examples {
+					// Examples should not be empty
+					assert.NotEmpty(t, example,
+						"%s example[%d] should not be empty", cmdName, i)
+
+					// Examples should start with "magex" or be a valid command
+					if !strings.HasPrefix(example, "magex") &&
+						!strings.HasPrefix(example, "MAGE_X") {
+						t.Logf("Warning: %s example[%d] doesn't start with 'magex': %s",
+							cmdName, i, example)
+					}
+				}
+			})
+		}
+	}
+}
+
+// BenchmarkDataDrivenRegistration benchmarks the data-driven approach
+func BenchmarkDataDrivenRegistration(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		mockReg := NewMockRegistry()
+		b.StartTimer()
+
+		// Register a single namespace using data-driven approach
+		registerBuildCommands(mockReg.Registry)
+	}
+}
+
+// BenchmarkHelperFunction benchmarks the registerNamespaceCommands helper
+func BenchmarkHelperFunction(b *testing.B) {
+	commands := []CommandDef{
+		{Method: "cmd1", Desc: "Command 1"},
+		{Method: "cmd2", Desc: "Command 2"},
+		{Method: "cmd3", Desc: "Command 3"},
+		{Method: "cmd4", Desc: "Command 4"},
+		{Method: "cmd5", Desc: "Command 5"},
+	}
+	bindings := map[string]MethodBinding{
+		"cmd1": {NoArgs: func() error { return nil }},
+		"cmd2": {NoArgs: func() error { return nil }},
+		"cmd3": {NoArgs: func() error { return nil }},
+		"cmd4": {NoArgs: func() error { return nil }},
+		"cmd5": {NoArgs: func() error { return nil }},
+	}
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		mockReg := NewMockRegistry()
+		b.StartTimer()
+
+		registerNamespaceCommands(mockReg.Registry, "bench", "Bench", commands, bindings)
+	}
+}
+
+// ============================================================================
+// Getter Function Tests - Validate the refactor from globals to functions
+// ============================================================================
+
+// TestGetterFunctionsReturnFreshSlices verifies that each getter returns a new slice
+// (not a shared reference) to ensure immutability and thread safety
+func TestGetterFunctionsReturnFreshSlices(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		getter func() []CommandDef
+	}{
+		{"getBuildCommands", getBuildCommands},
+		{"getTestCommands", getTestCommands},
+		{"getLintCommands", getLintCommands},
+		{"getFormatCommands", getFormatCommands},
+		{"getDepsCommands", getDepsCommands},
+		{"getGitCommands", getGitCommands},
+		{"getReleaseCommands", getReleaseCommands},
+		{"getDocsCommands", getDocsCommands},
+		{"getToolsCommands", getToolsCommands},
+		{"getGenerateCommands", getGenerateCommands},
+		{"getUpdateCommands", getUpdateCommands},
+		{"getModCommands", getModCommands},
+		{"getMetricsCommands", getMetricsCommands},
+		{"getBenchCommands", getBenchCommands},
+		{"getVetCommands", getVetCommands},
+		{"getConfigureCommands", getConfigureCommands},
+		{"getHelpCommands", getHelpCommands},
+		{"getVersionCommands", getVersionCommands},
+		{"getInstallCommands", getInstallCommands},
+		{"getYamlCommands", getYamlCommands},
+		{"getBmadCommands", getBmadCommands},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Get two slices from the same getter
+			slice1 := tc.getter()
+			slice2 := tc.getter()
+
+			// They should have the same length and content
+			require.Len(t, slice2, len(slice1),
+				"%s should return slices of equal length", tc.name)
+
+			// But they should NOT be the same underlying slice (pointer comparison)
+			// Modify one and verify the other is unchanged
+			if len(slice1) > 0 {
+				originalMethod := slice1[0].Method
+				slice1[0].Method = "MODIFIED_FOR_TEST"
+
+				assert.Equal(t, originalMethod, slice2[0].Method,
+					"%s should return independent slices; modifying one should not affect the other", tc.name)
+
+				// Restore for cleanliness
+				slice1[0].Method = originalMethod
+			}
+		})
+	}
+}
+
+// TestGetterFunctionsReturnConsistentData verifies each getter returns the same data
+func TestGetterFunctionsReturnConsistentData(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		getter func() []CommandDef
+	}{
+		{"getBuildCommands", getBuildCommands},
+		{"getTestCommands", getTestCommands},
+		{"getLintCommands", getLintCommands},
+		{"getFormatCommands", getFormatCommands},
+		{"getDepsCommands", getDepsCommands},
+		{"getGitCommands", getGitCommands},
+		{"getReleaseCommands", getReleaseCommands},
+		{"getDocsCommands", getDocsCommands},
+		{"getToolsCommands", getToolsCommands},
+		{"getGenerateCommands", getGenerateCommands},
+		{"getUpdateCommands", getUpdateCommands},
+		{"getModCommands", getModCommands},
+		{"getMetricsCommands", getMetricsCommands},
+		{"getBenchCommands", getBenchCommands},
+		{"getVetCommands", getVetCommands},
+		{"getConfigureCommands", getConfigureCommands},
+		{"getHelpCommands", getHelpCommands},
+		{"getVersionCommands", getVersionCommands},
+		{"getInstallCommands", getInstallCommands},
+		{"getYamlCommands", getYamlCommands},
+		{"getBmadCommands", getBmadCommands},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Call multiple times and verify consistency
+			for i := 0; i < 5; i++ {
+				slice := tc.getter()
+				require.NotEmpty(t, slice, "%s should return non-empty slice", tc.name)
+
+				// Verify all commands have required fields
+				for j, cmd := range slice {
+					assert.NotEmpty(t, cmd.Method,
+						"%s[%d] should have Method field", tc.name, j)
+					assert.NotEmpty(t, cmd.Desc,
+						"%s[%d] should have Desc field", tc.name, j)
+				}
+			}
+		})
+	}
+}
+
+// TestGetterFunctionsConcurrentAccess verifies getter functions are thread-safe
+func TestGetterFunctionsConcurrentAccess(t *testing.T) {
+	t.Parallel()
+
+	getters := []struct {
+		name   string
+		getter func() []CommandDef
+	}{
+		{"getBuildCommands", getBuildCommands},
+		{"getTestCommands", getTestCommands},
+		{"getLintCommands", getLintCommands},
+		{"getFormatCommands", getFormatCommands},
+		{"getDepsCommands", getDepsCommands},
+		{"getGitCommands", getGitCommands},
+		{"getReleaseCommands", getReleaseCommands},
+		{"getDocsCommands", getDocsCommands},
+		{"getToolsCommands", getToolsCommands},
+		{"getGenerateCommands", getGenerateCommands},
+		{"getUpdateCommands", getUpdateCommands},
+		{"getModCommands", getModCommands},
+		{"getMetricsCommands", getMetricsCommands},
+		{"getBenchCommands", getBenchCommands},
+		{"getVetCommands", getVetCommands},
+		{"getConfigureCommands", getConfigureCommands},
+		{"getHelpCommands", getHelpCommands},
+		{"getVersionCommands", getVersionCommands},
+		{"getInstallCommands", getInstallCommands},
+		{"getYamlCommands", getYamlCommands},
+		{"getBmadCommands", getBmadCommands},
+	}
+
+	const numGoroutines = 50
+
+	for _, g := range getters {
+		t.Run(g.name+"_concurrent", func(t *testing.T) {
+			t.Parallel()
+
+			var wg sync.WaitGroup
+			results := make(chan int, numGoroutines)
+
+			// Launch many goroutines calling the same getter
+			for i := 0; i < numGoroutines; i++ {
+				wg.Add(1)
+				go func(getter func() []CommandDef) {
+					defer wg.Done()
+					cmds := getter()
+					results <- len(cmds)
+				}(g.getter)
+			}
+
+			wg.Wait()
+			close(results)
+
+			// All goroutines should get the same length
+			var firstLen int
+			first := true
+			for length := range results {
+				if first {
+					firstLen = length
+					first = false
+				} else {
+					assert.Equal(t, firstLen, length,
+						"%s should return same length from concurrent calls", g.name)
+				}
+			}
+		})
+	}
+}
+
+// TestGetterFunctionsExpectedCounts verifies each getter returns expected command counts
+func TestGetterFunctionsExpectedCounts(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name          string
+		getter        func() []CommandDef
+		expectedCount int
+	}{
+		{"getBuildCommands", getBuildCommands, 10},
+		{"getTestCommands", getTestCommands, 21},
+		{"getLintCommands", getLintCommands, 5},
+		{"getFormatCommands", getFormatCommands, 4},
+		{"getDepsCommands", getDepsCommands, 9},
+		{"getGitCommands", getGitCommands, 12},
+		{"getReleaseCommands", getReleaseCommands, 9},
+		{"getDocsCommands", getDocsCommands, 10},
+		{"getToolsCommands", getToolsCommands, 4},
+		{"getGenerateCommands", getGenerateCommands, 5},
+		{"getUpdateCommands", getUpdateCommands, 2},
+		{"getModCommands", getModCommands, 9},
+		{"getMetricsCommands", getMetricsCommands, 7},
+		{"getBenchCommands", getBenchCommands, 8},
+		{"getVetCommands", getVetCommands, 1},
+		{"getConfigureCommands", getConfigureCommands, 7},
+		{"getHelpCommands", getHelpCommands, 7},
+		{"getVersionCommands", getVersionCommands, 6},
+		{"getInstallCommands", getInstallCommands, 15},
+		{"getYamlCommands", getYamlCommands, 5},
+		{"getBmadCommands", getBmadCommands, 3},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cmds := tc.getter()
+			assert.Len(t, cmds, tc.expectedCount,
+				"%s should return exactly %d commands", tc.name, tc.expectedCount)
+		})
+	}
+}
+
+// TestGetterFunctionsNoDuplicateMethods verifies no duplicate methods within each getter
+func TestGetterFunctionsNoDuplicateMethods(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		getter func() []CommandDef
+	}{
+		{"getBuildCommands", getBuildCommands},
+		{"getTestCommands", getTestCommands},
+		{"getLintCommands", getLintCommands},
+		{"getFormatCommands", getFormatCommands},
+		{"getDepsCommands", getDepsCommands},
+		{"getGitCommands", getGitCommands},
+		{"getReleaseCommands", getReleaseCommands},
+		{"getDocsCommands", getDocsCommands},
+		{"getToolsCommands", getToolsCommands},
+		{"getGenerateCommands", getGenerateCommands},
+		{"getUpdateCommands", getUpdateCommands},
+		{"getModCommands", getModCommands},
+		{"getMetricsCommands", getMetricsCommands},
+		{"getBenchCommands", getBenchCommands},
+		{"getVetCommands", getVetCommands},
+		{"getConfigureCommands", getConfigureCommands},
+		{"getHelpCommands", getHelpCommands},
+		{"getVersionCommands", getVersionCommands},
+		{"getInstallCommands", getInstallCommands},
+		{"getYamlCommands", getYamlCommands},
+		{"getBmadCommands", getBmadCommands},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cmds := tc.getter()
+			seen := make(map[string]bool)
+
+			for _, cmd := range cmds {
+				assert.False(t, seen[cmd.Method],
+					"%s has duplicate method: %s", tc.name, cmd.Method)
+				seen[cmd.Method] = true
+			}
+		})
+	}
+}
+
+// TestGetterFunctionsAliasesValid verifies all aliases in commands are non-empty
+func TestGetterFunctionsAliasesValid(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		getter func() []CommandDef
+	}{
+		{"getBuildCommands", getBuildCommands},
+		{"getTestCommands", getTestCommands},
+		{"getLintCommands", getLintCommands},
+		{"getFormatCommands", getFormatCommands},
+		{"getDepsCommands", getDepsCommands},
+		{"getGitCommands", getGitCommands},
+		{"getReleaseCommands", getReleaseCommands},
+		{"getDocsCommands", getDocsCommands},
+		{"getToolsCommands", getToolsCommands},
+		{"getGenerateCommands", getGenerateCommands},
+		{"getUpdateCommands", getUpdateCommands},
+		{"getModCommands", getModCommands},
+		{"getMetricsCommands", getMetricsCommands},
+		{"getBenchCommands", getBenchCommands},
+		{"getVetCommands", getVetCommands},
+		{"getConfigureCommands", getConfigureCommands},
+		{"getHelpCommands", getHelpCommands},
+		{"getVersionCommands", getVersionCommands},
+		{"getInstallCommands", getInstallCommands},
+		{"getYamlCommands", getYamlCommands},
+		{"getBmadCommands", getBmadCommands},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cmds := tc.getter()
+			for _, cmd := range cmds {
+				for i, alias := range cmd.Aliases {
+					assert.NotEmpty(t, alias,
+						"%s method '%s' has empty alias at index %d", tc.name, cmd.Method, i)
+				}
+			}
+		})
+	}
+}
+
+// TestTotalCommandsFromGetters verifies sum of all getter counts matches expected total
+func TestTotalCommandsFromGetters(t *testing.T) {
+	t.Parallel()
+
+	getters := []func() []CommandDef{
+		getBuildCommands,
+		getTestCommands,
+		getLintCommands,
+		getFormatCommands,
+		getDepsCommands,
+		getGitCommands,
+		getReleaseCommands,
+		getDocsCommands,
+		getToolsCommands,
+		getGenerateCommands,
+		getUpdateCommands,
+		getModCommands,
+		getMetricsCommands,
+		getBenchCommands,
+		getVetCommands,
+		getConfigureCommands,
+		getHelpCommands,
+		getVersionCommands,
+		getInstallCommands,
+		getYamlCommands,
+		getBmadCommands,
+	}
+
+	total := 0
+	for _, getter := range getters {
+		total += len(getter())
+	}
+
+	// Expected: 159 commands from data tables
+	assert.Equal(t, 159, total,
+		"Total commands from all getters should equal 159")
+}
+
+// BenchmarkGetterFunctions benchmarks the getter function calls
+func BenchmarkGetterFunctions(b *testing.B) {
+	getters := []struct {
+		name   string
+		getter func() []CommandDef
+	}{
+		{"getBuildCommands", getBuildCommands},
+		{"getTestCommands", getTestCommands},
+		{"getLintCommands", getLintCommands},
+	}
+
+	for _, g := range getters {
+		b.Run(g.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = g.getter()
+			}
 		})
 	}
 }

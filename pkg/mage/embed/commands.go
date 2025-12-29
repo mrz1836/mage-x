@@ -7,6 +7,593 @@ import (
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 )
 
+// MethodBinding links method names to actual functions
+type MethodBinding struct {
+	NoArgs   func() error          // for WithFunc
+	WithArgs func(...string) error // for WithArgsFunc
+}
+
+// CommandDef represents a declarative command definition
+type CommandDef struct {
+	Method   string   // e.g., "default", "all", "linux"
+	Desc     string   // Short description
+	Aliases  []string // Optional aliases
+	Usage    string   // Optional usage pattern
+	Examples []string // Optional examples
+}
+
+// registerNamespaceCommands registers all commands for a namespace using data definitions
+func registerNamespaceCommands(
+	reg *registry.Registry,
+	namespace, category string,
+	commands []CommandDef,
+	bindings map[string]MethodBinding,
+) {
+	for _, cmd := range commands {
+		binding := bindings[cmd.Method]
+		builder := registry.NewNamespaceCommand(namespace, cmd.Method).
+			WithDescription(cmd.Desc).
+			WithCategory(category)
+
+		if binding.NoArgs != nil {
+			builder = builder.WithFunc(binding.NoArgs)
+		}
+		if binding.WithArgs != nil {
+			builder = builder.WithArgsFunc(binding.WithArgs)
+		}
+		if len(cmd.Aliases) > 0 {
+			builder = builder.WithAliases(cmd.Aliases...)
+		}
+		if cmd.Usage != "" {
+			builder = builder.WithUsage(cmd.Usage)
+		}
+		if len(cmd.Examples) > 0 {
+			builder = builder.WithExamples(cmd.Examples...)
+		}
+		reg.MustRegister(builder.MustBuild())
+	}
+}
+
+// ============================================================================
+// Command Definitions - Data Tables (as functions to avoid global variables)
+// ============================================================================
+
+func getBuildCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Build the application for the current platform", Aliases: []string{"build"}},
+		{Method: "all", Desc: "Build for all configured platforms"},
+		{Method: "linux", Desc: "Build for Linux (amd64)"},
+		{Method: "darwin", Desc: "Build for macOS (amd64 and arm64)", Aliases: []string{"build:mac", "build:macos"}},
+		{Method: "windows", Desc: "Build for Windows (amd64)"},
+		{Method: "clean", Desc: "Remove build artifacts", Aliases: []string{"clean"}},
+		{Method: "install", Desc: "Install the binary to $GOPATH/bin", Aliases: []string{"install"}},
+		{Method: "dev", Desc: "Build and install development version (forced 'dev' version)", Aliases: []string{"dev"}},
+		{Method: "generate", Desc: "Run go generate"},
+		{Method: "prebuild", Desc: "Pre-build all packages to warm cache"},
+	}
+}
+
+func getTestCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Run standard test suite", Aliases: []string{"test"}, Usage: "magex test [flags]", Examples: []string{"magex test", "magex test -json", "magex test -race -v"}},
+		{Method: "unit", Desc: "Run unit tests only", Usage: "magex test:unit [flags]", Examples: []string{"magex test:unit", "magex test:unit -json", "magex test:unit -v"}},
+		{Method: "full", Desc: "Run full test suite with linting", Usage: "magex test:full [flags]", Examples: []string{"magex test:full", "magex test:full -json", "magex test:full -v"}},
+		{Method: "short", Desc: "Run short tests", Usage: "magex test:short [flags]", Examples: []string{"magex test:short", "magex test:short -json"}},
+		{Method: "race", Desc: "Run tests with race detector", Usage: "magex test:race [flags]", Examples: []string{"magex test:race", "magex test:race -json", "magex test:race -v"}},
+		{Method: "cover", Desc: "Run tests with coverage", Usage: "magex test:cover [flags]", Examples: []string{"magex test:cover", "magex test:cover -json", "magex test:cover -v"}},
+		{Method: "coverrace", Desc: "Run tests with coverage and race detector", Usage: "magex test:coverrace [flags]", Examples: []string{"magex test:coverrace", "magex test:coverrace -json", "magex test:coverrace -v"}},
+		{Method: "coverreport", Desc: "Generate coverage report"},
+		{Method: "coverhtml", Desc: "Generate HTML coverage report"},
+		{Method: "fuzz", Desc: "Run fuzz tests with optional time parameter", Usage: "magex test:fuzz [time=<duration>]", Examples: []string{"magex test:fuzz", "magex test:fuzz time=5s"}},
+		{Method: "fuzzshort", Desc: "Run short fuzz tests with optional time parameter", Usage: "magex test:fuzzshort [time=<duration>]", Examples: []string{"magex test:fuzzshort", "magex test:fuzzshort time=3s"}},
+		{Method: "bench", Desc: "Run benchmarks", Aliases: []string{"benchmark"}},
+		{Method: "benchshort", Desc: "Run short benchmarks with optional time parameter", Usage: "magex test:benchshort [time=<duration>]", Examples: []string{"magex test:benchshort", "magex test:benchshort time=1s"}},
+		{Method: "integration", Desc: "Run integration tests"},
+		{Method: "ci", Desc: "Run CI test suite"},
+		{Method: "parallel", Desc: "Run tests in parallel"},
+		{Method: "nolint", Desc: "Run tests without linting"},
+		{Method: "cinorace", Desc: "Run CI tests without race detector"},
+		{Method: "run", Desc: "Run a specific test pattern"},
+		{Method: "coverage", Desc: "Run tests and generate coverage"},
+		{Method: "vet", Desc: "Run go vet"},
+	}
+}
+
+func getLintCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Run default linting", Aliases: []string{"lint"}},
+		{Method: "fix", Desc: "Fix auto-fixable lint issues"},
+		{Method: "ci", Desc: "Run CI linting (strict)"},
+		{Method: "fast", Desc: "Run fast linting checks"},
+		{Method: "issues", Desc: "Scan for TODOs, FIXMEs, nolint directives, and test skips"},
+	}
+}
+
+func getFormatCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Format Go code", Aliases: []string{"format", "fmt"}},
+		{Method: "check", Desc: "Check if code is formatted"},
+		{Method: "fix", Desc: "Fix formatting issues"},
+		{Method: "imports", Desc: "Fix import statements"},
+	}
+}
+
+func getDepsCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Manage dependencies", Aliases: []string{"deps"}},
+		{Method: "update", Desc: "Update all dependencies", Usage: "magex deps:update [all-modules] [dry-run] [fail-fast] [allow-major] [stable-only] [verbose]", Examples: []string{"magex deps:update", "magex deps:update all-modules", "magex deps:update all-modules dry-run", "magex deps:update all-modules fail-fast verbose", "magex deps:update all-modules allow-major stable-only verbose"}},
+		{Method: "tidy", Desc: "Run go mod tidy", Aliases: []string{"tidy"}},
+		{Method: "download", Desc: "Download dependencies"},
+		{Method: "vendor", Desc: "Vendor dependencies", Aliases: []string{"vendor"}},
+		{Method: "verify", Desc: "Verify dependencies"},
+		{Method: "outdated", Desc: "List outdated dependencies"},
+		{Method: "graph", Desc: "Show dependency graph"},
+		{Method: "licenses", Desc: "List dependency licenses"},
+	}
+}
+
+func getGitCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "status", Desc: "Show git status"},
+		{Method: "diff", Desc: "Show git diff and check for uncommitted changes"},
+		{Method: "tag", Desc: "Create a git tag with version parameter", Usage: "magex git:tag version=<X.Y.Z>", Examples: []string{"magex git:tag version=1.2.3"}},
+		{Method: "tagremove", Desc: "Remove a git tag with version parameter", Usage: "magex git:tagremove version=<X.Y.Z>", Examples: []string{"magex git:tagremove version=1.2.3"}},
+		{Method: "tagupdate", Desc: "Update a git tag with version parameter", Usage: "magex git:tagupdate version=<X.Y.Z>", Examples: []string{"magex git:tagupdate version=1.2.3"}},
+		{Method: "log", Desc: "Show git log"},
+		{Method: "branch", Desc: "Show git branches"},
+		{Method: "pull", Desc: "Pull from remote"},
+		{Method: "commit", Desc: "Create a git commit with message parameter", Usage: "magex git:commit message=\"<commit message>\"", Examples: []string{"magex git:commit message=\"fix: resolve bug in parser\""}},
+		{Method: "init", Desc: "Initialize git repository"},
+		{Method: "add", Desc: "Add files to git"},
+		{Method: "clone", Desc: "Clone a repository"},
+	}
+}
+
+func getReleaseCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Create a release", Aliases: []string{"release"}},
+		{Method: "test", Desc: "Test release process without publishing"},
+		{Method: "snapshot", Desc: "Create a snapshot release"},
+		{Method: "check", Desc: "Check release configuration"},
+		{Method: "init", Desc: "Initialize release configuration"},
+		{Method: "changelog", Desc: "Generate changelog"},
+		{Method: "validate", Desc: "Comprehensive release readiness validation"},
+		{Method: "clean", Desc: "Clean release artifacts and build cache"},
+		{Method: "localinstall", Desc: "Build from latest tag and install locally"},
+	}
+}
+
+func getDocsCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Generate and serve documentation", Aliases: []string{"docs"}},
+		{Method: "build", Desc: "Build documentation"},
+		{Method: "generate", Desc: "Generate documentation from code"},
+		{Method: "serve", Desc: "Serve documentation locally"},
+		{Method: "check", Desc: "Check documentation quality"},
+		{Method: "godocs", Desc: "Generate godocs"},
+		{Method: "examples", Desc: "Generate example documentation"},
+		{Method: "readme", Desc: "Generate README documentation"},
+		{Method: "api", Desc: "Generate API documentation"},
+		{Method: "clean", Desc: "Clean documentation artifacts"},
+	}
+}
+
+func getToolsCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "install", Desc: "Install development tools"},
+		{Method: "update", Desc: "Update development tools"},
+		{Method: "verify", Desc: "Verify installed tools"},
+		{Method: "clean", Desc: "Clean tool installations"},
+	}
+}
+
+func getGenerateCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Run code generation", Aliases: []string{"generate"}},
+		{Method: "all", Desc: "Generate all code"},
+		{Method: "mocks", Desc: "Generate mock files"},
+		{Method: "proto", Desc: "Generate from protobuf files"},
+		{Method: "clean", Desc: "Clean generated files"},
+	}
+}
+
+func getUpdateCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "check", Desc: "Check for updates"},
+		{Method: "install", Desc: "Install updates"},
+	}
+}
+
+func getModCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "tidy", Desc: "Tidy go.mod"},
+		{Method: "download", Desc: "Download module dependencies"},
+		{Method: "update", Desc: "Update module dependencies"},
+		{Method: "clean", Desc: "Clean module cache"},
+		{Method: "graph", Desc: "Visualize dependency graph with parameters", Usage: "magex mod:graph [depth=<n>] [format=<type>] [filter=<pattern>] [show_versions=<bool>]", Examples: []string{"magex mod:graph", "magex mod:graph depth=3", "magex mod:graph format=json", "magex mod:graph filter=github.com show_versions=false"}},
+		{Method: "why", Desc: "Explain why packages are needed", Usage: "magex mod:why <module1> [module2] ...", Examples: []string{"magex mod:why github.com/stretchr/testify", "magex mod:why github.com/pkg/errors golang.org/x/sync"}},
+		{Method: "vendor", Desc: "Create vendor directory"},
+		{Method: "init", Desc: "Initialize go.mod"},
+		{Method: "verify", Desc: "Verify module dependencies"},
+	}
+}
+
+func getMetricsCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "loc", Desc: "Count lines of code (use json for JSON output)"},
+		{Method: "coverage", Desc: "Calculate test coverage metrics"},
+		{Method: "complexity", Desc: "Analyze code complexity"},
+		{Method: "size", Desc: "Calculate binary size metrics"},
+		{Method: "quality", Desc: "Generate quality metrics report"},
+		{Method: "imports", Desc: "Analyze import dependencies"},
+		{Method: "mage", Desc: "Analyze magefiles and targets"},
+	}
+}
+
+func getBenchCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Run benchmarks with optional parameters (time=duration)", Examples: []string{"magex bench", "magex bench time=50ms", "magex bench time=10s count=3"}},
+		{Method: "compare", Desc: "Compare benchmark results with optional file parameters", Examples: []string{"magex bench:compare", "magex bench:compare old=baseline.txt new=current.txt"}},
+		{Method: "save", Desc: "Save benchmark results with optional parameters (time=duration, output=file)", Examples: []string{"magex bench:save", "magex bench:save time=1s output=results.txt"}},
+		{Method: "cpu", Desc: "Run CPU benchmarks with optional parameters (time=duration, profile=file)", Examples: []string{"magex bench:cpu", "magex bench:cpu time=30s profile=cpu-profile.out"}},
+		{Method: "mem", Desc: "Run memory benchmarks with optional parameters (time=duration, profile=file)", Examples: []string{"magex bench:mem", "magex bench:mem time=2s profile=mem-profile.out"}},
+		{Method: "profile", Desc: "Generate benchmark profiles with optional parameters (time=duration, cpu-profile=file, mem-profile=file)", Examples: []string{"magex bench:profile", "magex bench:profile time=5s cpu-profile=cpu.prof mem-profile=mem.prof"}},
+		{Method: "trace", Desc: "Generate execution traces with optional parameters (time=duration, trace=file)", Examples: []string{"magex bench:trace", "magex bench:trace time=10s trace=bench-trace.out"}},
+		{Method: "regression", Desc: "Run regression benchmarks with optional parameters (time=duration, update-baseline=true)", Examples: []string{"magex bench:regression", "magex bench:regression time=5s update-baseline=true"}},
+	}
+}
+
+func getVetCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Run go vet", Aliases: []string{"vet"}},
+	}
+}
+
+func getConfigureCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "init", Desc: "Initialize configuration"},
+		{Method: "show", Desc: "Show current configuration"},
+		{Method: "update", Desc: "Update configuration"},
+		{Method: "export", Desc: "Export configuration"},
+		{Method: "import", Desc: "Import configuration"},
+		{Method: "validate", Desc: "Validate configuration"},
+		{Method: "schema", Desc: "Show configuration schema"},
+	}
+}
+
+func getHelpCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Show help", Aliases: []string{"help"}},
+		{Method: "commands", Desc: "List all available commands"},
+		{Method: "command", Desc: "Show help for a specific command"},
+		{Method: "examples", Desc: "Show usage examples"},
+		{Method: "gettingstarted", Desc: "Getting started guide"},
+		{Method: "completions", Desc: "Setup shell completions"},
+		{Method: "topics", Desc: "List help topics"},
+	}
+}
+
+func getVersionCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "show", Desc: "Display current version information"},
+		{Method: "check", Desc: "Check version information and compare with latest"},
+		{Method: "update", Desc: "Update to latest version"},
+		{Method: "bump", Desc: "Bump version with parameters: bump=<major|minor|patch> branch=<branch-name> push dry-run force major-confirm", Usage: "magex version:bump [bump=<type>] [branch=<branch-name>] [push] [dry-run] [force] [major-confirm]", Examples: []string{"magex version:bump bump=patch branch=master push", "magex version:bump bump=minor branch=main", "magex version:bump bump=major major-confirm branch=master push", "magex version:bump bump=patch dry-run", "magex version:bump bump=patch"}},
+		{Method: "changelog", Desc: "Generate changelog from git history with parameters: from=<tag> to=<tag>", Usage: "magex version:changelog [from=<tag>] [to=<tag>]", Examples: []string{"magex version:changelog", "magex version:changelog from=v1.0.0", "magex version:changelog from=v1.0.0 to=v1.1.0"}},
+		{Method: "tag", Desc: "Create version tag"},
+	}
+}
+
+func getInstallCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "default", Desc: "Default installation"},
+		{Method: "local", Desc: "Install locally"},
+		{Method: "binary", Desc: "Install project binary"},
+		{Method: "tools", Desc: "Install development tools"},
+		{Method: "go", Desc: "Install Go"},
+		{Method: "stdlib", Desc: "Install Go standard library"},
+		{Method: "systemwide", Desc: "Install system-wide"},
+		{Method: "deps", Desc: "Install dependencies"},
+		{Method: "mage", Desc: "Install mage"},
+		{Method: "githooks", Desc: "Install git hooks"},
+		{Method: "ci", Desc: "Install CI components"},
+		{Method: "certs", Desc: "Install certificates"},
+		{Method: "package", Desc: "Install package"},
+		{Method: "all", Desc: "Install everything"},
+		{Method: "uninstall", Desc: "Remove installation"},
+	}
+}
+
+func getYamlCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "init", Desc: "Create mage.yaml configuration"},
+		{Method: "validate", Desc: "Validate YAML configuration"},
+		{Method: "show", Desc: "Show current YAML configuration"},
+		{Method: "update", Desc: "Update YAML configuration"},
+		{Method: "template", Desc: "Generate YAML templates"},
+	}
+}
+
+func getBmadCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "install", Desc: "Install BMAD prerequisites (npm, npx, bmad-method)"},
+		{Method: "check", Desc: "Verify BMAD installation and version"},
+		{Method: "upgrade", Desc: "Upgrade BMAD to latest version"},
+	}
+}
+
+// ============================================================================
+// Method Bindings - Type-Safe Function References
+// ============================================================================
+
+func buildMethodBindings(b mage.Build) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default":  {NoArgs: b.Default},
+		"all":      {NoArgs: b.All},
+		"linux":    {NoArgs: b.Linux},
+		"darwin":   {NoArgs: b.Darwin},
+		"windows":  {NoArgs: b.Windows},
+		"clean":    {NoArgs: b.Clean},
+		"install":  {NoArgs: b.Install},
+		"dev":      {NoArgs: b.Dev},
+		"generate": {NoArgs: b.Generate},
+		"prebuild": {NoArgs: b.PreBuild},
+	}
+}
+
+func testMethodBindings(t mage.Test) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default":     {WithArgs: t.Default},
+		"unit":        {WithArgs: t.Unit},
+		"full":        {WithArgs: t.Full},
+		"short":       {WithArgs: t.Short},
+		"race":        {WithArgs: t.Race},
+		"cover":       {WithArgs: t.Cover},
+		"coverrace":   {WithArgs: t.CoverRace},
+		"coverreport": {NoArgs: t.CoverReport},
+		"coverhtml":   {NoArgs: t.CoverHTML},
+		"fuzz":        {WithArgs: t.Fuzz},
+		"fuzzshort":   {WithArgs: t.FuzzShort},
+		"bench":       {WithArgs: t.Bench},
+		"benchshort":  {WithArgs: t.BenchShort},
+		"integration": {NoArgs: t.Integration},
+		"ci":          {NoArgs: t.CI},
+		"parallel":    {NoArgs: t.Parallel},
+		"nolint":      {NoArgs: t.NoLint},
+		"cinorace":    {NoArgs: t.CINoRace},
+		"run":         {NoArgs: t.Run},
+		"coverage":    {WithArgs: t.Coverage},
+		"vet":         {NoArgs: t.Vet},
+	}
+}
+
+func lintMethodBindings(l mage.Lint) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default": {NoArgs: l.Default},
+		"fix":     {NoArgs: l.Fix},
+		"ci":      {NoArgs: l.CI},
+		"fast":    {NoArgs: l.Fast},
+		"issues":  {NoArgs: l.Issues},
+	}
+}
+
+func formatMethodBindings(f mage.Format) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default": {NoArgs: f.Default},
+		"check":   {NoArgs: f.Check},
+		"fix":     {NoArgs: f.Fix},
+		"imports": {NoArgs: f.Imports},
+	}
+}
+
+func depsMethodBindings(d mage.Deps) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default":  {NoArgs: d.Default},
+		"update":   {WithArgs: d.UpdateWithArgs},
+		"tidy":     {NoArgs: d.Tidy},
+		"download": {NoArgs: d.Download},
+		"vendor":   {NoArgs: d.Vendor},
+		"verify":   {NoArgs: d.Verify},
+		"outdated": {NoArgs: d.Outdated},
+		"graph":    {NoArgs: d.Graph},
+		"licenses": {NoArgs: d.Licenses},
+	}
+}
+
+func gitMethodBindings(g mage.Git) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"status":    {NoArgs: g.Status},
+		"diff":      {NoArgs: g.Diff},
+		"tag":       {WithArgs: g.TagWithArgs},
+		"tagremove": {WithArgs: g.TagRemoveWithArgs},
+		"tagupdate": {WithArgs: g.TagUpdate},
+		"log":       {NoArgs: g.Log},
+		"branch":    {NoArgs: g.Branch},
+		"pull":      {NoArgs: g.Pull},
+		"commit":    {WithArgs: g.Commit},
+		"init":      {NoArgs: g.Init},
+		"add":       {WithArgs: g.Add},
+		"clone":     {NoArgs: g.Clone},
+	}
+}
+
+func releaseMethodBindings(r mage.Release) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default":      {WithArgs: r.Default},
+		"test":         {NoArgs: r.Test},
+		"snapshot":     {NoArgs: r.Snapshot},
+		"check":        {NoArgs: r.Check},
+		"init":         {NoArgs: r.Init},
+		"changelog":    {NoArgs: r.Changelog},
+		"validate":     {NoArgs: r.Validate},
+		"clean":        {NoArgs: r.Clean},
+		"localinstall": {NoArgs: r.LocalInstall},
+	}
+}
+
+func docsMethodBindings(d mage.Docs) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default":  {NoArgs: d.Default},
+		"build":    {NoArgs: d.Build},
+		"generate": {NoArgs: d.Generate},
+		"serve":    {NoArgs: d.Serve},
+		"check":    {NoArgs: d.Check},
+		"godocs":   {WithArgs: d.GoDocs},
+		"examples": {NoArgs: d.Examples},
+		"readme":   {NoArgs: d.Readme},
+		"api":      {NoArgs: d.API},
+		"clean":    {NoArgs: d.Clean},
+	}
+}
+
+func toolsMethodBindings(t mage.Tools) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"install": {NoArgs: t.Install},
+		"update":  {NoArgs: t.Update},
+		"verify":  {NoArgs: t.Verify},
+		"clean":   {NoArgs: t.Clean},
+	}
+}
+
+func generateMethodBindings(g mage.Generate) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default": {NoArgs: g.Default},
+		"all":     {NoArgs: g.All},
+		"mocks":   {NoArgs: g.Mocks},
+		"proto":   {NoArgs: g.Proto},
+		"clean":   {NoArgs: g.Clean},
+	}
+}
+
+func updateMethodBindings(u mage.Update) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"check":   {NoArgs: u.Check},
+		"install": {NoArgs: u.Install},
+	}
+}
+
+func modMethodBindings(m mage.Mod) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"tidy":     {NoArgs: m.Tidy},
+		"download": {NoArgs: m.Download},
+		"update":   {NoArgs: m.Update},
+		"clean":    {NoArgs: m.Clean},
+		"graph":    {WithArgs: m.Graph},
+		"why":      {WithArgs: m.Why}, // Mod.Why takes args ...string
+		"vendor":   {NoArgs: m.Vendor},
+		"init":     {NoArgs: m.Init},
+		"verify":   {NoArgs: m.Verify},
+	}
+}
+
+func metricsMethodBindings(m mage.Metrics) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"loc":        {WithArgs: m.LOC},
+		"coverage":   {NoArgs: m.Coverage},
+		"complexity": {NoArgs: m.Complexity},
+		"size":       {NoArgs: m.Size},
+		"quality":    {NoArgs: m.Quality},
+		"imports":    {NoArgs: m.Imports},
+		"mage":       {NoArgs: m.Mage},
+	}
+}
+
+func benchMethodBindings(b mage.Bench) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default":    {NoArgs: b.Default, WithArgs: b.DefaultWithArgs},
+		"compare":    {NoArgs: b.Compare, WithArgs: b.CompareWithArgs},
+		"save":       {NoArgs: b.Save, WithArgs: b.SaveWithArgs},
+		"cpu":        {NoArgs: b.CPU, WithArgs: b.CPUWithArgs},
+		"mem":        {NoArgs: b.Mem, WithArgs: b.MemWithArgs},
+		"profile":    {NoArgs: b.Profile, WithArgs: b.ProfileWithArgs},
+		"trace":      {NoArgs: b.Trace, WithArgs: b.TraceWithArgs},
+		"regression": {NoArgs: b.Regression, WithArgs: b.RegressionWithArgs},
+	}
+}
+
+func vetMethodBindings(v mage.Vet) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default": {NoArgs: v.Default},
+	}
+}
+
+func configureMethodBindings(c mage.Configure) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"init":     {NoArgs: c.Init},
+		"show":     {NoArgs: c.Show},
+		"update":   {NoArgs: c.Update},
+		"export":   {NoArgs: c.Export},
+		"import":   {NoArgs: c.Import},
+		"validate": {NoArgs: c.Validate},
+		"schema":   {NoArgs: c.Schema},
+	}
+}
+
+func helpMethodBindings(h mage.Help) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default":        {NoArgs: h.Default},
+		"commands":       {NoArgs: h.Commands},
+		"command":        {NoArgs: h.Command},
+		"examples":       {NoArgs: h.Examples},
+		"gettingstarted": {NoArgs: h.GettingStarted},
+		"completions":    {NoArgs: h.Completions},
+		"topics":         {NoArgs: h.Topics},
+	}
+}
+
+func versionMethodBindings(v mage.Version) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"show":      {NoArgs: v.Show},
+		"check":     {WithArgs: v.Check}, // Version.Check takes _ ...string
+		"update":    {NoArgs: v.Update},
+		"bump":      {WithArgs: v.Bump},
+		"changelog": {WithArgs: v.Changelog},
+		"tag":       {WithArgs: v.Tag}, // Version.Tag takes _ ...string
+	}
+}
+
+func installMethodBindings(i mage.Install) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"default":    {NoArgs: i.Default},
+		"local":      {NoArgs: i.Local},
+		"binary":     {NoArgs: i.Binary},
+		"tools":      {NoArgs: i.Tools},
+		"go":         {NoArgs: i.Go},
+		"stdlib":     {NoArgs: i.Stdlib},
+		"systemwide": {NoArgs: i.SystemWide},
+		"deps":       {NoArgs: i.Deps},
+		"mage":       {NoArgs: i.Mage},
+		"githooks":   {NoArgs: i.GitHooks},
+		"ci":         {NoArgs: i.CI},
+		"certs":      {NoArgs: i.Certs},
+		"package":    {NoArgs: i.Package},
+		"all":        {NoArgs: i.All},
+		"uninstall":  {NoArgs: i.Uninstall},
+	}
+}
+
+func yamlMethodBindings(y mage.Yaml) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"init":     {NoArgs: y.Init},
+		"validate": {NoArgs: y.Validate},
+		"show":     {NoArgs: y.Show},
+		"update":   {NoArgs: y.Update},
+		"template": {NoArgs: y.Template},
+	}
+}
+
+func bmadMethodBindings(b mage.Bmad) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"install": {NoArgs: b.Install},
+		"check":   {NoArgs: b.Check},
+		"upgrade": {NoArgs: b.Upgrade},
+	}
+}
+
+// ============================================================================
+// Registration Functions
+// ============================================================================
+
 // RegisterAll registers all built-in MAGE-X commands with the registry
 // This is called automatically by the magex binary
 func RegisterAll(reg *registry.Registry) {
@@ -20,529 +607,56 @@ func RegisterAll(reg *registry.Registry) {
 	}
 	reg.SetRegistered(true)
 
-	// Register Build namespace commands
+	// Register all namespace commands
 	registerBuildCommands(reg)
-
-	// Register Test namespace commands
 	registerTestCommands(reg)
-
-	// Register Lint namespace commands
 	registerLintCommands(reg)
-
-	// Register Format namespace commands
 	registerFormatCommands(reg)
-
-	// Register Deps namespace commands
 	registerDepsCommands(reg)
-
-	// Register Git namespace commands
 	registerGitCommands(reg)
-
-	// Register Release namespace commands
 	registerReleaseCommands(reg)
-
-	// Register Docs namespace commands
 	registerDocsCommands(reg)
-
-	// Register Tools namespace commands
 	registerToolsCommands(reg)
-
-	// Register Generate namespace commands
 	registerGenerateCommands(reg)
-
-	// Register Update namespace commands
 	registerUpdateCommands(reg)
-
-	// Register Mod namespace commands
 	registerModCommands(reg)
-
-	// Register Metrics namespace commands
 	registerMetricsCommands(reg)
-
-	// Register Bench namespace commands
 	registerBenchCommands(reg)
-
-	// Register Vet namespace commands
 	registerVetCommands(reg)
-
-	// Register Configure namespace commands
 	registerConfigureCommands(reg)
-
-	// Register Help namespace commands
 	registerHelpCommands(reg)
-
-	// Register Version namespace commands
 	registerVersionCommands(reg)
-
-	// Register Install namespace commands
 	registerInstallCommands(reg)
-
-	// Register Yaml namespace commands
 	registerYamlCommands(reg)
-
-	// Register Bmad namespace commands
 	registerBmadCommands(reg)
-
-	// Register top-level convenience commands
 	registerTopLevelCommands(reg)
 }
 
-// registerBuildCommands registers all Build namespace commands
 func registerBuildCommands(reg *registry.Registry) {
 	b := mage.Build{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "default").
-			WithDescription("Build the application for the current platform").
-			WithFunc(func() error { return b.Default() }).
-			WithCategory("Build").
-			WithAliases("build").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "all").
-			WithDescription("Build for all configured platforms").
-			WithFunc(func() error { return b.All() }).
-			WithCategory("Build").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "linux").
-			WithDescription("Build for Linux (amd64)").
-			WithFunc(func() error { return b.Linux() }).
-			WithCategory("Build").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "darwin").
-			WithDescription("Build for macOS (amd64 and arm64)").
-			WithFunc(func() error { return b.Darwin() }).
-			WithCategory("Build").
-			WithAliases("build:mac", "build:macos").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "windows").
-			WithDescription("Build for Windows (amd64)").
-			WithFunc(func() error { return b.Windows() }).
-			WithCategory("Build").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "clean").
-			WithDescription("Remove build artifacts").
-			WithFunc(func() error { return b.Clean() }).
-			WithCategory("Build").
-			WithAliases("clean").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "install").
-			WithDescription("Install the binary to $GOPATH/bin").
-			WithFunc(func() error { return b.Install() }).
-			WithCategory("Build").
-			WithAliases("install").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "dev").
-			WithDescription("Build and install development version (forced 'dev' version)").
-			WithFunc(func() error { return b.Dev() }).
-			WithCategory("Build").
-			WithAliases("dev").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "generate").
-			WithDescription("Run go generate").
-			WithFunc(func() error { return b.Generate() }).
-			WithCategory("Build").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("build", "prebuild").
-			WithDescription("Pre-build all packages to warm cache").
-			WithFunc(func() error { return b.PreBuild() }).
-			WithCategory("Build").
-			MustBuild(),
-	)
+	registerNamespaceCommands(reg, "build", "Build", getBuildCommands(), buildMethodBindings(b))
 }
 
-// registerTestCommands registers all Test namespace commands
 func registerTestCommands(reg *registry.Registry) {
 	t := mage.Test{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "default").
-			WithDescription("Run standard test suite").
-			WithArgsFunc(func(args ...string) error { return t.Default(args...) }).
-			WithCategory("Test").
-			WithAliases("test").
-			WithUsage("magex test [flags]").
-			WithExamples("magex test", "magex test -json", "magex test -race -v").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "unit").
-			WithDescription("Run unit tests only").
-			WithArgsFunc(func(args ...string) error { return t.Unit(args...) }).
-			WithCategory("Test").
-			WithUsage("magex test:unit [flags]").
-			WithExamples("magex test:unit", "magex test:unit -json", "magex test:unit -v").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "full").
-			WithDescription("Run full test suite with linting").
-			WithArgsFunc(func(args ...string) error { return t.Full(args...) }).
-			WithCategory("Test").
-			WithUsage("magex test:full [flags]").
-			WithExamples("magex test:full", "magex test:full -json", "magex test:full -v").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "short").
-			WithDescription("Run short tests").
-			WithArgsFunc(func(args ...string) error { return t.Short(args...) }).
-			WithCategory("Test").
-			WithUsage("magex test:short [flags]").
-			WithExamples("magex test:short", "magex test:short -json").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "race").
-			WithDescription("Run tests with race detector").
-			WithArgsFunc(func(args ...string) error { return t.Race(args...) }).
-			WithCategory("Test").
-			WithUsage("magex test:race [flags]").
-			WithExamples("magex test:race", "magex test:race -json", "magex test:race -v").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "cover").
-			WithDescription("Run tests with coverage").
-			WithArgsFunc(func(args ...string) error { return t.Cover(args...) }).
-			WithCategory("Test").
-			WithUsage("magex test:cover [flags]").
-			WithExamples("magex test:cover", "magex test:cover -json", "magex test:cover -v").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "coverrace").
-			WithDescription("Run tests with coverage and race detector").
-			WithArgsFunc(func(args ...string) error { return t.CoverRace(args...) }).
-			WithCategory("Test").
-			WithUsage("magex test:coverrace [flags]").
-			WithExamples("magex test:coverrace", "magex test:coverrace -json", "magex test:coverrace -v").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "coverreport").
-			WithDescription("Generate coverage report").
-			WithFunc(func() error { return t.CoverReport() }).
-			WithCategory("Test").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "coverhtml").
-			WithDescription("Generate HTML coverage report").
-			WithFunc(func() error { return t.CoverHTML() }).
-			WithCategory("Test").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "fuzz").
-			WithDescription("Run fuzz tests with optional time parameter").
-			WithArgsFunc(func(args ...string) error { return t.Fuzz(args...) }).
-			WithCategory("Test").
-			WithUsage("magex test:fuzz [time=<duration>]").
-			WithExamples("magex test:fuzz", "magex test:fuzz time=5s").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "fuzzshort").
-			WithDescription("Run short fuzz tests with optional time parameter").
-			WithArgsFunc(func(args ...string) error { return t.FuzzShort(args...) }).
-			WithCategory("Test").
-			WithUsage("magex test:fuzzshort [time=<duration>]").
-			WithExamples("magex test:fuzzshort", "magex test:fuzzshort time=3s").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "bench").
-			WithDescription("Run benchmarks").
-			WithArgsFunc(func(args ...string) error { return t.Bench(args...) }).
-			WithCategory("Test").
-			WithAliases("benchmark").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "benchshort").
-			WithDescription("Run short benchmarks with optional time parameter").
-			WithArgsFunc(func(args ...string) error { return t.BenchShort(args...) }).
-			WithCategory("Test").
-			WithUsage("magex test:benchshort [time=<duration>]").
-			WithExamples("magex test:benchshort", "magex test:benchshort time=1s").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "integration").
-			WithDescription("Run integration tests").
-			WithFunc(func() error { return t.Integration() }).
-			WithCategory("Test").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "ci").
-			WithDescription("Run CI test suite").
-			WithFunc(func() error { return t.CI() }).
-			WithCategory("Test").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "parallel").
-			WithDescription("Run tests in parallel").
-			WithFunc(func() error { return t.Parallel() }).
-			WithCategory("Test").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "nolint").
-			WithDescription("Run tests without linting").
-			WithFunc(func() error { return t.NoLint() }).
-			WithCategory("Test").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "cinorace").
-			WithDescription("Run CI tests without race detector").
-			WithFunc(func() error { return t.CINoRace() }).
-			WithCategory("Test").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "run").
-			WithDescription("Run a specific test pattern").
-			WithFunc(func() error { return t.Run() }).
-			WithCategory("Test").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "coverage").
-			WithDescription("Run tests and generate coverage").
-			WithArgsFunc(func(args ...string) error { return t.Coverage(args...) }).
-			WithCategory("Test").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("test", "vet").
-			WithDescription("Run go vet").
-			WithFunc(func() error { return t.Vet() }).
-			WithCategory("Test").
-			MustBuild(),
-	)
+	registerNamespaceCommands(reg, "test", "Test", getTestCommands(), testMethodBindings(t))
 }
 
-// registerLintCommands registers all Lint namespace commands
 func registerLintCommands(reg *registry.Registry) {
 	l := mage.Lint{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("lint", "default").
-			WithDescription("Run default linting").
-			WithFunc(func() error { return l.Default() }).
-			WithCategory("Lint").
-			WithAliases("lint").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("lint", "fix").
-			WithDescription("Fix auto-fixable lint issues").
-			WithFunc(func() error { return l.Fix() }).
-			WithCategory("Lint").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("lint", "ci").
-			WithDescription("Run CI linting (strict)").
-			WithFunc(func() error { return l.CI() }).
-			WithCategory("Lint").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("lint", "fast").
-			WithDescription("Run fast linting checks").
-			WithFunc(func() error { return l.Fast() }).
-			WithCategory("Lint").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("lint", "issues").
-			WithDescription("Scan for TODOs, FIXMEs, nolint directives, and test skips").
-			WithFunc(func() error { return l.Issues() }).
-			WithCategory("Lint").
-			MustBuild(),
-	)
+	registerNamespaceCommands(reg, "lint", "Lint", getLintCommands(), lintMethodBindings(l))
 }
 
-// registerFormatCommands registers all Format namespace commands
 func registerFormatCommands(reg *registry.Registry) {
 	f := mage.Format{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("format", "default").
-			WithDescription("Format Go code").
-			WithFunc(func() error { return f.Default() }).
-			WithCategory("Format").
-			WithAliases("format", "fmt").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("format", "check").
-			WithDescription("Check if code is formatted").
-			WithFunc(func() error { return f.Check() }).
-			WithCategory("Format").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("format", "fix").
-			WithDescription("Fix formatting issues").
-			WithFunc(func() error { return f.Fix() }).
-			WithCategory("Format").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("format", "imports").
-			WithDescription("Fix import statements").
-			WithFunc(func() error { return f.Imports() }).
-			WithCategory("Format").
-			MustBuild(),
-	)
+	registerNamespaceCommands(reg, "format", "Format", getFormatCommands(), formatMethodBindings(f))
 }
 
-// registerDepsCommands registers all Deps namespace commands
 func registerDepsCommands(reg *registry.Registry) {
 	d := mage.Deps{}
+	registerNamespaceCommands(reg, "deps", "Dependencies", getDepsCommands(), depsMethodBindings(d))
 
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "default").
-			WithDescription("Manage dependencies").
-			WithFunc(func() error { return d.Default() }).
-			WithCategory("Dependencies").
-			WithAliases("deps").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "update").
-			WithDescription("Update all dependencies").
-			WithArgsFunc(func(args ...string) error { return d.UpdateWithArgs(args...) }).
-			WithCategory("Dependencies").
-			WithUsage("magex deps:update [all-modules] [dry-run] [fail-fast] [allow-major] [stable-only] [verbose]").
-			WithExamples(
-				"magex deps:update",
-				"magex deps:update all-modules",
-				"magex deps:update all-modules dry-run",
-				"magex deps:update all-modules fail-fast verbose",
-				"magex deps:update all-modules allow-major stable-only verbose",
-			).
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "tidy").
-			WithDescription("Run go mod tidy").
-			WithFunc(func() error { return d.Tidy() }).
-			WithCategory("Dependencies").
-			WithAliases("tidy").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "download").
-			WithDescription("Download dependencies").
-			WithFunc(func() error { return d.Download() }).
-			WithCategory("Dependencies").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "vendor").
-			WithDescription("Vendor dependencies").
-			WithFunc(func() error { return d.Vendor() }).
-			WithCategory("Dependencies").
-			WithAliases("vendor").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "verify").
-			WithDescription("Verify dependencies").
-			WithFunc(func() error { return d.Verify() }).
-			WithCategory("Dependencies").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "outdated").
-			WithDescription("List outdated dependencies").
-			WithFunc(func() error { return d.Outdated() }).
-			WithCategory("Dependencies").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "graph").
-			WithDescription("Show dependency graph").
-			WithFunc(func() error { return d.Graph() }).
-			WithCategory("Dependencies").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("deps", "licenses").
-			WithDescription("List dependency licenses").
-			WithFunc(func() error { return d.Licenses() }).
-			WithCategory("Dependencies").
-			MustBuild(),
-	)
-
+	// Special case: deps:audit with Options and LongDescription (kept as explicit builder)
 	reg.MustRegister(
 		registry.NewNamespaceCommand("deps", "audit").
 			WithDescription("Security audit of dependencies (govulncheck)").
@@ -577,21 +691,99 @@ func registerDepsCommands(reg *registry.Registry) {
 	)
 }
 
-// Continue with other namespace registrations...
-// For brevity, I'll add a few more key namespaces
+func registerGitCommands(reg *registry.Registry) {
+	g := mage.Git{}
+	registerNamespaceCommands(reg, "git", "Git", getGitCommands(), gitMethodBindings(g))
+}
 
-// registerTopLevelCommands registers convenience top-level commands
+func registerReleaseCommands(reg *registry.Registry) {
+	r := mage.Release{}
+	registerNamespaceCommands(reg, "release", "Release", getReleaseCommands(), releaseMethodBindings(r))
+}
+
+func registerDocsCommands(reg *registry.Registry) {
+	d := mage.Docs{}
+	registerNamespaceCommands(reg, "docs", "Documentation", getDocsCommands(), docsMethodBindings(d))
+}
+
+func registerToolsCommands(reg *registry.Registry) {
+	t := mage.Tools{}
+	registerNamespaceCommands(reg, "tools", "Tools", getToolsCommands(), toolsMethodBindings(t))
+}
+
+func registerGenerateCommands(reg *registry.Registry) {
+	g := mage.Generate{}
+	registerNamespaceCommands(reg, "generate", "Generate", getGenerateCommands(), generateMethodBindings(g))
+}
+
+func registerUpdateCommands(reg *registry.Registry) {
+	u := mage.Update{}
+	registerNamespaceCommands(reg, "update", "Update", getUpdateCommands(), updateMethodBindings(u))
+}
+
+func registerModCommands(reg *registry.Registry) {
+	m := mage.Mod{}
+	registerNamespaceCommands(reg, "mod", "Module", getModCommands(), modMethodBindings(m))
+}
+
+func registerMetricsCommands(reg *registry.Registry) {
+	m := mage.Metrics{}
+	registerNamespaceCommands(reg, "metrics", "Metrics", getMetricsCommands(), metricsMethodBindings(m))
+}
+
+func registerBenchCommands(reg *registry.Registry) {
+	b := mage.Bench{}
+	registerNamespaceCommands(reg, "bench", "Benchmark", getBenchCommands(), benchMethodBindings(b))
+}
+
+func registerVetCommands(reg *registry.Registry) {
+	v := mage.Vet{}
+	registerNamespaceCommands(reg, "vet", "Vet", getVetCommands(), vetMethodBindings(v))
+}
+
+func registerConfigureCommands(reg *registry.Registry) {
+	c := mage.Configure{}
+	registerNamespaceCommands(reg, "configure", "Configure", getConfigureCommands(), configureMethodBindings(c))
+}
+
+func registerHelpCommands(reg *registry.Registry) {
+	h := mage.Help{}
+	registerNamespaceCommands(reg, "help", "Help", getHelpCommands(), helpMethodBindings(h))
+}
+
+func registerVersionCommands(reg *registry.Registry) {
+	v := mage.Version{}
+	registerNamespaceCommands(reg, "version", "Version Management", getVersionCommands(), versionMethodBindings(v))
+}
+
+func registerInstallCommands(reg *registry.Registry) {
+	i := mage.Install{}
+	registerNamespaceCommands(reg, "install", "Installation", getInstallCommands(), installMethodBindings(i))
+}
+
+func registerYamlCommands(reg *registry.Registry) {
+	y := mage.Yaml{}
+	registerNamespaceCommands(reg, "yaml", "Configuration", getYamlCommands(), yamlMethodBindings(y))
+}
+
+func registerBmadCommands(reg *registry.Registry) {
+	b := mage.Bmad{}
+	registerNamespaceCommands(reg, "bmad", "AI/ML", getBmadCommands(), bmadMethodBindings(b))
+}
+
 func registerTopLevelCommands(reg *registry.Registry) {
-	// These are aliases for the most common commands
 	b := mage.Build{}
 	t := mage.Test{}
 	l := mage.Lint{}
 	f := mage.Format{}
 
+	// Top-level convenience commands
+	// Note: Some commands need wrappers because the underlying method takes variadic args
+	// but we want the top-level command to work without args too
 	reg.MustRegister(
 		registry.NewCommand("build").
 			WithDescription("Build the application").
-			WithFunc(func() error { return b.Default() }).
+			WithFunc(b.Default).
 			WithCategory("Common").
 			MustBuild(),
 	)
@@ -607,7 +799,7 @@ func registerTopLevelCommands(reg *registry.Registry) {
 	reg.MustRegister(
 		registry.NewCommand("lint").
 			WithDescription("Run linter").
-			WithFunc(func() error { return l.Default() }).
+			WithFunc(l.Default).
 			WithCategory("Common").
 			MustBuild(),
 	)
@@ -615,7 +807,7 @@ func registerTopLevelCommands(reg *registry.Registry) {
 	reg.MustRegister(
 		registry.NewCommand("format").
 			WithDescription("Format code").
-			WithFunc(func() error { return f.Default() }).
+			WithFunc(f.Default).
 			WithCategory("Common").
 			MustBuild(),
 	)
@@ -623,7 +815,7 @@ func registerTopLevelCommands(reg *registry.Registry) {
 	reg.MustRegister(
 		registry.NewCommand("clean").
 			WithDescription("Clean build artifacts").
-			WithFunc(func() error { return b.Clean() }).
+			WithFunc(b.Clean).
 			WithCategory("Common").
 			MustBuild(),
 	)
@@ -631,1027 +823,16 @@ func registerTopLevelCommands(reg *registry.Registry) {
 	reg.MustRegister(
 		registry.NewCommand("install").
 			WithDescription("Install the application").
-			WithFunc(func() error { return b.Install() }).
+			WithFunc(b.Install).
 			WithCategory("Common").
 			MustBuild(),
 	)
 
-	// Bench is an alias for test:bench
-	bench := mage.Test{}
 	reg.MustRegister(
 		registry.NewCommand("bench").
 			WithDescription("Run benchmarks").
-			WithArgsFunc(func(args ...string) error { return bench.Bench(args...) }).
+			WithArgsFunc(func(args ...string) error { return t.Bench(args...) }).
 			WithCategory("Common").
-			MustBuild(),
-	)
-}
-
-// Stub implementations for remaining namespaces
-// These would be fully implemented following the same pattern
-
-func registerGitCommands(reg *registry.Registry) {
-	g := mage.Git{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "status").
-			WithDescription("Show git status").
-			WithFunc(func() error { return g.Status() }).
-			WithCategory("Git").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "diff").
-			WithDescription("Show git diff and check for uncommitted changes").
-			WithFunc(func() error { return g.Diff() }).
-			WithCategory("Git").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "tag").
-			WithDescription("Create a git tag with version parameter").
-			WithArgsFunc(func(args ...string) error { return g.TagWithArgs(args...) }).
-			WithCategory("Git").
-			WithUsage("magex git:tag version=<X.Y.Z>").
-			WithExamples("magex git:tag version=1.2.3").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "tagremove").
-			WithDescription("Remove a git tag with version parameter").
-			WithArgsFunc(func(args ...string) error { return g.TagRemoveWithArgs(args...) }).
-			WithCategory("Git").
-			WithUsage("magex git:tagremove version=<X.Y.Z>").
-			WithExamples("magex git:tagremove version=1.2.3").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "tagupdate").
-			WithDescription("Update a git tag with version parameter").
-			WithArgsFunc(func(args ...string) error { return g.TagUpdate(args...) }).
-			WithCategory("Git").
-			WithUsage("magex git:tagupdate version=<X.Y.Z>").
-			WithExamples("magex git:tagupdate version=1.2.3").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "log").
-			WithDescription("Show git log").
-			WithFunc(func() error { return g.Log() }).
-			WithCategory("Git").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "branch").
-			WithDescription("Show git branches").
-			WithFunc(func() error { return g.Branch() }).
-			WithCategory("Git").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "pull").
-			WithDescription("Pull from remote").
-			WithFunc(func() error { return g.Pull() }).
-			WithCategory("Git").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "commit").
-			WithDescription("Create a git commit with message parameter").
-			WithArgsFunc(func(args ...string) error { return g.Commit(args...) }).
-			WithCategory("Git").
-			WithUsage("magex git:commit message=\"<commit message>\"").
-			WithExamples("magex git:commit message=\"fix: resolve bug in parser\"").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "init").
-			WithDescription("Initialize git repository").
-			WithFunc(func() error { return g.Init() }).
-			WithCategory("Git").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "add").
-			WithDescription("Add files to git").
-			WithArgsFunc(func(args ...string) error { return g.Add(args...) }).
-			WithCategory("Git").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("git", "clone").
-			WithDescription("Clone a repository").
-			WithFunc(func() error { return g.Clone() }).
-			WithCategory("Git").
-			MustBuild(),
-	)
-}
-
-func registerReleaseCommands(reg *registry.Registry) {
-	r := mage.Release{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "default").
-			WithDescription("Create a release").
-			WithArgsFunc(func(args ...string) error { return r.Default(args...) }).
-			WithCategory("Release").
-			WithAliases("release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "test").
-			WithDescription("Test release process without publishing").
-			WithFunc(func() error { return r.Test() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "snapshot").
-			WithDescription("Create a snapshot release").
-			WithFunc(func() error { return r.Snapshot() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "check").
-			WithDescription("Check release configuration").
-			WithFunc(func() error { return r.Check() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "init").
-			WithDescription("Initialize release configuration").
-			WithFunc(func() error { return r.Init() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "changelog").
-			WithDescription("Generate changelog").
-			WithFunc(func() error { return r.Changelog() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "validate").
-			WithDescription("Comprehensive release readiness validation").
-			WithFunc(func() error { return r.Validate() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "clean").
-			WithDescription("Clean release artifacts and build cache").
-			WithFunc(func() error { return r.Clean() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("release", "localinstall").
-			WithDescription("Build from latest tag and install locally").
-			WithFunc(func() error { return r.LocalInstall() }).
-			WithCategory("Release").
-			MustBuild(),
-	)
-}
-
-func registerDocsCommands(reg *registry.Registry) {
-	d := mage.Docs{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "default").
-			WithDescription("Generate and serve documentation").
-			WithFunc(func() error { return d.Default() }).
-			WithCategory("Documentation").
-			WithAliases("docs").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "build").
-			WithDescription("Build documentation").
-			WithFunc(func() error { return d.Build() }).
-			WithCategory("Documentation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "generate").
-			WithDescription("Generate documentation from code").
-			WithFunc(func() error { return d.Generate() }).
-			WithCategory("Documentation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "serve").
-			WithDescription("Serve documentation locally").
-			WithFunc(func() error { return d.Serve() }).
-			WithCategory("Documentation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "check").
-			WithDescription("Check documentation quality").
-			WithFunc(func() error { return d.Check() }).
-			WithCategory("Documentation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "godocs").
-			WithDescription("Generate godocs").
-			WithFunc(func() error { return d.GoDocs() }).
-			WithCategory("Documentation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "examples").
-			WithDescription("Generate example documentation").
-			WithFunc(func() error { return d.Examples() }).
-			WithCategory("Documentation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "readme").
-			WithDescription("Generate README documentation").
-			WithFunc(func() error { return d.Readme() }).
-			WithCategory("Documentation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "api").
-			WithDescription("Generate API documentation").
-			WithFunc(func() error { return d.API() }).
-			WithCategory("Documentation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("docs", "clean").
-			WithDescription("Clean documentation artifacts").
-			WithFunc(func() error { return d.Clean() }).
-			WithCategory("Documentation").
-			MustBuild(),
-	)
-}
-
-func registerToolsCommands(reg *registry.Registry) {
-	t := mage.Tools{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("tools", "install").
-			WithDescription("Install development tools").
-			WithFunc(func() error { return t.Install() }).
-			WithCategory("Tools").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("tools", "update").
-			WithDescription("Update development tools").
-			WithFunc(func() error { return t.Update() }).
-			WithCategory("Tools").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("tools", "verify").
-			WithDescription("Verify installed tools").
-			WithFunc(func() error { return t.Verify() }).
-			WithCategory("Tools").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("tools", "clean").
-			WithDescription("Clean tool installations").
-			WithFunc(func() error { return t.Clean() }).
-			WithCategory("Tools").
-			MustBuild(),
-	)
-}
-
-func registerGenerateCommands(reg *registry.Registry) {
-	g := mage.Generate{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("generate", "default").
-			WithDescription("Run code generation").
-			WithFunc(func() error { return g.Default() }).
-			WithCategory("Generate").
-			WithAliases("generate").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("generate", "all").
-			WithDescription("Generate all code").
-			WithFunc(func() error { return g.All() }).
-			WithCategory("Generate").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("generate", "mocks").
-			WithDescription("Generate mock files").
-			WithFunc(func() error { return g.Mocks() }).
-			WithCategory("Generate").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("generate", "proto").
-			WithDescription("Generate from protobuf files").
-			WithFunc(func() error { return g.Proto() }).
-			WithCategory("Generate").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("generate", "clean").
-			WithDescription("Clean generated files").
-			WithFunc(func() error { return g.Clean() }).
-			WithCategory("Generate").
-			MustBuild(),
-	)
-}
-
-func registerUpdateCommands(reg *registry.Registry) {
-	u := mage.Update{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("update", "check").
-			WithDescription("Check for updates").
-			WithFunc(func() error { return u.Check() }).
-			WithCategory("Update").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("update", "install").
-			WithDescription("Install updates").
-			WithFunc(func() error { return u.Install() }).
-			WithCategory("Update").
-			MustBuild(),
-	)
-}
-
-func registerModCommands(reg *registry.Registry) {
-	m := mage.Mod{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("mod", "tidy").
-			WithDescription("Tidy go.mod").
-			WithFunc(func() error { return m.Tidy() }).
-			WithCategory("Module").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("mod", "download").
-			WithDescription("Download module dependencies").
-			WithFunc(func() error { return m.Download() }).
-			WithCategory("Module").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("mod", "update").
-			WithDescription("Update module dependencies").
-			WithFunc(func() error { return m.Update() }).
-			WithCategory("Module").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("mod", "clean").
-			WithDescription("Clean module cache").
-			WithFunc(func() error { return m.Clean() }).
-			WithCategory("Module").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("mod", "graph").
-			WithDescription("Visualize dependency graph with parameters").
-			WithArgsFunc(func(args ...string) error { return m.Graph(args...) }).
-			WithCategory("Module").
-			WithUsage("magex mod:graph [depth=<n>] [format=<type>] [filter=<pattern>] [show_versions=<bool>]").
-			WithExamples(
-				"magex mod:graph",
-				"magex mod:graph depth=3",
-				"magex mod:graph format=json",
-				"magex mod:graph filter=github.com show_versions=false",
-			).
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("mod", "why").
-			WithDescription("Explain why packages are needed").
-			WithFunc(func() error { return m.Why() }).
-			WithArgsFunc(func(args ...string) error { return m.Why(args...) }).
-			WithCategory("Module").
-			WithUsage("magex mod:why <module1> [module2] ...").
-			WithExamples(
-				"magex mod:why github.com/stretchr/testify",
-				"magex mod:why github.com/pkg/errors golang.org/x/sync",
-			).
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("mod", "vendor").
-			WithDescription("Create vendor directory").
-			WithFunc(func() error { return m.Vendor() }).
-			WithCategory("Module").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("mod", "init").
-			WithDescription("Initialize go.mod").
-			WithFunc(func() error { return m.Init() }).
-			WithCategory("Module").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("mod", "verify").
-			WithDescription("Verify module dependencies").
-			WithFunc(func() error { return m.Verify() }).
-			WithCategory("Module").
-			MustBuild(),
-	)
-}
-
-func registerMetricsCommands(reg *registry.Registry) {
-	m := mage.Metrics{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("metrics", "loc").
-			WithDescription("Count lines of code (use json for JSON output)").
-			WithArgsFunc(func(args ...string) error { return m.LOC(args...) }).
-			WithCategory("Metrics").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("metrics", "coverage").
-			WithDescription("Calculate test coverage metrics").
-			WithFunc(func() error { return m.Coverage() }).
-			WithCategory("Metrics").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("metrics", "complexity").
-			WithDescription("Analyze code complexity").
-			WithFunc(func() error { return m.Complexity() }).
-			WithCategory("Metrics").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("metrics", "size").
-			WithDescription("Calculate binary size metrics").
-			WithFunc(func() error { return m.Size() }).
-			WithCategory("Metrics").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("metrics", "quality").
-			WithDescription("Generate quality metrics report").
-			WithFunc(func() error { return m.Quality() }).
-			WithCategory("Metrics").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("metrics", "imports").
-			WithDescription("Analyze import dependencies").
-			WithFunc(func() error { return m.Imports() }).
-			WithCategory("Metrics").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("metrics", "mage").
-			WithDescription("Analyze magefiles and targets").
-			WithFunc(func() error { return m.Mage() }).
-			WithCategory("Metrics").
-			MustBuild(),
-	)
-}
-
-func registerBenchCommands(reg *registry.Registry) {
-	b := mage.Bench{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bench", "default").
-			WithDescription("Run benchmarks with optional parameters (time=duration)").
-			WithFunc(func() error { return b.Default() }).
-			WithArgsFunc(func(args ...string) error { return b.DefaultWithArgs(args...) }).
-			WithCategory("Benchmark").
-			WithExamples("magex bench", "magex bench time=50ms", "magex bench time=10s count=3").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bench", "compare").
-			WithDescription("Compare benchmark results with optional file parameters").
-			WithFunc(func() error { return b.Compare() }).
-			WithArgsFunc(func(args ...string) error { return b.CompareWithArgs(args...) }).
-			WithCategory("Benchmark").
-			WithExamples("magex bench:compare", "magex bench:compare old=baseline.txt new=current.txt").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bench", "save").
-			WithDescription("Save benchmark results with optional parameters (time=duration, output=file)").
-			WithFunc(func() error { return b.Save() }).
-			WithArgsFunc(func(args ...string) error { return b.SaveWithArgs(args...) }).
-			WithCategory("Benchmark").
-			WithExamples("magex bench:save", "magex bench:save time=1s output=results.txt").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bench", "cpu").
-			WithDescription("Run CPU benchmarks with optional parameters (time=duration, profile=file)").
-			WithFunc(func() error { return b.CPU() }).
-			WithArgsFunc(func(args ...string) error { return b.CPUWithArgs(args...) }).
-			WithCategory("Benchmark").
-			WithExamples("magex bench:cpu", "magex bench:cpu time=30s profile=cpu-profile.out").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bench", "mem").
-			WithDescription("Run memory benchmarks with optional parameters (time=duration, profile=file)").
-			WithFunc(func() error { return b.Mem() }).
-			WithArgsFunc(func(args ...string) error { return b.MemWithArgs(args...) }).
-			WithCategory("Benchmark").
-			WithExamples("magex bench:mem", "magex bench:mem time=2s profile=mem-profile.out").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bench", "profile").
-			WithDescription("Generate benchmark profiles with optional parameters (time=duration, cpu-profile=file, mem-profile=file)").
-			WithFunc(func() error { return b.Profile() }).
-			WithArgsFunc(func(args ...string) error { return b.ProfileWithArgs(args...) }).
-			WithCategory("Benchmark").
-			WithExamples("magex bench:profile", "magex bench:profile time=5s cpu-profile=cpu.prof mem-profile=mem.prof").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bench", "trace").
-			WithDescription("Generate execution traces with optional parameters (time=duration, trace=file)").
-			WithFunc(func() error { return b.Trace() }).
-			WithArgsFunc(func(args ...string) error { return b.TraceWithArgs(args...) }).
-			WithCategory("Benchmark").
-			WithExamples("magex bench:trace", "magex bench:trace time=10s trace=bench-trace.out").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bench", "regression").
-			WithDescription("Run regression benchmarks with optional parameters (time=duration, update-baseline=true)").
-			WithFunc(func() error { return b.Regression() }).
-			WithArgsFunc(func(args ...string) error { return b.RegressionWithArgs(args...) }).
-			WithCategory("Benchmark").
-			WithExamples("magex bench:regression", "magex bench:regression time=5s update-baseline=true").
-			MustBuild(),
-	)
-}
-
-func registerVetCommands(reg *registry.Registry) {
-	v := mage.Vet{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("vet", "default").
-			WithDescription("Run go vet").
-			WithFunc(func() error { return v.Default() }).
-			WithCategory("Vet").
-			WithAliases("vet").
-			MustBuild(),
-	)
-
-	// Add more vet commands...
-}
-
-func registerConfigureCommands(reg *registry.Registry) {
-	c := mage.Configure{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("configure", "init").
-			WithDescription("Initialize configuration").
-			WithFunc(func() error { return c.Init() }).
-			WithCategory("Configure").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("configure", "show").
-			WithDescription("Show current configuration").
-			WithFunc(func() error { return c.Show() }).
-			WithCategory("Configure").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("configure", "update").
-			WithDescription("Update configuration").
-			WithFunc(func() error { return c.Update() }).
-			WithCategory("Configure").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("configure", "export").
-			WithDescription("Export configuration").
-			WithFunc(func() error { return c.Export() }).
-			WithCategory("Configure").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("configure", "import").
-			WithDescription("Import configuration").
-			WithFunc(func() error { return c.Import() }).
-			WithCategory("Configure").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("configure", "validate").
-			WithDescription("Validate configuration").
-			WithFunc(func() error { return c.Validate() }).
-			WithCategory("Configure").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("configure", "schema").
-			WithDescription("Show configuration schema").
-			WithFunc(func() error { return c.Schema() }).
-			WithCategory("Configure").
-			MustBuild(),
-	)
-}
-
-func registerHelpCommands(reg *registry.Registry) {
-	h := mage.Help{}
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("help", "default").
-			WithDescription("Show help").
-			WithFunc(func() error { return h.Default() }).
-			WithCategory("Help").
-			WithAliases("help").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("help", "commands").
-			WithDescription("List all available commands").
-			WithFunc(func() error { return h.Commands() }).
-			WithCategory("Help").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("help", "command").
-			WithDescription("Show help for a specific command").
-			WithFunc(func() error { return h.Command() }).
-			WithCategory("Help").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("help", "examples").
-			WithDescription("Show usage examples").
-			WithFunc(func() error { return h.Examples() }).
-			WithCategory("Help").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("help", "gettingstarted").
-			WithDescription("Getting started guide").
-			WithFunc(func() error { return h.GettingStarted() }).
-			WithCategory("Help").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("help", "completions").
-			WithDescription("Setup shell completions").
-			WithFunc(func() error { return h.Completions() }).
-			WithCategory("Help").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("help", "topics").
-			WithDescription("List help topics").
-			WithFunc(func() error { return h.Topics() }).
-			WithCategory("Help").
-			MustBuild(),
-	)
-}
-
-// registerVersionCommands registers all Version namespace commands
-func registerVersionCommands(reg *registry.Registry) {
-	var v mage.Version
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("version", "show").
-			WithDescription("Display current version information").
-			WithFunc(func() error { return v.Show() }).
-			WithCategory("Version Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("version", "check").
-			WithDescription("Check version information and compare with latest").
-			WithFunc(func() error { return v.Check() }).
-			WithCategory("Version Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("version", "update").
-			WithDescription("Update to latest version").
-			WithFunc(func() error { return v.Update() }).
-			WithCategory("Version Management").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("version", "bump").
-			WithDescription("Bump version with parameters: bump=<major|minor|patch> branch=<branch-name> push dry-run force major-confirm").
-			WithArgsFunc(func(args ...string) error { return v.Bump(args...) }).
-			WithCategory("Version Management").
-			WithUsage("magex version:bump [bump=<type>] [branch=<branch-name>] [push] [dry-run] [force] [major-confirm]").
-			WithExamples(
-				"magex version:bump bump=patch branch=master push",
-				"magex version:bump bump=minor branch=main",
-				"magex version:bump bump=major major-confirm branch=master push",
-				"magex version:bump bump=patch dry-run",
-				"magex version:bump bump=patch",
-			).
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("version", "changelog").
-			WithDescription("Generate changelog from git history with parameters: from=<tag> to=<tag>").
-			WithArgsFunc(func(args ...string) error { return v.Changelog(args...) }).
-			WithCategory("Version Management").
-			WithUsage("magex version:changelog [from=<tag>] [to=<tag>]").
-			WithExamples(
-				"magex version:changelog",
-				"magex version:changelog from=v1.0.0",
-				"magex version:changelog from=v1.0.0 to=v1.1.0",
-			).
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("version", "tag").
-			WithDescription("Create version tag").
-			WithFunc(func() error { return v.Tag() }).
-			WithCategory("Version Management").
-			MustBuild(),
-	)
-}
-
-// registerInstallCommands registers all Install namespace commands
-func registerInstallCommands(reg *registry.Registry) {
-	var i mage.Install
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "default").
-			WithDescription("Default installation").
-			WithFunc(func() error { return i.Default() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "local").
-			WithDescription("Install locally").
-			WithFunc(func() error { return i.Local() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "binary").
-			WithDescription("Install project binary").
-			WithFunc(func() error { return i.Binary() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "tools").
-			WithDescription("Install development tools").
-			WithFunc(func() error { return i.Tools() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "go").
-			WithDescription("Install Go").
-			WithFunc(func() error { return i.Go() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "stdlib").
-			WithDescription("Install Go standard library").
-			WithFunc(func() error { return i.Stdlib() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "systemwide").
-			WithDescription("Install system-wide").
-			WithFunc(func() error { return i.SystemWide() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "deps").
-			WithDescription("Install dependencies").
-			WithFunc(func() error { return i.Deps() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "mage").
-			WithDescription("Install mage").
-			WithFunc(func() error { return i.Mage() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "githooks").
-			WithDescription("Install git hooks").
-			WithFunc(func() error { return i.GitHooks() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "ci").
-			WithDescription("Install CI components").
-			WithFunc(func() error { return i.CI() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "certs").
-			WithDescription("Install certificates").
-			WithFunc(func() error { return i.Certs() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "package").
-			WithDescription("Install package").
-			WithFunc(func() error { return i.Package() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "all").
-			WithDescription("Install everything").
-			WithFunc(func() error { return i.All() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("install", "uninstall").
-			WithDescription("Remove installation").
-			WithFunc(func() error { return i.Uninstall() }).
-			WithCategory("Installation").
-			MustBuild(),
-	)
-}
-
-// registerYamlCommands registers all Yaml namespace commands
-func registerYamlCommands(reg *registry.Registry) {
-	var y mage.Yaml
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("yaml", "init").
-			WithDescription("Create mage.yaml configuration").
-			WithFunc(func() error { return y.Init() }).
-			WithCategory("Configuration").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("yaml", "validate").
-			WithDescription("Validate YAML configuration").
-			WithFunc(func() error { return y.Validate() }).
-			WithCategory("Configuration").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("yaml", "show").
-			WithDescription("Show current YAML configuration").
-			WithFunc(func() error { return y.Show() }).
-			WithCategory("Configuration").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("yaml", "update").
-			WithDescription("Update YAML configuration").
-			WithFunc(func() error { return y.Update() }).
-			WithCategory("Configuration").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("yaml", "template").
-			WithDescription("Generate YAML templates").
-			WithFunc(func() error { return y.Template() }).
-			WithCategory("Configuration").
-			MustBuild(),
-	)
-}
-
-// registerBmadCommands registers all Bmad namespace commands
-func registerBmadCommands(reg *registry.Registry) {
-	var bmad mage.Bmad
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bmad", "install").
-			WithDescription("Install BMAD prerequisites (npm, npx, bmad-method)").
-			WithFunc(func() error { return bmad.Install() }).
-			WithCategory("AI/ML").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bmad", "check").
-			WithDescription("Verify BMAD installation and version").
-			WithFunc(func() error { return bmad.Check() }).
-			WithCategory("AI/ML").
-			MustBuild(),
-	)
-
-	reg.MustRegister(
-		registry.NewNamespaceCommand("bmad", "upgrade").
-			WithDescription("Upgrade BMAD to latest version").
-			WithFunc(func() error { return bmad.Upgrade() }).
-			WithCategory("AI/ML").
 			MustBuild(),
 	)
 }
