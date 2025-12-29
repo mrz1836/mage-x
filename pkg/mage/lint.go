@@ -32,6 +32,95 @@ const (
 	falseValue = "false"
 )
 
+// golangciLintArgs holds the configuration for building golangci-lint arguments.
+// This consolidates the duplicated argument-building logic from Default() and Fix().
+type golangciLintArgs struct {
+	modulePath string  // absolute path to the module directory
+	config     *Config // mage configuration
+	withFix    bool    // whether to include --fix flag
+}
+
+// resolveConfigPath finds the golangci-lint config file, checking module directory first,
+// then falling back to the root directory. Returns the resolved config path and any
+// arguments to append.
+func (g *golangciLintArgs) resolveConfigPath() (configPath string, args []string) {
+	// Check for config file in module directory
+	moduleConfig := filepath.Join(g.modulePath, ".golangci.json")
+	if utils.FileExists(moduleConfig) {
+		return moduleConfig, []string{"--config", ".golangci.json"}
+	}
+
+	// Check in root directory
+	rootConfig := ".golangci.json"
+	if utils.FileExists(rootConfig) {
+		absPath, err := filepath.Abs(rootConfig)
+		if err != nil {
+			utils.Warn("Failed to get absolute path for config: %v", err)
+			absPath = rootConfig
+		}
+		return absPath, []string{"--config", absPath}
+	}
+
+	// No config file found
+	return "", nil
+}
+
+// timeoutArgs builds the timeout arguments, preferring the golangci config file
+// timeout if available, otherwise using the mage config timeout.
+func (g *golangciLintArgs) timeoutArgs(configPath string) []string {
+	timeout := g.config.Lint.Timeout
+
+	// Try to get timeout from golangci config file
+	if configPath != "" && utils.FileExists(configPath) {
+		if configTimeout, err := parseGolangciTimeout(configPath); err == nil && configTimeout != "" {
+			timeout = configTimeout
+		}
+	}
+
+	if timeout != "" {
+		return []string{"--timeout", timeout}
+	}
+	return nil
+}
+
+// commonFlags builds the common flags for build tags and verbose mode.
+func (g *golangciLintArgs) commonFlags() []string {
+	var args []string
+
+	// Add build tags if configured
+	if len(g.config.Build.Tags) > 0 {
+		args = append(args, "--build-tags", strings.Join(g.config.Build.Tags, ","))
+	}
+
+	// Add verbose flag if enabled via parameter, environment, or config
+	if shouldUseVerboseMode(g.config) {
+		args = append(args, "--verbose")
+	}
+
+	return args
+}
+
+// buildArgs constructs the complete argument list for golangci-lint.
+func (g *golangciLintArgs) buildArgs() []string {
+	args := []string{"run"}
+	if g.withFix {
+		args = append(args, "--fix")
+	}
+	args = append(args, "./...")
+
+	// Add config path arguments
+	configPath, configArgs := g.resolveConfigPath()
+	args = append(args, configArgs...)
+
+	// Add timeout arguments
+	args = append(args, g.timeoutArgs(configPath)...)
+
+	// Add common flags (build tags, verbose)
+	args = append(args, g.commonFlags()...)
+
+	return args
+}
+
 // Lint namespace for linting and formatting tasks
 type Lint mg.Namespace
 
@@ -77,50 +166,14 @@ func (Lint) Default() error {
 		// Run golangci-lint
 		golangciVersion := getLinterVersion("golangci-lint")
 		utils.Info("Running golangci-lint %s...", golangciVersion)
-		args := []string{"run", "./..."}
 
-		// Check for config file in root directory
-		configPath := filepath.Join(module.Path, ".golangci.json")
-		var actualConfigPath string
-		if !utils.FileExists(configPath) {
-			// Check in root directory
-			rootConfig := ".golangci.json"
-			if utils.FileExists(rootConfig) {
-				// Use absolute path to root config
-				var absPath string
-				absPath, err = filepath.Abs(rootConfig)
-				if err != nil {
-					utils.Warn("Failed to get absolute path for config: %v", err)
-					absPath = rootConfig
-				}
-				args = append(args, "--config", absPath)
-				actualConfigPath = absPath
-			}
-		} else {
-			args = append(args, "--config", ".golangci.json")
-			actualConfigPath = configPath
+		// Build arguments using consolidated helper
+		argBuilder := &golangciLintArgs{
+			modulePath: module.Path,
+			config:     config,
+			withFix:    false,
 		}
-
-		// Use timeout from config file if available, otherwise use mage config
-		timeout := config.Lint.Timeout
-		if actualConfigPath != "" && utils.FileExists(actualConfigPath) {
-			if configTimeout, parseErr := parseGolangciTimeout(actualConfigPath); parseErr == nil && configTimeout != "" {
-				timeout = configTimeout
-			}
-		}
-		if timeout != "" {
-			args = append(args, "--timeout", timeout)
-		}
-
-		// Add build tags if configured
-		if len(config.Build.Tags) > 0 {
-			args = append(args, "--build-tags", strings.Join(config.Build.Tags, ","))
-		}
-
-		// Add verbose flag if enabled via parameter, environment, or config
-		if shouldUseVerboseMode(config) {
-			args = append(args, "--verbose")
-		}
+		args := argBuilder.buildArgs()
 
 		// Debug: Log the exact command being executed
 		utils.Info("Executing: golangci-lint %s", strings.Join(args, " "))
@@ -206,50 +259,14 @@ func (Lint) Fix() error {
 		// Run golangci-lint with auto-fix
 		golangciVersion := getLinterVersion("golangci-lint")
 		utils.Info("Running golangci-lint %s --fix...", golangciVersion)
-		args := []string{"run", "--fix", "./..."}
 
-		// Check for config file
-		configPath := filepath.Join(module.Path, ".golangci.json")
-		var actualConfigPath string
-		if !utils.FileExists(configPath) {
-			// Check in root directory
-			rootConfig := ".golangci.json"
-			if utils.FileExists(rootConfig) {
-				// Use absolute path to root config
-				var absPath string
-				absPath, err = filepath.Abs(rootConfig)
-				if err != nil {
-					utils.Warn("Failed to get absolute path for config: %v", err)
-					absPath = rootConfig
-				}
-				args = append(args, "--config", absPath)
-				actualConfigPath = absPath
-			}
-		} else {
-			args = append(args, "--config", ".golangci.json")
-			actualConfigPath = configPath
+		// Build arguments using consolidated helper
+		argBuilder := &golangciLintArgs{
+			modulePath: module.Path,
+			config:     config,
+			withFix:    true,
 		}
-
-		// Use timeout from config file if available, otherwise use mage config
-		timeout := config.Lint.Timeout
-		if actualConfigPath != "" && utils.FileExists(actualConfigPath) {
-			if configTimeout, parseErr := parseGolangciTimeout(actualConfigPath); parseErr == nil && configTimeout != "" {
-				timeout = configTimeout
-			}
-		}
-		if timeout != "" {
-			args = append(args, "--timeout", timeout)
-		}
-
-		// Add build tags if configured
-		if len(config.Build.Tags) > 0 {
-			args = append(args, "--build-tags", strings.Join(config.Build.Tags, ","))
-		}
-
-		// Add verbose flag if enabled via parameter, environment, or config
-		if shouldUseVerboseMode(config) {
-			args = append(args, "--verbose")
-		}
+		args := argBuilder.buildArgs()
 
 		// Debug: Log the exact command being executed
 		utils.Info("Executing: golangci-lint %s", strings.Join(args, " "))
