@@ -246,37 +246,14 @@ func (Tools) VulnCheck() error {
 }
 
 // installGovulncheck installs govulncheck with retry and fallback logic
-func installGovulncheck(ctx context.Context, config *Config, maxRetries int, initialDelay time.Duration) error {
-	utils.Info("Installing govulncheck with retry logic...")
-
-	govulnVersion := config.Tools.GoVulnCheck
-	if govulnVersion == "" || govulnVersion == VersionLatest {
-		utils.Warn("GoVulnCheck version not available, using @latest")
-		govulnVersion = VersionAtLatest
-	} else if !strings.HasPrefix(govulnVersion, "@") {
-		govulnVersion = "@" + govulnVersion
-	}
-
-	moduleWithVersion := "golang.org/x/vuln/cmd/govulncheck" + govulnVersion
-
-	// Get the secure executor with retry capabilities
-	runner := GetRunner()
-	secureRunner, ok := runner.(*SecureCommandRunner)
-	if !ok {
-		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
-	}
-	executor := secureRunner.executor
-	err := exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", moduleWithVersion)
-	if err != nil {
-		// Try with direct proxy as fallback
-		utils.Warn("Installation failed: %v, trying direct proxy...", err)
-
-		env := []string{"GOPROXY=direct"}
-		if err := executor.ExecuteWithEnv(ctx, env, "go", "install", moduleWithVersion); err != nil {
-			return fmt.Errorf("failed to install govulncheck after %d retries and fallback: %w", maxRetries, err)
-		}
-	}
-	return nil
+//
+//nolint:contextcheck // installTool internally creates context.Background(), same as original caller behavior
+func installGovulncheck(_ context.Context, _ *Config, _ int, _ time.Duration) error {
+	return installTool(ToolDefinition{
+		Name:   "govulncheck",
+		Module: "golang.org/x/vuln/cmd/govulncheck",
+		Check:  "govulncheck",
+	})
 }
 
 // installToolFromModule installs a tool from a Go module with retry logic

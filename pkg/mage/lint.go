@@ -390,41 +390,12 @@ func (Lint) Fumpt() error {
 }
 
 // installGofumpt installs gofumpt with retry and fallback logic
-func installGofumpt(config *Config) error {
-	utils.Info("Installing gofumpt with retry logic...")
-
-	ctx := context.Background()
-	maxRetries := config.Download.MaxRetries
-	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
-
-	fumptVersion := config.Tools.Fumpt
-	if fumptVersion == "" {
-		utils.Warn("Gofumpt version not available, using @latest")
-		fumptVersion = VersionAtLatest
-	} else if !strings.HasPrefix(fumptVersion, "@") {
-		fumptVersion = "@" + fumptVersion
-	}
-
-	moduleWithVersion := "mvdan.cc/gofumpt" + fumptVersion
-
-	// Get the secure executor with retry capabilities
-	runner := GetRunner()
-	secureRunner, ok := runner.(*SecureCommandRunner)
-	if !ok {
-		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
-	}
-	executor := secureRunner.executor
-	err := exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, "go", "install", moduleWithVersion)
-	if err != nil {
-		// Try with direct proxy as fallback
-		utils.Warn("Installation failed: %v, trying direct proxy...", err)
-
-		env := []string{"GOPROXY=direct"}
-		if err = executor.ExecuteWithEnv(ctx, env, "go", "install", moduleWithVersion); err != nil {
-			return fmt.Errorf("failed to install gofumpt after %d retries and fallback: %w", maxRetries, err)
-		}
-	}
-	return nil
+func installGofumpt(_ *Config) error {
+	return installTool(ToolDefinition{
+		Name:   "gofumpt",
+		Module: "mvdan.cc/gofumpt",
+		Check:  "gofumpt",
+	})
 }
 
 // Vet runs go vet
