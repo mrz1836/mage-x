@@ -2,13 +2,8 @@
 package mage
 
 import (
-	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"log"
-	"net/http"
 	"os"
 	"runtime"
 	"strconv"
@@ -920,37 +915,7 @@ func getPreviousTag() string {
 // getLatestGitHubRelease fetches the latest release from GitHub
 func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			// Ignore error in defer cleanup
-			log.Printf("failed to close response body: %v", err)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		body, readErr := io.ReadAll(resp.Body)
-		if readErr != nil {
-			return nil, fmt.Errorf("GitHub API error: failed to read response body: %w", readErr)
-		}
-		return nil, fmt.Errorf("%w: %s", errGitHubAPIError, body)
-	}
-
-	var release GitHubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return nil, err
-	}
-
-	return &release, nil
+	return utils.HTTPGetJSON[GitHubRelease](url, 10*time.Second)
 }
 
 // isNewer checks if version a is newer than version b
