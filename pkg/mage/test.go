@@ -37,6 +37,24 @@ type fuzzTestResult struct {
 	Output   string // Captured stdout output for text parsing
 }
 
+// testRunnerOptions configures the common test runner setup.
+// This struct enables consolidation of the Unit, Short, Race, Cover, and CoverRace methods
+// which all follow the same pattern with minor variations.
+type testRunnerOptions struct {
+	testType   string // "unit", "short", "race", "coverage", or "coverage+race"
+	race       bool   // whether to enable race detection
+	isCoverage bool   // whether this is a coverage test (uses different underlying function)
+}
+
+// benchmarkOptions configures the common benchmark runner setup.
+// This struct enables consolidation of the Bench and BenchShort methods
+// which follow the same pattern with minor variations.
+type benchmarkOptions struct {
+	testType         string // "benchmark" or "benchmark-short"
+	defaultBenchTime string // default benchmark time ("10s" or "1s")
+	logPrefix        string // prefix for log messages
+}
+
 // getCIParams extracts CI-related parameters from args and returns the remaining args
 func getCIParams(args []string) (params map[string]string, remainingArgs []string) {
 	params = make(map[string]string)
@@ -65,6 +83,130 @@ func generateCIReport(runner CommandRunner) {
 			utils.Warn("Failed to generate CI report: %v", err)
 		}
 	}
+}
+
+// runWithStandardSetup executes the common test runner setup pattern used by
+// Unit, Short, Race, Cover, and CoverRace methods. This consolidates the
+// duplicated boilerplate into a single function.
+func runWithStandardSetup(opts testRunnerOptions, args ...string) error {
+	// Extract CI params from args
+	ciParams, remainingArgs := getCIParams(args)
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	// Get CI-aware runner
+	runner := getTestRunner(ciParams, config)
+	defer generateCIReport(runner)
+
+	// Display header with build tag information
+	discoveredTags := displayTestHeader(opts.testType, config)
+
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Show modules found
+	if len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
+	// Call the appropriate underlying function based on coverage mode
+	if opts.isCoverage {
+		return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, opts.race, remainingArgs, discoveredTags, runner)
+	}
+	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, opts.race, remainingArgs, opts.testType, discoveredTags, runner)
+}
+
+// runBenchmarkWithOptions executes the common benchmark setup pattern used by
+// Bench and BenchShort methods. This consolidates the duplicated boilerplate
+// into a single function.
+func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
+	// Parse command-line parameters
+	params := utils.ParseParams(argsList)
+
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	displayTestHeader(opts.testType, config)
+
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return nil
+	}
+
+	// Filter modules based on exclusion configuration
+	benchModules := filterModulesForProcessing(modules, config, "benchmarks")
+	if len(benchModules) == 0 {
+		utils.Warn("No modules to benchmark after exclusions")
+		return nil
+	}
+
+	// Build base benchmark args
+	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
+
+	if config.Test.Verbose {
+		args = append(args, "-v")
+	}
+
+	if config.Test.Tags != "" {
+		args = append(args, "-tags", config.Test.Tags)
+	}
+
+	// Get benchmark time from parameter or use default
+	benchTime := utils.GetParam(params, "time", opts.defaultBenchTime)
+	args = append(args, "-benchtime", benchTime)
+
+	// Get count from parameter
+	count := utils.GetParam(params, "count", "")
+	if count != "" {
+		args = append(args, "-count", count)
+	}
+
+	args = append(args, "./...")
+
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	// Run benchmarks for each module
+	for _, module := range benchModules {
+		displayModuleHeader(module, opts.logPrefix+" for")
+
+		moduleStart := time.Now()
+		err := runCommandInModule(module, "go", args...)
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+			utils.Error("%s failed for %s in %s", opts.logPrefix, module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		} else {
+			utils.Success("%s passed for %s in %s", opts.logPrefix, module.Relative, utils.FormatDuration(time.Since(moduleStart)))
+		}
+	}
+
+	// Report overall results
+	if len(moduleErrors) > 0 {
+		utils.Error("%s failed in %d/%d modules", opts.logPrefix, len(moduleErrors), len(benchModules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	utils.Success("All %s completed in %s", opts.logPrefix, utils.FormatDuration(time.Since(totalStart)))
+	return nil
 }
 
 // shouldExcludeModule checks if a module should be excluded from processing
@@ -132,187 +274,47 @@ func (Test) Full(args ...string) error {
 
 // Unit runs unit tests
 func (Test) Unit(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("unit", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use new build tag discovery if enabled, passing pre-discovered tags
-	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, "unit", discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "unit",
+		race:       false,
+		isCoverage: false,
+	}, args...)
 }
 
 // Short runs short tests (excludes integration tests)
 func (Test) Short(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("short", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use new build tag discovery if enabled (explicitly disable race for speed)
-	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, "short", discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "short",
+		race:       false,
+		isCoverage: false,
+	}, args...)
 }
 
 // Race runs tests with race detector
 func (Test) Race(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("race", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use new build tag discovery if enabled (with race detector)
-	return runTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, true, remainingArgs, "race", discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "race",
+		race:       true,
+		isCoverage: false,
+	}, args...)
 }
 
 // Cover runs tests with coverage
 func (Test) Cover(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("coverage", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use build tag discovery for coverage tests
-	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, false, remainingArgs, discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "coverage",
+		race:       false,
+		isCoverage: true,
+	}, args...)
 }
 
 // CoverRace runs tests with both coverage and race detector
 func (Test) CoverRace(args ...string) error {
-	// Extract CI params from args
-	ciParams, remainingArgs := getCIParams(args)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Get CI-aware runner
-	runner := getTestRunner(ciParams, config)
-	defer generateCIReport(runner)
-
-	// Display header with build tag information
-	discoveredTags := displayTestHeader("coverage+race", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		utils.Info("Found %d Go modules", len(modules))
-	}
-
-	// Use build tag discovery for coverage+race tests
-	return runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config, modules, true, remainingArgs, discoveredTags, runner)
+	return runWithStandardSetup(testRunnerOptions{
+		testType:   "coverage+race",
+		race:       true,
+		isCoverage: true,
+	}, args...)
 }
 
 // CoverReport shows coverage report
@@ -652,162 +654,20 @@ func (Test) FuzzShortWithTime(fuzzTime time.Duration) error {
 
 // Bench runs benchmarks
 func (Test) Bench(argsList ...string) error {
-	// Parse command-line parameters
-	params := utils.ParseParams(argsList)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	displayTestHeader("benchmark", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Filter modules based on exclusion configuration
-	benchModules := filterModulesForProcessing(modules, config, "benchmarks")
-	if len(benchModules) == 0 {
-		utils.Warn("No modules to benchmark after exclusions")
-		return nil
-	}
-
-	// Build base benchmark args
-	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
-
-	if config.Test.Verbose {
-		args = append(args, "-v")
-	}
-
-	if config.Test.Tags != "" {
-		args = append(args, "-tags", config.Test.Tags)
-	}
-
-	// Get benchmark time from parameter or use default
-	benchTime := utils.GetParam(params, "time", "10s")
-	args = append(args, "-benchtime", benchTime)
-
-	// Get count from parameter
-	count := utils.GetParam(params, "count", "")
-	if count != "" {
-		args = append(args, "-count", count)
-	}
-
-	args = append(args, "./...")
-
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-
-	// Run benchmarks for each module
-	for _, module := range benchModules {
-		displayModuleHeader(module, "Running benchmarks for")
-
-		moduleStart := time.Now()
-		err := runCommandInModule(module, "go", args...)
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Benchmarks failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Benchmarks passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Benchmarks failed in %d/%d modules", len(moduleErrors), len(benchModules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All benchmarks completed in %s", utils.FormatDuration(time.Since(totalStart)))
-	return nil
+	return runBenchmarkWithOptions(benchmarkOptions{
+		testType:         "benchmark",
+		defaultBenchTime: "10s",
+		logPrefix:        "Benchmarks",
+	}, argsList...)
 }
 
 // BenchShort runs benchmarks with shorter duration for quick feedback
 func (Test) BenchShort(argsList ...string) error {
-	// Parse command-line parameters
-	params := utils.ParseParams(argsList)
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	displayTestHeader("benchmark-short", config)
-
-	// Discover all modules
-	modules, err := findAllModules()
-	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
-	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Filter modules based on exclusion configuration
-	benchModules := filterModulesForProcessing(modules, config, "benchmarks")
-	if len(benchModules) == 0 {
-		utils.Warn("No modules to benchmark after exclusions")
-		return nil
-	}
-
-	// Build base benchmark args
-	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
-
-	if config.Test.Verbose {
-		args = append(args, "-v")
-	}
-
-	if config.Test.Tags != "" {
-		args = append(args, "-tags", config.Test.Tags)
-	}
-
-	// Get benchmark time from parameter or use default (1s for short)
-	benchTime := utils.GetParam(params, "time", "1s")
-	args = append(args, "-benchtime", benchTime)
-
-	// Get count from parameter
-	count := utils.GetParam(params, "count", "")
-	if count != "" {
-		args = append(args, "-count", count)
-	}
-
-	args = append(args, "./...")
-
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-
-	// Run benchmarks for each module
-	for _, module := range benchModules {
-		displayModuleHeader(module, "Running short benchmarks for")
-
-		moduleStart := time.Now()
-		err := runCommandInModule(module, "go", args...)
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-			utils.Error("Short benchmarks failed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		} else {
-			utils.Success("Short benchmarks passed for %s in %s", module.Relative, utils.FormatDuration(time.Since(moduleStart)))
-		}
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Short benchmarks failed in %d/%d modules", len(moduleErrors), len(benchModules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	utils.Success("All short benchmarks completed in %s", utils.FormatDuration(time.Since(totalStart)))
-	return nil
+	return runBenchmarkWithOptions(benchmarkOptions{
+		testType:         "benchmark-short",
+		defaultBenchTime: "1s",
+		logPrefix:        "Short benchmarks",
+	}, argsList...)
 }
 
 // Integration runs integration tests

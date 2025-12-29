@@ -586,3 +586,104 @@ func TestRunTestsForModulesWithRunner_NilConfig(t *testing.T) {
 	err := runTestsForModulesWithRunner(nil, nil, false, false, nil, "unit", "", nil)
 	assert.ErrorIs(t, err, errConfigNil)
 }
+
+func TestTestRunnerOptionsValues(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		opts       testRunnerOptions
+		expectType string
+		expectRace bool
+		expectCov  bool
+	}{
+		{
+			name:       "unit test options",
+			opts:       testRunnerOptions{testType: "unit", race: false, isCoverage: false},
+			expectType: "unit",
+			expectRace: false,
+			expectCov:  false,
+		},
+		{
+			name:       "short test options",
+			opts:       testRunnerOptions{testType: "short", race: false, isCoverage: false},
+			expectType: "short",
+			expectRace: false,
+			expectCov:  false,
+		},
+		{
+			name:       "race test options",
+			opts:       testRunnerOptions{testType: "race", race: true, isCoverage: false},
+			expectType: "race",
+			expectRace: true,
+			expectCov:  false,
+		},
+		{
+			name:       "coverage test options",
+			opts:       testRunnerOptions{testType: "coverage", race: false, isCoverage: true},
+			expectType: "coverage",
+			expectRace: false,
+			expectCov:  true,
+		},
+		{
+			name:       "coverage+race test options",
+			opts:       testRunnerOptions{testType: "coverage+race", race: true, isCoverage: true},
+			expectType: "coverage+race",
+			expectRace: true,
+			expectCov:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expectType, tt.opts.testType)
+			assert.Equal(t, tt.expectRace, tt.opts.race)
+			assert.Equal(t, tt.expectCov, tt.opts.isCoverage)
+		})
+	}
+}
+
+func TestBenchmarkOptionsValues(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		opts            benchmarkOptions
+		expectType      string
+		expectBenchTime string
+		expectLogPrefix string
+	}{
+		{
+			name: "benchmark options",
+			opts: benchmarkOptions{
+				testType:         "benchmark",
+				defaultBenchTime: "10s",
+				logPrefix:        "Benchmarks",
+			},
+			expectType:      "benchmark",
+			expectBenchTime: "10s",
+			expectLogPrefix: "Benchmarks",
+		},
+		{
+			name: "benchmark-short options",
+			opts: benchmarkOptions{
+				testType:         "benchmark-short",
+				defaultBenchTime: "1s",
+				logPrefix:        "Short benchmarks",
+			},
+			expectType:      "benchmark-short",
+			expectBenchTime: "1s",
+			expectLogPrefix: "Short benchmarks",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expectType, tt.opts.testType)
+			assert.Equal(t, tt.expectBenchTime, tt.opts.defaultBenchTime)
+			assert.Equal(t, tt.expectLogPrefix, tt.opts.logPrefix)
+		})
+	}
+}
