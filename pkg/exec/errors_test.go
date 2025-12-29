@@ -266,3 +266,156 @@ func TestCommandErrorInDirWithOutput(t *testing.T) {
 		})
 	}
 }
+
+// TestNewCommandError tests the NewCommandError function with various options.
+func TestNewCommandError(t *testing.T) {
+	t.Parallel()
+
+	baseErr := errExitStatus1
+
+	tests := []struct {
+		name    string
+		cmdName string
+		args    []string
+		err     error
+		opts    *CommandErrorOptions
+		wantMsg string
+	}{
+		{
+			name:    "nil options",
+			cmdName: "go",
+			args:    []string{"build"},
+			err:     baseErr,
+			opts:    nil,
+			wantMsg: "command failed [go build]: exit status 1",
+		},
+		{
+			name:    "empty options struct",
+			cmdName: "go",
+			args:    []string{"build"},
+			err:     baseErr,
+			opts:    &CommandErrorOptions{},
+			wantMsg: "command failed [go build]: exit status 1",
+		},
+		{
+			name:    "with directory only",
+			cmdName: "go",
+			args:    []string{"test"},
+			err:     baseErr,
+			opts:    &CommandErrorOptions{Dir: "/tmp/project"},
+			wantMsg: "command failed [go test] in /tmp/project: exit status 1",
+		},
+		{
+			name:    "with output only",
+			cmdName: "go",
+			args:    []string{"build"},
+			err:     baseErr,
+			opts:    &CommandErrorOptions{Output: "undefined: foo"},
+			wantMsg: "command failed [go build]: exit status 1\nundefined: foo",
+		},
+		{
+			name:    "with both directory and output",
+			cmdName: "npm",
+			args:    []string{"install"},
+			err:     baseErr,
+			opts:    &CommandErrorOptions{Dir: "/app", Output: "npm ERR!"},
+			wantMsg: "command failed [npm install] in /app: exit status 1\nnpm ERR!",
+		},
+		{
+			name:    "output is trimmed",
+			cmdName: "go",
+			args:    []string{"build"},
+			err:     baseErr,
+			opts:    &CommandErrorOptions{Output: "  error  \n"},
+			wantMsg: "command failed [go build]: exit status 1\nerror",
+		},
+		{
+			name:    "empty output is ignored",
+			cmdName: "go",
+			args:    []string{"build"},
+			err:     baseErr,
+			opts:    &CommandErrorOptions{Output: "   "},
+			wantMsg: "command failed [go build]: exit status 1",
+		},
+		{
+			name:    "empty directory is ignored",
+			cmdName: "go",
+			args:    []string{"build"},
+			err:     baseErr,
+			opts:    &CommandErrorOptions{Dir: ""},
+			wantMsg: "command failed [go build]: exit status 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := NewCommandError(tt.cmdName, tt.args, tt.err, tt.opts)
+			if got.Error() != tt.wantMsg {
+				t.Errorf("NewCommandError() = %q, want %q", got.Error(), tt.wantMsg)
+			}
+			if !errors.Is(got, tt.err) {
+				t.Error("NewCommandError() should wrap the original error")
+			}
+		})
+	}
+}
+
+// TestErrorWrappingConsistency ensures all error functions properly wrap the original error.
+func TestErrorWrappingConsistency(t *testing.T) {
+	t.Parallel()
+
+	originalErr := errGeneric
+
+	tests := []struct {
+		name  string
+		errFn func() error
+	}{
+		{
+			name:  "CommandError",
+			errFn: func() error { return CommandError("cmd", []string{"arg"}, originalErr) },
+		},
+		{
+			name:  "CommandErrorWithOutput",
+			errFn: func() error { return CommandErrorWithOutput("cmd", []string{"arg"}, originalErr, "output") },
+		},
+		{
+			name:  "CommandErrorWithOutput empty",
+			errFn: func() error { return CommandErrorWithOutput("cmd", []string{"arg"}, originalErr, "") },
+		},
+		{
+			name:  "CommandErrorInDir",
+			errFn: func() error { return CommandErrorInDir("cmd", []string{"arg"}, "/dir", originalErr) },
+		},
+		{
+			name: "CommandErrorInDirWithOutput",
+			errFn: func() error {
+				return CommandErrorInDirWithOutput("cmd", []string{"arg"}, "/dir", originalErr, "output")
+			},
+		},
+		{
+			name:  "CommandErrorInDirWithOutput empty",
+			errFn: func() error { return CommandErrorInDirWithOutput("cmd", []string{"arg"}, "/dir", originalErr, "") },
+		},
+		{
+			name:  "NewCommandError nil opts",
+			errFn: func() error { return NewCommandError("cmd", []string{"arg"}, originalErr, nil) },
+		},
+		{
+			name: "NewCommandError with opts",
+			errFn: func() error {
+				return NewCommandError("cmd", []string{"arg"}, originalErr, &CommandErrorOptions{Dir: "/dir", Output: "out"})
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := tt.errFn()
+			if !errors.Is(err, originalErr) {
+				t.Errorf("errors.Is() = false, want true for error chain")
+			}
+		})
+	}
+}
