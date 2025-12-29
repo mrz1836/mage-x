@@ -99,8 +99,7 @@ func (ts *ConfigureTestSuite) TestConfigureInit() {
 		ts.Require().NoError(os.Chdir(ts.tempDir))
 
 		// Clean up any existing config files first
-		configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
-		for _, configFile := range configFiles {
+		for _, configFile := range MageConfigFiles() {
 			if removeErr := os.Remove(configFile); removeErr != nil && !os.IsNotExist(removeErr) {
 				ts.T().Logf("Failed to remove config file %s: %v", configFile, removeErr)
 			}
@@ -147,9 +146,7 @@ func (ts *ConfigureTestSuite) TestConfigureInit() {
 		ts.Require().NoError(os.Chdir(ts.tempDir))
 
 		// Test each possible config file name
-		configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
-
-		for _, configFile := range configFiles {
+		for _, configFile := range MageConfigFiles() {
 			// Create the config file
 			file, err := os.Create(configFile) //nolint:gosec // G304: configFile is from safe hardcoded test slice
 			ts.Require().NoError(err)

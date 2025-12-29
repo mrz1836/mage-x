@@ -555,13 +555,12 @@ func SaveConfig(cfg *Config) error {
 
 // getConfigFilePath returns the path to the config file
 func getConfigFilePath() string {
-	configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
-	for _, cf := range configFiles {
+	for _, cf := range MageConfigFiles() {
 		if _, err := os.Stat(cf); err == nil {
 			return cf
 		}
 	}
-	return ".mage.yaml" // default
+	return FileMageYAML // default
 }
 
 // Methods for Config struct required by tests

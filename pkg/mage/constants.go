@@ -70,10 +70,25 @@ const (
 	FileGoSum        = "go.sum"
 	FileMageYAML     = ".mage.yaml"
 	FileMageYML      = ".mage.yml"
+	FileMageYAMLAlt  = "mage.yaml"
+	FileMageYMLAlt   = "mage.yml"
 	FileGitignore    = ".gitignore"
 	FileVersion      = "VERSION"
 	FileCoverageOut  = "coverage.out"
 	FileCoverageHTML = "coverage.html"
+
+	// Goreleaser configuration files
+	FileGoreleaserYML     = ".goreleaser.yml"
+	FileGoreleaserYAML    = ".goreleaser.yaml"
+	FileGoreleaserYMLAlt  = "goreleaser.yml"
+	FileGoreleaserYAMLAlt = "goreleaser.yaml"
+
+	// Golangci-lint configuration files
+	FileGolangciJSON    = ".golangci.json"
+	FileGolangciYML     = ".golangci.yml"
+	FileGolangciYAML    = ".golangci.yaml"
+	FileGolangciYMLAlt  = "golangci.yml"
+	FileGolangciYAMLAlt = "golangci.yaml"
 
 	DirBin      = "bin"
 	DirBuild    = "build"
@@ -147,6 +162,26 @@ const (
 // GetMageXEnv returns the value of a MAGE-X environment variable with the proper prefix
 func GetMageXEnv(suffix string) string {
 	return os.Getenv(EnvPrefix + suffix)
+}
+
+// Configuration file list functions
+// These return slices of configuration file names in search order.
+// Dot-prefixed files take precedence over non-prefixed ones.
+
+// MageConfigFiles returns mage configuration file names in search order.
+// The order is important: dot-prefixed files take precedence.
+func MageConfigFiles() []string {
+	return []string{FileMageYAML, FileMageYML, FileMageYAMLAlt, FileMageYMLAlt}
+}
+
+// GoreleaserConfigFiles returns goreleaser configuration file names in search order.
+func GoreleaserConfigFiles() []string {
+	return []string{FileGoreleaserYML, FileGoreleaserYAML, FileGoreleaserYMLAlt, FileGoreleaserYAMLAlt}
+}
+
+// GolangciLintConfigFiles returns golangci-lint configuration file names in search order.
+func GolangciLintConfigFiles() []string {
+	return []string{FileGolangciJSON, FileGolangciYML, FileGolangciYAML, FileGolangciYMLAlt, FileGolangciYAMLAlt}
 }
 
 // Version constants for consistency

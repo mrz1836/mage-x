@@ -40,8 +40,7 @@ func (Configure) Init() error {
 	utils.Header("🔧 Initialize Mage Configuration")
 
 	// Check if config already exists
-	configFiles := []string{".mage.yaml", ".mage.yml", "mage.yaml", "mage.yml"}
-	for _, cf := range configFiles {
+	for _, cf := range MageConfigFiles() {
 		if _, err := os.Stat(cf); err == nil {
 			return fmt.Errorf("%w: %s", ErrConfigFileExists, cf)
 		}

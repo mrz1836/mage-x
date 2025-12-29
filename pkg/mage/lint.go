@@ -946,9 +946,7 @@ func (Lint) Fast() error {
 // getLinterConfigInfo returns information about the golangci-lint configuration
 func getLinterConfigInfo() (configFile string, enabledCount, disabledCount int) {
 	// Check for config files in order of precedence
-	configFiles := []string{".golangci.json", ".golangci.yml", ".golangci.yaml", "golangci.yml", "golangci.yaml"}
-
-	for _, file := range configFiles {
+	for _, file := range GolangciLintConfigFiles() {
 		if utils.FileExists(file) {
 			configFile = file
 			break
