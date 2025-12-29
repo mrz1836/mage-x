@@ -141,21 +141,15 @@ func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
 
 	displayTestHeader(opts.testType, config)
 
-	// Discover all modules
-	modules, err := findAllModules()
+	// Discover and filter modules
+	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+		Operation: "benchmarks",
+		Quiet:     true, // Header already shown by displayTestHeader
+	})
 	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
+		return err
 	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Filter modules based on exclusion configuration
-	benchModules := filterModulesForProcessing(modules, config, "benchmarks")
-	if len(benchModules) == 0 {
-		utils.Warn("No modules to benchmark after exclusions")
+	if result.Empty || result.Skipped {
 		return nil
 	}
 
@@ -182,62 +176,13 @@ func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
 
 	args = append(args, "./...")
 
-	totalStart := time.Now()
-	var moduleErrors []moduleError
-
 	// Run benchmarks for each module
-	for _, module := range benchModules {
-		displayModuleHeader(module, opts.logPrefix+" for")
-
-		moduleStart := time.Now()
-		err := runCommandInModule(module, "go", args...)
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-		}
-		displayModuleCompletion(module, opts.logPrefix, moduleStart, err)
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("%s failed in %d/%d modules", opts.logPrefix, len(moduleErrors), len(benchModules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	displayOverallCompletion(opts.logPrefix, "completed", totalStart)
-	return nil
-}
-
-// shouldExcludeModule checks if a module should be excluded from processing
-// based on the configured exclusion list. By default, "magefiles" modules are excluded
-// because they have special build constraints (//go:build mage).
-func shouldExcludeModule(module ModuleInfo, config *Config) bool {
-	if config == nil || len(config.Test.ExcludeModules) == 0 {
-		return false
-	}
-	for _, excludedName := range config.Test.ExcludeModules {
-		if module.Name == excludedName {
-			return true
-		}
-	}
-	return false
-}
-
-// filterModulesForProcessing filters modules based on the exclusion configuration.
-// This is used by test, lint, and deps commands to skip modules like "magefiles"
-// that have special build constraints.
-func filterModulesForProcessing(modules []ModuleInfo, config *Config, operation string) []ModuleInfo {
-	if config == nil || len(config.Test.ExcludeModules) == 0 {
-		return modules
-	}
-	filtered := make([]ModuleInfo, 0, len(modules))
-	for _, m := range modules {
-		if shouldExcludeModule(m, config) {
-			utils.Info("Skipping module %s (excluded from %s)", m.Name, operation)
-			continue
-		}
-		filtered = append(filtered, m)
-	}
-	return filtered
+	return forEachModule(result.Modules, ModuleIteratorOptions{
+		Operation: opts.logPrefix,
+		Verb:      "completed",
+	}, func(module ModuleInfo) error {
+		return runCommandInModule(module, "go", args...)
+	})
 }
 
 // Test namespace for test-related tasks

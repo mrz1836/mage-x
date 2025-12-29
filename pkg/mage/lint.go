@@ -44,27 +44,14 @@ func (Lint) Default() error {
 		return err
 	}
 
-	// Discover all modules
-	var modules []ModuleInfo
-	modules, err = findAllModules()
+	// Discover and filter modules
+	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+		Operation: "linting",
+	})
 	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
+		return err
 	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		fmt.Printf("📦 Found %d Go modules\n", len(modules))
-	}
-
-	// Filter modules based on exclusion configuration
-	modules = filterModulesForProcessing(modules, config, "linting")
-	if len(modules) == 0 {
-		utils.Warn("No modules to lint after exclusions")
+	if result.Empty || result.Skipped {
 		return nil
 	}
 
@@ -81,7 +68,7 @@ func (Lint) Default() error {
 	}
 
 	// Run linters for each module
-	for _, module := range modules {
+	for _, module := range result.Modules {
 		displayModuleHeader(module, "Linting")
 
 		moduleStart := time.Now()
@@ -169,7 +156,7 @@ func (Lint) Default() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("Linting failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Linting failed in %d/%d modules", len(moduleErrors), len(result.Modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
@@ -186,27 +173,14 @@ func (Lint) Fix() error {
 		return err
 	}
 
-	// Discover all modules
-	var modules []ModuleInfo
-	modules, err = findAllModules()
+	// Discover and filter modules
+	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+		Operation: "lint fix",
+	})
 	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
+		return err
 	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
-		return nil
-	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		fmt.Printf("📦 Found %d Go modules\n", len(modules))
-	}
-
-	// Filter modules based on exclusion configuration
-	modules = filterModulesForProcessing(modules, config, "lint fix")
-	if len(modules) == 0 {
-		utils.Warn("No modules to fix after exclusions")
+	if result.Empty || result.Skipped {
 		return nil
 	}
 
@@ -223,7 +197,7 @@ func (Lint) Fix() error {
 	}
 
 	// Run fix for each module
-	for _, module := range modules {
+	for _, module := range result.Modules {
 		displayModuleHeader(module, "Fixing lint issues in")
 
 		moduleStart := time.Now()
@@ -316,7 +290,7 @@ func (Lint) Fix() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("Fix failed in %d/%d modules", len(moduleErrors), len(modules))
+		utils.Error("Fix failed in %d/%d modules", len(moduleErrors), len(result.Modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
@@ -418,53 +392,24 @@ func (Lint) Vet() error {
 		return err
 	}
 
-	// Discover all modules
-	modules, err := findAllModules()
+	// Discover and filter modules
+	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+		Operation: "go vet",
+	})
 	if err != nil {
-		return fmt.Errorf("failed to find modules: %w", err)
+		return err
 	}
-
-	if len(modules) == 0 {
-		utils.Warn("No Go modules found")
+	if result.Empty || result.Skipped {
 		return nil
 	}
-
-	// Show modules found
-	if len(modules) > 1 {
-		fmt.Printf("📦 Found %d Go modules\n", len(modules))
-	}
-
-	// Filter modules based on exclusion configuration
-	modules = filterModulesForProcessing(modules, config, "go vet")
-	if len(modules) == 0 {
-		utils.Warn("No modules to vet after exclusions")
-		return nil
-	}
-
-	totalStart := time.Now()
-	var moduleErrors []moduleError
 
 	// Run vet for each module
-	for _, module := range modules {
-		displayModuleHeader(module, "Running go vet in")
-
-		moduleStart := time.Now()
-
-		err = runVetInModule(module, config)
-		if err != nil {
-			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
-		}
-		displayModuleCompletion(module, "Vet", moduleStart, err)
-	}
-
-	// Report overall results
-	if len(moduleErrors) > 0 {
-		utils.Error("Vet failed in %d/%d modules", len(moduleErrors), len(modules))
-		return formatModuleErrors(moduleErrors)
-	}
-
-	displayOverallCompletion("vet checks", "passed", totalStart)
-	return nil
+	return forEachModule(result.Modules, ModuleIteratorOptions{
+		Operation: "Vet",
+		Verb:      "passed",
+	}, func(module ModuleInfo) error {
+		return runVetInModule(module, config)
+	})
 }
 
 // VetParallel runs go vet in parallel

@@ -609,3 +609,117 @@ func displayModuleSummary(modules []ModuleInfo, moduleDeps map[string][]string) 
 	}
 	utils.Info("")
 }
+
+// shouldExcludeModule checks if a module should be excluded from processing
+// based on the configured exclusion list. By default, "magefiles" modules are excluded
+// because they have special build constraints (//go:build mage).
+func shouldExcludeModule(module ModuleInfo, config *Config) bool {
+	if config == nil || len(config.Test.ExcludeModules) == 0 {
+		return false
+	}
+	for _, excludedName := range config.Test.ExcludeModules {
+		if module.Name == excludedName {
+			return true
+		}
+	}
+	return false
+}
+
+// filterModulesForProcessing filters modules based on the exclusion configuration.
+// This is used by test, lint, bench, and deps commands to skip modules like "magefiles"
+// that have special build constraints.
+func filterModulesForProcessing(modules []ModuleInfo, config *Config, operation string) []ModuleInfo {
+	if config == nil || len(config.Test.ExcludeModules) == 0 {
+		return modules
+	}
+	filtered := make([]ModuleInfo, 0, len(modules))
+	for _, m := range modules {
+		if shouldExcludeModule(m, config) {
+			utils.Info("Skipping module %s (excluded from %s)", m.Name, operation)
+			continue
+		}
+		filtered = append(filtered, m)
+	}
+	return filtered
+}
+
+// ModuleDiscoveryOptions configures module discovery and filtering behavior.
+type ModuleDiscoveryOptions struct {
+	Operation string // Description for logging (e.g., "benchmarks", "linting")
+	Quiet     bool   // If true, suppress "Found X modules" message
+}
+
+// ModuleDiscoveryResult contains the result of module discovery and filtering.
+type ModuleDiscoveryResult struct {
+	Modules []ModuleInfo
+	Empty   bool // True if no modules found at all
+	Skipped bool // True if all modules were filtered out
+}
+
+// discoverAndFilterModules discovers all modules and filters them based on configuration.
+// This consolidates the repeated pattern of findAllModules + filterModulesForProcessing.
+// Returns (result, nil) for success, even if result.Empty or result.Skipped is true.
+// Only returns error on actual discovery failure.
+func discoverAndFilterModules(config *Config, opts ModuleDiscoveryOptions) (*ModuleDiscoveryResult, error) {
+	// Discover all modules
+	modules, err := findAllModules()
+	if err != nil {
+		return nil, fmt.Errorf("failed to find modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Warn("No Go modules found")
+		return &ModuleDiscoveryResult{Empty: true}, nil
+	}
+
+	// Show modules found (unless quiet mode)
+	if !opts.Quiet && len(modules) > 1 {
+		utils.Info("Found %d Go modules", len(modules))
+	}
+
+	// Filter modules based on exclusion configuration
+	filtered := filterModulesForProcessing(modules, config, opts.Operation)
+	if len(filtered) == 0 {
+		utils.Warn("No modules to %s after exclusions", opts.Operation)
+		return &ModuleDiscoveryResult{Skipped: true}, nil
+	}
+
+	return &ModuleDiscoveryResult{Modules: filtered}, nil
+}
+
+// ModuleIteratorOptions configures the module iteration behavior.
+type ModuleIteratorOptions struct {
+	Operation string // Description for display (e.g., "Running benchmarks for")
+	Verb      string // Verb for completion message (e.g., "completed", "passed")
+}
+
+// ModuleAction is the function signature for per-module operations.
+// It receives the module and returns an error if the operation failed.
+type ModuleAction func(module ModuleInfo) error
+
+// forEachModule iterates over modules, running the action and collecting errors.
+// It handles displayModuleHeader, timing, displayModuleCompletion, and error aggregation.
+// Returns nil if all modules succeeded, or a formatted error summarizing failures.
+func forEachModule(modules []ModuleInfo, opts ModuleIteratorOptions, action ModuleAction) error {
+	totalStart := time.Now()
+	var moduleErrors []moduleError
+
+	for _, module := range modules {
+		displayModuleHeader(module, opts.Operation)
+
+		moduleStart := time.Now()
+		err := action(module)
+		if err != nil {
+			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
+		}
+		displayModuleCompletion(module, opts.Operation, moduleStart, err)
+	}
+
+	if len(moduleErrors) > 0 {
+		utils.Error("%s failed in %d/%d modules", opts.Operation, len(moduleErrors), len(modules))
+		return formatModuleErrors(moduleErrors)
+	}
+
+	displayOverallCompletion(opts.Operation, opts.Verb, totalStart)
+	return nil
+}
