@@ -98,7 +98,7 @@ func RunCmdSecure(name string, args ...string) error {
 	}
 
 	if err := executor.Execute(context.Background(), name, args...); err != nil {
-		return fmt.Errorf("secure command failed [%s %s]: %w", name, strings.Join(args, " "), err)
+		return pkgexec.CommandError(name, args, err)
 	}
 	return nil
 }
@@ -111,7 +111,7 @@ func RunCmdWithRetry(maxRetries int, name string, args ...string) error {
 	}
 
 	if err := executor.Execute(context.Background(), name, args...); err != nil {
-		return fmt.Errorf("command failed after retries [%s %s]: %w", name, strings.Join(args, " "), err)
+		return pkgexec.CommandError(name, args, err)
 	}
 	return nil
 }

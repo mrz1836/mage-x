@@ -183,12 +183,13 @@ func (Bench) CompareWithArgs(argsList ...string) error {
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
-	// Check if benchstat is installed
-	if !utils.CommandExists("benchstat") {
-		utils.Info("Installing benchstat...")
-		if err := GetRunner().RunCmd("go", "install", "golang.org/x/perf/cmd/benchstat@latest"); err != nil {
-			return fmt.Errorf("failed to install benchstat: %w", err)
-		}
+	// Ensure benchstat is installed using consolidated helper
+	if err := installTool(ToolDefinition{
+		Name:   "benchstat",
+		Module: "golang.org/x/perf/cmd/benchstat",
+		Check:  "benchstat",
+	}); err != nil {
+		return err
 	}
 
 	// Get benchmark files from parameters or environment
