@@ -124,8 +124,8 @@ func (Install) Default() error {
 	utils.Info("Installing to: %s", installPath)
 
 	// Determine package path using Build logic
-	builder := Build{}
-	packagePath, err := builder.determinePackagePath(config, installPath, true)
+	buildOps := GetBuildOperations()
+	packagePath, err := buildOps.DeterminePackagePath(config, installPath, true)
 	if err != nil {
 		return mageErrors.WrapError(err, "failed to determine package path")
 	}
@@ -309,8 +309,8 @@ func (Install) SystemWide() error {
 	utils.Info("Building binary...")
 
 	// Determine package path using Build logic
-	builder := Build{}
-	packagePath, err := builder.determinePackagePath(config, tempBinary, true)
+	buildOps := GetBuildOperations()
+	packagePath, err := buildOps.DeterminePackagePath(config, tempBinary, true)
 	if err != nil {
 		return mageErrors.WrapError(err, "failed to determine package path")
 	}

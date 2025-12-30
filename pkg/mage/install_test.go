@@ -61,6 +61,16 @@ func (h *installTestHelper) expectCmdOutput(cmd, output string, err error) {
 	h.mockRunner.On("RunCmdOutput", cmd, mock.Anything).Return(output, err)
 }
 
+// expectGitVersion sets up mock expectations for git version commands used by buildFlags
+func (h *installTestHelper) expectGitVersion() {
+	h.mockRunner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.0.0", nil).Maybe()
+	h.mockRunner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--always", "--dirty"}).Return("v1.0.0", nil).Maybe()
+	h.mockRunner.On("RunCmdOutput", "git", []string{"status", "--porcelain"}).Return("", nil).Maybe()
+	h.mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "HEAD"}).Return("abc123", nil).Maybe()
+	h.mockRunner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("abc1234", nil).Maybe()
+	h.mockRunner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--long", "--abbrev=0"}).Return("v1.0.0-0-gabc123", nil).Maybe()
+}
+
 // TestIsInPath tests the isInPath helper function
 func TestIsInPath(t *testing.T) {
 	tests := []struct {
@@ -713,15 +723,17 @@ func TestInstallPackage(t *testing.T) {
 	})
 }
 
-// installFullTestHelper provides test utilities including OS and Go operations mocks
+// installFullTestHelper provides test utilities including OS, Go, and Build operations mocks
 type installFullTestHelper struct {
 	*installTestHelper
 
-	originalOSOps  OSOperations
-	originalGoOps  GoOperations
-	mockOSOps      *testutil.MockOSOperations
-	mockGoOps      *testutil.MockGoOperations
-	originalConfig *Config
+	originalOSOps    OSOperations
+	originalGoOps    GoOperations
+	originalBuildOps BuildOperations
+	mockOSOps        *testutil.MockOSOperations
+	mockGoOps        *testutil.MockGoOperations
+	mockBuildOps     *MockBuildOperations // Local mock (defined in build_operations_test.go)
+	originalConfig   *Config
 }
 
 // newInstallFullTestHelper creates a helper with all mocks
@@ -731,15 +743,18 @@ func newInstallFullTestHelper(tb testing.TB) *installFullTestHelper {
 		installTestHelper: newInstallTestHelper(tb),
 		originalOSOps:     GetOSOperations(),
 		originalGoOps:     GetGoOperations(),
+		originalBuildOps:  GetBuildOperations(),
 	}
 
 	// Create mocks
 	h.mockOSOps = testutil.NewMockOSOperations()
 	h.mockGoOps = testutil.NewMockGoOperations()
+	h.mockBuildOps = NewMockBuildOperations() // Local mock (defined in build_operations_test.go)
 
 	// Set mocks
 	require.NoError(tb, SetOSOperations(h.mockOSOps))
 	require.NoError(tb, SetGoOperations(h.mockGoOps))
+	require.NoError(tb, SetBuildOperations(h.mockBuildOps))
 
 	return h
 }
@@ -750,6 +765,7 @@ func (h *installFullTestHelper) teardownFull(tb testing.TB) {
 	h.teardown(tb)
 	require.NoError(tb, SetOSOperations(h.originalOSOps))
 	require.NoError(tb, SetGoOperations(h.originalGoOps))
+	require.NoError(tb, SetBuildOperations(h.originalBuildOps))
 	if h.originalConfig != nil {
 		TestSetConfig(h.originalConfig)
 	}
@@ -930,7 +946,262 @@ func TestInstallGoMethod(t *testing.T) {
 	})
 }
 
-// Note: TestInstallDefault and TestInstallSystemWide require mocking the Build system's
-// determinePackagePath function which validates filesystem paths. These tests would need
-// a BuildOperations interface similar to OSOperations/GoOperations to be fully testable.
-// For now, coverage of Default() and SystemWide() is achieved through integration tests.
+// TestInstallDefault tests Install.Default with mocked dependencies
+func TestInstallDefault(t *testing.T) {
+	t.Run("successful install with file verification", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("Getenv", "GOPATH").Return("/home/user/go")
+		h.mockOSOps.On("Getenv", "HOME").Return("/home/user").Maybe()
+		h.mockOSOps.On("Getenv", "PATH").Return("/usr/bin:/home/user/go/bin")
+		h.mockOSOps.On("FileExists", "/home/user/go/bin/testapp").Return(true)
+		h.mockOSOps.On("FileExists", mock.Anything).Return(false).Maybe()
+		h.mockOSOps.On("Symlink", mock.Anything, mock.Anything).Return(nil).Maybe()
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/testapp", nil)
+		h.expectGitVersion()
+		h.expectCmd("go")
+
+		err := Install{}.Default()
+		require.NoError(t, err)
+	})
+
+	t.Run("package path determination failure", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("Getenv", "GOPATH").Return("/home/user/go")
+		h.mockOSOps.On("Getenv", "HOME").Return("/home/user").Maybe()
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("", assert.AnError)
+
+		err := Install{}.Default()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to determine package path")
+	})
+
+	t.Run("build command fails", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("Getenv", "GOPATH").Return("/home/user/go")
+		h.mockOSOps.On("Getenv", "HOME").Return("/home/user").Maybe()
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/testapp", nil)
+		h.expectGitVersion()
+		h.expectCmdError("go")
+
+		err := Install{}.Default()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "installation failed")
+	})
+
+	t.Run("verification fails when file does not exist", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("Getenv", "GOPATH").Return("/home/user/go")
+		h.mockOSOps.On("Getenv", "HOME").Return("/home/user").Maybe()
+		h.mockOSOps.On("FileExists", mock.Anything).Return(false)
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/testapp", nil)
+		h.expectGitVersion()
+		h.expectCmd("go")
+
+		err := Install{}.Default()
+		require.Error(t, err)
+		assert.Equal(t, errInstallationVerificationFailed, err)
+	})
+
+	t.Run("warns when GOPATH/bin not in PATH but still succeeds", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("Getenv", "GOPATH").Return("/home/user/go")
+		h.mockOSOps.On("Getenv", "HOME").Return("/home/user").Maybe()
+		h.mockOSOps.On("Getenv", "PATH").Return("/usr/bin") // GOPATH/bin not in PATH
+		h.mockOSOps.On("FileExists", "/home/user/go/bin/testapp").Return(true)
+		h.mockOSOps.On("FileExists", mock.Anything).Return(false).Maybe()
+		h.mockOSOps.On("Symlink", mock.Anything, mock.Anything).Return(nil).Maybe()
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/testapp", nil)
+		h.expectGitVersion()
+		h.expectCmd("go")
+
+		err := Install{}.Default()
+		require.NoError(t, err) // Should still succeed, just warn
+	})
+
+	t.Run("fallback to module name when binary not configured", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: ""}})
+		h.mockGoOps.On("GetModuleName").Return("github.com/user/myapp", nil)
+		h.mockOSOps.On("Getenv", "GOPATH").Return("/home/user/go")
+		h.mockOSOps.On("Getenv", "HOME").Return("/home/user").Maybe()
+		h.mockOSOps.On("Getenv", "PATH").Return("/usr/bin:/home/user/go/bin")
+		h.mockOSOps.On("FileExists", "/home/user/go/bin/myapp").Return(true)
+		h.mockOSOps.On("FileExists", mock.Anything).Return(false).Maybe()
+		h.mockOSOps.On("Symlink", mock.Anything, mock.Anything).Return(nil).Maybe()
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/myapp", nil)
+		h.expectGitVersion()
+		h.expectCmd("go")
+
+		err := Install{}.Default()
+		require.NoError(t, err)
+	})
+}
+
+// TestInstallSystemWide tests Install.SystemWide with mocked dependencies
+func TestInstallSystemWide(t *testing.T) {
+	if runtime.GOOS == OSWindows {
+		t.Run("not supported on windows", func(t *testing.T) {
+			err := Install{}.SystemWide()
+			require.Error(t, err)
+			assert.Equal(t, errSystemWideNotSupportedWindows, err)
+		})
+		return
+	}
+
+	t.Run("successful system-wide install", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("TempDir").Return("/tmp")
+		h.mockOSOps.On("Remove", "/tmp/testapp").Return(nil)
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/testapp", nil)
+		h.expectGitVersion()
+
+		// Expect go build, sudo cp, sudo chmod
+		h.mockRunner.On("RunCmd", "go", mock.Anything).Return(nil)
+		h.mockRunner.On("RunCmd", "sudo", mock.MatchedBy(func(args []string) bool {
+			return len(args) > 0 && args[0] == "cp"
+		})).Return(nil)
+		h.mockRunner.On("RunCmd", "sudo", mock.MatchedBy(func(args []string) bool {
+			return len(args) > 0 && args[0] == "chmod"
+		})).Return(nil)
+
+		err := Install{}.SystemWide()
+		require.NoError(t, err)
+	})
+
+	t.Run("package path determination failure", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("TempDir").Return("/tmp")
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("", assert.AnError)
+
+		err := Install{}.SystemWide()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to determine package path")
+	})
+
+	t.Run("build fails", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("TempDir").Return("/tmp")
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/testapp", nil)
+		h.expectGitVersion()
+		h.mockRunner.On("RunCmd", "go", mock.Anything).Return(assert.AnError)
+
+		err := Install{}.SystemWide()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "build failed")
+	})
+
+	t.Run("sudo cp fails", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("TempDir").Return("/tmp")
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/testapp", nil)
+		h.expectGitVersion()
+		h.mockRunner.On("RunCmd", "go", mock.Anything).Return(nil)
+		h.mockRunner.On("RunCmd", "sudo", mock.MatchedBy(func(args []string) bool {
+			return len(args) > 0 && args[0] == "cp"
+		})).Return(assert.AnError)
+
+		err := Install{}.SystemWide()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "installation failed")
+	})
+
+	t.Run("sudo chmod fails", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("TempDir").Return("/tmp")
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/testapp", nil)
+		h.expectGitVersion()
+		h.mockRunner.On("RunCmd", "go", mock.Anything).Return(nil)
+		h.mockRunner.On("RunCmd", "sudo", mock.MatchedBy(func(args []string) bool {
+			return len(args) > 0 && args[0] == "cp"
+		})).Return(nil)
+		h.mockRunner.On("RunCmd", "sudo", mock.MatchedBy(func(args []string) bool {
+			return len(args) > 0 && args[0] == "chmod"
+		})).Return(assert.AnError)
+
+		err := Install{}.SystemWide()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to set permissions")
+	})
+
+	t.Run("temp file cleanup failure is not an error", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: "testapp"}})
+		h.mockOSOps.On("TempDir").Return("/tmp")
+		h.mockOSOps.On("Remove", "/tmp/testapp").Return(assert.AnError) // Cleanup fails
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/testapp", nil)
+		h.expectGitVersion()
+		h.mockRunner.On("RunCmd", "go", mock.Anything).Return(nil)
+		h.mockRunner.On("RunCmd", "sudo", mock.Anything).Return(nil)
+
+		err := Install{}.SystemWide()
+		require.NoError(t, err) // Should still succeed
+	})
+
+	t.Run("fallback to module name when binary not configured", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: ""}})
+		h.mockGoOps.On("GetModuleName").Return("github.com/user/myapp", nil)
+		h.mockOSOps.On("TempDir").Return("/tmp")
+		h.mockOSOps.On("Remove", "/tmp/myapp").Return(nil)
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/myapp", nil)
+		h.expectGitVersion()
+		h.mockRunner.On("RunCmd", "go", mock.Anything).Return(nil)
+		h.mockRunner.On("RunCmd", "sudo", mock.Anything).Return(nil)
+
+		err := Install{}.SystemWide()
+		require.NoError(t, err)
+	})
+
+	t.Run("fallback to default binary name when module lookup fails", func(t *testing.T) {
+		h := newInstallFullTestHelper(t)
+		defer h.teardownFull(t)
+
+		h.setConfig(&Config{Project: ProjectConfig{Binary: ""}})
+		h.mockGoOps.On("GetModuleName").Return("", assert.AnError)
+		h.mockOSOps.On("TempDir").Return("/tmp")
+		h.mockOSOps.On("Remove", "/tmp/app").Return(nil)
+		h.mockBuildOps.On("DeterminePackagePath", mock.Anything, mock.Anything, true).Return("./cmd/app", nil)
+		h.expectGitVersion()
+		h.mockRunner.On("RunCmd", "go", mock.Anything).Return(nil)
+		h.mockRunner.On("RunCmd", "sudo", mock.Anything).Return(nil)
+
+		err := Install{}.SystemWide()
+		require.NoError(t, err)
+	})
+}
