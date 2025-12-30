@@ -38,6 +38,17 @@ var (
 	ErrInvalidUTF8Continuation = errors.New("path contains invalid UTF-8 continuation byte")
 )
 
+// windowsReservedDeviceNames contains Windows reserved device names that cannot be used as filenames.
+// See: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+//
+//nolint:gochecknoglobals // Package-level constant for performance - allocated once at package load
+var windowsReservedDeviceNames = []string{
+	"CON", "PRN", "AUX", "NUL",
+	"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+	"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+	"CONIN$", "CONOUT$",
+}
+
 // DefaultPathValidator implements PathValidator
 type DefaultPathValidator struct {
 	mu    sync.RWMutex
@@ -154,123 +165,80 @@ func (pv *DefaultPathValidator) IsValidPath(path PathBuilder) bool {
 	return len(pv.ValidatePath(path)) == 0
 }
 
+// addBuiltInRule is a helper that adds a validation rule and logs a warning on failure.
+// Built-in rules should never fail to add (only nil rules fail), but we handle it gracefully.
+func (pv *DefaultPathValidator) addBuiltInRule(rule ValidationRule) PathValidator {
+	if err := pv.AddRule(rule); err != nil {
+		log.Warn("failed to add %s rule: %v", rule.Name(), err)
+	}
+	return pv
+}
+
 // Built-in validators
 
 // RequireAbsolute requires the path to be absolute
 func (pv *DefaultPathValidator) RequireAbsolute() PathValidator {
-	if err := pv.AddRule(&AbsolutePathRule{}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add absolute path rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&AbsolutePathRule{})
 }
 
 // RequireRelative requires the path to be relative
 func (pv *DefaultPathValidator) RequireRelative() PathValidator {
-	if err := pv.AddRule(&RelativePathRule{}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add relative path rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&RelativePathRule{})
 }
 
 // RequireExists requires the path to exist
 func (pv *DefaultPathValidator) RequireExists() PathValidator {
-	if err := pv.AddRule(&ExistsRule{}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add exists rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&ExistsRule{})
 }
 
 // RequireNotExists requires the path to not exist
 func (pv *DefaultPathValidator) RequireNotExists() PathValidator {
-	if err := pv.AddRule(&NotExistsRule{}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add not exists rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&NotExistsRule{})
 }
 
 // RequireReadable requires the path to be readable
 func (pv *DefaultPathValidator) RequireReadable() PathValidator {
-	if err := pv.AddRule(&ReadableRule{}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add readable rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&ReadableRule{})
 }
 
 // RequireWritable requires the path to be writable
 func (pv *DefaultPathValidator) RequireWritable() PathValidator {
-	if err := pv.AddRule(&WritableRule{}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add writable rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&WritableRule{})
 }
 
 // RequireExecutable requires the path to be executable
 func (pv *DefaultPathValidator) RequireExecutable() PathValidator {
-	if err := pv.AddRule(&ExecutableRule{}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add executable rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&ExecutableRule{})
 }
 
 // RequireDirectory requires the path to be a directory
 func (pv *DefaultPathValidator) RequireDirectory() PathValidator {
-	if err := pv.AddRule(&DirectoryRule{}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add directory rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&DirectoryRule{})
 }
 
 // RequireFile requires the path to be a file
 func (pv *DefaultPathValidator) RequireFile() PathValidator {
-	if err := pv.AddRule(&FileRule{}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add file rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&FileRule{})
 }
 
 // RequireExtension requires the path to have one of the specified extensions
 func (pv *DefaultPathValidator) RequireExtension(exts ...string) PathValidator {
-	if err := pv.AddRule(&ExtensionRule{Extensions: exts}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add extension rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&ExtensionRule{Extensions: exts})
 }
 
 // RequireMaxLength requires the path to be shorter than the specified length
 func (pv *DefaultPathValidator) RequireMaxLength(length int) PathValidator {
-	if err := pv.AddRule(&MaxLengthRule{MaxLength: length}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add max length rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&MaxLengthRule{MaxLength: length})
 }
 
 // RequirePattern requires the path to match a pattern
 func (pv *DefaultPathValidator) RequirePattern(pattern string) PathValidator {
-	if err := pv.AddRule(&PatternRule{Pattern: pattern, Required: true}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add required pattern rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&PatternRule{Pattern: pattern, Required: true})
 }
 
 // ForbidPattern forbids the path from matching a pattern
 func (pv *DefaultPathValidator) ForbidPattern(pattern string) PathValidator {
-	if err := pv.AddRule(&PatternRule{Pattern: pattern, Required: false}); err != nil {
-		// This shouldn't fail for built-in rules, but we continue anyway
-		log.Warn("failed to add forbidden pattern rule: %v", err)
-	}
-	return pv
+	return pv.addBuiltInRule(&PatternRule{Pattern: pattern, Required: false})
 }
 
 // Built-in validation rules
@@ -824,13 +792,12 @@ func (r *WindowsReservedRule) Description() string {
 
 // Validate checks if the given path uses Windows reserved names
 func (r *WindowsReservedRule) Validate(path string) error {
-	reservedNames := []string{"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "CONIN$", "CONOUT$"}
 	baseName := strings.ToUpper(filepath.Base(path))
 	// Remove extension for checking
 	if idx := strings.LastIndex(baseName, "."); idx > 0 {
 		baseName = baseName[:idx]
 	}
-	for _, reserved := range reservedNames {
+	for _, reserved := range windowsReservedDeviceNames {
 		if baseName == reserved {
 			return ErrWindowsReservedName
 		}
@@ -925,26 +892,17 @@ func (r *ValidUTF8Rule) ValidatePath(path PathBuilder) error {
 // RequireSecure adds comprehensive security validation rules
 func (pv *DefaultPathValidator) RequireSecure() PathValidator {
 	// Add all security rules
-	if err := pv.AddRule(&PathTraversalRule{}); err != nil {
-		log.Warn("failed to add path traversal rule: %v", err)
+	securityRules := []ValidationRule{
+		&PathTraversalRule{},
+		&NullByteRule{},
+		&ControlCharacterRule{},
+		&WindowsReservedRule{},
+		&UNCPathRule{},
+		&DrivePathRule{},
+		&ValidUTF8Rule{},
 	}
-	if err := pv.AddRule(&NullByteRule{}); err != nil {
-		log.Warn("failed to add null byte rule: %v", err)
-	}
-	if err := pv.AddRule(&ControlCharacterRule{}); err != nil {
-		log.Warn("failed to add control character rule: %v", err)
-	}
-	if err := pv.AddRule(&WindowsReservedRule{}); err != nil {
-		log.Warn("failed to add Windows reserved rule: %v", err)
-	}
-	if err := pv.AddRule(&UNCPathRule{}); err != nil {
-		log.Warn("failed to add UNC path rule: %v", err)
-	}
-	if err := pv.AddRule(&DrivePathRule{}); err != nil {
-		log.Warn("failed to add drive path rule: %v", err)
-	}
-	if err := pv.AddRule(&ValidUTF8Rule{}); err != nil {
-		log.Warn("failed to add valid UTF-8 rule: %v", err)
+	for _, rule := range securityRules {
+		pv.addBuiltInRule(rule)
 	}
 	return pv
 }

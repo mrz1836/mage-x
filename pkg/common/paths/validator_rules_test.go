@@ -1201,3 +1201,158 @@ func TestValidator_PackageFunctions(t *testing.T) {
 		assert.False(t, IsValid(filepath.Join(tmpDir, "nonexistent"), v))
 	})
 }
+
+// =============================================================================
+// Constants and Helper Method Tests
+// =============================================================================
+
+// TestWindowsReservedDeviceNames_Constant verifies the package-level constant
+// contains all expected Windows reserved device names.
+func TestWindowsReservedDeviceNames_Constant(t *testing.T) {
+	expectedNames := []string{
+		"CON", "PRN", "AUX", "NUL",
+		"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+		"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+		"CONIN$", "CONOUT$",
+	}
+
+	assert.Len(t, windowsReservedDeviceNames, len(expectedNames),
+		"windowsReservedDeviceNames should contain exactly %d names", len(expectedNames))
+
+	// Verify all expected names are present
+	nameSet := make(map[string]bool)
+	for _, name := range windowsReservedDeviceNames {
+		nameSet[name] = true
+	}
+
+	for _, expected := range expectedNames {
+		assert.True(t, nameSet[expected],
+			"windowsReservedDeviceNames should contain %q", expected)
+	}
+}
+
+// TestAddBuiltInRule_Helper tests the addBuiltInRule helper method.
+func TestAddBuiltInRule_Helper(t *testing.T) {
+	t.Run("adds rule successfully", func(t *testing.T) {
+		v := NewPathValidator()
+		result := v.addBuiltInRule(&AbsolutePathRule{})
+
+		// Should return the validator for chaining
+		assert.Same(t, v, result)
+
+		// Rule should be added
+		rules := v.Rules()
+		assert.Len(t, rules, 1)
+		assert.Equal(t, "absolute-path", rules[0].Name())
+	})
+
+	t.Run("adds multiple rules sequentially", func(t *testing.T) {
+		v := NewPathValidator()
+		v.addBuiltInRule(&AbsolutePathRule{})
+		v.addBuiltInRule(&ExistsRule{})
+		v.addBuiltInRule(&ReadableRule{})
+
+		rules := v.Rules()
+		assert.Len(t, rules, 3)
+		assert.Equal(t, "absolute-path", rules[0].Name())
+		assert.Equal(t, "exists", rules[1].Name())
+		assert.Equal(t, "readable", rules[2].Name())
+	})
+}
+
+// TestRequireSecure_AddsAllSecurityRules verifies that RequireSecure
+// adds all seven security validation rules in the expected order.
+func TestRequireSecure_AddsAllSecurityRules(t *testing.T) {
+	v := NewPathValidator()
+	result := v.RequireSecure()
+
+	// Should return the validator for chaining
+	assert.Same(t, v, result)
+
+	// Should have exactly 7 security rules
+	rules := v.Rules()
+	require.Len(t, rules, 7, "RequireSecure should add exactly 7 rules")
+
+	// Verify rules are added in the expected order
+	expectedRuleNames := []string{
+		"no-path-traversal",
+		"no-null-bytes",
+		"no-control-chars",
+		"no-windows-reserved",
+		"no-unc-paths",
+		"no-drive-paths",
+		"valid-utf8",
+	}
+
+	for i, expectedName := range expectedRuleNames {
+		assert.Equal(t, expectedName, rules[i].Name(),
+			"Rule at position %d should be %q", i, expectedName)
+	}
+}
+
+// TestBuilderMethods_AllReturnValidator verifies that all builder methods
+// return the validator for chaining and properly add their rules.
+func TestBuilderMethods_AllReturnValidator(t *testing.T) {
+	testCases := []struct {
+		name         string
+		builderFunc  func(*DefaultPathValidator) PathValidator
+		expectedRule string
+	}{
+		{"RequireAbsolute", func(v *DefaultPathValidator) PathValidator { return v.RequireAbsolute() }, "absolute-path"},
+		{"RequireRelative", func(v *DefaultPathValidator) PathValidator { return v.RequireRelative() }, "relative-path"},
+		{"RequireExists", func(v *DefaultPathValidator) PathValidator { return v.RequireExists() }, "exists"},
+		{"RequireNotExists", func(v *DefaultPathValidator) PathValidator { return v.RequireNotExists() }, "not-exists"},
+		{"RequireReadable", func(v *DefaultPathValidator) PathValidator { return v.RequireReadable() }, "readable"},
+		{"RequireWritable", func(v *DefaultPathValidator) PathValidator { return v.RequireWritable() }, "writable"},
+		{"RequireExecutable", func(v *DefaultPathValidator) PathValidator { return v.RequireExecutable() }, "executable"},
+		{"RequireDirectory", func(v *DefaultPathValidator) PathValidator { return v.RequireDirectory() }, "directory"},
+		{"RequireFile", func(v *DefaultPathValidator) PathValidator { return v.RequireFile() }, "file"},
+		{"RequireExtension", func(v *DefaultPathValidator) PathValidator { return v.RequireExtension(".go", ".txt") }, "extension"},
+		{"RequireMaxLength", func(v *DefaultPathValidator) PathValidator { return v.RequireMaxLength(255) }, "max-length"},
+		{"RequirePattern", func(v *DefaultPathValidator) PathValidator { return v.RequirePattern(".*\\.go$") }, "require-pattern"},
+		{"ForbidPattern", func(v *DefaultPathValidator) PathValidator { return v.ForbidPattern(".*\\.exe$") }, "forbid-pattern"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v := NewPathValidator()
+			result := tc.builderFunc(v)
+
+			// Should return the validator for chaining
+			assert.NotNil(t, result)
+
+			// Rule should be added with expected name
+			rules := v.Rules()
+			require.Len(t, rules, 1, "%s should add exactly 1 rule", tc.name)
+			assert.Equal(t, tc.expectedRule, rules[0].Name(),
+				"%s should add rule with name %q", tc.name, tc.expectedRule)
+		})
+	}
+}
+
+// TestBuilderMethods_ChainCorrectly verifies that builder methods can be chained.
+func TestBuilderMethods_ChainCorrectly(t *testing.T) {
+	v := NewPathValidator()
+	result := v.
+		RequireAbsolute().
+		RequireExists().
+		RequireReadable().
+		RequireFile().
+		RequireExtension(".go", ".txt").
+		RequireMaxLength(4096)
+
+	// Should return the validator
+	assert.NotNil(t, result)
+
+	// All 6 rules should be added
+	rules := v.Rules()
+	assert.Len(t, rules, 6)
+
+	// Verify rules are in order of addition
+	assert.Equal(t, "absolute-path", rules[0].Name())
+	assert.Equal(t, "exists", rules[1].Name())
+	assert.Equal(t, "readable", rules[2].Name())
+	assert.Equal(t, "file", rules[3].Name())
+	assert.Equal(t, "extension", rules[4].Name())
+	assert.Equal(t, "max-length", rules[5].Name())
+}
