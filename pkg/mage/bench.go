@@ -22,6 +22,19 @@ var (
 	ErrNewBenchFileNotFound = errors.New("new benchmark file not found")
 )
 
+// Benchmark default constants
+const (
+	defaultBenchTime    = "3s"
+	defaultCPUProfile   = "cpu.prof"
+	defaultMemProfile   = "mem.prof"
+	defaultTraceFile    = "trace.out"
+	defaultCurrentFile  = "bench-current.txt"
+	defaultBaselineFile = "bench-baseline.txt"
+	defaultOldFile      = "old.txt"
+	defaultNewFile      = "new.txt"
+	defaultPackage      = "./..."
+)
+
 // Bench namespace for benchmark-related tasks
 type Bench mg.Namespace
 
@@ -39,16 +52,8 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 		return err
 	}
 
-	// Parse command-line parameters from os.Args
-	// Find arguments after the target name
-	var targetArgs []string
-	for i, arg := range os.Args {
-		if strings.Contains(arg, "bench:default") || strings.Contains(arg, "bench") {
-			targetArgs = os.Args[i+1:]
-			break
-		}
-	}
-	params := utils.ParseParams(targetArgs)
+	// Parse command-line parameters from argsList
+	params := utils.ParseParams(argsList)
 
 	// Discover and filter modules
 	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
@@ -65,7 +70,7 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
 	// Add bench time from parameter or default
-	benchTime := utils.GetParam(params, "time", "3s")
+	benchTime := utils.GetParam(params, "time", defaultBenchTime)
 	args = append(args, "-benchtime", benchTime)
 
 	// Add verbose flag if requested
@@ -98,7 +103,7 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 	}
 
 	// Add package filter - use ./... for each module
-	pkg := utils.GetParam(params, "pkg", "./...")
+	pkg := utils.GetParam(params, "pkg", defaultPackage)
 	args = append(args, pkg)
 
 	// Run benchmarks for each module
@@ -151,11 +156,11 @@ func (Bench) CompareWithArgs(argsList ...string) error {
 	// Get benchmark files from parameters or environment
 	oldBenchFile := utils.GetParam(params, "old", "")
 	if oldBenchFile == "" {
-		oldBenchFile = env.GetString("BENCH_OLD", "old.txt")
+		oldBenchFile = env.GetString("BENCH_OLD", defaultOldFile)
 	}
 	newBenchFile := utils.GetParam(params, "new", "")
 	if newBenchFile == "" {
-		newBenchFile = env.GetString("BENCH_NEW", "new.txt")
+		newBenchFile = env.GetString("BENCH_NEW", defaultNewFile)
 	}
 
 	// Check if files exist
@@ -186,16 +191,8 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 		return err
 	}
 
-	// Parse command-line parameters from os.Args
-	// Find arguments after the target name
-	var targetArgs []string
-	for i, arg := range os.Args {
-		if strings.Contains(arg, "bench:save") {
-			targetArgs = os.Args[i+1:]
-			break
-		}
-	}
-	params := utils.ParseParams(targetArgs)
+	// Parse command-line parameters from argsList
+	params := utils.ParseParams(argsList)
 
 	// Determine output file
 	output := utils.GetParam(params, "output", "")
@@ -231,7 +228,7 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 	// Build base benchmark args
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
 
-	benchTime := utils.GetParam(params, "time", "3s")
+	benchTime := utils.GetParam(params, "time", defaultBenchTime)
 	args = append(args, "-benchtime", benchTime)
 
 	// Add verbose flag if requested
@@ -252,7 +249,7 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 	}
 
 	// Add package filter - use ./... for each module
-	pkg := utils.GetParam(params, "pkg", "./...")
+	pkg := utils.GetParam(params, "pkg", defaultPackage)
 	args = append(args, pkg)
 
 	// Collect all benchmark outputs
@@ -303,9 +300,9 @@ func (Bench) CPUWithArgs(argsList ...string) error {
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
-	profile := utils.GetParam(params, "profile", "cpu.prof")
+	profile := utils.GetParam(params, "profile", defaultCPUProfile)
 	if profile == "" {
-		profile = env.GetString("CPU_PROFILE", "cpu.prof")
+		profile = env.GetString("CPU_PROFILE", defaultCPUProfile)
 	}
 	if err := os.Setenv("MAGE_X_BENCH_CPU_PROFILE", profile); err != nil {
 		return fmt.Errorf("failed to set MAGE_X_BENCH_CPU_PROFILE: %w", err)
@@ -341,9 +338,9 @@ func (Bench) MemWithArgs(argsList ...string) error {
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
-	profile := utils.GetParam(params, "profile", "mem.prof")
+	profile := utils.GetParam(params, "profile", defaultMemProfile)
 	if profile == "" {
-		profile = env.GetString("MEM_PROFILE", "mem.prof")
+		profile = env.GetString("MEM_PROFILE", defaultMemProfile)
 	}
 	if err := os.Setenv("MAGE_X_BENCH_MEM_PROFILE", profile); err != nil {
 		return fmt.Errorf("failed to set MAGE_X_BENCH_MEM_PROFILE: %w", err)
@@ -379,8 +376,8 @@ func (Bench) ProfileWithArgs(argsList ...string) error {
 	// Parse command-line parameters
 	params := utils.ParseParams(argsList)
 
-	cpuProfile := utils.GetParam(params, "cpu-profile", "cpu.prof")
-	memProfile := utils.GetParam(params, "mem-profile", "mem.prof")
+	cpuProfile := utils.GetParam(params, "cpu-profile", defaultCPUProfile)
+	memProfile := utils.GetParam(params, "mem-profile", defaultMemProfile)
 
 	if err := os.Setenv("MAGE_X_BENCH_CPU_PROFILE", cpuProfile); err != nil {
 		return fmt.Errorf("failed to set MAGE_X_BENCH_CPU_PROFILE: %w", err)
@@ -416,20 +413,12 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 		return err
 	}
 
-	// Parse command-line parameters from os.Args
-	// Find arguments after the target name
-	var targetArgs []string
-	for i, arg := range os.Args {
-		if strings.Contains(arg, "bench:trace") {
-			targetArgs = os.Args[i+1:]
-			break
-		}
-	}
-	params := utils.ParseParams(targetArgs)
+	// Parse command-line parameters from argsList
+	params := utils.ParseParams(argsList)
 
-	trace := utils.GetParam(params, "trace", "trace.out")
+	trace := utils.GetParam(params, "trace", defaultTraceFile)
 	if trace == "" {
-		trace = env.GetString("TRACE_FILE", "trace.out")
+		trace = env.GetString("TRACE_FILE", defaultTraceFile)
 	}
 
 	// Discover and filter modules
@@ -443,16 +432,16 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 		return nil
 	}
 
-	benchTime := utils.GetParam(params, "time", "3s")
+	benchTime := utils.GetParam(params, "time", defaultBenchTime)
 
 	// Add skip pattern if specified
 	skip := utils.GetParam(params, "skip", "")
 
 	// Add package filter - use ./... for each module
-	pkg := utils.GetParam(params, "pkg", "./...")
+	pkg := utils.GetParam(params, "pkg", defaultPackage)
 
 	totalStart := time.Now()
-	var moduleErrors []moduleError
+	moduleErrors := make([]moduleError, 0, len(result.Modules))
 
 	// Run benchmarks for each module
 	// Note: Custom loop because we need per-module trace file naming
@@ -528,7 +517,7 @@ func (Bench) RegressionWithArgs(argsList ...string) error {
 	params := utils.ParseParams(argsList)
 
 	// Save current results
-	currentFile := "bench-current.txt"
+	currentFile := defaultCurrentFile
 	if err := os.Setenv("MAGE_X_BENCH_FILE", currentFile); err != nil {
 		return fmt.Errorf("failed to set MAGE_X_BENCH_FILE: %w", err)
 	}
@@ -538,12 +527,12 @@ func (Bench) RegressionWithArgs(argsList ...string) error {
 	}
 
 	// Check if we have a baseline
-	baseline := env.GetString("BENCH_BASELINE", "bench-baseline.txt")
+	baseline := env.GetString("BENCH_BASELINE", defaultBaselineFile)
 	if !utils.FileExists(baseline) {
 		utils.Warn("No baseline found at %s", baseline)
 		utils.Info("Creating baseline from current results...")
 
-		if err := os.Rename("bench-current.txt", baseline); err != nil {
+		if err := os.Rename(currentFile, baseline); err != nil {
 			return fmt.Errorf("failed to create baseline: %w", err)
 		}
 
