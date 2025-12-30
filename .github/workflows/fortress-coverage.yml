@@ -2442,11 +2442,11 @@ jobs:
                 [[ "$line" == mode:* ]] && continue
                 # Skip empty lines
                 [[ -z "$line" ]] && continue
-                # Extract statement count (last number) and hit count (second to last)
-                # Format: path/file.go:startLine.startCol,endLine.endCol hitCount stmtCount
+                # Extract statement count (first number) and hit count (second number)
+                # Format: path/file.go:startLine.startCol,endLine.endCol stmtCount hitCount
                 if [[ "$line" =~ [[:space:]]([0-9]+)[[:space:]]([0-9]+)$ ]]; then
-                  HIT_COUNT="${BASH_REMATCH[1]}"
-                  STMT_COUNT="${BASH_REMATCH[2]}"
+                  STMT_COUNT="${BASH_REMATCH[1]}"
+                  HIT_COUNT="${BASH_REMATCH[2]}"
                   TOTAL_STATEMENTS=$((TOTAL_STATEMENTS + STMT_COUNT))
                   if [[ $HIT_COUNT -gt 0 ]]; then
                     COVERED_STATEMENTS=$((COVERED_STATEMENTS + STMT_COUNT))
