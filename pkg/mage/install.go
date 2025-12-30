@@ -40,6 +40,9 @@ func (Install) Local() error {
 func (Install) Uninstall() error {
 	utils.Header("Uninstalling Application")
 
+	ops := GetOSOperations()
+	goOps := GetGoOperations()
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
@@ -49,7 +52,7 @@ func (Install) Uninstall() error {
 	binaryName := config.Project.Binary
 	if binaryName == "" {
 		// Try to get from module name
-		if module, moduleErr := utils.GetModuleName(); moduleErr == nil {
+		if module, moduleErr := goOps.GetModuleName(); moduleErr == nil {
 			parts := strings.Split(module, "/")
 			binaryName = parts[len(parts)-1]
 		} else {
@@ -58,9 +61,9 @@ func (Install) Uninstall() error {
 	}
 
 	// Get GOPATH
-	gopath := os.Getenv("GOPATH")
+	gopath := ops.Getenv("GOPATH")
 	if gopath == "" {
-		gopath = filepath.Join(os.Getenv("HOME"), "go")
+		gopath = filepath.Join(ops.Getenv("HOME"), "go")
 	}
 
 	// Determine install path
@@ -70,7 +73,7 @@ func (Install) Uninstall() error {
 	}
 
 	// Remove the binary
-	if err := os.Remove(installPath); err != nil {
+	if err := ops.Remove(installPath); err != nil {
 		if os.IsNotExist(err) {
 			utils.Warn("Binary not found at %s", installPath)
 			return nil
@@ -86,6 +89,9 @@ func (Install) Uninstall() error {
 func (Install) Default() error {
 	utils.Header("Installing Application")
 
+	ops := GetOSOperations()
+	goOps := GetGoOperations()
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
@@ -95,7 +101,7 @@ func (Install) Default() error {
 	binaryName := config.Project.Binary
 	if binaryName == "" {
 		// Try to get from module name
-		if module, moduleErr := utils.GetModuleName(); moduleErr == nil {
+		if module, moduleErr := goOps.GetModuleName(); moduleErr == nil {
 			parts := strings.Split(module, "/")
 			binaryName = parts[len(parts)-1]
 		} else {
@@ -104,9 +110,9 @@ func (Install) Default() error {
 	}
 
 	// Get GOPATH
-	gopath := os.Getenv("GOPATH")
+	gopath := ops.Getenv("GOPATH")
 	if gopath == "" {
-		gopath = filepath.Join(os.Getenv("HOME"), "go")
+		gopath = filepath.Join(ops.Getenv("HOME"), "go")
 	}
 
 	// Determine install path
@@ -139,7 +145,7 @@ func (Install) Default() error {
 	}
 
 	// Verify installation
-	if utils.FileExists(installPath) {
+	if ops.FileExists(installPath) {
 		utils.Success("Successfully installed %s", binaryName)
 		utils.Info("Binary location: %s", installPath)
 
@@ -164,16 +170,19 @@ func (Install) Default() error {
 func (Install) Go() error {
 	utils.Header("Installing with go install")
 
+	ops := GetOSOperations()
+	goOps := GetGoOperations()
+
 	// Get module info
-	module, err := utils.GetModuleName()
+	module, err := goOps.GetModuleName()
 	if err != nil {
 		return mageErrors.WrapError(err, "failed to get module name")
 	}
 
 	// Get version
-	installVersion := env.GetString("VERSION", getVersion())
+	installVersion := env.GetString("VERSION", goOps.GetVersion())
 	if installVersion == versionDev || installVersion == "" {
-		installVersion = GetDefaultGoVulnCheckVersion()
+		installVersion = goOps.GetGoVulnCheckVersion()
 		if installVersion == "" {
 			utils.Warn("GoVulnCheck version not available, using @latest")
 			installVersion = VersionLatest
@@ -193,7 +202,7 @@ func (Install) Go() error {
 	args := []string{"install"}
 
 	// Add build tags if specified
-	if tags := os.Getenv("MAGE_X_BUILD_TAGS"); tags != "" {
+	if tags := ops.Getenv("MAGE_X_BUILD_TAGS"); tags != "" {
 		args = append(args, "-tags", tags)
 	}
 
@@ -275,6 +284,9 @@ func (Install) SystemWide() error {
 		return errSystemWideNotSupportedWindows
 	}
 
+	ops := GetOSOperations()
+	goOps := GetGoOperations()
+
 	config, err := GetConfig()
 	if err != nil {
 		return err
@@ -283,7 +295,7 @@ func (Install) SystemWide() error {
 	// Get binary name
 	binaryName := config.Project.Binary
 	if binaryName == "" {
-		if module, moduleErr := utils.GetModuleName(); moduleErr == nil {
+		if module, moduleErr := goOps.GetModuleName(); moduleErr == nil {
 			parts := strings.Split(module, "/")
 			binaryName = parts[len(parts)-1]
 		} else {
@@ -292,7 +304,7 @@ func (Install) SystemWide() error {
 	}
 
 	// Build binary first
-	tempBinary := filepath.Join(os.TempDir(), binaryName)
+	tempBinary := filepath.Join(ops.TempDir(), binaryName)
 
 	utils.Info("Building binary...")
 
@@ -331,7 +343,7 @@ func (Install) SystemWide() error {
 	}
 
 	// Clean up temp file
-	if err := os.Remove(tempBinary); err != nil {
+	if err := ops.Remove(tempBinary); err != nil {
 		// Log but don't fail - this is cleanup
 		utils.Debug("Failed to remove temporary file %s: %v", tempBinary, err)
 	}
@@ -346,7 +358,8 @@ func (Install) SystemWide() error {
 
 // isInPath checks if a directory is in PATH
 func isInPath(dir string) bool {
-	path := os.Getenv("PATH")
+	ops := GetOSOperations()
+	path := ops.Getenv("PATH")
 	paths := strings.Split(path, string(os.PathListSeparator))
 
 	for _, p := range paths {
@@ -360,6 +373,8 @@ func isInPath(dir string) bool {
 
 // createSymlinkAlias creates a symlink alias for the installed binary
 func createSymlinkAlias(gopath, installPath, aliasName string) {
+	ops := GetOSOperations()
+
 	// Determine alias path
 	aliasPath := filepath.Join(gopath, "bin", aliasName)
 	if runtime.GOOS == OSWindows && !strings.HasSuffix(aliasPath, ".exe") {
@@ -367,7 +382,7 @@ func createSymlinkAlias(gopath, installPath, aliasName string) {
 	}
 
 	// Check if alias already exists
-	if utils.FileExists(aliasPath) {
+	if ops.FileExists(aliasPath) {
 		if checkExistingAlias(aliasPath, installPath, aliasName) {
 			return
 		}
@@ -381,7 +396,7 @@ func createSymlinkAlias(gopath, installPath, aliasName string) {
 		createWindowsBatchWrapper(aliasPath, installPath, aliasName)
 	} else {
 		// Unix/Mac: create symlink
-		if err := os.Symlink(installPath, aliasPath); err != nil {
+		if err := ops.Symlink(installPath, aliasPath); err != nil {
 			utils.Warn("Failed to create alias '%s': %v", aliasName, err)
 		} else {
 			binaryName := filepath.Base(installPath)
@@ -395,8 +410,10 @@ func createSymlinkAlias(gopath, installPath, aliasName string) {
 
 // checkExistingAlias checks if an existing alias already points to our binary
 func checkExistingAlias(aliasPath, installPath, aliasName string) bool {
+	ops := GetOSOperations()
+
 	// If it's already a symlink to our binary, that's fine
-	link, err := os.Readlink(aliasPath)
+	link, err := ops.Readlink(aliasPath)
 	if err != nil {
 		return false
 	}
@@ -421,6 +438,8 @@ func checkExistingAlias(aliasPath, installPath, aliasName string) bool {
 
 // createWindowsBatchWrapper creates a batch file wrapper on Windows
 func createWindowsBatchWrapper(aliasPath, installPath, aliasName string) {
+	ops := GetOSOperations()
+
 	// Remove .exe extension for batch file
 	if strings.HasSuffix(aliasPath, ".exe") {
 		aliasPath = strings.TrimSuffix(aliasPath, ".exe") + ".bat"
@@ -429,7 +448,7 @@ func createWindowsBatchWrapper(aliasPath, installPath, aliasName string) {
 	// Create batch file content that forwards all arguments
 	batchContent := fmt.Sprintf("@echo off\n\"%s\" %%*\n", installPath)
 
-	if err := os.WriteFile(aliasPath, []byte(batchContent), fileops.PermFileSensitive); err != nil {
+	if err := ops.WriteFile(aliasPath, []byte(batchContent), fileops.PermFileSensitive); err != nil {
 		utils.Warn("Failed to create alias '%s': %v", aliasName, err)
 	} else {
 		binaryName := filepath.Base(installPath)
