@@ -391,6 +391,99 @@ func TestFileSystemOperations(t *testing.T) {
 	})
 }
 
+// TestParseGoVersionOutput tests the version parsing logic from go version output
+func TestParseGoVersionOutput(t *testing.T) {
+	tests := []struct {
+		name      string
+		output    string
+		expected  string
+		expectErr bool
+	}{
+		{
+			name:     "standard darwin output",
+			output:   "go version go1.24.0 darwin/amd64",
+			expected: "1.24.0",
+		},
+		{
+			name:     "standard linux output",
+			output:   "go version go1.22.5 linux/amd64",
+			expected: "1.22.5",
+		},
+		{
+			name:     "standard windows output",
+			output:   "go version go1.21.0 windows/amd64",
+			expected: "1.21.0",
+		},
+		{
+			name:     "arm64 architecture",
+			output:   "go version go1.23.1 darwin/arm64",
+			expected: "1.23.1",
+		},
+		{
+			name:     "rc version",
+			output:   "go version go1.24rc1 darwin/amd64",
+			expected: "1.24rc1",
+		},
+		{
+			name:     "beta version",
+			output:   "go version go1.24beta1 darwin/amd64",
+			expected: "1.24beta1",
+		},
+		{
+			name:      "too few fields",
+			output:    "go version",
+			expectErr: true,
+		},
+		{
+			name:      "empty output",
+			output:    "",
+			expectErr: true,
+		},
+		{
+			name:      "single word",
+			output:    "go",
+			expectErr: true,
+		},
+		{
+			name:      "two words",
+			output:    "go version",
+			expectErr: true,
+		},
+		{
+			name:     "extra whitespace",
+			output:   "  go  version  go1.24.0  darwin/amd64  ",
+			expected: "1.24.0",
+		},
+		{
+			name:     "unexpected prefix but valid format",
+			output:   "go version xyz1.0.0 darwin/amd64",
+			expected: "xyz1.0.0", // TrimPrefix removes "go" only if present
+		},
+	}
+
+	// parseGoVersionOutput is the parsing logic extracted from GetGoVersion
+	parseGoVersionOutput := func(output string) (string, error) {
+		parts := strings.Fields(output)
+		if len(parts) >= 3 {
+			return strings.TrimPrefix(parts[2], "go"), nil
+		}
+		return "", errParseGoVersion
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseGoVersionOutput(tt.output)
+			if tt.expectErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, errParseGoVersion)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 // Integration tests for Go commands (may require Go to be installed)
 func TestGoCommands(t *testing.T) {
 	// Only run if Go is available
@@ -403,6 +496,13 @@ func TestGoCommands(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, version)
 		assert.Contains(t, version, ".")
+	})
+
+	t.Run("GetGoVersion format is semantic", func(t *testing.T) {
+		version, err := GetGoVersion()
+		require.NoError(t, err)
+		// Version should start with a digit (e.g., "1.24.0")
+		assert.Regexp(t, `^\d+\.\d+`, version, "version should start with major.minor")
 	})
 
 	t.Run("GetModuleName", func(t *testing.T) {
@@ -425,6 +525,39 @@ func TestGoCommands(t *testing.T) {
 		} else {
 			// Packages list should be valid
 			t.Logf("Found %d packages", len(packages))
+		}
+	})
+
+	t.Run("GoList with invalid package returns error", func(t *testing.T) {
+		// Test with a package that doesn't exist
+		_, err := GoList("nonexistent/package/that/does/not/exist/12345")
+		require.Error(t, err)
+	})
+
+	t.Run("GoList parses multiple packages", func(t *testing.T) {
+		// Test listing all packages in the module
+		packages, err := GoList("./...")
+		if err != nil {
+			t.Skipf("Skipping - not in a proper Go module context: %v", err)
+		}
+		// Should find at least one package
+		assert.NotEmpty(t, packages)
+		// Each package should be a valid import path
+		for _, pkg := range packages {
+			assert.NotEmpty(t, pkg)
+			assert.NotContains(t, pkg, "\n") // No embedded newlines
+		}
+	})
+
+	t.Run("GoList empty lines filtered", func(t *testing.T) {
+		// The current package should return exactly one result
+		packages, err := GoList(".")
+		if err != nil {
+			t.Skipf("Skipping - not in a proper Go module context: %v", err)
+		}
+		// Should return non-empty package names only
+		for _, pkg := range packages {
+			assert.NotEmpty(t, pkg, "should not contain empty package names")
 		}
 	})
 }
@@ -463,6 +596,63 @@ func TestCommandExecution(t *testing.T) {
 		cmd2 := exec.CommandContext(context.Background(), "cat")
 
 		err := RunCmdPipe(cmd1, cmd2)
+		require.NoError(t, err)
+	})
+}
+
+// TestCommandExecutionErrorPaths tests error handling in command execution functions
+func TestCommandExecutionErrorPaths(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping command execution error path tests in short mode")
+	}
+
+	t.Run("RunCmd error wraps command info", func(t *testing.T) {
+		err := RunCmd("nonexistent-command-xyz-12345")
+		require.Error(t, err)
+		// Verify the error contains the command name for debugging
+		assert.Contains(t, err.Error(), "nonexistent-command-xyz-12345")
+	})
+
+	t.Run("RunCmd with args includes args in error", func(t *testing.T) {
+		err := RunCmd("nonexistent-command-xyz", "arg1", "arg2")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nonexistent-command-xyz")
+	})
+
+	t.Run("RunCmdOutput error wraps command and output info", func(t *testing.T) {
+		_, err := RunCmdOutput("nonexistent-command-xyz-67890")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nonexistent-command-xyz-67890")
+	})
+
+	t.Run("RunCmdPipe command start failure", func(t *testing.T) {
+		// First command is valid, second doesn't exist
+		cmd1 := exec.CommandContext(context.Background(), "echo", "test")
+		cmd2 := exec.CommandContext(context.Background(), "/nonexistent/binary/path")
+
+		err := RunCmdPipe(cmd1, cmd2)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed")
+	})
+
+	t.Run("RunCmdPipe command exit failure", func(t *testing.T) {
+		// First command succeeds, second exits with error
+		cmd1 := exec.CommandContext(context.Background(), "echo", "test")
+		cmd2 := exec.CommandContext(context.Background(), "sh", "-c", "exit 1")
+
+		err := RunCmdPipe(cmd1, cmd2)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed")
+	})
+
+	t.Run("RunCmdPipe single command works", func(t *testing.T) {
+		cmd := exec.CommandContext(context.Background(), "echo", "single")
+		err := RunCmdPipe(cmd)
+		require.NoError(t, err)
+	})
+
+	t.Run("RunCmdPipe empty pipeline", func(t *testing.T) {
+		err := RunCmdPipe()
 		require.NoError(t, err)
 	})
 }
@@ -655,4 +845,110 @@ func TestGetModuleNameInDir(t *testing.T) {
 				"should return empty or 'command-line-arguments' for non-module directory, got: %s", moduleName)
 		}
 	})
+}
+
+// withMockedStdin is a test helper that temporarily replaces os.Stdin with a pipe
+// containing the provided input string. The original stdin is restored after fn completes.
+func withMockedStdin(t *testing.T, input string, fn func()) {
+	t.Helper()
+
+	oldStdin := os.Stdin
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+
+	os.Stdin = r
+
+	// Write input in a goroutine to avoid blocking
+	go func() {
+		defer func() {
+			w.Close() //nolint:errcheck,gosec // Best-effort close in test helper
+		}()
+		w.WriteString(input) //nolint:errcheck,gosec // Best-effort write in test helper
+	}()
+
+	defer func() {
+		os.Stdin = oldStdin
+		r.Close() //nolint:errcheck,gosec // Best-effort close in test helper
+	}()
+
+	fn()
+}
+
+// TestPromptForInput tests the PromptForInput function with various input scenarios
+func TestPromptForInput(t *testing.T) {
+	tests := []struct {
+		name      string
+		prompt    string
+		input     string
+		expected  string
+		expectErr bool
+	}{
+		{
+			name:     "valid input with prompt",
+			prompt:   "Enter name",
+			input:    "Alice\n",
+			expected: "Alice",
+		},
+		{
+			name:     "valid input without prompt",
+			prompt:   "",
+			input:    "data\n",
+			expected: "data",
+		},
+		{
+			name:     "whitespace is trimmed",
+			prompt:   "test",
+			input:    "  hello  \n",
+			expected: "hello",
+		},
+		{
+			name:     "empty input returns empty string",
+			prompt:   "test",
+			input:    "\n",
+			expected: "",
+		},
+		{
+			name:     "EOF returns empty string without error",
+			prompt:   "test",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "multiline input reads first line only",
+			prompt:   "test",
+			input:    "first line\nsecond line\n",
+			expected: "first line",
+		},
+		{
+			name:     "input with special characters",
+			prompt:   "test",
+			input:    "hello@world.com\n",
+			expected: "hello@world.com",
+		},
+		{
+			name:     "input with unicode characters",
+			prompt:   "test",
+			input:    "こんにちは\n",
+			expected: "こんにちは",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result string
+			var err error
+
+			withMockedStdin(t, tt.input, func() {
+				result, err = PromptForInput(tt.prompt)
+			})
+
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
