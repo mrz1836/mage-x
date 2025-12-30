@@ -274,3 +274,261 @@ func TestErrorChain_EdgeCases(t *testing.T) {
 		assert.NotEmpty(t, errStr) // Verify error string is not empty
 	})
 }
+
+// Static errors for additional edge case tests
+var (
+	errFilterEdgeCase1  = errors.New("filter edge case 1")
+	errFilterEdgeCase2  = errors.New("filter edge case 2")
+	errForEachEdge      = errors.New("foreach edge error")
+	errForEachTerminate = errors.New("terminate foreach")
+)
+
+// TestRealDefaultChainErrorFilterDirectCases tests Filter with various predicates
+//
+//nolint:errcheck // return values intentionally ignored in edge case tests
+func TestRealDefaultChainErrorFilterDirectCases(t *testing.T) {
+	t.Run("filter empty chain", func(t *testing.T) {
+		chain := NewErrorChain()
+		result := chain.Filter(func(err error) bool { return true })
+
+		assert.Empty(t, result)
+		assert.NotNil(t, result) // Should be non-nil empty slice
+	})
+
+	t.Run("filter matches all errors", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(errFilterEdgeCase1)
+		_ = chain.Add(errFilterEdgeCase2)
+
+		result := chain.Filter(func(err error) bool { return true })
+
+		require.Len(t, result, 2)
+		assert.Equal(t, errFilterEdgeCase1, result[0])
+		assert.Equal(t, errFilterEdgeCase2, result[1])
+	})
+
+	t.Run("filter matches no errors", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(errFilterEdgeCase1)
+		_ = chain.Add(errFilterEdgeCase2)
+
+		result := chain.Filter(func(err error) bool { return false })
+
+		assert.Empty(t, result)
+	})
+
+	t.Run("filter matches some errors", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(errFilterEdgeCase1)
+		_ = chain.Add(errFilterEdgeCase2)
+		_ = chain.Add(errFilterEdgeCase1) // Duplicate
+
+		result := chain.Filter(func(err error) bool {
+			return err.Error() == "filter edge case 1"
+		})
+
+		require.Len(t, result, 2)
+		assert.Equal(t, errFilterEdgeCase1, result[0])
+		assert.Equal(t, errFilterEdgeCase1, result[1])
+	})
+
+	t.Run("filter only MageErrors", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(errFilterEdgeCase1)
+		mageErr := NewErrorBuilder().
+			WithCode(ErrInternal).
+			WithMessage("mage filter test").
+			Build()
+		_ = chain.Add(mageErr)
+		_ = chain.Add(errFilterEdgeCase2)
+
+		result := chain.Filter(func(err error) bool {
+			var me MageError
+			return errors.As(err, &me)
+		})
+
+		require.Len(t, result, 1)
+		var me MageError
+		require.ErrorAs(t, result[0], &me)
+		assert.Equal(t, ErrInternal, me.Code())
+	})
+
+	t.Run("filter by severity", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(NewErrorBuilder().
+			WithCode(ErrInternal).
+			WithSeverity(SeverityWarning).
+			WithMessage("warning").
+			Build())
+		_ = chain.Add(NewErrorBuilder().
+			WithCode(ErrInternal).
+			WithSeverity(SeverityCritical).
+			WithMessage("critical").
+			Build())
+		_ = chain.Add(NewErrorBuilder().
+			WithCode(ErrInternal).
+			WithSeverity(SeverityWarning).
+			WithMessage("another warning").
+			Build())
+
+		result := chain.Filter(func(err error) bool {
+			var me MageError
+			if errors.As(err, &me) {
+				return me.Severity() == SeverityCritical
+			}
+			return false
+		})
+
+		require.Len(t, result, 1)
+		var me MageError
+		require.ErrorAs(t, result[0], &me)
+		assert.Equal(t, SeverityCritical, me.Severity())
+	})
+}
+
+// TestRealDefaultChainErrorFindByCodeNotFound tests FindByCode when code is not found
+//
+//nolint:errcheck // return values intentionally ignored in edge case tests
+func TestRealDefaultChainErrorFindByCodeNotFound(t *testing.T) {
+	t.Run("empty chain returns nil", func(t *testing.T) {
+		chain := NewErrorChain()
+		result := chain.FindByCode(ErrNotFound)
+
+		assert.Nil(t, result)
+	})
+
+	t.Run("chain with only standard errors returns nil", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(errFilterEdgeCase1)
+		_ = chain.Add(errFilterEdgeCase2)
+
+		result := chain.FindByCode(ErrInternal)
+
+		assert.Nil(t, result)
+	})
+
+	t.Run("chain with MageErrors but different code returns nil", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(NewErrorBuilder().
+			WithCode(ErrInternal).
+			WithMessage("internal").
+			Build())
+		_ = chain.Add(NewErrorBuilder().
+			WithCode(ErrTimeout).
+			WithMessage("timeout").
+			Build())
+
+		result := chain.FindByCode(ErrNotFound)
+
+		assert.Nil(t, result)
+	})
+
+	t.Run("finds first matching code among many", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(NewErrorBuilder().
+			WithCode(ErrInternal).
+			WithMessage("first internal").
+			Build())
+		_ = chain.Add(NewErrorBuilder().
+			WithCode(ErrNotFound).
+			WithMessage("not found").
+			Build())
+		_ = chain.Add(NewErrorBuilder().
+			WithCode(ErrInternal).
+			WithMessage("second internal").
+			Build())
+
+		result := chain.FindByCode(ErrInternal)
+
+		require.NotNil(t, result)
+		assert.Contains(t, result.Error(), "first internal")
+	})
+}
+
+// TestRealDefaultChainErrorForEachEarlyTermination tests ForEach with early termination
+//
+//nolint:errcheck // return values intentionally ignored in edge case tests
+func TestRealDefaultChainErrorForEachEarlyTermination(t *testing.T) {
+	t.Run("empty chain calls function zero times", func(t *testing.T) {
+		chain := NewErrorChain()
+		callCount := 0
+
+		err := chain.ForEach(func(e error) error {
+			callCount++
+			return nil
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 0, callCount)
+	})
+
+	t.Run("terminates on first function error", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(errForEachEdge)
+		_ = chain.Add(errForEachEdge)
+		_ = chain.Add(errForEachEdge)
+
+		callCount := 0
+		err := chain.ForEach(func(e error) error {
+			callCount++
+			return errForEachTerminate // Terminate immediately
+		})
+
+		require.ErrorIs(t, err, errForEachTerminate)
+		assert.Equal(t, 1, callCount) // Should stop after first
+	})
+
+	t.Run("terminates mid-iteration", func(t *testing.T) {
+		chain := NewErrorChain()
+		for i := 0; i < 10; i++ {
+			_ = chain.Add(errForEachEdge)
+		}
+
+		callCount := 0
+		err := chain.ForEach(func(e error) error {
+			callCount++
+			if callCount == 5 {
+				return errForEachTerminate
+			}
+			return nil
+		})
+
+		require.ErrorIs(t, err, errForEachTerminate)
+		assert.Equal(t, 5, callCount)
+	})
+
+	t.Run("completes when function never returns error", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(errForEachEdge)
+		_ = chain.Add(errForEachEdge)
+		_ = chain.Add(errForEachEdge)
+
+		visited := make([]error, 0)
+		err := chain.ForEach(func(e error) error {
+			visited = append(visited, e)
+			return nil
+		})
+
+		require.NoError(t, err)
+		assert.Len(t, visited, 3)
+	})
+
+	t.Run("function receives errors in order", func(t *testing.T) {
+		chain := NewErrorChain()
+		_ = chain.Add(errError1)
+		_ = chain.Add(errError2)
+		_ = chain.Add(errError3)
+
+		order := make([]string, 0)
+		err := chain.ForEach(func(e error) error {
+			order = append(order, e.Error())
+			return nil
+		})
+
+		require.NoError(t, err)
+		require.Len(t, order, 3)
+		assert.Equal(t, "error 1", order[0])
+		assert.Equal(t, "error 2", order[1])
+		assert.Equal(t, "error 3", order[2])
+	})
+}
