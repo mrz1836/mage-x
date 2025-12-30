@@ -367,7 +367,8 @@ func TestGetReleaseForChannel(t *testing.T) {
 						errors.Is(err, errNoReleasesFound) ||
 						errors.Is(err, errNoBetaReleasesFound) ||
 						strings.Contains(err.Error(), "failed") ||
-						strings.Contains(err.Error(), "gh CLI"),
+						strings.Contains(err.Error(), "gh CLI") ||
+						strings.Contains(err.Error(), "rate limit"),
 					"unexpected error type: %v", err)
 			}
 		})

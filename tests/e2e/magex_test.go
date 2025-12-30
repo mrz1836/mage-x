@@ -205,9 +205,9 @@ func TestMagexInit(t *testing.T) {
 	// Run init
 	ctx := context.Background()
 	cmd := exec.CommandContext(ctx, "../../magex", "-init")
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("magex -init failed: %v", err)
+		t.Fatalf("magex -init failed: %v\nOutput: %s", err, string(output))
 	}
 
 	// Check if magefile.go was created
