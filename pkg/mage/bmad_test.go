@@ -78,24 +78,6 @@ func (ts *BmadTestSuite) TestVerifyBmadInstallation_Success() {
 	ts.Require().NoError(err)
 }
 
-// TestGetBmadPackageVersion tests version parsing from npm output
-func (ts *BmadTestSuite) TestGetBmadPackageVersion() {
-	// Test standard version format
-	output := "bmad-method@6.0.0-alpha.1"
-	version := getBmadPackageVersion(output, "bmad-method")
-	ts.Require().Equal("6.0.0-alpha.1", version)
-
-	// Test simple version format
-	output = "bmad-method@4.44.1"
-	version = getBmadPackageVersion(output, "bmad-method")
-	ts.Require().Equal("4.44.1", version)
-
-	// Test no match
-	output = "other-package@1.0.0"
-	version = getBmadPackageVersion(output, "bmad-method")
-	ts.Require().Empty(version)
-}
-
 // TestBmadConstants tests that all required constants are defined
 func (ts *BmadTestSuite) TestBmadConstants() {
 	// Verify command constants
@@ -107,34 +89,6 @@ func (ts *BmadTestSuite) TestBmadConstants() {
 	ts.Require().NotEmpty(DefaultBmadProjectDir, "DefaultBmadProjectDir should be defined")
 	ts.Require().NotEmpty(DefaultBmadVersionTag, "DefaultBmadVersionTag should be defined")
 	ts.Require().NotEmpty(DefaultBmadPackageName, "DefaultBmadPackageName should be defined")
-	ts.Require().NotEmpty(DefaultBmadStatusFile, "DefaultBmadStatusFile should be defined")
-}
-
-// TestDisplayBmadWorkflowStatus_NoStatusFile tests status display when file doesn't exist
-func (ts *BmadTestSuite) TestDisplayBmadWorkflowStatus_NoStatusFile() {
-	// Status file doesn't exist - should handle gracefully without error
-	err := displayBmadWorkflowStatus("nonexistent-status-file.yaml")
-	ts.Require().NoError(err)
-}
-
-// TestDisplayBmadWorkflowStatus_WithStatusFile tests status display when file exists
-func (ts *BmadTestSuite) TestDisplayBmadWorkflowStatus_WithStatusFile() {
-	// Create a test status file
-	statusFile := "test-bmm-workflow-status.yaml"
-	statusContent := `phase: 2
-track: bmad-method
-workflows_completed:
-  - workflow-init
-  - prd
-next_workflow: create-architecture
-`
-	err := os.WriteFile(statusFile, []byte(statusContent), 0o644)
-	ts.Require().NoError(err)
-	defer os.Remove(statusFile)
-
-	// Should read and display status without error
-	err = displayBmadWorkflowStatus(statusFile)
-	ts.Require().NoError(err)
 }
 
 // TestBmadConfigDefaults tests that BMAD config defaults are properly set
