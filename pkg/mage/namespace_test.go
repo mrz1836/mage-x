@@ -2,6 +2,7 @@ package mage
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,6 +17,12 @@ var (
 	errLintErrorsFound = errors.New("lint errors found")
 	errNotFound        = errors.New("not found")
 )
+
+// globalRunnerMu serializes access to the global command runner during tests.
+// This prevents race conditions when parallel tests modify the global runner.
+//
+//nolint:gochecknoglobals // Required for test synchronization
+var globalRunnerMu sync.Mutex
 
 // MockCommandRunner for testing
 type MockCommandRunner struct {
@@ -40,7 +47,11 @@ func (m *MockCommandRunner) RunCmdOutput(name string, args ...string) (string, e
 }
 
 // Test helper to replace the global runner
+// This function acquires a lock to prevent race conditions with parallel tests.
 func withMockRunner(t *testing.T, fn func(*MockCommandRunner)) {
+	globalRunnerMu.Lock()
+	defer globalRunnerMu.Unlock()
+
 	originalRunner := GetRunner()
 	mockRunner := new(MockCommandRunner)
 	if err := SetRunner(mockRunner); err != nil {

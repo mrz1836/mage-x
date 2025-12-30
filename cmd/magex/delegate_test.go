@@ -699,6 +699,11 @@ func TestDelegateToMageWithTimeoutTimesOut(t *testing.T) {
 		t.Skip("go command not available, skipping timeout test")
 	}
 
+	// Skip if mage is not available (go run fallback can't handle magefiles directories)
+	if _, err := exec.LookPath("mage"); err != nil {
+		t.Skip("mage binary not available, skipping timeout test")
+	}
+
 	// Create a temporary directory with a magefile that sleeps
 	tmpDir := t.TempDir()
 	originalDir, err := os.Getwd()
