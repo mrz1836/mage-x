@@ -1061,3 +1061,106 @@ func TestHandleNoSearchResults(t *testing.T) {
 		})
 	}
 }
+
+// TestNormalizeCommandName tests the command name normalization function
+func TestNormalizeCommandName(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"empty string", "", ""},
+		{"already normalized lowercase colon", "build:default", "build:default"},
+		{"dot separator", "build.default", "build:default"},
+		{"dash separator", "build-default", "build:default"},
+		{"mixed case with dot", "Build.Default", "build:default"},
+		{"uppercase with dash", "TEST-UNIT", "test:unit"},
+		{"multiple dots", "ns.sub.method", "ns:sub:method"},
+		{"multiple dashes", "ns-sub-method", "ns:sub:method"},
+		{"mixed separators dot and dash", "ns.sub-method", "ns:sub:method"},
+		{"no separator lowercase", "build", "build"},
+		{"no separator uppercase", "BUILD", "build"},
+		{"single char lowercase", "b", "b"},
+		{"single char uppercase", "B", "b"},
+		{"already lowercase no sep", "test", "test"},
+		{"CamelCase no separator", "BuildProject", "buildproject"},
+		{"numbers preserved", "test123", "test123"},
+		{"numbers with separator", "test.123", "test:123"},
+		{"underscore preserved", "test_unit", "test_unit"},
+		{"colon already present", "build:linux", "build:linux"},
+		{"mixed colon and dot", "build:sub.method", "build:sub:method"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := normalizeCommandName(tt.input)
+			if result != tt.expected {
+				t.Errorf("normalizeCommandName(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestTruncate tests the string truncation helper function
+func TestTruncate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    string
+		maxLen   int
+		expected string
+	}{
+		{"shorter than max", "hello", 10, "hello"},
+		{"exactly max length", "hello", 5, "hello"},
+		{"longer than max needs truncation", "hello world", 8, "hello..."},
+		{"empty string any max", "", 10, ""},
+		{"empty string zero max", "", 0, ""},
+		{"truncate to 4 chars", "hello", 4, "h..."},
+		{"truncate to 5 chars", "abcdefgh", 5, "ab..."},
+		{"truncate to 6 chars", "abcdefgh", 6, "abc..."},
+		{"truncate long string", "this is a very long string", 15, "this is a ve..."},
+		{"single char shorter than max", "a", 5, "a"},
+		{"unicode string shorter", "héllo", 10, "héllo"},
+		{"whitespace preserved", "a b c", 10, "a b c"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := truncate(tt.input, tt.maxLen)
+			if result != tt.expected {
+				t.Errorf("truncate(%q, %d) = %q, want %q", tt.input, tt.maxLen, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestTruncateEdgeCases tests edge cases for the truncate function
+func TestTruncateEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    string
+		maxLen   int
+		expected string
+	}{
+		{"maxLen exactly 3 with long string", "abcd", 3, "..."},
+		{"maxLen 3 with 3 char string", "abc", 3, "abc"},
+		{"maxLen 3 with 4 char string", "abcd", 3, "..."},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := truncate(tt.input, tt.maxLen)
+			if result != tt.expected {
+				t.Errorf("truncate(%q, %d) = %q, want %q", tt.input, tt.maxLen, result, tt.expected)
+			}
+		})
+	}
+}
