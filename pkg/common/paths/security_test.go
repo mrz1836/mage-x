@@ -180,6 +180,139 @@ func TestSymlinkAttackPrevention(t *testing.T) {
 	assert.False(t, pbRestricted.IsSafe(), "Restricted builder should reject unsafe symlinks")
 }
 
+// TestIsSymlinkUnsafe_Comprehensive tests isSymlinkUnsafe for all branches
+func TestIsSymlinkUnsafe_Comprehensive(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Symlink tests not reliable on Windows")
+	}
+
+	tempDir := t.TempDir()
+
+	t.Run("path does not exist", func(t *testing.T) {
+		// Non-existent path should return false (not unsafe)
+		nonExistent := filepath.Join(tempDir, "does_not_exist")
+		pb := NewPathBuilder(nonExistent)
+		// isSymlinkUnsafe is a private method, so we test via IsSafe behavior
+		assert.True(t, pb.IsSafe(), "Non-existent path should be safe from symlink perspective")
+	})
+
+	t.Run("regular file is not symlink unsafe", func(t *testing.T) {
+		regularFile := filepath.Join(tempDir, "regular_file.txt")
+		err := os.WriteFile(regularFile, []byte("content"), 0o600)
+		require.NoError(t, err)
+
+		pb := NewPathBuilder(regularFile)
+		assert.True(t, pb.IsSafe(), "Regular file should be safe")
+	})
+
+	t.Run("symlink with FollowSymlinks disabled", func(t *testing.T) {
+		// Create a regular file as target
+		targetFile := filepath.Join(tempDir, "target_file.txt")
+		err := os.WriteFile(targetFile, []byte("content"), 0o600)
+		require.NoError(t, err)
+
+		// Create symlink to the target
+		symlinkPath := filepath.Join(tempDir, "safe_symlink")
+		err = os.Symlink(targetFile, symlinkPath)
+		require.NoError(t, err)
+
+		// With FollowSymlinks disabled, any symlink is unsafe
+		options := PathOptions{
+			FollowSymlinks: false,
+		}
+		pb := NewPathBuilderWithOptions(symlinkPath, options)
+		assert.False(t, pb.IsSafe(), "Symlink should be unsafe when FollowSymlinks is disabled")
+	})
+
+	t.Run("symlink with RestrictToBasePath and absolute target inside base", func(t *testing.T) {
+		subDir := filepath.Join(tempDir, "base")
+		err := os.MkdirAll(subDir, 0o750)
+		require.NoError(t, err)
+
+		// Target file inside base
+		targetFile := filepath.Join(subDir, "target.txt")
+		err = os.WriteFile(targetFile, []byte("content"), 0o600)
+		require.NoError(t, err)
+
+		// Symlink inside base pointing to target inside base (absolute path)
+		symlinkPath := filepath.Join(subDir, "symlink")
+		err = os.Symlink(targetFile, symlinkPath)
+		require.NoError(t, err)
+
+		options := PathOptions{
+			FollowSymlinks:     true,
+			RestrictToBasePath: subDir,
+		}
+		pb := NewPathBuilderWithOptions(symlinkPath, options)
+		assert.True(t, pb.IsSafe(), "Symlink to target within base should be safe")
+	})
+
+	t.Run("symlink with RestrictToBasePath and absolute target outside base", func(t *testing.T) {
+		subDir := filepath.Join(tempDir, "restricted_base")
+		err := os.MkdirAll(subDir, 0o750)
+		require.NoError(t, err)
+
+		// Symlink pointing to /etc/passwd (outside base)
+		symlinkPath := filepath.Join(subDir, "evil_symlink")
+		err = os.Symlink("/etc/passwd", symlinkPath)
+		require.NoError(t, err)
+
+		options := PathOptions{
+			FollowSymlinks:     true,
+			RestrictToBasePath: subDir,
+		}
+		pb := NewPathBuilderWithOptions(symlinkPath, options)
+		assert.False(t, pb.IsSafe(), "Symlink to target outside base should be unsafe")
+	})
+
+	t.Run("symlink with RestrictToBasePath and relative target escaping base", func(t *testing.T) {
+		subDir := filepath.Join(tempDir, "restricted_base2")
+		err := os.MkdirAll(subDir, 0o750)
+		require.NoError(t, err)
+
+		// Create a file outside the base
+		outsideFile := filepath.Join(tempDir, "outside.txt")
+		err = os.WriteFile(outsideFile, []byte("content"), 0o600)
+		require.NoError(t, err)
+
+		// Symlink with relative path escaping base
+		symlinkPath := filepath.Join(subDir, "relative_escape")
+		err = os.Symlink("../outside.txt", symlinkPath)
+		require.NoError(t, err)
+
+		options := PathOptions{
+			FollowSymlinks:     true,
+			RestrictToBasePath: subDir,
+		}
+		pb := NewPathBuilderWithOptions(symlinkPath, options)
+		assert.False(t, pb.IsSafe(), "Symlink with relative path escaping base should be unsafe")
+	})
+
+	t.Run("symlink with RestrictToBasePath and relative target staying in base", func(t *testing.T) {
+		subDir := filepath.Join(tempDir, "restricted_base3")
+		nestedDir := filepath.Join(subDir, "nested")
+		err := os.MkdirAll(nestedDir, 0o750)
+		require.NoError(t, err)
+
+		// Create a file in the base
+		targetFile := filepath.Join(subDir, "target.txt")
+		err = os.WriteFile(targetFile, []byte("content"), 0o600)
+		require.NoError(t, err)
+
+		// Symlink from nested dir with relative path to target in base
+		symlinkPath := filepath.Join(nestedDir, "relative_safe")
+		err = os.Symlink("../target.txt", symlinkPath)
+		require.NoError(t, err)
+
+		options := PathOptions{
+			FollowSymlinks:     true,
+			RestrictToBasePath: subDir,
+		}
+		pb := NewPathBuilderWithOptions(symlinkPath, options)
+		assert.True(t, pb.IsSafe(), "Symlink with relative path staying in base should be safe")
+	})
+}
+
 // TestSymlinkRaceCondition tests for TOCTOU (Time-of-Check-Time-of-Use) vulnerabilities
 func TestSymlinkRaceCondition(t *testing.T) {
 	if runtime.GOOS == "windows" {

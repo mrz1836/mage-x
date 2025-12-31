@@ -288,6 +288,55 @@ func (s *ManagerTestSuite) TestBasicValidatorValidate() {
 			})
 		}
 	})
+
+	s.Run("ValidateMapPointerData", func() {
+		// Test with valid *map[string]interface{} pointer
+		data := map[string]interface{}{"key": "value"}
+		err := s.validator.Validate(&data)
+		s.NoError(err, "Should not error on valid map pointer data")
+	})
+
+	s.Run("ValidateNilMapPointerData", func() {
+		// Test with nil *map[string]interface{} pointer
+		var nilMapPtr *map[string]interface{}
+		err := s.validator.Validate(nilMapPtr)
+		s.Require().Error(err, "Should error on nil map pointer")
+		s.Equal(errConfigDataCannotNil, err, "Should return specific error for nil map pointer")
+	})
+
+	s.Run("ValidateMapWithFailingFieldValidation", func() {
+		// Set up a validation rule that will fail
+		validator := NewBasicValidator()
+		validator.rules["badField"] = func(value interface{}) error {
+			return errMockFieldValidation
+		}
+
+		// Create data with a field that will fail validation
+		data := map[string]interface{}{
+			"badField": "some value",
+		}
+
+		err := validator.Validate(data)
+		s.Require().Error(err, "Should error when field validation fails")
+		s.Contains(err.Error(), "validation failed for field 'badField'")
+	})
+
+	s.Run("ValidateMapPointerWithFailingFieldValidation", func() {
+		// Set up a validation rule that will fail
+		validator := NewBasicValidator()
+		validator.rules["invalidField"] = func(value interface{}) error {
+			return errMockValidationFailure
+		}
+
+		// Create data with a field that will fail validation
+		data := map[string]interface{}{
+			"invalidField": "test",
+		}
+
+		err := validator.Validate(&data)
+		s.Require().Error(err, "Should error when field validation fails via pointer")
+		s.Contains(err.Error(), "validation failed for field 'invalidField'")
+	})
 }
 
 // TestBasicValidatorValidateField tests the BasicValidator.ValidateField method
@@ -516,6 +565,31 @@ func (s *ManagerTestSuite) TestBasicValidatorSetValidationRules() {
 
 // TestLoadConfigEdgeCases tests additional edge cases for LoadConfig method
 func (s *ManagerTestSuite) TestLoadConfigEdgeCases() {
+	s.Run("LoadConfigWithNoSources", func() {
+		manager := s.setupFreshManager()
+
+		var config map[string]interface{}
+		err := manager.LoadConfig(&config)
+		s.Require().Error(err, "Should fail when no sources are added")
+		s.Equal(errNoConfigSources, err, "Should return specific error for no sources")
+	})
+
+	s.Run("LoadConfigWithUnavailableSources", func() {
+		manager := s.setupFreshManager()
+
+		// Add sources that are all unavailable
+		source1 := &mockSource{name: "unavailable1", priority: 100, available: false}
+		source2 := &mockSource{name: "unavailable2", priority: 200, available: false}
+
+		manager.AddSource(source1)
+		manager.AddSource(source2)
+
+		var config map[string]interface{}
+		err := manager.LoadConfig(&config)
+		s.Require().Error(err, "Should fail when all sources are unavailable")
+		s.Equal(errNoConfigSources, err, "Should return no sources error when all are unavailable")
+	})
+
 	s.Run("LoadConfigWithValidatorFailure", func() {
 		// Create a validator that always fails
 		failingValidator := NewBasicValidator()

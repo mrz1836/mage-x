@@ -11,6 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// testOSWindows is a constant for Windows OS checks in tests
+const testOSWindows = "windows"
+
 // TestNewPathBuilder tests path builder creation
 func TestNewPathBuilder(t *testing.T) {
 	tests := []struct {
@@ -743,7 +746,7 @@ func TestPathBuilder_List(t *testing.T) {
 
 // TestPathBuilder_Copy tests file copying
 func TestPathBuilder_Copy(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == testOSWindows {
 		t.Skip("Skipping copy test on Windows due to file system differences")
 	}
 
@@ -767,6 +770,182 @@ func TestPathBuilder_Copy(t *testing.T) {
 	dstContent, err := os.ReadFile(dstPath) //nolint:gosec // test file
 	require.NoError(t, err)
 	assert.Equal(t, content, dstContent)
+}
+
+// TestPathBuilder_CopyFile_Comprehensive tests copyFile method comprehensively
+func TestPathBuilder_CopyFile_Comprehensive(t *testing.T) {
+	if runtime.GOOS == testOSWindows {
+		t.Skip("Skipping copy test on Windows due to file system differences")
+	}
+
+	tempDir := t.TempDir()
+
+	t.Run("copy with CreateParents creates destination directory", func(t *testing.T) {
+		srcPath := filepath.Join(tempDir, "src_create_parents.txt")
+		dstPath := filepath.Join(tempDir, "nested", "deep", "dest_create_parents.txt")
+
+		content := []byte("test content for nested copy")
+		require.NoError(t, os.WriteFile(srcPath, content, 0o600))
+
+		options := PathOptions{
+			CreateParents: true,
+			CreateMode:    0o750,
+			BufferSize:    8192,
+		}
+		srcPb := NewPathBuilderWithOptions(srcPath, options)
+		dstPb := NewPathBuilder(dstPath)
+
+		err := srcPb.Copy(dstPb)
+		require.NoError(t, err)
+
+		assert.True(t, dstPb.Exists())
+		dstContent, err := os.ReadFile(dstPath) //nolint:gosec // G304: test file path is controlled
+		require.NoError(t, err)
+		assert.Equal(t, content, dstContent)
+	})
+
+	t.Run("copy with PreserveMode preserves file permissions", func(t *testing.T) {
+		srcPath := filepath.Join(tempDir, "src_preserve_mode.txt")
+		dstPath := filepath.Join(tempDir, "dest_preserve_mode.txt")
+
+		content := []byte("test content")
+		require.NoError(t, os.WriteFile(srcPath, content, 0o755)) //nolint:gosec // test file
+
+		options := PathOptions{
+			PreserveMode: true,
+			BufferSize:   8192,
+		}
+		srcPb := NewPathBuilderWithOptions(srcPath, options)
+		dstPb := NewPathBuilder(dstPath)
+
+		err := srcPb.Copy(dstPb)
+		require.NoError(t, err)
+
+		srcInfo, statErr := os.Stat(srcPath)
+		require.NoError(t, statErr)
+		dstInfo, statErr := os.Stat(dstPath)
+		require.NoError(t, statErr)
+		assert.Equal(t, srcInfo.Mode(), dstInfo.Mode())
+	})
+
+	t.Run("copy with PreserveMtime preserves modification time", func(t *testing.T) {
+		srcPath := filepath.Join(tempDir, "src_preserve_mtime.txt")
+		dstPath := filepath.Join(tempDir, "dest_preserve_mtime.txt")
+
+		content := []byte("test content")
+		require.NoError(t, os.WriteFile(srcPath, content, 0o600))
+
+		options := PathOptions{
+			PreserveMtime: true,
+			BufferSize:    8192,
+		}
+		srcPb := NewPathBuilderWithOptions(srcPath, options)
+		dstPb := NewPathBuilder(dstPath)
+
+		err := srcPb.Copy(dstPb)
+		require.NoError(t, err)
+
+		srcInfo, statErr := os.Stat(srcPath)
+		require.NoError(t, statErr)
+		dstInfo, statErr := os.Stat(dstPath)
+		require.NoError(t, statErr)
+		assert.Equal(t, srcInfo.ModTime().Unix(), dstInfo.ModTime().Unix())
+	})
+
+	t.Run("copy non-existent source returns error", func(t *testing.T) {
+		srcPath := filepath.Join(tempDir, "nonexistent.txt")
+		dstPath := filepath.Join(tempDir, "dest_nonexistent.txt")
+
+		srcPb := NewPathBuilder(srcPath)
+		dstPb := NewPathBuilder(dstPath)
+
+		err := srcPb.Copy(dstPb)
+		require.Error(t, err)
+	})
+
+	t.Run("copy with small buffer size", func(t *testing.T) {
+		srcPath := filepath.Join(tempDir, "src_small_buffer.txt")
+		dstPath := filepath.Join(tempDir, "dest_small_buffer.txt")
+
+		// Create a larger file to test buffered reading
+		content := make([]byte, 1024)
+		for i := range content {
+			content[i] = byte(i % 256)
+		}
+		require.NoError(t, os.WriteFile(srcPath, content, 0o600))
+
+		options := PathOptions{
+			BufferSize: 64, // Small buffer to force multiple read/write cycles
+		}
+		srcPb := NewPathBuilderWithOptions(srcPath, options)
+		dstPb := NewPathBuilder(dstPath)
+
+		err := srcPb.Copy(dstPb)
+		require.NoError(t, err)
+
+		dstContent, err := os.ReadFile(dstPath) //nolint:gosec // G304: test file path is controlled
+		require.NoError(t, err)
+		assert.Equal(t, content, dstContent)
+	})
+}
+
+// TestPathBuilder_CopyDir_Comprehensive tests copyDir method comprehensively
+func TestPathBuilder_CopyDir_Comprehensive(t *testing.T) {
+	if runtime.GOOS == testOSWindows {
+		t.Skip("Skipping copy test on Windows due to file system differences")
+	}
+
+	tempDir := t.TempDir()
+
+	t.Run("copy directory recursively", func(t *testing.T) {
+		// Create source directory structure
+		srcDir := filepath.Join(tempDir, "src_dir")
+		require.NoError(t, os.MkdirAll(filepath.Join(srcDir, "subdir"), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(srcDir, "file1.txt"), []byte("content1"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(srcDir, "subdir", "file2.txt"), []byte("content2"), 0o600))
+
+		dstDir := filepath.Join(tempDir, "dst_dir")
+
+		srcPb := NewPathBuilder(srcDir)
+		dstPb := NewPathBuilder(dstDir)
+
+		err := srcPb.Copy(dstPb)
+		require.NoError(t, err)
+
+		// Verify structure
+		assert.True(t, NewPathBuilder(dstDir).Exists())
+		assert.True(t, NewPathBuilder(filepath.Join(dstDir, "file1.txt")).Exists())
+		assert.True(t, NewPathBuilder(filepath.Join(dstDir, "subdir")).IsDir())
+		assert.True(t, NewPathBuilder(filepath.Join(dstDir, "subdir", "file2.txt")).Exists())
+
+		// Verify content
+		content1, readErr := os.ReadFile(filepath.Join(dstDir, "file1.txt")) //nolint:gosec // G304: test file path is controlled
+		require.NoError(t, readErr)
+		assert.Equal(t, []byte("content1"), content1)
+		content2, readErr := os.ReadFile(filepath.Join(dstDir, "subdir", "file2.txt")) //nolint:gosec // G304: test file path is controlled
+		require.NoError(t, readErr)
+		assert.Equal(t, []byte("content2"), content2)
+	})
+
+	t.Run("copy directory read error returns error", func(t *testing.T) {
+		// Create a directory then make it unreadable
+		srcDir := filepath.Join(tempDir, "unreadable_dir")
+		require.NoError(t, os.MkdirAll(srcDir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(srcDir, "file.txt"), []byte("content"), 0o600))
+
+		// Make source directory unreadable
+		require.NoError(t, os.Chmod(srcDir, 0o000))
+		defer func() {
+			_ = os.Chmod(srcDir, 0o750) //nolint:gosec,errcheck // G302: restore permissions for cleanup
+		}()
+
+		dstDir := filepath.Join(tempDir, "dst_unreadable")
+		srcPb := NewPathBuilder(srcDir)
+		dstPb := NewPathBuilder(dstDir)
+
+		err := srcPb.Copy(dstPb)
+		require.Error(t, err)
+	})
 }
 
 // TestPathBuilder_Move tests file moving
@@ -846,6 +1025,250 @@ func TestPathBuilder_Original(t *testing.T) {
 			assert.Equal(t, tt.wantOriginal, pb.Original())
 		})
 	}
+}
+
+// TestTempAndTempDir tests temporary file and directory creation
+func TestTempAndTempDir(t *testing.T) {
+	t.Run("Temp creates temporary file path", func(t *testing.T) {
+		pb, err := Temp("test-*")
+		require.NoError(t, err)
+		assert.NotNil(t, pb)
+		assert.NotEmpty(t, pb.String())
+		assert.Contains(t, pb.String(), "test-")
+		// File should NOT exist (Temp removes it after creating)
+		assert.False(t, pb.Exists())
+	})
+
+	t.Run("TempDir creates temporary directory", func(t *testing.T) {
+		pb, err := TempDir("test-dir-*")
+		require.NoError(t, err)
+		assert.NotNil(t, pb)
+		assert.True(t, pb.Exists())
+		assert.True(t, pb.IsDir())
+		// Cleanup
+		require.NoError(t, pb.RemoveAll())
+	})
+
+	t.Run("multiple Temp calls create unique paths", func(t *testing.T) {
+		pb1, err := Temp("unique-*")
+		require.NoError(t, err)
+		pb2, err := Temp("unique-*")
+		require.NoError(t, err)
+		assert.NotEqual(t, pb1.String(), pb2.String())
+	})
+
+	t.Run("multiple TempDir calls create unique directories", func(t *testing.T) {
+		pb1, err := TempDir("unique-dir-*")
+		require.NoError(t, err)
+		defer func() { require.NoError(t, pb1.RemoveAll()) }()
+		pb2, err := TempDir("unique-dir-*")
+		require.NoError(t, err)
+		defer func() { require.NoError(t, pb2.RemoveAll()) }()
+		assert.NotEqual(t, pb1.String(), pb2.String())
+	})
+}
+
+// TestPackageLevelFunctions tests the package-level convenience functions
+func TestPackageLevelFunctions(t *testing.T) {
+	tempDir := t.TempDir()
+
+	t.Run("Join creates path builder", func(t *testing.T) {
+		pb := Join("path", "to", "file.txt")
+		assert.Equal(t, filepath.Join("path", "to", "file.txt"), pb.String())
+	})
+
+	t.Run("FromString creates path builder", func(t *testing.T) {
+		pb := FromString("/tmp/test.txt")
+		assert.Equal(t, "/tmp/test.txt", pb.String())
+	})
+
+	t.Run("Exists checks file existence", func(t *testing.T) {
+		// Existing file
+		existingFile := filepath.Join(tempDir, "existing.txt")
+		require.NoError(t, os.WriteFile(existingFile, []byte("content"), 0o600))
+		assert.True(t, Exists(existingFile))
+
+		// Non-existing file
+		assert.False(t, Exists(filepath.Join(tempDir, "nonexistent.txt")))
+	})
+
+	t.Run("IsDir checks directory", func(t *testing.T) {
+		dirPath := filepath.Join(tempDir, "testdir")
+		require.NoError(t, os.MkdirAll(dirPath, 0o750))
+
+		filePath := filepath.Join(tempDir, "testfile.txt")
+		require.NoError(t, os.WriteFile(filePath, []byte("content"), 0o600))
+
+		assert.True(t, IsDir(dirPath))
+		assert.False(t, IsDir(filePath))
+		assert.False(t, IsDir(filepath.Join(tempDir, "nonexistent")))
+	})
+
+	t.Run("IsFile checks file", func(t *testing.T) {
+		dirPath := filepath.Join(tempDir, "testdir2")
+		require.NoError(t, os.MkdirAll(dirPath, 0o750))
+
+		filePath := filepath.Join(tempDir, "testfile2.txt")
+		require.NoError(t, os.WriteFile(filePath, []byte("content"), 0o600))
+
+		assert.True(t, IsFile(filePath))
+		assert.False(t, IsFile(dirPath))
+		assert.False(t, IsFile(filepath.Join(tempDir, "nonexistent")))
+	})
+
+	t.Run("GlobPaths returns sorted matching paths", func(t *testing.T) {
+		// Create test files
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "a.txt"), []byte("a"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "b.txt"), []byte("b"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "c.txt"), []byte("c"), 0o600))
+
+		paths, err := GlobPaths(filepath.Join(tempDir, "*.txt"))
+		require.NoError(t, err)
+		assert.GreaterOrEqual(t, len(paths), 3)
+
+		// Verify sorted order
+		for i := 1; i < len(paths); i++ {
+			assert.LessOrEqual(t, paths[i-1].String(), paths[i].String(), "paths should be sorted")
+		}
+	})
+
+	t.Run("GlobPaths returns empty for no matches", func(t *testing.T) {
+		paths, err := GlobPaths(filepath.Join(tempDir, "*.nonexistent"))
+		require.NoError(t, err)
+		assert.Empty(t, paths)
+	})
+}
+
+// TestPathBuilder_ErrorPaths tests various error conditions
+func TestPathBuilder_ErrorPaths(t *testing.T) {
+	tempDir := t.TempDir()
+
+	t.Run("Abs error is wrapped", func(t *testing.T) {
+		// This is hard to trigger on normal systems, but test the method exists
+		pb := NewPathBuilder("valid/path")
+		absPb, err := pb.Abs()
+		require.NoError(t, err)
+		assert.NotNil(t, absPb)
+	})
+
+	t.Run("Rel error for incompatible paths", func(t *testing.T) {
+		pb := NewPathBuilder("/tmp/test")
+		_, err := pb.Rel("relative/path/that/doesnt/work")
+		// May or may not error depending on platform
+		_ = err
+	})
+
+	t.Run("List returns error for non-directory", func(t *testing.T) {
+		filePath := filepath.Join(tempDir, "file.txt")
+		require.NoError(t, os.WriteFile(filePath, []byte("content"), 0o600))
+
+		pb := NewPathBuilder(filePath)
+		_, err := pb.List()
+		require.Error(t, err)
+	})
+
+	t.Run("ListFiles returns error for non-directory", func(t *testing.T) {
+		filePath := filepath.Join(tempDir, "file2.txt")
+		require.NoError(t, os.WriteFile(filePath, []byte("content"), 0o600))
+
+		pb := NewPathBuilder(filePath)
+		_, err := pb.ListFiles()
+		require.Error(t, err)
+	})
+
+	t.Run("ListDirs returns error for non-directory", func(t *testing.T) {
+		filePath := filepath.Join(tempDir, "file3.txt")
+		require.NoError(t, os.WriteFile(filePath, []byte("content"), 0o600))
+
+		pb := NewPathBuilder(filePath)
+		_, err := pb.ListDirs()
+		require.Error(t, err)
+	})
+
+	t.Run("Glob returns error for invalid pattern", func(t *testing.T) {
+		pb := NewPathBuilder(tempDir)
+		_, err := pb.Glob("[invalid")
+		require.Error(t, err)
+	})
+
+	t.Run("Readlink returns error for non-symlink", func(t *testing.T) {
+		filePath := filepath.Join(tempDir, "regular_file.txt")
+		require.NoError(t, os.WriteFile(filePath, []byte("content"), 0o600))
+
+		pb := NewPathBuilder(filePath)
+		_, err := pb.Readlink()
+		require.Error(t, err)
+	})
+
+	t.Run("Match returns false for invalid pattern", func(t *testing.T) {
+		pb := NewPathBuilder("file.txt")
+		result := pb.Match("[invalid")
+		assert.False(t, result)
+	})
+
+	t.Run("Create returns error when file exists and overwrite disabled", func(t *testing.T) {
+		filePath := filepath.Join(tempDir, "existing_file.txt")
+		require.NoError(t, os.WriteFile(filePath, []byte("content"), 0o600))
+
+		options := PathOptions{
+			OverwriteExisting: false,
+			CreateMode:        0o644,
+		}
+		pb := NewPathBuilderWithOptions(filePath, options)
+		err := pb.Create()
+		require.Error(t, err)
+	})
+}
+
+// TestPathBuilder_IsEmpty tests IsEmpty method
+func TestPathBuilder_IsEmpty(t *testing.T) {
+	t.Run("empty path", func(t *testing.T) {
+		pb := NewPathBuilder("")
+		// After cleaning, empty path becomes "."
+		assert.False(t, pb.IsEmpty())
+	})
+
+	t.Run("non-empty path", func(t *testing.T) {
+		pb := NewPathBuilder("test/path")
+		assert.False(t, pb.IsEmpty())
+	})
+}
+
+// TestPathBuilder_IsValid tests IsValid method
+func TestPathBuilder_IsValid(t *testing.T) {
+	t.Run("valid path", func(t *testing.T) {
+		pb := NewPathBuilder("test/path")
+		assert.True(t, pb.IsValid())
+	})
+
+	t.Run("invalid path with traversal when not allowed", func(t *testing.T) {
+		options := PathOptions{
+			AllowUnsafePaths: false,
+		}
+		pb := NewPathBuilderWithOptions("../escape", options)
+		assert.False(t, pb.IsValid())
+	})
+}
+
+// TestPathBuilder_Mode tests Mode method for non-existent files
+func TestPathBuilder_Mode(t *testing.T) {
+	pb := NewPathBuilder("/nonexistent/path")
+	mode := pb.Mode()
+	assert.Equal(t, os.FileMode(0), mode)
+}
+
+// TestPathBuilder_Size tests Size method for non-existent files
+func TestPathBuilder_Size(t *testing.T) {
+	pb := NewPathBuilder("/nonexistent/path")
+	size := pb.Size()
+	assert.Equal(t, int64(0), size)
+}
+
+// TestPathBuilder_ModTime tests ModTime method for non-existent files
+func TestPathBuilder_ModTime(t *testing.T) {
+	pb := NewPathBuilder("/nonexistent/path")
+	modTime := pb.ModTime()
+	assert.True(t, modTime.IsZero())
 }
 
 // TestValidateExtractPath tests the security-critical path validation

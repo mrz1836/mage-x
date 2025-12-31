@@ -202,6 +202,17 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Save() {
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "unsupported format")
 	})
+
+	ts.Run("JSON marshal error", func() {
+		// Channels cannot be marshaled to JSON
+		unmarshalable := map[string]interface{}{
+			"channel": make(chan int),
+		}
+		outputFile := filepath.Join(ts.tempDir, "fail_marshal.json")
+		err := loader.Save(outputFile, unmarshalable, "json")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "failed to marshal JSON")
+	})
 }
 
 // TestDefaultConfigLoader_Validate tests configuration validation

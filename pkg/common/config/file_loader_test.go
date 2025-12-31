@@ -393,6 +393,21 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Save() {
 
 	// Note: YAML marshaling failures cause panic in the yaml.v3 library rather than
 	// returning an error, so we cannot test that path without recovering from panic.
+
+	ts.Run("returns error when directory creation fails", func() {
+		// Create a regular file, then try to save to a path inside it (impossible)
+		blockingFile := filepath.Join(ts.tempDir, "blocking_file")
+		err := os.WriteFile(blockingFile, []byte("content"), 0o600)
+		ts.Require().NoError(err)
+
+		// Try to create a file inside the regular file (should fail)
+		invalidPath := filepath.Join(blockingFile, "subdir", "config.json")
+		testData := &testConfig{Name: "test", Value: 1}
+
+		err = ts.loader.Save(invalidPath, testData, "json")
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "failed to create directory")
+	})
 }
 
 // TestFileConfigLoader_Validate tests the Validate method

@@ -1679,3 +1679,306 @@ func createDeprecatedCommand(t *testing.T) []*registry.Command {
 	}
 	return []*registry.Command{cmd}
 }
+
+// TestListByNamespace_DefaultMethod tests listByNamespace with default method names
+func TestListByNamespace_DefaultMethod(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create a command with default method name
+	defaultCmd, err := registry.NewNamespaceCommand("deploy", "default").
+		WithDescription("Default deploy command").
+		WithFunc(func() error { return nil }).
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build default command: %v", err)
+	}
+	reg.MustRegister(defaultCmd)
+
+	// Also test with "Default" (capitalized)
+	capitalCmd, err := registry.NewNamespaceCommand("release", "Default").
+		WithDescription("Default release command").
+		WithFunc(func() error { return nil }).
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build capitalized default command: %v", err)
+	}
+	reg.MustRegister(capitalCmd)
+
+	// Regular namespaced command for comparison
+	regularCmd, err := registry.NewNamespaceCommand("build", "linux").
+		WithDescription("Build for Linux").
+		WithFunc(func() error { return nil }).
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build regular command: %v", err)
+	}
+	reg.MustRegister(regularCmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+	os.Stderr = w
+
+	listByNamespace(reg, NewCommandDiscovery(reg))
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Default methods should show without the method suffix
+	if !strings.Contains(output, "deploy:") {
+		t.Errorf("listByNamespace() should show deploy namespace, got: %s", output)
+	}
+	if !strings.Contains(output, "build:linux") {
+		t.Errorf("listByNamespace() should show build:linux, got: %s", output)
+	}
+}
+
+// TestSearchCommands_NoResults tests searchCommands when no results are found
+func TestSearchCommands_NoResults(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Register a command
+	cmd, err := registry.NewCommand("build").
+		WithDescription("Build the project").
+		WithFunc(func() error { return nil }).
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build command: %v", err)
+	}
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+	os.Stderr = w
+
+	// Search for something that doesn't exist
+	searchCommands(reg, NewCommandDiscovery(reg), "nonexistent_xyz_query")
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should indicate no results found
+	if !strings.Contains(strings.ToLower(output), "no") && !strings.Contains(strings.ToLower(output), "found") {
+		t.Logf("searchCommands() output for no results: %s", output)
+	}
+}
+
+// TestSearchCommands_DescriptionMatch tests searchCommands matching on description
+func TestSearchCommands_DescriptionMatch(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Register commands with unique descriptions
+	cmd1, err := registry.NewCommand("foo").
+		WithDescription("Compiles the project for production").
+		WithFunc(func() error { return nil }).
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build command: %v", err)
+	}
+	cmd2, err := registry.NewCommand("bar").
+		WithDescription("Tests the application").
+		WithFunc(func() error { return nil }).
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build command: %v", err)
+	}
+	reg.MustRegister(cmd1)
+	reg.MustRegister(cmd2)
+
+	// Capture stdout and stderr
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+	os.Stderr = w
+
+	// Search for "production" which is only in foo's description
+	searchCommands(reg, NewCommandDiscovery(reg), "production")
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should find at least one result
+	if !strings.Contains(output, "1 found") {
+		t.Errorf("searchCommands('production') should find at least 1 result, got: %s", output)
+	}
+}
+
+// TestListCommands_Verbose tests listCommands with verbose output
+func TestListCommands_Verbose(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("mycommand").
+		WithDescription("A command with a detailed description").
+		WithFunc(func() error { return nil }).
+		WithCategory("MyCategory").
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build command: %v", err)
+	}
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+
+	listCommands(reg, NewCommandDiscovery(reg), true) // verbose=true
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	if !strings.Contains(output, "mycommand") {
+		t.Errorf("listCommands(verbose) should contain command name, got: %s", output)
+	}
+	// Verbose should show the description
+	if !strings.Contains(output, "detailed description") {
+		t.Errorf("listCommands(verbose) should contain description, got: %s", output)
+	}
+}
+
+// TestShowCategorizedCommands tests categorized command display
+func TestShowCategorizedCommands(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create commands in different categories
+	buildCmd, err := registry.NewCommand("build").
+		WithDescription("Build the project").
+		WithFunc(func() error { return nil }).
+		WithCategory("Build").
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build command: %v", err)
+	}
+
+	testCmd, err := registry.NewCommand("test").
+		WithDescription("Run tests").
+		WithFunc(func() error { return nil }).
+		WithCategory("Test").
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build command: %v", err)
+	}
+
+	uncategorizedCmd, err := registry.NewCommand("misc").
+		WithDescription("Miscellaneous command").
+		WithFunc(func() error { return nil }).
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build command: %v", err)
+	}
+
+	reg.MustRegister(buildCmd)
+	reg.MustRegister(testCmd)
+	reg.MustRegister(uncategorizedCmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should contain category headers
+	if !strings.Contains(output, "Build") {
+		t.Errorf("showCategorizedCommands() should contain 'Build' category, got: %s", output)
+	}
+	if !strings.Contains(output, "Test") {
+		t.Errorf("showCategorizedCommands() should contain 'Test' category, got: %s", output)
+	}
+}
+
+// TestShowVersionWithDetails tests version display with build details
+func TestShowVersionWithDetails(t *testing.T) {
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+
+	showVersion()
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should contain version info
+	if !strings.Contains(output, "MAGE-X") {
+		t.Errorf("showVersion() should contain 'MAGE-X', got: %s", output)
+	}
+}

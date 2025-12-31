@@ -654,3 +654,445 @@ func TestConfigManagerGetDefaults(t *testing.T) {
 		assert.InDelta(t, 0.1, defaults.Analytics.SampleRate, 0.001)
 	})
 }
+
+// TestConfigManagerLoadFromPath tests LoadFromPath with error cases
+func TestConfigManagerLoadFromPath(t *testing.T) {
+	manager := NewManager()
+
+	t.Run("returns error for non-existent file", func(t *testing.T) {
+		_, err := manager.LoadFromPath("/nonexistent/path/config.yaml")
+		require.Error(t, err)
+	})
+
+	t.Run("returns error for relative path", func(t *testing.T) {
+		_, err := manager.LoadFromPath("relative/path.yaml")
+		require.Error(t, err)
+	})
+
+	t.Run("loads valid config from absolute path", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := tmpDir + "/test-config.yaml"
+
+		// Create a valid config file
+		configContent := `project:
+  name: test-project
+  version: 1.0.0
+build:
+  go_version: "1.24"
+`
+		require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o600))
+
+		config, err := manager.LoadFromPath(configPath)
+		require.NoError(t, err)
+		assert.Equal(t, "test-project", config.Project.Name)
+		assert.Equal(t, "1.0.0", config.Project.Version)
+	})
+}
+
+// TestConfigManagerSave tests Save with various scenarios
+func TestConfigManagerSave(t *testing.T) {
+	manager := NewManager()
+
+	t.Run("saves config as YAML", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := tmpDir + "/output.yaml"
+
+		config := &MageConfig{
+			Project: ProjectConfig{Name: "test", Version: "1.0.0"},
+			Build:   BuildConfig{GoVersion: "1.24"},
+		}
+
+		err := manager.Save(config, configPath)
+		require.NoError(t, err)
+
+		// Verify file exists
+		_, statErr := os.Stat(configPath)
+		require.NoError(t, statErr)
+
+		// Load and verify content
+		loaded, loadErr := manager.LoadFromPath(configPath)
+		require.NoError(t, loadErr)
+		assert.Equal(t, "test", loaded.Project.Name)
+	})
+
+	t.Run("saves config as JSON", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := tmpDir + "/output.json"
+
+		config := &MageConfig{
+			Project: ProjectConfig{Name: "json-test", Version: "2.0.0"},
+		}
+
+		err := manager.Save(config, configPath)
+		require.NoError(t, err)
+
+		// Verify file exists and is valid
+		_, statErr := os.Stat(configPath)
+		require.NoError(t, statErr)
+	})
+
+	t.Run("saves config with yml extension", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := tmpDir + "/output.yml"
+
+		config := &MageConfig{
+			Project: ProjectConfig{Name: "yml-test", Version: "1.0.0"},
+		}
+
+		err := manager.Save(config, configPath)
+		require.NoError(t, err)
+
+		_, statErr := os.Stat(configPath)
+		require.NoError(t, statErr)
+	})
+
+	t.Run("defaults to YAML for unknown extension", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := tmpDir + "/output.conf"
+
+		config := &MageConfig{
+			Project: ProjectConfig{Name: "default-test", Version: "1.0.0"},
+		}
+
+		err := manager.Save(config, configPath)
+		require.NoError(t, err)
+
+		_, statErr := os.Stat(configPath)
+		require.NoError(t, statErr)
+	})
+}
+
+// TestMergeProjectConfigComprehensive tests all project config merge scenarios
+func TestMergeProjectConfigComprehensive(t *testing.T) {
+	manager := NewManager()
+
+	t.Run("all project fields override", func(t *testing.T) {
+		base := &MageConfig{
+			Project: ProjectConfig{
+				Name:        "base",
+				Version:     "1.0.0",
+				Description: "base desc",
+				License:     "MIT",
+				Homepage:    "https://base.com",
+				Repository:  "https://github.com/base/repo",
+				Authors:     []string{"author1"},
+			},
+		}
+		override := &MageConfig{
+			Project: ProjectConfig{
+				Name:        "override",
+				Version:     "2.0.0",
+				Description: "override desc",
+				License:     "Apache-2.0",
+				Homepage:    "https://override.com",
+				Repository:  "https://github.com/override/repo",
+				Authors:     []string{"author2", "author3"},
+			},
+		}
+
+		result := manager.Merge(base, override)
+
+		assert.Equal(t, "override", result.Project.Name)
+		assert.Equal(t, "2.0.0", result.Project.Version)
+		assert.Equal(t, "override desc", result.Project.Description)
+		assert.Equal(t, "Apache-2.0", result.Project.License)
+		assert.Equal(t, "https://override.com", result.Project.Homepage)
+		assert.Equal(t, "https://github.com/override/repo", result.Project.Repository)
+		assert.Equal(t, []string{"author2", "author3"}, result.Project.Authors)
+	})
+
+	t.Run("partial project override preserves unset fields", func(t *testing.T) {
+		base := &MageConfig{
+			Project: ProjectConfig{
+				Name:        "base",
+				Version:     "1.0.0",
+				Description: "base desc",
+				License:     "MIT",
+				Homepage:    "https://base.com",
+			},
+		}
+		override := &MageConfig{
+			Project: ProjectConfig{
+				Name: "override",
+				// Version empty - should preserve base
+				// Description empty - should preserve base
+			},
+		}
+
+		result := manager.Merge(base, override)
+
+		assert.Equal(t, "override", result.Project.Name)
+		assert.Equal(t, "1.0.0", result.Project.Version)
+		assert.Equal(t, "base desc", result.Project.Description)
+		assert.Equal(t, "MIT", result.Project.License)
+	})
+}
+
+// TestMergeBuildConfigComprehensive tests all build config merge scenarios
+func TestMergeBuildConfigComprehensive(t *testing.T) {
+	manager := NewManager()
+
+	t.Run("all build fields override", func(t *testing.T) {
+		base := &MageConfig{
+			Project: ProjectConfig{Name: "test", Version: "1.0.0"},
+			Build: BuildConfig{
+				GoVersion:  "1.20",
+				Platform:   "linux/amd64",
+				Tags:       []string{"tag1"},
+				LDFlags:    "-s -w",
+				GCFlags:    "-N -l",
+				CGOEnabled: true,
+				OutputDir:  "/base/output",
+				Binary:     "base-binary",
+			},
+		}
+		override := &MageConfig{
+			Build: BuildConfig{
+				GoVersion:  "1.24",
+				Platform:   "darwin/arm64",
+				Tags:       []string{"tag2", "tag3"},
+				LDFlags:    "-X main.version=2.0",
+				GCFlags:    "-m",
+				CGOEnabled: false,
+				OutputDir:  "/override/output",
+				Binary:     "override-binary",
+			},
+		}
+
+		result := manager.Merge(base, override)
+
+		assert.Equal(t, "1.24", result.Build.GoVersion)
+		assert.Equal(t, "darwin/arm64", result.Build.Platform)
+		assert.Equal(t, []string{"tag2", "tag3"}, result.Build.Tags)
+		assert.Equal(t, "-X main.version=2.0", result.Build.LDFlags)
+		assert.Equal(t, "-m", result.Build.GCFlags)
+		assert.False(t, result.Build.CGOEnabled)
+		assert.Equal(t, "/override/output", result.Build.OutputDir)
+		assert.Equal(t, "override-binary", result.Build.Binary)
+	})
+
+	t.Run("partial build override preserves unset fields", func(t *testing.T) {
+		base := &MageConfig{
+			Project: ProjectConfig{Name: "test", Version: "1.0.0"},
+			Build: BuildConfig{
+				GoVersion:  "1.20",
+				Platform:   "linux/amd64",
+				LDFlags:    "-s -w",
+				CGOEnabled: true,
+			},
+		}
+		override := &MageConfig{
+			Build: BuildConfig{
+				GoVersion: "1.24",
+				// Platform empty - should preserve base
+				// LDFlags empty - should preserve base
+			},
+		}
+
+		result := manager.Merge(base, override)
+
+		assert.Equal(t, "1.24", result.Build.GoVersion)
+		assert.Equal(t, "linux/amd64", result.Build.Platform)
+		assert.Equal(t, "-s -w", result.Build.LDFlags)
+	})
+
+	t.Run("tags nil does not override base tags", func(t *testing.T) {
+		base := &MageConfig{
+			Project: ProjectConfig{Name: "test", Version: "1.0.0"},
+			Build: BuildConfig{
+				GoVersion: "1.20",
+				Tags:      []string{"original-tag"},
+			},
+		}
+		override := &MageConfig{
+			Build: BuildConfig{
+				GoVersion: "1.24",
+				Tags:      nil, // nil should not override
+			},
+		}
+
+		result := manager.Merge(base, override)
+
+		assert.Equal(t, []string{"original-tag"}, result.Build.Tags)
+	})
+}
+
+// TestMergeTestConfigComprehensive tests all test config merge scenarios
+func TestMergeTestConfigComprehensive(t *testing.T) {
+	manager := NewManager()
+
+	t.Run("all test fields override", func(t *testing.T) {
+		base := &MageConfig{
+			Project: ProjectConfig{Name: "test", Version: "1.0.0"},
+			Test: TestConfig{
+				Timeout:    60,
+				Coverage:   false,
+				Verbose:    false,
+				Race:       false,
+				Parallel:   2,
+				Tags:       []string{"test-tag1"},
+				OutputDir:  "/base/test-output",
+				BenchTime:  "1s",
+				MemProfile: false,
+				CPUProfile: false,
+			},
+		}
+		override := &MageConfig{
+			Test: TestConfig{
+				Timeout:    120,
+				Coverage:   true,
+				Verbose:    true,
+				Race:       true,
+				Parallel:   8,
+				Tags:       []string{"test-tag2"},
+				OutputDir:  "/override/test-output",
+				BenchTime:  "5s",
+				MemProfile: true,
+				CPUProfile: true,
+			},
+		}
+
+		result := manager.Merge(base, override)
+
+		assert.Equal(t, 120, result.Test.Timeout)
+		assert.True(t, result.Test.Coverage)
+		assert.True(t, result.Test.Verbose)
+		assert.True(t, result.Test.Race)
+		assert.Equal(t, 8, result.Test.Parallel)
+		assert.Equal(t, []string{"test-tag2"}, result.Test.Tags)
+		assert.Equal(t, "/override/test-output", result.Test.OutputDir)
+		assert.Equal(t, "5s", result.Test.BenchTime)
+		assert.True(t, result.Test.MemProfile)
+		assert.True(t, result.Test.CPUProfile)
+	})
+
+	t.Run("partial test override preserves unset fields", func(t *testing.T) {
+		base := &MageConfig{
+			Project: ProjectConfig{Name: "test", Version: "1.0.0"},
+			Test: TestConfig{
+				Timeout:   60,
+				Coverage:  true,
+				OutputDir: "/base/output",
+				BenchTime: "2s",
+			},
+		}
+		override := &MageConfig{
+			Test: TestConfig{
+				Timeout: 120,
+				// Coverage has no override trigger (no Timeout, Parallel, or Tags in override)
+				// But Timeout IS set, so hasTestOverrides returns true
+			},
+		}
+
+		result := manager.Merge(base, override)
+
+		assert.Equal(t, 120, result.Test.Timeout)
+		assert.Equal(t, "/base/output", result.Test.OutputDir)
+		assert.Equal(t, "2s", result.Test.BenchTime)
+	})
+
+	t.Run("test tags nil does not override base tags", func(t *testing.T) {
+		base := &MageConfig{
+			Project: ProjectConfig{Name: "test", Version: "1.0.0"},
+			Test: TestConfig{
+				Timeout: 60,
+				Tags:    []string{"original-tag"},
+			},
+		}
+		override := &MageConfig{
+			Test: TestConfig{
+				Timeout: 120,
+				Tags:    nil, // nil should not override
+			},
+		}
+
+		result := manager.Merge(base, override)
+
+		assert.Equal(t, []string{"original-tag"}, result.Test.Tags)
+	})
+
+	t.Run("boolean fields override when test overrides present", func(t *testing.T) {
+		base := &MageConfig{
+			Project: ProjectConfig{Name: "test", Version: "1.0.0"},
+			Test: TestConfig{
+				Timeout:    60,
+				Coverage:   true,
+				Verbose:    true,
+				Race:       true,
+				MemProfile: true,
+				CPUProfile: true,
+			},
+		}
+		override := &MageConfig{
+			Test: TestConfig{
+				Timeout:    120, // This triggers hasTestOverrides = true
+				Coverage:   false,
+				Verbose:    false,
+				Race:       false,
+				MemProfile: false,
+				CPUProfile: false,
+			},
+		}
+
+		result := manager.Merge(base, override)
+
+		assert.False(t, result.Test.Coverage)
+		assert.False(t, result.Test.Verbose)
+		assert.False(t, result.Test.Race)
+		assert.False(t, result.Test.MemProfile)
+		assert.False(t, result.Test.CPUProfile)
+	})
+}
+
+// TestLoaderImplSave tests the loaderImpl.Save method
+func TestLoaderImplSave(t *testing.T) {
+	loader := NewLoader()
+
+	t.Run("saves to default mage.yaml path", func(t *testing.T) {
+		// Change to temp directory for this test
+		originalDir, err := os.Getwd()
+		require.NoError(t, err)
+
+		tmpDir := t.TempDir()
+		require.NoError(t, os.Chdir(tmpDir))
+		defer func() {
+			require.NoError(t, os.Chdir(originalDir))
+		}()
+
+		config := &MageConfig{
+			Project: ProjectConfig{Name: "save-test", Version: "1.0.0"},
+		}
+
+		err = loader.Save(config)
+		require.NoError(t, err)
+
+		// Verify file was created
+		_, statErr := os.Stat("mage.yaml")
+		require.NoError(t, statErr)
+	})
+}
+
+// TestLoaderImplLoadFromPath tests the loaderImpl.LoadFromPath method
+func TestLoaderImplLoadFromPath(t *testing.T) {
+	loader := NewLoader()
+
+	t.Run("returns error for invalid path", func(t *testing.T) {
+		_, err := loader.LoadFromPath("/nonexistent/config.yaml")
+		require.Error(t, err)
+	})
+
+	t.Run("loads valid config", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := tmpDir + "/config.yaml"
+
+		configContent := `project:
+  name: loader-test
+  version: 2.0.0
+`
+		require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o600))
+
+		config, err := loader.LoadFromPath(configPath)
+		require.NoError(t, err)
+		assert.Equal(t, "loader-test", config.Project.Name)
+	})
+}

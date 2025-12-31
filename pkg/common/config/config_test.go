@@ -489,6 +489,13 @@ func (s *ConfigTestSuite) TestConfigFacade() {
 		// assert.Equal(s.T(), 9090, testConfig.App.Port)
 	})
 
+	s.Run("LoadWithEnvOverrides error path", func() {
+		// Test when config file is not found
+		var testConfig TestConfig
+		_, err := config.LoadWithEnvOverrides(&testConfig, "nonexistent-config-file", "MYAPP", s.TmpDir)
+		s.Require().Error(err, "Should error when config file is not found")
+	})
+
 	s.Run("SetupManager", func() {
 		config.SetupManager("testapp", "TEST", s.TmpDir)
 		// Manager setup verification would require checking internal state
