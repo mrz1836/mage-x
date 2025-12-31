@@ -87,7 +87,7 @@ func (l *Loader) parseMagefile(path string) ([]CommandInfo, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse file %s: %w", path, err)
 	}
 
 	var commands []CommandInfo

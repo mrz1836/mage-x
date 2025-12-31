@@ -308,7 +308,7 @@ func (b *CommandBuilder) Since(version string) *CommandBuilder {
 // Build validates and returns the command
 func (b *CommandBuilder) Build() (*Command, error) {
 	if err := b.cmd.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate command %s: %w", b.cmd.FullName(), err)
 	}
 	return b.cmd, nil
 }
