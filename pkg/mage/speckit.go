@@ -24,6 +24,8 @@ var (
 	errBackupFailed         = errors.New("failed to backup constitution")
 	errVersionParseFailed   = errors.New("failed to parse spec-kit version")
 	errSpeckitInstallFailed = errors.New("failed to install speckit prerequisites")
+	errCommandFailed        = errors.New("command failed")
+	errCheckFailed          = errors.New("check failed")
 )
 
 // Speckit namespace for spec-kit CLI management tasks

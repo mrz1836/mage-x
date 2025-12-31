@@ -234,7 +234,7 @@ func (ts *BuildCoverageTestSuite) TestBuildInstallSuccess() {
 	ts.mockVersionCommands()
 
 	ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-		return len(args) > 0 && args[0] == "install"
+		return len(args) > 0 && args[0] == CmdGoInstall
 	})).Return(nil).Maybe()
 
 	err := ts.withMockRunner(func() error {
@@ -265,7 +265,7 @@ func (ts *BuildCoverageTestSuite) TestBuildDevSuccess() {
 	ts.mockVersionCommands()
 
 	ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-		return len(args) > 0 && args[0] == "install"
+		return len(args) > 0 && args[0] == CmdGoInstall
 	})).Return(nil).Maybe()
 
 	err := ts.withMockRunner(func() error {
