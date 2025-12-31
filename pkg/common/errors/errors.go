@@ -5,63 +5,122 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 )
 
-// Global instances
-var (
-	// DefaultRegistry is the global error registry
-	DefaultRegistry = NewRegistry() //nolint:gochecknoglobals // Package-level default
-
-	// DefaultHandler is the global error handler
-	DefaultHandler = NewHandler() //nolint:gochecknoglobals // Package-level default
-
-	// DefaultFormatter is the global error formatter
-	DefaultFormatter = NewFormatter() //nolint:gochecknoglobals // Package-level default
-
-	// DefaultRecovery is the global error recovery handler
-	DefaultRecovery = NewRecovery() //nolint:gochecknoglobals // Package-level default
-
-	// DefaultMetrics is the global error metrics collector
-	DefaultMetrics = NewMetrics() //nolint:gochecknoglobals // Package-level default
-
-	// DefaultLogger is the global error logger
-	DefaultLogger = NewErrorLogger() //nolint:gochecknoglobals // Package-level default
-
-	// DefaultNotifier is the global error notifier
-	DefaultNotifier = NewErrorNotifier() //nolint:gochecknoglobals // Package-level default
-
-	// DefaultTransformer is the global error transformer
-	DefaultTransformer = NewErrorTransformer() //nolint:gochecknoglobals // Package-level default
-)
-
-// Package initialization
+// Lazy-initialized singleton instances using sync.Once pattern.
+// This avoids init() functions which can cause unpredictable initialization order.
 //
-//nolint:gochecknoinits // Required for package-level initialization
-func init() {
-	// Set up default error handlers
-	setupDefaultHandlers()
+//nolint:gochecknoglobals // Package-level singletons with lazy initialization
+var (
+	defaultRegistryOnce sync.Once
+	defaultRegistry     ErrorRegistry
 
-	// Register additional error codes if needed
-	registerAdditionalErrors()
+	defaultHandlerOnce sync.Once
+	defaultHandler     ErrorHandler
+
+	defaultFormatterOnce sync.Once
+	defaultFormatter     *DefaultErrorFormatter
+
+	defaultRecoveryOnce sync.Once
+	defaultRecovery     ErrorRecovery
+
+	defaultMetricsOnce sync.Once
+	defaultMetrics     ErrorMetrics
+
+	defaultLoggerOnce sync.Once
+	defaultLogger     ErrorLogger
+
+	defaultNotifierOnce sync.Once
+	defaultNotifier     ErrorNotifier
+
+	defaultTransformerOnce sync.Once
+	defaultTransformer     ErrorTransformer
+)
+
+// GetDefaultRegistry returns the global error registry (lazy initialized)
+func GetDefaultRegistry() ErrorRegistry {
+	defaultRegistryOnce.Do(func() {
+		defaultRegistry = NewRegistry()
+		registerAdditionalErrors(defaultRegistry)
+	})
+	return defaultRegistry
 }
 
-// setupDefaultHandlers configures default error handlers
-func setupDefaultHandlers() {
+// GetDefaultHandler returns the global error handler (lazy initialized)
+func GetDefaultHandler() ErrorHandler {
+	defaultHandlerOnce.Do(func() {
+		defaultHandler = NewHandler()
+		setupDefaultHandlers(defaultHandler)
+	})
+	return defaultHandler
+}
+
+// GetDefaultFormatter returns the global error formatter (lazy initialized)
+func GetDefaultFormatter() *DefaultErrorFormatter {
+	defaultFormatterOnce.Do(func() {
+		defaultFormatter = NewFormatter()
+	})
+	return defaultFormatter
+}
+
+// GetDefaultRecovery returns the global error recovery handler (lazy initialized)
+func GetDefaultRecovery() ErrorRecovery {
+	defaultRecoveryOnce.Do(func() {
+		defaultRecovery = NewRecovery()
+	})
+	return defaultRecovery
+}
+
+// GetDefaultMetrics returns the global error metrics collector (lazy initialized)
+func GetDefaultMetrics() ErrorMetrics {
+	defaultMetricsOnce.Do(func() {
+		defaultMetrics = NewMetrics()
+	})
+	return defaultMetrics
+}
+
+// GetDefaultLogger returns the global error logger (lazy initialized)
+func GetDefaultLogger() ErrorLogger {
+	defaultLoggerOnce.Do(func() {
+		defaultLogger = NewErrorLogger()
+	})
+	return defaultLogger
+}
+
+// GetDefaultNotifier returns the global error notifier (lazy initialized)
+func GetDefaultNotifier() ErrorNotifier {
+	defaultNotifierOnce.Do(func() {
+		defaultNotifier = NewErrorNotifier()
+	})
+	return defaultNotifier
+}
+
+// GetDefaultTransformer returns the global error transformer (lazy initialized)
+func GetDefaultTransformer() ErrorTransformer {
+	defaultTransformerOnce.Do(func() {
+		defaultTransformer = NewErrorTransformer()
+	})
+	return defaultTransformer
+}
+
+// setupDefaultHandlers configures default error handlers on the given handler
+func setupDefaultHandlers(handler ErrorHandler) {
 	// Handle fatal errors
-	DefaultHandler.OnSeverity(SeverityFatal, func(err MageError) error {
+	handler.OnSeverity(SeverityFatal, func(err MageError) error {
 		fmt.Fprintf(os.Stderr, "FATAL: %v\n", err.Format(true))
 		os.Exit(1)
 		return nil
 	})
 
 	// Handle critical errors
-	DefaultHandler.OnSeverity(SeverityCritical, func(err MageError) error {
+	handler.OnSeverity(SeverityCritical, func(err MageError) error {
 		fmt.Fprintf(os.Stderr, "CRITICAL: %v\n", err.Format(false))
 		return err
 	})
 
 	// Set default handler
-	DefaultHandler.SetDefault(func(err error) error {
+	handler.SetDefault(func(err error) error {
 		var mageErr MageError
 		if errors.As(err, &mageErr) {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", mageErr.Format(false))
@@ -72,10 +131,10 @@ func setupDefaultHandlers() {
 	})
 }
 
-// registerAdditionalErrors registers additional error codes
-func registerAdditionalErrors() {
+// registerAdditionalErrors registers additional error codes on the given registry
+func registerAdditionalErrors(registry ErrorRegistry) {
 	// Register deployment errors
-	if err := DefaultRegistry.RegisterWithSeverity(
+	if err := registry.RegisterWithSeverity(
 		"DEPLOY_FAILED",
 		"Deployment process failed",
 		SeverityError,
@@ -83,7 +142,7 @@ func registerAdditionalErrors() {
 		fmt.Fprintf(os.Stderr, "Warning: failed to register error DEPLOY_FAILED: %v\n", err)
 	}
 
-	if err := DefaultRegistry.RegisterWithSeverity(
+	if err := registry.RegisterWithSeverity(
 		"DEPLOY_ROLLBACK",
 		"Deployment rolled back",
 		SeverityWarning,
@@ -92,7 +151,7 @@ func registerAdditionalErrors() {
 	}
 
 	// Register security errors
-	if err := DefaultRegistry.RegisterWithSeverity(
+	if err := registry.RegisterWithSeverity(
 		"SECURITY_VIOLATION",
 		"Security violation detected",
 		SeverityCritical,
@@ -100,7 +159,7 @@ func registerAdditionalErrors() {
 		fmt.Fprintf(os.Stderr, "Warning: failed to register error SECURITY_VIOLATION: %v\n", err)
 	}
 
-	if err := DefaultRegistry.RegisterWithSeverity(
+	if err := registry.RegisterWithSeverity(
 		"AUTH_FAILED",
 		"Authentication failed",
 		SeverityError,
@@ -195,7 +254,7 @@ func IsBuildError(err error) bool {
 
 // IsRetryable returns true if the error is retryable
 func IsRetryable(err error) bool {
-	if def, exists := DefaultRegistry.Get(GetCode(err)); exists {
+	if def, exists := GetDefaultRegistry().Get(GetCode(err)); exists {
 		return def.Retryable
 	}
 	return false
@@ -254,7 +313,7 @@ func MustValue[T any](value T, err error) T {
 
 // Handle handles an error using the default handler
 func Handle(err error) error {
-	return DefaultHandler.Handle(err)
+	return GetDefaultHandler().Handle(err)
 }
 
 // Recover recovers from panics and returns as error
@@ -311,41 +370,47 @@ func SafeExecuteWithFallback(fn func() error, fallback func(error) error) error 
 
 // LogError logs an error using the default logger
 func LogError(err error) {
-	DefaultLogger.LogError(err)
+	GetDefaultLogger().LogError(err)
 }
 
 // LogMageError logs a MageError using the default logger
 func LogMageError(err MageError) {
-	DefaultLogger.LogMageError(err)
+	GetDefaultLogger().LogMageError(err)
 }
 
 // Notification convenience functions
 
 // NotifyError sends a notification for an error using the default notifier
 func NotifyError(err error) error {
-	return DefaultNotifier.Notify(err)
+	return GetDefaultNotifier().Notify(err)
 }
 
 // Transform convenience functions
 
 // TransformError transforms an error using the default transformer
 func TransformError(err error) error {
-	return DefaultTransformer.Transform(err)
+	return GetDefaultTransformer().Transform(err)
 }
 
 // Configuration functions
 
-// SetErrorLogger sets the global error logger
+// SetErrorLogger sets the global error logger.
+// Note: This must be called before any logging occurs to take effect.
 func SetErrorLogger(logger ErrorLogger) {
-	DefaultLogger = logger
+	defaultLoggerOnce.Do(func() {}) // Ensure initialization has happened
+	defaultLogger = logger
 }
 
-// SetErrorNotifier sets the global error notifier
+// SetErrorNotifier sets the global error notifier.
+// Note: This must be called before any notifications occur to take effect.
 func SetErrorNotifier(notifier ErrorNotifier) {
-	DefaultNotifier = notifier
+	defaultNotifierOnce.Do(func() {}) // Ensure initialization has happened
+	defaultNotifier = notifier
 }
 
-// SetErrorTransformer sets the global error transformer
+// SetErrorTransformer sets the global error transformer.
+// Note: This must be called before any transformations occur to take effect.
 func SetErrorTransformer(transformer ErrorTransformer) {
-	DefaultTransformer = transformer
+	defaultTransformerOnce.Do(func() {}) // Ensure initialization has happened
+	defaultTransformer = transformer
 }

@@ -244,10 +244,10 @@ func CombineRetryPredicates(predicates ...func(error) bool) func(error) bool {
 
 // RetryWithExponentialBackoff is a convenience function for exponential backoff retry
 func RetryWithExponentialBackoff(fn func() error, maxRetries int) error {
-	return DefaultRecovery.RecoverWithBackoff(fn, ExponentialBackoff(100*time.Millisecond, maxRetries))
+	return GetDefaultRecovery().RecoverWithBackoff(fn, ExponentialBackoff(100*time.Millisecond, maxRetries))
 }
 
 // RetryWithLinearBackoff is a convenience function for linear backoff retry
 func RetryWithLinearBackoff(fn func() error, delay time.Duration, maxRetries int) error {
-	return DefaultRecovery.RecoverWithBackoff(fn, LinearBackoff(delay, delay, maxRetries))
+	return GetDefaultRecovery().RecoverWithBackoff(fn, LinearBackoff(delay, delay, maxRetries))
 }
