@@ -407,6 +407,64 @@ func TestTreeSymbols(t *testing.T) {
 		assert.NotEmpty(t, asciiSymbols.vertical)
 		assert.NotEmpty(t, asciiSymbols.empty)
 	})
+
+	t.Run("GetSymbols returns correct type", func(t *testing.T) {
+		registry := NewTreeSymbolRegistry()
+
+		// Unicode type
+		unicodeSymbols := registry.GetSymbols(TreeSymbolTypeUnicode)
+		assert.NotEmpty(t, unicodeSymbols.branch)
+
+		// ASCII type
+		asciiSymbols := registry.GetSymbols(TreeSymbolTypeASCII)
+		assert.NotEmpty(t, asciiSymbols.branch)
+		assert.NotEqual(t, unicodeSymbols.branch, asciiSymbols.branch)
+
+		// Default (invalid) type should return unicode
+		defaultSymbols := registry.GetSymbols(TreeSymbolType(999))
+		assert.Equal(t, unicodeSymbols.branch, defaultSymbols.branch)
+	})
+}
+
+func TestProgressTreeWithCustomRegistry(t *testing.T) {
+	t.Run("NewProgressTreeWithRegistry creates tree with custom registry", func(t *testing.T) {
+		registry := NewTreeSymbolRegistry()
+		tree := NewProgressTreeWithRegistry("Root Task", registry, TreeSymbolTypeASCII)
+		assert.NotNil(t, tree)
+		assert.NotNil(t, tree.root)
+		assert.Equal(t, "Root Task", tree.root.name)
+		assert.NotNil(t, tree.renderer)
+	})
+
+	t.Run("Progress tree with nested children", func(t *testing.T) {
+		tree := NewProgressTree("Root")
+		tree.AddTask("Root", "Child1", 100)
+		tree.AddTask("Child1", "Grandchild1", 50)
+
+		// Update grandchild to completion
+		tree.UpdateTask("Grandchild1", 50, TaskStatusSuccess)
+
+		// Verify parent progress update logic is triggered
+		assert.NotPanics(t, func() {
+			tree.Render()
+		})
+	})
+
+	t.Run("Progress tree with multiple children at same level", func(t *testing.T) {
+		tree := NewProgressTree("Root")
+		tree.AddTask("Root", "Child1", 100)
+		tree.AddTask("Root", "Child2", 100)
+		tree.AddTask("Root", "Child3", 100)
+
+		// Update all children to completion
+		tree.UpdateTask("Child1", 100, TaskStatusSuccess)
+		tree.UpdateTask("Child2", 100, TaskStatusSuccess)
+		tree.UpdateTask("Child3", 100, TaskStatusSuccess)
+
+		assert.NotPanics(t, func() {
+			tree.Render()
+		})
+	})
 }
 
 // Integration test for complex spinner workflow
