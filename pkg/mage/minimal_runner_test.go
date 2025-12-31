@@ -831,3 +831,68 @@ func TestWrapTimeoutErrorPreservesOriginal(t *testing.T) {
 	assert.NotEqual(t, baseErr.Error(), wrappedErr.Error()) // Wrapped should be different
 	assert.Contains(t, wrappedErr.Error(), baseErr.Error()) // But should contain original
 }
+
+// TestSecureCommandRunner_RunCmdOutputInDir tests the RunCmdOutputInDir method
+func TestSecureCommandRunner_RunCmdOutputInDir(t *testing.T) {
+	t.Run("returns output from directory command", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		// Use a real command that works in any directory
+		output, err := runner.RunCmdOutputInDir(".", "echo", "hello")
+
+		require.NoError(t, err)
+		assert.Equal(t, "hello", output)
+	})
+
+	t.Run("trims whitespace from output", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		// echo adds newline, RunCmdOutputInDir should trim it
+		output, err := runner.RunCmdOutputInDir(".", "echo", "test output")
+
+		require.NoError(t, err)
+		assert.Equal(t, "test output", output)
+	})
+
+	t.Run("returns error for nonexistent directory", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		_, err := runner.RunCmdOutputInDir("/nonexistent/path/xyz/123", "echo", "test")
+
+		require.Error(t, err)
+	})
+
+	t.Run("returns error for invalid command", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		_, err := runner.RunCmdOutputInDir(".", "nonexistent-command-xyz-12345")
+
+		require.Error(t, err)
+	})
+
+	t.Run("executes in specified directory", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		// pwd returns current directory - verify it matches specified dir
+		output, err := runner.RunCmdOutputInDir("/tmp", "pwd")
+
+		// On macOS, /tmp may be symlinked to /private/tmp
+		require.NoError(t, err)
+		assert.Contains(t, output, "tmp")
+	})
+}

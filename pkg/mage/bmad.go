@@ -268,7 +268,8 @@ func verifyBmadInstallation(config *Config) error {
 	return nil
 }
 
-// upgradeBmadCLI runs the BMAD update command to upgrade an existing installation
+// upgradeBmadCLI runs the BMAD install command to upgrade an existing installation
+// The bmad-method install command auto-detects existing installations and offers upgrade options
 func upgradeBmadCLI(config *Config) error {
 	packageName := config.Bmad.PackageName
 	if packageName == "" {
@@ -280,12 +281,13 @@ func upgradeBmadCLI(config *Config) error {
 		versionTag = DefaultBmadVersionTag
 	}
 
-	projectDir := getBmadProjectDir(config)
-
-	// Use bmad update command which supports non-interactive mode
+	// Use bmad install command which detects existing installations
 	packageSpec := packageName + versionTag
-	utils.Info("Running: npx --yes %s update -d %s --force", packageSpec, projectDir)
-	return GetRunner().RunCmd(CmdNpx, "--yes", packageSpec, "update", "-d", projectDir, "--force")
+	utils.Info("Running: npx %s install", packageSpec)
+	utils.Info("Note: The installer will detect your existing installation and offer upgrade options")
+	utils.Info("")
+
+	return runInteractiveCmd(CmdNpx, packageSpec, "install")
 }
 
 // printBmadUpgradeSummary prints the upgrade summary

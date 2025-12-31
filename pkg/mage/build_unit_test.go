@@ -883,3 +883,354 @@ func TestFindSourceFiles(t *testing.T) {
 		assert.Contains(t, result, "go.sum")
 	})
 }
+
+// TestShouldExcludeModuleByName tests the module exclusion logic
+func TestShouldExcludeModuleByName(t *testing.T) {
+	tests := []struct {
+		name           string
+		moduleName     string
+		config         *Config
+		expectedResult bool
+	}{
+		{
+			name:           "nil config returns false",
+			moduleName:     "magefiles",
+			config:         nil,
+			expectedResult: false,
+		},
+		{
+			name:       "empty exclusion list returns false",
+			moduleName: "magefiles",
+			config: &Config{
+				Test: TestConfig{
+					ExcludeModules: []string{},
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name:       "module in exclusion list returns true",
+			moduleName: "magefiles",
+			config: &Config{
+				Test: TestConfig{
+					ExcludeModules: []string{"magefiles", "vendor"},
+				},
+			},
+			expectedResult: true,
+		},
+		{
+			name:       "module not in exclusion list returns false",
+			moduleName: "pkg",
+			config: &Config{
+				Test: TestConfig{
+					ExcludeModules: []string{"magefiles", "vendor"},
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name:       "exact match required",
+			moduleName: "magefiles",
+			config: &Config{
+				Test: TestConfig{
+					ExcludeModules: []string{"mage"},
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name:       "case sensitive match",
+			moduleName: "Magefiles",
+			config: &Config{
+				Test: TestConfig{
+					ExcludeModules: []string{"magefiles"},
+				},
+			},
+			expectedResult: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := shouldExcludeModuleByName(tt.moduleName, tt.config)
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
+}
+
+// buildBatchMockRunner mocks the command runner for batch build tests
+type buildBatchMockRunner struct {
+	RunCmdErr    error
+	Commands     []string
+	RunCmdCalled int
+}
+
+func (m *buildBatchMockRunner) RunCmd(cmd string, args ...string) error {
+	m.RunCmdCalled++
+	m.Commands = append(m.Commands, cmd+" "+strings.Join(args, " "))
+	return m.RunCmdErr
+}
+
+func (m *buildBatchMockRunner) RunCmdOutput(cmd string, args ...string) (string, error) {
+	return "", nil
+}
+
+func (m *buildBatchMockRunner) RunCmdInDir(dir, cmd string, args ...string) error {
+	return nil
+}
+
+// TestBuildPackageBatch tests building a batch of packages
+func TestBuildPackageBatch(t *testing.T) {
+	t.Run("builds packages with parallelism", func(t *testing.T) {
+		mock := &buildBatchMockRunner{}
+		originalRunner := GetRunner()
+		_ = SetRunner(mock) //nolint:errcheck // test cleanup
+		defer func() {
+			_ = SetRunner(originalRunner) //nolint:errcheck // cleanup
+		}()
+
+		b := Build{}
+		err := b.buildPackageBatch([]string{"./pkg/a", "./pkg/b"}, "4", true)
+
+		require.NoError(t, err)
+		require.Len(t, mock.Commands, 1)
+		assert.Contains(t, mock.Commands[0], "go build")
+		assert.Contains(t, mock.Commands[0], "-p 4")
+		assert.Contains(t, mock.Commands[0], "-v")
+		assert.Contains(t, mock.Commands[0], "./pkg/a")
+		assert.Contains(t, mock.Commands[0], "./pkg/b")
+	})
+
+	t.Run("builds packages without parallelism", func(t *testing.T) {
+		mock := &buildBatchMockRunner{}
+		originalRunner := GetRunner()
+		_ = SetRunner(mock) //nolint:errcheck // test cleanup
+		defer func() {
+			_ = SetRunner(originalRunner) //nolint:errcheck // cleanup
+		}()
+
+		b := Build{}
+		err := b.buildPackageBatch([]string{"./pkg/single"}, "", false)
+
+		require.NoError(t, err)
+		require.Len(t, mock.Commands, 1)
+		assert.Contains(t, mock.Commands[0], "go build")
+		assert.NotContains(t, mock.Commands[0], "-p")
+		assert.NotContains(t, mock.Commands[0], "-v")
+	})
+
+	t.Run("returns error on build failure", func(t *testing.T) {
+		mock := &buildBatchMockRunner{
+			RunCmdErr: assert.AnError,
+		}
+		originalRunner := GetRunner()
+		_ = SetRunner(mock) //nolint:errcheck // test cleanup
+		defer func() {
+			_ = SetRunner(originalRunner) //nolint:errcheck // cleanup
+		}()
+
+		b := Build{}
+		err := b.buildPackageBatch([]string{"./pkg/fail"}, "", false)
+
+		require.Error(t, err)
+	})
+}
+
+// workspaceMockRunner mocks runner for workspace-related tests
+type workspaceMockRunner struct {
+	RunCmdErr       error
+	RunCmdOutputVal string
+	RunCmdOutputErr error
+	Commands        []string
+}
+
+func (m *workspaceMockRunner) RunCmd(cmd string, args ...string) error {
+	m.Commands = append(m.Commands, cmd+" "+strings.Join(args, " "))
+	return m.RunCmdErr
+}
+
+func (m *workspaceMockRunner) RunCmdOutput(cmd string, args ...string) (string, error) {
+	m.Commands = append(m.Commands, cmd+" "+strings.Join(args, " "))
+	return m.RunCmdOutputVal, m.RunCmdOutputErr
+}
+
+func (m *workspaceMockRunner) RunCmdInDir(dir, cmd string, args ...string) error {
+	return nil
+}
+
+// TestFindMainPackagesUnit tests main package discovery
+func TestFindMainPackagesUnit(t *testing.T) {
+	t.Run("parses JSON output for main packages", func(t *testing.T) {
+		mock := &workspaceMockRunner{
+			RunCmdOutputVal: `{"ImportPath": "github.com/test/cmd/app", "Name": "main"}
+{"ImportPath": "github.com/test/pkg/lib", "Name": "lib"}
+{"ImportPath": "github.com/test/cmd/tool", "Name": "main"}`,
+		}
+		originalRunner := GetRunner()
+		_ = SetRunner(mock) //nolint:errcheck // test cleanup
+		defer func() {
+			_ = SetRunner(originalRunner) //nolint:errcheck // cleanup
+		}()
+
+		// Create temp dir without go.work to avoid workspace mode
+		tempDir := t.TempDir()
+		originalWd, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.Chdir(tempDir))
+		defer func() {
+			require.NoError(t, os.Chdir(originalWd))
+		}()
+
+		b := Build{}
+		packages, err := b.findMainPackages()
+
+		require.NoError(t, err)
+		assert.Contains(t, packages, "github.com/test/cmd/app")
+		assert.Contains(t, packages, "github.com/test/cmd/tool")
+		assert.NotContains(t, packages, "github.com/test/pkg/lib")
+	})
+
+	t.Run("returns error on command failure non-workspace", func(t *testing.T) {
+		mock := &workspaceMockRunner{
+			RunCmdOutputErr: assert.AnError,
+		}
+		originalRunner := GetRunner()
+		_ = SetRunner(mock) //nolint:errcheck // test cleanup
+		defer func() {
+			_ = SetRunner(originalRunner) //nolint:errcheck // cleanup
+		}()
+
+		// Create temp dir without go.work
+		tempDir := t.TempDir()
+		originalWd, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.Chdir(tempDir))
+		defer func() {
+			require.NoError(t, os.Chdir(originalWd))
+		}()
+
+		b := Build{}
+		_, err = b.findMainPackages()
+
+		require.Error(t, err)
+	})
+
+	t.Run("handles empty output gracefully", func(t *testing.T) {
+		mock := &workspaceMockRunner{
+			RunCmdOutputVal: "",
+		}
+		originalRunner := GetRunner()
+		_ = SetRunner(mock) //nolint:errcheck // test cleanup
+		defer func() {
+			_ = SetRunner(originalRunner) //nolint:errcheck // cleanup
+		}()
+
+		tempDir := t.TempDir()
+		originalWd, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.Chdir(tempDir))
+		defer func() {
+			require.NoError(t, os.Chdir(originalWd))
+		}()
+
+		b := Build{}
+		packages, err := b.findMainPackages()
+
+		require.NoError(t, err)
+		assert.Empty(t, packages)
+	})
+}
+
+// TestGetWorkspaceModuleDirs tests workspace module discovery
+func TestGetWorkspaceModuleDirs(t *testing.T) {
+	t.Run("returns false when no go.work exists", func(t *testing.T) {
+		tempDir := t.TempDir()
+		originalWd, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.Chdir(tempDir))
+		defer func() {
+			require.NoError(t, os.Chdir(originalWd))
+		}()
+
+		b := Build{}
+		dirs, isWorkspace := b.getWorkspaceModuleDirs()
+
+		assert.False(t, isWorkspace)
+		assert.Nil(t, dirs)
+	})
+
+	t.Run("returns modules when go.work exists", func(t *testing.T) {
+		mock := &workspaceMockRunner{
+			RunCmdOutputVal: "/path/to/module1\n/path/to/module2\n",
+		}
+		originalRunner := GetRunner()
+		_ = SetRunner(mock) //nolint:errcheck // test cleanup
+		defer func() {
+			_ = SetRunner(originalRunner) //nolint:errcheck // cleanup
+		}()
+
+		tempDir := t.TempDir()
+		originalWd, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.Chdir(tempDir))
+		defer func() {
+			require.NoError(t, os.Chdir(originalWd))
+		}()
+
+		// Create go.work file
+		require.NoError(t, os.WriteFile("go.work", []byte("go 1.21\n\nuse (\n\t./module1\n\t./module2\n)\n"), 0o600))
+
+		b := Build{}
+		dirs, isWorkspace := b.getWorkspaceModuleDirs()
+
+		assert.True(t, isWorkspace)
+		assert.Len(t, dirs, 2)
+		assert.Contains(t, dirs, "/path/to/module1")
+		assert.Contains(t, dirs, "/path/to/module2")
+	})
+
+	t.Run("returns false on command error", func(t *testing.T) {
+		mock := &workspaceMockRunner{
+			RunCmdOutputErr: assert.AnError,
+		}
+		originalRunner := GetRunner()
+		_ = SetRunner(mock) //nolint:errcheck // test cleanup
+		defer func() {
+			_ = SetRunner(originalRunner) //nolint:errcheck // cleanup
+		}()
+
+		tempDir := t.TempDir()
+		originalWd, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.Chdir(tempDir))
+		defer func() {
+			require.NoError(t, os.Chdir(originalWd))
+		}()
+
+		// Create go.work file
+		require.NoError(t, os.WriteFile("go.work", []byte("go 1.21\n"), 0o600))
+
+		b := Build{}
+		dirs, isWorkspace := b.getWorkspaceModuleDirs()
+
+		assert.False(t, isWorkspace)
+		assert.Nil(t, dirs)
+	})
+}
+
+// TestBuildWorkspaceModulesNotInWorkspace tests non-workspace mode error
+func TestBuildWorkspaceModulesNotInWorkspace(t *testing.T) {
+	tempDir := t.TempDir()
+	originalWd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tempDir))
+	defer func() {
+		require.NoError(t, os.Chdir(originalWd))
+	}()
+
+	b := Build{}
+	err = b.buildWorkspaceModules(false, "", "")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotInWorkspaceMode)
+}

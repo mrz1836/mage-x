@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/mage/registry"
 )
 
 // TestHelp_Default tests the default help output
@@ -296,4 +298,130 @@ func TestHelpErrorConstants(t *testing.T) {
 			assert.Contains(t, tt.err.Error(), tt.want)
 		})
 	}
+}
+
+// TestGetAllCommandsUnit tests getAllCommands helper function
+func TestGetAllCommandsUnit(t *testing.T) {
+	t.Run("returns help commands from registry", func(t *testing.T) {
+		commands := getAllCommands()
+
+		// Returns a slice (may be empty if no commands registered in unit test context)
+		assert.NotNil(t, commands)
+
+		// Each command should have required fields if any are present
+		for _, cmd := range commands {
+			assert.NotEmpty(t, cmd.Name, "command should have a name")
+		}
+	})
+
+	t.Run("converts registry commands correctly", func(t *testing.T) {
+		commands := getAllCommands()
+
+		// Find a known command and verify conversion
+		for _, cmd := range commands {
+			if cmd.Namespace != "" {
+				// Namespaced commands should have namespace populated
+				assert.NotEmpty(t, cmd.Name)
+				break
+			}
+		}
+	})
+}
+
+// TestGetCommandHelpUnit tests getCommandHelp helper function
+func TestGetCommandHelpUnit(t *testing.T) {
+	t.Run("returns error for nonexistent command", func(t *testing.T) {
+		_, err := getCommandHelp("nonexistent-command-xyz-12345")
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, errCommandNotFound)
+	})
+
+	t.Run("returns command help for valid command", func(t *testing.T) {
+		// Get all commands first to find a valid one
+		commands := getAllCommands()
+		if len(commands) == 0 {
+			t.Skip("no commands registered")
+		}
+
+		// Use the first available command
+		validName := commands[0].Name
+
+		cmd, err := getCommandHelp(validName)
+
+		require.NoError(t, err)
+		assert.Equal(t, validName, cmd.Name)
+	})
+}
+
+// TestShowHelpNamespaceUnit tests showHelpNamespace helper function
+func TestShowHelpNamespaceUnit(t *testing.T) {
+	t.Run("handles namespace with no commands", func(t *testing.T) {
+		// Get global registry
+		reg := registry.Global()
+
+		// Try a namespace that likely has no commands
+		err := showHelpNamespace(reg, "nonexistent-namespace-xyz")
+
+		// Should not error, just print message
+		require.NoError(t, err)
+	})
+
+	t.Run("displays commands for valid namespace", func(t *testing.T) {
+		reg := registry.Global()
+		namespaces := reg.Namespaces()
+
+		if len(namespaces) == 0 {
+			t.Skip("no namespaces registered")
+		}
+
+		// Use the first available namespace
+		err := showHelpNamespace(reg, namespaces[0])
+
+		require.NoError(t, err)
+	})
+}
+
+// TestHelpCommandNamespace tests Help.Command with namespace input
+func TestHelpCommandNamespace(t *testing.T) {
+	t.Run("shows namespace help when namespace provided", func(t *testing.T) {
+		// Get a valid namespace
+		reg := registry.Global()
+		namespaces := reg.Namespaces()
+
+		if len(namespaces) == 0 {
+			t.Skip("no namespaces registered")
+		}
+
+		t.Setenv("COMMAND", namespaces[0])
+
+		h := Help{}
+		err := h.Command()
+
+		require.NoError(t, err)
+	})
+}
+
+// TestGenerateBashCompletions tests bash completion generation
+func TestGenerateBashCompletions(t *testing.T) {
+	t.Run("generates bash completion script", func(t *testing.T) {
+		err := generateBashCompletions()
+		require.NoError(t, err)
+	})
+}
+
+// TestGenerateZshCompletions tests zsh completion generation
+func TestGenerateZshCompletions(t *testing.T) {
+	t.Run("generates zsh completion script", func(t *testing.T) {
+		err := generateZshCompletions()
+		require.NoError(t, err)
+	})
+}
+
+// TestGenerateFishCompletions tests fish completion generation
+func TestGenerateFishCompletions(t *testing.T) {
+	t.Run("generates fish completion script", func(t *testing.T) {
+		err := generateFishCompletions()
+		require.NoError(t, err)
+	})
 }

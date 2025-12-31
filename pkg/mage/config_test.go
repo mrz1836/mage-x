@@ -826,6 +826,89 @@ func (ts *ConfigTestSuite) TestDefaultConfigReturnsLatest() {
 	})
 }
 
+// TestConfigInterfaceMethods tests the interface getter methods on Config
+func (ts *ConfigTestSuite) TestConfigInterfaceMethods() {
+	ts.Run("GetLint", func() {
+		config := defaultConfig()
+		config.Lint.Timeout = "10m"
+
+		lint := config.GetLint()
+		ts.Require().NotNil(lint)
+		ts.Equal("10m", lint.GetTimeout())
+	})
+
+	ts.Run("GetBuild", func() {
+		config := defaultConfig()
+		config.Build.Verbose = true
+		config.Build.Parallel = 4
+		config.Build.Tags = []string{"tag1", "tag2"}
+
+		build := config.GetBuild()
+		ts.Require().NotNil(build)
+		ts.True(build.GetVerbose())
+		ts.Equal(4, build.GetParallel())
+		ts.Equal([]string{"tag1", "tag2"}, build.GetTags())
+	})
+
+	ts.Run("GetTest", func() {
+		config := defaultConfig()
+		config.Test.Timeout = "5m"
+		config.Test.IntegrationTimeout = "30m"
+		config.Test.IntegrationTag = "integration"
+		config.Test.CoverMode = "atomic"
+		config.Test.Parallel = 2
+		config.Test.Tags = "unit"
+		config.Test.Shuffle = true
+		config.Test.BenchCPU = 4
+		config.Test.BenchTime = "2s"
+		config.Test.BenchMem = true
+		config.Test.CoverageExclude = []string{"*_test.go", "vendor/*"}
+
+		test := config.GetTest()
+		ts.Require().NotNil(test)
+		ts.Equal("5m", test.GetTimeout())
+		ts.Equal("30m", test.GetIntegrationTimeout())
+		ts.Equal("integration", test.GetIntegrationTag())
+		ts.Equal("atomic", test.GetCoverMode())
+		ts.Equal(2, test.GetParallel())
+		ts.Equal("unit", test.GetTags())
+		ts.True(test.GetShuffle())
+		ts.Equal(4, test.GetBenchCPU())
+		ts.Equal("2s", test.GetBenchTime())
+		ts.True(test.GetBenchMem())
+		ts.Equal([]string{"*_test.go", "vendor/*"}, test.GetCoverageExclude())
+	})
+
+	ts.Run("DefaultValues", func() {
+		// Test with zero-value config to ensure getters handle defaults
+		config := &Config{}
+
+		lint := config.GetLint()
+		ts.NotNil(lint)
+		ts.Empty(lint.GetTimeout())
+
+		build := config.GetBuild()
+		ts.NotNil(build)
+		ts.False(build.GetVerbose())
+		ts.Zero(build.GetParallel())
+		ts.Nil(build.GetTags())
+
+		test := config.GetTest()
+		ts.NotNil(test)
+		ts.Empty(test.GetTimeout())
+		ts.Empty(test.GetIntegrationTimeout())
+		ts.Empty(test.GetIntegrationTag())
+		ts.Empty(test.GetCoverMode())
+		ts.Zero(test.GetParallel())
+		ts.Empty(test.GetTags())
+		ts.False(test.GetShuffle())
+		ts.Zero(test.GetBenchCPU())
+		ts.Empty(test.GetBenchTime())
+		ts.False(test.GetBenchMem())
+		ts.Nil(test.GetCoverageExclude())
+	})
+}
+
 // TestCleanEnvValue tests the cleanEnvValue function used for processing environment variables
 func TestCleanEnvValue(t *testing.T) {
 	tests := []struct {
