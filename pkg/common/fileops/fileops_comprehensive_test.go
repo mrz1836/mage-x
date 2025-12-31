@@ -826,6 +826,7 @@ func TestLoadConfigEdgeCases(t *testing.T) {
 
 // TestSymlinkHandling tests symlink behavior (platform-specific)
 func TestSymlinkHandling(t *testing.T) {
+	//nolint:goconst // "windows" constant not worth extracting in test files
 	if runtime.GOOS == "windows" {
 		t.Skip("Symlink tests not reliable on Windows without admin privileges")
 	}

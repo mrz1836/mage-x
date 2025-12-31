@@ -42,9 +42,7 @@
                 "linters": [
                     "gocyclo",
                     "dupl",
-                    "gosec",
                     "funlen",
-                    "goconst",
                     "gocognit",
                     "gochecknoglobals"
                 ],
