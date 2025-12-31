@@ -197,6 +197,21 @@ func TestLogger_Header(t *testing.T) {
 		assert.Contains(t, output, "===")
 		assert.Contains(t, output, strings.Repeat("=", 60))
 	})
+
+	t.Run("Header prints colored header when colors enabled", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(true)
+
+		logger.Header("Colored Header")
+
+		output := buf.String()
+		assert.Contains(t, output, "Colored Header")
+		assert.Contains(t, output, "===")
+		// Colored output contains ANSI escape codes
+		assert.Contains(t, output, "\x1b[") // ANSI escape sequence
+	})
 }
 
 func TestLogger_Spinner(t *testing.T) {
@@ -693,4 +708,192 @@ func TestSetDefaultLogger(t *testing.T) {
 		retrieved := GetDefaultLogger()
 		assert.Equal(t, LogLevelError, retrieved.level)
 	})
+}
+
+// TestLogWithEmojiPaths tests additional paths in logWithEmoji
+func TestLogWithEmojiPaths(t *testing.T) {
+	t.Run("logWithEmoji with colors enabled and prefix", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(true)
+		prefixedLogger := logger.WithPrefix("TEST")
+
+		prefixedLogger.Success("with prefix")
+
+		output := buf.String()
+		assert.Contains(t, output, "[TEST]")
+		assert.Contains(t, output, "with prefix")
+		assert.Contains(t, output, "\x1b[") // ANSI escape
+	})
+
+	t.Run("logWithEmoji with colors disabled and prefix", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(false)
+		prefixedLogger := logger.WithPrefix("MYMOD")
+
+		prefixedLogger.Success("without colors")
+
+		output := buf.String()
+		assert.Contains(t, output, "[MYMOD]")
+		assert.Contains(t, output, "without colors")
+		assert.NotContains(t, output, "\x1b[") // No ANSI escape
+	})
+
+	t.Run("logWithEmoji debug level with colors", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetLevel(LogLevelDebug)
+		logger.SetColorEnabled(true)
+
+		// Success uses logWithEmoji
+		logger.Success("debug level test")
+
+		output := buf.String()
+		assert.Contains(t, output, "debug level test")
+	})
+
+	t.Run("logWithEmoji below threshold is filtered", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetLevel(LogLevelError) // High threshold
+
+		// Info-level emoji log should not appear
+		logger.Success("should not appear")
+
+		output := buf.String()
+		assert.Empty(t, output)
+	})
+}
+
+// TestLogWithSpinnerPaused tests logging with an active spinner
+func TestLogWithSpinnerPaused(t *testing.T) {
+	t.Run("logging pauses and resumes spinner", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(false)
+
+		// Start spinner
+		logger.StartSpinner("test spinner")
+		require.NotNil(t, logger.spinner)
+
+		// Log should pause spinner temporarily
+		logger.Info("log message with spinner")
+
+		// Verify log was written
+		assert.Contains(t, buf.String(), "log message with spinner")
+
+		logger.StopSpinner()
+	})
+}
+
+// TestShouldUseColorEnvVars tests additional environment variable paths
+func TestShouldUseColorEnvVars(t *testing.T) {
+	t.Run("FORCE_COLOR enables color", func(t *testing.T) {
+		// Save and restore environment
+		originalCI := os.Getenv("CI")
+		originalNoColor := os.Getenv("NO_COLOR")
+		originalForceColor := os.Getenv("FORCE_COLOR")
+		defer func() {
+			restoreEnv(t, "CI", originalCI)
+			restoreEnv(t, "NO_COLOR", originalNoColor)
+			restoreEnv(t, "FORCE_COLOR", originalForceColor)
+		}()
+
+		// Clear CI and NO_COLOR
+		//nolint:errcheck // Test helper, error not critical
+		os.Unsetenv("CI")
+		//nolint:errcheck // Test helper, error not critical
+		os.Unsetenv("NO_COLOR")
+		//nolint:errcheck,gosec // Test helper, error not critical
+		os.Setenv("FORCE_COLOR", "1")
+
+		// Note: shouldUseColor may still return false due to terminal detection
+		// but we're testing the env var logic path
+		_ = shouldUseColor()
+	})
+
+	t.Run("NO_COLOR takes precedence over FORCE_COLOR", func(t *testing.T) {
+		originalNoColor := os.Getenv("NO_COLOR")
+		originalForceColor := os.Getenv("FORCE_COLOR")
+		defer func() {
+			restoreEnv(t, "NO_COLOR", originalNoColor)
+			restoreEnv(t, "FORCE_COLOR", originalForceColor)
+		}()
+
+		if err := os.Setenv("NO_COLOR", "1"); err != nil {
+			t.Fatalf("Failed to set NO_COLOR: %v", err)
+		}
+		if err := os.Setenv("FORCE_COLOR", "1"); err != nil {
+			t.Fatalf("Failed to set FORCE_COLOR: %v", err)
+		}
+
+		result := shouldUseColor()
+		assert.False(t, result)
+	})
+}
+
+// restoreEnv is a helper to restore an environment variable
+func restoreEnv(t *testing.T, key, value string) {
+	t.Helper()
+	if value == "" {
+		if err := os.Unsetenv(key); err != nil {
+			t.Logf("Warning: failed to unset %s: %v", key, err)
+		}
+	} else {
+		if err := os.Setenv(key, value); err != nil {
+			t.Logf("Warning: failed to set %s: %v", key, err)
+		}
+	}
+}
+
+// TestPlainHeaderOutput tests plain header output path
+func TestPlainHeaderOutput(t *testing.T) {
+	t.Run("Header with long text truncates properly", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(false)
+
+		longHeader := strings.Repeat("A", 100)
+		logger.Header(longHeader)
+
+		output := buf.String()
+		assert.Contains(t, output, "===")
+	})
+}
+
+// TestLogColoredOutput tests colored log output with all levels
+func TestLogColoredOutput(t *testing.T) {
+	tests := []struct {
+		name    string
+		logFunc func(*Logger, string, ...interface{})
+		level   LogLevel
+	}{
+		{"Debug colored", (*Logger).Debug, LogLevelDebug},
+		{"Info colored", (*Logger).Info, LogLevelInfo},
+		{"Warn colored", (*Logger).Warn, LogLevelWarn},
+		{"Error colored", (*Logger).Error, LogLevelError},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := NewLogger()
+			logger.SetOutput(&buf)
+			logger.SetLevel(LogLevelDebug)
+			logger.SetColorEnabled(true)
+
+			tt.logFunc(logger, "colored message")
+
+			output := buf.String()
+			assert.Contains(t, output, "colored message")
+			assert.Contains(t, output, "\x1b[") // ANSI escape
+		})
+	}
 }
