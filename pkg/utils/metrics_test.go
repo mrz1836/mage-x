@@ -701,6 +701,362 @@ func BenchmarkPerformanceTimer_StartStop(b *testing.B) {
 	}
 }
 
+func TestAggregateMetrics(t *testing.T) {
+	tempDir := t.TempDir()
+	config := MetricsConfig{
+		Enabled:     true,
+		StoragePath: filepath.Join(tempDir, "metrics"),
+	}
+	collector := NewMetricsCollector(&config)
+
+	t.Run("aggregates multiple metrics by name", func(t *testing.T) {
+		metrics := []*Metric{
+			{Name: "build_time", Value: 10.0, Type: MetricTypeTimer},
+			{Name: "build_time", Value: 20.0, Type: MetricTypeTimer},
+			{Name: "build_time", Value: 30.0, Type: MetricTypeTimer},
+			{Name: "test_time", Value: 5.0, Type: MetricTypeTimer},
+			{Name: "test_time", Value: 15.0, Type: MetricTypeTimer},
+		}
+
+		aggregated := collector.aggregateMetrics(metrics)
+
+		// Check build_time aggregation
+		buildAgg, ok := aggregated["build_time"]
+		assert.True(t, ok, "Expected aggregation for build_time")
+		assert.Equal(t, int64(3), buildAgg.Count)
+		assert.InDelta(t, 60.0, buildAgg.Sum, 0.001)
+		assert.InDelta(t, 10.0, buildAgg.Min, 0.001)
+		assert.InDelta(t, 30.0, buildAgg.Max, 0.001)
+		assert.InDelta(t, 20.0, buildAgg.Average, 0.001)
+
+		// Check test_time aggregation
+		testAgg, ok := aggregated["test_time"]
+		assert.True(t, ok, "Expected aggregation for test_time")
+		assert.Equal(t, int64(2), testAgg.Count)
+		assert.InDelta(t, 20.0, testAgg.Sum, 0.001)
+	})
+
+	t.Run("handles empty metrics list", func(t *testing.T) {
+		aggregated := collector.aggregateMetrics([]*Metric{})
+		assert.Empty(t, aggregated)
+	})
+
+	t.Run("handles single metric", func(t *testing.T) {
+		metrics := []*Metric{
+			{Name: "single_metric", Value: 42.0, Type: MetricTypeGauge},
+		}
+
+		aggregated := collector.aggregateMetrics(metrics)
+		assert.Len(t, aggregated, 1)
+
+		singleAgg := aggregated["single_metric"]
+		assert.Equal(t, int64(1), singleAgg.Count)
+		assert.InDelta(t, 42.0, singleAgg.Min, 0.001)
+		assert.InDelta(t, 42.0, singleAgg.Max, 0.001)
+		assert.InDelta(t, 42.0, singleAgg.Average, 0.001)
+	})
+}
+
+func TestGenerateTrends(t *testing.T) {
+	tempDir := t.TempDir()
+	config := MetricsConfig{
+		Enabled:     true,
+		StoragePath: filepath.Join(tempDir, "metrics"),
+	}
+	collector := NewMetricsCollector(&config)
+
+	t.Run("detects increasing trend", func(t *testing.T) {
+		metrics := []*Metric{
+			{Name: "build_time", Value: 10.0},
+			{Name: "build_time", Value: 15.0},
+			{Name: "build_time", Value: 20.0},
+			{Name: "build_time", Value: 25.0},
+		}
+
+		trends := collector.generateTrends(metrics, "day")
+
+		buildTrend, ok := trends["build_time"]
+		assert.True(t, ok, "Expected trend for build_time")
+		assert.Equal(t, "increasing", buildTrend.Trend)
+		assert.Positive(t, buildTrend.Change)
+		assert.Equal(t, "day", buildTrend.Period)
+	})
+
+	t.Run("detects decreasing trend", func(t *testing.T) {
+		metrics := []*Metric{
+			{Name: "error_rate", Value: 50.0},
+			{Name: "error_rate", Value: 40.0},
+			{Name: "error_rate", Value: 30.0},
+			{Name: "error_rate", Value: 20.0},
+		}
+
+		trends := collector.generateTrends(metrics, "week")
+
+		errorTrend := trends["error_rate"]
+		assert.Equal(t, "decreasing", errorTrend.Trend)
+		assert.Negative(t, errorTrend.Change)
+	})
+
+	t.Run("detects stable trend", func(t *testing.T) {
+		metrics := []*Metric{
+			{Name: "memory", Value: 100.0},
+			{Name: "memory", Value: 101.0},
+			{Name: "memory", Value: 99.0},
+			{Name: "memory", Value: 100.5},
+		}
+
+		trends := collector.generateTrends(metrics, "month")
+
+		memTrend := trends["memory"]
+		assert.Equal(t, "stable", memTrend.Trend)
+	})
+
+	t.Run("skips metrics with less than 2 values", func(t *testing.T) {
+		metrics := []*Metric{
+			{Name: "single_value", Value: 100.0},
+		}
+
+		trends := collector.generateTrends(metrics, "day")
+		_, ok := trends["single_value"]
+		assert.False(t, ok, "Should not generate trend for single value")
+	})
+
+	t.Run("handles empty metrics", func(t *testing.T) {
+		trends := collector.generateTrends([]*Metric{}, "day")
+		assert.Empty(t, trends)
+	})
+}
+
+func TestIdentifyBottlenecks(t *testing.T) {
+	tempDir := t.TempDir()
+	config := MetricsConfig{
+		Enabled:     true,
+		StoragePath: filepath.Join(tempDir, "metrics"),
+	}
+	collector := NewMetricsCollector(&config)
+
+	t.Run("identifies slow build bottleneck", func(t *testing.T) {
+		// Create metrics where P95 > 2x average (indicates inconsistent build times)
+		metrics := []*Metric{
+			{Name: "build_duration", Value: 10.0},
+			{Name: "build_duration", Value: 12.0},
+			{Name: "build_duration", Value: 11.0},
+			{Name: "build_duration", Value: 10.0},
+			{Name: "build_duration", Value: 100.0}, // Outlier that will make P95 very high
+		}
+
+		bottlenecks := collector.identifyBottlenecks(metrics)
+
+		// Should identify slow build times
+		found := false
+		for _, b := range bottlenecks {
+			if b.Name == "Slow Build Times" {
+				found = true
+				assert.Equal(t, "Build Performance", b.Category)
+				assert.Equal(t, "High", b.Impact)
+				break
+			}
+		}
+		assert.True(t, found, "Expected to identify slow build bottleneck")
+	})
+
+	t.Run("identifies slow test bottleneck", func(t *testing.T) {
+		// Create metrics where P95 > 3x average (indicates very slow tests)
+		metrics := []*Metric{
+			{Name: "test_duration", Value: 5.0},
+			{Name: "test_duration", Value: 5.0},
+			{Name: "test_duration", Value: 5.0},
+			{Name: "test_duration", Value: 5.0},
+			{Name: "test_duration", Value: 200.0}, // Outlier
+		}
+
+		bottlenecks := collector.identifyBottlenecks(metrics)
+
+		found := false
+		for _, b := range bottlenecks {
+			if b.Name == "Slow Test Execution" {
+				found = true
+				assert.Equal(t, "Test Performance", b.Category)
+				break
+			}
+		}
+		assert.True(t, found, "Expected to identify slow test bottleneck")
+	})
+
+	t.Run("no bottlenecks for consistent metrics", func(t *testing.T) {
+		metrics := []*Metric{
+			{Name: "build_duration", Value: 10.0},
+			{Name: "build_duration", Value: 11.0},
+			{Name: "build_duration", Value: 10.5},
+			{Name: "build_duration", Value: 10.2},
+		}
+
+		bottlenecks := collector.identifyBottlenecks(metrics)
+
+		// No significant bottlenecks expected for consistent metrics
+		for _, b := range bottlenecks {
+			assert.NotEqual(t, "Slow Build Times", b.Name)
+		}
+	})
+
+	t.Run("handles empty metrics", func(t *testing.T) {
+		bottlenecks := collector.identifyBottlenecks([]*Metric{})
+		assert.Empty(t, bottlenecks)
+	})
+}
+
+func TestRecordBuildMetrics(t *testing.T) {
+	t.Run("package level function doesn't panic", func(t *testing.T) {
+		buildMetrics := &BuildMetrics{
+			Duration:      10 * time.Second,
+			LinesOfCode:   1000,
+			PackagesBuilt: 10,
+			TestsRun:      50,
+			TestsPassed:   48,
+			TestsFailed:   2,
+			Coverage:      85.5,
+			BinarySize:    1024 * 1024,
+			Resources: ResourceMetrics{
+				CPUUsage:    75.0,
+				MemoryUsage: 512 * 1024 * 1024,
+			},
+			Tags: map[string]string{"project": "test"},
+		}
+
+		assert.NotPanics(t, func() {
+			err := RecordBuildMetrics(buildMetrics)
+			// May return error if collector is not properly initialized, that's ok
+			_ = err
+		})
+	})
+}
+
+func TestGeneratePerformanceReport(t *testing.T) {
+	t.Run("package level function doesn't panic", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			report, err := GeneratePerformanceReport("day")
+			// May return error if collector is not properly initialized
+			if err == nil {
+				assert.NotNil(t, report)
+			}
+		})
+	})
+
+	t.Run("works with custom collector", func(t *testing.T) {
+		tempDir := t.TempDir()
+		config := MetricsConfig{
+			Enabled:     true,
+			StoragePath: filepath.Join(tempDir, "metrics"),
+		}
+		collector := NewMetricsCollector(&config)
+
+		// Record some metrics first
+		now := time.Now()
+		metrics := []*Metric{
+			{Name: "build_duration", Type: MetricTypeTimer, Value: 10.0, Timestamp: now, Success: true},
+			{Name: "build_duration", Type: MetricTypeTimer, Value: 15.0, Timestamp: now.Add(-time.Hour), Success: true},
+			{Name: "build_duration", Type: MetricTypeTimer, Value: 20.0, Timestamp: now.Add(-2 * time.Hour), Success: false},
+		}
+
+		for _, m := range metrics {
+			err := collector.RecordMetric(m)
+			require.NoError(t, err)
+		}
+
+		report, err := collector.GenerateReport("day")
+		require.NoError(t, err)
+		assert.NotNil(t, report)
+	})
+}
+
+func TestGenerateRecommendations(t *testing.T) {
+	tempDir := t.TempDir()
+	config := MetricsConfig{
+		Enabled:     true,
+		StoragePath: filepath.Join(tempDir, "metrics"),
+	}
+	collector := NewMetricsCollector(&config)
+
+	t.Run("recommends reliability improvement for low success rate", func(t *testing.T) {
+		report := &PerformanceReport{
+			SuccessRate:     80.0, // Below 95%
+			AverageDuration: time.Minute,
+		}
+
+		recommendations := collector.generateRecommendations(report)
+
+		found := false
+		for _, r := range recommendations {
+			if r.Title == "Improve Build Reliability" {
+				found = true
+				assert.Equal(t, "High", r.Priority)
+				assert.Equal(t, "Reliability", r.Category)
+				break
+			}
+		}
+		assert.True(t, found, "Expected reliability recommendation")
+	})
+
+	t.Run("recommends performance optimization for slow builds", func(t *testing.T) {
+		report := &PerformanceReport{
+			SuccessRate:     99.0,
+			AverageDuration: 10 * time.Minute, // > 5 minutes
+		}
+
+		recommendations := collector.generateRecommendations(report)
+
+		found := false
+		for _, r := range recommendations {
+			if r.Title == "Optimize Build Performance" {
+				found = true
+				assert.Equal(t, "Medium", r.Priority)
+				assert.Equal(t, "Performance", r.Category)
+				break
+			}
+		}
+		assert.True(t, found, "Expected performance recommendation")
+	})
+
+	t.Run("recommends memory optimization for high memory usage", func(t *testing.T) {
+		report := &PerformanceReport{
+			SuccessRate:     99.0,
+			AverageDuration: time.Minute,
+			ResourceUsage: map[string]AggregatedMetrics{
+				"build_memory_usage": {Average: 2 * 1024 * 1024 * 1024}, // 2GB
+			},
+		}
+
+		recommendations := collector.generateRecommendations(report)
+
+		found := false
+		for _, r := range recommendations {
+			if r.Title == "Optimize Memory Usage" {
+				found = true
+				assert.Equal(t, "Resource Usage", r.Category)
+				break
+			}
+		}
+		assert.True(t, found, "Expected memory recommendation")
+	})
+
+	t.Run("no recommendations for healthy metrics", func(t *testing.T) {
+		report := &PerformanceReport{
+			SuccessRate:     99.0,
+			AverageDuration: 30 * time.Second,
+			ResourceUsage: map[string]AggregatedMetrics{
+				"build_memory_usage": {Average: 100 * 1024 * 1024}, // 100MB
+			},
+		}
+
+		recommendations := collector.generateRecommendations(report)
+
+		// Should have no critical recommendations
+		for _, r := range recommendations {
+			assert.NotEqual(t, "High", r.Priority, "Should not have high priority recommendations for healthy metrics")
+		}
+	})
+}
+
 func BenchmarkJSONStorage_Store(b *testing.B) {
 	tempDir := b.TempDir()
 	storage, err := NewJSONStorage(filepath.Join(tempDir, "bench_storage"))

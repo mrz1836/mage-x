@@ -25,6 +25,7 @@ var (
 	errTestFileNotFound      = errors.New("file not found")
 	errTestHTTP404           = errors.New("HTTP request failed with status 404")
 	errTestHTTP500           = errors.New("HTTP request failed with status 500")
+	errTestExecutionFailed   = errors.New("execution failed")
 )
 
 func TestDefaultDownloadConfig(t *testing.T) {
@@ -570,6 +571,181 @@ func BenchmarkDownloadSmallFile(b *testing.B) {
 			b.Logf("Failed to remove temp directory: %v", err)
 		}
 	}
+}
+
+func TestDownloadScript(t *testing.T) {
+	// Create a test server that serves a simple shell script
+	scriptContent := "#!/bin/bash\necho 'Hello World'\n"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/x-shellscript")
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte(scriptContent)); err != nil {
+			t.Errorf("Failed to write script content: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	t.Run("DownloadScript returns not supported error", func(t *testing.T) {
+		ctx := context.Background()
+		config := &DownloadConfig{
+			MaxRetries:   1,
+			InitialDelay: 10 * time.Millisecond,
+			Timeout:      5 * time.Second,
+		}
+
+		err := DownloadScript(ctx, server.URL+"/script.sh", "", config)
+
+		// Should return ErrScriptExecutionNotSupported because script execution
+		// requires integration with SecureExecutor
+		if !errors.Is(err, ErrScriptExecutionNotSupported) {
+			t.Errorf("Expected ErrScriptExecutionNotSupported, got: %v", err)
+		}
+	})
+
+	t.Run("DownloadScript with nil config uses defaults", func(t *testing.T) {
+		ctx := context.Background()
+
+		err := DownloadScript(ctx, server.URL+"/script.sh", "", nil)
+
+		// Should still return ErrScriptExecutionNotSupported
+		if !errors.Is(err, ErrScriptExecutionNotSupported) {
+			t.Errorf("Expected ErrScriptExecutionNotSupported, got: %v", err)
+		}
+	})
+
+	t.Run("DownloadScript with invalid URL fails", func(t *testing.T) {
+		ctx := context.Background()
+		config := &DownloadConfig{
+			MaxRetries:   1,
+			InitialDelay: 10 * time.Millisecond,
+			Timeout:      1 * time.Second,
+		}
+
+		err := DownloadScript(ctx, "http://invalid.example.test:12345/script.sh", "", config)
+
+		// Should fail during download
+		if err == nil {
+			t.Error("Expected error for invalid URL")
+		}
+	})
+}
+
+func TestConfigToDownloadConfig(t *testing.T) {
+	t.Run("nil config returns default", func(t *testing.T) {
+		result := ConfigToDownloadConfig(nil)
+
+		if result == nil {
+			t.Fatal("Expected non-nil config")
+		}
+		// Verify default values
+		if result.MaxRetries != 5 {
+			t.Errorf("Expected MaxRetries=5, got %d", result.MaxRetries)
+		}
+		if result.InitialDelay != 1*time.Second {
+			t.Errorf("Expected InitialDelay=1s, got %v", result.InitialDelay)
+		}
+	})
+
+	t.Run("non-nil config returns default", func(t *testing.T) {
+		// This is a simplified implementation that always returns default
+		input := &struct{ SomeField string }{SomeField: "test"}
+		result := ConfigToDownloadConfig(input)
+
+		if result == nil {
+			t.Fatal("Expected non-nil config")
+		}
+		// Currently returns default regardless of input
+		if result.MaxRetries != 5 {
+			t.Errorf("Expected MaxRetries=5, got %d", result.MaxRetries)
+		}
+	})
+}
+
+func TestExecuteCommandWithRetry(t *testing.T) {
+	t.Run("nil executor returns error", func(t *testing.T) {
+		ctx := context.Background()
+
+		err := ExecuteCommandWithRetry(ctx, nil, 3, 100, "echo", "hello")
+
+		if !errors.Is(err, ErrExecutorCannotBeNil) {
+			t.Errorf("Expected ErrExecutorCannotBeNil, got: %v", err)
+		}
+	})
+
+	t.Run("executor without interface returns error", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Pass an object that doesn't implement the retryExecutor interface
+		invalidExecutor := struct{ name string }{name: "invalid"}
+
+		err := ExecuteCommandWithRetry(ctx, invalidExecutor, 3, 100, "echo", "hello")
+
+		if !errors.Is(err, ErrExecutorNotImplemented) {
+			t.Errorf("Expected ErrExecutorNotImplemented, got: %v", err)
+		}
+	})
+
+	t.Run("executor with interface succeeds", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create a mock executor that implements the interface
+		mockExecutor := &mockRetryExecutor{
+			executeFunc: func(ctx context.Context, maxRetries int, initialDelay time.Duration,
+				name string, args ...string,
+			) error {
+				// Verify parameters were passed correctly
+				if maxRetries != 3 {
+					t.Errorf("Expected maxRetries=3, got %d", maxRetries)
+				}
+				if initialDelay != 100*time.Millisecond {
+					t.Errorf("Expected initialDelay=100ms, got %v", initialDelay)
+				}
+				if name != "echo" {
+					t.Errorf("Expected name=echo, got %s", name)
+				}
+				if len(args) != 1 || args[0] != "hello" {
+					t.Errorf("Expected args=[hello], got %v", args)
+				}
+				return nil
+			},
+		}
+
+		err := ExecuteCommandWithRetry(ctx, mockExecutor, 3, 100, "echo", "hello")
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+	})
+
+	t.Run("executor with interface returns error", func(t *testing.T) {
+		ctx := context.Background()
+
+		mockExecutor := &mockRetryExecutor{
+			executeFunc: func(ctx context.Context, maxRetries int, initialDelay time.Duration,
+				name string, args ...string,
+			) error {
+				return errTestExecutionFailed
+			},
+		}
+
+		err := ExecuteCommandWithRetry(ctx, mockExecutor, 3, 100, "echo", "hello")
+
+		if !errors.Is(err, errTestExecutionFailed) {
+			t.Errorf("Expected %v, got: %v", errTestExecutionFailed, err)
+		}
+	})
+}
+
+// mockRetryExecutor implements the retryExecutor interface for testing
+type mockRetryExecutor struct {
+	executeFunc func(ctx context.Context, maxRetries int, initialDelay time.Duration,
+		name string, args ...string) error
+}
+
+func (m *mockRetryExecutor) ExecuteWithRetry(ctx context.Context, maxRetries int, initialDelay time.Duration,
+	name string, args ...string,
+) error {
+	return m.executeFunc(ctx, maxRetries, initialDelay, name, args...)
 }
 
 func BenchmarkDownloadWithRetries(b *testing.B) {

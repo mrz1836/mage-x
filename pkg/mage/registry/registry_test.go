@@ -1,10 +1,14 @@
 package registry
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 )
+
+// Static test errors for err113 compliance
+var errTestExecutionFailed = errors.New("execution failed")
 
 func TestRegistry_NewRegistry(t *testing.T) {
 	r := NewRegistry()
@@ -844,6 +848,377 @@ func BenchmarkRegistry_List(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.List()
+	}
+}
+
+func TestRegistry_IsRegisteredAndSetRegistered(t *testing.T) {
+	r := NewRegistry()
+
+	// Initially not registered
+	if r.IsRegistered() {
+		t.Error("New registry should not be registered")
+	}
+
+	// Set registered to true
+	r.SetRegistered(true)
+
+	if !r.IsRegistered() {
+		t.Error("Registry should be registered after SetRegistered(true)")
+	}
+
+	// Set registered back to false
+	r.SetRegistered(false)
+
+	if r.IsRegistered() {
+		t.Error("Registry should not be registered after SetRegistered(false)")
+	}
+}
+
+func TestRegistry_CategorizedCommands(t *testing.T) {
+	r := NewRegistry()
+
+	commands := []*Command{
+		{
+			Name:        "build",
+			Method:      "Build",
+			Namespace:   "build",
+			Description: "Build command",
+			Category:    "Build",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "compile",
+			Method:      "Compile",
+			Namespace:   "build",
+			Description: "Compile command",
+			Category:    "Build",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "test",
+			Method:      "Test",
+			Namespace:   "test",
+			Description: "Test command",
+			Category:    "Test",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "lint",
+			Method:      "Lint",
+			Namespace:   "lint",
+			Description: "Lint command",
+			Category:    "Quality",
+			Func:        func() error { return nil },
+		},
+	}
+
+	for _, cmd := range commands {
+		r.MustRegister(cmd)
+	}
+
+	categorized := r.CategorizedCommands()
+
+	// Should have 3 categories
+	if len(categorized) != 3 {
+		t.Errorf("Expected 3 categories, got %d", len(categorized))
+	}
+
+	// Verify Build category has 2 commands
+	if builds, ok := categorized["Build"]; ok {
+		if len(builds) != 2 {
+			t.Errorf("Expected 2 Build commands, got %d", len(builds))
+		}
+	} else {
+		t.Error("Build category not found")
+	}
+
+	// Verify Test category has 1 command
+	if tests, ok := categorized["Test"]; ok {
+		if len(tests) != 1 {
+			t.Errorf("Expected 1 Test command, got %d", len(tests))
+		}
+	} else {
+		t.Error("Test category not found")
+	}
+}
+
+func TestRegistry_CategoryOrder(t *testing.T) {
+	r := NewRegistry()
+
+	commands := []*Command{
+		{
+			Name:        "test",
+			Method:      "Test",
+			Namespace:   "test",
+			Description: "Test command",
+			Category:    "Test",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "build",
+			Method:      "Build",
+			Namespace:   "build",
+			Description: "Build command",
+			Category:    "Build",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "custom",
+			Method:      "Custom",
+			Namespace:   "custom",
+			Description: "Custom command",
+			Category:    "ZCustom", // Non-standard category
+			Func:        func() error { return nil },
+		},
+	}
+
+	for _, cmd := range commands {
+		r.MustRegister(cmd)
+	}
+
+	order := r.CategoryOrder()
+
+	// Should contain our categories
+	if len(order) == 0 {
+		t.Error("CategoryOrder returned empty slice")
+	}
+
+	// Standard categories should come before custom ones
+	foundBuild := false
+	foundCustom := false
+	buildIndex := -1
+	customIndex := -1
+
+	for i, cat := range order {
+		if cat == "Build" {
+			foundBuild = true
+			buildIndex = i
+		}
+		if cat == "ZCustom" {
+			foundCustom = true
+			customIndex = i
+		}
+	}
+
+	if !foundBuild {
+		t.Error("Build category not in order")
+	}
+	if !foundCustom {
+		t.Error("ZCustom category not in order")
+	}
+
+	// Build (standard) should come before ZCustom (custom)
+	if buildIndex > customIndex {
+		t.Error("Standard category should come before custom category")
+	}
+}
+
+func TestRegistry_SearchWithTags(t *testing.T) {
+	r := NewRegistry()
+
+	commands := []*Command{
+		{
+			Name:        "build",
+			Method:      "Build",
+			Namespace:   "build",
+			Description: "Build the project",
+			Category:    "Build",
+			Tags:        []string{"ci", "compile"},
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "test",
+			Method:      "Test",
+			Namespace:   "test",
+			Description: "Run tests",
+			Category:    "Test",
+			Tags:        []string{"ci", "quality"},
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "deploy",
+			Method:      "Deploy",
+			Namespace:   "deploy",
+			Description: "Deploy application",
+			Category:    "Deploy",
+			Tags:        []string{"production"},
+			Func:        func() error { return nil },
+		},
+	}
+
+	for _, cmd := range commands {
+		r.MustRegister(cmd)
+	}
+
+	// Search by tag - should find commands with "ci" tag
+	results := r.Search("ci")
+	if len(results) != 2 {
+		t.Errorf("Expected 2 results for 'ci' tag, got %d", len(results))
+	}
+
+	// Search by unique tag
+	results = r.Search("production")
+	if len(results) != 1 {
+		t.Errorf("Expected 1 result for 'production' tag, got %d", len(results))
+	}
+	if len(results) > 0 && results[0].Name != "deploy" {
+		t.Errorf("Expected 'deploy' command, got '%s'", results[0].Name)
+	}
+}
+
+func TestRegistry_GlobalExecute(t *testing.T) {
+	// Clear global registry for test isolation
+	Global().Clear()
+
+	executed := false
+	cmd := &Command{
+		Name:        "globalexec",
+		Method:      "GlobalExec",
+		Namespace:   "test",
+		Description: "Global execute test command",
+		Category:    "Test",
+		Func: func() error {
+			executed = true
+			return nil
+		},
+	}
+
+	MustRegister(cmd)
+
+	err := Execute("test:globalexec")
+	if err != nil {
+		t.Fatalf("Global Execute() failed: %v", err)
+	}
+	if !executed {
+		t.Error("Command handler was not executed")
+	}
+}
+
+func TestCommandBuilder_AdditionalMethods(t *testing.T) {
+	// Test WithLongDescription
+	cmd1 := NewCommand("test").
+		WithDescription("Short desc").
+		WithLongDescription("This is a long description").
+		WithFunc(func() error { return nil }).
+		MustBuild()
+	if cmd1.LongDescription != "This is a long description" {
+		t.Error("LongDescription not set")
+	}
+
+	// Test WithUsage
+	cmd2 := NewCommand("test2").
+		WithDescription("Short desc").
+		WithUsage("test2 [options]").
+		WithFunc(func() error { return nil }).
+		MustBuild()
+	if cmd2.Usage != "test2 [options]" {
+		t.Error("Usage not set")
+	}
+
+	// Test WithExamples
+	cmd3 := NewCommand("test3").
+		WithDescription("Short desc").
+		WithExamples("example 1", "example 2").
+		WithFunc(func() error { return nil }).
+		MustBuild()
+	if len(cmd3.Examples) != 2 {
+		t.Errorf("Expected 2 examples, got %d", len(cmd3.Examples))
+	}
+
+	// Test WithOptions
+	option := CommandOption{Name: "--flag", Description: "description"}
+	cmd4 := NewCommand("test4").
+		WithDescription("Short desc").
+		WithOptions(option).
+		WithFunc(func() error { return nil }).
+		MustBuild()
+	if len(cmd4.Options) != 1 || cmd4.Options[0].Name != "--flag" {
+		t.Error("Options not set correctly")
+	}
+
+	// Test WithSeeAlso
+	cmd5 := NewCommand("test5").
+		WithDescription("Short desc").
+		WithSeeAlso("related:command").
+		WithFunc(func() error { return nil }).
+		MustBuild()
+	if len(cmd5.SeeAlso) != 1 || cmd5.SeeAlso[0] != "related:command" {
+		t.Error("SeeAlso not set correctly")
+	}
+
+	// Test WithTags
+	cmd6 := NewCommand("test6").
+		WithDescription("Short desc").
+		WithTags("ci", "build").
+		WithFunc(func() error { return nil }).
+		MustBuild()
+	if len(cmd6.Tags) != 2 {
+		t.Errorf("Expected 2 tags, got %d", len(cmd6.Tags))
+	}
+
+	// Test WithIcon
+	cmd7 := NewCommand("test7").
+		WithDescription("Short desc").
+		WithIcon("🔧").
+		WithFunc(func() error { return nil }).
+		MustBuild()
+	if cmd7.Icon != "🔧" {
+		t.Error("Icon not set correctly")
+	}
+}
+
+func TestRegistry_ExecuteWithArgs(t *testing.T) {
+	r := NewRegistry()
+
+	var receivedArgs []string
+	cmd := &Command{
+		Name:        "args",
+		Method:      "Args",
+		Namespace:   "test",
+		Description: "Args test command",
+		Category:    "Test",
+		FuncWithArgs: func(args ...string) error {
+			receivedArgs = args
+			return nil
+		},
+	}
+
+	r.MustRegister(cmd)
+
+	err := r.Execute("test:args", "arg1", "arg2")
+	if err != nil {
+		t.Fatalf("Execute() failed: %v", err)
+	}
+	if len(receivedArgs) != 2 {
+		t.Errorf("Expected 2 args, got %d", len(receivedArgs))
+	}
+	if receivedArgs[0] != "arg1" || receivedArgs[1] != "arg2" {
+		t.Errorf("Args not passed correctly: %v", receivedArgs)
+	}
+}
+
+func TestRegistry_ExecuteError(t *testing.T) {
+	r := NewRegistry()
+
+	cmd := &Command{
+		Name:        "error",
+		Method:      "Error",
+		Namespace:   "test",
+		Description: "Error test command",
+		Category:    "Test",
+		Func: func() error {
+			return errTestExecutionFailed
+		},
+	}
+
+	r.MustRegister(cmd)
+
+	err := r.Execute("test:error")
+	if err == nil {
+		t.Error("Expected error from execution")
+	}
+	if !strings.Contains(err.Error(), "execution failed") {
+		t.Errorf("Expected 'execution failed' error, got: %v", err)
 	}
 }
 

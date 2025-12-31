@@ -233,6 +233,49 @@ func TestNoDelay(t *testing.T) {
 	}
 }
 
+func TestBackoff_Reset(t *testing.T) {
+	// Test Reset methods for all backoff types
+	// These are all no-ops but should not panic
+
+	t.Run("ExponentialBackoff Reset", func(t *testing.T) {
+		b := &ExponentialBackoff{
+			Initial:    100 * time.Millisecond,
+			Multiplier: 2.0,
+		}
+		// Should not panic
+		b.Reset()
+		// Should still work after reset
+		got := b.Duration(0)
+		if got != 100*time.Millisecond {
+			t.Errorf("Duration after Reset = %v, want 100ms", got)
+		}
+	})
+
+	t.Run("LinearBackoff Reset", func(t *testing.T) {
+		b := &LinearBackoff{
+			Initial:   100 * time.Millisecond,
+			Increment: 50 * time.Millisecond,
+		}
+		// Should not panic
+		b.Reset()
+		// Should still work after reset
+		got := b.Duration(0)
+		if got != 100*time.Millisecond {
+			t.Errorf("Duration after Reset = %v, want 100ms", got)
+		}
+	})
+
+	t.Run("ConstantBackoff Reset is called", func(t *testing.T) {
+		b := &ConstantBackoff{Delay: 100 * time.Millisecond}
+		// Already tested above but confirm no panic
+		b.Reset()
+		got := b.Duration(0)
+		if got != 100*time.Millisecond {
+			t.Errorf("Duration after Reset = %v, want 100ms", got)
+		}
+	})
+}
+
 func BenchmarkExponentialBackoff(b *testing.B) {
 	backoff := DefaultBackoff()
 

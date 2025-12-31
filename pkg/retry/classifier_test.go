@@ -402,3 +402,113 @@ func TestDefaultClassifier_ExitError(t *testing.T) {
 		}
 	})
 }
+
+func TestDefaultClassifier_DNSError(t *testing.T) {
+	classifier := NewNetworkClassifier()
+
+	tests := []struct {
+		name      string
+		dnsErr    *net.DNSError
+		retriable bool
+	}{
+		{
+			name:      "temporary DNS failure",
+			dnsErr:    &net.DNSError{Err: "temporary failure", Name: "example.com"},
+			retriable: true,
+		},
+		{
+			name:      "no such host (matches pattern - retriable)",
+			dnsErr:    &net.DNSError{Err: "no such host", Name: "invalid.test"},
+			retriable: true, // "no such host" is in NetworkPatterns, so it matches
+		},
+		{
+			name:      "server misbehaving (retriable)",
+			dnsErr:    &net.DNSError{Err: "server misbehaving", Name: "example.com"},
+			retriable: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := classifier.IsRetriable(tt.dnsErr)
+			if result != tt.retriable {
+				t.Errorf("IsRetriable(%v) = %v, want %v", tt.dnsErr, result, tt.retriable)
+			}
+		})
+	}
+
+	// Test DNS error specifically without pattern matching
+	classifierNoPat := &DefaultClassifier{
+		Patterns:       []string{}, // No patterns
+		CheckDNSErrors: true,
+	}
+
+	// DNS error with "server misbehaving" should be retriable via DNS check
+	dnsRetriable := &net.DNSError{Err: "server misbehaving", Name: "example.com"}
+	if !classifierNoPat.IsRetriable(dnsRetriable) {
+		t.Error("DNS error with misbehaving should be retriable")
+	}
+
+	// DNS error with "no such host" should NOT be retriable without pattern matching
+	dnsNoHost := &net.DNSError{Err: "no such host", Name: "invalid.test"}
+	if classifierNoPat.IsRetriable(dnsNoHost) {
+		t.Error("DNS error with 'no such host' should NOT be retriable without pattern")
+	}
+}
+
+func TestDefaultClassifier_OpError(t *testing.T) {
+	classifier := NewNetworkClassifier()
+
+	// Test OpError is retriable
+	opErr := &net.OpError{
+		Op:  "dial",
+		Net: "tcp",
+		Err: errors.New("connection refused"), //nolint:err113 // Test error
+	}
+
+	if !classifier.IsRetriable(opErr) {
+		t.Error("OpError should be retriable")
+	}
+
+	// Verify CheckOpErrors flag works - OpError still matches via patterns
+	classifierNoOp := &DefaultClassifier{
+		Patterns:      NetworkPatterns,
+		CheckOpErrors: false,
+	}
+	// OpError is still retriable due to "connection refused" pattern matching
+	if !classifierNoOp.IsRetriable(opErr) {
+		t.Error("OpError should still match pattern 'connection refused'")
+	}
+}
+
+func TestDefaultClassifier_EmptyPatterns(t *testing.T) {
+	classifier := &DefaultClassifier{
+		Patterns: []string{}, // Empty patterns
+	}
+
+	// Should not match any patterns
+	if classifier.IsRetriable(errConnectionRefused) {
+		t.Error("Empty patterns should not match anything")
+	}
+}
+
+func TestDefaultClassifier_HTTPStatus(t *testing.T) {
+	classifierWithHTTP := &DefaultClassifier{
+		CheckHTTPStatus: true,
+	}
+	classifierWithoutHTTP := &DefaultClassifier{
+		CheckHTTPStatus: false,
+	}
+
+	errStatus503 := errors.New("status 503: service unavailable") //nolint:err113 // Test error
+
+	// With HTTP check enabled
+	if !classifierWithHTTP.IsRetriable(errStatus503) {
+		t.Error("HTTP 5xx status should be retriable when CheckHTTPStatus is true")
+	}
+
+	// Without HTTP check enabled
+	if classifierWithoutHTTP.IsRetriable(errStatus503) {
+		t.Error("HTTP status should not be checked when CheckHTTPStatus is false")
+	}
+}

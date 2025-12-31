@@ -518,3 +518,179 @@ func BenchmarkFormatDuration(b *testing.B) {
 		formatDuration(duration)
 	}
 }
+
+// TestDefaultLoggerProxy tests the defaultLoggerProxy methods
+func TestDefaultLoggerProxy(t *testing.T) {
+	// Save original logger and restore after test
+	originalLogger := GetDefaultLogger()
+	defer SetDefaultLogger(originalLogger)
+
+	// Create a test logger with captured output
+	var buf bytes.Buffer
+	testLogger := NewLogger()
+	testLogger.SetOutput(&buf)
+	testLogger.SetColorEnabled(false)
+	testLogger.SetLevel(LogLevelDebug)
+	SetDefaultLogger(testLogger)
+
+	proxy := DefaultLogger()
+
+	t.Run("Debug logs through proxy", func(t *testing.T) {
+		buf.Reset()
+		proxy.Debug("proxy debug %s", "test")
+		assert.Contains(t, buf.String(), "proxy debug test")
+	})
+
+	t.Run("Info logs through proxy", func(t *testing.T) {
+		buf.Reset()
+		proxy.Info("proxy info %s", "test")
+		assert.Contains(t, buf.String(), "proxy info test")
+	})
+
+	t.Run("Warn logs through proxy", func(t *testing.T) {
+		buf.Reset()
+		proxy.Warn("proxy warn %s", "test")
+		assert.Contains(t, buf.String(), "proxy warn test")
+	})
+
+	t.Run("Error logs through proxy", func(t *testing.T) {
+		buf.Reset()
+		proxy.Error("proxy error %s", "test")
+		assert.Contains(t, buf.String(), "proxy error test")
+	})
+
+	t.Run("Success logs through proxy", func(t *testing.T) {
+		buf.Reset()
+		proxy.Success("proxy success %s", "test")
+		assert.Contains(t, buf.String(), "proxy success test")
+	})
+
+	t.Run("Fail logs through proxy", func(t *testing.T) {
+		buf.Reset()
+		proxy.Fail("proxy fail %s", "test")
+		assert.Contains(t, buf.String(), "proxy fail test")
+	})
+
+	t.Run("Header logs through proxy", func(t *testing.T) {
+		buf.Reset()
+		proxy.Header("Proxy Header")
+		assert.Contains(t, buf.String(), "Proxy Header")
+	})
+
+	t.Run("SetLevel changes level through proxy", func(t *testing.T) {
+		proxy.SetLevel(LogLevelWarn)
+		assert.Equal(t, LogLevelWarn, GetDefaultLogger().level)
+		proxy.SetLevel(LogLevelDebug) // Reset
+	})
+
+	t.Run("SetColorEnabled changes color through proxy", func(t *testing.T) {
+		proxy.SetColorEnabled(true)
+		assert.True(t, GetDefaultLogger().useColor)
+		proxy.SetColorEnabled(false) // Reset
+	})
+
+	t.Run("SetOutput changes output through proxy", func(t *testing.T) {
+		var newBuf bytes.Buffer
+		proxy.SetOutput(&newBuf)
+		proxy.Info("new output test")
+		assert.Contains(t, newBuf.String(), "new output test")
+		proxy.SetOutput(&buf) // Reset
+	})
+
+	t.Run("WithPrefix creates prefixed logger through proxy", func(t *testing.T) {
+		prefixed := proxy.WithPrefix("PROXY")
+		assert.Equal(t, "PROXY", prefixed.prefix)
+	})
+
+	t.Run("GetContextualMessage works through proxy", func(t *testing.T) {
+		// Just verify it doesn't panic
+		_ = proxy.GetContextualMessage("morning")
+	})
+
+	t.Run("GetTimeContext works through proxy", func(t *testing.T) {
+		context := proxy.GetTimeContext()
+		assert.True(t, context == "morning" || context == "afternoon" || context == "evening")
+	})
+
+	t.Run("GetDayContext works through proxy", func(t *testing.T) {
+		context := proxy.GetDayContext()
+		assert.True(t, context == "monday" || context == "friday" || context == "")
+	})
+
+	t.Run("Spinner methods work through proxy", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			proxy.StartSpinner("proxy spinner")
+			time.Sleep(10 * time.Millisecond)
+			proxy.UpdateSpinner("proxy updated")
+			time.Sleep(10 * time.Millisecond)
+			proxy.StopSpinner()
+		})
+	})
+}
+
+// TestPrintFunctions tests Print and Println functions
+func TestPrintFunctions(t *testing.T) {
+	t.Run("Print outputs without newline", func(t *testing.T) {
+		// Capture stdout
+		oldStdout := os.Stdout
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stdout = w
+
+		Print("hello")
+		Print(" world")
+
+		require.NoError(t, w.Close())
+		os.Stdout = oldStdout
+
+		var buf bytes.Buffer
+		_, err = buf.ReadFrom(r)
+		require.NoError(t, err)
+
+		assert.Equal(t, "hello world", buf.String())
+	})
+
+	t.Run("Println outputs with newline", func(t *testing.T) {
+		// Capture stdout
+		oldStdout := os.Stdout
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stdout = w
+
+		Println("hello")
+		Println("world")
+
+		require.NoError(t, w.Close())
+		os.Stdout = oldStdout
+
+		var buf bytes.Buffer
+		_, err = buf.ReadFrom(r)
+		require.NoError(t, err)
+
+		assert.Equal(t, "hello\nworld\n", buf.String())
+	})
+}
+
+// TestSetDefaultLogger tests the SetDefaultLogger and GetDefaultLogger functions
+func TestSetDefaultLogger(t *testing.T) {
+	originalLogger := GetDefaultLogger()
+	defer SetDefaultLogger(originalLogger)
+
+	t.Run("SetDefaultLogger changes default logger", func(t *testing.T) {
+		newLogger := NewLogger()
+		newLogger.SetLevel(LogLevelWarn)
+
+		SetDefaultLogger(newLogger)
+
+		assert.Equal(t, LogLevelWarn, GetDefaultLogger().level)
+	})
+
+	t.Run("GetDefaultLogger returns current default", func(t *testing.T) {
+		newLogger := NewLogger()
+		newLogger.SetLevel(LogLevelError)
+		SetDefaultLogger(newLogger)
+
+		retrieved := GetDefaultLogger()
+		assert.Equal(t, LogLevelError, retrieved.level)
+	})
+}

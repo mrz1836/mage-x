@@ -1164,3 +1164,518 @@ func TestTruncateEdgeCases(t *testing.T) {
 		})
 	}
 }
+
+// TestShowQuickList tests the quick command list display
+func TestShowQuickList(t *testing.T) {
+	tests := []struct {
+		name            string
+		commands        []string
+		customCommands  []DiscoveredCommand
+		wantContains    []string
+		wantNotContains []string
+	}{
+		{
+			name:         "shows common commands",
+			commands:     []string{"build", "test", "lint", "format", "clean"},
+			wantContains: []string{"build", "test", "lint", "format", "clean"},
+		},
+		{
+			name:           "shows custom commands section",
+			commands:       []string{"build"},
+			customCommands: []DiscoveredCommand{{Name: "deploy", Description: "Deploy app"}},
+			wantContains:   []string{"build", "Custom commands", "deploy"},
+		},
+		{
+			name:     "limits custom commands to 5",
+			commands: []string{},
+			customCommands: []DiscoveredCommand{
+				{Name: "cmd1", Description: "Cmd 1"},
+				{Name: "cmd2", Description: "Cmd 2"},
+				{Name: "cmd3", Description: "Cmd 3"},
+				{Name: "cmd4", Description: "Cmd 4"},
+				{Name: "cmd5", Description: "Cmd 5"},
+				{Name: "cmd6", Description: "Cmd 6"},
+				{Name: "cmd7", Description: "Cmd 7"},
+			},
+			wantContains:    []string{"cmd1", "cmd2", "cmd3", "cmd4", "cmd5", "... and 2 more"},
+			wantNotContains: []string{"cmd6", "cmd7"},
+		},
+		{
+			name:         "handles empty registry",
+			commands:     []string{},
+			wantContains: []string{}, // Just should not crash
+		},
+		{
+			name:           "uses default description for custom commands without description",
+			commands:       []string{},
+			customCommands: []DiscoveredCommand{{Name: "nodesc", Description: ""}},
+			wantContains:   []string{"nodesc", "Custom command"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create test registry
+			reg := registry.NewRegistry()
+			for _, cmdName := range tt.commands {
+				cmd, err := registry.NewCommand(cmdName).
+					WithDescription(cmdName + " command").
+					WithFunc(func() error { return nil }).
+					Build()
+				if err != nil {
+					t.Fatalf("Failed to build test command %s: %v", cmdName, err)
+				}
+				reg.MustRegister(cmd)
+			}
+
+			// Create discovery with custom commands
+			discovery := NewCommandDiscovery(reg)
+			discovery.commands = tt.customCommands
+			discovery.loaded = true
+
+			// Capture stdout
+			oldStdout := os.Stdout
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdout = w
+
+			showQuickList(reg, discovery)
+
+			if closeErr := w.Close(); closeErr != nil {
+				t.Logf("Failed to close writer: %v", closeErr)
+			}
+			os.Stdout = oldStdout
+
+			var buf bytes.Buffer
+			if _, readErr := buf.ReadFrom(r); readErr != nil {
+				t.Logf("Failed to read from pipe: %v", readErr)
+			}
+			output := buf.String()
+
+			// Check expected content
+			for _, want := range tt.wantContains {
+				if !strings.Contains(output, want) {
+					t.Errorf("showQuickList() output should contain %q\nGot: %s", want, output)
+				}
+			}
+
+			// Check content that should NOT be present
+			for _, notWant := range tt.wantNotContains {
+				if strings.Contains(output, notWant) {
+					t.Errorf("showQuickList() output should NOT contain %q\nGot: %s", notWant, output)
+				}
+			}
+		})
+	}
+}
+
+// TestListCommandsVerbose tests verbose command listing
+func TestListCommandsVerbose(t *testing.T) {
+	tests := []struct {
+		name           string
+		commands       []*registry.Command
+		customCommands []DiscoveredCommand
+		wantContains   []string
+	}{
+		{
+			name:         "shows built-in commands with descriptions",
+			commands:     createTestCommands(t, []string{"build", "test"}),
+			wantContains: []string{"build", "test"},
+		},
+		{
+			name:           "shows custom commands with custom marker",
+			commands:       createTestCommands(t, []string{"build"}),
+			customCommands: []DiscoveredCommand{{Name: "deploy", Description: "Deploy app"}},
+			wantContains:   []string{"build", "deploy", "(custom)"},
+		},
+		{
+			name:           "uses default description for empty custom command description",
+			commands:       []*registry.Command{},
+			customCommands: []DiscoveredCommand{{Name: "nodesc", Description: ""}},
+			wantContains:   []string{"nodesc", "Custom command", "(custom)"},
+		},
+		{
+			name:         "shows deprecated warning",
+			commands:     createDeprecatedCommand(t),
+			wantContains: []string{"DEPRECATED"},
+		},
+		{
+			name:           "handles empty commands list",
+			commands:       []*registry.Command{},
+			customCommands: []DiscoveredCommand{},
+			wantContains:   []string{}, // Just should not crash
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Capture stdout
+			oldStdout := os.Stdout
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdout = w
+
+			listCommandsVerbose(tt.commands, tt.customCommands)
+
+			if closeErr := w.Close(); closeErr != nil {
+				t.Logf("Failed to close writer: %v", closeErr)
+			}
+			os.Stdout = oldStdout
+
+			var buf bytes.Buffer
+			if _, readErr := buf.ReadFrom(r); readErr != nil {
+				t.Logf("Failed to read from pipe: %v", readErr)
+			}
+			output := buf.String()
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(output, want) {
+					t.Errorf("listCommandsVerbose() output should contain %q\nGot: %s", want, output)
+				}
+			}
+		})
+	}
+}
+
+// TestShowCommandHelp tests detailed command help display
+func TestShowCommandHelp(t *testing.T) {
+	tests := []struct {
+		name         string
+		commandName  string
+		setupReg     func(*registry.Registry)
+		wantContains []string
+	}{
+		{
+			name:        "shows help for existing command",
+			commandName: "build",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewCommand("build").
+					WithDescription("Build the project").
+					WithLongDescription("Builds the project with all dependencies").
+					WithUsage("magex build [flags]").
+					WithCategory("Build").
+					WithExamples("magex build", "magex build --verbose").
+					WithAliases("b").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{
+				"Command Help: build",
+				"Description:",
+				"Build the project",
+				"Detailed Description:",
+				"Usage:",
+				"Category: Build",
+				"Aliases:",
+				"Examples:",
+			},
+		},
+		{
+			name:        "shows namespace help for namespace name",
+			commandName: "test",
+			setupReg: func(reg *registry.Registry) {
+				cmd1 := registry.NewNamespaceCommand("test", "unit").
+					WithDescription("Run unit tests").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				cmd2 := registry.NewNamespaceCommand("test", "integration").
+					WithDescription("Run integration tests").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd1)
+				reg.MustRegister(cmd2)
+			},
+			wantContains: []string{"Namespace Help: test", "test:unit", "test:integration"},
+		},
+		{
+			name:        "shows error for unknown command",
+			commandName: "nonexistent",
+			setupReg:    func(reg *registry.Registry) {},
+			wantContains: []string{
+				"Unknown command 'nonexistent'",
+			},
+		},
+		{
+			name:        "shows suggestions for similar commands",
+			commandName: "buil",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewCommand("build").
+					WithDescription("Build the project").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{"Unknown command 'buil'", "Did you mean", "build"},
+		},
+		{
+			name:        "shows deprecation warning",
+			commandName: "oldcmd",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewCommand("oldcmd").
+					WithDescription("Old command").
+					Deprecated("Use newcmd instead").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{"WARNING", "deprecated"},
+		},
+		{
+			name:        "shows since version",
+			commandName: "newcmd",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewCommand("newcmd").
+					WithDescription("New command").
+					Since("1.2.0").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{"Since: MAGE-X 1.2.0"},
+		},
+		{
+			name:        "shows tags",
+			commandName: "taggedcmd",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewCommand("taggedcmd").
+					WithDescription("Tagged command").
+					WithTags("core", "essential").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{"Tags:", "core", "essential"},
+		},
+		{
+			name:        "shows dependencies",
+			commandName: "depcmd",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewCommand("depcmd").
+					WithDescription("Command with deps").
+					WithDependencies("build", "test").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{"Dependencies:", "build", "test"},
+		},
+		{
+			name:        "shows see also",
+			commandName: "seealso",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewCommand("seealso").
+					WithDescription("See also command").
+					WithSeeAlso("build", "test").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{"See Also:", "magex build", "magex test"},
+		},
+		{
+			name:        "shows options",
+			commandName: "optcmd",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewCommand("optcmd").
+					WithDescription("Command with options").
+					WithOptions(
+						registry.CommandOption{Name: "--verbose", Description: "Enable verbose output", Default: "false"},
+						registry.CommandOption{Name: "--output", Description: "Output file", Required: true},
+					).
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{"Options:", "--verbose", "--output", "(required)", "[default: false]"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := registry.NewRegistry()
+			tt.setupReg(reg)
+
+			// Capture stdout
+			oldStdout := os.Stdout
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdout = w
+
+			showCommandHelp(reg, tt.commandName)
+
+			if closeErr := w.Close(); closeErr != nil {
+				t.Logf("Failed to close writer: %v", closeErr)
+			}
+			os.Stdout = oldStdout
+
+			var buf bytes.Buffer
+			if _, readErr := buf.ReadFrom(r); readErr != nil {
+				t.Logf("Failed to read from pipe: %v", readErr)
+			}
+			output := buf.String()
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(output, want) {
+					t.Errorf("showCommandHelp(%q) output should contain %q\nGot: %s", tt.commandName, want, output)
+				}
+			}
+		})
+	}
+}
+
+// TestShowNamespaceHelp tests namespace help display
+func TestShowNamespaceHelp(t *testing.T) {
+	tests := []struct {
+		name         string
+		namespace    string
+		setupReg     func(*registry.Registry)
+		wantContains []string
+	}{
+		{
+			name:      "shows namespace commands",
+			namespace: "build",
+			setupReg: func(reg *registry.Registry) {
+				cmd1 := registry.NewNamespaceCommand("build", "linux").
+					WithDescription("Build for Linux").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				cmd2 := registry.NewNamespaceCommand("build", "darwin").
+					WithDescription("Build for macOS").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				cmd3 := registry.NewNamespaceCommand("build", "windows").
+					WithDescription("Build for Windows").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd1)
+				reg.MustRegister(cmd2)
+				reg.MustRegister(cmd3)
+			},
+			wantContains: []string{
+				"Namespace Help: build",
+				"Available Commands in build namespace (3 commands)",
+				"build:linux",
+				"build:darwin",
+				"build:windows",
+				"Usage Examples:",
+				"For detailed help",
+			},
+		},
+		{
+			name:         "shows error for empty namespace",
+			namespace:    "nonexistent",
+			setupReg:     func(reg *registry.Registry) {},
+			wantContains: []string{"No commands found in namespace 'nonexistent'"},
+		},
+		{
+			name:      "truncates long descriptions",
+			namespace: "long",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewNamespaceCommand("long", "cmd").
+					WithDescription("This is a very long description that should be truncated because it exceeds the maximum length allowed for display in the namespace help output").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{"Namespace Help: long", "long:cmd", "..."},
+		},
+		{
+			name:      "limits usage examples to 3",
+			namespace: "many",
+			setupReg: func(reg *registry.Registry) {
+				for i := 1; i <= 5; i++ {
+					cmd := registry.NewNamespaceCommand("many", fmt.Sprintf("cmd%d", i)).
+						WithDescription(fmt.Sprintf("Command %d", i)).
+						WithFunc(func() error { return nil }).
+						MustBuild()
+					reg.MustRegister(cmd)
+				}
+			},
+			wantContains: []string{"... and 2 more commands"},
+		},
+		{
+			name:      "uses no description placeholder",
+			namespace: "nodesc",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewNamespaceCommand("nodesc", "cmd").
+					WithDescription("").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			wantContains: []string{"nodesc:cmd"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := registry.NewRegistry()
+			tt.setupReg(reg)
+
+			// Capture stdout
+			oldStdout := os.Stdout
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdout = w
+
+			showNamespaceHelp(reg, tt.namespace)
+
+			if closeErr := w.Close(); closeErr != nil {
+				t.Logf("Failed to close writer: %v", closeErr)
+			}
+			os.Stdout = oldStdout
+
+			var buf bytes.Buffer
+			if _, readErr := buf.ReadFrom(r); readErr != nil {
+				t.Logf("Failed to read from pipe: %v", readErr)
+			}
+			output := buf.String()
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(output, want) {
+					t.Errorf("showNamespaceHelp(%q) output should contain %q\nGot: %s", tt.namespace, want, output)
+				}
+			}
+		})
+	}
+}
+
+// Helper functions for test setup
+
+func createTestCommands(t *testing.T, names []string) []*registry.Command {
+	t.Helper()
+	commands := make([]*registry.Command, 0, len(names))
+	for _, name := range names {
+		cmd, err := registry.NewCommand(name).
+			WithDescription(name + " command").
+			WithFunc(func() error { return nil }).
+			Build()
+		if err != nil {
+			t.Fatalf("Failed to build test command %s: %v", name, err)
+		}
+		commands = append(commands, cmd)
+	}
+	return commands
+}
+
+func createDeprecatedCommand(t *testing.T) []*registry.Command {
+	t.Helper()
+	cmd, err := registry.NewCommand("oldcmd").
+		WithDescription("Old command").
+		Deprecated("Use newcmd instead").
+		WithFunc(func() error { return nil }).
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to build deprecated command: %v", err)
+	}
+	return []*registry.Command{cmd}
+}
