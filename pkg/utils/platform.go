@@ -44,7 +44,7 @@ func ParsePlatform(s string) (Platform, error) {
 
 // GetBinaryExt returns the binary extension for a platform
 func GetBinaryExt(p Platform) string {
-	if p.OS == "windows" {
+	if p.OS == osWindows {
 		return ".exe"
 	}
 	return ""
