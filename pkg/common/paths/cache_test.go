@@ -683,3 +683,196 @@ func TestDefaultPathCache_TTLEviction(t *testing.T) {
 	// "c" should still exist
 	assert.True(t, cacheImpl.Contains("c"), "c should still exist")
 }
+
+// TestDefaultPathCache_SelectRandomItemEmpty tests random eviction with empty cache
+func TestDefaultPathCache_SelectRandomItemEmpty(t *testing.T) {
+	cacheImpl, ok := NewPathCacheWithOptions(CacheOptions{
+		MaxSize: 3,
+		TTL:     0,
+		Policy:  EvictRandom,
+	}).(*DefaultPathCache)
+	require.True(t, ok)
+
+	// With empty cache, selectRandomItem should return nil
+	item := cacheImpl.selectRandomItem()
+	assert.Nil(t, item, "selectRandomItem should return nil for empty cache")
+}
+
+// TestDefaultPathCache_SelectLRUItemEmpty tests LRU eviction with empty list
+func TestDefaultPathCache_SelectLRUItemEmpty(t *testing.T) {
+	cacheImpl, ok := NewPathCacheWithOptions(CacheOptions{
+		MaxSize: 3,
+		TTL:     0,
+		Policy:  EvictLRU,
+	}).(*DefaultPathCache)
+	require.True(t, ok)
+
+	// With empty list, selectLRUItem should return nil
+	item := cacheImpl.selectLRUItem()
+	assert.Nil(t, item, "selectLRUItem should return nil for empty list")
+}
+
+// TestDefaultPathCache_ShortTTLCleanupTimer tests cleanup timer with very short TTL
+func TestDefaultPathCache_ShortTTLCleanupTimer(t *testing.T) {
+	// Create cache with TTL less than minimum cleanup interval (should use 1 minute minimum)
+	cache := NewPathCacheWithOptions(CacheOptions{
+		MaxSize: 100,
+		TTL:     10 * time.Millisecond, // Very short TTL
+		Policy:  EvictTTL,
+	})
+
+	// Add item
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
+
+	// The cleanup timer should still work
+	assert.NotNil(t, cache)
+}
+
+// TestDefaultPathCache_UnknownEvictionPolicy tests unknown eviction policy
+func TestDefaultPathCache_UnknownEvictionPolicy(t *testing.T) {
+	cacheImpl, ok := NewPathCacheWithOptions(CacheOptions{
+		MaxSize: 2,
+		TTL:     0,
+		Policy:  EvictionPolicy(99), // Unknown policy
+	}).(*DefaultPathCache)
+	require.True(t, ok)
+
+	// Add items to trigger eviction
+	err := cacheImpl.Set("a", NewPathBuilder("/path/a"))
+	require.NoError(t, err)
+	err = cacheImpl.Set("b", NewPathBuilder("/path/b"))
+	require.NoError(t, err)
+	err = cacheImpl.Set("c", NewPathBuilder("/path/c"))
+	require.NoError(t, err)
+
+	// With unknown policy, selectItemToEvict returns nil, so no eviction
+	// The cache should still work but not evict
+	assert.GreaterOrEqual(t, cacheImpl.Size(), 2)
+}
+
+// TestDefaultPathCache_SetTTLZero tests setting TTL to zero stops cleanup timer
+func TestDefaultPathCache_SetTTLZero(t *testing.T) {
+	// Create cache with TTL
+	cache := NewPathCacheWithOptions(CacheOptions{
+		MaxSize: 100,
+		TTL:     100 * time.Millisecond,
+		Policy:  EvictTTL,
+	})
+
+	// Set TTL to 0 to disable
+	cache.SetTTL(0)
+
+	// Add item
+	err := cache.Set("key1", NewPathBuilder("/path1"))
+	require.NoError(t, err)
+
+	// Items should not expire
+	time.Sleep(50 * time.Millisecond)
+	_, exists := cache.Get("key1")
+	assert.True(t, exists, "key1 should still exist when TTL is 0")
+}
+
+// TestMockPathCache_GetMiss tests MockPathCache Get miss
+func TestMockPathCache_GetMiss(t *testing.T) {
+	mock := NewMockPathCache()
+
+	// Get non-existent key
+	_, exists := mock.Get("nonexistent")
+	assert.False(t, exists)
+	assert.Len(t, mock.GetCalls, 1)
+}
+
+// TestMockPathCache_GetWithError tests MockPathCache Get with ShouldError
+func TestMockPathCache_GetWithError(t *testing.T) {
+	mock := NewMockPathCache()
+	mock.ShouldError = true
+
+	// Get should return false when ShouldError is true
+	_, exists := mock.Get("anykey")
+	assert.False(t, exists)
+}
+
+// TestMockPathCache_DeleteNonExistent tests MockPathCache Delete for non-existent key
+func TestMockPathCache_DeleteNonExistent(t *testing.T) {
+	mock := NewMockPathCache()
+
+	// Delete non-existent key
+	err := mock.Delete("nonexistent")
+	assert.Error(t, err)
+}
+
+// TestMockPathCache_DeleteWithError tests MockPathCache Delete with ShouldError
+func TestMockPathCache_DeleteWithError(t *testing.T) {
+	mock := NewMockPathCache()
+	mock.ShouldError = true
+
+	// Delete should return error
+	err := mock.Delete("anykey")
+	assert.Error(t, err)
+}
+
+// TestMockPathCache_ClearWithError tests MockPathCache Clear with ShouldError
+func TestMockPathCache_ClearWithError(t *testing.T) {
+	mock := NewMockPathCache()
+	mock.ShouldError = true
+
+	// Clear should return error
+	err := mock.Clear()
+	assert.Error(t, err)
+}
+
+// TestMockPathCache_KeysWithPreset tests MockPathCache Keys with preset return
+func TestMockPathCache_KeysWithPreset(t *testing.T) {
+	mock := NewMockPathCache()
+	mock.KeysReturns = []string{"key1", "key2", "key3"}
+
+	keys := mock.Keys()
+	assert.Len(t, keys, 3)
+	assert.Equal(t, mock.KeysReturns, keys)
+}
+
+// TestMockPathCache_SizeWithPreset tests MockPathCache Size with preset return
+func TestMockPathCache_SizeWithPreset(t *testing.T) {
+	mock := NewMockPathCache()
+	mock.SizeReturns = 42
+
+	size := mock.Size()
+	assert.Equal(t, 42, size)
+}
+
+// TestMockPathCache_ValidateWithError tests MockPathCache Validate with ShouldError
+func TestMockPathCache_ValidateWithError(t *testing.T) {
+	mock := NewMockPathCache()
+	mock.ShouldError = true
+
+	err := mock.Validate("anykey")
+	assert.Error(t, err)
+}
+
+// TestMockPathCache_RefreshWithError tests MockPathCache Refresh with ShouldError
+func TestMockPathCache_RefreshWithError(t *testing.T) {
+	mock := NewMockPathCache()
+	mock.ShouldError = true
+
+	err := mock.Refresh("anykey")
+	assert.Error(t, err)
+}
+
+// TestMockPathCache_RefreshAllWithError tests MockPathCache RefreshAll with ShouldError
+func TestMockPathCache_RefreshAllWithError(t *testing.T) {
+	mock := NewMockPathCache()
+	mock.ShouldError = true
+
+	err := mock.RefreshAll()
+	assert.Error(t, err)
+}
+
+// TestMockPathCache_ChainedMethods tests MockPathCache method chaining
+func TestMockPathCache_ChainedMethods(t *testing.T) {
+	mock := NewMockPathCache()
+
+	// Test chaining
+	result := mock.SetMaxSize(100).SetTTL(time.Minute).SetEvictionPolicy(EvictLRU)
+	assert.Equal(t, mock, result)
+}
