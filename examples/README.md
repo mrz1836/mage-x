@@ -178,7 +178,7 @@ Start with zero configuration, add custom commands only when needed:
 MAGE-X's `magex` uses a smart hybrid approach:
 - **Built-in commands** execute directly for speed and consistency
 - **Custom commands** discovered in magefile.go delegate to `mage`
-- **Unified experience** - one command line interface for everything
+- **Unified interface** - one standardized CLI for all tools
 
 ### Command Discovery
 ```bash

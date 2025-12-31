@@ -4,7 +4,7 @@ This example demonstrates the basic usage of the Go-Mage namespace interface arc
 
 ## Overview
 
-The example provides a simple build script that uses the namespace interface pattern for build automation.
+The example provides a simple build script that uses the namespace interface pattern for build tooling.
 
 ## Key Features
 
@@ -60,4 +60,4 @@ After understanding this basic example, explore:
 
 ## Getting Started
 
-This example shows how to use MAGE-X with namespace interfaces for clean, modular build automation.
+This example shows how to use MAGE-X with namespace interfaces for clean, modular build tooling.

@@ -1,6 +1,6 @@
 # 📚 MAGE-X Documentation
 
-Welcome to the comprehensive documentation for MAGE-X, the build automation toolkit for Go projects.
+Welcome to the comprehensive documentation for MAGE-X, the build tooling suite for Go projects.
 
 ## 📖 Documentation Structure
 

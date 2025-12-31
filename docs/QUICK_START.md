@@ -1,6 +1,6 @@
 # 🚀 MAGE-X Quick Start Guide
 
-> **MAGE-X**: Write Once, Mage Everywhere - True Zero-Boilerplate Build Automation
+> **MAGE-X**: Write Once, Mage Everywhere - True Zero-Boilerplate Build Tooling
 
 ## 🎯 How MAGE-X Detects Your Project
 
@@ -29,7 +29,7 @@ graph TD
 
 ## The New Way: Zero Configuration! 🎉
 
-MAGE-X now provides **true zero-boilerplate** automation through the `magex` binary. No more wrapper functions or complex setup!
+MAGE-X now provides **true zero-boilerplate** tooling through the `magex` binary. No more wrapper functions or complex setup!
 
 ### ⚡ Installation & Setup
 

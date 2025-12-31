@@ -1,10 +1,10 @@
 # 🚀 MAGE-X Binary (magex) - Complete Guide
 
-> **magex**: The hybrid binary+library that brings true "Write Once, Mage Everywhere" to Go build automation
+> **magex**: The hybrid binary+library that brings true "Write Once, Mage Everywhere" to Go build tooling
 
 ## 🎯 Overview
 
-The `magex` binary is MAGE-X's revolutionary hybrid approach that provides **true zero-boilerplate** build automation. It includes all 215+ MAGE-X commands built-in while maintaining full compatibility with existing magefiles.
+The `magex` binary is MAGE-X's revolutionary hybrid approach that provides **true zero-boilerplate** build tooling. It includes all 215+ MAGE-X commands built-in while maintaining full compatibility with existing magefiles.
 
 ### ✨ Key Features
 
@@ -493,7 +493,7 @@ MAGEX_VERBOSE=true MAGEX_DEBUG=true magex build
 
 ---
 
-**Ready to experience true zero-boilerplate build automation?**
+**Ready to experience true zero-boilerplate build tooling?**
 
 ```bash
 go install github.com/mrz1836/mage-x/cmd/magex@latest

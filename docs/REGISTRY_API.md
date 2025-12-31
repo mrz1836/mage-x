@@ -4,7 +4,7 @@
 
 ## 🎯 Overview
 
-The MAGE-X Registry API provides a sophisticated command management system that powers the `magex` binary and enables developers to create custom build automation tools. It offers type-safe command registration, intelligent discovery, and flexible execution patterns.
+The MAGE-X Registry API provides a sophisticated command management system that powers the `magex` binary and enables developers to create custom build tooling. It offers type-safe command registration, intelligent discovery, and flexible execution patterns.
 
 ### ✨ Core Features
 
@@ -759,4 +759,4 @@ func main() {
 go get github.com/mrz1836/mage-x/pkg/mage/registry
 ```
 
-The Registry API provides the foundation for creating powerful, flexible, and user-friendly build automation tools. Whether you're extending `magex` or building your own custom solution, the registry system gives you the building blocks you need.
+The Registry API provides the foundation for creating powerful, flexible, and user-friendly build tooling. Whether you're extending `magex` or building your own custom solution, the registry system gives you the building blocks you need.

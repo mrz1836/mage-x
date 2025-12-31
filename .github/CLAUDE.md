@@ -1,7 +1,7 @@
 # CLAUDE.md - AI Assistant Guidelines for mage-x
 
 ## Project Overview
-**mage-x** is a comprehensive build automation framework for Go projects, providing 400+ built-in commands through the `magex` binary. It features 19 specialized AI agents for intelligent development workflows, interface-based architecture with 30+ namespaces, and zero-configuration usage.
+**mage-x** is a comprehensive build tooling framework for Go projects, providing 400+ built-in commands through the `magex` binary. It features 19 specialized AI agents for intelligent development workflows, interface-based architecture with 30+ namespaces, and zero-configuration usage.
 
 ## Quick Start
 ```bash
