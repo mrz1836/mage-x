@@ -334,8 +334,8 @@ func defaultConfig() *Config {
 		},
 		Test: TestConfig{
 			Parallel:           runtime.NumCPU(),
-			Timeout:            "10m",
-			IntegrationTimeout: "30m",
+			Timeout:            DefaultTimeout,
+			IntegrationTimeout: LongTimeout,
 			CoverMode:          "atomic",
 			ExcludeModules:     []string{""},
 			CIMode:             DefaultCIMode(),

@@ -280,7 +280,7 @@ func createDefaultConfig() *YamlConfig {
 			Env:       map[string]string{},
 		},
 		Test: TestYamlConfig{
-			Timeout:   "10m",
+			Timeout:   DefaultTimeout,
 			Parallel:  true,
 			Race:      false,
 			Cover:     true,
