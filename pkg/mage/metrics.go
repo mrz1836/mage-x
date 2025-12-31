@@ -456,6 +456,8 @@ func formatNumberWithCommas(n int) string {
 }
 
 // countLinesWithStats counts lines and files matching pattern
+//
+//nolint:unparam // pattern is always "*_test.go" in production but varies in tests
 func countLinesWithStats(pattern string, excludeDirs []string) (LOCStats, error) {
 	stats := LOCStats{}
 

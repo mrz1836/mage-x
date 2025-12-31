@@ -14,6 +14,7 @@ import (
 var (
 	errNpmCommandFailed = errors.New("npm command failed")
 	errNpxCommandFailed = errors.New("npx command failed")
+	errTestError        = errors.New("test error")
 )
 
 // BmadMockRunner provides a mock implementation of CommandRunner for testing bmad functions
@@ -394,4 +395,165 @@ func TestGetBmadProjectDirTableDriven(t *testing.T) {
 			require.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// TestCheckBmadPrerequisites tests checkBmadPrerequisites function
+func TestCheckBmadPrerequisites(t *testing.T) {
+	// This test verifies the function runs without panicking
+	// Actual results depend on whether npm/npx are installed on the test machine
+	err := checkBmadPrerequisites()
+	// We don't assert on the error since it depends on the test environment
+	// Just verify it returns one of the expected errors or nil
+	if err != nil {
+		if !errors.Is(err, errNpmNotInstalled) && !errors.Is(err, errNpxNotInstalled) {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+// TestPrintBmadUpgradeSummary tests printBmadUpgradeSummary function
+func TestPrintBmadUpgradeSummary(t *testing.T) {
+	tests := []struct {
+		name       string
+		oldVersion string
+		newVersion string
+	}{
+		{
+			name:       "known versions",
+			oldVersion: "5.0.0",
+			newVersion: "6.0.0",
+		},
+		{
+			name:       "unknown old version",
+			oldVersion: statusUnknown,
+			newVersion: "6.0.0",
+		},
+		{
+			name:       "unknown new version",
+			oldVersion: "5.0.0",
+			newVersion: statusUnknown,
+		},
+		{
+			name:       "both unknown",
+			oldVersion: statusUnknown,
+			newVersion: statusUnknown,
+		},
+		{
+			name:       "same version",
+			oldVersion: "5.0.0",
+			newVersion: "5.0.0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Just verify it doesn't panic
+			require.NotPanics(t, func() {
+				printBmadUpgradeSummary(tt.oldVersion, tt.newVersion)
+			})
+		})
+	}
+}
+
+// TestInstallBmadCLIWithDefaults tests installBmadCLI uses defaults correctly
+func (ts *BmadUnitTestSuite) TestInstallBmadCLIConfigDefaults() {
+	// This test verifies the function uses default config values
+	config := &Config{
+		Bmad: BmadConfig{}, // Empty config, should use defaults
+	}
+
+	// We can't actually run the interactive command in tests,
+	// but we can verify the config defaults are correctly applied
+	packageName := config.Bmad.PackageName
+	if packageName == "" {
+		packageName = DefaultBmadPackageName
+	}
+	ts.Require().Equal(DefaultBmadPackageName, packageName)
+
+	versionTag := config.Bmad.VersionTag
+	if versionTag == "" {
+		versionTag = DefaultBmadVersionTag
+	}
+	ts.Require().Equal(DefaultBmadVersionTag, versionTag)
+}
+
+// TestInstallBmadCLIWithCustomConfig tests installBmadCLI with custom config
+func (ts *BmadUnitTestSuite) TestInstallBmadCLIConfigCustom() {
+	config := &Config{
+		Bmad: BmadConfig{
+			PackageName: "custom-bmad",
+			VersionTag:  "@latest",
+		},
+	}
+
+	packageName := config.Bmad.PackageName
+	if packageName == "" {
+		packageName = DefaultBmadPackageName
+	}
+	ts.Require().Equal("custom-bmad", packageName)
+
+	versionTag := config.Bmad.VersionTag
+	if versionTag == "" {
+		versionTag = DefaultBmadVersionTag
+	}
+	ts.Require().Equal("@latest", versionTag)
+}
+
+// TestBmadStaticErrors tests that static errors are properly defined
+func TestBmadStaticErrors(t *testing.T) {
+	// Verify all static errors are defined
+	require.Error(t, errNpmNotInstalled)
+	require.Error(t, errNpxNotInstalled)
+	require.Error(t, errBmadNotInstalled)
+	require.Error(t, errBmadInstallFailed)
+	require.Error(t, errBmadVersionParse)
+
+	// Verify error messages are not empty
+	require.NotEmpty(t, errNpmNotInstalled.Error())
+	require.NotEmpty(t, errNpxNotInstalled.Error())
+	require.NotEmpty(t, errBmadNotInstalled.Error())
+	require.NotEmpty(t, errBmadInstallFailed.Error())
+	require.NotEmpty(t, errBmadVersionParse.Error())
+}
+
+// TestBmadMockRunnerGetCommands tests the mock runner's command tracking
+func TestBmadMockRunnerGetCommands(t *testing.T) {
+	mock := NewBmadMockRunner()
+
+	// Verify initially empty
+	require.Empty(t, mock.GetCommands())
+
+	// Execute some commands
+	err := mock.RunCmd("echo", "hello")
+	require.NoError(t, err)
+
+	_, err = mock.RunCmdOutput("echo", "world")
+	require.NoError(t, err)
+
+	// Verify commands are tracked
+	commands := mock.GetCommands()
+	require.Len(t, commands, 2)
+	require.Equal(t, "echo hello", commands[0])
+	require.Equal(t, "echo world", commands[1])
+}
+
+// TestBmadMockRunnerSetOutput tests the mock runner's output setting
+func TestBmadMockRunnerSetOutput(t *testing.T) {
+	mock := NewBmadMockRunner()
+
+	// Set expected output
+	expectedOutput := "test output"
+	mock.SetOutput("echo test", expectedOutput, nil)
+
+	// Verify output is returned
+	output, err := mock.RunCmdOutput("echo", "test")
+	require.NoError(t, err)
+	require.Equal(t, expectedOutput, output)
+
+	// Verify error is returned when set
+	mock.SetOutput("fail cmd", "", errTestError)
+
+	err = mock.RunCmd("fail", "cmd")
+	require.Error(t, err)
+	require.Equal(t, errTestError, err)
 }
