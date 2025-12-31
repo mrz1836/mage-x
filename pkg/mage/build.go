@@ -109,12 +109,12 @@ func (b Build) Default() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	buildCtx, err := b.createBuildContext(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create build context: %w", err)
 	}
 
 	buildHash := b.generateBuildHash(buildCtx)
@@ -413,7 +413,7 @@ func (b Build) All() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	start := time.Now()
@@ -444,12 +444,12 @@ func (b Build) All() error {
 func (b Build) Platform(platform string) error {
 	p, err := utils.ParsePlatform(platform)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid platform %q: %w", platform, err)
 	}
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	binary := fmt.Sprintf("%s-%s-%s%s",
@@ -467,7 +467,7 @@ func (b Build) Platform(platform string) error {
 	// Determine the package path using the same logic as the main build
 	packagePath, err := b.determinePackagePath(config, outputPath, true)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to determine package path for %s: %w", platform, err)
 	}
 	args = append(args, packagePath)
 
@@ -505,7 +505,7 @@ func (b Build) Linux() error {
 // Darwin builds for macOS (amd64 and arm64)
 func (b Build) Darwin() error {
 	if err := b.Platform("darwin/amd64"); err != nil {
-		return err
+		return fmt.Errorf("darwin/amd64 build failed: %w", err)
 	}
 	return b.Platform("darwin/arm64")
 }
@@ -521,7 +521,7 @@ func (Build) Clean() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Clean output directory
@@ -554,7 +554,7 @@ func (b Build) Install() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Show version information
@@ -575,7 +575,7 @@ func (b Build) Install() error {
 	// Determine the package path using the same logic as the main build
 	packagePath, err := b.determinePackagePath(config, "", false)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to determine package path: %w", err)
 	}
 	args = append(args, packagePath)
 
@@ -599,7 +599,7 @@ func (b Build) Dev() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Force dev version by setting environment variable
@@ -622,7 +622,7 @@ func (b Build) Dev() error {
 	// Determine the package path using the same logic as the main build
 	packagePath, err := b.determinePackagePath(config, "", false)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to determine package path: %w", err)
 	}
 	args = append(args, packagePath)
 
@@ -645,7 +645,7 @@ func (Build) Generate() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	args := []string{"generate"}
@@ -677,7 +677,7 @@ func (Build) PreBuild() error {
 func (b Build) PreBuildWithArgs(argsList ...string) error {
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Parse command-line parameters from os.Args
@@ -1080,7 +1080,7 @@ func (b Build) buildIncremental(batchSize, delayMs int, exclude string, verbose 
 	// Discover packages
 	packages, err := b.discoverPackages(exclude)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to discover packages: %w", err)
 	}
 
 	if len(packages) == 0 {
@@ -1163,7 +1163,7 @@ func (b Build) buildMainsFirst(batchSize int, mainsOnly bool, exclude string, ve
 	// Get all packages
 	allPackages, err := b.discoverPackages(exclude)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to discover packages: %w", err)
 	}
 
 	// Filter out main packages that were already built
@@ -1231,7 +1231,7 @@ func (b Build) buildSmart(exclude string, verbose bool, parallelism string) erro
 	// Count packages to determine best strategy
 	packages, err := b.discoverPackages(exclude)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to discover packages: %w", err)
 	}
 	packageCount := len(packages)
 	utils.Info("Found %d packages to build", packageCount)

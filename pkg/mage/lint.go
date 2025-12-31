@@ -125,7 +125,7 @@ func (Lint) Default() error {
 		Operation: "linting",
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare lint command: %w", err)
 	}
 	if ctx == nil {
 		return nil
@@ -140,7 +140,7 @@ func (Lint) Default() error {
 	// Ensure golangci-lint is installed
 	utils.Info("Checking golangci-lint installation...")
 	if err = ensureGolangciLint(ctx.Config); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure golangci-lint: %w", err)
 	}
 
 	// Run linters for each module
@@ -211,7 +211,7 @@ func (Lint) Fix() error {
 		Operation: "lint fix",
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare lint fix command: %w", err)
 	}
 	if ctx == nil {
 		return nil
@@ -226,7 +226,7 @@ func (Lint) Fix() error {
 	// Ensure golangci-lint is installed
 	utils.Info("Checking golangci-lint installation...")
 	if err = ensureGolangciLint(ctx.Config); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure golangci-lint: %w", err)
 	}
 
 	// Run fix for each module
@@ -307,7 +307,7 @@ func (Lint) Fmt() error {
 	// Get list of packages
 	packages, err := utils.GoList("./...")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to list packages: %w", err)
 	}
 
 	// Check formatting
@@ -348,7 +348,7 @@ func (Lint) Fumpt() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	gofumptVersion := getLinterVersion("gofumpt")
@@ -357,7 +357,7 @@ func (Lint) Fumpt() error {
 
 	if !utils.CommandExists("gofumpt") {
 		if err = installGofumpt(config); err != nil {
-			return err
+			return fmt.Errorf("failed to install gofumpt: %w", err)
 		}
 	}
 
@@ -387,7 +387,7 @@ func (Lint) Vet() error {
 		Operation: "go vet",
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare vet command: %w", err)
 	}
 	if ctx == nil {
 		return nil
@@ -408,19 +408,19 @@ func (Lint) VetParallel() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	var module string
 	module, err = utils.GetModuleName()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get module name: %w", err)
 	}
 
 	// Get packages in current module
 	packages, err := utils.GoList("./...")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to list packages: %w", err)
 	}
 
 	// Filter to only module packages
@@ -482,7 +482,7 @@ func (Lint) VetParallel() error {
 func (Lint) Version() error {
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Display configuration information
@@ -753,7 +753,7 @@ func (Lint) Go() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Display linter configuration info
@@ -761,7 +761,7 @@ func (Lint) Go() error {
 
 	// Ensure golangci-lint is installed
 	if err = ensureGolangciLint(config); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure golangci-lint: %w", err)
 	}
 
 	if err = GetRunner().RunCmd("golangci-lint", "run"); err != nil {
@@ -1567,7 +1567,7 @@ func (Lint) Verbose() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Force verbose mode for this command

@@ -103,7 +103,7 @@ func runWithStandardSetup(opts testRunnerOptions, args ...string) error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Get CI-aware runner
@@ -145,7 +145,7 @@ func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	displayTestHeader(opts.testType, config)
@@ -156,7 +156,7 @@ func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
 		Quiet:     true, // Header already shown by displayTestHeader
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to discover modules: %w", err)
 	}
 	if result.Empty || result.Skipped {
 		return nil
@@ -214,7 +214,7 @@ func (Test) Full(args ...string) error {
 
 	// Run lint first
 	if err := (Lint{}).Default(); err != nil {
-		return err
+		return fmt.Errorf("linting failed: %w", err)
 	}
 
 	fmt.Printf("\n📋 Step 2/2: Running unit tests...\n")
@@ -302,7 +302,7 @@ func (Test) CoverHTML() error {
 
 	utils.Info("Generating HTML coverage report...")
 	if err := GetRunner().RunCmd("go", "tool", "cover", "-html=coverage.txt", "-o=coverage.html"); err != nil {
-		return err
+		return fmt.Errorf("failed to generate HTML coverage report: %w", err)
 	}
 
 	utils.Success("Coverage report generated: coverage.html")
@@ -406,7 +406,7 @@ func runFuzzWithOptions(opts fuzzOptions, argsList ...string) error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	displayTestHeader(opts.headerName, config)
@@ -436,7 +436,7 @@ func runFuzzWithOptions(opts fuzzOptions, argsList ...string) error {
 	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
 
 	if err := fuzzResultsToError(results); err != nil {
-		return err
+		return fmt.Errorf("fuzz tests failed: %w", err)
 	}
 
 	utils.Success(opts.successMessage)
@@ -450,7 +450,7 @@ func runFuzzWithDuration(fuzzTime time.Duration, opts fuzzOptions) error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	PrintCIBannerIfEnabled(nil, config)
@@ -473,7 +473,7 @@ func runFuzzWithDuration(fuzzTime time.Duration, opts fuzzOptions) error {
 	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
 
 	if err := fuzzResultsToError(results); err != nil {
-		return err
+		return fmt.Errorf("fuzz tests failed: %w", err)
 	}
 
 	utils.Success(opts.successMessage)
@@ -536,7 +536,7 @@ func (Test) BenchShort(argsList ...string) error {
 func (Test) Integration() error {
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	displayTestHeader("integration", config)
@@ -557,7 +557,7 @@ func (Test) Integration() error {
 	}
 
 	// Longer timeout for integration tests and don't run short tests
-	args = append(args, "-timeout", "30m", "-run", "Integration", "./...")
+	args = append(args, "-timeout", LongTimeout, "-run", "Integration", "./...")
 
 	start := time.Now()
 	if err := GetRunner().RunCmd("go", args...); err != nil {
@@ -587,7 +587,7 @@ func (Test) Parallel() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Force parallel execution
@@ -622,7 +622,7 @@ func (Test) NoLint() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Run unit tests without linting
