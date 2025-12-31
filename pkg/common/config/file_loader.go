@@ -18,8 +18,6 @@ var (
 	errNoConfigFileFound  = errors.New("no configuration file found in paths")
 	errConfigPathNotAbs   = errors.New("config file path must be absolute")
 	errUnsupportedFileExt = errors.New("unsupported file format")
-	errUnsupportedFormat  = errors.New("unsupported format")
-	errConfigDataNil      = errors.New("configuration data is nil")
 )
 
 // FileConfigLoader implements ConfigLoader for file-based configurations
@@ -92,7 +90,7 @@ func (f *FileConfigLoader) Save(path string, data interface{}, format string) er
 	case "yaml", "yml":
 		content, err = yaml.Marshal(data)
 	default:
-		return fmt.Errorf("%w: %s", errUnsupportedFormat, format)
+		return fmt.Errorf("%w: %s", ErrUnsupportedFormat, format)
 	}
 
 	if err != nil {
@@ -112,7 +110,7 @@ func (f *FileConfigLoader) Save(path string, data interface{}, format string) er
 func (f *FileConfigLoader) Validate(data interface{}) error {
 	// Basic validation - ensure data is not nil
 	if data == nil {
-		return errConfigDataNil
+		return ErrConfigDataNil
 	}
 
 	// Additional validation can be added here based on specific requirements

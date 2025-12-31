@@ -348,7 +348,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Save() {
 		err := ts.loader.Save(outputPath, testData, "xml")
 
 		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, errUnsupportedFormat)
+		ts.Require().ErrorIs(err, ErrUnsupportedFormat)
 	})
 
 	ts.Run("handles case insensitive format", func() {
@@ -416,7 +416,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Validate() {
 		err := ts.loader.Validate(nil)
 
 		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, errConfigDataNil)
+		ts.Require().ErrorIs(err, ErrConfigDataNil)
 	})
 
 	ts.Run("passes for non-nil struct", func() {

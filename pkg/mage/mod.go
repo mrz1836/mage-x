@@ -12,6 +12,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/common/config"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
@@ -21,7 +22,6 @@ var (
 	errOperationCanceled = errors.New("operation canceled")
 	errGoModExists       = errors.New("go.mod already exists")
 	errModuleRequired    = errors.New("module name is required")
-	errUnsupportedFormat = errors.New("unsupported format")
 )
 
 // Mod namespace for Go module management tasks
@@ -192,7 +192,7 @@ func (Mod) Graph(args ...string) error {
 	case "mermaid":
 		displayMermaidGraph(graph)
 	default:
-		return fmt.Errorf("%w: %s (supported: tree, json, dot, mermaid)", errUnsupportedFormat, format)
+		return fmt.Errorf("%w: %s (supported: tree, json, dot, mermaid)", config.ErrUnsupportedFormat, format)
 	}
 
 	// Display summary statistics

@@ -11,6 +11,7 @@ import (
 	"github.com/magefile/mage/mg"
 	"gopkg.in/yaml.v3"
 
+	commonconfig "github.com/mrz1836/mage-x/pkg/common/config"
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -23,7 +24,6 @@ const (
 // Static errors for err113 compliance
 var (
 	ErrConfigFileExists      = errors.New("configuration file already exists")
-	ErrUnsupportedFormat     = errors.New("unsupported format")
 	ErrFileEnvRequired       = errors.New("FILE environment variable is required")
 	ErrImportFileNotFound    = errors.New("import file not found")
 	ErrUnsupportedFileFormat = errors.New("unsupported file format")
@@ -139,7 +139,7 @@ func (Configure) Export() error {
 		data, err = marshalJSON(config)
 		ext = ".json"
 	default:
-		return fmt.Errorf("%w: %s", ErrUnsupportedFormat, format)
+		return fmt.Errorf("%w: %s", commonconfig.ErrUnsupportedFormat, format)
 	}
 
 	if err != nil {

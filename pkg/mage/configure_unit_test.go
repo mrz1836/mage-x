@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	commonconfig "github.com/mrz1836/mage-x/pkg/common/config"
 )
 
 // TestValidateConfiguration tests the validateConfiguration function
@@ -490,7 +492,7 @@ func TestConfigureExport(t *testing.T) {
 		c := Configure{}
 		err := c.Export()
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrUnsupportedFormat)
+		assert.ErrorIs(t, err, commonconfig.ErrUnsupportedFormat)
 	})
 
 	t.Run("export to file", func(t *testing.T) {
@@ -722,7 +724,7 @@ func TestStaticErrors(t *testing.T) {
 	// Verify all errors are non-nil and have expected messages
 	errors := map[string]error{
 		"ErrConfigFileExists":      ErrConfigFileExists,
-		"ErrUnsupportedFormat":     ErrUnsupportedFormat,
+		"ErrUnsupportedFormat":     commonconfig.ErrUnsupportedFormat,
 		"ErrFileEnvRequired":       ErrFileEnvRequired,
 		"ErrImportFileNotFound":    ErrImportFileNotFound,
 		"ErrUnsupportedFileFormat": ErrUnsupportedFileFormat,
