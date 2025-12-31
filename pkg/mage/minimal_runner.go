@@ -107,13 +107,13 @@ func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time
 			case CmdGoTest:
 				// Allow 10 minutes for go test commands
 				return 10 * time.Minute
-			case "install", "get", "mod":
+			case CmdGoInstall, CmdGoGet, CmdGoMod:
 				// Allow 5 minutes for package operations
 				return 5 * time.Minute
-			case "build", "run":
+			case CmdGoBuild, "run":
 				// Allow 3 minutes for build operations
 				return 3 * time.Minute
-			case "vet", "list":
+			case CmdGoVet, CmdGoList:
 				// Allow 1 minute for vet and list operations
 				return 1 * time.Minute
 			default:
