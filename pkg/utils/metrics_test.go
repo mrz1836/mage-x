@@ -518,6 +518,42 @@ func TestJSONStorage(t *testing.T) {
 		assert.GreaterOrEqual(t, aggregated.Count, int64(0))
 	})
 
+	t.Run("Aggregate with stored metrics", func(t *testing.T) {
+		// Create unique storage path for this test
+		testStoragePath := filepath.Join(tempDir, "test_agg")
+		storage, err := NewJSONStorage(testStoragePath)
+		require.NoError(t, err)
+
+		// Store multiple metrics
+		now := time.Now()
+		metrics := []*Metric{
+			{Name: "agg_metric", Type: MetricTypeGauge, Value: 10.0, Timestamp: now},
+			{Name: "agg_metric", Type: MetricTypeGauge, Value: 20.0, Timestamp: now},
+			{Name: "agg_metric", Type: MetricTypeGauge, Value: 30.0, Timestamp: now},
+			{Name: "agg_metric", Type: MetricTypeGauge, Value: 40.0, Timestamp: now},
+			{Name: "agg_metric", Type: MetricTypeGauge, Value: 50.0, Timestamp: now},
+		}
+
+		for _, m := range metrics {
+			require.NoError(t, storage.Store(m))
+		}
+
+		query := MetricsQuery{
+			StartTime: now.Add(-time.Hour),
+			EndTime:   now.Add(time.Hour),
+		}
+
+		aggregated, err := storage.Aggregate(&query)
+		require.NoError(t, err)
+		assert.NotNil(t, aggregated)
+		assert.Equal(t, int64(5), aggregated.Count)
+		assert.InDelta(t, 150.0, aggregated.Sum, 0.001)
+		assert.InDelta(t, 10.0, aggregated.Min, 0.001)
+		assert.InDelta(t, 50.0, aggregated.Max, 0.001)
+		assert.InDelta(t, 30.0, aggregated.Average, 0.001)
+		assert.InDelta(t, 30.0, aggregated.Median, 0.001) // Median of 10,20,30,40,50
+	})
+
 	t.Run("Cleanup old files", func(t *testing.T) {
 		// Create unique storage path for this test
 		testStoragePath := filepath.Join(tempDir, "test5")
