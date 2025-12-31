@@ -1,6 +1,7 @@
 package env
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -300,6 +301,149 @@ func TestDefaultPathResolver_Home(t *testing.T) {
 	})
 }
 
+// TestDefaultPathResolverHomeFallbacks tests all Home() fallback paths.
+func TestDefaultPathResolverHomeFallbacks(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("userprofile_fallback_when_home_unset", func(t *testing.T) {
+		// Save original values
+		originalHome := os.Getenv("HOME")
+		originalUserProfile := os.Getenv("USERPROFILE")
+
+		// Unset HOME, set USERPROFILE
+		require.NoError(t, os.Unsetenv("HOME"))
+		require.NoError(t, os.Setenv("USERPROFILE", "/mock/userprofile"))
+
+		t.Cleanup(func() {
+			if originalHome != "" {
+				require.NoError(t, os.Setenv("HOME", originalHome))
+			} else {
+				require.NoError(t, os.Unsetenv("HOME"))
+			}
+			if originalUserProfile != "" {
+				require.NoError(t, os.Setenv("USERPROFILE", originalUserProfile))
+			} else {
+				require.NoError(t, os.Unsetenv("USERPROFILE"))
+			}
+		})
+
+		got := resolver.Home()
+		require.Equal(t, "/mock/userprofile", got)
+	})
+
+	t.Run("homedrive_homepath_fallback", func(t *testing.T) {
+		// Save original values
+		originalHome := os.Getenv("HOME")
+		originalUserProfile := os.Getenv("USERPROFILE")
+		originalHomeDrive := os.Getenv("HOMEDRIVE")
+		originalHomePath := os.Getenv("HOMEPATH")
+
+		// Unset HOME and USERPROFILE, set HOMEDRIVE and HOMEPATH
+		require.NoError(t, os.Unsetenv("HOME"))
+		require.NoError(t, os.Unsetenv("USERPROFILE"))
+		require.NoError(t, os.Setenv("HOMEDRIVE", "C:"))
+		require.NoError(t, os.Setenv("HOMEPATH", "\\Users\\TestUser"))
+
+		t.Cleanup(func() {
+			if originalHome != "" {
+				require.NoError(t, os.Setenv("HOME", originalHome))
+			} else {
+				require.NoError(t, os.Unsetenv("HOME"))
+			}
+			if originalUserProfile != "" {
+				require.NoError(t, os.Setenv("USERPROFILE", originalUserProfile))
+			} else {
+				require.NoError(t, os.Unsetenv("USERPROFILE"))
+			}
+			if originalHomeDrive != "" {
+				require.NoError(t, os.Setenv("HOMEDRIVE", originalHomeDrive))
+			} else {
+				require.NoError(t, os.Unsetenv("HOMEDRIVE"))
+			}
+			if originalHomePath != "" {
+				require.NoError(t, os.Setenv("HOMEPATH", originalHomePath))
+			} else {
+				require.NoError(t, os.Unsetenv("HOMEPATH"))
+			}
+		})
+
+		got := resolver.Home()
+		require.Equal(t, "C:\\Users\\TestUser", got)
+	})
+
+	t.Run("homedrive_without_homepath_returns_empty", func(t *testing.T) {
+		// Save original values
+		originalHome := os.Getenv("HOME")
+		originalUserProfile := os.Getenv("USERPROFILE")
+		originalHomeDrive := os.Getenv("HOMEDRIVE")
+		originalHomePath := os.Getenv("HOMEPATH")
+
+		// Unset all home-related vars except HOMEDRIVE
+		require.NoError(t, os.Unsetenv("HOME"))
+		require.NoError(t, os.Unsetenv("USERPROFILE"))
+		require.NoError(t, os.Setenv("HOMEDRIVE", "C:"))
+		require.NoError(t, os.Unsetenv("HOMEPATH"))
+
+		t.Cleanup(func() {
+			if originalHome != "" {
+				require.NoError(t, os.Setenv("HOME", originalHome))
+			} else {
+				require.NoError(t, os.Unsetenv("HOME"))
+			}
+			if originalUserProfile != "" {
+				require.NoError(t, os.Setenv("USERPROFILE", originalUserProfile))
+			} else {
+				require.NoError(t, os.Unsetenv("USERPROFILE"))
+			}
+			if originalHomeDrive != "" {
+				require.NoError(t, os.Setenv("HOMEDRIVE", originalHomeDrive))
+			} else {
+				require.NoError(t, os.Unsetenv("HOMEDRIVE"))
+			}
+			if originalHomePath != "" {
+				require.NoError(t, os.Setenv("HOMEPATH", originalHomePath))
+			} else {
+				require.NoError(t, os.Unsetenv("HOMEPATH"))
+			}
+		})
+
+		got := resolver.Home()
+		require.Empty(t, got)
+	})
+
+	t.Run("all_home_vars_unset_returns_empty", func(t *testing.T) {
+		// Save original values
+		originalHome := os.Getenv("HOME")
+		originalUserProfile := os.Getenv("USERPROFILE")
+		originalHomeDrive := os.Getenv("HOMEDRIVE")
+		originalHomePath := os.Getenv("HOMEPATH")
+
+		// Unset all home-related vars
+		require.NoError(t, os.Unsetenv("HOME"))
+		require.NoError(t, os.Unsetenv("USERPROFILE"))
+		require.NoError(t, os.Unsetenv("HOMEDRIVE"))
+		require.NoError(t, os.Unsetenv("HOMEPATH"))
+
+		t.Cleanup(func() {
+			if originalHome != "" {
+				require.NoError(t, os.Setenv("HOME", originalHome))
+			}
+			if originalUserProfile != "" {
+				require.NoError(t, os.Setenv("USERPROFILE", originalUserProfile))
+			}
+			if originalHomeDrive != "" {
+				require.NoError(t, os.Setenv("HOMEDRIVE", originalHomeDrive))
+			}
+			if originalHomePath != "" {
+				require.NoError(t, os.Setenv("HOMEPATH", originalHomePath))
+			}
+		})
+
+		got := resolver.Home()
+		require.Empty(t, got)
+	})
+}
+
 // TestDefaultPathResolver_XDG tests XDG base directory support.
 func TestDefaultPathResolver_XDG(t *testing.T) {
 	resolver := NewDefaultPathResolver()
@@ -357,6 +501,351 @@ func TestDefaultPathResolver_GOCACHE(t *testing.T) {
 		t.Setenv("GOCACHE", "/custom/go-build")
 		got := resolver.GOCACHE()
 		require.Equal(t, "/custom/go-build", got)
+	})
+}
+
+// TestDefaultPathResolverGOCACHEPlatformDefaults tests GOCACHE platform-specific defaults.
+func TestDefaultPathResolverGOCACHEPlatformDefaults(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("darwin_default_path", func(t *testing.T) {
+		if runtime.GOOS != goosDarwin {
+			t.Skip("Darwin-specific test")
+		}
+
+		// Unset GOCACHE to force fallback
+		originalGOCACHE := os.Getenv("GOCACHE")
+		require.NoError(t, os.Unsetenv("GOCACHE"))
+		t.Setenv("HOME", "/Users/testuser")
+
+		t.Cleanup(func() {
+			if originalGOCACHE != "" {
+				require.NoError(t, os.Setenv("GOCACHE", originalGOCACHE))
+			}
+		})
+
+		got := resolver.GOCACHE()
+		require.Equal(t, "/Users/testuser/Library/Caches/go-build", got)
+	})
+
+	t.Run("linux_default_path", func(t *testing.T) {
+		if runtime.GOOS != goosLinux {
+			t.Skip("Linux-specific test")
+		}
+
+		// Unset GOCACHE to force fallback
+		originalGOCACHE := os.Getenv("GOCACHE")
+		require.NoError(t, os.Unsetenv("GOCACHE"))
+		t.Setenv("HOME", "/home/testuser")
+
+		t.Cleanup(func() {
+			if originalGOCACHE != "" {
+				require.NoError(t, os.Setenv("GOCACHE", originalGOCACHE))
+			}
+		})
+
+		got := resolver.GOCACHE()
+		require.Equal(t, "/home/testuser/.cache/go-build", got)
+	})
+
+	t.Run("no_home_returns_empty", func(t *testing.T) {
+		// Save all home-related env vars
+		originalGOCACHE := os.Getenv("GOCACHE")
+		originalHome := os.Getenv("HOME")
+		originalUserProfile := os.Getenv("USERPROFILE")
+		originalHomeDrive := os.Getenv("HOMEDRIVE")
+		originalHomePath := os.Getenv("HOMEPATH")
+		originalLocalAppData := os.Getenv("LOCALAPPDATA")
+
+		// Unset all to force empty home
+		require.NoError(t, os.Unsetenv("GOCACHE"))
+		require.NoError(t, os.Unsetenv("HOME"))
+		require.NoError(t, os.Unsetenv("USERPROFILE"))
+		require.NoError(t, os.Unsetenv("HOMEDRIVE"))
+		require.NoError(t, os.Unsetenv("HOMEPATH"))
+		require.NoError(t, os.Unsetenv("LOCALAPPDATA"))
+
+		t.Cleanup(func() {
+			if originalGOCACHE != "" {
+				require.NoError(t, os.Setenv("GOCACHE", originalGOCACHE))
+			}
+			if originalHome != "" {
+				require.NoError(t, os.Setenv("HOME", originalHome))
+			}
+			if originalUserProfile != "" {
+				require.NoError(t, os.Setenv("USERPROFILE", originalUserProfile))
+			}
+			if originalHomeDrive != "" {
+				require.NoError(t, os.Setenv("HOMEDRIVE", originalHomeDrive))
+			}
+			if originalHomePath != "" {
+				require.NoError(t, os.Setenv("HOMEPATH", originalHomePath))
+			}
+			if originalLocalAppData != "" {
+				require.NoError(t, os.Setenv("LOCALAPPDATA", originalLocalAppData))
+			}
+		})
+
+		got := resolver.GOCACHE()
+		require.Empty(t, got)
+	})
+}
+
+// TestDefaultPathResolverConfigDirPlatformDefaults tests ConfigDir platform-specific defaults.
+func TestDefaultPathResolverConfigDirPlatformDefaults(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("darwin_without_xdg", func(t *testing.T) {
+		if runtime.GOOS != goosDarwin {
+			t.Skip("Darwin-specific test")
+		}
+
+		// Unset XDG_CONFIG_HOME to force platform default
+		originalXDG := os.Getenv("XDG_CONFIG_HOME")
+		require.NoError(t, os.Unsetenv("XDG_CONFIG_HOME"))
+		t.Setenv("HOME", "/Users/testuser")
+
+		t.Cleanup(func() {
+			if originalXDG != "" {
+				require.NoError(t, os.Setenv("XDG_CONFIG_HOME", originalXDG))
+			}
+		})
+
+		got := resolver.ConfigDir("myapp")
+		require.Equal(t, "/Users/testuser/Library/Application Support/myapp", got)
+	})
+
+	t.Run("linux_without_xdg", func(t *testing.T) {
+		if runtime.GOOS != "linux" {
+			t.Skip("Linux-specific test")
+		}
+
+		// Unset XDG_CONFIG_HOME to force platform default
+		originalXDG := os.Getenv("XDG_CONFIG_HOME")
+		require.NoError(t, os.Unsetenv("XDG_CONFIG_HOME"))
+		t.Setenv("HOME", "/home/testuser")
+
+		t.Cleanup(func() {
+			if originalXDG != "" {
+				require.NoError(t, os.Setenv("XDG_CONFIG_HOME", originalXDG))
+			}
+		})
+
+		got := resolver.ConfigDir("myapp")
+		require.Equal(t, "/home/testuser/.config/myapp", got)
+	})
+
+	t.Run("empty_home_returns_empty", func(t *testing.T) {
+		// Save all home-related env vars
+		originalXDG := os.Getenv("XDG_CONFIG_HOME")
+		originalHome := os.Getenv("HOME")
+		originalUserProfile := os.Getenv("USERPROFILE")
+		originalHomeDrive := os.Getenv("HOMEDRIVE")
+		originalHomePath := os.Getenv("HOMEPATH")
+
+		// Unset all to force empty home
+		require.NoError(t, os.Unsetenv("XDG_CONFIG_HOME"))
+		require.NoError(t, os.Unsetenv("HOME"))
+		require.NoError(t, os.Unsetenv("USERPROFILE"))
+		require.NoError(t, os.Unsetenv("HOMEDRIVE"))
+		require.NoError(t, os.Unsetenv("HOMEPATH"))
+
+		t.Cleanup(func() {
+			if originalXDG != "" {
+				require.NoError(t, os.Setenv("XDG_CONFIG_HOME", originalXDG))
+			}
+			if originalHome != "" {
+				require.NoError(t, os.Setenv("HOME", originalHome))
+			}
+			if originalUserProfile != "" {
+				require.NoError(t, os.Setenv("USERPROFILE", originalUserProfile))
+			}
+			if originalHomeDrive != "" {
+				require.NoError(t, os.Setenv("HOMEDRIVE", originalHomeDrive))
+			}
+			if originalHomePath != "" {
+				require.NoError(t, os.Setenv("HOMEPATH", originalHomePath))
+			}
+		})
+
+		got := resolver.ConfigDir("myapp")
+		require.Empty(t, got)
+	})
+}
+
+// TestDefaultPathResolverCacheDirPlatformDefaults tests CacheDir platform-specific defaults.
+func TestDefaultPathResolverCacheDirPlatformDefaults(t *testing.T) {
+	resolver := NewDefaultPathResolver()
+
+	t.Run("darwin_without_xdg", func(t *testing.T) {
+		if runtime.GOOS != goosDarwin {
+			t.Skip("Darwin-specific test")
+		}
+
+		// Unset XDG_CACHE_HOME to force platform default
+		originalXDG := os.Getenv("XDG_CACHE_HOME")
+		require.NoError(t, os.Unsetenv("XDG_CACHE_HOME"))
+		t.Setenv("HOME", "/Users/testuser")
+
+		t.Cleanup(func() {
+			if originalXDG != "" {
+				require.NoError(t, os.Setenv("XDG_CACHE_HOME", originalXDG))
+			}
+		})
+
+		got := resolver.CacheDir("myapp")
+		require.Equal(t, "/Users/testuser/Library/Caches/myapp", got)
+	})
+
+	t.Run("linux_without_xdg", func(t *testing.T) {
+		if runtime.GOOS != "linux" {
+			t.Skip("Linux-specific test")
+		}
+
+		// Unset XDG_CACHE_HOME to force platform default
+		originalXDG := os.Getenv("XDG_CACHE_HOME")
+		require.NoError(t, os.Unsetenv("XDG_CACHE_HOME"))
+		t.Setenv("HOME", "/home/testuser")
+
+		t.Cleanup(func() {
+			if originalXDG != "" {
+				require.NoError(t, os.Setenv("XDG_CACHE_HOME", originalXDG))
+			}
+		})
+
+		got := resolver.CacheDir("myapp")
+		require.Equal(t, "/home/testuser/.cache/myapp", got)
+	})
+
+	t.Run("empty_home_returns_empty", func(t *testing.T) {
+		// Save all home-related env vars
+		originalXDG := os.Getenv("XDG_CACHE_HOME")
+		originalHome := os.Getenv("HOME")
+		originalUserProfile := os.Getenv("USERPROFILE")
+		originalHomeDrive := os.Getenv("HOMEDRIVE")
+		originalHomePath := os.Getenv("HOMEPATH")
+
+		// Unset all to force empty home
+		require.NoError(t, os.Unsetenv("XDG_CACHE_HOME"))
+		require.NoError(t, os.Unsetenv("HOME"))
+		require.NoError(t, os.Unsetenv("USERPROFILE"))
+		require.NoError(t, os.Unsetenv("HOMEDRIVE"))
+		require.NoError(t, os.Unsetenv("HOMEPATH"))
+
+		t.Cleanup(func() {
+			if originalXDG != "" {
+				require.NoError(t, os.Setenv("XDG_CACHE_HOME", originalXDG))
+			}
+			if originalHome != "" {
+				require.NoError(t, os.Setenv("HOME", originalHome))
+			}
+			if originalUserProfile != "" {
+				require.NoError(t, os.Setenv("USERPROFILE", originalUserProfile))
+			}
+			if originalHomeDrive != "" {
+				require.NoError(t, os.Setenv("HOMEDRIVE", originalHomeDrive))
+			}
+			if originalHomePath != "" {
+				require.NoError(t, os.Setenv("HOMEPATH", originalHomePath))
+			}
+		})
+
+		got := resolver.CacheDir("myapp")
+		require.Empty(t, got)
+	})
+}
+
+// TestDefaultEnvironmentClear tests the Clear() method.
+func TestDefaultEnvironmentClear(t *testing.T) {
+	t.Run("clear_controlled_variables", func(t *testing.T) {
+		// IMPORTANT: Save entire environment first since Clear() is destructive
+		originalEnv := os.Environ()
+		t.Cleanup(func() {
+			// Restore all original environment variables
+			for _, envVar := range originalEnv {
+				parts := splitEnvVar(envVar)
+				if len(parts) == 2 {
+					if err := os.Setenv(parts[0], parts[1]); err != nil {
+						t.Logf("cleanup: failed to restore env var %s: %v", parts[0], err)
+					}
+				}
+			}
+		})
+
+		// Create a fresh environment with test variables
+		env := NewDefaultEnvironment()
+
+		// Set some test variables with unique prefix to avoid system conflict
+		testVars := []string{
+			"MAGE_CLEAR_TEST_VAR1",
+			"MAGE_CLEAR_TEST_VAR2",
+			"MAGE_CLEAR_TEST_VAR3",
+		}
+
+		for i, v := range testVars {
+			require.NoError(t, env.Set(v, fmt.Sprintf("value%d", i)))
+		}
+
+		// Verify they exist
+		for _, v := range testVars {
+			require.True(t, env.Exists(v), "variable %s should exist before clear", v)
+		}
+
+		// Clear all env vars
+		err := env.Clear()
+		require.NoError(t, err)
+
+		// Verify test vars are gone
+		for _, v := range testVars {
+			require.False(t, env.Exists(v), "variable %s should not exist after clear", v)
+		}
+	})
+}
+
+// splitEnvVar splits an environment variable string into key and value.
+func splitEnvVar(envVar string) []string {
+	for i := 0; i < len(envVar); i++ {
+		if envVar[i] == '=' {
+			return []string{envVar[:i], envVar[i+1:]}
+		}
+	}
+	return []string{envVar}
+}
+
+// TestDefaultEnvironmentSetMultipleErrors tests SetMultiple error handling.
+func TestDefaultEnvironmentSetMultipleErrors(t *testing.T) {
+	t.Run("empty_map_succeeds", func(t *testing.T) {
+		env := NewDefaultEnvironment()
+		err := env.SetMultiple(map[string]string{})
+		require.NoError(t, err)
+	})
+
+	t.Run("overwrite_false_fails_on_existing", func(t *testing.T) {
+		testKey := "SET_MULTIPLE_TEST_EXISTING"
+		require.NoError(t, os.Unsetenv(testKey))
+
+		t.Cleanup(func() {
+			require.NoError(t, os.Unsetenv(testKey))
+		})
+
+		// Create env that doesn't allow overwrite
+		env := NewDefaultEnvironmentWithOptions(Options{
+			AllowOverwrite: false,
+		})
+
+		// Set the first variable
+		require.NoError(t, env.Set(testKey, "original"))
+
+		// Try to set multiple including the existing one
+		err := env.SetMultiple(map[string]string{
+			testKey: "new_value",
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to set")
+		require.Contains(t, err.Error(), testKey)
+
+		// Original value should be preserved
+		require.Equal(t, "original", env.Get(testKey))
 	})
 }
 
