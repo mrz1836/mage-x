@@ -26,12 +26,6 @@ var (
 	errFixFailed     = errors.New("fix failed")
 )
 
-// Constants for common string values
-const (
-	trueValue  = "true"
-	falseValue = "false"
-)
-
 // golangciLintArgs holds the configuration for building golangci-lint arguments.
 // This consolidates the duplicated argument-building logic from Default() and Fix().
 type golangciLintArgs struct {

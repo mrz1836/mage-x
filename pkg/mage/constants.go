@@ -33,6 +33,12 @@ const (
 	CmdMkdir = "mkdir"
 )
 
+// Boolean string values for environment variable comparisons
+const (
+	trueValue  = "true"
+	falseValue = "false"
+)
+
 // Common arguments and flags
 const (
 	// Go build flags
@@ -110,6 +116,7 @@ const (
 	EnvGOARCH      = "GOARCH"
 	EnvGOPATH      = "GOPATH"
 	EnvGOBIN       = "GOBIN"
+	EnvGoVersion   = "GO_VERSION"
 	EnvCGOEnabled  = "CGO_ENABLED"
 	EnvPath        = "PATH"
 	EnvDebug       = "DEBUG"
@@ -119,6 +126,10 @@ const (
 	EnvForceColor  = "FORCE_COLOR"
 	EnvCI          = "CI"
 	EnvGitHubToken = "GITHUB_TOKEN" //nolint:gosec // G101: This is an environment variable name, not a hardcoded credential
+
+	// MAGE-specific environment variables (legacy, without prefix)
+	EnvMageVerbose      = "MAGE_VERBOSE"
+	EnvMageAuditEnabled = "MAGE_AUDIT_ENABLED"
 )
 
 // Platform constants
@@ -131,6 +142,23 @@ const (
 	ArchARM64 = "arm64"
 	Arch386   = "386"
 	ArchARM   = "arm"
+)
+
+// CI platform identifiers (used by CIDetector.Platform())
+const (
+	CIPlatformGitHub    = "github"
+	CIPlatformGitLab    = "gitlab"
+	CIPlatformCircleCI  = "circleci"
+	CIPlatformTravis    = "travis"
+	CIPlatformJenkins   = "jenkins"
+	CIPlatformAzure     = "azure"
+	CIPlatformBuildkite = "buildkite"
+	CIPlatformDrone     = "drone"
+	CIPlatformCodeBuild = "codebuild"
+	CIPlatformTeamCity  = "teamcity"
+	CIPlatformBitbucket = "bitbucket"
+	CIPlatformGeneric   = "generic"
+	CIPlatformLocal     = "local"
 )
 
 // Time and duration constants

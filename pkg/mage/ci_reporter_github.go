@@ -81,7 +81,7 @@ func (r *githubReporter) WriteStepSummary(result *CIResult) error {
 	// Allow workflows to skip step summary writing to avoid duplicate "Test Results" blocks.
 	// The completion report workflow writes a single consolidated summary instead.
 	// Check both env var names for flexibility (workflow uses MAGE_X_ prefix)
-	if os.Getenv("MAGE_X_CI_SKIP_STEP_SUMMARY") == "true" || os.Getenv("MAGEX_CI_SKIP_STEP_SUMMARY") == "true" {
+	if os.Getenv("MAGE_X_CI_SKIP_STEP_SUMMARY") == trueValue || os.Getenv("MAGEX_CI_SKIP_STEP_SUMMARY") == trueValue {
 		return nil
 	}
 

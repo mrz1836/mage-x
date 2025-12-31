@@ -79,47 +79,47 @@ func (d *ciDetector) IsCI() bool {
 func (d *ciDetector) Platform() string {
 	// Check in priority order (most specific first)
 	if d.envGetter("GITHUB_ACTIONS") == trueValue {
-		return string(CIFormatGitHub)
+		return CIPlatformGitHub
 	}
 	if d.envGetter("GITLAB_CI") == trueValue {
-		return "gitlab"
+		return CIPlatformGitLab
 	}
 	if d.envGetter("CIRCLECI") == trueValue {
-		return "circleci"
+		return CIPlatformCircleCI
 	}
 	if d.envGetter("TRAVIS") == trueValue {
-		return "travis"
+		return CIPlatformTravis
 	}
 	if d.envGetter("JENKINS_URL") != "" {
-		return "jenkins"
+		return CIPlatformJenkins
 	}
 	// Azure Pipelines sets TF_BUILD to "True" (capital T), unlike other CI systems
 	// that typically use lowercase "true". This is documented behavior from Microsoft.
 	if d.envGetter("TF_BUILD") == "True" {
-		return "azure"
+		return CIPlatformAzure
 	}
 	if d.envGetter("BUILDKITE") == trueValue {
-		return "buildkite"
+		return CIPlatformBuildkite
 	}
 	if d.envGetter("DRONE") == trueValue {
-		return "drone"
+		return CIPlatformDrone
 	}
 	if d.envGetter("CODEBUILD_CI") == trueValue {
-		return "codebuild"
+		return CIPlatformCodeBuild
 	}
 	if d.envGetter("TEAMCITY_VERSION") != "" {
-		return "teamcity"
+		return CIPlatformTeamCity
 	}
 	if d.envGetter("BITBUCKET_BUILD_NUMBER") != "" {
-		return "bitbucket"
+		return CIPlatformBitbucket
 	}
 
 	// Generic CI detection
 	if d.envGetter("CI") == trueValue {
-		return "generic"
+		return CIPlatformGeneric
 	}
 
-	return "local"
+	return CIPlatformLocal
 }
 
 // GetConfig returns the effective CI configuration

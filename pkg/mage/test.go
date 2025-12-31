@@ -1530,7 +1530,7 @@ func writeFuzzCIResultsIfEnabled(params map[string]string, config *Config, resul
 	// Also add GitHub reporter if running in GitHub Actions
 	var reporters []CIReporter
 	reporters = append(reporters, reporter)
-	if mode.Format == CIFormatGitHub || (mode.Format == CIFormatAuto && detector.Platform() == string(CIFormatGitHub)) {
+	if mode.Format == CIFormatGitHub || (mode.Format == CIFormatAuto && detector.Platform() == CIPlatformGitHub) {
 		reporters = append(reporters, NewGitHubReporter())
 	}
 	multiReporter := NewMultiReporter(reporters...)

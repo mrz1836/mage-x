@@ -544,9 +544,9 @@ func GetCIRunner(base CommandRunner, params map[string]string, cfg *Config) Comm
 
 	// Add platform-specific reporter
 	platform := detector.Platform()
-	if mode.Format == CIFormatGitHub || (mode.Format == CIFormatAuto && platform == "github") {
+	if mode.Format == CIFormatGitHub || (mode.Format == CIFormatAuto && platform == CIPlatformGitHub) {
 		reporters = append(reporters, NewGitHubReporter())
-	} else if platform == "local" {
+	} else if platform == CIPlatformLocal {
 		// Add terminal reporter for local CI mode preview
 		reporters = append(reporters, NewTerminalReporter())
 	}
