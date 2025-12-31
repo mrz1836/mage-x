@@ -52,7 +52,7 @@ func NewWithOptions(file FileOperator, json JSONOperator, yaml YAMLOperator, saf
 // WriteJSONSafe writes JSON data atomically with directory creation
 func (f *FileOps) WriteJSONSafe(path string, data interface{}) error {
 	if err := f.ensureDir(path); err != nil {
-		return err
+		return fmt.Errorf("ensure directory for %s: %w", path, err)
 	}
 
 	jsonData, err := f.JSON.MarshalIndent(data, "", "  ")
@@ -66,7 +66,7 @@ func (f *FileOps) WriteJSONSafe(path string, data interface{}) error {
 // WriteYAMLSafe writes YAML data atomically with directory creation
 func (f *FileOps) WriteYAMLSafe(path string, data interface{}) error {
 	if err := f.ensureDir(path); err != nil {
-		return err
+		return fmt.Errorf("ensure directory for %s: %w", path, err)
 	}
 
 	yamlData, err := f.YAML.Marshal(data)
@@ -88,9 +88,9 @@ func (f *FileOps) LoadConfig(paths []string, dest interface{}) (string, error) {
 		var err error
 
 		switch ext {
-		case ".yaml", ".yml":
+		case ExtYAML, ExtYML:
 			err = f.YAML.ReadYAML(path, dest)
-		case ".json":
+		case ExtJSON:
 			err = f.JSON.ReadJSON(path, dest)
 		default:
 			// Try YAML first, then JSON
@@ -111,13 +111,13 @@ func (f *FileOps) LoadConfig(paths []string, dest interface{}) (string, error) {
 // SaveConfig saves configuration to file in the specified format
 func (f *FileOps) SaveConfig(path string, data interface{}, format string) error {
 	if err := f.ensureDir(path); err != nil {
-		return err
+		return fmt.Errorf("ensure directory for config %s: %w", path, err)
 	}
 
 	switch format {
-	case "yaml", "yml":
+	case FormatYAML, FormatYML:
 		return f.WriteYAMLSafe(path, data)
-	case "json":
+	case FormatJSON:
 		return f.WriteJSONSafe(path, data)
 	default:
 		// Default to YAML
@@ -128,7 +128,7 @@ func (f *FileOps) SaveConfig(path string, data interface{}, format string) error
 // CopyFile copies a file with error handling and parent directory creation
 func (f *FileOps) CopyFile(src, dst string) error {
 	if err := f.ensureDir(dst); err != nil {
-		return err
+		return fmt.Errorf("ensure directory for copy destination %s: %w", dst, err)
 	}
 
 	return f.File.Copy(src, dst)
