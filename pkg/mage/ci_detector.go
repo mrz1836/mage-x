@@ -374,8 +374,9 @@ func (d *ciDetector) getWorkflow() string {
 func parseIntEnv(s string, result *int) error {
 	var val int
 	_, err := fmt.Sscanf(s, "%d", &val)
-	if err == nil {
-		*result = val
+	if err != nil {
+		return fmt.Errorf("failed to parse integer from %q: %w", s, err)
 	}
-	return err
+	*result = val
+	return nil
 }

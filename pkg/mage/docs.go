@@ -79,7 +79,7 @@ func (Docs) GoDocs(args ...string) error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Construct module path

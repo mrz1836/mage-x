@@ -41,7 +41,7 @@ func (Tools) Install() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	tools := getRequiredTools(config)
@@ -62,7 +62,7 @@ func (Tools) Update() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	ctx := context.Background()
@@ -148,7 +148,7 @@ func (Tools) Verify() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	tools := getRequiredTools(config)
@@ -191,7 +191,7 @@ func (Tools) Verify() error {
 func (Tools) List() error {
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	utils.Info("Configured tools:")
@@ -221,7 +221,7 @@ func (Tools) VulnCheck() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	ctx := context.Background()
@@ -232,7 +232,7 @@ func (Tools) VulnCheck() error {
 
 	if !utils.CommandExists("govulncheck") {
 		if err := installGovulncheck(ctx, config, maxRetries, initialDelay); err != nil {
-			return err
+			return fmt.Errorf("failed to install govulncheck: %w", err)
 		}
 	}
 
@@ -414,7 +414,7 @@ func installTool(tool ToolDefinition) error {
 
 	if tool.Module != "" {
 		if err := installToolFromModule(ctx, tool, config, maxRetries, initialDelay); err != nil {
-			return err
+			return fmt.Errorf("failed to install tool from module: %w", err)
 		}
 	}
 

@@ -189,7 +189,7 @@ func checkForUpdates(channel UpdateChannel) (*UpdateInfo, error) {
 	// Get releases based on channel
 	release, err := getReleaseForChannel(owner, repo, channel)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get release for channel %s: %w", channel, err)
 	}
 
 	info := &UpdateInfo{
@@ -360,7 +360,7 @@ func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
 	releases, err := utils.HTTPGetJSON[[]GitHubRelease](url, 10*time.Second)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch releases from GitHub API: %w", err)
 	}
 
 	// First pass: look for the latest prerelease (beta/alpha/rc)
@@ -423,7 +423,7 @@ func getLatestEdgeReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
 	releases, err := utils.HTTPGetJSON[[]GitHubRelease](url, 10*time.Second)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch releases from GitHub API: %w", err)
 	}
 	if len(*releases) > 0 {
 		return &(*releases)[0], nil
@@ -439,13 +439,13 @@ func fetchChecksumForAsset(checksumURL, assetName string) (string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", checksumURL, http.NoBody)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create checksum request: %w", err)
 	}
 
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to fetch checksums file: %w", err)
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -460,7 +460,7 @@ func fetchChecksumForAsset(checksumURL, assetName string) (string, error) {
 	// Limit read to 1MB (checksums file should be small)
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read checksums data: %w", err)
 	}
 
 	// Parse checksums file (goreleaser format: "checksum  filename")
@@ -493,7 +493,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", info.DownloadURL, http.NoBody)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create download request: %w", err)
 	}
 
 	client := &http.Client{
@@ -506,7 +506,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to download update: %w", err)
 	}
 	defer func() {
 		// Ignore error in defer cleanup
@@ -527,7 +527,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	// Save response body to file
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read download response: %w", err)
 	}
 
 	// Verify checksum if provided (security: prevent MITM attacks)

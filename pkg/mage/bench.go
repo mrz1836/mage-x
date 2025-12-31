@@ -50,7 +50,7 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 		Operation: "benchmarks",
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare benchmark command: %w", err)
 	}
 	if ctx == nil {
 		return nil
@@ -109,7 +109,7 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 		return runCommandInModule(module, "go", args...)
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to run benchmarks: %w", err)
 	}
 
 	// Show how to analyze profiles if created
@@ -143,7 +143,7 @@ func (Bench) CompareWithArgs(argsList ...string) error {
 		Module: "golang.org/x/perf/cmd/benchstat",
 		Check:  "benchstat",
 	}); err != nil {
-		return err
+		return fmt.Errorf("failed to install benchstat tool: %w", err)
 	}
 
 	// Get benchmark files from parameters or environment
@@ -182,7 +182,7 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 		Operation: "benchmarks",
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare benchmark save command: %w", err)
 	}
 	if ctx == nil {
 		return nil
@@ -296,7 +296,7 @@ func (Bench) CPUWithArgs(argsList ...string) error {
 
 	var b Bench
 	if err := b.DefaultWithArgs(argsList...); err != nil {
-		return err
+		return fmt.Errorf("failed to run CPU benchmarks: %w", err)
 	}
 
 	// Analyze the profile
@@ -334,7 +334,7 @@ func (Bench) MemWithArgs(argsList ...string) error {
 
 	var b Bench
 	if err := b.DefaultWithArgs(argsList...); err != nil {
-		return err
+		return fmt.Errorf("failed to run memory benchmarks: %w", err)
 	}
 
 	// Analyze the profile
@@ -374,7 +374,7 @@ func (Bench) ProfileWithArgs(argsList ...string) error {
 
 	var b Bench
 	if err := b.DefaultWithArgs(argsList...); err != nil {
-		return err
+		return fmt.Errorf("failed to run profiling benchmarks: %w", err)
 	}
 
 	utils.Success("Profiling data saved:")
@@ -397,7 +397,7 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 		Operation: "benchmarks",
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare benchmark trace command: %w", err)
 	}
 	if ctx == nil {
 		return nil
@@ -502,7 +502,7 @@ func (Bench) RegressionWithArgs(argsList ...string) error {
 	}
 	var b Bench
 	if err := b.SaveWithArgs(argsList...); err != nil {
-		return err
+		return fmt.Errorf("failed to save benchmark results: %w", err)
 	}
 
 	// Check if we have a baseline
@@ -530,7 +530,7 @@ func (Bench) RegressionWithArgs(argsList ...string) error {
 	utils.Info("Comparing with baseline...")
 	compareArgs := []string{"old=" + baseline, "new=" + currentFile}
 	if err := b.CompareWithArgs(compareArgs...); err != nil {
-		return err
+		return fmt.Errorf("failed to compare benchmark results: %w", err)
 	}
 
 	// Ask about updating baseline

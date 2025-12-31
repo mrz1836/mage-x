@@ -83,11 +83,13 @@ func (c *DefaultClassifier) IsRetriable(err error) bool {
 		var dnsErr *net.DNSError
 		if errors.As(err, &dnsErr) {
 			errLower := strings.ToLower(dnsErr.Err)
-			// DNS errors are retriable unless they're permanent
-			if !strings.Contains(errLower, "no such host") ||
-				strings.Contains(errLower, "temporary failure") {
-				return true
+			// Permanent "no such host" errors are NOT retriable
+			if strings.Contains(errLower, "no such host") {
+				// But if it's a temporary DNS failure, it IS retriable
+				return strings.Contains(errLower, "temporary")
 			}
+			// Other DNS errors (timeouts, etc.) are retriable
+			return true
 		}
 	}
 

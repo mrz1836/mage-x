@@ -31,7 +31,7 @@ func (Bmad) Install() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Step 1: Check for npm
@@ -86,7 +86,7 @@ func (Bmad) Check() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Check prerequisites
@@ -124,7 +124,7 @@ func (Bmad) Upgrade() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Step 1: Check prerequisites
@@ -148,7 +148,7 @@ func (Bmad) Upgrade() error {
 	utils.Info("Step 3/4: Upgrading BMAD...")
 	if err := upgradeBmadCLI(config); err != nil {
 		utils.Error("Failed to upgrade BMAD: %v", err)
-		return err
+		return fmt.Errorf("failed to upgrade BMAD CLI: %w", err)
 	}
 	utils.Success("BMAD upgraded")
 

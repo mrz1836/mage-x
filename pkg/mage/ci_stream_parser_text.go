@@ -7,6 +7,7 @@ package mage
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"regexp"
 	"strconv"
@@ -364,7 +365,7 @@ func (p *textStreamParser) Parse(r io.Reader) error {
 
 	for scanner.Scan() {
 		if err := p.ParseLine(scanner.Text()); err != nil {
-			return err
+			return fmt.Errorf("failed to parse line: %w", err)
 		}
 	}
 
@@ -373,7 +374,10 @@ func (p *textStreamParser) Parse(r io.Reader) error {
 	p.finalizeCurrentTest()
 	p.mu.Unlock()
 
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("failed to scan input: %w", err)
+	}
+	return nil
 }
 
 // Flush finalizes parsing and returns collected failures

@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -56,7 +57,7 @@ func getDirSize(path string) (int64, error) {
 
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to walk directory: %w", err)
 		}
 		if !info.IsDir() {
 			size += info.Size()

@@ -160,7 +160,9 @@ func (r *jsonReporter) Flush() error {
 	defer r.mu.Unlock()
 
 	if r.file != nil {
-		return r.file.Sync()
+		if err := r.file.Sync(); err != nil {
+			return fmt.Errorf("failed to sync file: %w", err)
+		}
 	}
 	return nil
 }
@@ -183,9 +185,11 @@ func (r *jsonReporter) Close() error {
 			if closeErr != nil {
 				fmt.Fprintf(os.Stderr, "Warning: failed to close file after sync error: %v\n", closeErr)
 			}
-			return err
+			return fmt.Errorf("failed to sync file: %w", err)
 		}
-		return r.file.Close()
+		if err := r.file.Close(); err != nil {
+			return fmt.Errorf("failed to close file: %w", err)
+		}
 	}
 
 	return nil

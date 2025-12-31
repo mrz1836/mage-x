@@ -262,10 +262,13 @@ func (p *streamParser) Parse(r io.Reader) error {
 
 	for scanner.Scan() {
 		if err := p.ParseLine(scanner.Bytes()); err != nil {
-			return err
+			return fmt.Errorf("failed to parse line: %w", err)
 		}
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("failed to scan input: %w", err)
+	}
+	return nil
 }
 
 // processEvent handles a single test event
@@ -768,7 +771,7 @@ func CaptureContext(file string, line, contextLines int) ([]string, error) {
 
 	f, err := os.Open(file) //nolint:gosec // Source file from test output
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -801,5 +804,8 @@ func CaptureContext(file string, line, contextLines int) ([]string, error) {
 		}
 	}
 
-	return lines, scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return lines, fmt.Errorf("failed to scan file: %w", err)
+	}
+	return lines, nil
 }

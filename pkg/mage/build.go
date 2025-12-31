@@ -150,7 +150,7 @@ func (b Build) createBuildContext(cfg *Config) (*buildContext, error) {
 	requireMain := outputPath != "" && !strings.HasSuffix(outputPath, "/...")
 	packagePath, err := b.determinePackagePath(cfg, outputPath, requireMain)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to determine package path: %w", err)
 	}
 
 	buildArgs := b.createBuildArgs(cfg, outputPath, packagePath)
@@ -1428,7 +1428,7 @@ func findSourceFiles() ([]string, error) {
 	// Find .go files in current directory and subdirectories
 	goFiles, err := utils.FindFiles(".", "*.go")
 	if err != nil {
-		return files, err
+		return files, fmt.Errorf("failed to find Go source files: %w", err)
 	}
 
 	files = append(files, goFiles...)

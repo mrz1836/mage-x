@@ -413,10 +413,10 @@ func (c Clean) Full() error {
 	runner := GetRunner()
 	// Full clean includes build cache, test cache, and mod cache
 	if err := runner.RunCmd("go", "clean", "-cache"); err != nil {
-		return err
+		return fmt.Errorf("failed to clean build cache: %w", err)
 	}
 	if err := runner.RunCmd("go", "clean", "-testcache"); err != nil {
-		return err
+		return fmt.Errorf("failed to clean test cache: %w", err)
 	}
 	return runner.RunCmd("go", "clean", "-modcache")
 }

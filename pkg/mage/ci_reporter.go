@@ -1,6 +1,8 @@
 // Package mage provides CI reporter interface for test output
 package mage
 
+import "fmt"
+
 // CIReporter writes CI output in various formats
 type CIReporter interface {
 	// Start begins the test run report
@@ -54,7 +56,7 @@ func NewMultiReporter(reporters ...CIReporter) *MultiReporter {
 func (m *MultiReporter) Start(metadata CIMetadata) error {
 	for _, r := range m.reporters {
 		if err := r.Start(metadata); err != nil {
-			return err
+			return fmt.Errorf("failed to start reporter: %w", err)
 		}
 	}
 	return nil
@@ -64,7 +66,7 @@ func (m *MultiReporter) Start(metadata CIMetadata) error {
 func (m *MultiReporter) ReportFailure(failure CITestFailure) error {
 	for _, r := range m.reporters {
 		if err := r.ReportFailure(failure); err != nil {
-			return err
+			return fmt.Errorf("failed to report failure: %w", err)
 		}
 	}
 	return nil
@@ -74,7 +76,7 @@ func (m *MultiReporter) ReportFailure(failure CITestFailure) error {
 func (m *MultiReporter) WriteSummary(result *CIResult) error {
 	for _, r := range m.reporters {
 		if err := r.WriteSummary(result); err != nil {
-			return err
+			return fmt.Errorf("failed to write summary: %w", err)
 		}
 	}
 	return nil

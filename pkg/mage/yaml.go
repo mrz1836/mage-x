@@ -465,7 +465,7 @@ func loadConfig(filename string) (*YamlConfig, error) {
 	fileOps := fileops.New()
 	var config YamlConfig
 	if err := fileOps.YAML.ReadYAML(filename, &config); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read YAML config from %s: %w", filename, err)
 	}
 
 	return &config, nil

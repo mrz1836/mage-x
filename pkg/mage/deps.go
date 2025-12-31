@@ -145,7 +145,7 @@ func updateAllModules(params map[string]string, dryRun, failFast bool) error {
 		if dirErr != nil {
 			err := fmt.Errorf("failed to get current directory: %w", dirErr)
 			if failFast {
-				return err
+				return fmt.Errorf("failed to save current directory for module %s: %w", module.Relative, err)
 			}
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
 			continue
@@ -155,7 +155,7 @@ func updateAllModules(params map[string]string, dryRun, failFast bool) error {
 		if chErr := os.Chdir(module.Path); chErr != nil {
 			err := fmt.Errorf("failed to change to directory %s: %w", module.Path, chErr)
 			if failFast {
-				return err
+				return fmt.Errorf("failed to change to module directory %s: %w", module.Relative, err)
 			}
 			moduleErrors = append(moduleErrors, moduleError{Module: module, Error: err})
 			continue
@@ -398,7 +398,7 @@ func (Deps) List() error {
 	// Direct dependencies
 	utils.Info("Direct dependencies:")
 	if err := GetRunner().RunCmd("go", "list", "-m", "-f", "{{if not .Indirect}}{{.Path}} {{.Version}}{{end}}", "all"); err != nil {
-		return err
+		return fmt.Errorf("failed to list direct dependencies: %w", err)
 	}
 
 	// Show count of indirect dependencies
@@ -633,7 +633,7 @@ type dependencyInfo struct {
 func captureAllDependencies() (map[string]dependencyInfo, error) {
 	output, err := GetRunner().RunCmdOutput("go", "list", "-m", "-f", "{{.Path}} {{.Version}}", "all")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to capture dependencies: %w", err)
 	}
 
 	deps := make(map[string]dependencyInfo)
@@ -799,7 +799,7 @@ func (Deps) Audit(args ...string) error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get configuration: %w", err)
 	}
 
 	// Ensure govulncheck is installed

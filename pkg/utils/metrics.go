@@ -932,7 +932,9 @@ func GetCurrentResourceMetrics() ResourceMetrics {
 	return GetMetricsCollector().GetCurrentResourceMetrics()
 }
 
-// JSONStorage provides simple JSON-based storage implementation for metrics
+// JSONStorage provides simple JSON-based storage implementation for metrics.
+// Note: This implementation is safe for concurrent use within a single process.
+// For multi-process scenarios, consider using a database or message queue.
 type JSONStorage struct {
 	storagePath string
 	mu          sync.RWMutex

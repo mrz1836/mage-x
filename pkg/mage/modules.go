@@ -51,7 +51,7 @@ func findAllModules() ([]ModuleInfo, error) {
 	// Walk the directory tree looking for go.mod files
 	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to access path %s: %w", path, err)
 		}
 
 		// Skip vendor directories
@@ -116,7 +116,7 @@ func findAllModules() ([]ModuleInfo, error) {
 func getModuleNameFromFile(goModPath string) (string, error) {
 	content, err := os.ReadFile(goModPath) // #nosec G304 -- go.mod path from controlled module discovery
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read go.mod file %s: %w", goModPath, err)
 	}
 
 	lines := strings.Split(string(content), "\n")
@@ -228,7 +228,10 @@ func runCommandInModuleWithRunner(module ModuleInfo, runner CommandRunner, comma
 			return struct{}{}, runner.RunCmd(command, args...)
 		},
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to run command '%s' in module %s: %w", command, module.Relative, err)
+	}
+	return nil
 }
 
 // displayModuleHeader displays a header for the current module being processed
@@ -710,14 +713,14 @@ func prepareModuleCommand(cfg ModuleCommandConfig) (*ModuleCommandContext, error
 
 	config, err := GetConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get config: %w", err)
 	}
 
 	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
 		Operation: cfg.Operation,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to discover modules: %w", err)
 	}
 	if result.Empty || result.Skipped {
 		return nil, nil //nolint:nilnil // Intentional: nil context with nil error signals no modules to process

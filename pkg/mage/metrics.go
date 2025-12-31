@@ -144,7 +144,7 @@ func (Metrics) Mage() error {
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
 		}
 
 		// Skip hidden directories and common vendor dirs
@@ -463,7 +463,7 @@ func countLinesWithStats(pattern string, excludeDirs []string) (LOCStats, error)
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
 		}
 
 		// Skip excluded directories
@@ -517,7 +517,7 @@ func countGoLinesWithStats(excludeDirs []string) (LOCStats, error) {
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
 		}
 
 		// Skip excluded directories

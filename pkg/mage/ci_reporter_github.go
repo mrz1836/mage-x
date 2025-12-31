@@ -160,8 +160,10 @@ func (r *githubReporter) WriteStepSummary(result *CIResult) error {
 		}
 	}
 
-	_, err = f.WriteString(sb.String())
-	return err
+	if _, err = f.WriteString(sb.String()); err != nil {
+		return fmt.Errorf("failed to write step summary: %w", err)
+	}
+	return nil
 }
 
 // WriteOutputs writes key-value pairs to GITHUB_OUTPUT

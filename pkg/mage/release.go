@@ -46,7 +46,7 @@ func (Release) Default(args ...string) error {
 
 	// Ensure goreleaser is installed
 	if err := ensureGoreleaser(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure goreleaser is installed: %w", err)
 	}
 
 	// Get the latest tag to release
@@ -93,7 +93,7 @@ func (Release) Test() error {
 
 	// Ensure goreleaser is installed
 	if err := ensureGoreleaser(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure goreleaser is installed: %w", err)
 	}
 
 	// Run goreleaser in dry-run mode
@@ -111,7 +111,7 @@ func (Release) Snapshot() error {
 
 	// Ensure goreleaser is installed
 	if err := ensureGoreleaser(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure goreleaser is installed: %w", err)
 	}
 
 	// Run goreleaser in snapshot mode
@@ -130,7 +130,7 @@ func (Release) LocalInstall() error {
 
 	// Ensure goreleaser is installed
 	if err := ensureGoreleaser(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure goreleaser is installed: %w", err)
 	}
 
 	// Get the latest tag
@@ -143,7 +143,7 @@ func (Release) LocalInstall() error {
 
 	// Build and install the binary
 	if err := buildAndInstallFromTag(latestTag); err != nil {
-		return err
+		return fmt.Errorf("failed to build and install from tag: %w", err)
 	}
 
 	utils.Success("Successfully installed magex %s", latestTag)
@@ -309,7 +309,7 @@ func (Release) Check() error {
 
 	// Ensure goreleaser is installed
 	if err := ensureGoreleaser(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure goreleaser is installed: %w", err)
 	}
 
 	// Check if .goreleaser.yml exists
@@ -348,7 +348,7 @@ func (Release) Init() error {
 
 	// Ensure goreleaser is installed
 	if err := ensureGoreleaser(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure goreleaser is installed: %w", err)
 	}
 
 	// Initialize configuration
@@ -481,7 +481,7 @@ func (Release) Validate() error {
 
 	// Ensure goreleaser is installed
 	if err := ensureGoreleaser(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure goreleaser is installed: %w", err)
 	}
 
 	// Validate goreleaser configuration

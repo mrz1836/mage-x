@@ -54,7 +54,7 @@ func (Help) Default() error {
 
 	fmt.Printf(`🎯 MAGE-X: Write Once, Mage Everywhere
 
-MAGE-X is a comprehensive Go build automation toolkit that provides
+MAGE-X is a comprehensive Go build tooling suite that provides
 powerful development tools with a friendly user experience.
 
 Quick Start:
@@ -166,7 +166,7 @@ func (Help) Command() error {
 	// If not a namespace, try to get specific command help
 	cmd, err := getCommandHelp(commandName)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get command help for %s: %w", commandName, err)
 	}
 
 	utils.Header("📖 Command Help: " + cmd.Name)
@@ -316,11 +316,11 @@ func (Help) GettingStarted() error {
 	utils.Header("🚀 Getting Started with MAGE-X")
 
 	utils.Info(`Welcome to MAGE-X! This guide will help you get started with the most
-powerful Go build automation toolkit.
+powerful Go build tooling suite.
 
 🎯 What is MAGE-X?
 
-MAGE-X is a comprehensive build automation toolkit for Go projects that
+MAGE-X is a comprehensive build tooling suite for Go projects that
 provides powerful development tools with a friendly user experience.
 It follows the philosophy of "Write Once, Mage Everywhere" - create your
 build configuration once and use it across all your projects.

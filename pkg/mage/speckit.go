@@ -37,7 +37,7 @@ func (Speckit) Install() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Step 1: Check for uv
@@ -91,7 +91,7 @@ func (Speckit) Check() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Check prerequisites
@@ -138,7 +138,7 @@ func (Speckit) Upgrade() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Step 1: Check prerequisites
@@ -176,7 +176,7 @@ func (Speckit) Upgrade() error {
 	// Steps 4-7: Perform upgrade actions
 	newVersion, err := performSpeckitUpgradeActions(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to perform upgrade actions: %w", err)
 	}
 
 	// Step 8: Restore constitution (if we had a backup)

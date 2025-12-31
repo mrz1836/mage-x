@@ -97,7 +97,7 @@ func (Format) Fumpt() error {
 
 	// Ensure gofumpt is installed
 	if err := ensureGofumpt(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure gofumpt is installed: %w", err)
 	}
 
 	// Run gofumpt with extra rules
@@ -117,7 +117,7 @@ func (Format) Imports() error {
 
 	// Ensure goimports is installed
 	if err := ensureGoimports(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure goimports is installed: %w", err)
 	}
 
 	// Run goimports
@@ -137,7 +137,7 @@ func (Format) Gci() error {
 
 	// Ensure gci is installed
 	if err := ensureGci(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure gci is installed: %w", err)
 	}
 
 	// Build gci arguments
@@ -367,7 +367,7 @@ func findGoFiles() ([]string, error) {
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
 		}
 
 		// Skip directories from environment variable
@@ -388,8 +388,11 @@ func findGoFiles() ([]string, error) {
 
 		return nil
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to find Go files: %w", err)
+	}
 
-	return files, err
+	return files, nil
 }
 
 // filterEmpty removes empty strings from a slice

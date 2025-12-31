@@ -682,10 +682,11 @@ func (r *DefaultNamespaceRegistry) Docs() DocsNamespace {
 	return r.docs
 }
 
-// Deploy returns the deployment namespace
+// Deploy returns the deployment namespace.
+// NOTE: Deployment namespace is not yet implemented and returns nil.
+// Callers must check for nil before using.
 func (r *DefaultNamespaceRegistry) Deploy() DeployNamespace {
-	// Deploy might not exist in current implementation
-	return r.deploy
+	return nil // Not yet implemented
 }
 
 // Tools returns the tools namespace
@@ -705,10 +706,11 @@ func (r *DefaultNamespaceRegistry) Tools() ToolsNamespace {
 	return r.tools
 }
 
-// Security returns the security namespace
+// Security returns the security namespace.
+// NOTE: Security namespace is not yet implemented and returns nil.
+// Callers must check for nil before using.
 func (r *DefaultNamespaceRegistry) Security() SecurityNamespace {
-	// Temporarily disabled - would use lazyInitNamespace(&r.security, NewSecurityNamespace)
-	return nil
+	return nil // Not yet implemented
 }
 
 // Generate returns the generate namespace

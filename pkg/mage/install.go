@@ -45,7 +45,7 @@ func (Install) Uninstall() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Get binary name
@@ -94,7 +94,7 @@ func (Install) Default() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Get binary name
@@ -289,7 +289,7 @@ func (Install) SystemWide() error {
 
 	config, err := GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Get binary name
@@ -480,13 +480,19 @@ func (Install) Binary() error {
 // Deps installs dependencies
 func (Install) Deps() error {
 	runner := GetRunner()
-	return runner.RunCmd("go", "mod", "download")
+	if err := runner.RunCmd("go", "mod", "download"); err != nil {
+		return fmt.Errorf("failed to download dependencies: %w", err)
+	}
+	return nil
 }
 
 // Mage installs mage
 func (Install) Mage() error {
 	runner := GetRunner()
-	return runner.RunCmd("go", "install", "github.com/magefile/mage@latest")
+	if err := runner.RunCmd("go", "install", "github.com/magefile/mage@latest"); err != nil {
+		return fmt.Errorf("failed to install mage: %w", err)
+	}
+	return nil
 }
 
 // Docker installs Docker requirements

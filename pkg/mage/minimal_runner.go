@@ -207,6 +207,7 @@ func wrapTimeoutError(err error, ctx CommandContext) error {
 			ctx.Name, ctx.Timeout, err)
 	}
 
+	// Return err unchanged if not a timeout/cancellation - it already has context from exec layer
 	return err
 }
 

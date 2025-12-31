@@ -317,7 +317,7 @@ func runStaticcheck() error {
 		Module: "honnef.co/go/tools/cmd/staticcheck",
 		Check:  "staticcheck",
 	}); err != nil {
-		return err
+		return fmt.Errorf("failed to install staticcheck tool: %w", err)
 	}
 
 	version := getLinterVersion("staticcheck")
@@ -338,7 +338,7 @@ func runIneffassign() error {
 		Module: "github.com/gordonklaus/ineffassign",
 		Check:  "ineffassign",
 	}); err != nil {
-		return err
+		return fmt.Errorf("failed to install ineffassign tool: %w", err)
 	}
 
 	version := getLinterVersion("ineffassign")
@@ -359,7 +359,7 @@ func runMisspell() error {
 		Module: "github.com/client9/misspell/cmd/misspell",
 		Check:  "misspell",
 	}); err != nil {
-		return err
+		return fmt.Errorf("failed to install misspell tool: %w", err)
 	}
 
 	version := getLinterVersion("misspell")
