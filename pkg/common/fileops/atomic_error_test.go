@@ -44,7 +44,7 @@ func TestWriteFileAtomicCreateTempFailure(t *testing.T) {
 // TestWriteFileAtomicRenameFailureDestIsDir tests that WriteFileAtomic fails
 // when the destination is an existing directory.
 func TestWriteFileAtomicRenameFailureDestIsDir(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping on Windows - rename behavior differs")
 	}
 
@@ -110,7 +110,7 @@ func TestWriteFileAtomicTempFileCleanup(t *testing.T) {
 // TestWriteFileAtomicPermissionVariations tests WriteFileAtomic with various
 // permission modes to ensure proper handling.
 func TestWriteFileAtomicPermissionVariations(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping permission tests on Windows")
 	}
 
@@ -265,7 +265,7 @@ func TestWriteFileAtomicConcurrentWrites(t *testing.T) {
 // TestWriteFileAtomicReadOnlyDirectory tests behavior when writing to a
 // read-only directory (CreateTemp should fail).
 func TestWriteFileAtomicReadOnlyDirectory(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping on Windows - read-only directory behavior differs")
 	}
 	if os.Getuid() == 0 {
@@ -327,7 +327,7 @@ func TestWriteFileAtomicSpecialCharactersInPath(t *testing.T) {
 // TestWriteFileAtomicPreservesOriginalOnFailure tests that when a write fails,
 // any existing file at the destination remains unchanged.
 func TestWriteFileAtomicPreservesOriginalOnFailure(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping on Windows - behavior differs")
 	}
 

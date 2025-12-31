@@ -43,7 +43,7 @@ func TestCopyDestinationInvalidPath(t *testing.T) {
 // TestCopyPreservesPermissionsExtended tests that Copy properly preserves source permissions
 // with additional permission modes.
 func TestCopyPreservesPermissionsExtended(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping permission tests on Windows")
 	}
 
@@ -156,7 +156,7 @@ func TestCopyOverwriteExisting(t *testing.T) {
 
 // TestCopyToReadOnlyDirectory tests Copy when destination directory is read-only.
 func TestCopyToReadOnlyDirectory(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping on Windows - read-only directory behavior differs")
 	}
 	if os.Getuid() == 0 {
@@ -349,7 +349,7 @@ func TestCopyDestinationIsExistingDirectory(t *testing.T) {
 
 // TestCopySymlinkSource tests Copy behavior with symlink as source.
 func TestCopySymlinkSource(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping symlink test on Windows")
 	}
 
@@ -384,7 +384,7 @@ func TestCopySymlinkSource(t *testing.T) {
 
 // TestCopyBrokenSymlinkSource tests Copy behavior with broken symlink as source.
 func TestCopyBrokenSymlinkSource(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping symlink test on Windows")
 	}
 

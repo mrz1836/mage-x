@@ -97,7 +97,7 @@ func TestYAMLMarshalUnmarshalableTypesPanics(t *testing.T) {
 
 // TestWriteJSONToReadOnlyDirectory tests WriteJSON when directory is read-only.
 func TestWriteJSONToReadOnlyDirectory(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping on Windows - read-only directory behavior differs")
 	}
 	if os.Getuid() == 0 {
@@ -123,7 +123,7 @@ func TestWriteJSONToReadOnlyDirectory(t *testing.T) {
 
 // TestWriteJSONIndentToReadOnlyDirectory tests WriteJSONIndent when directory is read-only.
 func TestWriteJSONIndentToReadOnlyDirectory(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping on Windows - read-only directory behavior differs")
 	}
 	if os.Getuid() == 0 {
@@ -149,7 +149,7 @@ func TestWriteJSONIndentToReadOnlyDirectory(t *testing.T) {
 
 // TestWriteYAMLToReadOnlyDirectory tests WriteYAML when directory is read-only.
 func TestWriteYAMLToReadOnlyDirectory(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Skipping on Windows - read-only directory behavior differs")
 	}
 	if os.Getuid() == 0 {

@@ -826,8 +826,7 @@ func TestLoadConfigEdgeCases(t *testing.T) {
 
 // TestSymlinkHandling tests symlink behavior (platform-specific)
 func TestSymlinkHandling(t *testing.T) {
-	//nolint:goconst // "windows" constant not worth extracting in test files
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Symlink tests not reliable on Windows without admin privileges")
 	}
 
@@ -987,7 +986,7 @@ func TestFileOpsEnsureDirEdgeCases(t *testing.T) {
 // TestCopyPreservesPermissions verifies Copy preserves source file permissions
 func TestCopyPreservesPermissions(t *testing.T) {
 	// Skip on Windows where file permissions work differently
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		t.Skip("Permission preservation tests not reliable on Windows")
 	}
 
@@ -1534,7 +1533,7 @@ func TestWriteFileWithBackupWrappedErrors(t *testing.T) {
 	})
 
 	t.Run("ReadOnlyBackupDirectory", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
+		if runtime.GOOS == goosWindows {
 			t.Skip("Skipping permission test on Windows")
 		}
 
