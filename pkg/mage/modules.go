@@ -687,6 +687,48 @@ func discoverAndFilterModules(config *Config, opts ModuleDiscoveryOptions) (*Mod
 	return &ModuleDiscoveryResult{Modules: filtered}, nil
 }
 
+// ModuleCommandConfig configures a module-iterating command's initialization.
+type ModuleCommandConfig struct {
+	Header    string // Header message for utils.Header()
+	Operation string // Operation name for discoverAndFilterModules
+}
+
+// ModuleCommandContext holds initialized command state after setup.
+// A nil context with nil error indicates no modules to process (Empty or Skipped).
+type ModuleCommandContext struct {
+	Config  *Config
+	Modules []ModuleInfo
+}
+
+// prepareModuleCommand consolidates command setup boilerplate.
+// It performs: utils.Header(), GetConfig(), discoverAndFilterModules(), and Empty/Skipped check.
+// Returns (nil, nil) if no modules to process (Empty or Skipped).
+// Returns (nil, error) if setup failed.
+// Returns (context, nil) on success with modules ready to process.
+func prepareModuleCommand(cfg ModuleCommandConfig) (*ModuleCommandContext, error) {
+	utils.Header(cfg.Header)
+
+	config, err := GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+		Operation: cfg.Operation,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.Empty || result.Skipped {
+		return nil, nil //nolint:nilnil // Intentional: nil context with nil error signals no modules to process
+	}
+
+	return &ModuleCommandContext{
+		Config:  config,
+		Modules: result.Modules,
+	}, nil
+}
+
 // ModuleIteratorOptions configures the module iteration behavior.
 type ModuleIteratorOptions struct {
 	Operation string // Description for display (e.g., "Running benchmarks for")

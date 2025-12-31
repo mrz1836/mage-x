@@ -45,26 +45,19 @@ func (Bench) Default() error {
 
 // DefaultWithArgs runs all benchmarks with memory profiling and accepts parameters
 func (Bench) DefaultWithArgs(argsList ...string) error {
-	utils.Header("Running Benchmarks")
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Parse command-line parameters from argsList
-	params := utils.ParseParams(argsList)
-
-	// Discover and filter modules
-	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+	ctx, err := prepareModuleCommand(ModuleCommandConfig{
+		Header:    "Running Benchmarks",
 		Operation: "benchmarks",
 	})
 	if err != nil {
 		return err
 	}
-	if result.Empty || result.Skipped {
+	if ctx == nil {
 		return nil
 	}
+
+	// Parse command-line parameters from argsList
+	params := utils.ParseParams(argsList)
 
 	// Build base benchmark args
 	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
@@ -107,7 +100,7 @@ func (Bench) DefaultWithArgs(argsList ...string) error {
 	args = append(args, pkg)
 
 	// Run benchmarks for each module
-	err = forEachModule(result.Modules, ModuleIteratorOptions{
+	err = forEachModule(ctx.Modules, ModuleIteratorOptions{
 		Operation: "Benchmarks",
 		Verb:      "completed",
 	}, func(module ModuleInfo) error {
@@ -184,11 +177,15 @@ func (Bench) Save() error {
 
 // SaveWithArgs saves current benchmark results with parameters
 func (Bench) SaveWithArgs(argsList ...string) error {
-	utils.Header("Saving Benchmark Results")
-
-	config, err := GetConfig()
+	ctx, err := prepareModuleCommand(ModuleCommandConfig{
+		Header:    "Saving Benchmark Results",
+		Operation: "benchmarks",
+	})
 	if err != nil {
 		return err
+	}
+	if ctx == nil {
+		return nil
 	}
 
 	// Parse command-line parameters from argsList
@@ -212,17 +209,6 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 		if mkdirErr := fileOps.File.MkdirAll(dir, fileops.PermDir); mkdirErr != nil {
 			return fmt.Errorf("failed to create directory: %w", mkdirErr)
 		}
-	}
-
-	// Discover and filter modules
-	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
-		Operation: "benchmarks",
-	})
-	if err != nil {
-		return err
-	}
-	if result.Empty || result.Skipped {
-		return nil
 	}
 
 	// Build base benchmark args
@@ -257,7 +243,7 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 	// instead of forEachModule
 	var allOutputs []string
 
-	for _, module := range result.Modules {
+	for _, module := range ctx.Modules {
 		displayModuleHeader(module, "Running benchmarks for")
 
 		utils.Info("Running: go %s", strings.Join(args, " "))
@@ -406,11 +392,15 @@ func (Bench) Trace() error {
 
 // TraceWithArgs runs benchmarks with execution tracing and accepts parameters
 func (Bench) TraceWithArgs(argsList ...string) error {
-	utils.Header("Running Benchmarks with Execution Trace")
-
-	config, err := GetConfig()
+	ctx, err := prepareModuleCommand(ModuleCommandConfig{
+		Header:    "Running Benchmarks with Execution Trace",
+		Operation: "benchmarks",
+	})
 	if err != nil {
 		return err
+	}
+	if ctx == nil {
+		return nil
 	}
 
 	// Parse command-line parameters from argsList
@@ -419,17 +409,6 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 	trace := utils.GetParam(params, "trace", defaultTraceFile)
 	if trace == "" {
 		trace = env.GetString("TRACE_FILE", defaultTraceFile)
-	}
-
-	// Discover and filter modules
-	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
-		Operation: "benchmarks",
-	})
-	if err != nil {
-		return err
-	}
-	if result.Empty || result.Skipped {
-		return nil
 	}
 
 	benchTime := utils.GetParam(params, "time", defaultBenchTime)
@@ -441,16 +420,16 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 	pkg := utils.GetParam(params, "pkg", defaultPackage)
 
 	totalStart := time.Now()
-	moduleErrors := make([]moduleError, 0, len(result.Modules))
+	moduleErrors := make([]moduleError, 0, len(ctx.Modules))
 
 	// Run benchmarks for each module
 	// Note: Custom loop because we need per-module trace file naming
-	for i, module := range result.Modules {
+	for i, module := range ctx.Modules {
 		displayModuleHeader(module, "Running benchmarks with trace for")
 
 		// Create unique trace file for each module
 		moduleTrace := trace
-		if len(result.Modules) > 1 {
+		if len(ctx.Modules) > 1 {
 			ext := filepath.Ext(trace)
 			base := strings.TrimSuffix(trace, ext)
 			if module.Relative == "." {
@@ -496,7 +475,7 @@ func (Bench) TraceWithArgs(argsList ...string) error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("Benchmarks with trace failed in %d/%d modules", len(moduleErrors), len(result.Modules))
+		utils.Error("Benchmarks with trace failed in %d/%d modules", len(moduleErrors), len(ctx.Modules))
 		return formatModuleErrors(moduleErrors)
 	}
 

@@ -1072,3 +1072,154 @@ func TestDisplayOverallCompletionWithOptions(t *testing.T) {
 func fakeStartTime() time.Time {
 	return time.Now().Add(-100 * time.Millisecond)
 }
+
+func TestPrepareModuleCommand(t *testing.T) {
+	// Get current directory
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer func() {
+		if chdirErr := os.Chdir(originalDir); chdirErr != nil {
+			t.Logf("Failed to restore directory: %v", chdirErr)
+		}
+	}()
+
+	t.Run("returns context when modules found", func(t *testing.T) {
+		// Create a temporary test directory with a go.mod
+		tmpDir := t.TempDir()
+		goModPath := filepath.Join(tmpDir, "go.mod")
+		content := "module github.com/test/project\n\ngo 1.24\n"
+		if writeErr := os.WriteFile(goModPath, []byte(content), 0o600); writeErr != nil {
+			t.Fatalf("Failed to create go.mod: %v", writeErr)
+		}
+
+		// Change to temp directory
+		if chdirErr := os.Chdir(tmpDir); chdirErr != nil {
+			t.Fatalf("Failed to change to temp directory: %v", chdirErr)
+		}
+
+		ctx, err := prepareModuleCommand(ModuleCommandConfig{
+			Header:    "Test Header",
+			Operation: "testing",
+		})
+		if err != nil {
+			t.Errorf("prepareModuleCommand() error = %v", err)
+		}
+		if ctx == nil {
+			t.Error("prepareModuleCommand() returned nil context, expected non-nil")
+		}
+		if ctx != nil && len(ctx.Modules) == 0 {
+			t.Error("prepareModuleCommand() returned context with no modules")
+		}
+		if ctx != nil && ctx.Config == nil {
+			t.Error("prepareModuleCommand() returned context with nil Config")
+		}
+	})
+
+	t.Run("returns nil context when no modules found", func(t *testing.T) {
+		// Create an empty temp directory (no go.mod)
+		tmpDir := t.TempDir()
+
+		// Change to temp directory
+		if chdirErr := os.Chdir(tmpDir); chdirErr != nil {
+			t.Fatalf("Failed to change to temp directory: %v", chdirErr)
+		}
+
+		ctx, err := prepareModuleCommand(ModuleCommandConfig{
+			Header:    "Test Header",
+			Operation: "testing",
+		})
+		if err != nil {
+			t.Errorf("prepareModuleCommand() error = %v, expected nil", err)
+		}
+		if ctx != nil {
+			t.Errorf("prepareModuleCommand() returned non-nil context, expected nil for empty directory")
+		}
+	})
+
+	t.Run("context contains correct config and modules", func(t *testing.T) {
+		// Create a temp directory with a go.mod
+		tmpDir := t.TempDir()
+		goModPath := filepath.Join(tmpDir, "go.mod")
+		content := "module github.com/test/context\n\ngo 1.24\n"
+		if writeErr := os.WriteFile(goModPath, []byte(content), 0o600); writeErr != nil {
+			t.Fatalf("Failed to create go.mod: %v", writeErr)
+		}
+
+		// Change to temp directory
+		if chdirErr := os.Chdir(tmpDir); chdirErr != nil {
+			t.Fatalf("Failed to change to temp directory: %v", chdirErr)
+		}
+
+		ctx, err := prepareModuleCommand(ModuleCommandConfig{
+			Header:    "Verify Context",
+			Operation: "verification",
+		})
+		if err != nil {
+			t.Fatalf("prepareModuleCommand() error = %v", err)
+		}
+		if ctx == nil {
+			t.Fatal("prepareModuleCommand() returned nil context")
+		}
+
+		// Verify modules contain the expected module
+		foundModule := false
+		for _, m := range ctx.Modules {
+			if m.Module == "github.com/test/context" {
+				foundModule = true
+				break
+			}
+		}
+		if !foundModule {
+			t.Error("Expected to find module 'github.com/test/context' in context.Modules")
+		}
+
+		// Verify config is populated (should have defaults at minimum)
+		if ctx.Config == nil {
+			t.Error("Expected Config to be non-nil")
+		}
+	})
+}
+
+func TestModuleCommandConfig(t *testing.T) {
+	t.Run("config struct has required fields", func(t *testing.T) {
+		t.Parallel()
+		cfg := ModuleCommandConfig{
+			Header:    "Test Header",
+			Operation: "testing",
+		}
+
+		if cfg.Header != "Test Header" {
+			t.Errorf("Header = %q, want %q", cfg.Header, "Test Header")
+		}
+		if cfg.Operation != "testing" {
+			t.Errorf("Operation = %q, want %q", cfg.Operation, "testing")
+		}
+	})
+}
+
+func TestModuleCommandContext(t *testing.T) {
+	t.Run("context struct holds config and modules", func(t *testing.T) {
+		t.Parallel()
+		modules := []ModuleInfo{
+			{Path: "/test/path", Module: "github.com/test/module"},
+		}
+		config := &Config{}
+
+		ctx := &ModuleCommandContext{
+			Config:  config,
+			Modules: modules,
+		}
+
+		if ctx.Config != config {
+			t.Error("Config not stored correctly in context")
+		}
+		if len(ctx.Modules) != 1 {
+			t.Errorf("Modules length = %d, want 1", len(ctx.Modules))
+		}
+		if ctx.Modules[0].Module != "github.com/test/module" {
+			t.Errorf("Module = %q, want %q", ctx.Modules[0].Module, "github.com/test/module")
+		}
+	})
+}

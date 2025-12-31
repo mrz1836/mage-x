@@ -126,21 +126,14 @@ type Lint mg.Namespace
 
 // Default runs the default linter (golangci-lint + go vet)
 func (Lint) Default() error {
-	utils.Header("Running Default Linters")
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Discover and filter modules
-	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+	ctx, err := prepareModuleCommand(ModuleCommandConfig{
+		Header:    "Running Default Linters",
 		Operation: "linting",
 	})
 	if err != nil {
 		return err
 	}
-	if result.Empty || result.Skipped {
+	if ctx == nil {
 		return nil
 	}
 
@@ -152,12 +145,12 @@ func (Lint) Default() error {
 
 	// Ensure golangci-lint is installed
 	utils.Info("Checking golangci-lint installation...")
-	if err = ensureGolangciLint(config); err != nil {
+	if err = ensureGolangciLint(ctx.Config); err != nil {
 		return err
 	}
 
 	// Run linters for each module
-	for _, module := range result.Modules {
+	for _, module := range ctx.Modules {
 		displayModuleHeader(module, "Linting")
 
 		moduleStart := time.Now()
@@ -170,7 +163,7 @@ func (Lint) Default() error {
 		// Build arguments using consolidated helper
 		argBuilder := &golangciLintArgs{
 			modulePath: module.Path,
-			config:     config,
+			config:     ctx.Config,
 			withFix:    false,
 		}
 		args := argBuilder.buildArgs()
@@ -189,7 +182,7 @@ func (Lint) Default() error {
 		// Run go vet
 		goVersion := getLinterVersion("go", "version")
 		utils.Info("Running go vet (%s)...", goVersion)
-		if err = runVetInModule(module, config); err != nil {
+		if err = runVetInModule(module, ctx.Config); err != nil {
 			hasError = true
 			utils.Error("go vet failed for %s", module.Relative)
 		} else {
@@ -209,7 +202,7 @@ func (Lint) Default() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("Linting failed in %d/%d modules", len(moduleErrors), len(result.Modules))
+		utils.Error("Linting failed in %d/%d modules", len(moduleErrors), len(ctx.Modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
@@ -219,21 +212,14 @@ func (Lint) Default() error {
 
 // Fix runs golangci-lint with auto-fix and applies code formatting
 func (Lint) Fix() error {
-	utils.Header("Running Linter with Auto-Fix and Formatting")
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Discover and filter modules
-	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+	ctx, err := prepareModuleCommand(ModuleCommandConfig{
+		Header:    "Running Linter with Auto-Fix and Formatting",
 		Operation: "lint fix",
 	})
 	if err != nil {
 		return err
 	}
-	if result.Empty || result.Skipped {
+	if ctx == nil {
 		return nil
 	}
 
@@ -245,12 +231,12 @@ func (Lint) Fix() error {
 
 	// Ensure golangci-lint is installed
 	utils.Info("Checking golangci-lint installation...")
-	if err = ensureGolangciLint(config); err != nil {
+	if err = ensureGolangciLint(ctx.Config); err != nil {
 		return err
 	}
 
 	// Run fix for each module
-	for _, module := range result.Modules {
+	for _, module := range ctx.Modules {
 		displayModuleHeader(module, "Fixing lint issues in")
 
 		moduleStart := time.Now()
@@ -263,7 +249,7 @@ func (Lint) Fix() error {
 		// Build arguments using consolidated helper
 		argBuilder := &golangciLintArgs{
 			modulePath: module.Path,
-			config:     config,
+			config:     ctx.Config,
 			withFix:    true,
 		}
 		args := argBuilder.buildArgs()
@@ -307,7 +293,7 @@ func (Lint) Fix() error {
 
 	// Report overall results
 	if len(moduleErrors) > 0 {
-		utils.Error("Fix failed in %d/%d modules", len(moduleErrors), len(result.Modules))
+		utils.Error("Fix failed in %d/%d modules", len(moduleErrors), len(ctx.Modules))
 		return formatModuleErrors(moduleErrors)
 	}
 
@@ -402,30 +388,23 @@ func installGofumpt(_ *Config) error {
 
 // Vet runs go vet
 func (Lint) Vet() error {
-	utils.Header("Running go vet")
-
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// Discover and filter modules
-	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
+	ctx, err := prepareModuleCommand(ModuleCommandConfig{
+		Header:    "Running go vet",
 		Operation: "go vet",
 	})
 	if err != nil {
 		return err
 	}
-	if result.Empty || result.Skipped {
+	if ctx == nil {
 		return nil
 	}
 
 	// Run vet for each module
-	return forEachModule(result.Modules, ModuleIteratorOptions{
+	return forEachModule(ctx.Modules, ModuleIteratorOptions{
 		Operation: "Vet",
 		Verb:      "passed",
 	}, func(module ModuleInfo) error {
-		return runVetInModule(module, config)
+		return runVetInModule(module, ctx.Config)
 	})
 }
 
