@@ -176,7 +176,7 @@ func (d *CommandDiscovery) isLikelyNamespaceWrapper(funcName string) bool {
 	commonNamespaces := []string{
 		"build", "test", "lint", "format", "deps", "git", "release", "docs",
 		"tools", "generate", "mod", "help", "version", "install",
-		"configure", "init", "bench", "vet",
+		"configure", "init", "bench", "vet", "aws",
 	}
 
 	for _, ns := range commonNamespaces {

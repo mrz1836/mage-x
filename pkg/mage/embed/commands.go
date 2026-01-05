@@ -322,6 +322,36 @@ func getBmadCommands() []CommandDef {
 	}
 }
 
+func getAWSCommands() []CommandDef {
+	return []CommandDef{
+		{
+			Method:   "login",
+			Desc:     "Smart AWS login - detects setup state and performs MFA refresh",
+			Aliases:  []string{"aws"},
+			Usage:    "magex aws:login [profile=<name>]",
+			Examples: []string{"magex aws:login", "magex aws:login profile=production"},
+		},
+		{
+			Method:   "setup",
+			Desc:     "Interactive AWS credential setup (Access Key, Secret, MFA Serial)",
+			Usage:    "magex aws:setup [profile=<name>]",
+			Examples: []string{"magex aws:setup", "magex aws:setup profile=staging"},
+		},
+		{
+			Method:   "refresh",
+			Desc:     "Refresh AWS session credentials using MFA token",
+			Usage:    "magex aws:refresh [profile=<name>] [duration=<seconds>]",
+			Examples: []string{"magex aws:refresh", "magex aws:refresh profile=prod", "magex aws:refresh duration=28800"},
+		},
+		{
+			Method:   "status",
+			Desc:     "Show AWS credential status for profiles",
+			Usage:    "magex aws:status [profile=<name>]",
+			Examples: []string{"magex aws:status", "magex aws:status profile=dev"},
+		},
+	}
+}
+
 // ============================================================================
 // Method Bindings - Type-Safe Function References
 // ============================================================================
@@ -590,6 +620,15 @@ func bmadMethodBindings(b mage.Bmad) map[string]MethodBinding {
 	}
 }
 
+func awsMethodBindings(a mage.AWS) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"login":   {NoArgs: a.LoginNoArgs, WithArgs: a.Login},
+		"setup":   {NoArgs: a.SetupNoArgs, WithArgs: a.Setup},
+		"refresh": {NoArgs: a.RefreshNoArgs, WithArgs: a.Refresh},
+		"status":  {NoArgs: a.StatusNoArgs, WithArgs: a.Status},
+	}
+}
+
 // ============================================================================
 // Registration Functions
 // ============================================================================
@@ -629,6 +668,7 @@ func RegisterAll(reg *registry.Registry) {
 	registerInstallCommands(reg)
 	registerYamlCommands(reg)
 	registerBmadCommands(reg)
+	registerAWSCommands(reg)
 	registerTopLevelCommands(reg)
 }
 
@@ -769,6 +809,11 @@ func registerYamlCommands(reg *registry.Registry) {
 func registerBmadCommands(reg *registry.Registry) {
 	b := mage.Bmad{}
 	registerNamespaceCommands(reg, "bmad", "AI/ML", getBmadCommands(), bmadMethodBindings(b))
+}
+
+func registerAWSCommands(reg *registry.Registry) {
+	a := mage.AWS{}
+	registerNamespaceCommands(reg, "aws", "Cloud", getAWSCommands(), awsMethodBindings(a))
 }
 
 func registerTopLevelCommands(reg *registry.Registry) {
