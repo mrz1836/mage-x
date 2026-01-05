@@ -736,7 +736,12 @@ magex aws:status profile=dev       # Show specific profile
 ```
 
 **Prerequisites:**
-- AWS CLI must be installed ([Install Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))
+- AWS CLI must be installed and accessible in your PATH
+  - **macOS:** `brew install awscli`
+  - **Linux (Ubuntu/Debian):** `sudo apt-get install awscli`
+  - **Linux (RHEL/CentOS):** `sudo yum install aws-cli`
+  - **Windows:** [Download MSI installer](https://awscli.amazonaws.com/AWSCLIV2.msi)
+  - **Official guide:** [AWS CLI Installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 - IAM user with MFA device configured
 
 **Workflow:**

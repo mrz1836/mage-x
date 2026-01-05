@@ -29,12 +29,12 @@ const (
 
 // Static errors for AWS operations
 var (
-	errAWSCLINotFound      = errors.New("AWS CLI not found. Install it from: " + awsInstallURL)
 	errMFASerialNotFound   = errors.New("MFA serial not found in config. Run 'magex aws:setup' first")
 	errInvalidMFAToken     = errors.New("MFA token must be exactly 6 digits")
 	errEmptyInput          = errors.New("input cannot be empty")
 	errSTSCallFailed       = errors.New("AWS STS get-session-token failed")
 	errAWSCredBackupFailed = errors.New("failed to backup credentials file")
+	errAWSCLINotFound      = errors.New("AWS CLI not found in PATH")
 )
 
 // AWS namespace for AWS credential management
@@ -314,11 +314,35 @@ func (AWS) Status(args ...string) error {
 
 // checkAWSCLI verifies the AWS CLI is installed
 func checkAWSCLI() error {
-	_, err := GetRunner().RunCmdOutput("which", "aws")
-	if err != nil {
-		return errAWSCLINotFound
+	if !utils.CommandExists("aws") {
+		return getAWSCLINotFoundError()
 	}
 	return nil
+}
+
+// getAWSCLINotFoundError returns an OS-specific error message for missing AWS CLI
+func getAWSCLINotFoundError() error {
+	msg := "AWS CLI not found in PATH.\n\n"
+
+	if utils.IsWindows() {
+		msg += "Install it using:\n"
+		msg += "  MSI Installer: https://awscli.amazonaws.com/AWSCLIV2.msi\n"
+		msg += "  Official Guide: " + awsInstallURL + "\n\n"
+		msg += "After installation, restart your terminal and ensure 'aws.exe' is in your PATH."
+	} else if utils.IsMac() {
+		msg += "Install it using:\n"
+		msg += "  Homebrew:    brew install awscli\n"
+		msg += "  Official:    " + awsInstallURL + "\n\n"
+		msg += "If already installed, ensure 'aws' is in your PATH."
+	} else { // Linux
+		msg += "Install it using:\n"
+		msg += "  Ubuntu/Debian: sudo apt-get install awscli\n"
+		msg += "  RHEL/CentOS:   sudo yum install aws-cli\n"
+		msg += "  Official:      " + awsInstallURL + "\n\n"
+		msg += "If already installed, ensure 'aws' is in your PATH."
+	}
+
+	return fmt.Errorf("%w: %s", errAWSCLINotFound, msg)
 }
 
 // getAWSDir returns the AWS configuration directory path

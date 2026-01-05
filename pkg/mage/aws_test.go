@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // TestParseAWSINI tests the INI file parser
@@ -253,11 +255,6 @@ func TestAWSConstants(t *testing.T) {
 
 // TestAWSErrors tests error message content
 func TestAWSErrors(t *testing.T) {
-	t.Run("AWS CLI not found error", func(t *testing.T) {
-		assert.Contains(t, errAWSCLINotFound.Error(), "AWS CLI not found")
-		assert.Contains(t, errAWSCLINotFound.Error(), "https://")
-	})
-
 	t.Run("MFA serial not found error", func(t *testing.T) {
 		assert.Contains(t, errMFASerialNotFound.Error(), "aws:setup")
 	})
@@ -914,5 +911,60 @@ func TestNoArgsPlaceholders(t *testing.T) {
 	t.Run("StatusNoArgs exists", func(t *testing.T) {
 		var fn func() error = aws.StatusNoArgs
 		_ = fn
+	})
+}
+
+// TestCheckAWSCLI tests AWS CLI detection
+func TestCheckAWSCLI(t *testing.T) {
+	t.Run("AWS CLI found in PATH", func(t *testing.T) {
+		// Skip if AWS CLI not actually installed
+		if !utils.CommandExists("aws") {
+			t.Skip("AWS CLI not installed")
+		}
+
+		err := checkAWSCLI()
+		assert.NoError(t, err)
+	})
+
+	t.Run("AWS CLI not found returns helpful error", func(t *testing.T) {
+		err := getAWSCLINotFoundError()
+		assert.Error(t, err)
+
+		errMsg := err.Error()
+		assert.Contains(t, errMsg, "AWS CLI not found")
+		assert.Contains(t, errMsg, "Install it using")
+
+		// Should contain platform-specific guidance
+		if utils.IsWindows() {
+			assert.Contains(t, errMsg, "awscli.amazonaws.com/AWSCLIV2.msi")
+		} else if utils.IsMac() {
+			assert.Contains(t, errMsg, "brew install awscli")
+		} else {
+			assert.Contains(t, errMsg, "apt-get install awscli")
+		}
+	})
+
+	t.Run("error message includes PATH guidance", func(t *testing.T) {
+		err := getAWSCLINotFoundError()
+		assert.Contains(t, err.Error(), "PATH")
+	})
+
+	t.Run("error message includes official docs", func(t *testing.T) {
+		err := getAWSCLINotFoundError()
+		assert.Contains(t, err.Error(), awsInstallURL)
+	})
+}
+
+// TestAWSCLIErrorMessageFormat tests error message formatting
+func TestAWSCLIErrorMessageFormat(t *testing.T) {
+	t.Run("error is multiline for readability", func(t *testing.T) {
+		err := getAWSCLINotFoundError()
+		assert.Contains(t, err.Error(), "\n")
+	})
+
+	t.Run("error message not too long", func(t *testing.T) {
+		err := getAWSCLINotFoundError()
+		// Should be helpful but concise (under 500 chars)
+		assert.Less(t, len(err.Error()), 500)
 	})
 }
