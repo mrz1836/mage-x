@@ -712,6 +712,40 @@ magex release:clean        # Clean release artifacts and build cache
 </details>
 
 <details>
+<summary>☁️ <strong>AWS Credential Management</strong></summary>
+
+Manage AWS credentials with MFA authentication. Requires AWS CLI to be installed.
+
+```bash
+# Smart login - detects if setup is needed, then performs MFA refresh
+magex aws:login                    # Login with default profile
+magex aws:login profile=production # Login with specific profile
+
+# Interactive setup - configure credentials and MFA device
+magex aws:setup                    # Setup default profile
+magex aws:setup profile=staging    # Setup specific profile
+
+# MFA refresh - get temporary session credentials
+magex aws:refresh                  # Refresh default profile
+magex aws:refresh profile=prod     # Refresh specific profile
+magex aws:refresh duration=28800   # Custom session duration (8 hours)
+
+# Status - view credential status
+magex aws:status                   # Show all profiles
+magex aws:status profile=dev       # Show specific profile
+```
+
+**Prerequisites:**
+- AWS CLI must be installed ([Install Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))
+- IAM user with MFA device configured
+
+**Workflow:**
+1. Run `magex aws:setup` to configure your Access Key, Secret Key, and MFA device ARN
+2. Run `magex aws:login` daily to refresh your session credentials with MFA
+
+</details>
+
+<details>
 <summary>🔧 <strong>Development Tools</strong></summary>
 
 ```bash
