@@ -2,9 +2,9 @@
 
 # 🪄&nbsp;&nbsp;MAGE-X
 
-**Write Once, Mage Everywhere: Zero-Boilerplate Build Tooling for Go.**
+> **Write Once, Mage Everywhere: Zero-Boilerplate Build Tooling for Go.**
 
-<br/>
+<img src="examples/demo.gif" alt="MAGE-X Demo" title="MAGE-X Demo"/>
 
 <a href="https://github.com/mrz1836/mage-x/releases"><img src="https://img.shields.io/github/release-pre/mrz1836/mage-x?include_prereleases&style=flat-square&logo=github&color=black" alt="Release"></a>
 <a href="https://golang.org/"><img src="https://img.shields.io/github/go-mod/go-version/mrz1836/mage-x?style=flat-square&logo=go&color=00ADD8" alt="Go Version"></a>
