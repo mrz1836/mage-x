@@ -11,9 +11,9 @@ Require mgx
 
 Set Shell "zsh"
 Set FontSize 15
-Set Width 1200
-Set Height 650
-Set Padding 25
+Set Width 1100
+Set Height 850
+Set Padding 20
 Set BorderRadius 10
 Set WindowBar Colorful
 Set TypingSpeed 50ms
