@@ -13,11 +13,11 @@ coverage:
   round: down # up, down, or nearest
   precision: 2 # Number of decimal places, between 0 and 5
 
-# Flag Management - Don't carry forward coverage for deleted files
+# Flag Management - Simple carryforward for everything
 # ----------------------
 flag_management:
   default_rules:
-    carryforward: false # Don't carry forward coverage from previous uploads (avoids stale files)
+    carryforward: true # This keeps coverage from previous uploads
     statuses:
       - type: project
         target: auto
