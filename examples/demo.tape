@@ -101,3 +101,14 @@ Type "mgx test"
 Sleep 300ms
 Enter
 Sleep 5s
+
+Hide
+Type "clear"
+Enter
+Show
+
+# Scene 6: Metrics
+Type "mgx metrics:loc"
+Sleep 300ms
+Enter
+Sleep 5s
