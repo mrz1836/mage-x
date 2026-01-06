@@ -2,7 +2,7 @@ module github.com/mrz1836/mage-x/examples/override-commands
 
 go 1.24.9
 
-require github.com/mrz1836/mage-x v1.13.3
+require github.com/mrz1836/mage-x v1.15.0
 
 require (
 	github.com/kr/text v0.2.0 // indirect
