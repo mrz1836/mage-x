@@ -169,16 +169,18 @@ func (Metrics) LOC(args ...string) error {
 		date)
 	utils.Println("")
 
-	// Summary section
-	utils.Println("Summary:")
-	utils.Println("────────────────────────────────────────────────────")
-	utils.Print("  Total Lines of Code:     %s\n", formatNumberWithCommas(totalLOC))
-	utils.Print("  Total Files:             %d\n", totalFiles)
-	utils.Print("  Total Size:              %s\n", formatBytesMetrics(totalBytes))
-	utils.Print("  Package/Directory Count: %d\n", packageCount)
+	// Summary section - use markdown table for GitHub compatibility
 	utils.Println("")
-	utils.Print("  Average Lines per File:  %.1f\n", avgLinesPerFile)
-	utils.Print("  Test Coverage Ratio:     %.1f%% (test LOC / production LOC)\n", testCoverageRatio)
+	utils.Println("Summary")
+	utils.Println("")
+	utils.Println("| Metric                  | Value                                 |")
+	utils.Println("|-------------------------|---------------------------------------|")
+	utils.Print("| Total Lines of Code     | %-37s |\n", formatNumberWithCommas(totalLOC))
+	utils.Print("| Total Files             | %-37d |\n", totalFiles)
+	utils.Print("| Total Size              | %-37s |\n", formatBytesMetrics(totalBytes))
+	utils.Print("| Package/Directory Count | %-37d |\n", packageCount)
+	utils.Print("| Average Lines per File  | %-37.1f |\n", avgLinesPerFile)
+	utils.Print("| Test Coverage Ratio     | %-37s |\n", fmt.Sprintf("%.1f%% (test LOC / production LOC)", testCoverageRatio))
 	utils.Println("")
 
 	utils.Success("Analysis complete!")
