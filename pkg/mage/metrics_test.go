@@ -97,14 +97,27 @@ func TestFormatNumberWithCommas(t *testing.T) {
 // TestLOCResult_JSONMarshal tests that LOCResult correctly marshals to JSON
 func TestLOCResult_JSONMarshal(t *testing.T) {
 	result := LOCResult{
-		TestFilesLOC:    1000,
-		TestFilesCount:  10,
-		GoFilesLOC:      5000,
-		GoFilesCount:    50,
-		TotalLOC:        6000,
-		TotalFilesCount: 60,
-		Date:            "2025-01-15",
-		ExcludedDirs:    []string{"vendor", "third_party"},
+		TestFilesLOC:        1000,
+		TestFilesCount:      10,
+		GoFilesLOC:          5000,
+		GoFilesCount:        50,
+		TotalLOC:            6000,
+		TotalFilesCount:     60,
+		Date:                "2025-01-15",
+		ExcludedDirs:        []string{"vendor", "third_party"},
+		TestFilesSizeBytes:  50000,
+		TestFilesSizeHuman:  "48.8 KB",
+		GoFilesSizeBytes:    250000,
+		GoFilesSizeHuman:    "244.1 KB",
+		TotalSizeBytes:      300000,
+		TotalSizeHuman:      "293.0 KB",
+		AvgLinesPerFile:     100.0,
+		TestCoverageRatio:   20.0,
+		PackageCount:        5,
+		TestAvgLinesPerFile: 100.0,
+		GoAvgLinesPerFile:   100.0,
+		TestAvgSizeBytes:    5000,
+		GoAvgSizeBytes:      5000,
 	}
 
 	jsonBytes, err := json.Marshal(result)
@@ -115,7 +128,7 @@ func TestLOCResult_JSONMarshal(t *testing.T) {
 	err = json.Unmarshal(jsonBytes, &unmarshaled)
 	require.NoError(t, err)
 
-	// Verify all fields are preserved
+	// Verify all existing fields are preserved
 	assert.Equal(t, result.TestFilesLOC, unmarshaled.TestFilesLOC)
 	assert.Equal(t, result.TestFilesCount, unmarshaled.TestFilesCount)
 	assert.Equal(t, result.GoFilesLOC, unmarshaled.GoFilesLOC)
@@ -124,19 +137,47 @@ func TestLOCResult_JSONMarshal(t *testing.T) {
 	assert.Equal(t, result.TotalFilesCount, unmarshaled.TotalFilesCount)
 	assert.Equal(t, result.Date, unmarshaled.Date)
 	assert.Equal(t, result.ExcludedDirs, unmarshaled.ExcludedDirs)
+
+	// Verify all new fields are preserved
+	assert.Equal(t, result.TestFilesSizeBytes, unmarshaled.TestFilesSizeBytes)
+	assert.Equal(t, result.TestFilesSizeHuman, unmarshaled.TestFilesSizeHuman)
+	assert.Equal(t, result.GoFilesSizeBytes, unmarshaled.GoFilesSizeBytes)
+	assert.Equal(t, result.GoFilesSizeHuman, unmarshaled.GoFilesSizeHuman)
+	assert.Equal(t, result.TotalSizeBytes, unmarshaled.TotalSizeBytes)
+	assert.Equal(t, result.TotalSizeHuman, unmarshaled.TotalSizeHuman)
+	assert.InDelta(t, result.AvgLinesPerFile, unmarshaled.AvgLinesPerFile, 0.001)
+	assert.InDelta(t, result.TestCoverageRatio, unmarshaled.TestCoverageRatio, 0.001)
+	assert.Equal(t, result.PackageCount, unmarshaled.PackageCount)
+	assert.InDelta(t, result.TestAvgLinesPerFile, unmarshaled.TestAvgLinesPerFile, 0.001)
+	assert.InDelta(t, result.GoAvgLinesPerFile, unmarshaled.GoAvgLinesPerFile, 0.001)
+	assert.Equal(t, result.TestAvgSizeBytes, unmarshaled.TestAvgSizeBytes)
+	assert.Equal(t, result.GoAvgSizeBytes, unmarshaled.GoAvgSizeBytes)
 }
 
 // TestLOCResult_JSONFieldNames tests that JSON field names are correct
 func TestLOCResult_JSONFieldNames(t *testing.T) {
 	result := LOCResult{
-		TestFilesLOC:    100,
-		TestFilesCount:  5,
-		GoFilesLOC:      200,
-		GoFilesCount:    10,
-		TotalLOC:        300,
-		TotalFilesCount: 15,
-		Date:            "2025-12-15",
-		ExcludedDirs:    []string{"vendor"},
+		TestFilesLOC:        100,
+		TestFilesCount:      5,
+		GoFilesLOC:          200,
+		GoFilesCount:        10,
+		TotalLOC:            300,
+		TotalFilesCount:     15,
+		Date:                "2025-12-15",
+		ExcludedDirs:        []string{"vendor"},
+		TestFilesSizeBytes:  1000,
+		TestFilesSizeHuman:  "1.0 KB",
+		GoFilesSizeBytes:    2000,
+		GoFilesSizeHuman:    "2.0 KB",
+		TotalSizeBytes:      3000,
+		TotalSizeHuman:      "3.0 KB",
+		AvgLinesPerFile:     20.0,
+		TestCoverageRatio:   50.0,
+		PackageCount:        3,
+		TestAvgLinesPerFile: 20.0,
+		GoAvgLinesPerFile:   20.0,
+		TestAvgSizeBytes:    200,
+		GoAvgSizeBytes:      200,
 	}
 
 	jsonBytes, err := json.Marshal(result)
@@ -144,7 +185,7 @@ func TestLOCResult_JSONFieldNames(t *testing.T) {
 
 	jsonStr := string(jsonBytes)
 
-	// Verify snake_case field names are used
+	// Verify existing snake_case field names are used
 	assert.Contains(t, jsonStr, `"test_files_loc"`)
 	assert.Contains(t, jsonStr, `"test_files_count"`)
 	assert.Contains(t, jsonStr, `"go_files_loc"`)
@@ -153,18 +194,89 @@ func TestLOCResult_JSONFieldNames(t *testing.T) {
 	assert.Contains(t, jsonStr, `"total_files_count"`)
 	assert.Contains(t, jsonStr, `"date"`)
 	assert.Contains(t, jsonStr, `"excluded_dirs"`)
+
+	// Verify new snake_case field names are used
+	assert.Contains(t, jsonStr, `"test_files_size_bytes"`)
+	assert.Contains(t, jsonStr, `"test_files_size_human"`)
+	assert.Contains(t, jsonStr, `"go_files_size_bytes"`)
+	assert.Contains(t, jsonStr, `"go_files_size_human"`)
+	assert.Contains(t, jsonStr, `"total_size_bytes"`)
+	assert.Contains(t, jsonStr, `"total_size_human"`)
+	assert.Contains(t, jsonStr, `"avg_lines_per_file"`)
+	assert.Contains(t, jsonStr, `"test_coverage_ratio"`)
+	assert.Contains(t, jsonStr, `"package_count"`)
+	assert.Contains(t, jsonStr, `"test_avg_lines_per_file"`)
+	assert.Contains(t, jsonStr, `"go_avg_lines_per_file"`)
+	assert.Contains(t, jsonStr, `"test_avg_size_bytes"`)
+	assert.Contains(t, jsonStr, `"go_avg_size_bytes"`)
 }
 
 // TestLOCStats tests the LOCStats struct
 func TestLOCStats(t *testing.T) {
-	stats := LOCStats{Lines: 100, Files: 5}
+	stats := LOCStats{Lines: 100, Files: 5, TotalBytes: 50000}
 	assert.Equal(t, 100, stats.Lines)
 	assert.Equal(t, 5, stats.Files)
+	assert.Equal(t, int64(50000), stats.TotalBytes)
 
 	// Test zero values
 	emptyStats := LOCStats{}
 	assert.Equal(t, 0, emptyStats.Lines)
 	assert.Equal(t, 0, emptyStats.Files)
+	assert.Equal(t, int64(0), emptyStats.TotalBytes)
+}
+
+// TestSafeAverage tests the safeAverage helper function
+func TestSafeAverage(t *testing.T) {
+	// Test normal case
+	assert.InDelta(t, 50.0, safeAverage(100, 2), 0.001)
+	assert.InDelta(t, 33.333333333333336, safeAverage(100, 3), 0.001)
+
+	// Test division by zero
+	assert.InDelta(t, 0.0, safeAverage(100, 0), 0.001)
+
+	// Test zero numerator
+	assert.InDelta(t, 0.0, safeAverage(0, 5), 0.001)
+}
+
+// TestSafeAverageBytes tests the safeAverageBytes helper function
+func TestSafeAverageBytes(t *testing.T) {
+	// Test normal case
+	assert.Equal(t, int64(50), safeAverageBytes(100, 2))
+	assert.Equal(t, int64(33), safeAverageBytes(100, 3))
+
+	// Test division by zero
+	assert.Equal(t, int64(0), safeAverageBytes(100, 0))
+
+	// Test zero numerator
+	assert.Equal(t, int64(0), safeAverageBytes(0, 5))
+}
+
+// TestCountPackages tests the countPackages helper function
+func TestCountPackages(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "packages_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(tmpDir) }) //nolint:errcheck // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.Chdir(originalDir) }) //nolint:errcheck // cleanup
+
+	// Create file in root directory
+	err = os.WriteFile("root.go", []byte("package main"), 0o600)
+	require.NoError(t, err)
+
+	// Create multiple packages
+	pkgDirs := []string{"pkg1", "pkg2", "pkg2/sub"}
+	for _, dir := range pkgDirs {
+		require.NoError(t, os.MkdirAll(dir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o600))
+	}
+
+	count, err := countPackages([]string{})
+	require.NoError(t, err)
+	assert.Equal(t, 4, count) // . + pkg1 + pkg2 + pkg2/sub
 }
 
 // TestCountLinesWithStats tests the countLinesWithStats helper function
