@@ -31,6 +31,7 @@ type Metrics mg.Namespace
 
 // LOCResult represents JSON output for LOC statistics
 type LOCResult struct {
+	// EXISTING FIELDS - DO NOT MODIFY OR REMOVE (fortress workflow dependency)
 	TestFilesLOC    int      `json:"test_files_loc"`
 	TestFilesCount  int      `json:"test_files_count"`
 	GoFilesLOC      int      `json:"go_files_loc"`
@@ -39,12 +40,28 @@ type LOCResult struct {
 	TotalFilesCount int      `json:"total_files_count"`
 	Date            string   `json:"date"`
 	ExcludedDirs    []string `json:"excluded_dirs"`
+
+	// NEW FIELDS - ADDITIVE ONLY
+	TestFilesSizeBytes  int64   `json:"test_files_size_bytes"`
+	TestFilesSizeHuman  string  `json:"test_files_size_human"`
+	GoFilesSizeBytes    int64   `json:"go_files_size_bytes"`
+	GoFilesSizeHuman    string  `json:"go_files_size_human"`
+	TotalSizeBytes      int64   `json:"total_size_bytes"`
+	TotalSizeHuman      string  `json:"total_size_human"`
+	AvgLinesPerFile     float64 `json:"avg_lines_per_file"`
+	TestCoverageRatio   float64 `json:"test_coverage_ratio"`
+	PackageCount        int     `json:"package_count"`
+	TestAvgLinesPerFile float64 `json:"test_avg_lines_per_file"`
+	GoAvgLinesPerFile   float64 `json:"go_avg_lines_per_file"`
+	TestAvgSizeBytes    int64   `json:"test_avg_size_bytes"`
+	GoAvgSizeBytes      int64   `json:"go_avg_size_bytes"`
 }
 
-// LOCStats holds line and file counts
+// LOCStats holds line, file counts, and total size
 type LOCStats struct {
-	Lines int
-	Files int
+	Lines      int
+	Files      int
+	TotalBytes int64 // Total size in bytes
 }
 
 // LOC displays lines of code statistics (use json for JSON output)
@@ -77,9 +94,28 @@ func (Metrics) LOC(args ...string) error {
 	totalLOC := testStats.Lines + goStats.Lines
 	totalFiles := testStats.Files + goStats.Files
 
+	// Count packages
+	packageCount, err := countPackages(excludeDirs)
+	if err != nil {
+		if !jsonOutput {
+			utils.Warn("Failed to count packages: %v", err)
+		}
+		packageCount = 0
+	}
+
+	// Calculate derived metrics
+	totalBytes := testStats.TotalBytes + goStats.TotalBytes
+	avgLinesPerFile := safeAverage(totalLOC, totalFiles)
+	testCoverageRatio := safeAverage(testStats.Lines, goStats.Lines) * 100
+	testAvgLines := safeAverage(testStats.Lines, testStats.Files)
+	goAvgLines := safeAverage(goStats.Lines, goStats.Files)
+	testAvgBytes := safeAverageBytes(testStats.TotalBytes, testStats.Files)
+	goAvgBytes := safeAverageBytes(goStats.TotalBytes, goStats.Files)
+
 	if jsonOutput {
 		// JSON output - no headers, no success messages, just JSON
 		result := LOCResult{
+			// EXISTING FIELDS - UNCHANGED
 			TestFilesLOC:    testStats.Lines,
 			TestFilesCount:  testStats.Files,
 			GoFilesLOC:      goStats.Lines,
@@ -88,6 +124,21 @@ func (Metrics) LOC(args ...string) error {
 			TotalFilesCount: totalFiles,
 			Date:            date,
 			ExcludedDirs:    excludeDirs,
+
+			// NEW FIELDS
+			TestFilesSizeBytes:  testStats.TotalBytes,
+			TestFilesSizeHuman:  formatBytesMetrics(testStats.TotalBytes),
+			GoFilesSizeBytes:    goStats.TotalBytes,
+			GoFilesSizeHuman:    formatBytesMetrics(goStats.TotalBytes),
+			TotalSizeBytes:      totalBytes,
+			TotalSizeHuman:      formatBytesMetrics(totalBytes),
+			AvgLinesPerFile:     avgLinesPerFile,
+			TestCoverageRatio:   testCoverageRatio,
+			PackageCount:        packageCount,
+			TestAvgLinesPerFile: testAvgLines,
+			GoAvgLinesPerFile:   goAvgLines,
+			TestAvgSizeBytes:    testAvgBytes,
+			GoAvgSizeBytes:      goAvgBytes,
 		}
 
 		jsonBytes, err := json.Marshal(result)
@@ -102,13 +153,35 @@ func (Metrics) LOC(args ...string) error {
 	utils.Header("Lines of Code Statistics")
 
 	utils.Println("")
-	utils.Println("| Type       | Total Lines | Date       |")
-	utils.Println("|------------|-------------|------------|")
-	utils.Print("| Test Files | %-11s | %s |\n", formatNumberWithCommas(testStats.Lines), date)
-	utils.Print("| Go Files   | %-11s | %s |\n", formatNumberWithCommas(goStats.Lines), date)
+	utils.Println("| Type       | Total Lines | File Count | Total Size | Avg Size    | Date       |")
+	utils.Println("|------------|-------------|------------|------------|-------------|------------|")
+	utils.Print("| Test Files | %-11s | %-10d | %-10s | %-11s | %s |\n",
+		formatNumberWithCommas(testStats.Lines),
+		testStats.Files,
+		formatBytesMetrics(testStats.TotalBytes),
+		formatBytesMetrics(testAvgBytes),
+		date)
+	utils.Print("| Go Files   | %-11s | %-10d | %-10s | %-11s | %s |\n",
+		formatNumberWithCommas(goStats.Lines),
+		goStats.Files,
+		formatBytesMetrics(goStats.TotalBytes),
+		formatBytesMetrics(goAvgBytes),
+		date)
 	utils.Println("")
 
-	utils.Success("Total lines of code: %s", formatNumberWithCommas(totalLOC))
+	// Summary section
+	utils.Println("Summary:")
+	utils.Println("────────────────────────────────────────────────────")
+	utils.Print("  Total Lines of Code:     %s\n", formatNumberWithCommas(totalLOC))
+	utils.Print("  Total Files:             %d\n", totalFiles)
+	utils.Print("  Total Size:              %s\n", formatBytesMetrics(totalBytes))
+	utils.Print("  Package/Directory Count: %d\n", packageCount)
+	utils.Println("")
+	utils.Print("  Average Lines per File:  %.1f\n", avgLinesPerFile)
+	utils.Print("  Test Coverage Ratio:     %.1f%% (test LOC / production LOC)\n", testCoverageRatio)
+	utils.Println("")
+
+	utils.Success("Analysis complete!")
 
 	return nil
 }
@@ -337,7 +410,7 @@ func (Metrics) Size() error {
 		return fmt.Errorf("failed to stat binary: %w", err)
 	}
 
-	utils.Info("Binary size: %s", formatBytes(stat.Size()))
+	utils.Info("Binary size: %s", formatBytesMetrics(stat.Size()))
 
 	// Analyze binary sections
 	utils.Info("Binary composition:")
@@ -349,7 +422,7 @@ func (Metrics) Size() error {
 	utils.Info("Module dependencies size:")
 	if modCache := os.Getenv("GOMODCACHE"); modCache != "" {
 		if info, err := getDirSize(modCache); err == nil {
-			utils.Info("Module cache size: %s", formatBytes(info))
+			utils.Info("Module cache size: %s", formatBytesMetrics(info))
 		}
 	}
 
@@ -488,6 +561,7 @@ func countLinesWithStats(pattern string, excludeDirs []string) (LOCStats, error)
 
 		// Count this file
 		stats.Files++
+		stats.TotalBytes += info.Size()
 
 		// Count lines
 		fileOps := fileops.New()
@@ -537,6 +611,7 @@ func countGoLinesWithStats(excludeDirs []string) (LOCStats, error) {
 
 		// Count this file
 		stats.Files++
+		stats.TotalBytes += info.Size()
 
 		// Count lines
 		fileOps := fileops.New()
@@ -558,4 +633,65 @@ func countGoLinesWithStats(excludeDirs []string) (LOCStats, error) {
 	})
 
 	return stats, err
+}
+
+// countPackages counts unique Go packages (directories with .go files)
+func countPackages(excludeDirs []string) (int, error) {
+	packages := make(map[string]bool)
+
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
+		}
+
+		// Skip excluded directories
+		for _, exclude := range excludeDirs {
+			if strings.Contains(path, exclude) {
+				if info.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+		}
+
+		// If it's a .go file, mark its directory as a package
+		if !info.IsDir() && strings.HasSuffix(path, ".go") {
+			dir := filepath.Dir(path)
+			packages[dir] = true
+		}
+
+		return nil
+	})
+
+	return len(packages), err
+}
+
+// safeAverage calculates average safely, returning 0 if denominator is 0
+func safeAverage(numerator, denominator int) float64 {
+	if denominator == 0 {
+		return 0.0
+	}
+	return float64(numerator) / float64(denominator)
+}
+
+// safeAverageBytes calculates average bytes safely
+func safeAverageBytes(totalBytes int64, count int) int64 {
+	if count == 0 {
+		return 0
+	}
+	return totalBytes / int64(count)
+}
+
+// formatBytesMetrics formats bytes as human-readable size string
+func formatBytesMetrics(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
