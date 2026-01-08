@@ -183,7 +183,8 @@ func (b *LintCommandBuilder) BuildGofumptArgs(extra bool) []string {
 
 // BuildGoimportsArgs builds arguments for goimports
 func (b *LintCommandBuilder) BuildGoimportsArgs() []string {
-	args := []string{"-w"}
+	args := make([]string, 0, 2)
+	args = append(args, "-w")
 
 	// Add local prefix based on module name - temporarily removed until Project interface is added
 

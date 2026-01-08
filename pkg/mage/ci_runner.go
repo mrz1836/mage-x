@@ -445,7 +445,8 @@ func printCIModeBanner(platform string, mode CIMode) {
 
 // printCIModeSummary outputs test results summary to stdout
 func printCIModeSummary(results *CIResult, outputPath string) {
-	lines := []string{
+	lines := make([]string, 0, 15+len(results.Failures))
+	lines = append(lines,
 		"",
 		"============================================================",
 		"📊 MAGE-X CI TEST SUMMARY",
@@ -456,7 +457,7 @@ func printCIModeSummary(results *CIResult, outputPath string) {
 		fmt.Sprintf("└── Skipped:       %d", results.Summary.Skipped),
 		fmt.Sprintf("Duration:          %s", results.Summary.Duration),
 		fmt.Sprintf("Failures Detected: %d", len(results.Failures)),
-	}
+	)
 	for _, f := range results.Failures {
 		lines = append(lines, fmt.Sprintf("  └── %s (%s) - %s", f.Test, f.Package, f.Type))
 	}
@@ -490,7 +491,8 @@ func printCIFuzzSummary(results []fuzzTestResult, totalDuration time.Duration) {
 		}
 	}
 
-	lines := []string{
+	lines := make([]string, 0, 12+len(failures))
+	lines = append(lines,
 		"",
 		"============================================================",
 		"📊 MAGE-X CI FUZZ TEST SUMMARY",
@@ -500,7 +502,7 @@ func printCIFuzzSummary(results []fuzzTestResult, totalDuration time.Duration) {
 		fmt.Sprintf("└── Failed:        %d", failed),
 		fmt.Sprintf("Duration:          %s", formatDurationForSummary(totalDuration)),
 		fmt.Sprintf("Failures Detected: %d", len(failures)),
-	}
+	)
 	for _, f := range failures {
 		lines = append(lines, fmt.Sprintf("  └── %s (%s)", f.Test, f.Package))
 	}

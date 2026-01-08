@@ -226,7 +226,7 @@ func TestExtractDescription(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a comment group
-			var comments []*ast.Comment
+			comments := make([]*ast.Comment, 0, len(tt.comments))
 			for _, text := range tt.comments {
 				comments = append(comments, &ast.Comment{Text: text})
 			}

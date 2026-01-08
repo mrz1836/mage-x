@@ -726,7 +726,7 @@ func (mc *MetricsCollector) identifyBottlenecks(metrics []*Metric) []Performance
 	// Analyze build duration bottlenecks
 	buildDurations := filterMetrics(metrics, "build_duration")
 	if len(buildDurations) > 0 {
-		var durations []float64
+		durations := make([]float64, 0, len(buildDurations))
 		for _, metric := range buildDurations {
 			durations = append(durations, metric.Value)
 		}
@@ -752,7 +752,7 @@ func (mc *MetricsCollector) identifyBottlenecks(metrics []*Metric) []Performance
 	// Analyze test bottlenecks
 	testDurations := filterMetrics(metrics, "test_duration")
 	if len(testDurations) > 0 {
-		var durations []float64
+		durations := make([]float64, 0, len(testDurations))
 		for _, metric := range testDurations {
 			durations = append(durations, metric.Value)
 		}
@@ -970,7 +970,10 @@ func (js *JSONStorage) Store(metric *Metric) error {
 		}
 	}
 
-	// Append new metric
+	// Preallocate if needed and append new metric
+	if metrics == nil {
+		metrics = make([]*Metric, 0, 1)
+	}
 	metrics = append(metrics, metric)
 
 	// Write back to file

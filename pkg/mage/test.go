@@ -806,7 +806,8 @@ func processBuildTagAutoDiscovery(config *Config) ([]string, string) {
 	}
 
 	excluded := truncateList(config.Test.AutoDiscoverBuildTagsExclude, 40)
-	testTargets := []string{"base"}
+	testTargets := make([]string, 0, 1+len(tags))
+	testTargets = append(testTargets, "base")
 	testTargets = append(testTargets, tags...)
 
 	// Show count and full list of discovered tags (or reasonable truncation)

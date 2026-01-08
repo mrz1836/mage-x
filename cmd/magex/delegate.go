@@ -141,10 +141,10 @@ func DelegateToMageWithTimeout(command string, timeout time.Duration, args ...st
 		cmd = exec.CommandContext(ctx, magePath, cmdArgs...)
 	} else {
 		// Fallback to go run with mage tags
-		var cmdArgs []string
+		cmdArgs := make([]string, 0, 4+len(args))
 		if useDirectory {
 			// For directory, we need to run from within the directory using go run .
-			cmdArgs = []string{"run", "-tags=mage", ".", mageCommand}
+			cmdArgs = append(cmdArgs, "run", "-tags=mage", ".", mageCommand)
 			cmdArgs = append(cmdArgs, args...)
 			// #nosec G204 -- This is necessary for dynamic command execution with user-defined commands
 			cmd = exec.CommandContext(ctx, "go", cmdArgs...)
@@ -152,7 +152,7 @@ func DelegateToMageWithTimeout(command string, timeout time.Duration, args ...st
 			cmd.Dir = targetPath
 		} else {
 			// For single file, specify the file path
-			cmdArgs = []string{"run", "-tags=mage", targetPath, mageCommand}
+			cmdArgs = append(cmdArgs, "run", "-tags=mage", targetPath, mageCommand)
 			cmdArgs = append(cmdArgs, args...)
 			// #nosec G204 -- This is necessary for dynamic command execution with user-defined commands
 			cmd = exec.CommandContext(ctx, "go", cmdArgs...)

@@ -30,7 +30,8 @@ type MockCommandRunner struct {
 }
 
 func (m *MockCommandRunner) RunCmd(name string, args ...string) error {
-	argList := []interface{}{name}
+	argList := make([]interface{}, 0, 1+len(args))
+	argList = append(argList, name)
 	for _, arg := range args {
 		argList = append(argList, arg)
 	}
@@ -38,7 +39,8 @@ func (m *MockCommandRunner) RunCmd(name string, args ...string) error {
 }
 
 func (m *MockCommandRunner) RunCmdOutput(name string, args ...string) (string, error) {
-	argList := []interface{}{name}
+	argList := make([]interface{}, 0, 1+len(args))
+	argList = append(argList, name)
 	for _, arg := range args {
 		argList = append(argList, arg)
 	}

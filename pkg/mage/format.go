@@ -485,8 +485,10 @@ func (Format) YAML() error {
 	utils.Header("Formatting YAML Files")
 
 	// Find YAML files
-	findArgs := []string{".", "-name", "*.yml", "-o", "-name", "*.yaml"}
-	findArgs = append(findArgs, buildFindExcludeArgs()...)
+	excludeArgs := buildFindExcludeArgs()
+	findArgs := make([]string, 0, 6+len(excludeArgs))
+	findArgs = append(findArgs, ".", "-name", "*.yml", "-o", "-name", "*.yaml")
+	findArgs = append(findArgs, excludeArgs...)
 	yamlFilesOutput, err := GetRunner().RunCmdOutput("find", findArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to find YAML files: %w", err)
@@ -633,8 +635,10 @@ func (Format) JSON() error {
 	utils.Header("Formatting JSON Files")
 
 	// Find JSON files
-	findArgs := []string{".", "-name", "*.json"}
-	findArgs = append(findArgs, buildFindExcludeArgs()...)
+	excludeArgs := buildFindExcludeArgs()
+	findArgs := make([]string, 0, 3+len(excludeArgs))
+	findArgs = append(findArgs, ".", "-name", "*.json")
+	findArgs = append(findArgs, excludeArgs...)
 	jsonFiles, err := GetRunner().RunCmdOutput("find", findArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to find JSON files: %w", err)

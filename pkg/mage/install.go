@@ -131,10 +131,12 @@ func (Install) Default() error {
 	}
 
 	// Build with installation flags
-	args := []string{"build", "-o", installPath}
+	flags := buildFlags(config)
+	args := make([]string, 0, 4+len(flags))
+	args = append(args, "build", "-o", installPath)
 
 	// Add build flags using the shared helper (handles template expansion)
-	args = append(args, buildFlags(config)...)
+	args = append(args, flags...)
 
 	// Add main package
 	args = append(args, packagePath)
@@ -315,10 +317,12 @@ func (Install) SystemWide() error {
 		return mageErrors.WrapError(err, "failed to determine package path")
 	}
 
-	args := []string{"build", "-o", tempBinary}
+	flags := buildFlags(config)
+	args := make([]string, 0, 4+len(flags))
+	args = append(args, "build", "-o", tempBinary)
 
 	// Add build flags using the shared helper (handles template expansion)
-	args = append(args, buildFlags(config)...)
+	args = append(args, flags...)
 
 	args = append(args, packagePath)
 
