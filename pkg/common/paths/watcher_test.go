@@ -1,7 +1,9 @@
 package paths
 
 import (
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -616,5 +618,81 @@ func TestDefaultPathWatcher_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Should not panic
+	assert.NotNil(t, watcher)
+}
+
+func TestDefaultPathWatcher_ConcurrentFileModifications(t *testing.T) {
+	// This test specifically targets the race condition in checkFileForChanges
+	// where w.lastSeen map was accessed without proper synchronization
+	watcher, ok := NewPathWatcher().(*DefaultPathWatcher)
+	require.True(t, ok, "Expected *DefaultPathWatcher")
+	watcher.SetDebounce(10 * time.Millisecond) // Short debounce for faster iterations
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Logf("Failed to close watcher: %v", err)
+		}
+	}()
+
+	// Create temp directory
+	tempDir, err := TempDir("watchertest_race_*")
+	require.NoError(t, err)
+	defer func() {
+		if removeErr := os.RemoveAll(tempDir.String()); removeErr != nil {
+			t.Logf("Failed to remove temp dir: %v", removeErr)
+		}
+	}()
+
+	// Start watching before creating files to exercise lastSeen tracking
+	err = watcher.Watch(tempDir.String(), EventAll)
+	require.NoError(t, err)
+
+	var wg sync.WaitGroup
+	numWriters := 5
+	filesPerWriter := 10
+
+	// Spawn multiple goroutines that create and modify files concurrently
+	// while the watcher is detecting changes via checkFileForChanges
+	for i := 0; i < numWriters; i++ {
+		wg.Add(1)
+		go func(writerID int) {
+			defer wg.Done()
+			for j := 0; j < filesPerWriter; j++ {
+				filePath := tempDir.Join(fmt.Sprintf("file_%d_%d.txt", writerID, j))
+				// Create file
+				err := os.WriteFile(filePath.String(), []byte(fmt.Sprintf("initial content %d", j)), 0o600)
+				if err != nil {
+					t.Logf("Writer %d failed to create file: %v", writerID, err)
+					continue
+				}
+				// Small delay to allow watcher to detect
+				time.Sleep(15 * time.Millisecond)
+				// Modify file
+				err = os.WriteFile(filePath.String(), []byte(fmt.Sprintf("modified content %d", j)), 0o600)
+				if err != nil {
+					t.Logf("Writer %d failed to modify file: %v", writerID, err)
+				}
+			}
+		}(i)
+	}
+
+	// Drain events concurrently while files are being modified
+	eventsDone := make(chan bool)
+	go func() {
+		timeout := time.After(3 * time.Second)
+		for {
+			select {
+			case <-watcher.Events():
+				// Event received, continue
+			case <-timeout:
+				eventsDone <- true
+				return
+			}
+		}
+	}()
+
+	wg.Wait()
+	<-eventsDone
+
+	// Test should complete without race conditions
 	assert.NotNil(t, watcher)
 }

@@ -228,11 +228,13 @@ func (w *DefaultPathWatcher) checkForChanges() {
 // checkFileForChanges checks a specific file for changes
 func (w *DefaultPathWatcher) checkFileForChanges(path string, info fs.FileInfo, eventMask EventMask) {
 	modTime := info.ModTime()
-	lastSeen, exists := w.lastSeen[path]
 
+	w.mu.Lock()
+	lastSeen, exists := w.lastSeen[path]
 	if !exists {
 		// New file
 		w.lastSeen[path] = modTime
+		w.mu.Unlock()
 		if eventMask&EventCreate != 0 {
 			w.emitEvent(&PathEvent{
 				Path:   path,
@@ -245,6 +247,7 @@ func (w *DefaultPathWatcher) checkFileForChanges(path string, info fs.FileInfo, 
 	} else if modTime.After(lastSeen) {
 		// Modified file
 		w.lastSeen[path] = modTime
+		w.mu.Unlock()
 		if eventMask&EventWrite != 0 {
 			w.emitEvent(&PathEvent{
 				Path:   path,
@@ -254,6 +257,8 @@ func (w *DefaultPathWatcher) checkFileForChanges(path string, info fs.FileInfo, 
 				Source: "watcher",
 			})
 		}
+	} else {
+		w.mu.Unlock()
 	}
 }
 
