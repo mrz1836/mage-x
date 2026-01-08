@@ -586,7 +586,7 @@ func TestDownloadScript(t *testing.T) {
 	}))
 	defer server.Close()
 
-	t.Run("DownloadScript returns not supported error", func(t *testing.T) {
+	t.Run("DownloadScript with nil executor returns error", func(t *testing.T) {
 		ctx := context.Background()
 		config := &DownloadConfig{
 			MaxRetries:   1,
@@ -594,23 +594,67 @@ func TestDownloadScript(t *testing.T) {
 			Timeout:      5 * time.Second,
 		}
 
-		err := DownloadScript(ctx, server.URL+"/script.sh", "", config)
+		err := DownloadScript(ctx, server.URL+"/script.sh", "", config, nil)
 
-		// Should return ErrScriptExecutionNotSupported because script execution
-		// requires integration with SecureExecutor
-		if !errors.Is(err, ErrScriptExecutionNotSupported) {
-			t.Errorf("Expected ErrScriptExecutionNotSupported, got: %v", err)
+		if !errors.Is(err, ErrExecutorCannotBeNil) {
+			t.Errorf("Expected ErrExecutorCannotBeNil, got: %v", err)
+		}
+	})
+
+	t.Run("DownloadScript with executor executes script", func(t *testing.T) {
+		ctx := context.Background()
+		config := &DownloadConfig{
+			MaxRetries:   1,
+			InitialDelay: 10 * time.Millisecond,
+			Timeout:      5 * time.Second,
+		}
+
+		var executedScript string
+		var executedArgs []string
+		executor := func(ctx context.Context, name string, args ...string) error {
+			executedScript = name
+			executedArgs = args
+			return nil
+		}
+
+		err := DownloadScript(ctx, server.URL+"/script.sh", "-- -b /usr/local/bin v1.0.0", config, executor)
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+		// Script path should be a temp file
+		if executedScript == "" {
+			t.Error("Expected script to be executed")
+		}
+		if !strings.HasPrefix(executedScript, os.TempDir()) && !strings.Contains(executedScript, "mage-download") {
+			t.Errorf("Expected temp file path, got: %s", executedScript)
+		}
+		// Args should be parsed correctly
+		expectedArgs := []string{"--", "-b", "/usr/local/bin", "v1.0.0"}
+		if len(executedArgs) != len(expectedArgs) {
+			t.Errorf("Expected %d args, got %d: %v", len(expectedArgs), len(executedArgs), executedArgs)
+		}
+		for i, arg := range executedArgs {
+			if i < len(expectedArgs) && arg != expectedArgs[i] {
+				t.Errorf("Arg %d: expected %q, got %q", i, expectedArgs[i], arg)
+			}
 		}
 	})
 
 	t.Run("DownloadScript with nil config uses defaults", func(t *testing.T) {
 		ctx := context.Background()
 
-		err := DownloadScript(ctx, server.URL+"/script.sh", "", nil)
+		executed := false
+		executor := func(ctx context.Context, name string, args ...string) error {
+			executed = true
+			return nil
+		}
 
-		// Should still return ErrScriptExecutionNotSupported
-		if !errors.Is(err, ErrScriptExecutionNotSupported) {
-			t.Errorf("Expected ErrScriptExecutionNotSupported, got: %v", err)
+		err := DownloadScript(ctx, server.URL+"/script.sh", "", nil, executor)
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+		if !executed {
+			t.Error("Expected script to be executed")
 		}
 	})
 
@@ -622,11 +666,69 @@ func TestDownloadScript(t *testing.T) {
 			Timeout:      1 * time.Second,
 		}
 
-		err := DownloadScript(ctx, "http://invalid.example.test:12345/script.sh", "", config)
+		executor := func(ctx context.Context, name string, args ...string) error {
+			return nil
+		}
+
+		err := DownloadScript(ctx, "http://invalid.example.test:12345/script.sh", "", config, executor)
 
 		// Should fail during download
 		if err == nil {
 			t.Error("Expected error for invalid URL")
+		}
+		if !strings.Contains(err.Error(), "failed to download script") {
+			t.Errorf("Expected download error, got: %v", err)
+		}
+	})
+
+	t.Run("DownloadScript executor error propagates", func(t *testing.T) {
+		ctx := context.Background()
+		config := &DownloadConfig{
+			MaxRetries:   1,
+			InitialDelay: 10 * time.Millisecond,
+			Timeout:      5 * time.Second,
+		}
+
+		executor := func(ctx context.Context, name string, args ...string) error {
+			return errTestExecutionFailed
+		}
+
+		err := DownloadScript(ctx, server.URL+"/script.sh", "", config, executor)
+
+		if err == nil {
+			t.Error("Expected error from executor")
+		}
+		if !strings.Contains(err.Error(), "failed to execute script") {
+			t.Errorf("Expected execute error, got: %v", err)
+		}
+	})
+
+	t.Run("DownloadScript cleans up temp file", func(t *testing.T) {
+		ctx := context.Background()
+		config := &DownloadConfig{
+			MaxRetries:   1,
+			InitialDelay: 10 * time.Millisecond,
+			Timeout:      5 * time.Second,
+		}
+
+		var capturedScript string
+		executor := func(ctx context.Context, name string, args ...string) error {
+			capturedScript = name
+			// Verify file exists during execution
+			if _, err := os.Stat(name); err != nil {
+				t.Errorf("Script file should exist during execution: %v", err)
+			}
+			return nil
+		}
+
+		err := DownloadScript(ctx, server.URL+"/script.sh", "", config, executor)
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		// After execution, file should be cleaned up
+		if _, err := os.Stat(capturedScript); !os.IsNotExist(err) {
+			t.Errorf("Script file should be deleted after execution, got: %v", err)
 		}
 	})
 }

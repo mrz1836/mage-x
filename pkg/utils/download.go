@@ -317,8 +317,19 @@ func verifyChecksum(filePath, expectedSHA256 string) error {
 // NOTE: isRetriableError has been replaced by retry.NewNetworkClassifier().IsRetriable()
 // from pkg/retry. The classifier provides comprehensive network error classification.
 
-// DownloadScript downloads and executes a shell script with retry logic
-func DownloadScript(ctx context.Context, url, scriptArgs string, config *DownloadConfig) error {
+// ExecutorFunc is a function type that executes a command with the given name and arguments.
+// This allows callers to pass in their own execution strategy (e.g., SecureExecutor)
+// to avoid circular dependencies between packages.
+type ExecutorFunc func(ctx context.Context, name string, args ...string) error
+
+// DownloadScript downloads and executes a shell script with retry logic.
+// The executor parameter is required and will be used to execute the downloaded script.
+// This design allows the caller to provide their own secure execution strategy.
+func DownloadScript(ctx context.Context, url, scriptArgs string, config *DownloadConfig, executor ExecutorFunc) error {
+	if executor == nil {
+		return ErrExecutorCannotBeNil
+	}
+
 	if config == nil {
 		config = DefaultDownloadConfig()
 	}
@@ -328,38 +339,40 @@ func DownloadScript(ctx context.Context, url, scriptArgs string, config *Downloa
 	if err != nil {
 		return fmt.Errorf("failed to create temporary script file: %w", err)
 	}
+
+	scriptPath := tmpFile.Name()
+
+	// Ensure cleanup happens after execution
 	defer func() {
-		if removeErr := os.Remove(tmpFile.Name()); removeErr != nil {
+		if removeErr := os.Remove(scriptPath); removeErr != nil {
 			// Log error but don't return since we're in defer
 			// This avoids masking the original error
 			_ = removeErr // Acknowledged: error logged but not acted upon in defer
 		}
 	}()
-	defer func() {
-		if closeErr := tmpFile.Close(); closeErr != nil {
-			// Log error but don't return since we're in defer
-			// This avoids masking the original error
-			_ = closeErr // Acknowledged: error logged but not acted upon in defer
-		}
-	}()
+
+	// Close the file before downloading (DownloadWithRetry opens it)
+	if closeErr := tmpFile.Close(); closeErr != nil {
+		return fmt.Errorf("failed to close temporary file: %w", closeErr)
+	}
 
 	// Download script
-	if err := DownloadWithRetry(ctx, url, tmpFile.Name(), config); err != nil {
+	if err := DownloadWithRetry(ctx, url, scriptPath, config); err != nil {
 		return fmt.Errorf("failed to download script: %w", err)
 	}
 
 	// Make executable - scripts need execute permission
-	if err := os.Chmod(tmpFile.Name(), fileops.PermFileExecutable); err != nil {
+	if err := os.Chmod(scriptPath, fileops.PermFileExecutable); err != nil {
 		return fmt.Errorf("failed to make script executable: %w", err)
 	}
 
-	// Execute script would require shell execution
-	// This functionality would need to be integrated with the SecureExecutor
-	// from the mage package to avoid circular dependencies
+	// Parse script arguments and execute
+	args := splitArgs(scriptArgs)
+	if err := executor(ctx, scriptPath, args...); err != nil {
+		return fmt.Errorf("failed to execute script: %w", err)
+	}
 
-	// This functionality would need to be integrated with the SecureExecutor
-	// from the mage package to avoid circular dependencies
-	return ErrScriptExecutionNotSupported
+	return nil
 }
 
 // splitArgs splits a string into arguments (simple implementation)

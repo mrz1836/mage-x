@@ -691,25 +691,21 @@ func ensureGolangciLint(cfg *Config) error {
 	installScriptURL := "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
 	scriptArgs := fmt.Sprintf("-- -b %s %s", binPath, golangciVersion)
 
+	// Get the secure executor for script execution
+	runner := GetRunner()
+	secureRunner, ok := runner.(*SecureCommandRunner)
+	if !ok {
+		return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
+	}
+
+	// Create an executor function that uses the secure executor with retry logic
+	executor := func(execCtx context.Context, name string, args ...string) error {
+		return exec.ExecuteWithRetry(execCtx, secureRunner.executor, maxRetries, initialDelay, name, args...)
+	}
+
 	// Download and execute the installation script with retry logic
-	err := utils.DownloadScript(ctx, installScriptURL, scriptArgs, downloadConfig)
-	if err != nil {
-		// Fallback to direct command execution with retry
-		utils.Warn("Script download failed: %v, trying direct curl command...", err)
-
-		cmd := fmt.Sprintf("curl -sSfL %s | sh -s -- -b %s %s", installScriptURL, binPath, golangciVersion)
-		shell, shellArgs := utils.GetShell()
-
-		// Get the secure executor with retry capabilities
-		runner := GetRunner()
-		secureRunner, ok := runner.(*SecureCommandRunner)
-		if !ok {
-			return fmt.Errorf("%w: got %T", ErrUnexpectedRunnerType, runner)
-		}
-		executor := secureRunner.executor
-		if err = exec.ExecuteWithRetry(ctx, executor, maxRetries, initialDelay, shell, append(shellArgs, cmd)...); err != nil {
-			return fmt.Errorf("failed to install golangci-lint after %d retries: %w", maxRetries, err)
-		}
+	if err := utils.DownloadScript(ctx, installScriptURL, scriptArgs, downloadConfig, executor); err != nil {
+		return fmt.Errorf("failed to install golangci-lint: %w", err)
 	}
 
 	utils.Success("golangci-lint installed successfully")
