@@ -688,8 +688,8 @@ func ensureGolangciLint(cfg *Config) error {
 		golangciVersion = GetDefaultGolangciLintVersion()
 	}
 
-	installScriptURL := "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
-	scriptArgs := fmt.Sprintf("-- -b %s %s", binPath, golangciVersion)
+	installScriptURL := "https://golangci-lint.run/install.sh"
+	scriptArgs := fmt.Sprintf("-b %s %s", binPath, golangciVersion)
 
 	// Get the secure executor for script execution
 	runner := GetRunner()
