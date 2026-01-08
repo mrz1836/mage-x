@@ -281,17 +281,17 @@ jobs:
       # Cache golangci-lint binary (prevents re-downloading)
       # --------------------------------------------------------------------
       - name: 💾 Restore golangci-lint binary cache
-        id: cache-golangci-lint-binary
+        id: cache-golangci-linter-binary
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ~/.cache/golangci-lint-bin
-          key: ${{ inputs.primary-runner }}-golangci-lint-binary-${{ env.MAGE_X_GOLANGCI_LINT_VERSION }}
+          key: ${{ inputs.primary-runner }}-golangci-linter-binary-${{ env.MAGE_X_GOLANGCI_LINT_VERSION }}
 
       # --------------------------------------------------------------------
       # Install cached golangci-lint binary to GOPATH/bin
       # --------------------------------------------------------------------
       - name: 📦 Install cached golangci-lint binary
-        if: steps.cache-golangci-lint-binary.outputs.cache-hit == 'true'
+        if: steps.cache-golangci-linter-binary.outputs.cache-hit == 'true'
         run: |
           echo "📦 Restoring cached golangci-lint binary..."
           GOPATH_BIN="$(go env GOPATH)/bin"
@@ -367,7 +367,7 @@ jobs:
       # Save golangci-lint binary to cache (on cache miss)
       # --------------------------------------------------------------------
       - name: 💾 Save golangci-lint binary to cache
-        if: steps.cache-golangci-lint-binary.outputs.cache-hit != 'true'
+        if: steps.cache-golangci-linter-binary.outputs.cache-hit != 'true'
         run: |
           echo "💾 Caching golangci-lint binary for future runs..."
           GOPATH_BIN="$(go env GOPATH)/bin"
@@ -392,7 +392,7 @@ jobs:
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| **Configuration** | Custom ruleset via .golangci.json |" >> $GITHUB_STEP_SUMMARY
           echo "| **Version** | ${{ steps.golangci-lint-version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Binary Cache** | ${{ steps.cache-golangci-lint-binary.outputs.cache-hit == 'true' && '💚 Cache Hit' || '📦 Downloaded & Cached' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Binary Cache** | ${{ steps.cache-golangci-linter-binary.outputs.cache-hit == 'true' && '💚 Cache Hit' || '📦 Downloaded & Cached' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Analysis Cache** | 💾 Enabled |" >> $GITHUB_STEP_SUMMARY
           echo "| **Result** | ✅ All checks passed |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
