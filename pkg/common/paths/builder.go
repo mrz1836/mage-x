@@ -2,6 +2,7 @@ package paths
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -810,18 +811,10 @@ func (pb *DefaultPathBuilder) copyFile(src, dst string, srcInfo fs.FileInfo) err
 		}
 	}()
 
-	// Copy file contents
-	buffer := make([]byte, pb.options.BufferSize)
-	for {
-		n, err := srcFile.Read(buffer)
-		if n > 0 {
-			if _, writeErr := dstFile.Write(buffer[:n]); writeErr != nil {
-				return writeErr
-			}
-		}
-		if err != nil {
-			break
-		}
+	// Copy file contents using io.CopyBuffer for efficiency
+	buf := make([]byte, pb.options.BufferSize)
+	if _, err := io.CopyBuffer(dstFile, srcFile, buf); err != nil {
+		return fmt.Errorf("failed to copy file contents: %w", err)
 	}
 
 	// Preserve attributes if requested
