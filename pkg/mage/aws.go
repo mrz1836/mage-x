@@ -37,6 +37,20 @@ var (
 	errAWSCLINotFound      = errors.New("AWS CLI not found in PATH")
 )
 
+// mfaTokenPattern validates 6-digit MFA tokens (compiled once at package level)
+//
+
+var mfaTokenPattern = regexp.MustCompile(`^\d{6}$`)
+
+// getConfigSectionName returns the INI section name for a profile
+// In AWS config files, non-default profiles are prefixed with "profile "
+func getConfigSectionName(profile string) string {
+	if profile == awsDefaultProfile {
+		return profile
+	}
+	return "profile " + profile
+}
+
 // AWS namespace for AWS credential management
 type AWS mg.Namespace
 
@@ -404,12 +418,7 @@ func getMFASerial(profile string) (string, error) {
 	}
 
 	ini := parseAWSINI(data)
-
-	// Look for profile section (in config, non-default profiles are prefixed with "profile ")
-	sectionName := profile
-	if profile != awsDefaultProfile {
-		sectionName = "profile " + profile
-	}
+	sectionName := getConfigSectionName(profile)
 
 	for _, section := range ini.Sections {
 		if section.Name == sectionName {
@@ -436,12 +445,7 @@ func getSourceProfile(profile string) string {
 	}
 
 	ini := parseAWSINI(data)
-
-	// Look for profile section (in config, non-default profiles are prefixed with "profile ")
-	sectionName := profile
-	if profile != awsDefaultProfile {
-		sectionName = "profile " + profile
-	}
+	sectionName := getConfigSectionName(profile)
 
 	for _, section := range ini.Sections {
 		if section.Name == sectionName {
@@ -481,9 +485,8 @@ func promptForMFAToken() (string, error) {
 		return "", errInvalidMFAToken
 	}
 
-	// Verify all digits using compiled regex
-	mfaPattern := regexp.MustCompile(`^\d{6}$`)
-	if !mfaPattern.MatchString(token) {
+	// Verify all digits using package-level compiled regex
+	if !mfaTokenPattern.MatchString(token) {
 		return "", errInvalidMFAToken
 	}
 
@@ -690,11 +693,7 @@ func writeAWSConfig(path, profile, mfaSerial string) error {
 		ini = &awsINIFile{Sections: []*awsINISection{}}
 	}
 
-	// In config file, non-default profiles are prefixed with "profile "
-	sectionName := profile
-	if profile != awsDefaultProfile {
-		sectionName = "profile " + profile
-	}
+	sectionName := getConfigSectionName(profile)
 
 	// Get or create profile section
 	section := getOrCreateSection(ini, sectionName)

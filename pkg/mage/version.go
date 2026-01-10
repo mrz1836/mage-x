@@ -38,8 +38,179 @@ var (
 	errMaxAutoIncrementAttempts     = errors.New("could not find available version after 100 attempts")
 )
 
-// statusUnknown represents an unknown status
-const statusUnknown = "unknown"
+// Version operation constants
+const (
+	// statusUnknown represents an unknown status
+	statusUnknown = "unknown"
+	// maxAutoIncrementAttempts is the safety limit for finding an available version
+	maxAutoIncrementAttempts = 100
+)
+
+// bumpConfig holds parsed configuration for version bump operation
+type bumpConfig struct {
+	bumpType     string
+	targetBranch string
+	dryRun       bool
+	push         bool
+	force        bool
+	params       map[string]string
+}
+
+// parseBumpConfig parses command line arguments into bump configuration
+func parseBumpConfig(args []string) (*bumpConfig, error) {
+	// If no args provided, try to get from MAGE_ARGS environment variable
+	if len(args) == 0 {
+		if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
+			args = strings.Fields(mageArgs)
+		}
+	}
+
+	params := utils.ParseParams(args)
+	bumpType := strings.TrimSpace(strings.ToLower(utils.GetParam(params, "bump", "patch")))
+
+	if bumpType != "major" && bumpType != "minor" && bumpType != "patch" {
+		return nil, fmt.Errorf("%w: %s", errInvalidBumpType, bumpType)
+	}
+
+	return &bumpConfig{
+		bumpType:     bumpType,
+		targetBranch: utils.GetParam(params, "branch", ""),
+		dryRun:       utils.IsParamTrue(params, "dry-run"),
+		push:         utils.IsParamTrue(params, "push"),
+		force:        utils.IsParamTrue(params, "force"),
+		params:       params,
+	}, nil
+}
+
+// checkBumpPreconditions validates preconditions for version bump
+func checkBumpPreconditions(cfg *bumpConfig) error {
+	// Check for uncommitted changes
+	if isGitDirty() {
+		if cfg.dryRun {
+			utils.Warn("Working directory has uncommitted changes (would fail in normal mode)")
+		} else {
+			utils.Error("❌ Cannot proceed: Working directory has uncommitted changes")
+			utils.Info("Please commit or stash your changes before bumping version")
+			return errVersionUncommittedChanges
+		}
+	}
+	return nil
+}
+
+// checkExistingTags verifies no version tags exist on current commit
+func checkExistingTags(dryRun bool) error {
+	existingTags, err := getTagsOnCurrentCommit()
+	if err != nil {
+		return fmt.Errorf("failed to check existing tags: %w", err)
+	}
+
+	if len(existingTags) > 0 {
+		utils.Warn("Current commit already has version tags: %s", strings.Join(existingTags, ", "))
+		if dryRun {
+			utils.Warn("Would fail in normal mode - need a new commit before bumping")
+		} else {
+			utils.Warn("Please create a new commit before bumping the version again")
+			return fmt.Errorf("%w: %s", errMultipleTagsOnCommit, strings.Join(existingTags, ", "))
+		}
+	}
+	return nil
+}
+
+// calculateNewVersion determines the next version number
+func calculateNewVersion(cfg *bumpConfig) (current, newVersion string, skipped []string, err error) {
+	current = getCurrentGitTag()
+	if current == "" {
+		current = "v0.0.0"
+		utils.Info("No previous tags found, starting from %s", current)
+	}
+
+	// Parse and bump version
+	newVersion, err = bumpVersion(current, cfg.bumpType)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("failed to bump version: %w", err)
+	}
+
+	// Find next available version (auto-increment if tag exists from different branch)
+	newVersion, skipped, err = findNextAvailableVersion(newVersion, cfg.bumpType)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("failed to find available version: %w", err)
+	}
+
+	return current, newVersion, skipped, nil
+}
+
+// validateVersionChange checks for version gaps and unexpected jumps
+func validateVersionChange(cfg *bumpConfig, current, newVersion string, skipped []string) error {
+	// Check for version gaps and warn about them
+	for _, warning := range detectVersionGaps(current, newVersion) {
+		utils.Warn("⚠️  %s", warning)
+	}
+
+	// Validate version progression (skip if we auto-incremented due to conflicts)
+	if len(skipped) == 0 {
+		if err := validateVersionProgression(current, newVersion, cfg.bumpType); err != nil {
+			return err
+		}
+	} else {
+		utils.Info("Version validation skipped (auto-incremented due to existing tags)")
+	}
+
+	// Additional check for unexpected version jumps
+	if !cfg.dryRun && len(skipped) == 0 {
+		if jumpErr := checkForUnexpectedVersionJump(current, newVersion, cfg.bumpType); jumpErr != nil {
+			utils.Warn("⚠️  %s", jumpErr.Error())
+			if !cfg.force {
+				utils.Warn("To proceed anyway, add 'force' parameter")
+				utils.Warn("Or use 'dry-run' to preview the change first")
+				return errVersionBumpBlocked
+			}
+			utils.Warn("⚠️  Proceeding with potentially unexpected version jump due to 'force' parameter")
+		}
+	}
+	return nil
+}
+
+// printDryRunSummary outputs what would happen in dry-run mode
+func printDryRunSummary(cfg *bumpConfig, current, newVersion string) {
+	utils.Info("📋 DRY-RUN Summary:")
+	utils.Info("  Current version: %s", current)
+	utils.Info("  New version:     %s", newVersion)
+	utils.Info("  Bump type:       %s", cfg.bumpType)
+	utils.Info("🔧 Commands that would be executed:")
+	message := fmt.Sprintf("GitHubRelease %s", newVersion)
+	utils.Info("  git tag -a %s -m \"%s\"", newVersion, message)
+
+	if cfg.push {
+		utils.Info("  git push origin %s", newVersion)
+	} else {
+		utils.Info("📌 Note: Tag would be created locally only")
+		utils.Info("  To push: git push origin %s", newVersion)
+		utils.Info("  Or add 'push' parameter to push automatically")
+	}
+
+	utils.Success("✅ DRY-RUN completed - no changes made")
+}
+
+// createVersionTag creates the git tag for the new version
+func createVersionTag(newVersion string) error {
+	exists, pointsToHEAD, err := checkLocalTagExists(newVersion)
+	if err != nil {
+		return fmt.Errorf("failed to check tag existence: %w", err)
+	}
+
+	if exists && pointsToHEAD {
+		utils.Success("✅ Tag %s already exists on current commit", newVersion)
+		return nil
+	}
+
+	message := fmt.Sprintf("GitHubRelease %s", newVersion)
+	if err := GetRunner().RunCmd("git", "tag", "-a", newVersion, "-m", message); err != nil {
+		return fmt.Errorf("failed to create tag: %w", err)
+	}
+
+	utils.Success("✅ Created tag: %s", newVersion)
+	return nil
+}
 
 // Version namespace for version management tasks
 type Version mg.Namespace
@@ -267,57 +438,32 @@ func (Version) Update() error {
 func (Version) Bump(args ...string) error {
 	utils.Header("Bumping Version")
 
-	// If no args provided, try to get from MAGE_ARGS environment variable
-	if len(args) == 0 {
-		if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
-			args = strings.Fields(mageArgs)
-		}
+	// Parse configuration from arguments
+	cfg, err := parseBumpConfig(args)
+	if err != nil {
+		return err
 	}
 
-	// Parse command-line parameters
-	params := utils.ParseParams(args)
-
-	// Check for dry-run mode
-	dryRun := utils.IsParamTrue(params, "dry-run")
-
-	// Get branch parameter
-	targetBranch := utils.GetParam(params, "branch", "")
-
-	// Get bump type from parameters with default
-	bumpType := utils.GetParam(params, "bump", "patch")
-	bumpType = strings.TrimSpace(strings.ToLower(bumpType))
-
-	// Log the bump type being used for debugging
-	utils.Info("Using bump type: %s", bumpType)
-
-	if bumpType != "major" && bumpType != "minor" && bumpType != "patch" {
-		return fmt.Errorf("%w: %s", errInvalidBumpType, bumpType)
-	}
+	utils.Info("Using bump type: %s", cfg.bumpType)
 
 	// Special validation for major version bumps to prevent accidents
-	if bumpType == "major" && !dryRun {
-		if err := validateMajorVersionBump(params); err != nil {
+	if cfg.bumpType == "major" && !cfg.dryRun {
+		if err = validateMajorVersionBump(cfg.params); err != nil {
 			return err
 		}
 	}
 
-	if dryRun {
+	if cfg.dryRun {
 		utils.Info("🔍 Running in DRY-RUN mode - no changes will be made")
 	}
 
-	// Check for uncommitted changes FIRST (before any branch operations)
-	if dirty := isGitDirty(); dirty {
-		if dryRun {
-			utils.Warn("Working directory has uncommitted changes (would fail in normal mode)")
-		} else {
-			utils.Error("❌ Cannot proceed: Working directory has uncommitted changes")
-			utils.Info("Please commit or stash your changes before bumping version")
-			return errVersionUncommittedChanges
-		}
+	// Check preconditions (uncommitted changes)
+	if err = checkBumpPreconditions(cfg); err != nil {
+		return err
 	}
 
-	// Handle branch switching logic with helper function
-	cleanup, err := handleBranchSwitch(targetBranch, bumpType, dryRun)
+	// Handle branch switching logic
+	cleanup, err := handleBranchSwitch(cfg.targetBranch, cfg.bumpType, cfg.dryRun)
 	if cleanup != nil {
 		defer cleanup()
 	}
@@ -325,129 +471,46 @@ func (Version) Bump(args ...string) error {
 		return err
 	}
 
-	// Check if current commit already has version tags
-	existingTags, err := getTagsOnCurrentCommit()
+	// Check for existing tags on current commit
+	if err = checkExistingTags(cfg.dryRun); err != nil {
+		return err
+	}
+
+	// Calculate the new version
+	current, newVersion, skipped, err := calculateNewVersion(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to check existing tags: %w", err)
-	}
-
-	if len(existingTags) > 0 {
-		utils.Warn("Current commit already has version tags: %s", strings.Join(existingTags, ", "))
-		if dryRun {
-			utils.Warn("Would fail in normal mode - need a new commit before bumping")
-		} else {
-			utils.Warn("Please create a new commit before bumping the version again")
-			return fmt.Errorf("%w: %s", errMultipleTagsOnCommit, strings.Join(existingTags, ", "))
-		}
-	}
-
-	// Get current version with enhanced logging
-	current := getCurrentGitTag()
-	if current == "" {
-		current = "v0.0.0"
-		utils.Info("No previous tags found, starting from %s", current)
-	}
-
-	// Parse and bump version
-	newVersion, err := bumpVersion(current, bumpType)
-	if err != nil {
-		return fmt.Errorf("failed to bump version: %w", err)
-	}
-
-	// Find next available version (auto-increment if tag exists from different branch)
-	finalVersion, skippedVersions, err := findNextAvailableVersion(newVersion, bumpType)
-	if err != nil {
-		return fmt.Errorf("failed to find available version: %w", err)
+		return err
 	}
 
 	// If we skipped versions, inform the user
-	if len(skippedVersions) > 0 {
-		utils.Warn("⚠️  Skipped versions (exist from other branches): %s", strings.Join(skippedVersions, ", "))
-		utils.Info("Using next available version: %s", finalVersion)
+	if len(skipped) > 0 {
+		utils.Warn("⚠️  Skipped versions (exist from other branches): %s", strings.Join(skipped, ", "))
+		utils.Info("Using next available version: %s", newVersion)
 	}
 
-	// Use the final available version
-	newVersion = finalVersion
-
-	// Check for version gaps and warn about them
-	gapWarnings := detectVersionGaps(current, newVersion)
-	for _, warning := range gapWarnings {
-		utils.Warn("⚠️  %s", warning)
-	}
-
-	// Validate version progression (skip if we auto-incremented due to conflicts)
-	if len(skippedVersions) == 0 {
-		if validationErr := validateVersionProgression(current, newVersion, bumpType); validationErr != nil {
-			return validationErr
-		}
-	} else {
-		utils.Info("Version validation skipped (auto-incremented due to existing tags)")
-	}
-
-	// Additional check for unexpected version jumps (skip if we auto-incremented)
-	if !dryRun && len(skippedVersions) == 0 {
-		if jumpErr := checkForUnexpectedVersionJump(current, newVersion, bumpType); jumpErr != nil {
-			utils.Warn("⚠️  %s", jumpErr.Error())
-			if !utils.IsParamTrue(params, "force") {
-				utils.Warn("To proceed anyway, add 'force' parameter")
-				utils.Warn("Or use 'dry-run' to preview the change first")
-				return errVersionBumpBlocked
-			}
-			utils.Warn("⚠️  Proceeding with potentially unexpected version jump due to 'force' parameter")
-		}
+	// Validate version change
+	if err := validateVersionChange(cfg, current, newVersion, skipped); err != nil {
+		return err
 	}
 
 	utils.Info("📋 Version Bump Summary:")
 	utils.Info("  From:    %s", current)
 	utils.Info("  To:      %s", newVersion)
-	utils.Info("  Type:    %s bump", bumpType)
+	utils.Info("  Type:    %s bump", cfg.bumpType)
 
-	if dryRun {
-		// Dry-run mode - show what would happen
-		utils.Info("📋 DRY-RUN Summary:")
-		utils.Info("  Current version: %s", current)
-		utils.Info("  New version:     %s", newVersion)
-		utils.Info("  Bump type:       %s", bumpType)
-		utils.Info("🔧 Commands that would be executed:")
-		message := fmt.Sprintf("GitHubRelease %s", newVersion)
-		utils.Info("  git tag -a %s -m \"%s\"", newVersion, message)
-
-		if utils.IsParamTrue(params, "push") {
-			utils.Info("  git push origin %s", newVersion)
-		} else {
-			utils.Info("📌 Note: Tag would be created locally only")
-			utils.Info("  To push: git push origin %s", newVersion)
-			utils.Info("  Or add 'push' parameter to push automatically")
-		}
-
-		// Branch switching information is shown by helper functions during dry-run
-
-		utils.Success("✅ DRY-RUN completed - no changes made")
+	// Handle dry-run mode
+	if cfg.dryRun {
+		printDryRunSummary(cfg, current, newVersion)
 		return nil
 	}
 
-	// Check if tag already exists on HEAD (from findNextAvailableVersion check)
-	exists, pointsToHEAD, err := checkLocalTagExists(newVersion)
-	if err != nil {
-		return fmt.Errorf("failed to check tag existence: %w", err)
-	}
-
-	// Only create tag if it doesn't already exist on HEAD
-	if exists && pointsToHEAD {
-		utils.Success("✅ Tag %s already exists on current commit", newVersion)
-	} else {
-		// Create annotated tag
-		message := fmt.Sprintf("GitHubRelease %s", newVersion)
-		if err := GetRunner().RunCmd("git", "tag", "-a", newVersion, "-m", message); err != nil {
-			return fmt.Errorf("failed to create tag: %w", err)
-		}
-
-		utils.Success("✅ Created tag: %s", newVersion)
+	// Create the version tag
+	if err := createVersionTag(newVersion); err != nil {
+		return err
 	}
 
 	// Push if requested
-	shouldPush := utils.IsParamTrue(params, "push")
-	if shouldPush {
+	if cfg.push {
 		if err := handlePushTag(newVersion); err != nil {
 			return err
 		}
@@ -538,8 +601,8 @@ func findNextAvailableVersion(initialVersion, bumpType string) (string, []string
 	skippedVersions := []string{}
 	currentVersion := initialVersion
 
-	// Try up to 100 times to find an available version (safety limit)
-	for i := 0; i < 100; i++ {
+	// Try up to maxAutoIncrementAttempts times to find an available version (safety limit)
+	for i := 0; i < maxAutoIncrementAttempts; i++ {
 		exists, pointsToHEAD, err := checkLocalTagExists(currentVersion)
 		if err != nil {
 			return "", nil, err

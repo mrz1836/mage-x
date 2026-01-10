@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -136,19 +137,19 @@ func getModuleNameFromFile(goModPath string) (string, error) {
 	return "", fmt.Errorf("%w in %s", errModuleNameNotFound, goModPath)
 }
 
-// sortModules sorts modules with root module first, then by path
+// sortModules sorts modules with root module first, then alphabetically by path
 func sortModules(modules []ModuleInfo) {
-	// Simple bubble sort - root module first, then alphabetical by path
-	for i := 0; i < len(modules); i++ {
-		for j := i + 1; j < len(modules); j++ {
-			// Root module (.) should always be first
-			if modules[j].Relative == "." {
-				modules[i], modules[j] = modules[j], modules[i]
-			} else if modules[i].Relative != "." && modules[i].Relative > modules[j].Relative {
-				modules[i], modules[j] = modules[j], modules[i]
-			}
+	sort.Slice(modules, func(i, j int) bool {
+		// Root module (.) should always be first
+		if modules[i].Relative == "." {
+			return true
 		}
-	}
+		if modules[j].Relative == "." {
+			return false
+		}
+		// Otherwise sort alphabetically by relative path
+		return modules[i].Relative < modules[j].Relative
+	})
 }
 
 // runInModuleDir handles directory management for module commands using generics.

@@ -28,6 +28,38 @@ const (
 	windowsExeExt     = ".exe"
 )
 
+// getBinaryName returns the binary name from config or derives it from the module name
+func getBinaryName(config *Config) string {
+	if config.Project.Binary != "" {
+		return config.Project.Binary
+	}
+	goOps := GetGoOperations()
+	if module, err := goOps.GetModuleName(); err == nil {
+		parts := strings.Split(module, "/")
+		return parts[len(parts)-1]
+	}
+	return defaultBinaryName
+}
+
+// getGOPATH returns the GOPATH, defaulting to $HOME/go if not set
+func getGOPATH() string {
+	ops := GetOSOperations()
+	gopath := ops.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = filepath.Join(ops.Getenv("HOME"), "go")
+	}
+	return gopath
+}
+
+// getInstallPath returns the full install path for a binary in GOPATH/bin
+func getInstallPath(gopath, binaryName string) string {
+	installPath := filepath.Join(gopath, "bin", binaryName)
+	if runtime.GOOS == OSWindows && !strings.HasSuffix(installPath, windowsExeExt) {
+		installPath += windowsExeExt
+	}
+	return installPath
+}
+
 // Install namespace for installation tasks
 type Install mg.Namespace
 
@@ -41,36 +73,15 @@ func (Install) Uninstall() error {
 	utils.Header("Uninstalling Application")
 
 	ops := GetOSOperations()
-	goOps := GetGoOperations()
 
 	config, err := GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 
-	// Get binary name
-	binaryName := config.Project.Binary
-	if binaryName == "" {
-		// Try to get from module name
-		if module, moduleErr := goOps.GetModuleName(); moduleErr == nil {
-			parts := strings.Split(module, "/")
-			binaryName = parts[len(parts)-1]
-		} else {
-			binaryName = defaultBinaryName
-		}
-	}
-
-	// Get GOPATH
-	gopath := ops.Getenv("GOPATH")
-	if gopath == "" {
-		gopath = filepath.Join(ops.Getenv("HOME"), "go")
-	}
-
-	// Determine install path
-	installPath := filepath.Join(gopath, "bin", binaryName)
-	if runtime.GOOS == OSWindows && !strings.HasSuffix(installPath, ".exe") {
-		installPath += windowsExeExt
-	}
+	binaryName := getBinaryName(config)
+	gopath := getGOPATH()
+	installPath := getInstallPath(gopath, binaryName)
 
 	// Remove the binary
 	if err := ops.Remove(installPath); err != nil {
@@ -90,36 +101,15 @@ func (Install) Default() error {
 	utils.Header("Installing Application")
 
 	ops := GetOSOperations()
-	goOps := GetGoOperations()
 
 	config, err := GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 
-	// Get binary name
-	binaryName := config.Project.Binary
-	if binaryName == "" {
-		// Try to get from module name
-		if module, moduleErr := goOps.GetModuleName(); moduleErr == nil {
-			parts := strings.Split(module, "/")
-			binaryName = parts[len(parts)-1]
-		} else {
-			binaryName = defaultBinaryName
-		}
-	}
-
-	// Get GOPATH
-	gopath := ops.Getenv("GOPATH")
-	if gopath == "" {
-		gopath = filepath.Join(ops.Getenv("HOME"), "go")
-	}
-
-	// Determine install path
-	installPath := filepath.Join(gopath, "bin", binaryName)
-	if runtime.GOOS == OSWindows && !strings.HasSuffix(installPath, ".exe") {
-		installPath += windowsExeExt
-	}
+	binaryName := getBinaryName(config)
+	gopath := getGOPATH()
+	installPath := getInstallPath(gopath, binaryName)
 
 	utils.Info("Installing to: %s", installPath)
 
@@ -287,23 +277,13 @@ func (Install) SystemWide() error {
 	}
 
 	ops := GetOSOperations()
-	goOps := GetGoOperations()
 
 	config, err := GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 
-	// Get binary name
-	binaryName := config.Project.Binary
-	if binaryName == "" {
-		if module, moduleErr := goOps.GetModuleName(); moduleErr == nil {
-			parts := strings.Split(module, "/")
-			binaryName = parts[len(parts)-1]
-		} else {
-			binaryName = defaultBinaryName
-		}
-	}
+	binaryName := getBinaryName(config)
 
 	// Build binary first
 	tempBinary := filepath.Join(ops.TempDir(), binaryName)
