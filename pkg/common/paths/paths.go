@@ -3,6 +3,7 @@ package paths
 
 import (
 	"io/fs"
+	"sort"
 	"sync"
 	"time"
 
@@ -1041,15 +1042,9 @@ func SortPaths(paths []PathBuilder) []PathBuilder {
 	result := make([]PathBuilder, len(paths))
 	copy(result, paths)
 
-	// Simple bubble sort for demonstration
-	// In a real implementation, you'd use sort.Slice
-	for i := 0; i < len(result); i++ {
-		for j := i + 1; j < len(result); j++ {
-			if result[i].String() > result[j].String() {
-				result[i], result[j] = result[j], result[i]
-			}
-		}
-	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].String() < result[j].String()
+	})
 
 	return result
 }

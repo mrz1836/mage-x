@@ -36,6 +36,9 @@ type CommandExecutor interface {
 	ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error
 }
 
+// defaultCommandTimeout is the default timeout for secure command execution
+const defaultCommandTimeout = 5 * time.Minute
+
 // SecureExecutor implements CommandExecutor with security checks.
 // This is a thin wrapper around pkg/exec that provides a familiar API.
 type SecureExecutor struct {
@@ -56,7 +59,7 @@ type SecureExecutor struct {
 func NewSecureExecutor() *SecureExecutor {
 	return &SecureExecutor{
 		AllowedCommands: make(map[string]bool),
-		Timeout:         5 * time.Minute,
+		Timeout:         defaultCommandTimeout,
 		EnvWhitelist: map[string][]string{
 			"goreleaser": {"GITHUB_TOKEN", "GITLAB_TOKEN", "GITEA_TOKEN"},
 		},
@@ -182,8 +185,9 @@ func ValidatePath(path string) error {
 	return mageExec.ValidatePath(path)
 }
 
-// isRetriableCommandError determines if a command error should trigger a retry
-// Re-exported for backwards compatibility
+// isRetriableCommandError determines if a command error should trigger a retry.
+// Deprecated: Use retry.NewCommandClassifier().IsRetriable() instead.
+// This function is maintained for backwards compatibility.
 func isRetriableCommandError(err error) bool {
 	if err == nil {
 		return false

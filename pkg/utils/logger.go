@@ -38,17 +38,17 @@ type Logger struct {
 	spinner  *Spinner
 }
 
-// ANSI color codes
+// ANSI color codes - imported from pkg/log for consistency
 const (
-	colorReset  = "\033[0m"
-	colorRed    = "\033[31m"
-	colorGreen  = "\033[32m"
-	colorYellow = "\033[33m"
-	colorBlue   = "\033[34m"
-	colorPurple = "\033[35m"
-	colorCyan   = "\033[36m"
-	colorGray   = "\033[90m"
-	colorBold   = "\033[1m"
+	colorReset  = pkglog.ColorReset
+	colorRed    = pkglog.ColorRed
+	colorGreen  = pkglog.ColorGreen
+	colorYellow = pkglog.ColorYellow
+	colorBlue   = pkglog.ColorBlue
+	colorPurple = pkglog.ColorPurple
+	colorCyan   = pkglog.ColorCyan
+	colorGray   = pkglog.ColorGray
+	colorBold   = pkglog.ColorBold
 )
 
 // Emoji constants for different message types

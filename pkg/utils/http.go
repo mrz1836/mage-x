@@ -21,30 +21,30 @@ func HTTPGetJSON[T any](url string, timeout time.Duration) (*T, error) {
 	client := &http.Client{Timeout: timeout}
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, http.NoBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create request for %s: %w", url, err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch %s: %w", url, err)
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Printf("failed to close response body for %s: %v", url, closeErr)
 		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, readErr := io.ReadAll(resp.Body)
 		if readErr != nil {
-			return nil, fmt.Errorf("%w: status %d (body unreadable: %w)", ErrHTTPAPIError, resp.StatusCode, readErr)
+			return nil, fmt.Errorf("%w: GET %s returned status %d (body unreadable: %w)", ErrHTTPAPIError, url, resp.StatusCode, readErr)
 		}
-		return nil, fmt.Errorf("%w: %s", ErrHTTPAPIError, body)
+		return nil, fmt.Errorf("%w: GET %s returned status %d: %s", ErrHTTPAPIError, url, resp.StatusCode, body)
 	}
 
 	var result T
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode JSON response from %s: %w", url, err)
 	}
 	return &result, nil
 }

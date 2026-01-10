@@ -862,6 +862,13 @@ func (b Build) buildWorkspaceModules(verbose bool, parallelism, exclude string) 
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
+	// Ensure we always restore the original directory
+	defer func() {
+		if restoreErr := os.Chdir(originalDir); restoreErr != nil {
+			utils.Warn("Failed to restore original directory: %v", restoreErr)
+		}
+	}()
+
 	for _, modDir := range moduleDirs {
 		modName := filepath.Base(modDir)
 
@@ -910,17 +917,8 @@ func (b Build) buildWorkspaceModules(verbose bool, parallelism, exclude string) 
 		}
 
 		if err := GetRunner().RunCmd("go", args...); err != nil {
-			// Change back to original directory before returning error
-			if chErr := os.Chdir(originalDir); chErr != nil {
-				utils.Warn("Failed to restore original directory: %v", chErr)
-			}
 			return fmt.Errorf("failed to build module %s: %w", modName, err)
 		}
-	}
-
-	// Restore original directory
-	if err := os.Chdir(originalDir); err != nil {
-		return fmt.Errorf("failed to restore original directory: %w", err)
 	}
 
 	return nil

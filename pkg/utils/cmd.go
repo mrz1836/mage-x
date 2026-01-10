@@ -12,9 +12,20 @@ import (
 	pkgexec "github.com/mrz1836/mage-x/pkg/exec"
 )
 
-// defaultExecutor is a package-level executor using pkg/exec
-// This provides integration with the unified command execution package
-var defaultExecutor = pkgexec.Simple() //nolint:gochecknoglobals // Package singleton for backward compatibility
+// DefaultExecutor is the package-level executor using pkg/exec.
+// This provides integration with the unified command execution package.
+// Can be overridden in tests using SetExecutor.
+var DefaultExecutor pkgexec.Executor = pkgexec.Simple() //nolint:gochecknoglobals // Package singleton for backward compatibility
+
+// SetExecutor allows overriding the default executor for testing.
+func SetExecutor(e pkgexec.Executor) {
+	DefaultExecutor = e
+}
+
+// ResetExecutor restores the default executor.
+func ResetExecutor() {
+	DefaultExecutor = pkgexec.Simple()
+}
 
 // RunCmd executes a command and returns its output
 // Uses the unified pkg/exec package under the hood
@@ -23,7 +34,7 @@ func RunCmd(name string, args ...string) error {
 		Info("➤ %s %s", name, strings.Join(args, " "))
 	}
 
-	if err := defaultExecutor.Execute(context.Background(), name, args...); err != nil {
+	if err := DefaultExecutor.Execute(context.Background(), name, args...); err != nil {
 		return pkgexec.CommandError(name, args, err)
 	}
 	return nil
@@ -42,7 +53,7 @@ func RunCmdOutput(name string, args ...string) (string, error) {
 		Info("➤ %s %s", name, strings.Join(args, " "))
 	}
 
-	output, err := defaultExecutor.ExecuteOutput(context.Background(), name, args...)
+	output, err := DefaultExecutor.ExecuteOutput(context.Background(), name, args...)
 	if err != nil {
 		return "", pkgexec.CommandErrorWithOutput(name, args, err, output)
 	}

@@ -33,8 +33,9 @@ const banner = `
 `
 
 const (
-	noDescription = "No description available"
-	trueValue     = "true"
+	noDescription  = "No description available"
+	trueValue      = "true"
+	maxSuggestions = 5 // Maximum number of command suggestions to show
 )
 
 // BuildInfo contains version and build information
@@ -224,8 +225,7 @@ func main() {
 
 	if *flags.Init {
 		if err := initMagefile(); err != nil {
-			_, err = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			if err != nil {
+			if _, printErr := fmt.Fprintf(os.Stderr, "Error: %v\n", err); printErr != nil {
 				return
 			}
 			os.Exit(1)
@@ -528,8 +528,8 @@ func showCommandHelp(reg *registry.Registry, commandName string) {
 		if len(suggestions) > 0 {
 			fmt.Printf("\n🔍 Did you mean:\n")
 			for i, suggestion := range suggestions {
-				if i >= 5 {
-					break // Limit suggestions
+				if i >= maxSuggestions {
+					break
 				}
 				fmt.Printf("  • %s - %s\n", suggestion.FullName(), suggestion.Description)
 			}
@@ -946,13 +946,13 @@ func handleNoSearchResults(reg *registry.Registry, customCommands []DiscoveredCo
 	if len(fuzzyMatches) > 0 || len(fuzzyCustomMatches) > 0 {
 		fmt.Printf("\n🔍 Did you mean:\n")
 		for i, cmd := range fuzzyMatches {
-			if i >= 5 {
+			if i >= maxSuggestions {
 				break
 			}
 			fmt.Printf("  • %s - %s\n", cmd.FullName(), cmd.Description)
 		}
 		for i, cmd := range fuzzyCustomMatches {
-			if i >= 5 {
+			if i >= maxSuggestions {
 				break
 			}
 			fmt.Printf("  • %s - %s (custom)\n", cmd.Name, cmd.Description)
@@ -1034,8 +1034,8 @@ func showQuickList(reg *registry.Registry, discovery *CommandDiscovery) {
 	if len(customCommands) > 0 {
 		utils.Println("\n  Custom commands:")
 		for i, cmd := range customCommands {
-			if i >= 5 { // Limit to first 5 custom commands
-				fmt.Printf("  ... and %d more (run 'magex -l' to see all)\n", len(customCommands)-5)
+			if i >= maxSuggestions {
+				fmt.Printf("  ... and %d more (run 'magex -l' to see all)\n", len(customCommands)-maxSuggestions)
 				break
 			}
 			desc := cmd.Description

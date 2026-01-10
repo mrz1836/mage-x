@@ -728,15 +728,23 @@ func displayTestHeader(testType string, config *Config) []string {
 	// Get module information
 	modules, err := findAllModules()
 	var moduleList string
+	var excludedModules, activeModules []string
 	if err != nil {
 		moduleList = "Error loading modules"
 	} else {
 		moduleNames := make([]string, len(modules))
 		for i, mod := range modules {
+			modName := mod.Name
 			if mod.IsRoot {
-				moduleNames[i] = fmt.Sprintf("%s (main)", mod.Name)
+				modName = fmt.Sprintf("%s (main)", mod.Name)
+			}
+			moduleNames[i] = modName
+
+			// Separate modules into excluded vs active lists
+			if shouldExcludeModule(mod, config) {
+				excludedModules = append(excludedModules, modName)
 			} else {
-				moduleNames[i] = mod.Name
+				activeModules = append(activeModules, modName)
 			}
 		}
 		moduleList = truncateList(moduleNames, 80)
@@ -787,6 +795,14 @@ func displayTestHeader(testType string, config *Config) []string {
 		utils.Println("  No modules found")
 	} else {
 		utils.Print("  %d found: %s\n", len(modules), moduleList)
+
+		// Show breakdown if modules are excluded
+		if len(excludedModules) > 0 {
+			excludedList := truncateList(excludedModules, 80)
+			activeList := truncateList(activeModules, 80)
+			utils.Print("  %d excluded: %s\n", len(excludedModules), excludedList)
+			utils.Print("  %d active: %s\n", len(activeModules), activeList)
+		}
 	}
 
 	utils.Println(strings.Repeat("━", 60))

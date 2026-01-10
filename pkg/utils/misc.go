@@ -77,6 +77,9 @@ func PromptForInput(prompt string) (string, error) {
 	return strings.TrimSpace(scanner.Text()), nil
 }
 
+// defaultReadBufferSize is the buffer size for reading files (128KB)
+const defaultReadBufferSize = 128 * 1024
+
 // CheckFileLineLength checks if any line in a file exceeds maxLen bytes
 // Returns: (hasLongLines, lineNumber, lineLength, error)
 // Uses bufio.Reader with a large buffer to avoid token size limits
@@ -89,8 +92,8 @@ func CheckFileLineLength(path string, maxLen int) (bool, int, int, error) {
 		_ = file.Close() //nolint:errcheck // Best-effort close, errors not actionable in validation context
 	}()
 
-	// Use a reader with a large buffer (128KB) to handle lines larger than default
-	reader := bufio.NewReaderSize(file, 128*1024)
+	// Use a reader with a large buffer to handle lines larger than default
+	reader := bufio.NewReaderSize(file, defaultReadBufferSize)
 	lineNum := 0
 	maxLineLen := 0
 

@@ -25,7 +25,7 @@ func (b *ConstantBackoff) Duration(_ int) time.Duration {
 	return b.Delay
 }
 
-// Reset implements Backoff.
+// Reset implements Backoff. No-op for ConstantBackoff as it has no internal state.
 func (b *ConstantBackoff) Reset() {}
 
 // ExponentialBackoff implements exponential backoff with optional jitter.
@@ -80,7 +80,8 @@ func (b *ExponentialBackoff) Duration(attempt int) time.Duration {
 	return time.Duration(delay)
 }
 
-// Reset implements Backoff.
+// Reset implements Backoff. No-op for ExponentialBackoff as it calculates delays
+// purely from the attempt number passed to Duration().
 func (b *ExponentialBackoff) Reset() {}
 
 // LinearBackoff increases the delay linearly with each attempt.
@@ -110,7 +111,8 @@ func (b *LinearBackoff) Duration(attempt int) time.Duration {
 	return delay
 }
 
-// Reset implements Backoff.
+// Reset implements Backoff. No-op for LinearBackoff as it calculates delays
+// purely from the attempt number passed to Duration().
 func (b *LinearBackoff) Reset() {}
 
 // DefaultBackoff returns a standard exponential backoff configuration:

@@ -21,9 +21,9 @@ var (
 	ErrPathDoesNotExist        = errors.New("path does not exist")
 	ErrPathAlreadyExists       = errors.New("path already exists")
 	ErrPathTraversalDetected   = errors.New("invalid path: path traversal detected")
-	errPathNotExecutable       = errors.New("path is not executable")
-	errPathNotDirectory        = errors.New("path is not a directory")
-	errPathNotFile             = errors.New("path is not a file")
+	ErrPathNotExecutable       = errors.New("path is not executable")
+	ErrPathNotDirectory        = errors.New("path is not a directory")
+	ErrPathNotFile             = errors.New("path is not a file")
 	ErrInvalidExtensions       = errors.New("path must have one of the required extensions")
 	ErrPathTooLong             = errors.New("path exceeds maximum length")
 	ErrPatternMismatch         = errors.New("path does not match required pattern")
@@ -255,7 +255,7 @@ func (r *AbsolutePathRule) Description() string { return "path must be absolute"
 // Validate checks if the given path is absolute
 func (r *AbsolutePathRule) Validate(path string) error {
 	if !filepath.IsAbs(path) {
-		return ErrPathMustBeAbsolute
+		return fmt.Errorf("%w: got %q", ErrPathMustBeAbsolute, path)
 	}
 	return nil
 }
@@ -277,7 +277,7 @@ func (r *RelativePathRule) Description() string { return "path must be relative"
 // Validate validates that the given path is relative
 func (r *RelativePathRule) Validate(path string) error {
 	if filepath.IsAbs(path) {
-		return ErrPathMustBeRelative
+		return fmt.Errorf("%w: got %q", ErrPathMustBeRelative, path)
 	}
 	return nil
 }
@@ -299,7 +299,7 @@ func (r *ExistsRule) Description() string { return "path must exist" }
 // Validate validates that the given path exists
 func (r *ExistsRule) Validate(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return ErrPathDoesNotExist
+		return fmt.Errorf("%w: %q", ErrPathDoesNotExist, path)
 	}
 	return nil
 }
@@ -324,7 +324,7 @@ func (r *NotExistsRule) Description() string { return "path must not exist" }
 // Validate validates that the given path does not exist
 func (r *NotExistsRule) Validate(path string) error {
 	if _, err := os.Stat(path); err == nil {
-		return ErrPathAlreadyExists
+		return fmt.Errorf("%w: %q", ErrPathAlreadyExists, path)
 	}
 	return nil
 }
@@ -447,7 +447,7 @@ func (r *ExecutableRule) Validate(path string) error {
 	}
 
 	if info.Mode()&0o111 == 0 {
-		return errPathNotExecutable
+		return fmt.Errorf("%w: %q", ErrPathNotExecutable, path)
 	}
 
 	return nil
@@ -475,7 +475,7 @@ func (r *DirectoryRule) Validate(path string) error {
 	}
 
 	if !info.IsDir() {
-		return errPathNotDirectory
+		return fmt.Errorf("%w: %q", ErrPathNotDirectory, path)
 	}
 
 	return nil
@@ -484,7 +484,7 @@ func (r *DirectoryRule) Validate(path string) error {
 // ValidatePath validates that the given PathBuilder path is a directory
 func (r *DirectoryRule) ValidatePath(path PathBuilder) error {
 	if !path.IsDir() {
-		return errPathNotDirectory
+		return fmt.Errorf("%w: %q", ErrPathNotDirectory, path.String())
 	}
 	return nil
 }
@@ -506,7 +506,7 @@ func (r *FileRule) Validate(path string) error {
 	}
 
 	if info.IsDir() {
-		return errPathNotFile
+		return fmt.Errorf("%w: %q is a directory", ErrPathNotFile, path)
 	}
 
 	return nil
@@ -515,7 +515,7 @@ func (r *FileRule) Validate(path string) error {
 // ValidatePath validates that the given PathBuilder path is a file
 func (r *FileRule) ValidatePath(path PathBuilder) error {
 	if !path.IsFile() {
-		return errPathNotFile
+		return fmt.Errorf("%w: %q", ErrPathNotFile, path.String())
 	}
 	return nil
 }
