@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -1330,15 +1331,13 @@ func groupByMessage(matches []string, pattern string) []IssueCount {
 		results = append(results, *count)
 	}
 
-	// Sort by count (descending), then by message
-	for i := 0; i < len(results)-1; i++ {
-		for j := i + 1; j < len(results); j++ {
-			if results[i].Count < results[j].Count ||
-				(results[i].Count == results[j].Count && results[i].Message > results[j].Message) {
-				results[i], results[j] = results[j], results[i]
-			}
+	// Sort by count (descending), then by message (ascending)
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Count != results[j].Count {
+			return results[i].Count > results[j].Count
 		}
-	}
+		return results[i].Message < results[j].Message
+	})
 
 	return results
 }
@@ -1396,15 +1395,13 @@ func groupNolintByTag(matches []string) []IssueCount {
 		results = append(results, *count)
 	}
 
-	// Sort by count (descending), then by tag name
-	for i := 0; i < len(results)-1; i++ {
-		for j := i + 1; j < len(results); j++ {
-			if results[i].Count < results[j].Count ||
-				(results[i].Count == results[j].Count && results[i].Message > results[j].Message) {
-				results[i], results[j] = results[j], results[i]
-			}
+	// Sort by count (descending), then by tag name (ascending)
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Count != results[j].Count {
+			return results[i].Count > results[j].Count
 		}
-	}
+		return results[i].Message < results[j].Message
+	})
 
 	return results
 }
@@ -1455,15 +1452,13 @@ func groupSkipsByMessage(matches []string) []IssueCount {
 		results = append(results, *count)
 	}
 
-	// Sort by count (descending), then by message
-	for i := 0; i < len(results)-1; i++ {
-		for j := i + 1; j < len(results); j++ {
-			if results[i].Count < results[j].Count ||
-				(results[i].Count == results[j].Count && results[i].Message > results[j].Message) {
-				results[i], results[j] = results[j], results[i]
-			}
+	// Sort by count (descending), then by message (ascending)
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Count != results[j].Count {
+			return results[i].Count > results[j].Count
 		}
-	}
+		return results[i].Message < results[j].Message
+	})
 
 	return results
 }
