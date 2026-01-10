@@ -74,7 +74,7 @@ func NewSpinner(message string) *Spinner {
 
 // NewSpinnerWithStyle creates a new spinner with a specific style
 func NewSpinnerWithStyle(message string, style SpinnerStyle) *Spinner {
-	return NewSpinnerWithStyleAndRegistry(message, style, newDefaultSpinnerFrameRegistry())
+	return NewSpinnerWithStyleAndRegistry(message, style, NewSpinnerFrameRegistry())
 }
 
 // NewSpinnerWithStyleAndRegistry creates a new spinner with a specific style and frame registry
@@ -93,11 +93,6 @@ func NewSpinnerWithStyleAndRegistry(message string, style SpinnerStyle, registry
 		pauseCh:  make(chan struct{}),
 		resumeCh: make(chan struct{}),
 	}
-}
-
-// newDefaultSpinnerFrameRegistry creates the default registry instance
-func newDefaultSpinnerFrameRegistry() *SpinnerFrameRegistry {
-	return NewSpinnerFrameRegistry()
 }
 
 // Start starts the spinner animation
@@ -242,7 +237,7 @@ const (
 
 // NewMultiSpinner creates a new multi-spinner
 func NewMultiSpinner() *MultiSpinner {
-	return NewMultiSpinnerWithRegistry(newDefaultSpinnerFrameRegistry())
+	return NewMultiSpinnerWithRegistry(NewSpinnerFrameRegistry())
 }
 
 // NewMultiSpinnerWithRegistry creates a new multi-spinner with a specific frame registry
@@ -463,14 +458,9 @@ func (r *TreeSymbolRegistry) GetSymbols(symbolType TreeSymbolType) treeSymbols {
 	}
 }
 
-// newDefaultTreeSymbolRegistry creates the default tree symbol registry instance
-func newDefaultTreeSymbolRegistry() *TreeSymbolRegistry {
-	return NewTreeSymbolRegistry()
-}
-
 // NewProgressTree creates a new progress tree
 func NewProgressTree(name string) *ProgressTree {
-	return NewProgressTreeWithRegistry(name, newDefaultTreeSymbolRegistry(), TreeSymbolTypeUnicode)
+	return NewProgressTreeWithRegistry(name, NewTreeSymbolRegistry(), TreeSymbolTypeUnicode)
 }
 
 // NewProgressTreeWithRegistry creates a new progress tree with a specific symbol registry and type

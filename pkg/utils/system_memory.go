@@ -16,6 +16,22 @@ var (
 	ErrParseMemoryOutput = errors.New("failed to parse total memory from wmic output")
 )
 
+// parseWmicValue extracts a uint64 value from wmic /value output format
+// wmic output format: "FieldName=value\n"
+func parseWmicValue(output, prefix string) (uint64, bool) {
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, prefix) {
+			continue
+		}
+		value := strings.TrimPrefix(line, prefix)
+		if v, err := strconv.ParseUint(value, 10, 64); err == nil {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
 // OS constants
 const (
 	osLinux   = "linux"
@@ -163,19 +179,8 @@ func getWindowsMemoryInfo() (*MemoryInfo, error) {
 		return nil, fmt.Errorf("failed to get total memory: %w", err)
 	}
 
-	var totalMemory uint64
-	for _, line := range strings.Split(totalOutput, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "TotalPhysicalMemory=") {
-			value := strings.TrimPrefix(line, "TotalPhysicalMemory=")
-			if tm, parseErr := strconv.ParseUint(value, 10, 64); parseErr == nil {
-				totalMemory = tm
-				break
-			}
-		}
-	}
-
-	if totalMemory == 0 {
+	totalMemory, ok := parseWmicValue(totalOutput, "TotalPhysicalMemory=")
+	if !ok || totalMemory == 0 {
 		return nil, ErrParseMemoryOutput
 	}
 
@@ -193,18 +198,7 @@ func getWindowsMemoryInfo() (*MemoryInfo, error) {
 		}, nil
 	}
 
-	var freeMemoryKB uint64
-	for _, line := range strings.Split(availOutput, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "FreePhysicalMemory=") {
-			value := strings.TrimPrefix(line, "FreePhysicalMemory=")
-			if fm, err := strconv.ParseUint(value, 10, 64); err == nil {
-				freeMemoryKB = fm
-				break
-			}
-		}
-	}
-
+	freeMemoryKB, _ := parseWmicValue(availOutput, "FreePhysicalMemory=")
 	availableMemory := freeMemoryKB * 1024 // Convert KB to bytes
 
 	return &MemoryInfo{

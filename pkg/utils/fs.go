@@ -14,7 +14,8 @@ func FileExists(path string) bool {
 
 // DirExists checks if a directory exists
 func DirExists(path string) bool {
-	return fileops.GetDefault().File.Exists(path) && fileops.GetDefault().File.IsDir(path)
+	ops := fileops.GetDefault()
+	return ops.File.Exists(path) && ops.File.IsDir(path)
 }
 
 // EnsureDir creates a directory if it doesn't exist
@@ -45,6 +46,7 @@ func FindFiles(_, pattern string) ([]string, error) {
 
 func findFiles(root, pattern string) ([]string, error) {
 	var files []string
+	ops := fileops.GetDefault()
 
 	err := filepath.Walk(root, func(path string, _ os.FileInfo, err error) error {
 		if err != nil {
@@ -57,7 +59,7 @@ func findFiles(root, pattern string) ([]string, error) {
 		}
 
 		// Use fileops to check if it's a file (not directory)
-		if matched && fileops.GetDefault().File.Exists(path) && !fileops.GetDefault().File.IsDir(path) {
+		if matched && ops.File.Exists(path) && !ops.File.IsDir(path) {
 			files = append(files, path)
 		}
 

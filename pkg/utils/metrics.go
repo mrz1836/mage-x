@@ -308,8 +308,7 @@ func (pt *PerformanceTimer) Stop() time.Duration {
 
 		if err := pt.collector.RecordMetric(metric); err != nil {
 			// Log error but don't fail the timer stop
-			// In a production system, you might want to use a proper logger here
-			_ = err
+			Debug("failed to record metric %s: %v", metric.Name, err)
 		}
 	}
 
@@ -335,8 +334,7 @@ func (pt *PerformanceTimer) StopWithError(err error) time.Duration {
 
 		if err := pt.collector.RecordMetric(metric); err != nil {
 			// Log error but don't fail the timer stop
-			// In a production system, you might want to use a proper logger here
-			_ = err
+			Debug("failed to record metric %s: %v", metric.Name, err)
 		}
 	}
 
@@ -965,8 +963,7 @@ func (js *JSONStorage) Store(metric *Metric) error {
 	if data, err := os.ReadFile(filePath); err == nil { //nolint:gosec // controlled metrics storage path
 		if err := json.Unmarshal(data, &metrics); err != nil {
 			// Log error but continue with empty metrics slice
-			// In a production system, you might want to use a proper logger here
-			_ = err
+			Debug("failed to unmarshal metrics from %s: %v", filePath, err)
 		}
 	}
 
