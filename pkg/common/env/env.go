@@ -27,6 +27,9 @@ var (
 	defaultPathsInstance    PathResolver //nolint:gochecknoglobals // Required for thread-safe singleton pattern
 	defaultManagerInstance  Manager      //nolint:gochecknoglobals // Required for thread-safe singleton pattern
 	defaultValidateInstance Validator    //nolint:gochecknoglobals // Required for thread-safe singleton pattern
+
+	// singletonMu protects Set* functions from race conditions when resetting singletons
+	singletonMu sync.Mutex //nolint:gochecknoglobals // Required for thread-safe singleton reset
 )
 
 // GetDefaultEnv returns the default environment instance, creating it if necessary
@@ -254,28 +257,40 @@ func Isolate(vars map[string]string, fn func() error) error {
 // Configuration functions
 
 // SetEnvironment sets the global environment instance (for testing/mocking)
+// This function is thread-safe and can be called concurrently.
 func SetEnvironment(env Environment) {
+	singletonMu.Lock()
+	defer singletonMu.Unlock()
 	defaultEnvInstance = env
 	defaultEnvOnce = sync.Once{}
 	DefaultEnv = env
 }
 
 // SetPathResolver sets the global path resolver instance (for testing/mocking)
+// This function is thread-safe and can be called concurrently.
 func SetPathResolver(resolver PathResolver) {
+	singletonMu.Lock()
+	defer singletonMu.Unlock()
 	defaultPathsInstance = resolver
 	defaultPathsOnce = sync.Once{}
 	DefaultPaths = resolver
 }
 
 // SetManager sets the global manager instance (for testing/mocking)
+// This function is thread-safe and can be called concurrently.
 func SetManager(manager Manager) {
+	singletonMu.Lock()
+	defer singletonMu.Unlock()
 	defaultManagerInstance = manager
 	defaultManagerOnce = sync.Once{}
 	DefaultManager = manager
 }
 
 // SetValidator sets the global validator instance (for testing/mocking)
+// This function is thread-safe and can be called concurrently.
 func SetValidator(validator Validator) {
+	singletonMu.Lock()
+	defer singletonMu.Unlock()
 	defaultValidateInstance = validator
 	defaultValidateOnce = sync.Once{}
 	DefaultValidate = validator
