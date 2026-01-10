@@ -78,15 +78,12 @@ func (a *CLIAdapter) Header(text string) {
 
 	line := "============================================================"
 	if a.useColor {
-		colorBlue := "\033[34m"
-		colorBold := "\033[1m"
-		colorReset := "\033[0m"
 		//nolint:errcheck // Log output errors are intentionally ignored
-		fmt.Fprintf(a.output, "\n%s%s%s\n", colorBold+colorBlue, line, colorReset)
+		fmt.Fprintf(a.output, "\n%s%s%s\n", ColorBold+ColorBlue, line, ColorReset)
 		//nolint:errcheck // Log output errors are intentionally ignored
-		fmt.Fprintf(a.output, "%s%s %s %s%s\n", colorBold+colorBlue, "===", text, "===", colorReset)
+		fmt.Fprintf(a.output, "%s%s %s %s%s\n", ColorBold+ColorBlue, "===", text, "===", ColorReset)
 		//nolint:errcheck // Log output errors are intentionally ignored
-		fmt.Fprintf(a.output, "%s%s%s\n\n", colorBold+colorBlue, line, colorReset)
+		fmt.Fprintf(a.output, "%s%s%s\n\n", ColorBold+ColorBlue, line, ColorReset)
 	} else {
 		//nolint:errcheck // Log output errors are intentionally ignored
 		fmt.Fprintf(a.output, "\n%s\n=== %s ===\n%s\n\n", line, text, line)
@@ -202,28 +199,27 @@ func (a *CLIAdapter) log(level Level, format string, args ...interface{}) {
 	timestamp := time.Now().Format("15:04:05")
 
 	var levelStr, color string
-	colorReset := "\033[0m"
 	switch level {
 	case LevelDebug:
 		levelStr = "DEBUG"
-		color = "\033[90m" // gray
+		color = ColorGray
 	case LevelInfo:
 		levelStr = "INFO"
-		color = "\033[34m" // blue
+		color = ColorBlue
 	case LevelWarn:
 		levelStr = "WARN"
-		color = "\033[33m" // yellow
+		color = ColorYellow
 	case LevelError:
 		levelStr = "ERROR"
-		color = "\033[31m" // red
+		color = ColorRed
 	case LevelFatal:
 		levelStr = "FATAL"
-		color = "\033[31m" // red
+		color = ColorRed
 	}
 
 	if a.useColor {
 		//nolint:errcheck // Log output errors are intentionally ignored
-		fmt.Fprintf(a.output, "%s%s [%s]%s %s\n", color, timestamp, levelStr, colorReset, msg)
+		fmt.Fprintf(a.output, "%s%s [%s]%s %s\n", color, timestamp, levelStr, ColorReset, msg)
 	} else {
 		//nolint:errcheck // Log output errors are intentionally ignored
 		fmt.Fprintf(a.output, "%s [%s] %s\n", timestamp, levelStr, msg)
@@ -245,22 +241,21 @@ func (a *CLIAdapter) logWithEmoji(level Level, emoji, format string, args ...int
 	}
 
 	var color string
-	colorReset := "\033[0m"
 	//nolint:exhaustive // LevelDebug and LevelFatal use default color
 	switch level {
 	case LevelInfo:
-		color = "\033[32m" // green
+		color = ColorGreen
 	case LevelWarn:
-		color = "\033[33m" // yellow
+		color = ColorYellow
 	case LevelError, LevelFatal:
-		color = "\033[31m" // red
+		color = ColorRed
 	default:
-		color = colorReset
+		color = ColorReset
 	}
 
 	if a.useColor {
 		//nolint:errcheck // Log output errors are intentionally ignored
-		fmt.Fprintf(a.output, "%s %s%s%s\n", emoji, color, msg, colorReset)
+		fmt.Fprintf(a.output, "%s %s%s%s\n", emoji, color, msg, ColorReset)
 	} else {
 		//nolint:errcheck // Log output errors are intentionally ignored
 		fmt.Fprintf(a.output, "%s %s\n", emoji, msg)
