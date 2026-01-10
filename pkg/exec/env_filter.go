@@ -146,8 +146,6 @@ func (e *EnvFilteringExecutor) ExecuteOutputInDir(ctx context.Context, dir, name
 func (e *EnvFilteringExecutor) FilterEnvironment(env []string, commandName string) []string {
 	filtered := make([]string, 0, len(env))
 	for _, envVar := range env {
-		keep := true
-
 		// Extract the variable name part (before =)
 		parts := strings.SplitN(envVar, "=", 2)
 		if len(parts) < 2 {
@@ -158,37 +156,51 @@ func (e *EnvFilteringExecutor) FilterEnvironment(env []string, commandName strin
 
 		varName := strings.ToUpper(parts[0])
 
-		// Check if this environment variable contains sensitive data
-		for _, prefix := range e.SensitivePrefixes {
-			if !strings.HasPrefix(varName, prefix) {
-				continue
-			}
-			if len(varName) != len(prefix) && varName[len(prefix)] != '_' {
-				continue
-			}
-
-			// Check if this variable is whitelisted for this command
-			if whitelistedVars, ok := e.Whitelist[commandName]; ok {
-				for _, whitelistedVar := range whitelistedVars {
-					if varName == whitelistedVar {
-						// This sensitive variable is whitelisted for this command
-						keep = true
-						goto nextVar
-					}
-				}
-			}
-			// Only filter if it's an exact match or followed by underscore
-			keep = false
-			break
-		}
-	nextVar:
-
-		if keep {
+		if e.shouldKeepEnvVar(varName, commandName) {
 			filtered = append(filtered, envVar)
 		}
 	}
 
 	return filtered
+}
+
+// shouldKeepEnvVar determines if an environment variable should be kept based on sensitivity and whitelist rules
+func (e *EnvFilteringExecutor) shouldKeepEnvVar(varName, commandName string) bool {
+	// Check if this environment variable contains sensitive data
+	for _, prefix := range e.SensitivePrefixes {
+		if !strings.HasPrefix(varName, prefix) {
+			continue
+		}
+		// Only match if it's an exact match or followed by underscore
+		if len(varName) != len(prefix) && varName[len(prefix)] != '_' {
+			continue
+		}
+
+		// This is a sensitive variable - check if it's whitelisted for this command
+		if e.isWhitelisted(varName, commandName) {
+			return true
+		}
+
+		// Sensitive and not whitelisted - filter it out
+		return false
+	}
+
+	// Not a sensitive variable - keep it
+	return true
+}
+
+// isWhitelisted checks if a variable is whitelisted for a specific command
+func (e *EnvFilteringExecutor) isWhitelisted(varName, commandName string) bool {
+	whitelistedVars, ok := e.Whitelist[commandName]
+	if !ok {
+		return false
+	}
+	for _, whitelistedVar := range whitelistedVars {
+		if varName == whitelistedVar {
+			return true
+		}
+	}
+	return false
 }
 
 // Ensure EnvFilteringExecutor implements FullExecutor

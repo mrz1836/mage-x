@@ -70,86 +70,54 @@ func NewRetryingExecutor(wrapped FullExecutor, opts ...RetryOption) *RetryingExe
 	return r
 }
 
-// Execute runs a command with retry support
-func (r *RetryingExecutor) Execute(ctx context.Context, name string, args ...string) error {
-	cfg := &retry.Config{
+// retryConfig returns a retry.Config based on the executor's settings
+func (r *RetryingExecutor) retryConfig() *retry.Config {
+	return &retry.Config{
 		MaxAttempts: r.MaxRetries + 1,
 		Classifier:  r.Classifier,
 		Backoff:     r.Backoff,
 		OnRetry:     r.OnRetry,
 	}
+}
 
-	return retry.Do(ctx, cfg, func() error {
+// Execute runs a command with retry support
+func (r *RetryingExecutor) Execute(ctx context.Context, name string, args ...string) error {
+	return retry.Do(ctx, r.retryConfig(), func() error {
 		return r.wrapped.Execute(ctx, name, args...)
 	})
 }
 
 // ExecuteOutput runs a command with retry support and returns output
 func (r *RetryingExecutor) ExecuteOutput(ctx context.Context, name string, args ...string) (string, error) {
-	cfg := &retry.Config{
-		MaxAttempts: r.MaxRetries + 1,
-		Classifier:  r.Classifier,
-		Backoff:     r.Backoff,
-		OnRetry:     r.OnRetry,
-	}
-
-	return retry.DoWithData(ctx, cfg, func() (string, error) {
+	return retry.DoWithData(ctx, r.retryConfig(), func() (string, error) {
 		return r.wrapped.ExecuteOutput(ctx, name, args...)
 	})
 }
 
 // ExecuteWithEnv runs a command with additional environment variables and retry support
 func (r *RetryingExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
-	cfg := &retry.Config{
-		MaxAttempts: r.MaxRetries + 1,
-		Classifier:  r.Classifier,
-		Backoff:     r.Backoff,
-		OnRetry:     r.OnRetry,
-	}
-
-	return retry.Do(ctx, cfg, func() error {
+	return retry.Do(ctx, r.retryConfig(), func() error {
 		return r.wrapped.ExecuteWithEnv(ctx, env, name, args...)
 	})
 }
 
 // ExecuteInDir runs a command in the specified directory with retry support
 func (r *RetryingExecutor) ExecuteInDir(ctx context.Context, dir, name string, args ...string) error {
-	cfg := &retry.Config{
-		MaxAttempts: r.MaxRetries + 1,
-		Classifier:  r.Classifier,
-		Backoff:     r.Backoff,
-		OnRetry:     r.OnRetry,
-	}
-
-	return retry.Do(ctx, cfg, func() error {
+	return retry.Do(ctx, r.retryConfig(), func() error {
 		return r.wrapped.ExecuteInDir(ctx, dir, name, args...)
 	})
 }
 
 // ExecuteOutputInDir runs a command in the specified directory with retry support and returns output
 func (r *RetryingExecutor) ExecuteOutputInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
-	cfg := &retry.Config{
-		MaxAttempts: r.MaxRetries + 1,
-		Classifier:  r.Classifier,
-		Backoff:     r.Backoff,
-		OnRetry:     r.OnRetry,
-	}
-
-	return retry.DoWithData(ctx, cfg, func() (string, error) {
+	return retry.DoWithData(ctx, r.retryConfig(), func() (string, error) {
 		return r.wrapped.ExecuteOutputInDir(ctx, dir, name, args...)
 	})
 }
 
 // ExecuteStreaming runs a command with custom stdout/stderr and retry support
 func (r *RetryingExecutor) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error {
-	cfg := &retry.Config{
-		MaxAttempts: r.MaxRetries + 1,
-		Classifier:  r.Classifier,
-		Backoff:     r.Backoff,
-		OnRetry:     r.OnRetry,
-	}
-
-	return retry.Do(ctx, cfg, func() error {
+	return retry.Do(ctx, r.retryConfig(), func() error {
 		return r.wrapped.ExecuteStreaming(ctx, stdout, stderr, name, args...)
 	})
 }
