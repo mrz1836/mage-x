@@ -93,8 +93,25 @@ func TestHTTPGetJSON_HTTPError(t *testing.T) {
 			assert.Nil(t, result)
 			require.ErrorIs(t, err, ErrHTTPAPIError)
 			assert.Contains(t, err.Error(), tt.body)
+			// Verify URL is included in error message
+			assert.Contains(t, err.Error(), server.URL)
 		})
 	}
+}
+
+// TestHTTPGetJSON_ErrorContainsURL tests that errors include the URL for debugging
+func TestHTTPGetJSON_ErrorContainsURL(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"message":"Not Found"}`)) //nolint:errcheck // test server write never fails
+	}))
+	defer server.Close()
+
+	_, err := HTTPGetJSON[testRelease](server.URL, 5*time.Second)
+	require.Error(t, err)
+	// Verify error message includes the URL for debugging
+	assert.Contains(t, err.Error(), "GET")
+	assert.Contains(t, err.Error(), server.URL)
 }
 
 // TestHTTPGetJSON_InvalidJSON tests error handling for malformed JSON

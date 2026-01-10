@@ -191,6 +191,13 @@ func TestAbsolutePathRule(t *testing.T) {
 		err2 := rule.ValidatePath(pb2)
 		require.Error(t, err2)
 	})
+
+	t.Run("error message contains path for debugging", func(t *testing.T) {
+		err := rule.Validate("some/relative/path")
+		require.Error(t, err)
+		// Error should contain the path that failed validation
+		assert.Contains(t, err.Error(), "some/relative/path")
+	})
 }
 
 // =============================================================================
