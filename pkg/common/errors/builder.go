@@ -127,57 +127,7 @@ func (b *RealDefaultErrorBuilder) Build() MageError {
 	return result
 }
 
-// WithMessage adds a formatted message to the error builder
-func (b *DefaultErrorBuilder) WithMessage(format string, args ...interface{}) ErrorBuilder {
-	return NewErrorBuilder().WithMessage(format, args...)
-}
-
-// WithCode adds an error code to the error builder
-func (b *DefaultErrorBuilder) WithCode(code ErrorCode) ErrorBuilder {
-	return NewErrorBuilder().WithCode(code)
-}
-
-// WithSeverity adds a severity level to the error builder
-func (b *DefaultErrorBuilder) WithSeverity(severity Severity) ErrorBuilder {
-	return NewErrorBuilder().WithSeverity(severity)
-}
-
-// WithContext adds context information to the error builder
-func (b *DefaultErrorBuilder) WithContext(ctx *ErrorContext) ErrorBuilder {
-	return NewErrorBuilder().WithContext(ctx)
-}
-
-// WithField adds a key-value field to the error builder
-func (b *DefaultErrorBuilder) WithField(key string, value interface{}) ErrorBuilder {
-	return NewErrorBuilder().WithField(key, value)
-}
-
-// WithFields adds multiple key-value fields to the error builder
-func (b *DefaultErrorBuilder) WithFields(fields map[string]interface{}) ErrorBuilder {
-	return NewErrorBuilder().WithFields(fields)
-}
-
-// WithCause adds a cause error to the error builder
-func (b *DefaultErrorBuilder) WithCause(cause error) ErrorBuilder {
-	return NewErrorBuilder().WithCause(cause)
-}
-
-// WithOperation adds an operation name to the error builder
-func (b *DefaultErrorBuilder) WithOperation(operation string) ErrorBuilder {
-	return NewErrorBuilder().WithOperation(operation)
-}
-
-// WithResource adds a resource identifier to the error builder
-func (b *DefaultErrorBuilder) WithResource(resource string) ErrorBuilder {
-	return NewErrorBuilder().WithResource(resource)
-}
-
-// WithStackTrace adds stack trace information to the error builder
-func (b *DefaultErrorBuilder) WithStackTrace() ErrorBuilder {
-	return NewErrorBuilder().WithStackTrace()
-}
-
-// Build creates a MageError from the error builder
-func (b *DefaultErrorBuilder) Build() MageError {
-	return NewErrorBuilder().Build()
+// NewDefaultErrorBuilder creates a new DefaultErrorBuilder with initialized embedded type
+func NewDefaultErrorBuilder() *DefaultErrorBuilder {
+	return &DefaultErrorBuilder{RealDefaultErrorBuilder: NewErrorBuilder()}
 }

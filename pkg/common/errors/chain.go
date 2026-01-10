@@ -186,6 +186,11 @@ func (c *RealDefaultChainError) ToSlice() []error {
 	return c.Errors()
 }
 
+// NewDefaultChainError creates a new DefaultChainError
+func NewDefaultChainError() *DefaultChainError {
+	return &DefaultChainError{errors: []error{}}
+}
+
 // Add adds an error to the chain
 func (c *DefaultChainError) Add(err error) ErrorChain {
 	var chain ErrorChain = NewErrorChain()

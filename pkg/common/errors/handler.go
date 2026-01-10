@@ -148,6 +148,14 @@ func (h *RealDefaultErrorHandler) handleFallback(err error) error {
 	return err
 }
 
+// NewDefaultErrorHandler creates a new DefaultErrorHandler
+func NewDefaultErrorHandler() *DefaultErrorHandler {
+	return &DefaultErrorHandler{
+		handlers:         make(map[ErrorCode]func(MageError) error),
+		severityHandlers: make(map[Severity]func(MageError) error),
+	}
+}
+
 // Handle handles an error using the DefaultErrorHandler
 func (h *DefaultErrorHandler) Handle(err error) error {
 	handler := NewErrorHandler()

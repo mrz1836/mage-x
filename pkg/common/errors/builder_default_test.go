@@ -15,7 +15,7 @@ var (
 // TestDefaultErrorBuilderWithMessage tests the WithMessage method
 func TestDefaultErrorBuilderWithMessage(t *testing.T) {
 	t.Run("simple message", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithMessage("test message")
 
 		mageErr := result.Build()
@@ -23,7 +23,7 @@ func TestDefaultErrorBuilderWithMessage(t *testing.T) {
 	})
 
 	t.Run("formatted message", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithMessage("error %d: %s", 42, "details")
 
 		mageErr := result.Build()
@@ -31,24 +31,22 @@ func TestDefaultErrorBuilderWithMessage(t *testing.T) {
 	})
 
 	t.Run("empty message", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithMessage("")
 
 		mageErr := result.Build()
 		assert.NotNil(t, mageErr)
 	})
 
-	t.Run("chaining creates new builder each time", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
-		chain1 := builder.WithMessage("first")
-		chain2 := builder.WithMessage("second")
+	t.Run("chaining operates on same builder", func(t *testing.T) {
+		// With embedding, DefaultErrorBuilder delegates to the same RealDefaultErrorBuilder
+		builder := NewDefaultErrorBuilder()
+		_ = builder.WithMessage("first")
+		chain2 := builder.WithMessage("second") // Overwrites "first"
 
-		// Each call creates a new RealDefaultErrorBuilder via NewErrorBuilder()
-		err1 := chain1.Build()
-		err2 := chain2.Build()
-
-		assert.Contains(t, err1.Error(), "first")
-		assert.Contains(t, err2.Error(), "second")
+		// Both builders share the same underlying state
+		err := chain2.Build()
+		assert.Contains(t, err.Error(), "second")
 	})
 }
 
@@ -67,7 +65,7 @@ func TestDefaultErrorBuilderWithCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := &DefaultErrorBuilder{}
+			builder := NewDefaultErrorBuilder()
 			result := builder.WithCode(tt.code)
 
 			mageErr := result.Build()
@@ -92,7 +90,7 @@ func TestDefaultErrorBuilderWithSeverity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := &DefaultErrorBuilder{}
+			builder := NewDefaultErrorBuilder()
 			result := builder.WithSeverity(tt.severity)
 
 			mageErr := result.Build()
@@ -104,7 +102,7 @@ func TestDefaultErrorBuilderWithSeverity(t *testing.T) {
 // TestDefaultErrorBuilderWithContext tests the WithContext method
 func TestDefaultErrorBuilderWithContext(t *testing.T) {
 	t.Run("full context", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		ctx := &ErrorContext{
 			Operation:   "TestOp",
 			Resource:    "TestResource",
@@ -124,7 +122,7 @@ func TestDefaultErrorBuilderWithContext(t *testing.T) {
 	})
 
 	t.Run("nil context", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithContext(nil)
 
 		mageErr := result.Build()
@@ -134,7 +132,7 @@ func TestDefaultErrorBuilderWithContext(t *testing.T) {
 	})
 
 	t.Run("partial context", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		ctx := &ErrorContext{
 			Operation: "OnlyOp",
 		}
@@ -150,7 +148,7 @@ func TestDefaultErrorBuilderWithContext(t *testing.T) {
 // TestDefaultErrorBuilderWithField tests the WithField method
 func TestDefaultErrorBuilderWithField(t *testing.T) {
 	t.Run("single field", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithField("key1", "value1")
 
 		mageErr := result.Build()
@@ -159,7 +157,7 @@ func TestDefaultErrorBuilderWithField(t *testing.T) {
 	})
 
 	t.Run("multiple fields via chaining", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		// Note: Each WithField creates a new builder, so chaining doesn't accumulate
 		result := builder.WithField("key1", "value1")
 
@@ -169,7 +167,7 @@ func TestDefaultErrorBuilderWithField(t *testing.T) {
 	})
 
 	t.Run("various value types", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithField("int", 42)
 
 		mageErr := result.Build()
@@ -180,7 +178,7 @@ func TestDefaultErrorBuilderWithField(t *testing.T) {
 // TestDefaultErrorBuilderWithFields tests the WithFields method
 func TestDefaultErrorBuilderWithFields(t *testing.T) {
 	t.Run("multiple fields at once", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		fields := map[string]interface{}{
 			"key1": "value1",
 			"key2": 42,
@@ -196,7 +194,7 @@ func TestDefaultErrorBuilderWithFields(t *testing.T) {
 	})
 
 	t.Run("empty map", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithFields(map[string]interface{}{})
 
 		mageErr := result.Build()
@@ -204,7 +202,7 @@ func TestDefaultErrorBuilderWithFields(t *testing.T) {
 	})
 
 	t.Run("nil map", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithFields(nil)
 
 		mageErr := result.Build()
@@ -215,7 +213,7 @@ func TestDefaultErrorBuilderWithFields(t *testing.T) {
 // TestDefaultErrorBuilderWithCause tests the WithCause method
 func TestDefaultErrorBuilderWithCause(t *testing.T) {
 	t.Run("with cause", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithCause(errDefaultBuilderCause)
 
 		mageErr := result.Build()
@@ -223,7 +221,7 @@ func TestDefaultErrorBuilderWithCause(t *testing.T) {
 	})
 
 	t.Run("nil cause", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithCause(nil)
 
 		mageErr := result.Build()
@@ -231,7 +229,7 @@ func TestDefaultErrorBuilderWithCause(t *testing.T) {
 	})
 
 	t.Run("nested cause", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithCause(errDefaultBuilderCause)
 
 		mageErr := result.Build()
@@ -242,7 +240,7 @@ func TestDefaultErrorBuilderWithCause(t *testing.T) {
 // TestDefaultErrorBuilderWithOperation tests the WithOperation method
 func TestDefaultErrorBuilderWithOperation(t *testing.T) {
 	t.Run("sets operation", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithOperation("CreateUser")
 
 		mageErr := result.Build()
@@ -250,7 +248,7 @@ func TestDefaultErrorBuilderWithOperation(t *testing.T) {
 	})
 
 	t.Run("empty operation", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithOperation("")
 
 		mageErr := result.Build()
@@ -261,7 +259,7 @@ func TestDefaultErrorBuilderWithOperation(t *testing.T) {
 // TestDefaultErrorBuilderWithResource tests the WithResource method
 func TestDefaultErrorBuilderWithResource(t *testing.T) {
 	t.Run("sets resource", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithResource("users/123")
 
 		mageErr := result.Build()
@@ -269,7 +267,7 @@ func TestDefaultErrorBuilderWithResource(t *testing.T) {
 	})
 
 	t.Run("empty resource", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithResource("")
 
 		mageErr := result.Build()
@@ -280,7 +278,7 @@ func TestDefaultErrorBuilderWithResource(t *testing.T) {
 // TestDefaultErrorBuilderWithStackTrace tests the WithStackTrace method
 func TestDefaultErrorBuilderWithStackTrace(t *testing.T) {
 	t.Run("captures stack trace", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		result := builder.WithStackTrace()
 
 		mageErr := result.Build()
@@ -293,7 +291,7 @@ func TestDefaultErrorBuilderWithStackTrace(t *testing.T) {
 // TestDefaultErrorBuilderBuild tests the Build method
 func TestDefaultErrorBuilderBuild(t *testing.T) {
 	t.Run("builds with defaults", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		mageErr := builder.Build()
 
 		assert.NotNil(t, mageErr)
@@ -304,7 +302,7 @@ func TestDefaultErrorBuilderBuild(t *testing.T) {
 	})
 
 	t.Run("build is idempotent", func(t *testing.T) {
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		err1 := builder.Build()
 		err2 := builder.Build()
 
@@ -323,7 +321,7 @@ func TestDefaultErrorBuilderImplementsInterface(t *testing.T) {
 	var _ ErrorBuilder = (*DefaultErrorBuilder)(nil)
 
 	// Runtime check - all methods should be callable
-	var builder ErrorBuilder = &DefaultErrorBuilder{}
+	var builder ErrorBuilder = NewDefaultErrorBuilder()
 
 	builder = builder.WithMessage("test")
 	builder = builder.WithCode(ErrInternal)
@@ -345,7 +343,7 @@ func TestDefaultErrorBuilderFluent(t *testing.T) {
 	t.Run("complete fluent chain", func(t *testing.T) {
 		// Note: DefaultErrorBuilder creates new builder on each call,
 		// so fluent chaining works through the returned RealDefaultErrorBuilder
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 
 		// Start the chain - WithMessage returns RealDefaultErrorBuilder
 		mageErr := builder.WithMessage("operation failed").
@@ -367,29 +365,49 @@ func TestDefaultErrorBuilderFluent(t *testing.T) {
 	})
 }
 
-// TestDefaultErrorBuilderNewInstance verifies each method creates new builder
+// TestDefaultErrorBuilderNewInstance verifies methods operate on same builder
 func TestDefaultErrorBuilderNewInstance(t *testing.T) {
-	builder := &DefaultErrorBuilder{}
+	// With embedding, DefaultErrorBuilder delegates to the same RealDefaultErrorBuilder
+	// So all method calls accumulate on the same builder
 
-	// Each call should create an independent builder path
-	withCode := builder.WithCode(ErrInternal)
-	withSeverity := builder.WithSeverity(SeverityCritical)
-	withMessage := builder.WithMessage("test")
+	t.Run("independent builders require separate instances", func(t *testing.T) {
+		// To get independent builders, create separate instances
+		builder1 := NewDefaultErrorBuilder()
+		builder2 := NewDefaultErrorBuilder()
+		builder3 := NewDefaultErrorBuilder()
 
-	// Build each separately
-	errCode := withCode.Build()
-	errSeverity := withSeverity.Build()
-	errMessage := withMessage.Build()
+		builder1.WithCode(ErrInternal)
+		builder2.WithSeverity(SeverityCritical)
+		builder3.WithMessage("test")
 
-	// Each should have only the property that was set
-	// (others will be defaults)
-	assert.Equal(t, ErrInternal, errCode.Code())
-	assert.Equal(t, SeverityError, errCode.Severity()) // default
+		err1 := builder1.Build()
+		err2 := builder2.Build()
+		err3 := builder3.Build()
 
-	assert.Equal(t, ErrUnknown, errSeverity.Code()) // default
-	assert.Equal(t, SeverityCritical, errSeverity.Severity())
+		assert.Equal(t, ErrInternal, err1.Code())
+		assert.Equal(t, SeverityError, err1.Severity()) // default
 
-	assert.Contains(t, errMessage.Error(), "test")
-	assert.Equal(t, ErrUnknown, errMessage.Code())        // default
-	assert.Equal(t, SeverityError, errMessage.Severity()) // default
+		assert.Equal(t, ErrUnknown, err2.Code()) // default
+		assert.Equal(t, SeverityCritical, err2.Severity())
+
+		assert.Contains(t, err3.Error(), "test")
+		assert.Equal(t, ErrUnknown, err3.Code())        // default
+		assert.Equal(t, SeverityError, err3.Severity()) // default
+	})
+
+	t.Run("chained calls accumulate on same builder", func(t *testing.T) {
+		builder := NewDefaultErrorBuilder()
+
+		// All calls operate on the same underlying RealDefaultErrorBuilder
+		builder.WithCode(ErrInternal)
+		builder.WithSeverity(SeverityCritical)
+		builder.WithMessage("test")
+
+		err := builder.Build()
+
+		// The final error has all accumulated properties
+		assert.Equal(t, ErrInternal, err.Code())
+		assert.Equal(t, SeverityCritical, err.Severity())
+		assert.Contains(t, err.Error(), "test")
+	})
 }

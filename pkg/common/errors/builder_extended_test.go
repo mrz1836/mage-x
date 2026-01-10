@@ -43,7 +43,7 @@ func TestRealDefaultErrorBuilder_WithContext(t *testing.T) {
 
 func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 	// Test the DefaultErrorBuilder wrapper
-	builder := &DefaultErrorBuilder{}
+	builder := NewDefaultErrorBuilder()
 
 	t.Run("WithMessage", func(t *testing.T) {
 		b := builder.WithMessage("test message %s", "arg")
@@ -89,7 +89,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 	})
 
 	t.Run("WithField", func(t *testing.T) {
-		testBuilder := &DefaultErrorBuilder{}
+		testBuilder := NewDefaultErrorBuilder()
 		b := testBuilder.WithField("key1", "value1")
 		assert.NotNil(t, b)
 
@@ -100,7 +100,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 	})
 
 	t.Run("WithFields", func(t *testing.T) {
-		testBuilder := &DefaultErrorBuilder{}
+		testBuilder := NewDefaultErrorBuilder()
 		fields := map[string]interface{}{
 			"field1": "value1",
 			"field2": 123,
@@ -160,7 +160,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 	t.Run("Build", func(t *testing.T) {
 		// Since DefaultErrorBuilder creates a new builder each time,
 		// we need to chain all calls
-		builder := &DefaultErrorBuilder{}
+		builder := NewDefaultErrorBuilder()
 		err := builder.
 			WithMessage("final test").
 			WithCode(ErrInternal).
@@ -179,7 +179,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 
 func TestDefaultErrorBuilder_ComplexScenario(t *testing.T) {
 	// Test a complex scenario with all builder methods
-	builder := &DefaultErrorBuilder{}
+	builder := NewDefaultErrorBuilder()
 
 	cause := errRootCause
 
@@ -222,7 +222,7 @@ func TestDefaultErrorBuilder_ComplexScenario(t *testing.T) {
 }
 
 func TestDefaultErrorBuilder_NilFields(t *testing.T) {
-	builder := &DefaultErrorBuilder{}
+	builder := NewDefaultErrorBuilder()
 
 	// Test WithFields with nil map
 	b := builder.WithFields(nil)
@@ -235,7 +235,7 @@ func TestDefaultErrorBuilder_NilFields(t *testing.T) {
 }
 
 func TestDefaultErrorBuilder_EmptyBuild(t *testing.T) {
-	builder := &DefaultErrorBuilder{}
+	builder := NewDefaultErrorBuilder()
 
 	// Build without setting any properties
 	err := builder.Build()

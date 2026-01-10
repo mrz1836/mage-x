@@ -416,13 +416,18 @@ func NewMatcher() ErrorMatcher {
 	}
 }
 
-// Default implementations (defined in separate files)
+// Default implementations - these embed the Real* implementations for backward compatibility
 type (
-	// DefaultErrorBuilder provides default error building functionality.
-	DefaultErrorBuilder struct{}
+	// DefaultErrorBuilder embeds RealDefaultErrorBuilder for backward compatibility.
+	DefaultErrorBuilder struct {
+		*RealDefaultErrorBuilder
+	}
 	// DefaultChainError provides default error chaining functionality.
+	// Note: This type has duplicate methods that delegate to RealDefaultChainError.
+	// The methods are kept for backward compatibility with tests that use direct field initialization.
 	DefaultChainError struct{ errors []error }
 	// DefaultErrorHandler provides default error handling functionality.
+	// Note: This type has duplicate methods that delegate to RealDefaultErrorHandler.
 	DefaultErrorHandler struct {
 		handlers         map[ErrorCode]func(MageError) error
 		severityHandlers map[Severity]func(MageError) error
