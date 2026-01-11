@@ -1682,7 +1682,7 @@ func TestTryCustomCommand(t *testing.T) {
 
 			// Create magefile if requested
 			if tt.setupMagefile {
-				magefileContent := `//go:build mage
+				magefileContent := `//go:build mage //nolint:goconst // test data
 
 package main
 

@@ -439,8 +439,9 @@ func SlowCmd() error {
 `
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
-	// Use very short timeout
-	result := DelegateToMageWithTimeout("slowCmd", 100*time.Millisecond)
+	// Use short timeout (but not too short for CI)
+	// The command sleeps for 30s, so 2s timeout is enough to trigger timeout reliably
+	result := DelegateToMageWithTimeout("slowCmd", 2*time.Second)
 
 	// Should timeout
 	assert.Equal(t, 124, result.ExitCode)
