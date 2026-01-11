@@ -8,6 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 )
 
@@ -1528,6 +1531,217 @@ func TestShowCommandHelp(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestGetBuildInfo tests the getBuildInfo function
+func TestGetBuildInfo(t *testing.T) {
+	t.Parallel()
+
+	info := getBuildInfo()
+
+	// Verify all fields are present
+	assert.NotEmpty(t, info.Version)
+	assert.NotEmpty(t, info.Commit)
+	assert.NotEmpty(t, info.BuildDate)
+	assert.NotEmpty(t, info.BuildTime)
+
+	// Default values should be set
+	assert.Equal(t, version, info.Version)
+	assert.Equal(t, commit, info.Commit)
+	assert.Equal(t, buildDate, info.BuildDate)
+	assert.Equal(t, buildTime, info.BuildTime)
+}
+
+// TestIsValidBuildValue tests the build value validation function
+func TestIsValidBuildValue(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		value string
+		want  bool
+	}{
+		{"valid value", "v1.0.0", true},
+		{"valid commit hash", "abc123def", true},
+		{"valid date", "2024-01-15", true},
+		{"empty string", "", false},
+		{"unknown default", "unknown", false},
+		{"whitespace", "   ", true}, // whitespace is considered valid (not empty)
+		{"valid with spaces", "build 123", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := isValidBuildValue(tt.value)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestTryCustomCommand tests the tryCustomCommand function
+func TestTryCustomCommand(t *testing.T) {
+	tests := []struct {
+		name          string
+		command       string
+		args          []string
+		setupMagefile bool
+		wantExecuted  bool
+	}{
+		{
+			name:          "no magefile returns false",
+			command:       "deploy",
+			args:          []string{},
+			setupMagefile: false,
+			wantExecuted:  false,
+		},
+		{
+			name:          "with magefile attempts execution",
+			command:       "nonexistent",
+			args:          []string{},
+			setupMagefile: true,
+			wantExecuted:  true, // Returns true even if command fails
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup test environment
+			tmpDir := t.TempDir()
+			oldDir, err := os.Getwd()
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				if chErr := os.Chdir(oldDir); chErr != nil {
+					t.Errorf("failed to restore directory: %v", chErr)
+				}
+			})
+
+			err = os.Chdir(tmpDir)
+			require.NoError(t, err)
+
+			// Create go.mod
+			err = os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600)
+			require.NoError(t, err)
+
+			// Create magefile if requested
+			if tt.setupMagefile {
+				magefileContent := `//go:build mage
+
+package main
+
+func TestCommand() error {
+	return nil
+}
+`
+				err = os.WriteFile("magefile.go", []byte(magefileContent), 0o600)
+				require.NoError(t, err)
+			}
+
+			// Create registry and discovery
+			reg := registry.NewRegistry()
+			discovery := NewCommandDiscovery(reg)
+
+			// tryCustomCommand will call os.Exit on error, so we can't test the full flow
+			// We can only test the early return when no magefile exists
+			if !tt.setupMagefile {
+				result := tryCustomCommand(tt.command, tt.args, discovery)
+				assert.Equal(t, tt.wantExecuted, result)
+			}
+		})
+	}
+}
+
+// TestCompileForMage tests the compile for mage functionality
+func TestCompileForMage(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	outputFile := "magefile_compiled.go"
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+
+	compileForMage(outputFile)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Verify output file was created
+	_, err = os.Stat(outputFile)
+	require.NoError(t, err, "output file should be created")
+
+	// Verify output message
+	assert.Contains(t, output, outputFile)
+	assert.Contains(t, output, "Generated")
+
+	// Verify file contains expected content
+	content, err := os.ReadFile(outputFile)
+	require.NoError(t, err)
+	contentStr := string(content)
+	assert.Contains(t, contentStr, "//go:build mage")
+	assert.Contains(t, contentStr, "func Build()")
+	assert.Contains(t, contentStr, "func Test()")
+}
+
+// TestInitFlags tests the flag initialization
+func TestInitFlags(t *testing.T) {
+	t.Parallel()
+
+	flags := initFlags()
+
+	// Verify all flags are initialized
+	require.NotNil(t, flags.Clean)
+	require.NotNil(t, flags.Compile)
+	require.NotNil(t, flags.Debug)
+	require.NotNil(t, flags.Force)
+	require.NotNil(t, flags.Help)
+	require.NotNil(t, flags.HelpLong)
+	require.NotNil(t, flags.Init)
+	require.NotNil(t, flags.List)
+	require.NotNil(t, flags.ListLong)
+	require.NotNil(t, flags.Namespace)
+	require.NotNil(t, flags.Search)
+	require.NotNil(t, flags.Timeout)
+	require.NotNil(t, flags.Verbose)
+	require.NotNil(t, flags.Version)
+
+	// Verify default values
+	assert.False(t, *flags.Clean)
+	assert.Empty(t, *flags.Compile)
+	assert.False(t, *flags.Debug)
+	assert.False(t, *flags.Force)
+	assert.False(t, *flags.Help)
+	assert.False(t, *flags.HelpLong)
+	assert.False(t, *flags.Init)
+	assert.False(t, *flags.List)
+	assert.False(t, *flags.ListLong)
+	assert.False(t, *flags.Namespace)
+	assert.Empty(t, *flags.Search)
+	assert.Empty(t, *flags.Timeout)
+	assert.False(t, *flags.Verbose)
+	assert.False(t, *flags.Version)
 }
 
 // TestShowNamespaceHelp tests namespace help display
