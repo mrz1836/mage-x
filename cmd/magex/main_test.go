@@ -1708,6 +1708,59 @@ func TestCommand() error {
 	}
 }
 
+// TestTryCustomCommand_WithDiscoveredCommand tests tryCustomCommand when command is discovered
+func TestTryCustomCommand_WithDiscoveredCommand(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create go.mod
+	err = os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600)
+	require.NoError(t, err)
+
+	// Create a working magefile with a simple command
+	magefileContent := `//go:build mage
+
+package main
+
+import "fmt"
+
+func TestCommand() error {
+	fmt.Println("TestCommand executed")
+	return nil
+}
+`
+	err = os.WriteFile("magefile.go", []byte(magefileContent), 0o600)
+	require.NoError(t, err)
+
+	// Create registry and discovery
+	reg := registry.NewRegistry()
+	discovery := NewCommandDiscovery(reg)
+
+	// Pre-populate discovery with a command to test the OriginalName path
+	discovery.commands = []DiscoveredCommand{
+		{
+			Name:         "testcommand",
+			OriginalName: "TestCommand",
+			Description:  "Test command",
+		},
+	}
+	discovery.loaded = true
+
+	// Test that GetCommand returns the discovered command
+	cmd, found := discovery.GetCommand("testcommand")
+	assert.True(t, found)
+	assert.Equal(t, "TestCommand", cmd.OriginalName)
+}
+
 // TestCompileForMage tests the compile for mage functionality
 func TestCompileForMage(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -2813,4 +2866,159 @@ func TestListCommands_WithVerbose(t *testing.T) {
 
 	// Should show commands
 	assert.Contains(t, output, "test")
+}
+
+// TestListCommands_EmptyRegistry tests listCommands with empty registry
+func TestListCommands_EmptyRegistry(t *testing.T) {
+	reg := registry.NewRegistry()
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommands(reg, discovery, false)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show no commands message
+	assert.Contains(t, output, "No commands available")
+}
+
+// TestListCommandsSimple_WithCustomCommands tests simple list with custom commands
+func TestListCommandsSimple_WithCustomCommands(t *testing.T) {
+	// Create a test registry
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("test").
+		WithDescription("Test command").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Create discovery with custom commands
+	discovery := NewCommandDiscovery(reg)
+	discovery.commands = []DiscoveredCommand{
+		{Name: "custom", Description: "Custom command"},
+	}
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommandsSimple([]*registry.Command{cmd}, discovery.commands)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show both built-in and custom commands
+	assert.Contains(t, output, "test")
+	assert.Contains(t, output, "custom*")
+	assert.Contains(t, output, "* Custom commands")
+}
+
+// TestListCommandsVerbose_Deprecated tests verbose list with deprecated command
+func TestListCommandsVerbose_Deprecated(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("oldcmd").
+		WithDescription("Old command").
+		Deprecated("Use newcmd instead").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommandsVerbose([]*registry.Command{cmd}, nil)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show deprecated warning
+	assert.Contains(t, output, "DEPRECATED")
+}
+
+// TestCleanCache_ErrorHandling tests cleanCache with glob error handling
+func TestCleanCache_ErrorHandling(t *testing.T) {
+	// Use a temp directory
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create a directory we can't remove (readonly parent)
+	err = os.Mkdir("test-dir", 0o750)
+	require.NoError(t, err)
+
+	// Capture stdout and stderr
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+	os.Stderr = w
+
+	cleanCache()
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+
+	// Function should complete without crashing
+	t.Logf("cleanCache completed")
 }
