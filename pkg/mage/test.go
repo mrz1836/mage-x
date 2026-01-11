@@ -1613,6 +1613,9 @@ func writeFuzzCIResultsIfEnabled(params map[string]string, config *Config, resul
 func parseFuzzResultsWithTextParser(results []fuzzTestResult, contextLines int, dedup bool) []CITestFailure {
 	parser := NewTextStreamParser(contextLines, dedup)
 
+	// Track which results have errors for post-processing
+	var errorResults []fuzzTestResult
+
 	// Combine all output and parse
 	for _, r := range results {
 		if r.Output == "" {
@@ -1634,9 +1637,76 @@ func parseFuzzResultsWithTextParser(results []fuzzTestResult, contextLines int, 
 		for _, line := range lines {
 			_ = parser.ParseLine(line) //nolint:errcheck // Best effort parsing
 		}
+
+		// Track results with errors for post-processing
+		if r.Error != nil {
+			errorResults = append(errorResults, r)
+		}
 	}
 
-	return parser.Flush()
+	failures := parser.Flush()
+
+	// Create synthetic failures for error results that didn't produce parsed failures.
+	// This handles infrastructure errors like "cannot use -fuzz flag on package outside the main module"
+	// which don't produce "--- FAIL:" output but still represent failures.
+	for _, r := range errorResults {
+		// Check if any failure was created for this test
+		found := false
+		for _, f := range failures {
+			if f.Test == r.Test && f.Package == r.Package {
+				found = true
+				break
+			}
+		}
+		if !found {
+			// Extract first meaningful line from output as error message
+			errorMsg := extractFuzzInfrastructureError(r.Output)
+			if errorMsg == "" {
+				errorMsg = r.Error.Error()
+			}
+
+			failures = append(failures, CITestFailure{
+				Package:  r.Package,
+				Test:     r.Test,
+				Type:     FailureTypeBuild, // Infrastructure/setup error
+				Error:    errorMsg,
+				Output:   r.Output,
+				Duration: formatDurationSeconds(r.Duration.Seconds()),
+			})
+		}
+	}
+
+	return failures
+}
+
+// extractFuzzInfrastructureError extracts the first meaningful error line from fuzz test output.
+// This is used for infrastructure errors like "cannot use -fuzz flag on package outside the main module"
+// which don't produce standard test failure patterns.
+func extractFuzzInfrastructureError(output string) string {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Skip empty lines and common noise
+		if line == "" || strings.HasPrefix(line, "=== ") || strings.HasPrefix(line, "--- ") {
+			continue
+		}
+		// Look for error indicators
+		if strings.Contains(line, "cannot") ||
+			strings.Contains(line, "error:") ||
+			strings.Contains(line, "failed") ||
+			strings.Contains(line, "Error:") ||
+			strings.Contains(line, "FAIL") {
+			return line
+		}
+	}
+	// Return first non-empty line if no error pattern found
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "=== ") && !strings.HasPrefix(line, "--- ") {
+			return line
+		}
+	}
+	return ""
 }
 
 // fuzzResultsToError converts fuzz test results to an aggregated error
