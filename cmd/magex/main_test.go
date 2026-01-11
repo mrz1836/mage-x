@@ -3022,3 +3022,110 @@ func TestCleanCache_ErrorHandling(t *testing.T) {
 	// Function should complete without crashing
 	t.Logf("cleanCache completed")
 }
+
+// TestSearchCommands_NoMatches tests search with no results
+func TestSearchCommands_NoMatches(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("build").
+		WithDescription("Build the project").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	searchCommands(reg, discovery, "xyz123notfound")
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show no results message
+	assert.Contains(t, output, "No exact commands found")
+}
+
+// TestHandleNoSearchResults_WithFuzzyMatches tests fuzzy matching
+func TestHandleNoSearchResults_WithFuzzyMatches(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("build").
+		WithDescription("Build the project").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	handleNoSearchResults(reg, nil, "bild") // Close enough to "build"
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should suggest similar commands
+	assert.Contains(t, output, "Did you mean")
+}
+
+// TestShowCategorizedCommands_EmptyCategoryInfo tests with missing category metadata
+func TestShowCategorizedCommands_EmptyCategoryInfo(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Add command with a category that has no metadata
+	cmd, err := registry.NewCommand("orphan").
+		WithDescription("Orphan command").
+		WithCategory("orphan-category").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show the command even with missing metadata
+	assert.Contains(t, output, "orphan")
+}
