@@ -72,3 +72,4 @@ tests/.mage-cache/
 # Plans
 .plans
 pkg/utils/testdata/
+/.claude/settings.json
