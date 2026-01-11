@@ -3,6 +3,7 @@ package exec
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -249,6 +250,82 @@ func TestAuditingExecutor_ImplementsInterface(t *testing.T) {
 	executor := NewAuditingExecutor(base)
 
 	var _ Executor = executor
+}
+
+func TestAuditingExecutor_ExecuteWithEnv(t *testing.T) {
+	t.Run("logs command with environment", func(t *testing.T) {
+		base := NewBase(WithDryRun(true))
+		logger := &mockAuditLogger{}
+		executor := NewAuditingExecutor(base, WithAuditLogger(logger))
+
+		ctx := context.Background()
+		err := executor.ExecuteWithEnv(ctx, []string{"TEST_VAR=value"}, "echo", "hello")
+
+		require.NoError(t, err)
+
+		events := logger.getEvents()
+		require.Len(t, events, 1)
+		assert.Equal(t, "echo", events[0].Command)
+		assert.Equal(t, []string{"hello"}, events[0].Args)
+		assert.True(t, events[0].Success)
+	})
+}
+
+func TestAuditingExecutor_ExecuteInDir(t *testing.T) {
+	t.Run("logs command with directory", func(t *testing.T) {
+		base := NewBase(WithDryRun(true))
+		logger := &mockAuditLogger{}
+		executor := NewAuditingExecutor(base, WithAuditLogger(logger))
+
+		ctx := context.Background()
+		err := executor.ExecuteInDir(ctx, "/tmp", "echo", "hello")
+
+		require.NoError(t, err)
+
+		events := logger.getEvents()
+		require.Len(t, events, 1)
+		assert.Equal(t, "echo", events[0].Command)
+		assert.True(t, events[0].Success)
+	})
+}
+
+func TestAuditingExecutor_ExecuteOutputInDir(t *testing.T) {
+	t.Run("logs command with output and directory", func(t *testing.T) {
+		base := NewBase(WithDryRun(true))
+		logger := &mockAuditLogger{}
+		executor := NewAuditingExecutor(base, WithAuditLogger(logger))
+
+		ctx := context.Background()
+		output, err := executor.ExecuteOutputInDir(ctx, "/tmp", "echo", "hello")
+
+		require.NoError(t, err)
+		assert.Empty(t, output) // Dry run returns empty
+
+		events := logger.getEvents()
+		require.Len(t, events, 1)
+		assert.Equal(t, "echo", events[0].Command)
+		assert.True(t, events[0].Success)
+	})
+}
+
+func TestAuditingExecutor_ExecuteStreaming(t *testing.T) {
+	t.Run("logs streaming command", func(t *testing.T) {
+		base := NewBase(WithDryRun(true))
+		logger := &mockAuditLogger{}
+		executor := NewAuditingExecutor(base, WithAuditLogger(logger))
+
+		ctx := context.Background()
+		var stdout, stderr strings.Builder
+		err := executor.ExecuteStreaming(ctx, &stdout, &stderr, "echo", "hello")
+
+		require.NoError(t, err)
+
+		events := logger.getEvents()
+		require.Len(t, events, 1)
+		assert.Equal(t, "echo", events[0].Command)
+		assert.Equal(t, []string{"hello"}, events[0].Args)
+		assert.True(t, events[0].Success)
+	})
 }
 
 func BenchmarkAuditingExecutor(b *testing.B) {
