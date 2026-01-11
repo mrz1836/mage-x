@@ -73,3 +73,5 @@ tests/.mage-cache/
 .plans
 pkg/utils/testdata/
 /.claude/settings.json
+.claude/ralph-loop.local.md
+.claude/test-cmd.md
