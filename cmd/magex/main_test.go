@@ -2728,3 +2728,89 @@ func TestShowCategorizedCommands_EmptyDescription(t *testing.T) {
 	// Should show command name
 	assert.Contains(t, output, "nodesc")
 }
+
+// TestCompileForMage_Success tests successful compilation
+func TestCompileForMage_Success(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	outputFile := "generated_magefile.go"
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	compileForMage(outputFile)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Verify file was created
+	_, err = os.Stat(outputFile)
+	require.NoError(t, err, "output file should be created")
+
+	// Verify output message
+	assert.Contains(t, output, "Generated")
+
+	// Verify file contents
+	content, err := os.ReadFile(outputFile)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "//go:build mage")
+	assert.Contains(t, string(content), "Build commands")
+}
+
+// TestListCommands_WithVerbose tests list commands in verbose mode
+func TestListCommands_WithVerbose(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("test").
+		WithDescription("Test command").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommands(reg, discovery, true) // verbose = true
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show commands
+	assert.Contains(t, output, "test")
+}
