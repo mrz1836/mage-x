@@ -995,3 +995,38 @@ func TestDelegateResultStruct(t *testing.T) {
 		assert.Equal(t, testErr, result.Err)
 	})
 }
+
+// TestGetMagefilePath_PrefersMagefiles tests that GetMagefilePath prefers magefiles directory
+func TestGetMagefilePath_PrefersMagefiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create both magefiles directory and magefile.go
+	err = os.Mkdir("magefiles", secureDirPerm)
+	require.NoError(t, err)
+	err = os.WriteFile("magefile.go", []byte("package main"), secureFilePerm)
+	require.NoError(t, err)
+
+	path := GetMagefilePath()
+	// Should prefer magefiles directory
+	assert.Contains(t, path, "magefiles")
+	assert.NotContains(t, path, "magefile.go")
+}
+
+// TestConvertToMageFormat_MultipleColons tests command with multiple colons
+func TestConvertToMageFormat_MultipleColons(t *testing.T) {
+	input := "namespace:method:extra"
+	result := convertToMageFormat(input)
+	// SplitN with 2 only splits on first colon, so "namespace:method:extra" becomes "namespacemethod:extra"
+	expected := "namespacemethod:extra"
+	assert.Equal(t, expected, result)
+}

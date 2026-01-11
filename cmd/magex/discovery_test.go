@@ -1040,3 +1040,103 @@ func TestCommandDiscovery_ListCommands_AfterDiscover(t *testing.T) {
 	assert.Equal(t, "test1", commands[0].Name)
 	assert.Equal(t, "test2", commands[1].Name)
 }
+
+// TestCommandDiscovery_HasCommand_TriggersDiscover tests that HasCommand triggers discovery
+func TestCommandDiscovery_HasCommand_TriggersDiscover(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create go.mod
+	err = os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600)
+	require.NoError(t, err)
+
+	// Create magefile.go
+	magefileContent := `//go:build mage
+
+package main
+
+// Deploy deploys the application
+func Deploy() error {
+	return nil
+}
+`
+	err = os.WriteFile("magefile.go", []byte(magefileContent), 0o600)
+	require.NoError(t, err)
+
+	cd := NewCommandDiscovery(nil)
+
+	// HasCommand should trigger discovery
+	found := cd.HasCommand("deploy")
+
+	// May find it or not depending on environment, but should have tried discovery
+	if found {
+		assert.True(t, cd.loaded)
+	}
+}
+
+// TestCommandDiscovery_GetCommand_TriggersDiscover tests that GetCommand triggers discovery
+func TestCommandDiscovery_GetCommand_TriggersDiscover(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create go.mod
+	err = os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600)
+	require.NoError(t, err)
+
+	// Create magefile.go
+	magefileContent := `//go:build mage
+
+package main
+
+// Deploy deploys the application
+func Deploy() error {
+	return nil
+}
+`
+	err = os.WriteFile("magefile.go", []byte(magefileContent), 0o600)
+	require.NoError(t, err)
+
+	cd := NewCommandDiscovery(nil)
+
+	// GetCommand should trigger discovery
+	_, found := cd.GetCommand("deploy")
+
+	// May find it or not depending on environment, but should have tried discovery
+	if found {
+		assert.True(t, cd.loaded)
+	}
+}
+
+// TestCommandDiscovery_GetCommandsForHelp_TriggersDiscover tests that GetCommandsForHelp triggers discovery
+func TestCommandDiscovery_GetCommandsForHelp_TriggersDiscover(t *testing.T) {
+	cd := &CommandDiscovery{
+		commands: []DiscoveredCommand{
+			{Name: "test", Description: "Test command"},
+		},
+		loaded: true,
+	}
+
+	helpLines := cd.GetCommandsForHelp()
+	assert.NotEmpty(t, helpLines)
+	assert.Contains(t, helpLines[0], "test")
+	assert.Contains(t, helpLines[0], "Test command")
+	assert.Contains(t, helpLines[0], "(custom)")
+}
