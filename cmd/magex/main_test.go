@@ -2578,3 +2578,153 @@ func TestListByNamespace_EmptyNamespace(t *testing.T) {
 	// Should show header even with no commands
 	assert.Contains(t, output, "Available commands")
 }
+
+// TestShowCategorizedCommands_WithAliases tests commands with aliases
+func TestShowCategorizedCommands_WithAliases(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create command with alias
+	cmd, err := registry.NewCommand("build").
+		WithDescription("Build the project").
+		WithFunc(func() error { return nil }).
+		WithCategory("Build").
+		WithAliases("b").
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show the alias
+	assert.Contains(t, output, "b")
+}
+
+// TestShowCategorizedCommands_LongDescription tests description truncation
+func TestShowCategorizedCommands_LongDescription(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create command with very long description
+	longDesc := "This is a very long description that should be truncated because it exceeds the maximum length of 60 characters that is allowed in the display"
+	cmd, err := registry.NewCommand("longcmd").
+		WithDescription(longDesc).
+		WithFunc(func() error { return nil }).
+		WithCategory("Test").
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show truncation marker
+	assert.Contains(t, output, "...")
+	// Should not show full description
+	assert.NotContains(t, output, "maximum length of 60 characters that is allowed")
+}
+
+// TestShowCategorizedCommands_DeprecatedCommand tests deprecated command display
+func TestShowCategorizedCommands_DeprecatedCommand(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create deprecated command
+	cmd, err := registry.NewCommand("oldcmd").
+		WithDescription("Old command").
+		WithFunc(func() error { return nil }).
+		WithCategory("Test").
+		Deprecated("Use newcmd instead").
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show DEPRECATED marker
+	assert.Contains(t, output, "DEPRECATED")
+	assert.Contains(t, output, "Use newcmd instead")
+}
+
+// TestShowCategorizedCommands_EmptyDescription tests command with no description
+func TestShowCategorizedCommands_EmptyDescription(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create command with no description
+	cmd, err := registry.NewCommand("nodesc").
+		WithDescription("").
+		WithFunc(func() error { return nil }).
+		WithCategory("Test").
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show command name
+	assert.Contains(t, output, "nodesc")
+}
