@@ -3290,3 +3290,32 @@ func TestCleanCache_GlobError(t *testing.T) {
 	// cleanCache shows "Removed" for each deleted item and "Cache cleaned" at the end
 	assert.True(t, strings.Contains(output, "Removed") || strings.Contains(output, "Cache cleaned"))
 }
+
+// TestShowNamespaceHelp_NoCommands tests showNamespaceHelp with non-existent namespace
+func TestShowNamespaceHelp_NoCommands(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showNamespaceHelp(reg, "nonexistent")
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show no commands found
+	assert.Contains(t, output, "No commands found")
+}
+
+// TestSearchCommands_WithCustomMatches tests search finding custom commands
