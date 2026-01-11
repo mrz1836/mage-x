@@ -3129,3 +3129,164 @@ func TestShowCategorizedCommands_EmptyCategoryInfo(t *testing.T) {
 	// Should show the command even with missing metadata
 	assert.Contains(t, output, "orphan")
 }
+
+// TestListCommandsVerbose_EmptyDescription tests verbose list with no description
+func TestListCommandsVerbose_EmptyDescription(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("nodesc").
+		WithDescription("").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommandsVerbose([]*registry.Command{cmd}, nil)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show "No description available"
+	assert.Contains(t, output, "No description available")
+}
+
+// TestListCommandsVerbose_CustomCommandNoDescription tests custom command with no description
+func TestListCommandsVerbose_CustomCommandNoDescription(t *testing.T) {
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	customCmds := []DiscoveredCommand{
+		{Name: "custom", Description: ""},
+	}
+	listCommandsVerbose(nil, customCmds)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show "Custom command"
+	assert.Contains(t, output, "Custom command")
+	assert.Contains(t, output, "(custom)")
+}
+
+// TestShowVersion_WithValidBuildInfo tests showVersion with valid build info
+func TestShowVersion_WithValidBuildInfo(t *testing.T) {
+	// Save current values
+	oldVersion := version
+	oldCommit := commit
+	oldBuildDate := buildDate
+	oldBuildTime := buildTime
+
+	// Set test values
+	version = "v1.2.3"
+	commit = "abc123def456"
+	buildDate = "2024-01-15"
+	buildTime = "10:30:45"
+
+	// Restore after test
+	t.Cleanup(func() {
+		version = oldVersion
+		commit = oldCommit
+		buildDate = oldBuildDate
+		buildTime = oldBuildTime
+	})
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showVersion()
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show all build info
+	assert.Contains(t, output, "v1.2.3")
+	assert.Contains(t, output, "abc123d") // Short commit (7 chars)
+	assert.Contains(t, output, "2024-01-15")
+	assert.Contains(t, output, "10:30:45")
+}
+
+// TestCleanCache_GlobError tests cleanCache with complex glob patterns
+func TestCleanCache_GlobError(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create some cache directories
+	err = os.Mkdir(".mage", 0o750)
+	require.NoError(t, err)
+	err = os.WriteFile(".mage/test.txt", []byte("test"), 0o600)
+	require.NoError(t, err)
+
+	// Capture stdout and stderr
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+	os.Stderr = w
+
+	cleanCache()
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show removal message
+	// cleanCache shows "Removed" for each deleted item and "Cache cleaned" at the end
+	assert.True(t, strings.Contains(output, "Removed") || strings.Contains(output, "Cache cleaned"))
+}
