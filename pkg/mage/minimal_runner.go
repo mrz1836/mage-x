@@ -82,6 +82,19 @@ func (r *SecureCommandRunner) RunCmdOutputInDir(dir, name string, args ...string
 	return strings.TrimSpace(output), wrapTimeoutError(err, CommandContext{Name: name, Dir: dir, Timeout: timeout})
 }
 
+// RunCmdWithEnv executes a command with additional environment variables.
+// This is goroutine-safe unlike os.Setenv() - each command gets its own environment.
+// Use this for cross-compilation where GOOS/GOARCH need to be set per-command.
+func (r *SecureCommandRunner) RunCmdWithEnv(env []string, name string, args ...string) error {
+	ctx := context.Background()
+	timeout := r.getCommandTimeout(name, args)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	err := r.executor.ExecuteWithEnv(ctx, env, name, args...)
+	return wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
+}
+
 // getCommandTimeout returns appropriate timeout based on command type
 func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time.Duration {
 	// For golangci-lint, check if --timeout flag is provided in args

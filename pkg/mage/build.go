@@ -504,6 +504,30 @@ func (b Build) All() error {
 	return nil
 }
 
+// buildWithFallbackEnv builds using os.Setenv for runners that don't support env
+// Note: This path is not goroutine-safe for concurrent cross-compilation
+func buildWithFallbackEnv(runner CommandRunner, p utils.Platform, args []string, platform string) error {
+	if err := os.Setenv("GOOS", p.OS); err != nil {
+		return fmt.Errorf("failed to set GOOS: %w", err)
+	}
+	if err := os.Setenv("GOARCH", p.Arch); err != nil {
+		return fmt.Errorf("failed to set GOARCH: %w", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("GOOS"); err != nil {
+			utils.Error("failed to unset GOOS: %v", err)
+		}
+		if err := os.Unsetenv("GOARCH"); err != nil {
+			utils.Error("failed to unset GOARCH: %v", err)
+		}
+	}()
+
+	if err := runner.RunCmd("go", args...); err != nil {
+		return fmt.Errorf("build %s failed: %w", platform, err)
+	}
+	return nil
+}
+
 // Platform builds for a specific platform (e.g., "linux/amd64")
 func (b Build) Platform(platform string) error {
 	p, err := utils.ParsePlatform(platform)
@@ -537,24 +561,24 @@ func (b Build) Platform(platform string) error {
 
 	utils.Info("Building %s", platform)
 
-	// Set environment for cross-compilation
-	if err := os.Setenv("GOOS", p.OS); err != nil {
-		return fmt.Errorf("failed to set GOOS: %w", err)
+	// Build environment for cross-compilation
+	// This is goroutine-safe, unlike os.Setenv which affects the entire process
+	crossEnv := []string{
+		"GOOS=" + p.OS,
+		"GOARCH=" + p.Arch,
 	}
-	if err := os.Setenv("GOARCH", p.Arch); err != nil {
-		return fmt.Errorf("failed to set GOARCH: %w", err)
-	}
-	defer func() {
-		if err := os.Unsetenv("GOOS"); err != nil {
-			utils.Warn("Failed to unset GOOS: %v", err)
-		}
-		if err := os.Unsetenv("GOARCH"); err != nil {
-			utils.Warn("Failed to unset GOARCH: %v", err)
-		}
-	}()
 
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("build %s failed: %w", platform, err)
+	// Use EnvCommandRunner if available for goroutine-safe execution
+	runner := GetRunner()
+	if envRunner, ok := runner.(EnvCommandRunner); ok {
+		if err := envRunner.RunCmdWithEnv(crossEnv, "go", args...); err != nil {
+			return fmt.Errorf("build %s failed: %w", platform, err)
+		}
+	} else {
+		// Fallback for runners that don't support env (e.g., mocks in tests)
+		if err := buildWithFallbackEnv(runner, p, args, platform); err != nil {
+			return err
+		}
 	}
 
 	utils.Success("Built %s", outputPath)

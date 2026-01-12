@@ -896,3 +896,64 @@ func TestSecureCommandRunner_RunCmdOutputInDir(t *testing.T) {
 		assert.Contains(t, output, "tmp")
 	})
 }
+
+// TestSecureCommandRunner_RunCmdWithEnv tests the RunCmdWithEnv method for goroutine-safe
+// environment variable handling during cross-compilation
+func TestSecureCommandRunner_RunCmdWithEnv(t *testing.T) {
+	t.Run("executes command with custom environment", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		// Test that environment variables are passed to the command
+		// Using sh -c to echo the environment variable
+		err := runner.RunCmdWithEnv([]string{"TEST_VAR=hello_world"}, "sh", "-c", "test \"$TEST_VAR\" = \"hello_world\"")
+		require.NoError(t, err)
+	})
+
+	t.Run("environment variables are isolated per command", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		// First command sets GOOS=linux
+		err := runner.RunCmdWithEnv([]string{"GOOS=linux"}, "sh", "-c", "test \"$GOOS\" = \"linux\"")
+		require.NoError(t, err)
+
+		// Second command sets GOOS=darwin - should not be affected by first
+		err = runner.RunCmdWithEnv([]string{"GOOS=darwin"}, "sh", "-c", "test \"$GOOS\" = \"darwin\"")
+		require.NoError(t, err)
+	})
+
+	t.Run("returns error for invalid command", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		err := runner.RunCmdWithEnv([]string{"TEST=value"}, "nonexistent-command-xyz-12345")
+		require.Error(t, err)
+	})
+
+	t.Run("empty environment slice is valid", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		err := runner.RunCmdWithEnv([]string{}, "echo", "test")
+		require.NoError(t, err)
+	})
+
+	t.Run("nil environment slice is valid", func(t *testing.T) {
+		baseRunner := NewSecureCommandRunner()
+		runner, ok := baseRunner.(*SecureCommandRunner)
+		require.True(t, ok, "expected SecureCommandRunner type")
+		require.NotNil(t, runner)
+
+		err := runner.RunCmdWithEnv(nil, "echo", "test")
+		require.NoError(t, err)
+	})
+}
