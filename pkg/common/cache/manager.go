@@ -184,10 +184,11 @@ func (m *Manager) GenerateDependencyHash(modFile, sumFile string, environment ma
 	// Sort keys for deterministic output
 	sort.Strings(envKeys)
 
-	envStr := ""
+	var envBuilder strings.Builder
 	for _, k := range envKeys {
-		envStr += fmt.Sprintf("%s=%s|", k, environment[k])
+		fmt.Fprintf(&envBuilder, "%s=%s|", k, environment[k])
 	}
+	envStr := envBuilder.String()
 
 	return m.buildCache.GenerateHash(
 		fileHash,
@@ -262,12 +263,20 @@ func (m *Manager) WarmCache(operations []string) error {
 	return nil
 }
 
-// generateFileBasedHash creates hash based on file modification times and sizes
-func (m *Manager) generateFileBasedHash(sourceFiles, configFiles []string, platform, ldflags string) (string, error) {
-	allFiles := make([]string, 0, len(sourceFiles)+len(configFiles)+2)
+// assembleSourceFiles aggregates source files, config files, and Go module files into a single slice.
+// This helper eliminates code duplication across hash generation methods.
+func (m *Manager) assembleSourceFiles(sourceFiles, configFiles []string) []string {
+	capacity := len(sourceFiles) + len(configFiles) + 2
+	allFiles := make([]string, 0, capacity)
 	allFiles = append(allFiles, sourceFiles...)
 	allFiles = append(allFiles, configFiles...)
 	allFiles = append(allFiles, "go.mod", "go.sum")
+	return allFiles
+}
+
+// generateFileBasedHash creates hash based on file modification times and sizes
+func (m *Manager) generateFileBasedHash(sourceFiles, configFiles []string, platform, ldflags string) (string, error) {
+	allFiles := m.assembleSourceFiles(sourceFiles, configFiles)
 
 	fileHash, err := m.buildCache.GenerateFileHash(allFiles)
 	if err != nil {
@@ -285,20 +294,18 @@ func (m *Manager) generateFileBasedHash(sourceFiles, configFiles []string, platf
 // generateContentBasedHash creates hash based on actual file contents
 func (m *Manager) generateContentBasedHash(sourceFiles, configFiles []string, platform, ldflags string) (string, error) {
 	// This is more expensive but more accurate for content changes
-	allFiles := make([]string, 0, len(sourceFiles)+len(configFiles)+2)
-	allFiles = append(allFiles, sourceFiles...)
-	allFiles = append(allFiles, configFiles...)
-	allFiles = append(allFiles, "go.mod", "go.sum")
+	allFiles := m.assembleSourceFiles(sourceFiles, configFiles)
 
-	contentHash := ""
+	var contentHashBuilder strings.Builder
 	for _, file := range allFiles {
 		if m.fileOps.File.Exists(file) {
 			content, err := m.fileOps.File.ReadFile(file)
 			if err == nil {
-				contentHash += m.buildCache.GenerateHash(string(content))
+				contentHashBuilder.WriteString(m.buildCache.GenerateHash(string(content)))
 			}
 		}
 	}
+	contentHash := contentHashBuilder.String()
 
 	return m.buildCache.GenerateHash(
 		contentHash,
@@ -310,10 +317,7 @@ func (m *Manager) generateContentBasedHash(sourceFiles, configFiles []string, pl
 
 // generateTimestampBasedHash creates hash based on timestamps (fastest but least accurate)
 func (m *Manager) generateTimestampBasedHash(sourceFiles, configFiles []string, platform, ldflags string) (string, error) {
-	allFiles := make([]string, 0, len(sourceFiles)+len(configFiles)+2)
-	allFiles = append(allFiles, sourceFiles...)
-	allFiles = append(allFiles, configFiles...)
-	allFiles = append(allFiles, "go.mod", "go.sum")
+	allFiles := m.assembleSourceFiles(sourceFiles, configFiles)
 
 	var latestTime time.Time
 	for _, file := range allFiles {

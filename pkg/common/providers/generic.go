@@ -3,6 +3,7 @@ package providers
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
 // Provider provides a generic thread-safe singleton pattern for any type T.
@@ -12,6 +13,7 @@ type Provider[T any] struct {
 	mu       sync.RWMutex
 	instance T
 	factory  func() T
+	wasSet   atomic.Bool // Tracks if instance was manually set via Set()
 }
 
 // NewProvider creates a new generic provider with the given factory function.
@@ -24,14 +26,16 @@ func NewProvider[T any](factory func() T) *Provider[T] {
 
 // Get returns the singleton instance, creating it on first call using the factory function.
 // Subsequent calls return the same instance. This method is thread-safe.
+// sync.Once provides memory ordering guarantees, making the RWMutex unnecessary.
 func (p *Provider[T]) Get() T {
+	// If instance was manually set, return it directly
+	if p.wasSet.Load() {
+		return p.instance
+	}
+	// Otherwise, lazily initialize with factory
 	p.once.Do(func() {
-		p.mu.Lock()
 		p.instance = p.factory()
-		p.mu.Unlock()
 	})
-	p.mu.RLock()
-	defer p.mu.RUnlock()
 	return p.instance
 }
 
@@ -44,6 +48,7 @@ func (p *Provider[T]) Reset() {
 	p.once = sync.Once{}
 	var zero T
 	p.instance = zero
+	p.wasSet.Store(false)
 }
 
 // Set replaces the singleton instance with the provided value.
@@ -53,8 +58,7 @@ func (p *Provider[T]) Set(instance T) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.instance = instance
-	// Mark once as done to prevent factory from being called
-	p.once.Do(func() {})
+	p.wasSet.Store(true)
 }
 
 // PackageProvider provides a package-level generic singleton provider with thread-safe management.

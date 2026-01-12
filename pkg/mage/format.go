@@ -73,8 +73,7 @@ func (Format) Gofmt() error {
 		return fmt.Errorf("gofmt check failed: %w", err)
 	}
 
-	unformatted := strings.Split(strings.TrimSpace(output), "\n")
-	unformatted = filterEmpty(unformatted)
+	unformatted := utils.ParseNonEmptyLines(output)
 
 	if len(unformatted) == 0 {
 		utils.Success("All files are properly formatted")
@@ -500,8 +499,7 @@ func (Format) YAML() error {
 	}
 
 	// Parse file list
-	yamlFiles := strings.Split(strings.TrimSpace(yamlFilesOutput), "\n")
-	yamlFiles = filterEmpty(yamlFiles)
+	yamlFiles := utils.ParseNonEmptyLines(yamlFilesOutput)
 
 	if len(yamlFiles) == 0 {
 		utils.Info("No YAML files found")
@@ -650,11 +648,11 @@ func (Format) JSON() error {
 	}
 
 	// Format JSON files using native Go
-	files := strings.Split(strings.TrimSpace(jsonFiles), "\n")
+	files := utils.ParseNonEmptyLines(jsonFiles)
 	formatted := 0
 
 	for _, file := range files {
-		if file != "" && formatJSONFile(file) {
+		if formatJSONFile(file) {
 			formatted++
 		}
 	}

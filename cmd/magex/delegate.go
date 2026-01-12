@@ -16,6 +16,7 @@ import (
 
 const (
 	magefileFilename = "magefile.go"
+	magefilesDirname = "magefiles"
 	// DefaultDelegateTimeout is the default timeout for delegated mage commands
 	DefaultDelegateTimeout = 10 * time.Minute
 )
@@ -49,9 +50,7 @@ func convertToMageFormat(command string) string {
 	}
 
 	parts := strings.SplitN(command, ":", 2)
-	if len(parts) != 2 {
-		return command
-	}
+	// len(parts) is guaranteed to be 2 here due to guard above
 
 	// Mage uses lowercase namespace + method (preserving method case)
 	// e.g., Speckit:Install -> speckitInstall
@@ -80,7 +79,7 @@ func DelegateToMageWithTimeout(command string, timeout time.Duration, args ...st
 	mageCommand := convertToMageFormat(command)
 
 	// Check for magefiles/ directory first (preferred by standard mage)
-	magefilesDir := "magefiles"
+	magefilesDir := magefilesDirname
 	var targetPath string
 	var useDirectory bool
 
@@ -267,23 +266,17 @@ func filterStderr(stderrPipe io.ReadCloser, buf *strings.Builder, wg *sync.WaitG
 
 // HasMagefile checks if magefiles/ directory or magefile.go exists in the current directory
 func HasMagefile() bool {
-	// Check for magefiles/ directory first
-	if info, err := os.Stat("magefiles"); err == nil && info.IsDir() {
-		return true
-	}
-	// Fallback to magefile.go
-	_, err := os.Stat("magefile.go")
-	return err == nil
+	return GetMagefilePath() != ""
 }
 
 // GetMagefilePath returns the path to magefiles/ directory or magefile.go if it exists
 func GetMagefilePath() string {
 	// Check for magefiles/ directory first
-	if info, err := os.Stat("magefiles"); err == nil && info.IsDir() {
-		if abs, err := filepath.Abs("magefiles"); err == nil {
+	if info, err := os.Stat(magefilesDirname); err == nil && info.IsDir() {
+		if abs, err := filepath.Abs(magefilesDirname); err == nil {
 			return abs
 		}
-		return "magefiles"
+		return magefilesDirname
 	}
 	// Fallback to magefile.go
 	if _, err := os.Stat(magefileFilename); err == nil {

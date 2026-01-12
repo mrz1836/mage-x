@@ -94,10 +94,18 @@ func (f *FileOps) LoadConfig(paths []string, dest interface{}) (string, error) {
 			err = f.JSON.ReadJSON(path, dest)
 		default:
 			// Try YAML first, then JSON
-			err = f.YAML.ReadYAML(path, dest)
-			if err != nil {
-				err = f.JSON.ReadJSON(path, dest)
+			yamlErr := f.YAML.ReadYAML(path, dest)
+			if yamlErr == nil {
+				return path, nil
 			}
+
+			jsonErr := f.JSON.ReadJSON(path, dest)
+			if jsonErr == nil {
+				return path, nil
+			}
+
+			// Return both errors to help diagnose issues
+			err = fmt.Errorf("failed to load config as YAML (%w) or JSON (%w)", yamlErr, jsonErr)
 		}
 
 		if err == nil {
@@ -228,10 +236,8 @@ func IsDir(path string) bool {
 
 // IsFile checks if path is a file using the default instance
 func IsFile(path string) bool {
-	if GetDefault().File.Exists(path) && !GetDefault().File.IsDir(path) {
-		return true
-	}
-	return false
+	ops := GetDefault()
+	return ops.File.Exists(path) && !ops.File.IsDir(path)
 }
 
 // MkdirAll creates directories using the default instance

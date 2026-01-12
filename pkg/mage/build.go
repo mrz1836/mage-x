@@ -809,12 +809,7 @@ func (b Build) getWorkspaceModuleDirs() ([]string, bool) {
 		return nil, false
 	}
 
-	var modules []string
-	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
-		if line = strings.TrimSpace(line); line != "" {
-			modules = append(modules, line)
-		}
-	}
+	modules := utils.ParseNonEmptyLines(output)
 
 	if len(modules) > 0 {
 		utils.Debug("Workspace mode detected with %d modules", len(modules))
