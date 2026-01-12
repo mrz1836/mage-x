@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
@@ -29,6 +29,7 @@ const (
 var (
 	ErrDownloadFailed              = errors.New("download failed after all retries")
 	ErrChecksumMismatch            = errors.New("downloaded file checksum does not match expected value")
+	ErrChecksumRequired            = errors.New("checksum verification required but not provided (set MAGE_X_REQUIRE_CHECKSUMS=false to disable)")
 	ErrInvalidURL                  = errors.New("invalid download URL")
 	ErrInvalidDestination          = errors.New("invalid destination path")
 	ErrFileExists                  = errors.New("destination file already exists")
@@ -180,19 +181,9 @@ func downloadFile(ctx context.Context, url, destPath string, config *DownloadCon
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", resumeOffset))
 	}
 
-	// Create HTTP client with timeout
-	client := &http.Client{
-		Timeout: config.Timeout,
-		Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout:   10 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).DialContext,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ResponseHeaderTimeout: 30 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
-	}
+	// Use the shared HTTP client for connection pooling benefits
+	// The timeout is already handled by the context passed to the request
+	client := DefaultHTTPClient()
 
 	// Perform request
 	resp, err := client.Do(req)
@@ -328,6 +319,11 @@ type ExecutorFunc func(ctx context.Context, name string, args ...string) error
 //
 // Security Note: For production use, always provide ChecksumSHA256 in config to verify
 // the downloaded script's integrity before execution.
+//
+// Environment Variables:
+//   - MAGE_X_REQUIRE_CHECKSUMS: Set to "true" to enforce checksum verification (default: false)
+//     When enabled, script downloads without ChecksumSHA256 will fail with ErrChecksumRequired.
+//     This is recommended for CI/CD environments to prevent supply chain attacks.
 func DownloadScript(ctx context.Context, url, scriptArgs string, config *DownloadConfig, executor ExecutorFunc) error {
 	if executor == nil {
 		return ErrExecutorCannotBeNil
@@ -337,8 +333,14 @@ func DownloadScript(ctx context.Context, url, scriptArgs string, config *Downloa
 		config = DefaultDownloadConfig()
 	}
 
-	// Security warning: downloading scripts without checksum verification is risky
+	// Security: Check if checksum enforcement is enabled
+	requireChecksums := os.Getenv("MAGE_X_REQUIRE_CHECKSUMS") == "true"
+
 	if config.ChecksumSHA256 == "" {
+		if requireChecksums {
+			return fmt.Errorf("%w: script URL %s", ErrChecksumRequired, url)
+		}
+		// Security warning: downloading scripts without checksum verification is risky
 		log.Printf("WARNING: downloading script from %s without checksum verification - consider providing ChecksumSHA256 for security", url)
 	}
 
@@ -382,33 +384,34 @@ func DownloadScript(ctx context.Context, url, scriptArgs string, config *Downloa
 }
 
 // splitArgs splits a string into arguments (simple implementation)
+// Uses strings.Builder for O(n) performance instead of O(n²) string concatenation
 func splitArgs(s string) []string {
 	var args []string
-	var current string
+	var current strings.Builder
 	inQuotes := false
 
 	for i, r := range s {
 		switch r {
 		case ' ', '\t':
-			if !inQuotes && current != "" {
-				args = append(args, current)
-				current = ""
+			if !inQuotes && current.Len() > 0 {
+				args = append(args, current.String())
+				current.Reset()
 			} else if inQuotes {
-				current += string(r)
+				current.WriteRune(r)
 			}
 		case '"', '\'':
 			if i == 0 || s[i-1] != '\\' {
 				inQuotes = !inQuotes
 			} else {
-				current += string(r)
+				current.WriteRune(r)
 			}
 		default:
-			current += string(r)
+			current.WriteRune(r)
 		}
 	}
 
-	if current != "" {
-		args = append(args, current)
+	if current.Len() > 0 {
+		args = append(args, current.String())
 	}
 
 	return args

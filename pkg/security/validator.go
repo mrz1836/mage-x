@@ -64,6 +64,10 @@ var (
 
 	// Safe filename regex
 	safeFilenameRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_.]+$`)
+
+	// Environment variable regexes (pre-compiled for performance)
+	envVarStartRegex = regexp.MustCompile(`^[a-zA-Z_]`)
+	envVarFullRegex  = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 )
 
 // ValidateVersion validates a semantic version string
@@ -336,13 +340,13 @@ func ValidateEnvVar(name string) error {
 		return ErrEnvVarNameEmpty
 	}
 
-	// Must start with letter or underscore
-	if !regexp.MustCompile(`^[a-zA-Z_]`).MatchString(name) {
+	// Must start with letter or underscore (uses pre-compiled regex for performance)
+	if !envVarStartRegex.MatchString(name) {
 		return ErrEnvVarInvalidStart
 	}
 
-	// Can only contain alphanumeric and underscore
-	if !regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`).MatchString(name) {
+	// Can only contain alphanumeric and underscore (uses pre-compiled regex for performance)
+	if !envVarFullRegex.MatchString(name) {
 		return ErrEnvVarInvalidChar
 	}
 

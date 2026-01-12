@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/magefile/mage/mg"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -131,6 +133,7 @@ func (Vet) All() error {
 }
 
 // Parallel runs go vet in parallel (faster for large repos)
+// Uses errgroup for proper goroutine lifecycle management and error handling
 func (Vet) Parallel() error {
 	utils.Header("Running go vet in Parallel")
 
@@ -165,17 +168,26 @@ func (Vet) Parallel() error {
 	parallel := getCPUCount()
 	utils.Info("Vetting %d packages with %d workers", len(modulePackages), parallel)
 
-	// Create error channel
-	errChan := make(chan error, len(modulePackages))
-	semaphore := make(chan struct{}, parallel)
-
 	start := time.Now()
 
-	// Vet packages in parallel
+	// Use errgroup for proper goroutine lifecycle management
+	g, ctx := errgroup.WithContext(context.Background())
+	g.SetLimit(parallel)
+
+	// Mutex to protect vetErrors slice
+	var mu sync.Mutex
+	var vetErrors []error
+
+	// Vet packages in parallel using errgroup
 	for _, pkg := range modulePackages {
-		go func(p string) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
+		// Capture loop variable
+		g.Go(func() error {
+			// Check for context cancellation
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
 
 			args := []string{"vet"}
 
@@ -184,28 +196,26 @@ func (Vet) Parallel() error {
 				args = append(args, "-tags", tags)
 			}
 
-			args = append(args, p)
+			args = append(args, pkg)
 
-			if err := GetRunner().RunCmd("go", args...); err != nil {
-				errChan <- fmt.Errorf("vet failed for %s: %w", p, err)
-			} else {
-				errChan <- nil
+			if runErr := GetRunner().RunCmd("go", args...); runErr != nil {
+				mu.Lock()
+				vetErrors = append(vetErrors, fmt.Errorf("vet failed for %s: %w", pkg, runErr))
+				mu.Unlock()
 			}
-		}(pkg)
+			return nil // Don't return error to allow all packages to be vetted
+		})
 	}
 
 	// Wait for all goroutines to complete
-	var errors []error
-	for i := 0; i < len(modulePackages); i++ {
-		if err := <-errChan; err != nil {
-			errors = append(errors, err)
-		}
-	}
+	// Errors are collected in vetErrors, goroutines return nil to allow all packages to complete
+	//nolint:errcheck,gosec // Errors collected in vetErrors slice, not returned from Wait
+	g.Wait()
 
-	if len(errors) > 0 {
-		utils.Error("go vet found issues in %d packages:", len(errors))
-		for _, err := range errors {
-			fmt.Printf("  - %v\n", err)
+	if len(vetErrors) > 0 {
+		utils.Error("go vet found issues in %d packages:", len(vetErrors))
+		for _, vetErr := range vetErrors {
+			fmt.Printf("  - %v\n", vetErr)
 		}
 		return errGoVetFailed
 	}

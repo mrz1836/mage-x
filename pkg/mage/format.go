@@ -178,6 +178,7 @@ func getGciSectionsFromConfig() []string {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
+		utils.Debug("Could not read gci config from %s: %v", configPath, err)
 		return nil
 	}
 
@@ -192,6 +193,7 @@ func getGciSectionsFromConfig() []string {
 	}
 
 	if err := json.Unmarshal(data, &config); err != nil {
+		utils.Debug("Could not parse gci config from %s: %v", configPath, err)
 		return nil
 	}
 

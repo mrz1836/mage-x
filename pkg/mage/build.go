@@ -279,18 +279,27 @@ func (b Build) determineLDFlags(cfg *Config) string {
 	if ldflags != "" {
 		return ldflags
 	}
+	return strings.Join(defaultLDFlags(), " ")
+}
 
-	// Use default ldflags
-	defaultLDFlags := []string{
+// defaultLDFlags returns the default linker flags for builds.
+// This is extracted as a helper to avoid duplication between determineLDFlags and buildFlags.
+func defaultLDFlags() []string {
+	// Call time.Now() once for consistency across buildDate and buildTime
+	now := time.Now().Format(time.RFC3339)
+	ldflags := []string{
 		fmt.Sprintf("-X main.version=%s", getVersion()),
 		fmt.Sprintf("-X main.commit=%s", getCommit()),
-		fmt.Sprintf("-X main.buildDate=%s", time.Now().Format(time.RFC3339)),
-		fmt.Sprintf("-X main.buildTime=%s", time.Now().Format(time.RFC3339)),
+		fmt.Sprintf("-X main.buildDate=%s", now),
+		fmt.Sprintf("-X main.buildTime=%s", now),
 	}
+
+	// Add stripping flags for release builds (not debug)
 	if !env.GetBool("DEBUG", false) {
-		defaultLDFlags = append(defaultLDFlags, "-s", "-w")
+		ldflags = append(ldflags, "-s", "-w")
 	}
-	return strings.Join(defaultLDFlags, " ")
+
+	return ldflags
 }
 
 // findSourceFiles finds source files for cache hash
@@ -1352,20 +1361,8 @@ func buildFlags(cfg *Config) []string {
 		expandedLDFlags := expandLDFlagsTemplates(cfg.Build.LDFlags)
 		flags = append(flags, "-ldflags", strings.Join(expandedLDFlags, " "))
 	} else {
-		// Default ldflags
-		ldflags := []string{
-			fmt.Sprintf("-X main.version=%s", getVersion()),
-			fmt.Sprintf("-X main.commit=%s", getCommit()),
-			fmt.Sprintf("-X main.buildDate=%s", time.Now().Format(time.RFC3339)),
-			fmt.Sprintf("-X main.buildTime=%s", time.Now().Format(time.RFC3339)),
-		}
-
-		// Add stripping flags for release builds
-		if !env.GetBool("DEBUG", false) {
-			ldflags = append(ldflags, "-s", "-w")
-		}
-
-		flags = append(flags, "-ldflags", strings.Join(ldflags, " "))
+		// Use shared default ldflags helper
+		flags = append(flags, "-ldflags", strings.Join(defaultLDFlags(), " "))
 	}
 
 	// Add trimpath
