@@ -399,6 +399,66 @@ func TestHTTPGetJSON_AdditionalCoverage(t *testing.T) {
 	})
 }
 
+// TestCreateDefaultCollector_Coverage tests createDefaultCollector with env vars
+func TestCreateDefaultCollector_Coverage(t *testing.T) {
+	t.Run("with MAGE_X_METRICS_ENABLED", func(t *testing.T) {
+		// Save and restore env
+		oldEnabled := os.Getenv("MAGE_X_METRICS_ENABLED")
+		defer func() {
+			if oldEnabled == "" {
+				_ = os.Unsetenv("MAGE_X_METRICS_ENABLED") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_METRICS_ENABLED", oldEnabled) //nolint:errcheck // cleanup
+			}
+		}()
+
+		// Set environment variable
+		require.NoError(t, os.Setenv("MAGE_X_METRICS_ENABLED", "true"))
+
+		// Create collector - this will use the env var
+		collector := createDefaultCollector()
+		require.NotNil(t, collector)
+	})
+
+	t.Run("with MAGE_X_METRICS_PATH", func(t *testing.T) {
+		// Save and restore env
+		oldPath := os.Getenv("MAGE_X_METRICS_PATH")
+		defer func() {
+			if oldPath == "" {
+				_ = os.Unsetenv("MAGE_X_METRICS_PATH") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("MAGE_X_METRICS_PATH", oldPath) //nolint:errcheck // cleanup
+			}
+		}()
+
+		// Set custom path
+		customPath := t.TempDir()
+		require.NoError(t, os.Setenv("MAGE_X_METRICS_PATH", customPath))
+
+		// Create collector - this will use the custom path
+		collector := createDefaultCollector()
+		require.NotNil(t, collector)
+	})
+}
+
+// TestNewJSONStorage_Coverage tests NewJSONStorage error handling
+func TestNewJSONStorage_Coverage(t *testing.T) {
+	t.Run("creates storage successfully", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		storage, err := NewJSONStorage(tmpDir)
+		require.NoError(t, err)
+		require.NotNil(t, storage)
+	})
+
+	t.Run("handles directory creation error", func(t *testing.T) {
+		// Try to create storage in an invalid path
+		// On Unix systems, /dev/null/subdir should fail
+		_, err := NewJSONStorage("/dev/null/subdir")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to create storage directory")
+	})
+}
+
 // failingWriter is a writer that always returns an error
 type failingWriter struct{}
 
