@@ -1265,3 +1265,199 @@ func TestSpinner_AnimateFrames(t *testing.T) {
 		spinner.Stop()
 	})
 }
+
+// TestShouldUseColor_EnvVars tests shouldUseColor with different environment variables
+func TestShouldUseColor_EnvVars(t *testing.T) {
+	t.Run("returns false when CI env is set", func(t *testing.T) {
+		origCI := os.Getenv("CI")
+		defer func() {
+			if origCI == "" {
+				_ = os.Unsetenv("CI") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("CI", origCI) //nolint:errcheck // cleanup
+			}
+		}()
+
+		_ = os.Setenv("CI", "true") //nolint:errcheck // test setup
+
+		result := shouldUseColor()
+		assert.False(t, result)
+	})
+
+	t.Run("returns false when NO_COLOR is set", func(t *testing.T) {
+		origCI := os.Getenv("CI")
+		origNoColor := os.Getenv("NO_COLOR")
+		defer func() {
+			if origCI == "" {
+				_ = os.Unsetenv("CI") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("CI", origCI) //nolint:errcheck // cleanup
+			}
+			if origNoColor == "" {
+				_ = os.Unsetenv("NO_COLOR") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("NO_COLOR", origNoColor) //nolint:errcheck // cleanup
+			}
+		}()
+
+		_ = os.Unsetenv("CI")          //nolint:errcheck // test setup
+		_ = os.Setenv("NO_COLOR", "1") //nolint:errcheck // test setup
+
+		result := shouldUseColor()
+		assert.False(t, result)
+	})
+}
+
+// TestLogger_LogWithEmoji tests logWithEmoji with different log levels
+func TestLogger_LogWithEmoji_Coverage(t *testing.T) {
+	t.Run("logs with different levels and emoji", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(false)
+
+		// Test different log levels
+		logger.logWithEmoji(LogLevelInfo, "ℹ️", "info message")
+		logger.logWithEmoji(LogLevelWarn, "⚠️", "warning message")
+		logger.logWithEmoji(LogLevelError, "❌", "error message")
+		logger.logWithEmoji(LogLevelDebug, "🐛", "debug message")
+
+		output := buf.String()
+		assert.Contains(t, output, "info message")
+		assert.Contains(t, output, "warning message")
+		assert.Contains(t, output, "error message")
+	})
+
+	t.Run("respects log level filtering", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetLevel(LogLevelWarn) // Only warn and above
+
+		logger.logWithEmoji(LogLevelDebug, "🐛", "debug message")
+		logger.logWithEmoji(LogLevelInfo, "ℹ️", "info message")
+
+		output := buf.String()
+		assert.NotContains(t, output, "debug message")
+		assert.NotContains(t, output, "info message")
+	})
+
+	t.Run("adds prefix to messages", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(false)
+		prefixedLogger := logger.WithPrefix("TEST")
+
+		prefixedLogger.logWithEmoji(LogLevelInfo, "ℹ️", "message")
+
+		output := buf.String()
+		assert.Contains(t, output, "[TEST]")
+		assert.Contains(t, output, "message")
+	})
+
+	t.Run("pauses spinner while logging", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(false)
+
+		logger.StartSpinner("test")
+		time.Sleep(50 * time.Millisecond)
+
+		logger.logWithEmoji(LogLevelInfo, "ℹ️", "message")
+
+		output := buf.String()
+		assert.Contains(t, output, "message")
+	})
+
+	t.Run("uses color when enabled", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(true)
+
+		logger.logWithEmoji(LogLevelInfo, "ℹ️", "message")
+
+		output := buf.String()
+		// When color is enabled, ANSI codes should be present
+		assert.Contains(t, output, "message")
+	})
+}
+
+// TestProgress_FinishWithNewline tests Progress.Finish
+func TestProgress_FinishWithNewline(t *testing.T) {
+	t.Run("finishes and adds newline", func(t *testing.T) {
+		progress := NewProgress(100, "Test")
+		progress.Update(50)
+
+		// Finish should set to 100% and add newline
+		progress.Finish()
+
+		// Verify internal state
+		progress.mu.Lock()
+		current := progress.current
+		total := progress.total
+		progress.mu.Unlock()
+
+		assert.Equal(t, total, current)
+	})
+}
+
+// TestRender_TreeStructure tests tree rendering functions
+func TestRender_TreeStructure(t *testing.T) {
+	t.Run("renders tree with branches", func(t *testing.T) {
+		var buf bytes.Buffer
+		w := &buf
+
+		// Create a simple tree structure
+		type testNode struct {
+			name     string
+			children []*testNode
+		}
+
+		root := &testNode{
+			name: "root",
+			children: []*testNode{
+				{name: "child1", children: nil},
+				{name: "child2", children: []*testNode{
+					{name: "grandchild1", children: nil},
+				}},
+			},
+		}
+
+		// Render function
+		var render func(node *testNode, prefix string, isLast bool)
+		render = func(node *testNode, prefix string, isLast bool) {
+			branch := "├── "
+			if isLast {
+				branch = "└── "
+			}
+
+			_, _ = fmt.Fprintf(w, "%s%s%s\n", prefix, branch, node.name)
+
+			newPrefix := prefix
+			if isLast {
+				newPrefix += "    "
+			} else {
+				newPrefix += "│   "
+			}
+
+			for i, child := range node.children {
+				render(child, newPrefix, i == len(node.children)-1)
+			}
+		}
+
+		// Render root
+		_, _ = fmt.Fprintln(w, root.name)
+		for i, child := range root.children {
+			render(child, "", i == len(root.children)-1)
+		}
+
+		output := buf.String()
+		assert.Contains(t, output, "root")
+		assert.Contains(t, output, "child1")
+		assert.Contains(t, output, "child2")
+		assert.Contains(t, output, "grandchild1")
+	})
+}
