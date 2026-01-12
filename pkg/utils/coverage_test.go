@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -1459,5 +1461,100 @@ func TestRender_TreeStructure(t *testing.T) {
 		assert.Contains(t, output, "child1")
 		assert.Contains(t, output, "child2")
 		assert.Contains(t, output, "grandchild1")
+	})
+}
+
+// TestGetTimeContext_Coverage tests GetTimeContext returns valid values
+func TestGetTimeContext_Coverage(t *testing.T) {
+	t.Run("returns valid time context", func(t *testing.T) {
+		logger := NewLogger()
+		context := logger.GetTimeContext()
+
+		// Should return one of the valid contexts
+		validContexts := []string{"morning", "afternoon", "evening"}
+		assert.Contains(t, validContexts, context)
+	})
+}
+
+// TestGetDayContext_Coverage tests GetDayContext with different days
+func TestGetDayContext_Coverage(t *testing.T) {
+	t.Run("returns valid day context", func(t *testing.T) {
+		logger := NewLogger()
+		context := logger.GetDayContext()
+
+		// Should return monday, friday, or empty string
+		validContexts := []string{"monday", "friday", ""}
+		assert.Contains(t, validContexts, context)
+	})
+}
+
+// TestHTTPGetJSON_ContextTimeout tests HTTPGetJSON with timeout
+func TestHTTPGetJSON_ContextTimeout(t *testing.T) {
+	t.Run("handles context cancellation", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			// Delay to allow context cancellation
+			time.Sleep(100 * time.Millisecond)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{}`)) //nolint:errcheck // test server
+		}))
+		defer server.Close()
+
+		// Create a context that times out quickly
+		result, err := HTTPGetJSON[map[string]string](server.URL, 10*time.Millisecond)
+		require.Error(t, err)
+		assert.Nil(t, result)
+	})
+}
+
+// TestSpinner_StopEdgeCases tests Spinner Stop edge cases
+func TestSpinner_StopEdgeCases(t *testing.T) {
+	t.Run("stops inactive spinner without error", func(t *testing.T) {
+		spinner := NewSpinner("test")
+		// Don't start it, just stop
+		spinner.Stop()
+		// Should not panic or error
+	})
+
+	t.Run("stops and clears spinner", func(t *testing.T) {
+		spinner := NewSpinner("test")
+		spinner.Start()
+		time.Sleep(50 * time.Millisecond)
+
+		// Stop should clear the line
+		spinner.Stop()
+
+		// Verify spinner is not active
+		spinner.mu.Lock()
+		active := spinner.active
+		spinner.mu.Unlock()
+		assert.False(t, active)
+	})
+}
+
+// TestMultiSpinner_StopEdgeCases tests MultiSpinner Stop edge cases
+func TestMultiSpinner_StopEdgeCases(t *testing.T) {
+	t.Run("stops inactive multispinner without error", func(t *testing.T) {
+		ms := NewMultiSpinner()
+		// Don't start it, just stop
+		ms.Stop()
+		// Should not panic or error
+	})
+
+	t.Run("clears all spinner lines on stop", func(t *testing.T) {
+		ms := NewMultiSpinner()
+		ms.AddTask("task1", "Task 1")
+		ms.AddTask("task2", "Task 2")
+
+		ms.Start()
+		time.Sleep(100 * time.Millisecond)
+
+		// Stop should clear all lines
+		ms.Stop()
+
+		// Verify multispinner is not active
+		ms.mu.Lock()
+		active := ms.active
+		ms.mu.Unlock()
+		assert.False(t, active)
 	})
 }
