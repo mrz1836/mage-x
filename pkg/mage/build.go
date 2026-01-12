@@ -34,6 +34,30 @@ var (
 	ErrNotInWorkspaceMode    = errors.New("buildWorkspaceModules called but not in workspace mode")
 )
 
+// Build strategy thresholds and defaults
+const (
+	// Memory thresholds for build strategy selection (in MB)
+	MemoryLowThresholdMB    = 4000 // Below this, use aggressive batching
+	MemoryMediumThresholdMB = 8000 // Below this, use moderate batching
+
+	// Package count thresholds for build strategy selection
+	PackageCountHighThreshold   = 500 // Above this, use small batches regardless of memory
+	PackageCountMediumThreshold = 200 // Above this, use medium batches
+	PackageCountLowThreshold    = 50  // Above this with high memory usage, use mains-first
+
+	// Memory utilization threshold (percentage)
+	MemoryUtilizationPercent = 80
+
+	// Batch sizes for different strategies
+	BatchSizeSmall   = 5  // For low memory/high package count scenarios
+	BatchSizeMedium  = 20 // For medium resource scenarios
+	BatchSizeDefault = 10 // Default batch size
+
+	// Delays between batches (in milliseconds)
+	BatchDelayLowMemoryMs    = 500 // Delay for low memory scenarios
+	BatchDelayMediumMemoryMs = 200 // Delay for medium resource scenarios
+)
+
 // CacheManagerProvider defines the interface for providing cache manager instances
 type CacheManagerProvider interface {
 	GetCacheManager() *cache.Manager
@@ -430,8 +454,12 @@ func (b Build) All() error {
 
 	start := time.Now()
 
-	// Use errgroup for cleaner concurrent error handling
-	g, _ := errgroup.WithContext(context.Background())
+	// Create a cancellable context for coordinated shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Use errgroup with context for coordinated cancellation
+	g, ctx := errgroup.WithContext(ctx)
 
 	var mu sync.Mutex
 	var buildErrors []string
@@ -439,17 +467,34 @@ func (b Build) All() error {
 	for _, platform := range config.Build.Platforms {
 		// capture loop variable
 		g.Go(func() error {
+			defer func() {
+				if p := recover(); p != nil {
+					mu.Lock()
+					defer mu.Unlock()
+					buildErrors = append(buildErrors, fmt.Sprintf("panic building %s: %v", platform, p))
+				}
+			}()
+
+			// Check for context cancellation before starting build
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+
 			if buildErr := b.Platform(platform); buildErr != nil {
 				mu.Lock()
+				defer mu.Unlock()
 				buildErrors = append(buildErrors, buildErr.Error())
-				mu.Unlock()
 			}
 			return nil // Continue on error to collect all build failures
 		})
 	}
 
-	//nolint:errcheck,gosec // g.Wait() always returns nil since all goroutines return nil (errors collected separately)
-	g.Wait()
+	// Wait for all goroutines; context cancellation is now respected
+	if waitErr := g.Wait(); waitErr != nil && !errors.Is(waitErr, context.Canceled) {
+		utils.Warn("Build group wait error: %v", waitErr)
+	}
 
 	if len(buildErrors) > 0 {
 		return fmt.Errorf("%w:\n%s", ErrBuildErrors, strings.Join(buildErrors, "\n"))
@@ -724,7 +769,7 @@ func (b Build) PreBuildWithArgs(argsList ...string) error {
 	if batchSizeStr == "" && config.Build.PreBuild.BatchSize > 0 {
 		batchSizeStr = fmt.Sprintf("%d", config.Build.PreBuild.BatchSize)
 	}
-	batchSize := 10 // Default
+	batchSize := BatchSizeDefault
 	if batchSizeStr != "" {
 		if bs, err := strconv.Atoi(batchSizeStr); err == nil && bs > 0 {
 			batchSize = bs
@@ -1045,7 +1090,7 @@ func (b Build) findMainPackages() ([]string, error) {
 // splitIntoBatches divides a slice of packages into smaller batches
 func (b Build) splitIntoBatches(packages []string, batchSize int) [][]string {
 	if batchSize <= 0 {
-		batchSize = 10 // Default batch size
+		batchSize = BatchSizeDefault // Default batch size
 	}
 
 	var batches [][]string
@@ -1102,7 +1147,7 @@ func (b Build) buildIncremental(batchSize, delayMs int, exclude string, verbose 
 
 	// Set default batch size if not specified
 	if batchSize <= 0 {
-		batchSize = 10
+		batchSize = BatchSizeDefault
 	}
 
 	// Split into batches
@@ -1198,7 +1243,7 @@ func (b Build) buildMainsFirst(batchSize int, mainsOnly bool, exclude string, ve
 
 	// Build remaining packages in batches
 	if batchSize <= 0 {
-		batchSize = 10
+		batchSize = BatchSizeDefault
 	}
 
 	batches := b.splitIntoBatches(remainingPackages, batchSize)
@@ -1253,29 +1298,29 @@ func (b Build) buildSmart(exclude string, verbose bool, parallelism string) erro
 	estimatedMemoryMB := estimatedMemory / (1024 * 1024)
 	utils.Info("Estimated memory requirement: %s", utils.FormatMemory(estimatedMemory))
 
-	// Select strategy based on heuristics
+	// Select strategy based on heuristics (using defined constants for thresholds)
 	var strategy string
 	var batchSize int
 	var delayMs int
 
 	switch {
-	case availableMemoryMB < 4000 || packageCount > 500:
+	case availableMemoryMB < MemoryLowThresholdMB || packageCount > PackageCountHighThreshold:
 		// Low memory or many packages: Use small batches
 		strategy = "incremental (low memory/high package count)"
-		batchSize = 5
-		delayMs = 500
+		batchSize = BatchSizeSmall
+		delayMs = BatchDelayLowMemoryMs
 
-	case availableMemoryMB < 8000 || packageCount > 200:
+	case availableMemoryMB < MemoryMediumThresholdMB || packageCount > PackageCountMediumThreshold:
 		// Medium resources: Use medium batches
 		strategy = "incremental (medium resources)"
-		batchSize = 20
-		delayMs = 200
+		batchSize = BatchSizeMedium
+		delayMs = BatchDelayMediumMemoryMs
 
-	case packageCount > 50 && estimatedMemoryMB > availableMemoryMB*80/100:
+	case packageCount > PackageCountLowThreshold && estimatedMemoryMB > availableMemoryMB*MemoryUtilizationPercent/100:
 		// Memory usage would be close to limit: Use mains-first
 		strategy = "mains-first (optimize memory usage)"
 		utils.Info("Selected strategy: %s", strategy)
-		return b.buildMainsFirst(10, false, exclude, verbose, parallelism)
+		return b.buildMainsFirst(BatchSizeDefault, false, exclude, verbose, parallelism)
 
 	default:
 		// Sufficient resources: Use full build

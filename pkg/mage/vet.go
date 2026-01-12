@@ -182,6 +182,15 @@ func (Vet) Parallel() error {
 	for _, pkg := range modulePackages {
 		// Capture loop variable
 		g.Go(func() error {
+			defer func() {
+				if p := recover(); p != nil {
+					mu.Lock()
+					defer mu.Unlock()
+					//nolint:err113 // Dynamic error acceptable for panic recovery
+					vetErrors = append(vetErrors, fmt.Errorf("panic vetting %s: %v", pkg, p))
+				}
+			}()
+
 			// Check for context cancellation
 			select {
 			case <-ctx.Done():
@@ -200,8 +209,8 @@ func (Vet) Parallel() error {
 
 			if runErr := GetRunner().RunCmd("go", args...); runErr != nil {
 				mu.Lock()
+				defer mu.Unlock()
 				vetErrors = append(vetErrors, fmt.Errorf("vet failed for %s: %w", pkg, runErr))
-				mu.Unlock()
 			}
 			return nil // Don't return error to allow all packages to be vetted
 		})

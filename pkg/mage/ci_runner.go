@@ -376,26 +376,31 @@ func (r *ciRunner) GenerateReport() error {
 		return nil
 	}
 
-	// Create a defensive copy of failures under lock to avoid race condition
-	// with handleCrash which may append to results.Failures concurrently
+	// Create a full defensive copy of results under lock to avoid race condition
+	// with handleCrash which may modify r.results concurrently
 	r.mu.Lock()
-	results := r.results
-	failures := make([]CITestFailure, len(results.Failures))
-	copy(failures, results.Failures)
+	resultsCopy := &CIResult{
+		Summary:   r.results.Summary,
+		Failures:  make([]CITestFailure, len(r.results.Failures)),
+		Timestamp: r.results.Timestamp,
+		Duration:  r.results.Duration,
+		Metadata:  r.results.Metadata,
+	}
+	copy(resultsCopy.Failures, r.results.Failures)
 	r.mu.Unlock()
 
-	// Print CI mode completion summary to stdout
-	printCIModeSummary(results, r.mode.OutputPath)
+	// Print CI mode completion summary to stdout (using the copy, not the original)
+	printCIModeSummary(resultsCopy, r.mode.OutputPath)
 
 	// Report failures to JSONL (done here to ensure each failure is written only once,
 	// even when tests run multiple times with different build tags)
-	for _, failure := range failures {
+	for _, failure := range resultsCopy.Failures {
 		if err := r.reporter.ReportFailure(failure); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to report failure: %v\n", err)
 		}
 	}
 
-	if err := r.reporter.WriteSummary(results); err != nil {
+	if err := r.reporter.WriteSummary(resultsCopy); err != nil {
 		return fmt.Errorf("failed to write summary: %w", err)
 	}
 
