@@ -355,6 +355,27 @@ func TestRunCmdSecure_Coverage(t *testing.T) {
 		err := RunCmdSecure("failing-command")
 		require.Error(t, err)
 	})
+
+	t.Run("executes with verbose logging", func(t *testing.T) {
+		// Save and restore state
+		oldExec := DefaultExecutor
+		origVerbose := os.Getenv("VERBOSE")
+		defer func() {
+			DefaultExecutor = oldExec
+			if origVerbose == "" {
+				_ = os.Unsetenv("VERBOSE") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("VERBOSE", origVerbose) //nolint:errcheck // cleanup
+			}
+		}()
+
+		// Set verbose mode
+		_ = os.Setenv("VERBOSE", "true") //nolint:errcheck // test setup
+		SetExecutor(&mockExecutor{})
+
+		err := RunCmdSecure("echo", "test")
+		require.NoError(t, err)
+	})
 }
 
 // TestRunCmdWithRetry_Coverage tests RunCmdWithRetry
@@ -383,6 +404,27 @@ func TestRunCmdWithRetry_Coverage(t *testing.T) {
 
 		err := RunCmdWithRetry(3, "failing-command")
 		require.Error(t, err)
+	})
+
+	t.Run("executes with verbose logging", func(t *testing.T) {
+		// Save and restore state
+		oldExec := DefaultExecutor
+		origVerbose := os.Getenv("VERBOSE")
+		defer func() {
+			DefaultExecutor = oldExec
+			if origVerbose == "" {
+				_ = os.Unsetenv("VERBOSE") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("VERBOSE", origVerbose) //nolint:errcheck // cleanup
+			}
+		}()
+
+		// Set verbose mode
+		_ = os.Setenv("VERBOSE", "true") //nolint:errcheck // test setup
+		SetExecutor(&mockExecutor{})
+
+		err := RunCmdWithRetry(3, "echo", "test")
+		require.NoError(t, err)
 	})
 }
 
