@@ -3,7 +3,9 @@ package utils
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -723,4 +725,72 @@ type failingWriter struct{}
 
 func (f *failingWriter) Write(p []byte) (n int, err error) {
 	return 0, errors.New("write failed") //nolint:err113 // test error
+}
+
+// TestJSONStorage_Store_AdditionalCoverage tests Store with corrupted files
+func TestJSONStorage_Store_AdditionalCoverage(t *testing.T) {
+	t.Run("handles corrupted metrics file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		storage, err := NewJSONStorage(tmpDir)
+		require.NoError(t, err)
+
+		// Create a corrupted metrics file for today
+		now := time.Now()
+		filename := fmt.Sprintf("metrics_%s.json", now.Format("2006-01-02"))
+		filePath := filepath.Join(tmpDir, filename)
+		require.NoError(t, os.WriteFile(filePath, []byte("{invalid json"), 0o600))
+
+		// Store should handle corrupted file gracefully
+		metric := &Metric{
+			Name:      "test_metric",
+			Type:      MetricTypeCounter,
+			Value:     100.0,
+			Timestamp: now,
+		}
+		err = storage.Store(metric)
+		require.NoError(t, err)
+
+		// Verify the metric was still stored
+		data, err := os.ReadFile(filePath) //nolint:gosec // test file in temp directory
+		require.NoError(t, err)
+		var metrics []*Metric
+		require.NoError(t, json.Unmarshal(data, &metrics))
+		require.Len(t, metrics, 1)
+	})
+}
+
+// TestLogger_AdditionalCoverage tests various logger functions
+func TestLogger_AdditionalCoverage(t *testing.T) {
+	t.Run("Print package function", func(t *testing.T) {
+		// Test that Print doesn't panic with various formats
+		Print("test message")
+		Print("formatted %s", "message")
+	})
+
+	t.Run("Println package function", func(t *testing.T) {
+		// Test that Println doesn't panic
+		Println("test line")
+	})
+
+	t.Run("GetContextualMessage handles unknown context", func(t *testing.T) {
+		logger := NewLogger()
+
+		// Get unknown context returns empty
+		unknownMsg := logger.GetContextualMessage("unknown")
+		assert.Empty(t, unknownMsg)
+	})
+
+	t.Run("GetTimeContext doesnt panic", func(t *testing.T) {
+		logger := NewLogger()
+
+		// Just verify it doesn't panic - output depends on current time
+		_ = logger.GetTimeContext()
+	})
+
+	t.Run("GetDayContext doesnt panic", func(t *testing.T) {
+		logger := NewLogger()
+
+		// Just verify it doesn't panic - output depends on current day
+		_ = logger.GetDayContext()
+	})
 }
