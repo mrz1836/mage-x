@@ -574,13 +574,17 @@ func TestMetrics_AdditionalCoverage(t *testing.T) {
 // TestHTTPGetJSON_AdditionalCoverage tests HTTPGetJSON error handling
 func TestHTTPGetJSON_AdditionalCoverage(t *testing.T) {
 	t.Run("handles invalid URL", func(t *testing.T) {
-		_, err := HTTPGetJSON[map[string]interface{}]("://invalid-url", 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, err := HTTPGetJSON[map[string]interface{}](ctx, "://invalid-url")
 		require.Error(t, err)
 	})
 
 	t.Run("handles network error", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
 		// Use a URL that will fail
-		_, err := HTTPGetJSON[map[string]interface{}]("http://localhost:99999/nonexistent", 1*time.Second)
+		_, err := HTTPGetJSON[map[string]interface{}](ctx, "http://localhost:99999/nonexistent")
 		require.Error(t, err)
 	})
 }
@@ -1665,7 +1669,9 @@ func TestHTTPGetJSON_ContextTimeout(t *testing.T) {
 		defer server.Close()
 
 		// Create a context that times out quickly
-		result, err := HTTPGetJSON[map[string]string](server.URL, 10*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+		result, err := HTTPGetJSON[map[string]string](ctx, server.URL)
 		require.Error(t, err)
 		assert.Nil(t, result)
 	})

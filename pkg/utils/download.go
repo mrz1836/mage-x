@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -17,6 +18,11 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/retry"
+)
+
+const (
+	// downloadBufferSize is the buffer size for file downloads (32KB optimal for network I/O)
+	downloadBufferSize = 32 * 1024
 )
 
 // Static errors for err113 compliance
@@ -156,9 +162,7 @@ func downloadFile(ctx context.Context, url, destPath string, config *DownloadCon
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			// Log error but don't return since we're in defer
-			// This avoids masking the original error
-			_ = closeErr // Acknowledged: error logged but not acted upon in defer
+			log.Printf("failed to close destination file: %v", closeErr)
 		}
 	}()
 
@@ -197,9 +201,7 @@ func downloadFile(ctx context.Context, url, destPath string, config *DownloadCon
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			// Log error but don't return since we're in defer
-			// This avoids masking the original error
-			_ = closeErr // Acknowledged: error logged but not acted upon in defer
+			log.Printf("failed to close response body: %v", closeErr)
 		}
 	}()
 
@@ -241,7 +243,7 @@ func downloadFile(ctx context.Context, url, destPath string, config *DownloadCon
 func copyWithProgress(ctx context.Context, dst io.Writer, src io.Reader, offset, totalSize int64,
 	progressCallback func(int64, int64),
 ) error {
-	buf := make([]byte, 32*1024) // 32KB buffer
+	buf := make([]byte, downloadBufferSize)
 	bytesWritten := offset
 
 	for {
@@ -295,9 +297,7 @@ func verifyChecksum(filePath, expectedSHA256 string) error {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			// Log error but don't return since we're in defer
-			// This avoids masking the original error
-			_ = closeErr // Acknowledged: error logged but not acted upon in defer
+			log.Printf("failed to close file during checksum verification: %v", closeErr)
 		}
 	}()
 
@@ -345,9 +345,7 @@ func DownloadScript(ctx context.Context, url, scriptArgs string, config *Downloa
 	// Ensure cleanup happens after execution
 	defer func() {
 		if removeErr := os.Remove(scriptPath); removeErr != nil {
-			// Log error but don't return since we're in defer
-			// This avoids masking the original error
-			_ = removeErr // Acknowledged: error logged but not acted upon in defer
+			log.Printf("failed to remove temporary script %s: %v", scriptPath, removeErr)
 		}
 	}()
 
