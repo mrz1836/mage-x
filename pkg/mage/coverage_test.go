@@ -1,8 +1,10 @@
 package mage
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -753,4 +755,110 @@ func TestFindMainPackagesMultiple(t *testing.T) {
 
 	// Exercise code path
 	_ = err
+}
+
+// ================ Simple helper function coverage tests ================
+
+// TestGetTreeSymbol tests getTreeSymbol function
+func TestGetTreeSymbol(t *testing.T) {
+	// Test last node
+	symbol := getTreeSymbol(true)
+	assert.Equal(t, "└── ", symbol, "Last node should use └── symbol")
+
+	// Test non-last node
+	symbol = getTreeSymbol(false)
+	assert.Equal(t, "├── ", symbol, "Non-last node should use ├── symbol")
+}
+
+// TestGetTreePrefix tests getTreePrefix function
+func TestGetTreePrefix(t *testing.T) {
+	// Test when parent is last
+	prefix := getTreePrefix(true)
+	assert.Equal(t, "    ", prefix, "Last parent should use blank prefix")
+
+	// Test when parent is not last
+	prefix = getTreePrefix(false)
+	assert.Equal(t, "│   ", prefix, "Non-last parent should use │ prefix")
+}
+
+// TestResetOSOperations tests ResetOSOperations function
+func TestResetOSOperations(t *testing.T) {
+	// Should not panic
+	ResetOSOperations()
+}
+
+// TestIsDiskFullError tests isDiskFullError function
+func TestIsDiskFullError(t *testing.T) {
+	// Test nil error
+	assert.False(t, isDiskFullError(nil), "Nil error should return false")
+
+	// Test syscall.ENOSPC
+	assert.True(t, isDiskFullError(syscall.ENOSPC), "ENOSPC should be detected as disk full")
+
+	// Test error message "no space left on device"
+	err := errors.New("no space left on device") //nolint:err113 // test error
+	assert.True(t, isDiskFullError(err), "Should detect 'no space left on device' message")
+
+	// Test error message "disk quota exceeded"
+	err = errors.New("disk quota exceeded") //nolint:err113 // test error
+	assert.True(t, isDiskFullError(err), "Should detect 'disk quota exceeded' message")
+
+	// Test other error
+	err = errors.New("some other error") //nolint:err113 // test error
+	assert.False(t, isDiskFullError(err), "Other errors should return false")
+}
+
+// TestMockConfigProviderSetConfig tests SetConfig on MockConfigProvider
+func TestMockConfigProviderSetConfig(t *testing.T) {
+	mock := &MockConfigProvider{}
+	cfg := &Config{
+		Project: ProjectConfig{Name: "test"},
+	}
+
+	mock.SetConfig(cfg)
+	assert.Equal(t, cfg, mock.Config, "Config should be set")
+}
+
+// TestTextStreamParserGetFailures tests GetFailures method
+func TestTextStreamParserGetFailures(t *testing.T) {
+	parser := &textStreamParser{
+		failures: []CITestFailure{
+			{
+				Package: "test/pkg",
+				Test:    "TestExample",
+				Error:   "assertion failed",
+			},
+		},
+		seenTests: make(map[string]*CITestFailure),
+	}
+
+	// Get failures
+	failures := parser.GetFailures()
+	assert.Len(t, failures, 1, "Should have 1 failure")
+	assert.Equal(t, "TestExample", failures[0].Test)
+}
+
+// TestIsMultiModuleCoverage tests isMultiModuleCoverage function
+func TestIsMultiModuleCoverage(t *testing.T) {
+	tempDir := t.TempDir()
+	originalWd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tempDir))
+	defer func() {
+		_ = os.Chdir(originalWd) //nolint:errcheck // cleanup in defer
+	}()
+
+	// Create go.mod
+	require.NoError(t, os.WriteFile("go.mod", []byte("module test\n\ngo 1.24"), 0o600))
+
+	// Test with non-existent file
+	result := isMultiModuleCoverage("nonexistent.out")
+	assert.False(t, result, "Non-existent file should return false")
+
+	// Test with empty coverage file
+	coverageFile := filepath.Join(tempDir, "coverage.out")
+	require.NoError(t, os.WriteFile(coverageFile, []byte("mode: set\n"), 0o600))
+	result = isMultiModuleCoverage(coverageFile)
+	// Result depends on content, just exercise the function
+	_ = result
 }
