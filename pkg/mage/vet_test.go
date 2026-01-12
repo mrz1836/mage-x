@@ -2,6 +2,7 @@ package mage
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -404,10 +405,25 @@ func (ts *VetTestSuite) TestVetStaticErrors() {
 		// Test that static errors are properly defined
 		ts.Require().Error(errGoVetFailed)
 		ts.Require().Error(errStrictChecksFailed)
+		ts.Require().Error(ErrVetPanic)
 
 		// Test error messages are meaningful
 		ts.Require().Contains(errGoVetFailed.Error(), "go vet failed")
 		ts.Require().Contains(errStrictChecksFailed.Error(), "strict checks failed")
+		ts.Require().Contains(ErrVetPanic.Error(), "panic during vet operation")
+	})
+
+	ts.Run("ErrVetPanic_can_be_unwrapped", func() {
+		// Test that ErrVetPanic can be used with errors.Is() after wrapping
+		wrappedErr := fmt.Errorf("%w: package test/pkg: panic: test panic", ErrVetPanic)
+
+		// Should be able to detect the wrapped error
+		ts.Require().ErrorIs(wrappedErr, ErrVetPanic)
+
+		// Should contain the original error message plus context
+		ts.Require().Contains(wrappedErr.Error(), "panic during vet operation")
+		ts.Require().Contains(wrappedErr.Error(), "package test/pkg")
+		ts.Require().Contains(wrappedErr.Error(), "test panic")
 	})
 }
 

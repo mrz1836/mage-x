@@ -785,8 +785,8 @@ func listCommandsVerbose(commands []*registry.Command, customCommands []Discover
 			desc = fmt.Sprintf("⚠️  DEPRECATED: %s", cmd.Deprecated)
 		}
 		if _, err := fmt.Fprintf(w, "  %s\t%s\n", cmd.FullName(), desc); err != nil {
-			// Print error is non-critical, continue
-			_ = err
+			// Print error is non-critical but log for debugging
+			fmt.Fprintf(os.Stderr, "warning: failed to write command entry: %v\n", err)
 		}
 	}
 
@@ -798,14 +798,14 @@ func listCommandsVerbose(commands []*registry.Command, customCommands []Discover
 		}
 		desc += " (custom)"
 		if _, err := fmt.Fprintf(w, "  %s\t%s\n", cmd.Name, desc); err != nil {
-			// Print error is non-critical, continue
-			_ = err
+			// Print error is non-critical but log for debugging
+			fmt.Fprintf(os.Stderr, "warning: failed to write custom command entry: %v\n", err)
 		}
 	}
 
 	if err := w.Flush(); err != nil {
-		// Flush error is non-critical, continue
-		_ = err
+		// Flush error is non-critical but log for debugging
+		fmt.Fprintf(os.Stderr, "warning: failed to flush output: %v\n", err)
 	}
 }
 

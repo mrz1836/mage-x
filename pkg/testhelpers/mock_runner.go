@@ -307,6 +307,7 @@ func (m *MockRunner) FindCommandWithArgs(name string, args ...string) *ExecutedC
 
 // AssertCalled asserts that a command was called
 func (m *MockRunner) AssertCalled(t TestingT, name string) {
+	t.Helper()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -321,6 +322,7 @@ func (m *MockRunner) AssertCalled(t TestingT, name string) {
 
 // AssertCalledWith asserts that a command was called with specific args
 func (m *MockRunner) AssertCalledWith(t TestingT, name string, args ...string) {
+	t.Helper()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -336,6 +338,7 @@ func (m *MockRunner) AssertCalledWith(t TestingT, name string, args ...string) {
 
 // AssertNotCalled asserts that a command was not called
 func (m *MockRunner) AssertNotCalled(t TestingT, name string) {
+	t.Helper()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -349,6 +352,7 @@ func (m *MockRunner) AssertNotCalled(t TestingT, name string) {
 
 // AssertCallCount asserts the number of times a command was called
 func (m *MockRunner) AssertCallCount(t TestingT, name string, expected int) {
+	t.Helper()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

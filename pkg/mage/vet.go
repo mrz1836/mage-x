@@ -20,6 +20,9 @@ import (
 var (
 	errGoVetFailed        = errors.New("go vet failed")
 	errStrictChecksFailed = errors.New("strict checks failed")
+	// ErrVetPanic indicates a panic occurred during vet operation.
+	// Use errors.Is(err, ErrVetPanic) to check for this condition.
+	ErrVetPanic = errors.New("panic during vet operation")
 )
 
 // ShadowToolManager manages shadow tool installation and ensures thread-safety
@@ -186,8 +189,7 @@ func (Vet) Parallel() error {
 				if p := recover(); p != nil {
 					mu.Lock()
 					defer mu.Unlock()
-					//nolint:err113 // Dynamic error acceptable for panic recovery
-					vetErrors = append(vetErrors, fmt.Errorf("panic vetting %s: %v", pkg, p))
+					vetErrors = append(vetErrors, fmt.Errorf("%w: package %s: %v", ErrVetPanic, pkg, p))
 				}
 			}()
 

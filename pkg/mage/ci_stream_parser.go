@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -649,8 +650,20 @@ var (
 
 // generateSignature creates a deduplication key
 func generateSignature(pkg, test, file string, line int, failureType FailureType) string {
-	data := fmt.Sprintf("%s:%s:%s:%d:%s", pkg, test, file, line, failureType)
-	hash := sha256.Sum256([]byte(data))
+	// Use strings.Builder for better performance than fmt.Sprintf
+	var sb strings.Builder
+	sb.Grow(len(pkg) + len(test) + len(file) + len(failureType) + 20)
+	sb.WriteString(pkg)
+	sb.WriteByte(':')
+	sb.WriteString(test)
+	sb.WriteByte(':')
+	sb.WriteString(file)
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(line))
+	sb.WriteByte(':')
+	sb.WriteString(string(failureType))
+
+	hash := sha256.Sum256([]byte(sb.String()))
 	return hex.EncodeToString(hash[:8]) // Use first 8 bytes for compact signature
 }
 
