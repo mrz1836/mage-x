@@ -3,6 +3,7 @@ package utils
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -21,6 +22,7 @@ type Spinner struct {
 	pauseCh  chan struct{}
 	resumeCh chan struct{}
 	current  int
+	output   io.Writer
 }
 
 // SpinnerStyle represents different spinner animation styles
@@ -92,6 +94,7 @@ func NewSpinnerWithStyleAndRegistry(message string, style SpinnerStyle, registry
 		stopCh:   make(chan struct{}),
 		pauseCh:  make(chan struct{}),
 		resumeCh: make(chan struct{}),
+		output:   os.Stdout,
 	}
 }
 
@@ -121,7 +124,7 @@ func (s *Spinner) Stop() {
 	close(s.stopCh)
 
 	// Clear the spinner line
-	if _, err := fmt.Fprint(os.Stdout, "\r\033[K"); err != nil {
+	if _, err := fmt.Fprint(s.output, "\r\033[K"); err != nil {
 		// Continue if write fails
 		log.Printf("failed to clear spinner line: %v", err)
 	}
@@ -179,7 +182,7 @@ func (s *Spinner) animate() {
 
 		case <-s.pauseCh:
 			// Clear the spinner line when pausing
-			if _, err := fmt.Fprint(os.Stdout, "\r\033[K"); err != nil {
+			if _, err := fmt.Fprint(s.output, "\r\033[K"); err != nil {
 				// Continue if write fails
 				log.Printf("failed to clear spinner line: %v", err)
 			}
@@ -195,7 +198,7 @@ func (s *Spinner) animate() {
 			s.mu.Unlock()
 
 			// Use carriage return to overwrite the line
-			if _, err := fmt.Fprintf(os.Stdout, "\r%s %s", frame, msg); err != nil {
+			if _, err := fmt.Fprintf(s.output, "\r%s %s", frame, msg); err != nil {
 				// Continue if write fails
 				log.Printf("failed to write spinner frame: %v", err)
 			}
@@ -210,6 +213,7 @@ type MultiSpinner struct {
 	active   bool
 	stopCh   chan struct{}
 	registry *SpinnerFrameRegistry
+	output   io.Writer
 }
 
 // TaskSpinner represents a spinner for a specific task
@@ -246,6 +250,7 @@ func NewMultiSpinnerWithRegistry(registry *SpinnerFrameRegistry) *MultiSpinner {
 		spinners: make(map[string]*TaskSpinner),
 		stopCh:   make(chan struct{}),
 		registry: registry,
+		output:   os.Stdout,
 	}
 }
 
@@ -302,7 +307,7 @@ func (m *MultiSpinner) Stop() {
 
 	// Clear all spinner lines
 	for range m.spinners {
-		if _, err := fmt.Fprint(os.Stdout, "\033[1A\033[K"); err != nil {
+		if _, err := fmt.Fprint(m.output, "\033[1A\033[K"); err != nil {
 			// Continue if write fails
 			log.Printf("failed to clear multiline spinner: %v", err)
 		}
@@ -335,7 +340,7 @@ func (m *MultiSpinner) render() {
 
 	// Move cursor to beginning of spinner area
 	for i := 0; i < len(m.spinners); i++ {
-		if _, err := fmt.Fprint(os.Stdout, "\033[1A"); err != nil {
+		if _, err := fmt.Fprint(m.output, "\033[1A"); err != nil {
 			// Continue if write fails
 			log.Printf("failed to move cursor up: %v", err)
 		}
@@ -358,7 +363,7 @@ func (m *MultiSpinner) render() {
 		}
 
 		// Clear line and print status
-		if _, err := fmt.Fprintf(os.Stdout, "\033[K  %s %s: %s\n", icon, spinner.name, spinner.message); err != nil {
+		if _, err := fmt.Fprintf(m.output, "\033[K  %s %s: %s\n", icon, spinner.name, spinner.message); err != nil {
 			// Continue if write fails
 			log.Printf("failed to write multiline spinner status: %v", err)
 		}
@@ -387,6 +392,7 @@ type treeRenderer struct {
 	useColor bool
 	symbols  treeSymbols
 	registry *TreeSymbolRegistry
+	output   io.Writer
 }
 
 // treeSymbols contains symbols for tree rendering
@@ -474,6 +480,7 @@ func NewProgressTreeWithRegistry(name string, registry *TreeSymbolRegistry, symb
 			useColor: shouldUseColor(),
 			symbols:  registry.GetSymbols(symbolType),
 			registry: registry,
+			output:   os.Stdout,
 		},
 	}
 }
@@ -518,7 +525,7 @@ func (p *ProgressTree) Render() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if _, err := fmt.Fprintln(os.Stdout, ""); err != nil {
+	if _, err := fmt.Fprintln(p.renderer.output, ""); err != nil {
 		// Continue if write fails
 		log.Printf("failed to write newline: %v", err)
 	}
@@ -616,7 +623,7 @@ func (r *treeRenderer) renderNode(node *ProgressNode, prefix string, isLast bool
 		line += fmt.Sprintf(" [%d/%d] %.0f%%", node.progress, node.total, percent)
 	}
 
-	if _, err := fmt.Fprintln(os.Stdout, line); err != nil {
+	if _, err := fmt.Fprintln(r.output, line); err != nil {
 		// Continue if write fails
 		log.Printf("failed to write fancy line: %v", err)
 	}
