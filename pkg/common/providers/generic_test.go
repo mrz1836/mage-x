@@ -363,3 +363,76 @@ func BenchmarkPackageProvider(b *testing.B) {
 		}
 	})
 }
+
+// TestProviderConcurrentSetGet tests that concurrent Set and Get operations
+// are race-free. This test should be run with -race flag to detect races.
+func TestProviderConcurrentSetGet(t *testing.T) {
+	factory := func() string {
+		return "factory-value"
+	}
+
+	p := NewProvider(factory)
+
+	// First, set a value to enable the wasSet path in Get
+	p.Set("initial-value")
+
+	const numGoroutines = 100
+	const iterations = 1000
+
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines * 2) // Half getters, half setters
+
+	// Start getter goroutines
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				_ = p.Get()
+			}
+		}()
+	}
+
+	// Start setter goroutines concurrently
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				p.Set("value-" + string(rune(id+'A')))
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Verify we can still get a value
+	result := p.Get()
+	if result == "" {
+		t.Error("Expected non-empty result after concurrent operations")
+	}
+}
+
+// TestProviderGetAfterSet tests that Get returns the set value
+// when wasSet is true, verifying the race condition fix
+func TestProviderGetAfterSet(t *testing.T) {
+	callCount := 0
+	factory := func() string {
+		callCount++
+		return "factory-value"
+	}
+
+	p := NewProvider(factory)
+
+	// Set a custom value
+	p.Set("custom-value")
+
+	// Get should return the custom value, not call factory
+	result := p.Get()
+	if result != "custom-value" {
+		t.Errorf("Expected 'custom-value', got '%s'", result)
+	}
+
+	// Factory should not have been called
+	if callCount != 0 {
+		t.Errorf("Expected factory to not be called, got %d calls", callCount)
+	}
+}

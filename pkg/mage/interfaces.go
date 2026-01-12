@@ -158,6 +158,17 @@ type CommandRunner interface {
 	RunCmdOutput(name string, args ...string) (string, error)
 }
 
+// EnvCommandRunner extends CommandRunner with environment variable support.
+// This interface enables goroutine-safe command execution with custom environment
+// variables, avoiding process-wide os.Setenv() which causes race conditions.
+type EnvCommandRunner interface {
+	CommandRunner
+	// RunCmdWithEnv executes a command with additional environment variables.
+	// The env parameter contains KEY=VALUE pairs that are added to the command's environment.
+	// This is goroutine-safe unlike os.Setenv() as each command gets its own environment.
+	RunCmdWithEnv(env []string, name string, args ...string) error
+}
+
 // DirRunner is an optional interface for command runners that support
 // executing commands in a specific working directory. This avoids
 // the goroutine-unsafe os.Chdir() when running commands in different directories.

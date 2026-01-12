@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -8,9 +9,11 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/magefile/mage/mg"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/mrz1836/mage-x/pkg/common/cache"
 	"github.com/mrz1836/mage-x/pkg/common/env"
@@ -29,6 +32,30 @@ var (
 	ErrInvalidMainPath       = errors.New("configured main path is invalid")
 	ErrNoPackagesInWorkspace = errors.New("no packages found in workspace modules")
 	ErrNotInWorkspaceMode    = errors.New("buildWorkspaceModules called but not in workspace mode")
+)
+
+// Build strategy thresholds and defaults
+const (
+	// Memory thresholds for build strategy selection (in MB)
+	MemoryLowThresholdMB    = 4000 // Below this, use aggressive batching
+	MemoryMediumThresholdMB = 8000 // Below this, use moderate batching
+
+	// Package count thresholds for build strategy selection
+	PackageCountHighThreshold   = 500 // Above this, use small batches regardless of memory
+	PackageCountMediumThreshold = 200 // Above this, use medium batches
+	PackageCountLowThreshold    = 50  // Above this with high memory usage, use mains-first
+
+	// Memory utilization threshold (percentage)
+	MemoryUtilizationPercent = 80
+
+	// Batch sizes for different strategies
+	BatchSizeSmall   = 5  // For low memory/high package count scenarios
+	BatchSizeMedium  = 20 // For medium resource scenarios
+	BatchSizeDefault = 10 // Default batch size
+
+	// Delays between batches (in milliseconds)
+	BatchDelayLowMemoryMs    = 500 // Delay for low memory scenarios
+	BatchDelayMediumMemoryMs = 200 // Delay for medium resource scenarios
 )
 
 // CacheManagerProvider defines the interface for providing cache manager instances
@@ -276,18 +303,27 @@ func (b Build) determineLDFlags(cfg *Config) string {
 	if ldflags != "" {
 		return ldflags
 	}
+	return strings.Join(defaultLDFlags(), " ")
+}
 
-	// Use default ldflags
-	defaultLDFlags := []string{
+// defaultLDFlags returns the default linker flags for builds.
+// This is extracted as a helper to avoid duplication between determineLDFlags and buildFlags.
+func defaultLDFlags() []string {
+	// Call time.Now() once for consistency across buildDate and buildTime
+	now := time.Now().Format(time.RFC3339)
+	ldflags := []string{
 		fmt.Sprintf("-X main.version=%s", getVersion()),
 		fmt.Sprintf("-X main.commit=%s", getCommit()),
-		fmt.Sprintf("-X main.buildDate=%s", time.Now().Format(time.RFC3339)),
-		fmt.Sprintf("-X main.buildTime=%s", time.Now().Format(time.RFC3339)),
+		fmt.Sprintf("-X main.buildDate=%s", now),
+		fmt.Sprintf("-X main.buildTime=%s", now),
 	}
+
+	// Add stripping flags for release builds (not debug)
 	if !env.GetBool("DEBUG", false) {
-		defaultLDFlags = append(defaultLDFlags, "-s", "-w")
+		ldflags = append(ldflags, "-s", "-w")
 	}
-	return strings.Join(defaultLDFlags, " ")
+
+	return ldflags
 }
 
 // findSourceFiles finds source files for cache hash
@@ -417,19 +453,47 @@ func (b Build) All() error {
 	}
 
 	start := time.Now()
-	buildErrs := make(chan error, len(config.Build.Platforms))
+
+	// Create a cancellable context for coordinated shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Use errgroup with context for coordinated cancellation
+	g, ctx := errgroup.WithContext(ctx)
+
+	var mu sync.Mutex
+	var buildErrors []string
 
 	for _, platform := range config.Build.Platforms {
-		go func(p string) {
-			buildErrs <- b.Platform(p)
-		}(platform)
+		// capture loop variable
+		g.Go(func() error {
+			defer func() {
+				if p := recover(); p != nil {
+					mu.Lock()
+					defer mu.Unlock()
+					buildErrors = append(buildErrors, fmt.Sprintf("panic building %s: %v", platform, p))
+				}
+			}()
+
+			// Check for context cancellation before starting build
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+
+			if buildErr := b.Platform(platform); buildErr != nil {
+				mu.Lock()
+				defer mu.Unlock()
+				buildErrors = append(buildErrors, buildErr.Error())
+			}
+			return nil // Continue on error to collect all build failures
+		})
 	}
 
-	var buildErrors []string
-	for range config.Build.Platforms {
-		if err := <-buildErrs; err != nil {
-			buildErrors = append(buildErrors, err.Error())
-		}
+	// Wait for all goroutines; context cancellation is now respected
+	if waitErr := g.Wait(); waitErr != nil && !errors.Is(waitErr, context.Canceled) {
+		utils.Warn("Build group wait error: %v", waitErr)
 	}
 
 	if len(buildErrors) > 0 {
@@ -437,6 +501,30 @@ func (b Build) All() error {
 	}
 
 	utils.Success("Built all platforms in %s", utils.FormatDuration(time.Since(start)))
+	return nil
+}
+
+// buildWithFallbackEnv builds using os.Setenv for runners that don't support env
+// Note: This path is not goroutine-safe for concurrent cross-compilation
+func buildWithFallbackEnv(runner CommandRunner, p utils.Platform, args []string, platform string) error {
+	if err := os.Setenv("GOOS", p.OS); err != nil {
+		return fmt.Errorf("failed to set GOOS: %w", err)
+	}
+	if err := os.Setenv("GOARCH", p.Arch); err != nil {
+		return fmt.Errorf("failed to set GOARCH: %w", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("GOOS"); err != nil {
+			utils.Error("failed to unset GOOS: %v", err)
+		}
+		if err := os.Unsetenv("GOARCH"); err != nil {
+			utils.Error("failed to unset GOARCH: %v", err)
+		}
+	}()
+
+	if err := runner.RunCmd("go", args...); err != nil {
+		return fmt.Errorf("build %s failed: %w", platform, err)
+	}
 	return nil
 }
 
@@ -473,24 +561,24 @@ func (b Build) Platform(platform string) error {
 
 	utils.Info("Building %s", platform)
 
-	// Set environment for cross-compilation
-	if err := os.Setenv("GOOS", p.OS); err != nil {
-		return fmt.Errorf("failed to set GOOS: %w", err)
+	// Build environment for cross-compilation
+	// This is goroutine-safe, unlike os.Setenv which affects the entire process
+	crossEnv := []string{
+		"GOOS=" + p.OS,
+		"GOARCH=" + p.Arch,
 	}
-	if err := os.Setenv("GOARCH", p.Arch); err != nil {
-		return fmt.Errorf("failed to set GOARCH: %w", err)
-	}
-	defer func() {
-		if err := os.Unsetenv("GOOS"); err != nil {
-			utils.Warn("Failed to unset GOOS: %v", err)
-		}
-		if err := os.Unsetenv("GOARCH"); err != nil {
-			utils.Warn("Failed to unset GOARCH: %v", err)
-		}
-	}()
 
-	if err := GetRunner().RunCmd("go", args...); err != nil {
-		return fmt.Errorf("build %s failed: %w", platform, err)
+	// Use EnvCommandRunner if available for goroutine-safe execution
+	runner := GetRunner()
+	if envRunner, ok := runner.(EnvCommandRunner); ok {
+		if err := envRunner.RunCmdWithEnv(crossEnv, "go", args...); err != nil {
+			return fmt.Errorf("build %s failed: %w", platform, err)
+		}
+	} else {
+		// Fallback for runners that don't support env (e.g., mocks in tests)
+		if err := buildWithFallbackEnv(runner, p, args, platform); err != nil {
+			return err
+		}
 	}
 
 	utils.Success("Built %s", outputPath)
@@ -705,7 +793,7 @@ func (b Build) PreBuildWithArgs(argsList ...string) error {
 	if batchSizeStr == "" && config.Build.PreBuild.BatchSize > 0 {
 		batchSizeStr = fmt.Sprintf("%d", config.Build.PreBuild.BatchSize)
 	}
-	batchSize := 10 // Default
+	batchSize := BatchSizeDefault
 	if batchSizeStr != "" {
 		if bs, err := strconv.Atoi(batchSizeStr); err == nil && bs > 0 {
 			batchSize = bs
@@ -1026,7 +1114,7 @@ func (b Build) findMainPackages() ([]string, error) {
 // splitIntoBatches divides a slice of packages into smaller batches
 func (b Build) splitIntoBatches(packages []string, batchSize int) [][]string {
 	if batchSize <= 0 {
-		batchSize = 10 // Default batch size
+		batchSize = BatchSizeDefault // Default batch size
 	}
 
 	var batches [][]string
@@ -1083,7 +1171,7 @@ func (b Build) buildIncremental(batchSize, delayMs int, exclude string, verbose 
 
 	// Set default batch size if not specified
 	if batchSize <= 0 {
-		batchSize = 10
+		batchSize = BatchSizeDefault
 	}
 
 	// Split into batches
@@ -1179,7 +1267,7 @@ func (b Build) buildMainsFirst(batchSize int, mainsOnly bool, exclude string, ve
 
 	// Build remaining packages in batches
 	if batchSize <= 0 {
-		batchSize = 10
+		batchSize = BatchSizeDefault
 	}
 
 	batches := b.splitIntoBatches(remainingPackages, batchSize)
@@ -1234,29 +1322,29 @@ func (b Build) buildSmart(exclude string, verbose bool, parallelism string) erro
 	estimatedMemoryMB := estimatedMemory / (1024 * 1024)
 	utils.Info("Estimated memory requirement: %s", utils.FormatMemory(estimatedMemory))
 
-	// Select strategy based on heuristics
+	// Select strategy based on heuristics (using defined constants for thresholds)
 	var strategy string
 	var batchSize int
 	var delayMs int
 
 	switch {
-	case availableMemoryMB < 4000 || packageCount > 500:
+	case availableMemoryMB < MemoryLowThresholdMB || packageCount > PackageCountHighThreshold:
 		// Low memory or many packages: Use small batches
 		strategy = "incremental (low memory/high package count)"
-		batchSize = 5
-		delayMs = 500
+		batchSize = BatchSizeSmall
+		delayMs = BatchDelayLowMemoryMs
 
-	case availableMemoryMB < 8000 || packageCount > 200:
+	case availableMemoryMB < MemoryMediumThresholdMB || packageCount > PackageCountMediumThreshold:
 		// Medium resources: Use medium batches
 		strategy = "incremental (medium resources)"
-		batchSize = 20
-		delayMs = 200
+		batchSize = BatchSizeMedium
+		delayMs = BatchDelayMediumMemoryMs
 
-	case packageCount > 50 && estimatedMemoryMB > availableMemoryMB*80/100:
+	case packageCount > PackageCountLowThreshold && estimatedMemoryMB > availableMemoryMB*MemoryUtilizationPercent/100:
 		// Memory usage would be close to limit: Use mains-first
 		strategy = "mains-first (optimize memory usage)"
 		utils.Info("Selected strategy: %s", strategy)
-		return b.buildMainsFirst(10, false, exclude, verbose, parallelism)
+		return b.buildMainsFirst(BatchSizeDefault, false, exclude, verbose, parallelism)
 
 	default:
 		// Sufficient resources: Use full build
@@ -1342,20 +1430,8 @@ func buildFlags(cfg *Config) []string {
 		expandedLDFlags := expandLDFlagsTemplates(cfg.Build.LDFlags)
 		flags = append(flags, "-ldflags", strings.Join(expandedLDFlags, " "))
 	} else {
-		// Default ldflags
-		ldflags := []string{
-			fmt.Sprintf("-X main.version=%s", getVersion()),
-			fmt.Sprintf("-X main.commit=%s", getCommit()),
-			fmt.Sprintf("-X main.buildDate=%s", time.Now().Format(time.RFC3339)),
-			fmt.Sprintf("-X main.buildTime=%s", time.Now().Format(time.RFC3339)),
-		}
-
-		// Add stripping flags for release builds
-		if !env.GetBool("DEBUG", false) {
-			ldflags = append(ldflags, "-s", "-w")
-		}
-
-		flags = append(flags, "-ldflags", strings.Join(ldflags, " "))
+		// Use shared default ldflags helper
+		flags = append(flags, "-ldflags", strings.Join(defaultLDFlags(), " "))
 	}
 
 	// Add trimpath

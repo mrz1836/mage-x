@@ -20,10 +20,34 @@ var (
 )
 
 // isPathTraversal checks if a path contains directory traversal patterns.
-// It cleans the path first to normalize it, then checks for ".." components.
+// It checks for ".." as a path component (not in filenames like "file..txt"),
+// but defensively rejects filenames that START with ".." (like "..gitignore").
 func isPathTraversal(path string) bool {
-	cleanPath := filepath.Clean(path)
-	return strings.Contains(cleanPath, "..")
+	// Check the original path for URL-encoded traversal attempts
+	if strings.Contains(path, "%2e") || strings.Contains(path, "%2E") ||
+		strings.Contains(path, "%2f") || strings.Contains(path, "%2F") {
+		return true
+	}
+
+	// Split path into components and check each one
+	// This correctly handles both "/" and filepath.Separator
+	parts := strings.FieldsFunc(path, func(r rune) bool {
+		return r == '/' || r == filepath.Separator
+	})
+
+	for _, part := range parts {
+		// Reject ".." as path component (classic traversal)
+		if part == ".." {
+			return true
+		}
+		// Defensively reject path components starting with ".."
+		// (e.g., "..gitignore" could be a typo for "../gitignore")
+		if strings.HasPrefix(part, "..") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // DefaultFileOperator implements FileOperator using standard library
@@ -44,7 +68,10 @@ func (d *DefaultFileOperator) ReadFile(path string) ([]byte, error) {
 
 // WriteFile writes data to a file with the specified permissions
 func (d *DefaultFileOperator) WriteFile(path string, data []byte, perm os.FileMode) error {
-	return os.WriteFile(path, data, perm)
+	if isPathTraversal(path) {
+		return ErrPathTraversalDetected
+	}
+	return os.WriteFile(filepath.Clean(path), data, perm)
 }
 
 // Exists checks if a file or directory exists

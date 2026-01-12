@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -415,18 +416,20 @@ func (a *StructuredAdapter) logWithContext(ctx context.Context, level Level, for
 		logLine = fmt.Sprintf("[req:%s] %s", requestID, logLine)
 	}
 
-	// Add fields if present
+	// Add fields if present (using strings.Builder for efficient concatenation)
 	if len(a.fields) > 0 {
-		logLine += " {"
+		var sb strings.Builder
+		sb.WriteString(" {")
 		first := true
 		for k, v := range a.fields {
 			if !first {
-				logLine += ", "
+				sb.WriteString(", ")
 			}
-			logLine += fmt.Sprintf("%s=%v", k, v)
+			fmt.Fprintf(&sb, "%s=%v", k, v)
 			first = false
 		}
-		logLine += "}"
+		sb.WriteString("}")
+		logLine += sb.String()
 	}
 
 	//nolint:errcheck // Log output errors are intentionally ignored

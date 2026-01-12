@@ -83,6 +83,17 @@ func DoWithData[T any](ctx context.Context, cfg *Config, fn func() (T, error)) (
 	var lastResult T
 	var lastErr error
 
+	// Create a reusable timer to avoid allocating new timers on each retry
+	// This prevents potential memory leaks in long-running retry loops
+	timer := time.NewTimer(0)
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+	defer timer.Stop()
+
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		// Check context before attempting
 		if ctx.Err() != nil {
@@ -111,11 +122,12 @@ func DoWithData[T any](ctx context.Context, cfg *Config, fn func() (T, error)) (
 				cfg.OnRetry(attempt, err, delay)
 			}
 
-			// Wait with context cancellation support
+			// Reuse timer to avoid allocations (more efficient than time.After)
+			timer.Reset(delay)
 			select {
 			case <-ctx.Done():
 				return lastResult, ctx.Err()
-			case <-time.After(delay):
+			case <-timer.C:
 			}
 		}
 	}

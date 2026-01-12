@@ -21,14 +21,14 @@ type DefaultConfigManager struct {
 	sources   []Source
 	validator Validator
 	watching  bool
-	stopWatch chan bool
+	stopWatch chan struct{} // Using struct{} for zero-allocation signaling
 }
 
 // NewDefaultConfigManager creates a new default config manager
 func NewDefaultConfigManager() *DefaultConfigManager {
 	return &DefaultConfigManager{
-		sources:   make([]Source, 0),
-		stopWatch: make(chan bool, 1),
+		sources: make([]Source, 0),
+		// stopWatch is created lazily in Watch() to allow proper cleanup
 	}
 }
 
@@ -101,15 +101,19 @@ func (m *DefaultConfigManager) Watch(_ func(interface{})) error {
 		return errAlreadyWatching
 	}
 
+	// Create a fresh channel for this watch session
+	m.stopWatch = make(chan struct{})
 	m.watching = true
+
+	// Capture channel reference to avoid race with StopWatching
+	stopCh := m.stopWatch
 
 	// This is a simplified implementation
 	// In a real implementation, this would use filesystem watchers and other mechanisms
 	go func() {
-		<-m.stopWatch
-		m.mu.Lock()
-		m.watching = false
-		m.mu.Unlock()
+		<-stopCh
+		// The watching state is set to false in StopWatching, not here
+		// to avoid race conditions
 	}()
 
 	return nil
@@ -120,12 +124,19 @@ func (m *DefaultConfigManager) StopWatching() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.watching {
-		select {
-		case m.stopWatch <- true:
-		default:
-		}
+	if m.watching && m.stopWatch != nil {
+		// Set watching to false first, then close the channel
+		m.watching = false
+		close(m.stopWatch)
+		m.stopWatch = nil
 	}
+}
+
+// IsWatching returns true if the manager is currently watching for changes
+func (m *DefaultConfigManager) IsWatching() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.watching
 }
 
 // GetActiveSources returns list of currently active sources

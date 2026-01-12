@@ -889,3 +889,116 @@ func BenchmarkDownloadWithRetries(b *testing.B) {
 		}
 	}
 }
+
+// TestSplitArgs tests the splitArgs function with various inputs
+func TestSplitArgs(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "empty string",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:     "single arg",
+			input:    "hello",
+			expected: []string{"hello"},
+		},
+		{
+			name:     "multiple args",
+			input:    "hello world",
+			expected: []string{"hello", "world"},
+		},
+		{
+			name:     "multiple spaces",
+			input:    "hello   world",
+			expected: []string{"hello", "world"},
+		},
+		{
+			name:     "tabs",
+			input:    "hello\tworld",
+			expected: []string{"hello", "world"},
+		},
+		{
+			name:     "double quoted string",
+			input:    `hello "world with spaces" foo`,
+			expected: []string{"hello", "world with spaces", "foo"},
+		},
+		{
+			name:     "single quoted string",
+			input:    `hello 'world with spaces' foo`,
+			expected: []string{"hello", "world with spaces", "foo"},
+		},
+		{
+			name:     "mixed quotes",
+			input:    `"first arg" second 'third arg'`,
+			expected: []string{"first arg", "second", "third arg"},
+		},
+		{
+			name:     "escaped quote in arg",
+			input:    `hello \"world`,
+			expected: []string{"hello", `\"world`}, // Backslash is preserved
+		},
+		{
+			name:     "complex command",
+			input:    `-flag "value with spaces" --option 'another value'`,
+			expected: []string{"-flag", "value with spaces", "--option", "another value"},
+		},
+		{
+			name:     "leading spaces",
+			input:    "  hello world",
+			expected: []string{"hello", "world"},
+		},
+		{
+			name:     "trailing spaces",
+			input:    "hello world  ",
+			expected: []string{"hello", "world"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := splitArgs(tt.input)
+			if len(result) != len(tt.expected) {
+				t.Errorf("splitArgs(%q) returned %d args, expected %d. Got: %v, Expected: %v",
+					tt.input, len(result), len(tt.expected), result, tt.expected)
+				return
+			}
+			for i, arg := range result {
+				if arg != tt.expected[i] {
+					t.Errorf("splitArgs(%q)[%d] = %q, expected %q",
+						tt.input, i, arg, tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkSplitArgs benchmarks the splitArgs function with strings.Builder
+func BenchmarkSplitArgs(b *testing.B) {
+	testCases := []string{
+		"",
+		"simple",
+		"hello world",
+		`-flag "value with spaces" --option 'another value' more args here`,
+		strings.Repeat("arg ", 100), // 100 arguments
+	}
+
+	for _, tc := range testCases {
+		name := tc
+		if len(name) > 20 {
+			name = name[:20] + "..."
+		}
+		if name == "" {
+			name = "empty"
+		}
+		b.Run(name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = splitArgs(tc)
+			}
+		})
+	}
+}

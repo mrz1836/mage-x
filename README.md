@@ -609,8 +609,14 @@ magex format:check        # Check if files are properly formatted
 <summary>📊 <strong>Analysis & Metrics</strong></summary>
 
 ```bash
-magex metrics:loc         # Analyze lines of code
-magex metrics:loc json    # Output LOC metrics as JSON
+# Lines of Code Analysis (Multi-language support)
+magex metrics:loc              # Analyze Go lines of code (default)
+magex metrics:loc lang=go      # Explicitly analyze Go files
+magex metrics:loc lang=js      # Analyze JavaScript/TypeScript files (.js, .ts, .jsx, .tsx)
+magex metrics:loc lang=yaml    # Analyze YAML files (.yaml, .yml)
+magex metrics:loc lang=js json # JS metrics with JSON output
+
+# Other Metrics
 magex metrics:mage        # Analyze magefiles and targets
 magex metrics:coverage    # Generate coverage reports
 magex metrics:complexity  # Analyze code complexity

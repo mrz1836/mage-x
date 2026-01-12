@@ -4,8 +4,35 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 )
+
+// builderPool provides a pool of strings.Builder instances for efficient
+// memory reuse during error formatting operations. This reduces GC pressure
+// in high-throughput error scenarios.
+//
+//nolint:gochecknoglobals // Pool for performance optimization
+var builderPool = sync.Pool{
+	New: func() interface{} {
+		return new(strings.Builder)
+	},
+}
+
+// getBuilder retrieves a strings.Builder from the pool, resetting it for reuse.
+func getBuilder() *strings.Builder {
+	sb, ok := builderPool.Get().(*strings.Builder)
+	if !ok {
+		sb = new(strings.Builder)
+	}
+	sb.Reset()
+	return sb
+}
+
+// putBuilder returns a strings.Builder to the pool for future reuse.
+func putBuilder(sb *strings.Builder) {
+	builderPool.Put(sb)
+}
 
 // DefaultErrorFormatter is the default implementation of ErrorFormatter
 type DefaultErrorFormatter struct {
@@ -49,11 +76,13 @@ func (f *DefaultErrorFormatter) FormatChain(chain ErrorChain) string {
 		return "no errors in chain"
 	}
 
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Error chain (%d errors):\n", chain.Count()))
+	sb := getBuilder()
+	defer putBuilder(sb)
+
+	fmt.Fprintf(sb, "Error chain (%d errors):\n", chain.Count())
 
 	for i, err := range chain.Errors() {
-		sb.WriteString(fmt.Sprintf("\n[%d] ", i+1))
+		fmt.Fprintf(sb, "\n[%d] ", i+1)
 		var mageErr MageError
 		if errors.As(err, &mageErr) {
 			sb.WriteString(f.formatMageError(mageErr, f.defaultOptions, 1))
@@ -102,12 +131,14 @@ func (f *DefaultErrorFormatter) formatMageError(err MageError, opts FormatOption
 
 // formatCompactError formats an error in compact single-line format
 func (f *DefaultErrorFormatter) formatCompactError(err MageError, opts FormatOptions) string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("[%s/%s] %s", err.Code(), err.Severity(), err.Error()))
+	sb := getBuilder()
+	defer putBuilder(sb)
+
+	fmt.Fprintf(sb, "[%s/%s] %s", err.Code(), err.Severity(), err.Error())
 
 	if opts.IncludeFields && len(err.Context().Fields) > 0 {
 		fields := f.formatFields(err.Context().Fields, opts)
-		sb.WriteString(fmt.Sprintf(" {%s}", fields))
+		fmt.Fprintf(sb, " {%s}", fields)
 	}
 
 	return sb.String()
@@ -115,11 +146,13 @@ func (f *DefaultErrorFormatter) formatCompactError(err MageError, opts FormatOpt
 
 // formatFullError formats an error in full detailed format
 func (f *DefaultErrorFormatter) formatFullError(err MageError, opts FormatOptions, depth int) string {
-	var sb strings.Builder
+	sb := getBuilder()
+	defer putBuilder(sb)
+
 	indent := f.getIndent(depth)
 
-	f.writeErrorHeader(&sb, err, opts, indent)
-	f.writeErrorDetails(&sb, err, opts, indent, depth)
+	f.writeErrorHeader(sb, err, opts, indent)
+	f.writeErrorDetails(sb, err, opts, indent, depth)
 
 	return sb.String()
 }

@@ -4,6 +4,8 @@ package security
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -36,6 +38,9 @@ var (
 	ErrURLNullByte             = errors.New("URL contains null byte")
 	ErrURLSuspiciousPattern    = errors.New("suspicious pattern detected in URL")
 	ErrURLWhitespace           = errors.New("URL cannot have leading/trailing whitespace")
+	ErrURLInternalIP           = errors.New("URL points to internal/private IP address")
+	ErrURLLoopback             = errors.New("URL points to loopback address")
+	ErrURLMetadataEndpoint     = errors.New("URL points to cloud metadata endpoint")
 	ErrVersionCommandInjection = errors.New("version contains command injection pattern")
 	ErrVersionControlChar      = errors.New("version contains control character")
 	ErrVersionDoubleV          = errors.New("double 'v' prefix not allowed")
@@ -59,6 +64,10 @@ var (
 
 	// Safe filename regex
 	safeFilenameRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_.]+$`)
+
+	// Environment variable regexes (pre-compiled for performance)
+	envVarStartRegex = regexp.MustCompile(`^[a-zA-Z_]`)
+	envVarFullRegex  = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 )
 
 // ValidateVersion validates a semantic version string
@@ -223,6 +232,59 @@ func ValidateURL(url string) error {
 		return ErrURLInvalidProtocol
 	}
 
+	// SSRF Protection: Check for internal/private IP addresses
+	if err := validateURLHost(url); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateURLHost checks the URL host for SSRF vulnerabilities by detecting
+// internal IP addresses, loopback addresses, and cloud metadata endpoints.
+func validateURLHost(rawURL string) error {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL format: %w", err)
+	}
+
+	host := parsedURL.Hostname()
+	if host == "" {
+		return nil // No host to validate
+	}
+
+	// Try to parse as IP address
+	ip := net.ParseIP(host)
+	if ip == nil {
+		// Not a direct IP address, could be a hostname
+		// For hostnames, we can't validate without DNS resolution
+		// which we avoid to prevent DNS rebinding attacks
+		return nil
+	}
+
+	// Check loopback (127.0.0.0/8 for IPv4, ::1 for IPv6)
+	if ip.IsLoopback() {
+		return ErrURLLoopback
+	}
+
+	// Check private/internal ranges
+	// IPv4: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+	// IPv6: fc00::/7 (unique local addresses)
+	if ip.IsPrivate() {
+		return ErrURLInternalIP
+	}
+
+	// Check link-local addresses (169.254.0.0/16 for IPv4, fe80::/10 for IPv6)
+	// This includes AWS metadata endpoint 169.254.169.254
+	if ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return ErrURLMetadataEndpoint
+	}
+
+	// Check unspecified addresses (0.0.0.0, ::)
+	if ip.IsUnspecified() {
+		return ErrURLInternalIP
+	}
+
 	return nil
 }
 
@@ -278,13 +340,13 @@ func ValidateEnvVar(name string) error {
 		return ErrEnvVarNameEmpty
 	}
 
-	// Must start with letter or underscore
-	if !regexp.MustCompile(`^[a-zA-Z_]`).MatchString(name) {
+	// Must start with letter or underscore (uses pre-compiled regex for performance)
+	if !envVarStartRegex.MatchString(name) {
 		return ErrEnvVarInvalidStart
 	}
 
-	// Can only contain alphanumeric and underscore
-	if !regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`).MatchString(name) {
+	// Can only contain alphanumeric and underscore (uses pre-compiled regex for performance)
+	if !envVarFullRegex.MatchString(name) {
 		return ErrEnvVarInvalidChar
 	}
 

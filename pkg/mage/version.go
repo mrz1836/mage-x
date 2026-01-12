@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -977,8 +978,10 @@ func getPreviousTag() string {
 
 // getLatestGitHubRelease fetches the latest release from GitHub
 func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
-	return utils.HTTPGetJSON[GitHubRelease](url, 10*time.Second)
+	return utils.HTTPGetJSON[GitHubRelease](ctx, url)
 }
 
 // isNewer checks if version a is newer than version b

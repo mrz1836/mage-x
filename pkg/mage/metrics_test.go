@@ -255,13 +255,13 @@ func TestSafeAverageBytes(t *testing.T) {
 func TestCountPackages(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "packages_test")
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = os.RemoveAll(tmpDir) }) //nolint:errcheck // cleanup
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup //nolint:errcheck // cleanup
 
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = os.Chdir(originalDir) }) //nolint:errcheck // cleanup
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup //nolint:errcheck // cleanup
 
 	// Create file in root directory
 	err = os.WriteFile("root.go", []byte("package main"), 0o600)
@@ -552,7 +552,7 @@ func TestMetricsCoverage(t *testing.T) {
 		originalDir, err := os.Getwd()
 		require.NoError(t, err)
 		require.NoError(t, os.Chdir(tmpDir))
-		t.Cleanup(func() { _ = os.Chdir(originalDir) }) //nolint:errcheck // cleanup
+		t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup //nolint:errcheck // cleanup
 
 		err = m.Coverage()
 		require.NoError(t, err)
@@ -581,7 +581,7 @@ func TestMetricsCoverage(t *testing.T) {
 		originalDir, err := os.Getwd()
 		require.NoError(t, err)
 		require.NoError(t, os.Chdir(tmpDir))
-		t.Cleanup(func() { _ = os.Chdir(originalDir) }) //nolint:errcheck // cleanup
+		t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup //nolint:errcheck // cleanup
 
 		err = m.Coverage()
 		require.Error(t, err)
@@ -879,7 +879,7 @@ func TestMetricsSize(t *testing.T) {
 		originalDir, err := os.Getwd()
 		require.NoError(t, err)
 		require.NoError(t, os.Chdir(tmpDir))
-		t.Cleanup(func() { _ = os.Chdir(originalDir) }) //nolint:errcheck // cleanup
+		t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup //nolint:errcheck // cleanup
 
 		// Create a fake binary file that will be created by mock
 		callCount := 0
@@ -899,7 +899,7 @@ func TestMetricsSize(t *testing.T) {
 		originalDir, err := os.Getwd()
 		require.NoError(t, err)
 		require.NoError(t, os.Chdir(tmpDir))
-		t.Cleanup(func() { _ = os.Chdir(originalDir) }) //nolint:errcheck // cleanup
+		t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup //nolint:errcheck // cleanup
 
 		// Don't create the binary, so stat will fail
 		err = SetRunner(&sizeMockRunner{
@@ -1243,7 +1243,7 @@ func TestMetricsCoverageCleanup(t *testing.T) {
 		originalDir, err := os.Getwd()
 		require.NoError(t, err)
 		require.NoError(t, os.Chdir(tmpDir))
-		t.Cleanup(func() { _ = os.Chdir(originalDir) }) //nolint:errcheck // cleanup
+		t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup //nolint:errcheck // cleanup
 
 		// Create a mock that creates the coverage file in current directory
 		err = SetRunner(&coverageCleanupMockRunner{
@@ -1303,4 +1303,679 @@ func (m *coverageCleanupMockRunner) RunCmdDirOutput(_, cmd string, args ...strin
 
 func (m *coverageCleanupMockRunner) RunCmdEnv(env []string, cmd string, args ...string) error {
 	return m.RunCmd(cmd, args...)
+}
+
+// ============================================================================
+// Multi-language LOC Tests
+// ============================================================================
+
+// TestGetLangConfig tests the getLangConfig helper function
+func TestGetLangConfig(t *testing.T) {
+	testCases := []struct {
+		name        string
+		lang        string
+		expectError bool
+		expectName  string
+	}{
+		{
+			name:        "go language",
+			lang:        "go",
+			expectError: false,
+			expectName:  "Go",
+		},
+		{
+			name:        "js language",
+			lang:        "js",
+			expectError: false,
+			expectName:  "JavaScript",
+		},
+		{
+			name:        "yaml language",
+			lang:        "yaml",
+			expectError: false,
+			expectName:  "YAML",
+		},
+		{
+			name:        "empty defaults to go",
+			lang:        "",
+			expectError: false,
+			expectName:  "Go",
+		},
+		{
+			name:        "case insensitive",
+			lang:        "GO",
+			expectError: false,
+			expectName:  "Go",
+		},
+		{
+			name:        "invalid language",
+			lang:        "python",
+			expectError: true,
+		},
+		{
+			name:        "another invalid language",
+			lang:        "rust",
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			config, err := getLangConfig(tc.lang)
+			if tc.expectError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "invalid language")
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectName, config.name)
+			}
+		})
+	}
+}
+
+// TestHasExtension tests the hasExtension helper function
+func TestHasExtension(t *testing.T) {
+	testCases := []struct {
+		name       string
+		path       string
+		extensions []string
+		expected   bool
+	}{
+		{
+			name:       "go file",
+			path:       "main.go",
+			extensions: []string{".go"},
+			expected:   true,
+		},
+		{
+			name:       "js file",
+			path:       "index.js",
+			extensions: []string{".js", ".ts", ".jsx", ".tsx"},
+			expected:   true,
+		},
+		{
+			name:       "ts file",
+			path:       "app.ts",
+			extensions: []string{".js", ".ts", ".jsx", ".tsx"},
+			expected:   true,
+		},
+		{
+			name:       "tsx file",
+			path:       "Component.tsx",
+			extensions: []string{".js", ".ts", ".jsx", ".tsx"},
+			expected:   true,
+		},
+		{
+			name:       "yaml file",
+			path:       "config.yaml",
+			extensions: []string{".yaml", ".yml"},
+			expected:   true,
+		},
+		{
+			name:       "yml file",
+			path:       "config.yml",
+			extensions: []string{".yaml", ".yml"},
+			expected:   true,
+		},
+		{
+			name:       "no match",
+			path:       "readme.md",
+			extensions: []string{".go"},
+			expected:   false,
+		},
+		{
+			name:       "empty extensions",
+			path:       "file.txt",
+			extensions: []string{},
+			expected:   false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := hasExtension(tc.path, tc.extensions)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+// TestIsTestFile tests the isTestFile helper function
+func TestIsTestFile(t *testing.T) {
+	testCases := []struct {
+		name         string
+		path         string
+		testPatterns []string
+		expected     bool
+	}{
+		{
+			name:         "go test file",
+			path:         "main_test.go",
+			testPatterns: []string{"_test.go"},
+			expected:     true,
+		},
+		{
+			name:         "js test file with .test.",
+			path:         "app.test.js",
+			testPatterns: []string{".test.", ".spec.", "__tests__"},
+			expected:     true,
+		},
+		{
+			name:         "js spec file",
+			path:         "app.spec.ts",
+			testPatterns: []string{".test.", ".spec.", "__tests__"},
+			expected:     true,
+		},
+		{
+			name:         "file in __tests__ directory",
+			path:         "__tests__/utils.js",
+			testPatterns: []string{".test.", ".spec.", "__tests__"},
+			expected:     true,
+		},
+		{
+			name:         "nested __tests__ directory",
+			path:         "src/__tests__/helpers/format.js",
+			testPatterns: []string{".test.", ".spec.", "__tests__"},
+			expected:     true,
+		},
+		{
+			name:         "regular js file",
+			path:         "index.js",
+			testPatterns: []string{".test.", ".spec.", "__tests__"},
+			expected:     false,
+		},
+		{
+			name:         "regular go file",
+			path:         "main.go",
+			testPatterns: []string{"_test.go"},
+			expected:     false,
+		},
+		{
+			name:         "empty patterns",
+			path:         "file.yaml",
+			testPatterns: []string{},
+			expected:     false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := isTestFile(tc.path, tc.testPatterns)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+// TestMetricsLOCJavaScript tests LOC for JavaScript files
+func TestMetricsLOCJavaScript(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_js_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create JS source file
+	jsContent := "const x = 1;\n// comment\nfunction hello() {\n  console.log('hi');\n}\n"
+	err = os.WriteFile("index.js", []byte(jsContent), 0o600)
+	require.NoError(t, err)
+
+	// Create JS test file
+	testContent := "const test = require('tape');\n// test comment\ntest('hello', t => {\n  t.pass();\n});\n"
+	err = os.WriteFile("index.test.js", []byte(testContent), 0o600)
+	require.NoError(t, err)
+
+	m := Metrics{}
+
+	t.Run("default output", func(t *testing.T) {
+		err := m.LOC("lang=js")
+		require.NoError(t, err)
+	})
+
+	t.Run("json output", func(t *testing.T) {
+		err := m.LOC("lang=js", "json=true")
+		require.NoError(t, err)
+	})
+}
+
+// TestMetricsLOCTypeScript tests LOC for TypeScript files
+func TestMetricsLOCTypeScript(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_ts_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create TS source file
+	tsContent := "interface User {\n  name: string;\n}\n// comment\nconst user: User = { name: 'test' };\n"
+	err = os.WriteFile("types.ts", []byte(tsContent), 0o600)
+	require.NoError(t, err)
+
+	m := Metrics{}
+
+	t.Run("typescript files", func(t *testing.T) {
+		err := m.LOC("lang=js")
+		require.NoError(t, err)
+	})
+}
+
+// TestMetricsLOCJSXTSX tests LOC for JSX and TSX files
+func TestMetricsLOCJSXTSX(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_jsx_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create JSX file
+	jsxContent := "import React from 'react';\n// component\nfunction App() {\n  return <div>Hello</div>;\n}\n"
+	err = os.WriteFile("App.jsx", []byte(jsxContent), 0o600)
+	require.NoError(t, err)
+
+	// Create TSX file
+	tsxContent := "import React from 'react';\ninterface Props { name: string; }\nconst Hello: React.FC<Props> = ({ name }) => <span>{name}</span>;\n"
+	err = os.WriteFile("Hello.tsx", []byte(tsxContent), 0o600)
+	require.NoError(t, err)
+
+	m := Metrics{}
+
+	t.Run("jsx and tsx files", func(t *testing.T) {
+		err := m.LOC("lang=js")
+		require.NoError(t, err)
+	})
+}
+
+// TestMetricsLOCYAML tests LOC for YAML files
+func TestMetricsLOCYAML(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_yaml_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create YAML file
+	yamlContent := "name: test\n# comment line\nversion: 1.0.0\ndependencies:\n  - foo\n  - bar\n"
+	err = os.WriteFile("config.yaml", []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	m := Metrics{}
+
+	t.Run("default output", func(t *testing.T) {
+		err := m.LOC("lang=yaml")
+		require.NoError(t, err)
+	})
+
+	t.Run("json output", func(t *testing.T) {
+		err := m.LOC("lang=yaml", "json=true")
+		require.NoError(t, err)
+	})
+}
+
+// TestMetricsLOCYAMLAlternateExt tests LOC for .yml files
+func TestMetricsLOCYAMLAlternateExt(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_yml_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create .yml file
+	ymlContent := "key: value\nanother: data\n"
+	err = os.WriteFile("config.yml", []byte(ymlContent), 0o600)
+	require.NoError(t, err)
+
+	m := Metrics{}
+
+	t.Run("yml extension", func(t *testing.T) {
+		err := m.LOC("lang=yaml")
+		require.NoError(t, err)
+	})
+}
+
+// TestMetricsLOCInvalidLang tests error handling for invalid language
+func TestMetricsLOCInvalidLang(t *testing.T) {
+	m := Metrics{}
+
+	t.Run("invalid language returns error", func(t *testing.T) {
+		err := m.LOC("lang=python")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid language")
+	})
+
+	t.Run("another invalid language", func(t *testing.T) {
+		err := m.LOC("lang=rust")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid language")
+	})
+}
+
+// TestMetricsLOCJSExcludeNodeModules tests node_modules exclusion
+func TestMetricsLOCJSExcludeNodeModules(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_js_exclude_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create source file
+	jsContent := "const x = 1;\n"
+	err = os.WriteFile("index.js", []byte(jsContent), 0o600)
+	require.NoError(t, err)
+
+	// Create node_modules directory with JS file (should be excluded)
+	nodeModulesDir := filepath.Join(tmpDir, "node_modules")
+	require.NoError(t, os.MkdirAll(nodeModulesDir, 0o750))
+	err = os.WriteFile(filepath.Join(nodeModulesDir, "dep.js"), []byte("module.exports = {};\n"), 0o600)
+	require.NoError(t, err)
+
+	config := langConfigs["js"]
+	stats, err := countLinesWithConfig(config, false)
+	require.NoError(t, err)
+
+	// Should only count index.js, not dep.js in node_modules
+	assert.Equal(t, 1, stats.Files)
+}
+
+// TestMetricsLOCJSTestFiles tests JS test file detection
+func TestMetricsLOCJSTestFiles(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_js_testfiles_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create source file
+	err = os.WriteFile("index.js", []byte("const x = 1;\n"), 0o600)
+	require.NoError(t, err)
+
+	// Create test files with different patterns
+	err = os.WriteFile("index.test.js", []byte("test('x', () => {});\n"), 0o600)
+	require.NoError(t, err)
+	err = os.WriteFile("index.spec.ts", []byte("describe('x', () => {});\n"), 0o600)
+	require.NoError(t, err)
+
+	// Create __tests__ directory
+	testsDir := filepath.Join(tmpDir, "__tests__")
+	require.NoError(t, os.MkdirAll(testsDir, 0o750))
+	err = os.WriteFile(filepath.Join(testsDir, "helper.js"), []byte("const helper = true;\n"), 0o600)
+	require.NoError(t, err)
+
+	config := langConfigs["js"]
+
+	t.Run("source files excludes tests", func(t *testing.T) {
+		sourceStats, err := countLinesWithConfig(config, false)
+		require.NoError(t, err)
+		assert.Equal(t, 1, sourceStats.Files) // Only index.js
+	})
+
+	t.Run("test files only", func(t *testing.T) {
+		testStats, err := countLinesWithConfig(config, true)
+		require.NoError(t, err)
+		assert.Equal(t, 3, testStats.Files) // index.test.js, index.spec.ts, __tests__/helper.js
+	})
+}
+
+// TestMetricsLOCJSJSONOutput tests JSON output includes language field
+func TestMetricsLOCJSJSONOutput(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_js_json_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create JS file
+	err = os.WriteFile("app.js", []byte("const app = true;\n"), 0o600)
+	require.NoError(t, err)
+
+	// Test that LOCResult includes Language field
+	result := LOCResult{
+		Language:       "js",
+		SourceFilesLOC: 100,
+	}
+
+	jsonBytes, err := json.Marshal(result)
+	require.NoError(t, err)
+
+	jsonStr := string(jsonBytes)
+	assert.Contains(t, jsonStr, `"language":"js"`)
+	assert.Contains(t, jsonStr, `"source_files_loc":100`)
+}
+
+// TestMetricsLOCYAMLComments tests YAML comment handling
+func TestMetricsLOCYAMLComments(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_yaml_comments_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create YAML file with various comments
+	yamlContent := "# Full line comment\nkey: value\n  # Indented comment\nanother: data\n\n# Comment at end\n"
+	err = os.WriteFile("config.yaml", []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	config := langConfigs["yaml"]
+	stats, err := countLinesWithConfig(config, false)
+	require.NoError(t, err)
+
+	// Should only count non-empty, non-comment lines: "key: value" and "another: data"
+	assert.Equal(t, 2, stats.Lines)
+	assert.Equal(t, 1, stats.Files)
+}
+
+// TestCountJSLinesWithStats tests the countJSLinesWithStats function
+func TestCountJSLinesWithStats(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_js_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create JS files
+	err = os.WriteFile("app.js", []byte("const x = 1;\nconst y = 2;\n"), 0o600)
+	require.NoError(t, err)
+	err = os.WriteFile("app.test.js", []byte("test();\n"), 0o600)
+	require.NoError(t, err)
+
+	stats, err := countJSLinesWithStats([]string{})
+	require.NoError(t, err)
+
+	// Should only count app.js (2 lines), not the test file
+	assert.Equal(t, 1, stats.Files)
+	assert.Equal(t, 2, stats.Lines)
+}
+
+// TestCountJSTestLinesWithStats tests the countJSTestLinesWithStats function
+func TestCountJSTestLinesWithStats(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_js_test_files_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create JS files
+	err = os.WriteFile("app.js", []byte("const x = 1;\n"), 0o600)
+	require.NoError(t, err)
+	err = os.WriteFile("app.test.js", []byte("test('x');\nexpect(1);\n"), 0o600)
+	require.NoError(t, err)
+
+	stats, err := countJSTestLinesWithStats([]string{})
+	require.NoError(t, err)
+
+	// Should only count app.test.js (2 lines)
+	assert.Equal(t, 1, stats.Files)
+	assert.Equal(t, 2, stats.Lines)
+}
+
+// TestCountYAMLLinesWithStats tests the countYAMLLinesWithStats function
+func TestCountYAMLLinesWithStats(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_yaml_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create YAML files
+	err = os.WriteFile("config.yaml", []byte("key: value\n# comment\nanother: data\n"), 0o600)
+	require.NoError(t, err)
+	err = os.WriteFile("settings.yml", []byte("setting: true\n"), 0o600)
+	require.NoError(t, err)
+
+	stats, err := countYAMLLinesWithStats([]string{})
+	require.NoError(t, err)
+
+	// Should count both files, excluding comments
+	assert.Equal(t, 2, stats.Files)
+	assert.Equal(t, 3, stats.Lines) // 2 from config.yaml, 1 from settings.yml
+}
+
+// TestCountDirectoriesForLang tests the countDirectoriesForLang function
+func TestCountDirectoriesForLang(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_dirs_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create directory structure
+	err = os.WriteFile("index.js", []byte("const x = 1;\n"), 0o600)
+	require.NoError(t, err)
+
+	srcDir := filepath.Join(tmpDir, "src")
+	require.NoError(t, os.MkdirAll(srcDir, 0o750))
+	err = os.WriteFile(filepath.Join(srcDir, "app.js"), []byte("export default {};\n"), 0o600)
+	require.NoError(t, err)
+
+	componentsDir := filepath.Join(srcDir, "components")
+	require.NoError(t, os.MkdirAll(componentsDir, 0o750))
+	err = os.WriteFile(filepath.Join(componentsDir, "Button.jsx"), []byte("<button />\n"), 0o600)
+	require.NoError(t, err)
+
+	config := langConfigs["js"]
+	count, err := countDirectoriesForLang(config)
+	require.NoError(t, err)
+
+	// Should count: . (root), src, src/components
+	assert.Equal(t, 3, count)
+}
+
+// TestLOCResultJSONNewFields tests that new language fields are in JSON output
+func TestLOCResultJSONNewFields(t *testing.T) {
+	result := LOCResult{
+		Language:              "js",
+		SourceFilesLOC:        500,
+		SourceFilesCount:      10,
+		SourceFilesSizeBytes:  25000,
+		SourceFilesSizeHuman:  "24.4 KB",
+		SourceAvgLinesPerFile: 50.0,
+		SourceAvgSizeBytes:    2500,
+	}
+
+	jsonBytes, err := json.Marshal(result)
+	require.NoError(t, err)
+
+	jsonStr := string(jsonBytes)
+
+	// Verify new field names
+	assert.Contains(t, jsonStr, `"language":"js"`)
+	assert.Contains(t, jsonStr, `"source_files_loc":500`)
+	assert.Contains(t, jsonStr, `"source_files_count":10`)
+	assert.Contains(t, jsonStr, `"source_files_size_bytes":25000`)
+	assert.Contains(t, jsonStr, `"source_files_size_human":"24.4 KB"`)
+	assert.Contains(t, jsonStr, `"source_avg_lines_per_file":50`)
+	assert.Contains(t, jsonStr, `"source_avg_size_bytes":2500`)
+}
+
+// TestMetricsLOCGoDefault tests that Go remains the default
+func TestMetricsLOCGoDefault(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "loc_go_default_test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create Go file
+	err = os.WriteFile("main.go", []byte(testGoMainContent), 0o600)
+	require.NoError(t, err)
+
+	m := Metrics{}
+
+	t.Run("no lang parameter defaults to go", func(t *testing.T) {
+		err := m.LOC()
+		require.NoError(t, err)
+	})
+
+	t.Run("explicit go parameter", func(t *testing.T) {
+		err := m.LOC("lang=go")
+		require.NoError(t, err)
+	})
+}
+
+// TestMetricsLOCGoJSONIncludesLanguage tests Go JSON output includes language field
+func TestMetricsLOCGoJSONIncludesLanguage(t *testing.T) {
+	result := LOCResult{
+		Language:       "go",
+		GoFilesLOC:     1000,
+		SourceFilesLOC: 1000,
+	}
+
+	jsonBytes, err := json.Marshal(result)
+	require.NoError(t, err)
+
+	jsonStr := string(jsonBytes)
+	assert.Contains(t, jsonStr, `"language":"go"`)
 }

@@ -3,13 +3,16 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	"golang.org/x/text/cases"
@@ -119,7 +122,7 @@ func initFlags() *Flags {
 
 // tryCustomCommand attempts to execute a custom command via delegation
 // Returns exit code and error (0 on success or command not found)
-func tryCustomCommand(command string, commandArgs []string, discovery *CommandDiscovery) (int, error) {
+func tryCustomCommand(ctx context.Context, command string, commandArgs []string, discovery *CommandDiscovery) (int, error) {
 	// Check if we have a magefile with this command
 	if !HasMagefile() {
 		return 0, nil
@@ -132,7 +135,7 @@ func tryCustomCommand(command string, commandArgs []string, discovery *CommandDi
 		originalCommand = discoveredCmd.OriginalName
 	}
 
-	result := DelegateToMage(originalCommand, commandArgs...)
+	result := DelegateToMage(ctx, originalCommand, commandArgs...)
 	if result.Err != nil {
 		return result.ExitCode, result.Err
 	}
@@ -140,7 +143,8 @@ func tryCustomCommand(command string, commandArgs []string, discovery *CommandDi
 }
 
 // run executes the main application logic and returns an exit code
-func run(args []string) int {
+// The context is used for graceful shutdown handling
+func run(ctx context.Context, args []string) int {
 	// Create a new FlagSet for this run to avoid conflicts in tests
 	fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
@@ -302,6 +306,12 @@ func run(args []string) int {
 	// Convert mage-style namespace:method to our format
 	command = normalizeCommandName(command)
 
+	// Check for cancellation before executing command
+	if ctx.Err() != nil {
+		fmt.Fprintln(os.Stderr, "Operation canceled")
+		return 130 // Standard exit code for SIGINT
+	}
+
 	// Show banner in verbose mode
 	if *flags.Verbose {
 		fmt.Print(banner)
@@ -320,7 +330,7 @@ func run(args []string) int {
 				return 1
 			}
 
-			exitCode, customErr := tryCustomCommand(command, commandArgs, discovery)
+			exitCode, customErr := tryCustomCommand(ctx, command, commandArgs, discovery)
 			if customErr != nil {
 				fmt.Fprintf(os.Stderr, "❌ %v\n", customErr)
 				return exitCode
@@ -336,7 +346,22 @@ func run(args []string) int {
 }
 
 func main() {
-	os.Exit(run(os.Args))
+	// Create context that cancels on SIGINT/SIGTERM for graceful shutdown
+	ctx, cancel := signal.NotifyContext(context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer cancel()
+
+	// Handle shutdown signal notification in background
+	go func() {
+		<-ctx.Done()
+		if ctx.Err() != nil {
+			fmt.Fprintln(os.Stderr, "\nReceived shutdown signal, cleaning up...")
+		}
+	}()
+
+	os.Exit(run(ctx, os.Args))
 }
 
 // showUsage displays custom usage information
@@ -760,8 +785,8 @@ func listCommandsVerbose(commands []*registry.Command, customCommands []Discover
 			desc = fmt.Sprintf("⚠️  DEPRECATED: %s", cmd.Deprecated)
 		}
 		if _, err := fmt.Fprintf(w, "  %s\t%s\n", cmd.FullName(), desc); err != nil {
-			// Print error is non-critical, continue
-			_ = err
+			// Print error is non-critical but log for debugging
+			fmt.Fprintf(os.Stderr, "warning: failed to write command entry: %v\n", err)
 		}
 	}
 
@@ -773,14 +798,14 @@ func listCommandsVerbose(commands []*registry.Command, customCommands []Discover
 		}
 		desc += " (custom)"
 		if _, err := fmt.Fprintf(w, "  %s\t%s\n", cmd.Name, desc); err != nil {
-			// Print error is non-critical, continue
-			_ = err
+			// Print error is non-critical but log for debugging
+			fmt.Fprintf(os.Stderr, "warning: failed to write custom command entry: %v\n", err)
 		}
 	}
 
 	if err := w.Flush(); err != nil {
-		// Flush error is non-critical, continue
-		_ = err
+		// Flush error is non-critical but log for debugging
+		fmt.Fprintf(os.Stderr, "warning: failed to flush output: %v\n", err)
 	}
 }
 
@@ -1005,31 +1030,46 @@ func fuzzyMatch(text, pattern string) bool {
 	return editDistance(text, pattern) <= 2 && len(pattern) > 2
 }
 
-// editDistance calculates simple edit distance
+// editDistance calculates the Levenshtein distance between two strings
+// using dynamic programming for O(m*n) time complexity instead of O(3^n) recursive.
 func editDistance(s1, s2 string) int {
-	if len(s1) == 0 {
-		return len(s2)
+	m, n := len(s1), len(s2)
+	if m == 0 {
+		return n
 	}
-	if len(s2) == 0 {
-		return len(s1)
-	}
-
-	if s1[0] == s2[0] {
-		return editDistance(s1[1:], s2[1:])
+	if n == 0 {
+		return m
 	}
 
-	insert := 1 + editDistance(s1, s2[1:])
-	deleteOp := 1 + editDistance(s1[1:], s2)
-	replace := 1 + editDistance(s1[1:], s2[1:])
+	// Create DP table with dimensions (m+1) x (n+1)
+	dp := make([][]int, m+1)
+	for i := range dp {
+		dp[i] = make([]int, n+1)
+		dp[i][0] = i // Base case: distance from s1[0..i] to empty string
+	}
+	for j := 0; j <= n; j++ {
+		dp[0][j] = j // Base case: distance from empty string to s2[0..j]
+	}
 
-	minVal := insert
-	if deleteOp < minVal {
-		minVal = deleteOp
+	// Fill in the DP table
+	for i := 1; i <= m; i++ {
+		for j := 1; j <= n; j++ {
+			if s1[i-1] == s2[j-1] {
+				dp[i][j] = dp[i-1][j-1] // Characters match, no operation needed
+			} else {
+				// Take minimum of insert, delete, replace operations
+				minOp := dp[i-1][j] // Delete
+				if dp[i][j-1] < minOp {
+					minOp = dp[i][j-1] // Insert
+				}
+				if dp[i-1][j-1] < minOp {
+					minOp = dp[i-1][j-1] // Replace
+				}
+				dp[i][j] = 1 + minOp
+			}
+		}
 	}
-	if replace < minVal {
-		minVal = replace
-	}
-	return minVal
+	return dp[m][n]
 }
 
 // highlightMatch highlights the matched term (simple approach for CLI)

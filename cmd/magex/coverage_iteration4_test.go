@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,7 +46,7 @@ func TestCmd() error {
 	require.NoError(t, os.WriteFile(filepath.Join("magefiles", "commands.go"), []byte(magefilesContent), 0o600))
 
 	// Delegate to magefiles directory
-	result := DelegateToMageWithTimeout("testCmd", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "testCmd", 10*time.Second)
 
 	// Result depends on environment, just testing the code path
 	_ = result
@@ -94,7 +95,7 @@ func RootCmd() error {
 	require.NoError(t, os.WriteFile("magefile.go", []byte(rootMagefileContent), 0o600))
 
 	// Delegate - this should temporarily rename magefile.go and restore it
-	result := DelegateToMageWithTimeout("testCmd", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "testCmd", 10*time.Second)
 
 	// Verify magefile.go was restored after execution
 	_, err = os.Stat("magefile.go")
@@ -135,7 +136,7 @@ func TestCmd() error {
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
 	// Delegate using mage binary (different code path than go run)
-	result := DelegateToMageWithTimeout("testCmd", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "testCmd", 10*time.Second)
 
 	// Result depends on environment
 	_ = result
@@ -470,7 +471,7 @@ func TestUnit() error {
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
 	// Test with colon-separated format (should be converted to camelCase)
-	result := DelegateToMageWithTimeout("test:unit", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "test:unit", 10*time.Second)
 
 	// Result depends on environment
 	_ = result

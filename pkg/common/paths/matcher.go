@@ -258,7 +258,7 @@ func (pm *DefaultPathMatcher) MatchAll(paths ...string) bool {
 
 // Filter returns only the paths that match
 func (pm *DefaultPathMatcher) Filter(paths []string) []string {
-	result := make([]string, 0)
+	result := make([]string, 0, len(paths)) // Pre-allocate for better performance
 
 	for _, path := range paths {
 		if pm.Match(path) {
@@ -271,7 +271,7 @@ func (pm *DefaultPathMatcher) Filter(paths []string) []string {
 
 // FilterPaths returns only the PathBuilders that match
 func (pm *DefaultPathMatcher) FilterPaths(paths []PathBuilder) []PathBuilder {
-	result := make([]PathBuilder, 0)
+	result := make([]PathBuilder, 0, len(paths)) // Pre-allocate for better performance
 
 	for _, path := range paths {
 		if pm.MatchPath(path) {

@@ -31,7 +31,7 @@ func ParseParams(args []string) map[string]string {
 			// Boolean flag format (key without value means true)
 			key := strings.TrimSpace(arg)
 			if key != "" {
-				params[key] = "true"
+				params[key] = trueValue
 			}
 		}
 	}

@@ -11,9 +11,11 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/magefile/mage/mg"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/exec"
@@ -26,6 +28,16 @@ var (
 	errLintingFailed = errors.New("linting failed")
 	errFixFailed     = errors.New("fix failed")
 )
+
+// Pre-compiled regex patterns for version parsing (performance optimization)
+//
+//nolint:gochecknoglobals // Package-level compiled regexes for performance
+var versionPatterns = []*regexp.Regexp{
+	// Matches "v1.2.3" or "version 1.2.3" with optional pre-release suffix
+	regexp.MustCompile(`v?\d+\.\d+\.\d+(?:-[a-zA-Z0-9\-.]+)?`),
+	// Matches "1.2" format (major.minor only)
+	regexp.MustCompile(`\d+\.\d+`),
+}
 
 // golangciLintArgs holds the configuration for building golangci-lint arguments.
 // This consolidates the duplicated argument-building logic from Default() and Fix().
@@ -437,39 +449,37 @@ func (Lint) VetParallel() error {
 		return nil
 	}
 
-	// Create channel for errors
-	errs := make(chan error, len(modulePackages))
-	semaphore := make(chan struct{}, config.Build.Parallel)
-
 	start := time.Now()
 
-	// Vet packages in parallel
-	for _, pkg := range modulePackages {
-		go func(p string) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
+	// Use errgroup for cleaner concurrent execution with bounded parallelism
+	g, _ := errgroup.WithContext(context.Background())
+	g.SetLimit(config.Build.Parallel)
 
+	var mu sync.Mutex
+	var vetErrors []string
+
+	// Vet packages in parallel using errgroup
+	for _, pkg := range modulePackages {
+		// capture loop variable
+		g.Go(func() error {
 			args := []string{"vet"}
 			if len(config.Build.Tags) > 0 {
 				args = append(args, "-tags", strings.Join(config.Build.Tags, ","))
 			}
-			args = append(args, p)
+			args = append(args, pkg)
 
 			if runErr := GetRunner().RunCmd("go", args...); runErr != nil {
-				errs <- fmt.Errorf("vet %s: %w", p, runErr)
-			} else {
-				errs <- nil
+				mu.Lock()
+				vetErrors = append(vetErrors, fmt.Sprintf("vet %s: %v", pkg, runErr))
+				mu.Unlock()
 			}
-		}(pkg)
+			return nil // Continue on error to collect all vet failures
+		})
 	}
 
-	// Collect results
-	var vetErrors []string
-	for i := 0; i < len(modulePackages); i++ {
-		if runErr := <-errs; runErr != nil {
-			vetErrors = append(vetErrors, runErr.Error())
-		}
-	}
+	// Wait for all goroutines to complete
+	//nolint:errcheck,gosec // g.Wait() always returns nil since all goroutines return nil (errors collected separately)
+	g.Wait()
 
 	if len(vetErrors) > 0 {
 		return fmt.Errorf("%w:\n%s", errVetFailed, strings.Join(vetErrors, "\n"))
@@ -568,7 +578,8 @@ func getLinterVersion(command string, versionArgs ...string) string {
 	return parseVersionFromOutput(output)
 }
 
-// parseVersionFromOutput extracts version information from command output
+// parseVersionFromOutput extracts version information from command output.
+// Uses pre-compiled regex patterns (versionPatterns) for better performance.
 func parseVersionFromOutput(output string) string {
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	if len(lines) == 0 {
@@ -578,16 +589,9 @@ func parseVersionFromOutput(output string) string {
 	// Take the first line which usually contains version info
 	firstLine := strings.TrimSpace(lines[0])
 
-	// Common version patterns to extract
-	patterns := []string{
-		// Matches "v1.2.3" or "version 1.2.3"
-		`v?\d+\.\d+\.\d+(?:\-[a-zA-Z0-9\-\.]+)?`,
-		// Matches "1.2" format
-		`\d+\.\d+`,
-	}
-
-	for _, pattern := range patterns {
-		if match := regexp.MustCompile(pattern).FindString(firstLine); match != "" {
+	// Use pre-compiled patterns for version extraction
+	for _, pattern := range versionPatterns {
+		if match := pattern.FindString(firstLine); match != "" {
 			return match
 		}
 	}
@@ -595,12 +599,23 @@ func parseVersionFromOutput(output string) string {
 	// If no pattern matches, return the first word that looks like a version
 	words := strings.Fields(firstLine)
 	for _, word := range words {
-		if regexp.MustCompile(`[0-9]`).MatchString(word) {
+		if containsDigit(word) {
 			return word
 		}
 	}
 
 	return strings.TrimSpace(firstLine)
+}
+
+// containsDigit checks if a string contains at least one digit.
+// This is a simple check without regex for better performance.
+func containsDigit(s string) bool {
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			return true
+		}
+	}
+	return false
 }
 
 // parseGolangciTimeout reads timeout from .golangci.json config file

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -64,22 +63,13 @@ func (s *ManagerTestSuite) TestStopWatching() {
 		s.Require().NoError(err)
 
 		// Verify watching is active
-		s.manager.mu.RLock()
-		watching := s.manager.watching
-		s.manager.mu.RUnlock()
-		s.True(watching, "Manager should be watching")
+		s.True(s.manager.IsWatching(), "Manager should be watching")
 
 		// Stop watching
 		s.manager.StopWatching()
 
-		// Give a moment for the goroutine to process
-		time.Sleep(10 * time.Millisecond)
-
-		// Verify watching is stopped
-		s.manager.mu.RLock()
-		watching = s.manager.watching
-		s.manager.mu.RUnlock()
-		s.False(watching, "Manager should not be watching after stop")
+		// Verify watching is stopped (no need for sleep as StopWatching is synchronous now)
+		s.False(s.manager.IsWatching(), "Manager should not be watching after stop")
 	})
 
 	s.Run("MultipleStopWatchingCalls", func() {
@@ -679,22 +669,13 @@ func (s *ManagerTestSuite) TestWatchStopWatchingLifecycle() {
 		s.Require().NoError(err, "Watch should succeed")
 
 		// Verify watching state
-		s.manager.mu.RLock()
-		watching := s.manager.watching
-		s.manager.mu.RUnlock()
-		s.True(watching, "Should be watching")
+		s.True(s.manager.IsWatching(), "Should be watching")
 
 		// Stop watching
 		s.manager.StopWatching()
 
-		// Wait a bit for the goroutine to finish
-		time.Sleep(20 * time.Millisecond)
-
-		// Verify watching state
-		s.manager.mu.RLock()
-		watching = s.manager.watching
-		s.manager.mu.RUnlock()
-		s.False(watching, "Should not be watching after stop")
+		// Verify watching state (no sleep needed - StopWatching is synchronous)
+		s.False(s.manager.IsWatching(), "Should not be watching after stop")
 
 		// Should be able to watch again
 		err = s.manager.Watch(callback)

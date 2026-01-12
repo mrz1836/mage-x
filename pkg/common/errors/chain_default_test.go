@@ -37,21 +37,23 @@ func TestDefaultChainErrorAdd(t *testing.T) {
 		assert.Equal(t, errDefaultChainTest1.Error(), result.First().Error())
 	})
 
-	t.Run("multiple errors creates new RealDefaultChainError", func(t *testing.T) {
+	t.Run("multiple errors modifies in place for O(1) performance", func(t *testing.T) {
 		chain := &DefaultChainError{errors: []error{}}
 		chain1 := chain.Add(errDefaultChainTest1)
 		chain2 := chain1.Add(errDefaultChainTest2)
 		chain3 := chain2.Add(errDefaultChainTest3)
 
-		// Original DefaultChainError is unchanged
-		assert.Equal(t, 0, chain.Count())
-
-		// DefaultChainError.Add() returns RealDefaultChainError which mutates in place
-		// So chain1, chain2, chain3 all point to the same RealDefaultChainError
-		// after all mutations
+		// DefaultChainError.Add() modifies in place and returns itself (O(1) operation)
+		// All references point to the same object
+		assert.Equal(t, 3, chain.Count())
 		assert.Equal(t, 3, chain1.Count())
 		assert.Equal(t, 3, chain2.Count())
 		assert.Equal(t, 3, chain3.Count())
+
+		// Verify they're all the same underlying chain
+		assert.Same(t, chain, chain1)
+		assert.Same(t, chain1, chain2)
+		assert.Same(t, chain2, chain3)
 	})
 
 	t.Run("preserves existing errors", func(t *testing.T) {
@@ -123,15 +125,14 @@ func TestDefaultChainErrorAddWithContext(t *testing.T) {
 		assert.Equal(t, "NewOp", resultMageErr.Context().Operation)
 	})
 
-	t.Run("preserves existing errors immutably", func(t *testing.T) {
+	t.Run("adds to existing errors in place for O(1) performance", func(t *testing.T) {
 		chain := &DefaultChainError{errors: []error{errDefaultChainTest1}}
 		ctx := &ErrorContext{Operation: "Op2"}
 		result := chain.AddWithContext(errDefaultChainTest2, ctx)
 
-		// Original unchanged
-		assert.Equal(t, 1, chain.Count())
-
-		// New chain has both
+		// Modifies in place - same object returned
+		assert.Same(t, chain, result)
+		assert.Equal(t, 2, chain.Count())
 		assert.Equal(t, 2, result.Count())
 	})
 }
@@ -544,65 +545,60 @@ func TestDefaultChainErrorToSlice(t *testing.T) {
 }
 
 // TestDefaultChainErrorBehavior verifies that DefaultChainError operations
-// create new RealDefaultChainError instances
+// modify in place for O(1) performance (changed from O(n²) copy-on-write behavior)
 func TestDefaultChainErrorBehavior(t *testing.T) {
-	t.Run("Add creates new RealDefaultChainError", func(t *testing.T) {
+	t.Run("Add modifies in place for O(1) performance", func(t *testing.T) {
 		original := &DefaultChainError{errors: []error{errDefaultChainTest1}}
 		modified := original.Add(errDefaultChainTest2)
 
-		// Original DefaultChainError is unchanged
-		assert.Equal(t, 1, original.Count())
-
-		// Modified is a new RealDefaultChainError with both errors
+		// Same object is returned (mutable in place)
+		assert.Same(t, original, modified)
+		assert.Equal(t, 2, original.Count())
 		assert.Equal(t, 2, modified.Count())
 	})
 
-	t.Run("AddWithContext creates new RealDefaultChainError", func(t *testing.T) {
+	t.Run("AddWithContext modifies in place for O(1) performance", func(t *testing.T) {
 		original := &DefaultChainError{errors: []error{errDefaultChainTest1}}
 		ctx := &ErrorContext{Operation: "test"}
 		modified := original.AddWithContext(errDefaultChainTest2, ctx)
 
-		// Original DefaultChainError is unchanged
-		assert.Equal(t, 1, original.Count())
-
-		// Modified is a new RealDefaultChainError with both errors
+		// Same object is returned (mutable in place)
+		assert.Same(t, original, modified)
+		assert.Equal(t, 2, original.Count())
 		assert.Equal(t, 2, modified.Count())
 	})
 
-	t.Run("chained operations behavior", func(t *testing.T) {
-		// DefaultChainError.Add() returns RealDefaultChainError
-		// Subsequent Add() calls on RealDefaultChainError mutate in place
+	t.Run("chained operations all modify same instance", func(t *testing.T) {
+		// DefaultChainError.Add() modifies in place and returns itself
 		chain0 := &DefaultChainError{errors: []error{}}
-		chain1 := chain0.Add(errDefaultChainTest1) // Returns RealDefaultChainError
-		chain2 := chain1.Add(errDefaultChainTest2) // Mutates chain1 (same instance)
-		chain3 := chain2.Add(errDefaultChainTest3) // Mutates chain1/2 (same instance)
+		chain1 := chain0.Add(errDefaultChainTest1)
+		chain2 := chain1.Add(errDefaultChainTest2)
+		chain3 := chain2.Add(errDefaultChainTest3)
 
-		// Original DefaultChainError is unchanged
-		assert.Equal(t, 0, chain0.Count())
+		// All references point to same object
+		assert.Same(t, chain0, chain1)
+		assert.Same(t, chain1, chain2)
+		assert.Same(t, chain2, chain3)
 
-		// chain1, chain2, chain3 are all the same RealDefaultChainError
+		// All have 3 errors
+		assert.Equal(t, 3, chain0.Count())
 		assert.Equal(t, 3, chain1.Count())
 		assert.Equal(t, 3, chain2.Count())
 		assert.Equal(t, 3, chain3.Count())
 	})
 
-	t.Run("multiple independent chains from DefaultChainError", func(t *testing.T) {
+	t.Run("sequential additions to same chain", func(t *testing.T) {
 		original := &DefaultChainError{errors: []error{errDefaultChainTest1}}
 
-		// Each call to original.Add creates a new RealDefaultChainError
-		branch1 := original.Add(errDefaultChainTest2)
-		branch2 := original.Add(errDefaultChainTest3)
+		// Each call modifies the same chain (mutable)
+		//nolint:errcheck // Error intentionally ignored for mutability test
+		_ = original.Add(errDefaultChainTest2)
+		//nolint:errcheck // Error intentionally ignored for mutability test
+		_ = original.Add(errDefaultChainTest3)
 
-		// Original is unchanged
-		assert.Equal(t, 1, original.Count())
-
-		// Each branch has original + their own error
-		assert.Equal(t, 2, branch1.Count())
-		assert.Equal(t, 2, branch2.Count())
-
-		// Branches are independent
-		assert.Equal(t, errDefaultChainTest2.Error(), branch1.Last().Error())
-		assert.Equal(t, errDefaultChainTest3.Error(), branch2.Last().Error())
+		// Original has all 3 errors
+		assert.Equal(t, 3, original.Count())
+		assert.Equal(t, errDefaultChainTest3.Error(), original.Last().Error())
 	})
 }
 

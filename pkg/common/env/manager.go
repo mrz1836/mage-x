@@ -529,18 +529,21 @@ func (r *NotEmptyRule) Description() string {
 
 // PatternRule validates that a value matches a regex pattern
 type PatternRule struct {
-	Pattern string
-	regex   *regexp.Regexp
+	Pattern    string
+	once       sync.Once
+	regex      *regexp.Regexp
+	compileErr error
 }
 
 // Validate validates that a value matches a regex pattern
 func (r *PatternRule) Validate(value string) error {
-	if r.regex == nil {
-		var err error
-		r.regex, err = regexp.Compile(r.Pattern)
-		if err != nil {
-			return fmt.Errorf("invalid pattern: %w", err)
-		}
+	// Thread-safe lazy initialization of regex using sync.Once
+	r.once.Do(func() {
+		r.regex, r.compileErr = regexp.Compile(r.Pattern)
+	})
+
+	if r.compileErr != nil {
+		return fmt.Errorf("invalid pattern: %w", r.compileErr)
 	}
 
 	if !r.regex.MatchString(value) {
@@ -610,8 +613,11 @@ func (r *OneOfRule) Validate(value string) error {
 		}
 	}
 
-	sort.Strings(r.Values) // For consistent error messages
-	return fmt.Errorf("%w: %v", errValueMustBeOneOf, r.Values)
+	// Copy before sorting to avoid mutating the receiver (thread-safe, no side effects)
+	sortedValues := make([]string, len(r.Values))
+	copy(sortedValues, r.Values)
+	sort.Strings(sortedValues)
+	return fmt.Errorf("%w: %v", errValueMustBeOneOf, sortedValues)
 }
 
 // Description returns the description of the one-of rule
