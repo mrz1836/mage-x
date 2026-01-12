@@ -1142,3 +1142,126 @@ func TestCleanup_Coverage(t *testing.T) {
 		assert.True(t, os.IsNotExist(err))
 	})
 }
+
+// TestPerformanceTimer_StopWithStorageError tests PerformanceTimer.Stop when RecordMetric fails
+func TestPerformanceTimer_StopWithStorageError(t *testing.T) {
+	t.Run("handles RecordMetric error gracefully in Stop", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		collector := &MetricsCollector{
+			config:  config,
+			metrics: make(map[string]*Metric),
+			storage: &mockStorage{
+				shouldFail: true,
+				failError:  errors.New("storage error"), //nolint:err113 // test error
+			},
+		}
+
+		timer := collector.StartTimer("test_timer", nil)
+		time.Sleep(10 * time.Millisecond)
+
+		// Stop should complete even if RecordMetric fails
+		duration := timer.Stop()
+		assert.Greater(t, duration, time.Duration(0))
+	})
+
+	t.Run("handles RecordMetric error gracefully in StopWithError", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		collector := &MetricsCollector{
+			config:  config,
+			metrics: make(map[string]*Metric),
+			storage: &mockStorage{
+				shouldFail: true,
+				failError:  errors.New("storage error"), //nolint:err113 // test error
+			},
+		}
+
+		timer := collector.StartTimer("test_timer", nil)
+		time.Sleep(10 * time.Millisecond)
+
+		// StopWithError should complete even if RecordMetric fails
+		testErr := errors.New("test error") //nolint:err113 // test error
+		duration := timer.StopWithError(testErr)
+		assert.Greater(t, duration, time.Duration(0))
+	})
+}
+
+// TestRecordBuildMetrics_StorageError tests RecordBuildMetrics with storage errors
+func TestRecordBuildMetrics_StorageError(t *testing.T) {
+	t.Run("returns error when storage fails", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		collector := &MetricsCollector{
+			config:  config,
+			metrics: make(map[string]*Metric),
+			storage: &mockStorage{
+				shouldFail: true,
+				failError:  errors.New("storage write failed"), //nolint:err113 // test error
+			},
+		}
+
+		buildMetrics := &BuildMetrics{
+			Duration:      100 * time.Millisecond,
+			LinesOfCode:   1000,
+			PackagesBuilt: 5,
+			TestsRun:      20,
+			Coverage:      85.5,
+			BinarySize:    1024 * 1024,
+			Resources: ResourceMetrics{
+				CPUUsage:    50.0,
+				MemoryUsage: 512 * 1024 * 1024,
+			},
+			Timestamp: time.Now(),
+			Success:   true,
+		}
+
+		err := collector.RecordBuildMetrics(buildMetrics)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to record metric")
+		assert.Contains(t, err.Error(), "storage write failed")
+	})
+}
+
+// TestMultiSpinner_RenderStates tests MultiSpinner render with different task states
+func TestMultiSpinner_RenderStates(t *testing.T) {
+	t.Run("renders spinners with different task states", func(t *testing.T) {
+		ms := NewMultiSpinner()
+		defer func() {
+			ms.Stop()
+		}()
+
+		// Add tasks
+		ms.AddTask("task1", "Task 1")
+		ms.AddTask("task2", "Task 2")
+		ms.AddTask("task3", "Task 3")
+
+		// Start the spinner
+		ms.Start()
+
+		// Update task states
+		ms.UpdateTask("task1", TaskStatusRunning, "Task 1 running")
+		ms.UpdateTask("task2", TaskStatusSuccess, "Task 2 complete")
+		ms.UpdateTask("task3", TaskStatusFailed, "Task 3 failed")
+
+		// Let it render a few frames
+		time.Sleep(200 * time.Millisecond)
+
+		// Stop should clean up
+		ms.Stop()
+	})
+}
+
+// TestSpinner_AnimateFrames tests Spinner animation
+func TestSpinner_AnimateFrames(t *testing.T) {
+	t.Run("animates through frames", func(t *testing.T) {
+		spinner := NewSpinner("Testing")
+
+		// Start and let it animate
+		spinner.Start()
+		time.Sleep(150 * time.Millisecond)
+
+		// Stop should complete without error
+		spinner.Stop()
+	})
+}
