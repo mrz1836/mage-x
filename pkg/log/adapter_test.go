@@ -1036,3 +1036,99 @@ func TestTimestampFormat(t *testing.T) {
 		assert.Regexp(t, `\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}`, output)
 	})
 }
+
+// TestStructuredAdapterFieldsFormatting tests that fields are correctly
+// formatted using strings.Builder (performance optimization)
+func TestStructuredAdapterFieldsFormatting(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		fields        Fields
+		expectedParts []string
+		notExpected   []string
+	}{
+		{
+			name: "single field formats correctly",
+			fields: Fields{
+				"key": "value",
+			},
+			expectedParts: []string{" {", "key=value", "}"},
+		},
+		{
+			name: "multiple fields formats correctly",
+			fields: Fields{
+				"name":  "test",
+				"count": 42,
+			},
+			expectedParts: []string{" {", "name=test", "count=42", "}"},
+		},
+		{
+			name: "numeric fields format correctly",
+			fields: Fields{
+				"int":   123,
+				"float": 3.14,
+			},
+			expectedParts: []string{"int=123", "float=3.14"},
+		},
+		{
+			name:        "no fields produces no braces",
+			fields:      Fields{},
+			notExpected: []string{" {", "}"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var buf bytes.Buffer
+			adapter := NewStructuredAdapter()
+			adapter.SetOutput(&buf)
+			adapter.SetLevel(LevelDebug)
+
+			// Apply fields
+			loggerWithFields := adapter.WithFields(tt.fields)
+			structuredWithFields, ok := loggerWithFields.(*StructuredAdapter)
+			require.True(t, ok)
+
+			structuredWithFields.Info("test message")
+
+			output := buf.String()
+
+			for _, expected := range tt.expectedParts {
+				assert.Contains(t, output, expected, "output should contain %q", expected)
+			}
+
+			for _, notExpected := range tt.notExpected {
+				assert.NotContains(t, output, notExpected, "output should not contain %q", notExpected)
+			}
+		})
+	}
+}
+
+// BenchmarkStructuredAdapterWithFields benchmarks field formatting performance
+func BenchmarkStructuredAdapterWithFields(b *testing.B) {
+	var buf bytes.Buffer
+	adapter := NewStructuredAdapter()
+	adapter.SetOutput(&buf)
+	adapter.SetLevel(LevelDebug)
+
+	fields := Fields{
+		"user_id":    "12345",
+		"request_id": "abc-def-ghi",
+		"action":     "login",
+		"status":     "success",
+	}
+
+	loggerWithFields, ok := adapter.WithFields(fields).(*StructuredAdapter)
+	if !ok {
+		b.Fatal("expected *StructuredAdapter")
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		loggerWithFields.Info("test message")
+	}
+}

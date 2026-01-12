@@ -283,3 +283,159 @@ func TestGolangciLintArgs_BuildArgs_FullIntegration(t *testing.T) {
 		}
 	}
 }
+
+// Tests for parseVersionFromOutput and containsDigit (pre-compiled regex optimization)
+
+func TestParseVersionFromOutput_PreCompiledRegex(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "semantic version with v prefix",
+			input:    "golangci-lint has version v1.55.2 built with go1.21.0",
+			expected: "v1.55.2",
+		},
+		{
+			name:     "semantic version without v prefix",
+			input:    "version 1.55.2",
+			expected: "1.55.2",
+		},
+		{
+			name:     "semantic version with prerelease",
+			input:    "v1.55.2-beta.1",
+			expected: "v1.55.2-beta.1",
+		},
+		{
+			name:     "major.minor only",
+			input:    "go version go1.21 darwin/arm64",
+			expected: "1.21",
+		},
+		{
+			name:     "version on second word",
+			input:    "golangci-lint 1.55.2",
+			expected: "1.55.2",
+		},
+		{
+			name:     "version in complex string",
+			input:    "Built from: v1.55.2-abc123",
+			expected: "v1.55.2-abc123",
+		},
+		{
+			name:     "empty input returns empty string",
+			input:    "",
+			expected: "", // strings.Split("", "\n") returns [""], which has length 1
+		},
+		{
+			name:     "whitespace only returns empty string",
+			input:    "   \n   ",
+			expected: "", // trimmed to empty
+		},
+		{
+			name:     "multiline with version on first line",
+			input:    "v2.0.0\nsome other info\nmore stuff",
+			expected: "v2.0.0",
+		},
+		{
+			name:     "no version pattern fallback to word with digit",
+			input:    "tool abc123def version",
+			expected: "abc123def",
+		},
+		{
+			name:     "no digits returns first line",
+			input:    "unknown",
+			expected: "unknown",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseVersionFromOutput(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestContainsDigit(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "contains single digit",
+			input:    "abc1def",
+			expected: true,
+		},
+		{
+			name:     "contains multiple digits",
+			input:    "v1.2.3",
+			expected: true,
+		},
+		{
+			name:     "digit at start",
+			input:    "1abc",
+			expected: true,
+		},
+		{
+			name:     "digit at end",
+			input:    "abc9",
+			expected: true,
+		},
+		{
+			name:     "only digits",
+			input:    "12345",
+			expected: true,
+		},
+		{
+			name:     "no digits",
+			input:    "abcdef",
+			expected: false,
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: false,
+		},
+		{
+			name:     "special characters only",
+			input:    "!@#$%",
+			expected: false,
+		},
+		{
+			name:     "letters only no digits",
+			input:    "abcxyz",
+			expected: false,
+		},
+		{
+			name:     "mixed characters with digit",
+			input:    "abc1xyz",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := containsDigit(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// Benchmark to verify pre-compiled regex performance improvement
+func BenchmarkParseVersionFromOutput(b *testing.B) {
+	input := "golangci-lint has version v1.55.2 built with go1.21.0"
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = parseVersionFromOutput(input)
+	}
+}
+
+func BenchmarkContainsDigit(b *testing.B) {
+	input := "golangci-lint"
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = containsDigit(input)
+	}
+}
