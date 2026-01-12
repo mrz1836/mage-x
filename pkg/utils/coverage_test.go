@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -399,6 +400,32 @@ func TestHTTPGetJSON_AdditionalCoverage(t *testing.T) {
 	})
 }
 
+// TestNewMetricsCollector_ErrorHandling tests NewMetricsCollector error paths
+func TestNewMetricsCollector_ErrorHandling(t *testing.T) {
+	t.Run("disables metrics when storage init fails", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		// Use an invalid path that will fail to create
+		config.StoragePath = "/dev/null/invalid/path"
+
+		collector := NewMetricsCollector(&config)
+		require.NotNil(t, collector)
+		// Should have disabled metrics after storage failure
+		assert.False(t, collector.config.Enabled)
+	})
+
+	t.Run("creates collector with valid config", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		config.StoragePath = t.TempDir()
+
+		collector := NewMetricsCollector(&config)
+		require.NotNil(t, collector)
+		assert.True(t, collector.config.Enabled)
+		assert.NotNil(t, collector.storage)
+	})
+}
+
 // TestCreateDefaultCollector_Coverage tests createDefaultCollector with env vars
 func TestCreateDefaultCollector_Coverage(t *testing.T) {
 	t.Run("with MAGE_X_METRICS_ENABLED", func(t *testing.T) {
@@ -456,6 +483,118 @@ func TestNewJSONStorage_Coverage(t *testing.T) {
 		_, err := NewJSONStorage("/dev/null/subdir")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to create storage directory")
+	})
+}
+
+// Test_shouldRemoveMetricFile tests the shouldRemoveMetricFile function
+func Test_shouldRemoveMetricFile(t *testing.T) {
+	cutoffDate := time.Date(2025, 12, 15, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name     string
+		filename string
+		want     bool
+	}{
+		{
+			name:     "valid old metric file",
+			filename: "metrics_2025-12-10.json",
+			want:     true,
+		},
+		{
+			name:     "valid new metric file",
+			filename: "metrics_2025-12-20.json",
+			want:     false,
+		},
+		{
+			name:     "file without metrics prefix",
+			filename: "data_2025-12-10.json",
+			want:     false,
+		},
+		{
+			name:     "file without json suffix",
+			filename: "metrics_2025-12-10.txt",
+			want:     false,
+		},
+		{
+			name:     "file with invalid date",
+			filename: "metrics_invalid-date.json",
+			want:     false,
+		},
+		{
+			name:     "file with incomplete date",
+			filename: "metrics_2025-12.json",
+			want:     false,
+		},
+		{
+			name:     "random file",
+			filename: "random.json",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldRemoveMetricFile(tt.filename, cutoffDate)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestJSONStorage_Cleanup tests the Cleanup method
+func TestJSONStorage_Cleanup(t *testing.T) {
+	t.Run("removes old files and keeps new files", func(t *testing.T) {
+		// Create temp directory
+		tmpDir := t.TempDir()
+		storage, err := NewJSONStorage(tmpDir)
+		require.NoError(t, err)
+
+		// Create metric files with different dates
+		oldDate := time.Now().AddDate(0, 0, -60) // 60 days ago
+		newDate := time.Now().AddDate(0, 0, -5)  // 5 days ago
+
+		oldFile := filepath.Join(tmpDir, "metrics_"+oldDate.Format("2006-01-02")+".json")
+		newFile := filepath.Join(tmpDir, "metrics_"+newDate.Format("2006-01-02")+".json")
+		nonMetricFile := filepath.Join(tmpDir, "other.json")
+
+		require.NoError(t, os.WriteFile(oldFile, []byte("{}"), 0o600))
+		require.NoError(t, os.WriteFile(newFile, []byte("{}"), 0o600))
+		require.NoError(t, os.WriteFile(nonMetricFile, []byte("{}"), 0o600))
+
+		// Run cleanup with 30 day retention
+		err = storage.Cleanup(30)
+		require.NoError(t, err)
+
+		// Verify old file was removed
+		_, err = os.Stat(oldFile)
+		assert.True(t, os.IsNotExist(err), "old metric file should be removed")
+
+		// Verify new file was kept
+		_, err = os.Stat(newFile)
+		require.NoError(t, err, "new metric file should be kept")
+
+		// Verify non-metric file was kept
+		_, err = os.Stat(nonMetricFile)
+		require.NoError(t, err, "non-metric file should be kept")
+	})
+
+	t.Run("handles directory entries", func(t *testing.T) {
+		// Create temp directory with subdirectory
+		tmpDir := t.TempDir()
+		storage, err := NewJSONStorage(tmpDir)
+		require.NoError(t, err)
+
+		// Create a subdirectory (should be ignored)
+		subDir := filepath.Join(tmpDir, "metrics_2025-01-01.json")
+		require.NoError(t, os.Mkdir(subDir, 0o700))
+
+		// Run cleanup - should not fail on directory entry
+		err = storage.Cleanup(30)
+		require.NoError(t, err)
+
+		// Verify directory still exists
+		info, err := os.Stat(subDir)
+		require.NoError(t, err)
+		assert.True(t, info.IsDir())
 	})
 }
 
