@@ -68,7 +68,7 @@ func DefaultCIMode() CIMode {
 }
 
 // Validate validates the CIMode configuration
-func (m CIMode) Validate() error {
+func (m *CIMode) Validate() error {
 	if m.ContextLines < 0 || m.ContextLines > 100 {
 		return ErrCIContextLinesOutOfRange
 	}

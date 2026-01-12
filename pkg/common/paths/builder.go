@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -13,6 +14,24 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/log"
+)
+
+// unsafePathPatterns is a pre-compiled regex for detecting unsafe path patterns.
+// This consolidates multiple strings.Contains() calls into a single regex match for better performance.
+//
+
+var unsafePathPatterns = regexp.MustCompile(`(?i)` +
+	`\.\.` + // Path traversal
+	`|/proc/` + // Linux proc filesystem
+	`|/dev/` + // Device files
+	`|\\\\[?]\\` + // Windows extended path prefix (\\?\)
+	`|%2e` + // URL encoded dot
+	`|%2f` + // URL encoded slash
+	`|%00` + // URL encoded null
+	`|%25` + // Double URL encoded
+	`|\\u` + // Unicode escape sequences (catch \u prefix)
+	`|\\x` + // Hex escape sequences (catch \x prefix)
+	`|\x{2044}`, // Unicode fraction slash (U+2044)
 )
 
 // DefaultPathBuilder implements PathBuilder using standard library
@@ -297,7 +316,8 @@ func (pb *DefaultPathBuilder) ListFiles() ([]PathBuilder, error) {
 		return nil, err
 	}
 
-	result := make([]PathBuilder, 0)
+	// Pre-allocate with capacity to avoid reallocations
+	result := make([]PathBuilder, 0, len(entries))
 	for _, entry := range entries {
 		if entry.IsFile() {
 			result = append(result, entry)
@@ -314,7 +334,8 @@ func (pb *DefaultPathBuilder) ListDirs() ([]PathBuilder, error) {
 		return nil, err
 	}
 
-	result := make([]PathBuilder, 0)
+	// Pre-allocate with capacity to avoid reallocations
+	result := make([]PathBuilder, 0, len(entries))
 	for _, entry := range entries {
 		if entry.IsDir() {
 			result = append(result, entry)
@@ -415,58 +436,26 @@ func (pb *DefaultPathBuilder) IsEmpty() bool {
 
 // isPathSafe checks if a path string is safe
 func (pb *DefaultPathBuilder) isPathSafe(path string) bool {
-	// Check for path traversal patterns first - this catches both regular .. and paths like /proc/self/fd/../../..
-	if strings.Contains(path, "..") {
+	// Use pre-compiled regex for common unsafe patterns (single scan instead of 20+ Contains calls)
+	if unsafePathPatterns.MatchString(path) {
 		return false
 	}
 
-	// Check for suspicious Unix paths anywhere in the path (not just as prefix)
-	// This catches both absolute paths (/proc/...) and relative paths (0/proc/...)
-	if strings.Contains(path, "/proc/") || strings.Contains(path, "/dev/") {
+	// Check for null bytes (actual byte, not URL encoded - URL encoded caught by regex)
+	if strings.Contains(path, "\x00") {
 		return false
 	}
 
-	// Check for Windows extended path prefix
-	if strings.Contains(path, "\\\\?\\") {
-		return false
-	}
-
-	// Check for URL encoded patterns
-	if strings.Contains(path, "%2e") || strings.Contains(path, "%2f") ||
-		strings.Contains(path, "%2e%2e") || strings.Contains(path, "%252e%252e") {
-		return false
-	}
-
-	// Check for Unicode encoded patterns
-	if strings.Contains(path, "\\u") || strings.Contains(path, "\u002e\u002e") {
-		return false
-	}
-
-	// Check for hex encoded patterns
-	if strings.Contains(path, "\\x") || strings.Contains(path, "\x2e\x2e") {
-		return false
-	}
-
-	// Check for null bytes
-	if strings.Contains(path, "\x00") || strings.Contains(path, "%00") {
-		return false
-	}
-
-	// Check for overlong UTF-8 encoding attacks
+	// Check for overlong UTF-8 encoding attacks (actual bytes that bypass string matching)
 	if strings.Contains(path, "\xc0\xaf") {
 		return false
 	}
 
-	// Check for control characters
+	// Check for control characters (must iterate, can't be done efficiently with regex)
 	for _, char := range path {
 		if char < 32 && char != '\t' { // Allow tabs, reject other control chars
 			return false
 		}
-	}
-
-	// Check for Unicode confusable characters that could be used to bypass validation
-	if strings.Contains(path, "⁄") { // Unicode fraction slash (U+2044)
-		return false
 	}
 
 	// Check for invalid UTF-8 sequences
