@@ -199,8 +199,9 @@ func TestWithArgs() error {
 	discovery := NewCommandDiscovery(reg)
 
 	// This should execute successfully with args
-	result := tryCustomCommand("testwithargs", []string{"foo", "bar"}, discovery)
-	assert.True(t, result, "Should return true when command executes with args")
+	exitCode, err := tryCustomCommand("testwithargs", []string{"foo", "bar"}, discovery)
+	assert.Equal(t, 0, exitCode, "Should return 0 when command executes with args")
+	assert.NoError(t, err, "Should return no error when command executes with args")
 }
 
 // TestListCommandsVerbose_WithEmptyDescriptionAlt tests verbose listing with empty descriptions

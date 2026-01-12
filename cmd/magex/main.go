@@ -118,12 +118,11 @@ func initFlags() *Flags {
 }
 
 // tryCustomCommand attempts to execute a custom command via delegation
-// Returns true if the command was found and executed (regardless of success)
-// Returns false if the command was not found
-func tryCustomCommand(command string, commandArgs []string, discovery *CommandDiscovery) bool {
+// Returns exit code and error (0 on success or command not found)
+func tryCustomCommand(command string, commandArgs []string, discovery *CommandDiscovery) (int, error) {
 	// Check if we have a magefile with this command
 	if !HasMagefile() {
-		return false
+		return 0, nil
 	}
 
 	// Check if this is a discovered custom command and get the original name
@@ -135,21 +134,42 @@ func tryCustomCommand(command string, commandArgs []string, discovery *CommandDi
 
 	result := DelegateToMage(originalCommand, commandArgs...)
 	if result.Err != nil {
-		fmt.Fprintf(os.Stderr, "❌ %v\n", result.Err)
-		os.Exit(result.ExitCode) // Use actual exit code from mage
+		return result.ExitCode, result.Err
 	}
-	return true
+	return 0, nil
 }
 
-func main() {
-	// Initialize flags
-	flags := initFlags()
+// run executes the main application logic and returns an exit code
+func run(args []string) int {
+	// Create a new FlagSet for this run to avoid conflicts in tests
+	fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
+
+	// Initialize flags on the new FlagSet
+	flags := &Flags{
+		Clean:     fs.Bool("clean", false, "clean MAGE-X cache and temporary files"),
+		Compile:   fs.String("compile", "", "compile a magefile for use with mage"),
+		Debug:     fs.Bool("debug", false, "enable debug output"),
+		Force:     fs.Bool("f", false, "force operation"),
+		Help:      fs.Bool("h", false, "show help"),
+		HelpLong:  fs.Bool("help", false, "show help"),
+		Init:      fs.Bool("init", false, "initialize a new magefile with MAGE-X imports"),
+		List:      fs.Bool("l", false, "list available commands"),
+		ListLong:  fs.Bool("list", false, "list available commands (verbose)"),
+		Namespace: fs.Bool("n", false, "show commands organized by namespace"),
+		Search:    fs.String("search", "", "search for commands"),
+		Timeout:   fs.String("t", "", "timeout for command execution"),
+		Verbose:   fs.Bool("v", false, "verbose output"),
+		Version:   fs.Bool("version", false, "show version"),
+	}
 
 	// Custom usage function
-	flag.Usage = showUsage
+	fs.Usage = showUsage
 
 	// Parse command line arguments
-	flag.Parse()
+	if err := fs.Parse(args[1:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		return 1
+	}
 
 	// Load environment variables from .env files (early startup hook)
 	// This loads .github/.env.base and other env files before tool version checks
@@ -193,49 +213,47 @@ func main() {
 	}
 
 	// Get arguments early for help processing
-	args := flag.Args()
+	cmdArgs := fs.Args()
 
 	// Handle special flags
 	if *flags.Version {
 		showVersion()
-		return
+		return 0
 	}
 
 	// Handle help - support both general and command-specific help
 	if *flags.Help || *flags.HelpLong {
-		if len(args) > 0 {
+		if len(cmdArgs) > 0 {
 			// Command-specific help: magex -h build
-			showUnifiedHelp(args[0])
+			showUnifiedHelp(cmdArgs[0])
 		} else {
 			// General help: magex -h
 			showUnifiedHelp("")
 		}
-		return
+		return 0
 	}
 
 	// Handle help command: magex help [command]
-	if len(args) > 0 && args[0] == "help" {
-		if len(args) > 1 {
-			showUnifiedHelp(args[1])
+	if len(cmdArgs) > 0 && cmdArgs[0] == "help" {
+		if len(cmdArgs) > 1 {
+			showUnifiedHelp(cmdArgs[1])
 		} else {
 			showUnifiedHelp("")
 		}
-		return
+		return 0
 	}
 
 	if *flags.Init {
 		if err := initMagefile(); err != nil {
-			if _, printErr := fmt.Fprintf(os.Stderr, "Error: %v\n", err); printErr != nil {
-				return
-			}
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
 		}
-		return
+		return 0
 	}
 
 	if *flags.Clean {
 		cleanCache()
-		return
+		return 0
 	}
 
 	// Handle list commands
@@ -245,41 +263,41 @@ func main() {
 		} else {
 			listCommands(reg, discovery, *flags.ListLong)
 		}
-		return
+		return 0
 	}
 
 	// Handle search
 	if *flags.Search != "" {
 		searchCommands(reg, discovery, *flags.Search)
-		return
+		return 0
 	}
 
 	// Handle namespace listing
 	if *flags.Namespace {
 		listByNamespace(reg, discovery)
-		return
+		return 0
 	}
 
 	// Handle compilation request
 	if *flags.Compile != "" {
 		compileForMage(*flags.Compile)
-		return
+		return 0
 	}
 
-	// Process command execution (args already defined above)
-	if len(args) == 0 {
+	// Process command execution (cmdArgs already defined above)
+	if len(cmdArgs) == 0 {
 		// No command specified, show available commands
 		fmt.Print(banner)
 		utils.Println("\n📋 Available Commands (run 'magex -l' for full list):")
 		showQuickList(reg, discovery)
 		utils.Println("\n💡 Run 'magex <command>' to execute a command")
 		utils.Println("   Run 'magex -h' for help")
-		return
+		return 0
 	}
 
 	// Execute the command
-	command := args[0]
-	commandArgs := args[1:]
+	command := cmdArgs[0]
+	commandArgs := cmdArgs[1:]
 
 	// Convert mage-style namespace:method to our format
 	command = normalizeCommandName(command)
@@ -295,17 +313,30 @@ func main() {
 		// Only try custom command if built-in command doesn't exist
 		// Don't try custom commands when built-in command fails during execution
 		if errors.Is(err, registry.ErrUnknownCommand) {
-			if tryCustomCommand(command, commandArgs, discovery) {
-				return // Success
+			// Check if we have a magefile before trying custom command
+			if !HasMagefile() {
+				// No magefile and no built-in command - command not found
+				fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
+				return 1
 			}
+
+			exitCode, customErr := tryCustomCommand(command, commandArgs, discovery)
+			if customErr != nil {
+				fmt.Fprintf(os.Stderr, "❌ %v\n", customErr)
+				return exitCode
+			}
+			// Custom command succeeded (tryCustomCommand only returns 0, nil on success)
+			return 0
 		}
-		// Command execution failed OR custom command also failed
-		_, printErr := fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
-		if printErr != nil {
-			return
-		}
-		os.Exit(1)
+		// Command execution failed
+		fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
+		return 1
 	}
+	return 0
+}
+
+func main() {
+	os.Exit(run(os.Args))
 }
 
 // showUsage displays custom usage information

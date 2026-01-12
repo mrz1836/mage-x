@@ -1643,21 +1643,24 @@ func TestTryCustomCommand(t *testing.T) {
 		command       string
 		args          []string
 		setupMagefile bool
-		wantExecuted  bool
+		wantExitCode  int
+		wantError     bool
 	}{
 		{
-			name:          "no magefile returns false",
+			name:          "no magefile returns 0",
 			command:       "deploy",
 			args:          []string{},
 			setupMagefile: false,
-			wantExecuted:  false,
+			wantExitCode:  0,
+			wantError:     false,
 		},
 		{
 			name:          "with magefile attempts execution",
-			command:       "nonexistent",
+			command:       "testcommand",
 			args:          []string{},
 			setupMagefile: true,
-			wantExecuted:  true, // Returns true even if command fails
+			wantExitCode:  0,
+			wantError:     false,
 		},
 	}
 
@@ -1682,7 +1685,8 @@ func TestTryCustomCommand(t *testing.T) {
 
 			// Create magefile if requested
 			if tt.setupMagefile {
-				magefileContent := `//go:build mage //nolint:goconst // test data
+				//nolint:goconst // test data
+				magefileContent := `//go:build mage
 
 package main
 
@@ -1698,11 +1702,13 @@ func TestCommand() error {
 			reg := registry.NewRegistry()
 			discovery := NewCommandDiscovery(reg)
 
-			// tryCustomCommand will call os.Exit on error, so we can't test the full flow
-			// We can only test the early return when no magefile exists
-			if !tt.setupMagefile {
-				result := tryCustomCommand(tt.command, tt.args, discovery)
-				assert.Equal(t, tt.wantExecuted, result)
+			// Test tryCustomCommand with new signature
+			exitCode, cmdErr := tryCustomCommand(tt.command, tt.args, discovery)
+			assert.Equal(t, tt.wantExitCode, exitCode)
+			if tt.wantError {
+				assert.Error(t, cmdErr)
+			} else {
+				assert.NoError(t, cmdErr)
 			}
 		})
 	}

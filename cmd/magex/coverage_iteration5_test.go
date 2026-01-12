@@ -27,8 +27,9 @@ func TestTryCustomCommand_NoMagefileAlt(t *testing.T) {
 	reg := registry.NewRegistry()
 	discovery := NewCommandDiscovery(reg)
 
-	result := tryCustomCommand("somecommand", []string{}, discovery)
-	assert.False(t, result, "Should return false when no magefile exists")
+	exitCode, err := tryCustomCommand("somecommand", []string{}, discovery)
+	assert.Equal(t, 0, exitCode, "Should return 0 when no magefile exists")
+	assert.NoError(t, err, "Should return no error when no magefile exists")
 }
 
 // TestTryCustomCommand_SuccessfulExecution tests tryCustomCommand with successful execution
@@ -65,8 +66,9 @@ func Success() error {
 	discovery := NewCommandDiscovery(reg)
 
 	// This should execute successfully
-	result := tryCustomCommand("success", []string{}, discovery)
-	assert.True(t, result, "Should return true when command executes successfully")
+	exitCode, err := tryCustomCommand("success", []string{}, discovery)
+	assert.Equal(t, 0, exitCode, "Should return 0 when command executes successfully")
+	assert.NoError(t, err, "Should return no error when command executes successfully")
 }
 
 // TestTryCustomCommand_WithDiscoveredCommandAlt tests tryCustomCommand using discovered command
@@ -106,6 +108,7 @@ func BuildProject() error {
 	_ = discovery.HasCommand("buildproject")
 
 	// This should use the discovered command's OriginalName
-	result := tryCustomCommand("buildproject", []string{}, discovery)
-	assert.True(t, result, "Should return true when using discovered command")
+	exitCode, err := tryCustomCommand("buildproject", []string{}, discovery)
+	assert.Equal(t, 0, exitCode, "Should return 0 when using discovered command")
+	assert.NoError(t, err, "Should return no error when using discovered command")
 }
