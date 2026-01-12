@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -1220,6 +1221,41 @@ func TestCleanup_Coverage(t *testing.T) {
 		_, err = os.Stat(filePath)
 		assert.True(t, os.IsNotExist(err))
 	})
+
+	t.Run("skips directories during cleanup", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		storage, err := NewJSONStorage(tmpDir)
+		require.NoError(t, err)
+
+		// Create a subdirectory in the metrics path
+		subDir := filepath.Join(tmpDir, "subdir")
+		require.NoError(t, os.Mkdir(subDir, 0o750))
+
+		// Create an old file and a recent file
+		oldDate := time.Now().AddDate(0, 0, -45)
+		oldFile := filepath.Join(tmpDir, fmt.Sprintf("metrics_%s.json", oldDate.Format("2006-01-02")))
+		require.NoError(t, os.WriteFile(oldFile, []byte("[]"), 0o600))
+
+		recentDate := time.Now().AddDate(0, 0, -5)
+		recentFile := filepath.Join(tmpDir, fmt.Sprintf("metrics_%s.json", recentDate.Format("2006-01-02")))
+		require.NoError(t, os.WriteFile(recentFile, []byte("[]"), 0o600))
+
+		// Cleanup should skip the directory and keep recent file
+		err = storage.Cleanup(30)
+		require.NoError(t, err)
+
+		// Subdirectory should still exist
+		_, err = os.Stat(subDir)
+		require.NoError(t, err)
+
+		// Old file should be removed
+		_, err = os.Stat(oldFile)
+		assert.True(t, os.IsNotExist(err))
+
+		// Recent file should still exist
+		_, err = os.Stat(recentFile)
+		assert.NoError(t, err)
+	})
 }
 
 // TestPerformanceTimer_StopWithStorageError tests PerformanceTimer.Stop when RecordMetric fails
@@ -1699,4 +1735,58 @@ func TestExtractPageSize_EdgeCases(t *testing.T) {
 		result = extractPageSize("Mach Virtual Memory Statistics: (page size of 16384 bytes)", 0)
 		assert.Equal(t, uint64(16384), result)
 	})
+}
+
+// TestCheckFileLineLength_Coverage tests CheckFileLineLength edge cases
+func TestCheckFileLineLength_Coverage(t *testing.T) {
+	t.Run("handles empty file (EOF)", func(t *testing.T) {
+		tmpFile := filepath.Join(t.TempDir(), "empty.txt")
+		require.NoError(t, os.WriteFile(tmpFile, []byte(""), 0o600))
+
+		hasLong, lineNum, maxLen, err := CheckFileLineLength(tmpFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong)
+		assert.Equal(t, 0, lineNum)
+		assert.Equal(t, 0, maxLen)
+	})
+
+	t.Run("handles file with short lines", func(t *testing.T) {
+		tmpFile := filepath.Join(t.TempDir(), "short.txt")
+		content := "short line\nanother short line\n"
+		require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0o600))
+
+		hasLong, lineNum, maxLen, err := CheckFileLineLength(tmpFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong)
+		assert.Equal(t, 0, lineNum)
+		assert.Equal(t, 18, maxLen) // "another short line" is 18 chars
+	})
+
+	t.Run("detects long line", func(t *testing.T) {
+		tmpFile := filepath.Join(t.TempDir(), "long.txt")
+		// Create a line longer than limit
+		longLine := strings.Repeat("a", 150)
+		require.NoError(t, os.WriteFile(tmpFile, []byte(longLine), 0o600))
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(tmpFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong)
+		assert.Equal(t, 1, lineNum)
+		assert.Equal(t, 150, lineLen)
+	})
+}
+
+// TestGenerateReport_Disabled tests GenerateReport when metrics are disabled
+func TestGenerateReport_Disabled(t *testing.T) {
+	// Create a metrics collector with disabled metrics
+	tmpDir := t.TempDir()
+	collector := NewMetricsCollector(&MetricsConfig{
+		Enabled:     false,
+		StoragePath: tmpDir,
+	})
+
+	// GenerateReport should return errMetricsCollectionDisabled
+	report, err := collector.GenerateReport("week")
+	assert.Nil(t, report)
+	assert.ErrorIs(t, err, errMetricsCollectionDisabled)
 }
