@@ -34,7 +34,7 @@ func TestDelegateToMageWithTimeout_WithMagefilesDir(t *testing.T) {
 
 	// Create magefiles directory (preferred over magefile.go)
 	require.NoError(t, os.Mkdir("magefiles", 0o750))
-	magefilesContent := `//go:build mage //nolint:goconst // test data
+	magefilesContent := `/` + `/go:build mage
 
 package main
 
@@ -72,7 +72,7 @@ func TestDelegateToMageWithTimeout_ConflictHandling(t *testing.T) {
 
 	// Create BOTH magefiles directory and magefile.go (conflict situation)
 	require.NoError(t, os.Mkdir("magefiles", 0o750))
-	magefilesContent := `//go:build mage //nolint:goconst // test data
+	magefilesContent := `/` + `/go:build mage
 
 package main
 
@@ -83,7 +83,7 @@ func TestCmd() error {
 	require.NoError(t, os.WriteFile(filepath.Join("magefiles", "commands.go"), []byte(magefilesContent), 0o600))
 
 	// Also create root magefile.go
-	rootMagefileContent := `//go:build mage //nolint:goconst // test data
+	rootMagefileContent := `/` + `/go:build mage
 
 package main
 
@@ -124,7 +124,7 @@ func TestDelegateToMageWithTimeout_UsingMageBinary(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -199,7 +199,7 @@ func TestHasCommand_ReturnsFalseOnMismatch(t *testing.T) {
 
 	// Create go.mod and magefile with specific commands
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -236,7 +236,7 @@ func TestGetCommand_ReturnsNilOnMismatch(t *testing.T) {
 
 	// Create go.mod and magefile
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -275,7 +275,7 @@ func TestGetCommandsForHelp_WithMultipleCommands(t *testing.T) {
 
 	// Create go.mod and magefile with multiple commands
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -459,7 +459,7 @@ func TestDelegateToMageWithTimeout_CommandFormat(t *testing.T) {
 
 	// Create go.mod and magefile
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 

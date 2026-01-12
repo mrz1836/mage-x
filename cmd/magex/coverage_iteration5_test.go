@@ -49,7 +49,7 @@ func TestTryCustomCommand_SuccessfulExecution(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile with a simple command that succeeds
-	magefileContent := `//go:build mage
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -88,7 +88,7 @@ func TestTryCustomCommand_WithDiscoveredCommandAlt(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile with CamelCase command
-	magefileContent := `//go:build mage
+	magefileContent := `/` + `/go:build mage
 
 package main
 

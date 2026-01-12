@@ -320,7 +320,7 @@ func TestRun_VerboseFlag(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile with a test command
-	magefileContent := `//go:build mage
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -436,7 +436,7 @@ func TestTryCustomCommand_WithMagefile(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile
-	magefileContent := `//go:build mage
+	magefileContent := `/` + `/go:build mage
 
 package main
 

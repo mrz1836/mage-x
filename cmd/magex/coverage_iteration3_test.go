@@ -34,7 +34,7 @@ func TestInitMagefile_Success(t *testing.T) {
 	// Verify content
 	content, err := os.ReadFile("magefile.go")
 	require.NoError(t, err)
-	assert.Contains(t, string(content), "//go:build mage")
+	assert.Contains(t, string(content), "//"+"go:build mage")
 	assert.Contains(t, string(content), "github.com/mrz1836/mage-x/pkg/mage/auto")
 }
 
@@ -184,7 +184,7 @@ func TestSearchCommands_WithCustomMatchesAlt(t *testing.T) {
 
 	// Create go.mod and magefile with custom command
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -227,7 +227,7 @@ func TestSearchCommands_CustomCommandNoDescription(t *testing.T) {
 
 	// Create go.mod and magefile with custom command (no doc comment)
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -401,7 +401,7 @@ func TestCompileForMage_WritesSuccessfully(t *testing.T) {
 	// Verify content
 	content, err := os.ReadFile(outputFile)
 	require.NoError(t, err)
-	assert.Contains(t, string(content), "//go:build mage")
+	assert.Contains(t, string(content), "//"+"go:build mage")
 	assert.Contains(t, string(content), "auto-generated")
 	assert.Contains(t, string(content), "github.com/mrz1836/mage-x/pkg/mage")
 }
@@ -465,7 +465,7 @@ func TestShowQuickList_WithCustomCommands(t *testing.T) {
 
 	// Create go.mod and magefile
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 

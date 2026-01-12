@@ -69,7 +69,7 @@ func TestSearchCommands_CustomCommandsMatch(t *testing.T) {
 
 	// Create go.mod and magefile with custom command
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -387,7 +387,7 @@ func TestHasCommand_CaseInsensitive(t *testing.T) {
 
 	// Create go.mod and magefile
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -421,7 +421,7 @@ func TestGetCommand_CaseInsensitive(t *testing.T) {
 
 	// Create go.mod and magefile
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
-	magefileContent := `//go:build mage //nolint:goconst // test data
+	magefileContent := `/` + `/go:build mage
 
 package main
 

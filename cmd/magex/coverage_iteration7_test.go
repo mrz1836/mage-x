@@ -52,7 +52,7 @@ func TestDelegateToMageWithTimeout_WithArgs(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile that uses MAGE_ARGS
-	magefileContent := `//go:build mage
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -101,7 +101,7 @@ func TestDelegateToMageWithTimeout_ContextTimeout(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile with a slow command
-	magefileContent := `//go:build mage
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -176,7 +176,7 @@ func TestTryCustomCommand_WithArgs(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile with a command that uses args
-	magefileContent := `//go:build mage
+	magefileContent := `/` + `/go:build mage
 
 package main
 

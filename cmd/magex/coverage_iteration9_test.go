@@ -27,7 +27,7 @@ func TestDiscovery_VerboseModeWithError(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create invalid magefile that will cause parsing error
-	invalidMagefile := `//go:build mage
+	invalidMagefile := `/` + `/go:build mage
 
 package main
 
@@ -82,7 +82,7 @@ func TestDiscovery_VerboseModeWithEnvVar(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create invalid magefile
-	invalidMagefile := `//go:build mage
+	invalidMagefile := `/` + `/go:build mage
 
 package main
 
@@ -127,7 +127,7 @@ func TestDiscovery_OverrideBuiltinCommandVerbose(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile with a command that matches a built-in
-	magefileContent := `//go:build mage
+	magefileContent := `/` + `/go:build mage
 
 package main
 
@@ -184,7 +184,7 @@ func TestGetCommandsForHelp_DiscoveryError(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create invalid magefile
-	invalidMagefile := `//go:build mage
+	invalidMagefile := `/` + `/go:build mage
 
 package main
 
@@ -221,7 +221,7 @@ func TestIsLikelyNamespaceWrapper_VerboseMode(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create magefile with namespace wrapper pattern
-	magefileContent := `//go:build mage
+	magefileContent := `/` + `/go:build mage
 
 package main
 
