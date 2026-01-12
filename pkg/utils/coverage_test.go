@@ -790,6 +790,29 @@ func (f *failingWriter) Write(p []byte) (n int, err error) {
 	return 0, errors.New("write failed") //nolint:err113 // test error
 }
 
+// TestLogWithEmoji_WriteErrors tests logWithEmoji with write failures
+func TestLogWithEmoji_WriteErrors(t *testing.T) {
+	t.Run("handles write error with color", func(t *testing.T) {
+		logger := NewLogger()
+		logger.SetOutput(&failingWriter{})
+		logger.SetColorEnabled(true)
+
+		// logWithEmoji should handle write error gracefully
+		logger.logWithEmoji(LogLevelInfo, "✓", "test message")
+		// Should not panic, just log the error
+	})
+
+	t.Run("handles write error without color", func(t *testing.T) {
+		logger := NewLogger()
+		logger.SetOutput(&failingWriter{})
+		logger.SetColorEnabled(false)
+
+		// logWithEmoji should handle write error gracefully
+		logger.logWithEmoji(LogLevelWarn, "⚠", "test warning")
+		// Should not panic, just log the error
+	})
+}
+
 // TestJSONStorage_Store_AdditionalCoverage tests Store with corrupted files
 func TestJSONStorage_Store_AdditionalCoverage(t *testing.T) {
 	t.Run("handles corrupted metrics file", func(t *testing.T) {
