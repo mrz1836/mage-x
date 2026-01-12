@@ -172,7 +172,8 @@ func (c *RealDefaultChainError) Filter(predicate func(error) bool) []error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	result := make([]error, 0)
+	// Pre-allocate with capacity to avoid reallocations
+	result := make([]error, 0, len(c.errors))
 	for _, err := range c.errors {
 		if predicate(err) {
 			result = append(result, err)
@@ -191,30 +192,54 @@ func NewDefaultChainError() *DefaultChainError {
 	return &DefaultChainError{errors: []error{}}
 }
 
-// Add adds an error to the chain
+// Add adds an error to the chain (O(1) operation)
 func (c *DefaultChainError) Add(err error) ErrorChain {
-	var chain ErrorChain = NewErrorChain()
-	for _, e := range c.errors {
-		chain = chain.Add(e)
+	if err != nil {
+		c.errors = append(c.errors, err)
 	}
-	return chain.Add(err)
+	return c
 }
 
-// AddWithContext adds an error with context to the chain
+// AddWithContext adds an error with context to the chain (O(1) operation)
 func (c *DefaultChainError) AddWithContext(err error, ctx *ErrorContext) ErrorChain {
-	var chain ErrorChain = NewErrorChain()
-	for _, e := range c.errors {
-		chain = chain.Add(e)
+	if err == nil {
+		return c
 	}
-	return chain.AddWithContext(err, ctx)
+
+	// Wrap the error with context if it's not already a MageError
+	var mageErr MageError
+	var me MageError
+	if errors.As(err, &me) {
+		mageErr = me.WithContext(ctx)
+	} else {
+		mageErr = NewBuilder().
+			WithMessage("%s", err.Error()).
+			WithContext(ctx).
+			WithCause(err).
+			Build()
+	}
+	c.errors = append(c.errors, mageErr)
+	return c
 }
 
+// Error returns a string representation of all errors (O(n) operation)
 func (c *DefaultChainError) Error() string {
-	var chain ErrorChain = NewErrorChain()
-	for _, e := range c.errors {
-		chain = chain.Add(e)
+	if len(c.errors) == 0 {
+		return "no errors"
 	}
-	return chain.Error()
+
+	if len(c.errors) == 1 {
+		return c.errors[0].Error()
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("%d errors occurred:\n", len(c.errors)))
+
+	for i, err := range c.errors {
+		sb.WriteString(fmt.Sprintf("  [%d] %v\n", i+1, err))
+	}
+
+	return strings.TrimSuffix(sb.String(), "\n")
 }
 
 // Errors returns all errors in the chain
@@ -277,7 +302,8 @@ func (c *DefaultChainError) ForEach(fn func(error) error) error {
 
 // Filter returns errors that match the given predicate
 func (c *DefaultChainError) Filter(predicate func(error) bool) []error {
-	result := make([]error, 0)
+	// Pre-allocate with capacity to avoid reallocations
+	result := make([]error, 0, len(c.errors))
 	for _, err := range c.errors {
 		if predicate(err) {
 			result = append(result, err)
