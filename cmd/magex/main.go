@@ -3,13 +3,16 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	"golang.org/x/text/cases"
@@ -336,6 +339,21 @@ func run(args []string) int {
 }
 
 func main() {
+	// Create context that cancels on SIGINT/SIGTERM for graceful shutdown
+	ctx, cancel := signal.NotifyContext(context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer cancel()
+
+	// Handle shutdown signal notification in background
+	go func() {
+		<-ctx.Done()
+		if errors.Is(ctx.Err(), context.Canceled) {
+			fmt.Fprintln(os.Stderr, "\nReceived interrupt signal, shutting down...")
+		}
+	}()
+
 	os.Exit(run(os.Args))
 }
 
