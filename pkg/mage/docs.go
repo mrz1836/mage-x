@@ -111,13 +111,14 @@ func (Docs) GoDocs(args ...string) error {
 	utils.Info("Triggering sync for %s@%s", module, currentVersion)
 
 	// Use HTTP client to trigger the proxy
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), "GET", proxyURL, http.NoBody)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", proxyURL, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := utils.DefaultHTTPClient().Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to trigger pkg.go.dev sync: %w", err)
 	}

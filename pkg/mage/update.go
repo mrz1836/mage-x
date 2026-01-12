@@ -303,8 +303,10 @@ func getLatestStableReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 
 // getLatestStableReleaseViaAPI gets the latest stable release using GitHub API
 func getLatestStableReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
-	return utils.HTTPGetJSON[GitHubRelease](url, 10*time.Second)
+	return utils.HTTPGetJSON[GitHubRelease](ctx, url)
 }
 
 // getLatestBetaRelease gets the latest beta release
@@ -357,8 +359,10 @@ func getLatestBetaReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 // getLatestBetaReleaseViaAPI gets the latest beta release using GitHub API.
 // Beta channel prioritizes prereleases but falls back to stable if none exist.
 func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
-	releases, err := utils.HTTPGetJSON[[]GitHubRelease](url, 10*time.Second)
+	releases, err := utils.HTTPGetJSON[[]GitHubRelease](ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch releases from GitHub API: %w", err)
 	}
@@ -420,8 +424,10 @@ func getLatestEdgeReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 
 // getLatestEdgeReleaseViaAPI gets the latest edge release using GitHub API
 func getLatestEdgeReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
-	releases, err := utils.HTTPGetJSON[[]GitHubRelease](url, 10*time.Second)
+	releases, err := utils.HTTPGetJSON[[]GitHubRelease](ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch releases from GitHub API: %w", err)
 	}
@@ -442,8 +448,7 @@ func fetchChecksumForAsset(checksumURL, assetName string) (string, error) {
 		return "", fmt.Errorf("failed to create checksum request: %w", err)
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := utils.DefaultHTTPClient().Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch checksums file: %w", err)
 	}
