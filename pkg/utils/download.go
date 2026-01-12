@@ -325,6 +325,9 @@ type ExecutorFunc func(ctx context.Context, name string, args ...string) error
 // DownloadScript downloads and executes a shell script with retry logic.
 // The executor parameter is required and will be used to execute the downloaded script.
 // This design allows the caller to provide their own secure execution strategy.
+//
+// Security Note: For production use, always provide ChecksumSHA256 in config to verify
+// the downloaded script's integrity before execution.
 func DownloadScript(ctx context.Context, url, scriptArgs string, config *DownloadConfig, executor ExecutorFunc) error {
 	if executor == nil {
 		return ErrExecutorCannotBeNil
@@ -332,6 +335,11 @@ func DownloadScript(ctx context.Context, url, scriptArgs string, config *Downloa
 
 	if config == nil {
 		config = DefaultDownloadConfig()
+	}
+
+	// Security warning: downloading scripts without checksum verification is risky
+	if config.ChecksumSHA256 == "" {
+		log.Printf("WARNING: downloading script from %s without checksum verification - consider providing ChecksumSHA256 for security", url)
 	}
 
 	// Create temporary file for script

@@ -62,7 +62,7 @@ func (Vet) Default() error {
 	}
 
 	packages := strings.Split(strings.TrimSpace(output), "\n")
-	modulePackages := []string{}
+	modulePackages := make([]string, 0, len(packages)) // Pre-allocate for better performance
 
 	// Filter to only module packages
 	for _, pkg := range packages {
@@ -147,7 +147,7 @@ func (Vet) Parallel() error {
 	}
 
 	packages := strings.Split(strings.TrimSpace(output), "\n")
-	modulePackages := []string{}
+	modulePackages := make([]string, 0, len(packages)) // Pre-allocate for better performance
 
 	// Filter to only module packages
 	for _, pkg := range packages {

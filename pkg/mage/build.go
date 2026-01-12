@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -8,9 +9,11 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/magefile/mage/mg"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/mrz1836/mage-x/pkg/common/cache"
 	"github.com/mrz1836/mage-x/pkg/common/env"
@@ -417,20 +420,27 @@ func (b Build) All() error {
 	}
 
 	start := time.Now()
-	buildErrs := make(chan error, len(config.Build.Platforms))
+
+	// Use errgroup for cleaner concurrent error handling
+	g, _ := errgroup.WithContext(context.Background())
+
+	var mu sync.Mutex
+	var buildErrors []string
 
 	for _, platform := range config.Build.Platforms {
-		go func(p string) {
-			buildErrs <- b.Platform(p)
-		}(platform)
+		// capture loop variable
+		g.Go(func() error {
+			if buildErr := b.Platform(platform); buildErr != nil {
+				mu.Lock()
+				buildErrors = append(buildErrors, buildErr.Error())
+				mu.Unlock()
+			}
+			return nil // Continue on error to collect all build failures
+		})
 	}
 
-	var buildErrors []string
-	for range config.Build.Platforms {
-		if err := <-buildErrs; err != nil {
-			buildErrors = append(buildErrors, err.Error())
-		}
-	}
+	//nolint:errcheck,gosec // g.Wait() always returns nil since all goroutines return nil (errors collected separately)
+	g.Wait()
 
 	if len(buildErrors) > 0 {
 		return fmt.Errorf("%w:\n%s", ErrBuildErrors, strings.Join(buildErrors, "\n"))
