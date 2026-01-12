@@ -813,6 +813,35 @@ func TestLogWithEmoji_WriteErrors(t *testing.T) {
 	})
 }
 
+// TestLogger_Log_WriteErrors tests log function with write failures
+func TestLogger_Log_WriteErrors(t *testing.T) {
+	t.Run("handles write error with color", func(t *testing.T) {
+		logger := NewLogger()
+		logger.SetOutput(&failingWriter{})
+		logger.SetColorEnabled(true)
+
+		// log should handle write error gracefully
+		logger.log(LogLevelInfo, "test %s", "message")
+		logger.log(LogLevelWarn, "test %s", "warning")
+		logger.log(LogLevelError, "test %s", "error")
+		logger.log(LogLevelDebug, "test %s", "debug")
+		// Should not panic, just log the errors
+	})
+
+	t.Run("handles write error without color", func(t *testing.T) {
+		logger := NewLogger()
+		logger.SetOutput(&failingWriter{})
+		logger.SetColorEnabled(false)
+
+		// log should handle write error gracefully
+		logger.log(LogLevelInfo, "test %s", "message")
+		logger.log(LogLevelWarn, "test %s", "warning")
+		logger.log(LogLevelError, "test %s", "error")
+		logger.log(LogLevelDebug, "test %s", "debug")
+		// Should not panic, just log the errors
+	})
+}
+
 // TestJSONStorage_Store_AdditionalCoverage tests Store with corrupted files
 func TestJSONStorage_Store_AdditionalCoverage(t *testing.T) {
 	t.Run("handles corrupted metrics file", func(t *testing.T) {
