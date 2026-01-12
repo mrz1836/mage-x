@@ -794,3 +794,118 @@ func TestLogger_AdditionalCoverage(t *testing.T) {
 		_ = logger.GetDayContext()
 	})
 }
+
+// mockStorage is a storage implementation that can be configured to fail
+type mockStorage struct {
+	shouldFail bool
+	failError  error
+}
+
+func (m *mockStorage) Store(_ *Metric) error {
+	if m.shouldFail {
+		return m.failError
+	}
+	return nil
+}
+
+func (m *mockStorage) Query(_ *MetricsQuery) ([]*Metric, error) {
+	return nil, nil
+}
+
+func (m *mockStorage) Cleanup(_ int) error {
+	return nil
+}
+
+func (m *mockStorage) Aggregate(_ *MetricsQuery) (*AggregatedMetrics, error) {
+	return &AggregatedMetrics{}, nil
+}
+
+// TestMetricsCollector_RecordMetricErrors tests RecordMetric error handling
+func TestMetricsCollector_RecordMetricErrors(t *testing.T) {
+	t.Run("returns storage error when Store fails", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		collector := &MetricsCollector{
+			config:  config,
+			metrics: make(map[string]*Metric),
+			storage: &mockStorage{
+				shouldFail: true,
+				failError:  errors.New("storage write failed"), //nolint:err113 // test error
+			},
+		}
+
+		metric := &Metric{
+			Name:      "test_metric",
+			Type:      MetricTypeCounter,
+			Value:     1.0,
+			Timestamp: time.Now(),
+		}
+
+		err := collector.RecordMetric(metric)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "storage write failed")
+	})
+
+	t.Run("succeeds when storage is nil", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		collector := &MetricsCollector{
+			config:  config,
+			metrics: make(map[string]*Metric),
+			storage: nil,
+		}
+
+		metric := &Metric{
+			Name:      "test_metric",
+			Type:      MetricTypeCounter,
+			Value:     1.0,
+			Timestamp: time.Now(),
+		}
+
+		err := collector.RecordMetric(metric)
+		require.NoError(t, err)
+	})
+}
+
+// TestPromptForInput_EmptyPrompt tests PromptForInput with empty prompt
+func TestPromptForInput_EmptyPrompt(t *testing.T) {
+	t.Run("handles empty prompt string", func(t *testing.T) {
+		// Create a pipe to simulate stdin
+		oldStdin := os.Stdin
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stdin = r
+		defer func() {
+			os.Stdin = oldStdin
+			_ = r.Close() //nolint:errcheck // cleanup in defer
+		}()
+
+		// Write test input
+		go func() {
+			_, _ = w.WriteString("test input\n") //nolint:errcheck // test helper
+			_ = w.Close()                        //nolint:errcheck // test cleanup
+		}()
+
+		result, err := PromptForInput("")
+		require.NoError(t, err)
+		assert.Equal(t, "test input", result)
+	})
+}
+
+// TestDownloadWithRetry_EdgeCases tests DownloadWithRetry edge cases
+func TestDownloadWithRetry_EdgeCases(t *testing.T) {
+	t.Run("returns error for empty URL", func(t *testing.T) {
+		ctx := context.Background()
+		tmpFile := filepath.Join(t.TempDir(), "download.txt")
+		err := DownloadWithRetry(ctx, "", tmpFile, nil)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidURL)
+	})
+
+	t.Run("returns error for empty destination", func(t *testing.T) {
+		ctx := context.Background()
+		err := DownloadWithRetry(ctx, "http://example.com/file.txt", "", nil)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidDestination)
+	})
+}
