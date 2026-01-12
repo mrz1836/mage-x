@@ -1085,3 +1085,60 @@ func TestMultiSpinner_StopError(t *testing.T) {
 		// Should not panic
 	})
 }
+
+// TestGetCurrentResourceMetrics_Coverage tests GetCurrentResourceMetrics edge cases
+func TestGetCurrentResourceMetrics_Coverage(t *testing.T) {
+	t.Run("returns resource metrics", func(t *testing.T) {
+		metrics := GetCurrentResourceMetrics()
+		// Should return valid metrics
+		assert.NotNil(t, metrics)
+		assert.GreaterOrEqual(t, metrics.CPUUsage, float64(0))
+		assert.GreaterOrEqual(t, metrics.MemoryUsage, int64(0))
+	})
+}
+
+// TestEstimatePackageBuildMemory_Coverage tests memory estimation
+func TestEstimatePackageBuildMemory_Coverage(t *testing.T) {
+	t.Run("estimates memory for different package counts", func(t *testing.T) {
+		// Test with small package count
+		mem := EstimatePackageBuildMemory(1)
+		assert.Positive(t, mem)
+
+		// Test with larger package count
+		mem2 := EstimatePackageBuildMemory(100)
+		assert.Greater(t, mem2, mem)
+	})
+}
+
+// TestProgressFinish_Coverage tests Progress Finish edge cases
+func TestProgressFinish_Coverage(t *testing.T) {
+	t.Run("finishes progress bar with newline", func(t *testing.T) {
+		progress := NewProgress(100, "Testing")
+		progress.Update(75)
+		// Finish should set to 100% and print newline
+		progress.Finish()
+	})
+}
+
+// TestCleanup_Coverage tests Cleanup with retention days
+func TestCleanup_Coverage(t *testing.T) {
+	t.Run("cleanup with different retention periods", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		storage, err := NewJSONStorage(tmpDir)
+		require.NoError(t, err)
+
+		// Create some old metric files
+		oldDate := time.Now().AddDate(0, 0, -45)
+		filename := fmt.Sprintf("metrics_%s.json", oldDate.Format("2006-01-02"))
+		filePath := filepath.Join(tmpDir, filename)
+		require.NoError(t, os.WriteFile(filePath, []byte("[]"), 0o600))
+
+		// Cleanup with 30 day retention
+		err = storage.Cleanup(30)
+		require.NoError(t, err)
+
+		// Old file should be removed
+		_, err = os.Stat(filePath)
+		assert.True(t, os.IsNotExist(err))
+	})
+}
