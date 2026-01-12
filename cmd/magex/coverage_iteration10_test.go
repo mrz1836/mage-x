@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestRun_Version(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "--version"})
+	exitCode := run(context.Background(), []string{"magex", "--version"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -33,7 +34,7 @@ func TestRun_Help(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "--help"})
+	exitCode := run(context.Background(), []string{"magex", "--help"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -50,7 +51,7 @@ func TestRun_HelpShortFlag(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "-h"})
+	exitCode := run(context.Background(), []string{"magex", "-h"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -67,7 +68,7 @@ func TestRun_HelpCommand(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "help", "build"})
+	exitCode := run(context.Background(), []string{"magex", "help", "build"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -95,7 +96,7 @@ func TestRun_Init(t *testing.T) {
 	require.NoError(t, pipeErr)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "-init"})
+	exitCode := run(context.Background(), []string{"magex", "-init"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -128,7 +129,7 @@ func TestRun_InitAlreadyExists(t *testing.T) {
 	require.NoError(t, pipeErr)
 	os.Stderr = w
 
-	exitCode := run([]string{"magex", "-init"})
+	exitCode := run(context.Background(), []string{"magex", "-init"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stderr = oldStderr
@@ -160,7 +161,7 @@ func TestRun_Clean(t *testing.T) {
 	require.NoError(t, pipeErr)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "-clean"})
+	exitCode := run(context.Background(), []string{"magex", "-clean"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -177,7 +178,7 @@ func TestRun_List(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "-l"})
+	exitCode := run(context.Background(), []string{"magex", "-l"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -194,7 +195,7 @@ func TestRun_ListLong(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "--list"})
+	exitCode := run(context.Background(), []string{"magex", "--list"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -211,7 +212,7 @@ func TestRun_Namespace(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "-n"})
+	exitCode := run(context.Background(), []string{"magex", "-n"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -228,7 +229,7 @@ func TestRun_Search(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "-search", "build"})
+	exitCode := run(context.Background(), []string{"magex", "-search", "build"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -256,7 +257,7 @@ func TestRun_Compile(t *testing.T) {
 	require.NoError(t, pipeErr)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "-compile", "output.go"})
+	exitCode := run(context.Background(), []string{"magex", "-compile", "output.go"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -275,7 +276,7 @@ func TestRun_NoCommand(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex"})
+	exitCode := run(context.Background(), []string{"magex"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -292,7 +293,7 @@ func TestRun_UnknownCommand(t *testing.T) {
 	require.NoError(t, err)
 	os.Stderr = w
 
-	exitCode := run([]string{"magex", "nonexistentcommand12345"})
+	exitCode := run(context.Background(), []string{"magex", "nonexistentcommand12345"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stderr = oldStderr
@@ -337,7 +338,7 @@ func Test() error {
 	os.Stdout = w
 
 	// Run with -v flag and list commands
-	exitCode := run([]string{"magex", "-v", "-l"})
+	exitCode := run(context.Background(), []string{"magex", "-v", "-l"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -371,7 +372,7 @@ func TestRun_DebugFlag(t *testing.T) {
 	os.Stdout = w
 
 	// Run with -debug flag and list commands
-	exitCode := run([]string{"magex", "-debug", "-l"})
+	exitCode := run(context.Background(), []string{"magex", "-debug", "-l"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -391,7 +392,7 @@ func TestRun_ListWithNamespace(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	exitCode := run([]string{"magex", "-l", "-n"})
+	exitCode := run(context.Background(), []string{"magex", "-l", "-n"})
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout
@@ -414,7 +415,7 @@ func TestTryCustomCommand_NoMagefile(t *testing.T) {
 	require.NoError(t, os.Chdir(tmpDir))
 
 	// No magefile exists
-	exitCode, cmdErr := tryCustomCommand("test", []string{}, NewCommandDiscovery(nil))
+	exitCode, cmdErr := tryCustomCommand(context.Background(), "test", []string{}, NewCommandDiscovery(nil))
 	assert.Equal(t, 0, exitCode, "Should return 0 when no magefile")
 	assert.NoError(t, cmdErr, "Should return no error when no magefile")
 }
@@ -455,7 +456,7 @@ func Test() error {
 	require.NoError(t, pipeErr)
 	os.Stdout = w
 
-	exitCode, cmdErr := tryCustomCommand("test", []string{}, NewCommandDiscovery(nil))
+	exitCode, cmdErr := tryCustomCommand(context.Background(), "test", []string{}, NewCommandDiscovery(nil))
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout

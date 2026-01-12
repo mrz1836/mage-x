@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -52,7 +53,7 @@ func TestCmd() error {
 	require.NoError(t, os.Chmod(tmpDir, 0o500)) //nolint:gosec // intentional for test
 
 	// This should fail when trying to rename magefile.go
-	result := DelegateToMageWithTimeout("testCmd", 5*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "testCmd", 5*time.Second)
 
 	// Restore permissions
 	_ = os.Chmod(tmpDir, 0o750) //nolint:errcheck,gosec // test cleanup

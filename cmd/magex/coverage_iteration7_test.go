@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"testing"
@@ -72,7 +73,7 @@ func TestArgs() error {
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
 	// Delegate with arguments
-	result := DelegateToMageWithTimeout("testArgs", 10*time.Second, "arg1", "arg2")
+	result := DelegateToMageWithTimeout(context.Background(), "testArgs", 10*time.Second, "arg1", "arg2")
 
 	// Should complete successfully
 	assert.Equal(t, 0, result.ExitCode, "Should succeed with args")
@@ -115,7 +116,7 @@ func SlowCmd() error {
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
 	// Delegate with very short timeout
-	result := DelegateToMageWithTimeout("slowCmd", 100*time.Millisecond)
+	result := DelegateToMageWithTimeout(context.Background(), "slowCmd", 100*time.Millisecond)
 
 	// Should timeout
 	assert.Equal(t, 124, result.ExitCode, "Should return timeout exit code")
@@ -199,7 +200,7 @@ func TestWithArgs() error {
 	discovery := NewCommandDiscovery(reg)
 
 	// This should execute successfully with args
-	exitCode, err := tryCustomCommand("testwithargs", []string{"foo", "bar"}, discovery)
+	exitCode, err := tryCustomCommand(context.Background(), "testwithargs", []string{"foo", "bar"}, discovery)
 	assert.Equal(t, 0, exitCode, "Should return 0 when command executes with args")
 	assert.NoError(t, err, "Should return no error when command executes with args")
 }

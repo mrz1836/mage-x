@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,7 +55,7 @@ func TestGoRun() error {
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
 	// This should use go run since mage is not available
-	result := DelegateToMageWithTimeout("testGoRun", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "testGoRun", 10*time.Second)
 
 	assert.Equal(t, 0, result.ExitCode, "Should succeed with go run")
 	assert.NoError(t, result.Err)
@@ -102,7 +103,7 @@ func DirTest() error {
 	require.NoError(t, os.WriteFile("magefiles/commands.go", []byte(magefilesContent), 0o600))
 
 	// This should use go run with magefiles directory
-	result := DelegateToMageWithTimeout("dirTest", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "dirTest", 10*time.Second)
 
 	assert.Equal(t, 0, result.ExitCode, "Should succeed with magefiles directory")
 	assert.NoError(t, result.Err)
@@ -143,7 +144,7 @@ func FailSilent() error {
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
 	// This should fail without stderr content
-	result := DelegateToMageWithTimeout("failSilent", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "failSilent", 10*time.Second)
 
 	assert.NotEqual(t, 0, result.ExitCode, "Should have non-zero exit code")
 	assert.Error(t, result.Err, "Should return error")

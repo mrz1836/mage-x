@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -443,7 +444,7 @@ func TestDelegateToMageWithTimeout_NoMagefile(t *testing.T) {
 	require.NoError(t, os.Chdir(tmpDir))
 
 	// Don't create any magefile - should return error
-	result := DelegateToMageWithTimeout("test", DefaultDelegateTimeout)
+	result := DelegateToMageWithTimeout(context.Background(), "test", DefaultDelegateTimeout)
 
 	assert.Equal(t, 1, result.ExitCode)
 	require.Error(t, result.Err)

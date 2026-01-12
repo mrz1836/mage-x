@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"os/exec"
 	"strings"
@@ -635,7 +636,7 @@ func PrintArgs() error {
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
 	// Call with arguments
-	result := DelegateToMageWithTimeout("printArgs", DefaultDelegateTimeout, "arg1", "arg2")
+	result := DelegateToMageWithTimeout(context.Background(), "printArgs", DefaultDelegateTimeout, "arg1", "arg2")
 
 	// Should execute (may succeed or fail depending on environment)
 	_ = result // Just testing the code path with arguments

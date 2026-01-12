@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,7 +27,7 @@ func TestDelegateToMageWithTimeout_MageNotFoundError(t *testing.T) {
 	require.NoError(t, os.Chdir(tmpDir))
 
 	// Don't create any magefile - should get command not found error
-	result := DelegateToMageWithTimeout("test", 5*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "test", 5*time.Second)
 
 	assert.Equal(t, 1, result.ExitCode)
 	require.Error(t, result.Err)
@@ -66,7 +67,7 @@ func TestDelegateToMageWithTimeout_ConflictRenameError(t *testing.T) {
 		}
 	})
 
-	result := DelegateToMageWithTimeout("test", 5*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "test", 5*time.Second)
 
 	// Restore permissions before assertions
 	// #nosec G302 -- restoring permissions after test
@@ -112,7 +113,7 @@ func TestCmd() error {
 `
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
-	result := DelegateToMageWithTimeout("testCmd", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "testCmd", 10*time.Second)
 
 	// With mage binary, it should use different code path (lines 135-141)
 	_ = magePath // used to verify path was found
@@ -153,7 +154,7 @@ func TestCmd() error {
 `
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
-	result := DelegateToMageWithTimeout("testCmd", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "testCmd", 10*time.Second)
 
 	// This tests the path where cmd.Dir is empty and needs to be set (lines 171-174)
 	_ = result
@@ -395,7 +396,7 @@ func FailCmd() error {
 `
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
-	result := DelegateToMageWithTimeout("failCmd", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "failCmd", 10*time.Second)
 
 	// Should have non-zero exit code
 	assert.NotEqual(t, 0, result.ExitCode)
@@ -441,7 +442,7 @@ func SlowCmd() error {
 
 	// Use short timeout (but not too short for CI)
 	// The command sleeps for 30s, so 2s timeout is enough to trigger timeout reliably
-	result := DelegateToMageWithTimeout("slowCmd", 2*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "slowCmd", 2*time.Second)
 
 	// Should timeout
 	assert.Equal(t, 124, result.ExitCode)
@@ -567,7 +568,7 @@ func TestCmd() error {
 	require.NoError(t, os.WriteFile(filepath.Join("magefiles", "commands.go"), []byte(magefileContent), 0o600))
 
 	// Test with arguments - this tests line 148 and line 166-168
-	result := DelegateToMageWithTimeout("testCmd", 10*time.Second, "arg1", "arg2")
+	result := DelegateToMageWithTimeout(context.Background(), "testCmd", 10*time.Second, "arg1", "arg2")
 
 	// Should succeed or fail depending on environment, but we're testing the code path
 	_ = result
@@ -614,7 +615,7 @@ func TestCmd() error {
 
 	// Execute command - this will trigger conflict handling and attempt to restore
 	// The restore will happen in the defer (lines 120-131)
-	result := DelegateToMageWithTimeout("testCmd", 10*time.Second)
+	result := DelegateToMageWithTimeout(context.Background(), "testCmd", 10*time.Second)
 
 	// Verify magefile.go was restored
 	_, err = os.Stat("magefile.go")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestTryCustomCommand_NoMagefileAlt(t *testing.T) {
 	reg := registry.NewRegistry()
 	discovery := NewCommandDiscovery(reg)
 
-	exitCode, err := tryCustomCommand("somecommand", []string{}, discovery)
+	exitCode, err := tryCustomCommand(context.Background(), "somecommand", []string{}, discovery)
 	assert.Equal(t, 0, exitCode, "Should return 0 when no magefile exists")
 	assert.NoError(t, err, "Should return no error when no magefile exists")
 }
@@ -66,7 +67,7 @@ func Success() error {
 	discovery := NewCommandDiscovery(reg)
 
 	// This should execute successfully
-	exitCode, err := tryCustomCommand("success", []string{}, discovery)
+	exitCode, err := tryCustomCommand(context.Background(), "success", []string{}, discovery)
 	assert.Equal(t, 0, exitCode, "Should return 0 when command executes successfully")
 	assert.NoError(t, err, "Should return no error when command executes successfully")
 }
@@ -108,7 +109,7 @@ func BuildProject() error {
 	_ = discovery.HasCommand("buildproject")
 
 	// This should use the discovered command's OriginalName
-	exitCode, err := tryCustomCommand("buildproject", []string{}, discovery)
+	exitCode, err := tryCustomCommand(context.Background(), "buildproject", []string{}, discovery)
 	assert.Equal(t, 0, exitCode, "Should return 0 when using discovered command")
 	assert.NoError(t, err, "Should return no error when using discovered command")
 }
