@@ -1170,6 +1170,23 @@ func TestEstimatePackageBuildMemory_Coverage(t *testing.T) {
 		mem2 := EstimatePackageBuildMemory(100)
 		assert.Greater(t, mem2, mem)
 	})
+
+	t.Run("caps at maximum memory", func(t *testing.T) {
+		// Test with very large package count (> 8GB cap)
+		mem := EstimatePackageBuildMemory(1000)
+		// Should be capped at 8GB = 8000 MB
+		expected := uint64(8000) * 1024 * 1024
+		assert.Equal(t, expected, mem)
+	})
+
+	t.Run("handles negative package count", func(t *testing.T) {
+		// Test with negative package count that results in negative estimatedMB
+		// -100 * 50 = -5000, so 500 + (-5000) = -4500 < 0
+		mem := EstimatePackageBuildMemory(-100)
+		// Should return base memory (500 MB)
+		expected := uint64(500) * 1024 * 1024
+		assert.Equal(t, expected, mem)
+	})
 }
 
 // TestProgressFinish_Coverage tests Progress Finish edge cases
