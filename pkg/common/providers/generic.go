@@ -26,13 +26,17 @@ func NewProvider[T any](factory func() T) *Provider[T] {
 
 // Get returns the singleton instance, creating it on first call using the factory function.
 // Subsequent calls return the same instance. This method is thread-safe.
-// sync.Once provides memory ordering guarantees, making the RWMutex unnecessary.
 func (p *Provider[T]) Get() T {
-	// If instance was manually set, return it directly
+	// If instance was manually set via Set(), read with proper synchronization
+	// to avoid data race with concurrent Set() calls
 	if p.wasSet.Load() {
-		return p.instance
+		p.mu.RLock()
+		instance := p.instance
+		p.mu.RUnlock()
+		return instance
 	}
 	// Otherwise, lazily initialize with factory
+	// sync.Once provides memory ordering guarantees for the factory path
 	p.once.Do(func() {
 		p.instance = p.factory()
 	})
