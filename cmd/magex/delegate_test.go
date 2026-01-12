@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -227,7 +228,7 @@ func TestDelegateToMage_CommandNotFound(t *testing.T) {
 	}
 
 	// Test that DelegateToMage returns appropriate error
-	result := DelegateToMage("nonexistent")
+	result := DelegateToMage(context.Background(), "nonexistent")
 	if result.Err == nil {
 		t.Error("DelegateToMage should return error when no magefile exists")
 	}
@@ -598,7 +599,7 @@ func ParamsTest() error {
 
 	// Test that the command can be executed
 	// Note: This will use "go run" since mage might not be available
-	result := DelegateToMage("TestCommand")
+	result := DelegateToMage(context.Background(), "TestCommand")
 	if result.Err != nil {
 		// This is expected to work in a real environment with Go
 		// but might fail in test environment, so we'll log rather than fail
@@ -736,7 +737,7 @@ func SleepCmd() error {
 	require.NoError(t, os.WriteFile(filepath.Join("magefiles", "commands.go"), []byte(magefileContent), secureFilePerm))
 
 	// Execute with a very short timeout
-	result := DelegateToMageWithTimeout("sleepCmd", 500*time.Millisecond)
+	result := DelegateToMageWithTimeout(context.Background(), "sleepCmd", 500*time.Millisecond)
 
 	// Should timeout and return the timeout error
 	require.Error(t, result.Err, "Command should timeout")
@@ -786,7 +787,7 @@ func ArgsCmd() error {
 	require.NoError(t, os.WriteFile(filepath.Join("magefiles", "commands.go"), []byte(magefileContent), secureFilePerm))
 
 	// Execute with arguments
-	result := DelegateToMageWithTimeout("argsCmd", DefaultDelegateTimeout, "arg1", "arg2", "arg3")
+	result := DelegateToMageWithTimeout(context.Background(), "argsCmd", DefaultDelegateTimeout, "arg1", "arg2", "arg3")
 
 	// The command should execute without error
 	// Note: This test verifies the code path that sets MAGE_ARGS, even if the actual execution
@@ -846,7 +847,7 @@ func RootCmd() error {
 	require.NoError(t, os.WriteFile("magefile.go", []byte(rootMagefileContent), secureFilePerm))
 
 	// Execute a command - this should trigger the conflict handling code path
-	result := DelegateToMageWithTimeout("testCmd", DefaultDelegateTimeout)
+	result := DelegateToMageWithTimeout(context.Background(), "testCmd", DefaultDelegateTimeout)
 
 	// After execution, magefile.go should be restored
 	_, err = os.Stat("magefile.go")
@@ -903,7 +904,7 @@ func FailCmd() error {
 	require.NoError(t, os.WriteFile(filepath.Join("magefiles", "commands.go"), []byte(magefileContent), secureFilePerm))
 
 	// Execute the failing command
-	result := DelegateToMageWithTimeout("failCmd", DefaultDelegateTimeout)
+	result := DelegateToMageWithTimeout(context.Background(), "failCmd", DefaultDelegateTimeout)
 
 	// Should fail with the error message captured
 	require.Error(t, result.Err, "Command should fail")
