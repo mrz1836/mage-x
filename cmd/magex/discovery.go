@@ -20,10 +20,11 @@ type DiscoveredCommand struct {
 
 // CommandDiscovery handles discovery and caching of custom commands
 type CommandDiscovery struct {
-	commands []DiscoveredCommand
-	loaded   bool
-	verbose  bool
-	registry *registry.Registry
+	commands   []DiscoveredCommand
+	commandMap map[string]*DiscoveredCommand // Index for O(1) lookups by normalized name
+	loaded     bool
+	verbose    bool
+	registry   *registry.Registry
 }
 
 // NewCommandDiscovery creates a new command discovery instance
@@ -95,6 +96,12 @@ func (d *CommandDiscovery) Discover() error {
 		d.commands = append(d.commands, discovered)
 	}
 
+	// Build index for O(1) lookups
+	d.commandMap = make(map[string]*DiscoveredCommand, len(d.commands))
+	for i := range d.commands {
+		d.commandMap[d.commands[i].Name] = &d.commands[i]
+	}
+
 	d.loaded = true
 
 	if d.verbose && len(d.commands) > 0 {
@@ -114,12 +121,8 @@ func (d *CommandDiscovery) HasCommand(name string) bool {
 	}
 
 	name = strings.ToLower(name)
-	for _, cmd := range d.commands {
-		if cmd.Name == name {
-			return true
-		}
-	}
-	return false
+	_, found := d.commandMap[name]
+	return found
 }
 
 // GetCommand returns information about a discovered command
@@ -129,12 +132,8 @@ func (d *CommandDiscovery) GetCommand(name string) (*DiscoveredCommand, bool) {
 	}
 
 	name = strings.ToLower(name)
-	for _, cmd := range d.commands {
-		if cmd.Name == name {
-			return &cmd, true
-		}
-	}
-	return nil, false
+	cmd, found := d.commandMap[name]
+	return cmd, found
 }
 
 // ListCommands returns all discovered commands

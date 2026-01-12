@@ -12,6 +12,21 @@ import (
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 )
 
+// newTestDiscovery creates a CommandDiscovery with pre-populated commands for testing.
+// It properly initializes both the commands slice and the commandMap index.
+func newTestDiscovery(commands []DiscoveredCommand) *CommandDiscovery {
+	cd := &CommandDiscovery{
+		commands: commands,
+		loaded:   true,
+	}
+	// Build the command map index (required after performance optimization)
+	cd.commandMap = make(map[string]*DiscoveredCommand, len(commands))
+	for i := range cd.commands {
+		cd.commandMap[cd.commands[i].Name] = &cd.commands[i]
+	}
+	return cd
+}
+
 // =============================================================================
 // NewCommandDiscovery Tests
 // =============================================================================
@@ -168,10 +183,7 @@ func TestCommandDiscovery_HasCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cd := &CommandDiscovery{
-				commands: tt.commands,
-				loaded:   true, // Skip actual discovery
-			}
+			cd := newTestDiscovery(tt.commands)
 			got := cd.HasCommand(tt.lookup)
 			assert.Equal(t, tt.want, got)
 		})
@@ -258,10 +270,7 @@ func TestCommandDiscovery_GetCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cd := &CommandDiscovery{
-				commands: tt.commands,
-				loaded:   true, // Skip actual discovery
-			}
+			cd := newTestDiscovery(tt.commands)
 			gotCmd, gotOk := cd.GetCommand(tt.lookup)
 			assert.Equal(t, tt.wantOk, gotOk)
 			if tt.wantCmd == nil {
@@ -588,12 +597,9 @@ func TestCommandDiscovery_Integration_WithRegistry(t *testing.T) {
 }
 
 func TestCommandDiscovery_ClearAndReload(t *testing.T) {
-	cd := &CommandDiscovery{
-		commands: []DiscoveredCommand{
-			{Name: "test", Description: "Test"},
-		},
-		loaded: true,
-	}
+	cd := newTestDiscovery([]DiscoveredCommand{
+		{Name: "test", Description: "Test"},
+	})
 
 	// Verify command exists
 	assert.True(t, cd.HasCommand("test"))

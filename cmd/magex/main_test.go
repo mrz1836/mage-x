@@ -1759,6 +1759,11 @@ func TestCommand() error {
 			Description:  "Test command",
 		},
 	}
+	// Build the command map index (added as part of performance optimization)
+	discovery.commandMap = make(map[string]*DiscoveredCommand)
+	for i := range discovery.commands {
+		discovery.commandMap[discovery.commands[i].Name] = &discovery.commands[i]
+	}
 	discovery.loaded = true
 
 	// Test that GetCommand returns the discovered command
