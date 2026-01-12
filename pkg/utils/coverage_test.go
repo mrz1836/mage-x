@@ -1618,3 +1618,68 @@ func TestMultiSpinner_StopEdgeCases(t *testing.T) {
 		assert.False(t, active)
 	})
 }
+
+// TestExtractPagesValue_EdgeCases tests extractPagesValue error paths
+func TestExtractPagesValue_EdgeCases(t *testing.T) {
+	t.Run("returns 0 for lines with fewer than 3 fields", func(t *testing.T) {
+		result := extractPagesValue("Pages free:")
+		assert.Equal(t, uint64(0), result)
+
+		result = extractPagesValue("Pages")
+		assert.Equal(t, uint64(0), result)
+
+		result = extractPagesValue("")
+		assert.Equal(t, uint64(0), result)
+	})
+
+	t.Run("returns 0 for invalid number format", func(t *testing.T) {
+		result := extractPagesValue("Pages free: invalid.")
+		assert.Equal(t, uint64(0), result)
+
+		result = extractPagesValue("Pages free: -123.")
+		assert.Equal(t, uint64(0), result)
+
+		result = extractPagesValue("Pages free: abc123.")
+		assert.Equal(t, uint64(0), result)
+	})
+
+	t.Run("parses valid page count", func(t *testing.T) {
+		result := extractPagesValue("Pages free: 12345.")
+		assert.Equal(t, uint64(12345), result)
+
+		result = extractPagesValue("Pages active: 67890.")
+		assert.Equal(t, uint64(67890), result)
+	})
+}
+
+// TestExtractPageSize_EdgeCases tests extractPageSize error paths
+func TestExtractPageSize_EdgeCases(t *testing.T) {
+	t.Run("returns default when 'of' keyword not found", func(t *testing.T) {
+		result := extractPageSize("Mach Virtual Memory Statistics:", 4096)
+		assert.Equal(t, uint64(4096), result)
+
+		result = extractPageSize("Pages free: 12345.", 8192)
+		assert.Equal(t, uint64(8192), result)
+	})
+
+	t.Run("returns default when index out of bounds", func(t *testing.T) {
+		result := extractPageSize("page size of", 4096)
+		assert.Equal(t, uint64(4096), result)
+	})
+
+	t.Run("returns default for invalid number format", func(t *testing.T) {
+		result := extractPageSize("page size of invalid bytes", 4096)
+		assert.Equal(t, uint64(4096), result)
+
+		result = extractPageSize("page size of -123 bytes", 8192)
+		assert.Equal(t, uint64(8192), result)
+	})
+
+	t.Run("parses valid page size", func(t *testing.T) {
+		result := extractPageSize("page size of 4096 bytes", 0)
+		assert.Equal(t, uint64(4096), result)
+
+		result = extractPageSize("Mach Virtual Memory Statistics: (page size of 16384 bytes)", 0)
+		assert.Equal(t, uint64(16384), result)
+	})
+}
