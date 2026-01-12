@@ -210,6 +210,58 @@ func TestCleanDir_ErrorPath(t *testing.T) {
 	})
 }
 
+// TestRunCmd_Coverage tests RunCmd for coverage
+func TestRunCmd_Coverage(t *testing.T) {
+	t.Run("executes command successfully", func(t *testing.T) {
+		// Save current executor
+		oldExec := DefaultExecutor
+		defer func() { DefaultExecutor = oldExec }()
+
+		// Set executor that succeeds
+		SetExecutor(&mockExecutor{})
+
+		err := RunCmd("echo", "test")
+		require.NoError(t, err)
+	})
+
+	t.Run("executes command with verbose mode", func(t *testing.T) {
+		// Save current executor and env
+		oldExec := DefaultExecutor
+		oldVerbose := os.Getenv("VERBOSE")
+		defer func() {
+			DefaultExecutor = oldExec
+			if oldVerbose == "" {
+				_ = os.Unsetenv("VERBOSE") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("VERBOSE", oldVerbose) //nolint:errcheck // cleanup
+			}
+		}()
+
+		// Enable verbose mode
+		require.NoError(t, os.Setenv("VERBOSE", "true"))
+
+		// Set executor that succeeds
+		SetExecutor(&mockExecutor{})
+
+		err := RunCmd("echo", "test")
+		require.NoError(t, err)
+	})
+
+	t.Run("returns error from command", func(t *testing.T) {
+		// Save current executor
+		oldExec := DefaultExecutor
+		defer func() { DefaultExecutor = oldExec }()
+
+		// Set executor that fails
+		SetExecutor(&mockExecutor{
+			executeErr: errors.New("command failed"), //nolint:err113 // test error
+		})
+
+		err := RunCmd("failing-command")
+		require.Error(t, err)
+	})
+}
+
 // TestRunCmdOutput_ErrorWithOutput tests RunCmdOutput error path
 func TestRunCmdOutput_ErrorWithOutput(t *testing.T) {
 	t.Run("returns error from command", func(t *testing.T) {
@@ -225,6 +277,32 @@ func TestRunCmdOutput_ErrorWithOutput(t *testing.T) {
 
 		_, err := RunCmdOutput("failing-command")
 		require.Error(t, err)
+	})
+
+	t.Run("executes command with verbose mode", func(t *testing.T) {
+		// Save current executor and env
+		oldExec := DefaultExecutor
+		oldVerbose := os.Getenv("VERBOSE")
+		defer func() {
+			DefaultExecutor = oldExec
+			if oldVerbose == "" {
+				_ = os.Unsetenv("VERBOSE") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("VERBOSE", oldVerbose) //nolint:errcheck // cleanup
+			}
+		}()
+
+		// Enable verbose mode
+		require.NoError(t, os.Setenv("VERBOSE", "true"))
+
+		// Set executor that succeeds
+		SetExecutor(&mockExecutor{
+			executeOutput: "test output",
+		})
+
+		output, err := RunCmdOutput("echo", "test")
+		require.NoError(t, err)
+		assert.Equal(t, "test output", output)
 	})
 }
 
@@ -380,6 +458,48 @@ func TestMetrics_AdditionalCoverage(t *testing.T) {
 		collector := NewMetricsCollector(&config)
 
 		timer := collector.StartTimer("test_timer", nil)
+		testErr := errors.New("test error") //nolint:err113 // test error
+		duration := timer.StopWithError(testErr)
+		require.Greater(t, duration, time.Duration(0))
+	})
+
+	t.Run("Stop with disabled collector", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = false
+		collector := NewMetricsCollector(&config)
+
+		timer := collector.StartTimer("test_timer", nil)
+		duration := timer.Stop()
+		require.Greater(t, duration, time.Duration(0))
+	})
+
+	t.Run("StopWithError with disabled collector", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = false
+		collector := NewMetricsCollector(&config)
+
+		timer := collector.StartTimer("test_timer", nil)
+		testErr := errors.New("test error") //nolint:err113 // test error
+		duration := timer.StopWithError(testErr)
+		require.Greater(t, duration, time.Duration(0))
+	})
+
+	t.Run("Stop with nil collector", func(t *testing.T) {
+		timer := &PerformanceTimer{
+			Name:      "test_timer",
+			StartTime: time.Now().Add(-100 * time.Millisecond),
+			collector: nil,
+		}
+		duration := timer.Stop()
+		require.Greater(t, duration, time.Duration(0))
+	})
+
+	t.Run("StopWithError with nil collector", func(t *testing.T) {
+		timer := &PerformanceTimer{
+			Name:      "test_timer",
+			StartTime: time.Now().Add(-100 * time.Millisecond),
+			collector: nil,
+		}
 		testErr := errors.New("test error") //nolint:err113 // test error
 		duration := timer.StopWithError(testErr)
 		require.Greater(t, duration, time.Duration(0))
