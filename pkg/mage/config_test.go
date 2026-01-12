@@ -985,3 +985,116 @@ func TestCleanEnvValue(t *testing.T) {
 		})
 	}
 }
+
+// Test_applyDownloadEnvOverrides tests environment variable overrides for download config
+func Test_applyDownloadEnvOverrides(t *testing.T) {
+	t.Run("applies all download env overrides", func(t *testing.T) {
+		// Save original env vars
+		envVars := []string{
+			"MAGE_X_DOWNLOAD_RETRIES",
+			"MAGE_X_DOWNLOAD_TIMEOUT",
+			"MAGE_X_DOWNLOAD_INITIAL_DELAY",
+			"MAGE_X_DOWNLOAD_MAX_DELAY",
+			"MAGE_X_DOWNLOAD_BACKOFF",
+			"MAGE_X_DOWNLOAD_RESUME",
+			"MAGE_X_DOWNLOAD_USER_AGENT",
+		}
+		origValues := make(map[string]string)
+		for _, envVar := range envVars {
+			origValues[envVar] = os.Getenv(envVar)
+		}
+		defer func() {
+			for _, envVar := range envVars {
+				if orig, ok := origValues[envVar]; ok && orig != "" {
+					_ = os.Setenv(envVar, orig) //nolint:errcheck // cleanup
+				} else {
+					_ = os.Unsetenv(envVar) //nolint:errcheck // cleanup
+				}
+			}
+		}()
+
+		// Set environment variables
+		require.NoError(t, os.Setenv("MAGE_X_DOWNLOAD_RETRIES", "5"))
+		require.NoError(t, os.Setenv("MAGE_X_DOWNLOAD_TIMEOUT", "30000"))
+		require.NoError(t, os.Setenv("MAGE_X_DOWNLOAD_INITIAL_DELAY", "2000"))
+		require.NoError(t, os.Setenv("MAGE_X_DOWNLOAD_MAX_DELAY", "60000"))
+		require.NoError(t, os.Setenv("MAGE_X_DOWNLOAD_BACKOFF", "2.5"))
+		require.NoError(t, os.Setenv("MAGE_X_DOWNLOAD_RESUME", "true"))
+		require.NoError(t, os.Setenv("MAGE_X_DOWNLOAD_USER_AGENT", "test-agent"))
+
+		// Create config and apply overrides
+		cfg := &DownloadConfig{}
+		applyDownloadEnvOverrides(cfg)
+
+		// Verify all overrides were applied
+		assert.Equal(t, 5, cfg.MaxRetries)
+		assert.Equal(t, 30000, cfg.TimeoutMs)
+		assert.Equal(t, 2000, cfg.InitialDelayMs)
+		assert.Equal(t, 60000, cfg.MaxDelayMs)
+		assert.InEpsilon(t, 2.5, cfg.BackoffMultiplier, 0.001)
+		assert.True(t, cfg.EnableResume)
+		assert.Equal(t, "test-agent", cfg.UserAgent)
+	})
+}
+
+// Test_applyToolVersionEnvOverrides tests environment variable overrides for tool versions
+func Test_applyToolVersionEnvOverrides(t *testing.T) {
+	t.Run("applies tool version env overrides", func(t *testing.T) {
+		// Save original env vars
+		envVars := []string{
+			"MAGE_X_GOLANGCI_LINT_VERSION",
+			"MAGE_X_GOFUMPT_VERSION",
+			"MAGE_X_YAMLFMT_VERSION",
+			"MAGE_X_GOVULNCHECK_VERSION",
+			"MAGE_X_MOCKGEN_VERSION",
+			"MAGE_X_SWAG_VERSION",
+		}
+		origValues := make(map[string]string)
+		for _, envVar := range envVars {
+			origValues[envVar] = os.Getenv(envVar)
+		}
+		defer func() {
+			for _, envVar := range envVars {
+				if orig, ok := origValues[envVar]; ok && orig != "" {
+					_ = os.Setenv(envVar, orig) //nolint:errcheck // cleanup
+				} else {
+					_ = os.Unsetenv(envVar) //nolint:errcheck // cleanup
+				}
+			}
+		}()
+
+		// Set environment variables
+		require.NoError(t, os.Setenv("MAGE_X_GOLANGCI_LINT_VERSION", "v1.55.0"))
+		require.NoError(t, os.Setenv("MAGE_X_GOFUMPT_VERSION", "v0.5.0"))
+		require.NoError(t, os.Setenv("MAGE_X_YAMLFMT_VERSION", "v0.10.0"))
+		require.NoError(t, os.Setenv("MAGE_X_GOVULNCHECK_VERSION", "v1.0.0"))
+		require.NoError(t, os.Setenv("MAGE_X_MOCKGEN_VERSION", "v1.7.0"))
+		require.NoError(t, os.Setenv("MAGE_X_SWAG_VERSION", "v1.8.0"))
+
+		// Create config and apply overrides
+		cfg := &ToolsConfig{}
+		applyToolVersionEnvOverrides(cfg)
+
+		// Verify all overrides were applied
+		assert.Equal(t, "v1.55.0", cfg.GolangciLint)
+		assert.Equal(t, "v0.5.0", cfg.Fumpt)
+		assert.Equal(t, "v0.10.0", cfg.Yamlfmt)
+		assert.Equal(t, "v1.0.0", cfg.GoVulnCheck)
+		assert.Equal(t, "v1.7.0", cfg.Mockgen)
+		assert.Equal(t, "v1.8.0", cfg.Swag)
+	})
+}
+
+// Test_getDefaultAliases tests alias generation for binary names
+func Test_getDefaultAliases(t *testing.T) {
+	t.Run("returns mgx for magex", func(t *testing.T) {
+		aliases := getDefaultAliases("magex")
+		require.Len(t, aliases, 1)
+		assert.Equal(t, "mgx", aliases[0])
+	})
+
+	t.Run("returns nil for unknown binary", func(t *testing.T) {
+		aliases := getDefaultAliases("unknown-binary")
+		assert.Nil(t, aliases)
+	})
+}

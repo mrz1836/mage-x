@@ -2,8 +2,11 @@ package mage
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewTerminalReporter(t *testing.T) {
@@ -286,12 +289,81 @@ func TestTerminalReporter_Close(t *testing.T) {
 func TestColorHelpers(t *testing.T) {
 	t.Parallel()
 
-	// These just verify the functions don't panic
-	_ = colorBold("test")
-	_ = colorRed("test")
-	_ = colorGreen("test")
-	_ = colorYellow("test")
-	_ = colorCyan("test")
+	// Test without terminal support (TERM env var empty)
+	t.Run("without TERM env var", func(t *testing.T) {
+		// Save original TERM
+		origTerm := os.Getenv("TERM")
+		defer func() {
+			if origTerm == "" {
+				_ = os.Unsetenv("TERM") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("TERM", origTerm) //nolint:errcheck // cleanup
+			}
+		}()
+
+		// Unset TERM to disable terminal features
+		_ = os.Unsetenv("TERM") //nolint:errcheck // test setup
+
+		// Test that functions return plain text without ANSI codes when TERM is not set
+		assert.Equal(t, "test", colorBold("test"))
+		assert.Equal(t, "test", colorRed("test"))
+		assert.Equal(t, "test", colorGreen("test"))
+		assert.Equal(t, "test", colorYellow("test"))
+		assert.Equal(t, "test", colorCyan("test"))
+	})
+
+	// Test with TERM=dumb (should also disable colors)
+	t.Run("with TERM=dumb", func(t *testing.T) {
+		// Save original TERM
+		origTerm := os.Getenv("TERM")
+		defer func() {
+			if origTerm == "" {
+				_ = os.Unsetenv("TERM") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("TERM", origTerm) //nolint:errcheck // cleanup
+			}
+		}()
+
+		// Set TERM to dumb to disable terminal features
+		_ = os.Setenv("TERM", "dumb") //nolint:errcheck // test setup
+
+		// Test that functions return plain text when TERM=dumb
+		assert.Equal(t, "test", colorBold("test"))
+		assert.Equal(t, "test", colorRed("test"))
+		assert.Equal(t, "test", colorGreen("test"))
+		assert.Equal(t, "test", colorYellow("test"))
+		assert.Equal(t, "test", colorCyan("test"))
+	})
+
+	// Test with NO_COLOR environment variable
+	t.Run("with NO_COLOR set", func(t *testing.T) {
+		// Save original env vars
+		origTerm := os.Getenv("TERM")
+		origNoColor := os.Getenv("NO_COLOR")
+		defer func() {
+			if origTerm == "" {
+				_ = os.Unsetenv("TERM") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("TERM", origTerm) //nolint:errcheck // cleanup
+			}
+			if origNoColor == "" {
+				_ = os.Unsetenv("NO_COLOR") //nolint:errcheck // cleanup
+			} else {
+				_ = os.Setenv("NO_COLOR", origNoColor) //nolint:errcheck // cleanup
+			}
+		}()
+
+		// Set TERM and NO_COLOR
+		_ = os.Setenv("TERM", "xterm-256color") //nolint:errcheck // test setup
+		_ = os.Setenv("NO_COLOR", "1")          //nolint:errcheck // test setup
+
+		// Test that NO_COLOR takes precedence and disables colors
+		assert.Equal(t, "test", colorBold("test"))
+		assert.Equal(t, "test", colorRed("test"))
+		assert.Equal(t, "test", colorGreen("test"))
+		assert.Equal(t, "test", colorYellow("test"))
+		assert.Equal(t, "test", colorCyan("test"))
+	})
 }
 
 // T069: Integration test for local CI mode preview
