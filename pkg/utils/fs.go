@@ -44,6 +44,7 @@ func FindFiles(_, pattern string) ([]string, error) {
 	return findFiles(".", pattern)
 }
 
+//nolint:unparam // root parameter kept for potential future flexibility
 func findFiles(root, pattern string) ([]string, error) {
 	var files []string
 	ops := fileops.GetDefault()

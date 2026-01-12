@@ -774,3 +774,211 @@ func TestTestStaticErrors(t *testing.T) {
 	require.Error(t, errFuzzTestFailed)
 	assert.Error(t, errConfigNil)
 }
+
+func TestExtractFuzzInfrastructureError(t *testing.T) {
+	tests := []struct {
+		name     string
+		output   string
+		expected string
+	}{
+		{
+			name:     "cannot use fuzz flag error",
+			output:   "=== RUN   FuzzTest\ncannot use -fuzz flag on package outside the main module\n--- PASS: FuzzTest\n",
+			expected: "cannot use -fuzz flag on package outside the main module",
+		},
+		{
+			name:     "build error",
+			output:   "# package/name\nerror: undefined: foo\nFAIL package/name [build failed]",
+			expected: "error: undefined: foo",
+		},
+		{
+			name:     "FAIL line captured",
+			output:   "FAIL github.com/test/pkg [build failed]",
+			expected: "FAIL github.com/test/pkg [build failed]",
+		},
+		{
+			name:     "Error with capital E",
+			output:   "Running test\nError: something went wrong\nDone",
+			expected: "Error: something went wrong",
+		},
+		{
+			name:     "first non-empty line fallback",
+			output:   "\n\nSome output line\nAnother line",
+			expected: "Some output line",
+		},
+		{
+			name:     "empty output",
+			output:   "",
+			expected: "",
+		},
+		{
+			name:     "only whitespace and markers",
+			output:   "=== RUN Test\n--- PASS: Test\n",
+			expected: "",
+		},
+		{
+			name:     "failed keyword",
+			output:   "Test failed due to timeout",
+			expected: "Test failed due to timeout",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractFuzzInfrastructureError(tt.output)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseFuzzResultsWithTextParser_InfrastructureErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		results          []fuzzTestResult
+		contextLines     int
+		dedup            bool
+		expectedFailures int
+		checkFailure     func(t *testing.T, failures []CITestFailure)
+	}{
+		{
+			name: "infrastructure error creates synthetic failure",
+			results: []fuzzTestResult{
+				{
+					Package:  "github.com/test/pkg",
+					Test:     "FuzzTest",
+					Duration: time.Second,
+					Error:    errFuzzTestFailed,
+					Output:   "cannot use -fuzz flag on package outside the main module",
+				},
+			},
+			contextLines:     3,
+			dedup:            true,
+			expectedFailures: 1,
+			checkFailure: func(t *testing.T, failures []CITestFailure) {
+				require.Len(t, failures, 1)
+				assert.Equal(t, "github.com/test/pkg", failures[0].Package)
+				assert.Equal(t, "FuzzTest", failures[0].Test)
+				assert.Equal(t, FailureTypeBuild, failures[0].Type)
+				assert.Contains(t, failures[0].Error, "cannot use -fuzz flag")
+				assert.Contains(t, failures[0].Output, "cannot use -fuzz flag")
+			},
+		},
+		{
+			name: "normal fuzz failure still works",
+			results: []fuzzTestResult{
+				{
+					Package:  "github.com/test/pkg",
+					Test:     "FuzzTest",
+					Duration: time.Second,
+					Error:    errFuzzTestFailed,
+					Output:   "=== RUN   FuzzTest\n--- FAIL: FuzzTest (0.50s)\n    fuzz_test.go:15: failed on input\nFAIL github.com/test/pkg 0.5s\n",
+				},
+			},
+			contextLines:     3,
+			dedup:            true,
+			expectedFailures: 1,
+			checkFailure: func(t *testing.T, failures []CITestFailure) {
+				require.Len(t, failures, 1)
+				assert.Equal(t, "FuzzTest", failures[0].Test)
+				// Should be fuzz type from text parser, not build
+				assert.Equal(t, FailureTypeFuzz, failures[0].Type)
+			},
+		},
+		{
+			name: "no error no synthetic failure",
+			results: []fuzzTestResult{
+				{
+					Package:  "github.com/test/pkg",
+					Test:     "FuzzTest",
+					Duration: time.Second,
+					Error:    nil,
+					Output:   "=== RUN   FuzzTest\n--- PASS: FuzzTest (0.50s)\nok github.com/test/pkg 0.5s\n",
+				},
+			},
+			contextLines:     3,
+			dedup:            true,
+			expectedFailures: 0,
+			checkFailure: func(t *testing.T, failures []CITestFailure) {
+				assert.Empty(t, failures)
+			},
+		},
+		{
+			name: "empty output with error creates failure via parser",
+			results: []fuzzTestResult{
+				{
+					Package:  "github.com/test/pkg",
+					Test:     "FuzzTest",
+					Duration: time.Second,
+					Error:    errFuzzTestFailed,
+					Output:   "",
+				},
+			},
+			contextLines:     3,
+			dedup:            true,
+			expectedFailures: 1,
+			checkFailure: func(t *testing.T, failures []CITestFailure) {
+				require.Len(t, failures, 1)
+				assert.Equal(t, "FuzzTest", failures[0].Test)
+			},
+		},
+		{
+			name: "multiple results with mixed errors",
+			results: []fuzzTestResult{
+				{
+					Package:  "github.com/test/pkg1",
+					Test:     "FuzzGood",
+					Duration: time.Second,
+					Error:    nil,
+					Output:   "=== RUN   FuzzGood\n--- PASS: FuzzGood (0.50s)\nok github.com/test/pkg1 0.5s\n",
+				},
+				{
+					Package:  "github.com/test/pkg2",
+					Test:     "FuzzInfraError",
+					Duration: time.Second,
+					Error:    errFuzzTestFailed,
+					Output:   "cannot use -fuzz flag on package outside the main module",
+				},
+			},
+			contextLines:     3,
+			dedup:            true,
+			expectedFailures: 1,
+			checkFailure: func(t *testing.T, failures []CITestFailure) {
+				require.Len(t, failures, 1)
+				assert.Equal(t, "FuzzInfraError", failures[0].Test)
+				assert.Equal(t, FailureTypeBuild, failures[0].Type)
+			},
+		},
+		{
+			name: "infrastructure error uses Error.Error() fallback",
+			results: []fuzzTestResult{
+				{
+					Package:  "github.com/test/pkg",
+					Test:     "FuzzTest",
+					Duration: time.Second,
+					Error:    errFuzzTestFailed,
+					Output:   "=== RUN FuzzTest\n--- PASS: FuzzTest\n", // no error pattern in output
+				},
+			},
+			contextLines:     3,
+			dedup:            true,
+			expectedFailures: 1,
+			checkFailure: func(t *testing.T, failures []CITestFailure) {
+				require.Len(t, failures, 1)
+				assert.Equal(t, "FuzzTest", failures[0].Test)
+				assert.Equal(t, FailureTypeBuild, failures[0].Type)
+				// Should use the error message since output has no error patterns
+				assert.Contains(t, failures[0].Error, "fuzz test")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			failures := parseFuzzResultsWithTextParser(tt.results, tt.contextLines, tt.dedup)
+			assert.Len(t, failures, tt.expectedFailures)
+			if tt.checkFailure != nil {
+				tt.checkFailure(t, failures)
+			}
+		})
+	}
+}

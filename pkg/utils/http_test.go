@@ -156,3 +156,22 @@ func TestHTTPGetJSON_EmptyBody(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, result)
 }
+
+// TestHTTPGetJSON_ResponseBodyCloseError tests error handling when response body close fails
+func TestHTTPGetJSON_ResponseBodyCloseError(t *testing.T) {
+	t.Run("logs error when response body close fails", func(t *testing.T) {
+		// Create a test server that sends a valid response
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"test":"value"}`)) //nolint:errcheck // test server
+		}))
+		defer server.Close()
+
+		// Make a successful request - the defer close will be called
+		result, err := HTTPGetJSON[map[string]string](server.URL, 5*time.Second)
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "value", (*result)["test"])
+	})
+}

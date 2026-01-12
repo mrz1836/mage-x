@@ -20,6 +20,10 @@ var (
 	errSpecificError     = errors.New("specific error")
 	errAlwaysFail        = errors.New("always fail")
 	errNonRetriable      = errors.New("non-retriable error")
+	errConnectionRefused = errors.New("dial tcp: connection refused")
+	errIOTimeout         = errors.New("dial tcp: i/o timeout")
+	errConnectionReset   = errors.New("connection reset by peer")
+	errTempConnection    = errors.New("temporary failure: connection refused")
 )
 
 // mockFullExecutor is a mock FullExecutor for testing
@@ -588,4 +592,171 @@ func TestNewRetryingExecutor_Defaults(t *testing.T) {
 	if executor.Backoff == nil {
 		t.Error("expected default Backoff to be set")
 	}
+}
+
+func TestExecuteWithRetry(t *testing.T) {
+	t.Parallel()
+
+	t.Run("succeeds without retry", func(t *testing.T) {
+		t.Parallel()
+		executor := NewBase(WithDryRun(true))
+		err := ExecuteWithRetry(context.Background(), executor, 3, time.Millisecond, "echo", "hello")
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+	})
+
+	t.Run("retries on network failure", func(t *testing.T) {
+		t.Parallel()
+		var callCount int32
+		// Use an error that CommandClassifier recognizes as retriable
+		mock := &mockFullExecutor{
+			executeFunc: func(_ context.Context, _ string, _ ...string) error {
+				count := atomic.AddInt32(&callCount, 1)
+				if count < 2 {
+					return errConnectionRefused
+				}
+				return nil
+			},
+		}
+
+		err := ExecuteWithRetry(context.Background(), mock, 3, time.Millisecond, "echo", "hello")
+		if err != nil {
+			t.Errorf("expected no error after retry, got %v", err)
+		}
+		if atomic.LoadInt32(&callCount) != 2 {
+			t.Errorf("expected 2 calls, got %d", callCount)
+		}
+	})
+
+	t.Run("respects max retries", func(t *testing.T) {
+		t.Parallel()
+		var callCount int32
+		// Use a network error that will be retried
+		mock := &mockFullExecutor{
+			executeFunc: func(_ context.Context, _ string, _ ...string) error {
+				atomic.AddInt32(&callCount, 1)
+				return errIOTimeout
+			},
+		}
+
+		err := ExecuteWithRetry(context.Background(), mock, 2, time.Millisecond, "echo", "hello")
+		if err == nil {
+			t.Error("expected error after max retries")
+		}
+		// maxRetries=2 means 3 total attempts (initial + 2 retries)
+		if atomic.LoadInt32(&callCount) != 3 {
+			t.Errorf("expected 3 calls, got %d", callCount)
+		}
+	})
+
+	t.Run("respects context cancellation", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		mock := &mockFullExecutor{
+			executeFunc: func(_ context.Context, _ string, _ ...string) error {
+				return errKeepRetrying
+			},
+		}
+
+		// Cancel immediately
+		cancel()
+
+		err := ExecuteWithRetry(ctx, mock, 10, time.Millisecond, "echo", "hello")
+		if err == nil {
+			t.Error("expected error from context cancellation")
+		}
+	})
+}
+
+func TestExecuteOutputWithRetry(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns output on success", func(t *testing.T) {
+		t.Parallel()
+		mock := &mockFullExecutor{
+			executeOutputFunc: func(_ context.Context, _ string, _ ...string) (string, error) {
+				return "test output", nil
+			},
+		}
+
+		output, err := ExecuteOutputWithRetry(context.Background(), mock, 3, time.Millisecond, "echo", "hello")
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+		if output != "test output" {
+			t.Errorf("expected 'test output', got '%s'", output)
+		}
+	})
+
+	t.Run("retries and returns output on network error", func(t *testing.T) {
+		t.Parallel()
+		var callCount int32
+		// Use a network error that CommandClassifier recognizes as retriable
+		mock := &mockFullExecutor{
+			executeOutputFunc: func(_ context.Context, _ string, _ ...string) (string, error) {
+				count := atomic.AddInt32(&callCount, 1)
+				if count < 3 {
+					return "", errConnectionReset
+				}
+				return "success after retries", nil
+			},
+		}
+
+		output, err := ExecuteOutputWithRetry(context.Background(), mock, 5, time.Millisecond, "echo", "hello")
+		if err != nil {
+			t.Errorf("expected no error after retries, got %v", err)
+		}
+		if output != "success after retries" {
+			t.Errorf("expected 'success after retries', got '%s'", output)
+		}
+		if atomic.LoadInt32(&callCount) != 3 {
+			t.Errorf("expected 3 calls, got %d", callCount)
+		}
+	})
+
+	t.Run("respects max retries", func(t *testing.T) {
+		t.Parallel()
+		var callCount int32
+		// Use a network error that will be retried
+		mock := &mockFullExecutor{
+			executeOutputFunc: func(_ context.Context, _ string, _ ...string) (string, error) {
+				atomic.AddInt32(&callCount, 1)
+				return "", errTempConnection
+			},
+		}
+
+		output, err := ExecuteOutputWithRetry(context.Background(), mock, 2, time.Millisecond, "echo", "hello")
+		if err == nil {
+			t.Error("expected error after max retries")
+		}
+		if output != "" {
+			t.Errorf("expected empty output on error, got '%s'", output)
+		}
+		// maxRetries=2 means 3 total attempts (initial + 2 retries)
+		if atomic.LoadInt32(&callCount) != 3 {
+			t.Errorf("expected 3 calls, got %d", callCount)
+		}
+	})
+
+	t.Run("respects context cancellation", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		mock := &mockFullExecutor{
+			executeOutputFunc: func(_ context.Context, _ string, _ ...string) (string, error) {
+				return "", errKeepRetrying
+			},
+		}
+
+		// Cancel immediately
+		cancel()
+
+		output, err := ExecuteOutputWithRetry(ctx, mock, 10, time.Millisecond, "echo", "hello")
+		if err == nil {
+			t.Error("expected error from context cancellation")
+		}
+		if output != "" {
+			t.Errorf("expected empty output on error, got '%s'", output)
+		}
+	})
 }

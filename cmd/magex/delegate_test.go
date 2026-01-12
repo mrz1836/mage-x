@@ -995,3 +995,129 @@ func TestDelegateResultStruct(t *testing.T) {
 		assert.Equal(t, testErr, result.Err)
 	})
 }
+
+// TestGetMagefilePath_PrefersMagefiles tests that GetMagefilePath prefers magefiles directory
+func TestGetMagefilePath_PrefersMagefiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create both magefiles directory and magefile.go
+	err = os.Mkdir("magefiles", secureDirPerm)
+	require.NoError(t, err)
+	err = os.WriteFile("magefile.go", []byte("package main"), secureFilePerm)
+	require.NoError(t, err)
+
+	path := GetMagefilePath()
+	// Should prefer magefiles directory
+	assert.Contains(t, path, "magefiles")
+	assert.NotContains(t, path, "magefile.go")
+}
+
+// TestConvertToMageFormat_MultipleColons tests command with multiple colons
+func TestConvertToMageFormat_MultipleColons(t *testing.T) {
+	input := "namespace:method:extra"
+	result := convertToMageFormat(input)
+	// SplitN with 2 only splits on first colon, so "namespace:method:extra" becomes "namespacemethod:extra"
+	expected := "namespacemethod:extra"
+	assert.Equal(t, expected, result)
+}
+
+// TestGetMagefilePath_MagefilesDir tests GetMagefilePath with magefiles/ directory
+func TestGetMagefilePath_MagefilesDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create magefiles/ directory
+	err = os.Mkdir("magefiles", 0o750)
+	require.NoError(t, err)
+
+	path := GetMagefilePath()
+	assert.NotEmpty(t, path)
+	assert.Contains(t, path, "magefiles")
+}
+
+// TestGetMagefilePath_MagefileGo tests GetMagefilePath with magefile.go
+func TestGetMagefilePath_MagefileGo(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create magefile.go
+	err = os.WriteFile("magefile.go", []byte("package main"), 0o600)
+	require.NoError(t, err)
+
+	path := GetMagefilePath()
+	assert.NotEmpty(t, path)
+	assert.Contains(t, path, "magefile.go")
+}
+
+// TestGetMagefilePath_NoMagefile tests GetMagefilePath with no magefile
+func TestGetMagefilePath_NoMagefile(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	path := GetMagefilePath()
+	assert.Empty(t, path)
+}
+
+// TestGetMagefilePath_PrefersMagefilesDir tests that magefiles/ is preferred over magefile.go
+func TestGetMagefilePath_PrefersMagefilesDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create both magefiles/ and magefile.go
+	err = os.Mkdir("magefiles", 0o750)
+	require.NoError(t, err)
+	err = os.WriteFile("magefile.go", []byte("package main"), 0o600)
+	require.NoError(t, err)
+
+	path := GetMagefilePath()
+	assert.NotEmpty(t, path)
+	// Should prefer magefiles/ directory
+	assert.Contains(t, path, "magefiles")
+	assert.NotContains(t, path, "magefile.go")
+}

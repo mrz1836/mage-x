@@ -227,12 +227,29 @@ func TestTestEnvironment_AssertFileExists(t *testing.T) {
 
 	te.WriteFile("exists_assert.txt", "content")
 	te.AssertFileExists("exists_assert.txt")
+
+	// Test failure case when file doesn't exist
+	t.Run("file doesn't exist", func(t *testing.T) {
+		mockT := &testing.T{}
+		te.t = mockT
+		te.AssertFileExists("nonexistent-file.txt")
+		te.t = t
+	})
 }
 
 func TestTestEnvironment_AssertFileNotExists(t *testing.T) {
 	te := NewTestEnvironment(t)
 
 	te.AssertFileNotExists("does_not_exist.txt")
+
+	// Test failure case when file exists
+	t.Run("file exists", func(t *testing.T) {
+		te.WriteFile("existing-file.txt", "content")
+		mockT := &testing.T{}
+		te.t = mockT
+		te.AssertFileNotExists("existing-file.txt")
+		te.t = t
+	})
 }
 
 func TestTestEnvironment_AssertDirExists(t *testing.T) {
@@ -284,6 +301,22 @@ func TestTestEnvironment_AssertErrorContains(t *testing.T) {
 
 	err := os.ErrNotExist
 	te.AssertErrorContains(err, "file does not exist")
+
+	// Test nil error case
+	t.Run("with nil error", func(t *testing.T) {
+		mockT := &testing.T{}
+		te.t = mockT
+		te.AssertErrorContains(nil, "expected text")
+		te.t = t
+	})
+
+	// Test error without expected text
+	t.Run("without expected text", func(t *testing.T) {
+		mockT := &testing.T{}
+		te.t = mockT
+		te.AssertErrorContains(os.ErrNotExist, "this text is not in the error")
+		te.t = t
+	})
 }
 
 func TestTestEnvironment_AddCleanup(t *testing.T) {
@@ -297,6 +330,20 @@ func TestTestEnvironment_AddCleanup(t *testing.T) {
 	// Cleanup should be called when test ends
 	te.Cleanup()
 	require.True(t, cleanupCalled)
+
+	// Test multiple cleanup functions run in reverse order
+	t.Run("multiple cleanups in reverse order", func(t *testing.T) {
+		te2 := NewTestEnvironment(t)
+		var order []int
+		te2.AddCleanup(func() { order = append(order, 1) })
+		te2.AddCleanup(func() { order = append(order, 2) })
+		te2.AddCleanup(func() { order = append(order, 3) })
+
+		te2.Cleanup()
+
+		// Should run in reverse order: 3, 2, 1
+		require.Equal(t, []int{3, 2, 1}, order)
+	})
 }
 
 func TestTestEnvironment_CreateGoModule(t *testing.T) {

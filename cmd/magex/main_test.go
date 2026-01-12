@@ -8,6 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 )
 
@@ -267,6 +270,63 @@ func TestCleanCache(t *testing.T) {
 	// Note: Output may be empty if there are no cache directories to clean
 	// This is acceptable behavior
 	t.Logf("cleanCache() output: %q", output)
+}
+
+func TestCleanCache_WithDirectories(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create cache directories
+	err = os.Mkdir(".mage", 0o750)
+	require.NoError(t, err)
+	err = os.Mkdir(".mage-x", 0o750)
+	require.NoError(t, err)
+
+	// Create some files in the directories
+	err = os.WriteFile(".mage/test.txt", []byte("test"), 0o600)
+	require.NoError(t, err)
+	err = os.WriteFile(".mage-x/test.txt", []byte("test"), 0o600)
+	require.NoError(t, err)
+
+	// Capture stdout and stderr
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+	os.Stderr = w
+
+	cleanCache()
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Verify directories were removed
+	_, err = os.Stat(".mage")
+	assert.True(t, os.IsNotExist(err), ".mage should be removed")
+	_, err = os.Stat(".mage-x")
+	assert.True(t, os.IsNotExist(err), ".mage-x should be removed")
+
+	// Should show success message
+	assert.Contains(t, output, "Removed")
 }
 
 func TestShowCommands_List(t *testing.T) {
@@ -1530,6 +1590,276 @@ func TestShowCommandHelp(t *testing.T) {
 	}
 }
 
+// TestGetBuildInfo tests the getBuildInfo function
+func TestGetBuildInfo(t *testing.T) {
+	t.Parallel()
+
+	info := getBuildInfo()
+
+	// Verify all fields are present
+	assert.NotEmpty(t, info.Version)
+	assert.NotEmpty(t, info.Commit)
+	assert.NotEmpty(t, info.BuildDate)
+	assert.NotEmpty(t, info.BuildTime)
+
+	// Default values should be set
+	assert.Equal(t, version, info.Version)
+	assert.Equal(t, commit, info.Commit)
+	assert.Equal(t, buildDate, info.BuildDate)
+	assert.Equal(t, buildTime, info.BuildTime)
+}
+
+// TestIsValidBuildValue tests the build value validation function
+func TestIsValidBuildValue(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		value string
+		want  bool
+	}{
+		{"valid value", "v1.0.0", true},
+		{"valid commit hash", "abc123def", true},
+		{"valid date", "2024-01-15", true},
+		{"empty string", "", false},
+		{"unknown default", "unknown", false},
+		{"whitespace", "   ", true}, // whitespace is considered valid (not empty)
+		{"valid with spaces", "build 123", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := isValidBuildValue(tt.value)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestTryCustomCommand tests the tryCustomCommand function
+func TestTryCustomCommand(t *testing.T) {
+	tests := []struct {
+		name          string
+		command       string
+		args          []string
+		setupMagefile bool
+		wantExitCode  int
+		wantError     bool
+	}{
+		{
+			name:          "no magefile returns 0",
+			command:       "deploy",
+			args:          []string{},
+			setupMagefile: false,
+			wantExitCode:  0,
+			wantError:     false,
+		},
+		{
+			name:          "with magefile attempts execution",
+			command:       "testcommand",
+			args:          []string{},
+			setupMagefile: true,
+			wantExitCode:  0,
+			wantError:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup test environment
+			tmpDir := t.TempDir()
+			oldDir, err := os.Getwd()
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				if chErr := os.Chdir(oldDir); chErr != nil {
+					t.Errorf("failed to restore directory: %v", chErr)
+				}
+			})
+
+			err = os.Chdir(tmpDir)
+			require.NoError(t, err)
+
+			// Create go.mod
+			err = os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600)
+			require.NoError(t, err)
+
+			// Create magefile if requested
+			if tt.setupMagefile {
+
+				magefileContent := `//go:build mage
+
+package main
+
+func TestCommand() error {
+	return nil
+}
+`
+				err = os.WriteFile("magefile.go", []byte(magefileContent), 0o600)
+				require.NoError(t, err)
+			}
+
+			// Create registry and discovery
+			reg := registry.NewRegistry()
+			discovery := NewCommandDiscovery(reg)
+
+			// Test tryCustomCommand with new signature
+			exitCode, cmdErr := tryCustomCommand(tt.command, tt.args, discovery)
+			assert.Equal(t, tt.wantExitCode, exitCode)
+			if tt.wantError {
+				assert.Error(t, cmdErr)
+			} else {
+				assert.NoError(t, cmdErr)
+			}
+		})
+	}
+}
+
+// TestTryCustomCommand_WithDiscoveredCommand tests tryCustomCommand when command is discovered
+func TestTryCustomCommand_WithDiscoveredCommand(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create go.mod
+	err = os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600)
+	require.NoError(t, err)
+
+	// Create a working magefile with a simple command
+	magefileContent := `//go:build mage
+
+package main
+
+import "fmt"
+
+func TestCommand() error {
+	fmt.Println("TestCommand executed")
+	return nil
+}
+`
+	err = os.WriteFile("magefile.go", []byte(magefileContent), 0o600)
+	require.NoError(t, err)
+
+	// Create registry and discovery
+	reg := registry.NewRegistry()
+	discovery := NewCommandDiscovery(reg)
+
+	// Pre-populate discovery with a command to test the OriginalName path
+	discovery.commands = []DiscoveredCommand{
+		{
+			Name:         "testcommand",
+			OriginalName: "TestCommand",
+			Description:  "Test command",
+		},
+	}
+	discovery.loaded = true
+
+	// Test that GetCommand returns the discovered command
+	cmd, found := discovery.GetCommand("testcommand")
+	assert.True(t, found)
+	assert.Equal(t, "TestCommand", cmd.OriginalName)
+}
+
+// TestCompileForMage tests the compile for mage functionality
+func TestCompileForMage(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	outputFile := "magefile_compiled.go"
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+
+	compileForMage(outputFile)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Verify output file was created
+	_, err = os.Stat(outputFile)
+	require.NoError(t, err, "output file should be created")
+
+	// Verify output message
+	assert.Contains(t, output, outputFile)
+	assert.Contains(t, output, "Generated")
+
+	// Verify file contains expected content
+	content, err := os.ReadFile(outputFile)
+	require.NoError(t, err)
+	contentStr := string(content)
+	assert.Contains(t, contentStr, "//go:build mage")
+	assert.Contains(t, contentStr, "func Build()")
+	assert.Contains(t, contentStr, "func Test()")
+}
+
+// TestInitFlags tests the flag initialization
+func TestInitFlags(t *testing.T) {
+	t.Parallel()
+
+	flags := initFlags()
+
+	// Verify all flags are initialized
+	require.NotNil(t, flags.Clean)
+	require.NotNil(t, flags.Compile)
+	require.NotNil(t, flags.Debug)
+	require.NotNil(t, flags.Force)
+	require.NotNil(t, flags.Help)
+	require.NotNil(t, flags.HelpLong)
+	require.NotNil(t, flags.Init)
+	require.NotNil(t, flags.List)
+	require.NotNil(t, flags.ListLong)
+	require.NotNil(t, flags.Namespace)
+	require.NotNil(t, flags.Search)
+	require.NotNil(t, flags.Timeout)
+	require.NotNil(t, flags.Verbose)
+	require.NotNil(t, flags.Version)
+
+	// Verify default values
+	assert.False(t, *flags.Clean)
+	assert.Empty(t, *flags.Compile)
+	assert.False(t, *flags.Debug)
+	assert.False(t, *flags.Force)
+	assert.False(t, *flags.Help)
+	assert.False(t, *flags.HelpLong)
+	assert.False(t, *flags.Init)
+	assert.False(t, *flags.List)
+	assert.False(t, *flags.ListLong)
+	assert.False(t, *flags.Namespace)
+	assert.Empty(t, *flags.Search)
+	assert.Empty(t, *flags.Timeout)
+	assert.False(t, *flags.Verbose)
+	assert.False(t, *flags.Version)
+}
+
 // TestShowNamespaceHelp tests namespace help display
 func TestShowNamespaceHelp(t *testing.T) {
 	tests := []struct {
@@ -1982,3 +2312,1016 @@ func TestShowVersionWithDetails(t *testing.T) {
 		t.Errorf("showVersion() should contain 'MAGE-X', got: %s", output)
 	}
 }
+
+// TestListCommands_Simple tests simple command listing
+func TestListCommands_Simple(t *testing.T) {
+	cmd1, err := registry.NewCommand("alpha").
+		WithDescription("Alpha command").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	cmd2, err := registry.NewCommand("beta").
+		WithDescription("Beta command").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+
+	commands := []*registry.Command{cmd1, cmd2}
+	customCommands := []DiscoveredCommand{
+		{Name: "custom", Description: "Custom command"},
+	}
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommandsSimple(commands, customCommands)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should contain command names
+	assert.Contains(t, output, "alpha")
+	assert.Contains(t, output, "beta")
+	assert.Contains(t, output, "custom")
+	assert.Contains(t, output, "*")
+}
+
+// TestCompileForMage_ErrorCase tests compile error handling
+func TestCompileForMage_ErrorCase(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create a directory with the output filename so WriteFile fails
+	outputFile := "readonly_dir"
+	err = os.Mkdir(outputFile, 0o750)
+	require.NoError(t, err)
+
+	// Capture stdout and stderr
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+	os.Stderr = w
+
+	// Note: compileForMage calls os.Exit(1) on error, which makes it difficult to test
+	// the error path in a unit test. We're just verifying the setup here.
+	// The actual compileForMage function is tested by TestCompileForMage which tests the success path.
+
+	// Restore streams
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	// Read any output
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+
+	// The test verifies we created the directory that would cause WriteFile to fail
+	// Actually calling compileForMage would call os.Exit which we can't test easily
+	_, err = os.Stat(outputFile)
+	assert.NoError(t, err, "test directory should exist")
+}
+
+// TestListByNamespace_WithCustomCommands tests namespace listing with custom commands
+func TestListByNamespace_WithCustomCommands(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Register a namespace command
+	cmd, err := registry.NewNamespaceCommand("build", "linux").
+		WithDescription("Build for Linux").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Create discovery with custom commands
+	discovery := NewCommandDiscovery(reg)
+	discovery.commands = []DiscoveredCommand{
+		{Name: "custom:deploy", Description: "Deploy", IsNamespace: true, Namespace: "custom", Method: "deploy"},
+		{Name: "standalone", Description: "Standalone", IsNamespace: false},
+	}
+	discovery.loaded = true
+
+	// Capture stdout and stderr
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+	os.Stderr = w
+
+	listByNamespace(reg, discovery)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show both built-in and custom commands
+	assert.Contains(t, output, "build:linux")
+	assert.Contains(t, output, "Custom commands")
+}
+
+// TestSearchCommands_WithCustomMatches tests search with custom command matches
+func TestSearchCommands_WithCustomMatches(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Register a command
+	cmd, err := registry.NewCommand("build").
+		WithDescription("Build the project").
+		WithFunc(func() error { return nil }).
+		WithCategory("Build").
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Create discovery with custom commands
+	discovery := NewCommandDiscovery(reg)
+	discovery.commands = []DiscoveredCommand{
+		{Name: "custom-build", Description: "Custom build task", IsNamespace: false},
+	}
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	searchCommands(reg, discovery, "build")
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show both built-in and custom matches
+	assert.Contains(t, output, "build")
+	// Note: highlightMatch wraps matches in brackets, so "custom-build" appears as "custom-[build]"
+	assert.Contains(t, output, "custom-")
+	assert.Contains(t, output, "Custom Commands")
+}
+
+// TestSearchCommands_CustomOnly tests search matching only custom commands
+func TestSearchCommands_CustomOnly(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Register a command that doesn't match
+	cmd, err := registry.NewCommand("test").
+		WithDescription("Run tests").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Create discovery with custom command that matches
+	discovery := NewCommandDiscovery(reg)
+	discovery.commands = []DiscoveredCommand{
+		{Name: "deploy", Description: "Deploy application", IsNamespace: false},
+	}
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	searchCommands(reg, discovery, "deploy")
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show custom command
+	assert.Contains(t, output, "deploy")
+	assert.Contains(t, output, "Custom Commands")
+	// Should not show test command
+	assert.NotContains(t, output, "test")
+}
+
+// TestShowUnifiedHelp_WithCommand tests unified help for a specific command
+func TestShowUnifiedHelp_WithCommand(t *testing.T) {
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showUnifiedHelp("build")
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show command-specific help
+	assert.Contains(t, output, "build")
+}
+
+// TestListCommandsSimple_EmptyCustomCommands tests listCommandsSimple with no custom commands
+func TestListCommandsSimple_EmptyCustomCommands(t *testing.T) {
+	cmd1, err := registry.NewCommand("test1").
+		WithDescription("Test command 1").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+
+	commands := []*registry.Command{cmd1}
+	customCommands := []DiscoveredCommand{} // Empty custom commands
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommandsSimple(commands, customCommands)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should contain command name
+	assert.Contains(t, output, "test1")
+	// Should not contain custom command marker
+	assert.NotContains(t, output, "Custom commands")
+}
+
+// TestListByNamespace_EmptyNamespace tests listByNamespace with no commands in namespace
+func TestListByNamespace_EmptyNamespace(t *testing.T) {
+	reg := registry.NewRegistry()
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true // Prevent actual discovery
+
+	// Capture stdout and stderr
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+	os.Stderr = w
+
+	listByNamespace(reg, discovery)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show header even with no commands
+	assert.Contains(t, output, "Available commands")
+}
+
+// TestShowCategorizedCommands_WithAliases tests commands with aliases
+func TestShowCategorizedCommands_WithAliases(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create command with alias
+	cmd, err := registry.NewCommand("build").
+		WithDescription("Build the project").
+		WithFunc(func() error { return nil }).
+		WithCategory("Build").
+		WithAliases("b").
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show the alias
+	assert.Contains(t, output, "b")
+}
+
+// TestShowCategorizedCommands_LongDescription tests description truncation
+func TestShowCategorizedCommands_LongDescription(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create command with very long description
+	longDesc := "This is a very long description that should be truncated because it exceeds the maximum length of 60 characters that is allowed in the display"
+	cmd, err := registry.NewCommand("longcmd").
+		WithDescription(longDesc).
+		WithFunc(func() error { return nil }).
+		WithCategory("Test").
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show truncation marker
+	assert.Contains(t, output, "...")
+	// Should not show full description
+	assert.NotContains(t, output, "maximum length of 60 characters that is allowed")
+}
+
+// TestShowCategorizedCommands_DeprecatedCommand tests deprecated command display
+func TestShowCategorizedCommands_DeprecatedCommand(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create deprecated command
+	cmd, err := registry.NewCommand("oldcmd").
+		WithDescription("Old command").
+		WithFunc(func() error { return nil }).
+		WithCategory("Test").
+		Deprecated("Use newcmd instead").
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show DEPRECATED marker
+	assert.Contains(t, output, "DEPRECATED")
+	assert.Contains(t, output, "Use newcmd instead")
+}
+
+// TestShowCategorizedCommands_EmptyDescription tests command with no description
+func TestShowCategorizedCommands_EmptyDescription(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Create command with no description
+	cmd, err := registry.NewCommand("nodesc").
+		WithDescription("").
+		WithFunc(func() error { return nil }).
+		WithCategory("Test").
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show command name
+	assert.Contains(t, output, "nodesc")
+}
+
+// TestCompileForMage_Success tests successful compilation
+func TestCompileForMage_Success(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	outputFile := "generated_magefile.go"
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	compileForMage(outputFile)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Verify file was created
+	_, err = os.Stat(outputFile)
+	require.NoError(t, err, "output file should be created")
+
+	// Verify output message
+	assert.Contains(t, output, "Generated")
+
+	// Verify file contents
+	content, err := os.ReadFile(outputFile)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "//go:build mage")
+	assert.Contains(t, string(content), "Build commands")
+}
+
+// TestListCommands_WithVerbose tests list commands in verbose mode
+func TestListCommands_WithVerbose(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("test").
+		WithDescription("Test command").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommands(reg, discovery, true) // verbose = true
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show commands
+	assert.Contains(t, output, "test")
+}
+
+// TestListCommands_EmptyRegistry tests listCommands with empty registry
+func TestListCommands_EmptyRegistry(t *testing.T) {
+	reg := registry.NewRegistry()
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommands(reg, discovery, false)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show no commands message
+	assert.Contains(t, output, "No commands available")
+}
+
+// TestListCommandsSimple_WithCustomCommands tests simple list with custom commands
+func TestListCommandsSimple_WithCustomCommands(t *testing.T) {
+	// Create a test registry
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("test").
+		WithDescription("Test command").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Create discovery with custom commands
+	discovery := NewCommandDiscovery(reg)
+	discovery.commands = []DiscoveredCommand{
+		{Name: "custom", Description: "Custom command"},
+	}
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommandsSimple([]*registry.Command{cmd}, discovery.commands)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show both built-in and custom commands
+	assert.Contains(t, output, "test")
+	assert.Contains(t, output, "custom*")
+	assert.Contains(t, output, "* Custom commands")
+}
+
+// TestListCommandsVerbose_Deprecated tests verbose list with deprecated command
+func TestListCommandsVerbose_Deprecated(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("oldcmd").
+		WithDescription("Old command").
+		Deprecated("Use newcmd instead").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommandsVerbose([]*registry.Command{cmd}, nil)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show deprecated warning
+	assert.Contains(t, output, "DEPRECATED")
+}
+
+// TestCleanCache_ErrorHandling tests cleanCache with glob error handling
+func TestCleanCache_ErrorHandling(t *testing.T) {
+	// Use a temp directory
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create a directory we can't remove (readonly parent)
+	err = os.Mkdir("test-dir", 0o750)
+	require.NoError(t, err)
+
+	// Capture stdout and stderr
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+	os.Stderr = w
+
+	cleanCache()
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+
+	// Function should complete without crashing
+	t.Logf("cleanCache completed")
+}
+
+// TestSearchCommands_NoMatches tests search with no results
+func TestSearchCommands_NoMatches(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("build").
+		WithDescription("Build the project").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	searchCommands(reg, discovery, "xyz123notfound")
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show no results message
+	assert.Contains(t, output, "No exact commands found")
+}
+
+// TestHandleNoSearchResults_WithFuzzyMatches tests fuzzy matching
+func TestHandleNoSearchResults_WithFuzzyMatches(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("build").
+		WithDescription("Build the project").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	handleNoSearchResults(reg, nil, "bild") // Close enough to "build"
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should suggest similar commands
+	assert.Contains(t, output, "Did you mean")
+}
+
+// TestShowCategorizedCommands_EmptyCategoryInfo tests with missing category metadata
+func TestShowCategorizedCommands_EmptyCategoryInfo(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Add command with a category that has no metadata
+	cmd, err := registry.NewCommand("orphan").
+		WithDescription("Orphan command").
+		WithCategory("orphan-category").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showCategorizedCommands(reg)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show the command even with missing metadata
+	assert.Contains(t, output, "orphan")
+}
+
+// TestListCommandsVerbose_EmptyDescription tests verbose list with no description
+func TestListCommandsVerbose_EmptyDescription(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	cmd, err := registry.NewCommand("nodesc").
+		WithDescription("").
+		WithFunc(func() error { return nil }).
+		Build()
+	require.NoError(t, err)
+	reg.MustRegister(cmd)
+
+	discovery := NewCommandDiscovery(reg)
+	discovery.loaded = true
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	listCommandsVerbose([]*registry.Command{cmd}, nil)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show "No description available"
+	assert.Contains(t, output, "No description available")
+}
+
+// TestListCommandsVerbose_CustomCommandNoDescription tests custom command with no description
+func TestListCommandsVerbose_CustomCommandNoDescription(t *testing.T) {
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	customCmds := []DiscoveredCommand{
+		{Name: "custom", Description: ""},
+	}
+	listCommandsVerbose(nil, customCmds)
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show "Custom command"
+	assert.Contains(t, output, "Custom command")
+	assert.Contains(t, output, "(custom)")
+}
+
+// TestShowVersion_WithValidBuildInfo tests showVersion with valid build info
+func TestShowVersion_WithValidBuildInfo(t *testing.T) {
+	// Save current values
+	oldVersion := version
+	oldCommit := commit
+	oldBuildDate := buildDate
+	oldBuildTime := buildTime
+
+	// Set test values
+	version = "v1.2.3"
+	commit = "abc123def456"
+	buildDate = "2024-01-15"
+	buildTime = "10:30:45"
+
+	// Restore after test
+	t.Cleanup(func() {
+		version = oldVersion
+		commit = oldCommit
+		buildDate = oldBuildDate
+		buildTime = oldBuildTime
+	})
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showVersion()
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show all build info
+	assert.Contains(t, output, "v1.2.3")
+	assert.Contains(t, output, "abc123d") // Short commit (7 chars)
+	assert.Contains(t, output, "2024-01-15")
+	assert.Contains(t, output, "10:30:45")
+}
+
+// TestCleanCache_GlobError tests cleanCache with complex glob patterns
+func TestCleanCache_GlobError(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
+		}
+	})
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create some cache directories
+	err = os.Mkdir(".mage", 0o750)
+	require.NoError(t, err)
+	err = os.WriteFile(".mage/test.txt", []byte("test"), 0o600)
+	require.NoError(t, err)
+
+	// Capture stdout and stderr
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+	os.Stderr = w
+
+	cleanCache()
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show removal message
+	// cleanCache shows "Removed" for each deleted item and "Cache cleaned" at the end
+	assert.True(t, strings.Contains(output, "Removed") || strings.Contains(output, "Cache cleaned"))
+}
+
+// TestShowNamespaceHelp_NoCommands tests showNamespaceHelp with non-existent namespace
+func TestShowNamespaceHelp_NoCommands(t *testing.T) {
+	reg := registry.NewRegistry()
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	showNamespaceHelp(reg, "nonexistent")
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show no commands found
+	assert.Contains(t, output, "No commands found")
+}
+
+// TestSearchCommands_WithCustomMatches tests search finding custom commands

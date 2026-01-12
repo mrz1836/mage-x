@@ -316,3 +316,211 @@ func TestBuilder_ValidationAppliesToAllMethods(t *testing.T) {
 		}
 	})
 }
+
+func TestBuilder_WithBaseEnv(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("base env variables are set", func(t *testing.T) {
+		t.Parallel()
+		executor := NewBuilder().
+			WithBaseEnv([]string{"TEST_VAR=test_value"}).
+			Build()
+
+		// Execute command that uses the environment variable
+		output, err := executor.ExecuteOutput(ctx, "sh", "-c", "echo $TEST_VAR")
+		if err != nil {
+			t.Errorf("ExecuteOutput() error = %v", err)
+		}
+		if output == "" {
+			t.Error("ExecuteOutput() should use base environment variable")
+		}
+	})
+
+	t.Run("multiple base env variables", func(t *testing.T) {
+		t.Parallel()
+		executor := NewBuilder().
+			WithBaseEnv([]string{"VAR1=value1", "VAR2=value2"}).
+			Build()
+
+		err := executor.Execute(ctx, "echo", "hello")
+		if err != nil {
+			t.Errorf("Execute() error = %v", err)
+		}
+	})
+}
+
+func TestBuilder_WithTimeoutResolver(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("custom timeout resolver", func(t *testing.T) {
+		t.Parallel()
+		customResolver := TimeoutResolverFunc(func(name string, args []string) time.Duration {
+			return 10 * time.Second
+		})
+
+		executor := NewBuilder().
+			WithTimeoutResolver(customResolver).
+			Build()
+
+		err := executor.Execute(ctx, "echo", "hello")
+		if err != nil {
+			t.Errorf("Execute() error = %v", err)
+		}
+	})
+
+	t.Run("resolver allows fast command", func(t *testing.T) {
+		t.Parallel()
+		customResolver := TimeoutResolverFunc(func(name string, args []string) time.Duration {
+			return 5 * time.Second
+		})
+
+		executor := NewBuilder().
+			WithTimeoutResolver(customResolver).
+			Build()
+
+		err := executor.Execute(ctx, "echo", "fast command")
+		if err != nil {
+			t.Errorf("Execute() should succeed with adequate timeout: %v", err)
+		}
+	})
+}
+
+func TestBuilder_WithDryRun(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("dry run mode enabled", func(t *testing.T) {
+		t.Parallel()
+		executor := NewBuilder().
+			WithDryRun(true).
+			Build()
+
+		// In dry run mode, commands should not actually execute
+		err := executor.Execute(ctx, "echo", "hello")
+		if err != nil {
+			t.Errorf("Execute() in dry run should not error: %v", err)
+		}
+	})
+
+	t.Run("dry run mode disabled", func(t *testing.T) {
+		t.Parallel()
+		executor := NewBuilder().
+			WithDryRun(false).
+			Build()
+
+		err := executor.Execute(ctx, "echo", "hello")
+		if err != nil {
+			t.Errorf("Execute() error = %v", err)
+		}
+	})
+}
+
+// mockAuditLoggerBuilder is a simple mock for builder tests
+type mockAuditLoggerBuilder struct {
+	logged *bool
+}
+
+func (m *mockAuditLoggerBuilder) LogEvent(_ AuditEvent) error {
+	*m.logged = true
+	return nil
+}
+
+func TestBuilder_WithAuditLogging(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("audit logging with custom logger", func(t *testing.T) {
+		t.Parallel()
+		logged := false
+		customLogger := &mockAuditLoggerBuilder{logged: &logged}
+
+		executor := NewBuilder().
+			WithAuditLogging(customLogger).
+			Build()
+
+		err := executor.Execute(ctx, "echo", "test")
+		if err != nil {
+			t.Errorf("Execute() error = %v", err)
+		}
+		if !logged {
+			t.Error("Custom audit logger was not called")
+		}
+	})
+
+	t.Run("audit logging with nil logger uses default", func(t *testing.T) {
+		t.Parallel()
+		executor := NewBuilder().
+			WithAuditLogging(nil).
+			Build()
+
+		err := executor.Execute(ctx, "echo", "test")
+		if err != nil {
+			t.Errorf("Execute() error = %v", err)
+		}
+	})
+}
+
+// capturingAuditLogger captures the audit event for testing
+type capturingAuditLogger struct {
+	event *AuditEvent
+}
+
+func (c *capturingAuditLogger) LogEvent(event AuditEvent) error {
+	*c.event = event
+	return nil
+}
+
+func TestBuilder_WithAuditMetadata(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("single metadata entry", func(t *testing.T) {
+		t.Parallel()
+		var capturedEvent AuditEvent
+		customLogger := &capturingAuditLogger{event: &capturedEvent}
+
+		executor := NewBuilder().
+			WithAuditLogging(customLogger).
+			WithAuditMetadata("user", "testuser").
+			Build()
+
+		err := executor.Execute(ctx, "echo", "test")
+		if err != nil {
+			t.Errorf("Execute() error = %v", err)
+		}
+
+		if capturedEvent.Metadata["user"] != "testuser" {
+			t.Errorf("Audit metadata 'user' = %v, want 'testuser'", capturedEvent.Metadata["user"])
+		}
+	})
+
+	t.Run("multiple metadata entries", func(t *testing.T) {
+		t.Parallel()
+		var capturedEvent AuditEvent
+		customLogger := &capturingAuditLogger{event: &capturedEvent}
+
+		executor := NewBuilder().
+			WithAuditLogging(customLogger).
+			WithAuditMetadata("user", "testuser").
+			WithAuditMetadata("session", "abc123").
+			WithAuditMetadata("env", "test").
+			Build()
+
+		err := executor.Execute(ctx, "echo", "test")
+		if err != nil {
+			t.Errorf("Execute() error = %v", err)
+		}
+
+		if capturedEvent.Metadata["user"] != "testuser" {
+			t.Errorf("Audit metadata 'user' = %v, want 'testuser'", capturedEvent.Metadata["user"])
+		}
+		if capturedEvent.Metadata["session"] != "abc123" {
+			t.Errorf("Audit metadata 'session' = %v, want 'abc123'", capturedEvent.Metadata["session"])
+		}
+		if capturedEvent.Metadata["env"] != "test" {
+			t.Errorf("Audit metadata 'env' = %v, want 'test'", capturedEvent.Metadata["env"])
+		}
+	})
+}

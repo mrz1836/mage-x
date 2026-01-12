@@ -275,6 +275,24 @@ func TestDiscoverBuildTagsConvenienceFunction(t *testing.T) {
 		assert.NotContains(t, tags, "integration")
 		assert.NotContains(t, tags, "performance")
 	})
+
+	t.Run("InvalidPath", func(t *testing.T) {
+		// Test with a file instead of directory to trigger filepath.Walk error
+		invalidPath := filepath.Join(testdataDir, "integration_test.go")
+		discovery := NewBuildTagsDiscovery(invalidPath, nil)
+		tags, err := discovery.DiscoverBuildTags()
+		// Should succeed as filepath.Walk works on files too
+		require.NoError(t, err)
+		assert.NotNil(t, tags)
+	})
+
+	t.Run("NonExistentPath", func(t *testing.T) {
+		// Test with non-existent path
+		discovery := NewBuildTagsDiscovery("/nonexistent/path/that/does/not/exist", nil)
+		tags, err := discovery.DiscoverBuildTags()
+		require.Error(t, err)
+		assert.Nil(t, tags)
+	})
 }
 
 func TestDiscoverBuildTagsFromCurrentDir(t *testing.T) {

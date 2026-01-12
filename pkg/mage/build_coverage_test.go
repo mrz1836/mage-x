@@ -486,7 +486,7 @@ func (ts *BuildCoverageTestSuite) TestTryUseCachedBuild() {
 func (ts *BuildCoverageTestSuite) TestPreBuildWithArgs() {
 	// Mock go list and build commands
 	ts.env.Runner.On("RunCmdOutput", "go", mock.MatchedBy(func(args []string) bool {
-		return len(args) > 0 && args[0] == "list"
+		return len(args) > 0 && args[0] == CmdGoList
 	})).Return("test/module\n", nil).Maybe()
 
 	ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
