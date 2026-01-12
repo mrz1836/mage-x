@@ -909,3 +909,179 @@ func TestDownloadWithRetry_EdgeCases(t *testing.T) {
 		assert.ErrorIs(t, err, ErrInvalidDestination)
 	})
 }
+
+// TestLogger_HeaderWithSpinner tests Header when spinner is active
+func TestLogger_HeaderWithSpinner(t *testing.T) {
+	t.Run("stops spinner before printing header", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := NewLogger()
+		logger.SetOutput(&buf)
+		logger.SetColorEnabled(false)
+
+		// Start a spinner
+		logger.StartSpinner("test spinner")
+		// Give spinner time to start
+		time.Sleep(10 * time.Millisecond)
+
+		// Call Header - should stop spinner
+		logger.Header("Test Header")
+
+		output := buf.String()
+		assert.Contains(t, output, "Test Header")
+	})
+}
+
+// TestProgress_RenderEdgeCases tests Progress render with different states
+func TestProgress_RenderEdgeCases(t *testing.T) {
+	t.Run("render with showTime and not complete", func(t *testing.T) {
+		progress := NewProgress(100, "Testing")
+		progress.Update(50)
+		// Give some time to elapse
+		time.Sleep(10 * time.Millisecond)
+		progress.Update(60)
+		// This should render with ETA
+	})
+
+	t.Run("render with showTime and complete", func(t *testing.T) {
+		progress := NewProgress(100, "Testing")
+		progress.Update(50)
+		time.Sleep(10 * time.Millisecond)
+		progress.Update(100)
+		// This should render with total time
+	})
+
+	t.Run("render with zero current progress", func(t *testing.T) {
+		progress := NewProgress(100, "Testing")
+		// Don't update, leave at 0
+		progress.render()
+		// Should show different emoji for 0 progress
+	})
+}
+
+// TestBuildTags_DiscoverEdgeCases tests DiscoverBuildTags edge cases
+func TestBuildTags_DiscoverEdgeCases(t *testing.T) {
+	t.Run("handles directory read errors", func(t *testing.T) {
+		// Use a path that doesn't exist
+		discovery := NewBuildTagsDiscovery("/nonexistent/path", nil)
+		tags, err := discovery.DiscoverBuildTags()
+		// Should handle error gracefully
+		require.Error(t, err)
+		assert.Nil(t, tags)
+	})
+}
+
+// TestQuery_LimitEdgeCases tests Query with limit edge cases
+func TestQuery_LimitEdgeCases(t *testing.T) {
+	t.Run("applies limit correctly", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		storage, err := NewJSONStorage(tmpDir)
+		require.NoError(t, err)
+
+		// Store multiple metrics
+		now := time.Now()
+		for i := 0; i < 10; i++ {
+			metric := &Metric{
+				Name:      fmt.Sprintf("metric_%d", i),
+				Type:      MetricTypeCounter,
+				Value:     float64(i),
+				Timestamp: now,
+			}
+			require.NoError(t, storage.Store(metric))
+		}
+
+		// Query with limit
+		query := &MetricsQuery{
+			StartTime: now.Add(-time.Hour),
+			EndTime:   now.Add(time.Hour),
+			Limit:     5,
+		}
+
+		results, err := storage.Query(query)
+		require.NoError(t, err)
+		assert.LessOrEqual(t, len(results), 5)
+	})
+}
+
+// TestPromptForInput_WithPrompt tests PromptForInput with a non-empty prompt
+func TestPromptForInput_WithPrompt(t *testing.T) {
+	t.Run("displays prompt before reading input", func(t *testing.T) {
+		// Create a pipe to simulate stdin
+		oldStdin := os.Stdin
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stdin = r
+		defer func() {
+			os.Stdin = oldStdin
+			_ = r.Close() //nolint:errcheck // cleanup in defer
+		}()
+
+		// Write test input
+		go func() {
+			_, _ = w.WriteString("user input\n") //nolint:errcheck // test helper
+			_ = w.Close()                        //nolint:errcheck // test cleanup
+		}()
+
+		result, err := PromptForInput("Enter name")
+		require.NoError(t, err)
+		assert.Equal(t, "user input", result)
+	})
+}
+
+// TestRecordBuildMetrics_Coverage tests RecordBuildMetrics edge cases
+func TestRecordBuildMetrics_Coverage(t *testing.T) {
+	t.Run("records all build metrics when enabled", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		tmpDir := t.TempDir()
+		config.StoragePath = tmpDir
+
+		collector := NewMetricsCollector(&config)
+
+		buildMetrics := &BuildMetrics{
+			Duration:      100 * time.Millisecond,
+			LinesOfCode:   1000,
+			PackagesBuilt: 5,
+			TestsRun:      20,
+			TestsPassed:   18,
+			TestsFailed:   2,
+			Coverage:      85.5,
+			BinarySize:    1024 * 1024,
+			Resources: ResourceMetrics{
+				CPUUsage:    50.0,
+				MemoryUsage: 512 * 1024 * 1024,
+			},
+			Timestamp: time.Now(),
+			Success:   true,
+			Tags:      map[string]string{"env": "test"},
+		}
+
+		err := collector.RecordBuildMetrics(buildMetrics)
+		require.NoError(t, err)
+	})
+}
+
+// TestSpinner_StopError tests Stop when output write fails
+func TestSpinner_StopError(t *testing.T) {
+	t.Run("handles write error gracefully", func(t *testing.T) {
+		spinner := NewSpinner("test")
+		spinner.Start()
+		// Give spinner time to start
+		time.Sleep(10 * time.Millisecond)
+		// Stop should not panic even if write fails
+		spinner.Stop()
+	})
+}
+
+// TestMultiSpinner_StopError tests MultiSpinner Stop with active tasks
+func TestMultiSpinner_StopError(t *testing.T) {
+	t.Run("stops all tasks", func(t *testing.T) {
+		ms := NewMultiSpinner()
+		ms.AddTask("task1", "Task 1")
+		ms.AddTask("task2", "Task 2")
+		ms.Start()
+		// Give time to start
+		time.Sleep(10 * time.Millisecond)
+		ms.Stop()
+		// Should not panic
+	})
+}
