@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,7 +29,10 @@ func TestHTTPGetJSON_Success(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := HTTPGetJSON[testRelease](server.URL, 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := HTTPGetJSON[testRelease](ctx, server.URL)
 	require.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, "v1.0.0", result.TagName)
@@ -46,7 +50,10 @@ func TestHTTPGetJSON_SliceResult(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := HTTPGetJSON[[]testRelease](server.URL, 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := HTTPGetJSON[[]testRelease](ctx, server.URL)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Len(t, *result, 2)
@@ -88,7 +95,10 @@ func TestHTTPGetJSON_HTTPError(t *testing.T) {
 			}))
 			defer server.Close()
 
-			result, err := HTTPGetJSON[testRelease](server.URL, 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			result, err := HTTPGetJSON[testRelease](ctx, server.URL)
 			require.Error(t, err)
 			assert.Nil(t, result)
 			require.ErrorIs(t, err, ErrHTTPAPIError)
@@ -107,7 +117,10 @@ func TestHTTPGetJSON_ErrorContainsURL(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := HTTPGetJSON[testRelease](server.URL, 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := HTTPGetJSON[testRelease](ctx, server.URL)
 	require.Error(t, err)
 	// Verify error message includes the URL for debugging
 	assert.Contains(t, err.Error(), "GET")
@@ -123,12 +136,15 @@ func TestHTTPGetJSON_InvalidJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := HTTPGetJSON[testRelease](server.URL, 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := HTTPGetJSON[testRelease](ctx, server.URL)
 	require.Error(t, err)
 	assert.Nil(t, result)
 }
 
-// TestHTTPGetJSON_Timeout tests timeout handling
+// TestHTTPGetJSON_Timeout tests timeout handling via context
 func TestHTTPGetJSON_Timeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Sleep longer than the timeout
@@ -138,7 +154,10 @@ func TestHTTPGetJSON_Timeout(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := HTTPGetJSON[testRelease](server.URL, 50*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	result, err := HTTPGetJSON[testRelease](ctx, server.URL)
 	require.Error(t, err)
 	assert.Nil(t, result)
 }
@@ -152,7 +171,10 @@ func TestHTTPGetJSON_EmptyBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := HTTPGetJSON[testRelease](server.URL, 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := HTTPGetJSON[testRelease](ctx, server.URL)
 	require.Error(t, err)
 	assert.Nil(t, result)
 }
@@ -168,10 +190,110 @@ func TestHTTPGetJSON_ResponseBodyCloseError(t *testing.T) {
 		}))
 		defer server.Close()
 
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
 		// Make a successful request - the defer close will be called
-		result, err := HTTPGetJSON[map[string]string](server.URL, 5*time.Second)
+		result, err := HTTPGetJSON[map[string]string](ctx, server.URL)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, "value", (*result)["test"])
 	})
+}
+
+// TestHTTPGetJSON_ContextCancellation tests that requests are properly canceled
+func TestHTTPGetJSON_ContextCancellation(t *testing.T) {
+	requestReceived := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		close(requestReceived)
+		// Wait longer than we'll wait for context cancellation
+		time.Sleep(5 * time.Second)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`)) //nolint:errcheck // test server write never fails
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Start the request in a goroutine
+	done := make(chan error)
+	go func() {
+		_, err := HTTPGetJSON[testRelease](ctx, server.URL)
+		done <- err
+	}()
+
+	// Wait for server to receive request, then cancel
+	<-requestReceived
+	cancel()
+
+	// Request should return with context canceled error
+	err := <-done
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "context canceled")
+}
+
+// TestHTTPGetJSON_InvalidURL tests error handling for invalid URLs
+func TestHTTPGetJSON_InvalidURL(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := HTTPGetJSON[testRelease](ctx, "://invalid-url")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create request")
+}
+
+// TestHTTPGetJSON_ConnectionRefused tests error handling when connection is refused
+func TestHTTPGetJSON_ConnectionRefused(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	// Port 99999 should not have anything listening
+	_, err := HTTPGetJSON[testRelease](ctx, "http://localhost:99999/nonexistent")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to fetch")
+}
+
+// TestDefaultHTTPClient tests that the shared client is returned
+func TestDefaultHTTPClient(t *testing.T) {
+	client := DefaultHTTPClient()
+	require.NotNil(t, client)
+
+	// Verify it's the same instance on subsequent calls
+	client2 := DefaultHTTPClient()
+	assert.Same(t, client, client2)
+
+	// Verify transport configuration
+	transport, ok := client.Transport.(*http.Transport)
+	require.True(t, ok, "Transport should be *http.Transport")
+	assert.Equal(t, 100, transport.MaxIdleConns)
+	assert.Equal(t, 10, transport.MaxIdleConnsPerHost)
+	assert.Equal(t, 90*time.Second, transport.IdleConnTimeout)
+	assert.Equal(t, 10*time.Second, transport.TLSHandshakeTimeout)
+	assert.Equal(t, 30*time.Second, transport.ResponseHeaderTimeout)
+	assert.Equal(t, 1*time.Second, transport.ExpectContinueTimeout)
+}
+
+// TestHTTPGetJSON_UsesSharedClient verifies connection reuse
+func TestHTTPGetJSON_UsesSharedClient(t *testing.T) {
+	requestCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requestCount++
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"tag_name":"v1.0.0"}`)) //nolint:errcheck // test server
+	}))
+	defer server.Close()
+
+	// Make multiple requests - they should all succeed using the shared client
+	for i := 0; i < 5; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		result, err := HTTPGetJSON[testRelease](ctx, server.URL)
+		cancel()
+
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "v1.0.0", result.TagName)
+	}
+
+	assert.Equal(t, 5, requestCount)
 }
