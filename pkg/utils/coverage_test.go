@@ -212,6 +212,24 @@ func TestCleanDir_ErrorPath(t *testing.T) {
 		// Directory should be created
 		assert.True(t, DirExists(nonExistentDir))
 	})
+
+	t.Run("cleans existing directory with files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testDir := filepath.Join(tmpDir, "test-clean")
+
+		// Create directory with files
+		require.NoError(t, os.Mkdir(testDir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(testDir, "file.txt"), []byte("content"), 0o600))
+
+		// Clean should remove files and recreate directory
+		err := CleanDir(testDir)
+		require.NoError(t, err)
+
+		// Verify directory exists but is empty
+		entries, err := os.ReadDir(testDir)
+		require.NoError(t, err)
+		assert.Empty(t, entries)
+	})
 }
 
 // TestRunCmd_Coverage tests RunCmd for coverage
