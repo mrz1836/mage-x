@@ -569,18 +569,14 @@ func sortModulesByDependency(modules []ModuleInfo) ([]ModuleInfo, error) {
 
 // sortQueue sorts the queue with root module first, then alphabetically
 func sortQueue(queue []string, moduleByPath map[string]ModuleInfo) {
-	for i := 0; i < len(queue); i++ {
-		for j := i + 1; j < len(queue); j++ {
-			mi := moduleByPath[queue[i]]
-			mj := moduleByPath[queue[j]]
-			// Root module first
-			if mj.IsRoot {
-				queue[i], queue[j] = queue[j], queue[i]
-			} else if !mi.IsRoot && queue[i] > queue[j] {
-				queue[i], queue[j] = queue[j], queue[i]
-			}
+	sort.Slice(queue, func(i, j int) bool {
+		mi := moduleByPath[queue[i]]
+		mj := moduleByPath[queue[j]]
+		if mi.IsRoot != mj.IsRoot {
+			return mi.IsRoot // Root module first
 		}
-	}
+		return queue[i] < queue[j] // Then alphabetically
+	})
 }
 
 // displayModuleSummary displays a summary of found modules in dependency order
