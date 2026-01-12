@@ -1842,3 +1842,26 @@ func TestGenerateReport_Disabled(t *testing.T) {
 	assert.Nil(t, report)
 	assert.ErrorIs(t, err, errMetricsCollectionDisabled)
 }
+
+// TestPercentile_EdgeCases tests percentile function edge cases
+func TestPercentile_EdgeCases(t *testing.T) {
+	t.Run("exact position", func(t *testing.T) {
+		// Test when pos lands exactly on an index (no interpolation needed)
+		values := []float64{1.0, 2.0, 3.0, 4.0, 5.0}
+		// For 5 values, indices are 0-4, so 0th percentile = index 0, 100th = index 4
+		result := percentile(values, 0) // pos = 0 * 4 = 0 (exact)
+		assert.InDelta(t, 1.0, result, 0.001)
+
+		result = percentile(values, 100) // pos = 1.0 * 4 = 4 (exact)
+		assert.InDelta(t, 5.0, result, 0.001)
+	})
+
+	t.Run("upper bound clamping", func(t *testing.T) {
+		// Test the upper >= len(values) edge case
+		// This happens when we're very close to 100th percentile
+		values := []float64{1.0, 2.0}
+		result := percentile(values, 99)
+		// pos = 0.99 * (2-1) = 0.99, lower = 0, upper = 1
+		assert.InDelta(t, 1.99, result, 0.01)
+	})
+}
