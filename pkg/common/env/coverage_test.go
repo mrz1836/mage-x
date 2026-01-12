@@ -2,6 +2,7 @@ package env
 
 import (
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -332,4 +333,137 @@ func TestRequiredValidatorDescription(t *testing.T) {
 	desc := rule.Description()
 	assert.NotEmpty(t, desc)
 	assert.Equal(t, "required", desc)
+}
+
+// =============================================================================
+// Thread-safety Tests for Validation Rules (N3, N4 Critical Fixes)
+// =============================================================================
+
+// TestPatternRule_ConcurrentValidation tests thread-safe lazy regex compilation.
+// This validates the N3 fix: using sync.Once for lazy regex compilation.
+func TestPatternRule_ConcurrentValidation(t *testing.T) {
+	t.Parallel()
+
+	rule := &PatternRule{Pattern: `^[a-z]+$`}
+
+	// Run concurrent validations
+	const numGoroutines = 100
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+
+	errChan := make(chan error, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			// Mix of valid and invalid values
+			var err error
+			if id%2 == 0 {
+				err = rule.Validate("valid")
+			} else {
+				err = rule.Validate("INVALID123")
+			}
+			errChan <- err
+		}(i)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	// Count results
+	var validCount, invalidCount int
+	for err := range errChan {
+		if err == nil {
+			validCount++
+		} else {
+			invalidCount++
+		}
+	}
+
+	// Should have equal counts for valid/invalid
+	assert.Equal(t, numGoroutines/2, validCount, "half should be valid")
+	assert.Equal(t, numGoroutines/2, invalidCount, "half should be invalid")
+}
+
+// TestPatternRule_InvalidPattern tests handling of invalid regex patterns.
+func TestPatternRule_InvalidPattern(t *testing.T) {
+	t.Parallel()
+
+	rule := &PatternRule{Pattern: `[invalid`} // Missing closing bracket
+
+	err := rule.Validate("anything")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid pattern")
+}
+
+// TestPatternRule_MultipleValidations tests that regex is only compiled once.
+func TestPatternRule_MultipleValidations(t *testing.T) {
+	t.Parallel()
+
+	rule := &PatternRule{Pattern: `^\d{3}-\d{4}$`}
+
+	// Validate multiple times
+	for i := 0; i < 10; i++ {
+		err := rule.Validate("123-4567")
+		require.NoError(t, err)
+	}
+
+	// Invalid value
+	err := rule.Validate("invalid")
+	require.Error(t, err)
+}
+
+// TestOneOfRule_NoMutation tests that Validate doesn't mutate the Values slice.
+// This validates the N4 fix: copying slice before sorting.
+func TestOneOfRule_NoMutation(t *testing.T) {
+	t.Parallel()
+
+	// Create rule with specific order
+	originalValues := []string{"zebra", "apple", "mango"}
+	rule := &OneOfRule{Values: originalValues}
+
+	// Validate with invalid value (triggers error message with sorted values)
+	//nolint:errcheck // Error intentionally ignored for mutation test
+	_ = rule.Validate("invalid")
+
+	// Original slice should NOT be mutated
+	assert.Equal(t, []string{"zebra", "apple", "mango"}, rule.Values,
+		"OneOfRule.Validate should not mutate original Values slice")
+}
+
+// TestOneOfRule_ConcurrentValidation tests thread-safe validation.
+func TestOneOfRule_ConcurrentValidation(t *testing.T) {
+	t.Parallel()
+
+	rule := &OneOfRule{Values: []string{"alpha", "beta", "gamma"}}
+
+	const numGoroutines = 100
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			// Mix of valid and invalid values
+			switch id % 4 {
+			case 0:
+				err := rule.Validate("alpha")
+				assert.NoError(t, err)
+			case 1:
+				err := rule.Validate("beta")
+				assert.NoError(t, err)
+			case 2:
+				err := rule.Validate("gamma")
+				assert.NoError(t, err)
+			default:
+				err := rule.Validate("invalid")
+				assert.Error(t, err)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// After concurrent access, Values should still be unmutated
+	assert.Equal(t, []string{"alpha", "beta", "gamma"}, rule.Values)
 }

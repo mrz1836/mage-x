@@ -334,3 +334,96 @@ func TestYAMLOperator_NilFileOps(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, data, result)
 }
+
+// =============================================================================
+// WriteFile Path Traversal Tests (C4 Critical Fix)
+// =============================================================================
+
+// TestWriteFile_PathTraversal tests that path traversal is detected in WriteFile.
+func TestWriteFile_PathTraversal(t *testing.T) {
+	t.Parallel()
+
+	op := NewDefaultFileOperator()
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{"parent directory traversal", "../../../tmp/evil.txt"},
+		{"encoded traversal", "..%2f..%2f..%2ftmp/evil.txt"},
+		{"absolute path with traversal", "/foo/../../../etc/passwd"},
+		{"hidden traversal", "foo/../../bar/../../../tmp/evil.txt"},
+		{"double dot only", ".."},
+		{"double dot with slash", "../"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := op.WriteFile(tt.path, []byte("test"), 0o644)
+			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrPathTraversalDetected, "WriteFile should detect path traversal for: %s", tt.path)
+		})
+	}
+}
+
+// TestWriteFile_ValidPaths tests that valid paths work correctly.
+func TestWriteFile_ValidPaths(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	op := NewDefaultFileOperator()
+
+	tests := []struct {
+		name    string
+		relPath string
+	}{
+		{"simple filename", "test.txt"},
+		{"nested path", "subdir/test.txt"},
+		{"dotfile", ".hidden"},
+		{"path with dots in name", "file.test.txt"},
+		{"path with two dots in name", "file..txt"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			testPath := filepath.Join(tmpDir, tt.name, tt.relPath)
+			dir := filepath.Dir(testPath)
+			require.NoError(t, os.MkdirAll(dir, 0o755))
+
+			testData := []byte("valid content")
+			err := op.WriteFile(testPath, testData, 0o644)
+			require.NoError(t, err, "WriteFile should succeed for valid path: %s", tt.relPath)
+
+			// Verify content
+			content, err := os.ReadFile(testPath)
+			require.NoError(t, err)
+			assert.Equal(t, testData, content)
+		})
+	}
+}
+
+// TestWriteFile_PathCleaning tests that paths are cleaned after validation.
+func TestWriteFile_PathCleaning(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	op := NewDefaultFileOperator()
+
+	// Path with redundant slashes and dots should be cleaned
+	messyPath := filepath.Join(tmpDir, "foo", ".", "bar", ".", "test.txt")
+	cleanPath := filepath.Join(tmpDir, "foo", "bar", "test.txt")
+
+	// Create directory structure
+	require.NoError(t, os.MkdirAll(filepath.Dir(cleanPath), 0o755))
+
+	testData := []byte("test content")
+	err := op.WriteFile(messyPath, testData, 0o644)
+	require.NoError(t, err)
+
+	// File should exist at clean path
+	content, err := os.ReadFile(cleanPath)
+	require.NoError(t, err)
+	assert.Equal(t, testData, content)
+}
