@@ -27,7 +27,7 @@ func TestListCommands_SuccessPath(t *testing.T) {
 	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
 
 	// Create a simple magefile
-	magefileContent := "//go:build mage\n\npackage main\n\nfunc TestCommand() error {\n\treturn nil\n}\n"
+	magefileContent := "//go:build mage\n\npackage main\n\nfunc TestCommand() error {\n\treturn nil\n}\n" //nolint:lll // test fixture
 	require.NoError(t, os.WriteFile("magefile.go", []byte(magefileContent), 0o600))
 
 	reg := registry.NewRegistry()
