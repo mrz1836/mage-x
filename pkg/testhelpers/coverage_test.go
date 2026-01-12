@@ -525,30 +525,74 @@ func TestWorkspaceAssertions(t *testing.T) {
 
 // TestBaseSuite_RestoreEnvironment tests restoreEnvironment
 func TestBaseSuite_RestoreEnvironment(t *testing.T) {
-	suite := &BaseSuite{}
-	suite.SetT(t)
+	t.Run("restores existing var", func(t *testing.T) {
+		suite := &BaseSuite{}
+		suite.SetT(t)
 
-	// Set original environment
-	suite.OriginalEnv = map[string]string{
-		"TEST_VAR": "original",
-	}
+		// Set original environment
+		suite.OriginalEnv = map[string]string{
+			"TEST_VAR_RESTORE": "original",
+		}
 
-	// Set vars to restore
-	suite.EnvVarsToSet = map[string]string{
-		"TEST_VAR": "modified",
-	}
+		// Set vars to restore
+		suite.EnvVarsToSet = map[string]string{
+			"TEST_VAR_RESTORE": "modified",
+		}
 
-	// Set current value
-	require.NoError(t, os.Setenv("TEST_VAR", "modified"))
+		// Set current value
+		require.NoError(t, os.Setenv("TEST_VAR_RESTORE", "modified"))
 
-	// Restore environment
-	suite.restoreEnvironment()
+		// Restore environment
+		suite.restoreEnvironment()
 
-	// Verify it was restored
-	value := os.Getenv("TEST_VAR")
-	if value != "original" {
-		t.Errorf("restoreEnvironment failed: expected %q, got %q", "original", value)
-	}
+		// Verify it was restored
+		value := os.Getenv("TEST_VAR_RESTORE")
+		if value != "original" {
+			t.Errorf("restoreEnvironment failed: expected %q, got %q", "original", value)
+		}
+
+		// Cleanup
+		require.NoError(t, os.Unsetenv("TEST_VAR_RESTORE"))
+	})
+
+	t.Run("unsets new var", func(t *testing.T) {
+		suite := &BaseSuite{}
+		suite.SetT(t)
+
+		// Set original environment (empty - var didn't exist)
+		suite.OriginalEnv = map[string]string{}
+
+		// Set vars to restore (new var that was added)
+		suite.EnvVarsToSet = map[string]string{
+			"TEST_NEW_VAR": "new_value",
+		}
+
+		// Set current value
+		require.NoError(t, os.Setenv("TEST_NEW_VAR", "new_value"))
+
+		// Restore environment (should unset the var)
+		suite.restoreEnvironment()
+
+		// Verify it was unset
+		value := os.Getenv("TEST_NEW_VAR")
+		if value != "" {
+			t.Errorf("restoreEnvironment should have unset TEST_NEW_VAR, got %q", value)
+		}
+	})
+
+	t.Run("handles nil OriginalEnv", func(t *testing.T) {
+		suite := &BaseSuite{}
+		suite.SetT(t)
+
+		// OriginalEnv is nil
+		suite.OriginalEnv = nil
+		suite.EnvVarsToSet = map[string]string{
+			"TEST_VAR": "value",
+		}
+
+		// Should return early without error
+		suite.restoreEnvironment()
+	})
 }
 
 // TestBaseSuite_WithTestEnv tests WithTestEnv

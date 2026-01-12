@@ -2,8 +2,10 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -315,6 +317,84 @@ func TestGoList_ErrorWithOutput(t *testing.T) {
 		})
 
 		_, err := GoList("./...")
+		require.Error(t, err)
+	})
+}
+
+// TestRunCmdPipe_Coverage tests RunCmdPipe for coverage
+func TestRunCmdPipe_Coverage(t *testing.T) {
+	t.Run("executes simple pipe", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create commands that pipe together
+		cmd1 := exec.CommandContext(ctx, "echo", "test")
+		cmd2 := exec.CommandContext(ctx, "cat")
+
+		// Run the pipe
+		err := RunCmdPipe(cmd1, cmd2)
+		// These commands should work
+		require.NoError(t, err)
+	})
+}
+
+// TestMetrics_AdditionalCoverage tests metrics functions for coverage
+func TestMetrics_AdditionalCoverage(t *testing.T) {
+	t.Run("NewMetricsCollector with disabled config", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = false
+
+		collector := NewMetricsCollector(&config)
+		require.NotNil(t, collector)
+	})
+
+	t.Run("RecordMetric with disabled collector", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = false
+		collector := NewMetricsCollector(&config)
+
+		err := collector.RecordMetric(&Metric{
+			Name:  "test",
+			Type:  "counter",
+			Value: 1,
+		})
+		// Should not error even when disabled
+		require.NoError(t, err)
+	})
+
+	t.Run("Stop timer with enabled collector", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		config.StoragePath = t.TempDir()
+		collector := NewMetricsCollector(&config)
+
+		timer := collector.StartTimer("test_timer", nil)
+		duration := timer.Stop()
+		require.Greater(t, duration, time.Duration(0))
+	})
+
+	t.Run("StopWithError", func(t *testing.T) {
+		config := DefaultMetricsConfig()
+		config.Enabled = true
+		config.StoragePath = t.TempDir()
+		collector := NewMetricsCollector(&config)
+
+		timer := collector.StartTimer("test_timer", nil)
+		testErr := errors.New("test error") //nolint:err113 // test error
+		duration := timer.StopWithError(testErr)
+		require.Greater(t, duration, time.Duration(0))
+	})
+}
+
+// TestHTTPGetJSON_AdditionalCoverage tests HTTPGetJSON error handling
+func TestHTTPGetJSON_AdditionalCoverage(t *testing.T) {
+	t.Run("handles invalid URL", func(t *testing.T) {
+		_, err := HTTPGetJSON[map[string]interface{}]("://invalid-url", 5*time.Second)
+		require.Error(t, err)
+	})
+
+	t.Run("handles network error", func(t *testing.T) {
+		// Use a URL that will fail
+		_, err := HTTPGetJSON[map[string]interface{}]("http://localhost:99999/nonexistent", 1*time.Second)
 		require.Error(t, err)
 	})
 }
