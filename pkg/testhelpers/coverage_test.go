@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestAssertTrue_Coverage tests AssertTrue
@@ -519,4 +521,50 @@ func TestWorkspaceAssertions(t *testing.T) {
 
 	// AssertFileEquals
 	ws.AssertFileEquals("test.txt", "test content")
+}
+
+// TestBaseSuite_RestoreEnvironment tests restoreEnvironment
+func TestBaseSuite_RestoreEnvironment(t *testing.T) {
+	suite := &BaseSuite{}
+	suite.SetT(t)
+
+	// Set original environment
+	suite.OriginalEnv = map[string]string{
+		"TEST_VAR": "original",
+	}
+
+	// Set vars to restore
+	suite.EnvVarsToSet = map[string]string{
+		"TEST_VAR": "modified",
+	}
+
+	// Set current value
+	require.NoError(t, os.Setenv("TEST_VAR", "modified"))
+
+	// Restore environment
+	suite.restoreEnvironment()
+
+	// Verify it was restored
+	value := os.Getenv("TEST_VAR")
+	if value != "original" {
+		t.Errorf("restoreEnvironment failed: expected %q, got %q", "original", value)
+	}
+}
+
+// TestBaseSuite_WithTestEnv tests WithTestEnv
+func TestBaseSuite_WithTestEnv(t *testing.T) {
+	suite := &BaseSuite{}
+	suite.SetT(t)
+
+	// First call should create TestEnv
+	env1 := suite.WithTestEnv()
+	if env1 == nil {
+		t.Error("WithTestEnv should create TestEnvironment")
+	}
+
+	// Second call should return the same instance
+	env2 := suite.WithTestEnv()
+	if env2 != env1 {
+		t.Error("WithTestEnv should return the same instance on subsequent calls")
+	}
 }
