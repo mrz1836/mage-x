@@ -24,7 +24,61 @@ import (
 // Static errors for metrics operations
 var (
 	errQualityChecksFailed = errors.New("quality checks failed")
+	errInvalidLanguage     = errors.New("invalid language: supported values are go, js, yaml")
 )
+
+// langConfig defines language-specific settings for LOC counting
+type langConfig struct {
+	name          string   // Display name: "Go", "JavaScript", "YAML"
+	extensions    []string // File extensions to count
+	testPatterns  []string // Patterns identifying test files (empty if no test concept)
+	hasTestFiles  bool     // Whether language has test file concept
+	excludeDirs   []string // Directories to exclude
+	commentPrefix string   // Line comment prefix for filtering
+}
+
+// langConfigs maps language identifiers to their configurations.
+//
+//nolint:gochecknoglobals // Package-level configuration for language settings
+var langConfigs = map[string]*langConfig{
+	"go": {
+		name:          "Go",
+		extensions:    []string{".go"},
+		testPatterns:  []string{"_test.go"},
+		hasTestFiles:  true,
+		excludeDirs:   []string{"vendor", "third_party"},
+		commentPrefix: "//",
+	},
+	"js": {
+		name:          "JavaScript",
+		extensions:    []string{".js", ".ts", ".jsx", ".tsx"},
+		testPatterns:  []string{".test.", ".spec.", "__tests__"},
+		hasTestFiles:  true,
+		excludeDirs:   []string{"node_modules", "dist", "build", ".next", "coverage"},
+		commentPrefix: "//",
+	},
+	"yaml": {
+		name:          "YAML",
+		extensions:    []string{".yaml", ".yml"},
+		testPatterns:  []string{},
+		hasTestFiles:  false,
+		excludeDirs:   []string{"node_modules", "vendor"},
+		commentPrefix: "#",
+	},
+}
+
+// getLangConfig returns the configuration for the specified language
+func getLangConfig(lang string) (*langConfig, error) {
+	lang = strings.ToLower(strings.TrimSpace(lang))
+	if lang == "" {
+		lang = "go" // default
+	}
+	config, ok := langConfigs[lang]
+	if !ok {
+		return nil, fmt.Errorf("%w: got %q", errInvalidLanguage, lang)
+	}
+	return config, nil
+}
 
 // Metrics namespace for code metrics and analysis tasks
 type Metrics mg.Namespace
@@ -55,6 +109,15 @@ type LOCResult struct {
 	GoAvgLinesPerFile   float64 `json:"go_avg_lines_per_file"`
 	TestAvgSizeBytes    int64   `json:"test_avg_size_bytes"`
 	GoAvgSizeBytes      int64   `json:"go_avg_size_bytes"`
+
+	// Multi-language support fields
+	Language              string  `json:"language"`                  // Language analyzed: "go", "js", or "yaml"
+	SourceFilesLOC        int     `json:"source_files_loc"`          // Source file lines (non-test)
+	SourceFilesCount      int     `json:"source_files_count"`        // Source file count (non-test)
+	SourceFilesSizeBytes  int64   `json:"source_files_size_bytes"`   // Source files total size
+	SourceFilesSizeHuman  string  `json:"source_files_size_human"`   // Source files human-readable size
+	SourceAvgLinesPerFile float64 `json:"source_avg_lines_per_file"` // Source files average lines
+	SourceAvgSizeBytes    int64   `json:"source_avg_size_bytes"`     // Source files average size
 }
 
 // LOCStats holds line, file counts, and total size
@@ -64,13 +127,31 @@ type LOCStats struct {
 	TotalBytes int64 // Total size in bytes
 }
 
-// LOC displays lines of code statistics (use json for JSON output)
+// LOC displays lines of code statistics (use lang=go|js|yaml, json for JSON output)
 func (Metrics) LOC(args ...string) error {
 	// Parse command-line parameters
 	params := utils.ParseParams(args)
 	jsonOutput := utils.IsParamTrue(params, "json")
+	lang := utils.GetParam(params, "lang", "go")
 
-	excludeDirs := []string{"vendor", "third_party"}
+	// Get language configuration
+	config, err := getLangConfig(lang)
+	if err != nil {
+		return err
+	}
+
+	// For backward compatibility, Go uses existing functions
+	// Other languages use the new config-based approach
+	if lang == "go" {
+		return locGo(jsonOutput, config)
+	}
+
+	return locMultiLang(jsonOutput, config, lang)
+}
+
+// locGo handles LOC for Go files (backward compatible)
+func locGo(jsonOutput bool, config *langConfig) error {
+	excludeDirs := config.excludeDirs
 
 	// Count lines and files in test files
 	testStats, err := countLinesWithStats("*_test.go", excludeDirs)
@@ -139,6 +220,15 @@ func (Metrics) LOC(args ...string) error {
 			GoAvgLinesPerFile:   goAvgLines,
 			TestAvgSizeBytes:    testAvgBytes,
 			GoAvgSizeBytes:      goAvgBytes,
+
+			// Multi-language fields (for Go, source = Go files)
+			Language:              "go",
+			SourceFilesLOC:        goStats.Lines,
+			SourceFilesCount:      goStats.Files,
+			SourceFilesSizeBytes:  goStats.TotalBytes,
+			SourceFilesSizeHuman:  formatBytesMetrics(goStats.TotalBytes),
+			SourceAvgLinesPerFile: goAvgLines,
+			SourceAvgSizeBytes:    goAvgBytes,
 		}
 
 		jsonBytes, err := json.Marshal(result)
@@ -181,6 +271,153 @@ func (Metrics) LOC(args ...string) error {
 	utils.Print("| Package/Directory Count | %-37d |\n", packageCount)
 	utils.Print("| Average Lines per File  | %-37.1f |\n", avgLinesPerFile)
 	utils.Print("| Test Coverage Ratio     | %-37s |\n", fmt.Sprintf("%.1f%% (test LOC / production LOC)", testCoverageRatio))
+	utils.Println("")
+
+	utils.Success("Analysis complete!")
+
+	return nil
+}
+
+// locMultiLang handles LOC for JS and YAML files
+func locMultiLang(jsonOutput bool, config *langConfig, lang string) error {
+	var sourceStats, testStats LOCStats
+	var err error
+
+	// Count source files (non-test)
+	sourceStats, err = countLinesWithConfig(config, false)
+	if err != nil {
+		if !jsonOutput {
+			utils.Warn("Failed to count %s source files: %v", config.name, err)
+		}
+		sourceStats = LOCStats{}
+	}
+
+	// Count test files if the language has them
+	if config.hasTestFiles {
+		testStats, err = countLinesWithConfig(config, true)
+		if err != nil {
+			if !jsonOutput {
+				utils.Warn("Failed to count %s test files: %v", config.name, err)
+			}
+			testStats = LOCStats{}
+		}
+	}
+
+	date := time.Now().Format("2006-01-02")
+	totalLOC := sourceStats.Lines + testStats.Lines
+	totalFiles := sourceStats.Files + testStats.Files
+
+	// Count directories containing files of this language
+	dirCount, err := countDirectoriesForLang(config)
+	if err != nil {
+		if !jsonOutput {
+			utils.Warn("Failed to count directories: %v", err)
+		}
+		dirCount = 0
+	}
+
+	// Calculate derived metrics
+	totalBytes := sourceStats.TotalBytes + testStats.TotalBytes
+	avgLinesPerFile := safeAverage(totalLOC, totalFiles)
+	testCoverageRatio := safeAverage(testStats.Lines, sourceStats.Lines) * 100
+	testAvgLines := safeAverage(testStats.Lines, testStats.Files)
+	sourceAvgLines := safeAverage(sourceStats.Lines, sourceStats.Files)
+	testAvgBytes := safeAverageBytes(testStats.TotalBytes, testStats.Files)
+	sourceAvgBytes := safeAverageBytes(sourceStats.TotalBytes, sourceStats.Files)
+
+	if jsonOutput {
+		result := LOCResult{
+			// For non-Go languages, populate Go fields with zeros for backward compat
+			TestFilesLOC:    testStats.Lines,
+			TestFilesCount:  testStats.Files,
+			GoFilesLOC:      0, // Not Go
+			GoFilesCount:    0, // Not Go
+			TotalLOC:        totalLOC,
+			TotalFilesCount: totalFiles,
+			Date:            date,
+			ExcludedDirs:    config.excludeDirs,
+
+			TestFilesSizeBytes:  testStats.TotalBytes,
+			TestFilesSizeHuman:  formatBytesMetrics(testStats.TotalBytes),
+			GoFilesSizeBytes:    0,
+			GoFilesSizeHuman:    "0 B",
+			TotalSizeBytes:      totalBytes,
+			TotalSizeHuman:      formatBytesMetrics(totalBytes),
+			AvgLinesPerFile:     avgLinesPerFile,
+			TestCoverageRatio:   testCoverageRatio,
+			PackageCount:        dirCount,
+			TestAvgLinesPerFile: testAvgLines,
+			GoAvgLinesPerFile:   0,
+			TestAvgSizeBytes:    testAvgBytes,
+			GoAvgSizeBytes:      0,
+
+			// Multi-language fields
+			Language:              lang,
+			SourceFilesLOC:        sourceStats.Lines,
+			SourceFilesCount:      sourceStats.Files,
+			SourceFilesSizeBytes:  sourceStats.TotalBytes,
+			SourceFilesSizeHuman:  formatBytesMetrics(sourceStats.TotalBytes),
+			SourceAvgLinesPerFile: sourceAvgLines,
+			SourceAvgSizeBytes:    sourceAvgBytes,
+		}
+
+		jsonBytes, err := json.Marshal(result)
+		if err != nil {
+			return fmt.Errorf("failed to marshal JSON: %w", err)
+		}
+		utils.Println(string(jsonBytes))
+		return nil
+	}
+
+	// Default markdown table output
+	utils.Header(fmt.Sprintf("%s Lines of Code Statistics", config.name))
+
+	utils.Println("")
+
+	// Build table header based on language type
+	if config.hasTestFiles {
+		utils.Println("| Type         | Total Lines | File Count | Total Size | Avg Size    | Date       |")
+		utils.Println("|--------------|-------------|------------|------------|-------------|------------|")
+		utils.Print("| Test Files   | %-11s | %-10d | %-10s | %-11s | %s |\n",
+			formatNumberWithCommas(testStats.Lines),
+			testStats.Files,
+			formatBytesMetrics(testStats.TotalBytes),
+			formatBytesMetrics(testAvgBytes),
+			date)
+		utils.Print("| Source Files | %-11s | %-10d | %-10s | %-11s | %s |\n",
+			formatNumberWithCommas(sourceStats.Lines),
+			sourceStats.Files,
+			formatBytesMetrics(sourceStats.TotalBytes),
+			formatBytesMetrics(sourceAvgBytes),
+			date)
+	} else {
+		// YAML doesn't have test files concept
+		utils.Println("| Type         | Total Lines | File Count | Total Size | Avg Size    | Date       |")
+		utils.Println("|--------------|-------------|------------|------------|-------------|------------|")
+		utils.Print("| YAML Files   | %-11s | %-10d | %-10s | %-11s | %s |\n",
+			formatNumberWithCommas(sourceStats.Lines),
+			sourceStats.Files,
+			formatBytesMetrics(sourceStats.TotalBytes),
+			formatBytesMetrics(sourceAvgBytes),
+			date)
+	}
+	utils.Println("")
+
+	// Summary section
+	utils.Println("")
+	utils.Println("Summary")
+	utils.Println("")
+	utils.Println("| Metric                  | Value                                 |")
+	utils.Println("|-------------------------|---------------------------------------|")
+	utils.Print("| Language                | %-37s |\n", config.name)
+	utils.Print("| Total Lines of Code     | %-37s |\n", formatNumberWithCommas(totalLOC))
+	utils.Print("| Total Files             | %-37d |\n", totalFiles)
+	utils.Print("| Total Size              | %-37s |\n", formatBytesMetrics(totalBytes))
+	utils.Print("| Directory Count         | %-37d |\n", dirCount)
+	utils.Print("| Average Lines per File  | %-37.1f |\n", avgLinesPerFile)
+	if config.hasTestFiles {
+		utils.Print("| Test Coverage Ratio     | %-37s |\n", fmt.Sprintf("%.1f%% (test LOC / source LOC)", testCoverageRatio))
+	}
 	utils.Println("")
 
 	utils.Success("Analysis complete!")
@@ -696,4 +933,176 @@ func formatBytesMetrics(bytes int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// hasExtension checks if a file has one of the specified extensions
+func hasExtension(path string, extensions []string) bool {
+	for _, ext := range extensions {
+		if strings.HasSuffix(path, ext) {
+			return true
+		}
+	}
+	return false
+}
+
+// isTestFile checks if a file matches any of the test patterns
+func isTestFile(path string, testPatterns []string) bool {
+	baseName := filepath.Base(path)
+	for _, pattern := range testPatterns {
+		// Check for directory patterns like __tests__
+		if strings.Contains(path, pattern) {
+			return true
+		}
+		// Check for file name patterns like .test. or .spec.
+		if strings.Contains(baseName, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// countLinesWithConfig counts lines and files using language config
+func countLinesWithConfig(config *langConfig, includeTests bool) (LOCStats, error) {
+	stats := LOCStats{}
+
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
+		}
+
+		// Skip hidden directories
+		if info.IsDir() && strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+			return filepath.SkipDir
+		}
+
+		// Skip excluded directories
+		for _, exclude := range config.excludeDirs {
+			if info.IsDir() && info.Name() == exclude {
+				return filepath.SkipDir
+			}
+			// Also check path contains for nested exclusion
+			if strings.Contains(path, string(filepath.Separator)+exclude+string(filepath.Separator)) {
+				if info.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+		}
+
+		// Skip directories
+		if info.IsDir() {
+			return nil
+		}
+
+		// Check if file has a matching extension
+		if !hasExtension(path, config.extensions) {
+			return nil
+		}
+
+		// Handle test file filtering
+		isTest := isTestFile(path, config.testPatterns)
+		if config.hasTestFiles {
+			// If we want tests but this isn't a test, skip
+			if includeTests && !isTest {
+				return nil
+			}
+			// If we don't want tests but this is a test, skip
+			if !includeTests && isTest {
+				return nil
+			}
+		}
+
+		// Count this file
+		stats.Files++
+		stats.TotalBytes += info.Size()
+
+		// Count lines
+		fileOps := fileops.New()
+		content, err := fileOps.File.ReadFile(path)
+		if err != nil {
+			utils.Debug("line count: failed to read file %s: %v", path, err)
+			return nil
+		}
+
+		scanner := bufio.NewScanner(strings.NewReader(string(content)))
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line != "" && !strings.HasPrefix(line, config.commentPrefix) {
+				stats.Lines++
+			}
+		}
+
+		return nil
+	})
+
+	return stats, err
+}
+
+// countJSLinesWithStats counts lines in JavaScript/TypeScript files (excluding tests)
+func countJSLinesWithStats(excludeDirs []string) (LOCStats, error) {
+	config := &langConfig{
+		extensions:    []string{".js", ".ts", ".jsx", ".tsx"},
+		testPatterns:  []string{".test.", ".spec.", "__tests__"},
+		hasTestFiles:  true,
+		excludeDirs:   excludeDirs,
+		commentPrefix: "//",
+	}
+	return countLinesWithConfig(config, false)
+}
+
+// countJSTestLinesWithStats counts lines in JavaScript/TypeScript test files
+func countJSTestLinesWithStats(excludeDirs []string) (LOCStats, error) {
+	config := &langConfig{
+		extensions:    []string{".js", ".ts", ".jsx", ".tsx"},
+		testPatterns:  []string{".test.", ".spec.", "__tests__"},
+		hasTestFiles:  true,
+		excludeDirs:   excludeDirs,
+		commentPrefix: "//",
+	}
+	return countLinesWithConfig(config, true)
+}
+
+// countYAMLLinesWithStats counts lines in YAML files
+func countYAMLLinesWithStats(excludeDirs []string) (LOCStats, error) {
+	config := &langConfig{
+		extensions:    []string{".yaml", ".yml"},
+		testPatterns:  []string{},
+		hasTestFiles:  false,
+		excludeDirs:   excludeDirs,
+		commentPrefix: "#",
+	}
+	return countLinesWithConfig(config, false)
+}
+
+// countDirectoriesForLang counts directories containing files of the specified language
+func countDirectoriesForLang(config *langConfig) (int, error) {
+	directories := make(map[string]bool)
+
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
+		}
+
+		// Skip hidden directories
+		if info.IsDir() && strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+			return filepath.SkipDir
+		}
+
+		// Skip excluded directories
+		for _, exclude := range config.excludeDirs {
+			if info.IsDir() && info.Name() == exclude {
+				return filepath.SkipDir
+			}
+		}
+
+		// If it's a file with matching extension, mark its directory
+		if !info.IsDir() && hasExtension(path, config.extensions) {
+			dir := filepath.Dir(path)
+			directories[dir] = true
+		}
+
+		return nil
+	})
+
+	return len(directories), err
 }
