@@ -71,3 +71,46 @@ func HTTPGetJSON[T any](ctx context.Context, url string) (*T, error) {
 	}
 	return &result, nil
 }
+
+// HTTPGetJSONWithAuth fetches JSON from a URL with optional bearer token authentication.
+// This is useful for GitHub API calls where authentication provides higher rate limits.
+// If token is empty, it behaves like HTTPGetJSON without authentication.
+func HTTPGetJSONWithAuth[T any](ctx context.Context, url, token string) (*T, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request for %s: %w", url, err)
+	}
+
+	// Add authentication header if token provided
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	// Add standard headers for GitHub API
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "mage-x-cli")
+
+	resp, err := defaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch %s: %w", url, err)
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Printf("failed to close response body for %s: %v", url, closeErr)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("%w: GET %s returned status %d (body unreadable: %w)", ErrHTTPAPIError, url, resp.StatusCode, readErr)
+		}
+		return nil, fmt.Errorf("%w: GET %s returned status %d: %s", ErrHTTPAPIError, url, resp.StatusCode, body)
+	}
+
+	var result T
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode JSON response from %s: %w", url, err)
+	}
+	return &result, nil
+}

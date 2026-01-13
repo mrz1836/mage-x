@@ -297,3 +297,104 @@ func TestHTTPGetJSON_UsesSharedClient(t *testing.T) {
 
 	assert.Equal(t, 5, requestCount)
 }
+
+// TestHTTPGetJSONWithAuth_Success tests successful authenticated JSON fetching
+func TestHTTPGetJSONWithAuth_Success(t *testing.T) {
+	// Create test server that checks for auth header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify auth header
+		authHeader := r.Header.Get("Authorization")
+		assert.Equal(t, "Bearer test-token", authHeader)
+
+		// Verify other headers
+		acceptHeader := r.Header.Get("Accept")
+		assert.Equal(t, "application/vnd.github.v3+json", acceptHeader)
+
+		userAgent := r.Header.Get("User-Agent")
+		assert.Equal(t, "mage-x-cli", userAgent)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"tag_name":"v1.0.0","name":"Release 1.0.0"}`)) //nolint:errcheck // test server
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := HTTPGetJSONWithAuth[testRelease](ctx, server.URL, "test-token")
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "v1.0.0", result.TagName)
+}
+
+// TestHTTPGetJSONWithAuth_NoToken tests that no auth header is sent when token is empty
+func TestHTTPGetJSONWithAuth_NoToken(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify no auth header when token is empty
+		authHeader := r.Header.Get("Authorization")
+		assert.Empty(t, authHeader, "Authorization header should be empty when token is empty")
+
+		// Other headers should still be set
+		acceptHeader := r.Header.Get("Accept")
+		assert.Equal(t, "application/vnd.github.v3+json", acceptHeader)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"tag_name":"v1.0.0"}`)) //nolint:errcheck // test server
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := HTTPGetJSONWithAuth[testRelease](ctx, server.URL, "")
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+}
+
+// TestHTTPGetJSONWithAuth_HTTPError tests error handling with authentication
+func TestHTTPGetJSONWithAuth_HTTPError(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+	}{
+		{"401 Unauthorized", http.StatusUnauthorized},
+		{"403 Forbidden", http.StatusForbidden},
+		{"404 Not Found", http.StatusNotFound},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.statusCode)
+				_, _ = w.Write([]byte(`{"message":"error"}`)) //nolint:errcheck // test server
+			}))
+			defer server.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			_, err := HTTPGetJSONWithAuth[testRelease](ctx, server.URL, "test-token")
+			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrHTTPAPIError)
+		})
+	}
+}
+
+// TestHTTPGetJSONWithAuth_InvalidJSON tests error handling for invalid JSON
+func TestHTTPGetJSONWithAuth_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`not valid json`)) //nolint:errcheck // test server
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := HTTPGetJSONWithAuth[testRelease](ctx, server.URL, "test-token")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to decode JSON")
+}
