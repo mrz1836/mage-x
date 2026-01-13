@@ -3330,4 +3330,96 @@ func TestShowNamespaceHelp_NoCommands(t *testing.T) {
 	assert.Contains(t, output, "No commands found")
 }
 
-// TestSearchCommands_WithCustomMatches tests search finding custom commands
+// TestIsNamespace tests the isNamespace helper function
+func TestIsNamespace(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		setupReg func(*registry.Registry)
+		want     bool
+	}{
+		{
+			name:  "returns true for existing namespace",
+			input: "aws",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewNamespaceCommand("aws", "login").
+					WithDescription("Login to AWS").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			want: true,
+		},
+		{
+			name:  "returns true for namespace case-insensitive",
+			input: "AWS",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewNamespaceCommand("aws", "login").
+					WithDescription("Login to AWS").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			want: true,
+		},
+		{
+			name:     "returns false for non-existent namespace",
+			input:    "nonexistent",
+			setupReg: func(reg *registry.Registry) {},
+			want:     false,
+		},
+		{
+			name:  "returns false for command name (not namespace)",
+			input: "aws:login",
+			setupReg: func(reg *registry.Registry) {
+				cmd := registry.NewNamespaceCommand("aws", "login").
+					WithDescription("Login to AWS").
+					WithFunc(func() error { return nil }).
+					MustBuild()
+				reg.MustRegister(cmd)
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testReg := registry.NewRegistry()
+			tt.setupReg(testReg)
+
+			got := isNamespace(testReg, tt.input)
+			assert.Equal(t, tt.want, got, "isNamespace(%q) should return %v", tt.input, tt.want)
+		})
+	}
+}
+
+// TestRunNamespaceCommand tests that running a namespace name shows namespace help
+func TestRunNamespaceCommand(t *testing.T) {
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	// Run the command with just namespace name "aws" (which no longer has an alias after the fix)
+	exitCode := run(context.Background(), []string{"magex", "aws"})
+
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("Failed to close writer: %v", closeErr)
+	}
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		t.Logf("Failed to read from pipe: %v", readErr)
+	}
+	output := buf.String()
+
+	// Should show namespace help (exit code 0) not an error
+	assert.Equal(t, 0, exitCode, "Running namespace name should exit with 0")
+	assert.Contains(t, output, "Namespace Help: aws", "Should show namespace help")
+	assert.Contains(t, output, "aws:login", "Should list aws:login command")
+	assert.Contains(t, output, "aws:setup", "Should list aws:setup command")
+	assert.Contains(t, output, "aws:refresh", "Should list aws:refresh command")
+	assert.Contains(t, output, "aws:status", "Should list aws:status command")
+}

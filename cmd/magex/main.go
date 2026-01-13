@@ -320,28 +320,40 @@ func run(ctx context.Context, args []string) int {
 	// Try built-in command first to ensure parameters work correctly
 	// Built-in commands have proper parameter handling
 	if err := reg.Execute(command, commandArgs...); err != nil {
-		// Only try custom command if built-in command doesn't exist
-		// Don't try custom commands when built-in command fails during execution
-		if errors.Is(err, registry.ErrUnknownCommand) {
-			// Check if we have a magefile before trying custom command
-			if !HasMagefile() {
-				// No magefile and no built-in command - command not found
-				fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
-				return 1
-			}
+		return handleCommandError(ctx, reg, command, commandArgs, discovery, err)
+	}
+	return 0
+}
 
-			exitCode, customErr := tryCustomCommand(ctx, command, commandArgs, discovery)
-			if customErr != nil {
-				fmt.Fprintf(os.Stderr, "❌ %v\n", customErr)
-				return exitCode
-			}
-			// Custom command succeeded (tryCustomCommand only returns 0, nil on success)
-			return 0
-		}
-		// Command execution failed
+// handleCommandError handles errors from command execution, including
+// unknown commands which may be namespace names or custom magefile commands.
+func handleCommandError(ctx context.Context, reg *registry.Registry, command string, commandArgs []string, discovery *CommandDiscovery, err error) int {
+	// Only try custom command if built-in command doesn't exist
+	// Don't try custom commands when built-in command fails during execution
+	if !errors.Is(err, registry.ErrUnknownCommand) {
 		fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
 		return 1
 	}
+
+	// Check if command is a namespace name - show namespace help
+	if isNamespace(reg, command) {
+		showNamespaceHelp(reg, command)
+		return 0
+	}
+
+	// Check if we have a magefile before trying custom command
+	if !HasMagefile() {
+		// No magefile and no built-in command - command not found
+		fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
+		return 1
+	}
+
+	exitCode, customErr := tryCustomCommand(ctx, command, commandArgs, discovery)
+	if customErr != nil {
+		fmt.Fprintf(os.Stderr, "❌ %v\n", customErr)
+		return exitCode
+	}
+	// Custom command succeeded (tryCustomCommand only returns 0, nil on success)
 	return 0
 }
 
@@ -684,6 +696,16 @@ func showCommandHelp(reg *registry.Registry, commandName string) {
 		fmt.Printf("\n⚠️  WARNING: This command is deprecated\n")
 		fmt.Printf("   %s\n", cmd.Deprecated)
 	}
+}
+
+// isNamespace checks if the given name is a registered namespace
+func isNamespace(reg *registry.Registry, name string) bool {
+	for _, ns := range reg.Namespaces() {
+		if strings.EqualFold(ns, name) {
+			return true
+		}
+	}
+	return false
 }
 
 // showNamespaceHelp displays help for all commands in a namespace
