@@ -557,6 +557,7 @@ func TestSpeckitStaticErrors(t *testing.T) {
 	require.Error(t, errBackupFailed)
 	require.Error(t, errVersionParseFailed)
 	require.Error(t, errSpeckitInstallFailed)
+	require.Error(t, errSpeckitAlreadyInstalled)
 
 	// Verify error messages are not empty
 	require.NotEmpty(t, errUVNotInstalled.Error())
@@ -565,6 +566,37 @@ func TestSpeckitStaticErrors(t *testing.T) {
 	require.NotEmpty(t, errBackupFailed.Error())
 	require.NotEmpty(t, errVersionParseFailed.Error())
 	require.NotEmpty(t, errSpeckitInstallFailed.Error())
+	require.NotEmpty(t, errSpeckitAlreadyInstalled.Error())
+}
+
+// TestSpeckitInstallBlocksOnExistingConstitution tests that Install returns an error
+// when a constitution file already exists, forcing users to use Upgrade instead
+func TestSpeckitInstallBlocksOnExistingConstitution(t *testing.T) {
+	// Create temp directory for test
+	tmpDir := t.TempDir()
+
+	// Create the constitution file
+	constitutionDir := filepath.Join(tmpDir, ".specify", "memory")
+	require.NoError(t, os.MkdirAll(constitutionDir, 0o750))
+	constitutionPath := filepath.Join(constitutionDir, "constitution.md")
+	require.NoError(t, os.WriteFile(constitutionPath, []byte("# Existing Constitution"), 0o600))
+
+	// Set up config with the test constitution path
+	testConfig := &Config{
+		Speckit: SpeckitConfig{
+			ConstitutionPath: constitutionPath,
+		},
+	}
+	TestSetConfig(testConfig)
+	t.Cleanup(func() {
+		TestResetConfig()
+	})
+
+	// Call Install and verify it returns the expected error
+	speckit := Speckit{}
+	err := speckit.Install()
+	require.Error(t, err)
+	require.ErrorIs(t, err, errSpeckitAlreadyInstalled)
 }
 
 // TestGetGitHubTokenFromGH tests getGitHubTokenFromGH function

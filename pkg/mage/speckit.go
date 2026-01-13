@@ -18,14 +18,15 @@ import (
 
 // Static errors for err113 compliance
 var (
-	errUVNotInstalled       = errors.New("uv package manager not installed")
-	errSpecifyNotInstalled  = errors.New("specify CLI not installed")
-	errConstitutionNotFound = errors.New("constitution file not found")
-	errBackupFailed         = errors.New("failed to backup constitution")
-	errVersionParseFailed   = errors.New("failed to parse spec-kit version")
-	errSpeckitInstallFailed = errors.New("failed to install speckit prerequisites")
-	errCommandFailed        = errors.New("command failed")
-	errCheckFailed          = errors.New("check failed")
+	errUVNotInstalled          = errors.New("uv package manager not installed")
+	errSpecifyNotInstalled     = errors.New("specify CLI not installed")
+	errConstitutionNotFound    = errors.New("constitution file not found")
+	errBackupFailed            = errors.New("failed to backup constitution")
+	errVersionParseFailed      = errors.New("failed to parse spec-kit version")
+	errSpeckitInstallFailed    = errors.New("failed to install speckit prerequisites")
+	errSpeckitAlreadyInstalled = errors.New("spec-kit already installed - use upgrade command")
+	errCommandFailed           = errors.New("command failed")
+	errCheckFailed             = errors.New("check failed")
 )
 
 // Speckit namespace for spec-kit CLI management tasks
@@ -38,6 +39,15 @@ func (Speckit) Install() error {
 	config, err := GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
+	}
+
+	// Check for existing constitution file - install is for fresh projects only
+	constitutionPath := getSpeckitConstitutionPath(config)
+	if _, err := os.Stat(constitutionPath); err == nil {
+		utils.Error("Existing spec-kit installation detected: %s", constitutionPath)
+		utils.Info("The install command is intended for fresh projects only")
+		utils.Info("Use 'magex speckit:upgrade' to upgrade an existing installation")
+		return errSpeckitAlreadyInstalled
 	}
 
 	// Step 1: Check for uv
