@@ -14,12 +14,14 @@ import (
 	"strings"
 	"syscall"
 	"text/tabwriter"
+	"time"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/mrz1836/mage-x/pkg/mage/embed"
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -39,6 +41,11 @@ const (
 	noDescription  = "No description available"
 	trueValue      = "true"
 	maxSuggestions = 5 // Maximum number of command suggestions to show
+
+	// updateCheckWaitTimeout is the maximum time to wait for the background update check
+	// before completing the CLI. Chosen to be short enough to not noticeably delay the CLI
+	// but long enough for most network responses to complete.
+	updateCheckWaitTimeout = 500 * time.Millisecond
 )
 
 // BuildInfo contains version and build information
@@ -199,6 +206,10 @@ func run(ctx context.Context, args []string) int {
 		}
 	}
 
+	// Start background update check (non-blocking)
+	// This runs in a goroutine and checks for new versions of MAGE-X
+	updateResultChan := mage.StartBackgroundUpdateCheck(ctx)
+
 	// Initialize the command registry early (needed for help)
 	reg := registry.Global()
 	embed.RegisterAll(reg)
@@ -319,10 +330,23 @@ func run(ctx context.Context, args []string) int {
 
 	// Try built-in command first to ensure parameters work correctly
 	// Built-in commands have proper parameter handling
+	var exitCode int
 	if err := reg.Execute(command, commandArgs...); err != nil {
-		return handleCommandError(ctx, reg, command, commandArgs, discovery, err)
+		exitCode = handleCommandError(ctx, reg, command, commandArgs, discovery, err)
 	}
-	return 0
+
+	// Check for update notification after command execution
+	// Wait briefly for the background check to complete
+	select {
+	case result := <-updateResultChan:
+		if result != nil && result.UpdateAvailable {
+			mage.ShowUpdateBanner(result)
+		}
+	case <-time.After(updateCheckWaitTimeout):
+		// Update check didn't complete in time, skip notification
+	}
+
+	return exitCode
 }
 
 // handleCommandError handles errors from command execution, including
