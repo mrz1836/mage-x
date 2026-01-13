@@ -20,7 +20,7 @@ var errWorkerPanic = errors.New("worker panicked")
 // Test constants
 const (
 	testTimeout         = 5 * 1000 // 5 seconds in milliseconds for timeout tests
-	expectedMinCommands = 163      // Minimum expected number of registered commands
+	expectedMinCommands = 166      // Minimum expected number of registered commands
 	concurrentWorkers   = 10       // Number of concurrent workers for parallel tests
 )
 
@@ -750,6 +750,13 @@ func TestCriticalCommandsExist(t *testing.T) {
 		"configure:init",
 		"help:default",
 		"version:show",
+		// Tool integrations - these must always be available
+		"bmad:install",
+		"bmad:check",
+		"aws:login",
+		"aws:status",
+		"speckit:install",
+		"speckit:check",
 	}
 
 	mockReg := NewMockRegistry()
@@ -765,6 +772,43 @@ func TestCriticalCommandsExist(t *testing.T) {
 			// Command should have either Func or FuncWithArgs
 			hasFunc := cmd.Func != nil || cmd.FuncWithArgs != nil
 			require.True(t, hasFunc, "Critical command %s must have a function (Func or FuncWithArgs)", cmdName)
+		})
+	}
+}
+
+// TestAllNamespaceImplementationsRegistered ensures that all mage.Namespace
+// implementations in pkg/mage have corresponding command registrations.
+// This prevents the speckit-style bug where implementation exists but registration is missing.
+func TestAllNamespaceImplementationsRegistered(t *testing.T) {
+	t.Parallel()
+
+	// Expected namespaces that MUST have command registrations.
+	// This list should match all `type Xxx mg.Namespace` definitions in pkg/mage.
+	// When adding a new namespace, add it here to ensure registration is not forgotten.
+	expectedNamespaces := []string{
+		"build", "test", "lint", "format", "deps", "git", "release",
+		"docs", "tools", "generate", "update", "mod", "metrics",
+		"bench", "vet", "configure", "help", "version", "install",
+		"yaml", "bmad", "aws", "speckit",
+	}
+
+	mockReg := NewMockRegistry()
+	RegisterAll(mockReg.Registry)
+	commands := mockReg.GetRegisteredCommands()
+
+	for _, ns := range expectedNamespaces {
+		t.Run(ns, func(t *testing.T) {
+			found := false
+			for cmdName := range commands {
+				if strings.HasPrefix(cmdName, ns+":") {
+					found = true
+					break
+				}
+			}
+			require.True(t, found,
+				"Namespace %q has no registered commands. "+
+					"Did you forget to add registerXxxCommands() to RegisterAll()? "+
+					"Check pkg/mage/embed/commands.go", ns)
 		})
 	}
 }
@@ -1405,6 +1449,8 @@ func TestDataTableIntegrity(t *testing.T) {
 		{"installCommands", getInstallCommands(), 15},
 		{"yamlCommands", getYamlCommands(), 5},
 		{"bmadCommands", getBmadCommands(), 3},
+		{"awsCommands", getAWSCommands(), 4},
+		{"speckitCommands", getSpeckitCommands(), 3},
 	}
 
 	for _, tc := range testCases {
@@ -1518,6 +1564,8 @@ func TestMethodBindingFactories(t *testing.T) {
 			{"install", func() map[string]MethodBinding { return installMethodBindings(mage.Install{}) }},
 			{"yaml", func() map[string]MethodBinding { return yamlMethodBindings(mage.Yaml{}) }},
 			{"bmad", func() map[string]MethodBinding { return bmadMethodBindings(mage.Bmad{}) }},
+			{"aws", func() map[string]MethodBinding { return awsMethodBindings(mage.AWS{}) }},
+			{"speckit", func() map[string]MethodBinding { return speckitMethodBindings(mage.Speckit{}) }},
 		}
 
 		for _, f := range factories {
@@ -1629,6 +1677,8 @@ func TestBindingsMatchDataTables(t *testing.T) {
 		{"install", getInstallCommands(), installMethodBindings(mage.Install{})},
 		{"yaml", getYamlCommands(), yamlMethodBindings(mage.Yaml{})},
 		{"bmad", getBmadCommands(), bmadMethodBindings(mage.Bmad{})},
+		{"aws", getAWSCommands(), awsMethodBindings(mage.AWS{})},
+		{"speckit", getSpeckitCommands(), speckitMethodBindings(mage.Speckit{})},
 	}
 
 	for _, tc := range testCases {
@@ -1685,13 +1735,13 @@ func TestTotalCommandCount(t *testing.T) {
 		}
 	}
 
-	// Expected: 163 data table + 1 deps:audit + 7 top-level = 171
-	assert.Equal(t, 164, namespaceCommands,
-		"Should have 164 namespace commands (163 from tables + 1 deps:audit)")
+	// Expected: 166 data table + 1 deps:audit + 7 top-level = 174
+	assert.Equal(t, 167, namespaceCommands,
+		"Should have 167 namespace commands (166 from tables + 1 deps:audit)")
 	assert.Equal(t, 7, topLevelCommands,
 		"Should have 7 top-level commands")
-	assert.Len(t, commands, 171,
-		"Should have 171 total commands")
+	assert.Len(t, commands, 174,
+		"Should have 174 total commands")
 }
 
 // TestMissingBindingPanics verifies commands without bindings cause panic
@@ -2018,6 +2068,8 @@ func TestGetterFunctionsExpectedCounts(t *testing.T) {
 		{"getInstallCommands", getInstallCommands, 15},
 		{"getYamlCommands", getYamlCommands, 5},
 		{"getBmadCommands", getBmadCommands, 3},
+		{"getAWSCommands", getAWSCommands, 4},
+		{"getSpeckitCommands", getSpeckitCommands, 3},
 	}
 
 	for _, tc := range testCases {
@@ -2060,6 +2112,8 @@ func TestGetterFunctionsNoDuplicateMethods(t *testing.T) {
 		{"getInstallCommands", getInstallCommands},
 		{"getYamlCommands", getYamlCommands},
 		{"getBmadCommands", getBmadCommands},
+		{"getAWSCommands", getAWSCommands},
+		{"getSpeckitCommands", getSpeckitCommands},
 	}
 
 	for _, tc := range testCases {
@@ -2150,6 +2204,8 @@ func TestTotalCommandsFromGetters(t *testing.T) {
 		getInstallCommands,
 		getYamlCommands,
 		getBmadCommands,
+		getAWSCommands,
+		getSpeckitCommands,
 	}
 
 	total := 0
@@ -2157,9 +2213,9 @@ func TestTotalCommandsFromGetters(t *testing.T) {
 		total += len(getter())
 	}
 
-	// Expected: 159 commands from data tables
-	assert.Equal(t, 159, total,
-		"Total commands from all getters should equal 159")
+	// Expected: 166 commands from data tables
+	assert.Equal(t, 166, total,
+		"Total commands from all getters should equal 166")
 }
 
 // BenchmarkGetterFunctions benchmarks the getter function calls

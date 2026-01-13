@@ -327,7 +327,6 @@ func getAWSCommands() []CommandDef {
 		{
 			Method:   "login",
 			Desc:     "Smart AWS login - detects setup state and performs MFA refresh",
-			Aliases:  []string{"aws"},
 			Usage:    "magex aws:login [profile=<name>]",
 			Examples: []string{"magex aws:login", "magex aws:login profile=production"},
 		},
@@ -349,6 +348,14 @@ func getAWSCommands() []CommandDef {
 			Usage:    "magex aws:status [profile=<name>]",
 			Examples: []string{"magex aws:status", "magex aws:status profile=dev"},
 		},
+	}
+}
+
+func getSpeckitCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "install", Desc: "Install spec-kit prerequisites (uv, uvx, specify-cli)"},
+		{Method: "check", Desc: "Verify spec-kit installation and configuration"},
+		{Method: "upgrade", Desc: "Upgrade spec-kit to latest version"},
 	}
 }
 
@@ -629,6 +636,14 @@ func awsMethodBindings(a mage.AWS) map[string]MethodBinding {
 	}
 }
 
+func speckitMethodBindings(s mage.Speckit) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"install": {NoArgs: s.Install},
+		"check":   {NoArgs: s.Check},
+		"upgrade": {NoArgs: s.Upgrade},
+	}
+}
+
 // ============================================================================
 // Registration Functions
 // ============================================================================
@@ -669,6 +684,7 @@ func RegisterAll(reg *registry.Registry) {
 	registerYamlCommands(reg)
 	registerBmadCommands(reg)
 	registerAWSCommands(reg)
+	registerSpeckitCommands(reg)
 	registerTopLevelCommands(reg)
 }
 
@@ -814,6 +830,11 @@ func registerBmadCommands(reg *registry.Registry) {
 func registerAWSCommands(reg *registry.Registry) {
 	a := mage.AWS{}
 	registerNamespaceCommands(reg, "aws", "Cloud", getAWSCommands(), awsMethodBindings(a))
+}
+
+func registerSpeckitCommands(reg *registry.Registry) {
+	s := mage.Speckit{}
+	registerNamespaceCommands(reg, "speckit", "Specification", getSpeckitCommands(), speckitMethodBindings(s))
 }
 
 func registerTopLevelCommands(reg *registry.Registry) {
