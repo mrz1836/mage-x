@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -951,4 +952,502 @@ func TestPromptForInput(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// TestParallel_EdgeCases tests additional edge cases for Parallel function
+func TestParallel_EdgeCases(t *testing.T) {
+	t.Run("large number of functions - 100", func(t *testing.T) {
+		var count int32
+		fns := make([]func() error, 100)
+		for i := 0; i < 100; i++ {
+			fns[i] = func() error {
+				atomic.AddInt32(&count, 1)
+				return nil
+			}
+		}
+
+		err := Parallel(fns...)
+		require.NoError(t, err)
+		assert.Equal(t, int32(100), atomic.LoadInt32(&count))
+	})
+
+	t.Run("large number with some failures", func(t *testing.T) {
+		fns := make([]func() error, 100)
+		for i := 0; i < 100; i++ {
+			if i%10 == 0 {
+				fns[i] = func() error { return errTestError }
+			} else {
+				fns[i] = func() error { return nil }
+			}
+		}
+
+		err := Parallel(fns...)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "parallel execution failed")
+	})
+
+	t.Run("concurrency verification - shorter sleep completes first", func(t *testing.T) {
+		var order []int
+		var mu sync.Mutex
+
+		fns := []func() error{
+			func() error {
+				time.Sleep(30 * time.Millisecond)
+				mu.Lock()
+				order = append(order, 1)
+				mu.Unlock()
+				return nil
+			},
+			func() error {
+				time.Sleep(10 * time.Millisecond)
+				mu.Lock()
+				order = append(order, 2)
+				mu.Unlock()
+				return nil
+			},
+			func() error {
+				time.Sleep(20 * time.Millisecond)
+				mu.Lock()
+				order = append(order, 3)
+				mu.Unlock()
+				return nil
+			},
+		}
+
+		err := Parallel(fns...)
+		require.NoError(t, err)
+
+		// If truly parallel, order should be [2, 3, 1] not [1, 2, 3]
+		require.Len(t, order, 3)
+		assert.Equal(t, 2, order[0], "shortest sleep should complete first")
+	})
+
+	t.Run("function with delayed error", func(t *testing.T) {
+		fns := []func() error{
+			func() error {
+				time.Sleep(50 * time.Millisecond)
+				return errTestError
+			},
+			func() error { return nil },
+		}
+
+		err := Parallel(fns...)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "parallel execution failed")
+	})
+}
+
+// TestFormatBytes_EdgeCases tests additional edge cases for FormatBytes function
+func TestFormatBytes_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		bytes    int64
+		expected string
+	}{
+		{
+			name:     "negative bytes - -1024",
+			bytes:    -1024,
+			expected: "-1024 B",
+		},
+		{
+			name:     "negative single byte",
+			bytes:    -1,
+			expected: "-1 B",
+		},
+		{
+			name:     "negative large value - -5GB",
+			bytes:    -5368709120,
+			expected: "-5368709120 B",
+		},
+		{
+			name:     "1023 bytes - boundary before KB",
+			bytes:    1023,
+			expected: "1023 B",
+		},
+		{
+			name:     "exactly 1 KB",
+			bytes:    1024,
+			expected: "1.0 KB",
+		},
+		{
+			name:     "exactly 1 TB",
+			bytes:    1024 * 1024 * 1024 * 1024,
+			expected: "1.0 TB",
+		},
+		{
+			name:     "exactly 1 PB",
+			bytes:    1024 * 1024 * 1024 * 1024 * 1024,
+			expected: "1.0 PB",
+		},
+		{
+			name:     "exactly 1 EB",
+			bytes:    1024 * 1024 * 1024 * 1024 * 1024 * 1024,
+			expected: "1.0 EB",
+		},
+		{
+			name:     "max int64 value",
+			bytes:    9223372036854775807,
+			expected: "8.0 EB",
+		},
+		{
+			name:     "fractional MB - 2.5 MB",
+			bytes:    2621440,
+			expected: "2.5 MB",
+		},
+		{
+			name:     "large GB value - 5 GB",
+			bytes:    5368709120,
+			expected: "5.0 GB",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := FormatBytes(tt.bytes)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestFormatDuration_EdgeCases tests additional edge cases for FormatDuration function
+func TestFormatDuration_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		duration time.Duration
+	}{
+		{
+			name:     "one nanosecond",
+			duration: 1 * time.Nanosecond,
+		},
+		{
+			name:     "one microsecond",
+			duration: 1 * time.Microsecond,
+		},
+		{
+			name:     "100 microseconds",
+			duration: 100 * time.Microsecond,
+		},
+		{
+			name:     "one hour",
+			duration: 1 * time.Hour,
+		},
+		{
+			name:     "compound duration - 1h23m45s",
+			duration: 1*time.Hour + 23*time.Minute + 45*time.Second,
+		},
+		{
+			name:     "very large duration - 24 hours",
+			duration: 24 * time.Hour,
+		},
+		{
+			name:     "very large duration - 100 hours",
+			duration: 100 * time.Hour,
+		},
+		{
+			name:     "fractional second - 1.5s",
+			duration: 1500 * time.Millisecond,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := FormatDuration(tt.duration)
+			assert.NotEmpty(t, result, "FormatDuration should not return empty string")
+			// Just verify it returns a reasonable string representation
+			assert.NotContains(t, result, "unknown", "should not contain 'unknown'")
+		})
+	}
+}
+
+// TestCheckFileLineLength_EdgeCases tests additional edge cases for CheckFileLineLength function
+func TestCheckFileLineLength_EdgeCases(t *testing.T) {
+	t.Run("no newline at EOF", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "nonewline.txt")
+
+		content := "line1\nline2\nline3 without newline"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, _, _, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "should handle file without trailing newline")
+	})
+
+	t.Run("CRLF line endings", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "crlf.txt")
+
+		content := "line1\r\nline2\r\nline3\r\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, _, _, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "should handle CRLF line endings")
+	})
+
+	t.Run("CRLF with long line", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "crlf_long.txt")
+
+		content := strings.Repeat("a", 150) + "\r\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong)
+		assert.Equal(t, 1, lineNum)
+		assert.Equal(t, 150, lineLen)
+	})
+
+	t.Run("mixed line endings", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "mixed.txt")
+
+		content := "line1\nline2\r\nline3\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, _, _, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "should handle mixed line endings")
+	})
+
+	t.Run("unicode characters", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "unicode.txt")
+
+		content := "日本語\n中文\nEnglish\n" //nolint:gosmopolitan // Testing unicode handling
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, _, _, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "should handle unicode characters")
+	})
+
+	t.Run("long unicode line", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "unicode_long.txt")
+
+		content := strings.Repeat("日本語", 50) + "\n" //nolint:gosmopolitan // Testing unicode handling
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, _, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong, "should detect long unicode line")
+		assert.Equal(t, 1, lineNum)
+	})
+
+	t.Run("exactly at limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "exact.txt")
+
+		content := strings.Repeat("a", 80) + "\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, _, _, err := CheckFileLineLength(testFile, 80)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "line exactly at limit should not trigger")
+	})
+
+	t.Run("one byte over limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "oneover.txt")
+
+		content := strings.Repeat("a", 81) + "\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 80)
+		require.NoError(t, err)
+		assert.True(t, hasLong)
+		assert.Equal(t, 1, lineNum)
+		assert.Equal(t, 81, lineLen)
+	})
+
+	t.Run("file with only newlines", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "onlynewlines.txt")
+
+		content := "\n\n\n\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, _, _, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "file with only newlines should not have long lines")
+	})
+
+	t.Run("line exactly 128KB - buffer boundary", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "128kb.txt")
+
+		content := strings.Repeat("b", 128*1024) + "\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 1000)
+		require.NoError(t, err)
+		assert.True(t, hasLong)
+		assert.Equal(t, 1, lineNum)
+		assert.Equal(t, 128*1024, lineLen)
+	})
+
+	t.Run("very large line - 500KB", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "500kb.txt")
+
+		longLine := strings.Repeat("x", 500*1024)
+		content := "short\n" + longLine + "\nshort\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 1000)
+		require.NoError(t, err)
+		assert.True(t, hasLong, "should detect 500KB line")
+		assert.Equal(t, 2, lineNum)
+		assert.GreaterOrEqual(t, lineLen, 500*1024)
+	})
+
+	t.Run("multiple lines all under limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "multiunder.txt")
+
+		content := strings.Repeat("short line\n", 100)
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, _, _, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "all lines under limit")
+	})
+
+	t.Run("maxLen of 0", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "maxlen0.txt")
+
+		content := "any content\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, _, err := CheckFileLineLength(testFile, 0)
+		require.NoError(t, err)
+		assert.True(t, hasLong, "maxLen 0 should flag any content")
+		assert.Equal(t, 1, lineNum)
+	})
+
+	t.Run("special characters", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "special.txt")
+
+		content := "!@#$%^&*(){}[]|\\:;\"'<>?,./\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, _, _, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.False(t, hasLong, "should handle special characters")
+	})
+
+	t.Run("last line exceeds limit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		testFile := filepath.Join(tmpDir, "lastlong.txt")
+
+		content := "short\nshort\n" + strings.Repeat("x", 200) + "\n"
+		err := os.WriteFile(testFile, []byte(content), 0o600)
+		require.NoError(t, err)
+
+		hasLong, lineNum, lineLen, err := CheckFileLineLength(testFile, 100)
+		require.NoError(t, err)
+		assert.True(t, hasLong)
+		assert.Equal(t, 3, lineNum, "long line should be on line 3")
+		assert.Equal(t, 200, lineLen)
+	})
+}
+
+// TestPromptForInput_EdgeCases tests additional edge cases for PromptForInput function
+func TestPromptForInput_EdgeCases(t *testing.T) {
+	t.Run("very long input - 10000 chars", func(t *testing.T) {
+		longInput := strings.Repeat("a", 10000)
+		var result string
+		var err error
+
+		withMockedStdin(t, longInput+"\n", func() {
+			result, err = PromptForInput("Enter")
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, longInput, result)
+		assert.Len(t, result, 10000)
+	})
+
+	t.Run("input with tabs", func(t *testing.T) {
+		var result string
+		var err error
+
+		withMockedStdin(t, "\ttest\t\n", func() {
+			result, err = PromptForInput("Enter")
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, "test", result, "tabs should be trimmed")
+	})
+
+	t.Run("whitespace-only input becomes empty", func(t *testing.T) {
+		var result string
+		var err error
+
+		withMockedStdin(t, "   \t  \n", func() {
+			result, err = PromptForInput("Enter")
+		})
+
+		require.NoError(t, err)
+		assert.Empty(t, result, "whitespace-only should return empty string")
+	})
+
+	t.Run("input with many special characters", func(t *testing.T) {
+		specialChars := "!@#$%^&*()_+-={}[]|\\:;\"'<>?,./~`"
+		var result string
+		var err error
+
+		withMockedStdin(t, specialChars+"\n", func() {
+			result, err = PromptForInput("Enter")
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, specialChars, result)
+	})
+}
+
+// TestParallel_Sync tests synchronization in Parallel function
+func TestParallel_Sync(t *testing.T) {
+	t.Run("waits for all functions to complete", func(t *testing.T) {
+		completed := make([]bool, 5)
+		var mu sync.Mutex
+
+		fns := make([]func() error, 5)
+		for i := 0; i < 5; i++ {
+			idx := i
+			fns[i] = func() error {
+				time.Sleep(time.Duration(idx*10) * time.Millisecond)
+				mu.Lock()
+				completed[idx] = true
+				mu.Unlock()
+				return nil
+			}
+		}
+
+		err := Parallel(fns...)
+		require.NoError(t, err)
+
+		// All functions should have completed
+		for i, done := range completed {
+			assert.True(t, done, "function %d should have completed", i)
+		}
+	})
 }

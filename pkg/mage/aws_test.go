@@ -238,6 +238,123 @@ func TestValidateMFAToken(t *testing.T) {
 	})
 }
 
+// TestMFATokenPattern_EdgeCases tests MFA token pattern validation edge cases
+func TestMFATokenPattern_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		token string
+		valid bool
+	}{
+		{
+			name:  "valid 6 digits",
+			token: "123456",
+			valid: true,
+		},
+		{
+			name:  "leading zeros - 000000",
+			token: "000000",
+			valid: true,
+		},
+		{
+			name:  "leading zeros - 000123",
+			token: "000123",
+			valid: true,
+		},
+		{
+			name:  "all nines - 999999",
+			token: "999999",
+			valid: true,
+		},
+		{
+			name:  "5 digits",
+			token: "12345",
+			valid: false,
+		},
+		{
+			name:  "7 digits - 1000000",
+			token: "1000000",
+			valid: false,
+		},
+		{
+			name:  "contains letters",
+			token: "12a456",
+			valid: false,
+		},
+		{
+			name:  "all letters",
+			token: "abcdef",
+			valid: false,
+		},
+		{
+			name:  "special characters",
+			token: "123-56",
+			valid: false,
+		},
+		{
+			name:  "spaces in between",
+			token: "123 456",
+			valid: false,
+		},
+		{
+			name:  "leading spaces",
+			token: "  123456",
+			valid: false,
+		},
+		{
+			name:  "trailing spaces",
+			token: "123456  ",
+			valid: false,
+		},
+		{
+			name:  "negative number",
+			token: "-23456",
+			valid: false,
+		},
+		{
+			name:  "decimal number",
+			token: "123.56",
+			valid: false,
+		},
+		{
+			name:  "empty string",
+			token: "",
+			valid: false,
+		},
+		{
+			name:  "hex digits",
+			token: "ABCDEF",
+			valid: false,
+		},
+		{
+			name:  "unicode digits",
+			token: "①②③④⑤⑥",
+			valid: false,
+		},
+		{
+			name:  "tab character",
+			token: "123\t456",
+			valid: false,
+		},
+		{
+			name:  "newline",
+			token: "123456\n",
+			valid: false,
+		},
+		{
+			name:  "plus sign",
+			token: "+23456",
+			valid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := mfaTokenPattern.MatchString(tt.token)
+			assert.Equal(t, tt.valid, result, "MFA token validation mismatch")
+		})
+	}
+}
+
 // TestAWSConstants tests that constants are set correctly
 func TestAWSConstants(t *testing.T) {
 	t.Run("default duration is 12 hours", func(t *testing.T) {
