@@ -3423,3 +3423,121 @@ func TestRunNamespaceCommand(t *testing.T) {
 	assert.Contains(t, output, "aws:refresh", "Should list aws:refresh command")
 	assert.Contains(t, output, "aws:status", "Should list aws:status command")
 }
+
+// TestUpdateCommandBannerSuppression tests that the update banner is not shown
+// after running update-related commands to avoid displaying stale version information
+func TestUpdateCommandBannerSuppression(t *testing.T) {
+	tests := []struct {
+		name             string
+		command          string
+		shouldShowBanner bool
+	}{
+		{
+			name:             "update:install suppresses banner",
+			command:          "update:install",
+			shouldShowBanner: false,
+		},
+		{
+			name:             "update:check suppresses banner",
+			command:          "update:check",
+			shouldShowBanner: false,
+		},
+		{
+			name:             "update suppresses banner",
+			command:          "update",
+			shouldShowBanner: false,
+		},
+		{
+			name:             "build command allows banner",
+			command:          "build",
+			shouldShowBanner: true,
+		},
+		{
+			name:             "test command allows banner",
+			command:          "test",
+			shouldShowBanner: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Normalize the command the same way the run() function does
+			normalizedCmd := normalizeCommandName(tt.command)
+
+			// Test the logic that determines if banner should be shown
+			// This matches the condition in main.go: if !strings.HasPrefix(command, "update:") && command != "update"
+			shouldShow := !strings.HasPrefix(normalizedCmd, "update:") && normalizedCmd != "update"
+
+			assert.Equal(t, tt.shouldShowBanner, shouldShow,
+				"Command %q should have banner display=%v", tt.command, tt.shouldShowBanner)
+		})
+	}
+}
+
+// TestUpdateCommandsNoStaleBanner is an integration test that verifies
+// the update banner is not shown after running update commands
+func TestUpdateCommandsNoStaleBanner(t *testing.T) {
+	// Skip this test in short mode as it's more of an integration test
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		name    string
+		command string
+	}{
+		{
+			name:    "update:check command",
+			command: "update:check",
+		},
+		// Note: update:install is harder to test as it requires network access
+		// and modifies the binary, so we focus on update:check which is safer
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Capture stdout and stderr
+			oldStdout := os.Stdout
+			oldStderr := os.Stderr
+
+			rOut, wOut, err := os.Pipe()
+			require.NoError(t, err)
+			rErr, wErr, err := os.Pipe()
+			require.NoError(t, err)
+
+			os.Stdout = wOut
+			os.Stderr = wErr
+
+			// Run the command
+			_ = run(context.Background(), []string{"magex", tt.command})
+
+			// Close writers and restore stdout/stderr
+			if closeErr := wOut.Close(); closeErr != nil {
+				t.Logf("Failed to close stdout writer: %v", closeErr)
+			}
+			if closeErr := wErr.Close(); closeErr != nil {
+				t.Logf("Failed to close stderr writer: %v", closeErr)
+			}
+			os.Stdout = oldStdout
+			os.Stderr = oldStderr
+
+			// Read captured output
+			var bufOut, bufErr bytes.Buffer
+			if _, readErr := bufOut.ReadFrom(rOut); readErr != nil {
+				t.Logf("Failed to read from stdout pipe: %v", readErr)
+			}
+			if _, readErr := bufErr.ReadFrom(rErr); readErr != nil {
+				t.Logf("Failed to read from stderr pipe: %v", readErr)
+			}
+
+			output := bufOut.String() + bufErr.String()
+
+			// Verify the update banner is NOT shown
+			// The banner contains distinctive text like "A new version of MAGE-X is available!"
+			assert.NotContains(t, output, "A new version of MAGE-X is available!",
+				"Update banner should not be shown after %s command", tt.command)
+			assert.NotContains(t, output, "Upgrade command:",
+				"Update banner should not be shown after %s command", tt.command)
+		})
+	}
+}

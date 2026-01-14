@@ -336,14 +336,19 @@ func run(ctx context.Context, args []string) int {
 	}
 
 	// Check for update notification after command execution
-	// Wait briefly for the background check to complete
-	select {
-	case result := <-updateResultChan:
-		if result != nil && result.UpdateAvailable {
-			mage.ShowUpdateBanner(result)
+	// Skip showing banner for update commands to avoid displaying stale data
+	// right after the user just performed an update action. The cache is cleared
+	// during update:install, so the next CLI invocation will show correct data.
+	if !strings.HasPrefix(command, "update:") && command != "update" {
+		// Wait briefly for the background check to complete
+		select {
+		case result := <-updateResultChan:
+			if result != nil && result.UpdateAvailable {
+				mage.ShowUpdateBanner(result)
+			}
+		case <-time.After(updateCheckWaitTimeout):
+			// Update check didn't complete in time, skip notification
 		}
-	case <-time.After(updateCheckWaitTimeout):
-		// Update check didn't complete in time, skip notification
 	}
 
 	return exitCode
