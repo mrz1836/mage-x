@@ -110,7 +110,7 @@ func (Pipeline) CD() error {
 }
 
 // Note: When using magex, you get:
-// 1. All 215+ built-in MAGE-X commands (build, test, lint, etc.)
+// 1. All 174 built-in MAGE-X commands (build, test, lint, etc.)
 // 2. Plus these custom commands (deploy, stage, rollback, pipeline:ci, pipeline:cd)
 // 3. All accessible through: magex <command>
 
