@@ -160,6 +160,9 @@ go install github.com/mrz1836/mage-x/cmd/magex@latest
 # Auto-update to latest stable release (with proper version info)
 magex update:install
 
+# MAGE-X automatically checks for updates in the background
+# and notifies you when new versions are available
+
 # Now use it in ANY Go project (no setup!)
 # Use either 'magex' or its shorter alias 'mgx'
 magex build         # Automatically detects & builds your project
