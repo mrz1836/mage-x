@@ -174,7 +174,11 @@ func (w *DefaultPathWatcher) WatchedPaths() []string {
 
 // watchLoop is the main watching loop
 func (w *DefaultPathWatcher) watchLoop() {
-	ticker := time.NewTicker(w.debounce)
+	w.mu.RLock()
+	debounce := w.debounce
+	w.mu.RUnlock()
+
+	ticker := time.NewTicker(debounce)
 	defer ticker.Stop()
 
 	for {
@@ -194,6 +198,7 @@ func (w *DefaultPathWatcher) checkForChanges() {
 	for path, events := range w.watchedPaths {
 		watchedPaths[path] = events
 	}
+	recursive := w.recursive
 	w.mu.RUnlock()
 
 	for watchPath, eventMask := range watchedPaths {
@@ -205,7 +210,7 @@ func (w *DefaultPathWatcher) checkForChanges() {
 			}
 
 			// Skip if not recursive and not in the root directory
-			if !w.recursive && filepath.Dir(path) != watchPath {
+			if !recursive && filepath.Dir(path) != watchPath {
 				if info.IsDir() {
 					return filepath.SkipDir
 				}
@@ -264,6 +269,14 @@ func (w *DefaultPathWatcher) checkFileForChanges(path string, info fs.FileInfo, 
 
 // emitEvent sends an event to the events channel
 func (w *DefaultPathWatcher) emitEvent(event *PathEvent) {
+	w.mu.RLock()
+	running := w.running
+	w.mu.RUnlock()
+
+	if !running {
+		return
+	}
+
 	select {
 	case w.events <- event:
 	default:
