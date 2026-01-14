@@ -278,7 +278,6 @@ func (ts *AgentOSTestSuite) TestCheckAgentOSPrerequisites() {
 	// This test verifies that curl and bash are available
 	// In most environments, these should be available
 	err := checkAgentOSPrerequisites()
-
 	// If running on a standard Unix-like system, should pass
 	// If running in a minimal container, might fail
 	if err != nil {
