@@ -160,6 +160,15 @@ type CommandMetadata struct {
 	// Namespaces is the list of all namespaces
 	Namespaces []string
 
+	// TotalNamespaces is the count of unique namespaces
+	TotalNamespaces int
+
+	// AICommands is the count of AI-related commands
+	AICommands int
+
+	// AINamespaces is the count of AI-related namespaces
+	AINamespaces int
+
 	// Categories maps category names to command counts
 	Categories map[string]int
 
