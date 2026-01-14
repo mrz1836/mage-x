@@ -1051,6 +1051,50 @@ speckit:
 </details>
 
 <details>
+<summary><strong>⬆️ Upgrading Spec-Kit</strong></summary>
+<br/>
+
+### Automated Upgrade (Recommended)
+
+```bash
+magex speckit:upgrade
+```
+
+The upgrade command automatically:
+- ✅ Backs up your constitution to `.specify/backups/` with timestamp
+- ✅ Upgrades the spec-kit CLI using `uv tool upgrade`
+- ✅ Updates project configuration with `--force` flag
+- ✅ Restores your constitution from backup
+- ✅ Tracks version history in `.specify/version.txt`
+- ✅ Cleans old backups (keeps last 5)
+- ✅ Verifies the upgrade with `specify check`
+
+### Manual Upgrade (Alternative)
+
+If you prefer manual control:
+
+#### Step 1: Backup Your Constitution
+```bash
+cp .specify/memory/constitution.md ~/constitution.backup.md
+```
+
+#### Step 2: Upgrade the CLI
+```bash
+uv tool upgrade specify-cli
+specify check
+```
+
+#### Step 3: Upgrade Project Configuration
+```bash
+uvx --from git+https://github.com/github/spec-kit.git specify init --here --ai claude --force
+```
+
+#### Step 4: Restore Custom Constitution
+If you have custom constitution changes, carefully merge them back from your backup.
+
+</details>
+
+<details>
 <summary><strong>🚀 BMAD - AI-Driven Agile Development</strong></summary>
 <br/>
 
@@ -1254,50 +1298,6 @@ The following are refreshed during upgrades:
 - `.claude/agents/agent-os/` - Claude Code agents
 
 > **Pro tip:** Create custom profiles in `~/agent-os/profiles/` to customize standards and workflows without losing your changes during updates.
-
-</details>
-
-<details>
-<summary><strong>Upgrading Spec-Kit</strong></summary>
-<br/>
-
-### Automated Upgrade (Recommended)
-
-```bash
-magex speckit:upgrade
-```
-
-The upgrade command automatically:
-- ✅ Backs up your constitution to `.specify/backups/` with timestamp
-- ✅ Upgrades the spec-kit CLI using `uv tool upgrade`
-- ✅ Updates project configuration with `--force` flag
-- ✅ Restores your constitution from backup
-- ✅ Tracks version history in `.specify/version.txt`
-- ✅ Cleans old backups (keeps last 5)
-- ✅ Verifies the upgrade with `specify check`
-
-### Manual Upgrade (Alternative)
-
-If you prefer manual control:
-
-#### Step 1: Backup Your Constitution
-```bash
-cp .specify/memory/constitution.md ~/constitution.backup.md
-```
-
-#### Step 2: Upgrade the CLI
-```bash
-uv tool upgrade specify-cli
-specify check
-```
-
-#### Step 3: Upgrade Project Configuration
-```bash
-uvx --from git+https://github.com/github/spec-kit.git specify init --here --ai claude --force
-```
-
-#### Step 4: Restore Custom Constitution
-If you have custom constitution changes, carefully merge them back from your backup.
 
 </details>
 
