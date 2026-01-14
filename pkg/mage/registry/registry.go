@@ -381,12 +381,30 @@ func (r *Registry) Metadata() CommandMetadata {
 	// Get namespaces without re-acquiring lock
 	namespaces := r.namespacesLocked()
 
+	// Calculate AI-related statistics
+	aiCommands := 0
+	aiNamespaces := make(map[string]bool)
+	aiNamespaceList := []string{"bmad", "speckit"}
+
+	for cmdName := range r.commands {
+		for _, aiNs := range aiNamespaceList {
+			if len(cmdName) > len(aiNs) && cmdName[:len(aiNs)] == aiNs && cmdName[len(aiNs)] == ':' {
+				aiCommands++
+				aiNamespaces[aiNs] = true
+				break
+			}
+		}
+	}
+
 	return CommandMetadata{
-		TotalCommands: len(r.commands),
-		Namespaces:    namespaces,
-		Categories:    categories,
-		CategoryInfo:  categoryInfo,
-		Version:       r.metadata.Version,
+		TotalCommands:   len(r.commands),
+		Namespaces:      namespaces,
+		TotalNamespaces: len(namespaces),
+		AICommands:      aiCommands,
+		AINamespaces:    len(aiNamespaces),
+		Categories:      categories,
+		CategoryInfo:    categoryInfo,
+		Version:         r.metadata.Version,
 	}
 }
 

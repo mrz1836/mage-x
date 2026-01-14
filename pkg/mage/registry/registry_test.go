@@ -616,6 +616,193 @@ func TestRegistry_Metadata(t *testing.T) {
 	}
 }
 
+func TestRegistry_MetadataAIFeatures(t *testing.T) {
+	r := NewRegistry()
+
+	commands := []*Command{
+		{
+			Name:        "install",
+			Method:      "Install",
+			Namespace:   "bmad",
+			Description: "Install BMAD",
+			Category:    "AI/ML",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "check",
+			Method:      "Check",
+			Namespace:   "bmad",
+			Description: "Check BMAD",
+			Category:    "AI/ML",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "upgrade",
+			Method:      "Upgrade",
+			Namespace:   "bmad",
+			Description: "Upgrade BMAD",
+			Category:    "AI/ML",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "install",
+			Method:      "Install",
+			Namespace:   "speckit",
+			Description: "Install Speckit",
+			Category:    "Specification",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "check",
+			Method:      "Check",
+			Namespace:   "speckit",
+			Description: "Check Speckit",
+			Category:    "Specification",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "upgrade",
+			Method:      "Upgrade",
+			Namespace:   "speckit",
+			Description: "Upgrade Speckit",
+			Category:    "Specification",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "build",
+			Method:      "Build",
+			Namespace:   "build",
+			Description: "Build command",
+			Category:    "Build",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "test",
+			Method:      "Test",
+			Namespace:   "test",
+			Description: "Test command",
+			Category:    "Test",
+			Func:        func() error { return nil },
+		},
+	}
+
+	for _, cmd := range commands {
+		r.MustRegister(cmd)
+	}
+
+	metadata := r.Metadata()
+
+	// Test total commands
+	if metadata.TotalCommands != 8 {
+		t.Errorf("Expected 8 total commands, got %d", metadata.TotalCommands)
+	}
+
+	// Test namespace count
+	expectedNamespaces := 4 // bmad, speckit, build, test
+	if metadata.TotalNamespaces != expectedNamespaces {
+		t.Errorf("Expected %d namespaces, got %d", expectedNamespaces, metadata.TotalNamespaces)
+	}
+
+	// Test AI features
+	expectedAICommands := 6 // 3 from bmad + 3 from speckit
+	if metadata.AICommands != expectedAICommands {
+		t.Errorf("Expected %d AI commands, got %d", expectedAICommands, metadata.AICommands)
+	}
+
+	expectedAINamespaces := 2 // bmad and speckit
+	if metadata.AINamespaces != expectedAINamespaces {
+		t.Errorf("Expected %d AI namespaces, got %d", expectedAINamespaces, metadata.AINamespaces)
+	}
+
+	// Verify namespaces list contains expected values
+	namespaceMap := make(map[string]bool)
+	for _, ns := range metadata.Namespaces {
+		namespaceMap[ns] = true
+	}
+	expectedNS := []string{"bmad", "speckit", "build", "test"}
+	for _, ns := range expectedNS {
+		if !namespaceMap[ns] {
+			t.Errorf("Expected namespace '%s' not found in metadata.Namespaces", ns)
+		}
+	}
+}
+
+func TestRegistry_MetadataAIFeaturesPartial(t *testing.T) {
+	r := NewRegistry()
+
+	// Test with only bmad namespace (no speckit)
+	commands := []*Command{
+		{
+			Name:        "install",
+			Method:      "Install",
+			Namespace:   "bmad",
+			Description: "Install BMAD",
+			Category:    "AI/ML",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "build",
+			Method:      "Build",
+			Namespace:   "build",
+			Description: "Build command",
+			Category:    "Build",
+			Func:        func() error { return nil },
+		},
+	}
+
+	for _, cmd := range commands {
+		r.MustRegister(cmd)
+	}
+
+	metadata := r.Metadata()
+
+	// Should only count bmad
+	if metadata.AICommands != 1 {
+		t.Errorf("Expected 1 AI command, got %d", metadata.AICommands)
+	}
+	if metadata.AINamespaces != 1 {
+		t.Errorf("Expected 1 AI namespace, got %d", metadata.AINamespaces)
+	}
+}
+
+func TestRegistry_MetadataNoAIFeatures(t *testing.T) {
+	r := NewRegistry()
+
+	// Test with no AI namespaces
+	commands := []*Command{
+		{
+			Name:        "build",
+			Method:      "Build",
+			Namespace:   "build",
+			Description: "Build command",
+			Category:    "Build",
+			Func:        func() error { return nil },
+		},
+		{
+			Name:        "test",
+			Method:      "Test",
+			Namespace:   "test",
+			Description: "Test command",
+			Category:    "Test",
+			Func:        func() error { return nil },
+		},
+	}
+
+	for _, cmd := range commands {
+		r.MustRegister(cmd)
+	}
+
+	metadata := r.Metadata()
+
+	// Should be zero AI features
+	if metadata.AICommands != 0 {
+		t.Errorf("Expected 0 AI commands, got %d", metadata.AICommands)
+	}
+	if metadata.AINamespaces != 0 {
+		t.Errorf("Expected 0 AI namespaces, got %d", metadata.AINamespaces)
+	}
+}
+
 func TestRegistry_Clear(t *testing.T) {
 	r := NewRegistry()
 
