@@ -458,8 +458,8 @@ func showVersion() {
 	utils.Println("\n Capabilities")
 	utils.Println(strings.Repeat("─", 50))
 	fmt.Printf("  Commands:     %d built-in commands\n", metadata.TotalCommands)
-	fmt.Printf("  Namespaces:   20+ specialized namespaces\n")
-	fmt.Printf("  AI Features:  15+ intelligent agents and 13+ commands\n")
+	fmt.Printf("  Namespaces:   %d specialized namespaces\n", metadata.TotalNamespaces)
+	fmt.Printf("  AI Features:  %d commands across %d namespaces\n", metadata.AICommands, metadata.AINamespaces)
 
 	// Quick start hint
 	utils.Println("\n Quick Start")
@@ -511,7 +511,7 @@ func showGeneralHelp(reg *registry.Registry) {
 // showUsageSection displays usage information
 func showUsageSection() {
 	fmt.Printf("\n📋 Usage: magex [options] [command] [arguments...]\n")
-	fmt.Printf("\nMAGE-X is a drop-in replacement for Mage with 215+ built-in commands.\n")
+	fmt.Printf("\nMAGE-X is a drop-in replacement for Mage with 174 built-in commands.\n")
 	fmt.Printf("Zero configuration needed - works immediately in any Go project!\n")
 }
 
