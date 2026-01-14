@@ -783,6 +783,11 @@ magex speckit:upgrade     # Upgrade spec-kit with automatic constitution backup/
 magex bmad:install        # Install BMAD prerequisites (npm, npx, bmad-method)
 magex bmad:check          # Verify BMAD installation and report version info
 magex bmad:upgrade        # Upgrade BMAD to the latest alpha version
+
+# Agent OS CLI Management (requires agentos.enabled: true in .mage.yaml)
+magex agentos:install     # Install Agent OS (base + project)
+magex agentos:check       # Verify Agent OS installation and report version info
+magex agentos:upgrade     # Upgrade Agent OS with user data preservation
 ```
 
 </details>
@@ -954,14 +959,14 @@ See the [examples directory](examples) for more custom magefile implementations.
 
 Integrated support for AI-driven development methodologies. **Choose your style:**
 
-| | 📋 **Spec-Kit** (Recommended) | 🚀 **BMAD** |
-|---|---|---|
-| **Philosophy** | Executable specifications | Agile workflows with AI agents |
-| **Interface** | CLI slash commands (`/commands`) | IDE-based agents (`*commands`) |
-| **Workflow** | Specify → Plan → Tasks → Implement | PRD → Tech Spec → Architecture → Sprint |
-| **Package** | Python (`specify-cli`) | npm (`bmad-method`) |
-| **Complexity** | Simple, streamlined | Full agile methodology |
-| **Best for** | Quick start, precise requirements | Large projects, team workflows |
+| | 📋 **Spec-Kit** (Recommended) | 🚀 **BMAD** | 🤖 **Agent OS** |
+|---|---|---|---|
+| **Philosophy** | Executable specifications | Agile workflows with AI agents | Structured agentic workflows |
+| **Interface** | CLI slash commands (`/commands`) | IDE-based agents (`*commands`) | Claude Code commands + agents |
+| **Workflow** | Specify → Plan → Tasks → Implement | PRD → Tech Spec → Architecture → Sprint | Write Spec → Shape → Plan → Tasks → Implement |
+| **Package** | Python (`specify-cli`) | npm (`bmad-method`) | Shell scripts (curl install) |
+| **Complexity** | Simple, streamlined | Full agile methodology | Flexible, profile-based |
+| **Best for** | Quick start, precise requirements | Large projects, team workflows | Claude Code users, multi-agent workflows |
 
 ---
 
@@ -1035,7 +1040,6 @@ magex speckit:upgrade   # Upgrade with automatic backup/restore
 **Configuration** (`.mage.yaml`):
 ```yaml
 speckit:
-  enabled: true
   constitution_path: ".specify/memory/constitution.md"
   backup_dir: ".specify/backups"
   backups_to_keep: 5
@@ -1157,10 +1161,99 @@ magex bmad:upgrade   # Upgrade to latest version
 **Configuration** (`.mage.yaml`):
 ```yaml
 bmad:
-  enabled: true
   project_dir: "_bmad"
   version_tag: "@alpha"
 ```
+
+</details>
+
+<details>
+<summary><strong>🤖 Agent OS - Structured Agentic Workflows</strong></summary>
+<br/>
+
+[Agent OS](https://github.com/buildermethods/agent-os) is a system for spec-driven agentic development that provides structured workflows for AI coding agents. It integrates deeply with Claude Code and supports multi-agent delegation.
+
+### Quick Start
+
+```bash
+# Install Agent OS (base + project)
+magex agentos:install
+```
+
+The installer will:
+1. Install the base Agent OS to `~/agent-os` (if not already installed)
+2. Run the interactive project installer to set up your project
+
+### Development Workflow
+
+After installation, use Claude Code slash commands to work through the Agent OS workflow:
+
+#### 1. **Write Spec** (Define your feature)
+Create a detailed specification for your feature.
+```
+/write-spec
+```
+
+#### 2. **Shape Spec** (Refine requirements)
+Shape and refine the specification with targeted questions.
+```
+/shape-spec
+```
+
+#### 3. **Plan Product** (Design implementation)
+Create a technical implementation plan.
+```
+/plan-product
+```
+
+#### 4. **Create Tasks** (Generate action items)
+Generate dependency-ordered tasks from the plan.
+```
+/create-tasks
+```
+
+#### 5. **Implement Tasks** (Build the feature)
+Execute tasks to implement the feature.
+```
+/implement-tasks
+```
+
+#### 6. **Orchestrate Tasks** (Multi-agent coordination)
+Coordinate multiple agents for complex implementations.
+```
+/orchestrate-tasks
+```
+
+### Management Commands
+
+```bash
+magex agentos:install   # Install Agent OS (base + project)
+magex agentos:check     # Verify installation and version
+magex agentos:upgrade   # Upgrade with user data preservation
+```
+
+**Configuration** (`.mage.yaml`):
+```yaml
+agentos:
+  base_dir: "agent-os"
+  profile: "default"
+  claude_code_commands: true
+  use_claude_code_subagents: true
+  standards_as_skills: false
+```
+
+### User Data Preservation
+
+Agent OS preserves your important project data during upgrades:
+- `agent-os/specs/` - All your feature specifications
+- `agent-os/product/` - Your product roadmap and mission
+
+The following are refreshed during upgrades:
+- `agent-os/standards/` - Standards from your profile
+- `.claude/commands/agent-os/` - Claude Code commands
+- `.claude/agents/agent-os/` - Claude Code agents
+
+> **Pro tip:** Create custom profiles in `~/agent-os/profiles/` to customize standards and workflows without losing your changes during updates.
 
 </details>
 

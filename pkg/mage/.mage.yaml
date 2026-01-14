@@ -1,5 +1,12 @@
+agentos:
+  base_dir: agent-os
+  home_dir: agent-os
+  profile: default
+  claude_code_commands: true
+  agent_os_commands: false
+  use_claude_code_subagents: true
+  standards_as_skills: false
 bmad:
-  enabled: false
   project_dir: _bmad
   version_tag: '@alpha'
   package_name: bmad-method
@@ -64,7 +71,6 @@ release:
   name_template: ""
   prerelease: false
 speckit:
-  enabled: false
   constitution_path: .specify/memory/constitution.md
   version_file: .specify/version.txt
   backup_dir: .specify/backups

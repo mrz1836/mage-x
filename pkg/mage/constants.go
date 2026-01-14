@@ -311,3 +311,20 @@ const (
 	DefaultBmadVersionTag  = "@alpha"
 	DefaultBmadPackageName = "bmad-method"
 )
+
+// Agent OS command names
+const (
+	CmdCurl = "curl"
+	CmdBash = "bash"
+)
+
+// Agent OS default configuration values
+const (
+	DefaultAgentOSBaseDir    = "agent-os"
+	DefaultAgentOSHomeDir    = "agent-os" // Relative to home directory
+	DefaultAgentOSConfigFile = "config.yml"
+	DefaultAgentOSGitHubRepo = "buildermethods/agent-os"
+	DefaultAgentOSBranch     = "main"
+	DefaultAgentOSSpecsDir   = "agent-os/specs"
+	DefaultAgentOSProductDir = "agent-os/product"
+)

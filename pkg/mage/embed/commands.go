@@ -322,6 +322,14 @@ func getBmadCommands() []CommandDef {
 	}
 }
 
+func getAgentOSCommands() []CommandDef {
+	return []CommandDef{
+		{Method: "install", Desc: "Install Agent OS (base + project)"},
+		{Method: "check", Desc: "Verify Agent OS installation and version"},
+		{Method: "upgrade", Desc: "Upgrade Agent OS with user data preservation"},
+	}
+}
+
 func getAWSCommands() []CommandDef {
 	return []CommandDef{
 		{
@@ -627,6 +635,14 @@ func bmadMethodBindings(b mage.Bmad) map[string]MethodBinding {
 	}
 }
 
+func agentosMethodBindings(a mage.AgentOS) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"install": {NoArgs: a.Install},
+		"check":   {NoArgs: a.Check},
+		"upgrade": {NoArgs: a.Upgrade},
+	}
+}
+
 func awsMethodBindings(a mage.AWS) map[string]MethodBinding {
 	return map[string]MethodBinding{
 		"login":   {NoArgs: a.LoginNoArgs, WithArgs: a.Login},
@@ -682,6 +698,7 @@ func RegisterAll(reg *registry.Registry) {
 	registerVersionCommands(reg)
 	registerInstallCommands(reg)
 	registerYamlCommands(reg)
+	registerAgentOSCommands(reg)
 	registerBmadCommands(reg)
 	registerAWSCommands(reg)
 	registerSpeckitCommands(reg)
@@ -825,6 +842,11 @@ func registerYamlCommands(reg *registry.Registry) {
 func registerBmadCommands(reg *registry.Registry) {
 	b := mage.Bmad{}
 	registerNamespaceCommands(reg, "bmad", "AI/ML", getBmadCommands(), bmadMethodBindings(b))
+}
+
+func registerAgentOSCommands(reg *registry.Registry) {
+	a := mage.AgentOS{}
+	registerNamespaceCommands(reg, "agentos", "AI/ML", getAgentOSCommands(), agentosMethodBindings(a))
 }
 
 func registerAWSCommands(reg *registry.Registry) {

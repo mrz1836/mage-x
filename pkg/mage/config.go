@@ -14,6 +14,7 @@ import (
 
 // Config represents the mage configuration
 type Config struct {
+	AgentOS  AgentOSConfig     `yaml:"agentos"`
 	Bmad     BmadConfig        `yaml:"bmad"`
 	Build    BuildConfig       `yaml:"build"`
 	Docs     DocsConfig        `yaml:"docs"`
@@ -142,7 +143,6 @@ type DocsConfig struct {
 
 // SpeckitConfig contains spec-kit CLI management settings
 type SpeckitConfig struct {
-	Enabled          bool   `yaml:"enabled"`           // Whether speckit commands are available (default: false, opt-in)
 	ConstitutionPath string `yaml:"constitution_path"` // Path to constitution file (default: ".specify/memory/constitution.md")
 	VersionFile      string `yaml:"version_file"`      // Path to version tracking file (default: ".specify/version.txt")
 	BackupDir        string `yaml:"backup_dir"`        // Directory for constitution backups (default: ".specify/backups")
@@ -154,10 +154,21 @@ type SpeckitConfig struct {
 
 // BmadConfig contains BMAD (Build More, Architect Dreams) CLI management settings
 type BmadConfig struct {
-	Enabled     bool   `yaml:"enabled"`      // Whether bmad commands are available (default: false, opt-in)
 	ProjectDir  string `yaml:"project_dir"`  // Directory for BMAD project files (default: "_bmad")
 	VersionTag  string `yaml:"version_tag"`  // npm version tag to use (default: "@alpha" for v6)
 	PackageName string `yaml:"package_name"` // npm package name (default: "bmad-method")
+}
+
+// AgentOSConfig contains Agent OS CLI management settings
+// Agent OS provides structured workflows for AI coding agents with Claude Code integration
+type AgentOSConfig struct {
+	BaseDir                string `yaml:"base_dir"`                  // Project directory for Agent OS files (default: "agent-os")
+	HomeDir                string `yaml:"home_dir"`                  // Base installation directory relative to home (default: "agent-os")
+	Profile                string `yaml:"profile"`                   // Profile to use for installation (default: "default")
+	ClaudeCodeCommands     bool   `yaml:"claude_code_commands"`      // Deploy commands to .claude/commands/agent-os/ (default: true)
+	AgentOSCommands        bool   `yaml:"agent_os_commands"`         // Deploy commands to agent-os/commands/ (default: false)
+	UseClaudeCodeSubagents bool   `yaml:"use_claude_code_subagents"` // Enable agent delegation with subagents (default: true)
+	StandardsAsSkills      bool   `yaml:"standards_as_skills"`       // Use Claude Code Skills for standards (default: false)
 }
 
 // Static errors for err113 compliance
@@ -293,6 +304,11 @@ func cleanConfigValues(config *Config) {
 	config.Bmad.ProjectDir = env.CleanValue(config.Bmad.ProjectDir)
 	config.Bmad.VersionTag = env.CleanValue(config.Bmad.VersionTag)
 	config.Bmad.PackageName = env.CleanValue(config.Bmad.PackageName)
+
+	// Clean AgentOS config strings
+	config.AgentOS.BaseDir = env.CleanValue(config.AgentOS.BaseDir)
+	config.AgentOS.HomeDir = env.CleanValue(config.AgentOS.HomeDir)
+	config.AgentOS.Profile = env.CleanValue(config.AgentOS.Profile)
 }
 
 // defaultConfig returns the default configuration
@@ -367,14 +383,21 @@ func defaultConfig() *Config {
 			EnableResume:      true,
 			UserAgent:         "mage-x-downloader/1.0",
 		},
+		AgentOS: AgentOSConfig{
+			BaseDir:                DefaultAgentOSBaseDir,
+			HomeDir:                DefaultAgentOSHomeDir,
+			Profile:                "default",
+			ClaudeCodeCommands:     true,
+			AgentOSCommands:        false,
+			UseClaudeCodeSubagents: true,
+			StandardsAsSkills:      false,
+		},
 		Bmad: BmadConfig{
-			Enabled:     false, // Opt-in, disabled by default
 			ProjectDir:  DefaultBmadProjectDir,
 			VersionTag:  DefaultBmadVersionTag,
 			PackageName: DefaultBmadPackageName,
 		},
 		Speckit: SpeckitConfig{
-			Enabled:          false, // Opt-in, disabled by default
 			ConstitutionPath: DefaultSpeckitConstitutionPath,
 			VersionFile:      DefaultSpeckitVersionFile,
 			BackupDir:        DefaultSpeckitBackupDir,

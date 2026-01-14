@@ -109,7 +109,6 @@ func (ts *BmadTestSuite) TestBmadCustomConfig() {
 	// Set custom config
 	TestSetConfig(&Config{
 		Bmad: BmadConfig{
-			Enabled:     true,
 			ProjectDir:  "custom_bmad",
 			VersionTag:  "@latest",
 			PackageName: "custom-bmad",
@@ -119,7 +118,6 @@ func (ts *BmadTestSuite) TestBmadCustomConfig() {
 	config, err := GetConfig()
 	ts.Require().NoError(err)
 
-	ts.Require().True(config.Bmad.Enabled)
 	ts.Require().Equal("custom_bmad", config.Bmad.ProjectDir)
 	ts.Require().Equal("@latest", config.Bmad.VersionTag)
 	ts.Require().Equal("custom-bmad", config.Bmad.PackageName)

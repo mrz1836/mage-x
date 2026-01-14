@@ -1735,13 +1735,13 @@ func TestTotalCommandCount(t *testing.T) {
 		}
 	}
 
-	// Expected: 166 data table + 1 deps:audit + 7 top-level = 174
-	assert.Equal(t, 167, namespaceCommands,
-		"Should have 167 namespace commands (166 from tables + 1 deps:audit)")
+	// Expected: 169 data table + 1 deps:audit + 7 top-level = 177
+	assert.Equal(t, 170, namespaceCommands,
+		"Should have 170 namespace commands (169 from tables + 1 deps:audit)")
 	assert.Equal(t, 7, topLevelCommands,
 		"Should have 7 top-level commands")
-	assert.Len(t, commands, 174,
-		"Should have 174 total commands")
+	assert.Len(t, commands, 177,
+		"Should have 177 total commands")
 }
 
 // TestMissingBindingPanics verifies commands without bindings cause panic
