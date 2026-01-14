@@ -3,7 +3,7 @@
 //
 // # Overview
 //
-// This package registers all 215+ pre-built commands with the global registry,
+// This package registers all 174 pre-built commands with the global registry,
 // making them immediately available without manual registration. Commands are
 // defined declaratively using data tables and registered at startup.
 //
