@@ -149,6 +149,15 @@ func (Update) Install() error {
 	}
 
 	utils.Success("Successfully updated to version %s", info.LatestVersion)
+
+	// Clear the update cache so the user doesn't see stale "update available" notifications
+	// The next run will perform a fresh check and correctly detect the new version
+	cache := NewUpdateNotifyCache()
+	if err := cache.Clear(); err != nil {
+		// Non-fatal: log but don't fail the installation
+		log.Printf("failed to clear update cache: %v", err)
+	}
+
 	utils.Info("Please restart your application to use the new version")
 
 	return nil

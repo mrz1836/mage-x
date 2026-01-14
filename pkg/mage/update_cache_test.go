@@ -491,3 +491,34 @@ func (suite *UpdateCacheTestSuite) TestCacheStoreOverwritesExisting() {
 	suite.Equal("v2.0.0", data.LatestVersion)
 	suite.True(data.UpdateAvailable)
 }
+
+// TestClearAfterInstallScenario tests the expected behavior after update:install completes
+// This simulates the UX flow: user has stale "update available" cache, installs update,
+// cache is cleared, next run doesn't show stale notification
+func (suite *UpdateCacheTestSuite) TestClearAfterInstallScenario() {
+	// Simulate pre-install state: cache shows update available
+	err := suite.cache.Store(&UpdateCacheData{
+		CurrentVersion:  "v1.0.0",
+		LatestVersion:   "v1.1.0",
+		UpdateAvailable: true,
+		ReleaseNotes:    "Bug fixes and improvements",
+	})
+	suite.Require().NoError(err)
+
+	// Verify cache exists and shows update available
+	data, valid := suite.cache.Get()
+	suite.True(valid, "Cache should exist before install")
+	suite.True(data.UpdateAvailable, "Cache should show update available")
+
+	// Simulate post-install: cache is cleared (this is what Install() now does)
+	err = suite.cache.Clear()
+	suite.Require().NoError(err)
+
+	// Verify cache is gone - next run will perform fresh check
+	_, valid = suite.cache.Get()
+	suite.False(valid, "Cache should be cleared after install")
+
+	// Verify file doesn't exist
+	_, err = os.Stat(suite.cache.GetCacheFile())
+	suite.True(os.IsNotExist(err), "Cache file should not exist after clear")
+}
