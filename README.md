@@ -774,17 +774,17 @@ magex build:dev           # Build and install development version (forced 'dev' 
 magex install:stdlib      # Install Go standard library for cross-compilation
 magex uninstall           # Remove installed binary
 
-# Spec-Kit CLI Management (requires speckit.enabled: true in .mage.yaml)
+# Spec-Kit CLI Management
 magex speckit:install     # Install spec-kit prerequisites (uv, uvx, specify-cli)
 magex speckit:check       # Verify spec-kit installation and report version info
 magex speckit:upgrade     # Upgrade spec-kit with automatic constitution backup/restore
 
-# BMAD CLI Management (requires bmad.enabled: true in .mage.yaml)
+# BMAD CLI Management
 magex bmad:install        # Install BMAD prerequisites (npm, npx, bmad-method)
 magex bmad:check          # Verify BMAD installation and report version info
 magex bmad:upgrade        # Upgrade BMAD to the latest alpha version
 
-# Agent OS CLI Management (requires agentos.enabled: true in .mage.yaml)
+# Agent OS CLI Management
 magex agentos:install     # Install Agent OS (base + project)
 magex agentos:check       # Verify Agent OS installation and report version info
 magex agentos:upgrade     # Upgrade Agent OS with user data preservation
