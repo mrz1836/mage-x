@@ -635,7 +635,7 @@ func ShowHelp() {
 	fmt.Printf("  mage release             # Create a release\n")
 
 	fmt.Printf("\n📖 Note: This is the legacy help view. For the complete unified help system\n")
-	fmt.Printf("   with 215+ commands, search, and detailed documentation, use 'magex -h'\n")
+	fmt.Printf("   with 174 commands, search, and detailed documentation, use 'magex -h'\n")
 }
 
 // List displays all available commands with beautiful MAGE-X formatting
@@ -643,7 +643,7 @@ func ShowHelp() {
 // The actual help functionality has been unified in the magex binary
 func List() {
 	utils.Header("🎯 MAGE-X Commands")
-	fmt.Printf("\n📚 For comprehensive command listing with all 215+ commands, use:\n")
+	fmt.Printf("\n📚 For comprehensive command listing with all 174 commands, use:\n")
 	fmt.Printf("  magex -l                 # Simple list of all commands\n")
 	fmt.Printf("  magex -n                 # Commands organized by namespace\n")
 	fmt.Printf("  magex -h                 # Full help with categories and descriptions\n")
