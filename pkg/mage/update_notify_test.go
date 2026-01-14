@@ -696,3 +696,224 @@ func TestUpdateErrorConstants(t *testing.T) {
 	assert.Contains(t, ErrEmptyTagName.Error(), "empty")
 	assert.Contains(t, ErrRateLimited.Error(), "rate limit")
 }
+
+// TestSameVersionNoUpdate tests that same versions don't trigger update notification
+// This is a regression test for the bug where v1.17.3 was showing update to v1.17.3
+func TestSameVersionNoUpdate(t *testing.T) {
+	tests := []struct {
+		name           string
+		currentVersion string
+		latestVersion  string
+	}{
+		{
+			name:           "exact same version with v prefix",
+			currentVersion: "v1.17.3",
+			latestVersion:  "v1.17.3",
+		},
+		{
+			name:           "exact same version without v prefix",
+			currentVersion: "1.17.3",
+			latestVersion:  "1.17.3",
+		},
+		{
+			name:           "same version mixed prefix current no v",
+			currentVersion: "1.17.3",
+			latestVersion:  "v1.17.3",
+		},
+		{
+			name:           "same version mixed prefix current with v",
+			currentVersion: "v1.17.3",
+			latestVersion:  "1.17.3",
+		},
+		{
+			name:           "same version v1.0.0",
+			currentVersion: "v1.0.0",
+			latestVersion:  "v1.0.0",
+		},
+		{
+			name:           "same version major only",
+			currentVersion: "v2.0.0",
+			latestVersion:  "v2.0.0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create temp cache directory
+			tempDir, err := os.MkdirTemp("", "same-version-test-*")
+			require.NoError(t, err)
+			defer func() {
+				_ = os.RemoveAll(tempDir) //nolint:errcheck // Best effort cleanup
+			}()
+
+			mockFetcher := &MockReleaseFetcher{
+				Release: &GitHubRelease{
+					TagName: tt.latestVersion,
+					Body:    "Release notes",
+					HTMLURL: "https://github.com/test/release",
+				},
+			}
+
+			cache := NewUpdateNotifyCacheWithOptions(tempDir, 0) // No caching
+
+			notifier := NewUpdateNotifier(
+				WithCache(cache),
+				WithFetcher(mockFetcher),
+				WithCurrentVersion(tt.currentVersion),
+			)
+
+			result, err := notifier.Check(context.Background())
+			require.NoError(t, err)
+
+			// Same version should NOT show update available
+			assert.False(t, result.UpdateAvailable,
+				"Same version should not show update: current=%s, latest=%s",
+				tt.currentVersion, tt.latestVersion)
+			assert.Equal(t, tt.currentVersion, result.CurrentVersion)
+			assert.Equal(t, tt.latestVersion, result.LatestVersion)
+		})
+	}
+}
+
+// TestIsNewerSameVersionEdgeCases tests isNewer function with same version edge cases
+func TestIsNewerSameVersionEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		latest   string
+		current  string
+		expected bool
+	}{
+		// Same version should never show as newer
+		{"v1.17.3 vs v1.17.3", "v1.17.3", "v1.17.3", false},
+		{"1.17.3 vs 1.17.3", "1.17.3", "1.17.3", false},
+		{"v1.17.3 vs 1.17.3", "v1.17.3", "1.17.3", false},
+		{"1.17.3 vs v1.17.3", "1.17.3", "v1.17.3", false},
+
+		// Current version ahead should not show update
+		{"v1.17.2 vs v1.17.3", "v1.17.2", "v1.17.3", false},
+		{"v1.16.0 vs v1.17.3", "v1.16.0", "v1.17.3", false},
+		{"v1.0.0 vs v2.0.0", "v1.0.0", "v2.0.0", false},
+
+		// Latest version ahead should show update
+		{"v1.17.4 vs v1.17.3", "v1.17.4", "v1.17.3", true},
+		{"v1.18.0 vs v1.17.3", "v1.18.0", "v1.17.3", true},
+		{"v2.0.0 vs v1.17.3", "v2.0.0", "v1.17.3", true},
+
+		// Dev version always shows update available
+		{"v1.0.0 vs dev", "v1.0.0", "dev", true},
+		{"v0.0.1 vs dev", "v0.0.1", "dev", true},
+
+		// Empty version shows update available
+		{"v1.0.0 vs empty", "v1.0.0", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isNewer(tt.latest, tt.current)
+			assert.Equal(t, tt.expected, result,
+				"isNewer(%q, %q) = %v, want %v",
+				tt.latest, tt.current, result, tt.expected)
+		})
+	}
+}
+
+// TestVersionInjectionBehavior documents the expected behavior when version is/isn't injected
+func TestVersionInjectionBehavior(t *testing.T) {
+	t.Run("without registration version is dev", func(t *testing.T) {
+		// Clear any registered version first
+		RegisterBinaryVersion("")
+
+		// In test environment (no registration), getBuildInfoVersion returns "dev"
+		v := getBuildInfoVersion()
+		assert.Equal(t, "dev", v, "Without version registration, version should be 'dev'")
+	})
+
+	t.Run("dev version triggers update for any release", func(t *testing.T) {
+		// Any valid release version should show as an update when current is "dev"
+		testReleases := []string{"v0.0.1", "v1.0.0", "v1.17.3", "v99.99.99"}
+
+		for _, release := range testReleases {
+			result := isNewer(release, "dev")
+			assert.True(t, result,
+				"Release %s should show as update available for 'dev' version", release)
+		}
+	})
+
+	t.Run("properly injected version does not show spurious updates", func(t *testing.T) {
+		// Simulate a properly built release binary
+		// If current version is v1.17.3 and latest is also v1.17.3, no update should show
+		tempDir, err := os.MkdirTemp("", "version-inject-test-*")
+		require.NoError(t, err)
+		defer func() {
+			_ = os.RemoveAll(tempDir) //nolint:errcheck // Best effort cleanup
+		}()
+
+		mockFetcher := &MockReleaseFetcher{
+			Release: &GitHubRelease{
+				TagName: "v1.17.3",
+				Body:    "Release notes",
+				HTMLURL: "https://github.com/test/release",
+			},
+		}
+
+		cache := NewUpdateNotifyCacheWithOptions(tempDir, 0)
+
+		// Simulate a binary that was built with proper ldflags (version = v1.17.3)
+		notifier := NewUpdateNotifier(
+			WithCache(cache),
+			WithFetcher(mockFetcher),
+			WithCurrentVersion("v1.17.3"), // Simulates ldflags injection
+		)
+
+		result, err := notifier.Check(context.Background())
+		require.NoError(t, err)
+
+		assert.False(t, result.UpdateAvailable,
+			"When ldflags properly inject version, same version should NOT show update")
+		assert.Equal(t, "v1.17.3", result.CurrentVersion)
+		assert.Equal(t, "v1.17.3", result.LatestVersion)
+	})
+}
+
+// TestRegisterBinaryVersion tests the version registration mechanism
+func TestRegisterBinaryVersion(t *testing.T) {
+	// Save and restore any existing registered version
+	savedVersion := registeredBinaryVersion
+	defer func() {
+		registeredBinaryVersion = savedVersion
+	}()
+
+	t.Run("registration sets version", func(t *testing.T) {
+		RegisterBinaryVersion("v1.17.3")
+		v := getBuildInfoVersion()
+		assert.Equal(t, "v1.17.3", v, "getBuildInfoVersion should return registered version")
+	})
+
+	t.Run("empty registration falls back to default", func(t *testing.T) {
+		RegisterBinaryVersion("")
+		v := getBuildInfoVersion()
+		assert.Equal(t, "dev", v, "Empty registration should fall back to default 'dev'")
+	})
+
+	t.Run("registration overrides default", func(t *testing.T) {
+		// First verify default
+		RegisterBinaryVersion("")
+		assert.Equal(t, "dev", getBuildInfoVersion())
+
+		// Then register a version
+		RegisterBinaryVersion("v2.0.0")
+		assert.Equal(t, "v2.0.0", getBuildInfoVersion())
+
+		// Clear and verify fallback
+		RegisterBinaryVersion("")
+		assert.Equal(t, "dev", getBuildInfoVersion())
+	})
+
+	t.Run("NewUpdateNotifier uses registered version", func(t *testing.T) {
+		RegisterBinaryVersion("v1.17.3")
+
+		notifier := NewUpdateNotifier()
+		assert.Equal(t, "v1.17.3", notifier.currentVersion,
+			"NewUpdateNotifier should use registered version")
+	})
+}
