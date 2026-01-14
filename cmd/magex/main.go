@@ -206,6 +206,10 @@ func run(ctx context.Context, args []string) int {
 		}
 	}
 
+	// Register the binary's version with the mage package for update checking
+	// This ensures the update checker uses the version embedded via ldflags in main
+	mage.RegisterBinaryVersion(version)
+
 	// Start background update check (non-blocking)
 	// This runs in a goroutine and checks for new versions of MAGE-X
 	updateResultChan := mage.StartBackgroundUpdateCheck(ctx)

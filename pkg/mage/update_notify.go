@@ -101,10 +101,28 @@ func WithCurrentVersion(version string) UpdateNotifierOption {
 	}
 }
 
+// registeredBinaryVersion holds the version registered by main at startup
+// This allows the binary's actual embedded version to be used for update checks
+// without requiring ldflags to be set for the pkg/mage package
+var registeredBinaryVersion string //nolint:gochecknoglobals // Required for version registration from main
+
+// RegisterBinaryVersion registers the binary's version with the mage package.
+// This should be called by main at startup to ensure the update checker
+// uses the correct version that was embedded via ldflags in main.
+// If not called, getBuildInfoVersion() falls back to pkg/mage's default "dev".
+func RegisterBinaryVersion(version string) {
+	registeredBinaryVersion = version
+}
+
 // getBuildInfoVersion returns the version embedded in the binary
 // This is used for update checking to ensure "dev" builds always see updates
-// It does NOT use git tag detection, so users building from source get "dev"
+// It prioritizes the registered version from main over the pkg default
 func getBuildInfoVersion() string {
+	// Use registered version from main if available
+	if registeredBinaryVersion != "" {
+		return registeredBinaryVersion
+	}
+	// Fall back to pkg/mage's BuildInfo (will be "dev" in dev builds)
 	return getBuildInfo().Version
 }
 
