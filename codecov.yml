@@ -17,7 +17,7 @@ coverage:
 # ----------------------
 flag_management:
   default_rules:
-    carryforward: false # This keeps coverage from previous uploads
+    carryforward: true # This keeps coverage from previous uploads
     statuses:
       - type: project
         target: auto
