@@ -796,29 +796,59 @@ func getCurrentGitTag() string {
 	}
 
 	utils.Info("No tags found on HEAD commit")
-	utils.Info("Searching for latest reachable tag...")
 
-	// Get the latest reachable tag with distance info
-	latestTag, distance := getLatestReachableTag()
-	if latestTag == "" {
+	// IMPORTANT: First find the highest version tag in the ENTIRE repository
+	// This handles the case where tags exist on squash-merged branches that
+	// are not ancestors of the current commit (git describe can't find these)
+	highestTag := getHighestVersionTag()
+
+	// Also get the latest reachable tag for comparison
+	reachableTag, distance := getLatestReachableTag()
+
+	// If no tags exist anywhere, return empty
+	if highestTag == "" && reachableTag == "" {
 		utils.Info("No previous tags found in repository")
 		return ""
 	}
 
-	if distance > 0 {
-		utils.Warn("Current version tag is not on HEAD - there are %d commits since %s", distance, latestTag)
+	// If we have a highest tag but git describe couldn't find a reachable tag,
+	// or if the highest tag is different from the reachable tag, warn the user
+	if highestTag != "" {
+		if reachableTag == "" {
+			utils.Warn("Found tag %s in repository, but it's not reachable from current commit", highestTag)
+			utils.Info("This can happen after squash-merges where the tag was on a different branch")
+		} else if highestTag != reachableTag {
+			// Compare versions to see which is higher
+			if isVersionHigher(highestTag, reachableTag) {
+				utils.Warn("Highest tag in repository (%s) differs from reachable tag (%s)", highestTag, reachableTag)
+				utils.Info("Using highest tag to prevent version regression")
+			}
+		}
+
+		// Show recent version tags for context
+		showRecentVersionTags()
+
+		// Return the highest tag to prevent version regression
+		if highestTag != "" && (reachableTag == "" || isVersionHigher(highestTag, reachableTag)) {
+			return highestTag
+		}
+	}
+
+	// If reachable tag exists, provide distance info
+	if reachableTag != "" && distance > 0 {
+		utils.Warn("Current version tag is not on HEAD - there are %d commits since %s", distance, reachableTag)
 		// Show recent commits for context
 		if recentCommits, err := GetRunner().RunCmdOutput("git", "log", "--oneline", "-5", "--no-decorate"); err == nil {
 			utils.Info("Recent commits:\n%s", recentCommits)
 		}
-	} else {
-		utils.Info("Found tag: %s (on current commit)", latestTag)
+	} else if reachableTag != "" {
+		utils.Info("Found tag: %s (on current commit)", reachableTag)
 	}
 
 	// Show recent version tags for context
 	showRecentVersionTags()
 
-	return latestTag
+	return reachableTag
 }
 
 // getTagsOnHead returns all version tags pointing to HEAD, sorted by version (highest first)
@@ -841,39 +871,66 @@ func getTagsOnHead() []string {
 
 // getLatestReachableTag returns the latest tag reachable from HEAD and the distance (commits) from it
 func getLatestReachableTag() (string, int) {
-	// Use git describe to get tag and distance
-	describeOutput, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--long", "--abbrev=0")
+	// Use git describe without conflicting flags
+	// Note: --long and --abbrev=0 are mutually exclusive in git
+	simpleTag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
 	if err != nil {
-		// Fallback to simple describe
-		simpleTag, simpleErr := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")
-		if simpleErr != nil {
-			return "", 0
-		}
-		// Try to get distance separately
-		tag := strings.TrimSpace(simpleTag)
-		distance := 0
-		if distanceCmd, err := GetRunner().RunCmdOutput("git", "rev-list", "--count", tag+"..HEAD"); err == nil {
-			if d, parseErr := strconv.Atoi(strings.TrimSpace(distanceCmd)); parseErr == nil {
-				distance = d
-			}
-		}
-		return tag, distance
+		return "", 0
 	}
 
-	// Parse the describe output (format: tag-distance-gcommit)
-	parts := strings.Split(strings.TrimSpace(describeOutput), "-")
-	if len(parts) >= 2 {
-		tag := parts[0]
-		distance := 0
-		if len(parts) >= 2 {
-			if d, err := strconv.Atoi(parts[len(parts)-2]); err == nil {
-				distance = d
-			}
-		}
-		return tag, distance
+	tag := strings.TrimSpace(simpleTag)
+	if tag == "" {
+		return "", 0
 	}
 
-	return strings.TrimSpace(describeOutput), 0
+	// Get distance separately
+	distance := 0
+	if distanceCmd, err := GetRunner().RunCmdOutput("git", "rev-list", "--count", tag+"..HEAD"); err == nil {
+		if d, parseErr := strconv.Atoi(strings.TrimSpace(distanceCmd)); parseErr == nil {
+			distance = d
+		}
+	}
+	return tag, distance
+}
+
+// getHighestVersionTag returns the highest semantic version tag in the entire repository.
+// Unlike getLatestReachableTag, this finds ALL tags regardless of commit ancestry.
+// This is important for detecting tags on squash-merged branches.
+func getHighestVersionTag() string {
+	output, err := GetRunner().RunCmdOutput("git", "tag", "--sort=-version:refname")
+	if err != nil || strings.TrimSpace(output) == "" {
+		return ""
+	}
+
+	tagList := strings.Split(strings.TrimSpace(output), "\n")
+	for _, tag := range tagList {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
+		if _, err := ParseSemanticVersion(tag); err == nil {
+			return tag
+		}
+	}
+	return ""
+}
+
+// isVersionHigher returns true if version a is higher than version b.
+// Handles the case where either or both versions may not parse correctly.
+func isVersionHigher(a, b string) bool {
+	aV, aErr := ParseSemanticVersion(a)
+	bV, bErr := ParseSemanticVersion(b)
+
+	// If a can't be parsed, it's not higher
+	if aErr != nil {
+		return false
+	}
+	// If b can't be parsed but a can, a is considered higher
+	if bErr != nil {
+		return true
+	}
+
+	return aV.Compare(bV) > 0
 }
 
 // showRecentVersionTags displays recent version tags for context
@@ -1212,7 +1269,7 @@ func handleNoBranchSpecified(bumpType string) (func(), error) {
 		utils.Warn("Could not determine current branch")
 	} else {
 		utils.Warn("⚠️  No branch parameter specified - performing version bump on current branch: '%s'", current)
-		utils.Warn("💡 For GitButler users, consider using: magex version:bump branch=master bump=%s", bumpType)
+		utils.Warn("💡 If not on a release branch, consider using: magex version:bump branch=master bump=%s", bumpType)
 		utils.Info("To proceed with version bump on current branch, this is normal behavior")
 	}
 	return func() {}, nil // no-op cleanup function
