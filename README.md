@@ -680,7 +680,7 @@ magex version:bump bump=minor               # Bump minor version
 magex version:bump bump=major major-confirm # Bump major version with confirmation
 magex version:bump bump=minor push          # Bump minor and push to remote
 
-# Branch Parameter Examples (recommended for GitButler users)
+# Branch Parameter Examples (recommended for virtual branch workflows)
 magex version:bump bump=patch branch=master push    # Switch to master, bump patch, and push
 magex version:bump bump=minor branch=main           # Switch to main branch before bumping
 magex version:bump bump=major branch=master major-confirm push  # Major bump on master with push
