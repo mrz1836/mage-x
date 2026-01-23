@@ -30,7 +30,8 @@ func TestVersionBumpWithRemoteTagsNotFetched(t *testing.T) {
 		// Mock git commands for version bump
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.4.0-5-gabcdef")                                                  // After fetch, should find v1.4.0
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.4.0\nv1.3.0")                                                          // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.4.0")                                                                   // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.4.0..HEAD", "5")                                                                     // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -80,7 +81,8 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 		// Mock git commands for version bump
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.0-22-gabcdef")                                                 // Current version v1.3.0
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.0\nv1.2.0")                                                          // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.0")                                                                   // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.0..HEAD", "22")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -116,7 +118,8 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 		// Mock git commands for version bump
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.0-22-gabcdef")                                                 // Current version v1.3.0
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.0\nv1.2.0")                                                          // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.0")                                                                   // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.0..HEAD", "22")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -208,7 +211,8 @@ func TestVersionBumpAutoIncrement(t *testing.T) {
 		// Mock git commands for version bump
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.0-22-gabcdef")                                                 // Current version v1.3.0
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.0\nv1.2.0")                                                          // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.0")                                                                   // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.0..HEAD", "22")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -256,7 +260,8 @@ func TestVersionBumpAutoIncrement(t *testing.T) {
 		// Mock git commands for version bump
 		mockRunner.SetOutput("git status --porcelain", "")
 		mockRunner.SetOutput("git tag --points-at HEAD", "")
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.0-22-gabcdef")
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.0\nv1.2.0")
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.0")
 		mockRunner.SetOutput("git rev-list --count v1.3.0..HEAD", "22")
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)")
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")
@@ -290,7 +295,8 @@ func TestVersionBumpAutoIncrement(t *testing.T) {
 
 		mockRunner.SetOutput("git status --porcelain", "")
 		mockRunner.SetOutput("git tag --points-at HEAD", "")
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.0-22-gabcdef")
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.0\nv1.2.0")
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.0")
 		mockRunner.SetOutput("git rev-list --count v1.3.0..HEAD", "22")
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)")
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")
@@ -337,10 +343,11 @@ func TestVersionBumpCompleteScenario(t *testing.T) {
 
 		// Mock git commands
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                                                                                                                                                                                       // Clean working directory
-		mockRunner.SetOutput("git branch --show-current", "gitbutler/workspace")                                                                                                                                                                                                                                 // Current branch (GitButler workspace)
-		mockRunner.SetOutput("git branch -a", "* gitbutler/workspace\n  master\n  remotes/origin/master")                                                                                                                                                                                                        // Branch list
+		mockRunner.SetOutput("git branch --show-current", "feature/workspace")                                                                                                                                                                                                                                   // Current branch (feature workspace)
+		mockRunner.SetOutput("git branch -a", "* feature/workspace\n  master\n  remotes/origin/master")                                                                                                                                                                                                          // Branch list
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                                                                                                                                                                                                     // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.0-22-g78baa5e")                                                                                                                                                                                                                      // v1.3.0 with 22 commits ahead
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.0\nv1.2.0")                                                                                                                                                                                                                                // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.0")                                                                                                                                                                                                                                         // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.0..HEAD", "22")                                                                                                                                                                                                                                          // Distance from tag
 		mockRunner.SetOutput("git log --oneline -5 --no-decorate", "78baa5e docs(examples): add P2PKH validation example (#38)\n4918f74 fix(tests): reuse genesis validation formats (#37)\ne7c2455 sync: update 9 files from source repository (#36)\n5b8a1ec fix: minor fixes\nb284f69 feat: upgraded readme") // Recent commits
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:bsv-blockchain/go-chaincfg.git (fetch)\norigin\tgit@github.com:bsv-blockchain/go-chaincfg.git (push)")                                                                                                                                     // Mock git remote

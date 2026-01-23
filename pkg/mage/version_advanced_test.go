@@ -105,10 +105,10 @@ func TestGetCurrentGitTagWithMocks(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		// No tags on HEAD, should fall back to describe
+		// No tags on HEAD, should fall back to highest tag in repo
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v0.0.5", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v0.0.5\nv0.0.4", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v0.0.5", nil)          // Reachable tag
 
 		tag := getCurrentGitTag()
 		assert.Equal(t, "v0.0.5", tag)
@@ -120,8 +120,8 @@ func TestGetCurrentGitTagWithMocks(t *testing.T) {
 
 		// No tags anywhere
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)        // Fallback also fails
+		mock.SetOutput("git tag --sort=-version:refname", "", errNoTags) // No tags in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)  // Fallback also fails
 
 		tag := getCurrentGitTag()
 		assert.Empty(t, tag)
@@ -131,13 +131,54 @@ func TestGetCurrentGitTagWithMocks(t *testing.T) {
 		mock := NewVersionMockRunner()
 		require.NoError(t, SetRunner(mock))
 
-		// Empty tag list
+		// Empty tag list on HEAD
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", nil)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v0.0.3", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v0.0.3\nv0.0.2", nil) // Tags exist in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v0.0.3", nil)          // Reachable tag
 
 		tag := getCurrentGitTag()
 		assert.Equal(t, "v0.0.3", tag)
+	})
+
+	t.Run("TagOnUnreachableBranch", func(t *testing.T) {
+		mock := NewVersionMockRunner()
+		require.NoError(t, SetRunner(mock))
+
+		// v0.1.0 exists in repo but git describe can't find it (squash-merged scenario)
+		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
+		mock.SetOutput("git tag --sort=-version:refname", "v0.1.0\nv0.0.5", nil) // v0.1.0 is highest
+		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)          // No reachable tag
+
+		tag := getCurrentGitTag()
+		assert.Equal(t, "v0.1.0", tag, "Should find tag even when not reachable from current commit")
+	})
+
+	t.Run("HighestTagNotOnCurrentBranch", func(t *testing.T) {
+		mock := NewVersionMockRunner()
+		require.NoError(t, SetRunner(mock))
+
+		// v0.1.0 exists but only v0.0.5 is reachable
+		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
+		mock.SetOutput("git tag --sort=-version:refname", "v0.1.0\nv0.0.5\nv0.0.4", nil) // v0.1.0 is highest
+		mock.SetOutput("git describe --tags --abbrev=0", "v0.0.5", nil)                  // Only v0.0.5 is reachable
+		mock.SetOutput("git rev-list --count v0.0.5..HEAD", "3", nil)                    // 3 commits since reachable tag
+
+		tag := getCurrentGitTag()
+		assert.Equal(t, "v0.1.0", tag, "Should return highest tag to prevent version regression")
+	})
+
+	t.Run("PrereleaseTagsHandled", func(t *testing.T) {
+		mock := NewVersionMockRunner()
+		require.NoError(t, SetRunner(mock))
+
+		// v1.0.0 is stable, v1.0.1-beta is prerelease
+		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.1-beta\nv1.0.0\nv0.9.0", nil)
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.0", nil)
+
+		tag := getCurrentGitTag()
+		// Git's --sort=-version:refname puts v1.0.1-beta first, but since it's a valid semver tag, we should use it
+		assert.Equal(t, "v1.0.1-beta", tag, "Should handle pre-release tags correctly")
 	})
 }
 
@@ -217,10 +258,10 @@ func TestBumpMethodWithMocks(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		// No existing tags on commit
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
-		// Current tag
+		// Current tag detection
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.2.3", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.2.3\nv1.2.2", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.2.3", nil)          // Reachable tag
 		// Tag creation
 		mock.SetOutput("git tag -a v1.2.4 -m GitHubRelease v1.2.4", "", nil)
 
@@ -247,6 +288,30 @@ func TestBumpMethodWithMocks(t *testing.T) {
 		err := version.Bump()
 		require.Error(t, err)
 		assert.ErrorIs(t, err, errMultipleTagsOnCommit)
+	})
+
+	t.Run("PreventVersionRegressionAfterSquashMerge", func(t *testing.T) {
+		mock := NewVersionMockRunner()
+		require.NoError(t, SetRunner(mock))
+
+		// Clean working directory
+		mock.SetOutput("git status --porcelain", "", nil)
+		// No existing tags on commit
+		mock.SetOutput("git tag --points-at HEAD", "", nil)
+		// v0.1.0 exists in repo but unreachable (squash merge scenario)
+		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
+		mock.SetOutput("git tag --sort=-version:refname", "v0.1.0\nv0.0.5", nil) // v0.1.0 is highest
+		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)          // No reachable tag
+		// Should bump from v0.1.0 to v0.1.1
+		mock.SetOutput("git tag -a v0.1.1 -m GitHubRelease v0.1.1", "", nil)
+
+		version := Version{}
+		err := version.Bump() // Default is patch bump
+		require.NoError(t, err)
+
+		// Verify v0.1.1 was created (not v0.0.1)
+		assert.Contains(t, mock.commands, "git tag -a v0.1.1 -m GitHubRelease v0.1.1",
+			"Should bump from v0.1.0 to v0.1.1, NOT from v0.0.0 to v0.0.1")
 	})
 }
 
@@ -325,8 +390,8 @@ func TestVersionCheckWithMocks(t *testing.T) {
 
 		// Setup responses
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.0", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.0", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.0", nil)  // Reachable tag
 
 		// Note: We can't easily mock HTTP calls without more infrastructure
 		// but this tests part of the flow
@@ -351,8 +416,8 @@ func TestVersionUpdateWithMocks(t *testing.T) {
 
 		// Setup git responses
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.0", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.0", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.0", nil)  // Reachable tag
 
 		version := Version{}
 		err := version.Update()
@@ -377,8 +442,8 @@ func TestBumpWithPushEnabled(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.0", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.0", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.0", nil)  // Reachable tag
 		mock.SetOutput("git tag -a v1.0.1 -m GitHubRelease v1.0.1", "", nil)
 		// Mock git remote validation
 		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
@@ -476,8 +541,8 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 
 		// Expect patch bump: v1.0.6 -> v1.0.7
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
@@ -513,8 +578,8 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 
 		// With bump=major, expect v2.0.0
 		mock.SetOutput("git tag -a v2.0.0 -m GitHubRelease v2.0.0", "", nil)
@@ -586,8 +651,8 @@ func TestVersionBumpIntegrationScenarios(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "M test-file.go", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 
 		version := Version{}
 		err := version.Bump("bump=major", "push", "dry-run")
@@ -620,8 +685,8 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 		// Mock git remote validation
 		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
@@ -656,8 +721,8 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 		mock.SetOutput("git tag -a v1.1.0 -m GitHubRelease v1.1.0", "", nil)
 		// Mock git remote validation
 		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
@@ -680,8 +745,8 @@ func TestVersionBumpWorkflowValidation(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 		mock.SetOutput("git tag -a v2.0.0 -m GitHubRelease v2.0.0", "", nil)
 		// Mock git remote validation
 		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
@@ -716,8 +781,8 @@ func TestVersionBumpErrorRecovery(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", errGitError)
 
 		version := Version{}
@@ -738,8 +803,8 @@ func TestVersionBumpErrorRecovery(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 		// Mock git remote validation to pass, then fail on push
 		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
@@ -789,8 +854,8 @@ func TestVersionBumpComplexTagScenarios(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)        // Fallback also fails
+		mock.SetOutput("git tag --sort=-version:refname", "", errNoTags) // No tags in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)  // Fallback also fails
 		mock.SetOutput("git tag -a v0.0.1 -m GitHubRelease v0.0.1", "", nil)
 
 		version := Version{}
@@ -827,8 +892,8 @@ func TestVersionBumpComplexTagScenarios(t *testing.T) {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 
 		version := Version{}

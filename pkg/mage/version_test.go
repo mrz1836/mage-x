@@ -723,10 +723,15 @@ func (ts *VersionTestSuite) TestErrorHandling() {
 		ts.Require().Error(err)
 		ts.Require().ErrorIs(err, errInvalidVersionFormat)
 
-		// Test version with non-numeric parts
-		_, err = bumpVersion("v1.2.3-alpha", "patch")
-		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, errInvalidPatchVersion)
+		// Test version with prerelease suffix - now supported
+		result, err := bumpVersion("v1.2.3-alpha", "patch")
+		ts.Require().NoError(err, "Pre-release versions should be parsed successfully")
+		ts.Require().Equal("v1.2.4", result, "Bumping v1.2.3-alpha patch should give v1.2.4")
+
+		// Test version with rc suffix
+		result, err = bumpVersion("v1.0.0-rc.1", "minor")
+		ts.Require().NoError(err, "RC versions should be parsed successfully")
+		ts.Require().Equal("v1.1.0", result, "Bumping v1.0.0-rc.1 minor should give v1.1.0")
 	})
 
 	ts.Run("HTTPClientTimeout", func() {

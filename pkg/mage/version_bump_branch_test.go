@@ -35,10 +35,11 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 
 		// Mock git commands for version bump with branch switching
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
-		mockRunner.SetOutput("git branch --show-current", "gitbutler/workspace")                                                           // Current branch
-		mockRunner.SetOutput("git branch -a", "  master\n* gitbutler/workspace\n  remotes/origin/master\n  remotes/origin/develop")        // Available branches
+		mockRunner.SetOutput("git branch --show-current", "feature/workspace")                                                             // Current branch
+		mockRunner.SetOutput("git branch -a", "  master\n* feature/workspace\n  remotes/origin/master\n  remotes/origin/develop")          // Available branches
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                                 // Previous tag with distance
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                                        // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                                  // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -86,7 +87,7 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 			"Expected git push command not found. Commands: %v", commands)
 
 		// Check that we switched back to original branch (should be at the end)
-		expectedSwitchBackCmd := []string{"git", "checkout", "gitbutler/workspace"}
+		expectedSwitchBackCmd := []string{"git", "checkout", "feature/workspace"}
 		require.True(t, mockRunner.HasCommand(expectedSwitchBackCmd),
 			"Expected switch back command not found. Commands: %v", commands)
 	})
@@ -99,7 +100,8 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
 		mockRunner.SetOutput("git branch --show-current", "master")                                                                        // Already on master
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                                 // Previous tag with distance
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                                        // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                                  // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -133,9 +135,10 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 
 		// Mock git commands for normal version bump
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
-		mockRunner.SetOutput("git branch --show-current", "gitbutler/workspace")                                                           // Current branch for warning
+		mockRunner.SetOutput("git branch --show-current", "feature/workspace")                                                             // Current branch for warning
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                                 // Previous tag with distance
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                                        // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                                  // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -217,12 +220,13 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		require.NoError(t, SetRunner(mockRunner))
 
 		// Mock git commands for dry-run
-		mockRunner.SetOutput("git status --porcelain", "")                                                                          // Clean working directory
-		mockRunner.SetOutput("git branch --show-current", "gitbutler/workspace")                                                    // Current branch
-		mockRunner.SetOutput("git branch -a", "  master\n* gitbutler/workspace\n  remotes/origin/master\n  remotes/origin/develop") // Available branches
-		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                        // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                          // Previous tag with distance
-		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                             // Distance from tag
+		mockRunner.SetOutput("git status --porcelain", "")                                                                        // Clean working directory
+		mockRunner.SetOutput("git branch --show-current", "feature/workspace")                                                    // Current branch
+		mockRunner.SetOutput("git branch -a", "  master\n* feature/workspace\n  remotes/origin/master\n  remotes/origin/develop") // Available branches
+		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                      // No tags on HEAD
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                               // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                         // Reachable tag
+		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                           // Distance from tag
 
 		version := Version{}
 
@@ -239,7 +243,7 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 			{"git", "pull", "--rebase", "origin"},
 			{"git", "tag", "-a", "v1.3.28", "-m", "GitHubRelease v1.3.28"},
 			{"git", "push", "origin", "v1.3.28"},
-			{"git", "checkout", "gitbutler/workspace"},
+			{"git", "checkout", "feature/workspace"},
 		}
 
 		for _, forbiddenCmd := range forbiddenCommands {
@@ -262,7 +266,8 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		mockRunner.SetOutput("git branch --show-current", "master")                                                                        // Current branch
 		mockRunner.SetOutput("git branch -a", "  master\n* main\n  remotes/origin/master\n  remotes/origin/develop")                       // develop only exists remotely
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                                 // Previous tag with distance
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                                        // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                                  // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -295,10 +300,11 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 
 		// Mock successful branch operations
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                    // Clean working directory
-		mockRunner.SetOutput("git branch --show-current", "gitbutler/workspace")                                                              // Current branch
-		mockRunner.SetOutput("git branch -a", "  master\\n* gitbutler/workspace\\n  remotes/origin/master\\n  remotes/origin/develop")        // Available branches
+		mockRunner.SetOutput("git branch --show-current", "feature/workspace")                                                                // Current branch
+		mockRunner.SetOutput("git branch -a", "  master\\n* feature/workspace\\n  remotes/origin/master\\n  remotes/origin/develop")          // Available branches
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                                  // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                                    // Previous tag with distance
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                                           // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                                     // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                       // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\\tgit@github.com:test/repo.git (fetch)\\norigin\\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\\trefs/heads/main")                                             // Mock remote accessibility
@@ -326,7 +332,7 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 			"Expected tag command not found. Commands: %v", commands)
 
 		// Should have switched back to original branch (defer should execute)
-		expectedSwitchBackCmd := []string{"git", "checkout", "gitbutler/workspace"}
+		expectedSwitchBackCmd := []string{"git", "checkout", "feature/workspace"}
 		require.True(t, mockRunner.HasCommand(expectedSwitchBackCmd),
 			"Expected switch back command not found. Commands: %v", commands)
 	})
@@ -337,10 +343,11 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 
 		// Mock successful operations until push
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                    // Clean working directory
-		mockRunner.SetOutput("git branch --show-current", "gitbutler/workspace")                                                              // Current branch
-		mockRunner.SetOutput("git branch -a", "  master\\n* gitbutler/workspace\\n  remotes/origin/master\\n  remotes/origin/develop")        // Available branches
+		mockRunner.SetOutput("git branch --show-current", "feature/workspace")                                                                // Current branch
+		mockRunner.SetOutput("git branch -a", "  master\\n* feature/workspace\\n  remotes/origin/master\\n  remotes/origin/develop")          // Available branches
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                                  // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                                    // Previous tag with distance
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                                           // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                                     // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                       // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\\tgit@github.com:test/repo.git (fetch)\\norigin\\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\\trefs/heads/main")                                             // Mock remote accessibility
@@ -373,7 +380,7 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 			"Expected push command not found. Commands: %v", commands)
 
 		// Should have switched back to original branch (defer should execute)
-		expectedSwitchBackCmd := []string{"git", "checkout", "gitbutler/workspace"}
+		expectedSwitchBackCmd := []string{"git", "checkout", "feature/workspace"}
 		require.True(t, mockRunner.HasCommand(expectedSwitchBackCmd),
 			"Expected switch back command not found. Commands: %v", commands)
 	})
@@ -383,9 +390,9 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		require.NoError(t, SetRunner(mockRunner))
 
 		// Mock successful branch operations until pull
-		mockRunner.SetOutput("git status --porcelain", "")                                                                             // Clean working directory
-		mockRunner.SetOutput("git branch --show-current", "gitbutler/workspace")                                                       // Current branch
-		mockRunner.SetOutput("git branch -a", "  master\\n* gitbutler/workspace\\n  remotes/origin/master\\n  remotes/origin/develop") // Available branches
+		mockRunner.SetOutput("git status --porcelain", "")                                                                           // Clean working directory
+		mockRunner.SetOutput("git branch --show-current", "feature/workspace")                                                       // Current branch
+		mockRunner.SetOutput("git branch -a", "  master\\n* feature/workspace\\n  remotes/origin/master\\n  remotes/origin/develop") // Available branches
 
 		// Mock network failure during pull
 		mockRunner.SetError("git pull --rebase origin", errNetworkUnreachable)
@@ -410,7 +417,7 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 			"Expected pull command not found. Commands: %v", commands)
 
 		// Should have switched back to original branch (defer should execute even on pull failure)
-		expectedSwitchBackCmd := []string{"git", "checkout", "gitbutler/workspace"}
+		expectedSwitchBackCmd := []string{"git", "checkout", "feature/workspace"}
 		require.True(t, mockRunner.HasCommand(expectedSwitchBackCmd),
 			"Expected switch back command not found. Commands: %v", commands)
 

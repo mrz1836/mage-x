@@ -51,7 +51,8 @@ func TestVersionBumpViaCLI(t *testing.T) {
 		// Mock git commands for version bump
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                                 // Previous tag with distance
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                                        // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                                  // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -98,7 +99,8 @@ func TestVersionBumpViaCLI(t *testing.T) {
 		// Mock git commands for version bump
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                                 // Previous tag with distance
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                                        // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                                  // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -145,7 +147,8 @@ func TestVersionBumpViaCLI(t *testing.T) {
 		// Mock git commands for version bump
 		mockRunner.SetOutput("git status --porcelain", "")                                                                                 // Clean working directory
 		mockRunner.SetOutput("git tag --points-at HEAD", "")                                                                               // No tags on HEAD
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")                                                 // Previous tag with distance
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")                                                        // Highest tag in repo
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")                                                                  // Reachable tag
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
@@ -200,7 +203,8 @@ func TestDebugArgumentPassing(t *testing.T) {
 		// Mock git commands
 		mockRunner.SetOutput("git status --porcelain", "")
 		mockRunner.SetOutput("git tag --points-at HEAD", "")
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)")
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")
@@ -249,7 +253,8 @@ func TestDebugArgumentPassing(t *testing.T) {
 		// Mock git commands
 		mockRunner.SetOutput("git status --porcelain", "")
 		mockRunner.SetOutput("git tag --points-at HEAD", "")
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)")
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")
@@ -325,7 +330,8 @@ func TestMAGE_ARGSEnvironmentVariable(t *testing.T) {
 	// Mock git commands
 	mockRunner.SetOutput("git status --porcelain", "")
 	mockRunner.SetOutput("git tag --points-at HEAD", "")
-	mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")
+	mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")
+	mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")
 	mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")
 	mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)")
 	mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")
@@ -363,7 +369,8 @@ func TestMAGE_ARGSEnvironmentVariable(t *testing.T) {
 		}
 		mockRunner.SetOutput("git status --porcelain", "")
 		mockRunner.SetOutput("git tag --points-at HEAD", "")
-		mockRunner.SetOutput("git describe --tags --long --abbrev=0", "v1.3.27-3-gabcdef")
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.27\nv1.3.26")
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.27")
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)")
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")

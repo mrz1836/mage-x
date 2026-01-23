@@ -97,8 +97,8 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 		// Mock git remote validation
 		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
@@ -125,8 +125,8 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 		mock.SetOutput("git tag -a v1.0.7 -m GitHubRelease v1.0.7", "", nil)
 		// Mock git remote validation
 		mock.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)", nil)
@@ -148,8 +148,8 @@ func (vpts *VersionProtectionTestSuite) TestCommandSimulation() {
 		mock.SetOutput("git status --porcelain", "", nil)
 		mock.SetOutput("git tag --points-at HEAD", "", nil)
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 
 		version := Version{}
 		err := version.Bump("bump=major", "push") // Deliberately NOT passing "confirm" to test protection
@@ -284,8 +284,8 @@ func (vpts *VersionProtectionTestSuite) TestGitTagScenarios() {
 		// No tags on HEAD
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
 		// But tags exist in history
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)        // Fallback succeeds
+		mock.SetOutput("git tag --sort=-version:refname", "v1.0.6", nil) // Highest tag in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "v1.0.6", nil)  // Reachable tag
 
 		tag := getCurrentGitTag()
 		vpts.Equal("v1.0.6", tag, "Should fall back to git describe when no tags on HEAD")
@@ -297,8 +297,8 @@ func (vpts *VersionProtectionTestSuite) TestGitTagScenarios() {
 
 		// No tags anywhere
 		mock.SetOutput("git tag --sort=-version:refname --points-at HEAD", "", errNoTags)
-		mock.SetOutput("git describe --tags --long --abbrev=0", "", errNoTags) // First attempt with --long fails
-		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)        // Fallback also fails
+		mock.SetOutput("git tag --sort=-version:refname", "", errNoTags) // No tags in repo
+		mock.SetOutput("git describe --tags --abbrev=0", "", errNoTags)  // Fallback also fails
 
 		tag := getCurrentGitTag()
 		vpts.Empty(tag, "Should return empty string when no tags exist")
@@ -397,21 +397,40 @@ func (vpts *VersionProtectionTestSuite) TestVersionStringParsing() {
 
 	vpts.Run("RejectInvalidVersionFormats", func() {
 		invalidVersions := []string{
-			"1.0",          // Missing patch
-			"1.0.0.0",      // Too many parts
-			"v1.0.x",       // Non-numeric patch
-			"v1.x.0",       // Non-numeric minor
-			"vx.0.0",       // Non-numeric major
-			"1.0.0-alpha",  // Pre-release suffix
-			"v1.0.0+build", // Build metadata
-			"",             // Empty
-			"invalid",      // Not a version
+			"1.0",     // Missing patch
+			"1.0.0.0", // Too many parts
+			"v1.0.x",  // Non-numeric patch
+			"v1.x.0",  // Non-numeric minor
+			"vx.0.0",  // Non-numeric major
+			"",        // Empty
+			"invalid", // Not a version
 		}
 
 		for _, version := range invalidVersions {
 			vpts.Run(fmt.Sprintf("Reject_%s", version), func() {
 				_, err := bumpVersion(version, "patch")
 				vpts.Require().Error(err, "Should reject invalid version: %s", version)
+			})
+		}
+	})
+
+	vpts.Run("AcceptPrereleaseVersions", func() {
+		// Pre-release and build metadata are now supported
+		validPrereleaseVersions := []struct {
+			input    string
+			expected string
+		}{
+			{"1.0.0-alpha", "v1.0.1"},
+			{"v1.0.0+build", "v1.0.1"},
+			{"v1.0.0-beta.1", "v1.0.1"},
+			{"v1.0.0-rc.2", "v1.0.1"},
+		}
+
+		for _, tc := range validPrereleaseVersions {
+			vpts.Run(fmt.Sprintf("Accept_%s", tc.input), func() {
+				result, err := bumpVersion(tc.input, "patch")
+				vpts.Require().NoError(err, "Should accept pre-release version: %s", tc.input)
+				vpts.Equal(tc.expected, result, "Bumping %s should give %s", tc.input, tc.expected)
 			})
 		}
 	})
