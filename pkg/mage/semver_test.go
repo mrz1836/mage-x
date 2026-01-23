@@ -7,12 +7,13 @@ import (
 
 func TestParseSemanticVersion(t *testing.T) {
 	tests := []struct {
-		name      string
-		input     string
-		wantMajor int
-		wantMinor int
-		wantPatch int
-		wantErr   error
+		name          string
+		input         string
+		wantMajor     int
+		wantMinor     int
+		wantPatch     int
+		wantPrerelase string
+		wantErr       error
 	}{
 		// Valid versions with v prefix
 		{name: "basic version", input: "v1.2.3", wantMajor: 1, wantMinor: 2, wantPatch: 3},
@@ -24,6 +25,14 @@ func TestParseSemanticVersion(t *testing.T) {
 		{name: "no prefix", input: "1.2.3", wantMajor: 1, wantMinor: 2, wantPatch: 3},
 		{name: "no prefix zeros", input: "0.0.1", wantMajor: 0, wantMinor: 0, wantPatch: 1},
 
+		// Pre-release versions
+		{name: "alpha suffix", input: "v1.2.3-alpha", wantMajor: 1, wantMinor: 2, wantPatch: 3, wantPrerelase: "alpha"},
+		{name: "beta suffix", input: "v1.2.3-beta", wantMajor: 1, wantMinor: 2, wantPatch: 3, wantPrerelase: "beta"},
+		{name: "rc suffix", input: "v1.2.3-rc.1", wantMajor: 1, wantMinor: 2, wantPatch: 3, wantPrerelase: "rc.1"},
+		{name: "rc2 suffix", input: "v1.0.0-rc.2", wantMajor: 1, wantMinor: 0, wantPatch: 0, wantPrerelase: "rc.2"},
+		{name: "complex prerelease", input: "v2.0.0-beta.1.build.123", wantMajor: 2, wantMinor: 0, wantPatch: 0, wantPrerelase: "beta.1.build.123"},
+		{name: "no prefix with prerelease", input: "1.2.3-beta", wantMajor: 1, wantMinor: 2, wantPatch: 3, wantPrerelase: "beta"},
+
 		// Invalid versions
 		{name: "empty string", input: "", wantErr: errInvalidVersionFormat},
 		{name: "only v", input: "v", wantErr: errInvalidVersionFormat},
@@ -32,7 +41,6 @@ func TestParseSemanticVersion(t *testing.T) {
 		{name: "non-numeric major", input: "va.2.3", wantErr: errInvalidMajorVersion},
 		{name: "non-numeric minor", input: "v1.b.3", wantErr: errInvalidMinorVersion},
 		{name: "non-numeric patch", input: "v1.2.c", wantErr: errInvalidPatchVersion},
-		{name: "alpha suffix", input: "v1.2.3-alpha", wantErr: errInvalidPatchVersion},
 		{name: "spaces", input: "v1. 2.3", wantErr: errInvalidMinorVersion},
 		{name: "negative major", input: "v-1.2.3", wantErr: errInvalidVersionFormat},
 	}
@@ -62,6 +70,10 @@ func TestParseSemanticVersion(t *testing.T) {
 					tt.input, got.Major(), got.Minor(), got.Patch(),
 					tt.wantMajor, tt.wantMinor, tt.wantPatch)
 			}
+			if got.Prerelease() != tt.wantPrerelase {
+				t.Errorf("ParseSemanticVersion(%q).Prerelease() = %q, want %q",
+					tt.input, got.Prerelease(), tt.wantPrerelase)
+			}
 		})
 	}
 }
@@ -76,6 +88,9 @@ func TestSemanticVersion_String(t *testing.T) {
 		{name: "without prefix", input: "1.2.3", want: "v1.2.3"},
 		{name: "zeros", input: "v0.0.0", want: "v0.0.0"},
 		{name: "large", input: "v100.200.300", want: "v100.200.300"},
+		{name: "prerelease alpha", input: "v1.2.3-alpha", want: "v1.2.3-alpha"},
+		{name: "prerelease beta", input: "v1.2.3-beta", want: "v1.2.3-beta"},
+		{name: "prerelease rc", input: "v1.0.0-rc.1", want: "v1.0.0-rc.1"},
 	}
 
 	for _, tt := range tests {
@@ -88,6 +103,59 @@ func TestSemanticVersion_String(t *testing.T) {
 			got := sv.String()
 			if got != tt.want {
 				t.Errorf("SemanticVersion.String() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSemanticVersion_BaseString(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "no prerelease", input: "v1.2.3", want: "v1.2.3"},
+		{name: "with prerelease", input: "v1.2.3-beta", want: "v1.2.3"},
+		{name: "with rc", input: "v1.0.0-rc.1", want: "v1.0.0"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sv, err := ParseSemanticVersion(tt.input)
+			if err != nil {
+				t.Fatalf("ParseSemanticVersion(%q) unexpected error: %v", tt.input, err)
+			}
+
+			got := sv.BaseString()
+			if got != tt.want {
+				t.Errorf("SemanticVersion.BaseString() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSemanticVersion_IsPrerelease(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{name: "stable version", input: "v1.2.3", want: false},
+		{name: "alpha", input: "v1.2.3-alpha", want: true},
+		{name: "beta", input: "v1.2.3-beta", want: true},
+		{name: "rc", input: "v1.0.0-rc.1", want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sv, err := ParseSemanticVersion(tt.input)
+			if err != nil {
+				t.Fatalf("ParseSemanticVersion(%q) unexpected error: %v", tt.input, err)
+			}
+
+			got := sv.IsPrerelease()
+			if got != tt.want {
+				t.Errorf("SemanticVersion.IsPrerelease() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -139,6 +207,20 @@ func TestSemanticVersion_Compare(t *testing.T) {
 		// Patch version differences
 		{name: "patch greater", a: "v1.2.4", b: "v1.2.3", want: 1},
 		{name: "patch less", a: "v1.2.3", b: "v1.2.4", want: -1},
+
+		// Prerelease comparisons (per semver spec)
+		{name: "stable > prerelease same version", a: "v1.0.0", b: "v1.0.0-alpha", want: 1},
+		{name: "prerelease < stable same version", a: "v1.0.0-alpha", b: "v1.0.0", want: -1},
+		{name: "alpha < beta", a: "v1.0.0-alpha", b: "v1.0.0-beta", want: -1},
+		{name: "beta > alpha", a: "v1.0.0-beta", b: "v1.0.0-alpha", want: 1},
+		{name: "beta < rc", a: "v1.0.0-beta", b: "v1.0.0-rc", want: -1},
+		{name: "rc.1 < rc.2", a: "v1.0.0-rc.1", b: "v1.0.0-rc.2", want: -1},
+		{name: "rc.2 > rc.1", a: "v1.0.0-rc.2", b: "v1.0.0-rc.1", want: 1},
+		{name: "alpha.1 < alpha.2", a: "v1.0.0-alpha.1", b: "v1.0.0-alpha.2", want: -1},
+		{name: "alpha.2 > alpha.1", a: "v1.0.0-alpha.2", b: "v1.0.0-alpha.1", want: 1},
+		{name: "equal prereleases", a: "v1.0.0-beta", b: "v1.0.0-beta", want: 0},
+		{name: "numeric prerelease < non-numeric", a: "v1.0.0-1", b: "v1.0.0-alpha", want: -1},
+		{name: "higher stable > lower prerelease", a: "v1.1.0", b: "v1.0.0-beta", want: 1},
 	}
 
 	for _, tt := range tests {
