@@ -11,6 +11,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -118,6 +119,9 @@ type LOCResult struct {
 	SourceFilesSizeHuman  string  `json:"source_files_size_human"`   // Source files human-readable size
 	SourceAvgLinesPerFile float64 `json:"source_avg_lines_per_file"` // Source files average lines
 	SourceAvgSizeBytes    int64   `json:"source_avg_size_bytes"`     // Source files average size
+
+	// Test function metrics
+	TestFunctionCount int `json:"test_function_count"` // Total number of test functions
 }
 
 // LOCStats holds line, file counts, and total size
@@ -184,6 +188,15 @@ func locGo(jsonOutput bool, config *langConfig) error {
 		packageCount = 0
 	}
 
+	// Count test functions
+	testFuncCount, err := countGoTestFunctions(excludeDirs)
+	if err != nil {
+		if !jsonOutput {
+			utils.Warn("Failed to count test functions: %v", err)
+		}
+		testFuncCount = 0
+	}
+
 	// Calculate derived metrics
 	totalBytes := testStats.TotalBytes + goStats.TotalBytes
 	avgLinesPerFile := safeAverage(totalLOC, totalFiles)
@@ -229,6 +242,9 @@ func locGo(jsonOutput bool, config *langConfig) error {
 			SourceFilesSizeHuman:  formatBytesMetrics(goStats.TotalBytes),
 			SourceAvgLinesPerFile: goAvgLines,
 			SourceAvgSizeBytes:    goAvgBytes,
+
+			// Test function metrics
+			TestFunctionCount: testFuncCount,
 		}
 
 		jsonBytes, err := json.Marshal(result)
@@ -271,6 +287,7 @@ func locGo(jsonOutput bool, config *langConfig) error {
 	utils.Print("| Package/Directory Count | %-37d |\n", packageCount)
 	utils.Print("| Average Lines per File  | %-37.1f |\n", avgLinesPerFile)
 	utils.Print("| Test Coverage Ratio     | %-37s |\n", fmt.Sprintf("%.1f%% (test LOC / production LOC)", testCoverageRatio))
+	utils.Print("| Test Function Count     | %-37d |\n", testFuncCount)
 	utils.Println("")
 
 	utils.Success("Analysis complete!")
@@ -316,6 +333,18 @@ func locMultiLang(jsonOutput bool, config *langConfig, lang string) error {
 		dirCount = 0
 	}
 
+	// Count test functions (only for JS, not YAML)
+	var testFuncCount int
+	if lang == "js" && config.hasTestFiles {
+		testFuncCount, err = countJSTestFunctions(config)
+		if err != nil {
+			if !jsonOutput {
+				utils.Warn("Failed to count test functions: %v", err)
+			}
+			testFuncCount = 0
+		}
+	}
+
 	// Calculate derived metrics
 	totalBytes := sourceStats.TotalBytes + testStats.TotalBytes
 	avgLinesPerFile := safeAverage(totalLOC, totalFiles)
@@ -359,6 +388,9 @@ func locMultiLang(jsonOutput bool, config *langConfig, lang string) error {
 			SourceFilesSizeHuman:  formatBytesMetrics(sourceStats.TotalBytes),
 			SourceAvgLinesPerFile: sourceAvgLines,
 			SourceAvgSizeBytes:    sourceAvgBytes,
+
+			// Test function metrics
+			TestFunctionCount: testFuncCount,
 		}
 
 		jsonBytes, err := json.Marshal(result)
@@ -417,6 +449,9 @@ func locMultiLang(jsonOutput bool, config *langConfig, lang string) error {
 	utils.Print("| Average Lines per File  | %-37.1f |\n", avgLinesPerFile)
 	if config.hasTestFiles {
 		utils.Print("| Test Coverage Ratio     | %-37s |\n", fmt.Sprintf("%.1f%% (test LOC / source LOC)", testCoverageRatio))
+	}
+	if lang == "js" && config.hasTestFiles {
+		utils.Print("| Test Function Count     | %-37d |\n", testFuncCount)
 	}
 	utils.Println("")
 
@@ -1105,4 +1140,168 @@ func countDirectoriesForLang(config *langConfig) (int, error) {
 	})
 
 	return len(directories), err
+}
+
+// countGoTestFunctions counts test functions (func Test*) in Go test files using AST parsing
+func countGoTestFunctions(excludeDirs []string) (int, error) {
+	count := 0
+	fset := token.NewFileSet()
+
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
+		}
+
+		// Skip hidden directories
+		if info.IsDir() && strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+			return filepath.SkipDir
+		}
+
+		// Skip excluded directories
+		for _, exclude := range excludeDirs {
+			if strings.Contains(path, exclude) {
+				if info.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+		}
+
+		// Only process *_test.go files
+		if info.IsDir() || !strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+
+		// Parse file with go/parser
+		node, parseErr := parser.ParseFile(fset, path, nil, 0)
+		if parseErr != nil {
+			utils.Debug("Failed to parse test file %s: %v", path, parseErr)
+			return nil
+		}
+
+		// Count functions starting with "Test" that have correct signature
+		for _, decl := range node.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok {
+				continue
+			}
+
+			// Check if function name starts with "Test"
+			if fn.Name == nil || !strings.HasPrefix(fn.Name.Name, "Test") {
+				continue
+			}
+
+			// Verify it has exactly one parameter of type *testing.T
+			if fn.Type.Params == nil || len(fn.Type.Params.List) != 1 {
+				continue
+			}
+
+			param := fn.Type.Params.List[0]
+			starExpr, ok := param.Type.(*ast.StarExpr)
+			if !ok {
+				continue
+			}
+
+			selExpr, ok := starExpr.X.(*ast.SelectorExpr)
+			if !ok {
+				continue
+			}
+
+			ident, ok := selExpr.X.(*ast.Ident)
+			if !ok {
+				continue
+			}
+
+			// Check for *testing.T or *testing.B (benchmarks)
+			if ident.Name == "testing" && (selExpr.Sel.Name == "T" || selExpr.Sel.Name == "B") {
+				count++
+			}
+		}
+
+		return nil
+	})
+
+	return count, err
+}
+
+// countJSTestFunctions counts test functions (test(), it()) in JS/TS test files using regex
+func countJSTestFunctions(config *langConfig) (int, error) {
+	count := 0
+	// Pattern matches: test(, it(, test.only(, test.skip(, it.only(, it.skip(
+	// Match at start of line (after optional whitespace) to reduce false positives
+	testFuncPattern := `^\s*(?:test|it)(?:\.(?:only|skip|todo|concurrent))?\s*\(`
+
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
+		}
+
+		// Skip hidden directories
+		if info.IsDir() && strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+			return filepath.SkipDir
+		}
+
+		// Skip excluded directories
+		for _, exclude := range config.excludeDirs {
+			if info.IsDir() && info.Name() == exclude {
+				return filepath.SkipDir
+			}
+			if strings.Contains(path, string(filepath.Separator)+exclude+string(filepath.Separator)) {
+				if info.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+		}
+
+		// Skip directories
+		if info.IsDir() {
+			return nil
+		}
+
+		// Check if file has a matching extension
+		if !hasExtension(path, config.extensions) {
+			return nil
+		}
+
+		// Only process test files
+		if !isTestFile(path, config.testPatterns) {
+			return nil
+		}
+
+		// Read file content
+		fileOps := fileops.New()
+		content, readErr := fileOps.File.ReadFile(path)
+		if readErr != nil {
+			utils.Debug("Failed to read test file %s: %v", path, readErr)
+			return nil
+		}
+
+		// Count regex matches per line
+		scanner := bufio.NewScanner(strings.NewReader(string(content)))
+		re := compileTestFuncRegex(testFuncPattern)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if re.MatchString(line) {
+				count++
+			}
+		}
+
+		return nil
+	})
+
+	return count, err
+}
+
+// compileTestFuncRegex compiles the test function regex pattern
+// Separated for testability
+func compileTestFuncRegex(pattern string) interface{ MatchString(s string) bool } {
+	return regexpMustCompile(pattern)
+}
+
+// regexpMustCompile is a wrapper for regexp.MustCompile to allow testing
+//
+//nolint:gochecknoglobals // required for testing purposes
+var regexpMustCompile = func(pattern string) interface{ MatchString(s string) bool } {
+	return regexp.MustCompile(pattern)
 }

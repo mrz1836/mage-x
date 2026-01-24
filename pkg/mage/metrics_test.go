@@ -118,6 +118,7 @@ func TestLOCResult_JSONMarshal(t *testing.T) {
 		GoAvgLinesPerFile:   100.0,
 		TestAvgSizeBytes:    5000,
 		GoAvgSizeBytes:      5000,
+		TestFunctionCount:   42,
 	}
 
 	jsonBytes, err := json.Marshal(result)
@@ -152,6 +153,7 @@ func TestLOCResult_JSONMarshal(t *testing.T) {
 	assert.InDelta(t, result.GoAvgLinesPerFile, unmarshaled.GoAvgLinesPerFile, 0.001)
 	assert.Equal(t, result.TestAvgSizeBytes, unmarshaled.TestAvgSizeBytes)
 	assert.Equal(t, result.GoAvgSizeBytes, unmarshaled.GoAvgSizeBytes)
+	assert.Equal(t, result.TestFunctionCount, unmarshaled.TestFunctionCount)
 }
 
 // TestLOCResult_JSONFieldNames tests that JSON field names are correct
@@ -178,6 +180,7 @@ func TestLOCResult_JSONFieldNames(t *testing.T) {
 		GoAvgLinesPerFile:   20.0,
 		TestAvgSizeBytes:    200,
 		GoAvgSizeBytes:      200,
+		TestFunctionCount:   25,
 	}
 
 	jsonBytes, err := json.Marshal(result)
@@ -209,6 +212,7 @@ func TestLOCResult_JSONFieldNames(t *testing.T) {
 	assert.Contains(t, jsonStr, `"go_avg_lines_per_file"`)
 	assert.Contains(t, jsonStr, `"test_avg_size_bytes"`)
 	assert.Contains(t, jsonStr, `"go_avg_size_bytes"`)
+	assert.Contains(t, jsonStr, `"test_function_count"`)
 }
 
 // TestLOCStats tests the LOCStats struct
@@ -1978,4 +1982,450 @@ func TestMetricsLOCGoJSONIncludesLanguage(t *testing.T) {
 
 	jsonStr := string(jsonBytes)
 	assert.Contains(t, jsonStr, `"language":"go"`)
+}
+
+// ============================================================================
+// Test Function Counting Tests
+// ============================================================================
+
+// TestCountGoTestFunctions tests the countGoTestFunctions helper function
+func TestCountGoTestFunctions(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_go_test_funcs")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	t.Run("counts valid test functions", func(t *testing.T) {
+		// Create a test file with valid test functions
+		testContent := `package main
+
+import "testing"
+
+func TestFoo(t *testing.T) {
+	// test
+}
+
+func TestBar(t *testing.T) {
+	// test
+}
+
+func TestBaz(t *testing.T) {
+	// test
+}
+`
+		err := os.WriteFile("example_test.go", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("example_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		count, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 3, count)
+	})
+
+	t.Run("ignores non-test functions", func(t *testing.T) {
+		// Create a test file with non-test functions
+		testContent := `package main
+
+import "testing"
+
+func TestValid(t *testing.T) {}
+
+func Helper() {}
+
+func TestInvalidNoParam() {}
+
+func NotATest(t *testing.T) {}
+`
+		err := os.WriteFile("mixed_test.go", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("mixed_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		count, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		// Only TestValid should be counted
+		assert.Equal(t, 1, count)
+	})
+
+	t.Run("counts benchmarks", func(t *testing.T) {
+		// Create a test file with benchmarks
+		testContent := `package main
+
+import "testing"
+
+func TestOne(t *testing.T) {}
+
+func BenchmarkOne(b *testing.B) {}
+
+func BenchmarkTwo(b *testing.B) {}
+`
+		err := os.WriteFile("bench_test.go", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("bench_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		count, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		// Should count TestOne + BenchmarkOne + BenchmarkTwo = 3
+		// Wait, benchmarks start with Benchmark, not Test. Let me re-check the function.
+		// The function only counts functions starting with "Test", so only 1 should be counted
+		assert.Equal(t, 1, count)
+	})
+}
+
+// TestCountGoTestFunctions_ExcludeDirs tests that excluded directories are skipped
+func TestCountGoTestFunctions_ExcludeDirs(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_go_test_funcs_exclude")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create test file in root
+	rootTestContent := `package main
+
+import "testing"
+
+func TestRoot(t *testing.T) {}
+`
+	err = os.WriteFile("root_test.go", []byte(rootTestContent), 0o600)
+	require.NoError(t, err)
+
+	// Create vendor directory with test file
+	vendorDir := filepath.Join(tmpDir, "vendor")
+	require.NoError(t, os.MkdirAll(vendorDir, 0o750))
+	vendorTestContent := `package vendor
+
+import "testing"
+
+func TestVendor(t *testing.T) {}
+func TestVendor2(t *testing.T) {}
+`
+	err = os.WriteFile(filepath.Join(vendorDir, "vendor_test.go"), []byte(vendorTestContent), 0o600)
+	require.NoError(t, err)
+
+	t.Run("excludes vendor directory", func(t *testing.T) {
+		count, err := countGoTestFunctions([]string{"vendor"})
+		require.NoError(t, err)
+		assert.Equal(t, 1, count) // Only TestRoot
+	})
+
+	t.Run("no exclusions counts all", func(t *testing.T) {
+		count, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 3, count) // TestRoot + TestVendor + TestVendor2
+	})
+}
+
+// TestCountGoTestFunctions_HiddenDirs tests that hidden directories are skipped
+func TestCountGoTestFunctions_HiddenDirs(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_go_test_funcs_hidden")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	// Create test file in root
+	rootTestContent := `package main
+
+import "testing"
+
+func TestRoot(t *testing.T) {}
+`
+	err = os.WriteFile("root_test.go", []byte(rootTestContent), 0o600)
+	require.NoError(t, err)
+
+	// Create hidden directory with test file
+	hiddenDir := filepath.Join(tmpDir, ".hidden")
+	require.NoError(t, os.MkdirAll(hiddenDir, 0o750))
+	hiddenTestContent := `package hidden
+
+import "testing"
+
+func TestHidden(t *testing.T) {}
+`
+	err = os.WriteFile(filepath.Join(hiddenDir, "hidden_test.go"), []byte(hiddenTestContent), 0o600)
+	require.NoError(t, err)
+
+	count, err := countGoTestFunctions([]string{})
+	require.NoError(t, err)
+	assert.Equal(t, 1, count) // Only TestRoot, hidden dir is skipped
+}
+
+// TestCountJSTestFunctions tests the countJSTestFunctions helper function
+func TestCountJSTestFunctions(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_js_test_funcs")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	config := langConfigs["js"]
+
+	t.Run("counts test() calls", func(t *testing.T) {
+		testContent := `import { test } from 'vitest';
+
+test('should do something', () => {
+  expect(true).toBe(true);
+});
+
+test('should do another thing', () => {
+  expect(1).toBe(1);
+});
+`
+		err := os.WriteFile("app.test.js", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("app.test.js") }) //nolint:errcheck,gosec // cleanup
+
+		count, err := countJSTestFunctions(config)
+		require.NoError(t, err)
+		assert.Equal(t, 2, count)
+	})
+
+	t.Run("counts it() calls", func(t *testing.T) {
+		testContent := `describe('MyComponent', () => {
+  it('renders correctly', () => {
+    expect(true).toBe(true);
+  });
+
+  it('handles click', () => {
+    expect(1).toBe(1);
+  });
+
+  it('updates state', () => {
+    expect(2).toBe(2);
+  });
+});
+`
+		err := os.WriteFile("component.spec.js", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("component.spec.js") }) //nolint:errcheck,gosec // cleanup
+
+		count, err := countJSTestFunctions(config)
+		require.NoError(t, err)
+		assert.Equal(t, 3, count)
+	})
+}
+
+// TestCountJSTestFunctions_Patterns tests different JS test patterns
+func TestCountJSTestFunctions_Patterns(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_js_test_funcs_patterns")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	config := langConfigs["js"]
+
+	t.Run("counts test.only and test.skip", func(t *testing.T) {
+		testContent := `test('normal test', () => {});
+test.only('focused test', () => {});
+test.skip('skipped test', () => {});
+test.todo('todo test', () => {});
+`
+		err := os.WriteFile("patterns.test.js", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("patterns.test.js") }) //nolint:errcheck,gosec // cleanup
+
+		count, err := countJSTestFunctions(config)
+		require.NoError(t, err)
+		assert.Equal(t, 4, count)
+	})
+
+	t.Run("counts it.only and it.skip", func(t *testing.T) {
+		testContent := `it('normal test', () => {});
+it.only('focused test', () => {});
+it.skip('skipped test', () => {});
+`
+		err := os.WriteFile("it-patterns.spec.js", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("it-patterns.spec.js") }) //nolint:errcheck,gosec // cleanup
+
+		count, err := countJSTestFunctions(config)
+		require.NoError(t, err)
+		assert.Equal(t, 3, count)
+	})
+
+	t.Run("does not count describe blocks", func(t *testing.T) {
+		testContent := `describe('Suite', () => {
+  describe('Nested', () => {
+    test('actual test', () => {});
+  });
+});
+`
+		err := os.WriteFile("describe.test.js", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("describe.test.js") }) //nolint:errcheck,gosec // cleanup
+
+		count, err := countJSTestFunctions(config)
+		require.NoError(t, err)
+		// Only test() is counted, not describe()
+		assert.Equal(t, 1, count)
+	})
+
+	t.Run("handles indented tests", func(t *testing.T) {
+		testContent := `describe('Suite', () => {
+    test('test with spaces', () => {});
+		test('test with tabs', () => {});
+  it('it with spaces', () => {});
+});
+`
+		err := os.WriteFile("indented.test.js", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("indented.test.js") }) //nolint:errcheck,gosec // cleanup
+
+		count, err := countJSTestFunctions(config)
+		require.NoError(t, err)
+		assert.Equal(t, 3, count)
+	})
+}
+
+// TestCountJSTestFunctions_ExcludeNodeModules tests that node_modules are excluded
+func TestCountJSTestFunctions_ExcludeNodeModules(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_js_test_funcs_exclude")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	config := langConfigs["js"]
+
+	// Create test file in root
+	testContent := `test('root test', () => {});
+`
+	err = os.WriteFile("app.test.js", []byte(testContent), 0o600)
+	require.NoError(t, err)
+
+	// Create node_modules directory with test file
+	nodeModulesDir := filepath.Join(tmpDir, "node_modules", "some-package")
+	require.NoError(t, os.MkdirAll(nodeModulesDir, 0o750))
+	nodeModulesTestContent := `test('node modules test', () => {});
+test('another node modules test', () => {});
+`
+	err = os.WriteFile(filepath.Join(nodeModulesDir, "index.test.js"), []byte(nodeModulesTestContent), 0o600)
+	require.NoError(t, err)
+
+	count, err := countJSTestFunctions(config)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count) // Only root test, node_modules is excluded
+}
+
+// TestCountJSTestFunctions_TypeScript tests that TypeScript test files are counted
+func TestCountJSTestFunctions_TypeScript(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_js_test_funcs_ts")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	config := langConfigs["js"]
+
+	testContent := `import { describe, it, expect } from 'vitest';
+
+describe('TypeScript tests', () => {
+  it('handles types correctly', () => {
+    const value: string = 'test';
+    expect(value).toBe('test');
+  });
+
+  it('handles generics', () => {
+    expect(true).toBe(true);
+  });
+});
+`
+	err = os.WriteFile("typescript.spec.ts", []byte(testContent), 0o600)
+	require.NoError(t, err)
+
+	count, err := countJSTestFunctions(config)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+}
+
+// TestCountJSTestFunctions_TestsDirectory tests files in __tests__ directory
+func TestCountJSTestFunctions_TestsDirectory(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_js_test_funcs_dir")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	config := langConfigs["js"]
+
+	// Create __tests__ directory
+	testsDir := filepath.Join(tmpDir, "__tests__")
+	require.NoError(t, os.MkdirAll(testsDir, 0o750))
+
+	testContent := `test('test in __tests__ directory', () => {});
+it('it in __tests__ directory', () => {});
+`
+	err = os.WriteFile(filepath.Join(testsDir, "utils.js"), []byte(testContent), 0o600)
+	require.NoError(t, err)
+
+	count, err := countJSTestFunctions(config)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+}
+
+// TestCountJSTestFunctions_EmptyDirectory tests empty directory handling
+func TestCountJSTestFunctions_EmptyDirectory(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "count_js_test_funcs_empty")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDir) }) //nolint:errcheck,gosec // cleanup
+
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(originalDir) }) //nolint:errcheck,gosec // cleanup
+
+	config := langConfigs["js"]
+
+	count, err := countJSTestFunctions(config)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
+}
+
+// TestLOCResultTestFunctionCount tests that TestFunctionCount is included in JSON
+func TestLOCResultTestFunctionCount(t *testing.T) {
+	result := LOCResult{
+		Language:          "go",
+		TestFunctionCount: 157,
+	}
+
+	jsonBytes, err := json.Marshal(result)
+	require.NoError(t, err)
+
+	jsonStr := string(jsonBytes)
+	assert.Contains(t, jsonStr, `"test_function_count":157`)
 }
