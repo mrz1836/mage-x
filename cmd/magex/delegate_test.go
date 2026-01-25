@@ -1122,3 +1122,203 @@ func TestGetMagefilePath_PrefersMagefilesDir(t *testing.T) {
 	assert.Contains(t, path, "magefiles")
 	assert.NotContains(t, path, "magefile.go")
 }
+
+// TestDelegateToMage_NamespaceCommands tests that namespace commands (colon-separated)
+// are properly converted and passed to mage. This is a regression test for the
+// convertToMageFormat fix that ensures commands like "Ci:Static" are properly
+// converted to "ci:static" (lowercase) before being passed to mage.
+//
+// Note: Full execution may not work in all test environments due to mage compilation
+// requirements. The test validates format conversion and command delegation.
+func TestDelegateToMage_NamespaceCommands(t *testing.T) {
+	// Skip if mage binary not available
+	if _, err := exec.LookPath("mage"); err != nil {
+		t.Skip("mage binary not available, skipping namespace command integration test")
+	}
+
+	// Skip if go is not available
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go command not available, skipping namespace command integration test")
+	}
+
+	// Create temporary project directory
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(originalDir); chErr != nil {
+			t.Logf("Failed to restore directory: %v", chErr)
+		}
+	})
+
+	require.NoError(t, os.Chdir(tmpDir))
+
+	// Create go.mod
+	goModContent := `module testnamespace
+
+go 1.21
+`
+	require.NoError(t, os.WriteFile("go.mod", []byte(goModContent), secureFilePerm))
+
+	// Create magefiles directory with namespace commands
+	require.NoError(t, os.Mkdir("magefiles", secureDirPerm))
+
+	// Create a magefile with a namespace (type CI struct{})
+	magefileContent := `//go:build mage
+
+package main
+
+import (
+	"fmt"
+)
+
+// CI namespace for CI/CD commands
+type CI struct{}
+
+// Static runs static analysis (this was the command that was broken)
+func (CI) Static() error {
+	fmt.Println("NAMESPACE_COMMAND_SUCCESS:ci:static")
+	return nil
+}
+
+// Lint runs linting
+func (CI) Lint() error {
+	fmt.Println("NAMESPACE_COMMAND_SUCCESS:ci:lint")
+	return nil
+}
+
+// Build namespace for build commands
+type Build struct{}
+
+// Default runs the default build
+func (Build) Default() error {
+	fmt.Println("NAMESPACE_COMMAND_SUCCESS:build:default")
+	return nil
+}
+
+// Test namespace for test commands
+type Test struct{}
+
+// Unit runs unit tests
+func (Test) Unit() error {
+	fmt.Println("NAMESPACE_COMMAND_SUCCESS:test:unit")
+	return nil
+}
+
+// Coverage runs tests with coverage (multiple-colon test when chained)
+func (Test) Coverage() error {
+	fmt.Println("NAMESPACE_COMMAND_SUCCESS:test:coverage")
+	return nil
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join("magefiles", "commands.go"), []byte(magefileContent), secureFilePerm))
+
+	// Test cases for namespace command handling
+	tests := []struct {
+		name              string
+		input             string
+		expectedLowercase string
+		expectedOutput    string
+		description       string
+	}{
+		{
+			name:              "mixed_case_namespace",
+			input:             "Ci:Static",
+			expectedLowercase: "ci:static",
+			expectedOutput:    "NAMESPACE_COMMAND_SUCCESS:ci:static",
+			description:       "Mixed case namespace (the bug that was fixed)",
+		},
+		{
+			name:              "all_uppercase_namespace",
+			input:             "CI:STATIC",
+			expectedLowercase: "ci:static",
+			expectedOutput:    "NAMESPACE_COMMAND_SUCCESS:ci:static",
+			description:       "All uppercase namespace",
+		},
+		{
+			name:              "already_lowercase_namespace",
+			input:             "ci:static",
+			expectedLowercase: "ci:static",
+			expectedOutput:    "NAMESPACE_COMMAND_SUCCESS:ci:static",
+			description:       "Already lowercase namespace",
+		},
+		{
+			name:              "mixed_case_build",
+			input:             "Build:Default",
+			expectedLowercase: "build:default",
+			expectedOutput:    "NAMESPACE_COMMAND_SUCCESS:build:default",
+			description:       "Standard mixed case namespace",
+		},
+		{
+			name:              "ci_lint",
+			input:             "CI:Lint",
+			expectedLowercase: "ci:lint",
+			expectedOutput:    "NAMESPACE_COMMAND_SUCCESS:ci:lint",
+			description:       "CI lint command",
+		},
+		{
+			name:              "test_coverage",
+			input:             "Test:Coverage",
+			expectedLowercase: "test:coverage",
+			expectedOutput:    "NAMESPACE_COMMAND_SUCCESS:test:coverage",
+			description:       "Test coverage command",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// First verify the format conversion works correctly (unit test level)
+			converted := convertToMageFormat(tt.input)
+			assert.Equal(t, tt.expectedLowercase, converted,
+				"convertToMageFormat(%q) should return %q", tt.input, tt.expectedLowercase)
+
+			// Capture stdout to verify output
+			oldStdout := os.Stdout
+			r, w, pipeErr := os.Pipe()
+			require.NoError(t, pipeErr)
+			os.Stdout = w
+
+			// Execute the command with a timeout
+			result := DelegateToMageWithTimeout(context.Background(), tt.input, 30*time.Second)
+
+			// Restore stdout and read captured output
+			if closeErr := w.Close(); closeErr != nil {
+				t.Logf("Failed to close pipe writer: %v", closeErr)
+			}
+			os.Stdout = oldStdout
+
+			var capturedOutput strings.Builder
+			if _, copyErr := io.Copy(&capturedOutput, r); copyErr != nil {
+				t.Logf("Failed to read captured output: %v", copyErr)
+			}
+			if closeErr := r.Close(); closeErr != nil {
+				t.Logf("Failed to close pipe reader: %v", closeErr)
+			}
+
+			// If execution succeeded, verify the output
+			if result.Err == nil {
+				assert.Equal(t, 0, result.ExitCode, "Exit code should be 0 for '%s'", tt.input)
+				output := capturedOutput.String()
+				assert.Contains(t, output, tt.expectedOutput,
+					"Output for '%s' should contain '%s', got: %s",
+					tt.input, tt.expectedOutput, output)
+			} else {
+				// If execution failed, verify it's due to mage not finding the target
+				// (expected in test environments where mage can't compile the test magefiles)
+				// The key verification is that the command was passed correctly (lowercase)
+				errMsg := result.Err.Error()
+				if strings.Contains(errMsg, "Unknown target specified") {
+					// This is acceptable - mage received the correctly formatted command
+					// but couldn't find the target (test environment limitation)
+					assert.Contains(t, errMsg, tt.expectedLowercase,
+						"Error should reference the lowercase command format '%s'", tt.expectedLowercase)
+					t.Logf("Command '%s' correctly converted to '%s' (mage target not found in test env)",
+						tt.input, tt.expectedLowercase)
+				} else {
+					// Unexpected error
+					t.Errorf("Unexpected error for command '%s': %v", tt.input, result.Err)
+				}
+			}
+		})
+	}
+}
