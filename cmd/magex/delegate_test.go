@@ -504,24 +504,24 @@ func TestConvertToMageFormat(t *testing.T) {
 		input    string
 		expected string
 	}{
-		// Colon-separated namespace commands
-		{"Speckit:Install", "speckitinstall"},
-		{"Bmad:Install", "bmadinstall"},
-		{"Bmad:Check", "bmadcheck"},
-		{"Bmad:Upgrade", "bmadupgrade"},
-		{"Bmad:Status", "bmadstatus"},
-		{"Pipeline:CI", "pipelinecI"},
-		{"Build:Default", "builddefault"},
-		{"Test:Unit", "testunit"},
+		// Colon-separated namespace commands - preserves colon
+		{"Speckit:Install", "speckit:install"},
+		{"Bmad:Install", "bmad:install"},
+		{"Bmad:Check", "bmad:check"},
+		{"Bmad:Upgrade", "bmad:upgrade"},
+		{"Bmad:Status", "bmad:status"},
+		{"Pipeline:CI", "pipeline:ci"},
+		{"Build:Default", "build:default"},
+		{"Test:Unit", "test:unit"},
 
-		// Simple commands (no conversion needed)
-		{"Deploy", "Deploy"},
+		// Simple commands (just lowercased)
+		{"Deploy", "deploy"},
 		{"build", "build"},
 
-		// Edge cases
-		{":", ""}, // Empty parts result in empty string
-		{"Namespace:", "namespace"},
-		{":Method", "method"},
+		// Edge cases - colon preserved
+		{":", ":"},
+		{"Namespace:", "namespace:"},
+		{":Method", ":method"},
 	}
 
 	for _, tt := range tests {
@@ -919,9 +919,9 @@ func TestConvertToMageFormatEdgeCases(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "multiple colons only uses first split",
+			name:     "multiple colons preserves all",
 			input:    "A:B:C",
-			expected: "ab:C", // SplitN with 2 means B:C is the second part
+			expected: "a:b:c", // Just lowercased, colons preserved
 		},
 		{
 			name:     "empty string",
@@ -931,17 +931,17 @@ func TestConvertToMageFormatEdgeCases(t *testing.T) {
 		{
 			name:     "single colon with empty parts",
 			input:    ":",
-			expected: "", // Both parts are empty
+			expected: ":", // Colon preserved
 		},
 		{
 			name:     "unicode characters",
 			input:    "Ünïcödé:Tëst",
-			expected: "ünïcödétëst", // é is lowercased from É, T becomes t
+			expected: "ünïcödé:tëst", // Just lowercased, colon preserved
 		},
 		{
 			name:     "numbers in namespace",
 			input:    "Build123:Run456",
-			expected: "build123run456",
+			expected: "build123:run456", // Colon preserved
 		},
 	}
 
@@ -1027,8 +1027,8 @@ func TestGetMagefilePath_PrefersMagefiles(t *testing.T) {
 func TestConvertToMageFormat_MultipleColons(t *testing.T) {
 	input := "namespace:method:extra"
 	result := convertToMageFormat(input)
-	// SplitN with 2 only splits on first colon, so "namespace:method:extra" becomes "namespacemethod:extra"
-	expected := "namespacemethod:extra"
+	// Just lowercased, all colons preserved
+	expected := "namespace:method:extra"
 	assert.Equal(t, expected, result)
 }
 

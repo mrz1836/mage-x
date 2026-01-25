@@ -201,22 +201,22 @@ func TestConvertToMageFormat_SpecialCases(t *testing.T) {
 		{
 			name:     "colon at end",
 			input:    "build:",
-			expected: "build",
+			expected: "build:",
 		},
 		{
 			name:     "colon at start",
 			input:    ":build",
-			expected: "build",
+			expected: ":build",
 		},
 		{
 			name:     "only colon",
 			input:    ":",
-			expected: "",
+			expected: ":",
 		},
 		{
 			name:     "spaces around colon",
 			input:    "build : test",
-			expected: "build  test", // Spaces are preserved
+			expected: "build : test", // Spaces and colon preserved
 		},
 	}
 

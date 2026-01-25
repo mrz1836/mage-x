@@ -340,11 +340,11 @@ func TestConvertToMageFormat_ColonSeparated(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"test:unit", "testunit"},
-		{"build:all", "buildall"},
+		{"test:unit", "test:unit"},
+		{"build:all", "build:all"},
 		{"simple", "simple"},
-		{"test:unit:coverage", "testunit:coverage"}, // Only splits on first colon
-		{"Speckit:Install", "speckitinstall"},
+		{"test:unit:coverage", "test:unit:coverage"}, // All colons preserved
+		{"Speckit:Install", "speckit:install"},
 	}
 
 	for _, tt := range tests {

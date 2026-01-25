@@ -344,12 +344,12 @@ func TestConvertToMageFormat_EdgeCases(t *testing.T) {
 		{
 			name:     "multiple colons",
 			input:    "a:b:c",
-			expected: "ab:c", // First colon is processed, namespace lowercased, method first letter lowercased
+			expected: "a:b:c", // All colons preserved, just lowercased
 		},
 		{
 			name:     "uppercase",
 			input:    "BUILD:ALL",
-			expected: "buildaLL", // namespace lowercased, method first letter lowercased
+			expected: "build:all", // Just lowercased, colon preserved
 		},
 	}
 

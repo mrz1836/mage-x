@@ -190,22 +190,22 @@ func TestConvertToMageFormat_EdgeCasesAlt(t *testing.T) {
 		{
 			name:     "no colon",
 			input:    "simpleCommand",
-			expected: "simpleCommand",
+			expected: "simplecommand",
 		},
 		{
 			name:     "empty method",
 			input:    "build:",
-			expected: "build",
+			expected: "build:",
 		},
 		{
 			name:     "single character method",
 			input:    "test:A",
-			expected: "testa",
+			expected: "test:a",
 		},
 		{
 			name:     "uppercase namespace",
 			input:    "BUILD:Default",
-			expected: "builddefault",
+			expected: "build:default",
 		},
 	}
 

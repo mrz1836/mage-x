@@ -261,9 +261,7 @@ func TestUnit() error {
 
 // TestConvertToMageFormat_InvalidSplit tests defensive split validation
 func TestConvertToMageFormat_InvalidSplit(t *testing.T) {
-	// This tests the defensive len(parts) != 2 check
-	// In practice, SplitN with n=2 always returns 2 parts,
-	// but we test the defensive code path
+	// This tests the simple lowercasing behavior
 	tests := []struct {
 		name     string
 		input    string
@@ -277,12 +275,12 @@ func TestConvertToMageFormat_InvalidSplit(t *testing.T) {
 		{
 			name:     "only colon",
 			input:    ":",
-			expected: "",
+			expected: ":",
 		},
 		{
-			name:     "multiple colons preserves beyond first",
+			name:     "multiple colons preserves all",
 			input:    "a:b:c",
-			expected: "ab:c",
+			expected: "a:b:c",
 		},
 	}
 

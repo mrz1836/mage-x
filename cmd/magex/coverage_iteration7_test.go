@@ -133,22 +133,22 @@ func TestConvertToMageFormat_ComplexCases(t *testing.T) {
 		{
 			name:     "simple namespace:method",
 			input:    "build:Linux",
-			expected: "buildlinux",
+			expected: "build:linux",
 		},
 		{
-			name:     "preserve method case after first letter",
+			name:     "preserve colon separator",
 			input:    "test:RunAll",
-			expected: "testrunAll",
+			expected: "test:runall",
 		},
 		{
 			name:     "already simple format",
 			input:    "buildAll",
-			expected: "buildAll",
+			expected: "buildall",
 		},
 		{
 			name:     "lowercase namespace",
 			input:    "Build:Default",
-			expected: "builddefault",
+			expected: "build:default",
 		},
 	}
 

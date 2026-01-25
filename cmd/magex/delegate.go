@@ -42,27 +42,11 @@ type DelegateResult struct {
 	Err error
 }
 
-// convertToMageFormat converts colon-separated command names to mage's camelCase format
-// e.g., "Speckit:Install" -> "speckitInstall", "Pipeline:CI" -> "pipelineCI"
+// convertToMageFormat converts command names to mage's expected format
+// Mage expects colon-separated format for namespaced commands (e.g., ci:static)
+// and performs case-insensitive lookup, so we just lowercase the entire command
 func convertToMageFormat(command string) string {
-	if !strings.Contains(command, ":") {
-		return command // Already in simple format
-	}
-
-	parts := strings.SplitN(command, ":", 2)
-	// len(parts) is guaranteed to be 2 here due to guard above
-
-	// Mage uses lowercase namespace + method (preserving method case)
-	// e.g., Speckit:Install -> speckitInstall
-	namespace := strings.ToLower(parts[0])
-	method := parts[1]
-
-	// First letter of method should be lowercase to form camelCase
-	if len(method) > 0 {
-		method = strings.ToLower(method[:1]) + method[1:]
-	}
-
-	return namespace + method
+	return strings.ToLower(command)
 }
 
 // DelegateToMage executes a custom command using mage or go run.
