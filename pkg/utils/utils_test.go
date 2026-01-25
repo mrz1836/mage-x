@@ -986,40 +986,39 @@ func TestParallel_EdgeCases(t *testing.T) {
 		assert.Contains(t, err.Error(), "parallel execution failed")
 	})
 
-	t.Run("concurrency verification - shorter sleep completes first", func(t *testing.T) {
-		var order []int
-		var mu sync.Mutex
+	t.Run("concurrency verification - runs in parallel", func(t *testing.T) {
+		var count int32
+		sleepDuration := 50 * time.Millisecond
 
 		fns := []func() error{
 			func() error {
-				time.Sleep(30 * time.Millisecond)
-				mu.Lock()
-				order = append(order, 1)
-				mu.Unlock()
+				time.Sleep(sleepDuration)
+				atomic.AddInt32(&count, 1)
 				return nil
 			},
 			func() error {
-				time.Sleep(10 * time.Millisecond)
-				mu.Lock()
-				order = append(order, 2)
-				mu.Unlock()
+				time.Sleep(sleepDuration)
+				atomic.AddInt32(&count, 1)
 				return nil
 			},
 			func() error {
-				time.Sleep(20 * time.Millisecond)
-				mu.Lock()
-				order = append(order, 3)
-				mu.Unlock()
+				time.Sleep(sleepDuration)
+				atomic.AddInt32(&count, 1)
 				return nil
 			},
 		}
 
+		start := time.Now()
 		err := Parallel(fns...)
-		require.NoError(t, err)
+		elapsed := time.Since(start)
 
-		// If truly parallel, order should be [2, 3, 1] not [1, 2, 3]
-		require.Len(t, order, 3)
-		assert.Equal(t, 2, order[0], "shortest sleep should complete first")
+		require.NoError(t, err)
+		assert.Equal(t, int32(3), atomic.LoadInt32(&count), "all functions should complete")
+
+		// If running sequentially, would take 150ms+. Parallel should be ~50ms.
+		// Use 120ms as threshold to allow for scheduling overhead.
+		assert.Less(t, elapsed, 120*time.Millisecond,
+			"functions should run in parallel (elapsed: %v)", elapsed)
 	})
 
 	t.Run("function with delayed error", func(t *testing.T) {
