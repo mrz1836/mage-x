@@ -308,7 +308,7 @@ const (
 // BMAD default configuration values
 const (
 	DefaultBmadProjectDir  = "_bmad"
-	DefaultBmadVersionTag  = "@alpha"
+	DefaultBmadVersionTag  = ""
 	DefaultBmadPackageName = "bmad-method"
 )
 
