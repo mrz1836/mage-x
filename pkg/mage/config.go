@@ -155,7 +155,7 @@ type SpeckitConfig struct {
 // BmadConfig contains BMAD (Build More, Architect Dreams) CLI management settings
 type BmadConfig struct {
 	ProjectDir  string `yaml:"project_dir"`  // Directory for BMAD project files (default: "_bmad")
-	VersionTag  string `yaml:"version_tag"`  // npm version tag to use (default: "@alpha" for v6)
+	VersionTag  string `yaml:"version_tag"`  // npm version tag to use (default: "@beta" for v6)
 	PackageName string `yaml:"package_name"` // npm package name (default: "bmad-method")
 }
 

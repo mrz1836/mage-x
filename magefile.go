@@ -191,7 +191,7 @@ func BmadCheck() error {
 	return b.Check()
 }
 
-// BmadUpgrade upgrades BMAD to the latest alpha version
+// BmadUpgrade upgrades BMAD to the latest beta version
 func BmadUpgrade() error {
 	var b mage.Bmad
 	return b.Upgrade()

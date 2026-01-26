@@ -232,7 +232,7 @@ func installBmadCLI(config *Config) error {
 		versionTag = DefaultBmadVersionTag
 	}
 
-	// Run: npx bmad-method@alpha install (interactive - requires user input)
+	// Run: npx bmad-method@beta install (interactive - requires user input)
 	packageSpec := packageName + versionTag
 	utils.Info("Running: npx %s install", packageSpec)
 	utils.Info("Note: This is an interactive installer - please follow the prompts")

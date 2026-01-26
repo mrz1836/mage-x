@@ -48,7 +48,7 @@ func (ts *BmadMainTestSuite) TestCheck_PrerequisitesMissing() {
 	configContent := `
 bmad:
   package_name: bmad-method
-  version_tag: "@alpha"
+  version_tag: "@beta"
 `
 	configPath := filepath.Join(ts.env.TempDir, ".mage.yaml")
 	err := os.WriteFile(configPath, []byte(configContent), 0o644)
@@ -95,7 +95,7 @@ bmad:
 
 	// Mock npm view command for version check
 	ts.env.Runner.On("RunCmdOutput", CmdNpm, []string{
-		"view", "bmad-method@alpha", "version",
+		"view", "bmad-method@beta", "version",
 	}).Return("1.0.0", nil).Maybe()
 
 	err = ts.env.WithMockRunner(
@@ -164,7 +164,7 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 		{
 			name:        "successful version retrieval",
 			packageName: "bmad-method",
-			versionTag:  "@alpha",
+			versionTag:  "@beta",
 			mockOutput:  "1.2.3",
 			mockError:   nil,
 			wantVersion: "1.2.3",
@@ -173,7 +173,7 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 		{
 			name:        "empty version output",
 			packageName: "bmad-method",
-			versionTag:  "@alpha",
+			versionTag:  "@beta",
 			mockOutput:  "",
 			mockError:   nil,
 			wantVersion: "",
@@ -182,7 +182,7 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 		{
 			name:        "npm command fails",
 			packageName: "bmad-method",
-			versionTag:  "@alpha",
+			versionTag:  "@beta",
 			mockOutput:  "",
 			mockError:   errBmadMainTestFailed,
 			wantVersion: "",

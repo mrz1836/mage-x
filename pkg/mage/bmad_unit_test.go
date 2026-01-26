@@ -167,8 +167,8 @@ func (ts *BmadUnitTestSuite) TestGetBmadVersionSuccess() {
 
 	// Create mock runner
 	mock := NewBmadMockRunner()
-	expectedCmd := "npm view bmad-method@alpha version"
-	mock.SetOutput(expectedCmd, "6.0.0-alpha.1", nil)
+	expectedCmd := "npm view bmad-method@beta version"
+	mock.SetOutput(expectedCmd, "6.0.0-beta.1", nil)
 
 	err := SetRunner(mock)
 	ts.Require().NoError(err)
@@ -176,13 +176,13 @@ func (ts *BmadUnitTestSuite) TestGetBmadVersionSuccess() {
 	config := &Config{
 		Bmad: BmadConfig{
 			PackageName: "bmad-method",
-			VersionTag:  "@alpha",
+			VersionTag:  "@beta",
 		},
 	}
 
 	version, err := getBmadVersion(config)
 	ts.Require().NoError(err)
-	ts.Require().Equal("6.0.0-alpha.1", version)
+	ts.Require().Equal("6.0.0-beta.1", version)
 }
 
 // TestGetBmadVersionWithDefaults tests getBmadVersion with default config values
@@ -219,7 +219,7 @@ func (ts *BmadUnitTestSuite) TestGetBmadVersionRunnerError() {
 	}()
 
 	mock := NewBmadMockRunner()
-	expectedCmd := "npm view bmad-method@alpha version"
+	expectedCmd := "npm view bmad-method@beta version"
 	mock.SetOutput(expectedCmd, "", errNpmCommandFailed)
 
 	err := SetRunner(mock)
@@ -228,7 +228,7 @@ func (ts *BmadUnitTestSuite) TestGetBmadVersionRunnerError() {
 	config := &Config{
 		Bmad: BmadConfig{
 			PackageName: "bmad-method",
-			VersionTag:  "@alpha",
+			VersionTag:  "@beta",
 		},
 	}
 
@@ -246,7 +246,7 @@ func (ts *BmadUnitTestSuite) TestGetBmadVersionEmptyOutput() {
 	}()
 
 	mock := NewBmadMockRunner()
-	expectedCmd := "npm view bmad-method@alpha version"
+	expectedCmd := "npm view bmad-method@beta version"
 	mock.SetOutput(expectedCmd, "", nil)
 
 	err := SetRunner(mock)
@@ -255,7 +255,7 @@ func (ts *BmadUnitTestSuite) TestGetBmadVersionEmptyOutput() {
 	config := &Config{
 		Bmad: BmadConfig{
 			PackageName: "bmad-method",
-			VersionTag:  "@alpha",
+			VersionTag:  "@beta",
 		},
 	}
 

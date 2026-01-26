@@ -100,7 +100,7 @@ func (ts *BmadTestSuite) TestBmadConfigDefaults() {
 
 	// Verify default values are set correctly
 	ts.Require().Equal("_bmad", config.Bmad.ProjectDir)
-	ts.Require().Equal("@alpha", config.Bmad.VersionTag)
+	ts.Require().Equal("@beta", config.Bmad.VersionTag)
 	ts.Require().Equal("bmad-method", config.Bmad.PackageName)
 }
 
@@ -155,7 +155,7 @@ func (ts *BmadTestSuite) setupBmadConfig() {
 		Bmad: BmadConfig{
 			Enabled:     true,
 			ProjectDir:  "_bmad",
-			VersionTag:  "@alpha",
+			VersionTag:  "@beta",
 			PackageName: "bmad-method",
 		},
 	})

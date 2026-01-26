@@ -782,7 +782,7 @@ magex speckit:upgrade     # Upgrade spec-kit with automatic constitution backup/
 # BMAD CLI Management
 magex bmad:install        # Install BMAD prerequisites (npm, npx, bmad-method)
 magex bmad:check          # Verify BMAD installation and report version info
-magex bmad:upgrade        # Upgrade BMAD to the latest alpha version
+magex bmad:upgrade        # Upgrade BMAD to the latest beta version
 
 # Agent OS CLI Management
 magex agentos:install     # Install Agent OS (base + project)
@@ -1206,7 +1206,7 @@ magex bmad:upgrade   # Upgrade to latest version
 ```yaml
 bmad:
   project_dir: "_bmad"
-  version_tag: "@alpha"
+  version_tag: "@beta"
 ```
 
 </details>

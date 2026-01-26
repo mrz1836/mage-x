@@ -8,7 +8,7 @@ agentos:
   standards_as_skills: false
 bmad:
   project_dir: _bmad
-  version_tag: '@alpha'
+  version_tag: ""
   package_name: bmad-method
 build:
   goflags: []
