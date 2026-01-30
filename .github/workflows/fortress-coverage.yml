@@ -870,6 +870,78 @@ jobs:
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+      # --------------------------------------------------------------------
+      # Enforce Coverage Threshold
+      # Fails the build if coverage drops below GO_COVERAGE_THRESHOLD
+      # Exclusions are already applied during coverage generation
+      # --------------------------------------------------------------------
+      - name: 🎯 Enforce Coverage Threshold
+        if: env.GO_COVERAGE_THRESHOLD != '' && env.GO_COVERAGE_THRESHOLD != '0' && env.GO_COVERAGE_THRESHOLD != '0.0'
+        run: |
+          echo "🎯 Enforcing coverage threshold..."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          THRESHOLD="${{ env.GO_COVERAGE_THRESHOLD }}"
+          echo "📊 Coverage threshold: ${THRESHOLD}%"
+
+          # Find coverage file
+          REPO_ROOT="$(pwd)"
+          COVERAGE_FILE=""
+          COVERAGE_LOCATIONS=(
+            "$REPO_ROOT/coverage-artifacts/coverage-data/${{ inputs.coverage-file }}"
+            "$REPO_ROOT/coverage-artifacts/${{ inputs.coverage-file }}"
+            "$REPO_ROOT/${{ inputs.coverage-file }}"
+          )
+
+          for location in "${COVERAGE_LOCATIONS[@]}"; do
+            if [[ -f "$location" ]]; then
+              COVERAGE_FILE="$location"
+              break
+            fi
+          done
+
+          if [[ -z "$COVERAGE_FILE" ]]; then
+            echo "⚠️ Coverage file not found for threshold check"
+            echo "🔍 Searched in:"
+            for location in "${COVERAGE_LOCATIONS[@]}"; do
+              echo "  - $location"
+            done
+            echo "❌ Cannot enforce threshold without coverage data"
+            exit 1
+          fi
+
+          echo "📄 Coverage file: $COVERAGE_FILE"
+          echo ""
+
+          # Use go-coverage parse to check threshold
+          # This command returns non-zero exit code if coverage is below threshold
+          echo "🔍 Checking coverage against threshold..."
+          if "$GO_COVERAGE_BINARY" parse \
+            --file "$COVERAGE_FILE" \
+            --threshold "$THRESHOLD"; then
+            echo ""
+            echo "✅ Coverage threshold check PASSED"
+          else
+            EXIT_CODE=$?
+            echo ""
+            echo "❌ Coverage threshold check FAILED"
+            echo ""
+            echo "🚨 BUILD FAILURE: Coverage is below the required threshold of ${THRESHOLD}%"
+            echo ""
+            echo "📝 To fix this:"
+            echo "  1. Add more tests to increase coverage"
+            echo "  2. Or adjust GO_COVERAGE_THRESHOLD in .env.base/.env.custom"
+            echo ""
+            echo "📊 Coverage exclusions (applied during test generation):"
+            echo "  - GO_COVERAGE_EXCLUDE_PATHS: ${{ env.GO_COVERAGE_EXCLUDE_PATHS }}"
+            echo "  - GO_COVERAGE_EXCLUDE_FILES: ${{ env.GO_COVERAGE_EXCLUDE_FILES }}"
+            echo "  - GO_COVERAGE_EXCLUDE_TESTS: ${{ env.GO_COVERAGE_EXCLUDE_TESTS }}"
+            echo "  - GO_COVERAGE_EXCLUDE_GENERATED: ${{ env.GO_COVERAGE_EXCLUDE_GENERATED }}"
+            exit $EXIT_CODE
+          fi
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
       - name: 📈 Record coverage history
         # Record history for all branches to enable trend tracking
         if: github.event_name == 'push'
