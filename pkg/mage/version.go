@@ -37,6 +37,7 @@ var (
 	errBranchNotFound               = errors.New("branch does not exist locally or remotely")
 	errTagAlreadyExistsOnRemote     = errors.New("tag already exists on remote")
 	errMaxAutoIncrementAttempts     = errors.New("could not find available version after 100 attempts")
+	errSubmoduleNotFound            = errors.New("sub-module not found")
 )
 
 // Version operation constants
@@ -54,7 +55,16 @@ type bumpConfig struct {
 	dryRun       bool
 	push         bool
 	force        bool
+	module       string // NEW: "", "models", "all", "*"
 	params       map[string]string
+}
+
+// VersionModule represents a Go sub-module for version management
+type VersionModule struct {
+	Name       string // "models", "engine", etc.
+	Path       string // relative path: "models", "engine"
+	CurrentTag string // current version tag: "v0.15.0" or ""
+	HasTags    bool   // whether any tags exist for this module
 }
 
 // parseBumpConfig parses command line arguments into bump configuration
@@ -79,8 +89,99 @@ func parseBumpConfig(args []string) (*bumpConfig, error) {
 		dryRun:       utils.IsParamTrue(params, "dry-run"),
 		push:         utils.IsParamTrue(params, "push"),
 		force:        utils.IsParamTrue(params, "force"),
+		module:       utils.GetParam(params, "module", ""),
 		params:       params,
 	}, nil
+}
+
+// discoverModules finds all sub-modules (*/go.mod) in the repository
+func discoverModules() ([]VersionModule, error) {
+	// Default exclusion patterns
+	defaultExcludes := []string{"vendor/", "testdata/", ".*/"}
+
+	// Get additional exclusions from config if available
+	// Future: Read from .mage.yaml → version.module_excludes for project-specific overrides
+
+	// Find all go.mod files
+	output, err := GetRunner().RunCmdOutput("find", ".", "-name", "go.mod", "-type", "f")
+	if err != nil {
+		return nil, fmt.Errorf("failed to find go.mod files: %w", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	var modules []VersionModule
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || line == "./go.mod" {
+			// Skip root go.mod
+			continue
+		}
+
+		// Extract module path (remove leading ./ and trailing /go.mod)
+		path := strings.TrimPrefix(line, "./")
+		path = strings.TrimSuffix(path, "/go.mod")
+
+		// Apply exclusion patterns
+		excluded := false
+		for _, pattern := range defaultExcludes {
+			if strings.Contains(path, pattern) || strings.HasPrefix(path, ".") {
+				excluded = true
+				break
+			}
+		}
+		if excluded {
+			continue
+		}
+
+		// Check for test patterns
+		if strings.Contains(path, "test") {
+			continue
+		}
+
+		// Get module name (last path component)
+		parts := strings.Split(path, "/")
+		name := parts[len(parts)-1]
+
+		// Get current tag for this module
+		currentTag := getModuleTag(name)
+
+		modules = append(modules, VersionModule{
+			Name:       name,
+			Path:       path,
+			CurrentTag: currentTag,
+			HasTags:    currentTag != "",
+		})
+	}
+
+	return modules, nil
+}
+
+// getModuleTag returns the current version tag for a sub-module
+func getModuleTag(moduleName string) string {
+	// Get all tags matching the pattern {moduleName}/v*
+	pattern := fmt.Sprintf("%s/v*", moduleName)
+	output, err := GetRunner().RunCmdOutput("git", "tag", "-l", pattern, "--sort=-version:refname")
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) == 0 || lines[0] == "" {
+		return ""
+	}
+
+	// Return the most recent tag
+	return parseModuleTagVersion(lines[0], moduleName)
+}
+
+// parseModuleTagVersion extracts version from "models/v0.15.0" → "v0.15.0"
+func parseModuleTagVersion(tag, moduleName string) string {
+	prefix := moduleName + "/"
+	if strings.HasPrefix(tag, prefix) {
+		return strings.TrimPrefix(tag, prefix)
+	}
+	return tag
 }
 
 // checkBumpPreconditions validates preconditions for version bump
@@ -323,6 +424,407 @@ func (Version) Show() error {
 	return nil
 }
 
+// getSubmoduleCurrentVersion gets current version for a sub-module
+func getSubmoduleCurrentVersion(moduleName string) string {
+	return getModuleTag(moduleName)
+}
+
+// createModuleTag creates a sub-module version tag (e.g., "models/v0.16.0")
+func createModuleTag(moduleName, version string) error {
+	tagName := fmt.Sprintf("%s/%s", moduleName, version)
+
+	// Check if tag already exists on current commit
+	exists, pointsToHEAD, err := checkLocalTagExists(tagName)
+	if err != nil {
+		return fmt.Errorf("failed to check tag existence: %w", err)
+	}
+
+	if exists && pointsToHEAD {
+		utils.Success("✅ Tag %s already exists on current commit", tagName)
+		return nil
+	}
+
+	message := fmt.Sprintf("Release %s %s", moduleName, version)
+	if err := GetRunner().RunCmd("git", "tag", "-a", tagName, "-m", message); err != nil {
+		return fmt.Errorf("failed to create tag: %w", err)
+	}
+
+	utils.Success("✅ Created tag: %s", tagName)
+	return nil
+}
+
+// bumpRootAndAllSubmodules handles versioning for root + all sub-modules
+func bumpRootAndAllSubmodules(cfg *bumpConfig) error {
+	utils.Info("Bumping root module and all sub-modules together")
+
+	// First, bump the root module (but don't push yet)
+	utils.Info("Step 1: Bumping root module")
+
+	// Special validation for major version bumps to prevent accidents
+	if cfg.bumpType == "major" && !cfg.dryRun {
+		if err := validateMajorVersionBump(cfg.params); err != nil {
+			return err
+		}
+	}
+
+	if cfg.dryRun {
+		utils.Info("🔍 Running in DRY-RUN mode - no changes will be made")
+	}
+
+	// Check preconditions (uncommitted changes)
+	if err := checkBumpPreconditions(cfg); err != nil {
+		return err
+	}
+
+	// Handle branch switching logic
+	cleanup, err := handleBranchSwitch(cfg.targetBranch, cfg.bumpType, cfg.dryRun)
+	if cleanup != nil {
+		defer cleanup()
+	}
+	if err != nil {
+		return err
+	}
+
+	// Check for existing tags on current commit
+	if checkErr := checkExistingTags(cfg.dryRun); checkErr != nil {
+		return checkErr
+	}
+
+	// Calculate root version
+	currentRoot, newRootVersion, skipped, err := calculateNewVersion(cfg)
+	if err != nil {
+		return err
+	}
+
+	if len(skipped) > 0 {
+		utils.Warn("⚠️  Skipped root versions (exist from other branches): %s", strings.Join(skipped, ", "))
+		utils.Info("Using next available version: %s", newRootVersion)
+	}
+
+	// Validate root version change
+	if validateErr := validateVersionChange(cfg, currentRoot, newRootVersion, skipped); validateErr != nil {
+		return validateErr
+	}
+
+	// Get all sub-modules
+	modules, err := discoverModules()
+	if err != nil {
+		return fmt.Errorf("failed to discover modules: %w", err)
+	}
+
+	// Calculate new versions for all sub-modules
+	type moduleBump struct {
+		module     VersionModule
+		oldVersion string
+		newVersion string
+	}
+
+	bumps := make([]moduleBump, 0, len(modules))
+	for _, m := range modules {
+		current := m.CurrentTag
+		if current == "" {
+			current = "v0.0.0"
+		}
+
+		newVersion, err := bumpVersion(current, cfg.bumpType)
+		if err != nil {
+			return fmt.Errorf("failed to bump version for %s: %w", m.Name, err)
+		}
+
+		bumps = append(bumps, moduleBump{
+			module:     m,
+			oldVersion: current,
+			newVersion: newVersion,
+		})
+	}
+
+	// Display combined summary
+	utils.Info("📋 Version Bump Summary (Root + Sub-modules):")
+	utils.Info("  Root: %s → %s", currentRoot, newRootVersion)
+	for _, b := range bumps {
+		utils.Info("  %s: %s → %s", b.module.Name, b.oldVersion, b.newVersion)
+	}
+	utils.Info("  Type: %s bump", cfg.bumpType)
+
+	// Handle dry-run mode
+	if cfg.dryRun {
+		utils.Info("📋 DRY-RUN Summary:")
+		utils.Info("  Bumping root + %d sub-module(s)", len(bumps))
+		utils.Info("🔧 Commands that would be executed:")
+
+		// Root tag
+		message := fmt.Sprintf("GitHubRelease %s", newRootVersion)
+		utils.Info("  git tag -a %s -m \"%s\"", newRootVersion, message)
+
+		// Sub-module tags
+		for _, b := range bumps {
+			tagName := fmt.Sprintf("%s/%s", b.module.Name, b.newVersion)
+			moduleMessage := fmt.Sprintf("Release %s %s", b.module.Name, b.newVersion)
+			utils.Info("  git tag -a %s -m \"%s\"", tagName, moduleMessage)
+		}
+
+		if cfg.push {
+			utils.Info("  git push origin %s", newRootVersion)
+			for _, b := range bumps {
+				tagName := fmt.Sprintf("%s/%s", b.module.Name, b.newVersion)
+				utils.Info("  git push origin %s", tagName)
+			}
+		} else {
+			utils.Info("📌 Note: Tags would be created locally only")
+		}
+
+		utils.Success("✅ DRY-RUN completed - no changes made")
+		return nil
+	}
+
+	// Create root tag
+	if err := createVersionTag(newRootVersion); err != nil {
+		return err
+	}
+
+	// Create all sub-module tags
+	for _, b := range bumps {
+		if err := createModuleTag(b.module.Name, b.newVersion); err != nil {
+			return fmt.Errorf("failed to create tag for %s: %w", b.module.Name, err)
+		}
+	}
+
+	// Push all tags if requested
+	if cfg.push {
+		// Push root tag
+		if err := handlePushTag(newRootVersion); err != nil {
+			return fmt.Errorf("failed to push root tag: %w", err)
+		}
+
+		// Push sub-module tags
+		for _, b := range bumps {
+			tagName := fmt.Sprintf("%s/%s", b.module.Name, b.newVersion)
+			if err := handlePushTag(tagName); err != nil {
+				return fmt.Errorf("failed to push tag %s: %w", tagName, err)
+			}
+		}
+	} else {
+		utils.Info("To push tags, run:")
+		utils.Info("  git push origin %s", newRootVersion)
+		for _, b := range bumps {
+			utils.Info("  git push origin %s/%s", b.module.Name, b.newVersion)
+		}
+	}
+
+	utils.Success("✅ Root and all %d sub-module(s) bumped successfully", len(bumps))
+	return nil
+}
+
+// bumpAllSubmodules handles versioning for all sub-modules together
+func bumpAllSubmodules(cfg *bumpConfig) error {
+	utils.Info("Bumping all sub-modules together")
+
+	// Discover all modules
+	modules, err := discoverModules()
+	if err != nil {
+		return fmt.Errorf("failed to discover modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Info("No sub-modules found to bump")
+		return nil
+	}
+
+	// Calculate new versions for all modules
+	type moduleBump struct {
+		module     VersionModule
+		oldVersion string
+		newVersion string
+	}
+
+	bumps := make([]moduleBump, 0, len(modules))
+	for _, m := range modules {
+		current := m.CurrentTag
+		if current == "" {
+			current = "v0.0.0"
+		}
+
+		newVersion, err := bumpVersion(current, cfg.bumpType)
+		if err != nil {
+			return fmt.Errorf("failed to bump version for %s: %w", m.Name, err)
+		}
+
+		bumps = append(bumps, moduleBump{
+			module:     m,
+			oldVersion: current,
+			newVersion: newVersion,
+		})
+	}
+
+	// Display summary
+	utils.Info("📋 Sub-modules Version Bump Summary:")
+	for _, b := range bumps {
+		utils.Info("  %s: %s → %s", b.module.Name, b.oldVersion, b.newVersion)
+	}
+	utils.Info("  Type: %s bump", cfg.bumpType)
+
+	// Handle dry-run mode
+	if cfg.dryRun {
+		utils.Info("📋 DRY-RUN Summary:")
+		utils.Info("  Bumping %d sub-module(s)", len(bumps))
+		utils.Info("  Bump type: %s", cfg.bumpType)
+		utils.Info("🔧 Commands that would be executed:")
+		for _, b := range bumps {
+			tagName := fmt.Sprintf("%s/%s", b.module.Name, b.newVersion)
+			message := fmt.Sprintf("Release %s %s", b.module.Name, b.newVersion)
+			utils.Info("  git tag -a %s -m \"%s\"", tagName, message)
+		}
+
+		if cfg.push {
+			for _, b := range bumps {
+				tagName := fmt.Sprintf("%s/%s", b.module.Name, b.newVersion)
+				utils.Info("  git push origin %s", tagName)
+			}
+		} else {
+			utils.Info("📌 Note: Tags would be created locally only")
+			utils.Info("  Or add 'push' parameter to push automatically")
+		}
+
+		utils.Success("✅ DRY-RUN completed - no changes made")
+		return nil
+	}
+
+	// Create all module tags
+	for _, b := range bumps {
+		if err := createModuleTag(b.module.Name, b.newVersion); err != nil {
+			return fmt.Errorf("failed to create tag for %s: %w", b.module.Name, err)
+		}
+	}
+
+	// Push if requested
+	if cfg.push {
+		for _, b := range bumps {
+			tagName := fmt.Sprintf("%s/%s", b.module.Name, b.newVersion)
+			if err := handlePushTag(tagName); err != nil {
+				return fmt.Errorf("failed to push tag %s: %w", tagName, err)
+			}
+		}
+	} else {
+		utils.Info("To push tags, run:")
+		for _, b := range bumps {
+			utils.Info("  git push origin %s/%s", b.module.Name, b.newVersion)
+		}
+		utils.Info("Or add 'push' parameter to push automatically")
+	}
+
+	utils.Success("✅ All %d sub-module(s) bumped successfully", len(bumps))
+	return nil
+}
+
+// bumpSubmodule handles versioning for a specific sub-module
+func bumpSubmodule(moduleName string, cfg *bumpConfig) error {
+	utils.Info("Bumping sub-module: %s", moduleName)
+
+	// Verify the sub-module exists
+	modules, err := discoverModules()
+	if err != nil {
+		return fmt.Errorf("failed to discover modules: %w", err)
+	}
+
+	moduleExists := false
+	for _, m := range modules {
+		if m.Name == moduleName {
+			moduleExists = true
+			break
+		}
+	}
+
+	if !moduleExists {
+		return fmt.Errorf("%w: %s", errSubmoduleNotFound, moduleName)
+	}
+
+	// Get current version
+	current := getSubmoduleCurrentVersion(moduleName)
+	if current == "" {
+		current = "v0.0.0"
+		utils.Info("No previous tags found for %s, starting from %s", moduleName, current)
+	}
+
+	// Calculate new version
+	newVersion, err := bumpVersion(current, cfg.bumpType)
+	if err != nil {
+		return fmt.Errorf("failed to bump version: %w", err)
+	}
+
+	utils.Info("📋 Sub-module Version Bump Summary:")
+	utils.Info("  Module:   %s", moduleName)
+	utils.Info("  From:     %s", current)
+	utils.Info("  To:       %s", newVersion)
+	utils.Info("  Type:     %s bump", cfg.bumpType)
+
+	// Handle dry-run mode
+	if cfg.dryRun {
+		utils.Info("📋 DRY-RUN Summary:")
+		utils.Info("  Module:          %s", moduleName)
+		utils.Info("  Current version: %s", current)
+		utils.Info("  New version:     %s", newVersion)
+		utils.Info("  Tag to create:   %s/%s", moduleName, newVersion)
+		utils.Info("🔧 Commands that would be executed:")
+		message := fmt.Sprintf("Release %s %s", moduleName, newVersion)
+		utils.Info("  git tag -a %s/%s -m \"%s\"", moduleName, newVersion, message)
+
+		if cfg.push {
+			utils.Info("  git push origin %s/%s", moduleName, newVersion)
+		} else {
+			utils.Info("📌 Note: Tag would be created locally only")
+			utils.Info("  To push: git push origin %s/%s", moduleName, newVersion)
+			utils.Info("  Or add 'push' parameter to push automatically")
+		}
+
+		utils.Success("✅ DRY-RUN completed - no changes made")
+		return nil
+	}
+
+	// Create the module tag
+	if err := createModuleTag(moduleName, newVersion); err != nil {
+		return err
+	}
+
+	// Push if requested
+	if cfg.push {
+		tagName := fmt.Sprintf("%s/%s", moduleName, newVersion)
+		if err := handlePushTag(tagName); err != nil {
+			return err
+		}
+	} else {
+		utils.Info("To push the tag, run: git push origin %s/%s", moduleName, newVersion)
+		utils.Info("Or add 'push' parameter to push automatically")
+	}
+
+	return nil
+}
+
+// Modules lists all discovered sub-modules and their current versions
+func (Version) Modules(args ...string) error {
+	utils.Header("Go Modules")
+
+	modules, err := discoverModules()
+	if err != nil {
+		return fmt.Errorf("failed to discover modules: %w", err)
+	}
+
+	if len(modules) == 0 {
+		utils.Info("No sub-modules found (single-module repository)")
+		return nil
+	}
+
+	utils.Info("Found %d sub-module(s):", len(modules))
+	for _, m := range modules {
+		if m.CurrentTag != "" {
+			fmt.Printf("  %s: %s\n", m.Name, m.CurrentTag)
+		} else {
+			fmt.Printf("  %s: (no tags)\n", m.Name)
+		}
+	}
+
+	return nil
+}
+
 // Check checks for available updates
 func (Version) Check(_ ...string) error {
 	utils.Header("Checking for Updates")
@@ -443,6 +945,19 @@ func (Version) Bump(args ...string) error {
 	cfg, err := parseBumpConfig(args)
 	if err != nil {
 		return err
+	}
+
+	// Route to sub-module bump if module parameter is set
+	if cfg.module != "" && cfg.module != "*" {
+		if cfg.module == "all" {
+			return bumpAllSubmodules(cfg)
+		}
+		return bumpSubmodule(cfg.module, cfg)
+	}
+
+	// Handle module=* (root + all sub-modules)
+	if cfg.module == "*" {
+		return bumpRootAndAllSubmodules(cfg)
 	}
 
 	utils.Info("Using bump type: %s", cfg.bumpType)

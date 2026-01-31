@@ -241,7 +241,7 @@ This means:
 - **Command Execution**: Secure, interface-based command execution with validation
 - **Native Logging**: Colored output, progress indicators, and structured logging
 - **Complete Build Toolchain**: All essential build, test, lint, and release tasks
-- **Version Management**: Automatic version detection and update infrastructure
+- **Version Management**: Automatic version detection and update infrastructure with sub-module support for multi-module repositories
 
 ### Developer Experience
 - **Release Tooling**: Multi-platform asset building with GitHub integration
@@ -666,6 +666,7 @@ magex git:tagupdate version=1.2.3               # Force update a tag
 
 # Version Management
 magex version:show         # Display current version information
+magex version:modules      # List all discovered sub-modules (for multi-module repos)
 magex version:check        # Check version information and compare with latest
 magex version:update       # Update to latest version
 magex version:bump         # Bump version (patch, minor, major)
@@ -690,6 +691,13 @@ magex version:bump dry-run                 # Preview patch bump
 magex version:bump bump=minor dry-run      # Preview minor bump
 magex version:bump bump=major major-confirm push dry-run  # Preview major bump with push
 magex version:bump bump=patch branch=master dry-run      # Preview branch switch and bump
+
+# Sub-module Versioning (for multi-module repositories like spv-wallet)
+magex version:modules                           # List all discovered sub-modules
+magex version:bump module=models bump=patch     # Bump specific sub-module
+magex version:bump module=all bump=minor        # Bump all sub-modules together
+magex version:bump module=* bump=patch push     # Bump root + all sub-modules
+magex version:bump module=models dry-run        # Preview sub-module bump
 
 # Important Notes:
 # - Uncommitted changes will block version bump operation (safety check)
