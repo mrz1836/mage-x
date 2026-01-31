@@ -214,22 +214,19 @@ func (Tmux) Start(args ...string) error {
 	utils.Info("Creating session '%s' in directory: %s", sessionName, dir)
 	utils.Info("Using model: %s", fullModel)
 
-	// Create new tmux session
+	// Create new tmux session in detached mode first
 	ctx := context.Background()
 	//nolint:gosec // claudeCmd is constructed from validated inputs
-	cmd := exec.CommandContext(ctx, "tmux", "new", "-s", sessionName, "-c", dir, claudeCmd)
+	createCmd := exec.CommandContext(ctx, "tmux", "new", "-d", "-s", sessionName, "-c", dir, claudeCmd)
 
-	// Run in foreground (user will be attached to the session)
-	cmd.Stdin = nil
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-
-	if err := cmd.Run(); err != nil {
+	if err := createCmd.Run(); err != nil {
 		return fmt.Errorf("failed to create tmux session: %w", err)
 	}
 
-	utils.Success("Session '%s' started successfully!", sessionName)
-	return nil
+	utils.Success("Session '%s' created. Attaching...", sessionName)
+
+	// Now attach to the session with proper TTY
+	return attachToSession(sessionName)
 }
 
 // attachToSession attaches to an existing tmux session
@@ -237,9 +234,10 @@ func attachToSession(name string) error {
 	ctx := context.Background()
 	cmd := exec.CommandContext(ctx, "tmux", "attach", "-t", name)
 
-	cmd.Stdin = nil
-	cmd.Stdout = nil
-	cmd.Stderr = nil
+	// Connect to terminal for interactive session
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to attach to session: %w", err)
