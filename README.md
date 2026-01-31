@@ -810,13 +810,13 @@ magex tmux:killall        # Kill all sessions (with confirmation)
 magex tmux:status         # Show session health and status
 
 # Supported Models
-# - opus: claude-opus-4
-# - sonnet: claude-sonnet-4 (default)
-# - haiku: claude-haiku-3.5
+# - opus: claude-opus-4-5
+# - sonnet: claude-sonnet-4-5 (default)
+# - haiku: claude-haiku-4-5
 # - gpt: gpt-4o
 # - o1: o1
 # - o3: o3-mini
-# - gemini: gemini-2.0-flash
+# - gemini: gemini-3-flash
 
 # Session auto-attach: If a session already exists, tmux:start will attach to it
 ```
