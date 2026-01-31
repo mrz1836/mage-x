@@ -37,15 +37,15 @@ type Tmux mg.Namespace
 func getSupportedModels() map[string]string {
 	return map[string]string{
 		// Anthropic
-		"opus":   "claude-opus-4",
-		"sonnet": "claude-sonnet-4",
-		"haiku":  "claude-haiku-3.5",
+		"opus":   "claude-opus-4-5",
+		"sonnet": "claude-sonnet-4-5",
+		"haiku":  "claude-haiku-4-5",
 		// OpenAI
 		"gpt": "gpt-4o",
 		"o1":  "o1",
 		"o3":  "o3-mini",
 		// Google
-		"gemini": "gemini-2.0-flash",
+		"gemini": "gemini-3-flash",
 	}
 }
 
