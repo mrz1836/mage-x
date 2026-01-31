@@ -793,6 +793,37 @@ magex agentos:upgrade     # Upgrade Agent OS with user data preservation
 </details>
 
 <details>
+<summary>💻 <strong>Tmux Session Management</strong></summary>
+
+```bash
+# Claude Code Pairing Sessions
+magex tmux:start                              # Start Claude Code in current directory
+magex tmux:start dir=~/projects/foo           # Start in specific directory
+magex tmux:start model=opus                   # Start with specific model (opus/sonnet/haiku)
+magex tmux:start dir=~/projects/foo name=my-session model=opus  # All options
+
+# Session Management
+magex tmux:list           # List all active tmux sessions
+magex tmux:attach name=my-session  # Attach to existing session
+magex tmux:kill name=my-session    # Kill specific session
+magex tmux:killall        # Kill all sessions (with confirmation)
+magex tmux:status         # Show session health and status
+
+# Supported Models
+# - opus: claude-opus-4
+# - sonnet: claude-sonnet-4 (default)
+# - haiku: claude-haiku-3.5
+# - gpt: gpt-4o
+# - o1: o1
+# - o3: o3-mini
+# - gemini: gemini-2.0-flash
+
+# Session auto-attach: If a session already exists, tmux:start will attach to it
+```
+
+</details>
+
+<details>
 <summary>⚙️ <strong>Configuration Management</strong></summary>
 
 ```bash

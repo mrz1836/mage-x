@@ -187,6 +187,56 @@ func getToolsCommands() []CommandDef {
 	}
 }
 
+func getTmuxCommands() []CommandDef {
+	return []CommandDef{
+		{
+			Method:   "list",
+			Desc:     "List all tmux sessions with status",
+			Usage:    "magex tmux:list",
+			Examples: []string{"magex tmux:list"},
+		},
+		{
+			Method: "start",
+			Desc:   "Start Claude Code session in tmux",
+			Usage:  "magex tmux:start [dir=PATH] [name=NAME] [model=MODEL]",
+			Examples: []string{
+				"magex tmux:start",
+				"magex tmux:start dir=~/projects/foo",
+				"magex tmux:start model=opus",
+				"magex tmux:start dir=~/projects/foo name=my-session model=sonnet",
+			},
+		},
+		{
+			Method: "attach",
+			Desc:   "Attach to an existing tmux session",
+			Usage:  "magex tmux:attach name=NAME",
+			Examples: []string{
+				"magex tmux:attach name=my-session",
+			},
+		},
+		{
+			Method: "kill",
+			Desc:   "Kill a specific tmux session",
+			Usage:  "magex tmux:kill name=NAME",
+			Examples: []string{
+				"magex tmux:kill name=my-session",
+			},
+		},
+		{
+			Method:   "killall",
+			Desc:     "Kill all tmux sessions with confirmation",
+			Usage:    "magex tmux:killall",
+			Examples: []string{"magex tmux:killall"},
+		},
+		{
+			Method:   "status",
+			Desc:     "Show tmux session health and status",
+			Usage:    "magex tmux:status",
+			Examples: []string{"magex tmux:status"},
+		},
+	}
+}
+
 func getGenerateCommands() []CommandDef {
 	return []CommandDef{
 		{Method: "default", Desc: "Run code generation", Aliases: []string{"generate"}},
@@ -500,6 +550,17 @@ func toolsMethodBindings(t mage.Tools) map[string]MethodBinding {
 	}
 }
 
+func tmuxMethodBindings(tmux mage.Tmux) map[string]MethodBinding {
+	return map[string]MethodBinding{
+		"list":    {NoArgs: tmux.List},
+		"start":   {WithArgs: tmux.Start},
+		"attach":  {WithArgs: tmux.Attach},
+		"kill":    {WithArgs: tmux.Kill},
+		"killall": {NoArgs: tmux.KillAll},
+		"status":  {WithArgs: tmux.Status},
+	}
+}
+
 func generateMethodBindings(g mage.Generate) map[string]MethodBinding {
 	return map[string]MethodBinding{
 		"default": {NoArgs: g.Default},
@@ -687,6 +748,7 @@ func RegisterAll(reg *registry.Registry) {
 	registerReleaseCommands(reg)
 	registerDocsCommands(reg)
 	registerToolsCommands(reg)
+	registerTmuxCommands(reg)
 	registerGenerateCommands(reg)
 	registerUpdateCommands(reg)
 	registerModCommands(reg)
@@ -782,6 +844,11 @@ func registerDocsCommands(reg *registry.Registry) {
 func registerToolsCommands(reg *registry.Registry) {
 	t := mage.Tools{}
 	registerNamespaceCommands(reg, "tools", "Tools", getToolsCommands(), toolsMethodBindings(t))
+}
+
+func registerTmuxCommands(reg *registry.Registry) {
+	tmux := mage.Tmux{}
+	registerNamespaceCommands(reg, "tmux", "Development", getTmuxCommands(), tmuxMethodBindings(tmux))
 }
 
 func registerGenerateCommands(reg *registry.Registry) {
