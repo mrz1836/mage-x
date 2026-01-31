@@ -803,11 +803,11 @@ magex tmux:start model=opus                   # Start with specific model (opus/
 magex tmux:start dir=~/projects/foo name=my-session model=opus  # All options
 
 # Session Management
-magex tmux:list           # List all active tmux sessions
-magex tmux:attach name=my-session  # Attach to existing session
-magex tmux:kill name=my-session    # Kill specific session
-magex tmux:killall        # Kill all sessions (with confirmation)
-magex tmux:status         # Show session health and status
+magex tmux:list                      # List all active tmux sessions
+magex tmux:attach name=my-session    # Attach to existing session
+magex tmux:kill name=my-session      # Kill specific session
+magex tmux:killall                   # Kill all sessions (with confirmation)
+magex tmux:status                    # Show session health and status
 
 # Supported Models
 # - opus: claude-opus-4-5
