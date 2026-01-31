@@ -43,6 +43,7 @@ type (
 	Release   mg.Namespace
 	Speckit   mg.Namespace
 	Test      mg.Namespace
+	Tmux      mg.Namespace
 	Tools     mg.Namespace
 	Update    mg.Namespace
 	Version   mg.Namespace
