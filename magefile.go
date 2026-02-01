@@ -1322,6 +1322,11 @@ func (v Version) Tag() error {
 	return impl.Tag(getMageArgs()...)
 }
 
+func (v Version) Modules() error {
+	var impl mage.Version
+	return impl.Modules(getMageArgs()...)
+}
+
 // Next method requires parameters and returns multiple values, not suitable for namespace syntax
 // Compare method requires parameters, not suitable for namespace syntax
 // Validate method requires parameters, not suitable for namespace syntax
