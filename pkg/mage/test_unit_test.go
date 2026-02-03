@@ -419,40 +419,47 @@ func boolPtr(b bool) *bool {
 func TestCalculateFuzzTimeout(t *testing.T) {
 	t.Parallel()
 
+	// calculateFuzzTimeout now uses the new fuzz timing system with an assumed 10 seeds.
+	// Formula: fuzzTime + (10 seeds * 500ms) + 1m buffer = fuzzTime + 5s + 1m
+	// Min timeout is 1m, max is 30m.
+	cfg := DefaultFuzzTimingConfig()
+	assumedSeeds := 10
+	seedOverhead := time.Duration(assumedSeeds) * cfg.BaselineOverheadPerSeed // 5s
+
 	tests := []struct {
 		name     string
 		args     []string
 		expected time.Duration
 	}{
 		{
-			name:     "default timeout when no fuzztime",
+			name:     "default timeout when no fuzztime (10s default)",
 			args:     []string{"test", "-fuzz=FuzzFoo"},
-			expected: 15 * time.Minute,
+			expected: 10*time.Second + seedOverhead + cfg.BaselineBuffer, // 10s + 5s + 1m = 1m15s
 		},
 		{
-			name:     "parses fuzztime with 5 minute buffer",
+			name:     "parses fuzztime and adds overhead",
 			args:     []string{"test", "-fuzz=FuzzFoo", "-fuzztime", "10s"},
-			expected: 10*time.Second + 5*time.Minute,
+			expected: 10*time.Second + seedOverhead + cfg.BaselineBuffer, // 10s + 5s + 1m = 1m15s
 		},
 		{
 			name:     "parses longer fuzztime",
 			args:     []string{"test", "-fuzztime", "5m", "-fuzz=FuzzBar"},
-			expected: 5*time.Minute + 5*time.Minute,
+			expected: 5*time.Minute + seedOverhead + cfg.BaselineBuffer, // 5m + 5s + 1m = 6m5s
 		},
 		{
-			name:     "caps at maxFuzzTimeout",
+			name:     "caps at max timeout",
 			args:     []string{"test", "-fuzztime", "1h"},
-			expected: maxFuzzTimeout, // Should be capped at 30 minutes
+			expected: cfg.MaxTimeout, // Should be capped at 30 minutes
 		},
 		{
 			name:     "handles invalid duration format",
 			args:     []string{"test", "-fuzztime", "invalid"},
-			expected: 15 * time.Minute, // Falls back to default
+			expected: 10*time.Second + seedOverhead + cfg.BaselineBuffer, // Falls back to default 10s
 		},
 		{
 			name:     "handles fuzztime at end of args",
 			args:     []string{"test", "-fuzz=FuzzFoo", "-fuzztime"},
-			expected: 15 * time.Minute, // Missing value, falls back
+			expected: 10*time.Second + seedOverhead + cfg.BaselineBuffer, // Missing value, uses default
 		},
 	}
 

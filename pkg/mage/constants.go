@@ -167,6 +167,14 @@ const (
 	DefaultBenchTime = "10s"
 	ShortTimeout     = "1m"
 	LongTimeout      = "30m"
+
+	// Fuzz test timing constants
+	// DefaultFuzzBaselineOverheadPerSeed is the estimated time per seed during baseline gathering.
+	// Go's fuzz tests run all seeds before the -fuzztime timer starts.
+	DefaultFuzzBaselineOverheadPerSeed = "500ms"
+	// DefaultFuzzBaselineBuffer is extra buffer time added to fuzz test timeouts
+	// to account for test setup, teardown, and variance in seed execution time.
+	DefaultFuzzBaselineBuffer = "1m"
 )
 
 // Coverage modes

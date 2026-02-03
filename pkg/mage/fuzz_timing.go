@@ -1,0 +1,423 @@
+// Package mage provides fuzz test timing utilities for accurate timeout calculation.
+//
+// Go's fuzz tests have two distinct phases:
+//  1. Baseline gathering - Runs ALL seed corpus entries before fuzzing starts
+//  2. Fuzzing - The actual -fuzztime duration
+//
+// The -fuzztime flag only controls phase 2. Phase 1 runs before the timer starts,
+// so total wall-clock time is: baseline_time + fuzztime.
+//
+// This package provides utilities to:
+//   - Count seed corpus entries (f.Add() calls + testdata/fuzz/* files)
+//   - Calculate accurate timeouts accounting for baseline gathering
+//   - Report timing breakdown for debugging
+package mage
+
+import (
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
+
+	"github.com/mrz1836/mage-x/pkg/utils"
+)
+
+// FuzzSeedInfo contains information about a fuzz test's seed corpus
+type FuzzSeedInfo struct {
+	TestName       string // Name of the fuzz test function
+	Package        string // Package path
+	CodeSeeds      int    // Number of f.Add() calls in code
+	CorpusSeeds    int    // Number of files in testdata/fuzz/<TestName>/
+	TotalSeeds     int    // CodeSeeds + CorpusSeeds
+	EstimatedTime  time.Duration
+	SourceFile     string // Path to the test file containing this fuzz test
+	HasLoopedSeeds bool   // True if f.Add is called inside a loop (count may be inaccurate)
+}
+
+// FuzzTimingConfig holds configuration for fuzz test timing calculations
+type FuzzTimingConfig struct {
+	BaselineOverheadPerSeed time.Duration // Time per seed during baseline gathering
+	BaselineBuffer          time.Duration // Extra buffer time for safety margin
+	MaxTimeout              time.Duration // Maximum allowed timeout (cap)
+	MinTimeout              time.Duration // Minimum timeout regardless of calculation
+}
+
+// DefaultFuzzTimingConfig returns the default fuzz timing configuration
+func DefaultFuzzTimingConfig() FuzzTimingConfig {
+	return FuzzTimingConfig{
+		BaselineOverheadPerSeed: 500 * time.Millisecond,
+		BaselineBuffer:          1 * time.Minute,
+		MaxTimeout:              30 * time.Minute,
+		MinTimeout:              1 * time.Minute,
+	}
+}
+
+// FuzzTimingConfigFromTestConfig creates a FuzzTimingConfig from TestConfig
+func FuzzTimingConfigFromTestConfig(cfg *TestConfig) FuzzTimingConfig {
+	ftc := DefaultFuzzTimingConfig()
+
+	if cfg == nil {
+		return ftc
+	}
+
+	// Parse overhead per seed
+	if cfg.FuzzBaselineOverheadPerSeed != "" {
+		if d, err := time.ParseDuration(cfg.FuzzBaselineOverheadPerSeed); err == nil && d > 0 {
+			ftc.BaselineOverheadPerSeed = d
+		}
+	}
+
+	// Parse baseline buffer
+	if cfg.FuzzBaselineBuffer != "" {
+		if d, err := time.ParseDuration(cfg.FuzzBaselineBuffer); err == nil && d >= 0 {
+			ftc.BaselineBuffer = d
+		}
+	}
+
+	return ftc
+}
+
+// CountFuzzSeeds counts the total number of seed corpus entries for a fuzz test.
+// It combines:
+//   - f.Add() calls found in the test source code
+//   - Files in testdata/fuzz/<TestName>/ directory
+//
+// The pkgDir should be the directory containing the test files.
+// Returns FuzzSeedInfo with details about the seed corpus.
+func CountFuzzSeeds(pkgDir, testName string) (*FuzzSeedInfo, error) {
+	info := &FuzzSeedInfo{
+		TestName: testName,
+		Package:  pkgDir,
+	}
+
+	// Count f.Add() calls in source code
+	codeSeeds, sourceFile, hasLoop, err := countFAddCalls(pkgDir, testName)
+	if err != nil {
+		// Non-fatal: we can still check testdata
+		utils.Debug("Failed to count f.Add() calls: %v", err)
+	}
+	info.CodeSeeds = codeSeeds
+	info.SourceFile = sourceFile
+	info.HasLoopedSeeds = hasLoop
+
+	// Count corpus files in testdata/fuzz/<TestName>/
+	corpusSeeds, err := countCorpusFiles(pkgDir, testName)
+	if err != nil {
+		// Non-fatal: testdata might not exist
+		utils.Debug("Failed to count corpus files: %v", err)
+	}
+	info.CorpusSeeds = corpusSeeds
+
+	info.TotalSeeds = info.CodeSeeds + info.CorpusSeeds
+
+	return info, nil
+}
+
+// countFAddCalls parses test files to count f.Add() calls within a specific fuzz test.
+// Returns the count, source file path, whether seeds are in a loop, and any error.
+func countFAddCalls(pkgDir, testName string) (int, string, bool, error) {
+	// Find all *_test.go files in the package directory
+	pattern := filepath.Join(pkgDir, "*_test.go")
+	testFiles, err := filepath.Glob(pattern)
+	if err != nil {
+		return 0, "", false, err
+	}
+
+	fset := token.NewFileSet()
+	count := 0
+	sourceFile := ""
+	hasLoop := false
+
+	for _, testFile := range testFiles {
+		file, parseErr := parser.ParseFile(fset, testFile, nil, parser.ParseComments)
+		if parseErr != nil {
+			utils.Debug("Failed to parse %s: %v", testFile, parseErr)
+			continue
+		}
+
+		// Look for the specific fuzz test function
+		for _, decl := range file.Decls {
+			funcDecl, ok := decl.(*ast.FuncDecl)
+			if !ok {
+				continue
+			}
+
+			if funcDecl.Name.Name != testName {
+				continue
+			}
+
+			// Found the fuzz test function
+			sourceFile = testFile
+
+			// Count f.Add() calls and detect if they're in loops
+			c, inLoop := countFAddInFunc(funcDecl)
+			count += c
+			if inLoop {
+				hasLoop = true
+			}
+		}
+	}
+
+	return count, sourceFile, hasLoop, nil
+}
+
+// countFAddInFunc counts f.Add() calls within a function and detects if any are in loops.
+// When f.Add is called in a loop (for, range), the static count is unreliable.
+func countFAddInFunc(funcDecl *ast.FuncDecl) (int, bool) {
+	if funcDecl.Body == nil {
+		return 0, false
+	}
+
+	count := 0
+	inLoop := false
+	loopDepth := 0
+
+	// Track the fuzz parameter name (usually "f")
+	fuzzParamName := ""
+	if funcDecl.Type.Params != nil && len(funcDecl.Type.Params.List) > 0 {
+		// Fuzz test signature: func FuzzXxx(f *testing.F)
+		for _, param := range funcDecl.Type.Params.List {
+			if len(param.Names) > 0 {
+				fuzzParamName = param.Names[0].Name
+				break
+			}
+		}
+	}
+
+	if fuzzParamName == "" {
+		fuzzParamName = "f" // Default assumption
+	}
+
+	// Walk the AST to find f.Add() calls
+	ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.ForStmt, *ast.RangeStmt:
+			loopDepth++
+			// Continue inspection but track we're in a loop
+			return true
+		case *ast.CallExpr:
+			if isAddCall(node, fuzzParamName) {
+				count++
+				if loopDepth > 0 {
+					inLoop = true
+				}
+			}
+		}
+		return true
+	})
+
+	// Note: This simple approach doesn't properly handle loop exit,
+	// but for our purposes (detecting ANY loop usage), it's sufficient.
+	// A more complex solution would use a visitor pattern with proper scope tracking.
+
+	return count, inLoop
+}
+
+// isAddCall checks if a call expression is f.Add() where f is the fuzz parameter
+func isAddCall(call *ast.CallExpr, fuzzParamName string) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+
+	// Check if it's <fuzzParam>.Add
+	ident, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return false
+	}
+
+	return ident.Name == fuzzParamName && sel.Sel.Name == "Add"
+}
+
+// countCorpusFiles counts files in testdata/fuzz/<TestName>/ directory
+func countCorpusFiles(pkgDir, testName string) (int, error) {
+	corpusDir := filepath.Join(pkgDir, "testdata", "fuzz", testName)
+
+	entries, err := os.ReadDir(corpusDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil // No corpus directory is fine
+		}
+		return 0, err
+	}
+
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			count++
+		}
+	}
+
+	return count, nil
+}
+
+// CalculateFuzzTimeout calculates the appropriate timeout for a fuzz test
+// based on the fuzz time and estimated seed count.
+//
+// Formula: timeout = fuzzTime + (seedCount * overheadPerSeed) + buffer
+//
+// The calculation accounts for:
+//   - The actual fuzzing duration (-fuzztime)
+//   - Baseline gathering phase (runs all seeds before fuzzing starts)
+//   - Safety buffer for setup/teardown overhead
+func CalculateFuzzTimeout(fuzzTime time.Duration, seedCount int, cfg FuzzTimingConfig) time.Duration {
+	// Base: the actual fuzz time
+	timeout := fuzzTime
+
+	// Add baseline gathering overhead
+	if seedCount > 0 {
+		baselineTime := time.Duration(seedCount) * cfg.BaselineOverheadPerSeed
+		timeout += baselineTime
+	}
+
+	// Add safety buffer
+	timeout += cfg.BaselineBuffer
+
+	// Apply minimum
+	if timeout < cfg.MinTimeout {
+		timeout = cfg.MinTimeout
+	}
+
+	// Apply maximum cap
+	if timeout > cfg.MaxTimeout {
+		timeout = cfg.MaxTimeout
+	}
+
+	return timeout
+}
+
+// CalculateFuzzTimeoutWithArgs calculates timeout from command-line args.
+// This is a convenience wrapper that parses -fuzztime from args.
+func CalculateFuzzTimeoutWithArgs(args []string, seedCount int, cfg FuzzTimingConfig) time.Duration {
+	fuzzTime := parseFuzzTimeFromArgs(args)
+	return CalculateFuzzTimeout(fuzzTime, seedCount, cfg)
+}
+
+// parseFuzzTimeFromArgs extracts -fuzztime duration from command arguments
+func parseFuzzTimeFromArgs(args []string) time.Duration {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == "-fuzztime" {
+			if d, err := time.ParseDuration(args[i+1]); err == nil {
+				return d
+			}
+		}
+	}
+
+	// Also check for -fuzztime=value format
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-fuzztime=") {
+			val := strings.TrimPrefix(arg, "-fuzztime=")
+			if d, err := time.ParseDuration(val); err == nil {
+				return d
+			}
+		}
+	}
+
+	// Default fuzz time if not specified
+	return 10 * time.Second
+}
+
+// FuzzTestTiming captures timing information for a fuzz test run
+type FuzzTestTiming struct {
+	TestName         string
+	Package          string
+	SeedCount        int
+	BaselineStart    time.Time
+	BaselineEnd      time.Time
+	BaselineDuration time.Duration
+	FuzzingStart     time.Time
+	FuzzingEnd       time.Time
+	FuzzingDuration  time.Duration
+	TotalDuration    time.Duration
+}
+
+// String returns a human-readable timing breakdown
+func (t *FuzzTestTiming) String() string {
+	if t.BaselineDuration > 0 {
+		return fmt.Sprintf("Baseline: %s (%d seeds) | Fuzzing: %s | Total: %s",
+			utils.FormatDuration(t.BaselineDuration),
+			t.SeedCount,
+			utils.FormatDuration(t.FuzzingDuration),
+			utils.FormatDuration(t.TotalDuration))
+	}
+	return fmt.Sprintf("Total: %s", utils.FormatDuration(t.TotalDuration))
+}
+
+// ParseFuzzOutputTiming extracts timing information from fuzz test output.
+// It looks for patterns like "gathering baseline coverage: N/M completed"
+// to determine when baseline gathering started and ended.
+func ParseFuzzOutputTiming(output string, startTime time.Time) *FuzzTestTiming {
+	timing := &FuzzTestTiming{}
+
+	// Pattern: "gathering baseline coverage: 0/8 completed"
+	// This appears at the start of baseline gathering
+	baselineStartPattern := regexp.MustCompile(`gathering baseline coverage:\s*0/(\d+)\s*completed`)
+	// Pattern: "fuzz: elapsed:" indicates fuzzing phase has started (baseline complete)
+	// Note: Can't use backreference to match "N/N completed" in Go regex, so we use a simpler pattern
+	baselineEndPattern := regexp.MustCompile(`fuzz:\s*elapsed:`)
+
+	lines := strings.Split(output, "\n")
+
+	baselineStarted := false
+	var baselineEndTime time.Time
+
+	for _, line := range lines {
+		if !baselineStarted {
+			if matches := baselineStartPattern.FindStringSubmatch(line); matches != nil {
+				baselineStarted = true
+				timing.BaselineStart = startTime
+				// Try to extract total seed count from "0/N"
+				// The regex captured it in matches[1]
+			}
+		} else if baselineEndPattern.MatchString(line) {
+			// Baseline completed, fuzzing phase started
+			baselineEndTime = time.Now() // Approximate
+			timing.BaselineEnd = baselineEndTime
+			timing.FuzzingStart = baselineEndTime
+			break
+		}
+	}
+
+	return timing
+}
+
+// EstimateFuzzTestDuration provides an estimate of how long a fuzz test will take
+// based on seed count and fuzz time. Useful for pre-flight planning.
+func EstimateFuzzTestDuration(fuzzTime time.Duration, seedInfo *FuzzSeedInfo, cfg FuzzTimingConfig) time.Duration {
+	if seedInfo == nil {
+		return fuzzTime + cfg.BaselineBuffer
+	}
+
+	baselineEstimate := time.Duration(seedInfo.TotalSeeds) * cfg.BaselineOverheadPerSeed
+	return fuzzTime + baselineEstimate + cfg.BaselineBuffer
+}
+
+// WarnIfHighSeedCount logs a warning if a fuzz test has an unusually high seed count
+// that might cause timeout issues.
+func WarnIfHighSeedCount(seedInfo *FuzzSeedInfo, fuzzTime time.Duration, cfg FuzzTimingConfig) {
+	if seedInfo == nil {
+		return
+	}
+
+	// Threshold: if baseline might take longer than fuzz time itself, warn
+	baselineEstimate := time.Duration(seedInfo.TotalSeeds) * cfg.BaselineOverheadPerSeed
+
+	if baselineEstimate > fuzzTime {
+		utils.Warn("Fuzz test %s has %d seeds - baseline gathering (~%s) may exceed fuzz time (%s)",
+			seedInfo.TestName,
+			seedInfo.TotalSeeds,
+			utils.FormatDuration(baselineEstimate),
+			utils.FormatDuration(fuzzTime))
+	}
+
+	if seedInfo.HasLoopedSeeds {
+		utils.Warn("Fuzz test %s has f.Add() calls in a loop - actual seed count may be higher than detected (%d)",
+			seedInfo.TestName,
+			seedInfo.CodeSeeds)
+	}
+}

@@ -97,6 +97,8 @@ test:
   coverage_exclude: []
   exclude_modules:
     - ""
+  fuzz_baseline_buffer: 1m
+  fuzz_baseline_overhead_per_seed: 500ms
   integration_tag: ""
   integration_timeout: 30m
   parallel: 10

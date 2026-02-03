@@ -31,11 +31,14 @@ var (
 
 // fuzzTestResult captures the result of a single fuzz test run
 type fuzzTestResult struct {
-	Package  string
-	Test     string
-	Duration time.Duration
-	Error    error
-	Output   string // Captured stdout output for text parsing
+	Package          string
+	Test             string
+	Duration         time.Duration
+	Error            error
+	Output           string // Captured stdout output for text parsing
+	SeedCount        int    // Number of seeds detected for this test
+	BaselineDuration time.Duration
+	FuzzingDuration  time.Duration
 }
 
 // testRunnerOptions configures the common test runner setup.
@@ -1402,11 +1405,20 @@ func findFuzzPackagesInDir(dir string) []string {
 
 // runFuzzTestsWithResultsCI runs fuzz tests with optional CI output capture.
 // When ciEnabled is true, stdout is captured for text parsing to extract detailed failure info.
+//
+// This function implements smart timeout calculation that accounts for Go's two-phase fuzz testing:
+//  1. Baseline gathering - runs ALL seed corpus entries before fuzzing starts
+//  2. Fuzzing - the actual -fuzztime duration
+//
+// The timeout is calculated as: fuzzTime + (seedCount * overheadPerSeed) + buffer
 func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages []string, ciEnabled bool) ([]fuzzTestResult, time.Duration) {
 	startTime := time.Now()
 	var results []fuzzTestResult
 
 	fuzzTimeStr := fuzzTime.String()
+
+	// Get fuzz timing configuration
+	fuzzTimingCfg := FuzzTimingConfigFromTestConfig(&config.Test)
 
 	for _, pkg := range packages {
 		// List fuzz tests in package
@@ -1415,13 +1427,33 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 			continue
 		}
 
+		// Resolve package directory for seed counting
+		pkgDir := resolvePkgDir(pkg)
+
 		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
 		for _, test := range fuzzTests {
 			if !strings.HasPrefix(test, "Fuzz") {
 				continue
 			}
 
-			utils.Info("Fuzzing %s.%s", pkg, test)
+			// Count seeds and calculate appropriate timeout
+			seedInfo, seedErr := CountFuzzSeeds(pkgDir, test)
+			seedCount := 0
+			if seedErr == nil && seedInfo != nil {
+				seedCount = seedInfo.TotalSeeds
+				// Warn if seed count might cause issues
+				WarnIfHighSeedCount(seedInfo, fuzzTime, fuzzTimingCfg)
+			}
+
+			// Calculate timeout based on seed count
+			timeout := CalculateFuzzTimeout(fuzzTime, seedCount, fuzzTimingCfg)
+
+			// Display fuzz test info with seed count
+			if seedCount > 0 {
+				utils.Info("Fuzzing %s.%s (%d seeds, timeout: %s)", pkg, test, seedCount, utils.FormatDuration(timeout))
+			} else {
+				utils.Info("Fuzzing %s.%s (timeout: %s)", pkg, test, utils.FormatDuration(timeout))
+			}
 
 			testStart := time.Now()
 			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
@@ -1436,38 +1468,99 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 			var testOutput string
 
 			if ciEnabled {
-				// Capture output for CI text parsing
-				testOutput, testErr = runFuzzTestWithOutput("go", args...)
+				// Capture output for CI text parsing with calculated timeout
+				testOutput, testErr = runFuzzTestWithOutputAndTimeout("go", timeout, args...)
 			} else {
-				// Standard execution without output capture
-				testErr = GetRunner().RunCmd("go", args...)
+				// Standard execution without output capture (still uses smart timeout)
+				testErr = runFuzzTestWithTimeout("go", timeout, args...)
 			}
 			testDuration := time.Since(testStart)
 
+			// Parse timing from output if available
+			var baselineDur, fuzzingDur time.Duration
+			if testOutput != "" {
+				timing := ParseFuzzOutputTiming(testOutput, testStart)
+				if timing != nil {
+					baselineDur = timing.BaselineDuration
+					fuzzingDur = timing.FuzzingDuration
+				}
+			}
+
 			results = append(results, fuzzTestResult{
-				Package:  pkg,
-				Test:     test,
-				Duration: testDuration,
-				Error:    testErr,
-				Output:   testOutput,
+				Package:          pkg,
+				Test:             test,
+				Duration:         testDuration,
+				Error:            testErr,
+				Output:           testOutput,
+				SeedCount:        seedCount,
+				BaselineDuration: baselineDur,
+				FuzzingDuration:  fuzzingDur,
 			})
+
+			// Display timing breakdown
+			displayFuzzTestResult(test, testDuration, baselineDur, seedCount, testErr)
 		}
 	}
 
 	return results, time.Since(startTime)
 }
 
-// maxFuzzTimeout is the absolute maximum time to wait for a fuzz test.
-// This prevents indefinite hangs if -fuzztime is corrupted or ignored.
-const maxFuzzTimeout = 30 * time.Minute
+// displayFuzzTestResult shows a timing breakdown for a completed fuzz test
+func displayFuzzTestResult(testName string, totalDur, baselineDur time.Duration, seedCount int, err error) {
+	status := "✓"
+	if err != nil {
+		status = "✗"
+	}
 
-// runFuzzTestWithOutput executes a fuzz test command and captures stdout/stderr.
-// This is used in CI mode to capture output for text parsing.
-// A timeout is applied to prevent indefinite hangs.
-func runFuzzTestWithOutput(name string, args ...string) (string, error) {
-	// Parse -fuzztime from args to determine appropriate timeout
-	timeout := calculateFuzzTimeout(args)
+	if baselineDur > 0 && seedCount > 0 {
+		fuzzingDur := totalDur - baselineDur
+		if fuzzingDur < 0 {
+			fuzzingDur = 0
+		}
+		utils.Info("  %s %s: Baseline %s (%d seeds) | Fuzzing %s | Total %s",
+			status, testName,
+			utils.FormatDuration(baselineDur), seedCount,
+			utils.FormatDuration(fuzzingDur),
+			utils.FormatDuration(totalDur))
+	} else if seedCount > 0 {
+		utils.Info("  %s %s: %s (%d seeds)", status, testName, utils.FormatDuration(totalDur), seedCount)
+	} else {
+		utils.Info("  %s %s: %s", status, testName, utils.FormatDuration(totalDur))
+	}
+}
 
+// resolvePkgDir converts a package path to a directory path for seed counting
+func resolvePkgDir(pkg string) string {
+	// Try to find the package directory
+	// First, check if it's relative to current directory
+	if strings.HasPrefix(pkg, "./") {
+		return strings.TrimPrefix(pkg, "./")
+	}
+
+	// For module paths, try to resolve via go list
+	output, err := GetRunner().RunCmdOutput("go", "list", "-f", "{{.Dir}}", pkg)
+	if err == nil {
+		return strings.TrimSpace(output)
+	}
+
+	// Fallback: assume it's the current directory if package matches module
+	moduleName, _ := utils.GetModuleName() //nolint:errcheck // Best effort - fallback to "." if this fails
+	if moduleName != "" && strings.HasPrefix(pkg, moduleName) {
+		// Strip module prefix to get relative path
+		relPath := strings.TrimPrefix(pkg, moduleName)
+		relPath = strings.TrimPrefix(relPath, "/")
+		if relPath == "" {
+			return "."
+		}
+		return relPath
+	}
+
+	return "."
+}
+
+// runFuzzTestWithOutputAndTimeout executes a fuzz test command with a specified timeout
+// and captures stdout/stderr. This is used in CI mode to capture output for text parsing.
+func runFuzzTestWithOutputAndTimeout(name string, timeout time.Duration, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -1489,23 +1582,36 @@ func runFuzzTestWithOutput(name string, args ...string) (string, error) {
 	return outputBuf.String(), err
 }
 
-// calculateFuzzTimeout parses -fuzztime from args and adds safety margin.
-// Returns maxFuzzTimeout if parsing fails or duration is excessive.
-func calculateFuzzTimeout(args []string) time.Duration {
-	for i := 0; i < len(args)-1; i++ {
-		if args[i] == "-fuzztime" {
-			if d, err := time.ParseDuration(args[i+1]); err == nil {
-				// Add 5 minute buffer for test setup/teardown
-				timeout := d + 5*time.Minute
-				if timeout > maxFuzzTimeout {
-					return maxFuzzTimeout
-				}
-				return timeout
-			}
-		}
+// runFuzzTestWithTimeout executes a fuzz test command with a specified timeout.
+// Unlike runFuzzTestWithOutputAndTimeout, this doesn't capture output - it streams directly.
+func runFuzzTestWithTimeout(name string, timeout time.Duration, args ...string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+
+	// Check if we hit the context deadline
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("fuzz test exceeded timeout of %s: %w", timeout, ctx.Err())
 	}
-	// Default fallback - 15 minutes should cover most fuzz tests
-	return 15 * time.Minute
+
+	return err
+}
+
+// calculateFuzzTimeout parses -fuzztime from args and calculates timeout using default config.
+// This is a legacy function kept for backward compatibility.
+// Prefer using CalculateFuzzTimeout with explicit seed count for accurate timeouts.
+//
+// Deprecated: Use CalculateFuzzTimeout instead.
+func calculateFuzzTimeout(args []string) time.Duration {
+	cfg := DefaultFuzzTimingConfig()
+	// Without seed count info, use a conservative estimate (assume 10 seeds)
+	return CalculateFuzzTimeoutWithArgs(args, 10, cfg)
 }
 
 // printCIFuzzSummaryIfEnabled prints the fuzz summary if CI mode is enabled

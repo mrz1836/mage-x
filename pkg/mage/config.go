@@ -80,6 +80,8 @@ type TestConfig struct {
 	CoverPkg                     []string `yaml:"coverpkg"`
 	CoverageExclude              []string `yaml:"coverage_exclude"`
 	ExcludeModules               []string `yaml:"exclude_modules"`
+	FuzzBaselineBuffer           string   `yaml:"fuzz_baseline_buffer"`            // Extra buffer time for fuzz baseline (default: "1m")
+	FuzzBaselineOverheadPerSeed  string   `yaml:"fuzz_baseline_overhead_per_seed"` // Time per seed during baseline (default: "500ms")
 	IntegrationTag               string   `yaml:"integration_tag"`
 	IntegrationTimeout           string   `yaml:"integration_timeout"`
 	Parallel                     int      `yaml:"parallel"`
@@ -349,12 +351,14 @@ func defaultConfig() *Config {
 			},
 		},
 		Test: TestConfig{
-			Parallel:           runtime.NumCPU(),
-			Timeout:            DefaultTimeout,
-			IntegrationTimeout: LongTimeout,
-			CoverMode:          "atomic",
-			ExcludeModules:     []string{""},
-			CIMode:             DefaultCIMode(),
+			Parallel:                    runtime.NumCPU(),
+			Timeout:                     DefaultTimeout,
+			IntegrationTimeout:          LongTimeout,
+			CoverMode:                   "atomic",
+			ExcludeModules:              []string{""},
+			CIMode:                      DefaultCIMode(),
+			FuzzBaselineOverheadPerSeed: DefaultFuzzBaselineOverheadPerSeed,
+			FuzzBaselineBuffer:          DefaultFuzzBaselineBuffer,
 		},
 		Lint: LintConfig{
 			GolangciVersion: VersionLatest,
