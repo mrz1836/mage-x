@@ -696,6 +696,11 @@ jobs:
             --input "$COVERAGE_FILE" \
             --output "$OUTPUT_DIR"; then
             echo "✅ Main coverage processing completed successfully"
+
+            # Copy raw coverage file for main download
+            echo "📥 Copying coverage.out for main download..."
+            cp "$COVERAGE_FILE" "$OUTPUT_DIR/coverage.out"
+            echo "✅ coverage.out copied to main directory"
           else
             echo "❌ Main coverage processing failed"
             exit 1
@@ -791,6 +796,11 @@ jobs:
             --input "$COVERAGE_FILE" \
             --output "$BRANCH_OUTPUT_DIR"; then
             echo "✅ Branch-specific coverage processing completed successfully"
+
+            # Copy raw coverage file for branch download
+            echo "📥 Copying coverage.out for branch download..."
+            cp "$COVERAGE_FILE" "$BRANCH_OUTPUT_DIR/coverage.out"
+            echo "✅ coverage.out copied to branch directory"
           else
             echo "❌ Branch-specific coverage processing failed"
             exit 1
@@ -1215,6 +1225,7 @@ jobs:
             "coverage-flat.svg"
             "coverage-flat-square.svg"
             "coverage-for-the-badge.svg"
+            "coverage.out"
           )
 
           # Selectively copy coverage files to avoid nested directory structures
@@ -1270,6 +1281,7 @@ jobs:
               "coverage-flat-square.svg"
               "coverage-for-the-badge.svg"
               "coverage.html"
+              "coverage.out"
               "index.html"
               "dashboard.html"
               "coverage-data.json"
@@ -1738,7 +1750,7 @@ jobs:
             echo "📋 Updating root coverage files for main branch (with filtering)..."
 
             # Define allowed root files explicitly
-            ALLOWED_ROOT_FILES=("index.html" "coverage.html" "coverage.svg" "coverage-flat.svg" "coverage-flat-square.svg" "coverage-for-the-badge.svg" ".nojekyll" "data" "assets")
+            ALLOWED_ROOT_FILES=("index.html" "coverage.html" "coverage.svg" "coverage-flat.svg" "coverage-flat-square.svg" "coverage-for-the-badge.svg" "coverage.out" ".nojekyll" "data" "assets")
 
             # Copy only allowed root files
             for file in "${ALLOWED_ROOT_FILES[@]}"; do
@@ -1803,7 +1815,7 @@ jobs:
           rm -rf "$TEMP_STAGING"/*
 
           # Define allowed branch files
-          ALLOWED_BRANCH_FILES=("index.html" "coverage.html" "coverage.svg" "coverage-flat.svg" "coverage-flat-square.svg" "coverage-for-the-badge.svg" "data" "assets")
+          ALLOWED_BRANCH_FILES=("index.html" "coverage.html" "coverage.svg" "coverage-flat.svg" "coverage-flat-square.svg" "coverage-for-the-badge.svg" "coverage.out" "data" "assets")
 
           # Copy branch-specific files from deployment directory to staging first
           if [[ -d "$DEPLOY_DIR/coverage/branch/$BRANCH_NAME" ]]; then
