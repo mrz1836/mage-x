@@ -173,8 +173,12 @@ const (
 	// Go's fuzz tests run all seeds before the -fuzztime timer starts.
 	DefaultFuzzBaselineOverheadPerSeed = "500ms"
 	// DefaultFuzzBaselineBuffer is extra buffer time added to fuzz test timeouts
-	// to account for test setup, teardown, and variance in seed execution time.
-	DefaultFuzzBaselineBuffer = "1m"
+	// to account for test setup, teardown, compilation overhead, and variance in seed execution time.
+	// Increased from 1m to 90s to account for fuzz test binary compilation on CI systems.
+	DefaultFuzzBaselineBuffer = "90s"
+	// DefaultFuzzMinTimeout is the minimum timeout for fuzz tests.
+	// Increased from 1m to 90s to account for compilation overhead.
+	DefaultFuzzMinTimeout = "90s"
 )
 
 // Coverage modes

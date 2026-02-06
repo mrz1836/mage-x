@@ -42,19 +42,51 @@ type FuzzSeedInfo struct {
 // FuzzTimingConfig holds configuration for fuzz test timing calculations
 type FuzzTimingConfig struct {
 	BaselineOverheadPerSeed time.Duration // Time per seed during baseline gathering
-	BaselineBuffer          time.Duration // Extra buffer time for safety margin
+	BaselineBuffer          time.Duration // Extra buffer time for safety margin (includes compilation)
 	MaxTimeout              time.Duration // Maximum allowed timeout (cap)
 	MinTimeout              time.Duration // Minimum timeout regardless of calculation
 }
 
-// DefaultFuzzTimingConfig returns the default fuzz timing configuration
+// DefaultFuzzTimingConfig returns the default fuzz timing configuration.
+// Configuration can be overridden via environment variables:
+//   - MAGE_X_FUZZ_BASELINE_BUFFER: Buffer time including compilation (default: "90s")
+//   - MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED: Time per seed (default: "500ms")
+//   - MAGE_X_FUZZ_MIN_TIMEOUT: Minimum timeout (default: "90s")
+//   - MAGE_X_FUZZ_MAX_TIMEOUT: Maximum timeout cap (default: "30m")
 func DefaultFuzzTimingConfig() FuzzTimingConfig {
-	return FuzzTimingConfig{
+	cfg := FuzzTimingConfig{
 		BaselineOverheadPerSeed: 500 * time.Millisecond,
-		BaselineBuffer:          1 * time.Minute,
+		BaselineBuffer:          90 * time.Second, // Increased to account for compilation overhead
 		MaxTimeout:              30 * time.Minute,
-		MinTimeout:              1 * time.Minute,
+		MinTimeout:              90 * time.Second, // Increased to account for compilation overhead
 	}
+
+	// Allow environment variable overrides
+	if envBuffer := os.Getenv("MAGE_X_FUZZ_BASELINE_BUFFER"); envBuffer != "" {
+		if d, err := time.ParseDuration(envBuffer); err == nil && d >= 0 {
+			cfg.BaselineBuffer = d
+		}
+	}
+
+	if envOverhead := os.Getenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED"); envOverhead != "" {
+		if d, err := time.ParseDuration(envOverhead); err == nil && d > 0 {
+			cfg.BaselineOverheadPerSeed = d
+		}
+	}
+
+	if envMin := os.Getenv("MAGE_X_FUZZ_MIN_TIMEOUT"); envMin != "" {
+		if d, err := time.ParseDuration(envMin); err == nil && d > 0 {
+			cfg.MinTimeout = d
+		}
+	}
+
+	if envMax := os.Getenv("MAGE_X_FUZZ_MAX_TIMEOUT"); envMax != "" {
+		if d, err := time.ParseDuration(envMax); err == nil && d > 0 {
+			cfg.MaxTimeout = d
+		}
+	}
+
+	return cfg
 }
 
 // FuzzTimingConfigFromTestConfig creates a FuzzTimingConfig from TestConfig

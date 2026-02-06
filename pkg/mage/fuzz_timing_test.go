@@ -12,12 +12,85 @@ import (
 
 // TestDefaultFuzzTimingConfig verifies the default configuration values
 func TestDefaultFuzzTimingConfig(t *testing.T) {
+	// Clear any env overrides for this test
+	for _, env := range []string{
+		"MAGE_X_FUZZ_BASELINE_BUFFER",
+		"MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED",
+		"MAGE_X_FUZZ_MIN_TIMEOUT",
+		"MAGE_X_FUZZ_MAX_TIMEOUT",
+	} {
+		t.Setenv(env, "")
+	}
+
 	cfg := DefaultFuzzTimingConfig()
 
 	assert.Equal(t, 500*time.Millisecond, cfg.BaselineOverheadPerSeed)
-	assert.Equal(t, 1*time.Minute, cfg.BaselineBuffer)
+	assert.Equal(t, 90*time.Second, cfg.BaselineBuffer) // Increased to account for compilation
 	assert.Equal(t, 30*time.Minute, cfg.MaxTimeout)
-	assert.Equal(t, 1*time.Minute, cfg.MinTimeout)
+	assert.Equal(t, 90*time.Second, cfg.MinTimeout) // Increased to account for compilation
+}
+
+// TestDefaultFuzzTimingConfigEnvOverride verifies environment variable overrides work
+func TestDefaultFuzzTimingConfigEnvOverride(t *testing.T) {
+	// Test MAGE_X_FUZZ_BASELINE_BUFFER override
+	t.Run("MAGE_X_FUZZ_BASELINE_BUFFER", func(t *testing.T) {
+		t.Setenv("MAGE_X_FUZZ_BASELINE_BUFFER", "2m")
+		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
+		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+
+		cfg := DefaultFuzzTimingConfig()
+		assert.Equal(t, 2*time.Minute, cfg.BaselineBuffer)
+		assert.Equal(t, 500*time.Millisecond, cfg.BaselineOverheadPerSeed) // unchanged
+	})
+
+	// Test MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED override
+	t.Run("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", func(t *testing.T) {
+		t.Setenv("MAGE_X_FUZZ_BASELINE_BUFFER", "")
+		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "1s")
+		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+
+		cfg := DefaultFuzzTimingConfig()
+		assert.Equal(t, 1*time.Second, cfg.BaselineOverheadPerSeed)
+		assert.Equal(t, 90*time.Second, cfg.BaselineBuffer) // unchanged
+	})
+
+	// Test MAGE_X_FUZZ_MIN_TIMEOUT override
+	t.Run("MAGE_X_FUZZ_MIN_TIMEOUT", func(t *testing.T) {
+		t.Setenv("MAGE_X_FUZZ_BASELINE_BUFFER", "")
+		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
+		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "2m")
+		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+
+		cfg := DefaultFuzzTimingConfig()
+		assert.Equal(t, 2*time.Minute, cfg.MinTimeout)
+	})
+
+	// Test MAGE_X_FUZZ_MAX_TIMEOUT override
+	t.Run("MAGE_X_FUZZ_MAX_TIMEOUT", func(t *testing.T) {
+		t.Setenv("MAGE_X_FUZZ_BASELINE_BUFFER", "")
+		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
+		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "1h")
+
+		cfg := DefaultFuzzTimingConfig()
+		assert.Equal(t, 1*time.Hour, cfg.MaxTimeout)
+	})
+
+	// Test invalid env var values are ignored
+	t.Run("invalid_values_ignored", func(t *testing.T) {
+		t.Setenv("MAGE_X_FUZZ_BASELINE_BUFFER", "invalid")
+		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "not-a-duration")
+		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "-5m") // negative
+		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+
+		cfg := DefaultFuzzTimingConfig()
+		// Should use defaults when env vars are invalid
+		assert.Equal(t, 90*time.Second, cfg.BaselineBuffer)
+		assert.Equal(t, 500*time.Millisecond, cfg.BaselineOverheadPerSeed)
+		assert.Equal(t, 90*time.Second, cfg.MinTimeout)
+	})
 }
 
 // TestFuzzTimingConfigFromTestConfig tests config conversion
@@ -44,9 +117,9 @@ func TestFuzzTimingConfigFromTestConfig(t *testing.T) {
 			},
 			expected: FuzzTimingConfig{
 				BaselineOverheadPerSeed: 1 * time.Second,
-				BaselineBuffer:          1 * time.Minute,
+				BaselineBuffer:          90 * time.Second,
 				MaxTimeout:              30 * time.Minute,
-				MinTimeout:              1 * time.Minute,
+				MinTimeout:              90 * time.Second,
 			},
 		},
 		{
@@ -58,7 +131,7 @@ func TestFuzzTimingConfigFromTestConfig(t *testing.T) {
 				BaselineOverheadPerSeed: 500 * time.Millisecond,
 				BaselineBuffer:          2 * time.Minute,
 				MaxTimeout:              30 * time.Minute,
-				MinTimeout:              1 * time.Minute,
+				MinTimeout:              90 * time.Second,
 			},
 		},
 		{
@@ -71,7 +144,7 @@ func TestFuzzTimingConfigFromTestConfig(t *testing.T) {
 				BaselineOverheadPerSeed: 200 * time.Millisecond,
 				BaselineBuffer:          30 * time.Second,
 				MaxTimeout:              30 * time.Minute,
-				MinTimeout:              1 * time.Minute,
+				MinTimeout:              90 * time.Second,
 			},
 		},
 		{
@@ -97,7 +170,7 @@ func TestFuzzTimingConfigFromTestConfig(t *testing.T) {
 				BaselineOverheadPerSeed: 500 * time.Millisecond,
 				BaselineBuffer:          0,
 				MaxTimeout:              30 * time.Minute,
-				MinTimeout:              1 * time.Minute,
+				MinTimeout:              90 * time.Second,
 			},
 		},
 	}
@@ -542,7 +615,8 @@ func TestWarnIfHighSeedCount(t *testing.T) {
 func TestFuzzTimingConstants(t *testing.T) {
 	// Verify the constants match expected values
 	assert.Equal(t, "500ms", DefaultFuzzBaselineOverheadPerSeed)
-	assert.Equal(t, "1m", DefaultFuzzBaselineBuffer)
+	assert.Equal(t, "90s", DefaultFuzzBaselineBuffer) // Increased to account for compilation
+	assert.Equal(t, "90s", DefaultFuzzMinTimeout)     // Increased to account for compilation
 }
 
 // Benchmark seed counting performance
