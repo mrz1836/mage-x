@@ -16,7 +16,6 @@ Configuration is split into domain-specific files loaded in numeric order. Later
 ├── 10-mage-x.env         # MAGE-X build system configuration
 ├── 10-pre-commit.env     # go-pre-commit settings
 ├── 10-security.env       # Gitleaks, Nancy, Govulncheck
-├── 20-guardian.env       # CI Guardian framework
 ├── 20-redis.env          # Redis service configuration
 ├── 20-workflows.env      # Stale, labels, dependabot, PR management
 ├── 90-project.env        # Project-specific overrides (not synced)
