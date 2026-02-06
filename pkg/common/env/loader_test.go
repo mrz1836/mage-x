@@ -1,12 +1,400 @@
 package env
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+// TestProcessValue tests the processValue function with various input formats.
+func TestProcessValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "plain_value",
+			input:    "hello",
+			expected: "hello",
+		},
+		{
+			name:     "double_quoted",
+			input:    `"hello world"`,
+			expected: "hello world",
+		},
+		{
+			name:     "single_quoted",
+			input:    `'hello world'`,
+			expected: "hello world",
+		},
+		{
+			name:     "inline_comment_space",
+			input:    "value # comment",
+			expected: "value",
+		},
+		{
+			name:     "inline_comment_tab",
+			input:    "value\t# comment",
+			expected: "value",
+		},
+		{
+			name:     "hash_no_space_not_comment",
+			input:    "value#notcomment",
+			expected: "value#notcomment",
+		},
+		{
+			name:     "url_preserved",
+			input:    "https://example.com/path#anchor",
+			expected: "https://example.com/path#anchor",
+		},
+		{
+			name:     "empty_string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "whitespace_only",
+			input:    "   ",
+			expected: "",
+		},
+		{
+			name:     "empty_double_quotes",
+			input:    `""`,
+			expected: "",
+		},
+		{
+			name:     "empty_single_quotes",
+			input:    `''`,
+			expected: "",
+		},
+		{
+			name:     "hash_in_double_quotes",
+			input:    `"value # with hash"`,
+			expected: "value # with hash",
+		},
+		{
+			name:     "hash_in_single_quotes",
+			input:    `'value # with hash'`,
+			expected: "value # with hash",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := processValue(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestIsCILoader tests the isCI function with various CI environment variable states.
+func TestIsCILoader(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		setEnv   bool
+		expected bool
+	}{
+		{
+			name:     "ci_true",
+			envValue: "true",
+			setEnv:   true,
+			expected: true,
+		},
+		{
+			name:     "ci_false",
+			envValue: "false",
+			setEnv:   true,
+			expected: false,
+		},
+		{
+			name:     "ci_unset",
+			setEnv:   false,
+			expected: false,
+		},
+		{
+			name:     "ci_empty",
+			envValue: "",
+			setEnv:   true,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore CI env var
+			origCI, hadCI := os.LookupEnv("CI")
+			t.Cleanup(func() {
+				if hadCI {
+					require.NoError(t, os.Setenv("CI", origCI))
+				} else {
+					require.NoError(t, os.Unsetenv("CI"))
+				}
+			})
+
+			if tt.setEnv {
+				require.NoError(t, os.Setenv("CI", tt.envValue))
+			} else {
+				require.NoError(t, os.Unsetenv("CI"))
+			}
+
+			require.Equal(t, tt.expected, isCI())
+		})
+	}
+}
+
+// TestHasEnvFiles tests the hasEnvFiles function.
+func TestHasEnvFiles(t *testing.T) {
+	t.Run("with_env_files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		err := os.WriteFile(filepath.Join(tmpDir, "00-core.env"), []byte("KEY=val"), 0o600)
+		require.NoError(t, err)
+
+		require.True(t, hasEnvFiles(tmpDir))
+	})
+
+	t.Run("empty_directory", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		require.False(t, hasEnvFiles(tmpDir))
+	})
+
+	t.Run("nonexistent_directory", func(t *testing.T) {
+		require.False(t, hasEnvFiles("/nonexistent/path/env"))
+	})
+
+	t.Run("file_not_directory", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		filePath := filepath.Join(tmpDir, "notadir")
+		err := os.WriteFile(filePath, []byte("data"), 0o600)
+		require.NoError(t, err)
+
+		require.False(t, hasEnvFiles(filePath))
+	})
+
+	t.Run("non_env_files_only", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		err := os.WriteFile(filepath.Join(tmpDir, "readme.md"), []byte("# readme"), 0o600)
+		require.NoError(t, err)
+
+		require.False(t, hasEnvFiles(tmpDir))
+	})
+}
+
+// TestFindEnvDir tests the findEnvDir function.
+func TestFindEnvDir(t *testing.T) {
+	t.Run("found", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		envDir := filepath.Join(tmpDir, ".github", "env")
+		require.NoError(t, os.MkdirAll(envDir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(envDir, "00-core.env"), []byte("KEY=val"), 0o600))
+
+		result := findEnvDir(tmpDir)
+		require.Equal(t, envDir, result)
+	})
+
+	t.Run("not_found", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		result := findEnvDir(tmpDir)
+		require.Empty(t, result)
+	})
+
+	t.Run("dir_without_env_files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		envDir := filepath.Join(tmpDir, ".github", "env")
+		require.NoError(t, os.MkdirAll(envDir, 0o750))
+		// Directory exists but has no .env files
+		require.NoError(t, os.WriteFile(filepath.Join(envDir, "readme.txt"), []byte("not an env"), 0o600))
+
+		result := findEnvDir(tmpDir)
+		require.Empty(t, result)
+	})
+}
+
+// TestLoadEnvDir tests the LoadEnvDir function.
+func TestLoadEnvDir(t *testing.T) {
+	t.Run("sort_order", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		// Create files in reverse order to test sorting
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "20-tools.env"), []byte("TOOL_VAR=tools"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "00-core.env"), []byte("CORE_VAR=core\nTOOL_VAR=from_core"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "10-build.env"), []byte("BUILD_VAR=build"), 0o600))
+
+		t.Cleanup(func() {
+			require.NoError(t, os.Unsetenv("CORE_VAR"))
+			require.NoError(t, os.Unsetenv("BUILD_VAR"))
+			require.NoError(t, os.Unsetenv("TOOL_VAR"))
+		})
+
+		err := LoadEnvDir(tmpDir, false)
+		require.NoError(t, err)
+
+		require.Equal(t, "core", os.Getenv("CORE_VAR"))
+		require.Equal(t, "build", os.Getenv("BUILD_VAR"))
+		// 20-tools.env loads after 00-core.env, so "tools" wins over "from_core"
+		require.Equal(t, "tools", os.Getenv("TOOL_VAR"))
+	})
+
+	t.Run("skip_local_true", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "00-core.env"), []byte("SKIP_CORE=core"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "99-local.env"), []byte("SKIP_LOCAL=local"), 0o600))
+
+		t.Cleanup(func() {
+			require.NoError(t, os.Unsetenv("SKIP_CORE"))
+			require.NoError(t, os.Unsetenv("SKIP_LOCAL"))
+		})
+
+		err := LoadEnvDir(tmpDir, true)
+		require.NoError(t, err)
+
+		require.Equal(t, "core", os.Getenv("SKIP_CORE"))
+		require.Empty(t, os.Getenv("SKIP_LOCAL"), "99-local.env should be skipped when skipLocal=true")
+	})
+
+	t.Run("skip_local_false", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "00-core.env"), []byte("NOSKIP_CORE=core"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "99-local.env"), []byte("NOSKIP_LOCAL=local"), 0o600))
+
+		t.Cleanup(func() {
+			require.NoError(t, os.Unsetenv("NOSKIP_CORE"))
+			require.NoError(t, os.Unsetenv("NOSKIP_LOCAL"))
+		})
+
+		err := LoadEnvDir(tmpDir, false)
+		require.NoError(t, err)
+
+		require.Equal(t, "core", os.Getenv("NOSKIP_CORE"))
+		require.Equal(t, "local", os.Getenv("NOSKIP_LOCAL"), "99-local.env should be loaded when skipLocal=false")
+	})
+
+	t.Run("not_directory", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		filePath := filepath.Join(tmpDir, "afile")
+		require.NoError(t, os.WriteFile(filePath, []byte("data"), 0o600))
+
+		err := LoadEnvDir(filePath, false)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNotDirectory)
+	})
+
+	t.Run("no_env_files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		// Empty directory
+		err := LoadEnvDir(tmpDir, false)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNoEnvFiles)
+	})
+
+	t.Run("nonexistent_directory", func(t *testing.T) {
+		err := LoadEnvDir("/nonexistent/path/env", false)
+		require.Error(t, err)
+	})
+
+	t.Run("non_env_files_ignored", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "00-core.env"), []byte("IGN_VAR=present"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "readme.md"), []byte("# readme"), 0o600))
+
+		t.Cleanup(func() {
+			require.NoError(t, os.Unsetenv("IGN_VAR"))
+		})
+
+		err := LoadEnvDir(tmpDir, false)
+		require.NoError(t, err)
+		require.Equal(t, "present", os.Getenv("IGN_VAR"))
+	})
+
+	t.Run("cross_file_variable_expansion", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "00-core.env"), []byte("XBASE=/opt/app"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "10-paths.env"), []byte("XPATH=${XBASE}/bin"), 0o600))
+
+		t.Cleanup(func() {
+			require.NoError(t, os.Unsetenv("XBASE"))
+			require.NoError(t, os.Unsetenv("XPATH"))
+		})
+
+		err := LoadEnvDir(tmpDir, false)
+		require.NoError(t, err)
+		require.Equal(t, "/opt/app", os.Getenv("XBASE"))
+		require.Equal(t, "/opt/app/bin", os.Getenv("XPATH"))
+	})
+}
+
+// TestLoadEnvFiles_ModularPreferred tests that LoadEnvFiles prefers modular env over legacy.
+func TestLoadEnvFiles_ModularPreferred(t *testing.T) {
+	t.Run("modular_preferred_over_legacy", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create modular env dir
+		envDir := filepath.Join(tmpDir, ".github", "env")
+		require.NoError(t, os.MkdirAll(envDir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(envDir, "00-core.env"), []byte("MOD_PREF_VAR=modular"), 0o600))
+
+		// Create legacy .env file with a different value
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, ".env"), []byte("MOD_PREF_VAR=legacy"), 0o600))
+
+		t.Cleanup(func() {
+			require.NoError(t, os.Unsetenv("MOD_PREF_VAR"))
+		})
+
+		err := LoadEnvFiles(tmpDir)
+		require.NoError(t, err)
+		require.Equal(t, "modular", os.Getenv("MOD_PREF_VAR"),
+			"modular env dir should be preferred over legacy files")
+	})
+
+	t.Run("legacy_fallback", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// No modular dir, only legacy .env
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, ".env"), []byte("LEG_FB_VAR=legacy"), 0o600))
+
+		t.Cleanup(func() {
+			require.NoError(t, os.Unsetenv("LEG_FB_VAR"))
+		})
+
+		err := LoadEnvFiles(tmpDir)
+		require.NoError(t, err)
+		require.Equal(t, "legacy", os.Getenv("LEG_FB_VAR"),
+			"should fall back to legacy when no modular dir exists")
+	})
+
+	t.Run("ci_skips_local", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create modular env dir with 99-local.env
+		envDir := filepath.Join(tmpDir, ".github", "env")
+		require.NoError(t, os.MkdirAll(envDir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(envDir, "00-core.env"), []byte("CI_CORE=core"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(envDir, "99-local.env"), []byte("CI_LOCAL=local"), 0o600))
+
+		// Save and restore CI env var
+		origCI, hadCI := os.LookupEnv("CI")
+		t.Cleanup(func() {
+			if hadCI {
+				require.NoError(t, os.Setenv("CI", origCI))
+			} else {
+				require.NoError(t, os.Unsetenv("CI"))
+			}
+			require.NoError(t, os.Unsetenv("CI_CORE"))
+			require.NoError(t, os.Unsetenv("CI_LOCAL"))
+		})
+
+		require.NoError(t, os.Setenv("CI", "true"))
+
+		err := LoadEnvFiles(tmpDir)
+		require.NoError(t, err)
+		require.Equal(t, "core", os.Getenv("CI_CORE"))
+		require.Empty(t, os.Getenv("CI_LOCAL"),
+			"99-local.env should be skipped in CI")
+	})
+}
 
 // TestLoadEnvFile tests the loadEnvFile function with various input formats.
 // This validates the core .env parsing logic including comments, whitespace,
@@ -115,7 +503,7 @@ VAR3=has=equals=signs`,
 			name:    "hash_at_start_of_value",
 			content: "KEY=#startswithash",
 			expected: map[string]string{
-				"KEY": "",
+				"KEY": "#startswithash",
 			},
 		},
 		{
@@ -128,6 +516,62 @@ VAR3=has=equals=signs`,
 		{
 			name:    "spaces_around_equals",
 			content: "KEY = value",
+			expected: map[string]string{
+				"KEY": "value",
+			},
+		},
+		{
+			name:    "export_prefix",
+			content: "export MY_KEY=exported_value",
+			expected: map[string]string{
+				"MY_KEY": "exported_value",
+			},
+		},
+		{
+			name:    "export_prefix_with_spaces",
+			content: "export  MY_KEY2 = spaced_export",
+			expected: map[string]string{
+				"MY_KEY2": "spaced_export",
+			},
+		},
+		{
+			name:    "double_quoted_value",
+			content: `KEY="hello world"`,
+			expected: map[string]string{
+				"KEY": "hello world",
+			},
+		},
+		{
+			name:    "single_quoted_value",
+			content: `KEY='hello world'`,
+			expected: map[string]string{
+				"KEY": "hello world",
+			},
+		},
+		{
+			name:    "double_quoted_with_hash",
+			content: `KEY="value # not a comment"`,
+			expected: map[string]string{
+				"KEY": "value # not a comment",
+			},
+		},
+		{
+			name:    "single_quoted_with_hash",
+			content: `KEY='value # not a comment'`,
+			expected: map[string]string{
+				"KEY": "value # not a comment",
+			},
+		},
+		{
+			name:    "hash_without_space_preserved",
+			content: "URL=https://example.com/path#section",
+			expected: map[string]string{
+				"URL": "https://example.com/path#section",
+			},
+		},
+		{
+			name:    "tab_before_comment",
+			content: "KEY=value\t# tab comment",
 			expected: map[string]string{
 				"KEY": "value",
 			},
@@ -639,5 +1083,26 @@ func BenchmarkExpandVariables(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = expandVariables(input, localVars)
+	}
+}
+
+func BenchmarkLoadEnvDir(b *testing.B) {
+	tmpDir := b.TempDir()
+
+	// Create 5 env files with 20 vars each
+	for i := 0; i < 5; i++ {
+		var content string
+		for j := 0; j < 20; j++ {
+			content += fmt.Sprintf("BENCH_%d_%d=value_%d_%d\n", i, j, i, j)
+		}
+		fileName := fmt.Sprintf("%02d-file.env", i*10)
+		if err := os.WriteFile(filepath.Join(tmpDir, fileName), []byte(content), 0o600); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = LoadEnvDir(tmpDir, false) //nolint:errcheck // Benchmark intentionally ignores return value
 	}
 }
