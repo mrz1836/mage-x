@@ -1430,12 +1430,30 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 		// Resolve package directory for seed counting
 		pkgDir := resolvePkgDir(pkg)
 
+		// Filter valid fuzz tests first
 		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
+		var validFuzzTests []string
 		for _, test := range fuzzTests {
-			if !strings.HasPrefix(test, "Fuzz") {
-				continue
+			if strings.HasPrefix(test, "Fuzz") {
+				validFuzzTests = append(validFuzzTests, test)
 			}
+		}
+		if len(validFuzzTests) == 0 {
+			continue
+		}
 
+		// Pre-compile with coverage instrumentation to warm build cache.
+		// This prevents the first fuzz test per package from timing out due to
+		// compilation overhead in projects with large dependency trees.
+		if fuzzTimingCfg.WarmupTimeout > 0 {
+			utils.Info("Warming build cache for %s...", pkg)
+			warmupDur := warmFuzzBuildCache(pkg, fuzzTimingCfg.WarmupTimeout)
+			if warmupDur > 5*time.Second {
+				utils.Info("Build cache warmup for %s took %s", pkg, utils.FormatDuration(warmupDur))
+			}
+		}
+
+		for _, test := range validFuzzTests {
 			// Count seeds and calculate appropriate timeout
 			seedInfo, seedErr := CountFuzzSeeds(pkgDir, test)
 			seedCount := 0
@@ -1601,6 +1619,35 @@ func runFuzzTestWithTimeout(name string, timeout time.Duration, args ...string) 
 	}
 
 	return err
+}
+
+// warmFuzzBuildCache pre-compiles the fuzz test binary with coverage instrumentation
+// to warm the Go build cache. This prevents the first fuzz test in each package from
+// timing out due to compilation overhead in projects with large dependency trees.
+// Returns the elapsed time for the warmup.
+func warmFuzzBuildCache(pkg string, timeout time.Duration) time.Duration {
+	start := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "go", "test", "-c", "-covermode=atomic", "-o", os.DevNull, pkg) //nolint:gosec // pkg is an internal Go package path, not user input
+	cmd.Env = os.Environ()
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+
+	err := cmd.Run()
+	elapsed := time.Since(start)
+
+	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			utils.Warn("Fuzz build cache warmup for %s timed out after %s", pkg, utils.FormatDuration(elapsed))
+		} else {
+			utils.Debug("Fuzz build cache warmup for %s: %v (continuing)", pkg, err)
+		}
+	} else {
+		utils.Debug("Fuzz build cache warmup for %s completed in %s", pkg, utils.FormatDuration(elapsed))
+	}
+	return elapsed
 }
 
 // calculateFuzzTimeout parses -fuzztime from args and calculates timeout using default config.

@@ -179,6 +179,9 @@ const (
 	// DefaultFuzzMinTimeout is the minimum timeout for fuzz tests.
 	// Increased from 1m to 90s to account for compilation overhead.
 	DefaultFuzzMinTimeout = "90s"
+	// DefaultFuzzWarmupTimeout is the timeout for pre-compiling fuzz test binaries
+	// with coverage instrumentation to warm the Go build cache before running individual tests.
+	DefaultFuzzWarmupTimeout = "5m"
 )
 
 // Coverage modes

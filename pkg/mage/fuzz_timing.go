@@ -45,6 +45,7 @@ type FuzzTimingConfig struct {
 	BaselineBuffer          time.Duration // Extra buffer time for safety margin (includes compilation)
 	MaxTimeout              time.Duration // Maximum allowed timeout (cap)
 	MinTimeout              time.Duration // Minimum timeout regardless of calculation
+	WarmupTimeout           time.Duration // Timeout for pre-compiling fuzz test binary (0 disables warmup)
 }
 
 // DefaultFuzzTimingConfig returns the default fuzz timing configuration.
@@ -53,12 +54,14 @@ type FuzzTimingConfig struct {
 //   - MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED: Time per seed (default: "500ms")
 //   - MAGE_X_FUZZ_MIN_TIMEOUT: Minimum timeout (default: "90s")
 //   - MAGE_X_FUZZ_MAX_TIMEOUT: Maximum timeout cap (default: "30m")
+//   - MAGE_X_FUZZ_WARMUP_TIMEOUT: Timeout for build cache warmup (default: "5m", "0s" disables)
 func DefaultFuzzTimingConfig() FuzzTimingConfig {
 	cfg := FuzzTimingConfig{
 		BaselineOverheadPerSeed: 500 * time.Millisecond,
 		BaselineBuffer:          90 * time.Second, // Increased to account for compilation overhead
 		MaxTimeout:              30 * time.Minute,
 		MinTimeout:              90 * time.Second, // Increased to account for compilation overhead
+		WarmupTimeout:           5 * time.Minute,
 	}
 
 	// Allow environment variable overrides
@@ -83,6 +86,12 @@ func DefaultFuzzTimingConfig() FuzzTimingConfig {
 	if envMax := os.Getenv("MAGE_X_FUZZ_MAX_TIMEOUT"); envMax != "" {
 		if d, err := time.ParseDuration(envMax); err == nil && d > 0 {
 			cfg.MaxTimeout = d
+		}
+	}
+
+	if envWarmup := os.Getenv("MAGE_X_FUZZ_WARMUP_TIMEOUT"); envWarmup != "" {
+		if d, err := time.ParseDuration(envWarmup); err == nil && d >= 0 {
+			cfg.WarmupTimeout = d
 		}
 	}
 

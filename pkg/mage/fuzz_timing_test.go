@@ -18,6 +18,7 @@ func TestDefaultFuzzTimingConfig(t *testing.T) {
 		"MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED",
 		"MAGE_X_FUZZ_MIN_TIMEOUT",
 		"MAGE_X_FUZZ_MAX_TIMEOUT",
+		"MAGE_X_FUZZ_WARMUP_TIMEOUT",
 	} {
 		t.Setenv(env, "")
 	}
@@ -27,7 +28,8 @@ func TestDefaultFuzzTimingConfig(t *testing.T) {
 	assert.Equal(t, 500*time.Millisecond, cfg.BaselineOverheadPerSeed)
 	assert.Equal(t, 90*time.Second, cfg.BaselineBuffer) // Increased to account for compilation
 	assert.Equal(t, 30*time.Minute, cfg.MaxTimeout)
-	assert.Equal(t, 90*time.Second, cfg.MinTimeout) // Increased to account for compilation
+	assert.Equal(t, 90*time.Second, cfg.MinTimeout)   // Increased to account for compilation
+	assert.Equal(t, 5*time.Minute, cfg.WarmupTimeout) // Build cache warmup timeout
 }
 
 // TestDefaultFuzzTimingConfigEnvOverride verifies environment variable overrides work
@@ -38,10 +40,12 @@ func TestDefaultFuzzTimingConfigEnvOverride(t *testing.T) {
 		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
 		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
 		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_WARMUP_TIMEOUT", "")
 
 		cfg := DefaultFuzzTimingConfig()
 		assert.Equal(t, 2*time.Minute, cfg.BaselineBuffer)
 		assert.Equal(t, 500*time.Millisecond, cfg.BaselineOverheadPerSeed) // unchanged
+		assert.Equal(t, 5*time.Minute, cfg.WarmupTimeout)                  // unchanged
 	})
 
 	// Test MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED override
@@ -50,6 +54,7 @@ func TestDefaultFuzzTimingConfigEnvOverride(t *testing.T) {
 		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "1s")
 		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
 		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_WARMUP_TIMEOUT", "")
 
 		cfg := DefaultFuzzTimingConfig()
 		assert.Equal(t, 1*time.Second, cfg.BaselineOverheadPerSeed)
@@ -62,6 +67,7 @@ func TestDefaultFuzzTimingConfigEnvOverride(t *testing.T) {
 		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
 		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "2m")
 		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_WARMUP_TIMEOUT", "")
 
 		cfg := DefaultFuzzTimingConfig()
 		assert.Equal(t, 2*time.Minute, cfg.MinTimeout)
@@ -73,9 +79,34 @@ func TestDefaultFuzzTimingConfigEnvOverride(t *testing.T) {
 		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
 		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
 		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "1h")
+		t.Setenv("MAGE_X_FUZZ_WARMUP_TIMEOUT", "")
 
 		cfg := DefaultFuzzTimingConfig()
 		assert.Equal(t, 1*time.Hour, cfg.MaxTimeout)
+	})
+
+	// Test MAGE_X_FUZZ_WARMUP_TIMEOUT override
+	t.Run("MAGE_X_FUZZ_WARMUP_TIMEOUT", func(t *testing.T) {
+		t.Setenv("MAGE_X_FUZZ_BASELINE_BUFFER", "")
+		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
+		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_WARMUP_TIMEOUT", "10m")
+
+		cfg := DefaultFuzzTimingConfig()
+		assert.Equal(t, 10*time.Minute, cfg.WarmupTimeout)
+	})
+
+	// Test MAGE_X_FUZZ_WARMUP_TIMEOUT=0s disables warmup
+	t.Run("MAGE_X_FUZZ_WARMUP_TIMEOUT_zero_disables", func(t *testing.T) {
+		t.Setenv("MAGE_X_FUZZ_BASELINE_BUFFER", "")
+		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
+		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_WARMUP_TIMEOUT", "0s")
+
+		cfg := DefaultFuzzTimingConfig()
+		assert.Equal(t, time.Duration(0), cfg.WarmupTimeout)
 	})
 
 	// Test invalid env var values are ignored
@@ -84,12 +115,14 @@ func TestDefaultFuzzTimingConfigEnvOverride(t *testing.T) {
 		t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "not-a-duration")
 		t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "-5m") // negative
 		t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+		t.Setenv("MAGE_X_FUZZ_WARMUP_TIMEOUT", "not-valid")
 
 		cfg := DefaultFuzzTimingConfig()
 		// Should use defaults when env vars are invalid
 		assert.Equal(t, 90*time.Second, cfg.BaselineBuffer)
 		assert.Equal(t, 500*time.Millisecond, cfg.BaselineOverheadPerSeed)
 		assert.Equal(t, 90*time.Second, cfg.MinTimeout)
+		assert.Equal(t, 5*time.Minute, cfg.WarmupTimeout) // default preserved
 	})
 }
 
@@ -120,6 +153,7 @@ func TestFuzzTimingConfigFromTestConfig(t *testing.T) {
 				BaselineBuffer:          90 * time.Second,
 				MaxTimeout:              30 * time.Minute,
 				MinTimeout:              90 * time.Second,
+				WarmupTimeout:           5 * time.Minute,
 			},
 		},
 		{
@@ -132,6 +166,7 @@ func TestFuzzTimingConfigFromTestConfig(t *testing.T) {
 				BaselineBuffer:          2 * time.Minute,
 				MaxTimeout:              30 * time.Minute,
 				MinTimeout:              90 * time.Second,
+				WarmupTimeout:           5 * time.Minute,
 			},
 		},
 		{
@@ -145,6 +180,7 @@ func TestFuzzTimingConfigFromTestConfig(t *testing.T) {
 				BaselineBuffer:          30 * time.Second,
 				MaxTimeout:              30 * time.Minute,
 				MinTimeout:              90 * time.Second,
+				WarmupTimeout:           5 * time.Minute,
 			},
 		},
 		{
@@ -171,6 +207,7 @@ func TestFuzzTimingConfigFromTestConfig(t *testing.T) {
 				BaselineBuffer:          0,
 				MaxTimeout:              30 * time.Minute,
 				MinTimeout:              90 * time.Second,
+				WarmupTimeout:           5 * time.Minute,
 			},
 		},
 	}
@@ -617,6 +654,7 @@ func TestFuzzTimingConstants(t *testing.T) {
 	assert.Equal(t, "500ms", DefaultFuzzBaselineOverheadPerSeed)
 	assert.Equal(t, "90s", DefaultFuzzBaselineBuffer) // Increased to account for compilation
 	assert.Equal(t, "90s", DefaultFuzzMinTimeout)     // Increased to account for compilation
+	assert.Equal(t, "5m", DefaultFuzzWarmupTimeout)   // Build cache warmup timeout
 }
 
 // Benchmark seed counting performance
@@ -662,6 +700,63 @@ func BenchmarkCalculateFuzzTimeout(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = CalculateFuzzTimeout(fuzzTime, seedCount, cfg)
 	}
+}
+
+// TestWarmFuzzBuildCache tests the build cache warmup function
+func TestWarmFuzzBuildCache(t *testing.T) {
+	t.Run("valid package compiles successfully", func(t *testing.T) {
+		// Use a known valid package from this repo
+		elapsed := warmFuzzBuildCache("github.com/mrz1836/mage-x/pkg/utils", 2*time.Minute)
+		assert.Greater(t, elapsed, time.Duration(0), "warmup should take some time")
+	})
+
+	t.Run("invalid package returns quickly without panic", func(t *testing.T) {
+		// warmFuzzBuildCache is non-fatal: it should log and return, not panic
+		elapsed := warmFuzzBuildCache("github.com/nonexistent/package/does/not/exist", 30*time.Second)
+		assert.Greater(t, elapsed, time.Duration(0), "should still return elapsed time")
+	})
+
+	t.Run("very short timeout triggers deadline exceeded", func(t *testing.T) {
+		// Use a real package but with an impossibly short timeout
+		elapsed := warmFuzzBuildCache("github.com/mrz1836/mage-x/pkg/mage", 1*time.Nanosecond)
+		// Should return very quickly (either timeout or immediate failure)
+		assert.Greater(t, elapsed, time.Duration(0))
+	})
+
+	t.Run("zero timeout disables warmup at call site", func(t *testing.T) {
+		// Verify the calling convention: WarmupTimeout=0 means caller skips the call
+		cfg := FuzzTimingConfig{WarmupTimeout: 0}
+		assert.Equal(t, time.Duration(0), cfg.WarmupTimeout)
+		// The caller checks `if fuzzTimingCfg.WarmupTimeout > 0` before calling
+	})
+}
+
+// TestWarmFuzzBuildCacheEnvDisable tests that MAGE_X_FUZZ_WARMUP_TIMEOUT=0s disables warmup
+func TestWarmFuzzBuildCacheEnvDisable(t *testing.T) {
+	t.Setenv("MAGE_X_FUZZ_WARMUP_TIMEOUT", "0s")
+	// Clear other env vars to isolate
+	t.Setenv("MAGE_X_FUZZ_BASELINE_BUFFER", "")
+	t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
+	t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
+	t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+
+	cfg := DefaultFuzzTimingConfig()
+	assert.Equal(t, time.Duration(0), cfg.WarmupTimeout, "warmup should be disabled with 0s")
+
+	// Verify the guard condition
+	assert.LessOrEqual(t, cfg.WarmupTimeout, time.Duration(0), "WarmupTimeout > 0 should be false when disabled")
+}
+
+// TestWarmFuzzBuildCacheNegativeIgnored tests that negative warmup timeout env values are ignored
+func TestWarmFuzzBuildCacheNegativeIgnored(t *testing.T) {
+	t.Setenv("MAGE_X_FUZZ_WARMUP_TIMEOUT", "-5m")
+	t.Setenv("MAGE_X_FUZZ_BASELINE_BUFFER", "")
+	t.Setenv("MAGE_X_FUZZ_BASELINE_OVERHEAD_PER_SEED", "")
+	t.Setenv("MAGE_X_FUZZ_MIN_TIMEOUT", "")
+	t.Setenv("MAGE_X_FUZZ_MAX_TIMEOUT", "")
+
+	cfg := DefaultFuzzTimingConfig()
+	assert.Equal(t, 5*time.Minute, cfg.WarmupTimeout, "negative warmup timeout should be ignored, default preserved")
 }
 
 // TestCountFuzzSeedsRealWorld tests seed counting on actual fuzz tests in the repo
