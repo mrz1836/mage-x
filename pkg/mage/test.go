@@ -1442,12 +1442,12 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 			continue
 		}
 
-		// Pre-compile with coverage instrumentation to warm build cache.
+		// Pre-compile with fuzz-specific instrumentation to warm build cache.
 		// This prevents the first fuzz test per package from timing out due to
 		// compilation overhead in projects with large dependency trees.
-		if fuzzTimingCfg.WarmupTimeout > 0 {
+		if fuzzTimingCfg.WarmupTimeout > 0 && len(validFuzzTests) > 0 {
 			utils.Info("Warming build cache for %s...", pkg)
-			warmupDur := warmFuzzBuildCache(pkg, fuzzTimingCfg.WarmupTimeout)
+			warmupDur := warmFuzzBuildCache(pkg, validFuzzTests[0], fuzzTimingCfg.WarmupTimeout)
 			if warmupDur > 5*time.Second {
 				utils.Info("Build cache warmup for %s took %s", pkg, utils.FormatDuration(warmupDur))
 			}
@@ -1621,16 +1621,23 @@ func runFuzzTestWithTimeout(name string, timeout time.Duration, args ...string) 
 	return err
 }
 
-// warmFuzzBuildCache pre-compiles the fuzz test binary with coverage instrumentation
+// warmFuzzBuildCache pre-compiles the fuzz test binary with fuzz-specific instrumentation
 // to warm the Go build cache. This prevents the first fuzz test in each package from
 // timing out due to compilation overhead in projects with large dependency trees.
+//
+// It runs a minimal fuzz test (1 iteration via -fuzztime=1x) so the build cache is
+// populated with the exact same instrumentation that real fuzz runs use. A previous
+// approach using "go test -c -covermode=atomic" produced cache entries with different
+// build keys, causing the first real fuzz invocation to recompile from scratch.
+//
 // Returns the elapsed time for the warmup.
-func warmFuzzBuildCache(pkg string, timeout time.Duration) time.Duration {
+func warmFuzzBuildCache(pkg, firstFuzzTest string, timeout time.Duration) time.Duration {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "go", "test", "-c", "-covermode=atomic", "-o", os.DevNull, pkg) //nolint:gosec // pkg is an internal Go package path, not user input
+	cmd := exec.CommandContext(ctx, "go", "test", "-run=^$", //nolint:gosec // pkg and firstFuzzTest are internal Go identifiers, not user input
+		fmt.Sprintf("-fuzz=^%s$", firstFuzzTest), "-fuzztime=1x", pkg)
 	cmd.Env = os.Environ()
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
