@@ -1476,6 +1476,11 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 			testStart := time.Now()
 			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
 			args = append(args, "-fuzztime", fuzzTimeStr)
+			// Pass calculated timeout to Go's test framework so the fuzz coordinator
+			// can properly manage its internal context. Without this, Go may cancel
+			// its internal contexts prematurely when fuzztime expires, causing
+			// "context deadline exceeded" errors even when tests complete normally.
+			args = append(args, "-timeout", timeout.String())
 
 			if config.Test.Verbose {
 				args = append(args, "-v")
