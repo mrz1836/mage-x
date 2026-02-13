@@ -1476,10 +1476,12 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 			testStart := time.Now()
 			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
 			args = append(args, "-fuzztime", fuzzTimeStr)
-			// Pass calculated timeout to Go's test framework so the fuzz coordinator
-			// can properly manage its internal context. Without this, Go may cancel
-			// its internal contexts prematurely when fuzztime expires, causing
-			// "context deadline exceeded" errors even when tests complete normally.
+			// Pass calculated timeout to Go's test framework. This controls the
+			// test-level deadline (system 1). Note: Go's fuzzer also creates a
+			// separate internal context tied to -fuzztime for worker coordination
+			// (system 2) that mage-x cannot control. If a fuzz function does
+			// expensive work on large inputs, that internal deadline may expire
+			// independently — see DiagnoseFuzzContextDeadline for detection.
 			args = append(args, "-timeout", timeout.String())
 
 			if config.Test.Verbose {
@@ -1522,6 +1524,17 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 
 			// Display timing breakdown
 			displayFuzzTestResult(test, testDuration, baselineDur, seedCount, testErr)
+
+			if testErr != nil {
+				DiagnoseFuzzContextDeadline(FuzzTestDiagnosticInfo{
+					TestName:     test,
+					Package:      pkg,
+					TestErr:      testErr,
+					TestOutput:   testOutput,
+					TestDuration: testDuration,
+					FuzzTime:     fuzzTime,
+				})
+			}
 		}
 	}
 

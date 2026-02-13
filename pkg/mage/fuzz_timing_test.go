@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -646,6 +647,213 @@ func TestWarnIfHighSeedCount(t *testing.T) {
 	WarnIfHighSeedCount(&FuzzSeedInfo{TotalSeeds: 0}, fuzzTime, cfg)
 	WarnIfHighSeedCount(&FuzzSeedInfo{TotalSeeds: 100}, fuzzTime, cfg)
 	WarnIfHighSeedCount(&FuzzSeedInfo{TotalSeeds: 10, HasLoopedSeeds: true}, fuzzTime, cfg)
+}
+
+// TestDiagnoseFuzzContextDeadline tests the fuzz context deadline diagnostic
+func TestDiagnoseFuzzContextDeadline(t *testing.T) {
+	fuzzTime := 10 * time.Second
+
+	// Test mock errors (nolint for test fixtures)
+	var (
+		errSomeOther       = errors.New("some other error")                                 //nolint:err113 // mock error for testing
+		errContextDeadline = errors.New("context deadline exceeded")                        //nolint:err113 // mock error for testing
+		errExitStatus      = errors.New("exit status 1")                                    //nolint:err113 // mock error for testing
+		errWrappedDeadline = errors.New("test failed: context deadline exceeded (wrapped)") //nolint:err113 // mock error for testing
+	)
+
+	tests := []struct {
+		name     string
+		info     FuzzTestDiagnosticInfo
+		expected bool
+	}{
+		{
+			name: "nil error returns false",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      nil,
+				TestDuration: 10 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: false,
+		},
+		{
+			name: "error without context deadline exceeded returns false",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errSomeOther,
+				TestDuration: 10 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: false,
+		},
+		{
+			name: "context deadline exceeded in error at fuzztime boundary",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 10 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: true,
+		},
+		{
+			name: "context deadline exceeded in output at fuzztime boundary",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzBar",
+				Package:      "./pkg/bar",
+				TestErr:      errExitStatus,
+				TestOutput:   "FAIL: context deadline exceeded\n",
+				TestDuration: 10500 * time.Millisecond,
+				FuzzTime:     fuzzTime,
+			},
+			expected: true,
+		},
+		{
+			name: "context deadline exceeded but duration far above fuzztime",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 30 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: false,
+		},
+		{
+			name: "context deadline exceeded but duration far below fuzztime",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 2 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: false,
+		},
+		{
+			name: "duration at lower boundary edge (fuzztime - 1s)",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 9 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: true,
+		},
+		{
+			name: "duration at upper boundary edge (fuzztime + 2s)",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 12 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: true,
+		},
+		{
+			name: "duration just outside lower boundary",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 8999 * time.Millisecond,
+				FuzzTime:     fuzzTime,
+			},
+			expected: false,
+		},
+		{
+			name: "duration just outside upper boundary",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 12001 * time.Millisecond,
+				FuzzTime:     fuzzTime,
+			},
+			expected: false,
+		},
+		{
+			name: "very short fuzztime with lower bound clamped to 0",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 500 * time.Millisecond,
+				FuzzTime:     500 * time.Millisecond,
+			},
+			expected: true,
+		},
+		{
+			name: "zero fuzztime with zero duration",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 0,
+				FuzzTime:     0,
+			},
+			expected: true,
+		},
+		{
+			name: "wrapped error containing context deadline exceeded",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errWrappedDeadline,
+				TestDuration: 10 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: true,
+		},
+		{
+			name: "context deadline exceeded in both error and output",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestOutput:   "panic: test timed out\ncontext deadline exceeded\n",
+				TestDuration: 10 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: true,
+		},
+		{
+			name: "unrelated error with context deadline exceeded in output but far from fuzztime",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errExitStatus,
+				TestOutput:   "context deadline exceeded",
+				TestDuration: 60 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: false,
+		},
+		{
+			name: "empty test output with deadline error at boundary",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestOutput:   "",
+				TestDuration: 11 * time.Second,
+				FuzzTime:     fuzzTime,
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := DiagnoseFuzzContextDeadline(tt.info)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
 
 // TestFuzzTimingConstants verifies the constants are set correctly

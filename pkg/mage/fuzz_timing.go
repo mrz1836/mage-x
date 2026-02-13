@@ -462,3 +462,67 @@ func WarnIfHighSeedCount(seedInfo *FuzzSeedInfo, fuzzTime time.Duration, cfg Fuz
 			seedInfo.CodeSeeds)
 	}
 }
+
+// FuzzTestDiagnosticInfo contains information about a completed fuzz test run
+// used for diagnosing context deadline exceeded failures.
+type FuzzTestDiagnosticInfo struct {
+	TestName     string        // Name of the fuzz test function
+	Package      string        // Package path
+	TestErr      error         // Error returned by the test, if any
+	TestOutput   string        // Captured test output (may be empty in non-CI mode)
+	TestDuration time.Duration // Wall-clock duration of the test run
+	FuzzTime     time.Duration // The -fuzztime value used
+}
+
+// DiagnoseFuzzContextDeadline detects when a fuzz test failed due to Go's
+// internal fuzztime context deadline rather than mage-x's -timeout flag.
+//
+// Go's fuzzer has two independent timeout systems:
+//  1. The -timeout flag (test-level) — controlled by mage-x, correctly calculated
+//  2. A fuzztime-internal context — created by Go's fuzzer for worker coordination,
+//     tied to -fuzztime. Mage-x cannot control this.
+//
+// When fuzz test functions perform expensive operations on large fuzzer-generated
+// inputs (up to 1MB+), this internal deadline can expire. The fix on the user side
+// is adding t.Skip() guards for oversized inputs.
+//
+// Returns true if the pattern was detected and a diagnostic was emitted.
+func DiagnoseFuzzContextDeadline(info FuzzTestDiagnosticInfo) bool {
+	if info.TestErr == nil {
+		return false
+	}
+
+	// Check if "context deadline exceeded" appears in the error or output
+	errStr := info.TestErr.Error()
+	hasDeadlineErr := strings.Contains(errStr, "context deadline exceeded") ||
+		strings.Contains(info.TestOutput, "context deadline exceeded")
+
+	if !hasDeadlineErr {
+		return false
+	}
+
+	// Check if the test duration is within a tolerance window of fuzztime.
+	// If the test failed near the fuzztime boundary, it's likely the internal
+	// fuzztime context that expired, not mage-x's -timeout.
+	// Window: [fuzzTime - 1s, fuzzTime + 2s]
+	lowerBound := info.FuzzTime - 1*time.Second
+	if lowerBound < 0 {
+		lowerBound = 0
+	}
+	upperBound := info.FuzzTime + 2*time.Second
+
+	if info.TestDuration < lowerBound || info.TestDuration > upperBound {
+		return false
+	}
+
+	utils.Warn("Fuzz test %s.%s failed with 'context deadline exceeded' near the fuzztime boundary (%s elapsed, fuzztime=%s)",
+		info.Package, info.TestName,
+		utils.FormatDuration(info.TestDuration),
+		utils.FormatDuration(info.FuzzTime))
+	utils.Warn("This is likely caused by Go's internal fuzztime context, not mage-x's -timeout flag")
+	utils.Warn("The fuzzer generates inputs up to ~1MB — if your fuzz test does expensive work on large inputs, the internal deadline expires")
+	utils.Warn("Fix: add a t.Skip() guard in your fuzz function for oversized inputs, e.g.:")
+	utils.Warn("  f.Fuzz(func(t *testing.T, data []byte) { if len(data) > 10000 { t.Skip(\"input too large\") } ... })")
+
+	return true
+}
