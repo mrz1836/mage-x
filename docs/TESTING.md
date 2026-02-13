@@ -209,6 +209,43 @@ go test -fuzz=FuzzReverse -fuzztime=10s ./pkg/utils
 FUZZ_TIME=30s mage test:fuzzshort
 ```
 
+### Troubleshooting: Fuzz Test "context deadline exceeded"
+
+Go's fuzz tests have **two independent timeout systems**, and understanding this distinction is key to diagnosing failures:
+
+| System | Flag | Controlled by | Purpose |
+|---|---|---|---|
+| Test-level timeout | `-timeout` | mage-x (calculated automatically) | Overall test process deadline |
+| Fuzztime-internal context | `-fuzztime` | Go's fuzzer (cannot be controlled externally) | Worker coordination deadline |
+
+**The failure pattern:** Your fuzz test fails with `context deadline exceeded`, and the test duration is very close to the `-fuzztime` value (within ~1-2 seconds). This means Go's internal fuzztime context expired — not mage-x's timeout.
+
+**Why it happens:** Go's fuzzer generates inputs up to ~1MB. If your fuzz test function performs expensive operations (parsing, hashing, encoding) on these large inputs, processing can exceed the internal fuzztime deadline.
+
+**How to identify it:** mage-x automatically detects this pattern and prints a diagnostic warning when:
+- The error contains "context deadline exceeded"
+- The test duration falls within the fuzztime boundary window
+
+**The fix:** Add a `t.Skip()` guard for oversized inputs in your fuzz function:
+
+```go
+f.Fuzz(func(t *testing.T, data []byte) {
+    if len(data) > 10000 {
+        t.Skip("input too large")
+    }
+    // ... rest of your fuzz test
+})
+```
+
+**Threshold guidelines by input type:**
+
+| Input type | Suggested skip threshold | Rationale |
+|---|---|---|
+| `[]byte` / `string` (parsing) | 10 KB | Parsing large inputs is O(n) or worse |
+| `[]byte` (hashing/encoding) | 100 KB | Hash/encode is fast but still bounded |
+| Structured inputs (JSON, XML) | 5 KB | Deserialization is expensive |
+| Multiple parameters | Sum of sizes > 10 KB | Combined cost adds up |
+
 ## Writing Tests
 
 ### Unit Test Example
