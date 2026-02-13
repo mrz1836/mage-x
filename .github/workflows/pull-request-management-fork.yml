@@ -3,7 +3,7 @@
 #
 #  Purpose: Automate labeling, assignment, and welcoming of pull requests for forked PRs.
 #
-#  Configuration: All settings are loaded from modular .github/env/ files for
+#  Configuration: All settings are loaded from .env.base and .env.custom files for
 #  centralized management across all workflows.
 #
 #  Triggers: Pull request events (opened, reopened, ready for review, closed, synchronize)
@@ -82,8 +82,6 @@
 #  - GitHub Docs: Keeping your GitHub Actions and workflows secure
 #  - OWASP: CI/CD Security Top 10
 #
-# ════════════════════════════════════════════════════════════════════════════════
-#
 # ------------------------------------------------------------------------------------
 
 name: PR Management (Forks)
@@ -108,7 +106,7 @@ concurrency:
 # --------------------------------------------------------------------
 # Environment Variables
 # --------------------------------------------------------------------
-# Note: Configuration variables are loaded from modular .github/env/ files
+# Note: Configuration variables are loaded from .env.base and .env.custom files
 
 jobs:
   # ------------------------------------------------------------
@@ -117,8 +115,6 @@ jobs:
   load-env:
     name: 🌍 Load Environment (Base Repo)
     runs-on: ubuntu-latest
-    # Early exit: Skip entire workflow for same-repo PRs (handled by main workflow)
-    if: github.event.pull_request.head.repo.full_name != github.repository
     # No write perms here
     permissions:
       contents: read
