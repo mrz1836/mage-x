@@ -818,6 +818,19 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 	}
 
 	utils.Success("Binary installed to: %s", outputPath)
+
+	// Create symlink aliases from configuration
+	config, err := GetConfig()
+	if err != nil {
+		// Log warning but don't fail - aliases are nice-to-have
+		utils.Warn("Failed to load config for alias creation: %v", err)
+	} else {
+		// Create aliases - mirrors Install.Default() behavior
+		for _, alias := range config.Project.Aliases {
+			createSymlinkAlias(gopath, outputPath, alias)
+		}
+	}
+
 	return nil
 }
 
