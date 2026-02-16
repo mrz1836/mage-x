@@ -791,7 +791,7 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 
 	var binaryPath string
 	for _, file := range extractedFiles {
-		if file.Name() == "magex" || (runtime.GOOS == "windows" && file.Name() == "magex.exe") {
+		if file.Name() == "magex" || (runtime.GOOS == OSWindows && file.Name() == "magex.exe") {
 			binaryPath = filepath.Join(extractDir, file.Name())
 			break
 		}

@@ -677,6 +677,21 @@ func (b Build) Install() error {
 	}
 
 	utils.Success("Installed %s to %s", config.Project.Binary, filepath.Join(gopath, "bin"))
+
+	// Create symlink aliases from configuration
+	binaryName := config.Project.Binary
+	if binaryName == "" {
+		binaryName = filepath.Base(packagePath)
+	}
+	installPath := filepath.Join(gopath, "bin", binaryName)
+	if runtime.GOOS == "windows" {
+		installPath += ".exe"
+	}
+
+	for _, alias := range config.Project.Aliases {
+		createSymlinkAlias(gopath, installPath, alias)
+	}
+
 	return nil
 }
 

@@ -421,7 +421,7 @@ func defaultConfig() *Config {
 // getDefaultAliases returns default aliases for the given binary name
 func getDefaultAliases(binary string) []string {
 	switch binary {
-	case "magex":
+	case "magex", "mage-x":
 		return []string{"mgx"}
 	default:
 		return nil

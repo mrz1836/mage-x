@@ -51,6 +51,8 @@ lint:
   skip_files: []
   timeout: 5m
 project:
+  aliases:
+    - mgx
   binary: mage-x
   description: ""
   env: {}
