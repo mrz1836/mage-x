@@ -802,7 +802,7 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 	}
 
 	// Move binary to final location
-	if err := os.Rename(binaryPath, outputPath); err != nil {
+	if renameErr := os.Rename(binaryPath, outputPath); renameErr != nil {
 		// Try copy + delete if rename fails (cross-filesystem moves)
 		if copyErr := copyFile(binaryPath, outputPath); copyErr != nil {
 			return fmt.Errorf("failed to install binary: %w", copyErr)
@@ -813,8 +813,8 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 	}
 
 	// Ensure binary is executable
-	if err := os.Chmod(outputPath, fileops.PermFileExecutable); err != nil {
-		return fmt.Errorf("failed to make binary executable: %w", err)
+	if chmodErr := os.Chmod(outputPath, fileops.PermFileExecutable); chmodErr != nil {
+		return fmt.Errorf("failed to make binary executable: %w", chmodErr)
 	}
 
 	utils.Success("Binary installed to: %s", outputPath)
