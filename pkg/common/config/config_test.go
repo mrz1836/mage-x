@@ -1002,7 +1002,7 @@ settings:
 			Host     string `yaml:"host"`
 			Port     int    `yaml:"port"`
 			User     string `yaml:"user"`
-			Password string `yaml:"password"`
+			Password string `yaml:"password"` //nolint:gosec // G117: test struct field, not a real credential
 		} `yaml:"database"`
 		App struct {
 			Name     string   `yaml:"name"`

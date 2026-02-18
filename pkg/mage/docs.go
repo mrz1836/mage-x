@@ -118,7 +118,7 @@ func (Docs) GoDocs(args ...string) error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	resp, err := utils.DefaultHTTPClient().Do(req)
+	resp, err := utils.DefaultHTTPClient().Do(req) // #nosec G704 -- URL is pkg.go.dev API endpoint
 	if err != nil {
 		return fmt.Errorf("failed to trigger pkg.go.dev sync: %w", err)
 	}
@@ -273,7 +273,7 @@ func generateDocumentationIndex(documented, failed []string) string {
 
 	content.WriteString("# Generated Package Documentation\n\n")
 	content.WriteString("This directory contains auto-generated documentation for all packages in the mage-x project.\n\n")
-	content.WriteString(fmt.Sprintf("**Generated on:** %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
+	fmt.Fprintf(&content, "**Generated on:** %s\n\n", time.Now().Format("2006-01-02 15:04:05"))
 
 	if len(documented) > 0 {
 		content.WriteString("## 📚 Available Documentation\n\n")
@@ -300,11 +300,11 @@ func generateDocumentationIndex(documented, failed []string) string {
 				continue
 			}
 
-			content.WriteString(fmt.Sprintf("### %s Packages\n\n", category))
+			fmt.Fprintf(&content, "### %s Packages\n\n", category)
 			for _, pkg := range packages {
 				filename := strings.ReplaceAll(strings.TrimPrefix(pkg, "github.com/mrz1836/mage-x/"), "/", "_") + ".md"
 				packageName := pkg[strings.LastIndex(pkg, "/")+1:]
-				content.WriteString(fmt.Sprintf("- [%s](./%s) - `%s`\n", packageName, filename, pkg))
+				fmt.Fprintf(&content, "- [%s](./%s) - `%s`\n", packageName, filename, pkg)
 			}
 			content.WriteString("\n")
 		}
@@ -314,7 +314,7 @@ func generateDocumentationIndex(documented, failed []string) string {
 		content.WriteString("## ⚠️ Failed Documentation Generation\n\n")
 		content.WriteString("The following packages failed to generate documentation:\n\n")
 		for _, pkg := range failed {
-			content.WriteString(fmt.Sprintf("- `%s`\n", pkg))
+			fmt.Fprintf(&content, "- `%s`\n", pkg)
 		}
 		content.WriteString("\n")
 	}
@@ -905,8 +905,8 @@ func processMarkdownForBuild(content, filePath string) string {
 
 	// Add build metadata header
 	enhanced.WriteString("---\n")
-	enhanced.WriteString(fmt.Sprintf("generated: %s\n", time.Now().Format("2006-01-02 15:04:05")))
-	enhanced.WriteString(fmt.Sprintf("source: %s\n", filePath))
+	fmt.Fprintf(&enhanced, "generated: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(&enhanced, "source: %s\n", filePath)
 	enhanced.WriteString("build: mage-x documentation builder\n")
 	enhanced.WriteString("---\n\n")
 
@@ -929,8 +929,8 @@ func createBuildIndex(processedFiles []string) string {
 
 	content.WriteString("# MAGE-X Documentation Build\n\n")
 	content.WriteString("> 🏗️ **Static Documentation Build**\n\n")
-	content.WriteString(fmt.Sprintf("**Generated:** %s  \n", time.Now().Format("2006-01-02 15:04:05")))
-	content.WriteString(fmt.Sprintf("**Files:** %d packages documented  \n", len(processedFiles)))
+	fmt.Fprintf(&content, "**Generated:** %s  \n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(&content, "**Files:** %d packages documented  \n", len(processedFiles))
 	content.WriteString("**Format:** Enhanced Markdown with metadata  \n\n")
 
 	content.WriteString("## 📚 Available Documentation\n\n")
@@ -962,7 +962,7 @@ func createBuildIndex(processedFiles []string) string {
 			continue
 		}
 
-		content.WriteString(fmt.Sprintf("### %s\n\n", category))
+		fmt.Fprintf(&content, "### %s\n\n", category)
 		for _, file := range files {
 			// Extract package name from filename
 			packageName := strings.TrimSuffix(file, ".md")
@@ -970,7 +970,7 @@ func createBuildIndex(processedFiles []string) string {
 			packageName = strings.TrimPrefix(packageName, "pkg/")
 			packageName = strings.TrimPrefix(packageName, "cmd/")
 
-			content.WriteString(fmt.Sprintf("- [%s](./%s)\n", packageName, file))
+			fmt.Fprintf(&content, "- [%s](./%s)\n", packageName, file)
 		}
 		content.WriteString("\n")
 	}

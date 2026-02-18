@@ -314,6 +314,7 @@ func createDefaultConfig() *YamlConfig {
 				Format:  "markdown",
 				File:    "CHANGELOG.md",
 			},
+			// #nosec G101 -- placeholder config values in default config, not real credentials
 			GitHub: GitHubReleaseConfig{
 				Owner:      "username",
 				Repository: "repository",

@@ -635,7 +635,7 @@ _mage "$@"
 	completionFile := filepath.Join(os.Getenv("HOME"), ".zsh", "completions", "_mage")
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(filepath.Dir(completionFile), fileops.PermDirSensitive); err != nil {
+	if err := os.MkdirAll(filepath.Dir(completionFile), fileops.PermDirSensitive); err != nil { // #nosec G703 -- completionFile path is from HOME env + fixed subpath
 		return fmt.Errorf("failed to create completion directory: %w", err)
 	}
 
@@ -678,7 +678,7 @@ complete -c mage -n '__fish_seen_subcommand_from release' -a 'stable beta edge'
 	completionFile := filepath.Join(configDir, "mage.fish")
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(configDir, fileops.PermDirSensitive); err != nil {
+	if err := os.MkdirAll(configDir, fileops.PermDirSensitive); err != nil { // #nosec G703 -- configDir is from HOME env + fixed subpath
 		return fmt.Errorf("failed to create completion directory: %w", err)
 	}
 

@@ -514,7 +514,7 @@ func (te *TestEnvironment) GitCommit(message string) {
 	te.t.Helper()
 
 	ctx := context.Background()
-	if err := exec.CommandContext(ctx, "git", "commit", "-m", message).Run(); err != nil {
+	if err := exec.CommandContext(ctx, "git", "commit", "-m", message).Run(); err != nil { // #nosec G204 -- git command with fixed args for test helper
 		te.t.Fatalf("Failed to git commit: %v", err)
 	}
 }

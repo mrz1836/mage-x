@@ -427,9 +427,10 @@ func verifyAgentOSInstallation(config *Config) error {
 // runInteractivePipedCmd runs a command piped to another command with stdin/stdout connected
 func runInteractivePipedCmd(cmd1 string, args1 []string, cmd2 string, args2 []string) error {
 	// Create the curl command
+	// #nosec G204 -- cmd1/cmd2 are internal function parameters for piped commands
 	curlCmd := exec.CommandContext(context.Background(), cmd1, args1...)
 
-	// Create the bash command
+	// #nosec G204 -- cmd1/cmd2 are internal function parameters for piped commands
 	bashCmd := exec.CommandContext(context.Background(), cmd2, args2...)
 
 	// Pipe curl's stdout to bash's stdin

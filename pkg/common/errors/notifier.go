@@ -378,7 +378,7 @@ func (w *WebhookChannel) Send(ctx context.Context, notification *ErrorNotificati
 	}
 
 	// Send request
-	resp, err := w.client.Do(req)
+	resp, err := w.client.Do(req) // #nosec G704 -- webhook URL is configured by library caller
 	if err != nil {
 		return fmt.Errorf("%w: %w", errSendWebhook, err)
 	}

@@ -120,7 +120,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 		// NOTE: mage binary does NOT support command-line arguments for custom functions
 		// Arguments must be passed via environment variables (MAGE_ARGS)
 		cmdArgs := []string{mageCommand}
-		// #nosec G204 -- This is necessary for dynamic command execution with user-defined commands
+		// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
 		cmd = exec.CommandContext(timeoutCtx, magePath, cmdArgs...)
 	} else {
 		// Fallback to go run with mage tags
@@ -129,7 +129,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 			// For directory, we need to run from within the directory using go run .
 			cmdArgs = append(cmdArgs, "run", "-tags=mage", ".", mageCommand)
 			cmdArgs = append(cmdArgs, args...)
-			// #nosec G204 -- This is necessary for dynamic command execution with user-defined commands
+			// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
 			cmd = exec.CommandContext(timeoutCtx, "go", cmdArgs...)
 			// Set the working directory to the magefiles directory
 			cmd.Dir = targetPath
@@ -137,7 +137,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 			// For single file, specify the file path
 			cmdArgs = append(cmdArgs, "run", "-tags=mage", targetPath, mageCommand)
 			cmdArgs = append(cmdArgs, args...)
-			// #nosec G204 -- This is necessary for dynamic command execution with user-defined commands
+			// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
 			cmd = exec.CommandContext(timeoutCtx, "go", cmdArgs...)
 		}
 	}
@@ -244,7 +244,7 @@ func filterStderr(stderrPipe io.ReadCloser, buf *strings.Builder, wg *sync.WaitG
 		}
 
 		// Pass through all other stderr output to user in real-time
-		fmt.Fprintln(os.Stderr, line)
+		fmt.Fprintln(os.Stderr, line) // #nosec G705 -- intentionally printing subprocess stderr to user
 	}
 }
 

@@ -498,7 +498,7 @@ func TestTestEnvironment_ConcurrentAccess(t *testing.T) {
 	done := make(chan bool, 10)
 	for i := 0; i < 10; i++ {
 		go func(n int) {
-			filename := strings.ReplaceAll("concurrent_$n.txt", "$n", string(rune('0'+n)))
+			filename := strings.ReplaceAll("concurrent_$n.txt", "$n", string(rune('0'+n))) //nolint:gosec // G115: bounded test value (0-9)
 			te.WriteFile(filename, "content")
 			done <- true
 		}(i)

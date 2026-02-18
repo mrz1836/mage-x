@@ -360,6 +360,7 @@ func TestGetGitHubTokenForUpdateCheck(t *testing.T) {
 		},
 		{
 			name: "MAGE_X_GITHUB_TOKEN set",
+			// #nosec G101 -- test token value, not a real credential
 			envVars: map[string]string{
 				"MAGE_X_GITHUB_TOKEN": "mage_x_token",
 			},
@@ -381,6 +382,7 @@ func TestGetGitHubTokenForUpdateCheck(t *testing.T) {
 		},
 		{
 			name: "MAGE_X_GITHUB_TOKEN takes priority",
+			// #nosec G101 -- test token values, not real credentials
 			envVars: map[string]string{
 				"MAGE_X_GITHUB_TOKEN": "mage_x_token",
 				"GITHUB_TOKEN":        "github_token",

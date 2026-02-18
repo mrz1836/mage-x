@@ -288,8 +288,8 @@ func TestCopyConcurrent(t *testing.T) {
 	// Run concurrent copies
 	for i := 0; i < numCopiers; i++ {
 		go func(idx int) {
-			src := filepath.Join(tmpDir, "src"+string(rune('0'+idx))+".txt")
-			dst := filepath.Join(tmpDir, "dst"+string(rune('0'+idx))+".txt")
+			src := filepath.Join(tmpDir, "src"+string(rune('0'+idx))+".txt") //nolint:gosec // G115: bounded test value
+			dst := filepath.Join(tmpDir, "dst"+string(rune('0'+idx))+".txt") //nolint:gosec // G115: bounded test value
 			done <- op.Copy(src, dst)
 		}(i)
 	}

@@ -417,7 +417,7 @@ func TestSandboxedWorkspace(t *testing.T) {
 	tempFile, err := os.CreateTemp("", "external-*.txt")
 	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, os.Remove(tempFile.Name()))
+		require.NoError(t, os.Remove(tempFile.Name())) // #nosec G703 -- tempFile.Name() is from os.CreateTemp
 	}()
 
 	sw.AllowPath(filepath.Dir(tempFile.Name()))

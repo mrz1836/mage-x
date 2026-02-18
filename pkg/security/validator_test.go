@@ -339,7 +339,7 @@ func TestSecureExecutor_Concurrent(t *testing.T) {
 	done := make(chan error, 10)
 	for i := 0; i < 10; i++ {
 		go func(id int) {
-			err := executor.Execute(ctx, "echo", string(rune('0'+id)))
+			err := executor.Execute(ctx, "echo", string(rune('0'+id))) //nolint:gosec // G115: bounded test value (0-9), no overflow risk
 			done <- err
 		}(i)
 	}

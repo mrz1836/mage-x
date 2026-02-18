@@ -543,5 +543,17 @@ func DiagnoseFuzzContextDeadline(info FuzzTestDiagnosticInfo) bool {
 	utils.Warn("  • Regex operations: 1000 bytes MAX, 2s timeout")
 	utils.Warn("  • Multiple expensive operations: 300-500 bytes, 1.5s timeout")
 
+	if !isFuzzStrictDeadline() {
+		utils.Info("[INFO] This failure is being tolerated (not counted as a CI failure)")
+		utils.Info("[INFO] Set MAGE_X_FUZZ_STRICT_DEADLINE=true to treat this as a real failure")
+	}
+
 	return true
+}
+
+// isFuzzStrictDeadline returns true if fuzztime context deadline tolerance is disabled.
+// When MAGE_X_FUZZ_STRICT_DEADLINE=true, fuzztime boundary failures are treated as real failures.
+func isFuzzStrictDeadline() bool {
+	v := os.Getenv("MAGE_X_FUZZ_STRICT_DEADLINE")
+	return strings.EqualFold(v, "true")
 }

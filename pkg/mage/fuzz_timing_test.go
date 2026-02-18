@@ -856,6 +856,63 @@ func TestDiagnoseFuzzContextDeadline(t *testing.T) {
 	}
 }
 
+// TestIsFuzzStrictDeadline tests the MAGE_X_FUZZ_STRICT_DEADLINE env var behavior
+func TestIsFuzzStrictDeadline(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		expected bool
+	}{
+		{
+			name:     "unset returns false",
+			envValue: "",
+			expected: false,
+		},
+		{
+			name:     "true returns true",
+			envValue: "true",
+			expected: true,
+		},
+		{
+			name:     "TRUE returns true (case insensitive)",
+			envValue: "TRUE",
+			expected: true,
+		},
+		{
+			name:     "True returns true (case insensitive)",
+			envValue: "True",
+			expected: true,
+		},
+		{
+			name:     "false returns false",
+			envValue: "false",
+			expected: false,
+		},
+		{
+			name:     "arbitrary string returns false",
+			envValue: "yes",
+			expected: false,
+		},
+		{
+			name:     "1 returns false (only true is accepted)",
+			envValue: "1",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.envValue == "" {
+				t.Setenv("MAGE_X_FUZZ_STRICT_DEADLINE", "")
+			} else {
+				t.Setenv("MAGE_X_FUZZ_STRICT_DEADLINE", tt.envValue)
+			}
+			result := isFuzzStrictDeadline()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 // TestFuzzTimingConstants verifies the constants are set correctly
 func TestFuzzTimingConstants(t *testing.T) {
 	// Verify the constants match expected values

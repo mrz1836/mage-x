@@ -245,6 +245,7 @@ func installBmadCLI(config *Config) error {
 func runInteractiveCmd(name string, args ...string) error {
 	// Use background context - interactive commands shouldn't have a timeout
 
+	// #nosec G204 -- interactive command helper, name is from internal callers
 	cmd := exec.CommandContext(context.Background(), name, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

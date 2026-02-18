@@ -78,7 +78,7 @@ func (e *EnvFilteringExecutor) Execute(ctx context.Context, name string, args ..
 	// Since we can't modify the wrapped executor's behavior directly,
 	// we create a new command with filtered environment
 
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -88,7 +88,7 @@ func (e *EnvFilteringExecutor) Execute(ctx context.Context, name string, args ..
 
 // ExecuteOutput runs a command with filtered environment and returns output
 func (e *EnvFilteringExecutor) ExecuteOutput(ctx context.Context, name string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
 
 	output, err := cmd.CombinedOutput()
@@ -97,7 +97,7 @@ func (e *EnvFilteringExecutor) ExecuteOutput(ctx context.Context, name string, a
 
 // ExecuteWithEnv runs a command with additional environment variables (filtered)
 func (e *EnvFilteringExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 
 	// Filter base environment, then add additional env
 	baseEnv := e.FilterEnvironment(os.Environ(), name)
@@ -113,7 +113,7 @@ func (e *EnvFilteringExecutor) ExecuteWithEnv(ctx context.Context, env []string,
 
 // ExecuteStreaming runs a command with filtered environment and custom output
 func (e *EnvFilteringExecutor) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error {
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
@@ -123,7 +123,7 @@ func (e *EnvFilteringExecutor) ExecuteStreaming(ctx context.Context, stdout, std
 
 // ExecuteInDir runs a command in the specified directory with filtered environment
 func (e *EnvFilteringExecutor) ExecuteInDir(ctx context.Context, dir, name string, args ...string) error {
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
@@ -134,7 +134,7 @@ func (e *EnvFilteringExecutor) ExecuteInDir(ctx context.Context, dir, name strin
 
 // ExecuteOutputInDir runs a command in the specified directory with filtered environment and returns output
 func (e *EnvFilteringExecutor) ExecuteOutputInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
 	cmd.Dir = dir
 

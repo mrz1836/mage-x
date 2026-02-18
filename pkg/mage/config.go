@@ -373,6 +373,7 @@ func defaultConfig() *Config {
 			Swag:         VersionLatest,
 			Custom:       make(map[string]string),
 		},
+		// #nosec G101 -- placeholder env var name in default config, not a real token
 		Release: ReleaseConfig{
 			GitHubToken: "GITHUB_TOKEN",
 			Changelog:   true,

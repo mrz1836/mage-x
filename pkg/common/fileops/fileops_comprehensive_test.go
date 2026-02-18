@@ -1239,7 +1239,7 @@ func TestYAMLOperatorEdgeCases(t *testing.T) {
 			Port     int    `yaml:"port"`
 			Name     string `yaml:"name"`
 			User     string `yaml:"user"`
-			Password string `yaml:"password"`
+			Password string `yaml:"password"` //nolint:gosec // G117: test struct field, not a real credential
 		}
 		type Config struct {
 			Server   Server                 `yaml:"server"`

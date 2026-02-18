@@ -25,7 +25,7 @@ var (
 func RunCommand(t *testing.T, name string, args ...string) (string, error) {
 	t.Helper()
 
-	cmd := exec.CommandContext(context.Background(), name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...) // #nosec G204 -- test helper, callers control command name
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -42,7 +42,7 @@ func RunCommand(t *testing.T, name string, args ...string) (string, error) {
 func RunCommandWithInput(t *testing.T, input, name string, args ...string) (string, error) {
 	t.Helper()
 
-	cmd := exec.CommandContext(context.Background(), name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...) // #nosec G204 -- test helper, callers control command name
 	cmd.Stdin = strings.NewReader(input)
 
 	var stdout, stderr bytes.Buffer

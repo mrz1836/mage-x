@@ -670,6 +670,30 @@ func TestFuzzResultsToError(t *testing.T) {
 			results:   []fuzzTestResult{},
 			wantError: false,
 		},
+		{
+			name: "tolerated deadline not counted as failure",
+			results: []fuzzTestResult{
+				{Package: "pkg", Test: "FuzzTest1", Error: errFuzzTestFailed, DeadlineTolerated: true},
+			},
+			wantError: false,
+		},
+		{
+			name: "mixed tolerated and real failure",
+			results: []fuzzTestResult{
+				{Package: "pkg1", Test: "FuzzTest1", Error: errFuzzTestFailed, DeadlineTolerated: true},
+				{Package: "pkg2", Test: "FuzzTest2", Error: errFuzzTestFailed, DeadlineTolerated: false},
+			},
+			wantError: true,
+			errMsg:    "pkg2.FuzzTest2",
+		},
+		{
+			name: "all tolerated no failure",
+			results: []fuzzTestResult{
+				{Package: "pkg1", Test: "FuzzTest1", Error: errFuzzTestFailed, DeadlineTolerated: true},
+				{Package: "pkg2", Test: "FuzzTest2", Error: errFuzzTestFailed, DeadlineTolerated: true},
+			},
+			wantError: false,
+		},
 	}
 
 	for _, tt := range tests {

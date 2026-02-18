@@ -777,7 +777,7 @@ func showNamespaceHelp(reg *registry.Registry, namespace string) {
 			description = description[:67] + "..."
 		}
 
-		if _, err := fmt.Fprintf(w, "  %s\t%s\n", fullName, description); err != nil {
+		if _, err := fmt.Fprintf(w, "  %s\t%s\n", fullName, description); err != nil { // #nosec G705 -- fullName and description come from internal command definitions
 			fmt.Printf("Warning: failed to write namespace help: %v\n", err)
 		}
 	}

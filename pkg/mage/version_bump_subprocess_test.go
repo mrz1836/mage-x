@@ -65,7 +65,6 @@ func TestVersionBumpMagexSubprocess(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		//nolint:gosec // G204: Subprocess launched with variable - safe in test context
 		magexCmd := exec.CommandContext(ctx, magexBinary, "version:bump", "push=true", "bump=patch")
 		magexCmd.Dir = testRepoDir
 		output, err := magexCmd.CombinedOutput()
@@ -134,7 +133,6 @@ func TestVersionBumpMagexSubprocess(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		//nolint:gosec // G204: Subprocess launched with variable - safe in test context
 		magexCmd := exec.CommandContext(ctx, magexBinary, "version:bump", "push", "bump=patch")
 		magexCmd.Dir = testRepoDir
 		output, err := magexCmd.CombinedOutput()
@@ -195,7 +193,6 @@ func TestVersionBumpMagexSubprocess(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		//nolint:gosec // G204: Subprocess launched with variable - safe in test context
 		magexCmd := exec.CommandContext(ctx, magexBinary, "version:bump", "bump=patch")
 		magexCmd.Dir = testRepoDir
 		output, err := magexCmd.CombinedOutput()

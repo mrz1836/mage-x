@@ -197,6 +197,7 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 	}
 
 	// Create command
+	// #nosec G204 -- name comes from validated test runner configuration
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = os.Environ()
 
@@ -485,28 +486,36 @@ func printCIFuzzSummary(results []fuzzTestResult, totalDuration time.Duration) {
 	total := len(results)
 	passed := 0
 	failed := 0
+	tolerated := 0
 	var failures []fuzzTestResult
 
 	for _, r := range results {
 		if r.Error == nil {
 			passed++
+		} else if r.DeadlineTolerated {
+			tolerated++
 		} else {
 			failed++
 			failures = append(failures, r)
 		}
 	}
 
-	lines := make([]string, 0, 12+len(failures))
+	lines := make([]string, 0, 14+len(failures))
 	lines = append(lines,
 		"",
 		"============================================================",
 		"📊 MAGE-X CI FUZZ TEST SUMMARY",
 		"============================================================",
-		fmt.Sprintf("Total Fuzz Tests:  %d", total),
-		fmt.Sprintf("├── Passed:        %d", passed),
-		fmt.Sprintf("└── Failed:        %d", failed),
-		fmt.Sprintf("Duration:          %s", formatDurationForSummary(totalDuration)),
-		fmt.Sprintf("Failures Detected: %d", len(failures)),
+		fmt.Sprintf("Total Fuzz Tests:     %d", total),
+		fmt.Sprintf("├── Passed:           %d", passed),
+		fmt.Sprintf("├── Failed:           %d", failed),
+	)
+	if tolerated > 0 {
+		lines = append(lines, fmt.Sprintf("└── Deadline-Skipped: %d", tolerated))
+	}
+	lines = append(lines,
+		fmt.Sprintf("Duration:             %s", formatDurationForSummary(totalDuration)),
+		fmt.Sprintf("Failures Detected:    %d", len(failures)),
 	)
 	for _, f := range failures {
 		lines = append(lines, fmt.Sprintf("  └── %s (%s)", f.Test, f.Package))

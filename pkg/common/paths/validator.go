@@ -419,7 +419,7 @@ func (r *WritableRule) checkDirWritable(dir string) error {
 	if err := tempFile.Close(); err != nil {
 		return fmt.Errorf("failed to close temp file: %w", err)
 	}
-	if err := os.Remove(tempFile.Name()); err != nil {
+	if err := os.Remove(tempFile.Name()); err != nil { // #nosec G703 -- tempFile.Name() is from os.CreateTemp
 		return fmt.Errorf("failed to remove temp file: %w", err)
 	}
 	return nil

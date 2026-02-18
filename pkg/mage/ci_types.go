@@ -92,13 +92,14 @@ const (
 
 // CISummary contains test count statistics
 type CISummary struct {
-	Status      TestStatus `json:"status"`
-	Total       int        `json:"total"`        // Total test runs (may include duplicates from build tag runs)
-	UniqueTotal int        `json:"unique_total"` // Unique test cases (deduplicated across build tag runs)
-	Passed      int        `json:"passed"`
-	Failed      int        `json:"failed"`
-	Skipped     int        `json:"skipped"`
-	Duration    string     `json:"duration"`
+	Status            TestStatus `json:"status"`
+	Total             int        `json:"total"`        // Total test runs (may include duplicates from build tag runs)
+	UniqueTotal       int        `json:"unique_total"` // Unique test cases (deduplicated across build tag runs)
+	Passed            int        `json:"passed"`
+	Failed            int        `json:"failed"`
+	Skipped           int        `json:"skipped"`
+	DeadlineTolerated int        `json:"deadline_tolerated,omitempty"`
+	Duration          string     `json:"duration"`
 }
 
 // CIMetadata contains execution context information

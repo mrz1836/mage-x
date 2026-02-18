@@ -118,15 +118,15 @@ func (r *githubReporter) WriteStepSummary(result *CIResult) error {
 	case TestStatusError:
 		statusEmoji = "💥"
 	}
-	sb.WriteString(fmt.Sprintf("**Status**: %s %s\n\n", statusEmoji, result.Summary.Status))
+	fmt.Fprintf(&sb, "**Status**: %s %s\n\n", statusEmoji, result.Summary.Status)
 
 	// Summary table
 	sb.WriteString("| Metric | Count |\n")
 	sb.WriteString("|--------|-------|\n")
-	sb.WriteString(fmt.Sprintf("| ✅ Passed | %d |\n", result.Summary.Passed))
-	sb.WriteString(fmt.Sprintf("| ❌ Failed | %d |\n", result.Summary.Failed))
-	sb.WriteString(fmt.Sprintf("| ⏭️ Skipped | %d |\n", result.Summary.Skipped))
-	sb.WriteString(fmt.Sprintf("| ⏱️ Duration | %s |\n", result.Summary.Duration))
+	fmt.Fprintf(&sb, "| ✅ Passed | %d |\n", result.Summary.Passed)
+	fmt.Fprintf(&sb, "| ❌ Failed | %d |\n", result.Summary.Failed)
+	fmt.Fprintf(&sb, "| ⏭️ Skipped | %d |\n", result.Summary.Skipped)
+	fmt.Fprintf(&sb, "| ⏱️ Duration | %s |\n", result.Summary.Duration)
 	sb.WriteString("\n")
 
 	// Failed tests details
@@ -134,20 +134,20 @@ func (r *githubReporter) WriteStepSummary(result *CIResult) error {
 		sb.WriteString("### Failed Tests\n\n")
 
 		for _, failure := range result.Failures {
-			sb.WriteString(fmt.Sprintf("<details>\n<summary>%s (%s)</summary>\n\n", failure.Test, failure.Package))
+			fmt.Fprintf(&sb, "<details>\n<summary>%s (%s)</summary>\n\n", failure.Test, failure.Package)
 
 			if failure.File != "" {
-				sb.WriteString(fmt.Sprintf("**File**: `%s", failure.File))
+				fmt.Fprintf(&sb, "**File**: `%s", failure.File)
 				if failure.Line > 0 {
-					sb.WriteString(fmt.Sprintf(":%d", failure.Line))
+					fmt.Fprintf(&sb, ":%d", failure.Line)
 				}
 				sb.WriteString("`\n")
 			}
 
-			sb.WriteString(fmt.Sprintf("**Type**: %s\n", failure.Type))
+			fmt.Fprintf(&sb, "**Type**: %s\n", failure.Type)
 
 			if failure.Error != "" {
-				sb.WriteString(fmt.Sprintf("**Error**: %s\n", failure.Error))
+				fmt.Fprintf(&sb, "**Error**: %s\n", failure.Error)
 			}
 
 			if len(failure.Context) > 0 {
