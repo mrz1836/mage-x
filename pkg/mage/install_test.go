@@ -213,7 +213,7 @@ func TestCreateWindowsBatchWrapper(t *testing.T) {
 
 // TestCreateSymlinkAlias tests the createSymlinkAlias helper function
 func TestCreateSymlinkAlias(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == OSWindows {
 		t.Skip("Skipping symlink test on Windows")
 	}
 
