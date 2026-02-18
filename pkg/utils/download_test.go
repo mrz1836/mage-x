@@ -715,7 +715,7 @@ func TestDownloadScript(t *testing.T) {
 		executor := func(ctx context.Context, name string, args ...string) error {
 			capturedScript = name
 			// Verify file exists during execution
-			if _, err := os.Stat(name); err != nil {
+			if _, err := os.Stat(name); err != nil { // #nosec G703 -- name is downloaded script path from temp dir
 				t.Errorf("Script file should exist during execution: %v", err)
 			}
 			return nil

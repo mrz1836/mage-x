@@ -302,7 +302,7 @@ Custom version: %s
 		os.Getenv("MAGE_X_CUSTOM_VERSION"),
 	)
 
-	return os.WriteFile("BUILD_SUMMARY.md", []byte(content), 0o600)
+	return os.WriteFile("BUILD_SUMMARY.md", []byte(content), 0o600) // #nosec G703 -- fixed filename, not user-controlled path
 }
 
 // Note: This magefile demonstrates several override patterns:

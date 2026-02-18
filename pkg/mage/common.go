@@ -55,6 +55,7 @@ func getModuleName() (string, error) {
 func getDirSize(path string) (int64, error) {
 	var size int64
 
+	// #nosec G703 -- path is a validated directory path from caller
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("failed to walk directory: %w", err)

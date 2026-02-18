@@ -186,6 +186,7 @@ func TestFormatJSONRealWorldExamples(t *testing.T) {
 }`,
 			description: "Complex API response with nested data",
 		},
+		// #nosec G101 -- test JSON containing example credentials in URL, not real credentials
 		{
 			name: "docker_compose.json",
 			input: `{

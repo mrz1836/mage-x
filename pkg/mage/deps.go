@@ -954,7 +954,7 @@ func findGovulncheckCommand() string {
 	}
 
 	govulncheckPath := filepath.Join(gopath, "bin", "govulncheck")
-	if _, err := os.Stat(govulncheckPath); err == nil {
+	if _, err := os.Stat(govulncheckPath); err == nil { // #nosec G703 -- govulncheckPath is from known gopath + fixed binary name
 		return govulncheckPath
 	}
 

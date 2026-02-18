@@ -47,7 +47,7 @@ func HTTPGetJSON[T any](ctx context.Context, url string) (*T, error) {
 		return nil, fmt.Errorf("failed to create request for %s: %w", url, err)
 	}
 
-	resp, err := defaultClient.Do(req)
+	resp, err := defaultClient.Do(req) // #nosec G704 -- URL is provided by library caller, not user input
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch %s: %w", url, err)
 	}
@@ -90,7 +90,7 @@ func HTTPGetJSONWithAuth[T any](ctx context.Context, url, token string) (*T, err
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "mage-x-cli")
 
-	resp, err := defaultClient.Do(req)
+	resp, err := defaultClient.Do(req) // #nosec G704 -- URL is provided by library caller, not user input
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch %s: %w", url, err)
 	}

@@ -867,7 +867,7 @@ func Temp(pattern string) (PathBuilder, error) {
 	if closeErr := file.Close(); closeErr != nil {
 		return nil, fmt.Errorf("failed to close temp file: %w", closeErr)
 	}
-	if removeErr := os.Remove(path); removeErr != nil {
+	if removeErr := os.Remove(path); removeErr != nil { // #nosec G703 -- path is from os.CreateTemp, not user input
 		return nil, fmt.Errorf("failed to remove temp file: %w", removeErr)
 	}
 	return NewPathBuilder(path), nil

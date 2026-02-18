@@ -129,7 +129,7 @@ func DownloadWithRetry(ctx context.Context, url, destPath string, config *Downlo
 	if config.ChecksumSHA256 != "" {
 		if checksumErr := verifyChecksum(destPath, config.ChecksumSHA256); checksumErr != nil {
 			// Remove corrupted file
-			if removeErr := os.Remove(destPath); removeErr != nil {
+			if removeErr := os.Remove(destPath); removeErr != nil { // #nosec G703 -- destPath is from validated config
 				return fmt.Errorf("checksum verification failed and could not remove corrupted file: %w, original error: %w", removeErr, checksumErr)
 			}
 			return fmt.Errorf("checksum verification failed: %w", checksumErr)
@@ -186,7 +186,7 @@ func downloadFile(ctx context.Context, url, destPath string, config *DownloadCon
 	client := DefaultHTTPClient()
 
 	// Perform request
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- download URL is from validated config
 	if err != nil {
 		return fmt.Errorf("HTTP request failed: %w", err)
 	}
@@ -370,7 +370,7 @@ func DownloadScript(ctx context.Context, url, scriptArgs string, config *Downloa
 	}
 
 	// Make executable - scripts need execute permission
-	if err := os.Chmod(scriptPath, fileops.PermFileExecutable); err != nil {
+	if err := os.Chmod(scriptPath, fileops.PermFileExecutable); err != nil { // #nosec G703 -- scriptPath is from temp dir download
 		return fmt.Errorf("failed to make script executable: %w", err)
 	}
 

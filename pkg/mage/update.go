@@ -457,7 +457,7 @@ func fetchChecksumForAsset(checksumURL, assetName string) (string, error) {
 		return "", fmt.Errorf("failed to create checksum request: %w", err)
 	}
 
-	resp, err := utils.DefaultHTTPClient().Do(req)
+	resp, err := utils.DefaultHTTPClient().Do(req) // #nosec G704 -- URL is the checksums file for the update
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch checksums file: %w", err)
 	}
@@ -518,7 +518,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 		},
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL is the release download URL
 	if err != nil {
 		return fmt.Errorf("failed to download update: %w", err)
 	}
@@ -647,7 +647,7 @@ func extractTarGz(src, dest string) error {
 		}
 
 		// Ensure the destination directory exists
-		if dirErr := os.MkdirAll(filepath.Dir(destPath), fileops.PermDirSensitive); dirErr != nil {
+		if dirErr := os.MkdirAll(filepath.Dir(destPath), fileops.PermDirSensitive); dirErr != nil { // #nosec G703 -- destPath validated by validateExtractPath
 			return fmt.Errorf("failed to create destination directory for %s: %w", destPath, dirErr)
 		}
 
@@ -655,7 +655,7 @@ func extractTarGz(src, dest string) error {
 		// Executables get 0o755, regular files get 0o644
 		// This prevents malicious tar files from setting dangerous permissions (e.g., 0o777, setuid)
 		// Mask to standard permission bits to avoid overflow when converting int64 to FileMode
-		//nolint:gosec // G115: Mode is intentionally masked to valid permission bits
+
 		mode := normalizeFileMode(os.FileMode(header.Mode & 0o7777))
 
 		// Create the file with normalized permissions
@@ -673,7 +673,7 @@ func extractTarGz(src, dest string) error {
 		// Check if file exceeded size limit
 		if n >= maxUpdateFileSize {
 			// Clean up the oversized file
-			if rmErr := os.Remove(destPath); rmErr != nil {
+			if rmErr := os.Remove(destPath); rmErr != nil { // #nosec G703,G706 -- destPath validated; log message doesn't reach HTTP output
 				log.Printf("failed to remove oversized file %s: %v", destPath, rmErr)
 			}
 			return fmt.Errorf("%w: %s exceeds %d bytes", errFileTooLarge, header.Name, maxUpdateFileSize)
@@ -802,18 +802,18 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 	}
 
 	// Move binary to final location
-	if renameErr := os.Rename(binaryPath, outputPath); renameErr != nil {
+	if renameErr := os.Rename(binaryPath, outputPath); renameErr != nil { // #nosec G703 -- binaryPath/outputPath are from validated internal download
 		// Try copy + delete if rename fails (cross-filesystem moves)
 		if copyErr := copyFile(binaryPath, outputPath); copyErr != nil {
 			return fmt.Errorf("failed to install binary: %w", copyErr)
 		}
-		if removeErr := os.Remove(binaryPath); removeErr != nil {
+		if removeErr := os.Remove(binaryPath); removeErr != nil { // #nosec G703 -- binaryPath is from internal download process
 			log.Printf("failed to remove temporary binary: %v", removeErr)
 		}
 	}
 
 	// Ensure binary is executable
-	if chmodErr := os.Chmod(outputPath, fileops.PermFileExecutable); chmodErr != nil {
+	if chmodErr := os.Chmod(outputPath, fileops.PermFileExecutable); chmodErr != nil { // #nosec G703 -- outputPath is from validated config
 		return fmt.Errorf("failed to make binary executable: %w", chmodErr)
 	}
 

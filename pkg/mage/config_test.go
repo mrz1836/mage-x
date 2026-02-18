@@ -684,6 +684,7 @@ func (ts *ConfigTestSuite) TestCleanConfigValues() {
 					"tool1": "version1 # custom tool",
 				},
 			},
+			// #nosec G101 -- test config with placeholder value, not a real token
 			Release: ReleaseConfig{
 				GitHubToken: "GITHUB_TOKEN # token env",
 				NameTmpl:    "  template  ",

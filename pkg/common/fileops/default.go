@@ -336,12 +336,12 @@ func (d *DefaultSafeFileOperator) WriteFileAtomic(path string, data []byte, perm
 	}
 
 	// Set permissions
-	if err = os.Chmod(tmpPath, perm); err != nil {
+	if err = os.Chmod(tmpPath, perm); err != nil { // #nosec G703 -- tmpPath is created by os.CreateTemp, not user input
 		return fmt.Errorf("failed to set permissions: %w", err)
 	}
 
 	// Atomic rename
-	if err = os.Rename(tmpPath, path); err != nil {
+	if err = os.Rename(tmpPath, path); err != nil { // #nosec G703 -- path is validated before use
 		return fmt.Errorf("failed to rename temp file: %w", err)
 	}
 

@@ -397,7 +397,7 @@ func TestProviderConcurrentSetGet(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			for j := 0; j < iterations; j++ {
-				p.Set("value-" + string(rune(id+'A')))
+				p.Set("value-" + string(rune(id+'A'))) //nolint:gosec // G115: bounded test value, no overflow risk
 			}
 		}(i)
 	}

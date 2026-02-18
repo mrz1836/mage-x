@@ -125,6 +125,7 @@ func getExpandedDir(params map[string]string) (string, error) {
 // sessionExists checks if a tmux session exists
 func sessionExists(name string) bool {
 	ctx := context.Background()
+	// #nosec G204 -- fixed tmux command with session name parameter
 	cmd := exec.CommandContext(ctx, "tmux", "has-session", "-t", name)
 	return cmd.Run() == nil
 }
@@ -232,6 +233,7 @@ func (Tmux) Start(args ...string) error {
 // attachToSession attaches to an existing tmux session
 func attachToSession(name string) error {
 	ctx := context.Background()
+	// #nosec G204 -- fixed tmux command with session name parameter
 	cmd := exec.CommandContext(ctx, "tmux", "attach", "-t", name)
 
 	// Connect to terminal for interactive session

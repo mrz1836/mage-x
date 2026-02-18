@@ -110,7 +110,7 @@ func (b *Base) ExecuteOutput(ctx context.Context, name string, args ...string) (
 		return "", nil
 	}
 
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	b.configureCommand(cmd)
 
 	output, err := cmd.CombinedOutput()
@@ -127,7 +127,7 @@ func (b *Base) ExecuteWithEnv(ctx context.Context, env []string, name string, ar
 		return nil
 	}
 
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	b.configureCommand(cmd)
 
 	// Add additional environment variables
@@ -149,7 +149,7 @@ func (b *Base) ExecuteInDir(ctx context.Context, dir, name string, args ...strin
 		return nil
 	}
 
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	b.configureCommand(cmd)
 	cmd.Dir = dir // Override working directory
 
@@ -169,7 +169,7 @@ func (b *Base) ExecuteOutputInDir(ctx context.Context, dir, name string, args ..
 		return "", nil
 	}
 
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	b.configureCommand(cmd)
 	cmd.Dir = dir // Override working directory
 
@@ -187,7 +187,7 @@ func (b *Base) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, n
 		return nil
 	}
 
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204,G702 -- executor library, callers control command name
 	b.configureCommand(cmd)
 
 	cmd.Stdout = stdout

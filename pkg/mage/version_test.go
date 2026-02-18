@@ -1070,7 +1070,7 @@ func TestBumpVersionWithRealWorldScenarios(t *testing.T) {
 		versions := []string{"v1.0.0", "v1.0.1", "v1.0.2", "v1.0.3", "v1.0.4", "v1.0.5", "v1.0.6"}
 
 		for i, current := range versions[:len(versions)-1] {
-			expected := versions[i+1]
+			expected := versions[i+1] // #nosec G602 -- i+1 is safe: loop range is versions[:len-1]
 
 			result, err := bumpVersion(current, "patch")
 			require.NoError(t, err)
