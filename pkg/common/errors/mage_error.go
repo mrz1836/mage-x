@@ -192,27 +192,27 @@ func (e *DefaultMageError) Format(includeStack bool) string {
 	var sb strings.Builder
 
 	// Error code and message
-	sb.WriteString(fmt.Sprintf("[%s] %s", e.code, e.message))
+	fmt.Fprintf(&sb, "[%s] %s", e.code, e.message)
 
 	// Context information
 	if e.context.Operation != "" {
-		sb.WriteString(fmt.Sprintf("\n  Operation: %s", e.context.Operation))
+		fmt.Fprintf(&sb, "\n  Operation: %s", e.context.Operation)
 	}
 	if e.context.Resource != "" {
-		sb.WriteString(fmt.Sprintf("\n  Resource: %s", e.context.Resource))
+		fmt.Fprintf(&sb, "\n  Resource: %s", e.context.Resource)
 	}
 
 	// Fields
 	if len(e.context.Fields) > 0 {
 		sb.WriteString("\n  Fields:")
 		for k, v := range e.context.Fields {
-			sb.WriteString(fmt.Sprintf("\n    %s: %v", k, v))
+			fmt.Fprintf(&sb, "\n    %s: %v", k, v)
 		}
 	}
 
 	// Cause
 	if e.cause != nil {
-		sb.WriteString(fmt.Sprintf("\n  Caused by: %v", e.cause))
+		fmt.Fprintf(&sb, "\n  Caused by: %v", e.cause)
 	}
 
 	// Stack trace
@@ -317,8 +317,8 @@ func captureStackTrace(skip int) string {
 			continue
 		}
 
-		sb.WriteString(fmt.Sprintf("    %s\n        %s:%d\n",
-			frame.Function, frame.File, frame.Line))
+		fmt.Fprintf(&sb, "    %s\n        %s:%d\n",
+			frame.Function, frame.File, frame.Line)
 
 		if !more {
 			break

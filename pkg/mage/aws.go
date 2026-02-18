@@ -68,6 +68,7 @@ type awsINIFile struct {
 }
 
 // awsSTSCredentials represents the response from AWS STS
+// #nosec G117 -- SessionToken field name matches secret pattern by design (it is a credential field)
 type awsSTSCredentials struct {
 	AccessKeyID     string
 	SecretAccessKey string
@@ -513,6 +514,7 @@ func getAWSSessionToken(profile, mfaSerial, mfaToken string, duration int) (*aws
 	}
 
 	// Parse JSON response
+	// #nosec G117 -- SessionToken field name matches secret pattern by design (it is a credential field)
 	var response struct {
 		Credentials struct {
 			AccessKeyID     string `json:"AccessKeyId"`
@@ -586,12 +588,12 @@ func writeAWSINI(ini *awsINIFile) []byte {
 		if i > 0 {
 			buf.WriteString("\n")
 		}
-		buf.WriteString(fmt.Sprintf("[%s]\n", section.Name))
+		fmt.Fprintf(&buf, "[%s]\n", section.Name)
 
 		// Write keys in order
 		for _, key := range section.KeyOrder {
 			if value, ok := section.Values[key]; ok {
-				buf.WriteString(fmt.Sprintf("%s = %s\n", key, value))
+				fmt.Fprintf(&buf, "%s = %s\n", key, value)
 			}
 		}
 	}

@@ -73,10 +73,10 @@ func (c *RealDefaultChainError) Error() string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%d errors occurred:\n", len(c.errors)))
+	fmt.Fprintf(&sb, "%d errors occurred:\n", len(c.errors))
 
 	for i, err := range c.errors {
-		sb.WriteString(fmt.Sprintf("  [%d] %v\n", i+1, err))
+		fmt.Fprintf(&sb, "  [%d] %v\n", i+1, err)
 	}
 
 	return strings.TrimSuffix(sb.String(), "\n")
@@ -233,10 +233,10 @@ func (c *DefaultChainError) Error() string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%d errors occurred:\n", len(c.errors)))
+	fmt.Fprintf(&sb, "%d errors occurred:\n", len(c.errors))
 
 	for i, err := range c.errors {
-		sb.WriteString(fmt.Sprintf("  [%d] %v\n", i+1, err))
+		fmt.Fprintf(&sb, "  [%d] %v\n", i+1, err)
 	}
 
 	return strings.TrimSuffix(sb.String(), "\n")

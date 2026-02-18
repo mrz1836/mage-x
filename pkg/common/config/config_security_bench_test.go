@@ -602,11 +602,11 @@ func generateYAMLConfig(size int) string {
 	sb.WriteString("config:\n")
 
 	for i := 0; i < size; i++ {
-		sb.WriteString(fmt.Sprintf("  key_%d: value_%d\n", i, i))
+		fmt.Fprintf(&sb, "  key_%d: value_%d\n", i, i)
 		if i%10 == 0 {
-			sb.WriteString(fmt.Sprintf("  nested_%d:\n", i))
-			sb.WriteString(fmt.Sprintf("    inner_key: inner_value_%d\n", i))
-			sb.WriteString(fmt.Sprintf("    number: %d\n", i))
+			fmt.Fprintf(&sb, "  nested_%d:\n", i)
+			fmt.Fprintf(&sb, "    inner_key: inner_value_%d\n", i)
+			fmt.Fprintf(&sb, "    number: %d\n", i)
 		}
 	}
 

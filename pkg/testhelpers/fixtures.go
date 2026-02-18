@@ -530,7 +530,7 @@ func (tf *TestFixtures) CreateLargeFile(path string, lines int) {
 
 	var content strings.Builder
 	for i := 0; i < lines; i++ {
-		content.WriteString(fmt.Sprintf("Line %d: This is a test line with some content to make it realistic.\n", i+1))
+		fmt.Fprintf(&content, "Line %d: This is a test line with some content to make it realistic.\n", i+1)
 	}
 
 	tf.env.WriteFile(path, content.String())
