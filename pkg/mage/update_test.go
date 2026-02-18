@@ -12,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/common/fileops"
 )
 
 // TestGetUpdateChannel tests the getUpdateChannel function
@@ -571,6 +573,75 @@ func TestErrorConstants(t *testing.T) {
 			assert.Contains(t, tt.err.Error(), tt.want)
 		})
 	}
+}
+
+// TestCreateMagexAliases tests that createMagexAliases creates aliases
+// even when no .mage.yaml is present (the normal user scenario for update:install)
+func TestCreateMagexAliases(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink tests not supported on Windows")
+	}
+
+	t.Run("creates mgx alias without config file", func(t *testing.T) {
+		// Set up a temp directory to act as GOPATH with a fake magex binary
+		tempDir := t.TempDir()
+		binDir := filepath.Join(tempDir, "bin")
+		require.NoError(t, os.MkdirAll(binDir, fileops.PermDirSensitive))
+
+		magexPath := filepath.Join(binDir, "magex")
+		require.NoError(t, os.WriteFile(magexPath, []byte("fake binary"), 0o755)) //nolint:gosec // test file
+
+		// Change to a directory without .mage.yaml to simulate running from any dir
+		origDir, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.Chdir(t.TempDir()))
+		t.Cleanup(func() {
+			require.NoError(t, os.Chdir(origDir))
+		})
+
+		// Call the function under test
+		createMagexAliases(tempDir, magexPath)
+
+		// Verify the mgx symlink was created
+		mgxPath := filepath.Join(binDir, "mgx")
+		info, err := os.Lstat(mgxPath)
+		require.NoError(t, err, "mgx symlink should exist")
+		assert.NotEqual(t, 0, info.Mode()&os.ModeSymlink, "mgx should be a symlink")
+
+		// Verify it points to the magex binary
+		target, err := os.Readlink(mgxPath)
+		require.NoError(t, err)
+		assert.Equal(t, magexPath, target)
+	})
+
+	t.Run("does not fail if alias already exists", func(t *testing.T) {
+		tempDir := t.TempDir()
+		binDir := filepath.Join(tempDir, "bin")
+		require.NoError(t, os.MkdirAll(binDir, fileops.PermDirSensitive))
+
+		magexPath := filepath.Join(binDir, "magex")
+		require.NoError(t, os.WriteFile(magexPath, []byte("fake binary"), 0o755)) //nolint:gosec // test file
+
+		// Pre-create the mgx symlink
+		mgxPath := filepath.Join(binDir, "mgx")
+		require.NoError(t, os.Symlink(magexPath, mgxPath))
+
+		// Change to dir without .mage.yaml
+		origDir, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.Chdir(t.TempDir()))
+		t.Cleanup(func() {
+			require.NoError(t, os.Chdir(origDir))
+		})
+
+		// Should not panic or error
+		createMagexAliases(tempDir, magexPath)
+
+		// Symlink should still exist and point to magex
+		target, err := os.Readlink(mgxPath)
+		require.NoError(t, err)
+		assert.Equal(t, magexPath, target)
+	})
 }
 
 // Helper function to create a test tar.gz file

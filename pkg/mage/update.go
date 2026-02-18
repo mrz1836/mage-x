@@ -749,7 +749,11 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 	// If no binary was downloaded, fall back to go install
 	if info.DownloadURL == "" {
 		utils.Info("No binary asset found, using go install...")
-		return GetRunner().RunCmd("go", "install", fmt.Sprintf("%s@%s", magexModule, info.LatestVersion))
+		if err := GetRunner().RunCmd("go", "install", fmt.Sprintf("%s@%s", magexModule, info.LatestVersion)); err != nil {
+			return err
+		}
+		createMagexAliases(gopath, outputPath)
+		return nil
 	}
 
 	utils.Info("Installing downloaded binary...")
@@ -819,19 +823,32 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 
 	utils.Success("Binary installed to: %s", outputPath)
 
-	// Create symlink aliases from configuration
-	config, err := GetConfig()
-	if err != nil {
-		// Log warning but don't fail - aliases are nice-to-have
-		utils.Warn("Failed to load config for alias creation: %v", err)
-	} else {
-		// Create aliases - mirrors Install.Default() behavior
-		for _, alias := range config.Project.Aliases {
-			createSymlinkAlias(gopath, outputPath, alias)
-		}
-	}
+	// Create symlink aliases (uses config if available, falls back to defaults)
+	createMagexAliases(gopath, outputPath)
 
 	return nil
+}
+
+// createMagexAliases creates symlink aliases for the magex binary.
+// It tries config-based aliases first, falling back to hardcoded defaults
+// since update:install is always for the magex binary regardless of CWD.
+func createMagexAliases(gopath, outputPath string) {
+	var aliases []string
+
+	config, err := GetConfig()
+	if err == nil {
+		aliases = config.Project.Aliases
+	}
+
+	// Fall back to defaults when config is unavailable or has no aliases
+	// (e.g., when running update:install from a directory without .mage.yaml)
+	if len(aliases) == 0 {
+		aliases = getDefaultAliases("magex")
+	}
+
+	for _, alias := range aliases {
+		createSymlinkAlias(gopath, outputPath, alias)
+	}
 }
 
 // getVersionInfoForUpdate returns version specifically for update checking
