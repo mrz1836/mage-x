@@ -31,14 +31,15 @@ var (
 
 // fuzzTestResult captures the result of a single fuzz test run
 type fuzzTestResult struct {
-	Package          string
-	Test             string
-	Duration         time.Duration
-	Error            error
-	Output           string // Captured stdout output for text parsing
-	SeedCount        int    // Number of seeds detected for this test
-	BaselineDuration time.Duration
-	FuzzingDuration  time.Duration
+	Package           string
+	Test              string
+	Duration          time.Duration
+	Error             error
+	Output            string // Captured stdout output for text parsing
+	SeedCount         int    // Number of seeds detected for this test
+	BaselineDuration  time.Duration
+	FuzzingDuration   time.Duration
+	DeadlineTolerated bool // true if context deadline was at fuzztime boundary (not a real failure)
 }
 
 // testRunnerOptions configures the common test runner setup.
@@ -330,7 +331,7 @@ func handleCoverageFiles(coverageFiles []string) {
 		utils.Info("\nMerging coverage files...")
 		handleMultipleCoverageFiles(coverageFiles)
 	} else if len(coverageFiles) == 1 {
-		handleSingleCoverageFile(coverageFiles[0])
+		handleSingleCoverageFile(coverageFiles[0]) // #nosec G602 -- len(coverageFiles)==1 guard ensures index 0 is valid
 	}
 }
 
@@ -1511,22 +1512,10 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 				}
 			}
 
-			results = append(results, fuzzTestResult{
-				Package:          pkg,
-				Test:             test,
-				Duration:         testDuration,
-				Error:            testErr,
-				Output:           testOutput,
-				SeedCount:        seedCount,
-				BaselineDuration: baselineDur,
-				FuzzingDuration:  fuzzingDur,
-			})
-
-			// Display timing breakdown
-			displayFuzzTestResult(test, testDuration, baselineDur, seedCount, testErr)
-
+			// Diagnose fuzztime context deadline before appending result
+			deadlineTolerated := false
 			if testErr != nil {
-				DiagnoseFuzzContextDeadline(FuzzTestDiagnosticInfo{
+				diagnosed := DiagnoseFuzzContextDeadline(FuzzTestDiagnosticInfo{
 					TestName:     test,
 					Package:      pkg,
 					TestErr:      testErr,
@@ -1534,7 +1523,25 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 					TestDuration: testDuration,
 					FuzzTime:     fuzzTime,
 				})
+				if diagnosed && !isFuzzStrictDeadline() {
+					deadlineTolerated = true
+				}
 			}
+
+			results = append(results, fuzzTestResult{
+				Package:           pkg,
+				Test:              test,
+				Duration:          testDuration,
+				Error:             testErr,
+				Output:            testOutput,
+				SeedCount:         seedCount,
+				BaselineDuration:  baselineDur,
+				FuzzingDuration:   fuzzingDur,
+				DeadlineTolerated: deadlineTolerated,
+			})
+
+			// Display timing breakdown
+			displayFuzzTestResult(test, testDuration, baselineDur, seedCount, testErr, deadlineTolerated)
 		}
 	}
 
@@ -1542,10 +1549,14 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 }
 
 // displayFuzzTestResult shows a timing breakdown for a completed fuzz test
-func displayFuzzTestResult(testName string, totalDur, baselineDur time.Duration, seedCount int, err error) {
+func displayFuzzTestResult(testName string, totalDur, baselineDur time.Duration, seedCount int, err error, deadlineTolerated bool) {
 	status := "✓"
 	if err != nil {
-		status = "✗"
+		if deadlineTolerated {
+			status = "~"
+		} else {
+			status = "✗"
+		}
 	}
 
 	if baselineDur > 0 && seedCount > 0 {
@@ -1600,6 +1611,7 @@ func runFuzzTestWithOutputAndTimeout(name string, timeout time.Duration, args ..
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	// #nosec G204 -- name is the fuzz test binary path from internal caller
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = os.Environ()
 
@@ -1624,6 +1636,7 @@ func runFuzzTestWithTimeout(name string, timeout time.Duration, args ...string) 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	// #nosec G204 -- name is the fuzz test binary path from internal caller
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout
@@ -1737,18 +1750,30 @@ func writeFuzzCIResultsIfEnabled(params map[string]string, config *Config, resul
 		}
 	}
 
-	// Parse fuzz output with text parser to extract detailed failure info
-	failures := parseFuzzResultsWithTextParser(results, mode.ContextLines, mode.Dedup)
-
-	// Count results
-	total, passed, failed := len(results), 0, 0
+	// Count results, tracking tolerated separately
+	total, passed, failed, tolerated := len(results), 0, 0, 0
 	for _, r := range results {
 		if r.Error != nil {
-			failed++
+			if r.DeadlineTolerated {
+				tolerated++
+			} else {
+				failed++
+			}
 		} else {
 			passed++
 		}
 	}
+
+	// Filter tolerated results out before parsing for failures
+	var realFailureResults []fuzzTestResult
+	for _, r := range results {
+		if !r.DeadlineTolerated {
+			realFailureResults = append(realFailureResults, r)
+		}
+	}
+
+	// Parse fuzz output with text parser to extract detailed failure info
+	failures := parseFuzzResultsWithTextParser(realFailureResults, mode.ContextLines, mode.Dedup)
 
 	// Report failures
 	for _, failure := range failures {
@@ -1765,12 +1790,13 @@ func writeFuzzCIResultsIfEnabled(params map[string]string, config *Config, resul
 
 	result := &CIResult{
 		Summary: CISummary{
-			Status:   status,
-			Total:    total,
-			Passed:   passed,
-			Failed:   len(failures), // Use deduplicated count from parser
-			Skipped:  0,
-			Duration: formatDurationForSummary(totalDuration),
+			Status:            status,
+			Total:             total,
+			Passed:            passed,
+			Failed:            len(failures), // Use deduplicated count from parser
+			Skipped:           0,
+			DeadlineTolerated: tolerated,
+			Duration:          formatDurationForSummary(totalDuration),
 		},
 		Failures:  failures,
 		Timestamp: time.Now(),
@@ -1891,7 +1917,7 @@ func extractFuzzInfrastructureError(output string) string {
 func fuzzResultsToError(results []fuzzTestResult) error {
 	var failures []string
 	for _, r := range results {
-		if r.Error != nil {
+		if r.Error != nil && !r.DeadlineTolerated {
 			failures = append(failures, fmt.Sprintf("%s.%s", r.Package, r.Test))
 		}
 	}
