@@ -1287,7 +1287,7 @@ func TestCover() error { var t mage.Test; return t.Cover() }
 // Add more commands as needed...
 `
 
-	if err := os.WriteFile(output, []byte(content), fileops.PermFileSensitive); err != nil {
+	if err := os.WriteFile(output, []byte(content), fileops.PermFileSensitive); err != nil { // #nosec G703 -- output path is controlled by the CLI flag
 		fmt.Printf("❌ Error: %v\n", err)
 		os.Exit(1)
 	}
