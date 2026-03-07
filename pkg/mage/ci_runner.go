@@ -197,7 +197,7 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 	}
 
 	// Create command
-	// #nosec G204 -- name comes from validated test runner configuration
+	// #nosec G204 G702 -- name comes from validated test runner configuration
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = os.Environ()
 

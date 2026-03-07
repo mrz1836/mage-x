@@ -179,7 +179,7 @@ func TestSpinnerStyles(t *testing.T) {
 	}
 
 	for _, style := range styles {
-		t.Run(string(rune(style)), func(t *testing.T) {
+		t.Run(string(rune(style)), func(t *testing.T) { // #nosec G115 -- SpinnerStyle values are small int constants, overflow not possible
 			spinner := NewSpinnerWithStyle("Test", style)
 			registry := NewSpinnerFrameRegistry()
 			expectedFrames := registry.GetFrames()[style]

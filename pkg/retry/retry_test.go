@@ -100,7 +100,7 @@ func TestDo_PermanentError(t *testing.T) {
 }
 
 func TestDo_ContextCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) // #nosec G118 -- cancel is called via defer below
 	attempts := 0
 
 	cfg := &Config{

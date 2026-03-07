@@ -134,9 +134,9 @@ func (t *TimeoutExecutor) getTimeout(name string, args []string) time.Duration {
 func (t *TimeoutExecutor) contextWithTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	if _, ok := ctx.Deadline(); ok {
 		// Context already has a deadline, wrap with cancel capability
-		return context.WithCancel(ctx)
+		return context.WithCancel(ctx) // #nosec G118 -- cancel func is returned to caller
 	}
-	return context.WithTimeout(ctx, timeout)
+	return context.WithTimeout(ctx, timeout) // #nosec G118 -- cancel func is returned to caller
 }
 
 // wrapTimeoutError wraps context errors with more descriptive messages
