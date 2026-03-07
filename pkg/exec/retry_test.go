@@ -169,7 +169,7 @@ func TestRetryingExecutor_Execute(t *testing.T) {
 			},
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(context.Background()) // #nosec G118 -- cancel is called in goroutine below
 		executor := NewRetryingExecutor(mock,
 			WithMaxRetries(100),
 			WithClassifier(retry.AlwaysRetry),
