@@ -316,7 +316,7 @@ func TestFormatJSONRealWorldExamples(t *testing.T) {
 			assert.Equal(t, byte('\n'), resultStr[len(resultStr)-1], "Should end with newline")
 
 			// Test that the formatted result is idempotent
-			err = os.WriteFile(testFile, result, 0o600)
+			err = os.WriteFile(testFile, result, 0o600) // #nosec G703 -- testFile is a controlled test path from t.TempDir()
 			require.NoError(t, err)
 
 			success = formatJSONFileNative(testFile)

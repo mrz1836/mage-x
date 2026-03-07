@@ -639,7 +639,7 @@ func backupFile(path string) error {
 	}
 
 	backupPath := path + awsBackupSuffix
-	if err := os.WriteFile(backupPath, data, fileops.PermFileSensitive); err != nil {
+	if err := os.WriteFile(backupPath, data, fileops.PermFileSensitive); err != nil { // #nosec G703 -- backupPath is constructed from validated config
 		return fmt.Errorf("%w: %w", errAWSCredBackupFailed, err)
 	}
 

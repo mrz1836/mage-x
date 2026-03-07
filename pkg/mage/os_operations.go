@@ -57,7 +57,7 @@ func (DefaultOSOperations) FileExists(path string) bool {
 
 // WriteFile writes data to the named file, creating it if necessary.
 func (DefaultOSOperations) WriteFile(path string, data []byte, perm os.FileMode) error {
-	return os.WriteFile(path, data, perm)
+	return os.WriteFile(path, data, perm) // #nosec G703 -- path validation is the caller's responsibility
 }
 
 // Symlink creates newname as a symbolic link to oldname.

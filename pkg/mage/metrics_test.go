@@ -933,7 +933,7 @@ func (m *sizeMockRunner) RunCmd(cmd string, args ...string) error {
 	if cmd == "go" && len(args) > 0 && args[0] == "build" && m.createBinary {
 		binaryName := "temp-size-check"
 		binaryPath := filepath.Join(m.tmpDir, binaryName)
-		if err := os.WriteFile(binaryPath, []byte("fake binary content"), 0o600); err != nil {
+		if err := os.WriteFile(binaryPath, []byte("fake binary content"), 0o600); err != nil { // #nosec G703 -- binaryPath is constructed from controlled test tmpDir
 			return err
 		}
 	}

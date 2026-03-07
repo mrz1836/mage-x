@@ -330,7 +330,7 @@ func backupSpeckitConstitution(config *Config) (string, error) {
 	}
 
 	// Write backup
-	if err := os.WriteFile(backupPath, data, fileops.PermFile); err != nil {
+	if err := os.WriteFile(backupPath, data, fileops.PermFile); err != nil { // #nosec G703 -- backupPath is constructed from validated config
 		return "", fmt.Errorf("%w: %w", errBackupFailed, err)
 	}
 
@@ -355,7 +355,7 @@ func restoreSpeckitConstitution(config *Config, backupPath string) error {
 	}
 
 	// Write to constitution path
-	if err := os.WriteFile(constitutionPath, data, fileops.PermFile); err != nil {
+	if err := os.WriteFile(constitutionPath, data, fileops.PermFile); err != nil { // #nosec G703 -- constitutionPath is constructed from validated config
 		return fmt.Errorf("failed to write constitution: %w", err)
 	}
 
