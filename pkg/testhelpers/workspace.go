@@ -185,7 +185,7 @@ func (tw *TempWorkspace) CopyDir(src, dst string) {
 		}
 
 		// Copy file
-		srcFile, err := os.Open(path) // #nosec G304 -- controlled test workspace path
+		srcFile, err := os.Open(path) // #nosec G304 G122 -- controlled test workspace path, symlink TOCTOU not a concern in test fixtures
 		if err != nil {
 			return err
 		}
