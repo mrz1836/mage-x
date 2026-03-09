@@ -1344,7 +1344,7 @@ The following are refreshed during upgrades:
 
 ## 🧪 Examples & Tests
 
-All examples and tests run via GitHub Actions using Go 1.24+. View the [examples directory](examples) for complete project demonstrations.
+All examples and tests run via GitHub Actions using Go 1.25+. View the [examples directory](examples) for complete project demonstrations.
 
 ### Run Tests
 
@@ -1386,7 +1386,7 @@ Performance benchmarks for core MAGE-X operations:
 | Command Execution     | 0.8ms | 128KB  | Secure command validation         |
 | Configuration Loading | 2.1ms | 512KB  | YAML parsing and validation       |
 
-> Benchmarks run on Apple M1 Pro (ARM64) with Go 1.24+
+> Benchmarks run on Apple M1 Pro (ARM64) with Go 1.25+
 > All operations show consistent sub-5ms performance with minimal memory allocation
 
 <br/>
