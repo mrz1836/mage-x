@@ -133,7 +133,7 @@ func TestTimeoutExecutor_ContextAlreadyHasDeadline(t *testing.T) {
 	te := NewTimeoutExecutor(base, WithDefaultTimeout(5*time.Minute))
 
 	// Create context with shorter deadline
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	err := te.Execute(ctx, "sleep", "1")
