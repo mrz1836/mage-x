@@ -126,8 +126,9 @@ func ParseGovulncheckJSON(jsonOutput string) (*VulnScanResult, error) {
 	return result, nil
 }
 
-// FilterExcludedVulns filters out vulnerabilities whose CVE aliases match the exclusion list.
-// Returns the filtered result and the list of CVEs that were actually excluded.
+// FilterExcludedVulns filters out vulnerabilities whose CVE aliases or OSV IDs match the exclusion list.
+// Exclusions can be CVE IDs (e.g., CVE-2024-38513) or OSV IDs (e.g., GO-2026-4514).
+// Returns the filtered result and the list of CVEs/OSV IDs that were actually excluded.
 func FilterExcludedVulns(result *VulnScanResult, excludes []string) *VulnFilterResult {
 	if result == nil {
 		return &VulnFilterResult{}
@@ -144,6 +145,13 @@ func FilterExcludedVulns(result *VulnScanResult, excludes []string) *VulnFilterR
 	excludedCVEs := make([]string, 0)
 
 	for osvID, osv := range result.OSVEntries {
+		// Match by OSV ID directly (e.g., GO-2026-4514)
+		if excludeSet[strings.ToUpper(strings.TrimSpace(osvID))] {
+			excludedOSVIDs[osvID] = true
+			excludedCVEs = append(excludedCVEs, osvID)
+			continue
+		}
+		// Match by CVE alias
 		for _, alias := range osv.Aliases {
 			normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
 			if excludeSet[normalizedAlias] {

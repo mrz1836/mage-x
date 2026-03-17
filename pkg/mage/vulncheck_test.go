@@ -27,7 +27,9 @@ const sampleGovulncheckJSON = `{"config":{"protocol_version":"v1.0.0","scanner_n
 {"osv":{"id":"GO-2024-9999","aliases":["CVE-2024-99999"],"summary":"Unexcluded vulnerability","details":"This should not be excluded"}}
 {"finding":{"osv":"GO-2024-1234","fixed_version":"v1.2.3","trace":[{"module":"github.com/example/vuln","version":"v1.0.0","package":"github.com/example/vuln","function":"VulnFunc"}]}}
 {"finding":{"osv":"GO-2023-5678","fixed_version":"v2.0.0","trace":[{"module":"github.com/another/vuln","version":"v0.9.0","package":"github.com/another/vuln","function":"BadFunc"}]}}
-{"finding":{"osv":"GO-2024-9999","fixed_version":"v3.0.0","trace":[{"module":"github.com/third/vuln","version":"v0.5.0","package":"github.com/third/vuln","function":"ThirdFunc"}]}}`
+{"finding":{"osv":"GO-2024-9999","fixed_version":"v3.0.0","trace":[{"module":"github.com/third/vuln","version":"v0.5.0","package":"github.com/third/vuln","function":"ThirdFunc"}]}}
+{"osv":{"id":"GO-2024-0001","aliases":[],"summary":"No CVE alias vulnerability","details":"This vulnerability has no CVE alias, only an OSV ID"}}
+{"finding":{"osv":"GO-2024-0001","fixed_version":"v1.5.0","trace":[{"module":"github.com/nocve/vuln","version":"v1.0.0","package":"github.com/nocve/vuln","function":"NoCVEFunc"}]}}`
 
 // Sample JSON with no vulnerabilities
 const sampleNoVulnsJSON = `{"config":{"protocol_version":"v1.0.0","scanner_name":"govulncheck","scanner_version":"v1.1.4","db":"https://vuln.go.dev","go_version":"go1.21.0","scan_level":"symbol"}}
@@ -50,10 +52,11 @@ func (s *VulncheckTestSuite) TestParseGovulncheckJSON() {
 	s.Len(result.ProgressMsgs, 1)
 
 	// Check OSV entries were parsed
-	s.Len(result.OSVEntries, 3)
+	s.Len(result.OSVEntries, 4)
 	s.Contains(result.OSVEntries, "GO-2024-1234")
 	s.Contains(result.OSVEntries, "GO-2023-5678")
 	s.Contains(result.OSVEntries, "GO-2024-9999")
+	s.Contains(result.OSVEntries, "GO-2024-0001")
 
 	// Check aliases
 	osv1 := result.OSVEntries["GO-2024-1234"]
@@ -64,7 +67,7 @@ func (s *VulncheckTestSuite) TestParseGovulncheckJSON() {
 	s.Contains(osv2.Aliases, "GHSA-xxxx-yyyy-zzzz")
 
 	// Check findings were parsed
-	s.Len(result.Findings, 3)
+	s.Len(result.Findings, 4)
 }
 
 // TestParseGovulncheckJSON_NoVulns tests parsing output with no vulnerabilities
@@ -100,8 +103,8 @@ func (s *VulncheckTestSuite) TestFilterExcludedVulns() {
 	s.Len(filtered.ExcludedCVEs, 1)
 	s.Contains(filtered.ExcludedCVEs, "CVE-2024-38513")
 
-	// Should have 2 remaining findings (for GO-2023-5678 and GO-2024-9999)
-	s.Len(filtered.RemainingFindings, 2)
+	// Should have 3 remaining findings (for GO-2023-5678, GO-2024-9999, GO-2024-0001)
+	s.Len(filtered.RemainingFindings, 3)
 }
 
 // TestFilterExcludedVulns_MultipleCVEs tests filtering multiple CVEs
@@ -116,9 +119,8 @@ func (s *VulncheckTestSuite) TestFilterExcludedVulns_MultipleCVEs() {
 	// Should have excluded two CVEs
 	s.Len(filtered.ExcludedCVEs, 2)
 
-	// Should have 1 remaining finding (for GO-2024-9999)
-	s.Len(filtered.RemainingFindings, 1)
-	s.Equal("GO-2024-9999", filtered.RemainingFindings[0].OSV)
+	// Should have 2 remaining findings (for GO-2024-9999 and GO-2024-0001)
+	s.Len(filtered.RemainingFindings, 2)
 }
 
 // TestFilterExcludedVulns_CaseInsensitive tests case-insensitive matching
@@ -131,7 +133,7 @@ func (s *VulncheckTestSuite) TestFilterExcludedVulns_CaseInsensitive() {
 	filtered := FilterExcludedVulns(result, excludes)
 
 	s.Len(filtered.ExcludedCVEs, 1)
-	s.Len(filtered.RemainingFindings, 2)
+	s.Len(filtered.RemainingFindings, 3)
 }
 
 // TestFilterExcludedVulns_AllExcluded tests excluding all vulnerabilities
@@ -139,12 +141,12 @@ func (s *VulncheckTestSuite) TestFilterExcludedVulns_AllExcluded() {
 	result, err := ParseGovulncheckJSON(sampleGovulncheckJSON)
 	s.Require().NoError(err)
 
-	// Exclude all CVEs
-	excludes := []string{"CVE-2024-38513", "CVE-2023-45142", "CVE-2024-99999"}
+	// Exclude all CVEs and OSV IDs
+	excludes := []string{"CVE-2024-38513", "CVE-2023-45142", "CVE-2024-99999", "GO-2024-0001"}
 	filtered := FilterExcludedVulns(result, excludes)
 
 	// All should be excluded
-	s.Len(filtered.ExcludedCVEs, 3)
+	s.Len(filtered.ExcludedCVEs, 4)
 	s.Empty(filtered.RemainingFindings)
 }
 
@@ -159,7 +161,7 @@ func (s *VulncheckTestSuite) TestFilterExcludedVulns_EmptyExcludes() {
 
 	// Nothing should be excluded
 	s.Empty(filtered.ExcludedCVEs)
-	s.Len(filtered.RemainingFindings, 3)
+	s.Len(filtered.RemainingFindings, 4)
 }
 
 // TestFilterExcludedVulns_NilResult tests handling nil input
@@ -181,6 +183,49 @@ func (s *VulncheckTestSuite) TestFilterExcludedVulns_NonMatchingExcludes() {
 
 	// Nothing should be excluded
 	s.Empty(filtered.ExcludedCVEs)
+	s.Len(filtered.RemainingFindings, 4)
+}
+
+// TestFilterExcludedVulns_ByOSVID tests excluding by OSV ID (no CVE alias)
+func (s *VulncheckTestSuite) TestFilterExcludedVulns_ByOSVID() {
+	result, err := ParseGovulncheckJSON(sampleGovulncheckJSON)
+	s.Require().NoError(err)
+
+	// Exclude by OSV ID (GO-2024-0001 has no CVE aliases)
+	excludes := []string{"GO-2024-0001"}
+	filtered := FilterExcludedVulns(result, excludes)
+
+	s.Len(filtered.ExcludedCVEs, 1)
+	s.Contains(filtered.ExcludedCVEs, "GO-2024-0001")
+	s.Len(filtered.RemainingFindings, 3)
+}
+
+// TestFilterExcludedVulns_MixedCVEAndOSV tests excluding one by CVE alias and one by OSV ID
+func (s *VulncheckTestSuite) TestFilterExcludedVulns_MixedCVEAndOSV() {
+	result, err := ParseGovulncheckJSON(sampleGovulncheckJSON)
+	s.Require().NoError(err)
+
+	// Exclude one by CVE alias and one by OSV ID
+	excludes := []string{"CVE-2024-38513", "GO-2024-0001"}
+	filtered := FilterExcludedVulns(result, excludes)
+
+	s.Len(filtered.ExcludedCVEs, 2)
+	s.Contains(filtered.ExcludedCVEs, "CVE-2024-38513")
+	s.Contains(filtered.ExcludedCVEs, "GO-2024-0001")
+	s.Len(filtered.RemainingFindings, 2)
+}
+
+// TestFilterExcludedVulns_OSVIDCaseInsensitive tests case-insensitive OSV ID matching
+func (s *VulncheckTestSuite) TestFilterExcludedVulns_OSVIDCaseInsensitive() {
+	result, err := ParseGovulncheckJSON(sampleGovulncheckJSON)
+	s.Require().NoError(err)
+
+	// Exclude with lowercase OSV ID
+	excludes := []string{"go-2024-0001"}
+	filtered := FilterExcludedVulns(result, excludes)
+
+	s.Len(filtered.ExcludedCVEs, 1)
+	s.Contains(filtered.ExcludedCVEs, "GO-2024-0001")
 	s.Len(filtered.RemainingFindings, 3)
 }
 
@@ -357,8 +402,8 @@ func TestParseGovulncheckJSON_Basic(t *testing.T) {
 	result, err := ParseGovulncheckJSON(sampleGovulncheckJSON)
 	require.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Len(t, result.OSVEntries, 3)
-	assert.Len(t, result.Findings, 3)
+	assert.Len(t, result.OSVEntries, 4)
+	assert.Len(t, result.Findings, 4)
 }
 
 func TestFilterExcludedVulns_Basic(t *testing.T) {
@@ -369,7 +414,7 @@ func TestFilterExcludedVulns_Basic(t *testing.T) {
 
 	filtered := FilterExcludedVulns(result, []string{"CVE-2024-38513", "CVE-2023-45142"})
 	assert.Len(t, filtered.ExcludedCVEs, 2)
-	assert.Len(t, filtered.RemainingFindings, 1)
+	assert.Len(t, filtered.RemainingFindings, 2)
 }
 
 func TestParseCVEExclusions_EnvVar(t *testing.T) {

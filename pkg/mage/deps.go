@@ -780,10 +780,10 @@ func showUpdateSummary(initial, final map[string]dependencyInfo, directUpdates, 
 	}
 }
 
-// Audit performs comprehensive dependency audit with optional CVE exclusions.
-// Supports CVE exclusions via:
+// Audit performs comprehensive dependency audit with optional CVE/OSV exclusions.
+// Supports exclusions via CVE ID or OSV ID (e.g., GO-2026-4514):
 //   - Environment variable: MAGE_X_CVE_EXCLUDES (comma-separated)
-//   - Parameter: exclude=CVE-2024-38513,CVE-2023-45142
+//   - Parameter: exclude=CVE-2024-38513,GO-2026-4514
 //
 // Example: magex deps:audit exclude=CVE-2024-38513
 func (Deps) Audit(args ...string) error {

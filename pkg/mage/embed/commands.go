@@ -796,29 +796,30 @@ func registerDepsCommands(reg *registry.Registry) {
 		registry.NewNamespaceCommand("deps", "audit").
 			WithDescription("Security audit of dependencies (govulncheck)").
 			WithLongDescription("Run govulncheck to scan dependencies for known vulnerabilities.\n\n"+
-				"Supports CVE exclusions for known/accepted vulnerabilities via:\n"+
-				"  - Environment variable: MAGE_X_CVE_EXCLUDES (comma-separated CVE IDs)\n"+
-				"  - Command parameter: exclude=CVE-2024-38513,CVE-2023-45142\n\n"+
+				"Supports exclusions for known/accepted vulnerabilities via CVE IDs or OSV IDs (GO-YYYY-NNNN):\n"+
+				"  - Environment variable: MAGE_X_CVE_EXCLUDES (comma-separated CVE/OSV IDs)\n"+
+				"  - Command parameter: exclude=CVE-2024-38513,GO-2026-4514\n\n"+
 				"When exclusions are specified, the scan will only fail if non-excluded\n"+
-				"vulnerabilities are found. Excluded CVEs are reported as warnings.").
+				"vulnerabilities are found. Excluded vulnerabilities are reported as warnings.").
 			WithArgsFunc(func(args ...string) error { return d.Audit(args...) }).
 			WithCategory("Dependencies").
-			WithUsage("magex deps:audit [exclude=CVE-ID,...]").
+			WithUsage("magex deps:audit [exclude=CVE-ID|OSV-ID,...]").
 			WithExamples(
 				"magex deps:audit",
 				"magex deps:audit exclude=CVE-2024-38513",
 				"magex deps:audit exclude=CVE-2024-38513,CVE-2023-45142",
-				"MAGE_X_CVE_EXCLUDES=CVE-2024-38513 magex deps:audit",
+				"magex deps:audit exclude=GO-2026-4514",
+				"MAGE_X_CVE_EXCLUDES=CVE-2024-38513,GO-2026-4514 magex deps:audit",
 			).
 			WithOptions(
 				registry.CommandOption{
 					Name:        "exclude",
-					Description: "Comma-separated CVE IDs to exclude (e.g., CVE-2024-38513,CVE-2023-45142)",
+					Description: "Comma-separated CVE/OSV IDs to exclude (e.g., CVE-2024-38513,GO-2026-4514)",
 					Default:     "",
 				},
 				registry.CommandOption{
 					Name:        "MAGE_X_CVE_EXCLUDES",
-					Description: "Environment variable with comma-separated CVE IDs to exclude",
+					Description: "Environment variable with comma-separated CVE/OSV IDs to exclude",
 					Default:     "",
 				},
 			).
