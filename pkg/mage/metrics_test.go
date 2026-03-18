@@ -2022,9 +2022,10 @@ func TestBaz(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { os.Remove("example_test.go") }) //nolint:errcheck,gosec // cleanup
 
-		count, err := countGoTestFunctions([]string{})
+		counts, err := countGoTestFunctions([]string{})
 		require.NoError(t, err)
-		assert.Equal(t, 3, count)
+		assert.Equal(t, 3, counts.Standard)
+		assert.Equal(t, 3, counts.Total())
 	})
 
 	t.Run("ignores non-test functions", func(t *testing.T) {
@@ -2045,10 +2046,15 @@ func NotATest(t *testing.T) {}
 		require.NoError(t, err)
 		t.Cleanup(func() { os.Remove("mixed_test.go") }) //nolint:errcheck,gosec // cleanup
 
-		count, err := countGoTestFunctions([]string{})
+		counts, err := countGoTestFunctions([]string{})
 		require.NoError(t, err)
-		// Only TestValid should be counted
-		assert.Equal(t, 1, count)
+		// Only TestValid should be counted as standard
+		assert.Equal(t, 1, counts.Standard)
+		assert.Equal(t, 0, counts.SuiteMethods)
+		assert.Equal(t, 0, counts.Benchmarks)
+		assert.Equal(t, 0, counts.Fuzz)
+		assert.Equal(t, 0, counts.Examples)
+		assert.Equal(t, 1, counts.Total())
 	})
 
 	t.Run("counts benchmarks", func(t *testing.T) {
@@ -2067,12 +2073,196 @@ func BenchmarkTwo(b *testing.B) {}
 		require.NoError(t, err)
 		t.Cleanup(func() { os.Remove("bench_test.go") }) //nolint:errcheck,gosec // cleanup
 
-		count, err := countGoTestFunctions([]string{})
+		counts, err := countGoTestFunctions([]string{})
 		require.NoError(t, err)
-		// Should count TestOne + BenchmarkOne + BenchmarkTwo = 3
-		// Wait, benchmarks start with Benchmark, not Test. Let me re-check the function.
-		// The function only counts functions starting with "Test", so only 1 should be counted
-		assert.Equal(t, 1, count)
+		assert.Equal(t, 1, counts.Standard)
+		assert.Equal(t, 2, counts.Benchmarks)
+		assert.Equal(t, 3, counts.Total())
+	})
+
+	t.Run("counts testify suite test methods", func(t *testing.T) {
+		testContent := `package main
+
+import "testing"
+
+type MySuite struct {}
+
+func (s *MySuite) TestAlpha() {}
+func (s *MySuite) TestBeta() {}
+func (s *MySuite) TestGamma() {}
+
+func TestRunSuite(t *testing.T) {}
+`
+		err := os.WriteFile("suite_test.go", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("suite_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		counts, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 1, counts.Standard)
+		assert.Equal(t, 3, counts.SuiteMethods)
+		assert.Equal(t, 4, counts.Total())
+	})
+
+	t.Run("counts fuzz tests", func(t *testing.T) {
+		testContent := `package main
+
+import "testing"
+
+func TestOne(t *testing.T) {}
+
+func FuzzAdd(f *testing.F) {}
+func FuzzParse(f *testing.F) {}
+`
+		err := os.WriteFile("fuzz_test.go", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("fuzz_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		counts, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 1, counts.Standard)
+		assert.Equal(t, 2, counts.Fuzz)
+		assert.Equal(t, 3, counts.Total())
+	})
+
+	t.Run("counts example tests", func(t *testing.T) {
+		testContent := `package main
+
+func ExampleFoo() {}
+func ExampleBar() {}
+func ExampleBaz_method() {}
+`
+		err := os.WriteFile("example_funcs_test.go", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("example_funcs_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		counts, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 3, counts.Examples)
+		assert.Equal(t, 3, counts.Total())
+	})
+
+	t.Run("counts all test types together", func(t *testing.T) {
+		testContent := `package main
+
+import "testing"
+
+type Suite struct {}
+
+func TestStd(t *testing.T) {}
+func (s *Suite) TestMethod() {}
+func BenchmarkX(b *testing.B) {}
+func FuzzY(f *testing.F) {}
+func ExampleZ() {}
+`
+		err := os.WriteFile("all_types_test.go", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("all_types_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		counts, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 1, counts.Standard)
+		assert.Equal(t, 1, counts.SuiteMethods)
+		assert.Equal(t, 1, counts.Benchmarks)
+		assert.Equal(t, 1, counts.Fuzz)
+		assert.Equal(t, 1, counts.Examples)
+		assert.Equal(t, 5, counts.Total())
+	})
+
+	t.Run("does not count near-miss functions", func(t *testing.T) {
+		testContent := `package main
+
+import "testing"
+
+// Wrong prefix
+func NotATest(t *testing.T) {}
+
+// Benchmark without param
+func BenchmarkNoParam() {}
+
+// Fuzz without param
+func FuzzNoParam() {}
+
+// Example with param (invalid)
+func ExampleWithParam(t *testing.T) {}
+
+// Helper that happens to start with Test prefix but wrong param type
+func TestWithWrongParam(x int) {}
+
+// Suite method with params (not a valid testify method)
+type S struct{}
+func (s *S) TestWithParam(t *testing.T) {}
+`
+		err := os.WriteFile("nearmiss_test.go", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("nearmiss_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		counts, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 0, counts.Standard)
+		assert.Equal(t, 0, counts.SuiteMethods)
+		assert.Equal(t, 0, counts.Benchmarks)
+		assert.Equal(t, 0, counts.Fuzz)
+		assert.Equal(t, 0, counts.Examples)
+		assert.Equal(t, 0, counts.Total())
+	})
+
+	t.Run("counts suite methods with value receiver", func(t *testing.T) {
+		testContent := `package main
+
+type ValSuite struct {}
+
+func (s ValSuite) TestAlpha() {}
+func (s ValSuite) TestBeta() {}
+`
+		err := os.WriteFile("valsuite_test.go", []byte(testContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("valsuite_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		counts, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 0, counts.Standard)
+		assert.Equal(t, 2, counts.SuiteMethods)
+		assert.Equal(t, 2, counts.Total())
+	})
+
+	t.Run("returns zero counts for empty directory", func(t *testing.T) {
+		// No test files exist at this point (all cleaned up)
+		counts, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 0, counts.Total())
+	})
+
+	t.Run("counts across multiple subdirectories", func(t *testing.T) {
+		subDir := filepath.Join(tmpDir, "sub", "pkg")
+		require.NoError(t, os.MkdirAll(subDir, 0o750))
+		t.Cleanup(func() { os.RemoveAll(filepath.Join(tmpDir, "sub")) }) //nolint:errcheck,gosec // cleanup
+
+		rootContent := `package main
+
+import "testing"
+
+func TestRoot(t *testing.T) {}
+`
+		subContent := `package pkg
+
+import "testing"
+
+func TestSub(t *testing.T) {}
+func BenchmarkSub(b *testing.B) {}
+`
+		err := os.WriteFile("multi_root_test.go", []byte(rootContent), 0o600)
+		require.NoError(t, err)
+		t.Cleanup(func() { os.Remove("multi_root_test.go") }) //nolint:errcheck,gosec // cleanup
+
+		err = os.WriteFile(filepath.Join(subDir, "sub_test.go"), []byte(subContent), 0o600)
+		require.NoError(t, err)
+
+		counts, err := countGoTestFunctions([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, 2, counts.Standard)
+		assert.Equal(t, 1, counts.Benchmarks)
+		assert.Equal(t, 3, counts.Total())
 	})
 }
 
@@ -2112,15 +2302,15 @@ func TestVendor2(t *testing.T) {}
 	require.NoError(t, err)
 
 	t.Run("excludes vendor directory", func(t *testing.T) {
-		count, err := countGoTestFunctions([]string{"vendor"})
+		counts, err := countGoTestFunctions([]string{"vendor"})
 		require.NoError(t, err)
-		assert.Equal(t, 1, count) // Only TestRoot
+		assert.Equal(t, 1, counts.Total()) // Only TestRoot
 	})
 
 	t.Run("no exclusions counts all", func(t *testing.T) {
-		count, err := countGoTestFunctions([]string{})
+		counts, err := countGoTestFunctions([]string{})
 		require.NoError(t, err)
-		assert.Equal(t, 3, count) // TestRoot + TestVendor + TestVendor2
+		assert.Equal(t, 3, counts.Total()) // TestRoot + TestVendor + TestVendor2
 	})
 }
 
@@ -2158,9 +2348,9 @@ func TestHidden(t *testing.T) {}
 	err = os.WriteFile(filepath.Join(hiddenDir, "hidden_test.go"), []byte(hiddenTestContent), 0o600)
 	require.NoError(t, err)
 
-	count, err := countGoTestFunctions([]string{})
+	counts, err := countGoTestFunctions([]string{})
 	require.NoError(t, err)
-	assert.Equal(t, 1, count) // Only TestRoot, hidden dir is skipped
+	assert.Equal(t, 1, counts.Total()) // Only TestRoot, hidden dir is skipped
 }
 
 // TestCountJSTestFunctions tests the countJSTestFunctions helper function

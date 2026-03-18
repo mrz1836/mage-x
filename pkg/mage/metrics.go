@@ -121,7 +121,12 @@ type LOCResult struct {
 	SourceAvgSizeBytes    int64   `json:"source_avg_size_bytes"`     // Source files average size
 
 	// Test function metrics
-	TestFunctionCount int `json:"test_function_count"` // Total number of test functions
+	TestFunctionCount    int `json:"test_function_count"`     // Total number of test functions
+	TestStandardCount    int `json:"test_standard_count"`     // Standard test functions (func Test*(t *testing.T))
+	TestSuiteMethodCount int `json:"test_suite_method_count"` // Testify suite test methods
+	TestBenchmarkCount   int `json:"test_benchmark_count"`    // Benchmark functions
+	TestFuzzCount        int `json:"test_fuzz_count"`         // Fuzz test functions
+	TestExampleCount     int `json:"test_example_count"`      // Example functions
 }
 
 // LOCStats holds line, file counts, and total size
@@ -189,12 +194,12 @@ func locGo(jsonOutput bool, config *langConfig) error {
 	}
 
 	// Count test functions
-	testFuncCount, err := countGoTestFunctions(excludeDirs)
+	testFuncCounts, err := countGoTestFunctions(excludeDirs)
 	if err != nil {
 		if !jsonOutput {
 			utils.Warn("Failed to count test functions: %v", err)
 		}
-		testFuncCount = 0
+		testFuncCounts = goTestCounts{}
 	}
 
 	// Calculate derived metrics
@@ -244,7 +249,12 @@ func locGo(jsonOutput bool, config *langConfig) error {
 			SourceAvgSizeBytes:    goAvgBytes,
 
 			// Test function metrics
-			TestFunctionCount: testFuncCount,
+			TestFunctionCount:    testFuncCounts.Total(),
+			TestStandardCount:    testFuncCounts.Standard,
+			TestSuiteMethodCount: testFuncCounts.SuiteMethods,
+			TestBenchmarkCount:   testFuncCounts.Benchmarks,
+			TestFuzzCount:        testFuncCounts.Fuzz,
+			TestExampleCount:     testFuncCounts.Examples,
 		}
 
 		jsonBytes, err := json.Marshal(result)
@@ -287,7 +297,12 @@ func locGo(jsonOutput bool, config *langConfig) error {
 	utils.Print("| Package/Directory Count | %-37d |\n", packageCount)
 	utils.Print("| Average Lines per File  | %-37.1f |\n", avgLinesPerFile)
 	utils.Print("| Test Coverage Ratio     | %-37s |\n", fmt.Sprintf("%.1f%% (test LOC / production LOC)", testCoverageRatio))
-	utils.Print("| Test Function Count     | %-37d |\n", testFuncCount)
+	utils.Print("| Test Function Count     | %-37s |\n", formatNumberWithCommas(testFuncCounts.Total()))
+	utils.Print("|   Standard Tests        | %-37s |\n", formatNumberWithCommas(testFuncCounts.Standard))
+	utils.Print("|   Suite Test Methods    | %-37s |\n", formatNumberWithCommas(testFuncCounts.SuiteMethods))
+	utils.Print("|   Benchmarks            | %-37s |\n", formatNumberWithCommas(testFuncCounts.Benchmarks))
+	utils.Print("|   Fuzz Tests            | %-37s |\n", formatNumberWithCommas(testFuncCounts.Fuzz))
+	utils.Print("|   Examples              | %-37s |\n", formatNumberWithCommas(testFuncCounts.Examples))
 	utils.Println("")
 
 	utils.Success("Analysis complete!")
@@ -390,7 +405,12 @@ func locMultiLang(jsonOutput bool, config *langConfig, lang string) error {
 			SourceAvgSizeBytes:    sourceAvgBytes,
 
 			// Test function metrics
-			TestFunctionCount: testFuncCount,
+			TestFunctionCount:    testFuncCount,
+			TestStandardCount:    testFuncCount,
+			TestSuiteMethodCount: 0,
+			TestBenchmarkCount:   0,
+			TestFuzzCount:        0,
+			TestExampleCount:     0,
 		}
 
 		jsonBytes, err := json.Marshal(result)
@@ -1142,9 +1162,43 @@ func countDirectoriesForLang(config *langConfig) (int, error) {
 	return len(directories), err
 }
 
-// countGoTestFunctions counts test functions (func Test*) in Go test files using AST parsing
-func countGoTestFunctions(excludeDirs []string) (int, error) {
-	count := 0
+// goTestCounts holds per-category counts of Go test functions
+type goTestCounts struct {
+	Standard     int // func Test*(t *testing.T)
+	SuiteMethods int // func (s *Suite) Test*() — testify
+	Benchmarks   int // func Benchmark*(b *testing.B)
+	Fuzz         int // func Fuzz*(f *testing.F)
+	Examples     int // func Example*()
+}
+
+// Total returns the sum of all test function categories
+func (c goTestCounts) Total() int {
+	return c.Standard + c.SuiteMethods + c.Benchmarks + c.Fuzz + c.Examples
+}
+
+// isTestingParam checks if a parameter list has exactly one param of type *testing.<typeName>
+func isTestingParam(params *ast.FieldList, typeName string) bool {
+	if params == nil || len(params.List) != 1 {
+		return false
+	}
+	starExpr, ok := params.List[0].Type.(*ast.StarExpr)
+	if !ok {
+		return false
+	}
+	selExpr, ok := starExpr.X.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	ident, ok := selExpr.X.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	return ident.Name == "testing" && selExpr.Sel.Name == typeName
+}
+
+// countGoTestFunctions counts test functions in Go test files using AST parsing
+func countGoTestFunctions(excludeDirs []string) (goTestCounts, error) {
+	var counts goTestCounts
 	fset := token.NewFileSet()
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
@@ -1179,49 +1233,37 @@ func countGoTestFunctions(excludeDirs []string) (int, error) {
 			return nil
 		}
 
-		// Count functions starting with "Test" that have correct signature
 		for _, decl := range node.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
-			if !ok {
+			if !ok || fn.Name == nil {
 				continue
 			}
 
-			// Check if function name starts with "Test"
-			if fn.Name == nil || !strings.HasPrefix(fn.Name.Name, "Test") {
-				continue
+			name := fn.Name.Name
+			hasReceiver := fn.Recv != nil && len(fn.Recv.List) > 0
+			paramCount := 0
+			if fn.Type.Params != nil {
+				paramCount = len(fn.Type.Params.List)
 			}
 
-			// Verify it has exactly one parameter of type *testing.T
-			if fn.Type.Params == nil || len(fn.Type.Params.List) != 1 {
-				continue
-			}
-
-			param := fn.Type.Params.List[0]
-			starExpr, ok := param.Type.(*ast.StarExpr)
-			if !ok {
-				continue
-			}
-
-			selExpr, ok := starExpr.X.(*ast.SelectorExpr)
-			if !ok {
-				continue
-			}
-
-			ident, ok := selExpr.X.(*ast.Ident)
-			if !ok {
-				continue
-			}
-
-			// Check for *testing.T or *testing.B (benchmarks)
-			if ident.Name == "testing" && (selExpr.Sel.Name == "T" || selExpr.Sel.Name == "B") {
-				count++
+			switch {
+			case strings.HasPrefix(name, "Test") && !hasReceiver && isTestingParam(fn.Type.Params, "T"):
+				counts.Standard++
+			case strings.HasPrefix(name, "Test") && hasReceiver && paramCount == 0:
+				counts.SuiteMethods++
+			case strings.HasPrefix(name, "Benchmark") && !hasReceiver && isTestingParam(fn.Type.Params, "B"):
+				counts.Benchmarks++
+			case strings.HasPrefix(name, "Fuzz") && !hasReceiver && isTestingParam(fn.Type.Params, "F"):
+				counts.Fuzz++
+			case strings.HasPrefix(name, "Example") && !hasReceiver && paramCount == 0:
+				counts.Examples++
 			}
 		}
 
 		return nil
 	})
 
-	return count, err
+	return counts, err
 }
 
 // countJSTestFunctions counts test functions (test(), it()) in JS/TS test files using regex
