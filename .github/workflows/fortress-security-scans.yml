@@ -432,10 +432,10 @@ jobs:
           echo "| **Version** | ${{ env.GOVULNCHECK_VERSION }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Show excluded vulnerabilities if configured (supports CVE IDs and OSV IDs)
+          # Show excluded vulnerabilities if configured
           if [ -n "${MAGE_X_CVE_EXCLUDES:-}" ]; then
             echo "### 🚫 Excluded Vulnerabilities" >> $GITHUB_STEP_SUMMARY
-            echo "The following CVE/OSV IDs were excluded from the scan:" >> $GITHUB_STEP_SUMMARY
+            echo "The following vulnerabilities were excluded from the scan:" >> $GITHUB_STEP_SUMMARY
             echo "\`${MAGE_X_CVE_EXCLUDES}\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
