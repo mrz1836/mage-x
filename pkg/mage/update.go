@@ -737,6 +737,29 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
+// installBinaryFallback copies src to dst via a temp file then atomically
+// renames it into place. This avoids truncating a running binary in-place on
+// Linux (which would corrupt its memory-map and raise SIGBUS).
+func installBinaryFallback(src, dst string) error {
+	tmpPath := dst + ".new"
+	if copyErr := copyFile(src, tmpPath); copyErr != nil {
+		if rmErr := os.Remove(tmpPath); rmErr != nil { // #nosec G703 -- tmpPath derived from validated dst
+			log.Printf("failed to remove temp binary: %v", rmErr)
+		}
+		return fmt.Errorf("failed to install binary: %w", copyErr)
+	}
+	if renErr := os.Rename(tmpPath, dst); renErr != nil { // #nosec G703 -- tmpPath/dst are from validated internal paths
+		if rmErr := os.Remove(tmpPath); rmErr != nil { // #nosec G703 -- tmpPath derived from validated dst
+			log.Printf("failed to remove temp binary: %v", rmErr)
+		}
+		return fmt.Errorf("failed to install binary: %w", renErr)
+	}
+	if removeErr := os.Remove(src); removeErr != nil { // #nosec G703 -- src is from internal download process
+		log.Printf("failed to remove temporary binary: %v", removeErr)
+	}
+	return nil
+}
+
 // installUpdate installs the downloaded update
 func installUpdate(info *UpdateInfo, updateDir string) error {
 	// Get GOPATH for installation location
@@ -805,14 +828,11 @@ func installUpdate(info *UpdateInfo, updateDir string) error {
 		return errMagexBinaryNotFound
 	}
 
-	// Move binary to final location
+	// Move binary to final location; fall back to copy+atomic-rename on
+	// cross-filesystem moves (e.g. /tmp → ~/go/bin).
 	if renameErr := os.Rename(binaryPath, outputPath); renameErr != nil { // #nosec G703 -- binaryPath/outputPath are from validated internal download
-		// Try copy + delete if rename fails (cross-filesystem moves)
-		if copyErr := copyFile(binaryPath, outputPath); copyErr != nil {
-			return fmt.Errorf("failed to install binary: %w", copyErr)
-		}
-		if removeErr := os.Remove(binaryPath); removeErr != nil { // #nosec G703 -- binaryPath is from internal download process
-			log.Printf("failed to remove temporary binary: %v", removeErr)
+		if err := installBinaryFallback(binaryPath, outputPath); err != nil {
+			return err
 		}
 	}
 
