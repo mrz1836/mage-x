@@ -6,7 +6,7 @@ require github.com/mrz1836/mage-x v1.20.6
 
 require (
 	github.com/kr/text v0.2.0 // indirect
-	github.com/magefile/mage v1.16.1 // indirect
+	github.com/magefile/mage v1.17.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
