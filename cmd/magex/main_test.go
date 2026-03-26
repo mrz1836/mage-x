@@ -1704,7 +1704,7 @@ func TestCommand() error {
 			discovery := NewCommandDiscovery(reg)
 
 			// Test tryCustomCommand with new signature
-			exitCode, cmdErr := tryCustomCommand(context.Background(), tt.command, tt.args, discovery)
+			exitCode, cmdErr := tryCustomCommand(context.Background(), tt.command, tt.args, discovery, DefaultDelegateTimeout)
 			assert.Equal(t, tt.wantExitCode, exitCode)
 			if tt.wantError {
 				assert.Error(t, cmdErr)

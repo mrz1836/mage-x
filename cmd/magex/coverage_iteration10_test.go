@@ -415,7 +415,7 @@ func TestTryCustomCommand_NoMagefile(t *testing.T) {
 	require.NoError(t, os.Chdir(tmpDir))
 
 	// No magefile exists
-	exitCode, cmdErr := tryCustomCommand(context.Background(), "test", []string{}, NewCommandDiscovery(nil))
+	exitCode, cmdErr := tryCustomCommand(context.Background(), "test", []string{}, NewCommandDiscovery(nil), DefaultDelegateTimeout)
 	assert.Equal(t, 0, exitCode, "Should return 0 when no magefile")
 	assert.NoError(t, cmdErr, "Should return no error when no magefile")
 }
@@ -456,7 +456,7 @@ func Test() error {
 	require.NoError(t, pipeErr)
 	os.Stdout = w
 
-	exitCode, cmdErr := tryCustomCommand(context.Background(), "test", []string{}, NewCommandDiscovery(nil))
+	exitCode, cmdErr := tryCustomCommand(context.Background(), "test", []string{}, NewCommandDiscovery(nil), DefaultDelegateTimeout)
 
 	_ = w.Close() //nolint:errcheck // test cleanup
 	os.Stdout = oldStdout

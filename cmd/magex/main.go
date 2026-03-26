@@ -127,9 +127,10 @@ func initFlags() *Flags {
 	}
 }
 
-// tryCustomCommand attempts to execute a custom command via delegation
+// tryCustomCommand attempts to execute a custom command via delegation.
+// A timeout of 0 means no timeout — the command runs until completion or signal.
 // Returns exit code and error (0 on success or command not found)
-func tryCustomCommand(ctx context.Context, command string, commandArgs []string, discovery *CommandDiscovery) (int, error) {
+func tryCustomCommand(ctx context.Context, command string, commandArgs []string, discovery *CommandDiscovery, timeout time.Duration) (int, error) {
 	// Check if we have a magefile with this command
 	if !HasMagefile() {
 		return 0, nil
@@ -142,7 +143,7 @@ func tryCustomCommand(ctx context.Context, command string, commandArgs []string,
 		originalCommand = discoveredCmd.OriginalName
 	}
 
-	result := DelegateToMage(ctx, originalCommand, commandArgs...)
+	result := DelegateToMageWithTimeout(ctx, originalCommand, timeout, commandArgs...)
 	if result.Err != nil {
 		return result.ExitCode, result.Err
 	}
@@ -335,8 +336,19 @@ func run(ctx context.Context, args []string) int {
 	// Try built-in command first to ensure parameters work correctly
 	// Built-in commands have proper parameter handling
 	var exitCode int
+	// Parse -t flag into a duration for custom command timeout
+	var delegateTimeout time.Duration
+	if flags.Timeout != nil && *flags.Timeout != "" {
+		var parseErr error
+		delegateTimeout, parseErr = time.ParseDuration(*flags.Timeout)
+		if parseErr != nil {
+			fmt.Fprintf(os.Stderr, "❌ Error: invalid timeout %q: %v\n", *flags.Timeout, parseErr)
+			return 1
+		}
+	}
+
 	if err := reg.Execute(command, commandArgs...); err != nil {
-		exitCode = handleCommandError(ctx, reg, command, commandArgs, discovery, err)
+		exitCode = handleCommandError(ctx, reg, command, commandArgs, discovery, delegateTimeout, err)
 	}
 
 	// Check for update notification after command execution
@@ -360,7 +372,7 @@ func run(ctx context.Context, args []string) int {
 
 // handleCommandError handles errors from command execution, including
 // unknown commands which may be namespace names or custom magefile commands.
-func handleCommandError(ctx context.Context, reg *registry.Registry, command string, commandArgs []string, discovery *CommandDiscovery, err error) int {
+func handleCommandError(ctx context.Context, reg *registry.Registry, command string, commandArgs []string, discovery *CommandDiscovery, timeout time.Duration, err error) int {
 	// Only try custom command if built-in command doesn't exist
 	// Don't try custom commands when built-in command fails during execution
 	if !errors.Is(err, registry.ErrUnknownCommand) {
@@ -381,7 +393,7 @@ func handleCommandError(ctx context.Context, reg *registry.Registry, command str
 		return 1
 	}
 
-	exitCode, customErr := tryCustomCommand(ctx, command, commandArgs, discovery)
+	exitCode, customErr := tryCustomCommand(ctx, command, commandArgs, discovery, timeout)
 	if customErr != nil {
 		fmt.Fprintf(os.Stderr, "❌ %v\n", customErr)
 		return exitCode

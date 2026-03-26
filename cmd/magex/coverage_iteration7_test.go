@@ -200,7 +200,7 @@ func TestWithArgs() error {
 	discovery := NewCommandDiscovery(reg)
 
 	// This should execute successfully with args
-	exitCode, err := tryCustomCommand(context.Background(), "testwithargs", []string{"foo", "bar"}, discovery)
+	exitCode, err := tryCustomCommand(context.Background(), "testwithargs", []string{"foo", "bar"}, discovery, DefaultDelegateTimeout)
 	assert.Equal(t, 0, exitCode, "Should return 0 when command executes with args")
 	assert.NoError(t, err, "Should return no error when command executes with args")
 }

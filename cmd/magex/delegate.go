@@ -17,8 +17,9 @@ import (
 const (
 	magefileFilename = "magefile.go"
 	magefilesDirname = "magefiles"
-	// DefaultDelegateTimeout is the default timeout for delegated mage commands
-	DefaultDelegateTimeout = 10 * time.Minute
+	// DefaultDelegateTimeout is the default timeout for delegated mage commands.
+	// A value of 0 means no timeout — the command runs until completion or signal.
+	DefaultDelegateTimeout = 0 * time.Second
 )
 
 var (
@@ -81,8 +82,15 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 	}
 
 	var cmd *exec.Cmd
-	// Create context with timeout to prevent hanging commands
-	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	// Apply timeout only if explicitly requested (timeout > 0).
+	// By default, custom commands run until completion or signal (SIGINT/SIGTERM).
+	var execCtx context.Context
+	var cancel context.CancelFunc
+	if timeout > 0 {
+		execCtx, cancel = context.WithTimeout(ctx, timeout)
+	} else {
+		execCtx, cancel = context.WithCancel(ctx)
+	}
 	defer cancel()
 
 	// Check if we have both magefiles/ directory and magefile.go (conflict situation)
@@ -121,7 +129,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 		// Arguments must be passed via environment variables (MAGE_ARGS)
 		cmdArgs := []string{mageCommand}
 		// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
-		cmd = exec.CommandContext(timeoutCtx, magePath, cmdArgs...)
+		cmd = exec.CommandContext(execCtx, magePath, cmdArgs...)
 	} else {
 		// Fallback to go run with mage tags
 		cmdArgs := make([]string, 0, 4+len(args))
@@ -130,7 +138,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 			cmdArgs = append(cmdArgs, "run", "-tags=mage", ".", mageCommand)
 			cmdArgs = append(cmdArgs, args...)
 			// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
-			cmd = exec.CommandContext(timeoutCtx, "go", cmdArgs...)
+			cmd = exec.CommandContext(execCtx, "go", cmdArgs...)
 			// Set the working directory to the magefiles directory
 			cmd.Dir = targetPath
 		} else {
@@ -138,7 +146,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 			cmdArgs = append(cmdArgs, "run", "-tags=mage", targetPath, mageCommand)
 			cmdArgs = append(cmdArgs, args...)
 			// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
-			cmd = exec.CommandContext(timeoutCtx, "go", cmdArgs...)
+			cmd = exec.CommandContext(execCtx, "go", cmdArgs...)
 		}
 	}
 
@@ -195,7 +203,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 		}
 
 		// Check for context deadline exceeded (timeout)
-		if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
+		if errors.Is(execCtx.Err(), context.DeadlineExceeded) {
 			return DelegateResult{
 				ExitCode: 124, // Standard timeout exit code
 				Err:      fmt.Errorf("%w: '%s' after %v", ErrCommandTimeout, command, timeout),
