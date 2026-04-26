@@ -3,7 +3,7 @@ module github.com/mrz1836/mage-x
 go 1.25.0
 
 require (
-	github.com/magefile/mage v1.17.1
+	github.com/magefile/mage v1.17.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
 	golang.org/x/sync v0.20.0
