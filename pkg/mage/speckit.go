@@ -70,9 +70,19 @@ func (Speckit) Install() error {
 	}
 	utils.Success("uvx command runner found")
 
+	// Resolve the latest official release tag once and reuse it across both
+	// the CLI install and the project init so the templates match the CLI
+	// even if a new release ships mid-flow.
+	tag, source, resolveErr := resolveLatestSpeckitTag(resolveSpeckitOwnerRepo(config), resolveSpeckitGitURL(config))
+	if resolveErr != nil {
+		utils.Error("Failed to resolve latest spec-kit release: %v", resolveErr)
+		return resolveErr
+	}
+	utils.Info("Resolved spec-kit %s via %s", tag, source)
+
 	// Step 3: Install/update specify-cli
 	utils.Info("Step 3/4: Installing/updating specify-cli...")
-	if err := installSpeckitCLI(config); err != nil {
+	if err := installSpeckitCLI(config, tag); err != nil {
 		utils.Error("Failed to install specify-cli: %v", err)
 		return fmt.Errorf("%w: %w", errSpeckitInstallFailed, err)
 	}
@@ -80,7 +90,7 @@ func (Speckit) Install() error {
 
 	// Step 4: Initialize project configuration
 	utils.Info("Step 4/4: Initializing project configuration...")
-	if err := upgradeSpeckitProjectConfig(config); err != nil {
+	if err := upgradeSpeckitProjectConfig(config, tag); err != nil {
 		utils.Error("Failed to initialize project: %v", err)
 		return fmt.Errorf("failed to initialize speckit project: %w", err)
 	}
@@ -119,6 +129,16 @@ func (Speckit) Check() error {
 		return versionErr
 	}
 	utils.Success("Spec-kit version: %s", speckitVersion)
+
+	// Best-effort: surface staleness against the latest official release.
+	// Failure here is non-fatal — `speckit:check` should still pass when
+	// offline or rate-limited.
+	if latestTag, source, resolveErr := resolveLatestSpeckitTag(resolveSpeckitOwnerRepo(config), resolveSpeckitGitURL(config)); resolveErr == nil {
+		utils.Info("Latest official release: %s (via %s)", latestTag, source)
+		warnIfSpeckitVersionMismatch(speckitVersion, latestTag)
+	} else {
+		utils.Warn("Could not check for newer releases: %v", resolveErr)
+	}
 
 	// Verify with specify check
 	utils.Info("Running specify check...")
@@ -183,8 +203,18 @@ func (Speckit) Upgrade() error {
 		utils.Success("Constitution backed up to: %s", backupPath)
 	}
 
+	// Resolve the latest official release tag once and pass it through to
+	// every install/init step so the CLI and project files end up on the
+	// same release even if a new version ships mid-flow.
+	tag, source, resolveErr := resolveLatestSpeckitTag(resolveSpeckitOwnerRepo(config), resolveSpeckitGitURL(config))
+	if resolveErr != nil {
+		utils.Error("Failed to resolve latest spec-kit release: %v", resolveErr)
+		return resolveErr
+	}
+	utils.Info("Resolved spec-kit %s via %s", tag, source)
+
 	// Steps 4-7: Perform upgrade actions
-	newVersion, err := performSpeckitUpgradeActions(config)
+	newVersion, err := performSpeckitUpgradeActions(config, tag)
 	if err != nil {
 		return fmt.Errorf("failed to perform upgrade actions: %w", err)
 	}
@@ -248,17 +278,33 @@ func checkSpeckitPrerequisites() error {
 	return nil
 }
 
-// getSpeckitVersion gets the current spec-kit version from uv tool list
+// speckitVersionPattern captures a leading "v"-prefixed semver from a string.
+var speckitVersionPattern = regexp.MustCompile(`v\d+\.\d+\.\d+(?:[-+.][\w.]+)?`)
+
+// getSpeckitVersion returns the installed spec-kit version. Prefers the
+// official `specify --version` output (added upstream in the version
+// callback) and falls back to parsing `uv tool list` if specify is missing
+// or returns nothing parseable.
 func getSpeckitVersion(config *Config) (string, error) {
+	if utils.CommandExists(CmdSpecify) {
+		if out, err := GetRunner().RunCmdOutput(CmdSpecify, "--version"); err == nil {
+			if v := speckitVersionPattern.FindString(out); v != "" {
+				return v, nil
+			}
+		}
+	}
+	return getSpeckitVersionFromUVList(config)
+}
+
+// getSpeckitVersionFromUVList parses `uv tool list` for the configured CLI's
+// version. Used as a fallback when `specify --version` is unavailable.
+func getSpeckitVersionFromUVList(config *Config) (string, error) {
 	output, err := GetRunner().RunCmdOutput(CmdUV, "tool", "list")
 	if err != nil {
 		return "", fmt.Errorf("failed to run uv tool list: %w", err)
 	}
 
-	cliName := config.Speckit.CLIName
-	if cliName == "" {
-		cliName = DefaultSpeckitCLIName
-	}
+	cliName := resolveSpeckitCLIName(config)
 
 	// Parse output: specify-cli v0.0.20
 	re := regexp.MustCompile(regexp.QuoteMeta(cliName) + `\s+(v[\d.]+)`)
@@ -270,6 +316,21 @@ func getSpeckitVersion(config *Config) (string, error) {
 	return matches[1], nil
 }
 
+// warnIfSpeckitVersionMismatch surfaces a non-fatal warning when the
+// installed CLI version differs from the expected release tag. Common cause:
+// the caller still has the unofficial PyPI `specify-cli` installed (which
+// uses a different version stream) instead of the GitHub release.
+func warnIfSpeckitVersionMismatch(installed, expected string) {
+	if installed == "" || expected == "" || installed == statusUnknown {
+		return
+	}
+	if installed == expected {
+		return
+	}
+	utils.Warn("Installed spec-kit version (%s) does not match latest official release (%s)", installed, expected)
+	utils.Info("If you previously installed the unofficial PyPI 'specify-cli' package, run 'magex speckit:upgrade' to switch to the official GitHub source.")
+}
+
 // getSpeckitConstitutionPath returns the configured constitution path
 func getSpeckitConstitutionPath(config *Config) string {
 	if config.Speckit.ConstitutionPath != "" {
@@ -278,15 +339,28 @@ func getSpeckitConstitutionPath(config *Config) string {
 	return DefaultSpeckitConstitutionPath
 }
 
-// installSpeckitCLI installs the specify-cli tool using uv
-func installSpeckitCLI(config *Config) error {
-	cliName := config.Speckit.CLIName
-	if cliName == "" {
-		cliName = DefaultSpeckitCLIName
+// installSpeckitCLI installs the specify-cli tool from the official spec-kit
+// git repository at the given release tag. The `--force` flag self-heals
+// users who already have a same-named (but unofficial) PyPI package
+// installed by switching the source to git.
+func installSpeckitCLI(config *Config, tag string) error {
+	return installOrReinstallSpeckitFromTag(config, tag)
+}
+
+// installOrReinstallSpeckitFromTag is the single canonical install path used
+// by both the install and upgrade flows. Matches upstream's documented
+// command: uv tool install specify-cli --force --from git+<repo>@<tag>.
+func installOrReinstallSpeckitFromTag(config *Config, tag string) error {
+	if err := validateSpeckitTag(tag); err != nil {
+		return err
 	}
 
-	utils.Info("Installing %s via uv...", cliName)
-	return GetRunner().RunCmd(CmdUV, "tool", "install", cliName)
+	cliName := resolveSpeckitCLIName(config)
+	gitURL := resolveSpeckitGitURL(config)
+	fromSpec := speckitFromSpec(gitURL, tag)
+
+	utils.Info("Installing %s %s from %s", cliName, tag, fromSpec)
+	return GetRunner().RunCmd(CmdUV, "tool", "install", "--force", "--from", fromSpec, cliName)
 }
 
 // verifySpeckitInstallation runs 'specify check' to verify the installation
@@ -362,11 +436,13 @@ func restoreSpeckitConstitution(config *Config, backupPath string) error {
 	return nil
 }
 
-// performSpeckitUpgradeActions handles the core upgrade steps (CLI upgrade, verification, config upgrade)
-func performSpeckitUpgradeActions(config *Config) (string, error) {
+// performSpeckitUpgradeActions handles the core upgrade steps (CLI upgrade, verification, config upgrade).
+// The tag is resolved once by the caller and threaded through so the CLI and
+// project init use the same release.
+func performSpeckitUpgradeActions(config *Config, tag string) (string, error) {
 	// Step 4: Upgrade uv tool
-	utils.Info("Step 4/10: Upgrading spec-kit CLI...")
-	if err := upgradeSpeckitUVTool(config); err != nil {
+	utils.Info("Step 4/10: Upgrading spec-kit CLI to %s...", tag)
+	if err := upgradeSpeckitUVTool(config, tag); err != nil {
 		utils.Error("Failed to upgrade spec-kit CLI: %v", err)
 		return "", err
 	}
@@ -388,11 +464,12 @@ func performSpeckitUpgradeActions(config *Config) (string, error) {
 		newVersion = statusUnknown
 	} else {
 		utils.Success("New version: %s", newVersion)
+		warnIfSpeckitVersionMismatch(newVersion, tag)
 	}
 
 	// Step 7: Upgrade project configuration
 	utils.Info("Step 7/10: Upgrading project configuration...")
-	if configErr := upgradeSpeckitProjectConfig(config); configErr != nil {
+	if configErr := upgradeSpeckitProjectConfig(config, tag); configErr != nil {
 		utils.Error("Failed to upgrade project configuration: %v", configErr)
 		return "", configErr
 	}
@@ -401,42 +478,40 @@ func performSpeckitUpgradeActions(config *Config) (string, error) {
 	return newVersion, nil
 }
 
-// upgradeSpeckitUVTool upgrades the spec-kit CLI using uv tool upgrade
-func upgradeSpeckitUVTool(config *Config) error {
-	cliName := config.Speckit.CLIName
-	if cliName == "" {
-		cliName = DefaultSpeckitCLIName
-	}
-
-	return GetRunner().RunCmd(CmdUV, "tool", "upgrade", cliName)
+// upgradeSpeckitUVTool reinstalls the spec-kit CLI at the resolved release
+// tag. `uv tool upgrade` cannot switch the install source, so a tag-pinned
+// `uv tool install --force --from git+...@<tag>` is the only reliable way
+// to both bump versions and migrate users off the unofficial PyPI package.
+func upgradeSpeckitUVTool(config *Config, tag string) error {
+	return installOrReinstallSpeckitFromTag(config, tag)
 }
 
-// upgradeSpeckitProjectConfig upgrades the project configuration using uvx
-// It attempts to use gh CLI for authentication first to avoid rate limits
-func upgradeSpeckitProjectConfig(config *Config) error {
-	gitHubRepo := config.Speckit.GitHubRepo
-	if gitHubRepo == "" {
-		gitHubRepo = DefaultSpeckitGitHubRepo
+// upgradeSpeckitProjectConfig refreshes the project's spec-kit files
+// (slash commands, scripts, templates) by running `uvx specify init` from
+// the same release tag the CLI was just installed at. Matches upstream's
+// documented form: uvx --from git+...@<tag> specify init --here --force --integration <agent>.
+func upgradeSpeckitProjectConfig(config *Config, tag string) error {
+	if err := validateSpeckitTag(tag); err != nil {
+		return err
 	}
 
-	aiProvider := config.Speckit.AIProvider
-	if aiProvider == "" {
-		aiProvider = DefaultSpeckitAIProvider
-	}
+	gitURL := resolveSpeckitGitURL(config)
+	integration := resolveSpeckitIntegration(config)
+	fromSpec := speckitFromSpec(gitURL, tag)
 
 	args := []string{
 		"--from",
-		gitHubRepo,
+		fromSpec,
 		CmdSpecify,
 		"init",
 		"--here",
-		"--ai",
-		aiProvider,
 		"--force",
+		"--integration",
+		integration,
 	}
 
-	// Try to get GitHub token from gh CLI for higher rate limits
-	// Only set if GH_TOKEN/GITHUB_TOKEN not already set
+	// Reuse a gh-issued token when no env token is set so uvx's git fetch
+	// shares the higher 5000-req/hr authenticated limit.
 	if os.Getenv("GH_TOKEN") == "" && os.Getenv("GITHUB_TOKEN") == "" {
 		if ghToken := getGitHubTokenFromGH(); ghToken != "" {
 			utils.Info("Using GitHub CLI authentication for higher rate limits")

@@ -213,21 +213,28 @@ func (ts *SpeckitTestSuite) TestSpeckitConstants() {
 	ts.Require().NotEmpty(DefaultSpeckitCLIName, "DefaultSpeckitCLIName should be defined")
 	ts.Require().NotEmpty(DefaultSpeckitGitHubRepo, "DefaultSpeckitGitHubRepo should be defined")
 	ts.Require().NotEmpty(DefaultSpeckitAIProvider, "DefaultSpeckitAIProvider should be defined")
+	ts.Require().NotEmpty(DefaultSpeckitOwnerRepo, "DefaultSpeckitOwnerRepo should be defined")
+	ts.Require().NotEmpty(DefaultSpeckitGitURL, "DefaultSpeckitGitURL should be defined")
+	ts.Require().NotEmpty(DefaultSpeckitIntegration, "DefaultSpeckitIntegration should be defined")
 	ts.Require().Positive(DefaultSpeckitBackupsToKeep, "DefaultSpeckitBackupsToKeep should be positive")
 }
 
-// setupSpeckitConfig creates a test configuration with speckit enabled
+// setupSpeckitConfig creates a test configuration mirroring the production
+// defaults, populating both the legacy git+URL field and the modern
+// owner/repo + git URL pair so all code paths see realistic values.
 func (ts *SpeckitTestSuite) setupSpeckitConfig() {
 	TestSetConfig(&Config{
 		Speckit: SpeckitConfig{
-			Enabled:          true,
 			ConstitutionPath: ".specify/memory/constitution.md",
 			VersionFile:      ".specify/version.txt",
 			BackupDir:        ".specify/backups",
 			BackupsToKeep:    5,
 			CLIName:          "specify-cli",
 			GitHubRepo:       "git+https://github.com/github/spec-kit.git",
+			OwnerRepo:        "github/spec-kit",
+			GitURL:           "https://github.com/github/spec-kit.git",
 			AIProvider:       "claude",
+			Integration:      "claude",
 		},
 	})
 }

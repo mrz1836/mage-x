@@ -150,8 +150,11 @@ type SpeckitConfig struct {
 	BackupDir        string `yaml:"backup_dir"`        // Directory for constitution backups (default: ".specify/backups")
 	BackupsToKeep    int    `yaml:"backups_to_keep"`   // Number of backups to retain (default: 5)
 	CLIName          string `yaml:"cli_name"`          // Package name for spec-kit CLI (default: "specify-cli")
-	GitHubRepo       string `yaml:"github_repo"`       // GitHub repository URL for spec-kit
-	AIProvider       string `yaml:"ai_provider"`       // AI provider for spec-kit initialization (default: "claude")
+	GitHubRepo       string `yaml:"github_repo"`       // git+URL form of the spec-kit repository (default: "git+https://github.com/github/spec-kit.git")
+	OwnerRepo        string `yaml:"owner_repo"`        // GitHub owner/repo for release lookup (default: "github/spec-kit")
+	GitURL           string `yaml:"git_url"`           // Bare git URL of the spec-kit repository (default: "https://github.com/github/spec-kit.git")
+	AIProvider       string `yaml:"ai_provider"`       // Deprecated: use Integration. Retained for back-compat.
+	Integration      string `yaml:"integration"`       // Spec-kit integration target (default: "claude") - replaces ai_provider on v0.10.0+
 }
 
 // BmadConfig contains BMAD (Build More, Architect Dreams) CLI management settings
@@ -409,7 +412,10 @@ func defaultConfig() *Config {
 			BackupsToKeep:    DefaultSpeckitBackupsToKeep,
 			CLIName:          DefaultSpeckitCLIName,
 			GitHubRepo:       DefaultSpeckitGitHubRepo,
+			OwnerRepo:        DefaultSpeckitOwnerRepo,
+			GitURL:           DefaultSpeckitGitURL,
 			AIProvider:       DefaultSpeckitAIProvider,
+			Integration:      DefaultSpeckitIntegration,
 		},
 	}
 

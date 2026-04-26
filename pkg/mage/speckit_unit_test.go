@@ -118,8 +118,9 @@ func TestCheckSpeckitPrerequisites(t *testing.T) {
 	}
 }
 
-// TestGetSpeckitVersionWithMock tests getSpeckitVersion with mock runner
-func TestGetSpeckitVersionWithMock(t *testing.T) {
+// TestGetSpeckitVersionFromUVListWithMock tests getSpeckitVersionFromUVList
+// (the fallback path that does not depend on the specify CLI being on PATH).
+func TestGetSpeckitVersionFromUVListWithMock(t *testing.T) {
 	// Save original runner and restore after test
 	originalRunner := GetRunner()
 	defer func() {
@@ -140,7 +141,7 @@ func TestGetSpeckitVersionWithMock(t *testing.T) {
 			},
 		}
 
-		version, err := getSpeckitVersion(config)
+		version, err := getSpeckitVersionFromUVList(config)
 		require.NoError(t, err)
 		assert.Equal(t, "v0.0.20", version)
 	})
@@ -156,7 +157,7 @@ func TestGetSpeckitVersionWithMock(t *testing.T) {
 			Speckit: SpeckitConfig{}, // Empty, should use default
 		}
 
-		version, err := getSpeckitVersion(config)
+		version, err := getSpeckitVersionFromUVList(config)
 		require.NoError(t, err)
 		assert.Equal(t, "v0.1.0", version)
 	})
@@ -174,7 +175,7 @@ func TestGetSpeckitVersionWithMock(t *testing.T) {
 			},
 		}
 
-		_, err = getSpeckitVersion(config)
+		_, err = getSpeckitVersionFromUVList(config)
 		require.ErrorIs(t, err, errVersionParseFailed)
 	})
 
@@ -189,7 +190,7 @@ func TestGetSpeckitVersionWithMock(t *testing.T) {
 			Speckit: SpeckitConfig{},
 		}
 
-		_, err = getSpeckitVersion(config)
+		_, err = getSpeckitVersionFromUVList(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to run uv tool list")
 	})
@@ -440,7 +441,9 @@ func TestCleanOldSpeckitBackupsUnit(t *testing.T) {
 	})
 }
 
-// TestInstallSpeckitCLIWithMock tests installSpeckitCLI with mock runner
+// TestInstallSpeckitCLIWithMock tests installSpeckitCLI with mock runner.
+// The install path always pins to a tag and uses --force --from to switch
+// the source from any unofficial PyPI install to the official git release.
 func TestInstallSpeckitCLIWithMock(t *testing.T) {
 	originalRunner := GetRunner()
 	defer func() {
@@ -448,9 +451,12 @@ func TestInstallSpeckitCLIWithMock(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
+	const tag = "v0.8.1"
+
 	t.Run("successful install", func(t *testing.T) {
 		mock := NewBmadMockRunner()
-		mock.SetOutput("uv tool install specify-cli", "", nil)
+		expectedCmd := "uv tool install --force --from git+https://github.com/github/spec-kit.git@" + tag + " specify-cli"
+		mock.SetOutput(expectedCmd, "", nil)
 
 		err := SetRunner(mock)
 		require.NoError(t, err)
@@ -458,36 +464,108 @@ func TestInstallSpeckitCLIWithMock(t *testing.T) {
 		config := &Config{
 			Speckit: SpeckitConfig{
 				CLIName: "specify-cli",
+				GitURL:  "https://github.com/github/spec-kit.git",
 			},
 		}
 
-		err = installSpeckitCLI(config)
-		require.NoError(t, err)
-
-		commands := mock.GetCommands()
-		require.Len(t, commands, 1)
-		assert.Equal(t, "uv tool install specify-cli", commands[0])
-	})
-
-	t.Run("uses default CLI name", func(t *testing.T) {
-		mock := NewBmadMockRunner()
-		expectedCmd := "uv tool install " + DefaultSpeckitCLIName
-		mock.SetOutput(expectedCmd, "", nil)
-
-		err := SetRunner(mock)
-		require.NoError(t, err)
-
-		config := &Config{
-			Speckit: SpeckitConfig{}, // Empty, should use default
-		}
-
-		err = installSpeckitCLI(config)
+		err = installSpeckitCLI(config, tag)
 		require.NoError(t, err)
 
 		commands := mock.GetCommands()
 		require.Len(t, commands, 1)
 		assert.Equal(t, expectedCmd, commands[0])
 	})
+
+	t.Run("uses default CLI name and git URL", func(t *testing.T) {
+		mock := NewBmadMockRunner()
+		expectedCmd := "uv tool install --force --from git+" + DefaultSpeckitGitURL + "@" + tag + " " + DefaultSpeckitCLIName
+		mock.SetOutput(expectedCmd, "", nil)
+
+		err := SetRunner(mock)
+		require.NoError(t, err)
+
+		config := &Config{
+			Speckit: SpeckitConfig{}, // Empty, should use defaults
+		}
+
+		err = installSpeckitCLI(config, tag)
+		require.NoError(t, err)
+
+		commands := mock.GetCommands()
+		require.Len(t, commands, 1)
+		assert.Equal(t, expectedCmd, commands[0])
+	})
+
+	t.Run("rejects invalid tag", func(t *testing.T) {
+		mock := NewBmadMockRunner()
+		err := SetRunner(mock)
+		require.NoError(t, err)
+
+		config := &Config{Speckit: SpeckitConfig{}}
+
+		err = installSpeckitCLI(config, "main")
+		require.Error(t, err)
+		require.ErrorIs(t, err, errSpeckitTagInvalid)
+		assert.Empty(t, mock.GetCommands(), "no command should run when tag is invalid")
+	})
+}
+
+// TestUpgradeSpeckitProjectConfigPinsTagAndIntegration verifies that the
+// project-init step pins the tag in the --from value and uses --integration
+// (the modern flag), not the deprecated --ai flag.
+func TestUpgradeSpeckitProjectConfigPinsTagAndIntegration(t *testing.T) {
+	originalRunner := GetRunner()
+	defer func() {
+		err := SetRunner(originalRunner)
+		require.NoError(t, err)
+	}()
+
+	t.Setenv("GH_TOKEN", "set-by-test")
+	t.Setenv("GITHUB_TOKEN", "")
+
+	const tag = "v0.8.1"
+	expectedCmd := "uvx --from git+https://github.com/github/spec-kit.git@" + tag + " specify init --here --force --integration claude"
+
+	mock := NewBmadMockRunner()
+	mock.SetOutput(expectedCmd, "", nil)
+	err := SetRunner(mock)
+	require.NoError(t, err)
+
+	config := &Config{
+		Speckit: SpeckitConfig{
+			GitURL:      "https://github.com/github/spec-kit.git",
+			Integration: "claude",
+		},
+	}
+
+	err = upgradeSpeckitProjectConfig(config, tag)
+	require.NoError(t, err)
+
+	commands := mock.GetCommands()
+	require.Len(t, commands, 1, "GH_TOKEN is set, so no gh auth token call should occur")
+	cmd := commands[0]
+	assert.Contains(t, cmd, "@"+tag, "command must pin the resolved release tag")
+	assert.Contains(t, cmd, "--integration claude", "command must use the modern --integration flag")
+	assert.NotContains(t, cmd, "--ai ", "command must not use the deprecated --ai flag")
+}
+
+// TestUpgradeSpeckitProjectConfigRejectsInvalidTag confirms the project-init
+// step refuses to run with a non-release tag, so we never silently fall back
+// to the default branch.
+func TestUpgradeSpeckitProjectConfigRejectsInvalidTag(t *testing.T) {
+	originalRunner := GetRunner()
+	defer func() {
+		err := SetRunner(originalRunner)
+		require.NoError(t, err)
+	}()
+
+	mock := NewBmadMockRunner()
+	require.NoError(t, SetRunner(mock))
+
+	err := upgradeSpeckitProjectConfig(&Config{Speckit: SpeckitConfig{}}, "main")
+	require.Error(t, err)
+	require.ErrorIs(t, err, errSpeckitTagInvalid)
+	assert.Empty(t, mock.GetCommands(), "no command should run when the tag is invalid")
 }
 
 // TestVerifySpeckitInstallationWithMock tests verifySpeckitInstallation with mock
@@ -521,7 +599,10 @@ func TestVerifySpeckitInstallationWithMock(t *testing.T) {
 	})
 }
 
-// TestUpgradeSpeckitUVToolWithMock tests upgradeSpeckitUVTool with mock
+// TestUpgradeSpeckitUVToolWithMock tests upgradeSpeckitUVTool with mock.
+// Upgrade emits the same command shape as install — `uv tool upgrade` cannot
+// switch sources, so the implementation always reinstalls from git+...@<tag>
+// with --force.
 func TestUpgradeSpeckitUVToolWithMock(t *testing.T) {
 	originalRunner := GetRunner()
 	defer func() {
@@ -529,8 +610,11 @@ func TestUpgradeSpeckitUVToolWithMock(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
+	const tag = "v0.8.1"
+	expectedCmd := "uv tool install --force --from git+https://github.com/github/spec-kit.git@" + tag + " specify-cli"
+
 	mock := NewBmadMockRunner()
-	mock.SetOutput("uv tool upgrade specify-cli", "", nil)
+	mock.SetOutput(expectedCmd, "", nil)
 
 	err := SetRunner(mock)
 	require.NoError(t, err)
@@ -538,35 +622,36 @@ func TestUpgradeSpeckitUVToolWithMock(t *testing.T) {
 	config := &Config{
 		Speckit: SpeckitConfig{
 			CLIName: "specify-cli",
+			GitURL:  "https://github.com/github/spec-kit.git",
 		},
 	}
 
-	err = upgradeSpeckitUVTool(config)
+	err = upgradeSpeckitUVTool(config, tag)
 	require.NoError(t, err)
 
 	commands := mock.GetCommands()
 	require.Len(t, commands, 1)
-	assert.Equal(t, "uv tool upgrade specify-cli", commands[0])
+	assert.Equal(t, expectedCmd, commands[0])
 }
 
 // TestSpeckitStaticErrors tests that static errors are properly defined
 func TestSpeckitStaticErrors(t *testing.T) {
-	require.Error(t, errUVNotInstalled)
-	require.Error(t, errSpecifyNotInstalled)
-	require.Error(t, errConstitutionNotFound)
-	require.Error(t, errBackupFailed)
-	require.Error(t, errVersionParseFailed)
-	require.Error(t, errSpeckitInstallFailed)
-	require.Error(t, errSpeckitAlreadyInstalled)
-
-	// Verify error messages are not empty
-	require.NotEmpty(t, errUVNotInstalled.Error())
-	require.NotEmpty(t, errSpecifyNotInstalled.Error())
-	require.NotEmpty(t, errConstitutionNotFound.Error())
-	require.NotEmpty(t, errBackupFailed.Error())
-	require.NotEmpty(t, errVersionParseFailed.Error())
-	require.NotEmpty(t, errSpeckitInstallFailed.Error())
-	require.NotEmpty(t, errSpeckitAlreadyInstalled.Error())
+	errs := []error{
+		errUVNotInstalled,
+		errSpecifyNotInstalled,
+		errConstitutionNotFound,
+		errBackupFailed,
+		errVersionParseFailed,
+		errSpeckitInstallFailed,
+		errSpeckitAlreadyInstalled,
+		errSpeckitTagResolveFailed,
+		errSpeckitTagInvalid,
+		errSpeckitTagEmpty,
+	}
+	for _, e := range errs {
+		require.Error(t, e)
+		require.NotEmpty(t, e.Error())
+	}
 }
 
 // TestSpeckitInstallBlocksOnExistingConstitution tests that Install returns an error

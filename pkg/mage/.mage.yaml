@@ -79,7 +79,10 @@ speckit:
   backups_to_keep: 5
   cli_name: specify-cli
   github_repo: git+https://github.com/github/spec-kit.git
+  owner_repo: github/spec-kit
+  git_url: https://github.com/github/spec-kit.git
   ai_provider: claude
+  integration: claude
 test:
   auto_discover_build_tags: false
   auto_discover_build_tags_exclude: []

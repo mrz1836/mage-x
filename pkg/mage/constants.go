@@ -311,6 +311,9 @@ const (
 	DefaultSpeckitCLIName          = "specify-cli"
 	DefaultSpeckitGitHubRepo       = "git+https://github.com/github/spec-kit.git"
 	DefaultSpeckitAIProvider       = "claude"
+	DefaultSpeckitOwnerRepo        = "github/spec-kit"
+	DefaultSpeckitGitURL           = "https://github.com/github/spec-kit.git"
+	DefaultSpeckitIntegration      = "claude"
 )
 
 // BMAD command names

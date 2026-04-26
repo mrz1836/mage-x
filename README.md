@@ -1082,10 +1082,15 @@ speckit:
   constitution_path: ".specify/memory/constitution.md"
   backup_dir: ".specify/backups"
   backups_to_keep: 5
-  ai_provider: "claude"
+  owner_repo: "github/spec-kit"                          # GitHub owner/repo for release lookup
+  git_url: "https://github.com/github/spec-kit.git"      # bare git URL of the spec-kit repo
+  integration: "claude"                                   # spec-kit integration target (replaces ai_provider)
+  # ai_provider: "claude"                                # deprecated; still honored as a fallback
 ```
 
 > **Pro tip:** Run `/speckit.checklist` anytime to generate custom validation criteria.
+
+> **⚠️ Heads up:** The PyPI package literally named `specify-cli` is **not** the official spec-kit. Per the [upstream README](https://github.com/github/spec-kit#-get-started), only install from the GitHub repo. `magex speckit:install` and `speckit:upgrade` always install from GitHub at the latest tagged release, and `speckit:upgrade` self-heals any prior incorrect PyPI install via `--force`.
 
 </details>
 
@@ -1101,16 +1106,19 @@ magex speckit:upgrade
 
 The upgrade command automatically:
 - ✅ Backs up your constitution to `.specify/backups/` with timestamp
-- ✅ Upgrades the spec-kit CLI using `uv tool upgrade`
-- ✅ Updates project configuration with `--force` flag
+- ✅ Resolves the latest official release via the GitHub API (with `gh` → authenticated `curl` → `git ls-remote` fallback chain)
+- ✅ Reinstalls `specify-cli` from `git+https://github.com/github/spec-kit.git@<tag>` with `--force` (self-heals users on the unofficial PyPI `specify-cli` package)
+- ✅ Refreshes project files (slash commands, scripts, templates) at the same release tag using the modern `--integration` flag
 - ✅ Restores your constitution from backup
 - ✅ Tracks version history in `.specify/version.txt`
 - ✅ Cleans old backups (keeps last 5)
 - ✅ Verifies the upgrade with `specify check`
 
+> **How version resolution works:** the upgrade resolves the latest tag once and threads it through every install step, so the CLI and project templates always end up on the same release even if a new version ships mid-flow. If all three lookup methods (`gh`, `curl`, `git ls-remote`) fail, the command exits with an error rather than silently installing from the default branch.
+
 ### Manual Upgrade (Alternative)
 
-If you prefer manual control:
+If you prefer manual control, follow [upstream's official upgrade guide](https://github.com/github/spec-kit/blob/main/docs/upgrade.md). Replace `vX.Y.Z` with the latest tag from [Releases](https://github.com/github/spec-kit/releases):
 
 #### Step 1: Backup Your Constitution
 ```bash
@@ -1119,14 +1127,18 @@ cp .specify/memory/constitution.md ~/constitution.backup.md
 
 #### Step 2: Upgrade the CLI
 ```bash
-uv tool upgrade specify-cli
+uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git@vX.Y.Z
 specify check
 ```
 
+> Do **not** run `uv tool install specify-cli` without `--from` — that pulls an unrelated PyPI package, not the official spec-kit. Likewise, `uv tool upgrade specify-cli` cannot switch sources, so it will keep upgrading whatever was originally installed.
+
 #### Step 3: Upgrade Project Configuration
 ```bash
-uvx --from git+https://github.com/github/spec-kit.git specify init --here --ai claude --force
+uvx --from git+https://github.com/github/spec-kit.git@vX.Y.Z specify init --here --force --integration claude
 ```
+
+> The `--ai` flag is deprecated upstream and will be removed in v0.10.0; use `--integration` instead.
 
 #### Step 4: Restore Custom Constitution
 If you have custom constitution changes, carefully merge them back from your backup.
