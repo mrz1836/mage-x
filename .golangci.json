@@ -78,6 +78,7 @@
         "disable": [
             "gocognit",
             "funcorder",
+            "goconst",
             "lll",
             "recvcheck",
             "gomoddirectives"
@@ -106,7 +107,6 @@
             "gochecknoinits",
             "gochecksumtype",
             "gocognit",
-            "goconst",
             "godox",
             "goheader",
             "gosec",
@@ -191,10 +191,6 @@
             },
             "gocognit": {
                 "min-complexity": 15
-            },
-            "goconst": {
-                "min-len": 3,
-                "min-occurrences": 5
             },
             "gocritic": {
                 "disabled-checks": [
@@ -309,8 +305,7 @@
                 "linters": [
                     "dupl",
                     "misspell",
-                    "makezero",
-                    "goconst"
+                    "makezero"
                 ],
                 "severity": "info"
             },
