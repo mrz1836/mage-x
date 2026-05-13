@@ -298,9 +298,15 @@ func TestDefaultEnvManager_Context(t *testing.T) {
 	testKey := "CONTEXT_TEST_VAR"
 	testValue := "context_value"
 
+	// Snapshot the real environment so we can restore it after the test —
+	// RestoreContext clears everything currently set before applying the
+	// saved context, so an empty context would wipe TMPDIR/HOME/etc and
+	// break later tests in this package.
+	originalCtx, snapshotErr := manager.SaveContext()
+	require.NoError(t, snapshotErr)
 	defer func() {
-		if err := manager.RestoreContext(&DefaultEnvContext{variables: make(map[string]string)}); err != nil {
-			t.Errorf("Failed to restore context: %v", err)
+		if err := manager.RestoreContext(originalCtx); err != nil {
+			t.Errorf("Failed to restore original context: %v", err)
 		}
 	}()
 

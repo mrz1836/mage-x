@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -60,13 +61,36 @@ func FormatBytes(bytes int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
+// promptInput is the io.Reader used by PromptForInput. Tests may swap this via
+// SetPromptInput; production code resolves to os.Stdin at call time so existing
+// tests that pipe os.Stdin keep working when promptInput is nil.
+//
+//nolint:gochecknoglobals // package-level seam, same pattern as packageCommandRunnerProvider
+var promptInput io.Reader
+
+// SetPromptInput swaps the input source used by PromptForInput. Returns the
+// previous reader. Pass nil to restore the os.Stdin default. Intended for tests.
+func SetPromptInput(r io.Reader) io.Reader {
+	prev := promptInput
+	promptInput = r
+	return prev
+}
+
+// ResetPromptInput restores the os.Stdin default.
+func ResetPromptInput() { promptInput = nil }
+
 // PromptForInput prompts the user for input and returns the response
 func PromptForInput(prompt string) (string, error) {
 	if prompt != "" {
 		fmt.Printf("%s: ", prompt)
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
+	src := promptInput
+	if src == nil {
+		src = os.Stdin
+	}
+
+	scanner := bufio.NewScanner(src)
 	if !scanner.Scan() {
 		if err := scanner.Err(); err != nil {
 			return "", fmt.Errorf("failed to read input: %w", err)

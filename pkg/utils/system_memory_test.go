@@ -9,8 +9,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// skipIfPlatformMemoryProbeBlocked skips the test if the platform's memory
+// probe command (sysctl on macOS, wmic on Windows) cannot be executed in the
+// current environment, e.g. when running inside a sandbox that denies it.
+// Production behavior is unaffected; this only makes tests robust to
+// restricted CI/sandbox environments.
+func skipIfPlatformMemoryProbeBlocked(t *testing.T) {
+	t.Helper()
+	switch runtime.GOOS {
+	case osDarwin:
+		if _, err := RunCmdOutput("sysctl", "-n", "hw.memsize"); err != nil {
+			t.Skipf("skipping: sysctl unavailable in this environment: %v", err)
+		}
+	case osWindows:
+		if _, err := RunCmdOutput("wmic", "computersystem", "get", "TotalPhysicalMemory", "/value"); err != nil {
+			t.Skipf("skipping: wmic unavailable in this environment: %v", err)
+		}
+	}
+}
+
 // TestGetSystemMemoryInfo tests the memory information retrieval
 func TestGetSystemMemoryInfo(t *testing.T) {
+	skipIfPlatformMemoryProbeBlocked(t)
 	t.Run("gets memory info", func(t *testing.T) {
 		info, err := GetSystemMemoryInfo()
 
@@ -237,6 +257,7 @@ func BenchmarkGetAvailableMemory(b *testing.B) {
 
 // TestPlatformSpecificParsing tests platform-specific parsing logic
 func TestPlatformSpecificParsing(t *testing.T) {
+	skipIfPlatformMemoryProbeBlocked(t)
 	t.Run("linux meminfo parsing", func(t *testing.T) {
 		if runtime.GOOS != "linux" {
 			t.Skip("Linux-specific test")

@@ -118,6 +118,7 @@ func TestHelp_Completions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
 			if tt.shell != "" {
 				t.Setenv("SHELL", tt.shell)
 			}
@@ -405,6 +406,7 @@ func TestHelpCommandNamespace(t *testing.T) {
 // TestGenerateBashCompletions tests bash completion generation
 func TestGenerateBashCompletions(t *testing.T) {
 	t.Run("generates bash completion script", func(t *testing.T) {
+		t.Setenv("HOME", t.TempDir())
 		err := generateBashCompletions()
 		require.NoError(t, err)
 	})
@@ -413,6 +415,7 @@ func TestGenerateBashCompletions(t *testing.T) {
 // TestGenerateZshCompletions tests zsh completion generation
 func TestGenerateZshCompletions(t *testing.T) {
 	t.Run("generates zsh completion script", func(t *testing.T) {
+		t.Setenv("HOME", t.TempDir())
 		err := generateZshCompletions()
 		require.NoError(t, err)
 	})
@@ -421,6 +424,7 @@ func TestGenerateZshCompletions(t *testing.T) {
 // TestGenerateFishCompletions tests fish completion generation
 func TestGenerateFishCompletions(t *testing.T) {
 	t.Run("generates fish completion script", func(t *testing.T) {
+		t.Setenv("HOME", t.TempDir())
 		err := generateFishCompletions()
 		require.NoError(t, err)
 	})
