@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
@@ -101,17 +102,17 @@ func WithCurrentVersion(version string) UpdateNotifierOption {
 	}
 }
 
-// registeredBinaryVersion holds the version registered by main at startup
-// This allows the binary's actual embedded version to be used for update checks
-// without requiring ldflags to be set for the pkg/mage package
-var registeredBinaryVersion string //nolint:gochecknoglobals // Required for version registration from main
+// registeredBinaryVersion holds the version registered by main at startup.
+// It is read from a background update-check goroutine and written by
+// RegisterBinaryVersion, so it must be accessed atomically.
+var registeredBinaryVersion atomic.Value //nolint:gochecknoglobals // Required for version registration from main
 
 // RegisterBinaryVersion registers the binary's version with the mage package.
 // This should be called by main at startup to ensure the update checker
 // uses the correct version that was embedded via ldflags in main.
 // If not called, getBuildInfoVersion() falls back to pkg/mage's default "dev".
 func RegisterBinaryVersion(version string) {
-	registeredBinaryVersion = version
+	registeredBinaryVersion.Store(version)
 }
 
 // getBuildInfoVersion returns the version embedded in the binary
@@ -119,8 +120,8 @@ func RegisterBinaryVersion(version string) {
 // It prioritizes the registered version from main over the pkg default
 func getBuildInfoVersion() string {
 	// Use registered version from main if available
-	if registeredBinaryVersion != "" {
-		return registeredBinaryVersion
+	if v, ok := registeredBinaryVersion.Load().(string); ok && v != "" {
+		return v
 	}
 	// Fall back to pkg/mage's BuildInfo (will be "dev" in dev builds)
 	return getBuildInfo().Version
