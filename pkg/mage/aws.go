@@ -307,17 +307,32 @@ func (AWS) Status(args ...string) error {
 		configINI = parseAWSINI(configData)
 	}
 
+	// Resolve session -> base so a filter like "profile=mrz-ro" also matches
+	// credentials stored under "mrz-ro-base".
+	resolvedBase := ""
+	if profileFilter != "" {
+		resolvedBase = getSourceProfile(profileFilter)
+	}
+
 	found := false
 	for _, section := range ini.Sections {
-		if profileFilter != "" && section.Name != profileFilter {
-			continue
+		if profileFilter != "" {
+			matchesLiteral := section.Name == profileFilter
+			matchesBase := resolvedBase != "" && section.Name == resolvedBase
+			if !matchesLiteral && !matchesBase {
+				continue
+			}
 		}
 		found = true
 		displayAWSProfileStatus(section, configINI)
 	}
 
 	if profileFilter != "" && !found {
-		utils.Warn("Profile '%s' not found in credentials file", profileFilter)
+		if resolvedBase != "" {
+			utils.Warn("Profile '%s' (base '%s') not found in credentials file", profileFilter, resolvedBase)
+		} else {
+			utils.Warn("Profile '%s' not found in credentials file", profileFilter)
+		}
 	}
 
 	return nil
@@ -369,7 +384,10 @@ func getAWSDir() (string, error) {
 	return filepath.Join(home, ".aws"), nil
 }
 
-// hasValidAWSSetup checks if a profile has valid setup (credentials and MFA serial)
+// hasValidAWSSetup checks if a profile has valid setup: the resolved base
+// profile must have aws_access_key_id in credentials AND mfa_serial in config.
+// The argument may be either a session profile (resolved via source_profile)
+// or a legacy single-profile setup (falls back to literal name).
 func hasValidAWSSetup(profile string) bool {
 	awsDir, err := getAWSDir()
 	if err != nil {
@@ -382,7 +400,13 @@ func hasValidAWSSetup(profile string) bool {
 		return false
 	}
 
-	// Check if profile exists in credentials
+	// Resolve session -> base profile (legacy single-profile setups fall back to literal name).
+	baseProfile := getSourceProfile(profile)
+	if baseProfile == "" {
+		baseProfile = profile
+	}
+
+	// Verify long-term access key under the BASE profile section in credentials.
 	data, err := os.ReadFile(credPath) //nolint:gosec // path is constructed from known safe components
 	if err != nil {
 		return false
@@ -390,19 +414,25 @@ func hasValidAWSSetup(profile string) bool {
 
 	ini := parseAWSINI(data)
 
-	// Look for profile section with access key
+	hasKey := false
 	for _, section := range ini.Sections {
-		if section.Name == profile {
-			// If access key exists, setup is detected
-			// MFA serial check happens later in refresh flow
+		if section.Name == baseProfile {
 			if _, ok := section.Values["aws_access_key_id"]; ok {
-				return true
+				hasKey = true
 			}
 			break
 		}
 	}
+	if !hasKey {
+		return false
+	}
 
-	return false
+	// Setup is only valid if MFA serial is configured for the base profile.
+	if _, mfaErr := getMFASerial(baseProfile); mfaErr != nil {
+		return false
+	}
+
+	return true
 }
 
 // getMFASerial retrieves the MFA serial ARN from the config file
