@@ -7,11 +7,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"text/tabwriter"
 	"time"
@@ -24,6 +27,7 @@ import (
 	"github.com/mrz1836/mage-x/pkg/mage"
 	"github.com/mrz1836/mage-x/pkg/mage/embed"
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -410,23 +414,78 @@ func handleCommandError(ctx context.Context, reg *registry.Registry, command str
 	return 0
 }
 
-func main() {
-	// Create context that cancels on SIGINT/SIGTERM for graceful shutdown
-	ctx, cancel := signal.NotifyContext(context.Background(),
-		os.Interrupt,
-		syscall.SIGTERM,
-	)
-	defer cancel()
+// Signal-classification constants for cancelledBy. Translated to standard
+// shell exit codes (128 + signal number) when main() returns.
+const (
+	cancelledByNone    int32 = 0
+	cancelledBySIGINT  int32 = 1
+	cancelledBySIGTERM int32 = 2
 
-	// Handle shutdown signal notification in background
+	exitCodeSIGINT  = 130 // 128 + 2 (SIGINT)
+	exitCodeSIGTERM = 143 // 128 + 15 (SIGTERM)
+)
+
+// installSignalHandler wires sigCh to a goroutine that, on the first signal,
+// prints a single banner and invokes cancel; on a second signal, restores the
+// OS default handler and calls exit(130) as a force-quit escape hatch.
+//
+// Extracted from main() for testability; the goroutine returns when sigCh is
+// closed (test seam: signal.Stop closes nothing; tests close their own channel).
+func installSignalHandler(sigCh <-chan os.Signal, cancelledBy *atomic.Int32, cancel context.CancelFunc, exit func(int), stderr io.Writer) <-chan struct{} {
+	done := make(chan struct{})
+	var bannerOnce sync.Once
 	go func() {
-		<-ctx.Done()
-		if ctx.Err() != nil {
-			fmt.Fprintln(os.Stderr, "\nReceived shutdown signal, cleaning up...")
+		defer close(done)
+		first, ok := <-sigCh
+		if !ok {
+			return
+		}
+		if first == syscall.SIGTERM {
+			cancelledBy.Store(cancelledBySIGTERM)
+		} else {
+			cancelledBy.Store(cancelledBySIGINT)
+		}
+		bannerOnce.Do(func() {
+			_, _ = fmt.Fprintln(stderr, "\n⚠  Canceled by user (Ctrl+C) — stopping...") //nolint:errcheck // banner on shutdown path; nothing to do if write fails
+		})
+		cancel()
+
+		// Second signal → force exit. Restore OS default so a third Ctrl+C
+		// kills even if os.Exit itself is slow.
+		if _, ok := <-sigCh; ok {
+			signal.Reset(os.Interrupt, syscall.SIGTERM)
+			_, _ = fmt.Fprintln(stderr, "⚠  Force exit.") //nolint:errcheck // force-exit banner; about to os.Exit
+			exit(exitCodeSIGINT)
 		}
 	}()
+	return done
+}
 
-	os.Exit(run(ctx, os.Args))
+func main() {
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	runtimectx.SetRoot(rootCtx)
+
+	// Buffered (size 2) so a fast double-tap is never dropped between
+	// the first read and the second.
+	sigCh := make(chan os.Signal, 2)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+
+	var cancelledBy atomic.Int32
+	_ = installSignalHandler(sigCh, &cancelledBy, cancel, os.Exit, os.Stderr)
+
+	code := run(rootCtx, os.Args)
+
+	// Override exit code only if we actually canceled — a command that
+	// finished naturally before the signal keeps its real exit code.
+	switch cancelledBy.Load() {
+	case cancelledBySIGINT:
+		code = exitCodeSIGINT
+	case cancelledBySIGTERM:
+		code = exitCodeSIGTERM
+	}
+	os.Exit(code)
 }
 
 // showUsage displays custom usage information
