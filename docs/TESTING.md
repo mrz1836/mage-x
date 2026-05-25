@@ -146,25 +146,40 @@ func TestEnvOverrides(t *testing.T) {
 
 ```bash
 # Run all tests
-mage test
+magex test
 
 # Run with coverage
-mage test:cover
+magex test:cover
 
 # Run with race detector
-mage test:race
+magex test:race
 
 # Run short tests only
-mage test:short
-
-# Run specific package tests
-go test ./pkg/mage
-
-# Run specific test
-go test -run TestBuildDefault ./pkg/mage
+magex test:short
 
 # Run tests verbosely
-VERBOSE=1 mage test
+VERBOSE=1 magex test
+```
+
+### Running a Single Test or Package
+
+Use `magex test:run` (alias: `test:specific`) to run a focused subset without falling back to raw `go test`:
+
+```bash
+magex test:run name=TestBuildDefault pkg=./pkg/mage   # one test, one package
+magex test:run pkg=./pkg/mage                         # all tests in one package
+magex test:run name=TestBuildDefault                  # named test, all packages
+magex test:specific name=TestBuildDefault             # alias of test:run
+magex test:run                                        # back-compat: runs ./...
+```
+
+Parameters:
+- `name=<TestPattern>` — passed to `go test -run <pattern>` (regex)
+- `pkg=<./path>` — package path; defaults to `./...`
+
+For agents discovering the calling convention:
+```bash
+magex help:command command=test:run json=true   # structured Options + examples
 ```
 
 ### Integration Tests

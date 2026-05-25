@@ -112,6 +112,41 @@ magex metrics:coverage   # Coverage reports
 - Simple aliases available: `test`, `build`, `lint`, `clean`
 - Full format: `namespace:action`
 
+#### Calling Convention (important for agents)
+- Parameters are positional `key=value` pairs, **no spaces around `=`** and **no leading dashes**.
+  - Correct: `magex test:run name=TestFoo pkg=./internal/vault`
+  - Wrong: `magex test:run --name TestFoo` or `magex test:run name = TestFoo`
+- Boolean flags are bare values: `json=true`, not `--json`.
+- Some legacy commands also read environment variables; both styles work where supported (e.g. `COMMAND=test:run magex help:command` is equivalent to `magex help:command command=test:run`).
+
+#### Discovering Commands Programmatically
+When an agent isn't sure which command to call or what parameters it accepts, the help system is machine-readable:
+
+```bash
+# Full catalog as JSON (every command, with namespace, description, usage, examples, options, aliases)
+magex help:commands json=true
+
+# Schema for a single command — includes Options agents need to construct an invocation
+magex help:command command=test:run json=true
+
+# Schema for an entire namespace
+magex help:command command=test json=true
+```
+
+The JSON shape is stable: `HelpCommand { name, namespace, description, usage, category, aliases, examples, options[], see_also }` and `HelpCommandList { total, commands[] }`.
+
+#### Running a Targeted Test
+Agents often need to run a single Go test rather than the full suite. Use `test:run` (alias: `test:specific`):
+
+```bash
+magex test:run name=TestFoo pkg=./internal/vault   # one test in one package
+magex test:run pkg=./internal/vault                # all tests in one package
+magex test:run name=TestFoo                        # named test across all packages
+magex test:run                                     # back-compat: runs ./...
+```
+
+Do not fall back to `go test` directly unless `test:run` can't express what you need — keeping invocations inside `magex` ensures consistent module discovery, build tag handling, and runner mocking.
+
 #### Testing Commands
 ```bash
 go test ./pkg/mage/namespace_architecture_test.go -v  # Architecture test
