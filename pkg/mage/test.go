@@ -1944,9 +1944,9 @@ func fuzzResultsToError(results []fuzzTestResult) error {
 // Examples:
 //
 //	magex test:run                                # all tests in ./...
-//	magex test:run pkg=./internal/vault           # all tests in one package
+//	magex test:run pkg=./pkg/mage           # all tests in one package
 //	magex test:run name=TestFoo                   # named test across all packages
-//	magex test:run name=TestFoo pkg=./internal/vault
+//	magex test:run name=TestFoo pkg=./pkg/mage
 func (Test) Run(args ...string) error {
 	params := utils.ParseParams(args)
 	name := utils.GetParam(params, "name", "")

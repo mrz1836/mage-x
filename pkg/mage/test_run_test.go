@@ -40,13 +40,13 @@ func TestTestRun_ArgHandling(t *testing.T) {
 		},
 		{
 			name:       "pkg only restricts to that package",
-			args:       []string{"pkg=./internal/vault"},
-			expectArgs: []interface{}{"go", "test", "./internal/vault"},
+			args:       []string{"pkg=./pkg/mage"},
+			expectArgs: []interface{}{"go", "test", "./pkg/mage"},
 		},
 		{
 			name:       "name and pkg combine into -run + path",
-			args:       []string{"name=TestSecureZero", "pkg=./internal/vault"},
-			expectArgs: []interface{}{"go", "test", "-run", "TestSecureZero", "./internal/vault"},
+			args:       []string{"name=TestBuildDefault", "pkg=./pkg/mage"},
+			expectArgs: []interface{}{"go", "test", "-run", "TestBuildDefault", "./pkg/mage"},
 		},
 		{
 			name:       "pkg before name is order-independent",

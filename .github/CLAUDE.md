@@ -114,7 +114,7 @@ magex metrics:coverage   # Coverage reports
 
 #### Calling Convention (important for agents)
 - Parameters are positional `key=value` pairs, **no spaces around `=`** and **no leading dashes**.
-  - Correct: `magex test:run name=TestFoo pkg=./internal/vault`
+  - Correct: `magex test:run name=TestFoo pkg=./pkg/mage`
   - Wrong: `magex test:run --name TestFoo` or `magex test:run name = TestFoo`
 - Boolean flags are bare values: `json=true`, not `--json`.
 - Some legacy commands also read environment variables; both styles work where supported (e.g. `COMMAND=test:run magex help:command` is equivalent to `magex help:command command=test:run`).
@@ -139,8 +139,8 @@ The JSON shape is stable: `HelpCommand { name, namespace, description, usage, ca
 Agents often need to run a single Go test rather than the full suite. Use `test:run` (alias: `test:specific`):
 
 ```bash
-magex test:run name=TestFoo pkg=./internal/vault   # one test in one package
-magex test:run pkg=./internal/vault                # all tests in one package
+magex test:run name=TestFoo pkg=./pkg/mage   # one test in one package
+magex test:run pkg=./pkg/mage                # all tests in one package
 magex test:run name=TestFoo                        # named test across all packages
 magex test:run                                     # back-compat: runs ./...
 ```

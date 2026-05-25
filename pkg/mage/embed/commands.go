@@ -802,10 +802,10 @@ func registerTestCommands(reg *registry.Registry) {
 			WithUsage("magex test:run [name=<TestPattern>] [pkg=<./path>]").
 			WithExamples(
 				"magex test:run",
-				"magex test:run pkg=./internal/vault",
+				"magex test:run pkg=./pkg/mage",
 				"magex test:run name=TestFoo",
-				"magex test:run name=TestFoo pkg=./internal/vault",
-				"magex test:specific name=TestFoo pkg=./internal/vault",
+				"magex test:run name=TestFoo pkg=./pkg/mage",
+				"magex test:specific name=TestFoo pkg=./pkg/mage",
 			).
 			WithOptions(
 				registry.CommandOption{
@@ -815,7 +815,7 @@ func registerTestCommands(reg *registry.Registry) {
 				},
 				registry.CommandOption{
 					Name:        "pkg",
-					Description: "Package path (e.g. ./internal/vault). Defaults to ./...",
+					Description: "Package path (e.g. ./pkg/mage). Defaults to ./...",
 					Type:        "string",
 					Default:     "./...",
 				},
