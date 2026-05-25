@@ -122,6 +122,9 @@
 - **Security-First Architecture**<br/>
   _Input validation, secure command execution, and minimal dependencies. Built for environments where security matters._
   <br/><br/>
+- **Graceful Ctrl+C Cancellation**<br/>
+  _A single Ctrl+C cleanly stops any command — in-flight subprocesses receive SIGINT with a 5s grace window, loops bail on the next iteration, and magex exits with code 130. A second Ctrl+C force-exits as an escape hatch. SIGTERM is honored too (exit 143) so CI runners can cancel jobs cleanly without orphan processes._
+  <br/><br/>
 - **Professional Release Tooling**<br/>
   _Standardized versioning commands, GitHub integration, GoDocs proxy sync, and release tooling for production deployments._
   <br/><br/>
@@ -248,6 +251,7 @@ This means:
 - **Configuration Management**: Flexible mage.yaml with smart defaults
 - **Command Discovery**: Comprehensive CLI with intuitive command structure
 - **Help System**: Built-in documentation and usage examples
+- **Graceful Cancellation**: Ctrl+C stops every command cleanly (exit 130); second press force-exits; CI-friendly SIGTERM handling (exit 143)
 
 ### Production Features
 - **Security Scanning**: Vulnerability detection with govulncheck integration
