@@ -306,18 +306,31 @@ func (r *Registry) Search(query string) []*Command {
 	var matches []*Command
 
 	for _, cmd := range r.commands {
-		// Check name, namespace, method, description, tags
+		// Check name, namespace, method, description, tags, aliases
 		if strings.Contains(strings.ToLower(cmd.Name), query) ||
 			strings.Contains(strings.ToLower(cmd.Namespace), query) ||
 			strings.Contains(strings.ToLower(cmd.Method), query) ||
 			strings.Contains(strings.ToLower(cmd.Description), query) ||
 			strings.Contains(strings.ToLower(cmd.LongDescription), query) ||
-			r.searchTags(cmd.Tags, query) {
+			r.searchTags(cmd.Tags, query) ||
+			r.searchAliases(cmd.Aliases, query) {
 			matches = append(matches, cmd)
 		}
 	}
 
 	return matches
+}
+
+// searchAliases checks if any alias contains the query.
+// Lets agents searching for an alias (e.g. "test:specific") find the
+// canonical command they aliased to (e.g. "test:run").
+func (r *Registry) searchAliases(aliases []string, query string) bool {
+	for _, alias := range aliases {
+		if strings.Contains(strings.ToLower(alias), query) {
+			return true
+		}
+	}
+	return false
 }
 
 // searchTags checks if any tags contain the query

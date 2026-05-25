@@ -1253,6 +1253,45 @@ func TestRegistry_SearchWithTags(t *testing.T) {
 	}
 }
 
+// TestRegistry_SearchWithAliases verifies that searching for an alias resolves
+// to the canonical command. Lets agents discover commands by the name they
+// already know (e.g. searching "test:specific" must surface "test:run").
+func TestRegistry_SearchWithAliases(t *testing.T) {
+	r := NewRegistry()
+
+	r.MustRegister(&Command{
+		Name:        "run",
+		Method:      "run",
+		Namespace:   "test",
+		Description: "Run a specific test",
+		Category:    "Test",
+		Aliases:     []string{"test:specific"},
+		Func:        func() error { return nil },
+	})
+	r.MustRegister(&Command{
+		Name:        "default",
+		Method:      "default",
+		Namespace:   "build",
+		Description: "Build the project",
+		Category:    "Build",
+		Func:        func() error { return nil },
+	})
+
+	results := r.Search("test:specific")
+	if len(results) != 1 {
+		t.Fatalf("Expected 1 result for alias 'test:specific', got %d", len(results))
+	}
+	if results[0].Namespace != "test" || results[0].Method != "run" {
+		t.Errorf("Expected test:run, got %s:%s", results[0].Namespace, results[0].Method)
+	}
+
+	// Substring of an alias should also match (case-insensitive).
+	results = r.Search("SPECIFIC")
+	if len(results) != 1 {
+		t.Errorf("Expected 1 case-insensitive result for 'SPECIFIC', got %d", len(results))
+	}
+}
+
 func TestRegistry_GlobalExecute(t *testing.T) {
 	// Clear global registry for test isolation
 	Global().Clear()
