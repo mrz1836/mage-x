@@ -322,6 +322,14 @@ func run(ctx context.Context, args []string) int {
 	// Convert mage-style namespace:method to our format
 	command = normalizeCommandName(command)
 
+	// Intercept `-h` / `--help` after a command name so agents who try the
+	// GNU-style `magex test:run --help` see the help page instead of
+	// accidentally executing the command (which silently ignored unknown args).
+	if hasHelpFlag(commandArgs) {
+		showUnifiedHelp(command)
+		return 0
+	}
+
 	// Check for cancellation before executing command
 	if ctx.Err() != nil {
 		fmt.Fprintln(os.Stderr, "Operation canceled")
@@ -527,7 +535,8 @@ func showGeneralHelp(reg *registry.Registry) {
 // showUsageSection displays usage information
 func showUsageSection() {
 	fmt.Printf("\n📋 Usage: magex [options] [command] [arguments...]\n")
-	fmt.Printf("\nMAGE-X is a drop-in replacement for Mage with 174 built-in commands.\n")
+	count := registry.Global().Metadata().TotalCommands
+	fmt.Printf("\nMAGE-X is a drop-in replacement for Mage with %d built-in commands.\n", count)
 	fmt.Printf("Zero configuration needed - works immediately in any Go project!\n")
 }
 
@@ -1320,6 +1329,21 @@ func normalizeCommandName(name string) string {
 	name = strings.ReplaceAll(name, "-", ":")
 
 	return strings.ToLower(name)
+}
+
+// hasHelpFlag reports whether the post-command args contain a bare -h or
+// --help. magex commands take key=value parameters, never dash-flags, so any
+// dash-flag in this position is almost certainly an agent / user asking for
+// help. Intercepting it prevents the command from running with unrecognized
+// args silently dropped — which previously turned `magex test:run --help`
+// into a full test-suite run.
+func hasHelpFlag(args []string) bool {
+	for _, a := range args {
+		if a == "-h" || a == "--help" || a == "-help" {
+			return true
+		}
+	}
+	return false
 }
 
 // truncate truncates a string to a maximum length
