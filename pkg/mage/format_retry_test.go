@@ -322,14 +322,18 @@ func TestErrorWrapping(t *testing.T) {
 		err := exec.ExecuteWithRetry(ctx, executor, 5, 100*time.Millisecond, "sleep", "10")
 		require.Error(t, err)
 
-		// Check for context error or command termination due to timeout
-		// The context timeout causes the command to be killed with "signal: killed"
+		// Check for context error or command termination due to timeout.
+		// The graceful-cancel hook (pkg/exec.applyGracefulCancel) sends SIGINT
+		// first on context expiry; quick-to-die children exit with
+		// "signal: interrupt" before WaitDelay's SIGKILL escalation fires.
+		// Either signal indicates the timeout fired correctly.
 		assert.True(t, errors.Is(err, context.DeadlineExceeded) ||
 			errors.Is(err, context.Canceled) ||
 			strings.Contains(err.Error(), "context") ||
 			strings.Contains(err.Error(), "deadline exceeded") ||
 			strings.Contains(err.Error(), "command failed after") ||
 			strings.Contains(err.Error(), "signal: killed") ||
+			strings.Contains(err.Error(), "signal: interrupt") ||
 			strings.Contains(err.Error(), "permanent command error"),
 			"Error should indicate context cancellation or timeout, got: %v", err)
 	})

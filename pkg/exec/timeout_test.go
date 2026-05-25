@@ -33,11 +33,14 @@ func TestTimeoutExecutor(t *testing.T) {
 		if err == nil {
 			t.Error("Execute() expected timeout error")
 		}
-		// The command is killed when context times out, resulting in "signal: killed"
-		// We check for either DeadlineExceeded or killed signal
+		// Graceful cancel sends SIGINT first (then SIGKILL after WaitDelay), so
+		// a quick-to-die child like `sleep` will exit with "signal: interrupt"
+		// before WaitDelay elapses. Pre-graceful-cancel behavior was direct
+		// SIGKILL ("signal: killed"); either is a valid timeout outcome.
 		errStr := err.Error()
 		if !errors.Is(err, context.DeadlineExceeded) &&
 			!strings.Contains(errStr, "killed") &&
+			!strings.Contains(errStr, "interrupt") &&
 			!strings.Contains(errStr, "deadline") {
 			t.Errorf("Execute() error = %v, want timeout-related error", err)
 		}

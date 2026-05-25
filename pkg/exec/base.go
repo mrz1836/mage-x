@@ -212,6 +212,9 @@ func (b *Base) configureCommand(cmd *exec.Cmd) {
 	if len(b.Env) > 0 {
 		cmd.Env = append(cmd.Env, b.Env...)
 	}
+
+	// On ctx cancel: send SIGINT first, then SIGKILL after a grace window.
+	applyGracefulCancel(cmd)
 }
 
 // Ensure Base implements all interfaces

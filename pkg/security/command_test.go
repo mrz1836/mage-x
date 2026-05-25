@@ -292,6 +292,7 @@ func TestSecureExecutor_Execute(t *testing.T) {
 				errMsg := err.Error()
 				assert.True(t,
 					strings.Contains(errMsg, "killed") ||
+						strings.Contains(errMsg, "interrupt") || // graceful cancel sends SIGINT before WaitDelay SIGKILL
 						strings.Contains(errMsg, "context deadline exceeded") ||
 						strings.Contains(errMsg, "exit status") ||
 						strings.Contains(errMsg, "terminated") ||
@@ -575,7 +576,9 @@ func TestSecureExecutor_ContextCancellation(t *testing.T) {
 	assert.True(t,
 		strings.Contains(errMsg, "context canceled") ||
 			strings.Contains(errMsg, "signal: killed") ||
+			strings.Contains(errMsg, "signal: interrupt") || // graceful cancel hook (pkg/exec) sends SIGINT first
 			strings.Contains(errMsg, "killed") ||
+			strings.Contains(errMsg, "interrupt") ||
 			strings.Contains(errMsg, "exit status") ||
 			strings.Contains(errMsg, "terminated"),
 		"Expected cancellation-related error but got: %s", errMsg)

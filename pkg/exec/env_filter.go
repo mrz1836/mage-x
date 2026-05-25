@@ -80,6 +80,7 @@ func (e *EnvFilteringExecutor) Execute(ctx context.Context, name string, args ..
 
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
+	applyGracefulCancel(cmd)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -90,6 +91,7 @@ func (e *EnvFilteringExecutor) Execute(ctx context.Context, name string, args ..
 func (e *EnvFilteringExecutor) ExecuteOutput(ctx context.Context, name string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
+	applyGracefulCancel(cmd)
 
 	output, err := cmd.CombinedOutput()
 	return string(output), err
@@ -98,6 +100,7 @@ func (e *EnvFilteringExecutor) ExecuteOutput(ctx context.Context, name string, a
 // ExecuteWithEnv runs a command with additional environment variables (filtered)
 func (e *EnvFilteringExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
+	applyGracefulCancel(cmd)
 
 	// Filter base environment, then add additional env
 	baseEnv := e.FilterEnvironment(os.Environ(), name)
@@ -115,6 +118,7 @@ func (e *EnvFilteringExecutor) ExecuteWithEnv(ctx context.Context, env []string,
 func (e *EnvFilteringExecutor) ExecuteStreaming(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
+	applyGracefulCancel(cmd)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
@@ -125,6 +129,7 @@ func (e *EnvFilteringExecutor) ExecuteStreaming(ctx context.Context, stdout, std
 func (e *EnvFilteringExecutor) ExecuteInDir(ctx context.Context, dir, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
+	applyGracefulCancel(cmd)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -136,6 +141,7 @@ func (e *EnvFilteringExecutor) ExecuteInDir(ctx context.Context, dir, name strin
 func (e *EnvFilteringExecutor) ExecuteOutputInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- executor library, callers control command name
 	cmd.Env = e.FilterEnvironment(os.Environ(), name)
+	applyGracefulCancel(cmd)
 	cmd.Dir = dir
 
 	output, err := cmd.CombinedOutput()
