@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -29,23 +30,34 @@ var (
 // Help namespace for help system and documentation
 type Help mg.Namespace
 
-// HelpCommand represents a command with help information
+// HelpCommand represents a command with help information.
+// JSON tags allow agent-friendly machine-readable output via `magex help:command command=<name> json=true`.
 type HelpCommand struct {
-	Name        string
-	Namespace   string
-	Description string
-	Usage       string
-	Examples    []string
-	Options     []HelpOption
-	SeeAlso     []string
+	Name            string       `json:"name"`
+	Namespace       string       `json:"namespace,omitempty"`
+	Description     string       `json:"description,omitempty"`
+	LongDescription string       `json:"long_description,omitempty"`
+	Usage           string       `json:"usage,omitempty"`
+	Category        string       `json:"category,omitempty"`
+	Aliases         []string     `json:"aliases,omitempty"`
+	Examples        []string     `json:"examples,omitempty"`
+	Options         []HelpOption `json:"options,omitempty"`
+	SeeAlso         []string     `json:"see_also,omitempty"`
 }
 
 // HelpOption represents a command option
 type HelpOption struct {
-	Name        string
-	Description string
-	Default     string
-	Required    bool
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Default     string `json:"default,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Required    bool   `json:"required,omitempty"`
+}
+
+// HelpCommandList is the JSON shape returned by `magex help:commands json=true`.
+type HelpCommandList struct {
+	Total    int           `json:"total"`
+	Commands []HelpCommand `json:"commands"`
 }
 
 // Default shows general help
@@ -81,8 +93,15 @@ Documentation:
 	return nil
 }
 
-// Commands lists all available commands with descriptions
-func (Help) Commands() error {
+// Commands lists all available commands with descriptions.
+//
+// Supports `json=true` to emit the full command catalog as JSON for agents.
+func (Help) Commands(args ...string) error {
+	params := utils.ParseParams(args)
+	if utils.IsParamTrue(params, "json") {
+		return emitCommandsJSON()
+	}
+
 	utils.Header("📋 Available Commands")
 
 	// Get the global registry
@@ -145,12 +164,22 @@ func (Help) Commands() error {
 	return nil
 }
 
-// Command shows detailed help for a specific command or namespace
-func (Help) Command() error {
-	commandName := env.GetString("COMMAND", "")
+// Command shows detailed help for a specific command or namespace.
+//
+// Accepts the command name via the `command=<name>` param (preferred) or the
+// `COMMAND` environment variable (back-compat). Pass `json=true` to emit the
+// command metadata as JSON for agent consumption.
+func (Help) Command(args ...string) error {
+	params := utils.ParseParams(args)
+	commandName := utils.GetParam(params, "command", "")
+	if commandName == "" {
+		commandName = env.GetString("COMMAND", "")
+	}
 	if commandName == "" {
 		return errHelpCommandRequired
 	}
+
+	jsonOut := utils.IsParamTrue(params, "json")
 
 	// Get the global registry for namespace checking
 	reg := registry.Global()
@@ -159,6 +188,9 @@ func (Help) Command() error {
 	namespaces := reg.Namespaces()
 	for _, namespace := range namespaces {
 		if strings.EqualFold(namespace, commandName) {
+			if jsonOut {
+				return emitNamespaceJSON(namespace)
+			}
 			return showHelpNamespace(reg, namespace)
 		}
 	}
@@ -167,6 +199,10 @@ func (Help) Command() error {
 	cmd, err := getCommandHelp(commandName)
 	if err != nil {
 		return fmt.Errorf("failed to get command help for %s: %w", commandName, err)
+	}
+
+	if jsonOut {
+		return emitCommandJSON(cmd)
 	}
 
 	utils.Header("📖 Command Help: " + cmd.Name)
@@ -209,6 +245,51 @@ func (Help) Command() error {
 		}
 	}
 
+	return nil
+}
+
+// emitCommandsJSON writes the full command catalog to stdout as indented JSON.
+// Used by `magex help:commands json=true` for agent-friendly discovery.
+func emitCommandsJSON() error {
+	commands := getAllCommands()
+	payload := HelpCommandList{
+		Total:    len(commands),
+		Commands: commands,
+	}
+	return writeJSON(payload)
+}
+
+// emitCommandJSON writes a single HelpCommand to stdout as indented JSON.
+func emitCommandJSON(cmd HelpCommand) error {
+	return writeJSON(cmd)
+}
+
+// emitNamespaceJSON writes every command in a namespace as JSON.
+// Mirrors the namespace fall-through in Help.Command for the text path.
+func emitNamespaceJSON(namespace string) error {
+	all := getAllCommands()
+	matches := make([]HelpCommand, 0, 8)
+	for _, c := range all {
+		if strings.EqualFold(c.Namespace, namespace) {
+			matches = append(matches, c)
+		}
+	}
+	payload := HelpCommandList{
+		Total:    len(matches),
+		Commands: matches,
+	}
+	return writeJSON(payload)
+}
+
+// writeJSON marshals v with indentation and prints it to stdout.
+func writeJSON(v interface{}) error {
+	out, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal help JSON: %w", err)
+	}
+	if _, err := fmt.Fprintln(os.Stdout, string(out)); err != nil {
+		return fmt.Errorf("failed to write help JSON: %w", err)
+	}
 	return nil
 }
 
@@ -506,12 +587,15 @@ func getAllCommands() []HelpCommand {
 	helpCommands := make([]HelpCommand, 0, len(commands))
 	for _, cmd := range commands {
 		helpCmd := HelpCommand{
-			Name:        cmd.FullName(),
-			Namespace:   cmd.Namespace,
-			Description: cmd.Description,
-			Usage:       cmd.Usage,
-			Examples:    cmd.Examples,
-			SeeAlso:     cmd.SeeAlso,
+			Name:            cmd.FullName(),
+			Namespace:       cmd.Namespace,
+			Description:     cmd.Description,
+			LongDescription: cmd.LongDescription,
+			Usage:           cmd.Usage,
+			Category:        cmd.Category,
+			Aliases:         cmd.Aliases,
+			Examples:        cmd.Examples,
+			SeeAlso:         cmd.SeeAlso,
 		}
 
 		// Convert options if available
@@ -522,6 +606,7 @@ func getAllCommands() []HelpCommand {
 					Name:        opt.Name,
 					Description: opt.Description,
 					Default:     opt.Default,
+					Type:        opt.Type,
 					Required:    opt.Required,
 				}
 			}

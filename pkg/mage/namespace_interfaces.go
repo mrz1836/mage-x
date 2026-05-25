@@ -100,8 +100,8 @@ type TestNamespace interface {
 	// CINoRace runs CI tests without race detector
 	CINoRace() error
 
-	// Run runs a specific test pattern
-	Run() error
+	// Run runs a specific test by optional name= and/or pkg= params
+	Run(args ...string) error
 
 	// Coverage runs tests and generates coverage
 	Coverage(args ...string) error

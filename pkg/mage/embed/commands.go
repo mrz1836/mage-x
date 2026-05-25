@@ -93,7 +93,7 @@ func getTestCommands() []CommandDef {
 		{Method: "parallel", Desc: "Run tests in parallel"},
 		{Method: "nolint", Desc: "Run tests without linting"},
 		{Method: "cinorace", Desc: "Run CI tests without race detector"},
-		{Method: "run", Desc: "Run a specific test pattern"},
+		// "run" is registered explicitly below with Options + alias (test:specific)
 		{Method: "coverage", Desc: "Run tests and generate coverage"},
 		{Method: "vet", Desc: "Run go vet"},
 	}
@@ -314,8 +314,18 @@ func getConfigureCommands() []CommandDef {
 func getHelpCommands() []CommandDef {
 	return []CommandDef{
 		{Method: "default", Desc: "Show help", Aliases: []string{"help"}},
-		{Method: "commands", Desc: "List all available commands"},
-		{Method: "command", Desc: "Show help for a specific command"},
+		{
+			Method:   "commands",
+			Desc:     "List all available commands (add json=true for machine-readable output)",
+			Usage:    "magex help:commands [json=true]",
+			Examples: []string{"magex help:commands", "magex help:commands json=true"},
+		},
+		{
+			Method:   "command",
+			Desc:     "Show help for a specific command (add json=true for machine-readable output)",
+			Usage:    "magex help:command command=<name> [json=true]",
+			Examples: []string{"magex help:command command=test:run", "magex help:command command=test:run json=true", "magex help:command command=test"},
+		},
 		{Method: "examples", Desc: "Show usage examples"},
 		{Method: "gettingstarted", Desc: "Getting started guide"},
 		{Method: "completions", Desc: "Setup shell completions"},
@@ -456,9 +466,9 @@ func testMethodBindings(t mage.Test) map[string]MethodBinding {
 		"parallel":    {NoArgs: t.Parallel},
 		"nolint":      {NoArgs: t.NoLint},
 		"cinorace":    {NoArgs: t.CINoRace},
-		"run":         {NoArgs: t.Run},
-		"coverage":    {WithArgs: t.Coverage},
-		"vet":         {NoArgs: t.Vet},
+		// "run" is registered separately in registerTestCommands with WithArgs + Options + test:specific alias
+		"coverage": {WithArgs: t.Coverage},
+		"vet":      {NoArgs: t.Vet},
 	}
 }
 
@@ -638,8 +648,8 @@ func configureMethodBindings(c mage.Configure) map[string]MethodBinding {
 func helpMethodBindings(h mage.Help) map[string]MethodBinding {
 	return map[string]MethodBinding{
 		"default":        {NoArgs: h.Default},
-		"commands":       {NoArgs: h.Commands},
-		"command":        {NoArgs: h.Command},
+		"commands":       {WithArgs: h.Commands},
+		"command":        {WithArgs: h.Command},
 		"examples":       {NoArgs: h.Examples},
 		"gettingstarted": {NoArgs: h.GettingStarted},
 		"completions":    {NoArgs: h.Completions},
@@ -775,6 +785,43 @@ func registerBuildCommands(reg *registry.Registry) {
 func registerTestCommands(reg *registry.Registry) {
 	t := mage.Test{}
 	registerNamespaceCommands(reg, "test", "Test", getTestCommands(), testMethodBindings(t))
+
+	// Special case: test:run with Options + test:specific alias.
+	// Lets agents/users run a single test (-run pattern) and/or a single package.
+	reg.MustRegister(
+		registry.NewNamespaceCommand("test", "run").
+			WithDescription("Run a specific test by name and/or in a specific package").
+			WithLongDescription("Run a focused subset of the Go test suite.\n\n"+
+				"Both parameters are optional:\n"+
+				"  - name=<TestPattern>   passes -run <pattern> to `go test`\n"+
+				"  - pkg=<./path/...>     restricts execution to one package (default ./...)\n\n"+
+				"With no arguments, this runs `go test ./...` (every package).").
+			WithArgsFunc(t.Run).
+			WithCategory("Test").
+			WithAliases("test:specific").
+			WithUsage("magex test:run [name=<TestPattern>] [pkg=<./path>]").
+			WithExamples(
+				"magex test:run",
+				"magex test:run pkg=./internal/vault",
+				"magex test:run name=TestFoo",
+				"magex test:run name=TestFoo pkg=./internal/vault",
+				"magex test:specific name=TestFoo pkg=./internal/vault",
+			).
+			WithOptions(
+				registry.CommandOption{
+					Name:        "name",
+					Description: "Test name regex (passed to `go test -run`)",
+					Type:        "string",
+				},
+				registry.CommandOption{
+					Name:        "pkg",
+					Description: "Package path (e.g. ./internal/vault). Defaults to ./...",
+					Type:        "string",
+					Default:     "./...",
+				},
+			).
+			MustBuild(),
+	)
 }
 
 func registerLintCommands(reg *registry.Registry) {

@@ -321,7 +321,7 @@ func TestTestNamespaceCommands(t *testing.T) {
 		{"parallel", false},
 		{"nolint", false},
 		{"cinorace", false},
-		{"run", false},
+		{"run", true},      // Registered separately with ArgsFunc + test:specific alias + Options
 		{"coverage", true}, // Has ArgsFunc
 		{"vet", false},
 	}
@@ -2048,7 +2048,7 @@ func TestGetterFunctionsExpectedCounts(t *testing.T) {
 		expectedCount int
 	}{
 		{"getBuildCommands", getBuildCommands, 10},
-		{"getTestCommands", getTestCommands, 21},
+		{"getTestCommands", getTestCommands, 20}, // "run" is registered separately with Options + test:specific alias
 		{"getLintCommands", getLintCommands, 5},
 		{"getFormatCommands", getFormatCommands, 4},
 		{"getDepsCommands", getDepsCommands, 9},
@@ -2213,9 +2213,10 @@ func TestTotalCommandsFromGetters(t *testing.T) {
 		total += len(getter())
 	}
 
-	// Expected: 166 commands from data tables
-	assert.Equal(t, 166, total,
-		"Total commands from all getters should equal 166")
+	// Expected: 165 commands from data tables (test:run is registered separately
+	// via an explicit builder so it can carry Options + the test:specific alias).
+	assert.Equal(t, 165, total,
+		"Total commands from all getters should equal 165")
 }
 
 // BenchmarkGetterFunctions benchmarks the getter function calls

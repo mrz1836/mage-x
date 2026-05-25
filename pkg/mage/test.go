@@ -1934,10 +1934,31 @@ func fuzzResultsToError(results []fuzzTestResult) error {
 
 // Additional methods for Test namespace required by tests
 
-// Run runs tests
-func (Test) Run() error {
-	runner := GetRunner()
-	return runner.RunCmd("go", "test", "./...")
+// Run runs tests, optionally filtered by name and/or package.
+//
+// Supported params (key=value, space-separated):
+//
+//	name=<TestPattern>   passes -run <pattern> to go test
+//	pkg=<./path/...>     restricts execution to a specific package (defaults to ./...)
+//
+// Examples:
+//
+//	magex test:run                                # all tests in ./...
+//	magex test:run pkg=./internal/vault           # all tests in one package
+//	magex test:run name=TestFoo                   # named test across all packages
+//	magex test:run name=TestFoo pkg=./internal/vault
+func (Test) Run(args ...string) error {
+	params := utils.ParseParams(args)
+	name := utils.GetParam(params, "name", "")
+	pkg := utils.GetParam(params, "pkg", "./...")
+
+	cmdArgs := []string{"test"}
+	if name != "" {
+		cmdArgs = append(cmdArgs, "-run", name)
+	}
+	cmdArgs = append(cmdArgs, pkg)
+
+	return GetRunner().RunCmd("go", cmdArgs...)
 }
 
 // Coverage generates test coverage

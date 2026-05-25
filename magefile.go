@@ -591,7 +591,7 @@ func HelpDefault() error {
 // HelpCommands lists all available commands with descriptions
 func HelpCommands() error {
 	var h mage.Help
-	return h.Commands()
+	return h.Commands(getMageArgs()...)
 }
 
 // HelpExamples shows usage examples
@@ -615,7 +615,7 @@ func HelpCompletions() error {
 // HelpCommand shows help for a specific command
 func HelpCommand() error {
 	var h mage.Help
-	return h.Command()
+	return h.Command(getMageArgs()...)
 }
 
 // ShowHelp displays all available commands with beautiful MAGE-X formatting (clean output)
@@ -844,10 +844,10 @@ func (t Test) CINoRace() error {
 	return impl.CINoRace()
 }
 
-// Run runs tests
+// Run runs tests, optionally filtered by name= and/or pkg=
 func (t Test) Run() error {
 	var impl mage.Test
-	return impl.Run()
+	return impl.Run(getMageArgs()...)
 }
 
 // Coverage generates test coverage
