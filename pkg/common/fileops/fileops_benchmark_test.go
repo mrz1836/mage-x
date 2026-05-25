@@ -29,11 +29,13 @@ func BenchmarkFileOperations(b *testing.B) {
 		b.Run(fmt.Sprintf("WriteFile_%s", s.name), func(b *testing.B) {
 			tmpDir := b.TempDir()
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				testFile := filepath.Join(tmpDir, fmt.Sprintf("bench_%d.txt", i))
 				if err := ops.WriteFile(testFile, data, 0o644); err != nil {
 					b.Fatal(err)
 				}
+				i++
 			}
 		})
 
@@ -44,7 +46,7 @@ func BenchmarkFileOperations(b *testing.B) {
 				b.Fatal(err)
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if _, err := ops.ReadFile(testFile); err != nil {
 					b.Fatal(err)
 				}
@@ -76,11 +78,13 @@ func BenchmarkAtomicWrite(b *testing.B) {
 		b.Run(fmt.Sprintf("AtomicWrite_%s", s.name), func(b *testing.B) {
 			tmpDir := b.TempDir()
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				testFile := filepath.Join(tmpDir, fmt.Sprintf("atomic_%d.txt", i))
 				if err := safeOps.WriteFileAtomic(testFile, data, 0o644); err != nil {
 					b.Fatal(err)
 				}
+				i++
 			}
 		})
 
@@ -92,7 +96,7 @@ func BenchmarkAtomicWrite(b *testing.B) {
 				b.Fatal(err)
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if err := safeOps.WriteFileAtomic(testFile, data, 0o644); err != nil {
 					b.Fatal(err)
 				}
@@ -127,11 +131,13 @@ func BenchmarkCopy(b *testing.B) {
 				b.Fatal(err)
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				dstFile := filepath.Join(tmpDir, fmt.Sprintf("dest_%d.bin", i))
 				if err := ops.Copy(srcFile, dstFile); err != nil {
 					b.Fatal(err)
 				}
+				i++
 			}
 		})
 	}
@@ -173,7 +179,7 @@ func BenchmarkJSONMarshal(b *testing.B) {
 	}
 
 	b.Run("Marshal_Small", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if _, err := jsonOps.Marshal(smallData); err != nil {
 				b.Fatal(err)
 			}
@@ -181,7 +187,7 @@ func BenchmarkJSONMarshal(b *testing.B) {
 	})
 
 	b.Run("Marshal_Large", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if _, err := jsonOps.Marshal(largeData); err != nil {
 				b.Fatal(err)
 			}
@@ -189,7 +195,7 @@ func BenchmarkJSONMarshal(b *testing.B) {
 	})
 
 	b.Run("MarshalIndent_Small", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if _, err := jsonOps.MarshalIndent(smallData, "", "  "); err != nil {
 				b.Fatal(err)
 			}
@@ -197,7 +203,7 @@ func BenchmarkJSONMarshal(b *testing.B) {
 	})
 
 	b.Run("MarshalIndent_Large", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if _, err := jsonOps.MarshalIndent(largeData, "", "  "); err != nil {
 				b.Fatal(err)
 			}
@@ -215,7 +221,7 @@ func BenchmarkJSONMarshal(b *testing.B) {
 	}
 
 	b.Run("Unmarshal_Small", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			var result TestStruct
 			if err := jsonOps.Unmarshal(smallJSON, &result); err != nil {
 				b.Fatal(err)
@@ -224,7 +230,7 @@ func BenchmarkJSONMarshal(b *testing.B) {
 	})
 
 	b.Run("Unmarshal_Large", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			var result TestStruct
 			if err := jsonOps.Unmarshal(largeJSON, &result); err != nil {
 				b.Fatal(err)
@@ -269,7 +275,7 @@ func BenchmarkYAMLMarshal(b *testing.B) {
 	}
 
 	b.Run("Marshal_Small", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if _, err := yamlOps.Marshal(smallData); err != nil {
 				b.Fatal(err)
 			}
@@ -277,7 +283,7 @@ func BenchmarkYAMLMarshal(b *testing.B) {
 	})
 
 	b.Run("Marshal_Large", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if _, err := yamlOps.Marshal(largeData); err != nil {
 				b.Fatal(err)
 			}
@@ -295,7 +301,7 @@ func BenchmarkYAMLMarshal(b *testing.B) {
 	}
 
 	b.Run("Unmarshal_Small", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			var result TestStruct
 			if err := yamlOps.Unmarshal(smallYAML, &result); err != nil {
 				b.Fatal(err)
@@ -304,7 +310,7 @@ func BenchmarkYAMLMarshal(b *testing.B) {
 	})
 
 	b.Run("Unmarshal_Large", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			var result TestStruct
 			if err := yamlOps.Unmarshal(largeYAML, &result); err != nil {
 				b.Fatal(err)
@@ -317,7 +323,7 @@ func BenchmarkYAMLMarshal(b *testing.B) {
 func BenchmarkWriteJSONSafe(b *testing.B) {
 	ops := New()
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"name":    "benchmark",
 		"value":   42,
 		"tags":    []string{"a", "b", "c"},
@@ -327,22 +333,26 @@ func BenchmarkWriteJSONSafe(b *testing.B) {
 	b.Run("WriteJSONSafe", func(b *testing.B) {
 		tmpDir := b.TempDir()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			testFile := filepath.Join(tmpDir, fmt.Sprintf("safe_%d.json", i))
 			if err := ops.WriteJSONSafe(testFile, data); err != nil {
 				b.Fatal(err)
 			}
+			i++
 		}
 	})
 
 	b.Run("WriteJSONSafe_WithDirCreation", func(b *testing.B) {
 		tmpDir := b.TempDir()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			testFile := filepath.Join(tmpDir, fmt.Sprintf("dir_%d", i), "safe.json")
 			if err := ops.WriteJSONSafe(testFile, data); err != nil {
 				b.Fatal(err)
 			}
+			i++
 		}
 	})
 }
@@ -351,7 +361,7 @@ func BenchmarkWriteJSONSafe(b *testing.B) {
 func BenchmarkWriteYAMLSafe(b *testing.B) {
 	ops := New()
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"name":    "benchmark",
 		"value":   42,
 		"tags":    []string{"a", "b", "c"},
@@ -361,11 +371,13 @@ func BenchmarkWriteYAMLSafe(b *testing.B) {
 	b.Run("WriteYAMLSafe", func(b *testing.B) {
 		tmpDir := b.TempDir()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			testFile := filepath.Join(tmpDir, fmt.Sprintf("safe_%d.yaml", i))
 			if err := ops.WriteYAMLSafe(testFile, data); err != nil {
 				b.Fatal(err)
 			}
+			i++
 		}
 	})
 }
@@ -397,7 +409,7 @@ func BenchmarkLoadConfig(b *testing.B) {
 			b.Fatal(err)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			var result Config
 			if _, err := ops.LoadConfig([]string{configFile}, &result); err != nil {
 				b.Fatal(err)
@@ -412,7 +424,7 @@ func BenchmarkLoadConfig(b *testing.B) {
 			b.Fatal(err)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			var result Config
 			if _, err := ops.LoadConfig([]string{configFile}, &result); err != nil {
 				b.Fatal(err)
@@ -428,7 +440,7 @@ func BenchmarkLoadConfig(b *testing.B) {
 		}
 		nonexistent := filepath.Join(tmpDir, "nonexistent.yaml")
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			var result Config
 			if _, err := ops.LoadConfig([]string{nonexistent, configFile}, &result); err != nil {
 				b.Fatal(err)
@@ -448,7 +460,7 @@ func BenchmarkExists(b *testing.B) {
 			b.Fatal(err)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = ops.Exists(testFile)
 		}
 	})
@@ -457,7 +469,7 @@ func BenchmarkExists(b *testing.B) {
 		tmpDir := b.TempDir()
 		testFile := filepath.Join(tmpDir, "nonexistent.txt")
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = ops.Exists(testFile)
 		}
 	})
@@ -474,7 +486,7 @@ func BenchmarkStat(b *testing.B) {
 			b.Fatal(err)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if _, err := ops.Stat(testFile); err != nil {
 				b.Fatal(err)
 			}
@@ -484,7 +496,7 @@ func BenchmarkStat(b *testing.B) {
 	b.Run("Stat_Dir", func(b *testing.B) {
 		tmpDir := b.TempDir()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if _, err := ops.Stat(tmpDir); err != nil {
 				b.Fatal(err)
 			}
@@ -499,22 +511,26 @@ func BenchmarkMkdirAll(b *testing.B) {
 	b.Run("MkdirAll_Single", func(b *testing.B) {
 		tmpDir := b.TempDir()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			dir := filepath.Join(tmpDir, fmt.Sprintf("dir_%d", i))
 			if err := ops.MkdirAll(dir, 0o755); err != nil {
 				b.Fatal(err)
 			}
+			i++
 		}
 	})
 
 	b.Run("MkdirAll_Nested", func(b *testing.B) {
 		tmpDir := b.TempDir()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			dir := filepath.Join(tmpDir, fmt.Sprintf("a_%d", i), "b", "c", "d")
 			if err := ops.MkdirAll(dir, 0o755); err != nil {
 				b.Fatal(err)
 			}
+			i++
 		}
 	})
 }
@@ -529,14 +545,14 @@ func BenchmarkReadDir(b *testing.B) {
 		b.Run(fmt.Sprintf("ReadDir_%d_files", count), func(b *testing.B) {
 			tmpDir := b.TempDir()
 			// Create files
-			for i := 0; i < count; i++ {
+			for i := range count {
 				f := filepath.Join(tmpDir, fmt.Sprintf("file_%04d.txt", i))
 				if err := ops.WriteFile(f, []byte("x"), 0o644); err != nil {
 					b.Fatal(err)
 				}
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if _, err := ops.ReadDir(tmpDir); err != nil {
 					b.Fatal(err)
 				}

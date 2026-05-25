@@ -15,9 +15,9 @@ type mockReceiver struct{}
 // TestReporter implements gomock.TestReporter but doesn't enforce expectations
 type TestReporter struct{}
 
-func (tr TestReporter) Errorf(format string, args ...interface{}) {}
-func (tr TestReporter) Fatalf(format string, args ...interface{}) {}
-func (tr TestReporter) Helper()                                   {}
+func (tr TestReporter) Errorf(format string, args ...any) {}
+func (tr TestReporter) Fatalf(format string, args ...any) {}
+func (tr TestReporter) Helper()                           {}
 
 // Create a test controller that won't enforce missing call expectations
 func newTestController() *gomock.Controller {
@@ -48,18 +48,18 @@ func TestRecordCall(t *testing.T) {
 
 		tests := []struct {
 			name string
-			args []interface{}
+			args []any
 		}{
-			{"StringAndInt", []interface{}{"test", 42}},
-			{"NilValue", []interface{}{nil}},
-			{"EmptyString", []interface{}{""}},
-			{"MapValue", []interface{}{map[string]string{"key": "value"}}},
-			{"NoArgs", []interface{}{}},
+			{"StringAndInt", []any{"test", 42}},
+			{"NilValue", []any{nil}},
+			{"EmptyString", []any{""}},
+			{"MapValue", []any{map[string]string{"key": "value"}}},
+			{"NoArgs", []any{}},
 		}
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				methodType := reflect.TypeOf((func(...interface{}) interface{})(nil))
+				methodType := reflect.TypeOf((func(...any) any)(nil))
 				call := RecordCall(ctrl, receiver, "TestMethod", methodType, test.args...)
 				assert.NotNil(t, call, "RecordCall should work with %s", test.name)
 			})
@@ -91,7 +91,7 @@ func TestRecordNoArgsCall(t *testing.T) {
 			{"StringReturn", reflect.TypeOf((func() string)(nil))},
 			{"ErrorReturn", reflect.TypeOf((func() error)(nil))},
 			{"MultipleReturns", reflect.TypeOf((func() (string, error))(nil))},
-			{"InterfaceReturn", reflect.TypeOf((func() interface{})(nil))},
+			{"InterfaceReturn", reflect.TypeOf((func() any)(nil))},
 		}
 
 		for _, test := range tests {
@@ -132,8 +132,8 @@ func TestReflectionFunctionality(t *testing.T) {
 		// Test various method signatures with RecordCall
 		methodTypes := []reflect.Type{
 			reflect.TypeOf((func(string, int) error)(nil)),
-			reflect.TypeOf((func(interface{}) bool)(nil)),
-			reflect.TypeOf((func(...string) interface{})(nil)),
+			reflect.TypeOf((func(any) bool)(nil)),
+			reflect.TypeOf((func(...string) any)(nil)),
 		}
 
 		for i, methodType := range methodTypes {
@@ -145,7 +145,7 @@ func TestReflectionFunctionality(t *testing.T) {
 		returnTypes := []reflect.Type{
 			reflect.TypeOf((func() string)(nil)),
 			reflect.TypeOf((func() (string, error))(nil)),
-			reflect.TypeOf((func() interface{})(nil)),
+			reflect.TypeOf((func() any)(nil)),
 		}
 
 		for i, returnType := range returnTypes {
@@ -162,7 +162,7 @@ func TestEdgeCases(t *testing.T) {
 
 		// Test with multiple individual args (simulating variadic expansion)
 		methodType := reflect.TypeOf((func(string, int) error)(nil))
-		args := []interface{}{"variadic_test", 42}
+		args := []any{"variadic_test", 42}
 
 		call := RecordCall(ctrl, receiver, "MethodWithArgs", methodType, args...)
 		assert.NotNil(t, call, "Call should handle variadic args correctly")
@@ -209,8 +209,10 @@ func BenchmarkRecordCall(b *testing.B) {
 	methodType := reflect.TypeOf((func(string, int) error)(nil))
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		_ = RecordCall(ctrl, receiver, "MethodWithArgs", methodType, "benchmark", i)
+		i++
 	}
 }
 
@@ -220,7 +222,7 @@ func BenchmarkRecordNoArgsCall(b *testing.B) {
 	methodType := reflect.TypeOf((func() string)(nil))
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = RecordNoArgsCall(ctrl, receiver, "MethodNoArgs", methodType)
 	}
 }

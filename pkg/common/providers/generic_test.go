@@ -59,14 +59,14 @@ func TestProviderConcurrency(t *testing.T) {
 	const numGoroutines = 10
 	results := make(chan int, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			results <- p.Get()
 		}()
 	}
 
 	// Collect results
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		result := <-results
 		if result != 1 {
 			t.Errorf("Expected 1, got %d", result)
@@ -182,14 +182,14 @@ func TestPackageProviderConcurrency(t *testing.T) {
 	const numGoroutines = 20
 	results := make(chan int, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			results <- pp.Get()
 		}()
 	}
 
 	// Collect results
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		result := <-results
 		if result != 1 {
 			t.Errorf("Expected 1, got %d", result)
@@ -383,20 +383,20 @@ func TestProviderConcurrentSetGet(t *testing.T) {
 	wg.Add(numGoroutines * 2) // Half getters, half setters
 
 	// Start getter goroutines
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				_ = p.Get()
 			}
 		}()
 	}
 
 	// Start setter goroutines concurrently
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				p.Set("value-" + string(rune(id+'A'))) //nolint:gosec // G115: bounded test value, no overflow risk
 			}
 		}(i)

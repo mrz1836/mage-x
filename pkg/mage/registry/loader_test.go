@@ -377,7 +377,7 @@ func (Build) Darwin() error { return nil }
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := loader.parseMagefile(magefilePath)
 		if err != nil {
 			b.Fatalf("parseMagefile() failed: %v", err)
@@ -395,7 +395,7 @@ func BenchmarkExtractDescription(b *testing.B) {
 	doc := &ast.CommentGroup{List: comments}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		extractDescription(doc)
 	}
 }

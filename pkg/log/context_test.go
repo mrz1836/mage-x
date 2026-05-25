@@ -11,7 +11,7 @@ func TestGetRequestIDFromContext_AllKeys(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		key      interface{}
+		key      any
 		value    string
 		expected string
 	}{
@@ -122,7 +122,7 @@ func TestGetRequestIDFromContext_ConcurrentAccess(t *testing.T) {
 
 	results := make([]string, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()

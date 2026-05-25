@@ -114,7 +114,7 @@ func (suite *NamespaceInterfacesTestSuite) TestConcurrentAccess() {
 	var wg sync.WaitGroup
 
 	// Launch multiple goroutines that all try to get the registry
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
@@ -166,7 +166,7 @@ func (suite *NamespaceInterfacesTestSuite) TestConcurrentProviderSwitch() {
 	results := make([]*DefaultNamespaceRegistry, numReaders)
 
 	// Launch goroutines that only read the registry
-	for i := 0; i < numReaders; i++ {
+	for i := range numReaders {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
@@ -239,7 +239,7 @@ func TestNamespaceRegistryProviderInterface(t *testing.T) {
 // BenchmarkGetNamespaceRegistry benchmarks the registry getter performance
 func BenchmarkGetNamespaceRegistry(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		registry := GetNamespaceRegistry()
 		if registry == nil {
 			b.Fatal("Registry should not be nil")

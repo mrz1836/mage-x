@@ -1,7 +1,7 @@
 package mage
 
 import (
-	"sort"
+	"slices"
 	"testing"
 )
 
@@ -313,8 +313,8 @@ func TestListRegisteredTools(t *testing.T) {
 	}
 
 	// Sort both for comparison
-	sort.Strings(tools)
-	sort.Strings(expectedTools)
+	slices.Sort(tools)
+	slices.Sort(expectedTools)
 
 	for i, expected := range expectedTools {
 		if i >= len(tools) || tools[i] != expected {

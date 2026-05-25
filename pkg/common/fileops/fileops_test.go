@@ -324,7 +324,7 @@ func TestDefaultJSONOperatorErrorCases(t *testing.T) {
 	jsonOps := NewDefaultJSONOperator(fileOps)
 
 	t.Run("ReadJSON nonexistent file", func(t *testing.T) {
-		var result map[string]interface{}
+		var result map[string]any
 		err := jsonOps.ReadJSON(filepath.Join(tmpDir, "nonexistent.json"), &result)
 		require.Error(t, err, "Should error on nonexistent file")
 		assert.Contains(t, err.Error(), "failed to read file", "Error should mention file read failure")
@@ -359,7 +359,7 @@ func TestDefaultJSONOperatorErrorCases(t *testing.T) {
 
 	t.Run("Unmarshal invalid JSON", func(t *testing.T) {
 		invalidJSON := []byte("{ invalid json }")
-		var result map[string]interface{}
+		var result map[string]any
 		err := jsonOps.Unmarshal(invalidJSON, &result)
 		require.Error(t, err, "Should error on invalid JSON")
 	})
@@ -373,17 +373,17 @@ func TestDefaultJSONOperator(t *testing.T) {
 	jsonOps := NewDefaultJSONOperator(fileOps)
 
 	type TestStruct struct {
-		Name  string                 `json:"name"`
-		Value int                    `json:"value"`
-		Tags  []string               `json:"tags,omitempty"`
-		Meta  map[string]interface{} `json:"meta,omitempty"`
+		Name  string         `json:"name"`
+		Value int            `json:"value"`
+		Tags  []string       `json:"tags,omitempty"`
+		Meta  map[string]any `json:"meta,omitempty"`
 	}
 
 	testData := TestStruct{
 		Name:  "test",
 		Value: 42,
 		Tags:  []string{"tag1", "tag2"},
-		Meta:  map[string]interface{}{"key": "value", "count": float64(10)},
+		Meta:  map[string]any{"key": "value", "count": float64(10)},
 	}
 	testFile := filepath.Join(tmpDir, "test.json")
 
@@ -517,7 +517,7 @@ func TestDefaultYAMLOperatorErrorCases(t *testing.T) {
 	yamlOps := NewDefaultYAMLOperator(fileOps)
 
 	t.Run("ReadYAML nonexistent file", func(t *testing.T) {
-		var result map[string]interface{}
+		var result map[string]any
 		err := yamlOps.ReadYAML(filepath.Join(tmpDir, "nonexistent.yaml"), &result)
 		require.Error(t, err, "Should error on nonexistent file")
 		assert.Contains(t, err.Error(), "failed to read file", "Error should mention file read failure")
@@ -531,7 +531,7 @@ func TestDefaultYAMLOperatorErrorCases(t *testing.T) {
 
 	t.Run("Marshal unmarshalable data", func(t *testing.T) {
 		// Function types can't be marshaled to YAML and will panic
-		data := map[string]interface{}{
+		data := map[string]any{
 			"func": func() {},
 		}
 
@@ -543,7 +543,7 @@ func TestDefaultYAMLOperatorErrorCases(t *testing.T) {
 
 	t.Run("Unmarshal invalid YAML", func(t *testing.T) {
 		invalidYAML := []byte("invalid:\n  - yaml\n  - [unclosed")
-		var result map[string]interface{}
+		var result map[string]any
 		err := yamlOps.Unmarshal(invalidYAML, &result)
 		require.Error(t, err, "Should error on invalid YAML")
 	})
@@ -557,10 +557,10 @@ func TestDefaultYAMLOperator(t *testing.T) {
 	yamlOps := NewDefaultYAMLOperator(fileOps)
 
 	type TestStruct struct {
-		Name   string                 `yaml:"name"`
-		Value  int                    `yaml:"value"`
-		Tags   []string               `yaml:"tags,omitempty"`
-		Meta   map[string]interface{} `yaml:"meta,omitempty"`
+		Name   string         `yaml:"name"`
+		Value  int            `yaml:"value"`
+		Tags   []string       `yaml:"tags,omitempty"`
+		Meta   map[string]any `yaml:"meta,omitempty"`
 		Nested struct {
 			Field1 string `yaml:"field1"`
 			Field2 bool   `yaml:"field2"`
@@ -571,7 +571,7 @@ func TestDefaultYAMLOperator(t *testing.T) {
 		Name:  "test",
 		Value: 42,
 		Tags:  []string{"tag1", "tag2"},
-		Meta:  map[string]interface{}{"key": "value", "count": 10},
+		Meta:  map[string]any{"key": "value", "count": 10},
 	}
 	testData.Nested.Field1 = "nested value"
 	testData.Nested.Field2 = true
@@ -724,7 +724,7 @@ func TestSafeFileOperatorComprehensive(t *testing.T) {
 		errorChan := make(chan error, numGoroutines)
 
 		wg.Add(numGoroutines)
-		for i := 0; i < numGoroutines; i++ {
+		for i := range numGoroutines {
 			go func(index int) {
 				defer wg.Done()
 				testFile := filepath.Join(tmpDir, fmt.Sprintf("concurrent-%d.txt", index))
@@ -1087,7 +1087,7 @@ func TestMockFileOperations(t *testing.T) {
 
 		ops := NewWithOptions(mockFile, mockJSON, mockYAML, mockSafe)
 		paths := []string{"/nonexistent.json", "/existing.yaml"}
-		var dest map[string]interface{}
+		var dest map[string]any
 
 		// First path doesn't exist, second path exists and is YAML
 		mockFile.EXPECT().Exists("/nonexistent.json").Return(false)
@@ -1107,7 +1107,7 @@ func TestMockFileOperations(t *testing.T) {
 
 		ops := NewWithOptions(mockFile, mockJSON, mockYAML, mockSafe)
 		paths := []string{"/config"} // No extension
-		var dest map[string]interface{}
+		var dest map[string]any
 
 		// File exists, YAML fails, JSON succeeds
 		mockFile.EXPECT().Exists("/config").Return(true)

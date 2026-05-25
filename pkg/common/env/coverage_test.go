@@ -353,7 +353,7 @@ func TestPatternRule_ConcurrentValidation(t *testing.T) {
 
 	errChan := make(chan error, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(id int) {
 			defer wg.Done()
 			// Mix of valid and invalid values
@@ -441,7 +441,7 @@ func TestOneOfRule_ConcurrentValidation(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(id int) {
 			defer wg.Done()
 			// Mix of valid and invalid values

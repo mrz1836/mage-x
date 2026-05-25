@@ -114,7 +114,7 @@ type Validator interface {
 	Required(keys ...string) Validator
 	NotEmpty(keys ...string) Validator
 	Pattern(key, pattern string) Validator
-	Range(key string, minValue, maxValue interface{}) Validator
+	Range(key string, minValue, maxValue any) Validator
 	OneOf(key string, values ...string) Validator
 }
 

@@ -22,7 +22,7 @@ type TestingInterfaceMock struct {
 	tempDir      string
 	fatalfCalled bool
 	fatalfMsg    string
-	fatalfArgs   []interface{}
+	fatalfArgs   []any
 }
 
 func (m *TestingInterfaceMock) TempDir() string {
@@ -40,7 +40,7 @@ func (m *TestingInterfaceMock) Helper() {
 	// Mock implementation - does nothing
 }
 
-func (m *TestingInterfaceMock) Fatalf(format string, args ...interface{}) {
+func (m *TestingInterfaceMock) Fatalf(format string, args ...any) {
 	m.fatalfCalled = true
 	m.fatalfMsg = format
 	m.fatalfArgs = args
@@ -127,13 +127,13 @@ func (ts *TestUtilHelpersTestSuite) TestWithMockRunner() {
 	defer env.Cleanup()
 
 	// Create a simple runner getter/setter for testing
-	var currentRunner interface{} = "original"
+	var currentRunner any = "original"
 
-	getter := func() interface{} {
+	getter := func() any {
 		return currentRunner
 	}
 
-	setter := func(runner interface{}) error {
+	setter := func(runner any) error {
 		currentRunner = runner
 		return nil
 	}
@@ -157,11 +157,11 @@ func (ts *TestUtilHelpersTestSuite) TestWithMockRunnerSetterError() {
 	env := testutil.NewTestEnvironment(ts.mockT)
 	defer env.Cleanup()
 
-	setter := func(runner interface{}) error {
+	setter := func(runner any) error {
 		return errSetterTest
 	}
 
-	getter := func() interface{} {
+	getter := func() any {
 		return "original"
 	}
 
@@ -334,14 +334,14 @@ func (ts *TestUtilHelpersTestSuite) TestWithMockRunnerRestoreError() {
 	defer env.Cleanup()
 
 	// Create a getter/setter where setter fails on restore
-	var currentRunner interface{} = "original"
+	var currentRunner any = "original"
 	callCount := 0
 
-	getter := func() interface{} {
+	getter := func() any {
 		return currentRunner
 	}
 
-	setter := func(runner interface{}) error {
+	setter := func(runner any) error {
 		callCount++
 		if callCount == 2 { // Fail on restore (second call)
 			return errRestoreTest

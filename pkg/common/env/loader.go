@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -85,7 +85,7 @@ func LoadEnvDir(dirPath string, skipLocal bool) error {
 		return fmt.Errorf("%s: %w", dirPath, ErrNoEnvFiles)
 	}
 
-	sort.Strings(matches)
+	slices.Sort(matches)
 
 	for _, file := range matches {
 		if skipLocal && filepath.Base(file) == "99-local.env" {

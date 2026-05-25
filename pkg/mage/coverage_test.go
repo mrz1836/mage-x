@@ -245,10 +245,10 @@ project:
 
 	b := Build{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// buildIncremental should detect workspace mode
 			return b.buildIncremental(5, 100, "", false, "")
@@ -283,10 +283,10 @@ project:
 
 	b := Build{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			return b.buildMainsFirst(10, false, "", false, "")
 		},
@@ -313,10 +313,10 @@ project:
 
 	b := Build{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// Should stop after building mains
 			return b.buildMainsFirst(10, true, "", false, "")
@@ -346,10 +346,10 @@ project:
 
 	b := Build{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// buildSmart will select appropriate strategy based on resources
 			return b.buildSmart("", false, "")
@@ -376,10 +376,10 @@ project:
 
 	b := Build{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			return b.buildFull("", false, "")
 		},
@@ -405,10 +405,10 @@ project:
 
 	bench := Bench{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// Test with custom parameters to hit more code paths
 			return bench.TraceWithArgs("trace=custom.out", "time=5s", "verbose=true", "skip=TestSkip")
@@ -439,10 +439,10 @@ project:
 
 	bench := Bench{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// Test with custom parameters
 			return bench.SaveWithArgs("output=bench-custom.txt", "time=2s", "count=3", "verbose=true")
@@ -469,10 +469,10 @@ project:
 
 	bench := Bench{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// Test with custom profile path
 			return bench.CPUWithArgs("profile=custom-cpu.prof")
@@ -499,10 +499,10 @@ project:
 
 	bench := Bench{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// Test with custom profile path
 			return bench.MemWithArgs("profile=custom-mem.prof")
@@ -529,10 +529,10 @@ project:
 
 	bench := Bench{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// Test with custom profile paths
 			return bench.ProfileWithArgs("cpu-profile=custom.cpu", "mem-profile=custom.mem")
@@ -563,10 +563,10 @@ project:
 
 	bench := Bench{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// First run should create baseline
 			return bench.RegressionWithArgs()
@@ -605,10 +605,10 @@ project:
 
 	bench := Bench{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// Run with update-baseline flag
 			return bench.RegressionWithArgs("update-baseline=true")
@@ -659,10 +659,10 @@ project:
 
 	b := Build{}
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			return b.buildWorkspaceModules(false, "", "")
 		},
@@ -696,10 +696,10 @@ func TestDiscoverPackagesWithExclude(t *testing.T) {
 
 	b := Build{}
 	err = env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			// Exercise discoverPackages with exclude pattern
 			packages, discoverErr := b.discoverPackages("vendor")
@@ -743,10 +743,10 @@ func TestFindMainPackagesMultiple(t *testing.T) {
 
 	b := Build{}
 	err = env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			_, findErr := b.findMainPackages()
 			return findErr

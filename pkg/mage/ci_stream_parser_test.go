@@ -1307,7 +1307,7 @@ func TestNewStreamParserWithOptions(t *testing.T) {
 func BenchmarkStreamParser_SmallSuite(b *testing.B) {
 	// Simulate 100 tests
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		parser := NewStreamParser(20, true)
 		for j := 0; j < 100; j++ {
 			benchParseLine(parser, []byte(`{"Action":"run","Package":"pkg","Test":"Test`+string(rune(j))+`"}`))
@@ -1321,7 +1321,7 @@ func BenchmarkStreamParser_SmallSuite(b *testing.B) {
 func BenchmarkStreamParser_MediumSuite(b *testing.B) {
 	// Simulate 1000 tests
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		parser := NewStreamParser(20, true)
 		for j := 0; j < 1000; j++ {
 			testName := "Test" + string(rune(j%256)) + string(rune(j/256))
@@ -1336,7 +1336,7 @@ func BenchmarkStreamParser_MediumSuite(b *testing.B) {
 func BenchmarkStreamParser_LargeSuite(b *testing.B) {
 	// Simulate 5000 tests
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		parser := NewStreamParser(20, true)
 		for j := 0; j < 5000; j++ {
 			testName := "Test" + string(rune(j%256)) + string(rune((j/256)%256)) + string(rune(j/65536))
@@ -1351,7 +1351,7 @@ func BenchmarkStreamParser_LargeSuite(b *testing.B) {
 func BenchmarkStreamParser_WithFailures(b *testing.B) {
 	// Simulate suite with 10% failure rate
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		parser := NewStreamParser(20, true)
 		for j := 0; j < 1000; j++ {
 			testName := "Test" + string(rune(j%256)) + string(rune(j/256))
@@ -1520,7 +1520,7 @@ func TestRegexPatternEdgeCases(t *testing.T) {
 // T081: Benchmark for 10,000 test parsing performance
 func BenchmarkStreamParser_10000Tests(b *testing.B) {
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		parser := NewStreamParserWithOptions(StreamParserOptions{
 			ContextLines: 10,
 			Dedup:        true,
@@ -2099,7 +2099,7 @@ func TestStreamParser_GetStrategy_ThreadSafe(t *testing.T) {
 	done := make(chan bool, numGoroutines)
 
 	// Concurrent reads of strategy
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			defer func() { done <- true }()
 
@@ -2110,7 +2110,7 @@ func TestStreamParser_GetStrategy_ThreadSafe(t *testing.T) {
 	}
 
 	// Concurrent writes via SetStrategy
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(id int) {
 			defer func() { done <- true }()
 
@@ -2136,7 +2136,7 @@ func TestStreamParser_ConcurrentParsing(t *testing.T) {
 	const numGoroutines = 5
 	done := make(chan bool, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			defer func() { done <- true }()
 
@@ -2149,7 +2149,7 @@ func TestStreamParser_ConcurrentParsing(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		<-done
 	}
 }

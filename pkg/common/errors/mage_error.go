@@ -33,7 +33,7 @@ func NewMageError(message string) *DefaultMageError {
 		severity: SeverityError,
 		context: ErrorContext{
 			Timestamp: time.Now(),
-			Fields:    make(map[string]interface{}),
+			Fields:    make(map[string]any),
 		},
 	}
 }
@@ -71,7 +71,7 @@ func (e *DefaultMageError) Context() ErrorContext {
 	// Return a copy to prevent external modification
 	ctx := e.context
 	if e.context.Fields != nil {
-		ctx.Fields = make(map[string]interface{})
+		ctx.Fields = make(map[string]any)
 		for k, v := range e.context.Fields {
 			ctx.Fields[k] = v
 		}
@@ -121,32 +121,32 @@ func (e *DefaultMageError) WithContext(ctx *ErrorContext) MageError {
 		newErr.context = *ctx
 	}
 	if newErr.context.Fields == nil {
-		newErr.context.Fields = make(map[string]interface{})
+		newErr.context.Fields = make(map[string]any)
 	}
 	return newErr
 }
 
 // WithField adds a context field
-func (e *DefaultMageError) WithField(key string, value interface{}) MageError {
+func (e *DefaultMageError) WithField(key string, value any) MageError {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	newErr := e.clone()
 	if newErr.context.Fields == nil {
-		newErr.context.Fields = make(map[string]interface{})
+		newErr.context.Fields = make(map[string]any)
 	}
 	newErr.context.Fields[key] = value
 	return newErr
 }
 
 // WithFields adds multiple context fields
-func (e *DefaultMageError) WithFields(fields map[string]interface{}) MageError {
+func (e *DefaultMageError) WithFields(fields map[string]any) MageError {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	newErr := e.clone()
 	if newErr.context.Fields == nil {
-		newErr.context.Fields = make(map[string]interface{})
+		newErr.context.Fields = make(map[string]any)
 	}
 	for k, v := range fields {
 		newErr.context.Fields[k] = v
@@ -249,7 +249,7 @@ func (e *DefaultMageError) Is(target error) bool {
 }
 
 // As finds the first error in the chain that matches target
-func (e *DefaultMageError) As(target interface{}) bool {
+func (e *DefaultMageError) As(target any) bool {
 	if target == nil {
 		return false
 	}
@@ -267,7 +267,7 @@ func (e *DefaultMageError) As(target interface{}) bool {
 
 	// Try the cause chain
 	if e.cause != nil {
-		if causeErr, ok := e.cause.(interface{ As(target interface{}) bool }); ok {
+		if causeErr, ok := e.cause.(interface{ As(target any) bool }); ok {
 			return causeErr.As(target)
 		}
 	}
@@ -288,7 +288,7 @@ func (e *DefaultMageError) clone() *DefaultMageError {
 
 	// Deep copy fields
 	if e.context.Fields != nil {
-		newErr.context.Fields = make(map[string]interface{})
+		newErr.context.Fields = make(map[string]any)
 		for k, v := range e.context.Fields {
 			newErr.context.Fields[k] = v
 		}

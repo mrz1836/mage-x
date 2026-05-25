@@ -110,7 +110,7 @@ func (m *RealDefaultErrorMatcher) MatchType(target error) ErrorMatcher {
 }
 
 // MatchField adds a field matcher
-func (m *RealDefaultErrorMatcher) MatchField(key string, value interface{}) ErrorMatcher {
+func (m *RealDefaultErrorMatcher) MatchField(key string, value any) ErrorMatcher {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -204,7 +204,7 @@ func (m *DefaultErrorMatcher) MatchType(target error) ErrorMatcher {
 }
 
 // MatchField adds a matcher for errors with specific field values.
-func (m *DefaultErrorMatcher) MatchField(key string, value interface{}) ErrorMatcher {
+func (m *DefaultErrorMatcher) MatchField(key string, value any) ErrorMatcher {
 	return NewErrorMatcher().MatchField(key, value)
 }
 
@@ -266,7 +266,7 @@ func TypeMatcher(target error) ErrorMatcher {
 }
 
 // FieldMatcher creates a matcher for error fields
-func FieldMatcher(key string, value interface{}) ErrorMatcher {
+func FieldMatcher(key string, value any) ErrorMatcher {
 	return NewMatcher().MatchField(key, value)
 }
 

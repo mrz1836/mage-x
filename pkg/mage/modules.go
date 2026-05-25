@@ -1,11 +1,12 @@
 package mage
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -140,16 +141,15 @@ func getModuleNameFromFile(goModPath string) (string, error) {
 
 // sortModules sorts modules with root module first, then alphabetically by path
 func sortModules(modules []ModuleInfo) {
-	sort.Slice(modules, func(i, j int) bool {
+	slices.SortFunc(modules, func(a, b ModuleInfo) int {
 		// Root module (.) should always be first
-		if modules[i].Relative == "." {
-			return true
+		switch {
+		case a.Relative == ".":
+			return -1
+		case b.Relative == ".":
+			return 1
 		}
-		if modules[j].Relative == "." {
-			return false
-		}
-		// Otherwise sort alphabetically by relative path
-		return modules[i].Relative < modules[j].Relative
+		return cmp.Compare(a.Relative, b.Relative)
 	})
 }
 
@@ -580,13 +580,16 @@ func sortModulesByDependency(modules []ModuleInfo) ([]ModuleInfo, error) {
 
 // sortQueue sorts the queue with root module first, then alphabetically
 func sortQueue(queue []string, moduleByPath map[string]ModuleInfo) {
-	sort.Slice(queue, func(i, j int) bool {
-		mi := moduleByPath[queue[i]]
-		mj := moduleByPath[queue[j]]
-		if mi.IsRoot != mj.IsRoot {
-			return mi.IsRoot // Root module first
+	slices.SortFunc(queue, func(a, b string) int {
+		mi := moduleByPath[a]
+		mj := moduleByPath[b]
+		switch {
+		case mi.IsRoot && !mj.IsRoot:
+			return -1
+		case !mi.IsRoot && mj.IsRoot:
+			return 1
 		}
-		return queue[i] < queue[j] // Then alphabetically
+		return cmp.Compare(a, b)
 	})
 }
 

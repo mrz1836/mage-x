@@ -3,7 +3,7 @@ package mage
 import (
 	"os"
 	"path/filepath"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -633,7 +633,7 @@ func BenchmarkIssuesScanning(b *testing.B) {
 	lint := Lint{}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		err := lint.Issues()
 		if err != nil {
 			b.Fatalf("Issues() returned error: %v", err)
@@ -683,7 +683,7 @@ func BenchmarkScanForComments(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = scanForComments()
 	}
 }
@@ -728,7 +728,7 @@ func (m *SimpleMockCommandRunner) RunCmdOutputWithTimeout(timeout time.Duration,
 }
 
 // createTestCodebase creates a temporary directory with sample Go files for testing
-func createTestCodebase(t interface{}) string {
+func createTestCodebase(t any) string {
 	var tmpDir string
 	var err error
 
@@ -807,8 +807,8 @@ func TestUtils(t *testing.T) {
 
 // generateLargeMockOutput generates mock grep output for performance testing
 func generateLargeMockOutput(pattern string, count int) string {
-	var lines []string
-	for i := 0; i < count; i++ {
+	lines := make([]string, 0, count)
+	for range count {
 		line := ""
 		switch pattern {
 		case "TODO":
@@ -825,9 +825,9 @@ func generateLargeMockOutput(pattern string, count int) string {
 
 // generateNolintMockOutput generates mock nolint directive output
 func generateNolintMockOutput(count int) string {
-	var lines []string
+	lines := make([]string, 0, count)
 	tags := []string{"gocyclo", "unused", "deadcode", "forbidigo", "govet"}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		tag := tags[i%len(tags)]
 		line := strings.ReplaceAll("file%d.go:%d:	code() //nolint:%s", "%d", strings.Repeat("1", 3))
 		line = strings.ReplaceAll(line, "%s", tag)
@@ -838,9 +838,9 @@ func generateNolintMockOutput(count int) string {
 
 // generateSkipMockOutput generates mock test skip output
 func generateSkipMockOutput(count int) string {
-	var lines []string
+	lines := make([]string, 0, count)
 	messages := []string{"database not available", "requires external service", "slow test", "flaky test"}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		message := messages[i%len(messages)]
 		line := strings.ReplaceAll(`file%d_test.go:%d:	t.Skip("%s")`, "%d", strings.Repeat("1", 3))
 		line = strings.ReplaceAll(line, "%s", message)
@@ -851,8 +851,8 @@ func generateSkipMockOutput(count int) string {
 
 // generateDisabledFilesMock generates mock disabled files output
 func generateDisabledFilesMock(count int) string {
-	var lines []string
-	for i := 0; i < count; i++ {
+	lines := make([]string, 0, count)
+	for range count {
 		line := strings.ReplaceAll("./file%d.go.disabled", "%d", strings.Repeat("1", 3))
 		lines = append(lines, line)
 	}
@@ -880,7 +880,7 @@ func TestIssueCountStruct(t *testing.T) {
 	}
 
 	expectedFiles := []string{"file1.go", "file2.go"}
-	if !reflect.DeepEqual(issue.Files, expectedFiles) {
+	if !slices.Equal(issue.Files, expectedFiles) {
 		t.Errorf("Expected files %v, got %v", expectedFiles, issue.Files)
 	}
 }

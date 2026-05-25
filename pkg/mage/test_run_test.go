@@ -18,7 +18,7 @@ func TestTestRun_ArgHandling(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        []string
-		expectArgs  []interface{} // expected args to RunCmd ("go", ...)
+		expectArgs  []any // expected args to RunCmd ("go", ...)
 		runnerErr   error
 		wantErr     bool
 		wantErrorIs error
@@ -26,42 +26,42 @@ func TestTestRun_ArgHandling(t *testing.T) {
 		{
 			name:       "no args runs all packages",
 			args:       nil,
-			expectArgs: []interface{}{"go", "test", "./..."},
+			expectArgs: []any{"go", "test", "./..."},
 		},
 		{
 			name:       "empty args slice runs all packages",
 			args:       []string{},
-			expectArgs: []interface{}{"go", "test", "./..."},
+			expectArgs: []any{"go", "test", "./..."},
 		},
 		{
 			name:       "name only adds -run and defaults pkg to ./...",
 			args:       []string{"name=TestFoo"},
-			expectArgs: []interface{}{"go", "test", "-run", "TestFoo", "./..."},
+			expectArgs: []any{"go", "test", "-run", "TestFoo", "./..."},
 		},
 		{
 			name:       "pkg only restricts to that package",
 			args:       []string{"pkg=./pkg/mage"},
-			expectArgs: []interface{}{"go", "test", "./pkg/mage"},
+			expectArgs: []any{"go", "test", "./pkg/mage"},
 		},
 		{
 			name:       "name and pkg combine into -run + path",
 			args:       []string{"name=TestBuildDefault", "pkg=./pkg/mage"},
-			expectArgs: []interface{}{"go", "test", "-run", "TestBuildDefault", "./pkg/mage"},
+			expectArgs: []any{"go", "test", "-run", "TestBuildDefault", "./pkg/mage"},
 		},
 		{
 			name:       "pkg before name is order-independent",
 			args:       []string{"pkg=./pkg/utils", "name=TestParseParams"},
-			expectArgs: []interface{}{"go", "test", "-run", "TestParseParams", "./pkg/utils"},
+			expectArgs: []any{"go", "test", "-run", "TestParseParams", "./pkg/utils"},
 		},
 		{
 			name:       "unknown params are ignored",
 			args:       []string{"flavor=spicy", "name=TestX"},
-			expectArgs: []interface{}{"go", "test", "-run", "TestX", "./..."},
+			expectArgs: []any{"go", "test", "-run", "TestX", "./..."},
 		},
 		{
 			name:        "runner errors propagate",
 			args:        []string{"name=TestX"},
-			expectArgs:  []interface{}{"go", "test", "-run", "TestX", "./..."},
+			expectArgs:  []any{"go", "test", "-run", "TestX", "./..."},
 			runnerErr:   errBoom,
 			wantErr:     true,
 			wantErrorIs: errBoom,

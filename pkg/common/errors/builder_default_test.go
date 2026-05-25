@@ -179,7 +179,7 @@ func TestDefaultErrorBuilderWithField(t *testing.T) {
 func TestDefaultErrorBuilderWithFields(t *testing.T) {
 	t.Run("multiple fields at once", func(t *testing.T) {
 		builder := NewDefaultErrorBuilder()
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"key1": "value1",
 			"key2": 42,
 			"key3": true,
@@ -195,7 +195,7 @@ func TestDefaultErrorBuilderWithFields(t *testing.T) {
 
 	t.Run("empty map", func(t *testing.T) {
 		builder := NewDefaultErrorBuilder()
-		result := builder.WithFields(map[string]interface{}{})
+		result := builder.WithFields(map[string]any{})
 
 		mageErr := result.Build()
 		assert.NotNil(t, mageErr)
@@ -328,7 +328,7 @@ func TestDefaultErrorBuilderImplementsInterface(t *testing.T) {
 	builder = builder.WithSeverity(SeverityError)
 	builder = builder.WithContext(&ErrorContext{})
 	builder = builder.WithField("key", "value")
-	builder = builder.WithFields(map[string]interface{}{"k": "v"})
+	builder = builder.WithFields(map[string]any{"k": "v"})
 	builder = builder.WithCause(errDefaultBuilderCause)
 	builder = builder.WithOperation("op")
 	builder = builder.WithResource("res")

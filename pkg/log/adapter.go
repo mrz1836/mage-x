@@ -43,32 +43,32 @@ func NewCLIAdapter() *CLIAdapter {
 }
 
 // Debug logs a debug message
-func (a *CLIAdapter) Debug(format string, args ...interface{}) {
+func (a *CLIAdapter) Debug(format string, args ...any) {
 	a.log(LevelDebug, format, args...)
 }
 
 // Info logs an informational message
-func (a *CLIAdapter) Info(format string, args ...interface{}) {
+func (a *CLIAdapter) Info(format string, args ...any) {
 	a.log(LevelInfo, format, args...)
 }
 
 // Warn logs a warning message
-func (a *CLIAdapter) Warn(format string, args ...interface{}) {
+func (a *CLIAdapter) Warn(format string, args ...any) {
 	a.log(LevelWarn, format, args...)
 }
 
 // Error logs an error message
-func (a *CLIAdapter) Error(format string, args ...interface{}) {
+func (a *CLIAdapter) Error(format string, args ...any) {
 	a.log(LevelError, format, args...)
 }
 
 // Success logs a success message with emoji
-func (a *CLIAdapter) Success(format string, args ...interface{}) {
+func (a *CLIAdapter) Success(format string, args ...any) {
 	a.logWithEmoji(LevelInfo, "✅", format, args...)
 }
 
 // Fail logs a failure message with emoji
-func (a *CLIAdapter) Fail(format string, args ...interface{}) {
+func (a *CLIAdapter) Fail(format string, args ...any) {
 	a.logWithEmoji(LevelError, "❌", format, args...)
 }
 
@@ -150,7 +150,7 @@ func (a *CLIAdapter) WithPrefix(prefix string) Logger {
 }
 
 // WithField creates a new logger with an additional field
-func (a *CLIAdapter) WithField(key string, value interface{}) Logger {
+func (a *CLIAdapter) WithField(key string, value any) Logger {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -184,7 +184,7 @@ func (a *CLIAdapter) WithFields(fields Fields) Logger {
 }
 
 // log is the internal logging function
-func (a *CLIAdapter) log(level Level, format string, args ...interface{}) {
+func (a *CLIAdapter) log(level Level, format string, args ...any) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -228,7 +228,7 @@ func (a *CLIAdapter) log(level Level, format string, args ...interface{}) {
 }
 
 // logWithEmoji logs a message with an emoji prefix
-func (a *CLIAdapter) logWithEmoji(level Level, emoji, format string, args ...interface{}) {
+func (a *CLIAdapter) logWithEmoji(level Level, emoji, format string, args ...any) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -282,42 +282,42 @@ func NewStructuredAdapter() *StructuredAdapter {
 }
 
 // Debug logs a debug message
-func (a *StructuredAdapter) Debug(format string, args ...interface{}) {
+func (a *StructuredAdapter) Debug(format string, args ...any) {
 	a.log(LevelDebug, format, args...)
 }
 
 // Info logs an informational message
-func (a *StructuredAdapter) Info(format string, args ...interface{}) {
+func (a *StructuredAdapter) Info(format string, args ...any) {
 	a.log(LevelInfo, format, args...)
 }
 
 // Warn logs a warning message
-func (a *StructuredAdapter) Warn(format string, args ...interface{}) {
+func (a *StructuredAdapter) Warn(format string, args ...any) {
 	a.log(LevelWarn, format, args...)
 }
 
 // Error logs an error message
-func (a *StructuredAdapter) Error(format string, args ...interface{}) {
+func (a *StructuredAdapter) Error(format string, args ...any) {
 	a.log(LevelError, format, args...)
 }
 
 // DebugContext logs a debug message with context
-func (a *StructuredAdapter) DebugContext(ctx context.Context, format string, args ...interface{}) {
+func (a *StructuredAdapter) DebugContext(ctx context.Context, format string, args ...any) {
 	a.logWithContext(ctx, LevelDebug, format, args...)
 }
 
 // InfoContext logs an info message with context
-func (a *StructuredAdapter) InfoContext(ctx context.Context, format string, args ...interface{}) {
+func (a *StructuredAdapter) InfoContext(ctx context.Context, format string, args ...any) {
 	a.logWithContext(ctx, LevelInfo, format, args...)
 }
 
 // WarnContext logs a warning message with context
-func (a *StructuredAdapter) WarnContext(ctx context.Context, format string, args ...interface{}) {
+func (a *StructuredAdapter) WarnContext(ctx context.Context, format string, args ...any) {
 	a.logWithContext(ctx, LevelWarn, format, args...)
 }
 
 // ErrorContext logs an error message with context
-func (a *StructuredAdapter) ErrorContext(ctx context.Context, format string, args ...interface{}) {
+func (a *StructuredAdapter) ErrorContext(ctx context.Context, format string, args ...any) {
 	a.logWithContext(ctx, LevelError, format, args...)
 }
 
@@ -356,7 +356,7 @@ func (a *StructuredAdapter) WithPrefix(prefix string) Logger {
 }
 
 // WithField creates a new logger with an additional field
-func (a *StructuredAdapter) WithField(key string, value interface{}) Logger {
+func (a *StructuredAdapter) WithField(key string, value any) Logger {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -388,12 +388,12 @@ func (a *StructuredAdapter) WithFields(fields Fields) Logger {
 }
 
 // log is the internal logging function
-func (a *StructuredAdapter) log(level Level, format string, args ...interface{}) {
+func (a *StructuredAdapter) log(level Level, format string, args ...any) {
 	a.logWithContext(context.Background(), level, format, args...)
 }
 
 // logWithContext logs with context information
-func (a *StructuredAdapter) logWithContext(ctx context.Context, level Level, format string, args ...interface{}) {
+func (a *StructuredAdapter) logWithContext(ctx context.Context, level Level, format string, args ...any) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

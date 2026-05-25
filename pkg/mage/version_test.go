@@ -917,38 +917,38 @@ func (ts *VersionTestSuite) TestParameterHandling() {
 
 // Benchmark tests for performance validation
 func BenchmarkGetBuildInfo(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = getBuildInfo()
 	}
 }
 
 func BenchmarkGetVersionInfo(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = getVersionInfo()
 	}
 }
 
 func BenchmarkBumpVersion(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = bumpVersion("v1.2.3", "patch") //nolint:errcheck // Benchmark intentionally ignores errors
 	}
 }
 
 func BenchmarkGitOperations(b *testing.B) {
 	b.Run("IsGitRepo", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = isGitRepo()
 		}
 	})
 
 	b.Run("IsGitDirty", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = isGitDirty()
 		}
 	})
 
 	b.Run("GetCurrentGitTag", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = getCurrentGitTag()
 		}
 	})

@@ -555,7 +555,7 @@ func (ts *ConfigTestSuite) TestConfigStructValidation() {
 
 // Benchmark tests for performance validation
 func BenchmarkDefaultConfig(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = defaultConfig()
 	}
 }
@@ -570,7 +570,7 @@ func BenchmarkApplyEnvOverrides(b *testing.B) {
 	}()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		applyEnvOverrides(config)
 	}
 }
@@ -578,7 +578,7 @@ func BenchmarkApplyEnvOverrides(b *testing.B) {
 func BenchmarkGetConfig(b *testing.B) {
 	TestResetConfig()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		config, err := GetConfig()
 		require.NoError(b, err)
 		require.NotNil(b, config)

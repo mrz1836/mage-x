@@ -104,11 +104,11 @@ func TestMockBase(t *testing.T) {
 		mock := NewMockBase(t)
 
 		// Record some calls
-		args1 := []interface{}{"arg1", 42}
-		result1 := []interface{}{"result1"}
+		args1 := []any{"arg1", 42}
+		result1 := []any{"result1"}
 		mock.RecordCall("Method1", args1, result1, nil)
 
-		args2 := []interface{}{"arg2"}
+		args2 := []any{"arg2"}
 		testErr := errMockTestError
 		mock.RecordCall("Method2", args2, nil, testErr)
 
@@ -134,9 +134,9 @@ func TestMockBase(t *testing.T) {
 		mock := NewMockBase(t)
 
 		// Record calls for different methods
-		mock.RecordCall("Method1", []interface{}{"call1"}, nil, nil)
-		mock.RecordCall("Method2", []interface{}{"call2"}, nil, nil)
-		mock.RecordCall("Method1", []interface{}{"call3"}, nil, nil)
+		mock.RecordCall("Method1", []any{"call1"}, nil, nil)
+		mock.RecordCall("Method2", []any{"call2"}, nil, nil)
+		mock.RecordCall("Method1", []any{"call3"}, nil, nil)
 
 		// Get calls for specific method
 		method1Calls := mock.GetCallsForMethod("Method1")
@@ -179,8 +179,8 @@ func TestMockBase(t *testing.T) {
 		// Set up some state
 		mock.SetError(true)
 		mock.SetMethodError("TestMethod", testErr)
-		mock.RecordCall("Method1", []interface{}{"arg"}, nil, nil)
-		mock.RecordCall("Method2", []interface{}{"arg"}, nil, nil)
+		mock.RecordCall("Method1", []any{"arg"}, nil, nil)
+		mock.RecordCall("Method2", []any{"arg"}, nil, nil)
 
 		// Verify state is set
 		assert.True(t, mock.shouldError)
@@ -205,9 +205,9 @@ func TestMockBase(t *testing.T) {
 		assert.Nil(t, lastCall)
 
 		// Record some calls
-		mock.RecordCall("Method1", []interface{}{"first"}, nil, nil)
-		mock.RecordCall("Method2", []interface{}{"other"}, nil, nil)
-		mock.RecordCall("Method1", []interface{}{"last"}, nil, nil)
+		mock.RecordCall("Method1", []any{"first"}, nil, nil)
+		mock.RecordCall("Method2", []any{"other"}, nil, nil)
+		mock.RecordCall("Method1", []any{"last"}, nil, nil)
 
 		// Get last call for Method1
 		lastCall = mock.GetLastCall("Method1")
@@ -262,8 +262,8 @@ func TestMockBaseAssertions(t *testing.T) {
 		mock := NewMockBase(t)
 
 		// Record calls with different arguments
-		mock.RecordCall("TestMethod", []interface{}{"arg1", 42}, nil, nil)
-		mock.RecordCall("TestMethod", []interface{}{"arg2", 24}, nil, nil)
+		mock.RecordCall("TestMethod", []any{"arg1", 42}, nil, nil)
+		mock.RecordCall("TestMethod", []any{"arg2", 24}, nil, nil)
 
 		// This should pass
 		mock.AssertCalledWith("TestMethod", "arg1", 42)
@@ -287,10 +287,10 @@ func TestMockBaseAssertions(t *testing.T) {
 		mock := NewMockBase(t)
 
 		// Test argument matching
-		assert.True(t, mock.argsMatch([]interface{}{"a", 1}, []interface{}{"a", 1}))
-		assert.False(t, mock.argsMatch([]interface{}{"a", 1}, []interface{}{"b", 1}))
-		assert.False(t, mock.argsMatch([]interface{}{"a"}, []interface{}{"a", 1}))
-		assert.True(t, mock.argsMatch([]interface{}{}, []interface{}{}))
+		assert.True(t, mock.argsMatch([]any{"a", 1}, []any{"a", 1}))
+		assert.False(t, mock.argsMatch([]any{"a", 1}, []any{"b", 1}))
+		assert.False(t, mock.argsMatch([]any{"a"}, []any{"a", 1}))
+		assert.True(t, mock.argsMatch([]any{}, []any{}))
 	})
 
 	t.Run("argEquals", func(t *testing.T) {
@@ -457,7 +457,7 @@ func TestMockValidator(t *testing.T) {
 		validator := NewMockValidator(t)
 
 		// Set validation rule
-		validator.SetValidationRule("required_field", func(value interface{}) error {
+		validator.SetValidationRule("required_field", func(value any) error {
 			if value == nil || value == "" {
 				return errFieldRequired
 			}
@@ -517,7 +517,7 @@ func TestMockHandler(t *testing.T) {
 		handler := NewMockHandler(t)
 
 		// Set handler function
-		handler.SetHandler("process", func(args ...interface{}) (interface{}, error) {
+		handler.SetHandler("process", func(args ...any) (any, error) {
 			if len(args) == 0 {
 				return nil, errNoArgsProvided
 			}
@@ -544,7 +544,7 @@ func TestMockHandler(t *testing.T) {
 		handler := NewMockHandler(t)
 
 		// Set handler function
-		handler.SetHandler("test_method", func(args ...interface{}) (interface{}, error) {
+		handler.SetHandler("test_method", func(args ...any) (any, error) {
 			return "success", nil
 		})
 
@@ -579,12 +579,12 @@ func TestMockBaseUsageExample(t *testing.T) {
 		// Add custom method
 		customMethod := func(input string) (string, error) {
 			if err := custom.ShouldReturnError("CustomMethod"); err != nil {
-				custom.RecordCall("CustomMethod", []interface{}{input}, nil, err)
+				custom.RecordCall("CustomMethod", []any{input}, nil, err)
 				return "", err
 			}
 
 			result := "processed: " + input
-			custom.RecordCall("CustomMethod", []interface{}{input}, []interface{}{result}, nil)
+			custom.RecordCall("CustomMethod", []any{input}, []any{result}, nil)
 			return result, nil
 		}
 

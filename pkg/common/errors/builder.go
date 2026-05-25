@@ -18,14 +18,14 @@ func NewErrorBuilder() *RealDefaultErrorBuilder {
 			severity: SeverityError,
 			context: ErrorContext{
 				Timestamp: time.Now(),
-				Fields:    make(map[string]interface{}),
+				Fields:    make(map[string]any),
 			},
 		},
 	}
 }
 
 // WithMessage sets the error message
-func (b *RealDefaultErrorBuilder) WithMessage(format string, args ...interface{}) ErrorBuilder {
+func (b *RealDefaultErrorBuilder) WithMessage(format string, args ...any) ErrorBuilder {
 	if len(args) > 0 {
 		b.err.message = fmt.Sprintf(format, args...)
 	} else {
@@ -52,7 +52,7 @@ func (b *RealDefaultErrorBuilder) WithContext(ctx *ErrorContext) ErrorBuilder {
 		b.err.context = *ctx
 	}
 	if b.err.context.Fields == nil {
-		b.err.context.Fields = make(map[string]interface{})
+		b.err.context.Fields = make(map[string]any)
 	}
 	if b.err.context.Timestamp.IsZero() {
 		b.err.context.Timestamp = time.Now()
@@ -61,18 +61,18 @@ func (b *RealDefaultErrorBuilder) WithContext(ctx *ErrorContext) ErrorBuilder {
 }
 
 // WithField adds a field to the error context
-func (b *RealDefaultErrorBuilder) WithField(key string, value interface{}) ErrorBuilder {
+func (b *RealDefaultErrorBuilder) WithField(key string, value any) ErrorBuilder {
 	if b.err.context.Fields == nil {
-		b.err.context.Fields = make(map[string]interface{})
+		b.err.context.Fields = make(map[string]any)
 	}
 	b.err.context.Fields[key] = value
 	return b
 }
 
 // WithFields adds multiple fields to the error context
-func (b *RealDefaultErrorBuilder) WithFields(fields map[string]interface{}) ErrorBuilder {
+func (b *RealDefaultErrorBuilder) WithFields(fields map[string]any) ErrorBuilder {
 	if b.err.context.Fields == nil {
-		b.err.context.Fields = make(map[string]interface{})
+		b.err.context.Fields = make(map[string]any)
 	}
 	for k, v := range fields {
 		b.err.context.Fields[k] = v
@@ -118,7 +118,7 @@ func (b *RealDefaultErrorBuilder) Build() MageError {
 
 	// Deep copy fields
 	if b.err.context.Fields != nil {
-		result.context.Fields = make(map[string]interface{})
+		result.context.Fields = make(map[string]any)
 		for k, v := range b.err.context.Fields {
 			result.context.Fields[k] = v
 		}

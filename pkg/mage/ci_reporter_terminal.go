@@ -17,7 +17,7 @@ type terminalReporter struct {
 
 // write is a helper that writes to output and logs errors to stderr
 // Terminal output errors are non-critical and shouldn't fail the test run
-func (r *terminalReporter) write(format string, args ...interface{}) {
+func (r *terminalReporter) write(format string, args ...any) {
 	if _, err := fmt.Fprintf(r.output, format, args...); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to write to terminal: %v\n", err)
 	}

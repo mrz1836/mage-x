@@ -51,10 +51,10 @@ func (ts *DocsCoverageTestSuite) TearDownTest() {
 // Helper to set up mock runner and execute function
 func (ts *DocsCoverageTestSuite) withMockRunner(fn func() error) error {
 	return ts.env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		fn,
 	)
 }
@@ -368,10 +368,10 @@ func TestDetectBestDocTool(t *testing.T) {
 	env.Runner.On("RunCmdOutput", mock.Anything, mock.Anything).Return("", nil).Maybe()
 
 	_ = env.WithMockRunner( //nolint:errcheck // exercise code path only
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			tool := detectBestDocTool()
 			// Should return one of the doc tools or empty
@@ -392,10 +392,10 @@ func TestAutoDetectDocTool(t *testing.T) {
 	env.Runner.On("RunCmdOutput", mock.Anything, mock.Anything).Return("", nil).Maybe()
 
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			_ = autoDetectDocTool()
 			return nil

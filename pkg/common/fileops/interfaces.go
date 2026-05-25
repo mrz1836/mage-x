@@ -45,37 +45,37 @@ type FileOperator interface {
 // JSONOperator provides an interface for JSON operations
 type JSONOperator interface {
 	// Marshal converts a value to JSON
-	Marshal(v interface{}) ([]byte, error)
+	Marshal(v any) ([]byte, error)
 
 	// MarshalIndent converts a value to formatted JSON
-	MarshalIndent(v interface{}, prefix, indent string) ([]byte, error)
+	MarshalIndent(v any, prefix, indent string) ([]byte, error)
 
 	// Unmarshal parses JSON data into a value
-	Unmarshal(data []byte, v interface{}) error
+	Unmarshal(data []byte, v any) error
 
 	// WriteJSON writes a value as JSON to a file
-	WriteJSON(path string, v interface{}) error
+	WriteJSON(path string, v any) error
 
 	// WriteJSONIndent writes a value as formatted JSON to a file
-	WriteJSONIndent(path string, v interface{}, prefix, indent string) error
+	WriteJSONIndent(path string, v any, prefix, indent string) error
 
 	// ReadJSON reads JSON from a file into a value
-	ReadJSON(path string, v interface{}) error
+	ReadJSON(path string, v any) error
 }
 
 // YAMLOperator provides an interface for YAML operations
 type YAMLOperator interface {
 	// Marshal converts a value to YAML
-	Marshal(v interface{}) ([]byte, error)
+	Marshal(v any) ([]byte, error)
 
 	// Unmarshal parses YAML data into a value
-	Unmarshal(data []byte, v interface{}) error
+	Unmarshal(data []byte, v any) error
 
 	// WriteYAML writes a value as YAML to a file
-	WriteYAML(path string, v interface{}) error
+	WriteYAML(path string, v any) error
 
 	// ReadYAML reads YAML from a file into a value
-	ReadYAML(path string, v interface{}) error
+	ReadYAML(path string, v any) error
 }
 
 // SafeFileOperator provides atomic file operations

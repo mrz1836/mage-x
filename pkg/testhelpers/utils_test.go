@@ -185,7 +185,7 @@ func TestEventuallyTrue(t *testing.T) {
 
 func TestEventuallyEquals(t *testing.T) {
 	t.Run("equals immediately", func(t *testing.T) {
-		EventuallyEquals(t, func() interface{} {
+		EventuallyEquals(t, func() any {
 			return 42
 		}, 42, 100*time.Millisecond)
 	})
@@ -193,7 +193,7 @@ func TestEventuallyEquals(t *testing.T) {
 	t.Run("equals after delay", func(t *testing.T) {
 		counter := 0
 
-		EventuallyEquals(t, func() interface{} {
+		EventuallyEquals(t, func() any {
 			counter++
 			return counter
 		}, 3, 200*time.Millisecond)

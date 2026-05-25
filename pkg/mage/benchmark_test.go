@@ -25,26 +25,32 @@ func BenchmarkCommandExecution(b *testing.B) {
 	runner := NewSecureCommandRunner()
 
 	b.Run("echo", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			if err := runner.RunCmd("echo", "test"); err != nil {
 				b.Logf("RunCmd error (expected in benchmark): %v", err)
 			}
+			i++
 		}
 	})
 
 	b.Run("echo_with_output", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			if _, err := runner.RunCmdOutput("echo", "test"); err != nil {
 				b.Logf("RunCmdOutput error (expected in benchmark): %v", err)
 			}
+			i++
 		}
 	})
 
 	b.Run("true_command", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			if err := runner.RunCmd("true"); err != nil {
 				b.Logf("RunCmd error (expected in benchmark): %v", err)
 			}
+			i++
 		}
 	})
 }
@@ -93,17 +99,21 @@ lint:
 	}
 
 	b.Run("LoadConfig", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			// Reset config for benchmark
 			_, _ = GetConfig() //nolint:errcheck // Benchmark ignores errors
+			i++
 		}
 	})
 
 	b.Run("SaveConfig", func(b *testing.B) {
 		config, _ := GetConfig() //nolint:errcheck // Benchmark ignores errors
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = SaveConfig(config) //nolint:errcheck // Benchmark ignores errors
+			i++
 		}
 	})
 
@@ -112,8 +122,10 @@ lint:
 		testCfg, _ := GetConfig() //nolint:errcheck // Benchmark ignores errors
 		_ = testCfg
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_, _ = GetConfig() //nolint:errcheck // Benchmark ignores errors
+			i++
 		}
 	})
 }
@@ -122,25 +134,27 @@ lint:
 func BenchmarkNamespaceCreation(b *testing.B) {
 	benchmarks := []struct {
 		name    string
-		factory func() interface{}
+		factory func() any
 	}{
-		{"Build", func() interface{} { return NewBuildNamespace() }},
-		{"Test", func() interface{} { return NewTestNamespace() }},
-		{"Lint", func() interface{} { return NewLintNamespace() }},
-		{"Format", func() interface{} { return NewFormatNamespace() }},
-		{"Deps", func() interface{} { return NewDepsNamespace() }},
-		{"Git", func() interface{} { return NewGitNamespace() }},
-		{"Tools", func() interface{} { return NewToolsNamespace() }},
-		{"Generate", func() interface{} { return NewGenerateNamespace() }},
-		{"Update", func() interface{} { return NewUpdateNamespace() }},
-		{"Mod", func() interface{} { return NewModNamespace() }},
-		{"Metrics", func() interface{} { return NewMetricsNamespace() }},
+		{"Build", func() any { return NewBuildNamespace() }},
+		{"Test", func() any { return NewTestNamespace() }},
+		{"Lint", func() any { return NewLintNamespace() }},
+		{"Format", func() any { return NewFormatNamespace() }},
+		{"Deps", func() any { return NewDepsNamespace() }},
+		{"Git", func() any { return NewGitNamespace() }},
+		{"Tools", func() any { return NewToolsNamespace() }},
+		{"Generate", func() any { return NewGenerateNamespace() }},
+		{"Update", func() any { return NewUpdateNamespace() }},
+		{"Mod", func() any { return NewModNamespace() }},
+		{"Metrics", func() any { return NewMetricsNamespace() }},
 	}
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				_ = bm.factory()
+				i++
 			}
 		})
 	}
@@ -185,6 +199,7 @@ func createBenchmarkTestData() benchmarkTestData {
 
 // runWriteBenchmarks runs all write benchmarks
 func runWriteBenchmarks(b *testing.B, tempDir string, fileOps *fileops.FileOps, data benchmarkTestData) {
+	b.Helper()
 	b.Run("WriteSmallFile", func(b *testing.B) {
 		benchmarkWriteFile(b, tempDir, fileOps, "small.txt", data.small)
 	})
@@ -200,7 +215,9 @@ func runWriteBenchmarks(b *testing.B, tempDir string, fileOps *fileops.FileOps, 
 
 // benchmarkWriteFile benchmarks writing a file of specific size
 func benchmarkWriteFile(b *testing.B, tempDir string, fileOps *fileops.FileOps, filename string, data []byte) {
-	for i := 0; i < b.N; i++ {
+	b.Helper()
+	i := 0
+	for b.Loop() {
 		path := filepath.Join(tempDir, filename)
 		if err := fileOps.File.WriteFile(path, data, 0o644); err != nil {
 			b.Logf("WriteFile error: %v", err)
@@ -208,11 +225,13 @@ func benchmarkWriteFile(b *testing.B, tempDir string, fileOps *fileops.FileOps, 
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			b.Logf("Remove error: %v", err)
 		}
+		i++
 	}
 }
 
 // runReadBenchmarks runs all read benchmarks
 func runReadBenchmarks(b *testing.B, tempDir string, fileOps *fileops.FileOps, data benchmarkTestData) {
+	b.Helper()
 	readPaths := setupReadFiles(b, tempDir, fileOps, data)
 
 	b.Run("ReadSmallFile", func(b *testing.B) {
@@ -237,6 +256,7 @@ type readFilePaths struct {
 
 // setupReadFiles creates files for read benchmarks
 func setupReadFiles(b *testing.B, tempDir string, fileOps *fileops.FileOps, data benchmarkTestData) readFilePaths {
+	b.Helper()
 	paths := readFilePaths{
 		small:  filepath.Join(tempDir, "read_small.txt"),
 		medium: filepath.Join(tempDir, "read_medium.txt"),
@@ -258,10 +278,13 @@ func setupReadFiles(b *testing.B, tempDir string, fileOps *fileops.FileOps, data
 
 // benchmarkReadFile benchmarks reading a specific file
 func benchmarkReadFile(b *testing.B, fileOps *fileops.FileOps, path string) {
-	for i := 0; i < b.N; i++ {
+	b.Helper()
+	i := 0
+	for b.Loop() {
 		if _, err := fileOps.File.ReadFile(path); err != nil {
 			b.Logf("ReadFile error: %v", err)
 		}
+		i++
 	}
 }
 
@@ -275,38 +298,50 @@ func BenchmarkStringOperations(b *testing.B) {
 	}
 
 	b.Run("truncateString_short", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = truncateString(shortString, 10)
+			i++
 		}
 	})
 
 	b.Run("truncateString_medium", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = truncateString(mediumString, 20)
+			i++
 		}
 	})
 
 	b.Run("truncateString_long", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = truncateString(longString, 50)
+			i++
 		}
 	})
 
 	b.Run("formatBytes_small", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = formatBytes(512)
+			i++
 		}
 	})
 
 	b.Run("formatBytes_medium", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = formatBytes(1024 * 1024)
+			i++
 		}
 	})
 
 	b.Run("formatBytes_large", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = formatBytes(1024 * 1024 * 1024)
+			i++
 		}
 	})
 }
@@ -349,21 +384,27 @@ func BenchmarkBuildOperations(b *testing.B) {
 	b.Run("buildFlags", func(b *testing.B) {
 		config, _ := GetConfig() //nolint:errcheck // Benchmark ignores errors
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = buildFlags(config)
+			i++
 		}
 	})
 
 	b.Run("getVersion", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = getVersion()
+			i++
 		}
 	})
 
 	b.Run("getCommit", func(b *testing.B) {
 		// This might fail if not in a git repo, but benchmark the attempt
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = getCommit()
+			i++
 		}
 	})
 }
@@ -379,19 +420,23 @@ func BenchmarkPlatformParsing(b *testing.B) {
 	}
 
 	b.Run("parsePlatform", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			for _, p := range platforms {
 				_, _ = utils.ParsePlatform(p) //nolint:errcheck // Benchmark ignores errors
 			}
+			i++
 		}
 	})
 
 	b.Run("generateOutputPath", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			for _, p := range platforms {
 				platform, _ := utils.ParsePlatform(p) //nolint:errcheck // Benchmark ignores errors
 				_ = generateOutputPath("myapp", platform.OS, platform.Arch)
 			}
+			i++
 		}
 	})
 }
@@ -428,15 +473,19 @@ func BenchmarkConcurrentOperations(b *testing.B) {
 func BenchmarkMemoryAllocation(b *testing.B) {
 	b.Run("namespace_allocation", func(b *testing.B) {
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = NewBuildNamespace()
+			i++
 		}
 	})
 
 	b.Run("config_allocation", func(b *testing.B) {
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = defaultConfig()
+			i++
 		}
 	})
 }

@@ -346,7 +346,7 @@ type DeployTarget struct {
 	Environment string
 	Provider    string
 	Region      string
-	Config      map[string]interface{}
+	Config      map[string]any
 }
 
 // DeployOptions contains deployment configuration
@@ -775,7 +775,7 @@ type Application struct {
 	Name        string
 	Version     string
 	Image       string
-	Config      map[string]interface{}
+	Config      map[string]any
 	Secrets     map[string]string
 	Environment map[string]string
 }
@@ -784,5 +784,5 @@ type Application struct {
 type IEnvironment struct {
 	Name   string
 	Region string
-	Config map[string]interface{}
+	Config map[string]any
 }

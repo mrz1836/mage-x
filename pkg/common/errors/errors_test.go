@@ -59,7 +59,7 @@ func TestMageError_Context(t *testing.T) {
 		WithOperation("build").
 		WithResource("main.go").
 		WithField("exitCode", 1).
-		WithFields(map[string]interface{}{
+		WithFields(map[string]any{
 			"command":  "go build",
 			"duration": "5s",
 		}).
@@ -474,7 +474,7 @@ func TestSeverity(t *testing.T) {
 
 func BenchmarkErrorCreation(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		err := New("test error")
 		if err == nil {
 			b.Fatal("expected error, got nil")
@@ -484,7 +484,7 @@ func BenchmarkErrorCreation(b *testing.B) {
 
 func BenchmarkErrorBuilder(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		err := NewBuilder().
 			WithMessage("test error").
 			WithCode(ErrBuildFailed).
@@ -507,7 +507,7 @@ func BenchmarkErrorFormatting(b *testing.B) {
 	formatter := NewFormatter()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = formatter.Format(err)
 	}
 }
@@ -519,7 +519,7 @@ func BenchmarkErrorChain(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		chain := NewChain()
 		for _, err := range errs {
 			chain = chain.Add(err)

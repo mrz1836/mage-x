@@ -1119,7 +1119,7 @@ func findNextAvailableVersion(initialVersion, bumpType string) (string, []string
 	currentVersion := initialVersion
 
 	// Try up to maxAutoIncrementAttempts times to find an available version (safety limit)
-	for i := 0; i < maxAutoIncrementAttempts; i++ {
+	for range maxAutoIncrementAttempts {
 		exists, pointsToHEAD, err := checkLocalTagExists(currentVersion)
 		if err != nil {
 			return "", nil, err

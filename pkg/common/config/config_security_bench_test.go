@@ -108,12 +108,12 @@ func validatePathSecurityBench(path string) error {
 func BenchmarkConfigSecurityValidation(b *testing.B) {
 	testConfigs := []struct {
 		name   string
-		config map[string]interface{}
+		config map[string]any
 	}{
 		{
 			name: "small_config",
-			config: map[string]interface{}{
-				"app": map[string]interface{}{
+			config: map[string]any{
+				"app": map[string]any{
 					"name": "test-app",
 					"port": 8080,
 				},
@@ -129,8 +129,8 @@ func BenchmarkConfigSecurityValidation(b *testing.B) {
 		},
 		{
 			name: "config_with_secrets",
-			config: map[string]interface{}{
-				"database": map[string]interface{}{
+			config: map[string]any{
+				"database": map[string]any{
 					"password": "secret123",
 					"api_key":  "key-abc123",
 				},
@@ -142,7 +142,7 @@ func BenchmarkConfigSecurityValidation(b *testing.B) {
 		},
 		{
 			name: "config_with_commands",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"scripts": []string{
 					"echo hello",
 					"ls -la",
@@ -150,7 +150,7 @@ func BenchmarkConfigSecurityValidation(b *testing.B) {
 					"$(whoami)",
 					"`id`",
 				},
-				"commands": map[string]interface{}{
+				"commands": map[string]any{
 					"build": "go build -o app",
 					"test":  "go test ./...",
 				},
@@ -164,7 +164,7 @@ func BenchmarkConfigSecurityValidation(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				// Benchmark basic validation - ignore errors for performance measurement
 				_ = loader.Validate(tc.config) //nolint:errcheck // performance benchmark ignores validation errors
 			}
@@ -212,7 +212,7 @@ func BenchmarkConfigSecurityPathValidation(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				for _, path := range tc.paths {
 					_ = validatePathSecurityBench(path) //nolint:errcheck // benchmark focuses on performance not error handling
 				}
@@ -251,7 +251,7 @@ func BenchmarkConfigSecurityEnvironmentFiltering(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Use reflection to access the private filterEnvironment method
 		// Since we can't access it directly, we'll simulate the filtering logic
 		filteredCount := 0
@@ -316,7 +316,7 @@ func BenchmarkConfigSecurityCommandValidation(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				for _, cmd := range tc.commands {
 					_ = validateCommandArgSecurityBench(cmd) //nolint:errcheck // benchmark focuses on performance not error handling
 				}
@@ -391,8 +391,8 @@ func BenchmarkConfigSecurityConfigLoad(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 
-			for i := 0; i < b.N; i++ {
-				var config map[string]interface{}
+			for b.Loop() {
+				var config map[string]any
 				err := loader.LoadFrom(configPath, &config)
 				if err != nil {
 					b.Fatalf("Failed to load config: %v", err)
@@ -449,7 +449,7 @@ func BenchmarkConfigSecurityExpansion(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				for _, path := range tc.paths {
 					_ = config.expandPath(path)
 				}
@@ -542,7 +542,7 @@ func BenchmarkConfigSecurityTypeConversion(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				tc.fn()
 			}
 		})
@@ -551,12 +551,12 @@ func BenchmarkConfigSecurityTypeConversion(b *testing.B) {
 
 // Helper functions for benchmarks
 
-func generateTestConfig(size int) map[string]interface{} {
-	config := make(map[string]interface{})
+func generateTestConfig(size int) map[string]any {
+	config := make(map[string]any)
 
-	for i := 0; i < size; i++ {
+	for i := range size {
 		config[fmt.Sprintf("key_%d", i)] = fmt.Sprintf("value_%d", i)
-		config[fmt.Sprintf("nested_%d", i)] = map[string]interface{}{
+		config[fmt.Sprintf("nested_%d", i)] = map[string]any{
 			"inner_key": fmt.Sprintf("inner_value_%d", i),
 			"number":    i,
 			"boolean":   i%2 == 0,
@@ -580,7 +580,7 @@ func generateMixedCommands(count int) []string {
 		"$(whoami)", "`id`", "rm -rf /", "cat /etc/passwd", "command; evil",
 	}
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		if i%3 == 0 {
 			commands[i] = dangerousCommands[i%len(dangerousCommands)]
 		} else {
@@ -601,7 +601,7 @@ func generateYAMLConfig(size int) string {
 	sb.WriteString("  port: 5432\n")
 	sb.WriteString("config:\n")
 
-	for i := 0; i < size; i++ {
+	for i := range size {
 		fmt.Fprintf(&sb, "  key_%d: value_%d\n", i, i)
 		if i%10 == 0 {
 			fmt.Fprintf(&sb, "  nested_%d:\n", i)
@@ -614,26 +614,26 @@ func generateYAMLConfig(size int) string {
 }
 
 func generateJSONConfig(size int) string {
-	config := map[string]interface{}{
-		"app": map[string]interface{}{
+	config := map[string]any{
+		"app": map[string]any{
 			"name": "benchmark-app",
 			"port": 8080,
 		},
-		"database": map[string]interface{}{
+		"database": map[string]any{
 			"host": "localhost",
 			"port": 5432,
 		},
-		"config": make(map[string]interface{}),
+		"config": make(map[string]any),
 	}
 
-	configMap, ok := config["config"].(map[string]interface{})
+	configMap, ok := config["config"].(map[string]any)
 	if !ok {
 		panic("config field is not a map[string]interface{}")
 	}
-	for i := 0; i < size; i++ {
+	for i := range size {
 		configMap[fmt.Sprintf("key_%d", i)] = fmt.Sprintf("value_%d", i)
 		if i%10 == 0 {
-			configMap[fmt.Sprintf("nested_%d", i)] = map[string]interface{}{
+			configMap[fmt.Sprintf("nested_%d", i)] = map[string]any{
 				"inner_key": fmt.Sprintf("inner_value_%d", i),
 				"number":    i,
 			}

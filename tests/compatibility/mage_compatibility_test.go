@@ -543,7 +543,7 @@ func main() {
 func BenchmarkMagexVsMageStartup(b *testing.B) {
 	// Benchmark magex startup time (should be comparable to mage)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		cmd := exec.CommandContext(context.Background(), "./magex", "-version")
 		_, err := cmd.Output()
 		if err != nil {

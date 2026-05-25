@@ -28,7 +28,7 @@ type MockSecureExecutor struct {
 }
 
 func (m *MockSecureExecutor) Execute(ctx context.Context, name string, args ...string) error {
-	callArgs := make([]interface{}, 0, 2+len(args))
+	callArgs := make([]any, 0, 2+len(args))
 	callArgs = append(callArgs, ctx, name)
 	for _, arg := range args {
 		callArgs = append(callArgs, arg)
@@ -38,7 +38,7 @@ func (m *MockSecureExecutor) Execute(ctx context.Context, name string, args ...s
 }
 
 func (m *MockSecureExecutor) ExecuteOutput(ctx context.Context, name string, args ...string) (string, error) {
-	callArgs := make([]interface{}, 0, 2+len(args))
+	callArgs := make([]any, 0, 2+len(args))
 	callArgs = append(callArgs, ctx, name)
 	for _, arg := range args {
 		callArgs = append(callArgs, arg)
@@ -48,7 +48,7 @@ func (m *MockSecureExecutor) ExecuteOutput(ctx context.Context, name string, arg
 }
 
 func (m *MockSecureExecutor) ExecuteWithRetry(ctx context.Context, maxRetries int, initialDelay time.Duration, name string, args ...string) error {
-	callArgs := make([]interface{}, 0, 4+len(args))
+	callArgs := make([]any, 0, 4+len(args))
 	callArgs = append(callArgs, ctx, maxRetries, initialDelay, name)
 	for _, arg := range args {
 		callArgs = append(callArgs, arg)
@@ -58,7 +58,7 @@ func (m *MockSecureExecutor) ExecuteWithRetry(ctx context.Context, maxRetries in
 }
 
 func (m *MockSecureExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) error {
-	callArgs := make([]interface{}, 0, 3+len(args))
+	callArgs := make([]any, 0, 3+len(args))
 	callArgs = append(callArgs, ctx, env, name)
 	for _, arg := range args {
 		callArgs = append(callArgs, arg)

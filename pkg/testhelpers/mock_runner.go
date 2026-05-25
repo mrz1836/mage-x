@@ -424,7 +424,7 @@ func (m *MockRunner) argsMatch(a, b []string) bool {
 
 // TestingT is a subset of testing.T for assertions
 type TestingT interface {
-	Errorf(format string, args ...interface{})
+	Errorf(format string, args ...any)
 	Helper()
 }
 

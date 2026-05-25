@@ -399,13 +399,13 @@ nested:
 	})
 
 	t.Run("Load", func(t *testing.T) {
-		var config map[string]interface{}
+		var config map[string]any
 		err := source.Load(&config)
 		require.NoError(t, err, "Failed to load config")
 
 		assert.Equal(t, "value", config["test"], "Should load top-level value")
 
-		nested, ok := config["nested"].(map[string]interface{})
+		nested, ok := config["nested"].(map[string]any)
 		require.True(t, ok, "Nested should be a map")
 		assert.Equal(t, "nestedvalue", nested["key"], "Should load nested value")
 	})
@@ -1018,7 +1018,7 @@ settings:
 
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var config BenchConfig
 		err := loader.LoadFrom(configPath, &config)
 		if err != nil {

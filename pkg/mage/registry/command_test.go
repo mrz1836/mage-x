@@ -461,7 +461,7 @@ func BenchmarkCommand_Execute(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := cmd.Execute(); err != nil {
 			// Benchmark execution error is expected, continue
 			_ = err
@@ -478,7 +478,7 @@ func BenchmarkCommand_ExecuteWithArgs(b *testing.B) {
 	args := []string{"arg1", "arg2", "arg3"}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := cmd.Execute(args...); err != nil {
 			// Benchmark execution error is expected, continue
 			_ = err
@@ -493,14 +493,14 @@ func BenchmarkCommand_FullName(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		cmd.FullName()
 	}
 }
 
 func BenchmarkCommandBuilder_Build(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := NewCommand("bench").
 			WithDescription("Benchmark command").
 			WithFunc(func() error { return nil }).

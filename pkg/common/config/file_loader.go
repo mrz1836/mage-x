@@ -33,7 +33,7 @@ func NewFileLoader(defaultPath string) Loader {
 }
 
 // Load loads configuration from multiple file paths with fallback
-func (f *FileConfigLoader) Load(paths []string, dest interface{}) (string, error) {
+func (f *FileConfigLoader) Load(paths []string, dest any) (string, error) {
 	// Add default path if provided
 	if f.defaultPath != "" {
 		paths = append([]string{f.defaultPath}, paths...)
@@ -49,7 +49,7 @@ func (f *FileConfigLoader) Load(paths []string, dest interface{}) (string, error
 }
 
 // LoadFrom loads configuration from a specific file
-func (f *FileConfigLoader) LoadFrom(path string, dest interface{}) error {
+func (f *FileConfigLoader) LoadFrom(path string, dest any) error {
 	// Clean and validate the path
 	cleanPath := filepath.Clean(path)
 	if !filepath.IsAbs(cleanPath) {
@@ -80,7 +80,7 @@ func (f *FileConfigLoader) LoadFrom(path string, dest interface{}) error {
 }
 
 // Save saves configuration to a file in the specified format
-func (f *FileConfigLoader) Save(path string, data interface{}, format string) error {
+func (f *FileConfigLoader) Save(path string, data any, format string) error {
 	var content []byte
 	var err error
 
@@ -107,7 +107,7 @@ func (f *FileConfigLoader) Save(path string, data interface{}, format string) er
 }
 
 // Validate validates configuration data
-func (f *FileConfigLoader) Validate(data interface{}) error {
+func (f *FileConfigLoader) Validate(data any) error {
 	// Basic validation - ensure data is not nil
 	if data == nil {
 		return ErrConfigDataNil

@@ -432,7 +432,7 @@ func FuzzConfigSecurityMaliciousContent(f *testing.F) {
 		defer cancel()
 
 		done := make(chan error, 1)
-		var config map[string]interface{}
+		var config map[string]any
 
 		go func() {
 			loader := NewDefaultConfigLoader()
@@ -511,7 +511,7 @@ func FuzzConfigSecurityFileOperations(f *testing.F) {
 		loader := NewDefaultConfigLoader()
 
 		// Test LoadFrom (should handle non-existent files gracefully)
-		var config map[string]interface{}
+		var config map[string]any
 		err := loader.LoadFrom(path, &config)
 		// Most paths will fail to load - that's expected
 		if err == nil {
@@ -520,7 +520,7 @@ func FuzzConfigSecurityFileOperations(f *testing.F) {
 		}
 
 		// Test Save operation (should validate paths)
-		testData := map[string]interface{}{
+		testData := map[string]any{
 			"test": "value",
 		}
 
@@ -553,12 +553,14 @@ func FuzzConfigSecurityFileOperations(f *testing.F) {
 
 // Helper functions for fuzz testing
 
-func validateConfigSecurityFuzz(t *testing.T, config map[string]interface{}) {
+func validateConfigSecurityFuzz(t *testing.T, config map[string]any) {
+	t.Helper()
 	// Recursively validate configuration for security issues
 	validateMapSecurityFuzz(t, config, "root")
 }
 
-func validateMapSecurityFuzz(t *testing.T, m map[string]interface{}, path string) {
+func validateMapSecurityFuzz(t *testing.T, m map[string]any, path string) {
+	t.Helper()
 	for key, value := range m {
 		currentPath := path + "." + key
 
@@ -586,11 +588,11 @@ func validateMapSecurityFuzz(t *testing.T, m map[string]interface{}, path string
 				}
 			}
 
-		case map[string]interface{}:
+		case map[string]any:
 			// Recursively validate nested maps
 			validateMapSecurityFuzz(t, v, currentPath)
 
-		case []interface{}:
+		case []any:
 			// Validate array elements
 			for i, item := range v {
 				itemPath := fmt.Sprintf("%s[%d]", currentPath, i)

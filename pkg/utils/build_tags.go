@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -72,7 +72,7 @@ func (d *BuildTagsDiscovery) DiscoverBuildTags() ([]string, error) {
 	for tag := range tagSet {
 		tags = append(tags, tag)
 	}
-	sort.Strings(tags)
+	slices.Sort(tags)
 
 	return tags, nil
 }

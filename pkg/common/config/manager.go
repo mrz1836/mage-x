@@ -1,9 +1,10 @@
 package config
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 )
 
@@ -40,13 +41,13 @@ func (m *DefaultConfigManager) AddSource(source Source) {
 	m.sources = append(m.sources, source)
 
 	// Sort sources by priority (highest first)
-	sort.Slice(m.sources, func(i, j int) bool {
-		return m.sources[i].Priority() > m.sources[j].Priority()
+	slices.SortFunc(m.sources, func(a, b Source) int {
+		return cmp.Compare(b.Priority(), a.Priority())
 	})
 }
 
 // LoadConfig loads configuration from all sources in priority order
-func (m *DefaultConfigManager) LoadConfig(dest interface{}) error {
+func (m *DefaultConfigManager) LoadConfig(dest any) error {
 	m.mu.RLock()
 	sources := make([]Source, len(m.sources))
 	copy(sources, m.sources)
@@ -88,12 +89,12 @@ func (m *DefaultConfigManager) LoadConfig(dest interface{}) error {
 }
 
 // Reload reloads configuration from all sources
-func (m *DefaultConfigManager) Reload(dest interface{}) error {
+func (m *DefaultConfigManager) Reload(dest any) error {
 	return m.LoadConfig(dest)
 }
 
 // Watch watches for configuration changes (basic implementation)
-func (m *DefaultConfigManager) Watch(_ func(interface{})) error {
+func (m *DefaultConfigManager) Watch(_ func(any)) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -163,27 +164,27 @@ func (m *DefaultConfigManager) SetValidator(validator Validator) {
 
 // BasicValidator implements Validator with basic validation rules
 type BasicValidator struct {
-	rules map[string]interface{}
+	rules map[string]any
 }
 
 // NewBasicValidator creates a new basic validator
 func NewBasicValidator() *BasicValidator {
 	return &BasicValidator{
-		rules: make(map[string]interface{}),
+		rules: make(map[string]any),
 	}
 }
 
 // Validate validates configuration data
-func (v *BasicValidator) Validate(data interface{}) error {
+func (v *BasicValidator) Validate(data any) error {
 	if data == nil {
 		return errConfigDataCannotNil
 	}
 
 	// Validate using configured rules
 	switch d := data.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		return v.validateMap(d)
-	case *map[string]interface{}:
+	case *map[string]any:
 		if d != nil {
 			return v.validateMap(*d)
 		}
@@ -195,7 +196,7 @@ func (v *BasicValidator) Validate(data interface{}) error {
 }
 
 // validateMap validates a map using field-specific rules
-func (v *BasicValidator) validateMap(data map[string]interface{}) error {
+func (v *BasicValidator) validateMap(data map[string]any) error {
 	for fieldName, value := range data {
 		if err := v.ValidateField(fieldName, value); err != nil {
 			return fmt.Errorf("validation failed for field '%s': %w", fieldName, err)
@@ -205,7 +206,7 @@ func (v *BasicValidator) validateMap(data map[string]interface{}) error {
 }
 
 // ValidateField validates a specific field
-func (v *BasicValidator) ValidateField(fieldName string, value interface{}) error {
+func (v *BasicValidator) ValidateField(fieldName string, value any) error {
 	rule, exists := v.rules[fieldName]
 	if !exists {
 		return nil // No rule for this field
@@ -213,7 +214,7 @@ func (v *BasicValidator) ValidateField(fieldName string, value interface{}) erro
 
 	// Simple validation based on rule type
 	switch r := rule.(type) {
-	case func(interface{}) error:
+	case func(any) error:
 		return r(value)
 	default:
 		return nil
@@ -221,8 +222,8 @@ func (v *BasicValidator) ValidateField(fieldName string, value interface{}) erro
 }
 
 // GetValidationRules returns current validation rules
-func (v *BasicValidator) GetValidationRules() map[string]interface{} {
-	result := make(map[string]interface{})
+func (v *BasicValidator) GetValidationRules() map[string]any {
+	result := make(map[string]any)
 	for k, v := range v.rules {
 		result[k] = v
 	}
@@ -230,8 +231,8 @@ func (v *BasicValidator) GetValidationRules() map[string]interface{} {
 }
 
 // SetValidationRules sets validation rules
-func (v *BasicValidator) SetValidationRules(rules map[string]interface{}) {
-	v.rules = make(map[string]interface{})
+func (v *BasicValidator) SetValidationRules(rules map[string]any) {
+	v.rules = make(map[string]any)
 	for k, val := range rules {
 		v.rules[k] = val
 	}

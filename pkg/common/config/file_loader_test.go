@@ -141,7 +141,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_LoadFrom_JSON() {
 		nestedJSON := `{"outer": {"inner": "value"}, "count": 10}`
 		jsonFile := ts.createTestFile("nested.json", nestedJSON)
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := ts.loader.LoadFrom(jsonFile, &result)
 
 		ts.Require().NoError(err)
@@ -151,7 +151,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_LoadFrom_JSON() {
 	ts.Run("loads empty JSON object", func() {
 		jsonFile := ts.createTestFile("empty.json", "{}")
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := ts.loader.LoadFrom(jsonFile, &result)
 
 		ts.Require().NoError(err)
@@ -189,7 +189,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_LoadFrom_YAML() {
 count: 10`
 		yamlFile := ts.createTestFile("nested.yaml", nestedYAML)
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := ts.loader.LoadFrom(yamlFile, &result)
 
 		ts.Require().NoError(err)
@@ -199,7 +199,7 @@ count: 10`
 	ts.Run("loads empty YAML file", func() {
 		yamlFile := ts.createTestFile("empty.yaml", "")
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := ts.loader.LoadFrom(yamlFile, &result)
 
 		ts.Require().NoError(err)
@@ -361,8 +361,8 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Save() {
 	})
 
 	ts.Run("saves complex nested structure", func() {
-		complexData := map[string]interface{}{
-			"nested": map[string]interface{}{
+		complexData := map[string]any{
+			"nested": map[string]any{
 				"key": "value",
 			},
 			"array": []string{"a", "b", "c"},
@@ -373,7 +373,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Save() {
 		ts.Require().NoError(err)
 
 		// Verify round-trip
-		var loaded map[string]interface{}
+		var loaded map[string]any
 		loadErr := ts.loader.LoadFrom(outputPath, &loaded)
 		ts.Require().NoError(loadErr)
 		ts.Require().NotNil(loaded["nested"])
@@ -381,7 +381,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Save() {
 
 	ts.Run("returns error when marshaling fails for JSON", func() {
 		// Channels cannot be marshaled to JSON
-		unmarshalable := map[string]interface{}{
+		unmarshalable := map[string]any{
 			"channel": make(chan int),
 		}
 		outputPath := filepath.Join(ts.tempDir, "fail.json")
@@ -427,7 +427,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Validate() {
 	})
 
 	ts.Run("passes for non-nil map", func() {
-		data := map[string]interface{}{"key": "value"}
+		data := map[string]any{"key": "value"}
 
 		err := ts.loader.Validate(data)
 		ts.Require().NoError(err)
@@ -441,7 +441,7 @@ func (ts *FileLoaderTestSuite) TestFileConfigLoader_Validate() {
 	})
 
 	ts.Run("passes for empty map", func() {
-		data := map[string]interface{}{}
+		data := map[string]any{}
 
 		err := ts.loader.Validate(data)
 		ts.Require().NoError(err)

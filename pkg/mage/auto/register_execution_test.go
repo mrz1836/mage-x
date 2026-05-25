@@ -208,7 +208,7 @@ func TestWrapperFunctionDelegation(t *testing.T) {
 	tests := []struct {
 		name          string
 		wrapperFunc   func() error
-		namespaceType interface{}
+		namespaceType any
 		methodName    string
 	}{
 		{
@@ -283,8 +283,8 @@ func TestAllTypeAliasesExist(t *testing.T) {
 	// List of all type aliases defined in register.go
 	typeAliases := []struct {
 		name         string
-		aliasType    interface{}
-		expectedType interface{}
+		aliasType    any
+		expectedType any
 	}{
 		{"Build", Build{}, mage.Build{}},
 		{"Test", Test{}, mage.Test{}},
@@ -372,7 +372,7 @@ func BenchmarkWrapperFunctionNamespaceCreation(b *testing.B) {
 	// Benchmark the overhead of creating namespace instances
 	// This is what wrapper functions do on each call
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var build mage.Build
 		_ = build
 	}
@@ -381,7 +381,7 @@ func BenchmarkWrapperFunctionNamespaceCreation(b *testing.B) {
 func BenchmarkTypeAliasInstanceCreation(b *testing.B) {
 	// Benchmark creating instances via type aliases
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var build Build
 		_ = build
 	}

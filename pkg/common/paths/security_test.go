@@ -655,7 +655,7 @@ func BenchmarkSecurityValidation(b *testing.B) {
 			pb := NewPathBuilder(tt.path)
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_ = pb.IsSafe()
 			}
 		})
@@ -674,7 +674,7 @@ func BenchmarkSecurityValidation(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			for _, path := range paths {
 				_ = validator.Validate(path)
 			}

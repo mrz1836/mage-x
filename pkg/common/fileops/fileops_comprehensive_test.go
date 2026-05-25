@@ -250,7 +250,7 @@ func TestConcurrentAtomicWrites(t *testing.T) {
 		errChan := make(chan error, numGoroutines)
 
 		wg.Add(numGoroutines)
-		for i := 0; i < numGoroutines; i++ {
+		for i := range numGoroutines {
 			go func(index int) {
 				defer wg.Done()
 				// Each goroutine writes a unique identifier
@@ -295,7 +295,7 @@ func TestConcurrentAtomicWrites(t *testing.T) {
 
 		// Start readers (they will stop when done is closed)
 		readerWg.Add(numReaders)
-		for i := 0; i < numReaders; i++ {
+		for range numReaders {
 			go func() {
 				defer readerWg.Done()
 				for {
@@ -318,10 +318,10 @@ func TestConcurrentAtomicWrites(t *testing.T) {
 
 		// Start writers
 		writerWg.Add(numWriters)
-		for i := 0; i < numWriters; i++ {
+		for i := range numWriters {
 			go func(index int) {
 				defer writerWg.Done()
-				for j := 0; j < numIterations; j++ {
+				for j := range numIterations {
 					data := []byte(fmt.Sprintf("writer-%02d-iteration-%02d-data", index, j))
 					_ = safeOps.WriteFileAtomic(targetFile, data, 0o644) //nolint:errcheck // Intentionally ignoring errors in stress test
 				}
@@ -607,10 +607,10 @@ func TestEncodingEdgeCases(t *testing.T) {
 	t.Run("DeeplyNestedJSON", func(t *testing.T) {
 		// Create deeply nested structure
 		depth := 100
-		nested := make(map[string]interface{})
+		nested := make(map[string]any)
 		current := nested
 		for i := 0; i < depth-1; i++ {
-			inner := make(map[string]interface{})
+			inner := make(map[string]any)
 			current[fmt.Sprintf("level%d", i)] = inner
 			current = inner
 		}
@@ -620,7 +620,7 @@ func TestEncodingEdgeCases(t *testing.T) {
 		err := jsonOps.WriteJSON(testFile, nested)
 		require.NoError(t, err, "Should write deeply nested JSON")
 
-		var result map[string]interface{}
+		var result map[string]any
 		err = jsonOps.ReadJSON(testFile, &result)
 		require.NoError(t, err, "Should read deeply nested JSON")
 		assert.NotNil(t, result)
@@ -641,7 +641,7 @@ actual_number: 123
 		err := fileOps.WriteFile(testFile, []byte(yamlData), 0o644)
 		require.NoError(t, err)
 
-		var result map[string]interface{}
+		var result map[string]any
 		err = yamlOps.ReadYAML(testFile, &result)
 		require.NoError(t, err, "Should read YAML with type coercion")
 
@@ -707,7 +707,7 @@ production:
 			err := fileOps.WriteFile(testFile, []byte(tc.data), 0o644)
 			require.NoError(t, err)
 
-			var result interface{}
+			var result any
 			err = jsonOps.ReadJSON(testFile, &result)
 			require.NoError(t, err, "Should read %s", tc.name)
 		}
@@ -729,7 +729,7 @@ production:
 			err := fileOps.WriteFile(testFile, []byte(tc.data), 0o644)
 			require.NoError(t, err)
 
-			var result interface{}
+			var result any
 			err = yamlOps.ReadYAML(testFile, &result)
 			require.NoError(t, err, "Should read %s", tc.name)
 		}
@@ -1242,10 +1242,10 @@ func TestYAMLOperatorEdgeCases(t *testing.T) {
 			Password string `yaml:"password"`
 		}
 		type Config struct {
-			Server   Server                 `yaml:"server"`
-			Database Database               `yaml:"database"`
-			Features []string               `yaml:"features"`
-			Settings map[string]interface{} `yaml:"settings"`
+			Server   Server         `yaml:"server"`
+			Database Database       `yaml:"database"`
+			Features []string       `yaml:"features"`
+			Settings map[string]any `yaml:"settings"`
 		}
 
 		original := Config{
@@ -1259,7 +1259,7 @@ func TestYAMLOperatorEdgeCases(t *testing.T) {
 				Password: "secret",
 			},
 			Features: []string{"auth", "cache", "logging"},
-			Settings: map[string]interface{}{
+			Settings: map[string]any{
 				"debug":     true,
 				"timeout":   30,
 				"max_conns": 100,
@@ -1289,7 +1289,7 @@ key3:
 		err := fileOps.WriteFile(testFile, []byte(yamlContent), 0o644)
 		require.NoError(t, err)
 
-		var result map[string]interface{}
+		var result map[string]any
 		err = yamlOps.ReadYAML(testFile, &result)
 		require.NoError(t, err)
 
@@ -1397,13 +1397,13 @@ func TestMarshalUnmarshalRoundTrip(t *testing.T) {
 	yamlOps := NewDefaultYAMLOperator(fileOps)
 
 	type TestData struct {
-		String string                 `json:"string" yaml:"string"`
-		Int    int                    `json:"int" yaml:"int"`
-		Float  float64                `json:"float" yaml:"float"`
-		Bool   bool                   `json:"bool" yaml:"bool"`
-		Array  []int                  `json:"array" yaml:"array"`
-		Map    map[string]string      `json:"map" yaml:"map"`
-		Nested map[string]interface{} `json:"nested" yaml:"nested"`
+		String string            `json:"string" yaml:"string"`
+		Int    int               `json:"int" yaml:"int"`
+		Float  float64           `json:"float" yaml:"float"`
+		Bool   bool              `json:"bool" yaml:"bool"`
+		Array  []int             `json:"array" yaml:"array"`
+		Map    map[string]string `json:"map" yaml:"map"`
+		Nested map[string]any    `json:"nested" yaml:"nested"`
 	}
 
 	//nolint:gosmopolitan // Intentionally testing unicode round-trip
@@ -1414,8 +1414,8 @@ func TestMarshalUnmarshalRoundTrip(t *testing.T) {
 		Bool:   true,
 		Array:  []int{1, 2, 3, 4, 5},
 		Map:    map[string]string{"key1": "value1", "key2": "value2"},
-		Nested: map[string]interface{}{
-			"level1": map[string]interface{}{
+		Nested: map[string]any{
+			"level1": map[string]any{
 				"level2": "deep value",
 			},
 		},

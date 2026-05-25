@@ -1023,7 +1023,7 @@ func categorizeBuildFile(filename string) string {
 
 // createBuildMetadata generates JSON metadata about the build
 func createBuildMetadata(fileCount int) string {
-	metadata := map[string]interface{}{
+	metadata := map[string]any{
 		"build_time":    time.Now().Format(time.RFC3339),
 		"builder":       "mage-x documentation system",
 		"version":       "1.0.0",

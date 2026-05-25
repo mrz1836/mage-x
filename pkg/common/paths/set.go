@@ -1,7 +1,7 @@
 package paths
 
 import (
-	"sort"
+	"slices"
 	"sync"
 )
 
@@ -121,7 +121,7 @@ func (ps *DefaultPathSet) Paths() []string {
 		result = append(result, path)
 	}
 
-	sort.Strings(result)
+	slices.Sort(result)
 	return result
 }
 

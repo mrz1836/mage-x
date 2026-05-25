@@ -34,13 +34,13 @@ func NewWithOptions(loader Loader, env TypedEnvProvider, manager Manager) *Confi
 }
 
 // LoadFromPaths loads configuration from multiple paths with common fallbacks
-func (c *Config) LoadFromPaths(dest interface{}, baseName string, searchDirs ...string) (string, error) {
+func (c *Config) LoadFromPaths(dest any, baseName string, searchDirs ...string) (string, error) {
 	paths := c.buildConfigPaths(baseName, searchDirs...)
 	return c.Loader.Load(paths, dest)
 }
 
 // LoadWithEnvOverrides loads configuration and applies environment variable overrides
-func (c *Config) LoadWithEnvOverrides(dest interface{}, baseName, envPrefix string, searchDirs ...string) (string, error) {
+func (c *Config) LoadWithEnvOverrides(dest any, baseName, envPrefix string, searchDirs ...string) (string, error) {
 	// Load from files first
 	path, err := c.LoadFromPaths(dest, baseName, searchDirs...)
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *Config) detectFormat(path string) Format {
 }
 
 // applyEnvOverrides applies environment variable overrides to configuration
-func (c *Config) applyEnvOverrides(_ interface{}, _ string) error {
+func (c *Config) applyEnvOverrides(_ any, _ string) error {
 	// This is a simplified implementation
 	// In a real implementation, this would use reflection to map env vars to struct fields
 	// For now, we'll return nil (no error)
@@ -189,12 +189,12 @@ func GetDefault() *Config {
 // Package-level convenience functions
 
 // LoadFromPaths loads configuration using the default instance
-func LoadFromPaths(dest interface{}, baseName string, searchDirs ...string) (string, error) {
+func LoadFromPaths(dest any, baseName string, searchDirs ...string) (string, error) {
 	return GetDefault().LoadFromPaths(dest, baseName, searchDirs...)
 }
 
 // LoadWithEnvOverrides loads configuration with env overrides using the default instance
-func LoadWithEnvOverrides(dest interface{}, baseName, envPrefix string, searchDirs ...string) (string, error) {
+func LoadWithEnvOverrides(dest any, baseName, envPrefix string, searchDirs ...string) (string, error) {
 	return GetDefault().LoadWithEnvOverrides(dest, baseName, envPrefix, searchDirs...)
 }
 

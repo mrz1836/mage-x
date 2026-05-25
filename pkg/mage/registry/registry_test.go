@@ -979,7 +979,7 @@ func BenchmarkRegistry_Register(b *testing.B) {
 	r := NewRegistry()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		cmd := &Command{
 			Name:        "bench",
 			Method:      "Bench",
@@ -1010,7 +1010,7 @@ func BenchmarkRegistry_Get(b *testing.B) {
 	r.MustRegister(cmd)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		r.Get("bench:bench")
 	}
 }
@@ -1033,7 +1033,7 @@ func BenchmarkRegistry_List(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		r.List()
 	}
 }
@@ -1466,7 +1466,7 @@ func BenchmarkRegistry_Search(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		r.Search("bench")
 	}
 }

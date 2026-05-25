@@ -782,7 +782,7 @@ func TestCLIAdapterConcurrentAccess(t *testing.T) {
 	const numGoroutines = 100
 
 	// Concurrent reads and writes
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -818,7 +818,7 @@ func TestStructuredAdapterConcurrentAccess(t *testing.T) {
 	const numGoroutines = 100
 
 	// Concurrent reads and writes
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -1127,7 +1127,7 @@ func BenchmarkStructuredAdapterWithFields(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		buf.Reset()
 		loggerWithFields.Info("test message")
 	}

@@ -108,7 +108,7 @@ func (rb *RingBuffer) GetLines() []string {
 		start = rb.head
 	}
 
-	for i := 0; i < rb.count; i++ {
+	for i := range rb.count {
 		idx := (start + i) % rb.size
 		result[i] = rb.lines[idx]
 	}

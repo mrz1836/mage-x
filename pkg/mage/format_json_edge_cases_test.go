@@ -125,7 +125,7 @@ func TestFormatJSONEdgeCases(t *testing.T) {
 			assert.Equal(t, tt.expected, string(result), tt.description)
 
 			// Verify result is valid JSON
-			var jsonData interface{}
+			var jsonData any
 			err = json.Unmarshal(result, &jsonData)
 			require.NoError(t, err, "Result should be valid JSON")
 		})
@@ -165,7 +165,7 @@ func TestFormatJSONFileSystemEdgeCases(t *testing.T) {
 			// If it succeeded, verify the result is properly formatted
 			content, err := os.ReadFile(readOnlyFile) //nolint:gosec // test file path
 			require.NoError(t, err)
-			var jsonData interface{}
+			var jsonData any
 			err = json.Unmarshal(content, &jsonData)
 			require.NoError(t, err, "Result should be valid JSON")
 		}
@@ -197,7 +197,7 @@ func TestFormatJSONFileSystemEdgeCases(t *testing.T) {
 			// If formatting succeeded, verify the result is valid JSON
 			content, err := os.ReadFile(symlinkFile) //nolint:gosec // test file path
 			require.NoError(t, err)
-			var jsonData interface{}
+			var jsonData any
 			err = json.Unmarshal(content, &jsonData)
 			require.NoError(t, err, "Result should be valid JSON")
 			t.Log("Symlink formatting succeeded and result is valid JSON")
@@ -333,7 +333,7 @@ func TestFormatJSONConcurrent(t *testing.T) {
 	results := make([]bool, numFiles)
 
 	// Create multiple JSON files
-	for i := 0; i < numFiles; i++ {
+	for i := range numFiles {
 		testFile := filepath.Join(tmpDir, fmt.Sprintf("test%d.json", i))
 		jsonContent := fmt.Sprintf(`{"file":%d,"name":"test%d","data":[1,2,3]}`, i, i)
 		err := os.WriteFile(testFile, []byte(jsonContent), 0o600)
@@ -341,7 +341,7 @@ func TestFormatJSONConcurrent(t *testing.T) {
 	}
 
 	// Format all files concurrently
-	for i := 0; i < numFiles; i++ {
+	for i := range numFiles {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
@@ -358,7 +358,7 @@ func TestFormatJSONConcurrent(t *testing.T) {
 	}
 
 	// Verify all files are properly formatted
-	for i := 0; i < numFiles; i++ {
+	for i := range numFiles {
 		testFile := filepath.Join(tmpDir, fmt.Sprintf("test%d.json", i))
 		content, err := os.ReadFile(testFile) //nolint:gosec // test file path
 		require.NoError(t, err)
@@ -405,7 +405,7 @@ func BenchmarkFormatJSONFileNative(b *testing.B) {
 			testFile := filepath.Join(tmpDir, fmt.Sprintf("%s.json", tc.name))
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				// Write the unformatted JSON
 				err := os.WriteFile(testFile, []byte(tc.json), 0o600)
 				if err != nil {
@@ -443,7 +443,7 @@ func BenchmarkFormatJSONMemoryUsage(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		err := os.WriteFile(testFile, []byte(largeJSON), 0o600)
 		if err != nil {
 			b.Fatal(err)

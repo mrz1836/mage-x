@@ -9,7 +9,7 @@ import (
 func TestCoreNamespaceInterfaces(t *testing.T) {
 	tests := []struct {
 		name           string
-		implementation interface{}
+		implementation any
 		interfaceType  reflect.Type
 	}{
 		{
@@ -53,33 +53,33 @@ func TestCoreNamespaceInterfaces(t *testing.T) {
 func TestNamespaceFactories(t *testing.T) {
 	tests := []struct {
 		name    string
-		factory func() interface{}
-		check   func(interface{}) bool
+		factory func() any
+		check   func(any) bool
 	}{
 		{
 			name:    "NewBuildNamespace",
-			factory: func() interface{} { return NewBuildNamespace() },
-			check:   func(v interface{}) bool { _, ok := v.(BuildNamespace); return ok },
+			factory: func() any { return NewBuildNamespace() },
+			check:   func(v any) bool { _, ok := v.(BuildNamespace); return ok },
 		},
 		{
 			name:    "NewTestNamespace",
-			factory: func() interface{} { return NewTestNamespace() },
-			check:   func(v interface{}) bool { _, ok := v.(TestNamespace); return ok },
+			factory: func() any { return NewTestNamespace() },
+			check:   func(v any) bool { _, ok := v.(TestNamespace); return ok },
 		},
 		{
 			name:    "NewLintNamespace",
-			factory: func() interface{} { return NewLintNamespace() },
-			check:   func(v interface{}) bool { _, ok := v.(LintNamespace); return ok },
+			factory: func() any { return NewLintNamespace() },
+			check:   func(v any) bool { _, ok := v.(LintNamespace); return ok },
 		},
 		{
 			name:    "NewFormatNamespace",
-			factory: func() interface{} { return NewFormatNamespace() },
-			check:   func(v interface{}) bool { _, ok := v.(FormatNamespace); return ok },
+			factory: func() any { return NewFormatNamespace() },
+			check:   func(v any) bool { _, ok := v.(FormatNamespace); return ok },
 		},
 		{
 			name:    "NewDocsNamespace",
-			factory: func() interface{} { return NewDocsNamespace() },
-			check:   func(v interface{}) bool { _, ok := v.(DocsNamespace); return ok },
+			factory: func() any { return NewDocsNamespace() },
+			check:   func(v any) bool { _, ok := v.(DocsNamespace); return ok },
 		},
 	}
 

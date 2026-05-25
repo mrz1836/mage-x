@@ -13,7 +13,7 @@ import (
 type TestingInterface interface {
 	TempDir() string
 	Helper()
-	Fatalf(format string, args ...interface{})
+	Fatalf(format string, args ...any)
 }
 
 // TestEnvironment provides a clean test environment with temporary directories
@@ -65,10 +65,10 @@ func (env *TestEnvironment) Cleanup() {
 }
 
 // RunnerSetter is a function type for setting command runners
-type RunnerSetter func(runner interface{}) error
+type RunnerSetter func(runner any) error
 
 // RunnerGetter is a function type for getting command runners
-type RunnerGetter func() interface{}
+type RunnerGetter func() any
 
 // WithMockRunner executes a function with the mock runner active
 // The setter and getter functions should be passed from the calling package

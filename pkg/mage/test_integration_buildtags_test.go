@@ -339,6 +339,7 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 // Helper functions for integration tests
 
 func createIntegrationProjectStructure(t *testing.T, baseDir string) {
+	t.Helper()
 	// Create main.go
 	mainContent := `package main
 
@@ -440,6 +441,7 @@ func TestUtilUnit(t *testing.T) {
 }
 
 func createComplexBuildTagFiles(t *testing.T, baseDir string) {
+	t.Helper()
 	// File with complex AND expression
 	andContent := `//go:build linux && cgo && !debug
 // +build linux,cgo,!debug
@@ -489,6 +491,7 @@ func TestComplex(t *testing.T) {
 }
 
 func createMageConfig(t *testing.T, baseDir string, autoDiscover bool, excludeTags []string) {
+	t.Helper()
 	configContent := fmt.Sprintf(`test:
   auto_discover_build_tags: %t`, autoDiscover)
 

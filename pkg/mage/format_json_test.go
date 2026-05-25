@@ -84,7 +84,7 @@ func TestFormatJSONFileNative(t *testing.T) {
 			assert.Equal(t, tt.expected, string(result))
 
 			// Verify the result is valid JSON
-			var jsonData interface{}
+			var jsonData any
 			err = json.Unmarshal(result, &jsonData)
 			require.NoError(t, err, "Result should be valid JSON")
 		})

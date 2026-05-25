@@ -365,7 +365,7 @@ func TestRealMetrics_ConcurrentRecording(t *testing.T) {
 	const numGoroutines = 100
 	wg.Add(numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(idx int) {
 			defer wg.Done()
 			// Alternate between different error types

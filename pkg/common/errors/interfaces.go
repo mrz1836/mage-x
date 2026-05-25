@@ -85,15 +85,15 @@ const (
 
 // ErrorContext contains contextual information about an error
 type ErrorContext struct {
-	Operation   string                 // Operation being performed
-	Resource    string                 // Resource being operated on
-	User        string                 // User who triggered the operation
-	RequestID   string                 // Request identifier for tracing
-	Timestamp   time.Time              // When the error occurred
-	StackTrace  string                 // Stack trace at error point
-	Fields      map[string]interface{} // Additional context fields
-	Environment string                 // Environment (dev, staging, prod)
-	Version     string                 // Application version
+	Operation   string         // Operation being performed
+	Resource    string         // Resource being operated on
+	User        string         // User who triggered the operation
+	RequestID   string         // Request identifier for tracing
+	Timestamp   time.Time      // When the error occurred
+	StackTrace  string         // Stack trace at error point
+	Fields      map[string]any // Additional context fields
+	Environment string         // Environment (dev, staging, prod)
+	Version     string         // Application version
 }
 
 // MageError is the main error interface for the mage system
@@ -107,24 +107,24 @@ type MageError interface {
 	WithCode(code ErrorCode) MageError
 	WithSeverity(severity Severity) MageError
 	WithContext(ctx *ErrorContext) MageError
-	WithField(key string, value interface{}) MageError
-	WithFields(fields map[string]interface{}) MageError
+	WithField(key string, value any) MageError
+	WithFields(fields map[string]any) MageError
 	WithCause(cause error) MageError
 	WithOperation(operation string) MageError
 	WithResource(resource string) MageError
 	Format(includeStack bool) string
 	Is(target error) bool
-	As(target interface{}) bool
+	As(target any) bool
 }
 
 // ErrorBuilder provides a fluent interface for building errors
 type ErrorBuilder interface {
-	WithMessage(format string, args ...interface{}) ErrorBuilder
+	WithMessage(format string, args ...any) ErrorBuilder
 	WithCode(code ErrorCode) ErrorBuilder
 	WithSeverity(severity Severity) ErrorBuilder
 	WithContext(ctx *ErrorContext) ErrorBuilder
-	WithField(key string, value interface{}) ErrorBuilder
-	WithFields(fields map[string]interface{}) ErrorBuilder
+	WithField(key string, value any) ErrorBuilder
+	WithFields(fields map[string]any) ErrorBuilder
 	WithCause(cause error) ErrorBuilder
 	WithOperation(operation string) ErrorBuilder
 	WithResource(resource string) ErrorBuilder
@@ -278,7 +278,7 @@ type ErrorNotification struct {
 	Environment string
 	Hostname    string
 	Service     string
-	Metadata    map[string]interface{}
+	Metadata    map[string]any
 }
 
 // ErrorTransformer transforms errors
@@ -297,7 +297,7 @@ type ErrorMatcher interface {
 	MatchSeverity(severity Severity) ErrorMatcher
 	MatchMessage(pattern string) ErrorMatcher
 	MatchType(errType error) ErrorMatcher
-	MatchField(key string, value interface{}) ErrorMatcher
+	MatchField(key string, value any) ErrorMatcher
 	MatchAny(matchers ...ErrorMatcher) ErrorMatcher
 	MatchAll(matchers ...ErrorMatcher) ErrorMatcher
 	Not() ErrorMatcher
@@ -311,7 +311,7 @@ func New(message string) MageError {
 }
 
 // Newf creates a new MageError with a formatted message
-func Newf(format string, args ...interface{}) MageError {
+func Newf(format string, args ...any) MageError {
 	return NewBuilder().WithMessage(format, args...).Build()
 }
 
@@ -321,7 +321,7 @@ func WithCode(code ErrorCode, message string) MageError {
 }
 
 // WithCodef creates a new MageError with the given code and formatted message
-func WithCodef(code ErrorCode, format string, args ...interface{}) MageError {
+func WithCodef(code ErrorCode, format string, args ...any) MageError {
 	return NewBuilder().WithCode(code).WithMessage(format, args...).Build()
 }
 
@@ -334,7 +334,7 @@ func Wrap(err error, message string) MageError {
 }
 
 // Wrapf wraps an error with a formatted message
-func Wrapf(err error, format string, args ...interface{}) MageError {
+func Wrapf(err error, format string, args ...any) MageError {
 	if err == nil {
 		return nil
 	}
@@ -351,7 +351,7 @@ func Is(err, target error) bool {
 }
 
 // As finds the first error in err's chain that matches target
-func As(err error, target interface{}) bool {
+func As(err error, target any) bool {
 	var mageErr MageError
 	if errors.As(err, &mageErr) {
 		return mageErr.As(target)

@@ -1,9 +1,10 @@
 package errors
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -91,8 +92,8 @@ func (r *RealDefaultErrorRegistry) List() []ErrorDefinition {
 	}
 
 	// Sort by code
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Code < result[j].Code
+	slices.SortFunc(result, func(a, b ErrorDefinition) int {
+		return cmp.Compare(a.Code, b.Code)
 	})
 
 	return result
@@ -111,8 +112,8 @@ func (r *RealDefaultErrorRegistry) ListByPrefix(prefix string) []ErrorDefinition
 	}
 
 	// Sort by code
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Code < result[j].Code
+	slices.SortFunc(result, func(a, b ErrorDefinition) int {
+		return cmp.Compare(a.Code, b.Code)
 	})
 
 	return result
@@ -131,8 +132,8 @@ func (r *RealDefaultErrorRegistry) ListBySeverity(severity Severity) []ErrorDefi
 	}
 
 	// Sort by code
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Code < result[j].Code
+	slices.SortFunc(result, func(a, b ErrorDefinition) int {
+		return cmp.Compare(a.Code, b.Code)
 	})
 
 	return result

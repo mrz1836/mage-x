@@ -39,8 +39,8 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 		ts.env.CreateFile("main.go", "package main\n\nfunc main() {}\n")
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.Default()
 			},
@@ -57,8 +57,8 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.Default()
 			},
@@ -86,8 +86,8 @@ func (ts *GenerateTestSuite) TestGenerateDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "-tags", "test,dev"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.Default()
 			},
@@ -104,8 +104,8 @@ func (ts *GenerateTestSuite) TestGenerateAll() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.All()
 			},
@@ -130,8 +130,8 @@ func (ts *GenerateTestSuite) TestGenerateAll() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "./...", "-tags", "integration"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.All()
 			},
@@ -148,8 +148,8 @@ func (ts *GenerateTestSuite) TestGenerateMocks() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/golang/mock/mockgen@latest"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.Mocks()
 			},
@@ -163,8 +163,8 @@ func (ts *GenerateTestSuite) TestGenerateMocks() {
 func (ts *GenerateTestSuite) TestGenerateClean() {
 	ts.Run("no generated files to clean", func() {
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.Clean()
 			},
@@ -179,8 +179,8 @@ func (ts *GenerateTestSuite) TestGenerateClean() {
 		ts.env.CreateFile("test_gen.go", "// Generated file")
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.Clean()
 			},
@@ -202,8 +202,8 @@ func (ts *GenerateTestSuite) TestGenerateClean() {
 		}
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.Clean()
 			},
@@ -220,8 +220,8 @@ func (ts *GenerateTestSuite) TestGenerateCode() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.generate.Code()
 			},
@@ -243,8 +243,8 @@ func (ts *GenerateTestSuite) testEchoGenerateMethod(
 		ts.env.Runner.On("RunCmd", "echo", echoArgs).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			methodFunc,
 		)
 
@@ -394,8 +394,8 @@ func (ts *GenerateTestSuite) TestGenerateIntegration() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				// Run default generation
 				if err := ts.generate.Default(); err != nil {
@@ -436,8 +436,8 @@ func (ts *GenerateTestSuite) TestGenerateIntegration() {
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "-v", "-tags", "test"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				// Run generation with tags
 				if err := ts.generate.Default(); err != nil {

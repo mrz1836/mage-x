@@ -632,7 +632,7 @@ func BenchmarkHasMagefile(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		HasMagefile()
 	}
 }
@@ -662,7 +662,7 @@ func BenchmarkGetMagefilePath(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		GetMagefilePath()
 	}
 }

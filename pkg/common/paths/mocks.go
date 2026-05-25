@@ -16,7 +16,7 @@ type MockPathBuilder struct {
 	path     string
 	calls    map[string]int
 	options  PathOptions
-	mockData map[string]interface{}
+	mockData map[string]any
 }
 
 // NewMockPathBuilder creates a new mock path builder
@@ -24,20 +24,20 @@ func NewMockPathBuilder(path string) *MockPathBuilder {
 	return &MockPathBuilder{
 		path:     path,
 		calls:    make(map[string]int),
-		mockData: make(map[string]interface{}),
+		mockData: make(map[string]any),
 		options:  GetDefaultOptions(),
 	}
 }
 
 // SetMockData sets mock data for specific operations
-func (m *MockPathBuilder) SetMockData(key string, value interface{}) {
+func (m *MockPathBuilder) SetMockData(key string, value any) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.mockData[key] = value
 }
 
 // GetMockData gets mock data for specific operations
-func (m *MockPathBuilder) GetMockData(key string) (interface{}, bool) {
+func (m *MockPathBuilder) GetMockData(key string) (any, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	value, exists := m.mockData[key]
@@ -59,7 +59,7 @@ func (m *MockPathBuilder) Join(elements ...string) PathBuilder {
 	return &MockPathBuilder{
 		path:     newPath,
 		calls:    make(map[string]int),
-		mockData: make(map[string]interface{}),
+		mockData: make(map[string]any),
 		options:  m.options,
 	}
 }
@@ -383,7 +383,7 @@ func (m *MockPathBuilder) Clone() PathBuilder {
 	return &MockPathBuilder{
 		path:     m.path,
 		calls:    make(map[string]int),
-		mockData: make(map[string]interface{}),
+		mockData: make(map[string]any),
 		options:  m.options,
 	}
 }
@@ -400,7 +400,7 @@ type MockPathMatcher struct {
 	mu       sync.RWMutex
 	patterns []string
 	calls    map[string]int
-	mockData map[string]interface{}
+	mockData map[string]any
 }
 
 // NewMockPathMatcher creates a new mock path matcher
@@ -408,7 +408,7 @@ func NewMockPathMatcher() *MockPathMatcher {
 	return &MockPathMatcher{
 		patterns: make([]string, 0),
 		calls:    make(map[string]int),
-		mockData: make(map[string]interface{}),
+		mockData: make(map[string]any),
 	}
 }
 
@@ -515,7 +515,7 @@ type MockPathValidator struct {
 	mu       sync.RWMutex
 	rules    []ValidationRule
 	calls    map[string]int
-	mockData map[string]interface{}
+	mockData map[string]any
 }
 
 // NewMockPathValidator creates a new mock path validator
@@ -523,7 +523,7 @@ func NewMockPathValidator() *MockPathValidator {
 	return &MockPathValidator{
 		rules:    make([]ValidationRule, 0),
 		calls:    make(map[string]int),
-		mockData: make(map[string]interface{}),
+		mockData: make(map[string]any),
 	}
 }
 
@@ -650,7 +650,7 @@ type MockPathSet struct {
 	mu       sync.RWMutex
 	paths    map[string]bool
 	calls    map[string]int
-	mockData map[string]interface{}
+	mockData map[string]any
 }
 
 // NewMockPathSet creates a new mock path set
@@ -658,7 +658,7 @@ func NewMockPathSet() *MockPathSet {
 	return &MockPathSet{
 		paths:    make(map[string]bool),
 		calls:    make(map[string]int),
-		mockData: make(map[string]interface{}),
+		mockData: make(map[string]any),
 	}
 }
 

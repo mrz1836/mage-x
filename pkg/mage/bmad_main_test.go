@@ -99,8 +99,8 @@ bmad:
 	}).Return("1.0.0", nil).Maybe()
 
 	err = ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.bmad.Check()
 		},
@@ -215,8 +215,8 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 			}).Return(tt.mockOutput, tt.mockError)
 
 			err := ts.env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) },
+				func() any { return GetRunner() },
 				func() error {
 					version, err := getBmadVersion(config)
 
@@ -377,8 +377,8 @@ func (ts *BmadMainTestSuite) TestBmadConfigVariations() {
 			}).Return("1.0.0", nil)
 
 			err := ts.env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) },
+				func() any { return GetRunner() },
 				func() error {
 					_, err := getBmadVersion(config)
 					return err

@@ -336,7 +336,7 @@ func BenchmarkAuditingExecutor(b *testing.B) {
 	ctx := context.Background()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		//nolint:errcheck // Benchmarking execution, not checking errors
 		_ = executor.Execute(ctx, "echo", "benchmark")
 	}

@@ -306,7 +306,7 @@ func TestFormatJSONRealWorldExamples(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify the result is valid JSON
-			var jsonData interface{}
+			var jsonData any
 			err = json.Unmarshal(result, &jsonData)
 			require.NoError(t, err, "Result should be valid JSON for %s", tt.description)
 
@@ -352,7 +352,7 @@ func TestFormatJSONLargeFile(t *testing.T) {
 		result, err := os.ReadFile(testFile) //nolint:gosec // test file path
 		require.NoError(t, err)
 
-		var jsonData interface{}
+		var jsonData any
 		err = json.Unmarshal(result, &jsonData)
 		require.NoError(t, err, "Large JSON should remain valid after formatting")
 

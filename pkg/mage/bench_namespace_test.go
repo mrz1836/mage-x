@@ -71,10 +71,10 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Default()
 			},
@@ -88,10 +88,10 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "5s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.DefaultWithArgs("time=5s")
 			},
@@ -105,10 +105,10 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "50ms", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.DefaultWithArgs("time=50ms")
 			},
@@ -122,10 +122,10 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "100ms", "-count", "2", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.DefaultWithArgs("time=100ms", "count=2")
 			},
@@ -160,10 +160,10 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-cpuprofile", "cpu.prof", "-memprofile", "mem.prof", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Default()
 			},
@@ -185,10 +185,10 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"old.txt", "new.txt"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Compare()
 			},
@@ -226,10 +226,10 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"baseline.txt", "current.txt"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Compare()
 			},
@@ -251,10 +251,10 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/perf/cmd/benchstat@latest"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Compare()
 			},
@@ -275,10 +275,10 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/perf/cmd/benchstat@latest"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Compare()
 			},
@@ -296,10 +296,10 @@ func (ts *BenchTestSuite) TestBenchSave() {
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Save()
 			},
@@ -324,10 +324,10 @@ func (ts *BenchTestSuite) TestBenchSave() {
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Save()
 			},
@@ -353,10 +353,10 @@ func (ts *BenchTestSuite) TestBenchSave() {
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Save()
 			},
@@ -377,10 +377,10 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "cpu.prof"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.CPU()
 			},
@@ -407,10 +407,10 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "custom-cpu.prof"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.CPU()
 			},
@@ -429,10 +429,10 @@ func (ts *BenchTestSuite) TestBenchMem() {
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "-alloc_space", "mem.prof"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Mem()
 			},
@@ -459,10 +459,10 @@ func (ts *BenchTestSuite) TestBenchMem() {
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "-alloc_space", "custom-mem.prof"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Mem()
 			},
@@ -479,10 +479,10 @@ func (ts *BenchTestSuite) TestBenchProfile() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-cpuprofile", "cpu.prof", "-memprofile", "mem.prof", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Profile()
 			},
@@ -499,10 +499,10 @@ func (ts *BenchTestSuite) TestBenchTrace() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", "trace.out", "-benchtime", "10s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Trace()
 			},
@@ -527,10 +527,10 @@ func (ts *BenchTestSuite) TestBenchTrace() {
 		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", "custom-trace.out", "-benchtime", "10s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Trace()
 			},
@@ -547,10 +547,10 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Regression()
 			},
@@ -570,10 +570,10 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"bench-baseline.txt", "bench-current.txt"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Regression()
 			},
@@ -604,10 +604,10 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"bench-baseline.txt", "bench-current.txt"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.bench.Regression()
 			},

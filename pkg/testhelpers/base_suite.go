@@ -274,25 +274,25 @@ func (bs *BaseSuite) AssertFileNotContains(filename, unexpected string) {
 }
 
 // RequireNoError is a convenience method for require.NoError with helper marking
-func (bs *BaseSuite) RequireNoError(err error, msgAndArgs ...interface{}) {
+func (bs *BaseSuite) RequireNoError(err error, msgAndArgs ...any) {
 	bs.T().Helper()
 	bs.Require().NoError(err, msgAndArgs...)
 }
 
 // AssertNoError is a convenience method for assert.NoError with helper marking
-func (bs *BaseSuite) AssertNoError(err error, msgAndArgs ...interface{}) {
+func (bs *BaseSuite) AssertNoError(err error, msgAndArgs ...any) {
 	bs.T().Helper()
 	bs.NoError(err, msgAndArgs...)
 }
 
 // AssertError is a convenience method for assert.Error with helper marking
-func (bs *BaseSuite) AssertError(err error, msgAndArgs ...interface{}) {
+func (bs *BaseSuite) AssertError(err error, msgAndArgs ...any) {
 	bs.T().Helper()
 	bs.Error(err, msgAndArgs...)
 }
 
 // AssertErrorContains asserts that an error contains expected text
-func (bs *BaseSuite) AssertErrorContains(err error, expected string, msgAndArgs ...interface{}) {
+func (bs *BaseSuite) AssertErrorContains(err error, expected string, msgAndArgs ...any) {
 	bs.T().Helper()
 	bs.Require().Error(err, "Expected an error")
 	bs.Contains(err.Error(), expected, msgAndArgs...)

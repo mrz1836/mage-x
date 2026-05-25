@@ -724,7 +724,7 @@ func BenchmarkShowCommands(b *testing.B) {
 	defer func() { os.Stdout = oldStdout }()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		listCommands(reg, NewCommandDiscovery(reg), false)
 	}
 }
@@ -744,7 +744,7 @@ func BenchmarkRegistryExecute(b *testing.B) {
 	reg.MustRegister(testCmd)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := reg.Execute("bench"); err != nil {
 			// Benchmark execution error is expected, continue
 			_ = err

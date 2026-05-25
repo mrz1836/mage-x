@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -476,7 +476,7 @@ func (v *DefaultEnvValidator) Pattern(key, pattern string) Validator {
 }
 
 // Range adds range validation for a key
-func (v *DefaultEnvValidator) Range(key string, minValue, maxValue interface{}) Validator {
+func (v *DefaultEnvValidator) Range(key string, minValue, maxValue any) Validator {
 	if err := v.AddRule(key, &RangeRule{Min: minValue, Max: maxValue}); err != nil {
 		// Log error but continue
 		log.Warn("failed to add range rule for key %s with range %v-%v: %v", key, minValue, maxValue, err)
@@ -560,8 +560,8 @@ func (r *PatternRule) Description() string {
 
 // RangeRule validates that a numeric value is within range
 type RangeRule struct {
-	Min interface{}
-	Max interface{}
+	Min any
+	Max any
 }
 
 // Validate validates that a numeric value is within range
@@ -616,7 +616,7 @@ func (r *OneOfRule) Validate(value string) error {
 	// Copy before sorting to avoid mutating the receiver (thread-safe, no side effects)
 	sortedValues := make([]string, len(r.Values))
 	copy(sortedValues, r.Values)
-	sort.Strings(sortedValues)
+	slices.Sort(sortedValues)
 	return fmt.Errorf("%w: %v", errValueMustBeOneOf, sortedValues)
 }
 

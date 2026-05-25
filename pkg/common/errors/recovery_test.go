@@ -79,7 +79,7 @@ func TestRealRecovery_PanicWithNonError(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		panicValue interface{}
+		panicValue any
 		contains   string
 	}{
 		{

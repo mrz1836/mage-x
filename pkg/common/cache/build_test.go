@@ -742,12 +742,14 @@ func BenchmarkBuildCache_StoreBuildResult(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		hash := fmt.Sprintf("bench-hash-%d", i)
 		err := cache.StoreBuildResult(hash, buildResult)
 		if err != nil {
 			b.Fatal(err)
 		}
+		i++
 	}
 }
 
@@ -784,12 +786,14 @@ func BenchmarkBuildCache_GetBuildResult(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		hash := hashes[i%10]
 		_, found := cache.GetBuildResult(hash)
 		if !found {
 			b.Fatalf("Expected to find cached result for hash: %s", hash)
 		}
+		i++
 	}
 }
 
@@ -798,7 +802,7 @@ func BenchmarkBuildCache_GenerateHash(b *testing.B) {
 	inputs := []string{"input1", "input2", "input3", "input4", "input5"}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = cache.GenerateHash(inputs...)
 	}
 }
@@ -819,7 +823,7 @@ func BenchmarkBuildCache_GenerateFileHash(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := cache.GenerateFileHash(files)
 		if err != nil {
 			b.Fatal(err)

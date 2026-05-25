@@ -350,7 +350,7 @@ func (ts *AWSHelpersTestSuite) TestBackupFile() {
 func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 	ts.Run("successful token retrieval", func() {
 		// Create mock STS response
-		mockResponse := map[string]interface{}{
+		mockResponse := map[string]any{
 			"Credentials": map[string]string{
 				"AccessKeyId":     "ASIATESTACCESSKEY",
 				"SecretAccessKey": "TestSecretKey123",
@@ -370,8 +370,8 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 		}).Return(string(mockJSON), nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				creds, err := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "123456", 43200)
 				if err != nil {
@@ -402,8 +402,8 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 		}).Return("invalid json{{{", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				_, err := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "123456", 43200)
 				return err
@@ -425,8 +425,8 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 		}).Return("", errAWSSTSTestFailed)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				_, err := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "invalid", 43200)
 				return err
@@ -455,8 +455,8 @@ func (ts *AWSHelpersTestSuite) TestCheckAWSSession() {
 		}).Return(string(mockJSON), nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				accountID, userARN, isValid := checkAWSSession("default")
 
@@ -479,8 +479,8 @@ func (ts *AWSHelpersTestSuite) TestCheckAWSSession() {
 		}).Return("", errAWSCommandFailed)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				_, _, isValid := checkAWSSession("expired")
 				ts.Assert().False(isValid)

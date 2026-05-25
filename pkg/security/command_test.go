@@ -604,7 +604,7 @@ func BenchmarkSecureExecutor_Execute(b *testing.B) {
 	ctx := context.Background()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := executor.Execute(ctx, "echo", "test"); err != nil {
 			b.Errorf("Execute failed: %v", err)
 		}
@@ -616,7 +616,7 @@ func BenchmarkSecureExecutor_ValidateCommand(b *testing.B) {
 	args := []string{"arg1", "arg2", "arg3"}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := executor.validateCommand("echo", args); err != nil {
 			b.Errorf("validateCommand failed: %v", err)
 		}
@@ -628,7 +628,7 @@ func BenchmarkSecureExecutor_FilterEnvironment(b *testing.B) {
 	env := os.Environ()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = executor.filterEnvironment(env, "benchmark-command")
 	}
 }

@@ -48,7 +48,7 @@ func TestLogger_Logging(t *testing.T) {
 		name      string
 		level     LogLevel
 		logLevel  LogLevel
-		logFunc   func(*Logger, string, ...interface{})
+		logFunc   func(*Logger, string, ...any)
 		message   string
 		shouldLog bool
 	}{
@@ -509,8 +509,10 @@ func BenchmarkLogger_Info(b *testing.B) {
 	logger.SetColorEnabled(false)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		logger.Info("benchmark test message %d", i)
+		i++
 	}
 }
 
@@ -519,7 +521,7 @@ func BenchmarkLogger_WithSpinner(b *testing.B) {
 	logger.SetColorEnabled(false)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		logger.StartSpinner("test")
 		logger.StopSpinner()
 	}
@@ -529,7 +531,7 @@ func BenchmarkFormatDuration(b *testing.B) {
 	duration := 1500 * time.Millisecond
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		formatDuration(duration)
 	}
 }
@@ -872,7 +874,7 @@ func TestPlainHeaderOutput(t *testing.T) {
 func TestLogColoredOutput(t *testing.T) {
 	tests := []struct {
 		name    string
-		logFunc func(*Logger, string, ...interface{})
+		logFunc func(*Logger, string, ...any)
 		level   LogLevel
 	}{
 		{"Debug colored", (*Logger).Debug, LogLevelDebug},

@@ -661,7 +661,7 @@ func TestCommandExecutionErrorPaths(t *testing.T) {
 // Benchmark tests
 func BenchmarkFormatBytes(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		FormatBytes(1073741824) // 1GB
 	}
 }
@@ -674,7 +674,7 @@ func BenchmarkParallel(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		err := Parallel(fns...)
 		if err != nil {
 			b.Logf("Parallel error in benchmark: %v", err)

@@ -647,7 +647,7 @@ func BenchmarkManager_GenerateBuildHash(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := manager.GenerateBuildHash(
 			"linux/amd64",
 			"-ldflags=-s -w",
@@ -676,7 +676,7 @@ func BenchmarkManager_GenerateTestHash(b *testing.B) {
 	})
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := manager.GenerateTestHash(
 			"./pkg/test",
 			[]string{testFile},

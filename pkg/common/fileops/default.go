@@ -172,22 +172,22 @@ func NewDefaultJSONOperator(fileOps FileOperator) *DefaultJSONOperator {
 }
 
 // Marshal converts a value to JSON
-func (d *DefaultJSONOperator) Marshal(v interface{}) ([]byte, error) {
+func (d *DefaultJSONOperator) Marshal(v any) ([]byte, error) {
 	return json.Marshal(v)
 }
 
 // MarshalIndent converts a value to formatted JSON
-func (d *DefaultJSONOperator) MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
+func (d *DefaultJSONOperator) MarshalIndent(v any, prefix, indent string) ([]byte, error) {
 	return json.MarshalIndent(v, prefix, indent)
 }
 
 // Unmarshal parses JSON data into a value
-func (d *DefaultJSONOperator) Unmarshal(data []byte, v interface{}) error {
+func (d *DefaultJSONOperator) Unmarshal(data []byte, v any) error {
 	return json.Unmarshal(data, v)
 }
 
 // WriteJSON writes a value as JSON to a file
-func (d *DefaultJSONOperator) WriteJSON(path string, v interface{}) error {
+func (d *DefaultJSONOperator) WriteJSON(path string, v any) error {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
@@ -197,7 +197,7 @@ func (d *DefaultJSONOperator) WriteJSON(path string, v interface{}) error {
 }
 
 // WriteJSONIndent writes a value as formatted JSON to a file
-func (d *DefaultJSONOperator) WriteJSONIndent(path string, v interface{}, prefix, indent string) error {
+func (d *DefaultJSONOperator) WriteJSONIndent(path string, v any, prefix, indent string) error {
 	data, err := json.MarshalIndent(v, prefix, indent)
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
@@ -207,7 +207,7 @@ func (d *DefaultJSONOperator) WriteJSONIndent(path string, v interface{}, prefix
 }
 
 // ReadJSON reads JSON from a file into a value
-func (d *DefaultJSONOperator) ReadJSON(path string, v interface{}) error {
+func (d *DefaultJSONOperator) ReadJSON(path string, v any) error {
 	data, err := d.fileOps.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
@@ -234,7 +234,7 @@ func NewDefaultYAMLOperator(fileOps FileOperator) *DefaultYAMLOperator {
 }
 
 // Marshal converts a value to YAML
-func (d *DefaultYAMLOperator) Marshal(v interface{}) ([]byte, error) {
+func (d *DefaultYAMLOperator) Marshal(v any) ([]byte, error) {
 	// Use a custom encoder to ensure proper formatting
 	var buf bytes.Buffer
 	encoder := yaml.NewEncoder(&buf)
@@ -254,12 +254,12 @@ func (d *DefaultYAMLOperator) Marshal(v interface{}) ([]byte, error) {
 }
 
 // Unmarshal parses YAML data into a value
-func (d *DefaultYAMLOperator) Unmarshal(data []byte, v interface{}) error {
+func (d *DefaultYAMLOperator) Unmarshal(data []byte, v any) error {
 	return yaml.Unmarshal(data, v)
 }
 
 // WriteYAML writes a value as YAML to a file
-func (d *DefaultYAMLOperator) WriteYAML(path string, v interface{}) error {
+func (d *DefaultYAMLOperator) WriteYAML(path string, v any) error {
 	data, err := d.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("failed to marshal YAML: %w", err)
@@ -269,7 +269,7 @@ func (d *DefaultYAMLOperator) WriteYAML(path string, v interface{}) error {
 }
 
 // ReadYAML reads YAML from a file into a value
-func (d *DefaultYAMLOperator) ReadYAML(path string, v interface{}) error {
+func (d *DefaultYAMLOperator) ReadYAML(path string, v any) error {
 	data, err := d.fileOps.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)

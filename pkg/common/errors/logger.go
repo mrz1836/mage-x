@@ -195,7 +195,7 @@ type ErrorLoggerOptions struct {
 type StructuredErrorLogger struct {
 	*DefaultErrorLogger
 
-	fields map[string]interface{}
+	fields map[string]any
 }
 
 // NewStructuredErrorLogger creates a new structured error logger
@@ -208,16 +208,16 @@ func NewStructuredErrorLogger() *StructuredErrorLogger {
 			}
 			return nil
 		}(),
-		fields: make(map[string]interface{}),
+		fields: make(map[string]any),
 	}
 }
 
 // WithField adds a field to the structured logger
-func (l *StructuredErrorLogger) WithField(key string, value interface{}) *StructuredErrorLogger {
+func (l *StructuredErrorLogger) WithField(key string, value any) *StructuredErrorLogger {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	newFields := make(map[string]interface{})
+	newFields := make(map[string]any)
 	for k, v := range l.fields {
 		newFields[k] = v
 	}
@@ -230,11 +230,11 @@ func (l *StructuredErrorLogger) WithField(key string, value interface{}) *Struct
 }
 
 // WithFields adds multiple fields to the structured logger
-func (l *StructuredErrorLogger) WithFields(fields map[string]interface{}) *StructuredErrorLogger {
+func (l *StructuredErrorLogger) WithFields(fields map[string]any) *StructuredErrorLogger {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	newFields := make(map[string]interface{})
+	newFields := make(map[string]any)
 	for k, v := range l.fields {
 		newFields[k] = v
 	}

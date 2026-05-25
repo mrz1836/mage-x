@@ -542,7 +542,7 @@ func TestSpinnerIntegration(t *testing.T) {
 // Benchmark tests
 func BenchmarkSpinner_StartStop(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		spinner := NewSpinner("Benchmark test")
 		spinner.Start()
 		spinner.Stop()
@@ -553,7 +553,7 @@ func BenchmarkSpinner_UpdateMessage(b *testing.B) {
 	spinner := NewSpinner("Initial")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		spinner.UpdateMessage("Updated message")
 	}
 }
@@ -562,8 +562,10 @@ func BenchmarkMultiSpinner_AddTask(b *testing.B) {
 	ms := NewMultiSpinner()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		ms.AddTask(string(rune(i)), "Task")
+		i++
 	}
 }
 
@@ -572,7 +574,7 @@ func BenchmarkMultiSpinner_UpdateTask(b *testing.B) {
 	ms.AddTask("task", "Test task")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		ms.UpdateTask("task", TaskStatusRunning, "Running")
 	}
 }

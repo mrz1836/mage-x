@@ -2,8 +2,9 @@
 package paths
 
 import (
+	"cmp"
 	"io/fs"
-	"sort"
+	"slices"
 	"sync"
 	"time"
 
@@ -1042,8 +1043,8 @@ func SortPaths(paths []PathBuilder) []PathBuilder {
 	result := make([]PathBuilder, len(paths))
 	copy(result, paths)
 
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].String() < result[j].String()
+	slices.SortFunc(result, func(a, b PathBuilder) int {
+		return cmp.Compare(a.String(), b.String())
 	})
 
 	return result

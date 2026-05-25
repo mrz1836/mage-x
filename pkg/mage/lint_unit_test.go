@@ -427,7 +427,7 @@ func TestContainsDigit(t *testing.T) {
 func BenchmarkParseVersionFromOutput(b *testing.B) {
 	input := "golangci-lint has version v1.55.2 built with go1.21.0"
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = parseVersionFromOutput(input)
 	}
 }
@@ -435,7 +435,7 @@ func BenchmarkParseVersionFromOutput(b *testing.B) {
 func BenchmarkContainsDigit(b *testing.B) {
 	input := "golangci-lint"
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = containsDigit(input)
 	}
 }

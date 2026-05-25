@@ -946,7 +946,7 @@ func FuzzBenchmark(f *testing.F) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		info, err := CountFuzzSeeds(tmpDir, "FuzzBenchmark")
 		if err != nil {
 			b.Fatalf("CountFuzzSeeds failed: %v", err)
@@ -962,7 +962,7 @@ func BenchmarkCalculateFuzzTimeout(b *testing.B) {
 	seedCount := 50
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = CalculateFuzzTimeout(fuzzTime, seedCount, cfg)
 	}
 }

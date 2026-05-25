@@ -15,7 +15,7 @@ import (
 type VersionProtectionTestSuite struct {
 	suite.Suite
 
-	originalRunner interface{}
+	originalRunner any
 }
 
 // SetupSuite runs once before all tests
@@ -439,26 +439,26 @@ func (vpts *VersionProtectionTestSuite) TestVersionStringParsing() {
 // Benchmark tests to ensure version operations are performant
 func BenchmarkVersionProtection(b *testing.B) {
 	b.Run("ParseParams", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = utils.ParseParams([]string{"bump=patch", "push", "dry-run"})
 		}
 	})
 
 	b.Run("GetParam", func(b *testing.B) {
 		params := utils.ParseParams([]string{"bump=patch", "push", "dry-run"})
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = utils.GetParam(params, "bump", "patch")
 		}
 	})
 
 	b.Run("BumpVersionCalculation", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_, _ = bumpVersion("v1.0.6", "patch") //nolint:errcheck // Benchmark intentionally ignores errors
 		}
 	})
 
 	b.Run("ValidateVersionProgression", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = validateVersionProgression("v1.0.6", "v1.0.7", "patch") //nolint:errcheck // Benchmark intentionally ignores errors
 		}
 	})

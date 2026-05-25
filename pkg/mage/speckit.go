@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -610,7 +610,7 @@ func cleanOldSpeckitBackups(config *Config) error {
 	}
 
 	// Sort backups by name (timestamp-based names sort chronologically)
-	sort.Strings(backups)
+	slices.Sort(backups)
 
 	// Delete old backups if we have more than backupsToKeep
 	if len(backups) <= backupsToKeep {
@@ -618,7 +618,7 @@ func cleanOldSpeckitBackups(config *Config) error {
 	}
 
 	toDelete := len(backups) - backupsToKeep
-	for i := 0; i < toDelete; i++ {
+	for i := range toDelete {
 		backupPath := filepath.Join(backupDir, backups[i])
 		if err := os.Remove(backupPath); err != nil {
 			utils.Warn("Failed to delete old backup: %s", backups[i])

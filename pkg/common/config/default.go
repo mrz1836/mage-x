@@ -46,7 +46,7 @@ func NewDefaultConfigLoader() *DefaultConfigLoader {
 }
 
 // Load loads configuration from multiple file paths with fallback
-func (d *DefaultConfigLoader) Load(paths []string, dest interface{}) (string, error) {
+func (d *DefaultConfigLoader) Load(paths []string, dest any) (string, error) {
 	for _, path := range paths {
 		if !d.fileOps.Exists(path) {
 			continue
@@ -63,7 +63,7 @@ func (d *DefaultConfigLoader) Load(paths []string, dest interface{}) (string, er
 }
 
 // LoadFrom loads configuration from a specific file
-func (d *DefaultConfigLoader) LoadFrom(path string, dest interface{}) error {
+func (d *DefaultConfigLoader) LoadFrom(path string, dest any) error {
 	if !d.fileOps.Exists(path) {
 		return fmt.Errorf("%w: %s", ErrConfigFileNotExists, path)
 	}
@@ -84,7 +84,7 @@ func (d *DefaultConfigLoader) LoadFrom(path string, dest interface{}) error {
 }
 
 // Save saves configuration to a file in the specified format
-func (d *DefaultConfigLoader) Save(path string, data interface{}, format string) error {
+func (d *DefaultConfigLoader) Save(path string, data any, format string) error {
 	// Ensure directory exists
 	dir := filepath.Dir(path)
 	if err := d.fileOps.MkdirAll(dir, fileops.PermDir); err != nil {
@@ -106,7 +106,7 @@ func (d *DefaultConfigLoader) Save(path string, data interface{}, format string)
 }
 
 // Validate validates configuration data (basic implementation)
-func (d *DefaultConfigLoader) Validate(data interface{}) error {
+func (d *DefaultConfigLoader) Validate(data any) error {
 	if data == nil {
 		return ErrConfigDataNil
 	}
@@ -290,7 +290,7 @@ func (f *FileConfigSource) Name() string {
 }
 
 // Load loads configuration data from the source
-func (f *FileConfigSource) Load(dest interface{}) error {
+func (f *FileConfigSource) Load(dest any) error {
 	return f.loader.LoadFrom(f.path, dest)
 }
 
@@ -327,7 +327,7 @@ func (e *EnvConfigSource) Name() string {
 }
 
 // Load loads configuration data from environment variables
-func (e *EnvConfigSource) Load(_ interface{}) error {
+func (e *EnvConfigSource) Load(_ any) error {
 	// This is a simplified implementation
 	// In a real implementation, this would use reflection to map env vars to struct fields
 	return errEnvConfigNotImplemented

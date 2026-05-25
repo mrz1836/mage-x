@@ -11,8 +11,8 @@ import (
 // CallRecord represents a recorded method call for verification
 type CallRecord struct {
 	Method    string
-	Args      []interface{}
-	Result    []interface{}
+	Args      []any
+	Result    []any
 	Timestamp time.Time
 	Error     error
 }
@@ -67,7 +67,7 @@ func (m *MockBase) ClearAllErrors() {
 }
 
 // RecordCall records a method call for later verification
-func (m *MockBase) RecordCall(method string, args, result []interface{}, err error) {
+func (m *MockBase) RecordCall(method string, args, result []any, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -176,7 +176,7 @@ func (m *MockBase) AssertCalledTimes(method string, expectedTimes int) {
 }
 
 // AssertCalledWith verifies that a method was called with specific arguments
-func (m *MockBase) AssertCalledWith(method string, expectedArgs ...interface{}) {
+func (m *MockBase) AssertCalledWith(method string, expectedArgs ...any) {
 	if m.t == nil {
 		return
 	}
@@ -221,7 +221,7 @@ func (m *MockBase) GetLastCall(method string) *CallRecord {
 }
 
 // Helper method to compare arguments
-func (m *MockBase) argsMatch(actual, expected []interface{}) bool {
+func (m *MockBase) argsMatch(actual, expected []any) bool {
 	if len(actual) != len(expected) {
 		return false
 	}
@@ -237,7 +237,7 @@ func (m *MockBase) argsMatch(actual, expected []interface{}) bool {
 }
 
 // Helper method to compare individual arguments
-func (m *MockBase) argEquals(actual, expected interface{}) bool {
+func (m *MockBase) argEquals(actual, expected any) bool {
 	// For now, use simple equality. This could be enhanced with deep equality
 	return fmt.Sprintf("%v", actual) == fmt.Sprintf("%v", expected)
 }
@@ -246,114 +246,114 @@ func (m *MockBase) argEquals(actual, expected interface{}) bool {
 type MockStore struct {
 	*MockBase
 
-	data map[string]interface{} // key -> value storage
+	data map[string]any // key -> value storage
 }
 
 // NewMockStore creates a new generic mock store
 func NewMockStore(t *testing.T) *MockStore {
 	return &MockStore{
 		MockBase: NewMockBase(t),
-		data:     make(map[string]interface{}),
+		data:     make(map[string]any),
 	}
 }
 
 // Set stores a value in the mock store
-func (m *MockStore) Set(key string, value interface{}) error {
+func (m *MockStore) Set(key string, value any) error {
 	if err := m.ShouldReturnError("Set"); err != nil {
-		m.RecordCall("Set", []interface{}{key, value}, nil, err)
+		m.RecordCall("Set", []any{key, value}, nil, err)
 		return err
 	}
 
 	m.data[key] = value
-	m.RecordCall("Set", []interface{}{key, value}, []interface{}{}, nil)
+	m.RecordCall("Set", []any{key, value}, []any{}, nil)
 	return nil
 }
 
 // Get retrieves a value from the mock store
-func (m *MockStore) Get(key string) (interface{}, error) {
+func (m *MockStore) Get(key string) (any, error) {
 	if err := m.ShouldReturnError("Get"); err != nil {
-		m.RecordCall("Get", []interface{}{key}, nil, err)
+		m.RecordCall("Get", []any{key}, nil, err)
 		return nil, err
 	}
 
 	value, exists := m.data[key]
 	if !exists {
 		err := fmt.Errorf("key %s not found", key) //nolint:err113 // Dynamic errors are appropriate for test mocks
-		m.RecordCall("Get", []interface{}{key}, nil, err)
+		m.RecordCall("Get", []any{key}, nil, err)
 		return nil, err
 	}
 
-	m.RecordCall("Get", []interface{}{key}, []interface{}{value}, nil)
+	m.RecordCall("Get", []any{key}, []any{value}, nil)
 	return value, nil
 }
 
 // Delete removes a value from the mock store
 func (m *MockStore) Delete(key string) error {
 	if err := m.ShouldReturnError("Delete"); err != nil {
-		m.RecordCall("Delete", []interface{}{key}, nil, err)
+		m.RecordCall("Delete", []any{key}, nil, err)
 		return err
 	}
 
 	delete(m.data, key)
-	m.RecordCall("Delete", []interface{}{key}, []interface{}{}, nil)
+	m.RecordCall("Delete", []any{key}, []any{}, nil)
 	return nil
 }
 
 // Exists checks if a key exists in the mock store
 func (m *MockStore) Exists(key string) bool {
 	_, exists := m.data[key]
-	m.RecordCall("Exists", []interface{}{key}, []interface{}{exists}, nil)
+	m.RecordCall("Exists", []any{key}, []any{exists}, nil)
 	return exists
 }
 
 // Count returns the number of items in the store
 func (m *MockStore) Count() int {
 	count := len(m.data)
-	m.RecordCall("Count", []interface{}{}, []interface{}{count}, nil)
+	m.RecordCall("Count", []any{}, []any{count}, nil)
 	return count
 }
 
 // Clear removes all items from the store
 func (m *MockStore) Clear() {
-	m.data = make(map[string]interface{})
-	m.RecordCall("Clear", []interface{}{}, []interface{}{}, nil)
+	m.data = make(map[string]any)
+	m.RecordCall("Clear", []any{}, []any{}, nil)
 }
 
 // MockValidator provides a generic validator mock for testing
 type MockValidator struct {
 	*MockBase
 
-	validationRules map[string]func(interface{}) error
+	validationRules map[string]func(any) error
 }
 
 // NewMockValidator creates a new generic mock validator
 func NewMockValidator(t *testing.T) *MockValidator {
 	return &MockValidator{
 		MockBase:        NewMockBase(t),
-		validationRules: make(map[string]func(interface{}) error),
+		validationRules: make(map[string]func(any) error),
 	}
 }
 
 // SetValidationRule sets a validation rule for a specific field
-func (m *MockValidator) SetValidationRule(field string, rule func(interface{}) error) {
+func (m *MockValidator) SetValidationRule(field string, rule func(any) error) {
 	m.validationRules[field] = rule
 }
 
 // Validate validates a value using configured rules
-func (m *MockValidator) Validate(field string, value interface{}) error {
+func (m *MockValidator) Validate(field string, value any) error {
 	if err := m.ShouldReturnError("Validate"); err != nil {
-		m.RecordCall("Validate", []interface{}{field, value}, nil, err)
+		m.RecordCall("Validate", []any{field, value}, nil, err)
 		return err
 	}
 
 	if rule, exists := m.validationRules[field]; exists {
 		if err := rule(value); err != nil {
-			m.RecordCall("Validate", []interface{}{field, value}, nil, err)
+			m.RecordCall("Validate", []any{field, value}, nil, err)
 			return err
 		}
 	}
 
-	m.RecordCall("Validate", []interface{}{field, value}, []interface{}{}, nil)
+	m.RecordCall("Validate", []any{field, value}, []any{}, nil)
 	return nil
 }
 
@@ -361,24 +361,24 @@ func (m *MockValidator) Validate(field string, value interface{}) error {
 type MockHandler struct {
 	*MockBase
 
-	handlers map[string]func(...interface{}) (interface{}, error)
+	handlers map[string]func(...any) (any, error)
 }
 
 // NewMockHandler creates a new generic mock handler
 func NewMockHandler(t *testing.T) *MockHandler {
 	return &MockHandler{
 		MockBase: NewMockBase(t),
-		handlers: make(map[string]func(...interface{}) (interface{}, error)),
+		handlers: make(map[string]func(...any) (any, error)),
 	}
 }
 
 // SetHandler sets a handler function for a specific method
-func (m *MockHandler) SetHandler(method string, handler func(...interface{}) (interface{}, error)) {
+func (m *MockHandler) SetHandler(method string, handler func(...any) (any, error)) {
 	m.handlers[method] = handler
 }
 
 // Handle executes a handler with the given arguments
-func (m *MockHandler) Handle(method string, args ...interface{}) (interface{}, error) {
+func (m *MockHandler) Handle(method string, args ...any) (any, error) {
 	if err := m.ShouldReturnError(method); err != nil {
 		m.RecordCall(method, args, nil, err)
 		return nil, err
@@ -386,11 +386,11 @@ func (m *MockHandler) Handle(method string, args ...interface{}) (interface{}, e
 
 	if handler, exists := m.handlers[method]; exists {
 		result, err := handler(args...)
-		m.RecordCall(method, args, []interface{}{result}, err)
+		m.RecordCall(method, args, []any{result}, err)
 		return result, err
 	}
 
 	// Default behavior: return nil, nil
-	m.RecordCall(method, args, []interface{}{nil}, nil)
+	m.RecordCall(method, args, []any{nil}, nil)
 	return nil, nil //nolint:nilnil // Returning nil,nil is appropriate for mock handlers with no configured behavior
 }

@@ -576,7 +576,7 @@ func TestHTTPGetJSON_AdditionalCoverage(t *testing.T) {
 	t.Run("handles invalid URL", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_, err := HTTPGetJSON[map[string]interface{}](ctx, "://invalid-url")
+		_, err := HTTPGetJSON[map[string]any](ctx, "://invalid-url")
 		require.Error(t, err)
 	})
 
@@ -584,7 +584,7 @@ func TestHTTPGetJSON_AdditionalCoverage(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 		// Use a URL that will fail
-		_, err := HTTPGetJSON[map[string]interface{}](ctx, "http://localhost:99999/nonexistent")
+		_, err := HTTPGetJSON[map[string]any](ctx, "http://localhost:99999/nonexistent")
 		require.Error(t, err)
 	})
 }

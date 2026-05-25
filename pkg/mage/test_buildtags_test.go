@@ -26,7 +26,7 @@ type MockBuildTagRunner struct {
 
 func (m *MockBuildTagRunner) RunCmd(cmd string, args ...string) error {
 	allArgs := append([]string{cmd}, args...)
-	argsInterface := make([]interface{}, len(allArgs))
+	argsInterface := make([]any, len(allArgs))
 	for i, v := range allArgs {
 		argsInterface[i] = v
 	}
@@ -37,7 +37,7 @@ func (m *MockBuildTagRunner) RunCmd(cmd string, args ...string) error {
 
 func (m *MockBuildTagRunner) RunCmdOutput(cmd string, args ...string) (string, error) {
 	allArgs := append([]string{cmd}, args...)
-	argsInterface := make([]interface{}, len(allArgs))
+	argsInterface := make([]any, len(allArgs))
 	for i, v := range allArgs {
 		argsInterface[i] = v
 	}
@@ -468,6 +468,7 @@ func TestTitleCase(t *testing.T) {
 // Helper functions for tests
 
 func createTestFile(t *testing.T, dir, filename, buildTag string) {
+	t.Helper()
 	content := fmt.Sprintf(`%s
 
 package testdata

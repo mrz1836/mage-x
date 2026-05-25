@@ -46,10 +46,10 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.2.3", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				version := getVersion()
 				ts.Require().Equal("v1.2.3", version)
@@ -85,10 +85,10 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		ts.Require().NoError(err)
 
 		err = env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				version := getVersion()
 				ts.Require().Equal("2.0.0", version)
@@ -116,10 +116,10 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		})
 
 		err := env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				version := getVersion()
 				ts.Require().Equal("3.0.0", version)
@@ -142,10 +142,10 @@ func (ts *CommonTestSuite) TestGetVersion() {
 		TestResetConfig()
 
 		err := env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // Test setup function returns error
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				version := getVersion()
 				ts.Require().Equal("dev", version)

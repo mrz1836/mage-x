@@ -414,7 +414,7 @@ func BenchmarkDo_SuccessFirstAttempt(b *testing.B) {
 	cfg := DefaultConfig()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = Do(context.Background(), cfg, func() error {
 			return nil
 		})
@@ -430,7 +430,7 @@ func BenchmarkDo_WithRetries(b *testing.B) {
 
 	attempts := 0
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		attempts = 0
 		_ = Do(context.Background(), cfg, func() error {
 			attempts++

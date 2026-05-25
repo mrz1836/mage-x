@@ -1,9 +1,10 @@
 package registry
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 
@@ -143,11 +144,11 @@ func (r *Registry) List() []*Command {
 	}
 
 	// Sort by namespace and name
-	sort.Slice(commands, func(i, j int) bool {
-		if commands[i].Namespace != commands[j].Namespace {
-			return commands[i].Namespace < commands[j].Namespace
+	slices.SortFunc(commands, func(a, b *Command) int {
+		if c := cmp.Compare(a.Namespace, b.Namespace); c != 0 {
+			return c
 		}
-		return commands[i].Method < commands[j].Method
+		return cmp.Compare(a.Method, b.Method)
 	})
 
 	return commands
@@ -168,8 +169,8 @@ func (r *Registry) ListByNamespace(namespace string) []*Command {
 	}
 
 	// Sort by method name
-	sort.Slice(commands, func(i, j int) bool {
-		return commands[i].Method < commands[j].Method
+	slices.SortFunc(commands, func(a, b *Command) int {
+		return cmp.Compare(a.Method, b.Method)
 	})
 
 	return commands
@@ -188,8 +189,8 @@ func (r *Registry) ListByCategory(category string) []*Command {
 	}
 
 	// Sort by full name
-	sort.Slice(commands, func(i, j int) bool {
-		return commands[i].FullName() < commands[j].FullName()
+	slices.SortFunc(commands, func(a, b *Command) int {
+		return cmp.Compare(a.FullName(), b.FullName())
 	})
 
 	return commands
@@ -218,7 +219,7 @@ func (r *Registry) namespacesLocked() []string {
 		namespaces = append(namespaces, ns)
 	}
 
-	sort.Strings(namespaces)
+	slices.Sort(namespaces)
 	return namespaces
 }
 
@@ -232,7 +233,7 @@ func (r *Registry) Categories() []string {
 		categories = append(categories, cat)
 	}
 
-	sort.Strings(categories)
+	slices.Sort(categories)
 	return categories
 }
 
@@ -254,8 +255,8 @@ func (r *Registry) CategorizedCommands() map[string][]*Command {
 
 	// Sort commands within each category
 	for category := range categorized {
-		sort.Slice(categorized[category], func(i, j int) bool {
-			return categorized[category][i].FullName() < categorized[category][j].FullName()
+		slices.SortFunc(categorized[category], func(a, b *Command) int {
+			return cmp.Compare(a.FullName(), b.FullName())
 		})
 	}
 
@@ -282,11 +283,11 @@ func (r *Registry) CategoryOrder() []string {
 	}
 
 	// Sort by order, then by name
-	sort.Slice(categoriesWithOrder, func(i, j int) bool {
-		if categoriesWithOrder[i].order != categoriesWithOrder[j].order {
-			return categoriesWithOrder[i].order < categoriesWithOrder[j].order
+	slices.SortFunc(categoriesWithOrder, func(a, b categoryWithOrder) int {
+		if c := cmp.Compare(a.order, b.order); c != 0 {
+			return c
 		}
-		return categoriesWithOrder[i].name < categoriesWithOrder[j].name
+		return cmp.Compare(a.name, b.name)
 	})
 
 	categories := make([]string, len(categoriesWithOrder))

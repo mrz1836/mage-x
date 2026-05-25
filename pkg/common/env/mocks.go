@@ -590,7 +590,7 @@ func (m *MockEnvValidator) Pattern(key, pattern string) Validator {
 }
 
 // Range implements Validator.Range
-func (m *MockEnvValidator) Range(key string, min, max interface{}) Validator {
+func (m *MockEnvValidator) Range(key string, min, max any) Validator {
 	m.calls["Range"]++
 	return m
 }

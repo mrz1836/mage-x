@@ -27,6 +27,7 @@ func TestNamespaceArchitecture(t *testing.T) {
 }
 
 func testBuildNamespace(t *testing.T) {
+	t.Helper()
 	ns := NewBuildNamespace()
 	if ns == nil {
 		t.Fatal("NewBuildNamespace returned nil")
@@ -39,6 +40,7 @@ func testBuildNamespace(t *testing.T) {
 }
 
 func testTestNamespace(t *testing.T) {
+	t.Helper()
 	ns := NewTestNamespace()
 	if ns == nil {
 		t.Fatal("NewTestNamespace returned nil")
@@ -51,6 +53,7 @@ func testTestNamespace(t *testing.T) {
 }
 
 func testLintNamespace(t *testing.T) {
+	t.Helper()
 	ns := NewLintNamespace()
 	if ns == nil {
 		t.Fatal("NewLintNamespace returned nil")
@@ -63,6 +66,7 @@ func testLintNamespace(t *testing.T) {
 }
 
 func testToolsNamespace(t *testing.T) {
+	t.Helper()
 	ns := NewToolsNamespace()
 	if ns == nil {
 		t.Fatal("NewToolsNamespace returned nil")
@@ -75,6 +79,7 @@ func testToolsNamespace(t *testing.T) {
 }
 
 func testDepsNamespace(t *testing.T) {
+	t.Helper()
 	ns := NewDepsNamespace()
 	if ns == nil {
 		t.Fatal("NewDepsNamespace returned nil")
@@ -87,6 +92,7 @@ func testDepsNamespace(t *testing.T) {
 }
 
 func testModNamespace(t *testing.T) {
+	t.Helper()
 	ns := NewModNamespace()
 	if ns == nil {
 		t.Fatal("NewModNamespace returned nil")
@@ -99,6 +105,7 @@ func testModNamespace(t *testing.T) {
 }
 
 func testUpdateNamespace(t *testing.T) {
+	t.Helper()
 	ns := NewUpdateNamespace()
 	if ns == nil {
 		t.Fatal("NewUpdateNamespace returned nil")
@@ -111,6 +118,7 @@ func testUpdateNamespace(t *testing.T) {
 }
 
 func testMetricsNamespace(t *testing.T) {
+	t.Helper()
 	ns := NewMetricsNamespace()
 	if ns == nil {
 		t.Fatal("NewMetricsNamespace returned nil")
@@ -123,6 +131,7 @@ func testMetricsNamespace(t *testing.T) {
 }
 
 func testGenerateNamespace(t *testing.T) {
+	t.Helper()
 	ns := NewGenerateNamespace()
 	if ns == nil {
 		t.Fatal("NewGenerateNamespace returned nil")

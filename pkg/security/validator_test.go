@@ -388,7 +388,7 @@ func BenchmarkValidateCommandArg_Safe(b *testing.B) {
 	arg := "this is a safe argument with no dangerous patterns"
 	b.ResetTimer()
 	var result error
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result = ValidateCommandArg(arg)
 	}
 	_ = result // Prevent optimization
@@ -398,7 +398,7 @@ func BenchmarkValidateCommandArg_Dangerous(b *testing.B) {
 	arg := "$(whoami) && rm -rf /"
 	b.ResetTimer()
 	var result error
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result = ValidateCommandArg(arg)
 	}
 	_ = result // Prevent optimization
@@ -408,7 +408,7 @@ func BenchmarkValidatePath_Safe(b *testing.B) {
 	path := "path/to/safe/file.txt"
 	b.ResetTimer()
 	var result error
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result = ValidatePath(path)
 	}
 	_ = result // Prevent optimization
@@ -418,7 +418,7 @@ func BenchmarkValidatePath_Dangerous(b *testing.B) {
 	path := "../../../etc/passwd"
 	b.ResetTimer()
 	var result error
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result = ValidatePath(path)
 	}
 	_ = result // Prevent optimization
@@ -627,11 +627,11 @@ func (suite *SecurityValidatorTestSuite) TestConcurrentValidation() {
 	}
 
 	for _, tc := range testCases {
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			wg.Add(1)
 			go func(validator func() error) {
 				defer wg.Done()
-				for j := 0; j < iterations; j++ {
+				for range iterations {
 					if err := validator(); err != nil {
 						errorChan <- err
 					}

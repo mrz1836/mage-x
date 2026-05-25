@@ -605,7 +605,7 @@ func BenchmarkIntegration_CommandListing(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// #nosec G204 -- magexPath is controlled in tests
 		cmd := exec.CommandContext(context.Background(), magexPath, "-l")
 		cmd.Dir = tmpDir

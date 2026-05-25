@@ -30,7 +30,7 @@ func (f *CommonErrorFactory) Wrap(err error, message string) error {
 }
 
 // Wrapf creates a wrapped error with formatted message
-func (f *CommonErrorFactory) Wrapf(err error, format string, args ...interface{}) error {
+func (f *CommonErrorFactory) Wrapf(err error, format string, args ...any) error {
 	if err == nil {
 		return nil
 	}
@@ -43,7 +43,7 @@ func (f *CommonErrorFactory) WithCode(code ErrorCode, message string) MageError 
 }
 
 // WithCodef creates an error with a specific error code and formatted message
-func (f *CommonErrorFactory) WithCodef(code ErrorCode, format string, args ...interface{}) MageError {
+func (f *CommonErrorFactory) WithCodef(code ErrorCode, format string, args ...any) MageError {
 	return NewBuilder().WithCode(code).WithMessage(format, args...).Build()
 }
 
@@ -122,7 +122,7 @@ func (f *CommonErrorFactory) Chain(errors ...error) ErrorChain {
 }
 
 // Recovery creates an error indicating recovery from a panic
-func (f *CommonErrorFactory) Recovery(panicValue interface{}, operation string) error {
+func (f *CommonErrorFactory) Recovery(panicValue any, operation string) error {
 	return f.WithCodef(ErrInternal, "recovered from panic in %s: %v", operation, panicValue)
 }
 
@@ -134,7 +134,7 @@ func WrapError(err error, message string) error {
 }
 
 // WrapErrorf creates a wrapped error with formatted message
-func WrapErrorf(err error, format string, args ...interface{}) error {
+func WrapErrorf(err error, format string, args ...any) error {
 	return createDefaultFactory().Wrapf(err, format, args...)
 }
 
@@ -144,7 +144,7 @@ func ErrorWithCode(code ErrorCode, message string) MageError {
 }
 
 // ErrorWithCodef creates an error with a specific error code and formatted message
-func ErrorWithCodef(code ErrorCode, format string, args ...interface{}) MageError {
+func ErrorWithCodef(code ErrorCode, format string, args ...any) MageError {
 	return createDefaultFactory().WithCodef(code, format, args...)
 }
 
@@ -209,7 +209,7 @@ func Chain(errors ...error) ErrorChain {
 }
 
 // Recovery creates an error indicating recovery from a panic
-func Recovery(panicValue interface{}, operation string) error {
+func Recovery(panicValue any, operation string) error {
 	return createDefaultFactory().Recovery(panicValue, operation)
 }
 

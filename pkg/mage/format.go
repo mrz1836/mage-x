@@ -593,7 +593,7 @@ func formatJSONFileNative(file string) bool {
 	}
 
 	// Parse JSON to validate it and format it
-	var jsonData interface{}
+	var jsonData any
 	if unmarshalErr := json.Unmarshal(data, &jsonData); unmarshalErr != nil {
 		utils.Warn("Invalid JSON in %s: %v", file, unmarshalErr)
 		return false

@@ -233,7 +233,7 @@ func TestMemoryDetectionFallback(t *testing.T) {
 // Benchmark memory detection performance
 func BenchmarkGetSystemMemoryInfo(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		info, err := GetSystemMemoryInfo()
 		if err != nil {
 			b.Fatal(err)
@@ -247,7 +247,7 @@ func BenchmarkGetSystemMemoryInfo(b *testing.B) {
 // BenchmarkGetAvailableMemory benchmarks the convenience function
 func BenchmarkGetAvailableMemory(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		available := GetAvailableMemory()
 		if available == 0 {
 			b.Fatal("Got zero available memory")

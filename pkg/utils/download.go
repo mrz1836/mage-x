@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -163,7 +162,7 @@ func downloadFile(ctx context.Context, url, destPath string, config *DownloadCon
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			log.Printf("failed to close destination file: %v", closeErr)
+			Warn("failed to close destination file: %v", closeErr)
 		}
 	}()
 
@@ -192,7 +191,7 @@ func downloadFile(ctx context.Context, url, destPath string, config *DownloadCon
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			log.Printf("failed to close response body: %v", closeErr)
+			Warn("failed to close response body: %v", closeErr)
 		}
 	}()
 
@@ -288,7 +287,7 @@ func verifyChecksum(filePath, expectedSHA256 string) error {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			log.Printf("failed to close file during checksum verification: %v", closeErr)
+			Warn("failed to close file during checksum verification: %v", closeErr)
 		}
 	}()
 
@@ -341,7 +340,7 @@ func DownloadScript(ctx context.Context, url, scriptArgs string, config *Downloa
 			return fmt.Errorf("%w: script URL %s", ErrChecksumRequired, url)
 		}
 		// Security warning: downloading scripts without checksum verification is risky
-		log.Printf("WARNING: downloading script from %s without checksum verification - consider providing ChecksumSHA256 for security", url)
+		Warn("WARNING: downloading script from %s without checksum verification - consider providing ChecksumSHA256 for security", url)
 	}
 
 	// Create temporary file for script
@@ -355,7 +354,7 @@ func DownloadScript(ctx context.Context, url, scriptArgs string, config *Downloa
 	// Ensure cleanup happens after execution
 	defer func() {
 		if removeErr := os.Remove(scriptPath); removeErr != nil {
-			log.Printf("failed to remove temporary script %s: %v", scriptPath, removeErr)
+			Warn("failed to remove temporary script %s: %v", scriptPath, removeErr)
 		}
 	}()
 
@@ -418,7 +417,7 @@ func splitArgs(s string) []string {
 }
 
 // ConfigToDownloadConfig converts mage.DownloadConfig to utils.DownloadConfig
-func ConfigToDownloadConfig(cfg interface{}) *DownloadConfig {
+func ConfigToDownloadConfig(cfg any) *DownloadConfig {
 	// Use type assertion to safely convert from mage config
 	// This avoids circular import between mage and utils packages
 	if cfg == nil {
@@ -435,7 +434,7 @@ func ConfigToDownloadConfig(cfg interface{}) *DownloadConfig {
 
 // ExecuteCommandWithRetry wraps the command execution with retry logic
 // This will be called from the mage package to avoid circular dependencies
-func ExecuteCommandWithRetry(ctx context.Context, executor interface{}, maxRetries int,
+func ExecuteCommandWithRetry(ctx context.Context, executor any, maxRetries int,
 	initialDelayMs int, name string, args ...string,
 ) error {
 	// Cast the executor to the expected interface

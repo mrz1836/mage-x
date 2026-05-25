@@ -176,7 +176,7 @@ func TestPackageProviderRegistryProvider(t *testing.T) {
 		registries := make([]*ProviderRegistry, numGoroutines)
 
 		wg.Add(numGoroutines)
-		for i := 0; i < numGoroutines; i++ {
+		for i := range numGoroutines {
 			go func(index int) {
 				defer wg.Done()
 				registries[index] = provider.GetRegistry()
@@ -197,14 +197,14 @@ func TestPackageProviderRegistryProvider(t *testing.T) {
 		customRegistries := make([]*ProviderRegistry, numGoroutines)
 
 		// Create custom registries
-		for i := 0; i < numGoroutines; i++ {
+		for i := range numGoroutines {
 			customRegistries[i] = NewProviderRegistry()
 		}
 
 		wg.Add(numGoroutines * 2) // Double for set and get operations
 
 		// Concurrent set operations
-		for i := 0; i < numGoroutines; i++ {
+		for i := range numGoroutines {
 			go func(index int) {
 				defer wg.Done()
 				provider.SetRegistry(customRegistries[index])
@@ -212,7 +212,7 @@ func TestPackageProviderRegistryProvider(t *testing.T) {
 		}
 
 		// Concurrent get operations
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			go func() {
 				defer wg.Done()
 				registry := provider.GetRegistry()
@@ -349,7 +349,7 @@ func (suite *ConfigProviderTestSuite) TestConcurrentProviderAccess() {
 	results := make([]PackageProviderRegistryProvider, numGoroutines)
 
 	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(index int) {
 			defer wg.Done()
 			// Small delay to increase chance of race conditions

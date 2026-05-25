@@ -455,7 +455,7 @@ func TestProgressCallback(t *testing.T) {
 		// Write content in chunks to trigger progress updates
 		chunks := 10
 		chunkSize := len(testContent) / chunks
-		for i := 0; i < chunks; i++ {
+		for i := range chunks {
 			start := i * chunkSize
 			end := start + chunkSize
 			if i == chunks-1 {
@@ -555,7 +555,7 @@ func BenchmarkDownloadSmallFile(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		tempDir, err := os.MkdirTemp("", "bench")
 		if err != nil {
 			b.Fatalf("Failed to create temp directory: %v", err)
@@ -872,7 +872,7 @@ func BenchmarkDownloadWithRetries(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		tempDir, err := os.MkdirTemp("", "bench")
 		if err != nil {
 			b.Fatalf("Failed to create temp directory: %v", err)
@@ -996,7 +996,7 @@ func BenchmarkSplitArgs(b *testing.B) {
 			name = "empty"
 		}
 		b.Run(name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_ = splitArgs(tc)
 			}
 		})

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -182,7 +182,7 @@ func (m *Manager) GenerateDependencyHash(modFile, sumFile string, environment ma
 	}
 
 	// Sort keys for deterministic output
-	sort.Strings(envKeys)
+	slices.Sort(envKeys)
 
 	var envBuilder strings.Builder
 	for _, k := range envKeys {

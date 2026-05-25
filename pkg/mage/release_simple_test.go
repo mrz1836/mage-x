@@ -437,7 +437,7 @@ func BenchmarkReleaseOperations(b *testing.B) {
 
 	b.Run("Check", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if err := release.Check(); err != nil {
 				// Expected - this is a benchmark, just consume the error
 				_ = err

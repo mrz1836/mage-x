@@ -75,8 +75,8 @@ aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 	}).Return("", errAWSCommandFailed)
 
 	err = ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.aws.Status()
 		},
@@ -120,8 +120,8 @@ aws_access_key_id = KEY3
 	}).Return("", errAWSCommandFailed).Maybe()
 
 	err = ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.aws.Status()
 		},
@@ -151,8 +151,8 @@ aws_access_key_id = KEY2
 	}).Return("", errAWSCommandFailed)
 
 	err = ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.aws.Status("profile=production")
 		},
@@ -349,8 +349,8 @@ func (ts *AWSMainTestSuite) TestDisplayAWSProfileStatus() {
 	}).Return(string(mockJSON), nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			// This function prints output, just verify it doesn't panic
 			ts.Assert().NotPanics(func() {

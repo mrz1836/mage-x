@@ -33,10 +33,10 @@ func TestRealDefaultChainErrorConcurrentAdd(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(numGoroutines)
 
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			go func() {
 				defer wg.Done()
-				for j := 0; j < errorsPerGoroutine; j++ {
+				for range errorsPerGoroutine {
 					_ = chain.Add(errConcurrentWorker)
 				}
 			}()
@@ -57,7 +57,7 @@ func TestRealDefaultChainErrorConcurrentAdd(t *testing.T) {
 		wg.Add(numGoroutines * 2)
 
 		// Half add real errors, half add nil
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			go func() {
 				defer wg.Done()
 				_ = chain.Add(errConcurrentAdd)
@@ -81,7 +81,7 @@ func TestRealDefaultChainErrorConcurrentAdd(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(numGoroutines)
 
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			go func() {
 				defer wg.Done()
 				ctx := &ErrorContext{
@@ -120,20 +120,20 @@ func TestRealDefaultChainErrorConcurrentReadWrite(t *testing.T) {
 		wg.Add(numWriters + numReaders)
 
 		// Start writers
-		for i := 0; i < numWriters; i++ {
+		for range numWriters {
 			go func() {
 				defer wg.Done()
-				for j := 0; j < operationsPerWorker; j++ {
+				for range operationsPerWorker {
 					_ = chain.Add(errConcurrentWorker)
 				}
 			}()
 		}
 
 		// Start readers
-		for i := 0; i < numReaders; i++ {
+		for range numReaders {
 			go func() {
 				defer wg.Done()
-				for j := 0; j < operationsPerWorker; j++ {
+				for range operationsPerWorker {
 					_ = chain.Count()
 					_ = chain.Errors()
 					_ = chain.First()
@@ -160,10 +160,10 @@ func TestRealDefaultChainErrorConcurrentReadWrite(t *testing.T) {
 		wg.Add(numWriters + numReaders)
 
 		// Start writers adding MageErrors
-		for i := 0; i < numWriters; i++ {
+		for range numWriters {
 			go func() {
 				defer wg.Done()
-				for j := 0; j < operationsPerWorker; j++ {
+				for range operationsPerWorker {
 					mageErr := NewErrorBuilder().
 						WithCode(ErrInternal).
 						WithMessage("concurrent mage error").
@@ -174,10 +174,10 @@ func TestRealDefaultChainErrorConcurrentReadWrite(t *testing.T) {
 		}
 
 		// Start readers checking for errors
-		for i := 0; i < numReaders; i++ {
+		for range numReaders {
 			go func() {
 				defer wg.Done()
-				for j := 0; j < operationsPerWorker; j++ {
+				for range operationsPerWorker {
 					_ = chain.HasError(ErrInternal)
 					_ = chain.HasError(ErrNotFound)
 					_ = chain.FindByCode(ErrInternal)
@@ -220,10 +220,10 @@ func TestRealDefaultChainErrorConcurrentFilter(t *testing.T) {
 		wg.Add(numWriters + numFilterers)
 
 		// Start writers
-		for i := 0; i < numWriters; i++ {
+		for range numWriters {
 			go func() {
 				defer wg.Done()
-				for j := 0; j < operationsPerWorker; j++ {
+				for range operationsPerWorker {
 					_ = chain.Add(errConcurrentWorker)
 				}
 			}()
@@ -231,11 +231,11 @@ func TestRealDefaultChainErrorConcurrentFilter(t *testing.T) {
 
 		// Start filterers
 		filterResults := make([][]error, numFilterers)
-		for i := 0; i < numFilterers; i++ {
+		for i := range numFilterers {
 			idx := i
 			go func() {
 				defer wg.Done()
-				for j := 0; j < operationsPerWorker; j++ {
+				for range operationsPerWorker {
 					result := chain.Filter(func(err error) bool {
 						return err.Error() == errConcurrentFilter.Error()
 					})
@@ -277,7 +277,7 @@ func TestRealDefaultChainErrorConcurrentFilter(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(numFilterers)
 
-		for i := 0; i < numFilterers; i++ {
+		for range numFilterers {
 			go func() {
 				defer wg.Done()
 				result := chain.Filter(func(err error) bool {
@@ -312,7 +312,7 @@ func TestRealDefaultChainErrorConcurrentForEach(t *testing.T) {
 		wg.Add(numWriters + numIterators)
 
 		// Start writers
-		for i := 0; i < numWriters; i++ {
+		for range numWriters {
 			go func() {
 				defer wg.Done()
 				for j := 0; j < 10; j++ {
@@ -323,7 +323,7 @@ func TestRealDefaultChainErrorConcurrentForEach(t *testing.T) {
 
 		// Start iterators
 		iterationCounts := make([]int, numIterators)
-		for i := 0; i < numIterators; i++ {
+		for i := range numIterators {
 			idx := i
 			go func() {
 				defer wg.Done()
@@ -356,7 +356,7 @@ func TestRealDefaultChainErrorConcurrentForEach(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(numIterators)
 
-		for i := 0; i < numIterators; i++ {
+		for range numIterators {
 			go func() {
 				defer wg.Done()
 				count := 0
@@ -394,7 +394,7 @@ func TestRealDefaultChainErrorConcurrentToSliceErrors(t *testing.T) {
 	wg.Add(numReaders * 2)
 
 	// Half use ToSlice, half use Errors
-	for i := 0; i < numReaders; i++ {
+	for range numReaders {
 		go func() {
 			defer wg.Done()
 			result := chain.ToSlice()
@@ -423,7 +423,7 @@ func TestRealDefaultChainErrorConcurrentFirstLast(t *testing.T) {
 	wg.Add(numOperations * 3)
 
 	// Concurrent reads of First
-	for i := 0; i < numOperations; i++ {
+	for range numOperations {
 		go func() {
 			defer wg.Done()
 			first := chain.First()
@@ -432,7 +432,7 @@ func TestRealDefaultChainErrorConcurrentFirstLast(t *testing.T) {
 	}
 
 	// Concurrent reads of Last (while also adding)
-	for i := 0; i < numOperations; i++ {
+	for range numOperations {
 		go func() {
 			defer wg.Done()
 			_ = chain.Last() // Just verify no panic
@@ -440,7 +440,7 @@ func TestRealDefaultChainErrorConcurrentFirstLast(t *testing.T) {
 	}
 
 	// Concurrent adds
-	for i := 0; i < numOperations; i++ {
+	for range numOperations {
 		go func() {
 			defer wg.Done()
 			_ = chain.Add(errConcurrentWorker)
@@ -467,17 +467,17 @@ func TestRealDefaultChainErrorConcurrentCount(t *testing.T) {
 	wg.Add(numAdders + numCounters)
 
 	// Start adders
-	for i := 0; i < numAdders; i++ {
+	for range numAdders {
 		go func() {
 			defer wg.Done()
-			for j := 0; j < addsPerWorker; j++ {
+			for range addsPerWorker {
 				_ = chain.Add(errConcurrentWorker)
 			}
 		}()
 	}
 
 	// Start counters
-	for i := 0; i < numCounters; i++ {
+	for range numCounters {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < 50; j++ {

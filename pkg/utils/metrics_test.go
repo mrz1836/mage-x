@@ -714,11 +714,13 @@ func BenchmarkMetricsCollector_RecordCounter(b *testing.B) {
 	tags := map[string]string{"bench": "true"}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		err := collector.RecordCounter("bench_counter", float64(i), tags)
 		if err != nil {
 			b.Logf("RecordCounter error in benchmark: %v", err)
 		}
+		i++
 	}
 }
 
@@ -731,7 +733,7 @@ func BenchmarkPerformanceTimer_StartStop(b *testing.B) {
 	collector := NewMetricsCollector(&config)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		timer := collector.StartTimer("bench_timer", nil)
 		timer.Stop()
 	}
@@ -1110,7 +1112,7 @@ func BenchmarkJSONStorage_Store(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		err := storage.Store(metric)
 		if err != nil {
 			b.Logf("Store error in benchmark: %v", err)

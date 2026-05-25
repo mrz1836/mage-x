@@ -282,7 +282,7 @@ func emitNamespaceJSON(namespace string) error {
 }
 
 // writeJSON marshals v with indentation and prints it to stdout.
-func writeJSON(v interface{}) error {
+func writeJSON(v any) error {
 	out, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal help JSON: %w", err)

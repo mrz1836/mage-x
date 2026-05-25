@@ -99,7 +99,7 @@ func (n *DefaultErrorNotifier) NotifyWithContext(ctx context.Context, err error)
 		Environment: "mage-build-system",
 		Hostname:    "localhost",
 		Service:     "mage",
-		Metadata:    map[string]interface{}{"severity": mageErr.Severity()},
+		Metadata:    map[string]any{"severity": mageErr.Severity()},
 	}
 
 	// Send to all enabled channels

@@ -362,6 +362,7 @@ value:  123
 
 // checkColonSpacing checks for excessive spacing after colons in YAML key-value pairs
 func checkColonSpacing(t *testing.T, line, filename string, lineNum int) {
+	t.Helper()
 	if !strings.Contains(line, ":") || strings.HasPrefix(strings.TrimSpace(line), "#") {
 		return
 	}

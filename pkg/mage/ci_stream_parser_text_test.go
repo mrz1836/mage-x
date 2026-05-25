@@ -585,7 +585,7 @@ func BenchmarkTextStreamParser_ParseLine(b *testing.B) {
 	line := "--- FAIL: FuzzGetToken (0.34s)"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		//nolint:errcheck,gosec // Benchmark - ignore errors
 		parser.ParseLine(line)
 	}
@@ -602,7 +602,7 @@ FAIL
 FAIL github.com/example/pkg 0.345s
 `
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		parser := NewTextStreamParser(20, true)
 		//nolint:errcheck,gosec // Benchmark - ignore errors
 		parser.Parse(strings.NewReader(input))

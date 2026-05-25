@@ -36,72 +36,72 @@ func (suite *InterfaceComplianceTestSuite) SetupTest() {
 func (suite *InterfaceComplianceTestSuite) TestNamespaceFactoryFunctions() {
 	testCases := []struct {
 		name          string
-		factory       func() interface{}
+		factory       func() any
 		interfaceType reflect.Type
 	}{
 		{
 			name:          "NewBuildNamespace",
-			factory:       func() interface{} { return NewBuildNamespace() },
+			factory:       func() any { return NewBuildNamespace() },
 			interfaceType: reflect.TypeOf((*BuildNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewTestNamespace",
-			factory:       func() interface{} { return NewTestNamespace() },
+			factory:       func() any { return NewTestNamespace() },
 			interfaceType: reflect.TypeOf((*TestNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewLintNamespace",
-			factory:       func() interface{} { return NewLintNamespace() },
+			factory:       func() any { return NewLintNamespace() },
 			interfaceType: reflect.TypeOf((*LintNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewFormatNamespace",
-			factory:       func() interface{} { return NewFormatNamespace() },
+			factory:       func() any { return NewFormatNamespace() },
 			interfaceType: reflect.TypeOf((*FormatNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewDepsNamespace",
-			factory:       func() interface{} { return NewDepsNamespace() },
+			factory:       func() any { return NewDepsNamespace() },
 			interfaceType: reflect.TypeOf((*DepsNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewGitNamespace",
-			factory:       func() interface{} { return NewGitNamespace() },
+			factory:       func() any { return NewGitNamespace() },
 			interfaceType: reflect.TypeOf((*GitNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewReleaseNamespace",
-			factory:       func() interface{} { return NewReleaseNamespace() },
+			factory:       func() any { return NewReleaseNamespace() },
 			interfaceType: reflect.TypeOf((*ReleaseNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewDocsNamespace",
-			factory:       func() interface{} { return NewDocsNamespace() },
+			factory:       func() any { return NewDocsNamespace() },
 			interfaceType: reflect.TypeOf((*DocsNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewToolsNamespace",
-			factory:       func() interface{} { return NewToolsNamespace() },
+			factory:       func() any { return NewToolsNamespace() },
 			interfaceType: reflect.TypeOf((*ToolsNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewGenerateNamespace",
-			factory:       func() interface{} { return NewGenerateNamespace() },
+			factory:       func() any { return NewGenerateNamespace() },
 			interfaceType: reflect.TypeOf((*GenerateNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewUpdateNamespace",
-			factory:       func() interface{} { return NewUpdateNamespace() },
+			factory:       func() any { return NewUpdateNamespace() },
 			interfaceType: reflect.TypeOf((*UpdateNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewModNamespace",
-			factory:       func() interface{} { return NewModNamespace() },
+			factory:       func() any { return NewModNamespace() },
 			interfaceType: reflect.TypeOf((*ModNamespace)(nil)).Elem(),
 		},
 		{
 			name:          "NewMetricsNamespace",
-			factory:       func() interface{} { return NewMetricsNamespace() },
+			factory:       func() any { return NewMetricsNamespace() },
 			interfaceType: reflect.TypeOf((*MetricsNamespace)(nil)).Elem(),
 		},
 	}
@@ -182,7 +182,7 @@ func (suite *InterfaceComplianceTestSuite) TestNamespaceInterfaceMethods() {
 }
 
 // checkMethodExists verifies that a method exists on an interface
-func (suite *InterfaceComplianceTestSuite) checkMethodExists(obj interface{}, methodName string) {
+func (suite *InterfaceComplianceTestSuite) checkMethodExists(obj any, methodName string) {
 	value := reflect.ValueOf(obj)
 	method := value.MethodByName(methodName)
 	suite.True(method.IsValid(), "Method %s should exist on %T", methodName, obj)
@@ -301,12 +301,12 @@ func (suite *InterfaceComplianceTestSuite) TestConcurrentNamespaceAccess() {
 	var wg sync.WaitGroup
 	errorChan := make(chan error, numGoroutines*iterations)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
 
-			for j := 0; j < iterations; j++ {
+			for j := range iterations {
 				// Test concurrent access to different namespaces
 				build := suite.registry.Build()
 				if build == nil {
@@ -380,7 +380,7 @@ func (suite *InterfaceComplianceTestSuite) TestNamespaceRegistryProvider() {
 func (suite *InterfaceComplianceTestSuite) TestNamespaceMethodSignatures() {
 	testCases := []struct {
 		name      string
-		namespace interface{}
+		namespace any
 		methods   []string
 	}{
 		{
@@ -477,7 +477,7 @@ func (suite *InterfaceComplianceTestSuite) TestInterfaceStabilityAndEvolution() 
 
 		testCases := []struct {
 			name      string
-			namespace interface{}
+			namespace any
 		}{
 			{"BuildNamespace", suite.registry.Build()},
 			{"TestNamespace", suite.registry.Test()},
@@ -504,7 +504,7 @@ func (suite *InterfaceComplianceTestSuite) TestInterfaceStabilityAndEvolution() 
 
 	suite.Run("method signature consistency", func() {
 		// Test that common method patterns are consistent
-		namespaces := []interface{}{
+		namespaces := []any{
 			suite.registry.Build(),
 			suite.registry.Test(),
 			suite.registry.Lint(),
@@ -561,7 +561,7 @@ func BenchmarkNamespaceAccess(b *testing.B) {
 
 	b.Run("Multiple namespace access", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = registry.Build()
 			_ = registry.Test()
 			_ = registry.Lint()
@@ -571,7 +571,7 @@ func BenchmarkNamespaceAccess(b *testing.B) {
 
 	b.Run("Registry creation", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			registry := NewNamespaceRegistry()
 			if registry == nil {
 				b.Fatal("Registry should not be nil")
@@ -603,7 +603,7 @@ func TestInterfaceEvolutionTracking(t *testing.T) {
 		registry := NewNamespaceRegistry()
 
 		// Current method counts as of test creation
-		interfaceCounts := map[string]interface{}{
+		interfaceCounts := map[string]any{
 			"Build":    registry.Build(),
 			"Test":     registry.Test(),
 			"Lint":     registry.Lint(),

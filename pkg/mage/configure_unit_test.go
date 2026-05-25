@@ -124,7 +124,7 @@ func TestGenerateConfigurationSchema(t *testing.T) {
 	schema := generateConfigurationSchema()
 
 	// Verify it's valid JSON
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err := json.Unmarshal([]byte(schema), &parsed)
 	require.NoError(t, err, "Schema should be valid JSON")
 
@@ -134,41 +134,41 @@ func TestGenerateConfigurationSchema(t *testing.T) {
 	assert.Equal(t, "object", parsed["type"], "Root type should be object")
 
 	// Verify required fields
-	required, ok := parsed["required"].([]interface{})
+	required, ok := parsed["required"].([]any)
 	require.True(t, ok, "Should have required array")
 	assert.Contains(t, required, "project")
 	assert.Contains(t, required, "build")
 	assert.Contains(t, required, "test")
 
 	// Verify properties exist
-	properties, ok := parsed["properties"].(map[string]interface{})
+	properties, ok := parsed["properties"].(map[string]any)
 	require.True(t, ok, "Should have properties object")
 
 	// Check project properties
-	project, ok := properties["project"].(map[string]interface{})
+	project, ok := properties["project"].(map[string]any)
 	require.True(t, ok, "Should have project property")
 	assert.Equal(t, "object", project["type"])
 
-	projectProps, ok := project["properties"].(map[string]interface{})
+	projectProps, ok := project["properties"].(map[string]any)
 	require.True(t, ok, "Project should have properties")
 	assert.Contains(t, projectProps, "name")
 	assert.Contains(t, projectProps, "binary")
 	assert.Contains(t, projectProps, "module")
 
 	// Check project required fields
-	projectRequired, ok := project["required"].([]interface{})
+	projectRequired, ok := project["required"].([]any)
 	require.True(t, ok, "Project should have required fields")
 	assert.Contains(t, projectRequired, "name")
 	assert.Contains(t, projectRequired, "binary")
 	assert.Contains(t, projectRequired, "module")
 
 	// Check build properties
-	build, ok := properties["build"].(map[string]interface{})
+	build, ok := properties["build"].(map[string]any)
 	require.True(t, ok, "Should have build property")
 	assert.Equal(t, "object", build["type"])
 
 	// Check test properties
-	test, ok := properties["test"].(map[string]interface{})
+	test, ok := properties["test"].(map[string]any)
 	require.True(t, ok, "Should have test property")
 	assert.Equal(t, "object", test["type"])
 }
@@ -179,7 +179,7 @@ func TestMarshalJSON(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		input   interface{}
+		input   any
 		wantErr bool
 	}{
 		{
@@ -243,7 +243,7 @@ func TestUnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name    string
 		data    []byte
-		target  interface{}
+		target  any
 		wantErr bool
 	}{
 		{
@@ -660,7 +660,7 @@ func TestConfigureSchema(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify it's valid JSON schema
-		var schema map[string]interface{}
+		var schema map[string]any
 		err = json.Unmarshal(data, &schema)
 		require.NoError(t, err)
 		assert.Equal(t, "http://json-schema.org/draft-07/schema#", schema["$schema"])
@@ -754,7 +754,7 @@ func BenchmarkValidateConfiguration(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := validateConfiguration(config); err != nil {
 			b.Fatal(err)
 		}
@@ -763,7 +763,7 @@ func BenchmarkValidateConfiguration(b *testing.B) {
 
 func BenchmarkGenerateConfigurationSchema(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = generateConfigurationSchema()
 	}
 }
@@ -785,7 +785,7 @@ func BenchmarkMarshalJSON(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := marshalJSON(config); err != nil {
 			b.Fatal(err)
 		}
@@ -806,7 +806,7 @@ test:
 `)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var config Config
 		if err := unmarshalJSON(data, &config); err != nil {
 			b.Fatal(err)

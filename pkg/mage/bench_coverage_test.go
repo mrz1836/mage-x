@@ -53,10 +53,10 @@ func (ts *BenchCoverageTestSuite) TearDownTest() {
 // Helper to set up mock runner and execute function
 func (ts *BenchCoverageTestSuite) withMockRunner(fn func() error) error {
 	return ts.env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		fn,
 	)
 }

@@ -360,7 +360,7 @@ func TestPathBuilder_RelativeOperations(t *testing.T) {
 func BenchmarkPathBuilder_Join(b *testing.B) {
 	pb := NewPathBuilder("home")
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		pb.Join("user", "documents")
 	}
 }
@@ -368,7 +368,7 @@ func BenchmarkPathBuilder_Join(b *testing.B) {
 func BenchmarkPathBuilder_String(b *testing.B) {
 	pb := NewPathBuilder("home/user/documents/file.txt")
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = pb.String()
 	}
 }
@@ -386,7 +386,7 @@ func BenchmarkPathMatcher_Match(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		matcher.Match("test_file.txt")
 	}
 }
@@ -394,15 +394,17 @@ func BenchmarkPathMatcher_Match(b *testing.B) {
 func BenchmarkPathSet_Add(b *testing.B) {
 	set := NewPathSet()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		set.Add("path_" + string(rune(i)))
+		i++
 	}
 }
 
 func BenchmarkPathBuilder_Exists(b *testing.B) {
 	pb := NewPathBuilder("/")
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		pb.Exists()
 	}
 }
@@ -413,7 +415,7 @@ func BenchmarkPathValidator_Validate(b *testing.B) {
 	validator.RequireExtension("txt", "go")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		validator.Validate("/home/user/test.txt")
 	}
 }

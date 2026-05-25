@@ -51,10 +51,10 @@ func (ts *DepsCoverageTestSuite) TearDownTest() {
 // Helper to set up mock runner and execute function
 func (ts *DepsCoverageTestSuite) withMockRunner(fn func() error) error {
 	return ts.env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		fn,
 	)
 }
@@ -523,10 +523,10 @@ func TestDepsOutdatedSuccess(t *testing.T) {
 	env.Runner.On("RunCmdOutput", mock.Anything, mock.Anything).Return("", nil).Maybe()
 
 	err := env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		func() error {
 			deps := Deps{}
 			return deps.Outdated()

@@ -30,7 +30,7 @@ func NewMockMageError(message string) *MockMageError {
 		severity: SeverityError,
 		context: ErrorContext{
 			Timestamp: time.Now(),
-			Fields:    make(map[string]interface{}),
+			Fields:    make(map[string]any),
 		},
 		calls: make(map[string]int),
 	}
@@ -128,12 +128,12 @@ func (m *MockMageError) WithContext(ctx *ErrorContext) MageError {
 	return newErr
 }
 
-func (m *MockMageError) WithField(key string, value interface{}) MageError {
+func (m *MockMageError) WithField(key string, value any) MageError {
 	m.mu.Lock()
 	m.calls["WithField"]++
 	newContext := m.context
 	if newContext.Fields == nil {
-		newContext.Fields = make(map[string]interface{})
+		newContext.Fields = make(map[string]any)
 	}
 	newContext.Fields[key] = value
 	m.mu.Unlock()
@@ -141,12 +141,12 @@ func (m *MockMageError) WithField(key string, value interface{}) MageError {
 	return m.WithContext(&newContext)
 }
 
-func (m *MockMageError) WithFields(fields map[string]interface{}) MageError {
+func (m *MockMageError) WithFields(fields map[string]any) MageError {
 	m.mu.Lock()
 	m.calls["WithFields"]++
 	newContext := m.context
 	if newContext.Fields == nil {
-		newContext.Fields = make(map[string]interface{})
+		newContext.Fields = make(map[string]any)
 	}
 	for k, v := range fields {
 		newContext.Fields[k] = v
@@ -208,7 +208,7 @@ func (m *MockMageError) Is(target error) bool {
 	return false
 }
 
-func (m *MockMageError) As(target interface{}) bool {
+func (m *MockMageError) As(target any) bool {
 	m.mu.Lock()
 	m.calls["As"]++
 	m.mu.Unlock()
@@ -236,7 +236,7 @@ func NewMockErrorBuilder() *MockErrorBuilder {
 			code:     ErrUnknown,
 			severity: SeverityError,
 			context: ErrorContext{
-				Fields: make(map[string]interface{}),
+				Fields: make(map[string]any),
 			},
 			calls: make(map[string]int),
 		},
@@ -244,7 +244,7 @@ func NewMockErrorBuilder() *MockErrorBuilder {
 	}
 }
 
-func (b *MockErrorBuilder) WithMessage(format string, args ...interface{}) ErrorBuilder {
+func (b *MockErrorBuilder) WithMessage(format string, args ...any) ErrorBuilder {
 	b.mu.Lock()
 	b.calls["WithMessage"]++
 	b.mu.Unlock()
@@ -277,14 +277,14 @@ func (b *MockErrorBuilder) WithContext(ctx *ErrorContext) ErrorBuilder {
 	return b
 }
 
-func (b *MockErrorBuilder) WithField(key string, value interface{}) ErrorBuilder {
+func (b *MockErrorBuilder) WithField(key string, value any) ErrorBuilder {
 	b.mu.Lock()
 	b.calls["WithField"]++
 	b.mu.Unlock()
 	return b
 }
 
-func (b *MockErrorBuilder) WithFields(fields map[string]interface{}) ErrorBuilder {
+func (b *MockErrorBuilder) WithFields(fields map[string]any) ErrorBuilder {
 	b.mu.Lock()
 	b.calls["WithFields"]++
 	b.mu.Unlock()

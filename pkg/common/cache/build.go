@@ -160,7 +160,7 @@ func (c *BuildCache) Init() error {
 }
 
 // getCacheResult is a generic helper for retrieving cache results
-func (c *BuildCache) getCacheResult(hash, subdir, entryType string, result interface{}) (interface{}, bool) {
+func (c *BuildCache) getCacheResult(hash, subdir, entryType string, result any) (any, bool) {
 	if !c.enabled {
 		return nil, false
 	}
@@ -224,7 +224,7 @@ func (c *BuildCache) GetBuildResult(hash string) (*BuildResult, bool) {
 }
 
 // storeCacheResult is a generic helper for storing cache results
-func (c *BuildCache) storeCacheResult(hash, subdir string, result interface{}) error {
+func (c *BuildCache) storeCacheResult(hash, subdir string, result any) error {
 	if !c.enabled {
 		return nil
 	}

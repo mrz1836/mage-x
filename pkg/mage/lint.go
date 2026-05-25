@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,7 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -839,7 +840,7 @@ func validateJSONFile(file string) error {
 	}
 
 	// Parse JSON to validate syntax
-	var jsonData interface{}
+	var jsonData any
 	if err = json.Unmarshal(data, &jsonData); err != nil {
 		return fmt.Errorf("invalid JSON syntax: %w", err)
 	}
@@ -1357,11 +1358,11 @@ func groupByMessage(matches []string, pattern string) []IssueCount {
 	}
 
 	// Sort by count (descending), then by message (ascending)
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].Count != results[j].Count {
-			return results[i].Count > results[j].Count
+	slices.SortFunc(results, func(a, b IssueCount) int {
+		if c := cmp.Compare(b.Count, a.Count); c != 0 {
+			return c
 		}
-		return results[i].Message < results[j].Message
+		return cmp.Compare(a.Message, b.Message)
 	})
 
 	return results
@@ -1421,11 +1422,11 @@ func groupNolintByTag(matches []string) []IssueCount {
 	}
 
 	// Sort by count (descending), then by tag name (ascending)
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].Count != results[j].Count {
-			return results[i].Count > results[j].Count
+	slices.SortFunc(results, func(a, b IssueCount) int {
+		if c := cmp.Compare(b.Count, a.Count); c != 0 {
+			return c
 		}
-		return results[i].Message < results[j].Message
+		return cmp.Compare(a.Message, b.Message)
 	})
 
 	return results
@@ -1478,11 +1479,11 @@ func groupSkipsByMessage(matches []string) []IssueCount {
 	}
 
 	// Sort by count (descending), then by message (ascending)
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].Count != results[j].Count {
-			return results[i].Count > results[j].Count
+	slices.SortFunc(results, func(a, b IssueCount) int {
+		if c := cmp.Compare(b.Count, a.Count); c != 0 {
+			return c
 		}
-		return results[i].Message < results[j].Message
+		return cmp.Compare(a.Message, b.Message)
 	})
 
 	return results

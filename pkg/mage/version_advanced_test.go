@@ -19,6 +19,7 @@ var (
 // cleanupEnvironment is no longer needed since we use parameters instead of environment variables
 // Keeping the function for backward compatibility but it's now a no-op
 func cleanupEnvironment(t *testing.T) {
+	t.Helper()
 	// No-op: parameters don't need cleanup
 }
 

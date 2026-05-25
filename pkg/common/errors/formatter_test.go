@@ -433,7 +433,7 @@ func TestFormatter_FieldsFormatting(t *testing.T) {
 	err := NewBuilder().
 		WithMessage("test error").
 		WithCode(ErrBuildFailed).
-		WithFields(map[string]interface{}{
+		WithFields(map[string]any{
 			"string":  "value",
 			"number":  42,
 			"boolean": true,
@@ -606,7 +606,7 @@ func TestFormatter_FormatFieldsEmpty(t *testing.T) {
 	t.Parallel()
 
 	formatter := NewFormatter()
-	result := formatter.formatFields(map[string]interface{}{}, FormatOptions{})
+	result := formatter.formatFields(map[string]any{}, FormatOptions{})
 	assert.Empty(t, result)
 }
 
@@ -615,7 +615,7 @@ func TestFormatter_FormatFieldsMultiple(t *testing.T) {
 	t.Parallel()
 
 	formatter := NewFormatter()
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"key1": "value1",
 		"key2": 42,
 	}

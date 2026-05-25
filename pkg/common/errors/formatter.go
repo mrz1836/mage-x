@@ -14,7 +14,7 @@ import (
 //
 //nolint:gochecknoglobals // Pool for performance optimization
 var builderPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new(strings.Builder)
 	},
 }
@@ -273,7 +273,7 @@ func (f *DefaultErrorFormatter) formatContext(sb *strings.Builder, ctx *ErrorCon
 }
 
 // formatFields formats context fields
-func (f *DefaultErrorFormatter) formatFields(fields map[string]interface{}, opts FormatOptions) string {
+func (f *DefaultErrorFormatter) formatFields(fields map[string]any, opts FormatOptions) string {
 	if len(fields) == 0 {
 		return ""
 	}

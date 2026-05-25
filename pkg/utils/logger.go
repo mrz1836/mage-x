@@ -216,32 +216,32 @@ func DefaultLogger() *defaultLoggerProxy {
 type defaultLoggerProxy struct{}
 
 // Debug logs a debug message using the default logger
-func (p *defaultLoggerProxy) Debug(format string, args ...interface{}) {
+func (p *defaultLoggerProxy) Debug(format string, args ...any) {
 	GetDefaultLogger().Debug(format, args...)
 }
 
 // Info logs an informational message using the default logger
-func (p *defaultLoggerProxy) Info(format string, args ...interface{}) {
+func (p *defaultLoggerProxy) Info(format string, args ...any) {
 	GetDefaultLogger().Info(format, args...)
 }
 
 // Warn logs a warning message using the default logger
-func (p *defaultLoggerProxy) Warn(format string, args ...interface{}) {
+func (p *defaultLoggerProxy) Warn(format string, args ...any) {
 	GetDefaultLogger().Warn(format, args...)
 }
 
 // Error logs an error message using the default logger
-func (p *defaultLoggerProxy) Error(format string, args ...interface{}) {
+func (p *defaultLoggerProxy) Error(format string, args ...any) {
 	GetDefaultLogger().Error(format, args...)
 }
 
 // Success logs a success message using the default logger
-func (p *defaultLoggerProxy) Success(format string, args ...interface{}) {
+func (p *defaultLoggerProxy) Success(format string, args ...any) {
 	GetDefaultLogger().Success(format, args...)
 }
 
 // Fail logs a failure message using the default logger
-func (p *defaultLoggerProxy) Fail(format string, args ...interface{}) {
+func (p *defaultLoggerProxy) Fail(format string, args ...any) {
 	GetDefaultLogger().Fail(format, args...)
 }
 
@@ -338,35 +338,35 @@ func (l *Logger) SetOutput(w io.Writer) {
 // Debug logs a debug message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func (l *Logger) Debug(format string, args ...interface{}) {
+func (l *Logger) Debug(format string, args ...any) {
 	l.log(LogLevelDebug, format, args...)
 }
 
 // Info logs an informational message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func (l *Logger) Info(format string, args ...interface{}) {
+func (l *Logger) Info(format string, args ...any) {
 	l.log(LogLevelInfo, format, args...)
 }
 
 // Warn logs a warning message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func (l *Logger) Warn(format string, args ...interface{}) {
+func (l *Logger) Warn(format string, args ...any) {
 	l.log(LogLevelWarn, format, args...)
 }
 
 // Error logs an error message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func (l *Logger) Error(format string, args ...interface{}) {
+func (l *Logger) Error(format string, args ...any) {
 	l.log(LogLevelError, format, args...)
 }
 
 // Success logs a success message with emoji
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func (l *Logger) Success(format string, args ...interface{}) {
+func (l *Logger) Success(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	l.logWithEmoji(LogLevelInfo, emojiSuccess, msg)
 }
@@ -374,7 +374,7 @@ func (l *Logger) Success(format string, args ...interface{}) {
 // Fail logs a failure message with emoji
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func (l *Logger) Fail(format string, args ...interface{}) {
+func (l *Logger) Fail(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	l.logWithEmoji(LogLevelError, emojiError, msg)
 }
@@ -496,7 +496,7 @@ func (l *Logger) GetDayContext() string {
 // log is the internal logging function
 //
 //nolint:goprintffuncname // Internal function with printf-style formatting
-func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
+func (l *Logger) log(level LogLevel, format string, args ...any) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -692,7 +692,7 @@ func (p *Progress) render() {
 	bar := strings.Builder{}
 	bar.WriteString("[")
 
-	for i := 0; i < p.width; i++ {
+	for i := range p.width {
 		if i < filled {
 			bar.WriteString("█")
 		} else {
@@ -759,42 +759,42 @@ func formatDuration(d time.Duration) string {
 // Debug logs a debug message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Debug(format string, args ...interface{}) {
+func Debug(format string, args ...any) {
 	pkglog.Debug(format, args...)
 }
 
 // Info logs an informational message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Info(format string, args ...interface{}) {
+func Info(format string, args ...any) {
 	pkglog.Info(format, args...)
 }
 
 // Warn logs a warning message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Warn(format string, args ...interface{}) {
+func Warn(format string, args ...any) {
 	pkglog.Warn(format, args...)
 }
 
 // Error logs an error message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Error(format string, args ...interface{}) {
+func Error(format string, args ...any) {
 	pkglog.Error(format, args...)
 }
 
 // Success logs a success message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Success(format string, args ...interface{}) {
+func Success(format string, args ...any) {
 	pkglog.Success(format, args...)
 }
 
 // Fail logs a failure message using the unified logger
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Fail(format string, args ...interface{}) {
+func Fail(format string, args ...any) {
 	pkglog.Fail(format, args...)
 }
 
@@ -825,7 +825,7 @@ func UpdateSpinner(message string) {
 // This is useful for CLI output where structured logging is not appropriate
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner CLI output
-func Print(format string, args ...interface{}) {
+func Print(format string, args ...any) {
 	if _, err := fmt.Fprintf(os.Stdout, format, args...); err != nil {
 		// Continue if write fails - this is for CLI output
 		log.Printf("failed to write to stdout: %v", err)

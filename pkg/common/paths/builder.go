@@ -1,13 +1,14 @@
 package paths
 
 import (
+	"cmp"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -912,8 +913,8 @@ func GlobPaths(pattern string) ([]PathBuilder, error) {
 		result = append(result, NewPathBuilder(match))
 	}
 
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].String() < result[j].String()
+	slices.SortFunc(result, func(a, b PathBuilder) int {
+		return cmp.Compare(a.String(), b.String())
 	})
 
 	return result, nil

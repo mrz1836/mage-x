@@ -588,7 +588,7 @@ func (ts *DocsTestSuite) TestDocsBuildMetadata() {
 		ts.Require().NotEmpty(metadata)
 
 		// Parse as JSON to verify structure
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		err := json.Unmarshal([]byte(metadata), &parsed)
 		ts.Require().NoError(err)
 
@@ -743,7 +743,7 @@ func BenchmarkDocsOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			for _, pkg := range packages {
 				_ = shouldSkipPackage(pkg)
 			}
@@ -759,7 +759,7 @@ func BenchmarkDocsOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			for _, pkg := range packages {
 				_ = categorizePackage(pkg)
 			}
@@ -767,13 +767,13 @@ func BenchmarkDocsOperations(b *testing.B) {
 	})
 
 	b.Run("IsPortAvailable", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = isPortAvailable(65432)
 		}
 	})
 
 	b.Run("CreateBuildMetadata", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = createBuildMetadata(10)
 		}
 	})

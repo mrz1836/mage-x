@@ -267,7 +267,7 @@ func TestSanitizeTransformer(t *testing.T) {
 }
 
 func TestEnrichTransformer(t *testing.T) {
-	additionalContext := map[string]interface{}{
+	additionalContext := map[string]any{
 		"environment": "production",
 		"version":     "1.2.3",
 		"region":      "us-west-2",

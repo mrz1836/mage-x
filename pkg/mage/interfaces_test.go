@@ -33,13 +33,13 @@ func (m *MockBuilder) Build(_ context.Context, _ *BuildOptions) error {
 
 func (m *MockBuilder) CrossCompile(_ context.Context, platforms []Platform) error {
 	err := m.ShouldReturnError("CrossCompile")
-	m.RecordCall("CrossCompile", []interface{}{platforms}, nil, err)
+	m.RecordCall("CrossCompile", []any{platforms}, nil, err)
 	return err
 }
 
 func (m *MockBuilder) Package(_ context.Context, format PackageFormat) error {
 	err := m.ShouldReturnError("Package")
-	m.RecordCall("Package", []interface{}{format}, nil, err)
+	m.RecordCall("Package", []any{format}, nil, err)
 	return err
 }
 
@@ -51,7 +51,7 @@ func (m *MockBuilder) Clean(_ context.Context) error {
 
 func (m *MockBuilder) Install(_ context.Context, path string) error {
 	err := m.ShouldReturnError("Install")
-	m.RecordCall("Install", []interface{}{path}, nil, err)
+	m.RecordCall("Install", []any{path}, nil, err)
 	return err
 }
 
@@ -71,7 +71,7 @@ func (m *MockTester) RunTests(_ context.Context, opts TestOptions) (*TestResults
 	if err != nil {
 		result = nil
 	}
-	m.RecordCall("RunTests", []interface{}{opts}, []interface{}{result}, err)
+	m.RecordCall("RunTests", []any{opts}, []any{result}, err)
 	return result, err
 }
 
@@ -81,7 +81,7 @@ func (m *MockTester) RunBenchmarks(_ context.Context, opts *IBenchmarkOptions) (
 	if err != nil {
 		result = nil
 	}
-	m.RecordCall("RunBenchmarks", []interface{}{opts}, []interface{}{result}, err)
+	m.RecordCall("RunBenchmarks", []any{opts}, []any{result}, err)
 	return result, err
 }
 
@@ -93,7 +93,7 @@ func (m *MockTester) GenerateCoverage(_ context.Context, opts CoverageOptions) (
 	if err != nil {
 		result = nil
 	}
-	m.RecordCall("GenerateCoverage", []interface{}{opts}, []interface{}{result}, err)
+	m.RecordCall("GenerateCoverage", []any{opts}, []any{result}, err)
 	return result, err
 }
 
@@ -103,7 +103,7 @@ func (m *MockTester) RunUnit(_ context.Context, opts TestOptions) (*TestResults,
 	if err != nil {
 		result = nil
 	}
-	m.RecordCall("RunUnit", []interface{}{opts}, []interface{}{result}, err)
+	m.RecordCall("RunUnit", []any{opts}, []any{result}, err)
 	return result, err
 }
 
@@ -113,7 +113,7 @@ func (m *MockTester) RunIntegration(_ context.Context, opts TestOptions) (*TestR
 	if err != nil {
 		result = nil
 	}
-	m.RecordCall("RunIntegration", []interface{}{opts}, []interface{}{result}, err)
+	m.RecordCall("RunIntegration", []any{opts}, []any{result}, err)
 	return result, err
 }
 
@@ -129,19 +129,19 @@ func NewMockDeployer(t *testing.T) *MockDeployer {
 
 func (m *MockDeployer) Deploy(_ context.Context, target DeployTarget, opts *DeployOptions) error {
 	err := m.ShouldReturnError("Deploy")
-	m.RecordCall("Deploy", []interface{}{target, opts}, nil, err)
+	m.RecordCall("Deploy", []any{target, opts}, nil, err)
 	return err
 }
 
 func (m *MockDeployer) Validate(_ context.Context, target DeployTarget) error {
 	err := m.ShouldReturnError("Validate")
-	m.RecordCall("Validate", []interface{}{target}, nil, err)
+	m.RecordCall("Validate", []any{target}, nil, err)
 	return err
 }
 
 func (m *MockDeployer) Rollback(_ context.Context, target DeployTarget, version string) error {
 	err := m.ShouldReturnError("Rollback")
-	m.RecordCall("Rollback", []interface{}{target, version}, nil, err)
+	m.RecordCall("Rollback", []any{target, version}, nil, err)
 	return err
 }
 
@@ -151,13 +151,13 @@ func (m *MockDeployer) Status(_ context.Context, target DeployTarget) (*DeploySt
 	if err != nil {
 		result = nil
 	}
-	m.RecordCall("Status", []interface{}{target}, []interface{}{result}, err)
+	m.RecordCall("Status", []any{target}, []any{result}, err)
 	return result, err
 }
 
 func (m *MockDeployer) Scale(_ context.Context, target DeployTarget, replicas int) error {
 	err := m.ShouldReturnError("Scale")
-	m.RecordCall("Scale", []interface{}{target, replicas}, nil, err)
+	m.RecordCall("Scale", []any{target, replicas}, nil, err)
 	return err
 }
 
@@ -167,7 +167,7 @@ func (m *MockDeployer) Logs(_ context.Context, target DeployTarget, opts LogOpti
 	if err != nil {
 		result = nil
 	}
-	m.RecordCall("Logs", []interface{}{target, opts}, []interface{}{result}, err)
+	m.RecordCall("Logs", []any{target, opts}, []any{result}, err)
 	return result, err
 }
 
@@ -528,7 +528,7 @@ func BenchmarkBuilder_Build(b *testing.B) {
 	opts := BuildOptions{Verbose: false}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := builder.Build(ctx, &opts); err != nil {
 			b.Fatal(err)
 		}
@@ -543,7 +543,7 @@ func BenchmarkTester_RunTests(b *testing.B) {
 	opts := TestOptions{Verbose: false}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := tester.RunTests(ctx, opts); err != nil {
 			b.Fatal(err)
 		}
@@ -559,7 +559,7 @@ func BenchmarkDeployer_Deploy(b *testing.B) {
 	opts := DeployOptions{}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := deployer.Deploy(ctx, target, &opts); err != nil {
 			b.Fatal(err)
 		}
@@ -570,7 +570,7 @@ func BenchmarkPlatform_Access(b *testing.B) {
 	platform := Platform{OS: "linux", Arch: "amd64"}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = platform.OS + "/" + platform.Arch
 	}
 }

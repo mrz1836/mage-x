@@ -652,11 +652,11 @@ func TestDefaultPathWatcher_ConcurrentFileModifications(t *testing.T) {
 
 	// Spawn multiple goroutines that create and modify files concurrently
 	// while the watcher is detecting changes via checkFileForChanges
-	for i := 0; i < numWriters; i++ {
+	for i := range numWriters {
 		wg.Add(1)
 		go func(writerID int) {
 			defer wg.Done()
-			for j := 0; j < filesPerWriter; j++ {
+			for j := range filesPerWriter {
 				filePath := tempDir.Join(fmt.Sprintf("file_%d_%d.txt", writerID, j))
 				// Create file
 				err := os.WriteFile(filePath.String(), []byte(fmt.Sprintf("initial content %d", j)), 0o600)

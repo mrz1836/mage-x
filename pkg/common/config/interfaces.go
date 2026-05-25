@@ -8,16 +8,16 @@ import (
 // Loader provides an interface for loading and saving configurations
 type Loader interface {
 	// Load loads configuration from multiple file paths with fallback
-	Load(paths []string, dest interface{}) (string, error)
+	Load(paths []string, dest any) (string, error)
 
 	// LoadFrom loads configuration from a specific file
-	LoadFrom(path string, dest interface{}) error
+	LoadFrom(path string, dest any) error
 
 	// Save saves configuration to a file in the specified format
-	Save(path string, data interface{}, format string) error
+	Save(path string, data any, format string) error
 
 	// Validate validates configuration data
-	Validate(data interface{}) error
+	Validate(data any) error
 
 	// GetSupportedFormats returns list of supported file formats
 	GetSupportedFormats() []string
@@ -73,7 +73,7 @@ type Source interface {
 	Name() string
 
 	// Load loads configuration data from the source
-	Load(dest interface{}) error
+	Load(dest any) error
 
 	// IsAvailable checks if the source is available
 	IsAvailable() bool
@@ -88,13 +88,13 @@ type Manager interface {
 	AddSource(source Source)
 
 	// LoadConfig loads configuration from all sources in priority order
-	LoadConfig(dest interface{}) error
+	LoadConfig(dest any) error
 
 	// Reload reloads configuration from all sources
-	Reload(dest interface{}) error
+	Reload(dest any) error
 
 	// Watch watches for configuration changes (if supported)
-	Watch(callback func(interface{})) error
+	Watch(callback func(any)) error
 
 	// StopWatching stops watching for configuration changes
 	StopWatching()
@@ -106,16 +106,16 @@ type Manager interface {
 // Validator provides configuration validation capabilities
 type Validator interface {
 	// Validate validates configuration data
-	Validate(data interface{}) error
+	Validate(data any) error
 
 	// ValidateField validates a specific field
-	ValidateField(fieldName string, value interface{}) error
+	ValidateField(fieldName string, value any) error
 
 	// GetValidationRules returns current validation rules
-	GetValidationRules() map[string]interface{}
+	GetValidationRules() map[string]any
 
 	// SetValidationRules sets validation rules
-	SetValidationRules(rules map[string]interface{})
+	SetValidationRules(rules map[string]any)
 }
 
 // Options holds configuration loading options

@@ -94,7 +94,7 @@ func DoWithData[T any](ctx context.Context, cfg *Config, fn func() (T, error)) (
 	}
 	defer timer.Stop()
 
-	for attempt := 0; attempt < maxAttempts; attempt++ {
+	for attempt := range maxAttempts {
 		// Check context before attempting
 		if ctx.Err() != nil {
 			return lastResult, ctx.Err()

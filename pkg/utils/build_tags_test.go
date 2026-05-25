@@ -3,7 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,11 +19,11 @@ func TestBuildTagsDiscovery(t *testing.T) {
 		tags, err := discovery.DiscoverBuildTags()
 
 		require.NoError(t, err)
-		sort.Strings(tags)
+		slices.Sort(tags)
 
 		// Expected tags from our test files
 		expected := []string{"integration", "nested", "unit", "windows"}
-		sort.Strings(expected)
+		slices.Sort(expected)
 
 		assert.Equal(t, expected, tags)
 	})
@@ -34,7 +34,7 @@ func TestBuildTagsDiscovery(t *testing.T) {
 		tags, err := discovery.DiscoverBuildTags()
 
 		require.NoError(t, err)
-		sort.Strings(tags)
+		slices.Sort(tags)
 
 		// Should not contain excluded tags
 		assert.NotContains(t, tags, "integration")
@@ -156,8 +156,8 @@ func TestParseBuildExpression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := discovery.parseBuildExpression(tt.expression)
-			sort.Strings(result)
-			sort.Strings(tt.expected)
+			slices.Sort(result)
+			slices.Sort(tt.expected)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -206,8 +206,8 @@ func TestParseLegacyBuildExpression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := discovery.parseLegacyBuildExpression(tt.expression)
-			sort.Strings(result)
-			sort.Strings(tt.expected)
+			slices.Sort(result)
+			slices.Sort(tt.expected)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -500,7 +500,7 @@ func BenchmarkConfigOperations(b *testing.B) {
 	configFile := filepath.Join(tempDir, "benchmark.yaml")
 
 	b.Run("Save", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			err := manager.Save(testConfig, configFile)
 			if err != nil {
 				b.Fatalf("Failed to save config: %v", err)
@@ -516,7 +516,7 @@ func BenchmarkConfigOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_, err := manager.LoadFromPath(configFile)
 			if err != nil {
 				b.Fatalf("Failed to load config: %v", err)
@@ -525,7 +525,7 @@ func BenchmarkConfigOperations(b *testing.B) {
 	})
 
 	b.Run("Validate", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			err := manager.Validate(testConfig)
 			if err != nil {
 				b.Fatalf("Failed to validate config: %v", err)
@@ -540,7 +540,7 @@ func BenchmarkConfigOperations(b *testing.B) {
 			},
 		}
 
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = manager.Merge(testConfig, overrideConfig)
 		}
 	})

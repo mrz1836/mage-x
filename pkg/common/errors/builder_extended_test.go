@@ -101,7 +101,7 @@ func TestDefaultErrorBuilder_AllMethods(t *testing.T) {
 
 	t.Run("WithFields", func(t *testing.T) {
 		testBuilder := NewDefaultErrorBuilder()
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"field1": "value1",
 			"field2": 123,
 			"field3": true,
@@ -192,7 +192,7 @@ func TestDefaultErrorBuilder_ComplexScenario(t *testing.T) {
 		WithResource("ComplexResource").
 		WithField("request_id", "req-456").
 		WithField("user_id", "user-789").
-		WithFields(map[string]interface{}{
+		WithFields(map[string]any{
 			"additional_info": "some info",
 			"retry_count":     3,
 		}).

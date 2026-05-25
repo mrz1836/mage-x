@@ -41,24 +41,24 @@ func (suite *NamespaceIntegrationTestSuite) TestNamespaceDiscovery() {
 	// Test discovery of all registered namespaces
 	namespaces := []struct {
 		name   string
-		getter func() interface{}
+		getter func() any
 		notNil bool
 	}{
-		{"Build", func() interface{} { return registry.Build() }, true},
-		{"Test", func() interface{} { return registry.Test() }, true},
-		{"Lint", func() interface{} { return registry.Lint() }, true},
-		{"Format", func() interface{} { return registry.Format() }, true},
-		{"Deps", func() interface{} { return registry.Deps() }, true},
-		{"Git", func() interface{} { return registry.Git() }, true},
-		{"Release", func() interface{} { return registry.Release() }, true},
-		{"Docs", func() interface{} { return registry.Docs() }, true},
-		{"Deploy", func() interface{} { return registry.Deploy() }, false}, // Not implemented
-		{"Tools", func() interface{} { return registry.Tools() }, true},
-		{"Security", func() interface{} { return registry.Security() }, false}, // Disabled
-		{"Generate", func() interface{} { return registry.Generate() }, true},
-		{"Update", func() interface{} { return registry.Update() }, true},
-		{"Mod", func() interface{} { return registry.Mod() }, true},
-		{"Metrics", func() interface{} { return registry.Metrics() }, true},
+		{"Build", func() any { return registry.Build() }, true},
+		{"Test", func() any { return registry.Test() }, true},
+		{"Lint", func() any { return registry.Lint() }, true},
+		{"Format", func() any { return registry.Format() }, true},
+		{"Deps", func() any { return registry.Deps() }, true},
+		{"Git", func() any { return registry.Git() }, true},
+		{"Release", func() any { return registry.Release() }, true},
+		{"Docs", func() any { return registry.Docs() }, true},
+		{"Deploy", func() any { return registry.Deploy() }, false}, // Not implemented
+		{"Tools", func() any { return registry.Tools() }, true},
+		{"Security", func() any { return registry.Security() }, false}, // Disabled
+		{"Generate", func() any { return registry.Generate() }, true},
+		{"Update", func() any { return registry.Update() }, true},
+		{"Mod", func() any { return registry.Mod() }, true},
+		{"Metrics", func() any { return registry.Metrics() }, true},
 	}
 
 	for _, ns := range namespaces {
@@ -207,8 +207,8 @@ func (suite *NamespaceIntegrationTestSuite) TestNamespaceInterfaceCompliance() {
 
 	tests := []struct {
 		name          string
-		namespace     interface{}
-		interfaceType interface{}
+		namespace     any
+		interfaceType any
 	}{
 		{"Build", registry.Build(), (*BuildNamespace)(nil)},
 		{"Test", registry.Test(), (*TestNamespace)(nil)},
@@ -263,15 +263,15 @@ func (suite *NamespaceIntegrationTestSuite) TestNamespaceConcurrency() {
 	suite.Require().NotNil(registry)
 
 	var wg sync.WaitGroup
-	results := make([][]interface{}, numGoroutines)
+	results := make([][]any, numGoroutines)
 
 	// Test concurrent access to multiple namespaces
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			results[index] = make([]interface{}, numOperations)
-			for j := 0; j < numOperations; j++ {
+			results[index] = make([]any, numOperations)
+			for j := range numOperations {
 				// Rotate through different namespaces
 				switch j % 4 {
 				case 0:
@@ -499,7 +499,7 @@ func BenchmarkNamespaceIntegration(b *testing.B) {
 	registry := GetNamespaceRegistry()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Simulate accessing multiple namespaces in sequence
 		build := registry.Build()
 		test := registry.Test()
@@ -546,20 +546,20 @@ func FuzzNamespaceIntegration(f *testing.F) {
 		require.NotNil(t, registry)
 
 		// Map indices to namespace getters
-		getters := []func() interface{}{
-			func() interface{} { return registry.Build() },
-			func() interface{} { return registry.Test() },
-			func() interface{} { return registry.Lint() },
-			func() interface{} { return registry.Format() },
-			func() interface{} { return registry.Deps() },
-			func() interface{} { return registry.Git() },
-			func() interface{} { return registry.Release() },
-			func() interface{} { return registry.Docs() },
-			func() interface{} { return registry.Tools() },
-			func() interface{} { return registry.Generate() },
-			func() interface{} { return registry.Update() },
-			func() interface{} { return registry.Mod() },
-			func() interface{} { return registry.Metrics() },
+		getters := []func() any{
+			func() any { return registry.Build() },
+			func() any { return registry.Test() },
+			func() any { return registry.Lint() },
+			func() any { return registry.Format() },
+			func() any { return registry.Deps() },
+			func() any { return registry.Git() },
+			func() any { return registry.Release() },
+			func() any { return registry.Docs() },
+			func() any { return registry.Tools() },
+			func() any { return registry.Generate() },
+			func() any { return registry.Update() },
+			func() any { return registry.Mod() },
+			func() any { return registry.Metrics() },
 		}
 
 		// Access namespaces based on fuzz input

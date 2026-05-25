@@ -870,7 +870,7 @@ func TestCIRunner_ConcurrentWithContext(t *testing.T) {
 	const numGoroutines = 10
 	done := make(chan bool, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(id int) {
 			defer func() { done <- true }()
 
@@ -886,7 +886,7 @@ func TestCIRunner_ConcurrentWithContext(t *testing.T) {
 	}
 
 	// Wait for all goroutines
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		<-done
 	}
 }
@@ -914,7 +914,7 @@ func TestCIRunner_StartedFlagRace(t *testing.T) {
 	const numGoroutines = 5
 	done := make(chan bool, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			defer func() { done <- true }()
 			// This should not race thanks to mutex protection
@@ -923,7 +923,7 @@ func TestCIRunner_StartedFlagRace(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		<-done
 	}
 }

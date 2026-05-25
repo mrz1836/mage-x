@@ -113,7 +113,7 @@ key: value`,
 
 	f.Fuzz(func(t *testing.T, input string) {
 		// Test with a generic map structure
-		var result map[string]interface{}
+		var result map[string]any
 
 		// Should not panic
 		decoder := yaml.NewDecoder(bytes.NewReader([]byte(input)))
@@ -134,7 +134,7 @@ key: value`,
 				// numeric keys that get serialized ambiguously, causing
 				// duplicate key errors on re-parse. That's acceptable for
 				// fuzz testing - we just care that it doesn't panic.
-				var roundTrip map[string]interface{}
+				var roundTrip map[string]any
 				if decodeErr := yaml.Unmarshal(buf.Bytes(), &roundTrip); decodeErr != nil {
 					// Some edge cases (like numeric keys) may fail round-trip
 					// due to YAML serialization ambiguities. This is expected.
@@ -249,7 +249,7 @@ func FuzzJSONParsing(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, input string) {
 		// Test with a generic map structure
-		var result map[string]interface{}
+		var result map[string]any
 
 		// Should not panic
 		err := json.Unmarshal([]byte(input), &result)
@@ -260,7 +260,7 @@ func FuzzJSONParsing(f *testing.F) {
 			encoded, encodeErr := json.Marshal(result)
 			if encodeErr == nil {
 				// If we can round-trip, verify it's equivalent
-				var roundTrip map[string]interface{}
+				var roundTrip map[string]any
 				decodeErr := json.Unmarshal(encoded, &roundTrip)
 				require.NoError(t, decodeErr, "Failed to decode round-tripped JSON")
 			}
@@ -508,7 +508,7 @@ func FuzzConfigManager(f *testing.F) {
 		}
 
 		// Test Watch (should not panic even if not implemented)
-		watchCallback := func(interface{}) {
+		watchCallback := func(any) {
 			// Simple callback for testing
 		}
 		if err := manager.Watch(watchCallback); err != nil {

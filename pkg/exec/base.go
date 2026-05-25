@@ -25,7 +25,7 @@ type Base struct {
 	DryRun bool
 
 	// logger is the function used for verbose logging
-	logger func(format string, args ...interface{})
+	logger func(format string, args ...any)
 }
 
 // Option configures a Base executor
@@ -60,7 +60,7 @@ func WithDryRun(dryRun bool) Option {
 }
 
 // WithLogger sets a custom logger for verbose output
-func WithLogger(logger func(format string, args ...interface{})) Option {
+func WithLogger(logger func(format string, args ...any)) Option {
 	return func(b *Base) {
 		b.logger = logger
 	}
@@ -69,7 +69,7 @@ func WithLogger(logger func(format string, args ...interface{})) Option {
 // NewBase creates a new base executor with optional configuration
 func NewBase(opts ...Option) *Base {
 	b := &Base{
-		logger: func(format string, args ...interface{}) {
+		logger: func(format string, args ...any) {
 			fmt.Printf(format+"\n", args...)
 		},
 	}
@@ -80,7 +80,7 @@ func NewBase(opts ...Option) *Base {
 }
 
 // logVerbose logs a message if verbose mode is enabled and logger is set.
-func (b *Base) logVerbose(format string, args ...interface{}) {
+func (b *Base) logVerbose(format string, args ...any) {
 	if b.Verbose && b.logger != nil {
 		b.logger(format, args...)
 	}
@@ -88,7 +88,7 @@ func (b *Base) logVerbose(format string, args ...interface{}) {
 
 // checkDryRun checks if dry-run mode is enabled. If so, it logs the message
 // and returns true (caller should return early). Otherwise returns false.
-func (b *Base) checkDryRun(format string, args ...interface{}) bool {
+func (b *Base) checkDryRun(format string, args ...any) bool {
 	if b.DryRun {
 		if b.logger != nil {
 			b.logger(format, args...)

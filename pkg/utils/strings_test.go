@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -61,7 +61,7 @@ func TestParseNonEmptyLines(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ParseNonEmptyLines(tt.input)
-			if !reflect.DeepEqual(result, tt.expected) {
+			if !slices.Equal(result, tt.expected) {
 				t.Errorf("ParseNonEmptyLines() = %v, want %v", result, tt.expected)
 			}
 		})

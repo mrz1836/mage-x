@@ -561,7 +561,7 @@ func TestIntegration_ConcurrentDownloads(t *testing.T) {
 	ctx := context.Background()
 
 	// Start concurrent downloads
-	for i := 0; i < numConcurrent; i++ {
+	for i := range numConcurrent {
 		go func(index int) {
 			destPath := filepath.Join(tempDir, fmt.Sprintf("file_%d.txt", index))
 			err := utils.DownloadWithRetry(ctx, server.URL, destPath, config)
@@ -571,7 +571,7 @@ func TestIntegration_ConcurrentDownloads(t *testing.T) {
 
 	// Collect results
 	successCount := 0
-	for i := 0; i < numConcurrent; i++ {
+	for i := range numConcurrent {
 		err := <-results
 		if err != nil {
 			t.Logf("Download %d failed: %v", i, err)
@@ -589,7 +589,7 @@ func TestIntegration_ConcurrentDownloads(t *testing.T) {
 	}
 
 	// Verify downloaded files
-	for i := 0; i < successCount; i++ {
+	for i := range successCount {
 		destPath := filepath.Join(tempDir, fmt.Sprintf("file_%d.txt", i))
 		if stat, err := os.Stat(destPath); err == nil {
 			if stat.Size() != int64(contentSize) {

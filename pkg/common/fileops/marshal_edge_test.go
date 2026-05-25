@@ -16,7 +16,7 @@ func TestJSONMarshalUnmarshalableTypes(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		value interface{}
+		value any
 	}{
 		{
 			name:  "Channel",
@@ -46,7 +46,7 @@ func TestJSONMarshalIndentUnmarshalableTypes(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		value interface{}
+		value any
 	}{
 		{
 			name:  "Channel",
@@ -73,7 +73,7 @@ func TestYAMLMarshalUnmarshalableTypesPanics(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		value interface{}
+		value any
 	}{
 		{
 			name:  "Function",
@@ -177,7 +177,7 @@ func TestWriteYAMLToReadOnlyDirectory(t *testing.T) {
 func TestReadJSONFromNonExistent(t *testing.T) {
 	op := NewDefaultJSONOperator(nil)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := op.ReadJSON("/nonexistent/path/file.json", &result)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read file")
@@ -187,7 +187,7 @@ func TestReadJSONFromNonExistent(t *testing.T) {
 func TestReadYAMLFromNonExistent(t *testing.T) {
 	op := NewDefaultYAMLOperator(nil)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := op.ReadYAML("/nonexistent/path/file.yaml", &result)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read file")
@@ -201,7 +201,7 @@ func TestReadJSONInvalidContent(t *testing.T) {
 	path := filepath.Join(tmpDir, "invalid.json")
 	require.NoError(t, os.WriteFile(path, []byte("not valid json {"), 0o644)) //nolint:gosec // G306: Test file - intentional permissions
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := op.ReadJSON(path, &result)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal JSON")
@@ -216,7 +216,7 @@ func TestReadYAMLInvalidContent(t *testing.T) {
 	// Invalid YAML - tabs in wrong places
 	require.NoError(t, os.WriteFile(path, []byte(":\t:invalid:\n\t\t--"), 0o644)) //nolint:gosec // G306: Test file - intentional permissions
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := op.ReadYAML(path, &result)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal YAML")

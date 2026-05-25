@@ -137,7 +137,7 @@ func AssertNotContains(t *testing.T, str, substr string) {
 }
 
 // AssertEquals asserts that two values are equal
-func AssertEquals(t *testing.T, expected, actual interface{}) {
+func AssertEquals(t *testing.T, expected, actual any) {
 	t.Helper()
 
 	if expected != actual {
@@ -146,7 +146,7 @@ func AssertEquals(t *testing.T, expected, actual interface{}) {
 }
 
 // AssertNotEquals asserts that two values are not equal
-func AssertNotEquals(t *testing.T, expected, actual interface{}) {
+func AssertNotEquals(t *testing.T, expected, actual any) {
 	t.Helper()
 
 	if expected == actual {
@@ -181,7 +181,7 @@ func AssertFalse(t *testing.T, value bool, msg ...string) {
 }
 
 // AssertNil asserts that a value is nil
-func AssertNil(t *testing.T, value interface{}) {
+func AssertNil(t *testing.T, value any) {
 	t.Helper()
 
 	if value != nil {
@@ -190,7 +190,7 @@ func AssertNil(t *testing.T, value interface{}) {
 }
 
 // AssertNotNil asserts that a value is not nil
-func AssertNotNil(t *testing.T, value interface{}) {
+func AssertNotNil(t *testing.T, value any) {
 	t.Helper()
 
 	if value == nil {
@@ -219,7 +219,7 @@ func EventuallyTrue(t *testing.T, fn func() bool, timeout time.Duration, msg str
 }
 
 // EventuallyEquals waits for a value to equal expected
-func EventuallyEquals(t *testing.T, fn func() interface{}, expected interface{}, timeout time.Duration) {
+func EventuallyEquals(t *testing.T, fn func() any, expected any, timeout time.Duration) {
 	t.Helper()
 
 	EventuallyTrue(t, func() bool {
@@ -232,7 +232,7 @@ func Retry(t *testing.T, fn func() error, attempts int, delay time.Duration) err
 	t.Helper()
 
 	var lastErr error
-	for i := 0; i < attempts; i++ {
+	for i := range attempts {
 		err := fn()
 		if err == nil {
 			return nil
@@ -440,8 +440,8 @@ func (dp *DataProvider) Errors() []error {
 // TestCase represents a parameterized test case
 type TestCase struct {
 	Name  string
-	Input interface{}
-	Want  interface{}
+	Input any
+	Want  any
 	Error error
 }
 

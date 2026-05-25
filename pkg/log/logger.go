@@ -10,10 +10,10 @@ import (
 // All logging in mage-x should go through this interface.
 type Logger interface {
 	// Basic logging methods
-	Debug(format string, args ...interface{})
-	Info(format string, args ...interface{})
-	Warn(format string, args ...interface{})
-	Error(format string, args ...interface{})
+	Debug(format string, args ...any)
+	Info(format string, args ...any)
+	Warn(format string, args ...any)
+	Error(format string, args ...any)
 
 	// Level control
 	SetLevel(level Level)
@@ -26,7 +26,7 @@ type Logger interface {
 	WithPrefix(prefix string) Logger
 
 	// Create a child logger with a field
-	WithField(key string, value interface{}) Logger
+	WithField(key string, value any) Logger
 
 	// Create a child logger with multiple fields
 	WithFields(fields Fields) Logger
@@ -38,8 +38,8 @@ type CLILogger interface {
 	Logger
 
 	// CLI-specific methods
-	Success(format string, args ...interface{})
-	Fail(format string, args ...interface{})
+	Success(format string, args ...any)
+	Fail(format string, args ...any)
 	Header(text string)
 
 	// Spinner control
@@ -57,14 +57,14 @@ type StructuredLogger interface {
 	Logger
 
 	// Context-aware logging
-	DebugContext(ctx context.Context, format string, args ...interface{})
-	InfoContext(ctx context.Context, format string, args ...interface{})
-	WarnContext(ctx context.Context, format string, args ...interface{})
-	ErrorContext(ctx context.Context, format string, args ...interface{})
+	DebugContext(ctx context.Context, format string, args ...any)
+	InfoContext(ctx context.Context, format string, args ...any)
+	WarnContext(ctx context.Context, format string, args ...any)
+	ErrorContext(ctx context.Context, format string, args ...any)
 }
 
 // Fields is a map of key-value pairs for structured logging
-type Fields map[string]interface{}
+type Fields map[string]any
 
 // loggerManager manages the default loggers
 type loggerManager struct {
@@ -138,7 +138,7 @@ func GetLevel() Level {
 // Debug logs a debug message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Debug(format string, args ...interface{}) {
+func Debug(format string, args ...any) {
 	if l := Default(); l != nil {
 		l.Debug(format, args...)
 	}
@@ -147,7 +147,7 @@ func Debug(format string, args ...interface{}) {
 // Info logs an informational message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Info(format string, args ...interface{}) {
+func Info(format string, args ...any) {
 	if l := Default(); l != nil {
 		l.Info(format, args...)
 	}
@@ -156,7 +156,7 @@ func Info(format string, args ...interface{}) {
 // Warn logs a warning message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Warn(format string, args ...interface{}) {
+func Warn(format string, args ...any) {
 	if l := Default(); l != nil {
 		l.Warn(format, args...)
 	}
@@ -165,7 +165,7 @@ func Warn(format string, args ...interface{}) {
 // Error logs an error message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Error(format string, args ...interface{}) {
+func Error(format string, args ...any) {
 	if l := Default(); l != nil {
 		l.Error(format, args...)
 	}
@@ -174,7 +174,7 @@ func Error(format string, args ...interface{}) {
 // Success logs a success message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Success(format string, args ...interface{}) {
+func Success(format string, args ...any) {
 	if l := Default(); l != nil {
 		l.Success(format, args...)
 	}
@@ -183,7 +183,7 @@ func Success(format string, args ...interface{}) {
 // Fail logs a failure message
 //
 //nolint:goprintffuncname // Domain-specific API for cleaner logging interface
-func Fail(format string, args ...interface{}) {
+func Fail(format string, args ...any) {
 	if l := Default(); l != nil {
 		l.Fail(format, args...)
 	}
@@ -218,7 +218,7 @@ func UpdateSpinner(message string) {
 }
 
 // WithField creates a logger with an additional field
-func WithField(key string, value interface{}) Logger {
+func WithField(key string, value any) Logger {
 	if l := Default(); l != nil {
 		return l.WithField(key, value)
 	}

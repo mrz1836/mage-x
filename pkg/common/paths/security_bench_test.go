@@ -33,7 +33,7 @@ func BenchmarkSecurityValidationPerformance(b *testing.B) {
 			pb := NewPathBuilder(tc.path)
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_ = pb.IsSafe()
 			}
 		})
@@ -109,7 +109,7 @@ func BenchmarkPathValidatorRules(b *testing.B) {
 			validator := ruleTest.setupFunc()
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				for _, path := range paths {
 					_ = validator.Validate(path)
 				}
@@ -138,7 +138,7 @@ func BenchmarkPathCleaning(b *testing.B) {
 			pb := NewPathBuilder(tp.path)
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_ = pb.Clean()
 			}
 		})
@@ -157,7 +157,7 @@ func BenchmarkSecurityVsPerformance(b *testing.B) {
 	}
 
 	b.Run("is_safe_check", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			for _, path := range dangerousPaths {
 				pb := NewPathBuilder(path)
 				_ = pb.IsSafe()
@@ -169,7 +169,7 @@ func BenchmarkSecurityVsPerformance(b *testing.B) {
 		validator := NewPathValidator().ForbidPattern(`\.\.`)
 		b.ResetTimer()
 
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			for _, path := range dangerousPaths {
 				_ = validator.Validate(path)
 			}
@@ -183,7 +183,7 @@ func BenchmarkSecurityVsPerformance(b *testing.B) {
 			RequirePattern(`^[^\x00\n\r\t]*$`) // No control characters
 		b.ResetTimer()
 
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			for _, path := range dangerousPaths {
 				pb := NewPathBuilder(path)
 				_ = pb.IsSafe()
@@ -224,7 +224,7 @@ func BenchmarkPathOperationsSecurity(b *testing.B) {
 			}
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				for _, pb := range pbs {
 					_ = op.fn(pb)
 				}
@@ -247,7 +247,7 @@ func BenchmarkMemoryEfficiency(b *testing.B) {
 			RequirePattern(`^[a-zA-Z0-9._/-]+$`)
 		b.ResetTimer()
 
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			for _, path := range largePaths {
 				_ = validator.Validate(path)
 			}
@@ -255,7 +255,7 @@ func BenchmarkMemoryEfficiency(b *testing.B) {
 	})
 
 	b.Run("batch_safety_check", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			for _, path := range largePaths {
 				pb := NewPathBuilder(path)
 				_ = pb.IsSafe()
@@ -264,7 +264,7 @@ func BenchmarkMemoryEfficiency(b *testing.B) {
 	})
 
 	b.Run("batch_path_operations", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			for _, path := range largePaths {
 				pb := NewPathBuilder(path)
 				_ = pb.Clean()

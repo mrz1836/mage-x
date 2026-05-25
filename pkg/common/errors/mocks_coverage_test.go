@@ -27,7 +27,7 @@ func TestMockMageErrorOperations(t *testing.T) {
 		ctx := &ErrorContext{
 			Operation: "test-op",
 			Resource:  "test-resource",
-			Fields:    map[string]interface{}{"key": "value"},
+			Fields:    map[string]any{"key": "value"},
 		}
 
 		result := mock.WithContext(ctx)
@@ -50,7 +50,7 @@ func TestMockMageErrorOperations(t *testing.T) {
 
 	t.Run("WithFields", func(t *testing.T) {
 		mock := NewMockMageError("test")
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"key1": "value1",
 			"key2": "value2",
 		}
@@ -160,7 +160,7 @@ func TestMockErrorBuilderOperations(t *testing.T) {
 
 	t.Run("WithFields", func(t *testing.T) {
 		builder := NewMockErrorBuilder()
-		result := builder.WithFields(map[string]interface{}{"key": "value"})
+		result := builder.WithFields(map[string]any{"key": "value"})
 		assert.Equal(t, builder, result)
 	})
 
@@ -312,7 +312,7 @@ func TestStructuredErrorLoggerLogMageErrorWithContext(t *testing.T) {
 	t.Run("disabled_logger", func(t *testing.T) {
 		logger := &StructuredErrorLogger{
 			DefaultErrorLogger: &DefaultErrorLogger{enabled: false},
-			fields:             make(map[string]interface{}),
+			fields:             make(map[string]any),
 		}
 		mageErr := NewMageError("test")
 
@@ -323,7 +323,7 @@ func TestStructuredErrorLoggerLogMageErrorWithContext(t *testing.T) {
 	t.Run("nil_error", func(t *testing.T) {
 		logger := &StructuredErrorLogger{
 			DefaultErrorLogger: &DefaultErrorLogger{enabled: true},
-			fields:             make(map[string]interface{}),
+			fields:             make(map[string]any),
 		}
 
 		// Should not panic with nil error
@@ -350,7 +350,7 @@ func TestStructuredErrorLoggerLogMageErrorWithContext(t *testing.T) {
 		require.True(t, ok, "expected *DefaultErrorLogger")
 		logger := &StructuredErrorLogger{
 			DefaultErrorLogger: defaultLogger,
-			fields: map[string]interface{}{
+			fields: map[string]any{
 				"custom_field": "custom_value",
 			},
 		}

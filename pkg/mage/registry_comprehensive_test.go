@@ -48,97 +48,97 @@ func (suite *RegistryComprehensiveTestSuite) TestRegistryLazyInitialization() {
 	// Test lazy initialization for each namespace
 	tests := []struct {
 		name         string
-		getter       func() interface{}
-		expectedType interface{}
+		getter       func() any
+		expectedType any
 		notNil       bool
 	}{
 		{
 			name:         "Build",
-			getter:       func() interface{} { return registry.Build() },
+			getter:       func() any { return registry.Build() },
 			expectedType: (*buildNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Test",
-			getter:       func() interface{} { return registry.Test() },
+			getter:       func() any { return registry.Test() },
 			expectedType: (*testNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Lint",
-			getter:       func() interface{} { return registry.Lint() },
+			getter:       func() any { return registry.Lint() },
 			expectedType: (*lintNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Format",
-			getter:       func() interface{} { return registry.Format() },
+			getter:       func() any { return registry.Format() },
 			expectedType: (*formatNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Deps",
-			getter:       func() interface{} { return registry.Deps() },
+			getter:       func() any { return registry.Deps() },
 			expectedType: (*depsNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Git",
-			getter:       func() interface{} { return registry.Git() },
+			getter:       func() any { return registry.Git() },
 			expectedType: (*gitNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Release",
-			getter:       func() interface{} { return registry.Release() },
+			getter:       func() any { return registry.Release() },
 			expectedType: (*releaseNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Docs",
-			getter:       func() interface{} { return registry.Docs() },
+			getter:       func() any { return registry.Docs() },
 			expectedType: (*docsNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Deploy",
-			getter:       func() interface{} { return registry.Deploy() },
+			getter:       func() any { return registry.Deploy() },
 			expectedType: nil,
 			notNil:       false, // Deploy is not implemented
 		},
 		{
 			name:         "Tools",
-			getter:       func() interface{} { return registry.Tools() },
+			getter:       func() any { return registry.Tools() },
 			expectedType: (*toolsNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Security",
-			getter:       func() interface{} { return registry.Security() },
+			getter:       func() any { return registry.Security() },
 			expectedType: nil,
 			notNil:       false, // Security is temporarily disabled
 		},
 		{
 			name:         "Generate",
-			getter:       func() interface{} { return registry.Generate() },
+			getter:       func() any { return registry.Generate() },
 			expectedType: (*generateNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Update",
-			getter:       func() interface{} { return registry.Update() },
+			getter:       func() any { return registry.Update() },
 			expectedType: (*updateNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Mod",
-			getter:       func() interface{} { return registry.Mod() },
+			getter:       func() any { return registry.Mod() },
 			expectedType: (*modNamespaceWrapper)(nil),
 			notNil:       true,
 		},
 		{
 			name:         "Metrics",
-			getter:       func() interface{} { return registry.Metrics() },
+			getter:       func() any { return registry.Metrics() },
 			expectedType: (*metricsNamespaceWrapper)(nil),
 			notNil:       true,
 		},
@@ -168,12 +168,12 @@ func (suite *RegistryComprehensiveTestSuite) TestRegistryThreadSafety() {
 	results := make([][]*DefaultNamespaceRegistry, numGoroutines)
 
 	// Test concurrent access to GetNamespaceRegistry
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
 			results[index] = make([]*DefaultNamespaceRegistry, numIterations)
-			for j := 0; j < numIterations; j++ {
+			for j := range numIterations {
 				results[index][j] = GetNamespaceRegistry()
 			}
 		}(i)
@@ -203,7 +203,7 @@ func (suite *RegistryComprehensiveTestSuite) TestRegistryNamespaceThreadSafety()
 	lintResults := make([]LintNamespace, numGoroutines)
 
 	// Test concurrent access to namespace getters
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
@@ -324,7 +324,7 @@ func (suite *RegistryComprehensiveTestSuite) TestRegistryMemoryLeaks() {
 	// Create many registry instances to test for leaks
 	const numRegistries = 1000
 
-	for i := 0; i < numRegistries; i++ {
+	for range numRegistries {
 		// Create new provider each time to avoid singleton caching
 		provider := NewDefaultNamespaceRegistryProvider()
 		registry := provider.GetNamespaceRegistry()
@@ -398,13 +398,13 @@ func TestRunRegistryComprehensiveTestSuite(t *testing.T) {
 func BenchmarkRegistryAccess(b *testing.B) {
 	tests := []struct {
 		name   string
-		getter func(*DefaultNamespaceRegistry) interface{}
+		getter func(*DefaultNamespaceRegistry) any
 	}{
-		{"GetRegistry", func(*DefaultNamespaceRegistry) interface{} { return GetNamespaceRegistry() }},
-		{"BuildNamespace", func(r *DefaultNamespaceRegistry) interface{} { return r.Build() }},
-		{"TestNamespace", func(r *DefaultNamespaceRegistry) interface{} { return r.Test() }},
-		{"LintNamespace", func(r *DefaultNamespaceRegistry) interface{} { return r.Lint() }},
-		{"FormatNamespace", func(r *DefaultNamespaceRegistry) interface{} { return r.Format() }},
+		{"GetRegistry", func(*DefaultNamespaceRegistry) any { return GetNamespaceRegistry() }},
+		{"BuildNamespace", func(r *DefaultNamespaceRegistry) any { return r.Build() }},
+		{"TestNamespace", func(r *DefaultNamespaceRegistry) any { return r.Test() }},
+		{"LintNamespace", func(r *DefaultNamespaceRegistry) any { return r.Lint() }},
+		{"FormatNamespace", func(r *DefaultNamespaceRegistry) any { return r.Format() }},
 	}
 
 	registry := GetNamespaceRegistry()
@@ -412,7 +412,7 @@ func BenchmarkRegistryAccess(b *testing.B) {
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				result := tt.getter(registry)
 				if result == nil && tt.name != "GetRegistry" {
 					// Some namespaces like Security might be nil

@@ -161,7 +161,7 @@ func comparePrerelease(a, b string) int {
 		minLen = len(partsB)
 	}
 
-	for i := 0; i < minLen; i++ {
+	for i := range minLen {
 		cmp := comparePrereleaseIdentifier(partsA[i], partsB[i])
 		if cmp != 0 {
 			return cmp

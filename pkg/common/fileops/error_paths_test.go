@@ -62,7 +62,7 @@ func TestYAMLMarshalErrorPaths(t *testing.T) {
 
 	t.Run("Marshal encoder error", func(t *testing.T) {
 		// Function types cause yaml.v3 to panic during encoding
-		data := map[string]interface{}{
+		data := map[string]any{
 			"func": func() {},
 		}
 
@@ -370,7 +370,7 @@ func TestDefaultJSONOperatorMarshalErrors(t *testing.T) {
 	// Test types that can't be marshaled
 	unmarshalableTypes := []struct {
 		name string
-		data interface{}
+		data any
 	}{
 		{"channel", make(chan int)},
 		{"function", func() {}},
@@ -396,7 +396,7 @@ func TestDefaultYAMLOperatorEncoderCloseError(t *testing.T) {
 	yamlOps := NewDefaultYAMLOperator(fileOps)
 
 	// Test with valid data that exercises the full encode/close path
-	data := map[string]interface{}{
+	data := map[string]any{
 		"key1": "value1",
 		"key2": 123,
 		"nested": map[string]string{

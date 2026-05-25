@@ -51,10 +51,10 @@ func (ts *FormatCoverageTestSuite) TearDownTest() {
 // Helper to set up mock runner and execute function
 func (ts *FormatCoverageTestSuite) withMockRunner(fn func() error) error {
 	return ts.env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		fn,
 	)
 }

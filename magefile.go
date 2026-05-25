@@ -54,7 +54,7 @@ type (
 // Aliases provides short command names for common operations
 //
 //nolint:gochecknoglobals // Required by mage for command aliases
-var Aliases = map[string]interface{}{
+var Aliases = map[string]any{
 	"build":   BuildDefault,
 	"docs":    DocsDefault,
 	"help":    HelpDefault,
@@ -111,7 +111,7 @@ func InstallStdlib() error {
 
 	cfg, err := mage.GetConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("install stdlib: load config: %w", err)
 	}
 
 	// Install standard library for all configured platforms

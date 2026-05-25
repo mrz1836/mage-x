@@ -462,12 +462,12 @@ func generateConfigurationSchema() string {
 }`
 }
 
-func marshalJSON(v interface{}) ([]byte, error) {
+func marshalJSON(v any) ([]byte, error) {
 	// Use yaml package to marshal to JSON-compatible format
 	return yaml.Marshal(v)
 }
 
-func unmarshalJSON(data []byte, v interface{}) error {
+func unmarshalJSON(data []byte, v any) error {
 	// Use yaml package to unmarshal JSON
 	return yaml.Unmarshal(data, v)
 }

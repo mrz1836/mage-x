@@ -582,7 +582,7 @@ func TestMagexOutputFormat(t *testing.T) {
 
 func BenchmarkMagexStartup(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		ctx := context.Background()
 		cmd := exec.CommandContext(ctx, "./magex", "-version")
 		_, err := cmd.Output()
@@ -594,7 +594,7 @@ func BenchmarkMagexStartup(b *testing.B) {
 
 func BenchmarkMagexList(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		ctx := context.Background()
 		cmd := exec.CommandContext(ctx, "./magex", "-l")
 		_, err := cmd.Output()

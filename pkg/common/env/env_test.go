@@ -853,7 +853,7 @@ func BenchmarkEnvironment_Get(b *testing.B) {
 	}()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		env.Get("BENCH_VAR")
 	}
 }
@@ -867,10 +867,12 @@ func BenchmarkEnvironment_Set(b *testing.B) {
 	}()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		if err := env.Set("BENCH_SET_VAR", fmt.Sprintf("value_%d", i)); err != nil {
 			b.Fatalf("Failed to set BENCH_SET_VAR: %v", err)
 		}
+		i++
 	}
 }
 
@@ -878,7 +880,7 @@ func BenchmarkPathResolver_ConfigDir(b *testing.B) {
 	resolver := NewDefaultPathResolver()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		resolver.ConfigDir("test-app")
 	}
 }
@@ -887,7 +889,7 @@ func BenchmarkEnvManager_WithScope(b *testing.B) {
 	manager := NewDefaultEnvManager()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := manager.WithScope(func(scope Scope) error {
 			return scope.Set("BENCH_SCOPE_VAR", "value")
 		}); err != nil {

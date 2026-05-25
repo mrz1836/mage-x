@@ -420,7 +420,7 @@ func TestNamespaceInstantiation(t *testing.T) {
 
 	t.Run("all type aliases exist", func(t *testing.T) {
 		// Verify all 24 type aliases exist and are properly defined
-		typeAliases := []interface{}{
+		typeAliases := []any{
 			Build{},
 			Test{},
 			Lint{},
@@ -464,7 +464,7 @@ func BenchmarkConvenienceWrappers(b *testing.B) {
 
 	b.ResetTimer() // Reset timer after setup
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Benchmark function existence checks (not actual execution)
 		for _, wrapper := range wrappers {
 			if wrapper == nil {

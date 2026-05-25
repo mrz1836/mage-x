@@ -169,7 +169,7 @@ func TestBase_Verbose(t *testing.T) {
 	t.Parallel()
 
 	var logged bool
-	logger := func(format string, args ...interface{}) {
+	logger := func(format string, args ...any) {
 		logged = true
 	}
 
@@ -192,19 +192,19 @@ func TestBase_logVerbose(t *testing.T) {
 	tests := []struct {
 		name       string
 		verbose    bool
-		logger     func(string, ...interface{})
+		logger     func(string, ...any)
 		wantLogged bool
 	}{
 		{
 			name:       "verbose enabled with logger logs message",
 			verbose:    true,
-			logger:     func(string, ...interface{}) {},
+			logger:     func(string, ...any) {},
 			wantLogged: true,
 		},
 		{
 			name:       "verbose disabled does not log",
 			verbose:    false,
-			logger:     func(string, ...interface{}) {},
+			logger:     func(string, ...any) {},
 			wantLogged: false,
 		},
 		{
@@ -221,9 +221,9 @@ func TestBase_logVerbose(t *testing.T) {
 
 			var logged bool
 			var loggedMsg string
-			var wrappedLogger func(string, ...interface{})
+			var wrappedLogger func(string, ...any)
 			if tt.logger != nil {
-				wrappedLogger = func(format string, args ...interface{}) {
+				wrappedLogger = func(format string, args ...any) {
 					logged = true
 					loggedMsg = format
 				}
@@ -252,21 +252,21 @@ func TestBase_checkDryRun(t *testing.T) {
 	tests := []struct {
 		name       string
 		dryRun     bool
-		logger     func(string, ...interface{})
+		logger     func(string, ...any)
 		wantReturn bool
 		wantLogged bool
 	}{
 		{
 			name:       "dryRun enabled with logger returns true and logs",
 			dryRun:     true,
-			logger:     func(string, ...interface{}) {},
+			logger:     func(string, ...any) {},
 			wantReturn: true,
 			wantLogged: true,
 		},
 		{
 			name:       "dryRun disabled returns false",
 			dryRun:     false,
-			logger:     func(string, ...interface{}) {},
+			logger:     func(string, ...any) {},
 			wantReturn: false,
 			wantLogged: false,
 		},
@@ -284,9 +284,9 @@ func TestBase_checkDryRun(t *testing.T) {
 			t.Parallel()
 
 			var logged bool
-			var wrappedLogger func(string, ...interface{})
+			var wrappedLogger func(string, ...any)
 			if tt.logger != nil {
-				wrappedLogger = func(format string, args ...interface{}) {
+				wrappedLogger = func(format string, args ...any) {
 					logged = true
 				}
 			}
@@ -312,7 +312,7 @@ func TestBase_DryRunSkipsExecution(t *testing.T) {
 	t.Parallel()
 
 	var logMessages []string
-	logger := func(format string, args ...interface{}) {
+	logger := func(format string, args ...any) {
 		logMessages = append(logMessages, format)
 	}
 

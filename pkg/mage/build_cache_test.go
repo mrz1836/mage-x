@@ -99,7 +99,7 @@ func (s *BuildCacheTestSuite) TestThreadSafety() {
 	done := make(chan struct{}, numGoroutines)
 
 	// Launch multiple goroutines to access the cache manager
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(index int) {
 			defer func() { done <- struct{}{} }()
 			managers[index] = getCacheManager()
@@ -107,7 +107,7 @@ func (s *BuildCacheTestSuite) TestThreadSafety() {
 	}
 
 	// Wait for all goroutines to complete
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		<-done
 	}
 

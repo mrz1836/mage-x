@@ -250,7 +250,7 @@ func SanitizeTransformer(err error) error {
 }
 
 // EnrichTransformer adds additional context to errors
-func EnrichTransformer(additionalContext map[string]interface{}) func(error) error {
+func EnrichTransformer(additionalContext map[string]any) func(error) error {
 	return func(err error) error {
 		if err == nil {
 			return nil
@@ -354,7 +354,7 @@ func NewDevelopmentTransformer() ErrorTransformer {
 	transformer := NewErrorTransformer()
 
 	// Add context enrichment
-	transformer.AddTransformer(EnrichTransformer(map[string]interface{}{
+	transformer.AddTransformer(EnrichTransformer(map[string]any{
 		"environment": "development",
 		"debug":       true,
 	}))
@@ -378,7 +378,7 @@ func NewProductionTransformer() ErrorTransformer {
 	transformer.AddTransformer(SanitizeTransformer)
 
 	// Add production context
-	transformer.AddTransformer(EnrichTransformer(map[string]interface{}{
+	transformer.AddTransformer(EnrichTransformer(map[string]any{
 		"environment": "production",
 		"debug":       false,
 	}))

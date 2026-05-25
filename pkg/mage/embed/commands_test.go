@@ -445,7 +445,7 @@ func TestConcurrentRegistration(t *testing.T) {
 	var wg sync.WaitGroup
 	registrationErrors := make(chan error, concurrentWorkers)
 
-	for i := 0; i < concurrentWorkers; i++ {
+	for i := range concurrentWorkers {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
@@ -866,7 +866,7 @@ func TestErrorHandling(t *testing.T) {
 func BenchmarkRegisterAll(b *testing.B) {
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		b.StopTimer()
 		mockReg := NewMockRegistry()
 		b.StartTimer()
@@ -891,7 +891,7 @@ func BenchmarkIndividualRegistration(b *testing.B) {
 		b.Run(rf.name, func(b *testing.B) {
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				b.StopTimer()
 				mockReg := NewMockRegistry()
 				b.StartTimer()
@@ -906,10 +906,10 @@ func BenchmarkIndividualRegistration(b *testing.B) {
 func BenchmarkConcurrentRegistration(b *testing.B) {
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var wg sync.WaitGroup
 
-		for j := 0; j < concurrentWorkers; j++ {
+		for range concurrentWorkers {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -944,7 +944,7 @@ func TestMageNamespaceTypes(t *testing.T) {
 	t.Parallel()
 
 	// Test that all expected mage namespace types exist and can be instantiated
-	namespaceTypes := map[string]interface{}{
+	namespaceTypes := map[string]any{
 		"Build":     mage.Build{},
 		"Test":      mage.Test{},
 		"Lint":      mage.Lint{},
@@ -1022,12 +1022,12 @@ func TestThreadSafety(t *testing.T) {
 	const goroutines = 50
 	const iterations = 10
 
-	for i := 0; i < iterations; i++ {
+	for i := range iterations {
 		t.Run(fmt.Sprintf("Iteration_%d", i), func(t *testing.T) {
 			var wg sync.WaitGroup
 			errors := make(chan error, goroutines)
 
-			for j := 0; j < goroutines; j++ {
+			for j := range goroutines {
 				wg.Add(1)
 				go func(id int) {
 					defer wg.Done()
@@ -1817,7 +1817,7 @@ func TestCommandExamplesFormat(t *testing.T) {
 
 // BenchmarkDataDrivenRegistration benchmarks the data-driven approach
 func BenchmarkDataDrivenRegistration(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		b.StopTimer()
 		mockReg := NewMockRegistry()
 		b.StartTimer()
@@ -1844,7 +1844,7 @@ func BenchmarkHelperFunction(b *testing.B) {
 		"cmd5": {NoArgs: func() error { return nil }},
 	}
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		b.StopTimer()
 		mockReg := NewMockRegistry()
 		b.StartTimer()
@@ -2010,7 +2010,7 @@ func TestGetterFunctionsConcurrentAccess(t *testing.T) {
 			results := make(chan int, numGoroutines)
 
 			// Launch many goroutines calling the same getter
-			for i := 0; i < numGoroutines; i++ {
+			for range numGoroutines {
 				wg.Add(1)
 				go func(getter func() []CommandDef) {
 					defer wg.Done()
@@ -2232,7 +2232,7 @@ func BenchmarkGetterFunctions(b *testing.B) {
 
 	for _, g := range getters {
 		b.Run(g.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_ = g.getter()
 			}
 		})

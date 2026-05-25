@@ -501,7 +501,7 @@ func (ts *ConfigureTestSuite) TestConfigureSchema() {
 		data, err := os.ReadFile(outputFile)
 		ts.Require().NoError(err)
 
-		var schema map[string]interface{}
+		var schema map[string]any
 		err = json.Unmarshal(data, &schema)
 		ts.Require().NoError(err)
 		ts.Require().Contains(schema, "$schema")
@@ -600,7 +600,7 @@ func (ts *ConfigureTestSuite) TestConfigurationSchema() {
 		ts.Require().NotEmpty(schema)
 
 		// Verify it's valid JSON
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		err := json.Unmarshal([]byte(schema), &parsed)
 		ts.Require().NoError(err)
 
@@ -612,7 +612,7 @@ func (ts *ConfigureTestSuite) TestConfigurationSchema() {
 		ts.Require().Contains(parsed, "required")
 
 		// Check that it contains expected properties
-		properties, ok := parsed["properties"].(map[string]interface{})
+		properties, ok := parsed["properties"].(map[string]any)
 		ts.Require().True(ok)
 		ts.Require().Contains(properties, "project")
 		ts.Require().Contains(properties, "build")
@@ -622,7 +622,7 @@ func (ts *ConfigureTestSuite) TestConfigurationSchema() {
 	ts.Run("SchemaStructure", func() {
 		schema := generateConfigurationSchema()
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		err := json.Unmarshal([]byte(schema), &parsed)
 		ts.Require().NoError(err)
 
@@ -633,7 +633,7 @@ func (ts *ConfigureTestSuite) TestConfigurationSchema() {
 		ts.Require().Equal("object", parsed["type"])
 
 		// Verify required fields
-		required, ok := parsed["required"].([]interface{})
+		required, ok := parsed["required"].([]any)
 		ts.Require().True(ok)
 		ts.Require().Contains(required, "project")
 		ts.Require().Contains(required, "build")
@@ -775,29 +775,37 @@ func BenchmarkConfigurationOperations(b *testing.B) {
 	TestSetConfig(config)
 
 	b.Run("Validation", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = validateConfiguration(config) //nolint:errcheck // Benchmark intentionally ignores errors
+			i++
 		}
 	})
 
 	b.Run("MarshalJSON", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_, _ = marshalJSON(config) //nolint:errcheck // Benchmark intentionally ignores errors
+			i++
 		}
 	})
 
 	b.Run("UnmarshalJSON", func(b *testing.B) {
 		data, _ := marshalJSON(config) //nolint:errcheck // Benchmark intentionally ignores errors
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			var cfg Config
 			_ = unmarshalJSON(data, &cfg) //nolint:errcheck // Benchmark intentionally ignores errors
+			i++
 		}
 	})
 
 	b.Run("SchemaGeneration", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			_ = generateConfigurationSchema()
+			i++
 		}
 	})
 }

@@ -80,14 +80,14 @@ func TestFormatErrorContext(t *testing.T) {
 	})
 
 	t.Run("empty fields", func(t *testing.T) {
-		ctx := &ErrorContext{Fields: map[string]interface{}{}}
+		ctx := &ErrorContext{Fields: map[string]any{}}
 		result := formatErrorContext(ctx)
 		assert.Equal(t, "No additional context", result)
 	})
 
 	t.Run("with fields", func(t *testing.T) {
 		ctx := &ErrorContext{
-			Fields: map[string]interface{}{
+			Fields: map[string]any{
 				"key": "value",
 			},
 		}

@@ -277,7 +277,7 @@ func TestCopyConcurrent(t *testing.T) {
 	const numCopiers = 10
 
 	// Create source files
-	for i := 0; i < numCopiers; i++ {
+	for i := range numCopiers {
 		src := filepath.Join(tmpDir, "src"+string(rune('0'+i))+".txt")
 		data := []byte("content for file " + string(rune('0'+i)))
 		require.NoError(t, os.WriteFile(src, data, 0o644)) //nolint:gosec // G306: Test file - intentional permissions
@@ -286,7 +286,7 @@ func TestCopyConcurrent(t *testing.T) {
 	done := make(chan error, numCopiers)
 
 	// Run concurrent copies
-	for i := 0; i < numCopiers; i++ {
+	for i := range numCopiers {
 		go func(idx int) {
 			src := filepath.Join(tmpDir, "src"+string(rune('0'+idx))+".txt") //nolint:gosec // G115: bounded test value
 			dst := filepath.Join(tmpDir, "dst"+string(rune('0'+idx))+".txt") //nolint:gosec // G115: bounded test value
@@ -295,13 +295,13 @@ func TestCopyConcurrent(t *testing.T) {
 	}
 
 	// Collect results
-	for i := 0; i < numCopiers; i++ {
+	for range numCopiers {
 		err := <-done
 		require.NoError(t, err)
 	}
 
 	// Verify all destinations exist
-	for i := 0; i < numCopiers; i++ {
+	for i := range numCopiers {
 		dstPath := filepath.Join(tmpDir, "dst"+string(rune('0'+i))+".txt")
 		_, err := os.Stat(dstPath)
 		require.NoError(t, err)

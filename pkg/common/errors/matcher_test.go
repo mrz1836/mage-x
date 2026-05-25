@@ -300,36 +300,36 @@ func TestRealMatcher_MatchField(t *testing.T) {
 	tests := []struct {
 		name        string
 		fieldKey    string
-		fieldValue  interface{}
-		errFields   map[string]interface{}
+		fieldValue  any
+		errFields   map[string]any
 		shouldMatch bool
 	}{
 		{
 			name:        "matches string field",
 			fieldKey:    "env",
 			fieldValue:  "production",
-			errFields:   map[string]interface{}{"env": "production"},
+			errFields:   map[string]any{"env": "production"},
 			shouldMatch: true,
 		},
 		{
 			name:        "matches int field",
 			fieldKey:    "exitCode",
 			fieldValue:  1,
-			errFields:   map[string]interface{}{"exitCode": 1},
+			errFields:   map[string]any{"exitCode": 1},
 			shouldMatch: true,
 		},
 		{
 			name:        "does not match different value",
 			fieldKey:    "env",
 			fieldValue:  "production",
-			errFields:   map[string]interface{}{"env": "staging"},
+			errFields:   map[string]any{"env": "staging"},
 			shouldMatch: false,
 		},
 		{
 			name:        "does not match different type",
 			fieldKey:    "count",
 			fieldValue:  "1",
-			errFields:   map[string]interface{}{"count": 1},
+			errFields:   map[string]any{"count": 1},
 			shouldMatch: false,
 		},
 	}

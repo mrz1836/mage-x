@@ -135,10 +135,10 @@ func TestConcurrent_SetAndGet(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines * 3)
 
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		go func() {
 			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				ctx, cancel := context.WithCancel(context.Background())
 				runtimectx.SetRoot(ctx)
 				cancel()
@@ -146,13 +146,13 @@ func TestConcurrent_SetAndGet(t *testing.T) {
 		}()
 		go func() {
 			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				_ = runtimectx.Context()
 			}
 		}()
 		go func() {
 			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				_ = runtimectx.CheckCanceled() //nolint:errcheck // concurrency-stress only; result intentionally discarded
 			}
 		}()

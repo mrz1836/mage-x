@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -135,7 +134,7 @@ func (Update) Install() error {
 		// Ignore error in defer cleanup
 		if err := os.RemoveAll(updateDir); err != nil {
 			// Best effort cleanup - ignore error
-			log.Printf("failed to clean up update directory %s: %v", updateDir, err)
+			utils.Warn("failed to clean up update directory %s: %v", updateDir, err)
 		}
 	}()
 
@@ -156,7 +155,7 @@ func (Update) Install() error {
 	cache := NewUpdateNotifyCache()
 	if err := cache.Clear(); err != nil {
 		// Non-fatal: log but don't fail the installation
-		log.Printf("failed to clear update cache: %v", err)
+		utils.Warn("failed to clear update cache: %v", err)
 	}
 
 	utils.Info("Please restart your application to use the new version")
@@ -464,7 +463,7 @@ func fetchChecksumForAsset(checksumURL, assetName string) (string, error) {
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			log.Printf("failed to close checksum response body: %v", closeErr)
+			utils.Warn("failed to close checksum response body: %v", closeErr)
 		}
 	}()
 
@@ -527,7 +526,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 		// Ignore error in defer cleanup
 		if closeErr := resp.Body.Close(); closeErr != nil {
 			// Best effort cleanup - ignore error
-			log.Printf("failed to close response body: %v", closeErr)
+			utils.Warn("failed to close response body: %v", closeErr)
 		}
 	}()
 
@@ -602,7 +601,7 @@ func extractTarGz(src, dest string) error {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			log.Printf("failed to close tar.gz file: %v", closeErr)
+			utils.Warn("failed to close tar.gz file: %v", closeErr)
 		}
 	}()
 
@@ -613,7 +612,7 @@ func extractTarGz(src, dest string) error {
 	}
 	defer func() {
 		if closeErr := gzipReader.Close(); closeErr != nil {
-			log.Printf("failed to close gzip reader: %v", closeErr)
+			utils.Warn("failed to close gzip reader: %v", closeErr)
 		}
 	}()
 
@@ -675,7 +674,7 @@ func extractTarGz(src, dest string) error {
 		if n >= maxUpdateFileSize {
 			// Clean up the oversized file
 			if rmErr := os.Remove(destPath); rmErr != nil { // #nosec G703,G706 -- destPath validated; log message doesn't reach HTTP output
-				log.Printf("failed to remove oversized file %s: %v", destPath, rmErr)
+				utils.Warn("failed to remove oversized file %s: %v", destPath, rmErr)
 			}
 			return fmt.Errorf("%w: %s exceeds %d bytes", errFileTooLarge, header.Name, maxUpdateFileSize)
 		}
@@ -716,7 +715,7 @@ func copyFile(src, dst string) error {
 	}
 	defer func() {
 		if closeErr := srcFile.Close(); closeErr != nil {
-			log.Printf("failed to close source file: %v", closeErr)
+			utils.Warn("failed to close source file: %v", closeErr)
 		}
 	}()
 
@@ -727,7 +726,7 @@ func copyFile(src, dst string) error {
 	}
 	defer func() {
 		if closeErr := dstFile.Close(); closeErr != nil {
-			log.Printf("failed to close destination file: %v", closeErr)
+			utils.Warn("failed to close destination file: %v", closeErr)
 		}
 	}()
 
@@ -745,18 +744,18 @@ func installBinaryFallback(src, dst string) error {
 	tmpPath := dst + ".new"
 	if copyErr := copyFile(src, tmpPath); copyErr != nil {
 		if rmErr := os.Remove(tmpPath); rmErr != nil { // #nosec G703 -- tmpPath derived from validated dst
-			log.Printf("failed to remove temp binary: %v", rmErr)
+			utils.Warn("failed to remove temp binary: %v", rmErr)
 		}
 		return fmt.Errorf("failed to install binary: %w", copyErr)
 	}
 	if renErr := os.Rename(tmpPath, dst); renErr != nil { // #nosec G703 -- tmpPath/dst are from validated internal paths
 		if rmErr := os.Remove(tmpPath); rmErr != nil { // #nosec G703 -- tmpPath derived from validated dst
-			log.Printf("failed to remove temp binary: %v", rmErr)
+			utils.Warn("failed to remove temp binary: %v", rmErr)
 		}
 		return fmt.Errorf("failed to install binary: %w", renErr)
 	}
 	if removeErr := os.Remove(src); removeErr != nil { // #nosec G703 -- src is from internal download process
-		log.Printf("failed to remove temporary binary: %v", removeErr)
+		utils.Warn("failed to remove temporary binary: %v", removeErr)
 	}
 	return nil
 }

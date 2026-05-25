@@ -49,7 +49,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_LoadFrom() {
 		err := os.WriteFile(jsonFile, []byte(jsonContent), 0o600)
 		ts.Require().NoError(err)
 
-		var result map[string]interface{}
+		var result map[string]any
 		err = loader.LoadFrom(jsonFile, &result)
 		ts.Require().NoError(err)
 		ts.Require().Equal("test", result["name"])
@@ -61,7 +61,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_LoadFrom() {
 		err := os.WriteFile(yamlFile, []byte(testYAMLContent), 0o600)
 		ts.Require().NoError(err)
 
-		var result map[string]interface{}
+		var result map[string]any
 		err = loader.LoadFrom(yamlFile, &result)
 		ts.Require().NoError(err)
 		ts.Require().Equal("test", result["name"])
@@ -73,7 +73,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_LoadFrom() {
 		err := os.WriteFile(ymlFile, []byte(testYAMLContent), 0o600)
 		ts.Require().NoError(err)
 
-		var result map[string]interface{}
+		var result map[string]any
 		err = loader.LoadFrom(ymlFile, &result)
 		ts.Require().NoError(err)
 		ts.Require().Equal("test", result["name"])
@@ -85,14 +85,14 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_LoadFrom() {
 		err := os.WriteFile(configFile, []byte(testYAMLContent), 0o600)
 		ts.Require().NoError(err)
 
-		var result map[string]interface{}
+		var result map[string]any
 		err = loader.LoadFrom(configFile, &result)
 		ts.Require().NoError(err)
 		ts.Require().Equal("test", result["name"])
 	})
 
 	ts.Run("file does not exist", func() {
-		var result map[string]interface{}
+		var result map[string]any
 		err := loader.LoadFrom("nonexistent.json", &result)
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "does not exist")
@@ -120,7 +120,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Load() {
 			configFile2,
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		loadedPath, err := loader.Load(paths, &result)
 		ts.Require().NoError(err)
 		ts.Require().Equal(configFile1, loadedPath)
@@ -133,7 +133,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Load() {
 			filepath.Join(ts.tempDir, "nonexistent2.json"),
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		_, err := loader.Load(paths, &result)
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "no valid configuration file found")
@@ -143,7 +143,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Load() {
 // TestDefaultConfigLoader_Save tests saving configuration to files
 func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Save() {
 	loader := NewDefaultConfigLoader()
-	data := map[string]interface{}{
+	data := map[string]any{
 		"name":  "test",
 		"value": 42,
 	}
@@ -205,7 +205,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Save() {
 
 	ts.Run("JSON marshal error", func() {
 		// Channels cannot be marshaled to JSON
-		unmarshalable := map[string]interface{}{
+		unmarshalable := map[string]any{
 			"channel": make(chan int),
 		}
 		outputFile := filepath.Join(ts.tempDir, "fail_marshal.json")
@@ -220,7 +220,7 @@ func (ts *DefaultConfigTestSuite) TestDefaultConfigLoader_Validate() {
 	loader := NewDefaultConfigLoader()
 
 	ts.Run("valid data", func() {
-		data := map[string]interface{}{"key": "value"}
+		data := map[string]any{"key": "value"}
 		err := loader.Validate(data)
 		ts.Require().NoError(err)
 	})
@@ -650,7 +650,7 @@ func (ts *DefaultConfigTestSuite) TestFileConfigSource_Methods() {
 		err := os.WriteFile(path, []byte(jsonContent), 0o600)
 		ts.Require().NoError(err)
 
-		var result map[string]interface{}
+		var result map[string]any
 		err = source.Load(&result)
 		ts.Require().NoError(err)
 		ts.Require().Equal("test", result["name"])
@@ -688,7 +688,7 @@ func (ts *DefaultConfigTestSuite) TestEnvConfigSource_Methods() {
 	})
 
 	ts.Run("Load - not implemented", func() {
-		var result map[string]interface{}
+		var result map[string]any
 		err := source.Load(&result)
 		ts.Require().Error(err)
 		ts.Require().Contains(err.Error(), "not implemented yet")
@@ -893,7 +893,7 @@ func TestDefaultConfigLoader_LoadFrom_EdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := loader.LoadFrom(emptyFile, &result)
 		// Empty file should parse successfully to nil/empty map
 		if err != nil {
@@ -910,7 +910,7 @@ func TestDefaultConfigLoader_LoadFrom_EdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := loader.LoadFrom(commentFile, &result)
 		// Comments-only file should parse successfully
 		if err != nil {
@@ -924,7 +924,7 @@ func TestDefaultConfigLoader_LoadFrom_EdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := loader.LoadFrom(emptyFile, &result)
 		// Empty JSON is invalid
 		if err == nil {
@@ -938,7 +938,7 @@ func TestDefaultConfigLoader_LoadFrom_EdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := loader.LoadFrom(emptyObjFile, &result)
 		if err != nil {
 			t.Errorf("empty JSON object should parse, got error: %v", err)
@@ -955,7 +955,7 @@ func TestDefaultConfigLoader_LoadFrom_EdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := loader.LoadFrom(unknownFile, &result)
 		if err != nil {
 			t.Errorf("should auto-detect JSON, got error: %v", err)
@@ -973,7 +973,7 @@ value: 42`
 			t.Fatal(err)
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := loader.LoadFrom(unknownFile, &result)
 		if err != nil {
 			t.Errorf("should auto-detect YAML, got error: %v", err)
@@ -990,7 +990,7 @@ value: 42`
 			t.Fatal(err)
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		err := loader.LoadFrom(unknownFile, &result)
 		if err == nil {
 			t.Error("invalid content should fail to parse")
@@ -1005,7 +1005,7 @@ func TestDefaultConfigLoader_Save_Permissions(t *testing.T) {
 
 	t.Run("creates nested directories", func(t *testing.T) {
 		nestedPath := filepath.Join(tmpDir, "a", "b", "c", "config.json")
-		data := map[string]interface{}{"test": true}
+		data := map[string]any{"test": true}
 
 		err := loader.Save(nestedPath, data, "json")
 		if err != nil {
@@ -1020,7 +1020,7 @@ func TestDefaultConfigLoader_Save_Permissions(t *testing.T) {
 
 	t.Run("file has correct permissions", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "perms.json")
-		data := map[string]interface{}{"test": true}
+		data := map[string]any{"test": true}
 
 		err := loader.Save(configPath, data, "json")
 		if err != nil {
@@ -1041,7 +1041,7 @@ func TestDefaultConfigLoader_Save_Permissions(t *testing.T) {
 
 	t.Run("directory has correct permissions", func(t *testing.T) {
 		nestedPath := filepath.Join(tmpDir, "dir_perms", "config.json")
-		data := map[string]interface{}{"test": true}
+		data := map[string]any{"test": true}
 
 		err := loader.Save(nestedPath, data, "json")
 		if err != nil {
@@ -1065,7 +1065,7 @@ func TestDefaultConfigLoader_Save_Permissions(t *testing.T) {
 func TestEnvConfigSource_Load_Error(t *testing.T) {
 	source := NewEnvConfigSource("TEST_PREFIX_", 100)
 
-	var config map[string]interface{}
+	var config map[string]any
 	err := source.Load(&config)
 
 	if err == nil {
@@ -1081,7 +1081,7 @@ func TestEnvConfigSource_Load_Error(t *testing.T) {
 func TestFileConfigSource_Load_NonExistent(t *testing.T) {
 	source := NewFileConfigSource("/non/existent/path/config.yaml", FormatYAML, 100)
 
-	var config map[string]interface{}
+	var config map[string]any
 	err := source.Load(&config)
 
 	if err == nil {

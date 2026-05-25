@@ -833,7 +833,7 @@ func BenchmarkHasCommand(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		cd.HasCommand("cmdz")
 	}
 }
@@ -853,7 +853,7 @@ func BenchmarkGetCommand(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = cd.GetCommand("cmdz")
 	}
 }
@@ -873,7 +873,7 @@ func BenchmarkGetCommandsForHelp(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = cd.GetCommandsForHelp()
 	}
 }
@@ -895,7 +895,7 @@ func BenchmarkIsLikelyNamespaceWrapper(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		cd.isLikelyNamespaceWrapper("builddefault")
 	}
 }

@@ -1067,7 +1067,7 @@ func BenchmarkLoadEnvFile(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = loadEnvFile(envFile) //nolint:errcheck // Benchmark intentionally ignores return value
 	}
 }
@@ -1081,7 +1081,7 @@ func BenchmarkExpandVariables(b *testing.B) {
 	input := "prefix_${VAR1}_${VAR2}_${VAR3}_suffix"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = expandVariables(input, localVars)
 	}
 }
@@ -1102,7 +1102,7 @@ func BenchmarkLoadEnvDir(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = LoadEnvDir(tmpDir, false) //nolint:errcheck // Benchmark intentionally ignores return value
 	}
 }

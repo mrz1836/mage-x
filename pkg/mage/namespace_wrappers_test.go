@@ -17,87 +17,87 @@ type NamespaceWrappersTestSuite struct {
 func (suite *NamespaceWrappersTestSuite) TestWrapperTypeImplementations() {
 	tests := []struct {
 		name          string
-		wrapperType   interface{}
-		interfaceType interface{}
-		createWrapper func() interface{}
+		wrapperType   any
+		interfaceType any
+		createWrapper func() any
 	}{
 		{
 			name:          "buildNamespaceWrapper implements BuildNamespace",
 			wrapperType:   (*buildNamespaceWrapper)(nil),
 			interfaceType: (*BuildNamespace)(nil),
-			createWrapper: func() interface{} { return &buildNamespaceWrapper{} },
+			createWrapper: func() any { return &buildNamespaceWrapper{} },
 		},
 		{
 			name:          "testNamespaceWrapper implements TestNamespace",
 			wrapperType:   (*testNamespaceWrapper)(nil),
 			interfaceType: (*TestNamespace)(nil),
-			createWrapper: func() interface{} { return &testNamespaceWrapper{} },
+			createWrapper: func() any { return &testNamespaceWrapper{} },
 		},
 		{
 			name:          "lintNamespaceWrapper implements LintNamespace",
 			wrapperType:   (*lintNamespaceWrapper)(nil),
 			interfaceType: (*LintNamespace)(nil),
-			createWrapper: func() interface{} { return &lintNamespaceWrapper{} },
+			createWrapper: func() any { return &lintNamespaceWrapper{} },
 		},
 		{
 			name:          "formatNamespaceWrapper implements FormatNamespace",
 			wrapperType:   (*formatNamespaceWrapper)(nil),
 			interfaceType: (*FormatNamespace)(nil),
-			createWrapper: func() interface{} { return &formatNamespaceWrapper{} },
+			createWrapper: func() any { return &formatNamespaceWrapper{} },
 		},
 		{
 			name:          "depsNamespaceWrapper implements DepsNamespace",
 			wrapperType:   (*depsNamespaceWrapper)(nil),
 			interfaceType: (*DepsNamespace)(nil),
-			createWrapper: func() interface{} { return &depsNamespaceWrapper{} },
+			createWrapper: func() any { return &depsNamespaceWrapper{} },
 		},
 		{
 			name:          "gitNamespaceWrapper implements GitNamespace",
 			wrapperType:   (*gitNamespaceWrapper)(nil),
 			interfaceType: (*GitNamespace)(nil),
-			createWrapper: func() interface{} { return &gitNamespaceWrapper{} },
+			createWrapper: func() any { return &gitNamespaceWrapper{} },
 		},
 		{
 			name:          "releaseNamespaceWrapper implements ReleaseNamespace",
 			wrapperType:   (*releaseNamespaceWrapper)(nil),
 			interfaceType: (*ReleaseNamespace)(nil),
-			createWrapper: func() interface{} { return &releaseNamespaceWrapper{} },
+			createWrapper: func() any { return &releaseNamespaceWrapper{} },
 		},
 		{
 			name:          "docsNamespaceWrapper implements DocsNamespace",
 			wrapperType:   (*docsNamespaceWrapper)(nil),
 			interfaceType: (*DocsNamespace)(nil),
-			createWrapper: func() interface{} { return &docsNamespaceWrapper{} },
+			createWrapper: func() any { return &docsNamespaceWrapper{} },
 		},
 		{
 			name:          "toolsNamespaceWrapper implements ToolsNamespace",
 			wrapperType:   (*toolsNamespaceWrapper)(nil),
 			interfaceType: (*ToolsNamespace)(nil),
-			createWrapper: func() interface{} { return &toolsNamespaceWrapper{} },
+			createWrapper: func() any { return &toolsNamespaceWrapper{} },
 		},
 		{
 			name:          "generateNamespaceWrapper implements GenerateNamespace",
 			wrapperType:   (*generateNamespaceWrapper)(nil),
 			interfaceType: (*GenerateNamespace)(nil),
-			createWrapper: func() interface{} { return &generateNamespaceWrapper{} },
+			createWrapper: func() any { return &generateNamespaceWrapper{} },
 		},
 		{
 			name:          "updateNamespaceWrapper implements UpdateNamespace",
 			wrapperType:   (*updateNamespaceWrapper)(nil),
 			interfaceType: (*UpdateNamespace)(nil),
-			createWrapper: func() interface{} { return &updateNamespaceWrapper{} },
+			createWrapper: func() any { return &updateNamespaceWrapper{} },
 		},
 		{
 			name:          "modNamespaceWrapper implements ModNamespace",
 			wrapperType:   (*modNamespaceWrapper)(nil),
 			interfaceType: (*ModNamespace)(nil),
-			createWrapper: func() interface{} { return &modNamespaceWrapper{} },
+			createWrapper: func() any { return &modNamespaceWrapper{} },
 		},
 		{
 			name:          "metricsNamespaceWrapper implements MetricsNamespace",
 			wrapperType:   (*metricsNamespaceWrapper)(nil),
 			interfaceType: (*MetricsNamespace)(nil),
-			createWrapper: func() interface{} { return &metricsNamespaceWrapper{} },
+			createWrapper: func() any { return &metricsNamespaceWrapper{} },
 		},
 	}
 
@@ -117,72 +117,72 @@ func (suite *NamespaceWrappersTestSuite) TestWrapperTypeImplementations() {
 func (suite *NamespaceWrappersTestSuite) TestWrapperStructEmbedding() {
 	tests := []struct {
 		name          string
-		createWrapper func() interface{}
-		expectedField interface{}
+		createWrapper func() any
+		expectedField any
 	}{
 		{
 			name:          "buildNamespaceWrapper embeds Build",
-			createWrapper: func() interface{} { return &buildNamespaceWrapper{Build: Build{}, instanceID: 1} },
+			createWrapper: func() any { return &buildNamespaceWrapper{Build: Build{}, instanceID: 1} },
 			expectedField: Build{},
 		},
 		{
 			name:          "testNamespaceWrapper embeds Test",
-			createWrapper: func() interface{} { return &testNamespaceWrapper{Test: Test{}, instanceID: 1} },
+			createWrapper: func() any { return &testNamespaceWrapper{Test: Test{}, instanceID: 1} },
 			expectedField: Test{},
 		},
 		{
 			name:          "lintNamespaceWrapper embeds Lint",
-			createWrapper: func() interface{} { return &lintNamespaceWrapper{Lint: Lint{}, instanceID: 1} },
+			createWrapper: func() any { return &lintNamespaceWrapper{Lint: Lint{}, instanceID: 1} },
 			expectedField: Lint{},
 		},
 		{
 			name:          "formatNamespaceWrapper embeds Format",
-			createWrapper: func() interface{} { return &formatNamespaceWrapper{Format: Format{}, instanceID: 1} },
+			createWrapper: func() any { return &formatNamespaceWrapper{Format: Format{}, instanceID: 1} },
 			expectedField: Format{},
 		},
 		{
 			name:          "depsNamespaceWrapper embeds Deps",
-			createWrapper: func() interface{} { return &depsNamespaceWrapper{Deps: Deps{}, instanceID: 1} },
+			createWrapper: func() any { return &depsNamespaceWrapper{Deps: Deps{}, instanceID: 1} },
 			expectedField: Deps{},
 		},
 		{
 			name:          "gitNamespaceWrapper embeds Git",
-			createWrapper: func() interface{} { return &gitNamespaceWrapper{Git: Git{}, instanceID: 1} },
+			createWrapper: func() any { return &gitNamespaceWrapper{Git: Git{}, instanceID: 1} },
 			expectedField: Git{},
 		},
 		{
 			name:          "releaseNamespaceWrapper embeds Release",
-			createWrapper: func() interface{} { return &releaseNamespaceWrapper{Release: Release{}, instanceID: 1} },
+			createWrapper: func() any { return &releaseNamespaceWrapper{Release: Release{}, instanceID: 1} },
 			expectedField: Release{},
 		},
 		{
 			name:          "docsNamespaceWrapper embeds Docs",
-			createWrapper: func() interface{} { return &docsNamespaceWrapper{Docs: Docs{}, instanceID: 1} },
+			createWrapper: func() any { return &docsNamespaceWrapper{Docs: Docs{}, instanceID: 1} },
 			expectedField: Docs{},
 		},
 		{
 			name:          "toolsNamespaceWrapper embeds Tools",
-			createWrapper: func() interface{} { return &toolsNamespaceWrapper{Tools: Tools{}, instanceID: 1} },
+			createWrapper: func() any { return &toolsNamespaceWrapper{Tools: Tools{}, instanceID: 1} },
 			expectedField: Tools{},
 		},
 		{
 			name:          "generateNamespaceWrapper embeds Generate",
-			createWrapper: func() interface{} { return &generateNamespaceWrapper{Generate: Generate{}, instanceID: 1} },
+			createWrapper: func() any { return &generateNamespaceWrapper{Generate: Generate{}, instanceID: 1} },
 			expectedField: Generate{},
 		},
 		{
 			name:          "updateNamespaceWrapper embeds Update",
-			createWrapper: func() interface{} { return &updateNamespaceWrapper{Update: Update{}, instanceID: 1} },
+			createWrapper: func() any { return &updateNamespaceWrapper{Update: Update{}, instanceID: 1} },
 			expectedField: Update{},
 		},
 		{
 			name:          "modNamespaceWrapper embeds Mod",
-			createWrapper: func() interface{} { return &modNamespaceWrapper{Mod: Mod{}, instanceID: 1} },
+			createWrapper: func() any { return &modNamespaceWrapper{Mod: Mod{}, instanceID: 1} },
 			expectedField: Mod{},
 		},
 		{
 			name:          "metricsNamespaceWrapper embeds Metrics",
-			createWrapper: func() interface{} { return &metricsNamespaceWrapper{Metrics: Metrics{}, instanceID: 1} },
+			createWrapper: func() any { return &metricsNamespaceWrapper{Metrics: Metrics{}, instanceID: 1} },
 			expectedField: Metrics{},
 		},
 	}
@@ -201,85 +201,85 @@ func (suite *NamespaceWrappersTestSuite) TestWrapperStructEmbedding() {
 func (suite *NamespaceWrappersTestSuite) TestFactoryFunctionWrapperConsistency() {
 	tests := []struct {
 		name          string
-		factory       func() interface{}
-		expectedType  interface{}
-		interfaceType interface{}
+		factory       func() any
+		expectedType  any
+		interfaceType any
 	}{
 		{
 			name:          "NewBuildNamespace creates buildNamespaceWrapper",
-			factory:       func() interface{} { return NewBuildNamespace() },
+			factory:       func() any { return NewBuildNamespace() },
 			expectedType:  (*buildNamespaceWrapper)(nil),
 			interfaceType: (*BuildNamespace)(nil),
 		},
 		{
 			name:          "NewTestNamespace creates testNamespaceWrapper",
-			factory:       func() interface{} { return NewTestNamespace() },
+			factory:       func() any { return NewTestNamespace() },
 			expectedType:  (*testNamespaceWrapper)(nil),
 			interfaceType: (*TestNamespace)(nil),
 		},
 		{
 			name:          "NewLintNamespace creates lintNamespaceWrapper",
-			factory:       func() interface{} { return NewLintNamespace() },
+			factory:       func() any { return NewLintNamespace() },
 			expectedType:  (*lintNamespaceWrapper)(nil),
 			interfaceType: (*LintNamespace)(nil),
 		},
 		{
 			name:          "NewFormatNamespace creates formatNamespaceWrapper",
-			factory:       func() interface{} { return NewFormatNamespace() },
+			factory:       func() any { return NewFormatNamespace() },
 			expectedType:  (*formatNamespaceWrapper)(nil),
 			interfaceType: (*FormatNamespace)(nil),
 		},
 		{
 			name:          "NewDepsNamespace creates depsNamespaceWrapper",
-			factory:       func() interface{} { return NewDepsNamespace() },
+			factory:       func() any { return NewDepsNamespace() },
 			expectedType:  (*depsNamespaceWrapper)(nil),
 			interfaceType: (*DepsNamespace)(nil),
 		},
 		{
 			name:          "NewGitNamespace creates gitNamespaceWrapper",
-			factory:       func() interface{} { return NewGitNamespace() },
+			factory:       func() any { return NewGitNamespace() },
 			expectedType:  (*gitNamespaceWrapper)(nil),
 			interfaceType: (*GitNamespace)(nil),
 		},
 		{
 			name:          "NewReleaseNamespace creates releaseNamespaceWrapper",
-			factory:       func() interface{} { return NewReleaseNamespace() },
+			factory:       func() any { return NewReleaseNamespace() },
 			expectedType:  (*releaseNamespaceWrapper)(nil),
 			interfaceType: (*ReleaseNamespace)(nil),
 		},
 		{
 			name:          "NewDocsNamespace creates docsNamespaceWrapper",
-			factory:       func() interface{} { return NewDocsNamespace() },
+			factory:       func() any { return NewDocsNamespace() },
 			expectedType:  (*docsNamespaceWrapper)(nil),
 			interfaceType: (*DocsNamespace)(nil),
 		},
 		{
 			name:          "NewToolsNamespace creates toolsNamespaceWrapper",
-			factory:       func() interface{} { return NewToolsNamespace() },
+			factory:       func() any { return NewToolsNamespace() },
 			expectedType:  (*toolsNamespaceWrapper)(nil),
 			interfaceType: (*ToolsNamespace)(nil),
 		},
 		{
 			name:          "NewGenerateNamespace creates generateNamespaceWrapper",
-			factory:       func() interface{} { return NewGenerateNamespace() },
+			factory:       func() any { return NewGenerateNamespace() },
 			expectedType:  (*generateNamespaceWrapper)(nil),
 			interfaceType: (*GenerateNamespace)(nil),
 		},
 		{
 			name:          "NewUpdateNamespace creates updateNamespaceWrapper",
-			factory:       func() interface{} { return NewUpdateNamespace() },
+			factory:       func() any { return NewUpdateNamespace() },
 			expectedType:  (*updateNamespaceWrapper)(nil),
 			interfaceType: (*UpdateNamespace)(nil),
 		},
 		{
 			name:          "NewModNamespace creates modNamespaceWrapper",
-			factory:       func() interface{} { return NewModNamespace() },
+			factory:       func() any { return NewModNamespace() },
 			expectedType:  (*modNamespaceWrapper)(nil),
 			interfaceType: (*ModNamespace)(nil),
 		},
 		{
 			name:          "NewMetricsNamespace creates metricsNamespaceWrapper",
-			factory:       func() interface{} { return NewMetricsNamespace() },
+			factory:       func() any { return NewMetricsNamespace() },
 			expectedType:  (*metricsNamespaceWrapper)(nil),
 			interfaceType: (*MetricsNamespace)(nil),
 		},
@@ -437,18 +437,18 @@ func TestWrapperMethodSignatures(t *testing.T) {
 func BenchmarkWrapperCreation(b *testing.B) {
 	tests := []struct {
 		name    string
-		factory func() interface{}
+		factory func() any
 	}{
-		{"buildNamespaceWrapper", func() interface{} { return &buildNamespaceWrapper{Build: Build{}, instanceID: 1} }},
-		{"testNamespaceWrapper", func() interface{} { return &testNamespaceWrapper{Test: Test{}, instanceID: 1} }},
-		{"lintNamespaceWrapper", func() interface{} { return &lintNamespaceWrapper{Lint: Lint{}, instanceID: 1} }},
-		{"formatNamespaceWrapper", func() interface{} { return &formatNamespaceWrapper{Format: Format{}, instanceID: 1} }},
+		{"buildNamespaceWrapper", func() any { return &buildNamespaceWrapper{Build: Build{}, instanceID: 1} }},
+		{"testNamespaceWrapper", func() any { return &testNamespaceWrapper{Test: Test{}, instanceID: 1} }},
+		{"lintNamespaceWrapper", func() any { return &lintNamespaceWrapper{Lint: Lint{}, instanceID: 1} }},
+		{"formatNamespaceWrapper", func() any { return &formatNamespaceWrapper{Format: Format{}, instanceID: 1} }},
 	}
 
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				wrapper := tt.factory()
 				if wrapper == nil {
 					b.Fatal("Wrapper creation returned nil")
@@ -464,7 +464,7 @@ func BenchmarkWrapperMethodAccess(b *testing.B) {
 	build := NewBuildNamespace()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Access method without calling to test method resolution performance
 		_ = build.Default
 	}

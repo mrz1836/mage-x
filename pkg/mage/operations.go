@@ -464,91 +464,91 @@ func (r Run) Watch() error {
 }
 
 // Debug runs the application in debug mode
-func (r Run) Debug(_ ...interface{}) error {
+func (r Run) Debug(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running in debug mode")
 }
 
 // Profile runs the application with profiling enabled
-func (r Run) Profile(_ ...interface{}) error {
+func (r Run) Profile(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running with profiling")
 }
 
 // Benchmark runs the application benchmark tests
-func (r Run) Benchmark(_ ...interface{}) error {
+func (r Run) Benchmark(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running benchmarks")
 }
 
 // Server runs the application server
-func (r Run) Server(_ ...interface{}) error {
+func (r Run) Server(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running server")
 }
 
 // Migrations runs database migrations
-func (r Run) Migrations(_ ...interface{}) error {
+func (r Run) Migrations(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running migrations")
 }
 
 // Seeds runs database seed operations
-func (r Run) Seeds(_ ...interface{}) error {
+func (r Run) Seeds(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running seeds")
 }
 
 // Worker runs background worker processes
-func (r Run) Worker(_ ...interface{}) error {
+func (r Run) Worker(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Running worker")
 }
 
 // HTTP serves the application over HTTP
-func (s Serve) HTTP(_ ...interface{}) error {
+func (s Serve) HTTP(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving HTTP")
 }
 
 // HTTPS serves the application over HTTPS
-func (s Serve) HTTPS(_ ...interface{}) error {
+func (s Serve) HTTPS(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving HTTPS")
 }
 
 // Docs serves documentation
-func (s Serve) Docs(_ ...interface{}) error {
+func (s Serve) Docs(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving docs")
 }
 
 // API serves the API endpoints
-func (s Serve) API(_ ...interface{}) error {
+func (s Serve) API(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving API")
 }
 
 // GRPC serves the gRPC server
-func (s Serve) GRPC(_ ...interface{}) error {
+func (s Serve) GRPC(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving gRPC")
 }
 
 // Metrics serves application metrics
-func (s Serve) Metrics(_ ...interface{}) error {
+func (s Serve) Metrics(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving metrics")
 }
 
 // Static serves static files
-func (s Serve) Static(_ ...interface{}) error {
+func (s Serve) Static(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving static files")
 }
 
 // Proxy serves as a reverse proxy
-func (s Serve) Proxy(_ ...interface{}) error {
+func (s Serve) Proxy(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving proxy")
 }
@@ -560,12 +560,12 @@ func (s Serve) Websocket() error {
 }
 
 // WebSocket is an alias for Websocket to match test expectations
-func (s Serve) WebSocket(_ ...interface{}) error {
+func (s Serve) WebSocket(_ ...any) error {
 	return s.Websocket()
 }
 
 // HealthCheck serves health check endpoints
-func (s Serve) HealthCheck(_ ...interface{}) error {
+func (s Serve) HealthCheck(_ ...any) error {
 	runner := GetRunner()
 	return runner.RunCmd("echo", "Serving health check")
 }

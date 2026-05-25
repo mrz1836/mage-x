@@ -60,8 +60,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmd() {
 		ts.env.Runner.On("RunCmd", "echo", []string{"hello", "world"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				runner := GetRunner()
 				return runner.RunCmd("echo", "hello", "world")
@@ -76,8 +76,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmd() {
 		ts.env.Runner.On("RunCmd", "false", []string(nil)).Return(expectedError)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				runner := GetRunner()
 				return runner.RunCmd("false")
@@ -92,8 +92,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmd() {
 		ts.env.Runner.On("RunCmd", "git", []string{"status", "--porcelain", "--short"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				runner := GetRunner()
 				return runner.RunCmd("git", "status", "--porcelain", "--short")
@@ -108,8 +108,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmd() {
 		ts.env.Runner.On("RunCmd", "pwd", []string(nil)).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				runner := GetRunner()
 				return runner.RunCmd("pwd")
@@ -128,8 +128,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmdOutput() {
 
 		var output string
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				runner := GetRunner()
 				var err error
@@ -150,8 +150,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmdOutput() {
 
 		var output string
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				runner := GetRunner()
 				var err error
@@ -170,8 +170,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmdOutput() {
 
 		var output string
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				runner := GetRunner()
 				var err error
@@ -190,8 +190,8 @@ func (ts *MinimalRunnerTestSuite) TestSecureCommandRunner_RunCmdOutput() {
 
 		var output string
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				runner := GetRunner()
 				var err error
@@ -442,8 +442,8 @@ func (ts *MinimalRunnerTestSuite) TestMinimalRunnerIntegration() {
 		ts.env.Runner.On("RunCmd", "failing-command", []string(nil)).Return(errMinimalExecutionFailed)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				runner := GetRunner()
 				return runner.RunCmd("failing-command")

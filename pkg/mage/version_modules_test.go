@@ -319,19 +319,19 @@ func TestErrorMessages(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkDiscoverModules(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = discoverModules() //nolint:errcheck // error intentionally ignored in test cleanup
 	}
 }
 
 func BenchmarkGetModuleTag(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = getModuleTag("models")
 	}
 }
 
 func BenchmarkParseModuleTagVersion(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = parseModuleTagVersion("models/v1.2.3", "models")
 	}
 }

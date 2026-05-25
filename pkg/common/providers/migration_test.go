@@ -83,8 +83,8 @@ func TestProviderFactoryFlexibility(t *testing.T) {
 	}
 
 	// Test with complex initialization factory
-	complexProvider := NewProvider(func() map[string]interface{} {
-		config := make(map[string]interface{})
+	complexProvider := NewProvider(func() map[string]any {
+		config := make(map[string]any)
 		config["timeout"] = 30 * time.Second
 		config["retries"] = 3
 		config["enabled"] = true
@@ -144,13 +144,13 @@ func BenchmarkProviderVsDirectAccess(b *testing.B) {
 	_ = provider.Get()
 
 	b.Run("DirectAccess", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = directValue
 		}
 	})
 
 	b.Run("ProviderAccess", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = provider.Get()
 		}
 	})
@@ -171,13 +171,13 @@ func BenchmarkPackageProviderOverhead(b *testing.B) {
 	_ = packageProvider.Get()
 
 	b.Run("RegularProvider", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = regularProvider.Get()
 		}
 	})
 
 	b.Run("PackageProvider", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			_ = packageProvider.Get()
 		}
 	})

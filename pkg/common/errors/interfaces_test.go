@@ -274,7 +274,7 @@ func TestErrorContext_WithFields(t *testing.T) {
 	t.Parallel()
 
 	ctx := ErrorContext{
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"key1": "value1",
 			"key2": 42,
 		},

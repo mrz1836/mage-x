@@ -24,7 +24,7 @@ type mockTestingT struct {
 	helpers int
 }
 
-func (m *mockTestingT) Errorf(format string, args ...interface{}) {
+func (m *mockTestingT) Errorf(format string, args ...any) {
 	m.errors = append(m.errors, format)
 }
 
@@ -1231,11 +1231,11 @@ func TestMockRunnerConcurrentAccess(t *testing.T) {
 	const iterations = 100
 
 	// Run commands concurrently
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				// Mix of different operations
 				output, err := m.RunCmdOutput("echo", "test")
 				assert.NoError(t, err)
@@ -1265,7 +1265,7 @@ func TestMockRunnerConcurrentConfiguration(t *testing.T) {
 	const goroutines = 5
 
 	// Configure concurrently
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"reflect"
+	"maps"
 	"testing"
 )
 
@@ -56,7 +56,7 @@ func TestParseParams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ParseParams(tt.args)
-			if !reflect.DeepEqual(result, tt.expected) {
+			if !maps.Equal(result, tt.expected) {
 				t.Errorf("ParseParams() = %v, expected %v", result, tt.expected)
 			}
 		})

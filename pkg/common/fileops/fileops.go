@@ -50,7 +50,7 @@ func NewWithOptions(file FileOperator, json JSONOperator, yaml YAMLOperator, saf
 // Convenience methods that handle common patterns
 
 // WriteJSONSafe writes JSON data atomically with directory creation
-func (f *FileOps) WriteJSONSafe(path string, data interface{}) error {
+func (f *FileOps) WriteJSONSafe(path string, data any) error {
 	if err := f.ensureDir(path); err != nil {
 		return fmt.Errorf("ensure directory for %s: %w", path, err)
 	}
@@ -64,7 +64,7 @@ func (f *FileOps) WriteJSONSafe(path string, data interface{}) error {
 }
 
 // WriteYAMLSafe writes YAML data atomically with directory creation
-func (f *FileOps) WriteYAMLSafe(path string, data interface{}) error {
+func (f *FileOps) WriteYAMLSafe(path string, data any) error {
 	if err := f.ensureDir(path); err != nil {
 		return fmt.Errorf("ensure directory for %s: %w", path, err)
 	}
@@ -78,7 +78,7 @@ func (f *FileOps) WriteYAMLSafe(path string, data interface{}) error {
 }
 
 // LoadConfig loads configuration from file with fallback to multiple paths and formats
-func (f *FileOps) LoadConfig(paths []string, dest interface{}) (string, error) {
+func (f *FileOps) LoadConfig(paths []string, dest any) (string, error) {
 	for _, path := range paths {
 		if !f.File.Exists(path) {
 			continue
@@ -117,7 +117,7 @@ func (f *FileOps) LoadConfig(paths []string, dest interface{}) (string, error) {
 }
 
 // SaveConfig saves configuration to file in the specified format
-func (f *FileOps) SaveConfig(path string, data interface{}, format string) error {
+func (f *FileOps) SaveConfig(path string, data any, format string) error {
 	if err := f.ensureDir(path); err != nil {
 		return fmt.Errorf("ensure directory for config %s: %w", path, err)
 	}
@@ -190,22 +190,22 @@ func GetDefault() *FileOps {
 // Package-level convenience functions
 
 // WriteJSONSafe writes JSON data atomically using the default instance
-func WriteJSONSafe(path string, data interface{}) error {
+func WriteJSONSafe(path string, data any) error {
 	return GetDefault().WriteJSONSafe(path, data)
 }
 
 // WriteYAMLSafe writes YAML data atomically using the default instance
-func WriteYAMLSafe(path string, data interface{}) error {
+func WriteYAMLSafe(path string, data any) error {
 	return GetDefault().WriteYAMLSafe(path, data)
 }
 
 // LoadConfig loads configuration using the default instance
-func LoadConfig(paths []string, dest interface{}) (string, error) {
+func LoadConfig(paths []string, dest any) (string, error) {
 	return GetDefault().LoadConfig(paths, dest)
 }
 
 // SaveConfig saves configuration using the default instance
-func SaveConfig(path string, data interface{}, format string) error {
+func SaveConfig(path string, data any, format string) error {
 	return GetDefault().SaveConfig(path, data, format)
 }
 

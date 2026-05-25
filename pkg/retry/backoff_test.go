@@ -280,8 +280,10 @@ func BenchmarkExponentialBackoff(b *testing.B) {
 	backoff := DefaultBackoff()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		backoff.Duration(i % 10)
+		i++
 	}
 }
 
@@ -293,7 +295,9 @@ func BenchmarkLinearBackoff(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		backoff.Duration(i % 10)
+		i++
 	}
 }

@@ -2,7 +2,7 @@ package paths
 
 import (
 	"errors"
-	"sort"
+	"slices"
 	"sync"
 	"testing"
 
@@ -193,7 +193,7 @@ func TestSet_PathsRetrieval(t *testing.T) {
 
 		paths := set.Paths()
 		assert.Len(t, paths, 3)
-		assert.True(t, sort.StringsAreSorted(paths), "Paths should be sorted")
+		assert.True(t, slices.IsSorted(paths), "Paths should be sorted")
 		assert.Equal(t, []string{"/a.txt", "/b.txt", "/c.txt"}, paths)
 	})
 
@@ -535,7 +535,7 @@ func TestSet_ForEach(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Len(t, visited, 3)
-		sort.Strings(visited)
+		slices.Sort(visited)
 		assert.Equal(t, []string{"/a.txt", "/b.txt", "/c.txt"}, visited)
 	})
 

@@ -432,26 +432,26 @@ func (tf *TestFixtures) CreateTestData() {
 	tf.t.Helper()
 
 	// JSON data
-	tf.CreateJSONFile("testdata/config.json", map[string]interface{}{
+	tf.CreateJSONFile("testdata/config.json", map[string]any{
 		"name":    "test",
 		"version": "1.0.0",
 		"debug":   true,
-		"servers": []map[string]interface{}{
+		"servers": []map[string]any{
 			{"host": "localhost", "port": 8080},
 			{"host": "0.0.0.0", "port": 9090},
 		},
 	})
 
 	// YAML data
-	tf.CreateYAMLFile("testdata/config.yaml", map[string]interface{}{
-		"database": map[string]interface{}{
+	tf.CreateYAMLFile("testdata/config.yaml", map[string]any{
+		"database": map[string]any{
 			"host":     "localhost",
 			"port":     5432,
 			"name":     "testdb",
 			"user":     "testuser",
 			"password": "testpass",
 		},
-		"cache": map[string]interface{}{
+		"cache": map[string]any{
 			"enabled": true,
 			"ttl":     3600,
 		},
@@ -480,7 +480,7 @@ func (tf *TestFixtures) CreateTestData() {
 }
 
 // CreateJSONFile creates a JSON file from data
-func (tf *TestFixtures) CreateJSONFile(path string, data interface{}) {
+func (tf *TestFixtures) CreateJSONFile(path string, data any) {
 	tf.t.Helper()
 
 	content, err := json.MarshalIndent(data, "", "  ")
@@ -492,7 +492,7 @@ func (tf *TestFixtures) CreateJSONFile(path string, data interface{}) {
 }
 
 // CreateYAMLFile creates a YAML file from data
-func (tf *TestFixtures) CreateYAMLFile(path string, data interface{}) {
+func (tf *TestFixtures) CreateYAMLFile(path string, data any) {
 	tf.t.Helper()
 
 	content, err := yaml.Marshal(data)
@@ -529,7 +529,7 @@ func (tf *TestFixtures) CreateLargeFile(path string, lines int) {
 	tf.t.Helper()
 
 	var content strings.Builder
-	for i := 0; i < lines; i++ {
+	for i := range lines {
 		fmt.Fprintf(&content, "Line %d: This is a test line with some content to make it realistic.\n", i+1)
 	}
 
@@ -547,7 +547,7 @@ func (tf *TestFixtures) createFileTreeRecursive(base string, maxDepth, width, cu
 		return
 	}
 
-	for i := 0; i < width; i++ {
+	for i := range width {
 		// Create files
 		fileName := fmt.Sprintf("%s/file_%d_%d.txt", base, currentDepth, i)
 		tf.env.WriteFile(fileName, fmt.Sprintf("Content of %s", fileName))
@@ -756,7 +756,7 @@ func (tf *TestFixtures) CreateNodeProject(name string) {
 	}
 
 	// Create package.json
-	tf.CreateJSONFile("package.json", map[string]interface{}{
+	tf.CreateJSONFile("package.json", map[string]any{
 		"name":        name,
 		"version":     "1.0.0",
 		"description": "A sample Node.js project",

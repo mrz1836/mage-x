@@ -47,7 +47,8 @@ func cleanup() {
 func BenchmarkRegistryOperations(b *testing.B) {
 	b.Run("Register", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			r := registry.NewRegistry()
 			cmd, err := registry.NewCommand(fmt.Sprintf("cmd%d", i)).
 				WithDescription("Test command").
@@ -60,6 +61,7 @@ func BenchmarkRegistryOperations(b *testing.B) {
 			if err := r.Register(cmd); err != nil {
 				b.Fatalf("Failed to register command: %v", err)
 			}
+			i++
 		}
 	})
 
@@ -79,8 +81,10 @@ func BenchmarkRegistryOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			r.Get(fmt.Sprintf("cmd%d", i%100))
+			i++
 		}
 	})
 
@@ -100,7 +104,7 @@ func BenchmarkRegistryOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			r.List()
 		}
 	})
@@ -121,7 +125,7 @@ func BenchmarkRegistryOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			r.Search("test")
 		}
 	})
@@ -139,7 +143,7 @@ func BenchmarkRegistryOperations(b *testing.B) {
 		r.MustRegister(cmd)
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if err := r.Execute("benchmark"); err != nil {
 				b.Fatalf("Failed to execute command: %v", err)
 			}
@@ -160,7 +164,7 @@ func BenchmarkRegistryOperations(b *testing.B) {
 
 		args := []string{"arg1", "arg2", "arg3"}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if err := r.Execute("benchmarkargs", args...); err != nil {
 				b.Fatalf("Failed to execute command with args: %v", err)
 			}
@@ -172,7 +176,8 @@ func BenchmarkRegistryOperations(b *testing.B) {
 func BenchmarkCommandOperations(b *testing.B) {
 	b.Run("CommandBuild", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			cmd, err := registry.NewCommand(fmt.Sprintf("cmd%d", i)).
 				WithDescription("Benchmark command").
 				WithFunc(func() error { return nil }).
@@ -182,6 +187,7 @@ func BenchmarkCommandOperations(b *testing.B) {
 				b.Fatalf("Failed to build command: %v", err)
 			}
 			_ = cmd // Use the command variable
+			i++
 		}
 	})
 
@@ -195,7 +201,7 @@ func BenchmarkCommandOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if err := cmd.Validate(); err != nil {
 				b.Fatalf("Command validation failed: %v", err)
 			}
@@ -212,7 +218,7 @@ func BenchmarkCommandOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			cmd.FullName()
 		}
 	})
@@ -227,7 +233,7 @@ func BenchmarkCommandOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if err := cmd.Execute(); err != nil {
 				b.Fatalf("Failed to execute command: %v", err)
 			}
@@ -245,7 +251,7 @@ func BenchmarkCommandOperations(b *testing.B) {
 
 		args := []string{"arg1", "arg2"}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if err := cmd.Execute(args...); err != nil {
 				b.Fatalf("Failed to execute command with args: %v", err)
 			}
@@ -257,7 +263,7 @@ func BenchmarkCommandOperations(b *testing.B) {
 func BenchmarkMagexBinaryPerformance(b *testing.B) {
 	b.Run("Startup", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			ctx := context.Background()
 			cmd := exec.CommandContext(ctx, "./magex", "-version")
 			_, err := cmd.Output()
@@ -269,7 +275,7 @@ func BenchmarkMagexBinaryPerformance(b *testing.B) {
 
 	b.Run("ListCommands", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			ctx := context.Background()
 			cmd := exec.CommandContext(ctx, "./magex", "-l")
 			_, err := cmd.Output()
@@ -281,7 +287,7 @@ func BenchmarkMagexBinaryPerformance(b *testing.B) {
 
 	b.Run("SearchCommands", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			ctx := context.Background()
 			cmd := exec.CommandContext(ctx, "./magex", "-search", "build")
 			_, err := cmd.Output()
@@ -293,7 +299,7 @@ func BenchmarkMagexBinaryPerformance(b *testing.B) {
 
 	b.Run("Help", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			ctx := context.Background()
 			cmd := exec.CommandContext(ctx, "./magex", "-h")
 			_, err := cmd.Output()
@@ -305,7 +311,7 @@ func BenchmarkMagexBinaryPerformance(b *testing.B) {
 
 	b.Run("NamespaceList", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			ctx := context.Background()
 			cmd := exec.CommandContext(ctx, "./magex", "-n")
 			_, err := cmd.Output()
@@ -344,7 +350,7 @@ func BenchmarkMemoryUsage(b *testing.B) {
 		b.ReportMetric(float64(m2.Alloc-m1.Alloc)/1000, "bytes/command")
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			r.List()
 		}
 	})
@@ -353,7 +359,8 @@ func BenchmarkMemoryUsage(b *testing.B) {
 		var m1, m2 runtime.MemStats
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			runtime.GC()
 			runtime.ReadMemStats(&m1)
 
@@ -374,6 +381,7 @@ func BenchmarkMemoryUsage(b *testing.B) {
 			if i == 0 {
 				b.ReportMetric(float64(m2.Alloc-m1.Alloc), "bytes/command-exec")
 			}
+			i++
 		}
 	})
 }
@@ -386,7 +394,7 @@ func BenchmarkScalability(b *testing.B) {
 		b.Run(fmt.Sprintf("Registry%d", size), func(b *testing.B) {
 			// Setup registry with 'size' commands
 			r := registry.NewRegistry()
-			for i := 0; i < size; i++ {
+			for i := range size {
 				cmd, err := registry.NewCommand(fmt.Sprintf("cmd%d", i)).
 					WithDescription(fmt.Sprintf("Command %d", i)).
 					WithFunc(func() error { return nil }).
@@ -401,21 +409,23 @@ func BenchmarkScalability(b *testing.B) {
 			// Benchmark operations that should scale
 			b.Run("Get", func(b *testing.B) {
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				i := 0
+				for b.Loop() {
 					r.Get(fmt.Sprintf("cmd%d", i%size))
+					i++
 				}
 			})
 
 			b.Run("List", func(b *testing.B) {
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					r.List()
 				}
 			})
 
 			b.Run("Search", func(b *testing.B) {
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					r.Search("cmd")
 				}
 			})
@@ -498,8 +508,10 @@ func BenchmarkStringOperations(b *testing.B) {
 
 	b.Run("FullName", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			commands[i%100].FullName()
+			i++
 		}
 	})
 
@@ -510,7 +522,7 @@ func BenchmarkStringOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			r.Search("method")
 		}
 	})
@@ -520,7 +532,7 @@ func BenchmarkStringOperations(b *testing.B) {
 func BenchmarkRealWorldScenarios(b *testing.B) {
 	b.Run("TypicalWorkflow", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			// Simulate typical magex usage: startup, list commands, execute
 			r := registry.NewRegistry()
 
@@ -574,7 +586,8 @@ func BenchmarkRealWorldScenarios(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			// Simulate heavy usage pattern
 			r.List()        // List all commands
 			r.Search("cmd") // Search commands
@@ -582,6 +595,7 @@ func BenchmarkRealWorldScenarios(b *testing.B) {
 				// Command execution error is non-critical in benchmark
 				_ = err
 			}
+			i++
 		}
 	})
 }
@@ -591,7 +605,7 @@ func BenchmarkComparison(b *testing.B) {
 	b.Run("DirectFunctionCall", func(b *testing.B) {
 		fn := func() error { return nil }
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if err := fn(); err != nil {
 				// Function call error is non-critical in benchmark
 				_ = err
@@ -611,7 +625,7 @@ func BenchmarkComparison(b *testing.B) {
 		r.MustRegister(cmd)
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if err := r.Execute("direct"); err != nil {
 				// Direct execution error is non-critical in benchmark
 				_ = err
@@ -627,13 +641,15 @@ func BenchmarkComparison(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			if fn, ok := m[fmt.Sprintf("func%d", i%100)]; ok {
 				if err := fn(); err != nil {
 					// Function call error is non-critical in benchmark
 					_ = err
 				}
 			}
+			i++
 		}
 	})
 
@@ -651,17 +667,20 @@ func BenchmarkComparison(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		i := 0
+		for b.Loop() {
 			if err := r.Execute(fmt.Sprintf("func%d", i%100)); err != nil {
 				// Function execution error is non-critical in benchmark
 				_ = err
 			}
+			i++
 		}
 	})
 }
 
 // Performance test helpers
 func reportPerformanceMetrics(b *testing.B, _ string, duration time.Duration) {
+	b.Helper()
 	b.ReportMetric(float64(duration.Nanoseconds())/float64(b.N), "ns/op")
 	opsPerSecond := float64(b.N) / duration.Seconds()
 	b.ReportMetric(opsPerSecond, "ops/sec")
@@ -670,9 +689,11 @@ func reportPerformanceMetrics(b *testing.B, _ string, duration time.Duration) {
 // BenchmarkWithMetrics demonstrates the use of reportPerformanceMetrics
 func BenchmarkWithMetrics(b *testing.B) {
 	start := time.Now()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		// Simple operation for demonstration
 		_ = fmt.Sprintf("test-%d", i)
+		i++
 	}
 	duration := time.Since(start)
 	reportPerformanceMetrics(b, "string_formatting", duration)

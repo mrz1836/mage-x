@@ -380,6 +380,7 @@ func TestActualProjectScan(t *testing.T) {
 
 // createIntegrationTestCodebase creates a test codebase with more realistic content for integration testing
 func createIntegrationTestCodebase(t *testing.T) string {
+	t.Helper()
 	tmpDir := t.TempDir()
 
 	// Create more comprehensive test files
@@ -514,6 +515,7 @@ func Load() *Config {
 
 // createLargeTestCodebase creates a larger test codebase for performance testing
 func createLargeTestCodebase(t *testing.T) string {
+	t.Helper()
 	tmpDir := t.TempDir()
 
 	// Create multiple directories

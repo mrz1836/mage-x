@@ -1,8 +1,9 @@
 package errors
 
 import (
+	"cmp"
 	"errors"
-	"sort"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -151,8 +152,8 @@ func (m *RealDefaultErrorMetrics) getTopErrorsLocked(limit int) []ErrorStat {
 	}
 
 	// Sort by count (descending)
-	sort.Slice(stats, func(i, j int) bool {
-		return stats[i].Count > stats[j].Count
+	slices.SortFunc(stats, func(a, b ErrorStat) int {
+		return cmp.Compare(b.Count, a.Count)
 	})
 
 	// Limit results
@@ -340,8 +341,8 @@ func (m *DefaultErrorMetrics) GetTopErrors(limit int) []ErrorStat {
 		stats = append(stats, *stat)
 	}
 
-	sort.Slice(stats, func(i, j int) bool {
-		return stats[i].Count > stats[j].Count
+	slices.SortFunc(stats, func(a, b ErrorStat) int {
+		return cmp.Compare(b.Count, a.Count)
 	})
 
 	if limit > 0 && len(stats) > limit {

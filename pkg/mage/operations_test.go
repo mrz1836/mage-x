@@ -610,11 +610,13 @@ func BenchmarkCheck_All(b *testing.B) {
 	check := Check{}
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := check.All()
 		_ = err // Ignore errors in benchmark - we're testing performance
+		i++
 	}
 }
 
@@ -626,11 +628,13 @@ func BenchmarkCI_Test(b *testing.B) {
 	ci := CI{}
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		mockRunner := helper.GetMockRunner()
 		mockRunner.Reset()
 		err := ci.Run("test")
 		_ = err // Ignore errors in benchmark - we're testing performance
+		i++
 	}
 }
 

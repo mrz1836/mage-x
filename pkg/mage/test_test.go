@@ -48,8 +48,8 @@ func TestTestRun(t *testing.T) {
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				test.Run,
 			)
 
@@ -110,8 +110,8 @@ func TestTestRunWithCoverage(t *testing.T) {
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				func() error {
 					return test.Coverage(tt.coverageDir)
 				},
@@ -163,8 +163,8 @@ func TestTestRace(t *testing.T) {
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				func() error { return test.Race() },
 			)
 
@@ -225,8 +225,8 @@ func TestTestBench(t *testing.T) {
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				func() error {
 					return test.Bench(tt.pattern)
 				},
@@ -278,8 +278,8 @@ func TestTestVet(t *testing.T) {
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				test.Vet,
 			)
 
@@ -329,8 +329,8 @@ func TestTestLint(t *testing.T) {
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				test.Lint,
 			)
 
@@ -384,8 +384,8 @@ func TestTestClean(t *testing.T) {
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				test.Clean,
 			)
 
@@ -445,8 +445,8 @@ github.com/test/project/pkg/mage`
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				func() error { return test.Unit() },
 			)
 
@@ -496,8 +496,8 @@ func TestTestIntegration(t *testing.T) {
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				test.Integration,
 			)
 
@@ -551,8 +551,8 @@ func TestTestAll(t *testing.T) {
 
 			test := Test{}
 			err := env.WithMockRunner(
-				func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() interface{} { return GetRunner() },
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
 				test.All,
 			)
 

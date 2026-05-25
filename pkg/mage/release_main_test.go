@@ -48,8 +48,8 @@ func (ts *ReleaseMainTestSuite) TestEnsureGoreleaser_AlreadyInstalled() {
 	ts.env.Runner.On("RunCmd", "which", []string{"goreleaser"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ensureGoreleaser()
 		},
@@ -70,8 +70,8 @@ func (ts *ReleaseMainTestSuite) TestEnsureGoreleaser_NeedsInstall() {
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/goreleaser/goreleaser@latest"}).Return(nil).Maybe()
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ensureGoreleaser()
 		},
@@ -108,8 +108,8 @@ version: 2
 	defer os.Chdir(oldPwd)
 
 	err = ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Validate()
 		},
@@ -124,8 +124,8 @@ func (ts *ReleaseMainTestSuite) TestValidate_DirtyRepo() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"status", "--porcelain"}).Return("M file.go\n", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Validate()
 		},
@@ -144,8 +144,8 @@ func (ts *ReleaseMainTestSuite) TestValidate_NoTags() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", errReleaseGitError)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Validate()
 		},
@@ -172,8 +172,8 @@ func (ts *ReleaseMainTestSuite) TestCheck_ConfigExists() {
 	defer os.Chdir(oldPwd)
 
 	err = ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Check()
 		},
@@ -192,8 +192,8 @@ func (ts *ReleaseMainTestSuite) TestCheck_NoConfig() {
 	defer os.Chdir(oldPwd)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Check()
 		},
@@ -216,8 +216,8 @@ func (ts *ReleaseMainTestSuite) TestInit_Success() {
 	defer os.Chdir(oldPwd)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Init()
 		},
@@ -266,8 +266,8 @@ func (ts *ReleaseMainTestSuite) TestClean_Success() {
 	defer os.Chdir(oldPwd)
 
 	err = ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Clean()
 		},
@@ -285,8 +285,8 @@ func (ts *ReleaseMainTestSuite) TestChangelog_NoTags() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"log", "--pretty=format:- %s"}).Return("- Initial commit\n- Add feature\n", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Changelog()
 		},
@@ -304,8 +304,8 @@ func (ts *ReleaseMainTestSuite) TestChangelog_WithTag() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"log", "--pretty=format:- %s", "v1.0.0..HEAD"}).Return("- Fix bug\n- Add feature\n", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Changelog()
 		},
@@ -387,8 +387,8 @@ func (ts *ReleaseMainTestSuite) TestReleaseSnapshot() {
 	ts.env.Runner.On("RunCmd", "goreleaser", []string{"release", "--snapshot", "--skip=publish", "--clean"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Snapshot()
 		},
@@ -406,8 +406,8 @@ func (ts *ReleaseMainTestSuite) TestReleaseTest() {
 	ts.env.Runner.On("RunCmd", "goreleaser", []string{"release", "--skip=publish", "--clean"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-		func() interface{} { return GetRunner() },
+		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Test()
 		},

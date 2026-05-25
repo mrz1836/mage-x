@@ -91,20 +91,20 @@ func TestTestFixtures_CreateMageProject(t *testing.T) {
 	env.AssertFileExists(".mage.yaml")
 	content := env.ReadFile(".mage.yaml")
 
-	var config map[string]interface{}
+	var config map[string]any
 	err := yaml.Unmarshal([]byte(content), &config)
 	require.NoError(t, err)
 
 	projectValue, ok := config["project"]
 	require.True(t, ok, "project key should exist")
-	project, ok := projectValue.(map[string]interface{})
+	project, ok := projectValue.(map[string]any)
 	require.True(t, ok, "project should be a map")
 	require.Equal(t, "myapp", project["name"])
 	require.Equal(t, "1.0.0", project["version"])
 
 	buildValue, ok := config["build"]
 	require.True(t, ok, "build key should exist")
-	build, ok := buildValue.(map[string]interface{})
+	build, ok := buildValue.(map[string]any)
 	require.True(t, ok, "build should be a map")
 	require.Equal(t, "bin/", build["output"])
 	require.Equal(t, "myapp", build["binary"])
@@ -171,7 +171,7 @@ func TestTestFixtures_CreateTestData(t *testing.T) {
 	// Check JSON file
 	env.AssertFileExists("testdata/config.json")
 	jsonContent := env.ReadFile("testdata/config.json")
-	var jsonData map[string]interface{}
+	var jsonData map[string]any
 	err := json.Unmarshal([]byte(jsonContent), &jsonData)
 	require.NoError(t, err)
 	require.Equal(t, "test", jsonData["name"])
@@ -181,12 +181,12 @@ func TestTestFixtures_CreateTestData(t *testing.T) {
 	// Check YAML file
 	env.AssertFileExists("testdata/config.yaml")
 	yamlContent := env.ReadFile("testdata/config.yaml")
-	var yamlData map[string]interface{}
+	var yamlData map[string]any
 	err = yaml.Unmarshal([]byte(yamlContent), &yamlData)
 	require.NoError(t, err)
 	databaseValue, ok := yamlData["database"]
 	require.True(t, ok, "database key should exist")
-	database, ok := databaseValue.(map[string]interface{})
+	database, ok := databaseValue.(map[string]any)
 	require.True(t, ok, "database should be a map")
 	require.Equal(t, "localhost", database["host"])
 	require.Equal(t, 5432, database["port"])
@@ -207,12 +207,12 @@ func TestTestFixtures_CreateJSONFile(t *testing.T) {
 	env := NewTestEnvironment(t)
 	tf := NewTestFixtures(t, env)
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"string": "value",
 		"number": 42,
 		"bool":   true,
 		"array":  []string{"a", "b", "c"},
-		"nested": map[string]interface{}{
+		"nested": map[string]any{
 			"key": "value",
 		},
 	}
@@ -222,7 +222,7 @@ func TestTestFixtures_CreateJSONFile(t *testing.T) {
 	env.AssertFileExists("test.json")
 	content := env.ReadFile("test.json")
 
-	var loaded map[string]interface{}
+	var loaded map[string]any
 	err := json.Unmarshal([]byte(content), &loaded)
 	require.NoError(t, err)
 
@@ -235,12 +235,12 @@ func TestTestFixtures_CreateYAMLFile(t *testing.T) {
 	env := NewTestEnvironment(t)
 	tf := NewTestFixtures(t, env)
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"string": "value",
 		"number": 42,
 		"bool":   true,
 		"list":   []string{"a", "b", "c"},
-		"map": map[string]interface{}{
+		"map": map[string]any{
 			"key": "value",
 		},
 	}
@@ -250,7 +250,7 @@ func TestTestFixtures_CreateYAMLFile(t *testing.T) {
 	env.AssertFileExists("test.yaml")
 	content := env.ReadFile("test.yaml")
 
-	var loaded map[string]interface{}
+	var loaded map[string]any
 	err := yaml.Unmarshal([]byte(content), &loaded)
 	require.NoError(t, err)
 
@@ -399,7 +399,7 @@ func TestTestFixtures_CreateNodeProject(t *testing.T) {
 	// Check package.json
 	env.AssertFileExists("package.json")
 	content := env.ReadFile("package.json")
-	var pkg map[string]interface{}
+	var pkg map[string]any
 	err := json.Unmarshal([]byte(content), &pkg)
 	require.NoError(t, err)
 
@@ -409,7 +409,7 @@ func TestTestFixtures_CreateNodeProject(t *testing.T) {
 
 	scriptsValue, ok := pkg["scripts"]
 	require.True(t, ok, "scripts key should exist")
-	scripts, ok := scriptsValue.(map[string]interface{})
+	scripts, ok := scriptsValue.(map[string]any)
 	require.True(t, ok, "scripts should be a map")
 	require.Equal(t, "node src/index.js", scripts["start"])
 	require.Equal(t, "jest", scripts["test"])

@@ -107,7 +107,7 @@ func TestDefaultJSONOperator_Extended(t *testing.T) {
 
 	t.Run("WriteJSONIndent", func(t *testing.T) {
 		testFile := filepath.Join(tmpDir, "indent.json")
-		data := map[string]interface{}{
+		data := map[string]any{
 			"name":  "test",
 			"value": 123,
 			"nested": map[string]string{
@@ -145,7 +145,7 @@ value: 123
 nested:
   key: value
 `
-		var result map[string]interface{}
+		var result map[string]any
 		err := yamlOp.Unmarshal([]byte(yamlData), &result)
 		require.NoError(t, err)
 		assert.Equal(t, "test", result["name"])

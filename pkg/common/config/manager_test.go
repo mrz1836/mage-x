@@ -58,7 +58,7 @@ func (s *ManagerTestSuite) TestStopWatching() {
 
 	s.Run("StopWatchingWithActiveWatching", func() {
 		// Start watching first
-		callback := func(interface{}) {}
+		callback := func(any) {}
 		err := s.manager.Watch(callback)
 		s.Require().NoError(err)
 
@@ -74,7 +74,7 @@ func (s *ManagerTestSuite) TestStopWatching() {
 
 	s.Run("MultipleStopWatchingCalls", func() {
 		// Start watching
-		callback := func(interface{}) {}
+		callback := func(any) {}
 		err := s.manager.Watch(callback)
 		s.Require().NoError(err)
 
@@ -169,7 +169,7 @@ func (s *ManagerTestSuite) TestGetActiveSources() {
 		}
 
 		// Run concurrent GetActiveSources calls
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -191,7 +191,7 @@ func (s *ManagerTestSuite) TestSetValidator() {
 		source := &mockSource{name: "test", priority: 100, available: true}
 		s.manager.AddSource(source)
 
-		var config map[string]interface{}
+		var config map[string]any
 		err := s.manager.LoadConfig(&config)
 		s.NoError(err, "Should succeed without validator")
 	})
@@ -205,7 +205,7 @@ func (s *ManagerTestSuite) TestSetValidator() {
 		source := &mockSource{name: "test", priority: 100, available: true}
 		s.manager.AddSource(source)
 
-		var config map[string]interface{}
+		var config map[string]any
 		err := s.manager.LoadConfig(&config)
 		s.NoError(err, "Should succeed with valid validator")
 	})
@@ -214,7 +214,7 @@ func (s *ManagerTestSuite) TestSetValidator() {
 		var wg sync.WaitGroup
 		const numGoroutines = 10
 
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -259,15 +259,15 @@ func (s *ManagerTestSuite) TestBasicValidatorValidate() {
 	s.Run("ValidateValidData", func() {
 		testCases := []struct {
 			name string
-			data interface{}
+			data any
 		}{
 			{"String data", "test string"},
 			{"Integer data", 42},
 			{"Boolean data", true},
-			{"Map data", map[string]interface{}{"key": "value"}},
+			{"Map data", map[string]any{"key": "value"}},
 			{"Slice data", []string{"a", "b", "c"}},
 			{"Struct data", struct{ Name string }{Name: "test"}},
-			{"Empty map", map[string]interface{}{}},
+			{"Empty map", map[string]any{}},
 			{"Empty slice", []string{}},
 		}
 
@@ -281,14 +281,14 @@ func (s *ManagerTestSuite) TestBasicValidatorValidate() {
 
 	s.Run("ValidateMapPointerData", func() {
 		// Test with valid *map[string]interface{} pointer
-		data := map[string]interface{}{"key": "value"}
+		data := map[string]any{"key": "value"}
 		err := s.validator.Validate(&data)
 		s.NoError(err, "Should not error on valid map pointer data")
 	})
 
 	s.Run("ValidateNilMapPointerData", func() {
 		// Test with nil *map[string]interface{} pointer
-		var nilMapPtr *map[string]interface{}
+		var nilMapPtr *map[string]any
 		err := s.validator.Validate(nilMapPtr)
 		s.Require().Error(err, "Should error on nil map pointer")
 		s.Equal(errConfigDataCannotNil, err, "Should return specific error for nil map pointer")
@@ -297,12 +297,12 @@ func (s *ManagerTestSuite) TestBasicValidatorValidate() {
 	s.Run("ValidateMapWithFailingFieldValidation", func() {
 		// Set up a validation rule that will fail
 		validator := NewBasicValidator()
-		validator.rules["badField"] = func(value interface{}) error {
+		validator.rules["badField"] = func(value any) error {
 			return errMockFieldValidation
 		}
 
 		// Create data with a field that will fail validation
-		data := map[string]interface{}{
+		data := map[string]any{
 			"badField": "some value",
 		}
 
@@ -314,12 +314,12 @@ func (s *ManagerTestSuite) TestBasicValidatorValidate() {
 	s.Run("ValidateMapPointerWithFailingFieldValidation", func() {
 		// Set up a validation rule that will fail
 		validator := NewBasicValidator()
-		validator.rules["invalidField"] = func(value interface{}) error {
+		validator.rules["invalidField"] = func(value any) error {
 			return errMockValidationFailure
 		}
 
 		// Create data with a field that will fail validation
-		data := map[string]interface{}{
+		data := map[string]any{
 			"invalidField": "test",
 		}
 
@@ -338,7 +338,7 @@ func (s *ManagerTestSuite) TestBasicValidatorValidateField() {
 
 	s.Run("ValidateFieldWithFunctionRule", func() {
 		// Add a validation rule that checks if value is not empty
-		rule := func(value interface{}) error {
+		rule := func(value any) error {
 			if str, ok := value.(string); ok && str == "" {
 				return errFieldCannotEmpty
 			}
@@ -365,7 +365,7 @@ func (s *ManagerTestSuite) TestBasicValidatorValidateField() {
 	})
 
 	s.Run("ValidateFieldWithErroringRule", func() {
-		rule := func(value interface{}) error {
+		rule := func(value any) error {
 			return errValidationAlwaysFails
 		}
 		s.validator.rules["failField"] = rule
@@ -377,14 +377,14 @@ func (s *ManagerTestSuite) TestBasicValidatorValidateField() {
 
 	s.Run("ValidateFieldTableDriven", func() {
 		// Set up multiple validation rules
-		rules := map[string]interface{}{
-			"minLength": func(value interface{}) error {
+		rules := map[string]any{
+			"minLength": func(value any) error {
 				if str, ok := value.(string); ok && len(str) < 3 {
 					return errMinLength3
 				}
 				return nil
 			},
-			"positiveNumber": func(value interface{}) error {
+			"positiveNumber": func(value any) error {
 				if num, ok := value.(int); ok && num <= 0 {
 					return errMustBePositive
 				}
@@ -399,7 +399,7 @@ func (s *ManagerTestSuite) TestBasicValidatorValidateField() {
 
 		testCases := []struct {
 			field       string
-			value       interface{}
+			value       any
 			expectError bool
 			errorText   string
 		}{
@@ -439,8 +439,8 @@ func (s *ManagerTestSuite) TestBasicValidatorGetValidationRules() {
 
 	s.Run("GetRulesWithData", func() {
 		// Add some rules
-		testRules := map[string]interface{}{
-			"rule1": func(interface{}) error { return nil },
+		testRules := map[string]any{
+			"rule1": func(any) error { return nil },
 			"rule2": "string rule",
 			"rule3": 42,
 		}
@@ -481,7 +481,7 @@ func (s *ManagerTestSuite) TestBasicValidatorSetValidationRules() {
 		s.validator.rules["existing"] = "value"
 
 		// Set empty rules
-		s.validator.SetValidationRules(map[string]interface{}{})
+		s.validator.SetValidationRules(map[string]any{})
 
 		rules := s.validator.GetValidationRules()
 		s.Empty(rules, "Should clear all existing rules")
@@ -499,8 +499,8 @@ func (s *ManagerTestSuite) TestBasicValidatorSetValidationRules() {
 	})
 
 	s.Run("SetValidRules", func() {
-		newRules := map[string]interface{}{
-			"rule1": func(interface{}) error { return nil },
+		newRules := map[string]any{
+			"rule1": func(any) error { return nil },
 			"rule2": "string validation",
 			"rule3": 123,
 		}
@@ -519,7 +519,7 @@ func (s *ManagerTestSuite) TestBasicValidatorSetValidationRules() {
 		s.validator.rules["old2"] = "old value 2"
 
 		// Set new rules
-		newRules := map[string]interface{}{
+		newRules := map[string]any{
 			"new1": "new value 1",
 			"new2": "new value 2",
 		}
@@ -534,7 +534,7 @@ func (s *ManagerTestSuite) TestBasicValidatorSetValidationRules() {
 	})
 
 	s.Run("SetRulesCreatesCopy", func() {
-		originalRules := map[string]interface{}{
+		originalRules := map[string]any{
 			"rule1": "value1",
 			"rule2": "value2",
 		}
@@ -558,7 +558,7 @@ func (s *ManagerTestSuite) TestLoadConfigEdgeCases() {
 	s.Run("LoadConfigWithNoSources", func() {
 		manager := s.setupFreshManager()
 
-		var config map[string]interface{}
+		var config map[string]any
 		err := manager.LoadConfig(&config)
 		s.Require().Error(err, "Should fail when no sources are added")
 		s.Equal(errNoConfigSources, err, "Should return specific error for no sources")
@@ -574,7 +574,7 @@ func (s *ManagerTestSuite) TestLoadConfigEdgeCases() {
 		manager.AddSource(source1)
 		manager.AddSource(source2)
 
-		var config map[string]interface{}
+		var config map[string]any
 		err := manager.LoadConfig(&config)
 		s.Require().Error(err, "Should fail when all sources are unavailable")
 		s.Equal(errNoConfigSources, err, "Should return no sources error when all are unavailable")
@@ -583,8 +583,8 @@ func (s *ManagerTestSuite) TestLoadConfigEdgeCases() {
 	s.Run("LoadConfigWithValidatorFailure", func() {
 		// Create a validator that always fails
 		failingValidator := NewBasicValidator()
-		failingValidator.SetValidationRules(map[string]interface{}{
-			"test": func(interface{}) error {
+		failingValidator.SetValidationRules(map[string]any{
+			"test": func(any) error {
 				return errMockValidationFailure
 			},
 		})
@@ -596,7 +596,7 @@ func (s *ManagerTestSuite) TestLoadConfigEdgeCases() {
 		source := &mockSource{name: "test", priority: 100, available: true}
 		s.manager.AddSource(source)
 
-		var config map[string]interface{}
+		var config map[string]any
 		err := s.manager.LoadConfig(&config)
 		s.Require().Error(err, "Should fail when validator fails")
 		s.Contains(err.Error(), "configuration validation failed")
@@ -614,7 +614,7 @@ func (s *ManagerTestSuite) TestLoadConfigEdgeCases() {
 		manager.AddSource(source2)
 		manager.AddSource(source3)
 
-		var config map[string]interface{}
+		var config map[string]any
 		err := manager.LoadConfig(&config)
 		s.Require().Error(err, "Should fail when all sources fail")
 		s.Contains(err.Error(), "failed to load configuration from any source")
@@ -637,11 +637,11 @@ func (s *ManagerTestSuite) TestLoadConfigEdgeCases() {
 		const numGoroutines = 10
 		errors := make(chan error, numGoroutines)
 
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				var config map[string]interface{}
+				var config map[string]any
 				err := manager.LoadConfig(&config)
 				errors <- err
 			}()
@@ -661,7 +661,7 @@ func (s *ManagerTestSuite) TestLoadConfigEdgeCases() {
 func (s *ManagerTestSuite) TestWatchStopWatchingLifecycle() {
 	s.Run("WatchStopWatchingSequence", func() {
 		// Start watching
-		callback := func(interface{}) {
+		callback := func(any) {
 			// Callback implementation for testing
 		}
 
@@ -684,7 +684,7 @@ func (s *ManagerTestSuite) TestWatchStopWatchingLifecycle() {
 
 	s.Run("MultipleWatchCallsError", func() {
 		manager := s.setupFreshManager()
-		callback := func(interface{}) {}
+		callback := func(any) {}
 
 		err := manager.Watch(callback)
 		s.Require().NoError(err, "First watch should succeed")
@@ -704,7 +704,7 @@ type mockSource struct {
 	priority   int
 	available  bool
 	shouldFail bool
-	loadData   map[string]interface{}
+	loadData   map[string]any
 }
 
 func (m *mockSource) Name() string {
@@ -719,15 +719,15 @@ func (m *mockSource) IsAvailable() bool {
 	return m.available
 }
 
-func (m *mockSource) Load(dest interface{}) error {
+func (m *mockSource) Load(dest any) error {
 	if m.shouldFail {
 		return errMockSourceLoadFailure
 	}
 
 	// Simple mock loading - just set some data
 	if m.loadData != nil {
-		if mapDest, ok := dest.(*map[string]interface{}); ok {
-			*mapDest = make(map[string]interface{})
+		if mapDest, ok := dest.(*map[string]any); ok {
+			*mapDest = make(map[string]any)
 			for k, v := range m.loadData {
 				(*mapDest)[k] = v
 			}
@@ -740,19 +740,19 @@ func (m *mockSource) Load(dest interface{}) error {
 // Mock validator that always fails
 type alwaysFailValidator struct{}
 
-func (a *alwaysFailValidator) Validate(data interface{}) error {
+func (a *alwaysFailValidator) Validate(data any) error {
 	return errMockValidationFailure
 }
 
-func (a *alwaysFailValidator) ValidateField(fieldName string, value interface{}) error {
+func (a *alwaysFailValidator) ValidateField(fieldName string, value any) error {
 	return errMockFieldValidation
 }
 
-func (a *alwaysFailValidator) GetValidationRules() map[string]interface{} {
-	return map[string]interface{}{}
+func (a *alwaysFailValidator) GetValidationRules() map[string]any {
+	return map[string]any{}
 }
 
-func (a *alwaysFailValidator) SetValidationRules(rules map[string]interface{}) {
+func (a *alwaysFailValidator) SetValidationRules(rules map[string]any) {
 	// No-op for mock
 }
 
@@ -771,7 +771,7 @@ func BenchmarkGetActiveSources(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = manager.GetActiveSources()
 	}
 }
@@ -780,10 +780,10 @@ func BenchmarkBasicValidatorValidateField(b *testing.B) {
 	validator := NewBasicValidator()
 
 	// Set up validation rules
-	rules := make(map[string]interface{})
+	rules := make(map[string]any)
 	for i := 0; i < 10; i++ {
 		fieldName := "field" + string(rune('A'+i))
-		rules[fieldName] = func(value interface{}) error {
+		rules[fieldName] = func(value any) error {
 			if str, ok := value.(string); ok && len(str) < 3 {
 				return errTooShort
 			}
@@ -793,12 +793,14 @@ func BenchmarkBasicValidatorValidateField(b *testing.B) {
 	validator.SetValidationRules(rules)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for b.Loop() {
 		field := "field" + string(rune('A'+i%10))
 		err := validator.ValidateField(field, "test_value")
 		if err != nil {
 			b.Errorf("Unexpected error: %v", err)
 		}
+		i++
 	}
 }
 

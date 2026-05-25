@@ -235,9 +235,9 @@ func TestWriteFileAtomicConcurrentWrites(t *testing.T) {
 
 	done := make(chan error, numWriters*iterations)
 
-	for i := 0; i < numWriters; i++ {
+	for i := range numWriters {
 		go func(writerID int) {
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				path := filepath.Join(tmpDir, "concurrent.txt")
 				data := []byte("writer " + string(rune('A'+writerID))) //nolint:gosec // G115: bounded test value, no overflow risk
 				err := op.WriteFileAtomic(path, data, 0o644)

@@ -114,16 +114,16 @@ func (suite *AutoRegistrationTestSuite) TestConvenienceWrapperFunctionsComprehen
 func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() {
 	tests := []struct {
 		name         string
-		autoType     interface{}
-		mageType     interface{}
-		testCreation func() (interface{}, interface{})
+		autoType     any
+		mageType     any
+		testCreation func() (any, any)
 		description  string
 	}{
 		{
 			name:     "Build type alias",
 			autoType: Build{},
 			mageType: mage.Build{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Build{}, mage.Build{}
 			},
 			description: "Build should be aliased to mage.Build",
@@ -132,7 +132,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Test type alias",
 			autoType: Test{},
 			mageType: mage.Test{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Test{}, mage.Test{}
 			},
 			description: "Test should be aliased to mage.Test",
@@ -141,7 +141,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Lint type alias",
 			autoType: Lint{},
 			mageType: mage.Lint{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Lint{}, mage.Lint{}
 			},
 			description: "Lint should be aliased to mage.Lint",
@@ -150,7 +150,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Format type alias",
 			autoType: Format{},
 			mageType: mage.Format{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Format{}, mage.Format{}
 			},
 			description: "Format should be aliased to mage.Format",
@@ -159,7 +159,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Deps type alias",
 			autoType: Deps{},
 			mageType: mage.Deps{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Deps{}, mage.Deps{}
 			},
 			description: "Deps should be aliased to mage.Deps",
@@ -168,7 +168,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Git type alias",
 			autoType: Git{},
 			mageType: mage.Git{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Git{}, mage.Git{}
 			},
 			description: "Git should be aliased to mage.Git",
@@ -177,7 +177,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Release type alias",
 			autoType: Release{},
 			mageType: mage.Release{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Release{}, mage.Release{}
 			},
 			description: "Release should be aliased to mage.Release",
@@ -186,7 +186,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Docs type alias",
 			autoType: Docs{},
 			mageType: mage.Docs{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Docs{}, mage.Docs{}
 			},
 			description: "Docs should be aliased to mage.Docs",
@@ -195,7 +195,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Tools type alias",
 			autoType: Tools{},
 			mageType: mage.Tools{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Tools{}, mage.Tools{}
 			},
 			description: "Tools should be aliased to mage.Tools",
@@ -204,7 +204,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Generate type alias",
 			autoType: Generate{},
 			mageType: mage.Generate{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Generate{}, mage.Generate{}
 			},
 			description: "Generate should be aliased to mage.Generate",
@@ -213,7 +213,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Update type alias",
 			autoType: Update{},
 			mageType: mage.Update{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Update{}, mage.Update{}
 			},
 			description: "Update should be aliased to mage.Update",
@@ -222,7 +222,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Mod type alias",
 			autoType: Mod{},
 			mageType: mage.Mod{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Mod{}, mage.Mod{}
 			},
 			description: "Mod should be aliased to mage.Mod",
@@ -231,7 +231,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Metrics type alias",
 			autoType: Metrics{},
 			mageType: mage.Metrics{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Metrics{}, mage.Metrics{}
 			},
 			description: "Metrics should be aliased to mage.Metrics",
@@ -240,7 +240,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Bench type alias",
 			autoType: Bench{},
 			mageType: mage.Bench{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Bench{}, mage.Bench{}
 			},
 			description: "Bench should be aliased to mage.Bench",
@@ -249,7 +249,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Vet type alias",
 			autoType: Vet{},
 			mageType: mage.Vet{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Vet{}, mage.Vet{}
 			},
 			description: "Vet should be aliased to mage.Vet",
@@ -258,7 +258,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Configure type alias",
 			autoType: Configure{},
 			mageType: mage.Configure{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Configure{}, mage.Configure{}
 			},
 			description: "Configure should be aliased to mage.Configure",
@@ -267,7 +267,7 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 			name:     "Help type alias",
 			autoType: Help{},
 			mageType: mage.Help{},
-			testCreation: func() (interface{}, interface{}) {
+			testCreation: func() (any, any) {
 				return Help{}, mage.Help{}
 			},
 			description: "Help should be aliased to mage.Help",
@@ -292,37 +292,37 @@ func (suite *AutoRegistrationTestSuite) TestNamespaceTypeAliasesComprehensive() 
 func (suite *AutoRegistrationTestSuite) TestNamespaceMethodAccessibility() {
 	tests := []struct {
 		name           string
-		createInstance func() interface{}
+		createInstance func() any
 		methodTests    []string
 	}{
 		{
 			name:           "Build namespace methods",
-			createInstance: func() interface{} { return Build{} },
+			createInstance: func() any { return Build{} },
 			methodTests:    []string{"Default", "All", "Clean", "Install", "Generate"},
 		},
 		{
 			name:           "Test namespace methods",
-			createInstance: func() interface{} { return Test{} },
+			createInstance: func() any { return Test{} },
 			methodTests:    []string{"Default", "Unit", "Race", "Cover", "Bench"},
 		},
 		{
 			name:           "Lint namespace methods",
-			createInstance: func() interface{} { return Lint{} },
+			createInstance: func() any { return Lint{} },
 			methodTests:    []string{"Default", "All", "Go", "Fix"},
 		},
 		{
 			name:           "Format namespace methods",
-			createInstance: func() interface{} { return Format{} },
+			createInstance: func() any { return Format{} },
 			methodTests:    []string{"Default", "Check", "Go", "All"},
 		},
 		{
 			name:           "Deps namespace methods",
-			createInstance: func() interface{} { return Deps{} },
+			createInstance: func() any { return Deps{} },
 			methodTests:    []string{"Default", "Download", "Update", "Tidy"},
 		},
 		{
 			name:           "Release namespace methods",
-			createInstance: func() interface{} { return Release{} },
+			createInstance: func() any { return Release{} },
 			methodTests:    []string{"Default", "Test", "Snapshot"},
 		},
 	}
@@ -376,7 +376,7 @@ func (suite *AutoRegistrationTestSuite) TestBackwardCompatibilityComprehensive()
 
 	suite.Run("all type aliases exist", func() {
 		// Test that all 24 type aliases are defined
-		typeAliases := []interface{}{
+		typeAliases := []any{
 			Build{},
 			Test{},
 			Lint{},
@@ -515,7 +515,7 @@ func (suite *AutoRegistrationTestSuite) TestConcurrentAccess() {
 	var wg sync.WaitGroup
 
 	// Test concurrent access to convenience wrapper functions
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
@@ -559,17 +559,17 @@ func (suite *AutoRegistrationTestSuite) TestTypeAliasMethodCallability() {
 	// Test that type aliases properly expose methods
 	tests := []struct {
 		name           string
-		createInstance func() interface{}
+		createInstance func() any
 		methodName     string
 	}{
-		{"Build.Default", func() interface{} { return Build{} }, "Default"},
-		{"Test.Default", func() interface{} { return Test{} }, "Default"},
-		{"Lint.Default", func() interface{} { return Lint{} }, "Default"},
-		{"Format.Default", func() interface{} { return Format{} }, "Default"},
-		{"Deps.Default", func() interface{} { return Deps{} }, "Default"},
-		{"Release.Default", func() interface{} { return Release{} }, "Default"},
-		{"Build.Clean", func() interface{} { return Build{} }, "Clean"},
-		{"Build.Install", func() interface{} { return Build{} }, "Install"},
+		{"Build.Default", func() any { return Build{} }, "Default"},
+		{"Test.Default", func() any { return Test{} }, "Default"},
+		{"Lint.Default", func() any { return Lint{} }, "Default"},
+		{"Format.Default", func() any { return Format{} }, "Default"},
+		{"Deps.Default", func() any { return Deps{} }, "Default"},
+		{"Release.Default", func() any { return Release{} }, "Default"},
+		{"Build.Clean", func() any { return Build{} }, "Clean"},
+		{"Build.Install", func() any { return Build{} }, "Install"},
 	}
 
 	for _, tt := range tests {
@@ -626,7 +626,7 @@ func (suite *AutoRegistrationTestSuite) TestPackageDocumentationCompliance() {
 			CleanCmd, InstallCmd, DepsCmd, ReleaseCmd,
 		}
 
-		types := []interface{}{
+		types := []any{
 			Build{},
 			Test{},
 			Lint{},
@@ -675,7 +675,7 @@ func BenchmarkConvenienceFunctions(b *testing.B) {
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				// Benchmark function access (not execution)
 				fn := tt.fn
 				if fn == nil {
@@ -691,20 +691,20 @@ func BenchmarkConvenienceFunctions(b *testing.B) {
 func BenchmarkTypeAliasCreation(b *testing.B) {
 	tests := []struct {
 		name    string
-		creator func() interface{}
+		creator func() any
 	}{
-		{"Build", func() interface{} { return Build{} }},
-		{"Test", func() interface{} { return Test{} }},
-		{"Lint", func() interface{} { return Lint{} }},
-		{"Format", func() interface{} { return Format{} }},
-		{"Deps", func() interface{} { return Deps{} }},
-		{"Release", func() interface{} { return Release{} }},
+		{"Build", func() any { return Build{} }},
+		{"Test", func() any { return Test{} }},
+		{"Lint", func() any { return Lint{} }},
+		{"Format", func() any { return Format{} }},
+		{"Deps", func() any { return Deps{} }},
+		{"Release", func() any { return Release{} }},
 	}
 
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				instance := tt.creator()
 				if instance == nil {
 					b.Fatal("Instance should not be nil")
@@ -791,8 +791,8 @@ func TestAutoPackageTypeAliasEquivalence(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		autoType interface{}
-		mageType interface{}
+		autoType any
+		mageType any
 	}{
 		{"Build", Build{}, mage.Build{}},
 		{"Test", Test{}, mage.Test{}},

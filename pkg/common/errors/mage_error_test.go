@@ -157,7 +157,7 @@ func TestDefaultMageError_WithFields(t *testing.T) {
 	t.Parallel()
 
 	err := NewMageError("test")
-	withFields, ok := err.WithFields(map[string]interface{}{
+	withFields, ok := err.WithFields(map[string]any{
 		"key1": "value1",
 		"key2": 42,
 	}).(*DefaultMageError)
@@ -236,7 +236,7 @@ func TestDefaultMageError_WithContext(t *testing.T) {
 	newCtx := &ErrorContext{
 		Operation: "test-op",
 		Resource:  "test-resource",
-		Fields:    map[string]interface{}{"custom": "field"},
+		Fields:    map[string]any{"custom": "field"},
 	}
 
 	withCtx, ok := err.WithContext(newCtx).(*DefaultMageError)
@@ -417,7 +417,7 @@ func TestDefaultMageError_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	const numGoroutines = 100
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()

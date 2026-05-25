@@ -40,8 +40,8 @@ func (ts *FormatTestSuite) TestFormatGofmt() {
 		ts.env.Runner.On("RunCmdOutput", "gofmt", []string{"-l", "."}).Return("", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Gofmt()
 			},
@@ -56,8 +56,8 @@ func (ts *FormatTestSuite) TestFormatGofmt() {
 		ts.env.Runner.On("RunCmd", "gofmt", []string{"-w", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Gofmt()
 			},
@@ -76,8 +76,8 @@ func (ts *FormatTestSuite) TestFormatCheck() {
 		ts.env.Runner.On("RunCmdOutput", "goimports", []string{"-l", "."}).Return("", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Check()
 			},
@@ -95,8 +95,8 @@ func (ts *FormatTestSuite) TestFormatInstallTools() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.InstallTools()
 			},
@@ -122,8 +122,8 @@ func (ts *FormatTestSuite) TestFormatAll() {
 		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.All()
 			},
@@ -140,8 +140,8 @@ func (ts *FormatTestSuite) TestFormatGo() {
 		ts.env.Runner.On("RunCmd", "gofmt", []string{"-w", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Go()
 			},
@@ -168,8 +168,8 @@ func (ts *FormatTestSuite) TestFormatYAML() {
 		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.YAML()
 			},
@@ -196,8 +196,8 @@ func (ts *FormatTestSuite) TestFormatYaml() {
 		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Yaml()
 			},
@@ -223,8 +223,8 @@ func (ts *FormatTestSuite) TestFormatJSON() {
 		// JSON formatting now uses native Go implementation - no external commands needed
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.JSON()
 			},
@@ -250,8 +250,8 @@ func (ts *FormatTestSuite) TestFormatJson() {
 		// JSON formatting now uses native Go implementation - no external commands needed
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.JSON()
 			},
@@ -293,8 +293,8 @@ func (ts *FormatTestSuite) TestFormatFix() {
 		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Fix()
 			},
@@ -337,8 +337,8 @@ func (ts *FormatTestSuite) TestFormatGofmtErrorScenarios() {
 		ts.env.Runner.On("RunCmdOutput", "gofmt", []string{"-l", "."}).Return("", fmt.Errorf("gofmt command failed"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Gofmt()
 			},
@@ -353,8 +353,8 @@ func (ts *FormatTestSuite) TestFormatGofmtErrorScenarios() {
 		ts.env.Runner.On("RunCmd", "gofmt", []string{"-w", "."}).Return(fmt.Errorf("formatting failed"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Gofmt()
 			},
@@ -373,8 +373,8 @@ func (ts *FormatTestSuite) TestFormatFumptScenarios() {
 		ts.env.Runner.On("RunCmd", "gofumpt", []string{"-w", "-extra", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Fumpt()
 			},
@@ -389,8 +389,8 @@ func (ts *FormatTestSuite) TestFormatFumptScenarios() {
 		ts.env.Runner.On("RunCmd", "gofumpt", []string{"-w", "-extra", "."}).Return(fmt.Errorf("gofumpt failed"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Fumpt()
 			},
@@ -408,8 +408,8 @@ func (ts *FormatTestSuite) TestFormatImportsScenarios() {
 		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Imports()
 			},
@@ -423,8 +423,8 @@ func (ts *FormatTestSuite) TestFormatImportsScenarios() {
 		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(fmt.Errorf("goimports failed"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Imports()
 			},
@@ -444,8 +444,8 @@ func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
 		ts.env.Runner.On("RunCmd", "yamlfmt", ".").Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.YAML()
 			},
@@ -461,8 +461,8 @@ func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
 		ts.env.Runner.On("RunCmd", "yamlfmt", ".").Return(fmt.Errorf("yamlfmt failed"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.YAML()
 			},
@@ -496,8 +496,8 @@ func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
 		ts.env.Runner.On("RunCmd", "yamlfmt", "-conf", ".github/.yamlfmt", ".").Return(nil)
 
 		err = ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.YAML()
 			},
@@ -511,8 +511,8 @@ func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
 		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", fmt.Errorf("find failed"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.YAML()
 			},
@@ -527,8 +527,8 @@ func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
 		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.YAML()
 			},
@@ -542,8 +542,8 @@ func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/google/yamlfmt/cmd/yamlfmt@latest"}).Return(fmt.Errorf("network error"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				// This would trigger installation which would fail
 				return ensureYamlfmt()
@@ -563,8 +563,8 @@ func (ts *FormatTestSuite) TestFormatCheckWithFormatIssues() {
 		ts.env.Runner.On("RunCmdOutput", "goimports", []string{"-l", "."}).Return("", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Check()
 			},
@@ -580,8 +580,8 @@ func (ts *FormatTestSuite) TestFormatCheckWithFormatIssues() {
 		ts.env.Runner.On("RunCmdOutput", "goimports", []string{"-l", "."}).Return("", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Check()
 			},
@@ -597,8 +597,8 @@ func (ts *FormatTestSuite) TestFormatCheckWithFormatIssues() {
 		ts.env.Runner.On("RunCmdOutput", "goimports", []string{"-l", "."}).Return("file1.go", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Check()
 			},
@@ -614,8 +614,8 @@ func (ts *FormatTestSuite) TestFormatCheckWithFormatIssues() {
 		ts.env.Runner.On("RunCmdOutput", "goimports", []string{"-l", "."}).Return("file3.go", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Check()
 			},
@@ -632,8 +632,8 @@ func (ts *FormatTestSuite) TestFormatInstallToolsErrorScenarios() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@latest"}).Return(fmt.Errorf("network error"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.InstallTools()
 			},
@@ -649,8 +649,8 @@ func (ts *FormatTestSuite) TestFormatInstallToolsErrorScenarios() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(fmt.Errorf("network error"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.InstallTools()
 			},
@@ -667,8 +667,8 @@ func (ts *FormatTestSuite) TestFormatInstallToolsErrorScenarios() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/google/yamlfmt/cmd/yamlfmt@latest"}).Return(fmt.Errorf("network error"))
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.InstallTools()
 			},
@@ -685,8 +685,8 @@ func (ts *FormatTestSuite) TestFormatFileTypeScenarios() {
 		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.YAML()
 			},
@@ -700,8 +700,8 @@ func (ts *FormatTestSuite) TestFormatFileTypeScenarios() {
 		// JSON formatting now uses native Go implementation - no external commands needed
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.JSON()
 			},
@@ -725,8 +725,8 @@ func (ts *FormatTestSuite) TestFormatDefaultPartialFailures() {
 		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Default()
 			},
@@ -756,8 +756,8 @@ func (ts *FormatTestSuite) TestFormatWithEnvironmentVariables() {
 		// JSON formatting now uses native Go implementation - no external commands needed
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.JSON()
 			},
@@ -792,8 +792,8 @@ func (ts *FormatTestSuite) TestFormatFixMethod() {
 		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Fix()
 			},
@@ -813,8 +813,8 @@ func (ts *FormatTestSuite) TestFormatFixMethod() {
 		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", nil) // No YAML files
 
 		err := ts.env.WithMockRunner(
-			func(r interface{}) error { return SetRunner(r.(CommandRunner)) },
-			func() interface{} { return GetRunner() },
+			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.format.Fix()
 			},

@@ -758,7 +758,7 @@ func BenchmarkVetOperations(b *testing.B) {
 	vet := Vet{}
 
 	b.Run("Default", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			if err := vet.Default(); err != nil {
 				b.Logf("vet.Default() failed: %v", err)
 			}

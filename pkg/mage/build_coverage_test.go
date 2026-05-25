@@ -81,10 +81,10 @@ func (ts *BuildCoverageTestSuite) TearDownTest() {
 // Helper to set up mock runner and execute function
 func (ts *BuildCoverageTestSuite) withMockRunner(fn func() error) error {
 	return ts.env.WithMockRunner(
-		func(r interface{}) error {
+		func(r any) error {
 			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 		},
-		func() interface{} { return GetRunner() },
+		func() any { return GetRunner() },
 		fn,
 	)
 }
@@ -431,10 +431,10 @@ func (ts *BuildCoverageTestSuite) TestExecuteBuild() {
 		}
 
 		err := env.WithMockRunner(
-			func(r interface{}) error {
+			func(r any) error {
 				return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
 			},
-			func() interface{} { return GetRunner() },
+			func() any { return GetRunner() },
 			func() error {
 				return ts.build.executeBuild(ctx, "")
 			},
@@ -844,7 +844,7 @@ func BenchmarkCreateBuildContext(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		//nolint:errcheck // benchmark - error checking not needed
 		_, _ = build.createBuildContext(cfg)
 	}

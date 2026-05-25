@@ -166,7 +166,7 @@ func TestYAMLMarshal_ErrorHandling(t *testing.T) {
 	})
 
 	t.Run("marshal map", func(t *testing.T) {
-		data := map[string]interface{}{
+		data := map[string]any{
 			"key1": "value1",
 			"key2": 123,
 		}

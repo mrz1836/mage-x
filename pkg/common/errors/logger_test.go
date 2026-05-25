@@ -350,7 +350,7 @@ func TestDefaultErrorLogger_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	const numGoroutines = 50
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -418,7 +418,7 @@ func TestStructuredErrorLogger_WithFields(t *testing.T) {
 	t.Parallel()
 
 	logger := NewStructuredErrorLogger()
-	withFields := logger.WithFields(map[string]interface{}{
+	withFields := logger.WithFields(map[string]any{
 		"key1": "value1",
 		"key2": 42,
 	})

@@ -214,7 +214,7 @@ func NewCommandError(command string, exitCode int, output string) MageError {
 }
 
 // NewValidationError creates a new validation error
-func NewValidationError(field string, value interface{}, reason string) MageError {
+func NewValidationError(field string, value any, reason string) MageError {
 	return NewBuilder().
 		WithCode(ErrInvalidArgument).
 		WithMessage("validation failed for field '%s': %s", field, reason).
