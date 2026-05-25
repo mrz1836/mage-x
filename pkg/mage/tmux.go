@@ -2,7 +2,6 @@
 package mage
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -124,7 +124,7 @@ func getExpandedDir(params map[string]string) (string, error) {
 
 // sessionExists checks if a tmux session exists
 func sessionExists(name string) bool {
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	// #nosec G204 -- fixed tmux command with session name parameter
 	cmd := exec.CommandContext(ctx, "tmux", "has-session", "-t", name)
 	return cmd.Run() == nil
@@ -140,7 +140,7 @@ func (Tmux) List() error {
 	}
 
 	// Run tmux ls to get session list
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	cmd := exec.CommandContext(ctx, "tmux", "ls")
 	output, err := cmd.CombinedOutput()
 	// Handle no sessions case gracefully
@@ -216,7 +216,7 @@ func (Tmux) Start(args ...string) error {
 	utils.Info("Using model: %s", fullModel)
 
 	// Create new tmux session in detached mode first
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	//nolint:gosec // claudeCmd is constructed from validated inputs
 	createCmd := exec.CommandContext(ctx, "tmux", "new", "-d", "-s", sessionName, "-c", dir, claudeCmd)
 
@@ -232,7 +232,7 @@ func (Tmux) Start(args ...string) error {
 
 // attachToSession attaches to an existing tmux session
 func attachToSession(name string) error {
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	// #nosec G204 -- fixed tmux command with session name parameter
 	cmd := exec.CommandContext(ctx, "tmux", "attach", "-t", name)
 
@@ -301,7 +301,7 @@ func (Tmux) Kill(args ...string) error {
 	utils.Info("Killing session '%s'...", sessionName)
 
 	// Kill the session
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	//nolint:gosec // sessionName is validated and passed safely to tmux
 	cmd := exec.CommandContext(ctx, "tmux", "kill-session", "-t", sessionName)
 	if err := cmd.Run(); err != nil {
@@ -322,7 +322,7 @@ func (Tmux) KillAll() error {
 	}
 
 	// Get list of sessions
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	cmd := exec.CommandContext(ctx, "tmux", "ls")
 	output, err := cmd.CombinedOutput()
 	// Handle no sessions case gracefully
@@ -389,7 +389,7 @@ func (Tmux) Status(args ...string) error {
 	}
 
 	// Get list of sessions
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	cmd := exec.CommandContext(ctx, "tmux", "ls")
 	output, err := cmd.CombinedOutput()
 	// Handle no sessions case gracefully

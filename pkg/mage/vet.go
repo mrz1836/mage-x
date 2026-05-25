@@ -2,7 +2,6 @@
 package mage
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -174,7 +174,7 @@ func (Vet) Parallel() error {
 	start := time.Now()
 
 	// Use errgroup for proper goroutine lifecycle management
-	g, ctx := errgroup.WithContext(context.Background())
+	g, ctx := errgroup.WithContext(runtimectx.Context())
 	g.SetLimit(parallel)
 
 	// Mutex to protect vetErrors slice

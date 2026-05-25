@@ -18,6 +18,7 @@ import (
 	"github.com/mrz1836/mage-x/pkg/common/cache"
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/providers"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -455,7 +456,7 @@ func (b Build) All() error {
 	start := time.Now()
 
 	// Create a cancellable context for coordinated shutdown
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(runtimectx.Context())
 	defer cancel()
 
 	// Use errgroup with context for coordinated cancellation

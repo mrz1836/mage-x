@@ -18,6 +18,7 @@ import (
 	"github.com/magefile/mage/mg"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -111,7 +112,7 @@ func (Docs) GoDocs(args ...string) error {
 	utils.Info("Triggering sync for %s@%s", module, currentVersion)
 
 	// Use HTTP client to trigger the proxy
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "GET", proxyURL, http.NoBody)
 	if err != nil {
@@ -188,6 +189,9 @@ func (Docs) Generate() error {
 
 	// Generate documentation for each package
 	for _, pkg := range packages {
+		if err := runtimectx.CheckCanceled(); err != nil {
+			return fmt.Errorf("docs generation canceled: %w", err)
+		}
 		if pkg == "" {
 			continue
 		}
@@ -626,7 +630,7 @@ func findAvailablePort(preferredPort int) int {
 // isPortAvailable checks if a port is available for binding
 func isPortAvailable(port int) bool {
 	address := fmt.Sprintf(":%d", port)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), time.Second)
 	defer cancel()
 
 	lc := &net.ListenConfig{}

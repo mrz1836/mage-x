@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -207,6 +208,12 @@ func runCommandInModuleOutput(module ModuleInfo, command string, args ...string)
 // If the runner implements DirRunner, it uses the goroutine-safe RunCmdOutputInDir method.
 // Otherwise, falls back to os.Chdir with mutex protection for safety.
 func runCommandInModuleOutputWithRunner(module ModuleInfo, runner CommandRunner, command string, args ...string) (string, error) {
+	// Universal cancel guard: bail before launching another subprocess if the
+	// signal-aware root context has been canceled. Stops loops that delegate
+	// through this helper from continuing past Ctrl+C.
+	if err := runtimectx.CheckCanceled(); err != nil {
+		return "", fmt.Errorf("canceled before '%s' in %s: %w", command, module.Relative, err)
+	}
 	return runInModuleDir(module, runner,
 		func(dirRunner DirRunner, path string) (string, error) {
 			return dirRunner.RunCmdOutputInDir(path, command, args...)
@@ -221,6 +228,10 @@ func runCommandInModuleOutputWithRunner(module ModuleInfo, runner CommandRunner,
 // If the runner implements DirRunner, it uses the goroutine-safe RunCmdInDir method.
 // Otherwise, falls back to os.Chdir with mutex protection for safety.
 func runCommandInModuleWithRunner(module ModuleInfo, runner CommandRunner, command string, args ...string) error {
+	// Universal cancel guard: see runCommandInModuleOutputWithRunner.
+	if err := runtimectx.CheckCanceled(); err != nil {
+		return fmt.Errorf("canceled before '%s' in %s: %w", command, module.Relative, err)
+	}
 	_, err := runInModuleDir(module, runner,
 		func(dirRunner DirRunner, path string) (struct{}, error) {
 			return struct{}{}, dirRunner.RunCmdInDir(path, command, args...)
@@ -747,6 +758,9 @@ func forEachModule(modules []ModuleInfo, opts ModuleIteratorOptions, action Modu
 	var moduleErrors []moduleError
 
 	for _, module := range modules {
+		if cancelErr := runtimectx.CheckCanceled(); cancelErr != nil {
+			return fmt.Errorf("%s canceled: %w", opts.Operation, cancelErr)
+		}
 		displayModuleHeader(module, opts.Operation)
 
 		moduleStart := time.Now()

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 )
 
 // ErrCIOutputProcessingPanic is returned when a panic occurs during CI output processing
@@ -112,7 +114,7 @@ func NewCIRunner(base CommandRunner, opts CIRunnerOptions) CIRunner {
 		reporter: opts.Reporter,
 		detector: opts.Detector,
 		results:  &CIResult{},
-		getCtx:   func() context.Context { return context.Background() },
+		getCtx:   func() context.Context { return runtimectx.Context() },
 	}
 }
 
@@ -136,7 +138,7 @@ func (r *ciRunner) WithContext(ctx context.Context) CIRunner {
 func (r *ciRunner) RunCmd(name string, args ...string) error {
 	// Only intercept go test commands when CI mode is enabled
 	if r.mode.Enabled && name == "go" && len(args) > 0 && args[0] == "test" {
-		ctx := context.Background()
+		ctx := runtimectx.Context()
 		if r.getCtx != nil {
 			ctx = r.getCtx()
 		}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -244,6 +245,9 @@ func (Bench) SaveWithArgs(argsList ...string) error {
 	var allOutputs []string
 
 	for _, module := range ctx.Modules {
+		if err := runtimectx.CheckCanceled(); err != nil {
+			return fmt.Errorf("benchmarks canceled: %w", err)
+		}
 		displayModuleHeader(module, "Running benchmarks for")
 
 		utils.Info("Running: go %s", strings.Join(args, " "))

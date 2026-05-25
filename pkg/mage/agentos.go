@@ -1,7 +1,6 @@
 package mage
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -428,10 +428,10 @@ func verifyAgentOSInstallation(config *Config) error {
 func runInteractivePipedCmd(cmd1 string, args1 []string, cmd2 string, args2 []string) error {
 	// Create the curl command
 	// #nosec G204 -- cmd1/cmd2 are internal function parameters for piped commands
-	curlCmd := exec.CommandContext(context.Background(), cmd1, args1...)
+	curlCmd := exec.CommandContext(runtimectx.Context(), cmd1, args1...)
 
 	// #nosec G204 -- cmd1/cmd2 are internal function parameters for piped commands
-	bashCmd := exec.CommandContext(context.Background(), cmd2, args2...)
+	bashCmd := exec.CommandContext(runtimectx.Context(), cmd2, args2...)
 
 	// Pipe curl's stdout to bash's stdin
 	pipe, err := curlCmd.StdoutPipe()

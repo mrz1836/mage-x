@@ -19,6 +19,7 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/exec"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -158,6 +159,9 @@ func (Lint) Default() error {
 
 	// Run linters for each module
 	for _, module := range ctx.Modules {
+		if cancelErr := runtimectx.CheckCanceled(); cancelErr != nil {
+			return fmt.Errorf("linting canceled: %w", cancelErr)
+		}
 		displayModuleHeader(module, "Linting")
 
 		moduleStart := time.Now()
@@ -244,6 +248,9 @@ func (Lint) Fix() error {
 
 	// Run fix for each module
 	for _, module := range ctx.Modules {
+		if cancelErr := runtimectx.CheckCanceled(); cancelErr != nil {
+			return fmt.Errorf("lint fix canceled: %w", cancelErr)
+		}
 		displayModuleHeader(module, "Fixing lint issues in")
 
 		moduleStart := time.Now()
@@ -326,6 +333,9 @@ func (Lint) Fmt() error {
 	// Check formatting
 	var unformatted []string
 	for _, pkg := range packages {
+		if cancelErr := runtimectx.CheckCanceled(); cancelErr != nil {
+			return fmt.Errorf("format check canceled: %w", cancelErr)
+		}
 		var output string
 		output, err = GetRunner().RunCmdOutput("gofmt", "-l", pkg)
 		if err != nil {
@@ -452,7 +462,7 @@ func (Lint) VetParallel() error {
 	start := time.Now()
 
 	// Use errgroup for cleaner concurrent execution with bounded parallelism
-	g, _ := errgroup.WithContext(context.Background())
+	g, _ := errgroup.WithContext(runtimectx.Context())
 	g.SetLimit(config.Build.Parallel)
 
 	var mu sync.Mutex
@@ -647,7 +657,7 @@ func ensureGolangciLint(cfg *Config) error {
 
 	utils.Info("golangci-lint not found, installing...")
 
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	maxRetries := cfg.Download.MaxRetries
 	initialDelay := time.Duration(cfg.Download.InitialDelayMs) * time.Millisecond
 

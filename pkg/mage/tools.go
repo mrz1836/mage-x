@@ -10,6 +10,7 @@ import (
 	"github.com/magefile/mage/mg"
 
 	"github.com/mrz1836/mage-x/pkg/exec"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -65,7 +66,7 @@ func (Tools) Update() error {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	maxRetries := config.Download.MaxRetries
 	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
 
@@ -224,7 +225,7 @@ func (Tools) VulnCheck() error {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	maxRetries := config.Download.MaxRetries
 	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
 
@@ -247,7 +248,7 @@ func (Tools) VulnCheck() error {
 
 // installGovulncheck installs govulncheck with retry and fallback logic
 //
-//nolint:contextcheck // installTool internally creates context.Background(), same as original caller behavior
+//nolint:contextcheck // installTool reads runtimectx.Context() internally so the signal-aware root reaches subprocesses
 func installGovulncheck(_ context.Context, _ *Config, _ int, _ time.Duration) error {
 	return installTool(ToolDefinition{
 		Name:   "govulncheck",
@@ -401,7 +402,7 @@ func installTool(tool ToolDefinition) error {
 		config = defaultConfig()
 	}
 
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	maxRetries := config.Download.MaxRetries
 	initialDelay := time.Duration(config.Download.InitialDelayMs) * time.Millisecond
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -138,6 +139,9 @@ func updateAllModules(params map[string]string, dryRun, failFast bool) error {
 	// Process each module
 	var moduleErrors []moduleError
 	for _, module := range sortedModules {
+		if err := runtimectx.CheckCanceled(); err != nil {
+			return fmt.Errorf("deps update canceled: %w", err)
+		}
 		displayModuleHeader(module, "Updating dependencies in")
 
 		// Save current directory
@@ -852,6 +856,9 @@ func (Deps) Audit(args ...string) error {
 
 	// Run govulncheck for each module
 	for _, module := range modules {
+		if err := runtimectx.CheckCanceled(); err != nil {
+			return fmt.Errorf("deps audit canceled: %w", err)
+		}
 		displayModuleHeader(module, "Auditing")
 
 		moduleStart := time.Now()

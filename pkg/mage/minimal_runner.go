@@ -9,6 +9,7 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/common/providers"
 	"github.com/mrz1836/mage-x/pkg/exec"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 )
 
 // Static errors to satisfy err113 linter
@@ -36,7 +37,7 @@ func NewSecureCommandRunner() CommandRunner {
 
 // RunCmd executes a command and returns an error if it fails
 func (r *SecureCommandRunner) RunCmd(name string, args ...string) error {
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	// Use adaptive timeout based on command type
 	timeout := r.getCommandTimeout(name, args)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -48,7 +49,7 @@ func (r *SecureCommandRunner) RunCmd(name string, args ...string) error {
 
 // RunCmdOutput executes a command and returns its output
 func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string, error) {
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	// Use adaptive timeout based on command type
 	timeout := r.getCommandTimeout(name, args)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -61,7 +62,7 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 // RunCmdInDir executes a command in the specified working directory.
 // This is goroutine-safe unlike os.Chdir() - each command runs with its own cmd.Dir.
 func (r *SecureCommandRunner) RunCmdInDir(dir, name string, args ...string) error {
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	timeout := r.getCommandTimeout(name, args)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -73,7 +74,7 @@ func (r *SecureCommandRunner) RunCmdInDir(dir, name string, args ...string) erro
 // RunCmdOutputInDir executes a command in the specified directory and returns output.
 // This is goroutine-safe unlike os.Chdir() - each command runs with its own cmd.Dir.
 func (r *SecureCommandRunner) RunCmdOutputInDir(dir, name string, args ...string) (string, error) {
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	timeout := r.getCommandTimeout(name, args)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -86,7 +87,7 @@ func (r *SecureCommandRunner) RunCmdOutputInDir(dir, name string, args ...string
 // This is goroutine-safe unlike os.Setenv() - each command gets its own environment.
 // Use this for cross-compilation where GOOS/GOARCH need to be set per-command.
 func (r *SecureCommandRunner) RunCmdWithEnv(env []string, name string, args ...string) error {
-	ctx := context.Background()
+	ctx := runtimectx.Context()
 	timeout := r.getCommandTimeout(name, args)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

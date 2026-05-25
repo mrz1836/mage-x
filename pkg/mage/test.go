@@ -17,6 +17,7 @@ import (
 	"github.com/magefile/mage/mg"
 
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -1102,6 +1103,9 @@ func runTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race, co
 	}
 
 	for _, module := range filteredModules {
+		if err := runtimectx.CheckCanceled(); err != nil {
+			return fmt.Errorf("tests canceled: %w", err)
+		}
 		tagSuffix := ""
 		if buildTag != "" {
 			tagSuffix = fmt.Sprintf(" (tag: %s)", buildTag)
@@ -1422,6 +1426,9 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 	fuzzTimingCfg := FuzzTimingConfigFromTestConfig(&config.Test)
 
 	for _, pkg := range packages {
+		if runtimectx.CheckCanceled() != nil {
+			return results, time.Since(startTime)
+		}
 		// List fuzz tests in package
 		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
 		if err != nil {
@@ -1608,7 +1615,7 @@ func resolvePkgDir(pkg string) string {
 // runFuzzTestWithOutputAndTimeout executes a fuzz test command with a specified timeout
 // and captures stdout/stderr. This is used in CI mode to capture output for text parsing.
 func runFuzzTestWithOutputAndTimeout(name string, timeout time.Duration, args ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), timeout)
 	defer cancel()
 
 	// #nosec G204 -- name is the fuzz test binary path from internal caller
@@ -1633,7 +1640,7 @@ func runFuzzTestWithOutputAndTimeout(name string, timeout time.Duration, args ..
 // runFuzzTestWithTimeout executes a fuzz test command with a specified timeout.
 // Unlike runFuzzTestWithOutputAndTimeout, this doesn't capture output - it streams directly.
 func runFuzzTestWithTimeout(name string, timeout time.Duration, args ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), timeout)
 	defer cancel()
 
 	// #nosec G204 -- name is the fuzz test binary path from internal caller
@@ -1664,7 +1671,7 @@ func runFuzzTestWithTimeout(name string, timeout time.Duration, args ...string) 
 // Returns the elapsed time for the warmup.
 func warmFuzzBuildCache(pkg, firstFuzzTest string, timeout time.Duration) time.Duration {
 	start := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), timeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "go", "test", "-run=^$", //nolint:gosec // pkg and firstFuzzTest are internal Go identifiers, not user input

@@ -23,6 +23,7 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -312,7 +313,7 @@ func getLatestStableReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 
 // getLatestStableReleaseViaAPI gets the latest stable release using GitHub API
 func getLatestStableReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
 	defer cancel()
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 	return utils.HTTPGetJSON[GitHubRelease](ctx, url)
@@ -368,7 +369,7 @@ func getLatestBetaReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 // getLatestBetaReleaseViaAPI gets the latest beta release using GitHub API.
 // Beta channel prioritizes prereleases but falls back to stable if none exist.
 func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
 	defer cancel()
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
 	releases, err := utils.HTTPGetJSON[[]GitHubRelease](ctx, url)
@@ -433,7 +434,7 @@ func getLatestEdgeReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 
 // getLatestEdgeReleaseViaAPI gets the latest edge release using GitHub API
 func getLatestEdgeReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
 	defer cancel()
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
 	releases, err := utils.HTTPGetJSON[[]GitHubRelease](ctx, url)
@@ -449,7 +450,7 @@ func getLatestEdgeReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 // fetchChecksumForAsset fetches the checksums file and extracts the checksum for the specified asset.
 // Returns the hex-encoded SHA256 checksum or an error if not found.
 func fetchChecksumForAsset(checksumURL, assetName string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), 30*time.Second)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", checksumURL, http.NoBody)
@@ -502,7 +503,7 @@ func downloadUpdate(info *UpdateInfo, dir string) error {
 	utils.Info("Downloading update...")
 
 	// Create HTTP client with explicit timeout to prevent hanging downloads
-	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), downloadTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", info.DownloadURL, http.NoBody)

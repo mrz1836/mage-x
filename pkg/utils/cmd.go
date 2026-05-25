@@ -2,7 +2,6 @@
 package utils
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
 	pkgexec "github.com/mrz1836/mage-x/pkg/exec"
+	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 )
 
 // DefaultExecutor is the package-level executor using pkg/exec.
@@ -34,7 +34,7 @@ func RunCmd(name string, args ...string) error {
 		Info("➤ %s %s", name, strings.Join(args, " "))
 	}
 
-	if err := DefaultExecutor.Execute(context.Background(), name, args...); err != nil {
+	if err := DefaultExecutor.Execute(runtimectx.Context(), name, args...); err != nil {
 		return pkgexec.CommandError(name, args, err)
 	}
 	return nil
@@ -53,7 +53,7 @@ func RunCmdOutput(name string, args ...string) (string, error) {
 		Info("➤ %s %s", name, strings.Join(args, " "))
 	}
 
-	output, err := DefaultExecutor.ExecuteOutput(context.Background(), name, args...)
+	output, err := DefaultExecutor.ExecuteOutput(runtimectx.Context(), name, args...)
 	if err != nil {
 		return "", pkgexec.CommandErrorWithOutput(name, args, err, output)
 	}
@@ -108,7 +108,7 @@ func RunCmdSecure(name string, args ...string) error {
 		Info("➤ [secure] %s %s", name, strings.Join(args, " "))
 	}
 
-	if err := executor.Execute(context.Background(), name, args...); err != nil {
+	if err := executor.Execute(runtimectx.Context(), name, args...); err != nil {
 		return pkgexec.CommandError(name, args, err)
 	}
 	return nil
@@ -121,7 +121,7 @@ func RunCmdWithRetry(maxRetries int, name string, args ...string) error {
 		Info("➤ [retryable:%d] %s %s", maxRetries, name, strings.Join(args, " "))
 	}
 
-	if err := executor.Execute(context.Background(), name, args...); err != nil {
+	if err := executor.Execute(runtimectx.Context(), name, args...); err != nil {
 		return pkgexec.CommandError(name, args, err)
 	}
 	return nil
