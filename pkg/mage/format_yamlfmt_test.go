@@ -399,8 +399,32 @@ func checkColonSpacing(t *testing.T, line, filename string, lineNum int) {
 // (keyed by relative path), disables YAML line-length validation, and restores the working
 // directory and environment on cleanup. Format.YAML() now discovers files with a native
 // filesystem walk, so tests stage real files instead of mocking the external `find`.
+// stubFormatToolsInstalled marks the formatting tools (gofumpt, gci, goimports,
+// yamlfmt) as already present on PATH for the duration of the test, restoring the
+// real check on cleanup. Format tests inject a MockCommandRunner and assert only on
+// the formatting commands; without this stub, a host missing one of these tools
+// (notably yamlfmt in CI) makes installTool attempt a real "go install" through the
+// mock runner, which fails the SecureCommandRunner type assertion. Stubbing keeps
+// these unit tests host-independent. Other CommandExists callers are unaffected
+// because this seam only gates installTool.
+func stubFormatToolsInstalled(t *testing.T) {
+	t.Helper()
+	orig := commandExists
+	t.Cleanup(func() { commandExists = orig })
+	commandExists = func(cmd string) bool {
+		switch cmd {
+		case "gofumpt", "gci", "goimports", "yamlfmt":
+			return true
+		default:
+			return orig(cmd)
+		}
+	}
+}
+
 func setupYAMLTestDir(t *testing.T, files map[string]string) {
 	t.Helper()
+
+	stubFormatToolsInstalled(t)
 
 	origDir, err := os.Getwd()
 	require.NoError(t, err)

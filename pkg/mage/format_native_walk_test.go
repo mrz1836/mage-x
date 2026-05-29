@@ -17,6 +17,8 @@ import (
 func formatWalkTestEnv(t *testing.T, files, envOverrides map[string]string) {
 	t.Helper()
 
+	stubFormatToolsInstalled(t)
+
 	// Snapshot and reset the format-related env vars to a clean baseline, restoring on cleanup.
 	for _, key := range []string{"MAGE_X_YAML_VALIDATION", "MAGE_X_FORMAT_EXCLUDE_PATHS"} {
 

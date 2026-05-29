@@ -27,6 +27,10 @@ func (ts *FormatTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.env.CreateGoMod("test/module")
 	ts.format = Format{}
+	// Treat formatting tools as installed so installTool short-circuits instead of
+	// attempting a real "go install" through the mock runner on hosts (e.g. CI)
+	// where a tool such as yamlfmt is absent.
+	stubFormatToolsInstalled(ts.T())
 }
 
 // TearDownTest runs after each test
