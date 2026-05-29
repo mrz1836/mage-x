@@ -297,12 +297,23 @@ region = us-east-1
 // TestHasValidAWSSetup tests setup detection
 func (ts *AWSMainTestSuite) TestHasValidAWSSetup() {
 	ts.Run("valid setup exists", func() {
+		// hasValidAWSSetup requires BOTH a long-term access key in credentials
+		// AND an mfa_serial in config for the (base) profile.
 		credContent := `[default]
 aws_access_key_id = KEY1
 aws_secret_access_key = SECRET1
 `
 		credPath := filepath.Join(ts.awsDir, awsCredentialsFile)
 		err := os.WriteFile(credPath, []byte(credContent), 0o600)
+		ts.Require().NoError(err)
+
+		// The "default" profile maps to a literal "[default]" config section.
+		configContent := `[default]
+mfa_serial = arn:aws:iam::123456789012:mfa/default
+region = us-east-1
+`
+		configPath := filepath.Join(ts.awsDir, awsConfigFile)
+		err = os.WriteFile(configPath, []byte(configContent), 0o600)
 		ts.Require().NoError(err)
 
 		hasSetup := hasValidAWSSetup("default")
