@@ -299,15 +299,41 @@ func (its *IntegrationTestSuite) TestConfigurationLoading() {
 		its.RequireNoError(os.MkdirAll(isolatedDir, 0o755))
 		its.RequireNoError(os.Chdir(isolatedDir))
 
+		// Ensure ambient MAGE_X_* env overrides do not contaminate the
+		// default-value assertions below (applyEnvOverrides reads these).
+		restoreEnv := unsetEnvVars(
+			t,
+			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
+			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
+		)
+		defer restoreEnv()
+
 		TestResetConfig() // Reset
 		config, err := GetConfig()
 		assert.NoError(t, err)
 		assert.NotNil(t, config)
 		assert.Equal(t, "app", config.Project.Binary)
+
+		// Test-section defaults from defaultConfig() (config.go).
+		// CombineBuildTags defaults to true; auto-discover defaults to off.
+		assert.True(t, config.Test.CombineBuildTags,
+			"CombineBuildTags should default to true")
+		assert.False(t, config.Test.AutoDiscoverBuildTags,
+			"AutoDiscoverBuildTags should default to false")
+		assert.Empty(t, config.Test.AutoDiscoverBuildTagsExclude,
+			"AutoDiscoverBuildTagsExclude should default to empty")
 	})
 
 	// Test custom config
 	its.T().Run("custom config", func(t *testing.T) {
+		// Guard against ambient overrides for the merge-preservation assertions.
+		restoreEnv := unsetEnvVars(
+			t,
+			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
+			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
+		)
+		defer restoreEnv()
+
 		configYAML := `
 project:
   name: my-app
@@ -334,7 +360,82 @@ test:
 		assert.Equal(t, "dist", config.Build.Output)
 		assert.True(t, config.Test.Cover)
 		assert.True(t, config.Test.Race)
+
+		// The loader unmarshals YAML into a defaultConfig() base
+		// (config_provider.go), so fields omitted from the file keep their
+		// defaults. The fixture sets no combine/auto-discover keys, so
+		// CombineBuildTags must remain at its true default.
+		assert.True(t, config.Test.CombineBuildTags,
+			"CombineBuildTags should be preserved from defaults when omitted from YAML")
+		assert.False(t, config.Test.AutoDiscoverBuildTags,
+			"AutoDiscoverBuildTags should stay at its false default when omitted from YAML")
 	})
+
+	// Test that the new test-section build-tag keys are actually wired
+	// through YAML unmarshalling (proves the assertions above are meaningful).
+	its.T().Run("custom config build tag overrides", func(t *testing.T) {
+		restoreEnv := unsetEnvVars(
+			t,
+			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
+			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
+		)
+		defer restoreEnv()
+
+		configYAML := `
+project:
+  name: my-app
+  binary: myapp
+  module: github.com/example/myapp
+
+test:
+  combine_build_tags: false
+  auto_discover_build_tags: true
+  auto_discover_build_tags_exclude:
+    - integration
+    - e2e
+`
+		its.RequireNoError(os.WriteFile(".mage.yaml", []byte(configYAML), 0o644))
+
+		TestResetConfig() // Reset
+		config, err := GetConfig()
+		assert.NoError(t, err)
+		assert.False(t, config.Test.CombineBuildTags,
+			"combine_build_tags: false in YAML must override the true default")
+		assert.True(t, config.Test.AutoDiscoverBuildTags,
+			"auto_discover_build_tags: true must be read from YAML")
+		assert.Equal(t, []string{"integration", "e2e"}, config.Test.AutoDiscoverBuildTagsExclude,
+			"auto_discover_build_tags_exclude must be read from YAML")
+	})
+}
+
+// unsetEnvVars clears the given environment variables for the duration of a
+// test and returns a function that restores their original values. It is used
+// to keep config-default assertions hermetic regardless of the ambient
+// environment (t.Setenv cannot unset a variable).
+func unsetEnvVars(t *testing.T, keys ...string) func() {
+	t.Helper()
+
+	type saved struct {
+		val string
+		set bool
+	}
+
+	originals := make(map[string]saved, len(keys))
+	for _, k := range keys {
+		v, ok := os.LookupEnv(k)
+		originals[k] = saved{val: v, set: ok}
+		_ = os.Unsetenv(k)
+	}
+
+	return func() {
+		for k, s := range originals {
+			if s.set {
+				_ = os.Setenv(k, s.val)
+			} else {
+				_ = os.Unsetenv(k)
+			}
+		}
+	}
 }
 
 // TestCacheIntegration tests build caching functionality
