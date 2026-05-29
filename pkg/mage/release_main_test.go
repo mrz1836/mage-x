@@ -249,14 +249,18 @@ func (ts *ReleaseMainTestSuite) TestClean_Success() {
 	err := os.MkdirAll(distDir, 0o755)
 	ts.Require().NoError(err)
 
-	// Create some temp files
-	tempFile := filepath.Join(ts.env.TempDir, ".goreleaser-temp")
+	// Create some temp files. Clean uses filepath.Glob(".goreleaser-*")
+	// relative to the working directory, so the file must live in TempDir
+	// (where we chdir below) and the glob will yield the relative basename.
+	const tempFileName = ".goreleaser-temp"
+	tempFile := filepath.Join(ts.env.TempDir, tempFileName)
 	err = os.WriteFile(tempFile, []byte("temp"), 0o644)
 	ts.Require().NoError(err)
 
 	// Mock rm command
-	ts.env.Runner.On("RunCmd", "rm", []string{"-rf", "dist"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "rm", []string{"-f", tempFile}).Return(nil).Maybe()
+	ts.env.Runner.On("RunCmd", "rm", []string{"-rf", "dist"}).Return(nil).Once()
+	// Clean globs relative paths, so it removes the basename, not the absolute path.
+	ts.env.Runner.On("RunCmd", "rm", []string{"-f", tempFileName}).Return(nil).Once()
 
 	// Mock go clean
 	ts.env.Runner.On("RunCmd", "go", []string{"clean", "-cache"}).Return(nil)
