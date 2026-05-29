@@ -55,7 +55,7 @@ func (ts *AgentOSMainTestSuite) TestInstall_AlreadyInstalled() {
 
 	// Create minimal config
 	configContent := `
-agent_os:
+agentos:
   base_dir: ` + DefaultAgentOSBaseDir + `
 `
 	err = os.WriteFile(".mage.yaml", []byte(configContent), 0o644)
@@ -73,7 +73,7 @@ agent_os:
 func (ts *AgentOSMainTestSuite) TestCheck_NoBase() {
 	// Create config pointing to non-existent base
 	configContent := `
-agent_os:
+agentos:
   home_dir: nonexistent-home
 `
 	configPath := filepath.Join(ts.env.TempDir, ".mage.yaml")
@@ -118,7 +118,7 @@ func (ts *AgentOSMainTestSuite) TestCheck_BaseInstalled() {
 
 	// Create mage config
 	mageConfig := `
-agent_os:
+agentos:
   home_dir: .agent-os
   base_dir: ` + DefaultAgentOSBaseDir + `
   claude_code_commands: false
@@ -148,7 +148,7 @@ agent_os:
 func (ts *AgentOSMainTestSuite) TestUpgrade_NoBase() {
 	// Create config pointing to non-existent base
 	configContent := `
-agent_os:
+agentos:
   home_dir: nonexistent-upgrade-home
 `
 	configPath := filepath.Join(ts.env.TempDir, ".mage.yaml")
