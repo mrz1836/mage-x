@@ -35,6 +35,7 @@ func (ts *ConfigTestSuite) SetupSuite() {
 		"MAGE_X_SECURITY_LEVEL", "MAGE_X_ENABLE_VAULT", "VAULT_ADDR",
 		"MAGE_X_ANALYTICS_ENABLED", "MAGE_X_METRICS_INTERVAL",
 		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE",
+		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
 	}
 	for _, env := range envVars {
 		ts.origEnvVars[env] = os.Getenv(env)
@@ -66,6 +67,7 @@ func (ts *ConfigTestSuite) SetupTest() {
 		"MAGE_X_BINARY_NAME", "MAGE_X_BUILD_TAGS", "MAGE_X_VERBOSE",
 		"MAGE_X_TEST_RACE", "MAGE_X_PARALLEL", "MAGE_X_ORG_NAME", "MAGE_X_ORG_DOMAIN",
 		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE",
+		"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
 	}
 	for _, env := range envVars {
 		ts.Require().NoError(os.Unsetenv(env))
@@ -321,6 +323,31 @@ func (ts *ConfigTestSuite) TestEnvironmentOverrides() {
 		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE", ""))
 		applyEnvOverrides(config)
 		ts.Require().Equal(originalExclude, config.Test.AutoDiscoverBuildTagsExclude)
+	})
+
+	ts.Run("CombineBuildTagsOverride", func() {
+		// Combining build tags defaults to on.
+		config := defaultConfig()
+		ts.Require().True(config.Test.CombineBuildTags)
+
+		// Disable via "false"
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE", "false"))
+		applyEnvOverrides(config)
+		ts.Require().False(config.Test.CombineBuildTags)
+
+		// Re-enable via "true"
+		config = defaultConfig()
+		config.Test.CombineBuildTags = false // Set initial state
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE", "true"))
+		applyEnvOverrides(config)
+		ts.Require().True(config.Test.CombineBuildTags)
+
+		// Unrelated value leaves config untouched
+		config = defaultConfig()
+		original := config.Test.CombineBuildTags
+		ts.Require().NoError(os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE", "maybe"))
+		applyEnvOverrides(config)
+		ts.Require().Equal(original, config.Test.CombineBuildTags)
 	})
 }
 

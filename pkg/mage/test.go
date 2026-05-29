@@ -828,8 +828,13 @@ func processBuildTagAutoDiscovery(config *Config) ([]string, string) {
 
 	excluded := truncateList(config.Test.AutoDiscoverBuildTagsExclude, 40)
 	testTargets := make([]string, 0, 1+len(tags))
-	testTargets = append(testTargets, "base")
-	testTargets = append(testTargets, tags...)
+	if config.Test.CombineBuildTags {
+		// Single combined pass: the untagged files run alongside all tags.
+		testTargets = append(testTargets, "combined("+strings.Join(tags, "+")+")")
+	} else {
+		testTargets = append(testTargets, "base")
+		testTargets = append(testTargets, tags...)
+	}
 
 	// Show count and full list of discovered tags (or reasonable truncation)
 	var foundDisplay string
@@ -863,6 +868,13 @@ func titleCase(s string) string {
 	return string(runes)
 }
 
+// buildTagFileToken converts a build tag value into a filename-safe token.
+// In combined mode buildTag is a comma-joined list (e.g. "unit,integration"),
+// so collapse the commas to underscores to keep coverage filenames clean.
+func buildTagFileToken(buildTag string) string {
+	return strings.ReplaceAll(buildTag, ",", "_")
+}
+
 // getTagInfo returns formatted tag information string
 func getTagInfo(buildTag string) string {
 	if buildTag != "" {
@@ -893,7 +905,7 @@ func handleCoverageFilesWithBuildTag(coverageFiles []string, buildTag string) {
 	}
 
 	// For build tag coverage, create a separate merged coverage file
-	taggedCoverageFile := fmt.Sprintf("coverage_%s.txt", buildTag)
+	taggedCoverageFile := fmt.Sprintf("coverage_%s.txt", buildTagFileToken(buildTag))
 	handleTaggedCoverageFiles(coverageFiles, taggedCoverageFile, buildTag)
 }
 
@@ -939,7 +951,22 @@ func runTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules []Modul
 		return runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, "", runner)
 	}
 
-	// Run base tests (no build tags)
+	// Combined mode: a single pass enabling every discovered tag at once. Go
+	// build tags are additive, so this compiles the untagged files alongside
+	// all tagged files and runs the suite exactly once instead of re-running
+	// the base tests for every tag.
+	if config.Test.CombineBuildTags {
+		combined := strings.Join(discoveredTags, ",")
+		utils.Info("Running %s tests with combined build tags: %s", testType, combined)
+		if err := runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, combined, runner); err != nil {
+			return fmt.Errorf("tests with combined tags '%s' failed: %w", combined, err)
+		}
+		return nil
+	}
+
+	// Per-tag mode: run base tests (no build tags) then one pass per tag. This
+	// re-runs the untagged tests once per tag but isolates mutually exclusive
+	// tags that cannot be enabled together.
 	utils.Info("Running %s tests without build tags", testType)
 	if err := runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, "", runner); err != nil {
 		return fmt.Errorf("base tests failed: %w", err)
@@ -966,6 +993,20 @@ func runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules
 	if !config.Test.AutoDiscoverBuildTags || len(discoveredTags) == 0 {
 		// Run coverage tests normally without build tag discovery
 		return runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, "", runner)
+	}
+
+	if config.Test.CombineBuildTags {
+		// Combined mode: a single coverage pass enabling every discovered tag.
+		// See runTestsWithBuildTagDiscoveryTagsWithRunner for the rationale.
+		combined := strings.Join(discoveredTags, ",")
+		utils.Info("Running coverage tests with combined build tags: %s", combined)
+		if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, combined, runner); err != nil {
+			return fmt.Errorf("coverage tests with combined tags '%s' failed: %w", combined, err)
+		}
+		if utils.FileExists("coverage.txt") {
+			return Test{}.CoverReport()
+		}
+		return nil
 	}
 
 	// Run base coverage tests (no build tags)
@@ -1001,7 +1042,7 @@ func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, 
 
 	tagSuffix := ""
 	if buildTag != "" {
-		tagSuffix = fmt.Sprintf("_%s", buildTag)
+		tagSuffix = fmt.Sprintf("_%s", buildTagFileToken(buildTag))
 	}
 
 	// Filter modules based on exclusion configuration
