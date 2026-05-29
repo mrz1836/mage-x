@@ -5,6 +5,4 @@ test:
     - windows
     - go1.18
     - go1
-    - nocgo
-    - performance
   timeout: "5m"
