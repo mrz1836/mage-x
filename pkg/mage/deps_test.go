@@ -5,8 +5,10 @@ package mage
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -19,6 +21,25 @@ var (
 	errTidyFailed          = errors.New("tidy failed")
 	errOutdatedCheckFailed = errors.New("outdated check failed")
 )
+
+// govulncheckCmdMatcher matches the resolved govulncheck command. The binary is
+// located via exec.LookPath (PATH) or GOPATH/bin, so the absolute path varies by
+// environment; we match on the trailing command name.
+func govulncheckCmdMatcher(cmd string) bool {
+	return cmd == "govulncheck" || strings.HasSuffix(cmd, "/govulncheck")
+}
+
+// noVulnGovulncheckJSON is a minimal govulncheck JSON stream with only a config
+// message and no findings, representing a clean scan.
+const noVulnGovulncheckJSON = `{"config":{"protocol_version":"v1.0.0","scanner_name":"govulncheck","scanner_version":"v1.1.4","db":"https://vuln.go.dev","go_version":"go1.24"}}
+`
+
+// vulnFoundGovulncheckJSON is a govulncheck JSON stream describing a single
+// vulnerability finding, representing a failing scan.
+const vulnFoundGovulncheckJSON = `{"config":{"protocol_version":"v1.0.0","scanner_name":"govulncheck","scanner_version":"v1.1.4","db":"https://vuln.go.dev","go_version":"go1.24"}}
+{"osv":{"id":"GO-2024-0001","aliases":["CVE-2024-0001"],"summary":"Test vulnerability"}}
+{"finding":{"osv":"GO-2024-0001","fixed_version":"v1.2.4","trace":[{"module":"github.com/stretchr/testify","version":"v1.10.0","package":"github.com/stretchr/testify/assert","function":"Vulnerable"}]}}
+`
 
 // DepsTestSuite defines the test suite for deps functions
 type DepsTestSuite struct {
@@ -131,6 +152,11 @@ func (ts *DepsTestSuite) TestDeps_Tidy_Error() {
 
 // TestDeps_Update tests the Update function
 func (ts *DepsTestSuite) TestDeps_Update() {
+	// updateSingleModule pre-tidies the module and captures dependency state
+	// before and after the update loop.
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("github.com/stretchr/testify v1.8.0\ngithub.com/pkg/errors v0.9.0", nil)
+
 	// Set up expectations for the Update function
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/stretchr/testify\ngithub.com/pkg/errors", nil)
 
@@ -142,7 +168,9 @@ func (ts *DepsTestSuite) TestDeps_Update() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.9.0 v0.9.1", nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/pkg/errors@v0.9.1"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+
+	// updateSingleModule updates indirect dependencies after the direct loop.
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -160,6 +188,11 @@ func (ts *DepsTestSuite) TestDeps_Update() {
 // TestDeps_Update_ListError tests Update function with list error
 func (ts *DepsTestSuite) TestDeps_Update_ListError() {
 	expectedError := require.New(ts.T())
+
+	// Pre-tidy and initial dependency capture succeed; the direct-dependency
+	// listing is the call that fails.
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("github.com/stretchr/testify v1.8.0", nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", errListFailed)
 
 	err := ts.env.WithMockRunner(
@@ -179,6 +212,14 @@ func (ts *DepsTestSuite) TestDeps_Update_ListError() {
 // TestDeps_Update_TidyError tests Update function with tidy error at the end
 func (ts *DepsTestSuite) TestDeps_Update_TidyError() {
 	expectedError := require.New(ts.T())
+
+	// Both the pre-tidy and the final tidy use this expectation. The pre-tidy
+	// failure is only warned about; the final Tidy() returns the error.
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(errTidyFailed)
+
+	// Dependency capture (initial and final) succeeds.
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("github.com/stretchr/testify v1.8.0", nil)
+
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/stretchr/testify", nil)
 
 	// Mock current version query (new requirement)
@@ -186,7 +227,9 @@ func (ts *DepsTestSuite) TestDeps_Update_TidyError() {
 
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/stretchr/testify"}).Return("github.com/stretchr/testify v1.8.0 v1.9.0", nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(errTidyFailed)
+
+	// Indirect dependency update runs before the final tidy.
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -204,6 +247,10 @@ func (ts *DepsTestSuite) TestDeps_Update_TidyError() {
 
 // TestDeps_UpdateWithArgs_AllowMajor tests UpdateWithArgs with allow-major=true
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajor() {
+	// Pre-tidy and dependency capture (initial and final).
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("github.com/pkg/errors v0.8.1\ngithub.com/stretchr/testify v1.8.4", nil)
+
 	// Mock the list of direct dependencies command
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/pkg/errors\ngithub.com/stretchr/testify", nil)
 
@@ -218,7 +265,9 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajor() {
 	// Mock update commands - should update to latest including major version
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/pkg/errors@v2.0.0"}).Return(nil)
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+
+	// Indirect dependency update.
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -235,6 +284,10 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajor() {
 
 // TestDeps_UpdateWithArgs_NoMajor tests UpdateWithArgs without allow-major (default)
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_NoMajor() {
+	// Pre-tidy and dependency capture (initial and final).
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("github.com/pkg/errors v0.8.1\ngithub.com/stretchr/testify v1.8.4", nil)
+
 	// Mock the list of direct dependencies command
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/pkg/errors\ngithub.com/stretchr/testify", nil)
 
@@ -248,7 +301,9 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_NoMajor() {
 
 	// Mock update commands - should skip major version update, only update minor
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/stretchr/testify@v1.9.0"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+
+	// Indirect dependency update.
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -265,6 +320,10 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_NoMajor() {
 
 // TestDeps_UpdateWithArgs_AllowMajorFalse tests UpdateWithArgs with allow-major=false explicitly
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajorFalse() {
+	// Pre-tidy, dependency capture, and final tidy.
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("github.com/pkg/errors v0.8.1", nil)
+
 	// Mock the list of direct dependencies command
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/pkg/errors", nil)
 
@@ -274,8 +333,8 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllowMajorFalse() {
 	// Mock versions command to return newer major versions
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/pkg/errors"}).Return("github.com/pkg/errors v0.8.0 v0.8.1 v0.9.0 v0.9.1 v2.0.0", nil)
 
-	// Mock tidy command (no updates should happen)
-	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	// Indirect dependency update still runs even when no direct updates happen.
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -775,6 +834,10 @@ func (ts *DepsTestSuite) TestParseVersion() {
 
 // TestDeps_UpdateWithArgs_PreReleaseProtection tests that pre-release versions are not downgraded
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_PreReleaseProtection() {
+	// Pre-tidy, dependency capture, and final tidy.
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("github.com/uber/athenadriver v1.1.16-0.20250601040535-ed473510065e", nil)
+
 	// Mock the list of direct dependencies command
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/uber/athenadriver", nil)
 
@@ -784,8 +847,9 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_PreReleaseProtection() {
 	// Mock versions command to return stable versions only (as would happen in real life)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-versions", "github.com/uber/athenadriver"}).Return("github.com/uber/athenadriver v1.1.13 v1.1.14 v1.1.15", nil)
 
-	// Should only run tidy, NO update should happen because pre-release is newer than stable
-	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	// Indirect dependency update runs, but NO direct update happens because the
+	// pre-release is newer than the latest stable version.
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -805,6 +869,10 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_PreReleaseProtection() {
 
 // TestDeps_UpdateWithArgs_StableOnly tests that stable-only forces downgrade from pre-release
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_StableOnly() {
+	// Pre-tidy, dependency capture, and final tidy.
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("github.com/uber/athenadriver v1.1.16-0.20250601040535-ed473510065e", nil)
+
 	// Mock the list of direct dependencies command
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/uber/athenadriver", nil)
 
@@ -816,7 +884,9 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_StableOnly() {
 
 	// Should downgrade to stable version when stable-only is enabled
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/uber/athenadriver@v1.1.15"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+
+	// Indirect dependency update.
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -833,6 +903,10 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_StableOnly() {
 
 // TestDeps_UpdateWithArgs_PreReleaseToNewer tests normal update when newer stable version is available
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_PreReleaseToNewer() {
+	// Pre-tidy, dependency capture, and final tidy.
+	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("github.com/example/lib v1.1.16-0.20250601040535-ed473510065e", nil)
+
 	// Mock the list of direct dependencies command
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("github.com/example/lib", nil)
 
@@ -844,7 +918,9 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_PreReleaseToNewer() {
 
 	// Should update to newer stable version (v1.2.0 is newer than the pre-release v1.1.16)
 	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "github.com/example/lib@v1.2.0"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+
+	// Indirect dependency update.
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -869,9 +945,18 @@ func (ts *DepsTestSuite) TestDeps_Audit() {
 	}
 	TestSetConfig(&cfg)
 
-	// Mock command exists check (govulncheck not installed)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
+	// Audit discovers modules (the test go.mod yields a single root module),
+	// lists each module's dependencies, then runs govulncheck in JSON mode and
+	// parses the streaming output. If govulncheck is not already on PATH, prod
+	// installs it first; mock that install defensively so the test is
+	// independent of the host's tool installation.
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil).Maybe()
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "all"}).Return("test/module\ngithub.com/stretchr/testify v1.10.0", nil)
+
+	// The govulncheck binary path is resolved from PATH or GOPATH/bin, so match
+	// on the trailing command name while asserting the exact JSON-mode args.
+	ts.env.Runner.On("RunCmdOutput", mock.MatchedBy(govulncheckCmdMatcher), []string{"-format", "json", "./..."}).
+		Return(noVulnGovulncheckJSON, nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -886,7 +971,9 @@ func (ts *DepsTestSuite) TestDeps_Audit() {
 	ts.Require().NoError(err)
 }
 
-// TestDeps_Audit_Error tests Audit function with govulncheck failure
+// TestDeps_Audit_Error tests that Audit reports a failure when govulncheck finds
+// a vulnerability. In JSON mode govulncheck exits 0 even with findings, so prod
+// detects failure by parsing the JSON stream rather than the process exit code.
 func (ts *DepsTestSuite) TestDeps_Audit_Error() {
 	// Mock config loading
 	cfg := Config{
@@ -898,9 +985,13 @@ func (ts *DepsTestSuite) TestDeps_Audit_Error() {
 
 	expectedError := require.New(ts.T())
 
-	// Mock govulncheck failure
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(errors.New("vulnerability check failed"))
+	// Install is only invoked when govulncheck is not already available.
+	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@latest"}).Return(nil).Maybe()
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "all"}).Return("test/module\ngithub.com/stretchr/testify v1.10.0", nil)
+
+	// govulncheck reports a vulnerability via its JSON stream.
+	ts.env.Runner.On("RunCmdOutput", mock.MatchedBy(govulncheckCmdMatcher), []string{"-format", "json", "./..."}).
+		Return(vulnFoundGovulncheckJSON, nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -913,7 +1004,7 @@ func (ts *DepsTestSuite) TestDeps_Audit_Error() {
 	)
 
 	expectedError.Error(err)
-	expectedError.Contains(err.Error(), "vulnerability check failed")
+	expectedError.Contains(err.Error(), "vulnerabilities found after exclusions")
 }
 
 // TestDeps_UpdateWithArgs_AllModulesParameterParsing tests that all-modules parameter is correctly parsed
@@ -925,9 +1016,13 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllModulesParameterParsing() {
 	// The test environment already has a go.mod, so findAllModules will find at least one module
 	// We just verify the parameter parsing doesn't cause errors
 
-	// Mock all the commands that would be called during a single module update
-	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", nil)
+	// Mock all the commands that would be called during a single module update:
+	// pre-tidy, initial/final dependency capture, the (empty) direct-dependency
+	// listing, the indirect update, and the final tidy.
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -945,9 +1040,11 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllModulesParameterParsing() {
 
 // TestDeps_UpdateWithArgs_FailFastParameter tests fail-fast parameter handling
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_FailFastParameter() {
-	// Test that fail-fast parameter is correctly parsed
-	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", nil)
+	// Test that fail-fast parameter is correctly parsed (single module mode).
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -965,9 +1062,12 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_FailFastParameter() {
 
 // TestDeps_UpdateWithArgs_DryRunParameter tests dry-run parameter handling
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_DryRunParameter() {
-	// Test that dry-run parameter is correctly parsed
-	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", nil)
+	// Test that dry-run parameter is correctly parsed. Without all-modules this
+	// runs the single module path (dry-run only short-circuits all-modules mode).
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
@@ -985,9 +1085,11 @@ func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_DryRunParameter() {
 
 // TestDeps_UpdateWithArgs_AllParametersCombined tests all parameters together
 func (ts *DepsTestSuite) TestDeps_UpdateWithArgs_AllParametersCombined() {
-	// Test that all parameters can be combined
-	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", nil)
+	// Test that all parameters can be combined (single module mode).
 	ts.env.Runner.On("RunCmd", "go", []string{"mod", "tidy"}).Return(nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Path}} {{.Version}}", "all"}).Return("", nil)
+	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{if not .Indirect}}{{.Path}}{{end}}", "all"}).Return("", nil)
+	ts.env.Runner.On("RunCmd", "go", []string{"get", "-u", "./..."}).Return(nil)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error {
