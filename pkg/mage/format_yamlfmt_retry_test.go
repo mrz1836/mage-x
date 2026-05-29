@@ -347,38 +347,10 @@ func TestYamlfmtConcurrentInstallation(t *testing.T) {
 // TestYamlfmtConfigPathHandling tests yamlfmt config path handling
 func TestYamlfmtConfigPathHandling(t *testing.T) {
 	t.Run("config file exists", func(t *testing.T) {
-		// Create a temporary directory with yamlfmt config
-		tmpDir := t.TempDir()
-
-		// Change to temp directory
-		origDir, err := os.Getwd()
-		require.NoError(t, err)
-		defer func() { _ = os.Chdir(origDir) }() //nolint:errcheck // test cleanup
-
-		err = os.Chdir(tmpDir)
-		require.NoError(t, err)
-
-		// Create .github directory and config file
-		err = os.MkdirAll(".github", 0o750)
-		require.NoError(t, err)
-
-		configContent := `formatter:
-  type: basic
-  indent: 2
-`
-		err = os.WriteFile(".github/.yamlfmt", []byte(configContent), 0o600)
-		require.NoError(t, err)
-
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+		setupYAMLTestDir(t, map[string]string{
+			".github/.yamlfmt": "formatter:\n  type: basic\n  indent: 2\n",
+			"test.yml":         "a: 1\n",
+		})
 
 		// Save original runner
 		originalRunner := GetRunner()
@@ -386,13 +358,11 @@ func TestYamlfmtConfigPathHandling(t *testing.T) {
 
 		// Create mock runner to capture commands
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		mockRunner.On("RunCmd", "yamlfmt", "-conf", ".github/.yamlfmt", ".").Return(nil)
+		mockRunner.On("RunCmd", "yamlfmt", "-conf", ".github/.yamlfmt", "test.yml").Return(nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
 		// Test YAML formatting with config file
-		formatter := Format{}
-		err = formatter.YAML()
+		err := Format{}.YAML()
 		require.NoError(t, err, "YAML formatting with config should succeed")
 
 		// Verify the config file was used
@@ -400,27 +370,7 @@ func TestYamlfmtConfigPathHandling(t *testing.T) {
 	})
 
 	t.Run("config file missing - use defaults", func(t *testing.T) {
-		// Create a temporary directory without yamlfmt config
-		tmpDir := t.TempDir()
-
-		// Change to temp directory
-		origDir, err := os.Getwd()
-		require.NoError(t, err)
-		defer func() { _ = os.Chdir(origDir) }() //nolint:errcheck // test cleanup
-
-		err = os.Chdir(tmpDir)
-		require.NoError(t, err)
-
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+		setupYAMLTestDir(t, map[string]string{"test.yml": "a: 1\n"})
 
 		// Save original runner
 		originalRunner := GetRunner()
@@ -428,13 +378,11 @@ func TestYamlfmtConfigPathHandling(t *testing.T) {
 
 		// Create mock runner to capture commands
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		mockRunner.On("RunCmd", "yamlfmt", ".").Return(nil)
+		mockRunner.On("RunCmd", "yamlfmt", "test.yml").Return(nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
 		// Test YAML formatting without config file
-		formatter := Format{}
-		err = formatter.YAML()
+		err := Format{}.YAML()
 		require.NoError(t, err, "YAML formatting without config should succeed")
 
 		// Verify the default behavior was used

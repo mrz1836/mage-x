@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
@@ -154,18 +155,12 @@ func (ts *FormatTestSuite) TestFormatGo() {
 // TestFormatYAML tests the YAML method
 func (ts *FormatTestSuite) TestFormatYAML() {
 	ts.Run("successful YAML formatting", func() {
-		// Mock finding YAML files with default exclude paths
-		expectedFindArgs := []string{
-			".", "-name", "*.yml", "-o", "-name", "*.yaml",
-			"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*",
-			"-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*",
-			"-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*",
-			"-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*",
-			"-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*",
-		}
-		ts.env.Runner.On("RunCmdOutput", "find", expectedFindArgs).Return("config.yml\ndata.yaml", nil)
-		// Mock yamlfmt formatting (fallback to default since config file won't exist in test)
-		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"."}).Return(nil)
+		// Stage real YAML files; discovery now uses a native filesystem walk.
+		ts.env.CreateFile("config.yml", "a: 1\n")
+		ts.env.CreateFile("data.yaml", "b: 2\n")
+		// No .github/.yamlfmt present, so yamlfmt receives the explicit file list in
+		// lexical walk order (config.yml then data.yaml) without -conf.
+		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"config.yml", "data.yaml"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -176,24 +171,16 @@ func (ts *FormatTestSuite) TestFormatYAML() {
 		)
 
 		ts.Require().NoError(err)
+		ts.env.Runner.AssertExpectations(ts.T())
 	})
 }
 
 // TestFormatYaml tests the Yaml method (alias)
 func (ts *FormatTestSuite) TestFormatYaml() {
 	ts.Run("successful Yaml formatting (alias)", func() {
-		// Mock finding YAML files with default exclude paths (called through YAML method)
-		expectedFindArgs := []string{
-			".", "-name", "*.yml", "-o", "-name", "*.yaml",
-			"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*",
-			"-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*",
-			"-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*",
-			"-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*",
-			"-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*",
-		}
-		ts.env.Runner.On("RunCmdOutput", "find", expectedFindArgs).Return("config.yml\ndata.yaml", nil)
-		// Mock yamlfmt formatting (fallback to default since config file won't exist in test)
-		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"."}).Return(nil)
+		ts.env.CreateFile("config.yml", "a: 1\n")
+		ts.env.CreateFile("data.yaml", "b: 2\n")
+		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"config.yml", "data.yaml"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -204,23 +191,16 @@ func (ts *FormatTestSuite) TestFormatYaml() {
 		)
 
 		ts.Require().NoError(err)
+		ts.env.Runner.AssertExpectations(ts.T())
 	})
 }
 
 // TestFormatJSON tests the JSON method
 func (ts *FormatTestSuite) TestFormatJSON() {
 	ts.Run("successful JSON formatting", func() {
-		// Mock finding JSON files with default exclude paths
-		expectedFindArgs := []string{
-			".", "-name", "*.json",
-			"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*",
-			"-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*",
-			"-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*",
-			"-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*",
-			"-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*",
-		}
-		ts.env.Runner.On("RunCmdOutput", "find", expectedFindArgs).Return("package.json\nconfig.json", nil)
-		// JSON formatting now uses native Go implementation - no external commands needed
+		// JSON formatting uses native Go and a native walk: no external commands run.
+		ts.env.CreateFile("package.json", `{"name":"test","value":123}`)
+		ts.env.CreateFile("config.json", `{"a":1}`)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -231,23 +211,15 @@ func (ts *FormatTestSuite) TestFormatJSON() {
 		)
 
 		ts.Require().NoError(err)
+		// Native formatting rewrites the files with indentation.
+		ts.Require().Contains(ts.env.ReadFile("package.json"), "\n    ")
 	})
 }
 
 // TestFormatJson tests the Json method (alias)
 func (ts *FormatTestSuite) TestFormatJson() {
 	ts.Run("successful Json formatting (alias)", func() {
-		// Mock finding JSON files (called through JSON method)
-		expectedFindArgs := []string{
-			".", "-name", "*.json",
-			"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*",
-			"-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*",
-			"-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*",
-			"-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*",
-			"-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*",
-		}
-		ts.env.Runner.On("RunCmdOutput", "find", expectedFindArgs).Return("package.json\nconfig.json", nil)
-		// JSON formatting now uses native Go implementation - no external commands needed
+		ts.env.CreateFile("package.json", `{"name":"test","value":123}`)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -276,21 +248,17 @@ func (ts *FormatTestSuite) TestFormatFix() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(nil)
 
-		// JSON formatting commands - now uses native Go implementation
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./vendor/*").Return("package.json", nil)
-		// No external commands needed for JSON formatting
+		// gci commands (ensureGci + run gci)
+		ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/daixiang0/gci@latest"}).Return(nil).Maybe()
+		ts.env.Runner.On("RunCmd", "gci", mock.Anything).Return(nil).Maybe()
 
-		// YAML formatting commands with default exclude paths
-		expectedFindArgs := []string{
-			".", "-name", "*.yml", "-o", "-name", "*.yaml",
-			"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*",
-			"-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*",
-			"-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*",
-			"-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*",
-			"-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*",
-		}
-		ts.env.Runner.On("RunCmdOutput", "find", expectedFindArgs).Return("config.yml", nil)
-		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"."}).Return(nil)
+		// JSON formatting now uses native Go and a native walk (no external commands).
+		ts.env.CreateFile("package.json", `{"name":"test"}`)
+
+		// YAML formatting discovers files via a native walk and feeds yamlfmt the
+		// explicit list (no -conf, since .github/.yamlfmt is absent here).
+		ts.env.CreateFile("config.yml", "a: 1\n")
+		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"config.yml"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -435,13 +403,11 @@ func (ts *FormatTestSuite) TestFormatImportsScenarios() {
 	})
 }
 
-// TestFormatYamlfmtScenarios tests various Yamlfmt scenarios
+// TestFormatYamlfmtScenarios tests various yamlfmt scenarios through Format.YAML.
 func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
-	ts.Run("yamlfmt not installed, installation succeeds", func() {
-		// Mock yamlfmt installation and execution
-		ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/google/yamlfmt/cmd/yamlfmt@latest"}).Return(nil)
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		ts.env.Runner.On("RunCmd", "yamlfmt", ".").Return(nil)
+	ts.Run("yamlfmt formats discovered files", func() {
+		ts.env.CreateFile("test.yml", "a: 1\n")
+		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"test.yml"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
@@ -452,13 +418,14 @@ func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
 		)
 
 		ts.Require().NoError(err)
+		ts.env.Runner.AssertExpectations(ts.T())
 	})
 
 	ts.Run("yamlfmt execution fails", func() {
-		// Mock successful installation but failed execution
-		ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/google/yamlfmt/cmd/yamlfmt@latest"}).Return(nil)
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		ts.env.Runner.On("RunCmd", "yamlfmt", ".").Return(fmt.Errorf("yamlfmt failed"))
+		ts.env.CreateFile("test.yml", "a: 1\n")
+		// The batch run fails, then the per-file fallback retries the same file; the
+		// expectation matches both invocations.
+		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"test.yml"}).Return(fmt.Errorf("yamlfmt failed"))
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
@@ -473,42 +440,9 @@ func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
 	})
 
 	ts.Run("yamlfmt with config file", func() {
-		// Create a temporary config file
-		tmpDir := ts.env.TempDir
-		configDir := tmpDir + "/.github"
-		err := os.MkdirAll(configDir, 0o750)
-		ts.Require().NoError(err)
-
-		configFile := configDir + "/.yamlfmt"
-		err = os.WriteFile(configFile, []byte("formatter:\n  type: basic\n"), 0o600)
-		ts.Require().NoError(err)
-
-		// Change to temp directory so config is found
-		origDir, err := os.Getwd()
-		ts.Require().NoError(err)
-		defer func() { _ = os.Chdir(origDir) }() //nolint:errcheck // test cleanup
-
-		err = os.Chdir(tmpDir)
-		ts.Require().NoError(err)
-
-		// Mock yamlfmt with config file
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		ts.env.Runner.On("RunCmd", "yamlfmt", "-conf", ".github/.yamlfmt", ".").Return(nil)
-
-		err = ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) },
-			func() any { return GetRunner() },
-			func() error {
-				return ts.format.YAML()
-			},
-		)
-
-		ts.Require().NoError(err)
-	})
-
-	ts.Run("yamlfmt find command fails", func() {
-		// Mock find command failure
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", fmt.Errorf("find failed"))
+		ts.env.CreateFile(".github/.yamlfmt", "formatter:\n  type: basic\n")
+		ts.env.CreateFile("test.yml", "a: 1\n")
+		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"-conf", ".github/.yamlfmt", "test.yml"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
@@ -518,14 +452,13 @@ func (ts *FormatTestSuite) TestFormatYamlfmtScenarios() {
 			},
 		)
 
-		ts.Require().Error(err)
-		ts.Require().Contains(err.Error(), "failed to find YAML files")
+		ts.Require().NoError(err)
+		ts.env.Runner.AssertExpectations(ts.T())
 	})
 
 	ts.Run("yamlfmt no files found", func() {
-		// Mock no YAML files found
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", nil)
-
+		// Bare temp dir (only go.mod): the native walk finds no YAML files, so yamlfmt
+		// is never invoked.
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
 			func() any { return GetRunner() },
@@ -682,8 +615,7 @@ func (ts *FormatTestSuite) TestFormatInstallToolsErrorScenarios() {
 // TestFormatFileTypeScenarios tests formatting of different file types
 func (ts *FormatTestSuite) TestFormatFileTypeScenarios() {
 	ts.Run("YAML formatting with no files", func() {
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", nil)
-
+		// Bare temp dir: native walk finds no YAML files.
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
 			func() any { return GetRunner() },
@@ -696,8 +628,9 @@ func (ts *FormatTestSuite) TestFormatFileTypeScenarios() {
 	})
 
 	ts.Run("JSON formatting with native Go", func() {
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("package.json\nconfig.json", nil)
-		// JSON formatting now uses native Go implementation - no external commands needed
+		// JSON formatting uses native Go via a native walk - no external commands.
+		ts.env.CreateFile("package.json", `{"name":"test"}`)
+		ts.env.CreateFile("config.json", `{"a":1}`)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
@@ -751,9 +684,10 @@ func (ts *FormatTestSuite) TestFormatWithEnvironmentVariables() {
 		}()
 		os.Setenv("MAGE_X_FORMAT_EXCLUDE_PATHS", "build,dist,tmp")
 
-		// Mock find command with custom exclude paths
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./build/*", "-not", "-path", "./*build*/*", "-not", "-path", "./dist/*", "-not", "-path", "./*dist*/*", "-not", "-path", "./tmp/*", "-not", "-path", "./*tmp*/*").Return("package.json", nil)
-		// JSON formatting now uses native Go implementation - no external commands needed
+		// Stage a JSON file in an excluded directory and one outside it; the native
+		// walk must skip the excluded directory entirely.
+		ts.env.CreateFile("package.json", `{"name":"test"}`)
+		ts.env.CreateFile("build/skip.json", `not valid json that would error if formatted`)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
@@ -763,7 +697,9 @@ func (ts *FormatTestSuite) TestFormatWithEnvironmentVariables() {
 			},
 		)
 
+		// Succeeds: the invalid JSON under build/ is excluded and never parsed.
 		ts.Require().NoError(err)
+		ts.Require().Equal(`not valid json that would error if formatted`, ts.env.ReadFile("build/skip.json"))
 	})
 }
 
@@ -783,13 +719,17 @@ func (ts *FormatTestSuite) TestFormatFixMethod() {
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "goimports", []string{"-w", "."}).Return(nil)
 
-		// JSON formatting commands - now uses native Go implementation
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("package.json", nil)
-		// No external commands needed for JSON formatting
+		// gci commands (ensureGci + run gci) - tolerated whether or not gci is on PATH.
+		ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/daixiang0/gci@latest"}).Return(nil).Maybe()
+		ts.env.Runner.On("RunCmd", "gci", mock.Anything).Return(nil).Maybe()
 
-		// YAML formatting commands
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("config.yml", nil)
-		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"."}).Return(nil)
+		// JSON formatting uses native Go via a native walk (no external commands).
+		ts.env.CreateFile("package.json", `{"name":"test"}`)
+
+		// YAML formatting discovers files via a native walk and feeds yamlfmt the
+		// explicit list.
+		ts.env.CreateFile("config.yml", "a: 1\n")
+		ts.env.Runner.On("RunCmd", "yamlfmt", []string{"config.yml"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
@@ -807,10 +747,10 @@ func (ts *FormatTestSuite) TestFormatFixMethod() {
 		ts.env.Runner.On("RunCmdOutput", "gofmt", []string{"-l", "."}).Return("", fmt.Errorf("gofmt failed"))
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@latest"}).Return(fmt.Errorf("fumpt install failed"))
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/tools/cmd/goimports@latest"}).Return(fmt.Errorf("goimports install failed"))
+		ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/daixiang0/gci@latest"}).Return(fmt.Errorf("gci install failed")).Maybe()
+		ts.env.Runner.On("RunCmd", "gci", mock.Anything).Return(fmt.Errorf("gci failed")).Maybe()
 
-		// JSON and YAML should still be attempted
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.json", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", nil)                         // No JSON files
-		ts.env.Runner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", nil) // No YAML files
+		// JSON and YAML still run via native walk; the bare temp dir has no such files.
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
