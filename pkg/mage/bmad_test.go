@@ -153,7 +153,6 @@ func (ts *BmadTestSuite) TestBmadProjectDirCreation() {
 func (ts *BmadTestSuite) setupBmadConfig() {
 	TestSetConfig(&Config{
 		Bmad: BmadConfig{
-			Enabled:     true,
 			ProjectDir:  "_bmad",
 			VersionTag:  "@beta",
 			PackageName: "bmad-method",

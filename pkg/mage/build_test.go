@@ -700,7 +700,8 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 	ts.Run("incremental strategy", func() {
 		// Mock package listing
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
-			"github.com/test/pkg1\ngithub.com/test/pkg2\ngithub.com/test/pkg3", nil)
+			"github.com/test/pkg1\ngithub.com/test/pkg2\ngithub.com/test/pkg3", nil,
+		)
 
 		// Mock batch builds - expect 2 batches with batch size 2
 		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
@@ -715,8 +716,7 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 				strings.Contains(strings.Join(args, " "), "github.com/test/pkg3")
 		})).Return(nil).Once()
 
-		err := utils.WithIsolatedRunner(
-			ts.env.Runner,
+		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
 			func() any { return GetRunner() },
 			func() error {
@@ -730,11 +730,13 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 		// Mock finding main packages
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-json", "./..."}).Return(
 			`{"ImportPath":"github.com/test/cmd/app","Name":"main"}
-{"ImportPath":"github.com/test/pkg1","Name":"pkg1"}`, nil)
+{"ImportPath":"github.com/test/pkg1","Name":"pkg1"}`, nil,
+		)
 
 		// Mock listing all packages
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
-			"github.com/test/cmd/app\ngithub.com/test/pkg1", nil)
+			"github.com/test/cmd/app\ngithub.com/test/pkg1", nil,
+		)
 
 		// Expect main package to be built first
 		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
@@ -748,8 +750,7 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 				strings.Contains(strings.Join(args, " "), "github.com/test/pkg1")
 		})).Return(nil).Once()
 
-		err := utils.WithIsolatedRunner(
-			ts.env.Runner,
+		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
 			func() any { return GetRunner() },
 			func() error {
@@ -762,15 +763,15 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 	ts.Run("smart strategy selects appropriate method", func() {
 		// Mock package listing for smart strategy
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
-			"github.com/test/pkg1\ngithub.com/test/pkg2", nil)
+			"github.com/test/pkg1\ngithub.com/test/pkg2", nil,
+		)
 
 		// Mock build command - smart strategy should choose based on memory
 		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 			return args[0] == "build"
 		})).Return(nil)
 
-		err := utils.WithIsolatedRunner(
-			ts.env.Runner,
+		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
 			func() any { return GetRunner() },
 			func() error {
@@ -785,12 +786,11 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 		// Mock traditional full build
 		ts.env.Runner.On("RunCmd", "go", []string{"build", "-p", "4", "./..."}).Return(nil)
 
-		err := utils.WithIsolatedRunner(
-			ts.env.Runner,
+		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
 			func() any { return GetRunner() },
 			func() error {
-				return ts.build.buildFull("4", false)
+				return ts.build.buildFull("4", false, "")
 			},
 		)
 		ts.Require().NoError(err)
@@ -801,10 +801,10 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 func (ts *BuildTestSuite) TestPackageDiscoveryUtilities() {
 	ts.Run("discoverPackages lists all packages", func() {
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
-			"github.com/test/pkg1\ngithub.com/test/pkg2\ngithub.com/test/pkg3", nil)
+			"github.com/test/pkg1\ngithub.com/test/pkg2\ngithub.com/test/pkg3", nil,
+		)
 
-		err := utils.WithIsolatedRunner(
-			ts.env.Runner,
+		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
 			func() any { return GetRunner() },
 			func() error {
@@ -822,10 +822,10 @@ func (ts *BuildTestSuite) TestPackageDiscoveryUtilities() {
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-json", "./..."}).Return(
 			`{"ImportPath":"github.com/test/cmd/app","Name":"main"}
 {"ImportPath":"github.com/test/pkg1","Name":"pkg1"}
-{"ImportPath":"github.com/test/cmd/tool","Name":"main"}`, nil)
+{"ImportPath":"github.com/test/cmd/tool","Name":"main"}`, nil,
+		)
 
-		err := utils.WithIsolatedRunner(
-			ts.env.Runner,
+		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
 			func() any { return GetRunner() },
 			func() error {

@@ -4,7 +4,6 @@
 package mage
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,10 +16,8 @@ import (
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
-// Static test errors to satisfy err113 linter
-var (
-	errNotGitRepository = errors.New("not a git repository")
-)
+// errNotGitRepository is declared in version_bump_branch_test.go (an untagged
+// file), so it is available package-wide without redeclaring it here.
 
 // CommonTestSuite defines the test suite for common functions
 type CommonTestSuite struct {

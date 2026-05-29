@@ -125,13 +125,6 @@ func (ts *AgentOSTestSuite) TestIsAgentOSBaseInstalled_WithMockInstall() {
 	err = os.WriteFile(configPath, []byte("version: v2.1.1\n"), 0o644)
 	ts.Require().NoError(err)
 
-	// Create config pointing to temp home
-	config := &Config{
-		AgentOS: AgentOSConfig{
-			HomeDir: agentOSDir, // Point directly to the mock dir
-		},
-	}
-
 	// Need to override the home path logic for this test
 	// The current implementation uses os.UserHomeDir() which we can't easily mock
 	// So we verify the config file exists at the expected location
@@ -200,13 +193,6 @@ claude_code_commands: true
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0o644)
 	ts.Require().NoError(err)
-
-	// Create config pointing to temp dir
-	config := &Config{
-		AgentOS: AgentOSConfig{
-			HomeDir: tempDir,
-		},
-	}
 
 	// Override getAgentOSHomePath behavior for this test
 	// by directly testing the version parsing logic

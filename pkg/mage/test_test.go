@@ -50,7 +50,7 @@ func TestTestRun(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() any { return GetRunner() },
-				test.Run,
+				func() error { return test.Run() },
 			)
 
 			if tt.expectErr {
