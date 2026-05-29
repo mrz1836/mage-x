@@ -386,10 +386,18 @@ func getRequiredTools(cfg *Config) []ToolDefinition {
 	return tools
 }
 
+// commandExists reports whether an executable is available on PATH. It is a
+// package-level seam over utils.CommandExists so tests that inject a mock runner
+// can mark host tools (e.g. yamlfmt) as already installed, keeping installTool
+// from attempting a real "go install" that the mock runner cannot satisfy.
+//
+//nolint:gochecknoglobals // seam required for testing tool-installation paths
+var commandExists = utils.CommandExists
+
 // installTool installs a single tool with retry logic
 func installTool(tool ToolDefinition) error {
 	// Check if already installed
-	if utils.CommandExists(tool.Check) {
+	if commandExists(tool.Check) {
 		utils.Info("%s is already installed", tool.Name)
 		return nil
 	}
