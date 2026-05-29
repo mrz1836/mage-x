@@ -273,7 +273,8 @@ func TestGitHubReporter_WriteStepSummary_SkipsEmpty(t *testing.T) {
 		t.Error("Expected summary file to not be created for zero result with no status")
 	}
 
-	// Result with status but zero tests should be written (has meaningful status)
+	// Result with a "passed" status but zero tests and zero failures should still be
+	// skipped - it would render an all-zeros table that adds no signal.
 	statusOnlyResult := &CIResult{
 		Summary: CISummary{
 			Status: TestStatusPassed,
@@ -284,9 +285,28 @@ func TestGitHubReporter_WriteStepSummary_SkipsEmpty(t *testing.T) {
 		t.Errorf("WriteStepSummary() error = %v", err)
 	}
 
-	// File should now exist because we had a valid status
+	// File should still not exist - a zero-test passed result is not meaningful.
+	if _, statErr := os.Stat(summaryFile); !os.IsNotExist(statErr) {
+		t.Error("Expected summary file to not be created for zero-test passed result")
+	}
+
+	// Result with failures but zero total should still be written (failures are signal).
+	failureResult := &CIResult{
+		Summary: CISummary{
+			Status: TestStatusFailed,
+		},
+		Failures: []CITestFailure{
+			{Test: "TestBoom", Error: "boom", Type: FailureTypeTest},
+		},
+	}
+	err = reporter.WriteStepSummary(failureResult)
+	if err != nil {
+		t.Errorf("WriteStepSummary() error = %v", err)
+	}
+
+	// File should now exist because the result carries failures.
 	if _, statErr := os.Stat(summaryFile); os.IsNotExist(statErr) {
-		t.Error("Expected summary file to be created for result with valid status")
+		t.Error("Expected summary file to be created for result with failures")
 	}
 }
 
