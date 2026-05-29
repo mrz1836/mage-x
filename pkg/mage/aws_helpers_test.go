@@ -392,11 +392,16 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 	})
 
 	ts.Run("invalid JSON response", func() {
-		// Mock invalid JSON
+		// Mock invalid JSON. Use a distinct token-code so this expectation has
+		// unique args: SetupTest runs once per top-level test (not per ts.Run),
+		// so all subtests here share ts.env.Runner. testify's findExpectedCall
+		// returns the FIRST registered call matching the args, so reusing the
+		// "successful" subtest's token-code ("123456") would match its valid-JSON
+		// expectation instead of this one.
 		ts.env.Runner.On("RunCmdOutput", "aws", []string{
 			"sts", "get-session-token",
 			"--serial-number", "arn:aws:iam::123456789012:mfa/test",
-			"--token-code", "123456",
+			"--token-code", "654321",
 			"--duration-seconds", "43200",
 			"--output", "json",
 		}).Return("invalid json{{{", nil)
@@ -405,7 +410,7 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 			func(r any) error { return SetRunner(r.(CommandRunner)) },
 			func() any { return GetRunner() },
 			func() error {
-				_, err := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "123456", 43200)
+				_, err := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "654321", 43200)
 				return err
 			},
 		)
