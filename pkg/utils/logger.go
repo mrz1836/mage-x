@@ -750,7 +750,11 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%.1fs", d.Seconds())
 	}
 
-	return fmt.Sprintf("%.1fm", d.Minutes())
+	if d < time.Hour {
+		return fmt.Sprintf("%.1fm", d.Minutes())
+	}
+
+	return fmt.Sprintf("%.1fh", d.Hours())
 }
 
 // Package-level convenience functions that delegate to pkg/log
