@@ -305,6 +305,11 @@ func (its *IntegrationTestSuite) TestConfigurationLoading() {
 			t,
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
+			// Binary-name overrides win over both defaults and the YAML fixture, so a
+			// leaked value (e.g. config_test.go sets MAGE_X_CUSTOM_BINARY_NAME) would
+			// override the asserted Project.Binary. Clear them for a clean baseline.
+			"MAGE_X_BINARY_NAME",
+			"MAGE_X_CUSTOM_BINARY_NAME",
 		)
 		defer restoreEnv()
 
@@ -331,6 +336,11 @@ func (its *IntegrationTestSuite) TestConfigurationLoading() {
 			t,
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
+			// Binary-name overrides win over both defaults and the YAML fixture, so a
+			// leaked value (e.g. config_test.go sets MAGE_X_CUSTOM_BINARY_NAME) would
+			// override the asserted Project.Binary. Clear them for a clean baseline.
+			"MAGE_X_BINARY_NAME",
+			"MAGE_X_CUSTOM_BINARY_NAME",
 		)
 		defer restoreEnv()
 
@@ -378,6 +388,11 @@ test:
 			t,
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
+			// Binary-name overrides win over both defaults and the YAML fixture, so a
+			// leaked value (e.g. config_test.go sets MAGE_X_CUSTOM_BINARY_NAME) would
+			// override the asserted Project.Binary. Clear them for a clean baseline.
+			"MAGE_X_BINARY_NAME",
+			"MAGE_X_CUSTOM_BINARY_NAME",
 		)
 		defer restoreEnv()
 

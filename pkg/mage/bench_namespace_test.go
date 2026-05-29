@@ -25,6 +25,17 @@ func (ts *BenchTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.env.CreateGoMod("test/module")
 	ts.bench = Bench{}
+
+	// Start each test from a clean profile/file env. Other tests in the package
+	// (run earlier, e.g. via the integration build tag) may leave a
+	// MAGE_X_BENCH_* variable set; if not cleared here it leaks into the very
+	// first bench subtest and adds an unexpected -memprofile/-cpuprofile flag to
+	// the go test command, breaking the mock-runner assertion.
+	for _, key := range []string{"MAGE_X_BENCH_CPU_PROFILE", "MAGE_X_BENCH_MEM_PROFILE", "MAGE_X_BENCH_FILE", "BENCH_OLD"} {
+		if err := os.Unsetenv(key); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", key, err)
+		}
+	}
 }
 
 // TearDownTest runs after each test

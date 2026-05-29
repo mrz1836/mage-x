@@ -12,6 +12,24 @@ import (
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
+// clearCIEnv blanks the CI-detection environment variables for the duration of
+// the test so the CI-aware test runner (getTestRunner -> GetCIRunner) takes the
+// non-CI mock path regardless of ambient CI env that other tests in the package
+// may have left set (e.g. CI=true streams real `go test -json`, bypassing the
+// mock). t.Setenv restores the prior values on cleanup. Note: MAGE_X_CI_MODE=false
+// alone is not sufficient because GetCIRunner auto-enables CI mode whenever
+// IsCI() is true, so the detection vars themselves must be cleared.
+func clearCIEnv(t *testing.T) {
+	t.Helper()
+	for _, key := range []string{
+		"CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS",
+		"JENKINS_URL", "TF_BUILD", "BUILDKITE", "DRONE", "CODEBUILD_CI",
+		"TEAMCITY_VERSION", "BITBUCKET_BUILD_NUMBER", "MAGE_X_CI_MODE",
+	} {
+		t.Setenv(key, "")
+	}
+}
+
 func TestTestRun(t *testing.T) {
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
@@ -128,6 +146,7 @@ func TestTestRunWithCoverage(t *testing.T) {
 }
 
 func TestTestRace(t *testing.T) {
+	clearCIEnv(t) // Test.Race routes through the CI-aware runner; force the non-CI mock path.
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 
@@ -400,6 +419,7 @@ func TestTestClean(t *testing.T) {
 }
 
 func TestTestUnit(t *testing.T) {
+	clearCIEnv(t) // Test.Unit routes through the CI-aware runner; force the non-CI mock path.
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 
