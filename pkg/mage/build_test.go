@@ -4,6 +4,7 @@
 package mage
 
 import (
+	"context"
 	"errors"
 	"os"
 	"strings"
@@ -12,7 +13,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	pkgexec "github.com/mrz1836/mage-x/pkg/exec"
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 // Static test errors to satisfy err113 linter
@@ -62,9 +65,17 @@ func (ts *BuildTestSuite) TearDownTest() {
 	ts.env.Cleanup()
 }
 
-// mockGitCommands adds mock expectations for git commands used by buildFlags
+// mockGitCommands adds mock expectations for git commands used by buildFlags.
+//
+// buildFlags -> defaultLDFlags -> getVersion -> getVersionFromGit issues three
+// git commands (describe --tags --abbrev=0, describe --tags --always --dirty,
+// status --porcelain) and getCommit issues git rev-parse --short HEAD. The
+// returned values describe a clean checkout sitting exactly on tag v1.0.0 so
+// getVersion resolves to "v1.0.0" rather than the dev fallback.
 func (ts *BuildTestSuite) mockGitCommands() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.0.0", nil)
+	ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--always", "--dirty"}).Return("v1.0.0", nil)
+	ts.env.Runner.On("RunCmdOutput", "git", []string{"status", "--porcelain"}).Return("", nil)
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("abc1234", nil)
 }
 
@@ -86,6 +97,53 @@ func (ts *BuildTestSuite) mockBuildCommand(outputPath string) {
 		}
 		return false
 	})).Return(nil)
+}
+
+// goListStubExecutor is a minimal pkgexec.Executor that returns canned output
+// for `go list` invocations. Package discovery in build.go flows through
+// utils.GoList -> utils.RunCmdOutput -> utils.DefaultExecutor, which bypasses the
+// injected mage CommandRunner mock entirely. Stubbing the utils-level executor is
+// the only way to exercise discoverPackages against deterministic package output.
+type goListStubExecutor struct {
+	output string
+}
+
+func (s *goListStubExecutor) Execute(_ context.Context, _ string, _ ...string) error {
+	return nil
+}
+
+func (s *goListStubExecutor) ExecuteOutput(_ context.Context, _ string, _ ...string) (string, error) {
+	return s.output, nil
+}
+
+// withGoListOutput temporarily replaces utils.DefaultExecutor with a stub that
+// returns the supplied `go list` output, restoring the original executor when fn
+// returns. This keeps discoverPackages (utils.GoList) deterministic without
+// shelling out to a real `go list` in the sandbox.
+func (ts *BuildTestSuite) withGoListOutput(output string, fn func()) {
+	original := utils.DefaultExecutor
+	defer utils.SetExecutor(original)
+	utils.SetExecutor(&goListStubExecutor{output: output})
+	fn()
+}
+
+// Compile-time assertion that the stub satisfies the executor contract.
+var _ pkgexec.Executor = (*goListStubExecutor)(nil)
+
+// withEnv temporarily sets an environment variable for the duration of fn,
+// restoring the previous value (or unsetting it) afterwards. Used to pin the
+// prebuild strategy so the assertions are deterministic and sandbox-safe.
+func (ts *BuildTestSuite) withEnv(key, value string, fn func()) {
+	prev, had := os.LookupEnv(key)
+	ts.Require().NoError(os.Setenv(key, value))
+	defer func() {
+		if had {
+			ts.Require().NoError(os.Setenv(key, prev))
+		} else {
+			ts.Require().NoError(os.Unsetenv(key))
+		}
+	}()
+	fn()
 }
 
 // TestBuildDefault tests the Default method
@@ -126,6 +184,8 @@ func main() {
 
 		// Mock git commands and failed build command
 		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.0.0", nil)
+		env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--always", "--dirty"}).Return("v1.0.0", nil)
+		env.Runner.On("RunCmdOutput", "git", []string{"status", "--porcelain"}).Return("", nil)
 		env.Runner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).Return("abc1234", nil)
 		env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 			if len(args) < 6 || args[0] != CmdGoBuild || args[1] != "-ldflags" {
@@ -472,29 +532,45 @@ func main() {}`)
 // TestBuildPreBuild tests the PreBuild method
 func (ts *BuildTestSuite) TestBuildPreBuild() {
 	ts.Run("runs pre-build tasks without parallel flag", func() {
-		// Mock go build with flexible args (no parallel flag expected)
-		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-			// Should be ["build", "./..."] or ["build", "-v", "./..."]
-			if len(args) < 2 || args[0] != "build" || args[len(args)-1] != "./..." {
-				return false
-			}
-			// Should NOT contain -p flag
-			for i, arg := range args {
-				if arg == "-p" && i+1 < len(args) {
-					return false // Found -p flag, which shouldn't be there
-				}
-			}
-			return true
-		})).Return(nil)
+		// Pin the full strategy so the build command is deterministic. The default
+		// "smart" strategy probes system memory via sysctl, which is blocked in the
+		// sandbox and degrades non-deterministically into the incremental path
+		// (which routes package discovery through utils.GoList). The full strategy
+		// emits the traditional `go build ./...` we want to assert on.
+		//
+		// Also pin Build.Parallel to 0: with no CLI flag, PreBuildWithArgs falls
+		// back to config.Build.Parallel (which defaults to runtime.NumCPU()), so a
+		// non-zero default would add a -p flag. Setting it to 0 exercises the
+		// genuine "no parallelism anywhere" path the test name describes.
+		config := defaultConfig()
+		config.Build.Parallel = 0
+		TestSetConfig(config)
 
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() any { return GetRunner() },
-			func() error {
-				return ts.build.PreBuild()
-			},
-		)
-		ts.Require().NoError(err)
+		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+			// Mock go build with flexible args (no parallel flag expected)
+			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+				// Should be ["build", "./..."] or ["build", "-v", "./..."]
+				if len(args) < 2 || args[0] != "build" || args[len(args)-1] != "./..." {
+					return false
+				}
+				// Should NOT contain -p flag
+				for i, arg := range args {
+					if arg == "-p" && i+1 < len(args) {
+						return false // Found -p flag, which shouldn't be there
+					}
+				}
+				return true
+			})).Return(nil)
+
+			err := ts.env.WithMockRunner(
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
+				func() error {
+					return ts.build.PreBuild()
+				},
+			)
+			ts.Require().NoError(err)
+		})
 	})
 }
 
@@ -506,29 +582,33 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 		defer func() { os.Args = originalArgs }()
 		os.Args = []string{"magex", "build:prebuild", "parallel=2"}
 
-		// Mock go build with -p 2 flag
-		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-			// Should contain ["build", "-p", "2", "./..."]
-			expectedArgs := []string{"build", "-p", "2", "./..."}
-			if len(args) != len(expectedArgs) {
-				return false
-			}
-			for i, expected := range expectedArgs {
-				if args[i] != expected {
+		// Pin the full strategy (see TestBuildPreBuild for rationale) so the
+		// parallelism flag is plumbed straight through to `go build`.
+		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+			// Mock go build with -p 2 flag
+			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+				// Should contain ["build", "-p", "2", "./..."]
+				expectedArgs := []string{"build", "-p", "2", "./..."}
+				if len(args) != len(expectedArgs) {
 					return false
 				}
-			}
-			return true
-		})).Return(nil)
+				for i, expected := range expectedArgs {
+					if args[i] != expected {
+						return false
+					}
+				}
+				return true
+			})).Return(nil)
 
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() any { return GetRunner() },
-			func() error {
-				return ts.build.PreBuildWithArgs()
-			},
-		)
-		ts.Require().NoError(err)
+			err := ts.env.WithMockRunner(
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
+				func() error {
+					return ts.build.PreBuildWithArgs()
+				},
+			)
+			ts.Require().NoError(err)
+		})
 	})
 
 	ts.Run("runs pre-build with p=4 (short form)", func() {
@@ -537,29 +617,31 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 		defer func() { os.Args = originalArgs }()
 		os.Args = []string{"magex", "build:prebuild", "p=4"}
 
-		// Mock go build with -p 4 flag
-		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-			// Should contain ["build", "-p", "4", "./..."]
-			expectedArgs := []string{"build", "-p", "4", "./..."}
-			if len(args) != len(expectedArgs) {
-				return false
-			}
-			for i, expected := range expectedArgs {
-				if args[i] != expected {
+		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+			// Mock go build with -p 4 flag
+			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+				// Should contain ["build", "-p", "4", "./..."]
+				expectedArgs := []string{"build", "-p", "4", "./..."}
+				if len(args) != len(expectedArgs) {
 					return false
 				}
-			}
-			return true
-		})).Return(nil)
+				for i, expected := range expectedArgs {
+					if args[i] != expected {
+						return false
+					}
+				}
+				return true
+			})).Return(nil)
 
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() any { return GetRunner() },
-			func() error {
-				return ts.build.PreBuildWithArgs()
-			},
-		)
-		ts.Require().NoError(err)
+			err := ts.env.WithMockRunner(
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
+				func() error {
+					return ts.build.PreBuildWithArgs()
+				},
+			)
+			ts.Require().NoError(err)
+		})
 	})
 
 	ts.Run("runs pre-build without parallel flag when not specified", func() {
@@ -568,29 +650,39 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 		defer func() { os.Args = originalArgs }()
 		os.Args = []string{"magex", "build:prebuild"}
 
-		// Mock go build without -p flag
-		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-			// Should be ["build", "./..."] or ["build", "-v", "./..."]
-			if len(args) < 2 || args[0] != "build" || args[len(args)-1] != "./..." {
-				return false
-			}
-			// Should NOT contain -p flag
-			for i, arg := range args {
-				if arg == "-p" && i+1 < len(args) {
-					return false // Found -p flag, which shouldn't be there
-				}
-			}
-			return true
-		})).Return(nil)
+		// With no CLI flag, parallelism falls back to config.Build.Parallel
+		// (default runtime.NumCPU()), which would inject a -p flag. Pin it to 0 to
+		// assert the genuine no-parallelism path. Full strategy keeps the command
+		// deterministic in the sandbox (see TestBuildPreBuild for rationale).
+		config := defaultConfig()
+		config.Build.Parallel = 0
+		TestSetConfig(config)
 
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() any { return GetRunner() },
-			func() error {
-				return ts.build.PreBuildWithArgs()
-			},
-		)
-		ts.Require().NoError(err)
+		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+			// Mock go build without -p flag
+			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+				// Should be ["build", "./..."] or ["build", "-v", "./..."]
+				if len(args) < 2 || args[0] != "build" || args[len(args)-1] != "./..." {
+					return false
+				}
+				// Should NOT contain -p flag
+				for i, arg := range args {
+					if arg == "-p" && i+1 < len(args) {
+						return false // Found -p flag, which shouldn't be there
+					}
+				}
+				return true
+			})).Return(nil)
+
+			err := ts.env.WithMockRunner(
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
+				func() error {
+					return ts.build.PreBuildWithArgs()
+				},
+			)
+			ts.Require().NoError(err)
+		})
 	})
 
 	ts.Run("runs pre-build with verbose and parallel flags", func() {
@@ -604,29 +696,34 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 		config.Build.Verbose = true
 		TestSetConfig(config)
 
-		// Mock go build with -v and -p 1 flags
-		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-			// Should contain ["build", "-v", "-p", "1", "./..."]
-			expectedArgs := []string{"build", "-v", "-p", "1", "./..."}
-			if len(args) != len(expectedArgs) {
-				return false
-			}
-			for i, expected := range expectedArgs {
-				if args[i] != expected {
+		// Pin the full strategy. buildFull appends -p before -v, so the expected
+		// command is ["build", "-p", "1", "-v", "./..."]. (The previous "-v -p"
+		// ordering never matched the production arg construction.)
+		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+			// Mock go build with -p 1 and -v flags
+			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
+				// Should contain ["build", "-p", "1", "-v", "./..."]
+				expectedArgs := []string{"build", "-p", "1", "-v", "./..."}
+				if len(args) != len(expectedArgs) {
 					return false
 				}
-			}
-			return true
-		})).Return(nil)
+				for i, expected := range expectedArgs {
+					if args[i] != expected {
+						return false
+					}
+				}
+				return true
+			})).Return(nil)
 
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-			func() any { return GetRunner() },
-			func() error {
-				return ts.build.PreBuildWithArgs()
-			},
-		)
-		ts.Require().NoError(err)
+			err := ts.env.WithMockRunner(
+				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				func() any { return GetRunner() },
+				func() error {
+					return ts.build.PreBuildWithArgs()
+				},
+			)
+			ts.Require().NoError(err)
+		})
 	})
 }
 
@@ -698,66 +795,85 @@ func (ts *BuildTestSuite) TestBuildUtilityFunctions() {
 // TestBuildStrategies tests the new build strategy methods
 func (ts *BuildTestSuite) TestBuildStrategies() {
 	ts.Run("incremental strategy", func() {
-		// Mock package listing
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
-			"github.com/test/pkg1\ngithub.com/test/pkg2\ngithub.com/test/pkg3", nil,
-		)
+		// Package discovery flows through utils.GoList (utils.DefaultExecutor),
+		// while the per-batch `go build` calls go through the injected mage
+		// CommandRunner. Stub the former and mock the latter.
 
-		// Mock batch builds - expect 2 batches with batch size 2
+		// Mock batch builds - expect 2 batches with batch size 2.
+		// buildIncremental builds batches via buildPackageBatch with verbose=false,
+		// so the args are ["build", "-p", "1", <pkgs...>].
+		// NOTE: package names avoid "/test/" so they survive discoverPackages'
+		// test-package filter (otherwise discovery returns empty and the build
+		// mocks below would never fire, making the test pass vacuously).
 		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-			// First batch: ["build", "-p", "1", "github.com/test/pkg1", "github.com/test/pkg2"]
+			// First batch: ["build", "-p", "1", "github.com/example/pkg1", "github.com/example/pkg2"]
 			return len(args) >= 4 && args[0] == "build" &&
-				strings.Contains(strings.Join(args, " "), "github.com/test/pkg1")
+				strings.Contains(strings.Join(args, " "), "github.com/example/pkg1")
 		})).Return(nil).Once()
 
 		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
-			// Second batch: ["build", "-p", "1", "github.com/test/pkg3"]
+			// Second batch: ["build", "-p", "1", "github.com/example/pkg3"]
 			return len(args) >= 3 && args[0] == "build" &&
-				strings.Contains(strings.Join(args, " "), "github.com/test/pkg3")
+				strings.Contains(strings.Join(args, " "), "github.com/example/pkg3")
 		})).Return(nil).Once()
 
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
-			func() any { return GetRunner() },
-			func() error {
-				return ts.build.buildIncremental(2, 0, "", false, "1")
+		ts.withGoListOutput(
+			"github.com/example/pkg1\ngithub.com/example/pkg2\ngithub.com/example/pkg3",
+			func() {
+				err := ts.env.WithMockRunner(
+					func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+					func() any { return GetRunner() },
+					func() error {
+						return ts.build.buildIncremental(2, 0, "", false, "1")
+					},
+				)
+				ts.Require().NoError(err)
+				// Confirm both batches actually ran (guards against vacuous pass
+				// if discoverPackages were to filter everything out).
+				ts.env.Runner.AssertExpectations(ts.T())
 			},
 		)
-		ts.Require().NoError(err)
 	})
 
 	ts.Run("mains-first strategy", func() {
-		// Mock finding main packages
+		// findMainPackages uses the injected mage CommandRunner (go list -json),
+		// while the Phase 2 discoverPackages call uses utils.GoList
+		// (utils.DefaultExecutor). Mock the former and stub the latter.
+		// Package names avoid "/test/" so the Phase 2 discoverPackages filter does
+		// not strip them (which would skip the remaining-packages build).
 		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-json", "./..."}).Return(
-			`{"ImportPath":"github.com/test/cmd/app","Name":"main"}
-{"ImportPath":"github.com/test/pkg1","Name":"pkg1"}`, nil,
-		)
-
-		// Mock listing all packages
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
-			"github.com/test/cmd/app\ngithub.com/test/pkg1", nil,
+			`{"ImportPath":"github.com/example/cmd/app","Name":"main"}
+{"ImportPath":"github.com/example/pkg1","Name":"pkg1"}`, nil,
 		)
 
 		// Expect main package to be built first
 		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 			return len(args) >= 2 && args[0] == "build" &&
-				strings.Contains(strings.Join(args, " "), "github.com/test/cmd/app")
+				strings.Contains(strings.Join(args, " "), "github.com/example/cmd/app")
 		})).Return(nil).Once()
 
 		// Then remaining packages
 		ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 			return len(args) >= 2 && args[0] == "build" &&
-				strings.Contains(strings.Join(args, " "), "github.com/test/pkg1")
+				strings.Contains(strings.Join(args, " "), "github.com/example/pkg1")
 		})).Return(nil).Once()
 
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
-			func() any { return GetRunner() },
-			func() error {
-				return ts.build.buildMainsFirst(10, false, "", false, "")
+		// discoverPackages (Phase 2) resolves the full package set via utils.GoList.
+		ts.withGoListOutput(
+			"github.com/example/cmd/app\ngithub.com/example/pkg1",
+			func() {
+				err := ts.env.WithMockRunner(
+					func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+					func() any { return GetRunner() },
+					func() error {
+						return ts.build.buildMainsFirst(10, false, "", false, "")
+					},
+				)
+				ts.Require().NoError(err)
+				// Confirm both the mains build and the remaining-packages build ran.
+				ts.env.Runner.AssertExpectations(ts.T())
 			},
 		)
-		ts.Require().NoError(err)
 	})
 
 	ts.Run("smart strategy selects appropriate method", func() {
@@ -800,22 +916,22 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 // TestPackageDiscoveryUtilities tests package discovery and batching utilities
 func (ts *BuildTestSuite) TestPackageDiscoveryUtilities() {
 	ts.Run("discoverPackages lists all packages", func() {
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(
-			"github.com/test/pkg1\ngithub.com/test/pkg2\ngithub.com/test/pkg3", nil,
-		)
-
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
-			func() any { return GetRunner() },
-			func() error {
+		// discoverPackages resolves packages through utils.GoList, which uses
+		// utils.DefaultExecutor rather than the injected mage CommandRunner. Stub
+		// the utils-level executor so `go list ./...` yields a deterministic list.
+		// Package names must avoid "/test/" and "/tests/" because discoverPackages
+		// deliberately filters those out as test-only packages.
+		ts.withGoListOutput(
+			"github.com/example/pkg1\ngithub.com/example/pkg2\ngithub.com/example/pkg3",
+			func() {
 				packages, err := ts.build.discoverPackages("")
 				ts.Require().NoError(err)
 				ts.Require().Len(packages, 3)
-				ts.Assert().Contains(packages, "github.com/test/pkg1")
-				return nil
+				ts.Assert().Contains(packages, "github.com/example/pkg1")
+				ts.Assert().Contains(packages, "github.com/example/pkg2")
+				ts.Assert().Contains(packages, "github.com/example/pkg3")
 			},
 		)
-		ts.Require().NoError(err)
 	})
 
 	ts.Run("findMainPackages identifies main packages", func() {
