@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -291,7 +292,7 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 
 	testCases := []struct {
 		name           string
-		serverBehavior func(attempt *int) http.HandlerFunc
+		serverBehavior func(attempt *atomic.Int32) http.HandlerFunc
 		expectSuccess  bool
 		description    string
 		// expectDeadline asserts the failure is specifically a per-attempt
@@ -300,11 +301,11 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 	}{
 		{
 			name: "IntermittentServerErrors",
-			serverBehavior: func(attempt *int) http.HandlerFunc {
+			serverBehavior: func(attempt *atomic.Int32) http.HandlerFunc {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					*attempt++
+					attempt.Add(1)
 					// Fail first 2 attempts, succeed on 3rd
-					if *attempt < 3 {
+					if attempt.Load() < 3 {
 						w.WriteHeader(http.StatusInternalServerError)
 						w.Write([]byte("Server temporarily unavailable"))
 						return
@@ -328,9 +329,9 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 			// and fails immediately without further attempts. This case now
 			// verifies that contract: a per-attempt timeout is permanent.
 			name: "SlowResponseExceedsPerAttemptTimeout",
-			serverBehavior: func(attempt *int) http.HandlerFunc {
+			serverBehavior: func(attempt *atomic.Int32) http.HandlerFunc {
 				return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-					*attempt++
+					attempt.Add(1)
 					// Every attempt is slower than the per-attempt Timeout (1s),
 					// guaranteeing a context deadline on the first attempt.
 					time.Sleep(2 * time.Second)
@@ -343,19 +344,19 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 		},
 		{
 			name: "PartialContentWithResume",
-			serverBehavior: func(attempt *int) http.HandlerFunc {
+			serverBehavior: func(attempt *atomic.Int32) http.HandlerFunc {
 				fullContent := "This is the full content that should be downloaded completely"
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					*attempt++
+					attempt.Add(1)
 
 					rangeHeader := r.Header.Get("Range")
-					if rangeHeader != "" && *attempt > 1 {
+					if rangeHeader != "" && attempt.Load() > 1 {
 						// Resume request - return remaining content
 						w.Header().Set("Content-Range", fmt.Sprintf("bytes 20-%d/%d", len(fullContent)-1, len(fullContent)))
 						w.Header().Set("Content-Length", fmt.Sprintf("%d", len(fullContent)-20))
 						w.WriteHeader(http.StatusPartialContent)
 						w.Write([]byte(fullContent[20:]))
-					} else if *attempt == 1 {
+					} else if attempt.Load() == 1 {
 						// First attempt - return partial content then "disconnect"
 						w.Header().Set("Content-Length", fmt.Sprintf("%d", len(fullContent)))
 						w.WriteHeader(http.StatusOK)
@@ -381,9 +382,9 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 		},
 		{
 			name: "PersistentServerError",
-			serverBehavior: func(attempt *int) http.HandlerFunc {
+			serverBehavior: func(attempt *atomic.Int32) http.HandlerFunc {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					*attempt++
+					attempt.Add(1)
 					w.WriteHeader(http.StatusNotFound)
 					w.Write([]byte("Resource not found"))
 				})
@@ -393,9 +394,9 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 		},
 		{
 			name: "NetworkTimeouts",
-			serverBehavior: func(attempt *int) http.HandlerFunc {
+			serverBehavior: func(attempt *atomic.Int32) http.HandlerFunc {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					*attempt++
+					attempt.Add(1)
 					// All attempts timeout
 					time.Sleep(3 * time.Second) // Longer than reasonable timeout
 					w.WriteHeader(http.StatusOK)
@@ -409,7 +410,10 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			attempt := 0
+			// attempt is incremented by the httptest handler goroutine and read by
+			// this test goroutine; use atomic access so -race stays clean even when
+			// a slow handler is still running after a per-attempt timeout fires.
+			var attempt atomic.Int32
 			server := httptest.NewServer(tc.serverBehavior(&attempt))
 			defer server.Close()
 
@@ -439,13 +443,13 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 				if err != nil {
 					t.Errorf("Expected success for %s, got error: %v", tc.description, err)
 				} else {
-					t.Logf("Successfully completed: %s (attempts: %d)", tc.description, attempt)
+					t.Logf("Successfully completed: %s (attempts: %d)", tc.description, attempt.Load())
 				}
 			} else {
 				if err == nil {
 					t.Errorf("Expected failure for %s, but succeeded", tc.description)
 				} else {
-					t.Logf("Expected failure occurred: %s - %v (attempts: %d)", tc.description, err, attempt)
+					t.Logf("Expected failure occurred: %s - %v (attempts: %d)", tc.description, err, attempt.Load())
 				}
 				if tc.expectDeadline {
 					// The per-attempt timeout must surface as context.DeadlineExceeded
@@ -454,8 +458,8 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 					if !errors.Is(err, context.DeadlineExceeded) {
 						t.Errorf("Expected context.DeadlineExceeded for %s, got: %v", tc.description, err)
 					}
-					if attempt != 1 {
-						t.Errorf("Expected exactly 1 attempt (per-attempt timeout is non-retriable) for %s, got %d", tc.description, attempt)
+					if attempt.Load() != 1 {
+						t.Errorf("Expected exactly 1 attempt (per-attempt timeout is non-retriable) for %s, got %d", tc.description, attempt.Load())
 					}
 				}
 			}
