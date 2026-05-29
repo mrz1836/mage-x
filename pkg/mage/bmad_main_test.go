@@ -93,9 +93,12 @@ bmad:
 	os.Chdir(ts.env.TempDir)
 	defer os.Chdir(oldPwd)
 
-	// Mock npm view command for version check
+	// Mock npm view command for version check.
+	// The config above sets no package_name/version_tag, so getBmadVersion
+	// falls back to the defaults: DefaultBmadPackageName + DefaultBmadVersionTag.
+	// DefaultBmadVersionTag is now "", so the packageSpec is just the package name.
 	ts.env.Runner.On("RunCmdOutput", CmdNpm, []string{
-		"view", "bmad-method@beta", "version",
+		"view", DefaultBmadPackageName + DefaultBmadVersionTag, "version",
 	}).Return("1.0.0", nil).Maybe()
 
 	err = ts.env.WithMockRunner(
@@ -201,6 +204,13 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
+			// Use a fresh environment (and thus a fresh mock runner) per subtest.
+			// All four subtests build the identical npm packageSpec
+			// ("bmad-method@beta"), so a shared mock would resolve every call to
+			// the first-registered expectation and cross-contaminate results.
+			env := testutil.NewTestEnvironment(ts.T())
+			defer env.Cleanup()
+
 			config := &Config{
 				Bmad: BmadConfig{
 					PackageName: tt.packageName,
@@ -208,13 +218,14 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 				},
 			}
 
-			// Mock npm view command
+			// Mock npm view command: getBmadVersion runs
+			// `npm view <packageName><versionTag> version`.
 			packageSpec := tt.packageName + tt.versionTag
-			ts.env.Runner.On("RunCmdOutput", CmdNpm, []string{
+			env.Runner.On("RunCmdOutput", CmdNpm, []string{
 				"view", packageSpec, "version",
 			}).Return(tt.mockOutput, tt.mockError)
 
-			err := ts.env.WithMockRunner(
+			err := env.WithMockRunner(
 				func(r any) error { return SetRunner(r.(CommandRunner)) },
 				func() any { return GetRunner() },
 				func() error {
