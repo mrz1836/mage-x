@@ -393,7 +393,7 @@ func TestParameterPassingStressTest(t *testing.T) {
 	}
 
 	// Build magex
-	cmd := exec.Command("go", "build", "-o", "magex-test", "./cmd/magex")
+	cmd := exec.Command("go", "build", "-o", "magex-test", "../../cmd/magex")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to build magex: %v\nOutput: %s", err, output)
@@ -403,36 +403,30 @@ func TestParameterPassingStressTest(t *testing.T) {
 	magexPath, err := filepath.Abs("./magex-test")
 	require.NoError(t, err)
 
-	// Test various parameter formats
+	// Test various parameter formats. Each case passes a set of args to a
+	// custom "default" magefile target that echoes the raw MAGE_ARGS string it
+	// received. The stress is on the magex -> mage -> MAGE_ARGS pipeline faithfully
+	// carrying every parameter (booleans, key=value pairs, and quoted values with
+	// special characters) without dropping or mangling them.
 	parameterTests := []struct {
-		name     string
-		command  string
-		args     []string
-		checkFor []string
+		name string
+		args []string
 	}{
 		{
-			name:     "Boolean flags",
-			command:  "test:unit",
-			args:     []string{"verbose", "short", "race"},
-			checkFor: []string{"-v", "-short", "-race"},
+			name: "Boolean flags",
+			args: []string{"verbose", "short", "race"},
 		},
 		{
-			name:     "Key-value pairs",
-			command:  "test:bench",
-			args:     []string{"time=5s", "count=3", "cpu=2"},
-			checkFor: []string{"5s", "3", "2"},
+			name: "Key-value pairs",
+			args: []string{"time=5s", "count=3", "cpu=2"},
 		},
 		{
-			name:     "Mixed parameters",
-			command:  "test:cover",
-			args:     []string{"verbose", "package=./pkg", "timeout=30s"},
-			checkFor: []string{"./pkg", "30s"},
+			name: "Mixed parameters",
+			args: []string{"verbose", "package=./pkg", "timeout=30s"},
 		},
 		{
-			name:     "Special characters",
-			command:  "git:commit",
-			args:     []string{`message="fix: bug #123"`, "all"},
-			checkFor: []string{"fix:", "bug", "123"},
+			name: "Special characters",
+			args: []string{`message="fix: bug #123"`, "all"},
 		},
 	}
 
@@ -479,14 +473,17 @@ func Default() error {
 			cmd := exec.Command(magexPath, cmdArgs...)
 			cmd.Dir = testDir
 
-			output, _ := cmd.CombinedOutput()
+			output, err := cmd.CombinedOutput()
 			outputStr := string(output)
 
-			// Verify parameters were received
+			// The custom magefile target must run successfully.
+			require.NoError(t, err, "magex default command failed: %s", outputStr)
+
+			// The magefile echoes the raw MAGE_ARGS string, so every parameter we
+			// passed must survive the magex -> mage pipeline and appear verbatim.
 			for _, check := range tt.args {
-				if !strings.Contains(outputStr, check) {
-					t.Logf("Full output: %s", outputStr)
-				}
+				assert.Contains(t, outputStr, check,
+					"Parameter %q must be passed through to MAGE_ARGS\nFull output: %s", check, outputStr)
 			}
 		})
 	}
@@ -502,7 +499,7 @@ func TestRegressionPrevention(t *testing.T) {
 	// were not passed from magex -> mage -> functions
 
 	// Build magex
-	cmd := exec.Command("go", "build", "-o", "magex-test", "./cmd/magex")
+	cmd := exec.Command("go", "build", "-o", "magex-test", "../../cmd/magex")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to build magex: %v\nOutput: %s", err, output)
@@ -558,12 +555,23 @@ func CheckEnv() error {
 	})
 
 	t.Run("CriticalBugScenario", func(t *testing.T) {
-		// Reproduce the exact scenario that was broken:
-		// magex test:fuzz time=7s was running for 10s instead
-
+		// Reproduce the exact scenario that was broken: a "time=7s" parameter
+		// must flow through the magex -> mage -> magefile-function pipeline and
+		// arrive as "7s" (not be dropped, leaving the function to fall back to a
+		// default of 10s). This is the regression that magex must never reintroduce.
+		//
+		// NOTE: We deliberately do NOT name the magefile target "test:fuzz" here.
+		// magex resolves built-in commands BEFORE custom magefile commands (see
+		// cmd/magex/main.go: reg.Execute is tried first, custom commands only run
+		// on ErrUnknownCommand). "test:fuzz" is a built-in, so a custom magefile
+		// "Test.Fuzz" would never be invoked - magex would run the built-in fuzz
+		// runner instead (which needs real fuzz targets/modules). To exercise the
+		// parameter-passing pipeline hermetically we use a custom, non-built-in
+		// target that echoes the args it received.
 		testDir := t.TempDir()
 
-		// Create a magefile that tracks time parameter
+		// Create a magefile that tracks the time parameter. It uses only the
+		// standard library so it compiles in a bare temp dir with no go.mod.
 		magefileContent := `//go:build mage
 // +build mage
 
@@ -573,10 +581,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"github.com/magefile/mage/mg"
 )
-
-type Test mg.Namespace
 
 func getMageArgs() []string {
 	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
@@ -585,7 +590,9 @@ func getMageArgs() []string {
 	return nil
 }
 
-func (t Test) Fuzz() error {
+// CheckFuzzTime stands in for the old "test:fuzz" target. It verifies the
+// time parameter survives the magex -> mage -> function pipeline.
+func CheckFuzzTime() error {
 	args := getMageArgs()
 	fmt.Printf("Fuzz called with args: %v\n", args)
 
@@ -608,8 +615,8 @@ func (t Test) Fuzz() error {
 		err := os.WriteFile(filepath.Join(testDir, "magefile.go"), []byte(magefileContent), 0o644)
 		require.NoError(t, err)
 
-		// Run the exact command that was broken
-		cmd := exec.Command(magexPath, "test:fuzz", "time=7s")
+		// Run the regression scenario: pass the exact parameter that used to be dropped.
+		cmd := exec.Command(magexPath, "checkFuzzTime", "time=7s")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
