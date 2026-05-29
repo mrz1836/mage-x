@@ -104,27 +104,40 @@ func (ts *AgentOSHelpersTestSuite) TestCheckAgentOSPrerequisites() {
 	}
 }
 
-// TestGetAgentOSHomePath tests home path construction
+// TestGetAgentOSHomePath tests home path construction.
+//
+// getAgentOSHomePath resolves the base directory under the user's home
+// directory (os.UserHomeDir, which honors $HOME on Unix). The default
+// relative directory is DefaultAgentOSHomeDir ("agent-os", no leading dot).
+// The test pins a temporary HOME via t.Setenv (auto-restored, race-safe) so
+// the expected absolute path is derived hermetically the same way production
+// does, rather than depending on the real user's home directory.
 func (ts *AgentOSHelpersTestSuite) TestGetAgentOSHomePath() {
 	tests := []struct {
-		name     string
-		homeDir  string
-		wantPath string
+		name       string
+		homeDir    string
+		wantRelDir string // expected relative dir joined onto HOME
 	}{
 		{
-			name:     "default home dir",
-			homeDir:  "",
-			wantPath: ".agent-os",
+			name:       "default home dir",
+			homeDir:    "",
+			wantRelDir: DefaultAgentOSHomeDir,
 		},
 		{
-			name:     "custom home dir",
-			homeDir:  "custom-agent-os",
-			wantPath: "custom-agent-os",
+			name:       "custom home dir",
+			homeDir:    "custom-agent-os",
+			wantRelDir: "custom-agent-os",
 		},
 	}
 
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
+			// Pin a temporary HOME so the resolved path is hermetic and
+			// independent of the real user's home directory. t.Setenv
+			// restores the previous value automatically at test end.
+			tmpHome := ts.T().TempDir()
+			ts.T().Setenv("HOME", tmpHome)
+
 			// Create config
 			config := &Config{
 				AgentOS: AgentOSConfig{
@@ -134,13 +147,10 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSHomePath() {
 
 			path := getAgentOSHomePath(config)
 
-			// Path should end with expected directory
-			ts.Assert().Contains(path, tt.wantPath)
-
-			// Should expand to user home directory
-			if tt.homeDir == "" {
-				ts.Assert().Contains(path, DefaultAgentOSHomeDir)
-			}
+			// Derive the expected absolute path the same way production does:
+			// filepath.Join(<resolved home>, <relative dir>).
+			wantPath := filepath.Join(tmpHome, tt.wantRelDir)
+			ts.Assert().Equal(wantPath, path)
 		})
 	}
 }
