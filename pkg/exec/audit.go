@@ -213,7 +213,8 @@ type DefaultAuditLogger struct{}
 
 // LogEvent logs an audit event to stderr
 func (d *DefaultAuditLogger) LogEvent(event AuditEvent) error {
-	fmt.Fprintf(os.Stderr, "[AUDIT] %s: %s %s (duration=%s, exit=%d, success=%v)\n",
+	fmt.Fprintf(
+		os.Stderr, "[AUDIT] %s: %s %s (duration=%s, exit=%d, success=%v)\n",
 		event.Timestamp.Format(time.RFC3339),
 		event.Command,
 		strings.Join(event.Args, " "),

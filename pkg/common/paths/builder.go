@@ -21,18 +21,19 @@ import (
 // This consolidates multiple strings.Contains() calls into a single regex match for better performance.
 //
 
-var unsafePathPatterns = regexp.MustCompile(`(?i)` +
-	`\.\.` + // Path traversal
-	`|/proc/` + // Linux proc filesystem
-	`|/dev/` + // Device files
-	`|\\\\[?]\\` + // Windows extended path prefix (\\?\)
-	`|%2e` + // URL encoded dot
-	`|%2f` + // URL encoded slash
-	`|%00` + // URL encoded null
-	`|%25` + // Double URL encoded
-	`|\\u` + // Unicode escape sequences (catch \u prefix)
-	`|\\x` + // Hex escape sequences (catch \x prefix)
-	`|\x{2044}`, // Unicode fraction slash (U+2044)
+var unsafePathPatterns = regexp.MustCompile(
+	`(?i)` +
+		`\.\.` + // Path traversal
+		`|/proc/` + // Linux proc filesystem
+		`|/dev/` + // Device files
+		`|\\\\[?]\\` + // Windows extended path prefix (\\?\)
+		`|%2e` + // URL encoded dot
+		`|%2f` + // URL encoded slash
+		`|%00` + // URL encoded null
+		`|%25` + // Double URL encoded
+		`|\\u` + // Unicode escape sequences (catch \u prefix)
+		`|\\x` + // Hex escape sequences (catch \x prefix)
+		`|\x{2044}`, // Unicode fraction slash (U+2044)
 )
 
 // DefaultPathBuilder implements PathBuilder using standard library

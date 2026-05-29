@@ -1712,7 +1712,8 @@ func TestRefreshFlow(t *testing.T) {
 	t.Run("explicit base= overrides source_profile lookup", func(t *testing.T) {
 		skipIfNoAWSCLI(t)
 
-		withMockedHome(t,
+		withMockedHome(
+			t,
 			"[custom-base]\naws_access_key_id = AKIACUSTOM\n",
 			"[profile custom-base]\nmfa_serial = "+baseProfileMFA+"\n",
 		)
@@ -1744,7 +1745,8 @@ func TestEdgeCases(t *testing.T) {
 	t.Run("source_profile is resolved only one level deep", func(t *testing.T) {
 		// a -> b -> c (creds + MFA only on c). getSourceProfile is non-recursive,
 		// so hasValidAWSSetup("a") looks for credentials on "b" and finds none.
-		withMockedHome(t,
+		withMockedHome(
+			t,
 			"[c]\naws_access_key_id = AKIATEST\n",
 			"[profile a]\nsource_profile = b\n\n"+
 				"[profile b]\nsource_profile = c\n\n"+

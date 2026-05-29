@@ -214,7 +214,8 @@ func runCommandInModuleOutputWithRunner(module ModuleInfo, runner CommandRunner,
 	if err := runtimectx.CheckCanceled(); err != nil {
 		return "", fmt.Errorf("canceled before '%s' in %s: %w", command, module.Relative, err)
 	}
-	return runInModuleDir(module, runner,
+	return runInModuleDir(
+		module, runner,
 		func(dirRunner DirRunner, path string) (string, error) {
 			return dirRunner.RunCmdOutputInDir(path, command, args...)
 		},
@@ -232,7 +233,8 @@ func runCommandInModuleWithRunner(module ModuleInfo, runner CommandRunner, comma
 	if err := runtimectx.CheckCanceled(); err != nil {
 		return fmt.Errorf("canceled before '%s' in %s: %w", command, module.Relative, err)
 	}
-	_, err := runInModuleDir(module, runner,
+	_, err := runInModuleDir(
+		module, runner,
 		func(dirRunner DirRunner, path string) (struct{}, error) {
 			return struct{}{}, dirRunner.RunCmdInDir(path, command, args...)
 		},

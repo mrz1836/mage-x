@@ -296,7 +296,8 @@ Custom version: %s
 - Deploy: magex deploy (if available)
 `
 
-	content := fmt.Sprintf(summary,
+	content := fmt.Sprintf(
+		summary,
 		time.Now().Format("2006-01-02 15:04:05"),
 		os.Getenv("MAGE_X_CUSTOM_BUILD_TAGS"),
 		os.Getenv("MAGE_X_CUSTOM_VERSION"),

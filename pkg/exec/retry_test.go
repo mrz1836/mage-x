@@ -118,7 +118,8 @@ func TestRetryingExecutor_Execute(t *testing.T) {
 		}
 
 		// Use AlwaysRetry classifier to ensure retries happen
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(5),
 			WithClassifier(retry.AlwaysRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),
@@ -143,7 +144,8 @@ func TestRetryingExecutor_Execute(t *testing.T) {
 			},
 		}
 
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(2),
 			WithClassifier(retry.AlwaysRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),
@@ -170,7 +172,8 @@ func TestRetryingExecutor_Execute(t *testing.T) {
 		}
 
 		ctx, cancel := context.WithCancel(context.Background()) // #nosec G118 -- cancel is called in goroutine below
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(100),
 			WithClassifier(retry.AlwaysRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: 10 * time.Millisecond}),
@@ -229,7 +232,8 @@ func TestRetryingExecutor_ExecuteOutput(t *testing.T) {
 			},
 		}
 
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(3),
 			WithClassifier(retry.AlwaysRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),
@@ -283,7 +287,8 @@ func TestRetryingExecutor_ExecuteInDir(t *testing.T) {
 			},
 		}
 
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(3),
 			WithClassifier(retry.AlwaysRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),
@@ -335,7 +340,8 @@ func TestRetryingExecutor_ExecuteWithEnv(t *testing.T) {
 			},
 		}
 
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(3),
 			WithClassifier(retry.AlwaysRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),
@@ -416,7 +422,8 @@ func TestRetryingExecutor_ExecuteStreaming(t *testing.T) {
 			},
 		}
 
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(3),
 			WithClassifier(retry.AlwaysRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),
@@ -448,7 +455,8 @@ func TestRetryingExecutor_OnRetry(t *testing.T) {
 			},
 		}
 
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(5),
 			WithClassifier(retry.AlwaysRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),
@@ -476,7 +484,8 @@ func TestRetryingExecutor_OnRetry(t *testing.T) {
 			},
 		}
 
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(1),
 			WithClassifier(retry.AlwaysRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),
@@ -517,7 +526,8 @@ func TestRetryingExecutor_MaxRetries(t *testing.T) {
 				},
 			}
 
-			executor := NewRetryingExecutor(mock,
+			executor := NewRetryingExecutor(
+				mock,
 				WithMaxRetries(tc.maxRetries),
 				WithClassifier(retry.AlwaysRetry),
 				WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),
@@ -545,7 +555,8 @@ func TestRetryingExecutor_Classifier(t *testing.T) {
 		}
 
 		// Use NeverRetry classifier
-		executor := NewRetryingExecutor(mock,
+		executor := NewRetryingExecutor(
+			mock,
 			WithMaxRetries(5),
 			WithClassifier(retry.NeverRetry),
 			WithBackoff(&retry.ConstantBackoff{Delay: time.Millisecond}),

@@ -353,7 +353,8 @@ func (b Build) generateBuildHash(ctx *buildContext) string {
 	}
 
 	buildHash, err := ctx.cacheManager.GenerateBuildHash(
-		ctx.platform, ctx.ldflags, ctx.sourceFiles, ctx.configFiles)
+		ctx.platform, ctx.ldflags, ctx.sourceFiles, ctx.configFiles,
+	)
 	if err != nil {
 		utils.Warn("Failed to generate build hash: %v", err)
 		return ""
