@@ -202,7 +202,27 @@ test:
   bench_time: "10s"         # Benchmark duration
   mem_profile: false        # Enable memory profiling
   cpu_profile: false        # Enable CPU profiling
+  auto_discover_build_tags: true       # Detect build tags from //go:build constraints
+  auto_discover_build_tags_exclude:    # Tags to skip during auto-discovery
+    - mage
+    - windows
+  combine_build_tags: true             # Run all discovered tags in one test pass (see below)
 ```
+
+### Build Tag Auto-Discovery
+
+When `auto_discover_build_tags` is enabled, the test runner scans `//go:build`
+constraints in the source tree and runs the discovered tags automatically (tags
+in `auto_discover_build_tags_exclude` are skipped).
+
+`combine_build_tags` controls how those tags are executed:
+
+- **`true` (default):** all discovered tags run in a single `go test -tags a,b,c`
+  pass. Go build tags are additive, so the untagged suite compiles alongside
+  every tagged file and runs **once** — avoiding the re-run of the base suite
+  for each tag.
+- **`false`:** a separate pass per tag (base pass, then one pass per tag). Use
+  this only when tags are mutually exclusive and cannot be enabled together.
 
 ### Test Types
 
@@ -429,6 +449,9 @@ export MAGE_X_TEST_TIMEOUT="600"
 export MAGE_X_TEST_COVERAGE="true"
 export MAGE_X_TEST_RACE="false"
 export MAGE_X_TEST_PARALLEL="4"
+export MAGE_X_AUTO_DISCOVER_BUILD_TAGS="true"
+export MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE="mage,windows"
+export MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE="true"   # false = one test pass per tag
 ```
 
 ### Security Variables
