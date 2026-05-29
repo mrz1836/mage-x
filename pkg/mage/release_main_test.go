@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
@@ -60,7 +61,8 @@ func (ts *ReleaseMainTestSuite) TestEnsureGoreleaser_AlreadyInstalled() {
 
 // TestEnsureGoreleaser_NeedsInstall tests when goreleaser needs installation
 func (ts *ReleaseMainTestSuite) TestEnsureGoreleaser_NeedsInstall() {
-	// Mock which command to return error (not found)
+	// Mock which command to return error (not found). Defined first so it still matches
+	// the goreleaser lookup before the catch-all below.
 	ts.env.Runner.On("RunCmd", "which", []string{"goreleaser"}).Return(errReleaseGoreleaser)
 
 	// Mock brew install (for macOS simulation)
@@ -68,6 +70,11 @@ func (ts *ReleaseMainTestSuite) TestEnsureGoreleaser_NeedsInstall() {
 
 	// Mock go install (fallback)
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/goreleaser/goreleaser@latest"}).Return(nil).Maybe()
+
+	// Catch-all so installGoreleaser's unmocked "curl ... | sh" (and any OS-specific
+	// fallback) returns success instead of panicking on an unexpected call. The test
+	// ignores the result, so this only prevents the panic across OSes.
+	ts.env.Runner.On("RunCmd", mock.Anything, mock.Anything).Return(nil).Maybe()
 
 	err := ts.env.WithMockRunner(
 		func(r any) error { return SetRunner(r.(CommandRunner)) },
