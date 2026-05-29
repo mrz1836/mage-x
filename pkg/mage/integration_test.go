@@ -305,6 +305,11 @@ func (its *IntegrationTestSuite) TestConfigurationLoading() {
 			t,
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
+			// The mage-x test runner exports MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE
+			// to its `go test` subprocess (so `magex test:race` runs these tests with
+			// it set, e.g. "mage,windows,..."). It overrides both the default and the
+			// YAML fixture, so clear it to assert the configured exclude list.
+			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE",
 			// Binary-name overrides win over both defaults and the YAML fixture, so a
 			// leaked value (e.g. config_test.go sets MAGE_X_CUSTOM_BINARY_NAME) would
 			// override the asserted Project.Binary. Clear them for a clean baseline.
@@ -336,6 +341,11 @@ func (its *IntegrationTestSuite) TestConfigurationLoading() {
 			t,
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
+			// The mage-x test runner exports MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE
+			// to its `go test` subprocess (so `magex test:race` runs these tests with
+			// it set, e.g. "mage,windows,..."). It overrides both the default and the
+			// YAML fixture, so clear it to assert the configured exclude list.
+			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE",
 			// Binary-name overrides win over both defaults and the YAML fixture, so a
 			// leaked value (e.g. config_test.go sets MAGE_X_CUSTOM_BINARY_NAME) would
 			// override the asserted Project.Binary. Clear them for a clean baseline.
@@ -388,6 +398,11 @@ test:
 			t,
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
+			// The mage-x test runner exports MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE
+			// to its `go test` subprocess (so `magex test:race` runs these tests with
+			// it set, e.g. "mage,windows,..."). It overrides both the default and the
+			// YAML fixture, so clear it to assert the configured exclude list.
+			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE",
 			// Binary-name overrides win over both defaults and the YAML fixture, so a
 			// leaked value (e.g. config_test.go sets MAGE_X_CUSTOM_BINARY_NAME) would
 			// override the asserted Project.Binary. Clear them for a clean baseline.
