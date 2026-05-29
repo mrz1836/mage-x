@@ -87,8 +87,12 @@ func (ts *BmadTestSuite) TestBmadConstants() {
 
 	// Verify default value constants
 	ts.Require().NotEmpty(DefaultBmadProjectDir, "DefaultBmadProjectDir should be defined")
-	ts.Require().NotEmpty(DefaultBmadVersionTag, "DefaultBmadVersionTag should be defined")
 	ts.Require().NotEmpty(DefaultBmadPackageName, "DefaultBmadPackageName should be defined")
+
+	// DefaultBmadVersionTag is intentionally empty: an empty tag is appended to the
+	// package name (packageName + versionTag), so npm resolves the latest published
+	// version. It was changed from "@alpha" to "" in commit 5722e20.
+	ts.Require().Empty(DefaultBmadVersionTag, "DefaultBmadVersionTag should default to latest (empty tag)")
 }
 
 // TestBmadConfigDefaults tests that BMAD config defaults are properly set
