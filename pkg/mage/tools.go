@@ -231,7 +231,7 @@ func (Tools) VulnCheck() error {
 
 	// Ensure govulncheck is installed with retry logic
 
-	if !utils.CommandExists("govulncheck") {
+	if !commandExists("govulncheck") {
 		if err := installGovulncheck(ctx, config, maxRetries, initialDelay); err != nil {
 			return fmt.Errorf("failed to install govulncheck: %w", err)
 		}
