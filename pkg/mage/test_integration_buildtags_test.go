@@ -320,7 +320,13 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 		os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")
 		os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")
 
-		// Test with invalid boolean values
+		// Establish a known on-disk baseline (false). The sibling EmptyExclusionList
+		// subtest writes a .mage.yaml with auto_discover_build_tags: true into the
+		// same tempDir (still our cwd), so we overwrite it to keep this case hermetic.
+		createMageConfig(t, tempDir, false, []string{})
+
+		// "maybe" is not a recognized boolean, so env.ParseBool reports it as absent
+		// and applyEnvOverrides leaves the on-disk value untouched.
 		require.NoError(t, os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "maybe"))
 		defer func() {
 			os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")
@@ -331,7 +337,7 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 		config, err := GetConfig()
 		require.NoError(t, err)
 
-		// Invalid values should not change the default
+		// The invalid value must not flip the configured default (false).
 		assert.False(t, config.Test.AutoDiscoverBuildTags)
 	})
 }
