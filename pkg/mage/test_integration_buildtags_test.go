@@ -214,8 +214,8 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		// Test handleCoverageFilesWithBuildTag
-		handleCoverageFilesWithBuildTag(coverageFiles, "")
+		// Base (untagged) coverage consolidates to the canonical coverage.txt
+		finalizeCoverageProfiles(coverageFiles, coverageOutputForTag(""))
 		assert.FileExists(t, "coverage.txt")
 
 		// Clean up
@@ -228,7 +228,8 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		handleCoverageFilesWithBuildTag(coverageFiles, "unit")
+		// An isolated per-tag pass consolidates to coverage_<tag>.txt
+		finalizeCoverageProfiles(coverageFiles, coverageOutputForTag("unit"))
 		assert.FileExists(t, "coverage_unit.txt")
 
 		// Clean up

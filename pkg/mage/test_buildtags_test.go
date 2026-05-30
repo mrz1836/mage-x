@@ -493,7 +493,7 @@ func TestHandleCoverageFilesWithBuildTag(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		handleCoverageFilesWithBuildTag(coverageFiles, "")
+		finalizeCoverageProfiles(coverageFiles, coverageOutputForTag(""))
 
 		// Should create coverage.txt (standard name for base coverage)
 		assert.FileExists(t, "coverage.txt")
@@ -512,7 +512,7 @@ func TestHandleCoverageFilesWithBuildTag(t *testing.T) {
 		err := os.WriteFile(coverageFiles[0], []byte("mode: atomic\ntest coverage"), 0o600)
 		require.NoError(t, err)
 
-		handleCoverageFilesWithBuildTag(coverageFiles, "unit")
+		finalizeCoverageProfiles(coverageFiles, coverageOutputForTag("unit"))
 
 		// Should create coverage_unit.txt
 		assert.FileExists(t, "coverage_unit.txt")
