@@ -759,7 +759,7 @@ func TestMergeCoverageFiles(t *testing.T) {
 func TestHandleCoverageFiles(t *testing.T) {
 	t.Run("empty list does nothing", func(t *testing.T) {
 		// Should not panic with empty list
-		handleCoverageFiles([]string{})
+		finalizeCoverageProfiles([]string{}, "coverage.txt")
 	})
 }
 
@@ -770,7 +770,7 @@ func TestRunTestsForModulesWithRunnerNilConfig(t *testing.T) {
 }
 
 func TestRunCoverageTestsForModulesWithRunnerNilConfig(t *testing.T) {
-	err := runCoverageTestsForModulesWithRunner(nil, nil, false, nil, "", nil)
+	err := runCoverageTestsForModulesWithRunner(nil, nil, false, nil, "", "coverage.txt", nil)
 	require.Error(t, err)
 	assert.Equal(t, errConfigNil, err)
 }

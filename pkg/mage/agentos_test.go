@@ -4,6 +4,7 @@
 package mage
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -117,20 +118,13 @@ func (ts *AgentOSTestSuite) TestIsAgentOSBaseInstalled_WithMockInstall() {
 	// Create a mock agent-os directory in temp
 	tempHome := ts.T().TempDir()
 	agentOSDir := filepath.Join(tempHome, "agent-os")
-	err := os.MkdirAll(agentOSDir, 0o755)
+	err := os.MkdirAll(agentOSDir, 0o750)
 	ts.Require().NoError(err)
 
 	// Create mock config.yml
 	configPath := filepath.Join(agentOSDir, "config.yml")
-	err = os.WriteFile(configPath, []byte("version: v2.1.1\n"), 0o644)
+	err = os.WriteFile(configPath, []byte("version: v2.1.1\n"), 0o600)
 	ts.Require().NoError(err)
-
-	// Create config pointing to temp home
-	config := &Config{
-		AgentOS: AgentOSConfig{
-			HomeDir: agentOSDir, // Point directly to the mock dir
-		},
-	}
 
 	// Need to override the home path logic for this test
 	// The current implementation uses os.UserHomeDir() which we can't easily mock
@@ -198,18 +192,12 @@ version: v2.1.1
 profile: default
 claude_code_commands: true
 `
-	err := os.WriteFile(configPath, []byte(configContent), 0o644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o600)
 	ts.Require().NoError(err)
-
-	// Create config pointing to temp dir
-	config := &Config{
-		AgentOS: AgentOSConfig{
-			HomeDir: tempDir,
-		},
-	}
 
 	// Override getAgentOSHomePath behavior for this test
 	// by directly testing the version parsing logic
+	// #nosec G304 -- test reads config path in temp fixture
 	data, err := os.ReadFile(configPath)
 	ts.Require().NoError(err)
 	ts.Require().Contains(string(data), "version: v2.1.1")
@@ -237,19 +225,18 @@ func (ts *AgentOSTestSuite) TestVerifyAgentOSInstallation_WithMockProject() {
 
 	// Create mock project directory with required structure
 	projectDir := getAgentOSProjectDir(config)
-	err = os.MkdirAll(projectDir, 0o755)
+	err = os.MkdirAll(projectDir, 0o750)
 	ts.Require().NoError(err)
 
 	standardsDir := filepath.Join(projectDir, "standards")
-	err = os.MkdirAll(standardsDir, 0o755)
+	err = os.MkdirAll(standardsDir, 0o750)
 	ts.Require().NoError(err)
 
 	// Now verification should pass
 	err = verifyAgentOSInstallation(config)
 	ts.Require().NoError(err)
 
-	// Cleanup
-	_ = os.RemoveAll(projectDir)
+	cleanupRemoveAll(ts.T(), projectDir)
 }
 
 // TestAgentOSInstall_AlreadyInstalled tests that install fails if already installed
@@ -261,7 +248,7 @@ func (ts *AgentOSTestSuite) TestAgentOSInstall_AlreadyInstalled() {
 
 	// Create existing project directory
 	projectDir := getAgentOSProjectDir(config)
-	err = os.MkdirAll(projectDir, 0o755)
+	err = os.MkdirAll(projectDir, 0o750)
 	ts.Require().NoError(err)
 
 	// Install should fail with already installed error
@@ -269,8 +256,7 @@ func (ts *AgentOSTestSuite) TestAgentOSInstall_AlreadyInstalled() {
 	ts.Require().Error(err)
 	ts.Require().ErrorIs(err, errAgentOSAlreadyInstalled)
 
-	// Cleanup
-	_ = os.RemoveAll(projectDir)
+	cleanupRemoveAll(ts.T(), projectDir)
 }
 
 // TestCheckAgentOSPrerequisites tests prerequisite checking
@@ -283,7 +269,7 @@ func (ts *AgentOSTestSuite) TestCheckAgentOSPrerequisites() {
 	if err != nil {
 		// Verify it's one of the expected errors
 		ts.Require().True(
-			err == errCurlNotInstalled || err == errBashNotInstalled,
+			errors.Is(err, errCurlNotInstalled) || errors.Is(err, errBashNotInstalled),
 			"Should fail with curl or bash not installed error",
 		)
 	}
@@ -301,26 +287,25 @@ func (ts *AgentOSTestSuite) TestAgentOSPreservedDirectories() {
 	specsDir := filepath.Join(projectDir, "specs")
 	productDir := filepath.Join(projectDir, "product")
 
-	err = os.MkdirAll(specsDir, 0o755)
+	err = os.MkdirAll(specsDir, 0o750)
 	ts.Require().NoError(err)
-	err = os.MkdirAll(productDir, 0o755)
+	err = os.MkdirAll(productDir, 0o750)
 	ts.Require().NoError(err)
 
 	// Create test files in preserved directories
 	specFile := filepath.Join(specsDir, "test-feature.md")
-	err = os.WriteFile(specFile, []byte("# Test Feature Spec"), 0o644)
+	err = os.WriteFile(specFile, []byte("# Test Feature Spec"), 0o600)
 	ts.Require().NoError(err)
 
 	productFile := filepath.Join(productDir, "roadmap.md")
-	err = os.WriteFile(productFile, []byte("# Product Roadmap"), 0o644)
+	err = os.WriteFile(productFile, []byte("# Product Roadmap"), 0o600)
 	ts.Require().NoError(err)
 
 	// Verify files exist
 	ts.Require().FileExists(specFile)
 	ts.Require().FileExists(productFile)
 
-	// Cleanup
-	_ = os.RemoveAll(projectDir)
+	cleanupRemoveAll(ts.T(), projectDir)
 }
 
 // TestAgentOSClaudeCodeIntegration tests Claude Code directory detection
@@ -331,9 +316,9 @@ func (ts *AgentOSTestSuite) TestAgentOSClaudeCodeIntegration() {
 	claudeCommandsDir := filepath.Join(".claude", "commands", "agent-os")
 	claudeAgentsDir := filepath.Join(".claude", "agents", "agent-os")
 
-	err := os.MkdirAll(claudeCommandsDir, 0o755)
+	err := os.MkdirAll(claudeCommandsDir, 0o750)
 	ts.Require().NoError(err)
-	err = os.MkdirAll(claudeAgentsDir, 0o755)
+	err = os.MkdirAll(claudeAgentsDir, 0o750)
 	ts.Require().NoError(err)
 
 	// Verify directories exist
@@ -342,8 +327,7 @@ func (ts *AgentOSTestSuite) TestAgentOSClaudeCodeIntegration() {
 	_, err = os.Stat(claudeAgentsDir)
 	ts.Require().NoError(err)
 
-	// Cleanup
-	_ = os.RemoveAll(".claude")
+	cleanupRemoveAll(ts.T(), ".claude")
 }
 
 // setupAgentOSConfig creates a test configuration for agentos

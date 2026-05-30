@@ -130,7 +130,8 @@ func TestAuditingExecutor_Options(t *testing.T) {
 	t.Run("WithAuditWorkingDir sets working directory", func(t *testing.T) {
 		base := NewBase(WithDryRun(true))
 		logger := &mockAuditLogger{}
-		executor := NewAuditingExecutor(base,
+		executor := NewAuditingExecutor(
+			base,
 			WithAuditLogger(logger),
 			WithAuditWorkingDir("/test/dir"),
 		)
@@ -147,7 +148,8 @@ func TestAuditingExecutor_Options(t *testing.T) {
 	t.Run("WithAuditDryRun adds dry run metadata", func(t *testing.T) {
 		base := NewBase(WithDryRun(true))
 		logger := &mockAuditLogger{}
-		executor := NewAuditingExecutor(base,
+		executor := NewAuditingExecutor(
+			base,
 			WithAuditLogger(logger),
 			WithAuditDryRun(true),
 		)
@@ -164,7 +166,8 @@ func TestAuditingExecutor_Options(t *testing.T) {
 	t.Run("WithAuditMetadata adds custom metadata", func(t *testing.T) {
 		base := NewBase(WithDryRun(true))
 		logger := &mockAuditLogger{}
-		executor := NewAuditingExecutor(base,
+		executor := NewAuditingExecutor(
+			base,
 			WithAuditLogger(logger),
 			WithAuditMetadata("build_id", "12345"),
 			WithAuditMetadata("version", "1.0.0"),

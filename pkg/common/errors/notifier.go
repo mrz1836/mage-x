@@ -283,7 +283,8 @@ func (e *EmailChannel) formatEmailBody(notification *ErrorNotification) string {
 	if notification == nil {
 		return "Empty notification"
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(
+		`
 Error Details:
 - Code: %s
 - Message: %s
@@ -349,7 +350,8 @@ func (w *WebhookChannel) Send(ctx context.Context, notification *ErrorNotificati
 	}
 
 	// Create JSON payload
-	payload := fmt.Sprintf(`{
+	payload := fmt.Sprintf(
+		`{
 		"error_code": "%s",
 		"message": "%s",
 		"severity": "%s",

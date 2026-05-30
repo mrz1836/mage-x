@@ -326,35 +326,50 @@ func (Test) CoverHTML() error {
 	return nil
 }
 
-// handleCoverageFiles processes coverage files by merging multiple files or renaming single file
-func handleCoverageFiles(coverageFiles []string) {
-	if len(coverageFiles) > 1 {
-		utils.Info("\nMerging coverage files...")
-		handleMultipleCoverageFiles(coverageFiles)
-	} else if len(coverageFiles) == 1 {
-		handleSingleCoverageFile(coverageFiles[0]) // #nosec G602 -- len(coverageFiles)==1 guard ensures index 0 is valid
+// coverageOutputForTag returns the canonical merged coverage filename for a
+// single coverage pass. The untagged base suite — and the combined single-pass
+// run, which compiles the untagged files alongside every tag — writes to the
+// standard coverage.txt consumed by CoverReport and CI. An isolated per-tag pass
+// writes to coverage_<tag>.txt so it cannot overwrite the base profile.
+func coverageOutputForTag(buildTag string) string {
+	if buildTag == "" {
+		return "coverage.txt"
 	}
+	return fmt.Sprintf("coverage_%s.txt", buildTagFileToken(buildTag))
 }
 
-// handleMultipleCoverageFiles merges multiple coverage files
-func handleMultipleCoverageFiles(coverageFiles []string) {
-	if err := mergeCoverageFiles(coverageFiles, "coverage.txt"); err != nil {
-		utils.Warn("Failed to merge coverage files: %v", err)
+// finalizeCoverageProfiles consolidates the per-module coverage profiles produced
+// by a single pass into one output file. Multiple profiles are merged and the
+// per-module inputs removed; a lone profile is renamed. An empty input list is a
+// no-op so callers may invoke it unconditionally.
+func finalizeCoverageProfiles(coverageFiles []string, output string) {
+	switch len(coverageFiles) {
+	case 0:
 		return
-	}
-
-	// Clean up individual coverage files
-	for _, file := range coverageFiles {
-		if err := os.Remove(file); err != nil {
-			utils.Warn("Failed to remove coverage file %s: %v", file, err)
+	case 1:
+		src := coverageFiles[0] // #nosec G602 -- len==1 guard ensures index 0 is valid
+		if src == output {
+			return // already at the destination name
 		}
-	}
-}
-
-// handleSingleCoverageFile renames single coverage file to standard name
-func handleSingleCoverageFile(coverageFile string) {
-	if err := os.Rename(coverageFile, "coverage.txt"); err != nil {
-		utils.Warn("Failed to rename coverage file: %v", err)
+		if err := os.Rename(src, output); err != nil {
+			utils.Warn("Failed to rename coverage file: %v", err)
+		}
+	default:
+		utils.Info("\nMerging coverage files...")
+		if err := mergeCoverageFiles(coverageFiles, output); err != nil {
+			utils.Warn("Failed to merge coverage files: %v", err)
+			return
+		}
+		// Clean up the individual per-module inputs, but never delete the merged
+		// destination in case it happens to share a name with one of them.
+		for _, file := range coverageFiles {
+			if file == output {
+				continue
+			}
+			if err := os.Remove(file); err != nil {
+				utils.Warn("Failed to remove coverage file %s: %v", file, err)
+			}
+		}
 	}
 }
 
@@ -828,8 +843,13 @@ func processBuildTagAutoDiscovery(config *Config) ([]string, string) {
 
 	excluded := truncateList(config.Test.AutoDiscoverBuildTagsExclude, 40)
 	testTargets := make([]string, 0, 1+len(tags))
-	testTargets = append(testTargets, "base")
-	testTargets = append(testTargets, tags...)
+	if config.Test.CombineBuildTags {
+		// Single combined pass: the untagged files run alongside all tags.
+		testTargets = append(testTargets, "combined("+strings.Join(tags, "+")+")")
+	} else {
+		testTargets = append(testTargets, "base")
+		testTargets = append(testTargets, tags...)
+	}
 
 	// Show count and full list of discovered tags (or reasonable truncation)
 	var foundDisplay string
@@ -863,6 +883,13 @@ func titleCase(s string) string {
 	return string(runes)
 }
 
+// buildTagFileToken converts a build tag value into a filename-safe token.
+// In combined mode buildTag is a comma-joined list (e.g. "unit,integration"),
+// so collapse the commas to underscores to keep coverage filenames clean.
+func buildTagFileToken(buildTag string) string {
+	return strings.ReplaceAll(buildTag, ",", "_")
+}
+
 // getTagInfo returns formatted tag information string
 func getTagInfo(buildTag string) string {
 	if buildTag != "" {
@@ -884,47 +911,6 @@ func handleCoverageFileMove(module ModuleInfo, coverFile string, coverageFiles *
 	}
 }
 
-// handleCoverageFilesWithBuildTag handles coverage files based on build tag
-func handleCoverageFilesWithBuildTag(coverageFiles []string, buildTag string) {
-	if buildTag == "" {
-		// For base coverage (no tags), use standard coverage.txt
-		handleCoverageFiles(coverageFiles)
-		return
-	}
-
-	// For build tag coverage, create a separate merged coverage file
-	taggedCoverageFile := fmt.Sprintf("coverage_%s.txt", buildTag)
-	handleTaggedCoverageFiles(coverageFiles, taggedCoverageFile, buildTag)
-}
-
-// handleTaggedCoverageFiles processes coverage files for a specific build tag
-func handleTaggedCoverageFiles(coverageFiles []string, taggedCoverageFile, buildTag string) {
-	switch len(coverageFiles) {
-	case 0:
-		return
-	case 1:
-		if err := os.Rename(coverageFiles[0], taggedCoverageFile); err != nil {
-			utils.Warn("Failed to rename coverage file: %v", err)
-		}
-	default:
-		mergeAndCleanupCoverageFiles(coverageFiles, taggedCoverageFile, buildTag)
-	}
-}
-
-// mergeAndCleanupCoverageFiles merges multiple coverage files and cleans up
-func mergeAndCleanupCoverageFiles(coverageFiles []string, taggedCoverageFile, buildTag string) {
-	if err := mergeCoverageFiles(coverageFiles, taggedCoverageFile); err != nil {
-		utils.Warn("Failed to merge coverage files for tag '%s': %v", buildTag, err)
-		return
-	}
-	// Clean up individual coverage files
-	for _, file := range coverageFiles {
-		if err := os.Remove(file); err != nil {
-			utils.Warn("Failed to remove coverage file %s: %v", file, err)
-		}
-	}
-}
-
 // runTestsWithBuildTagDiscoveryTags runs tests with pre-discovered build tags
 //
 //nolint:unparam // testType kept for API consistency with WithRunner variant, even though currently only called with "unit"
@@ -939,7 +925,22 @@ func runTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules []Modul
 		return runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, "", runner)
 	}
 
-	// Run base tests (no build tags)
+	// Combined mode: a single pass enabling every discovered tag at once. Go
+	// build tags are additive, so this compiles the untagged files alongside
+	// all tagged files and runs the suite exactly once instead of re-running
+	// the base tests for every tag.
+	if config.Test.CombineBuildTags {
+		combined := strings.Join(discoveredTags, ",")
+		utils.Info("Running %s tests with combined build tags: %s", testType, combined)
+		if err := runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, combined, runner); err != nil {
+			return fmt.Errorf("tests with combined tags '%s' failed: %w", combined, err)
+		}
+		return nil
+	}
+
+	// Per-tag mode: run base tests (no build tags) then one pass per tag. This
+	// re-runs the untagged tests once per tag but isolates mutually exclusive
+	// tags that cannot be enabled together.
 	utils.Info("Running %s tests without build tags", testType)
 	if err := runTestsForModulesWithRunner(config, modules, race, false, additionalArgs, testType, "", runner); err != nil {
 		return fmt.Errorf("base tests failed: %w", err)
@@ -965,19 +966,35 @@ func runCoverageTestsWithBuildTagDiscoveryTags(config *Config, modules []ModuleI
 func runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs, discoveredTags []string, runner CommandRunner) error {
 	if !config.Test.AutoDiscoverBuildTags || len(discoveredTags) == 0 {
 		// Run coverage tests normally without build tag discovery
-		return runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, "", runner)
+		return runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, "", coverageOutputForTag(""), runner)
+	}
+
+	if config.Test.CombineBuildTags {
+		// Combined mode: a single coverage pass enabling every discovered tag.
+		// See runTestsWithBuildTagDiscoveryTagsWithRunner for the rationale. The
+		// pass runs with -tags set but the merged profile is the whole suite, so it
+		// is written to the canonical coverage.txt rather than a tag-named file.
+		combined := strings.Join(discoveredTags, ",")
+		utils.Info("Running coverage tests with combined build tags: %s", combined)
+		if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, combined, "coverage.txt", runner); err != nil {
+			return fmt.Errorf("coverage tests with combined tags '%s' failed: %w", combined, err)
+		}
+		if utils.FileExists("coverage.txt") {
+			return Test{}.CoverReport()
+		}
+		return nil
 	}
 
 	// Run base coverage tests (no build tags)
 	utils.Info("Running coverage tests without build tags")
-	if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, "", runner); err != nil {
+	if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, "", coverageOutputForTag(""), runner); err != nil {
 		return fmt.Errorf("base coverage tests failed: %w", err)
 	}
 
 	// Run coverage tests for each discovered build tag
 	for _, tag := range discoveredTags {
 		utils.Info("Running coverage tests with build tag: %s", tag)
-		if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, tag, runner); err != nil {
+		if err := runCoverageTestsForModulesWithRunner(config, modules, race, additionalArgs, tag, coverageOutputForTag(tag), runner); err != nil {
 			return fmt.Errorf("coverage tests with tag '%s' failed: %w", tag, err)
 		}
 	}
@@ -989,8 +1006,12 @@ func runCoverageTestsWithBuildTagDiscoveryTagsWithRunner(config *Config, modules
 	return nil
 }
 
-// runCoverageTestsForModulesWithRunner runs coverage tests for all modules with the specified build tag using provided runner
-func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, buildTag string, runner CommandRunner) error {
+// runCoverageTestsForModulesWithRunner runs coverage tests for all modules using the
+// provided runner. buildTag drives the -tags flag and the per-module temp profile
+// names; coverageOutput is the canonical filename the merged profile is written to.
+// They are independent: the combined pass runs with buildTag set but still writes to
+// the standard coverage.txt.
+func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race bool, additionalArgs []string, buildTag, coverageOutput string, runner CommandRunner) error {
 	if config == nil {
 		return errConfigNil
 	}
@@ -1001,7 +1022,7 @@ func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, 
 
 	tagSuffix := ""
 	if buildTag != "" {
-		tagSuffix = fmt.Sprintf("_%s", buildTag)
+		tagSuffix = fmt.Sprintf("_%s", buildTagFileToken(buildTag))
 	}
 
 	// Filter modules based on exclusion configuration
@@ -1065,8 +1086,8 @@ func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, 
 		displayModuleCompletionWithSuffix(module, "Coverage tests", tagInfo, moduleStart, err)
 	}
 
-	// Handle coverage files
-	handleCoverageFilesWithBuildTag(coverageFiles, buildTag)
+	// Consolidate the per-module profiles into the canonical output filename.
+	finalizeCoverageProfiles(coverageFiles, coverageOutput)
 
 	// Report overall results
 	tagInfo := getTagInfo(buildTag)

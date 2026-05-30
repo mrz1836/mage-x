@@ -114,49 +114,49 @@ func TestFormatHelperFunctions(t *testing.T) {
 		}
 	})
 
-	t.Run("buildFindExcludeArgs", func(t *testing.T) {
+	t.Run("newExcludeDirPredicate", func(t *testing.T) {
 		tests := []struct {
 			name     string
 			envValue string
-			expected []string
+			skipped  []string
+			kept     []string
 		}{
 			{
-				name:     "single exclude path",
-				envValue: "vendor",
-				expected: []string{"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*"},
+				name:     "default excludes",
+				envValue: "",
+				skipped:  []string{"vendor", "node_modules", ".git", ".idea", ".vscode"},
+				kept:     []string{"cmd", "pkg", "ci-tester", "src"},
 			},
 			{
-				name:     "multiple exclude paths",
-				envValue: "vendor,node_modules",
-				expected: []string{
-					"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*",
-					"-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*",
-				},
+				name:     "custom single exclude",
+				envValue: "ci-tester",
+				skipped:  []string{"ci-tester"},
+				kept:     []string{"vendor", "node_modules", "src"},
 			},
 			{
-				name:     "exclude path with spaces",
-				envValue: " build ",
-				expected: []string{"-not", "-path", "./build/*", "-not", "-path", "./*build*/*"},
-			},
-			{
-				name:     "empty paths filtered out",
-				envValue: "vendor,,build",
-				expected: []string{
-					"-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*",
-					"-not", "-path", "./build/*", "-not", "-path", "./*build*/*",
-				},
+				name:     "multiple excludes with spaces and empties",
+				envValue: "vendor, ci-tester ,,build",
+				skipped:  []string{"vendor", "ci-tester", "build"},
+				kept:     []string{"node_modules", ".git", "src"},
 			},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				_ = os.Setenv("MAGE_X_FORMAT_EXCLUDE_PATHS", tt.envValue) //nolint:errcheck // test setup
+				if tt.envValue == "" {
+					_ = os.Unsetenv("MAGE_X_FORMAT_EXCLUDE_PATHS") //nolint:errcheck // test setup
+				} else {
+					_ = os.Setenv("MAGE_X_FORMAT_EXCLUDE_PATHS", tt.envValue) //nolint:errcheck // test setup
+				}
+				defer func() { _ = os.Unsetenv("MAGE_X_FORMAT_EXCLUDE_PATHS") }() //nolint:errcheck // test cleanup
 
-				result := buildFindExcludeArgs()
-				assert.Equal(t, tt.expected, result)
-
-				// Clean up
-				_ = os.Unsetenv("MAGE_X_FORMAT_EXCLUDE_PATHS") //nolint:errcheck // test cleanup
+				skip := newExcludeDirPredicate()
+				for _, name := range tt.skipped {
+					assert.True(t, skip(name), "expected directory %q to be skipped", name)
+				}
+				for _, name := range tt.kept {
+					assert.False(t, skip(name), "expected directory %q to be kept", name)
+				}
 			})
 		}
 	})

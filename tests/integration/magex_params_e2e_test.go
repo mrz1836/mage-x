@@ -6,7 +6,6 @@ package integration
 import (
 	"bytes"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -26,7 +25,7 @@ func TestMagexParameterPassingE2E(t *testing.T) {
 
 	// Build magex first to ensure we're testing the latest code
 	t.Run("BuildMagex", func(t *testing.T) {
-		cmd := exec.Command("go", "build", "-o", "magex-test", "../../cmd/magex")
+		cmd := testCommand(t, "go", "build", "-o", "magex-test", "../../cmd/magex")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("Failed to build magex: %v\nOutput: %s", err, output)
@@ -34,7 +33,7 @@ func TestMagexParameterPassingE2E(t *testing.T) {
 	})
 
 	// Clean up the test binary after tests
-	defer os.Remove("magex-test")
+	cleanupFile(t, "magex-test")
 
 	// Get the absolute path to the test binary
 	magexPath, err := filepath.Abs("./magex-test")
@@ -73,7 +72,7 @@ func (t Test) Fuzz() error {
 	return impl.Fuzz(getMageArgs()...)
 }
 `
-		err := os.WriteFile(magefilePath, []byte(magefileContent), 0o644)
+		err := os.WriteFile(magefilePath, []byte(magefileContent), 0o600)
 		require.NoError(t, err)
 
 		// Create a simple fuzz test
@@ -88,11 +87,11 @@ func FuzzTest(f *testing.F) {
 	})
 }
 `
-		err = os.WriteFile(testFilePath, []byte(fuzzTestContent), 0o644)
+		err = os.WriteFile(testFilePath, []byte(fuzzTestContent), 0o600)
 		require.NoError(t, err)
 
 		// Run magex with time parameter
-		cmd := exec.Command(magexPath, "test:fuzz", "time=1s")
+		cmd := testCommand(t, magexPath, "test:fuzz", "time=1s")
 		cmd.Dir = testDir
 
 		// Capture output
@@ -124,7 +123,9 @@ func FuzzTest(f *testing.F) {
 			}
 		case <-time.After(5 * time.Second):
 			// If it takes more than 5s, it's probably using the wrong time
-			cmd.Process.Kill()
+			if err := cmd.Process.Kill(); err != nil {
+				t.Fatalf("kill fuzz test command: %v", err)
+			}
 			t.Error("Fuzz test took too long - likely using default 10s instead of 1s")
 		}
 	})
@@ -134,39 +135,39 @@ func FuzzTest(f *testing.F) {
 		testDir := t.TempDir()
 
 		// Initialize git repo
-		cmd := exec.Command("git", "init")
+		cmd := testCommand(t, "git", "init")
 		cmd.Dir = testDir
 		err := cmd.Run()
 		require.NoError(t, err)
 
 		// Configure git
-		cmd = exec.Command("git", "config", "user.email", "test@example.com")
+		cmd = testCommand(t, "git", "config", "user.email", "test@example.com")
 		cmd.Dir = testDir
 		err = cmd.Run()
 		require.NoError(t, err)
 
-		cmd = exec.Command("git", "config", "user.name", "Test User")
+		cmd = testCommand(t, "git", "config", "user.name", "Test User")
 		cmd.Dir = testDir
 		err = cmd.Run()
 		require.NoError(t, err)
 
 		// Create initial commit
 		testFile := filepath.Join(testDir, "test.txt")
-		err = os.WriteFile(testFile, []byte("test"), 0o644)
+		err = os.WriteFile(testFile, []byte("test"), 0o600)
 		require.NoError(t, err)
 
-		cmd = exec.Command("git", "add", ".")
+		cmd = testCommand(t, "git", "add", ".")
 		cmd.Dir = testDir
 		err = cmd.Run()
 		require.NoError(t, err)
 
-		cmd = exec.Command("git", "commit", "-m", "initial")
+		cmd = testCommand(t, "git", "commit", "-m", "initial")
 		cmd.Dir = testDir
 		err = cmd.Run()
 		require.NoError(t, err)
 
 		// Add initial tag
-		cmd = exec.Command("git", "tag", "v1.0.0")
+		cmd = testCommand(t, "git", "tag", "v1.0.0")
 		cmd.Dir = testDir
 		err = cmd.Run()
 		require.NoError(t, err)
@@ -199,25 +200,25 @@ func (v Version) Bump() error {
 	return impl.Bump(getMageArgs()...)
 }
 `
-		err = os.WriteFile(magefilePath, []byte(magefileContent), 0o644)
+		err = os.WriteFile(magefilePath, []byte(magefileContent), 0o600)
 		require.NoError(t, err)
 
 		// Run version bump with dry-run
-		cmd = exec.Command(magexPath, "version:bump", "dry-run", "bump=minor")
+		cmd = testCommand(t, magexPath, "version:bump", "dry-run", "bump=minor")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
 		outputStr := string(output)
 
 		// Should succeed
-		assert.NoError(t, err, "Command failed: %s", outputStr)
+		require.NoError(t, err, "Command failed: %s", outputStr)
 
 		// Should indicate dry-run mode
 		assert.Contains(t, outputStr, "DRY-RUN", "Should indicate dry-run mode")
 		assert.Contains(t, outputStr, "v1.1.0", "Should show version bump to v1.1.0")
 
 		// Verify no tag was actually created
-		cmd = exec.Command("git", "tag", "-l")
+		cmd = testCommand(t, "git", "tag", "-l")
 		cmd.Dir = testDir
 		tags, err := cmd.Output()
 		require.NoError(t, err)
@@ -235,13 +236,13 @@ go 1.21
 
 require github.com/mrz1836/mage-x v0.0.0
 `
-		err := os.WriteFile(filepath.Join(testDir, "go.mod"), []byte(modContent), 0o644)
+		err := os.WriteFile(filepath.Join(testDir, "go.mod"), []byte(modContent), 0o600)
 		require.NoError(t, err)
 
 		// Create test files in different packages
-		err = os.MkdirAll(filepath.Join(testDir, "pkg1"), 0o755)
+		err = os.MkdirAll(filepath.Join(testDir, "pkg1"), 0o750)
 		require.NoError(t, err)
-		err = os.MkdirAll(filepath.Join(testDir, "pkg2"), 0o755)
+		err = os.MkdirAll(filepath.Join(testDir, "pkg2"), 0o750)
 		require.NoError(t, err)
 
 		// pkg1 test
@@ -253,7 +254,7 @@ func TestPkg1(t *testing.T) {
 	t.Log("pkg1 test")
 }
 `
-		err = os.WriteFile(filepath.Join(testDir, "pkg1", "pkg1_test.go"), []byte(pkg1Test), 0o644)
+		err = os.WriteFile(filepath.Join(testDir, "pkg1", "pkg1_test.go"), []byte(pkg1Test), 0o600)
 		require.NoError(t, err)
 
 		// pkg2 test
@@ -265,7 +266,7 @@ func TestPkg2(t *testing.T) {
 	t.Log("pkg2 test")
 }
 `
-		err = os.WriteFile(filepath.Join(testDir, "pkg2", "pkg2_test.go"), []byte(pkg2Test), 0o644)
+		err = os.WriteFile(filepath.Join(testDir, "pkg2", "pkg2_test.go"), []byte(pkg2Test), 0o600)
 		require.NoError(t, err)
 
 		// Create magefile
@@ -296,21 +297,24 @@ func (t Test) Cover() error {
 	return impl.Cover(getMageArgs()...)
 }
 `
-		err = os.WriteFile(magefilePath, []byte(magefileContent), 0o644)
+		err = os.WriteFile(magefilePath, []byte(magefileContent), 0o600)
 		require.NoError(t, err)
 
 		// Run coverage for specific package
-		cmd := exec.Command(magexPath, "test:cover", "package=./pkg1")
+		cmd := testCommand(t, magexPath, "test:cover", "package=./pkg1")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
 		outputStr := string(output)
+		if err != nil {
+			t.Logf("coverage command exited with error while checking parameter handling: %v", err)
+		}
 
 		// Should run (may fail due to missing dependencies, but should attempt)
 		// The important thing is that it uses the package parameter
 		if strings.Contains(outputStr, "./pkg1") || strings.Contains(outputStr, "pkg1") {
 			// Good - it's using the package parameter
-			assert.True(t, true, "Package parameter was used")
+			t.Log("Package parameter was used")
 		} else if strings.Contains(outputStr, "cover") {
 			// At least it tried to run coverage
 			t.Log("Coverage command ran but package parameter may not have been visible in output")
@@ -330,7 +334,7 @@ func TestSimple(t *testing.T) {
 	t.Log("test")
 }
 `
-		err := os.WriteFile(filepath.Join(testDir, "simple_test.go"), []byte(testContent), 0o644)
+		err := os.WriteFile(filepath.Join(testDir, "simple_test.go"), []byte(testContent), 0o600)
 		require.NoError(t, err)
 
 		// Create magefile
@@ -361,11 +365,11 @@ func (t Test) Unit() error {
 	return impl.Unit(getMageArgs()...)
 }
 `
-		err = os.WriteFile(magefilePath, []byte(magefileContent), 0o644)
+		err = os.WriteFile(magefilePath, []byte(magefileContent), 0o600)
 		require.NoError(t, err)
 
 		// Run with multiple parameters
-		cmd := exec.Command(magexPath, "test:unit", "verbose", "short", "package=.")
+		cmd := testCommand(t, magexPath, "test:unit", "verbose", "short", "package=.")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
@@ -380,7 +384,7 @@ func (t Test) Unit() error {
 				strings.Contains(outputStr, "short") ||
 				strings.Contains(outputStr, "-short") {
 				// Parameters were processed
-				assert.True(t, true, "Parameters were processed")
+				t.Log("Parameters were processed")
 			}
 		}
 	})
@@ -393,46 +397,40 @@ func TestParameterPassingStressTest(t *testing.T) {
 	}
 
 	// Build magex
-	cmd := exec.Command("go", "build", "-o", "magex-test", "./cmd/magex")
+	cmd := testCommand(t, "go", "build", "-o", "magex-test", "../../cmd/magex")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to build magex: %v\nOutput: %s", err, output)
 	}
-	defer os.Remove("magex-test")
+	cleanupFile(t, "magex-test")
 
 	magexPath, err := filepath.Abs("./magex-test")
 	require.NoError(t, err)
 
-	// Test various parameter formats
+	// Test various parameter formats. Each case passes a set of args to a
+	// custom "default" magefile target that echoes the raw MAGE_ARGS string it
+	// received. The stress is on the magex -> mage -> MAGE_ARGS pipeline faithfully
+	// carrying every parameter (booleans, key=value pairs, and quoted values with
+	// special characters) without dropping or mangling them.
 	parameterTests := []struct {
-		name     string
-		command  string
-		args     []string
-		checkFor []string
+		name string
+		args []string
 	}{
 		{
-			name:     "Boolean flags",
-			command:  "test:unit",
-			args:     []string{"verbose", "short", "race"},
-			checkFor: []string{"-v", "-short", "-race"},
+			name: "Boolean flags",
+			args: []string{"verbose", "short", "race"},
 		},
 		{
-			name:     "Key-value pairs",
-			command:  "test:bench",
-			args:     []string{"time=5s", "count=3", "cpu=2"},
-			checkFor: []string{"5s", "3", "2"},
+			name: "Key-value pairs",
+			args: []string{"time=5s", "count=3", "cpu=2"},
 		},
 		{
-			name:     "Mixed parameters",
-			command:  "test:cover",
-			args:     []string{"verbose", "package=./pkg", "timeout=30s"},
-			checkFor: []string{"./pkg", "30s"},
+			name: "Mixed parameters",
+			args: []string{"verbose", "package=./pkg", "timeout=30s"},
 		},
 		{
-			name:     "Special characters",
-			command:  "git:commit",
-			args:     []string{`message="fix: bug #123"`, "all"},
-			checkFor: []string{"fix:", "bug", "123"},
+			name: "Special characters",
+			args: []string{`message="fix: bug #123"`, "all"},
 		},
 	}
 
@@ -469,24 +467,27 @@ func Default() error {
 	return nil
 }
 `
-			err := os.WriteFile(filepath.Join(testDir, "magefile.go"), []byte(magefileContent), 0o644)
+			err := os.WriteFile(filepath.Join(testDir, "magefile.go"), []byte(magefileContent), 0o600)
 			require.NoError(t, err)
 
 			// Run magex with the test parameters
 			cmdArgs := []string{"default"}
 			cmdArgs = append(cmdArgs, tt.args...)
 
-			cmd := exec.Command(magexPath, cmdArgs...)
+			cmd := testCommand(t, magexPath, cmdArgs...)
 			cmd.Dir = testDir
 
-			output, _ := cmd.CombinedOutput()
+			output, err := cmd.CombinedOutput()
 			outputStr := string(output)
 
-			// Verify parameters were received
+			// The custom magefile target must run successfully.
+			require.NoError(t, err, "magex default command failed: %s", outputStr)
+
+			// The magefile echoes the raw MAGE_ARGS string, so every parameter we
+			// passed must survive the magex -> mage pipeline and appear verbatim.
 			for _, check := range tt.args {
-				if !strings.Contains(outputStr, check) {
-					t.Logf("Full output: %s", outputStr)
-				}
+				assert.Contains(t, outputStr, check,
+					"Parameter %q must be passed through to MAGE_ARGS\nFull output: %s", check, outputStr)
 			}
 		})
 	}
@@ -502,12 +503,12 @@ func TestRegressionPrevention(t *testing.T) {
 	// were not passed from magex -> mage -> functions
 
 	// Build magex
-	cmd := exec.Command("go", "build", "-o", "magex-test", "./cmd/magex")
+	cmd := testCommand(t, "go", "build", "-o", "magex-test", "../../cmd/magex")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to build magex: %v\nOutput: %s", err, output)
 	}
-	defer os.Remove("magex-test")
+	cleanupFile(t, "magex-test")
 
 	magexPath, err := filepath.Abs("./magex-test")
 	require.NoError(t, err)
@@ -537,18 +538,18 @@ func CheckEnv() error {
 	return nil
 }
 `
-		err := os.WriteFile(filepath.Join(testDir, "magefile.go"), []byte(magefileContent), 0o644)
+		err := os.WriteFile(filepath.Join(testDir, "magefile.go"), []byte(magefileContent), 0o600)
 		require.NoError(t, err)
 
 		// Run with parameters
-		cmd := exec.Command(magexPath, "checkEnv", "test=true", "param=value")
+		cmd := testCommand(t, magexPath, "checkEnv", "test=true", "param=value")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
 		outputStr := string(output)
 
 		// Should succeed
-		assert.NoError(t, err, "Command failed: %s", outputStr)
+		require.NoError(t, err, "Command failed: %s", outputStr)
 
 		// Should show MAGE_ARGS
 		assert.Contains(t, outputStr, "MAGE_ARGS:", "Should print MAGE_ARGS")
@@ -558,12 +559,23 @@ func CheckEnv() error {
 	})
 
 	t.Run("CriticalBugScenario", func(t *testing.T) {
-		// Reproduce the exact scenario that was broken:
-		// magex test:fuzz time=7s was running for 10s instead
-
+		// Reproduce the exact scenario that was broken: a "time=7s" parameter
+		// must flow through the magex -> mage -> magefile-function pipeline and
+		// arrive as "7s" (not be dropped, leaving the function to fall back to a
+		// default of 10s). This is the regression that magex must never reintroduce.
+		//
+		// NOTE: We deliberately do NOT name the magefile target "test:fuzz" here.
+		// magex resolves built-in commands BEFORE custom magefile commands (see
+		// cmd/magex/main.go: reg.Execute is tried first, custom commands only run
+		// on ErrUnknownCommand). "test:fuzz" is a built-in, so a custom magefile
+		// "Test.Fuzz" would never be invoked - magex would run the built-in fuzz
+		// runner instead (which needs real fuzz targets/modules). To exercise the
+		// parameter-passing pipeline hermetically we use a custom, non-built-in
+		// target that echoes the args it received.
 		testDir := t.TempDir()
 
-		// Create a magefile that tracks time parameter
+		// Create a magefile that tracks the time parameter. It uses only the
+		// standard library so it compiles in a bare temp dir with no go.mod.
 		magefileContent := `//go:build mage
 // +build mage
 
@@ -573,10 +585,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"github.com/magefile/mage/mg"
 )
-
-type Test mg.Namespace
 
 func getMageArgs() []string {
 	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
@@ -585,7 +594,9 @@ func getMageArgs() []string {
 	return nil
 }
 
-func (t Test) Fuzz() error {
+// CheckFuzzTime stands in for the old "test:fuzz" target. It verifies the
+// time parameter survives the magex -> mage -> function pipeline.
+func CheckFuzzTime() error {
 	args := getMageArgs()
 	fmt.Printf("Fuzz called with args: %v\n", args)
 
@@ -605,11 +616,11 @@ func (t Test) Fuzz() error {
 	return fmt.Errorf("time parameter not passed")
 }
 `
-		err := os.WriteFile(filepath.Join(testDir, "magefile.go"), []byte(magefileContent), 0o644)
+		err := os.WriteFile(filepath.Join(testDir, "magefile.go"), []byte(magefileContent), 0o600)
 		require.NoError(t, err)
 
-		// Run the exact command that was broken
-		cmd := exec.Command(magexPath, "test:fuzz", "time=7s")
+		// Run the regression scenario: pass the exact parameter that used to be dropped.
+		cmd := testCommand(t, magexPath, "checkFuzzTime", "time=7s")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()

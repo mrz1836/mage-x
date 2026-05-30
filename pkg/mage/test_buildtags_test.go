@@ -340,6 +340,109 @@ func TestRunCoverageTestsWithBuildTagDiscoveryTags(t *testing.T) {
 	})
 }
 
+// combineRecordingRunner records every command invocation so tests can assert
+// on the exact number of passes and the tags supplied to each pass.
+type combineRecordingRunner struct {
+	calls [][]string
+}
+
+func (r *combineRecordingRunner) RunCmd(name string, args ...string) error {
+	r.calls = append(r.calls, append([]string{name}, args...))
+	return nil
+}
+
+func (r *combineRecordingRunner) RunCmdOutput(name string, args ...string) (string, error) {
+	r.calls = append(r.calls, append([]string{name}, args...))
+	return "", nil
+}
+
+// tagsForCall returns the value of the -tags flag for a recorded call, or ""
+// when the call ran without any build tags.
+func tagsForCall(call []string) string {
+	for i, a := range call {
+		if a == "-tags" && i+1 < len(call) {
+			return call[i+1]
+		}
+	}
+	return ""
+}
+
+func TestRunTestsWithBuildTagDiscoveryTagsCombined(t *testing.T) {
+	modules := []ModuleInfo{{Path: ".", Relative: ".", Name: "test-module", IsRoot: true}}
+	discoveredTags := []string{"unit", "integration"}
+
+	t.Run("CombinedSinglePass", func(t *testing.T) {
+		recorder := &combineRecordingRunner{}
+		original := GetRunner()
+		require.NoError(t, SetRunner(recorder))
+		defer func() { _ = SetRunner(original) }() //nolint:errcheck // test cleanup
+
+		config := &Config{Test: TestConfig{
+			AutoDiscoverBuildTags: true,
+			CombineBuildTags:      true,
+			Parallel:              2,
+			Timeout:               "5m",
+		}}
+
+		err := runTestsWithBuildTagDiscoveryTags(config, modules, []string{}, "unit", discoveredTags)
+		require.NoError(t, err)
+
+		// Exactly one pass, and it carries both tags joined together.
+		require.Len(t, recorder.calls, 1)
+		assert.Equal(t, "unit,integration", tagsForCall(recorder.calls[0]))
+	})
+
+	t.Run("PerTagModeStillRunsBasePlusEachTag", func(t *testing.T) {
+		recorder := &combineRecordingRunner{}
+		original := GetRunner()
+		require.NoError(t, SetRunner(recorder))
+		defer func() { _ = SetRunner(original) }() //nolint:errcheck // test cleanup
+
+		config := &Config{Test: TestConfig{
+			AutoDiscoverBuildTags: true,
+			CombineBuildTags:      false,
+			Parallel:              2,
+			Timeout:               "5m",
+		}}
+
+		err := runTestsWithBuildTagDiscoveryTags(config, modules, []string{}, "unit", discoveredTags)
+		require.NoError(t, err)
+
+		// Base pass (no tags) plus one pass per discovered tag.
+		require.Len(t, recorder.calls, 3)
+		assert.Empty(t, tagsForCall(recorder.calls[0]))
+		assert.Equal(t, "unit", tagsForCall(recorder.calls[1]))
+		assert.Equal(t, "integration", tagsForCall(recorder.calls[2]))
+	})
+}
+
+func TestRunCoverageTestsWithBuildTagDiscoveryTagsCombined(t *testing.T) {
+	recorder := &combineRecordingRunner{}
+	original := GetRunner()
+	require.NoError(t, SetRunner(recorder))
+	defer func() { _ = SetRunner(original) }() //nolint:errcheck // test cleanup
+
+	config := &Config{Test: TestConfig{
+		AutoDiscoverBuildTags: true,
+		CombineBuildTags:      true,
+		CoverMode:             "atomic",
+	}}
+	modules := []ModuleInfo{{Path: ".", Relative: ".", Name: "test-module", IsRoot: true}}
+
+	err := runCoverageTestsWithBuildTagDiscoveryTags(config, modules, false, []string{}, []string{"unit", "integration"})
+	require.NoError(t, err)
+
+	// A single combined coverage pass enabling both tags.
+	require.Len(t, recorder.calls, 1)
+	assert.Equal(t, "unit,integration", tagsForCall(recorder.calls[0]))
+}
+
+func TestBuildTagFileToken(t *testing.T) {
+	assert.Equal(t, "unit", buildTagFileToken("unit"))
+	assert.Equal(t, "unit_integration", buildTagFileToken("unit,integration"))
+	assert.Empty(t, buildTagFileToken(""))
+}
+
 func TestGetTagInfo(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -390,7 +493,7 @@ func TestHandleCoverageFilesWithBuildTag(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		handleCoverageFilesWithBuildTag(coverageFiles, "")
+		finalizeCoverageProfiles(coverageFiles, coverageOutputForTag(""))
 
 		// Should create coverage.txt (standard name for base coverage)
 		assert.FileExists(t, "coverage.txt")
@@ -409,7 +512,7 @@ func TestHandleCoverageFilesWithBuildTag(t *testing.T) {
 		err := os.WriteFile(coverageFiles[0], []byte("mode: atomic\ntest coverage"), 0o600)
 		require.NoError(t, err)
 
-		handleCoverageFilesWithBuildTag(coverageFiles, "unit")
+		finalizeCoverageProfiles(coverageFiles, coverageOutputForTag("unit"))
 
 		// Should create coverage_unit.txt
 		assert.FileExists(t, "coverage_unit.txt")

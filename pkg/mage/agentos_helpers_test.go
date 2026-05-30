@@ -4,7 +4,6 @@
 package mage
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,18 +13,10 @@ import (
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
-// Static test errors for linter compliance
-var (
-	errAgentOSTestFailed       = errors.New("test failed")
-	errAgentOSCommandNotFound  = errors.New("command not found")
-	errAgentOSScriptFailed     = errors.New("script execution failed")
-	errAgentOSVersionInvalid   = errors.New("invalid version")
-	errAgentOSDirectoryMissing = errors.New("directory missing")
-)
-
 // AgentOSHelpersTestSuite defines the test suite for AgentOS helper functions
 type AgentOSHelpersTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 }
 
@@ -33,6 +24,7 @@ type AgentOSHelpersTestSuite struct {
 func (ts *AgentOSHelpersTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.env.CreateGoMod("test/module")
+	ts.T().Setenv("GOTELEMETRY", "off")
 }
 
 // TearDownTest runs after each test
@@ -96,7 +88,7 @@ func (ts *AgentOSHelpersTestSuite) TestCheckAgentOSPrerequisites() {
 				// In CI/local environments with curl and bash, this may not fail
 				// The test validates the error types are correct if it does fail
 				if err != nil {
-					ts.Assert().ErrorIs(err, tt.wantError)
+					ts.ErrorIs(err, tt.wantError)
 				}
 			}
 			_ = originalCommandExists // Suppress unused warning
@@ -104,27 +96,40 @@ func (ts *AgentOSHelpersTestSuite) TestCheckAgentOSPrerequisites() {
 	}
 }
 
-// TestGetAgentOSHomePath tests home path construction
+// TestGetAgentOSHomePath tests home path construction.
+//
+// getAgentOSHomePath resolves the base directory under the user's home
+// directory (os.UserHomeDir, which honors $HOME on Unix). The default
+// relative directory is DefaultAgentOSHomeDir ("agent-os", no leading dot).
+// The test pins a temporary HOME via t.Setenv (auto-restored, race-safe) so
+// the expected absolute path is derived hermetically the same way production
+// does, rather than depending on the real user's home directory.
 func (ts *AgentOSHelpersTestSuite) TestGetAgentOSHomePath() {
 	tests := []struct {
-		name     string
-		homeDir  string
-		wantPath string
+		name       string
+		homeDir    string
+		wantRelDir string // expected relative dir joined onto HOME
 	}{
 		{
-			name:     "default home dir",
-			homeDir:  "",
-			wantPath: ".agent-os",
+			name:       "default home dir",
+			homeDir:    "",
+			wantRelDir: DefaultAgentOSHomeDir,
 		},
 		{
-			name:     "custom home dir",
-			homeDir:  "custom-agent-os",
-			wantPath: "custom-agent-os",
+			name:       "custom home dir",
+			homeDir:    "custom-agent-os",
+			wantRelDir: "custom-agent-os",
 		},
 	}
 
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
+			// Pin a temporary HOME so the resolved path is hermetic and
+			// independent of the real user's home directory. t.Setenv
+			// restores the previous value automatically at test end.
+			tmpHome := ts.T().TempDir()
+			ts.T().Setenv("HOME", tmpHome)
+
 			// Create config
 			config := &Config{
 				AgentOS: AgentOSConfig{
@@ -134,13 +139,10 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSHomePath() {
 
 			path := getAgentOSHomePath(config)
 
-			// Path should end with expected directory
-			ts.Assert().Contains(path, tt.wantPath)
-
-			// Should expand to user home directory
-			if tt.homeDir == "" {
-				ts.Assert().Contains(path, DefaultAgentOSHomeDir)
-			}
+			// Derive the expected absolute path the same way production does:
+			// filepath.Join(<resolved home>, <relative dir>).
+			wantPath := filepath.Join(tmpHome, tt.wantRelDir)
+			ts.Equal(wantPath, path)
 		})
 	}
 }
@@ -178,7 +180,7 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSProjectDir() {
 			}
 
 			result := getAgentOSProjectDir(config)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 		})
 	}
 }
@@ -193,17 +195,17 @@ func (ts *AgentOSHelpersTestSuite) TestIsAgentOSBaseInstalled() {
 		}
 
 		result := isAgentOSBaseInstalled(config)
-		ts.Assert().False(result)
+		ts.False(result)
 	})
 
 	ts.Run("base installed", func() {
 		// Create config file
 		homeDir := filepath.Join(ts.env.TempDir, ".agent-os")
-		err := os.MkdirAll(homeDir, 0o755)
+		err := os.MkdirAll(homeDir, 0o750)
 		ts.Require().NoError(err)
 
 		configFile := filepath.Join(homeDir, DefaultAgentOSConfigFile)
-		err = os.WriteFile(configFile, []byte("version: v1.0.0\n"), 0o644)
+		err = os.WriteFile(configFile, []byte("version: v1.0.0\n"), 0o600)
 		ts.Require().NoError(err)
 
 		config := &Config{
@@ -212,13 +214,10 @@ func (ts *AgentOSHelpersTestSuite) TestIsAgentOSBaseInstalled() {
 			},
 		}
 
-		// Override user home to temp dir
-		oldHome := os.Getenv("HOME")
-		os.Setenv("HOME", ts.env.TempDir)
-		defer os.Setenv("HOME", oldHome)
+		ts.T().Setenv("HOME", ts.env.TempDir)
 
 		result := isAgentOSBaseInstalled(config)
-		ts.Assert().True(result)
+		ts.True(result)
 	})
 }
 
@@ -317,11 +316,11 @@ func (ts *AgentOSHelpersTestSuite) TestBuildAgentOSInstallArgs() {
 			}
 
 			for _, expected := range tt.expectedContains {
-				ts.Assert().Contains(argsStr, expected, "args should contain %s", expected)
+				ts.Contains(argsStr, expected, "args should contain %s", expected)
 			}
 
 			for _, missing := range tt.expectedMissing {
-				ts.Assert().NotContains(argsStr, missing, "args should not contain %s", missing)
+				ts.NotContains(argsStr, missing, "args should not contain %s", missing)
 			}
 		})
 	}
@@ -377,11 +376,11 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSVersion() {
 		ts.Run(tt.name, func() {
 			// Create config file
 			homeDir := filepath.Join(ts.env.TempDir, ".agent-os-version-test-"+tt.name)
-			err := os.MkdirAll(homeDir, 0o755)
+			err := os.MkdirAll(homeDir, 0o750)
 			ts.Require().NoError(err)
 
 			configFile := filepath.Join(homeDir, DefaultAgentOSConfigFile)
-			err = os.WriteFile(configFile, []byte(tt.configYAML), 0o644)
+			err = os.WriteFile(configFile, []byte(tt.configYAML), 0o600)
 			ts.Require().NoError(err)
 
 			config := &Config{
@@ -390,18 +389,15 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSVersion() {
 				},
 			}
 
-			// Override user home
-			oldHome := os.Getenv("HOME")
-			os.Setenv("HOME", ts.env.TempDir)
-			defer os.Setenv("HOME", oldHome)
+			ts.T().Setenv("HOME", ts.env.TempDir)
 
 			version, err := getAgentOSVersion(config)
 
 			if tt.wantError {
-				ts.Assert().Error(err)
+				ts.Require().Error(err)
 			} else {
-				ts.Assert().NoError(err)
-				ts.Assert().Equal(tt.wantVersion, version)
+				ts.Require().NoError(err)
+				ts.Equal(tt.wantVersion, version)
 			}
 		})
 	}
@@ -413,7 +409,7 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		// Create project directory and standards directory
 		projectDir := filepath.Join(ts.env.TempDir, "agent-os-project")
 		standardsDir := filepath.Join(projectDir, "standards")
-		err := os.MkdirAll(standardsDir, 0o755)
+		err := os.MkdirAll(standardsDir, 0o750)
 		ts.Require().NoError(err)
 
 		config := &Config{
@@ -423,7 +419,7 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		}
 
 		err = verifyAgentOSInstallation(config)
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("project directory missing", func() {
@@ -434,14 +430,14 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		}
 
 		err := verifyAgentOSInstallation(config)
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errAgentOSProjectNotFound)
+		ts.Require().Error(err)
+		ts.ErrorIs(err, errAgentOSProjectNotFound)
 	})
 
 	ts.Run("standards directory missing", func() {
 		// Create project directory but not standards
 		projectDir := filepath.Join(ts.env.TempDir, "agent-os-project-no-standards")
-		err := os.MkdirAll(projectDir, 0o755)
+		err := os.MkdirAll(projectDir, 0o750)
 		ts.Require().NoError(err)
 
 		config := &Config{
@@ -451,8 +447,8 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		}
 
 		err = verifyAgentOSInstallation(config)
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errAgentOSStandardsNotFound)
+		ts.Require().Error(err)
+		ts.ErrorIs(err, errAgentOSStandardsNotFound)
 	})
 }
 
@@ -468,7 +464,7 @@ func (ts *AgentOSHelpersTestSuite) TestPrintAgentOSInstallSuccess() {
 		},
 	}
 
-	ts.Assert().NotPanics(func() {
+	ts.NotPanics(func() {
 		printAgentOSInstallSuccess(config)
 	})
 }
@@ -504,7 +500,7 @@ func (ts *AgentOSHelpersTestSuite) TestPrintAgentOSUpgradeSummary() {
 
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
-			ts.Assert().NotPanics(func() {
+			ts.NotPanics(func() {
 				printAgentOSUpgradeSummary(tt.oldVersion, tt.newVersion)
 			})
 		})

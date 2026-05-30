@@ -4,7 +4,6 @@
 package mage
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -51,16 +50,23 @@ func (ts *GitTestSuite) TestGitDiff() {
 	})
 }
 
-// TestGitTag tests the Tag method
+// TestGitTag tests the Tag and TagWithArgs methods
 func (ts *GitTestSuite) TestGitTag() {
-	ts.Run("successful tag creation", func() {
-		// Set version environment variable
-		originalVersion := os.Getenv("version")
-		defer func() {
-			ts.Require().NoError(os.Setenv("version", originalVersion))
-		}()
-		ts.Require().NoError(os.Setenv("version", "1.2.3"))
+	ts.Run("bare Tag requires TagWithArgs", func() {
+		// Tag() is a stub that directs callers to TagWithArgs and runs no git commands.
+		err := ts.env.WithMockRunner(
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
+			func() error {
+				return ts.git.Tag()
+			},
+		)
 
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "use TagWithArgs instead")
+	})
+
+	ts.Run("successful tag creation", func() {
 		// Mock successful git commands
 		ts.env.Runner.On("RunCmd", "git", []string{"tag", "-a", "v1.2.3", "-m", "Pending full release..."}).Return(nil)
 		ts.env.Runner.On("RunCmd", "git", []string{"push", "origin", "v1.2.3"}).Return(nil)
@@ -70,48 +76,44 @@ func (ts *GitTestSuite) TestGitTag() {
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
 			func() error {
-				return ts.git.Tag()
+				return ts.git.TagWithArgs("version=1.2.3")
 			},
 		)
 
 		ts.Require().NoError(err)
 	})
 
-	ts.Run("missing version environment variable", func() {
-		// Clear version environment variable
-		originalVersion := os.Getenv("version")
-		defer func() {
-			if err := os.Setenv("version", originalVersion); err != nil {
-				ts.T().Logf("Failed to restore version: %v", err)
-			}
-		}()
-		if err := os.Unsetenv("version"); err != nil {
-			ts.T().Logf("Failed to unset version: %v", err)
-		}
-
+	ts.Run("missing version parameter", func() {
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
 			func() error {
-				return ts.git.Tag()
+				return ts.git.TagWithArgs()
 			},
 		)
 
 		ts.Require().Error(err)
-		ts.Require().Contains(err.Error(), "version variable is required")
+		ts.Require().Contains(err.Error(), "version parameter is required")
 	})
 }
 
-// TestGitTagRemove tests the TagRemove method
+// TestGitTagRemove tests the TagRemove and TagRemoveWithArgs methods
 func (ts *GitTestSuite) TestGitTagRemove() {
-	ts.Run("successful tag removal", func() {
-		// Set version environment variable
-		originalVersion := os.Getenv("version")
-		defer func() {
-			ts.Require().NoError(os.Setenv("version", originalVersion))
-		}()
-		ts.Require().NoError(os.Setenv("version", "1.2.3"))
+	ts.Run("bare TagRemove requires TagRemoveWithArgs", func() {
+		// TagRemove() is a stub that directs callers to TagRemoveWithArgs and runs no git commands.
+		err := ts.env.WithMockRunner(
+			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			func() any { return GetRunner() },
+			func() error {
+				return ts.git.TagRemove()
+			},
+		)
 
+		ts.Require().Error(err)
+		ts.Require().Contains(err.Error(), "use TagRemoveWithArgs instead")
+	})
+
+	ts.Run("successful tag removal", func() {
 		// Mock successful git commands
 		ts.env.Runner.On("RunCmd", "git", []string{"tag", "-d", "v1.2.3"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "git", []string{"push", "--delete", "origin", "v1.2.3"}).Return(nil)
@@ -121,48 +123,30 @@ func (ts *GitTestSuite) TestGitTagRemove() {
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
 			func() error {
-				return ts.git.TagRemove()
+				return ts.git.TagRemoveWithArgs("version=1.2.3")
 			},
 		)
 
 		ts.Require().NoError(err)
 	})
 
-	ts.Run("missing version environment variable", func() {
-		// Clear version environment variable
-		originalVersion := os.Getenv("version")
-		defer func() {
-			if err := os.Setenv("version", originalVersion); err != nil {
-				ts.T().Logf("Failed to restore version: %v", err)
-			}
-		}()
-		if err := os.Unsetenv("version"); err != nil {
-			ts.T().Logf("Failed to unset version: %v", err)
-		}
-
+	ts.Run("missing version parameter", func() {
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
 			func() error {
-				return ts.git.TagRemove()
+				return ts.git.TagRemoveWithArgs()
 			},
 		)
 
 		ts.Require().Error(err)
-		ts.Require().Contains(err.Error(), "version variable is required")
+		ts.Require().Contains(err.Error(), "version parameter is required")
 	})
 }
 
 // TestGitTagUpdate tests the TagUpdate method
 func (ts *GitTestSuite) TestGitTagUpdate() {
 	ts.Run("successful tag update", func() {
-		// Set version environment variable
-		originalVersion := os.Getenv("version")
-		defer func() {
-			ts.Require().NoError(os.Setenv("version", originalVersion))
-		}()
-		ts.Require().NoError(os.Setenv("version", "1.2.3"))
-
 		// Mock successful git commands
 		ts.env.Runner.On("RunCmd", "git", []string{"push", "--force", "origin", "HEAD:refs/tags/v1.2.3"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "git", []string{"fetch", "--tags", "-f"}).Return(nil)
@@ -171,25 +155,14 @@ func (ts *GitTestSuite) TestGitTagUpdate() {
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
 			func() error {
-				return ts.git.TagUpdate()
+				return ts.git.TagUpdate("version=1.2.3")
 			},
 		)
 
 		ts.Require().NoError(err)
 	})
 
-	ts.Run("missing version environment variable", func() {
-		// Clear version environment variable
-		originalVersion := os.Getenv("version")
-		defer func() {
-			if err := os.Setenv("version", originalVersion); err != nil {
-				ts.T().Logf("Failed to restore version: %v", err)
-			}
-		}()
-		if err := os.Unsetenv("version"); err != nil {
-			ts.T().Logf("Failed to unset version: %v", err)
-		}
-
+	ts.Run("missing version parameter", func() {
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
@@ -199,7 +172,7 @@ func (ts *GitTestSuite) TestGitTagUpdate() {
 		)
 
 		ts.Require().Error(err)
-		ts.Require().Contains(err.Error(), "version variable is required")
+		ts.Require().Contains(err.Error(), "version parameter is required")
 	})
 }
 
@@ -279,7 +252,7 @@ func (ts *GitTestSuite) TestGitPull() {
 
 // TestGitCommit tests the Commit method
 func (ts *GitTestSuite) TestGitCommit() {
-	ts.Run("commit with parameter message", func() {
+	ts.Run("commit with message parameter", func() {
 		// Mock successful git add and commit
 		ts.env.Runner.On("RunCmd", "git", []string{"add", "-A"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "git", []string{"commit", "-m", "test commit"}).Return(nil)
@@ -288,30 +261,23 @@ func (ts *GitTestSuite) TestGitCommit() {
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
 			func() error {
-				return ts.git.Commit("test commit")
+				return ts.git.Commit("message=test commit")
 			},
 		)
 
 		ts.Require().NoError(err)
 	})
 
-	ts.Run("commit with environment variable message", func() {
-		// Set message environment variable
-		originalMessage := os.Getenv("message")
-		defer func() {
-			ts.Require().NoError(os.Setenv("message", originalMessage))
-		}()
-		ts.Require().NoError(os.Setenv("message", "env commit message"))
-
+	ts.Run("commit with message containing spaces", func() {
 		// Mock successful git add and commit
 		ts.env.Runner.On("RunCmd", "git", []string{"add", "-A"}).Return(nil)
-		ts.env.Runner.On("RunCmd", "git", []string{"commit", "-m", "env commit message"}).Return(nil)
+		ts.env.Runner.On("RunCmd", "git", []string{"commit", "-m", "feature commit message"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
 			func() error {
-				return ts.git.Commit()
+				return ts.git.Commit("message=feature commit message")
 			},
 		)
 
@@ -319,17 +285,6 @@ func (ts *GitTestSuite) TestGitCommit() {
 	})
 
 	ts.Run("missing commit message", func() {
-		// Clear message environment variable
-		originalMessage := os.Getenv("message")
-		defer func() {
-			if err := os.Setenv("message", originalMessage); err != nil {
-				ts.T().Logf("Failed to restore message: %v", err)
-			}
-		}()
-		if err := os.Unsetenv("message"); err != nil {
-			ts.T().Logf("Failed to unset message: %v", err)
-		}
-
 		err := ts.env.WithMockRunner(
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
@@ -339,7 +294,7 @@ func (ts *GitTestSuite) TestGitCommit() {
 		)
 
 		ts.Require().Error(err)
-		ts.Require().Contains(err.Error(), "message parameter or environment variable is required")
+		ts.Require().Contains(err.Error(), "message parameter is required")
 	})
 }
 
@@ -522,18 +477,8 @@ func (ts *GitTestSuite) TestGitLogWithCount() {
 
 // TestGitIntegration tests integration scenarios
 func (ts *GitTestSuite) TestGitIntegration() {
-	ts.Run("git operations with environment variables", func() {
-		// Set environment variables
-		originalVersion := os.Getenv("version")
-		originalMessage := os.Getenv("message")
-		defer func() {
-			ts.Require().NoError(os.Setenv("version", originalVersion))
-			ts.Require().NoError(os.Setenv("message", originalMessage))
-		}()
-		ts.Require().NoError(os.Setenv("version", "2.0.0"))
-		ts.Require().NoError(os.Setenv("message", "Version 2.0.0 release"))
-
-		// Mock git operations using environment variables
+	ts.Run("git operations with parameters", func() {
+		// Mock git operations driven by command-line parameters
 		ts.env.Runner.On("RunCmd", "git", []string{"add", "-A"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "git", []string{"commit", "-m", "Version 2.0.0 release"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "git", []string{"tag", "-a", "v2.0.0", "-m", "Pending full release..."}).Return(nil)
@@ -544,10 +489,10 @@ func (ts *GitTestSuite) TestGitIntegration() {
 			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 			func() any { return GetRunner() },
 			func() error {
-				if err := ts.git.Commit(); err != nil {
+				if err := ts.git.Commit("message=Version 2.0.0 release"); err != nil {
 					return err
 				}
-				return ts.git.Tag()
+				return ts.git.TagWithArgs("version=2.0.0")
 			},
 		)
 

@@ -237,12 +237,12 @@ func (ts *ModTestSuite) TestMod_Update_TidyError() {
 	expectedError.Contains(err.Error(), "go mod tidy failed")
 }
 
-// TestMod_Clean tests the Clean function with FORCE environment variable
+// TestMod_Clean tests the Clean function with MAGE_X_FORCE environment variable
 func (ts *ModTestSuite) TestMod_Clean() {
-	ts.Require().NoError(os.Setenv("FORCE", "true"))
+	ts.Require().NoError(os.Setenv("MAGE_X_FORCE", "true"))
 	defer func() {
-		if err := os.Unsetenv("FORCE"); err != nil {
-			ts.T().Logf("Failed to unset FORCE: %v", err)
+		if err := os.Unsetenv("MAGE_X_FORCE"); err != nil {
+			ts.T().Logf("Failed to unset MAGE_X_FORCE: %v", err)
 		}
 	}()
 
@@ -259,10 +259,10 @@ func (ts *ModTestSuite) TestMod_Clean() {
 	ts.Require().NoError(err)
 }
 
-// TestMod_Clean_NoForce tests Clean function without FORCE environment variable
+// TestMod_Clean_NoForce tests Clean function without MAGE_X_FORCE environment variable
 func (ts *ModTestSuite) TestMod_Clean_NoForce() {
-	if err := os.Unsetenv("FORCE"); err != nil {
-		ts.T().Logf("Failed to unset FORCE: %v", err)
+	if err := os.Unsetenv("MAGE_X_FORCE"); err != nil {
+		ts.T().Logf("Failed to unset MAGE_X_FORCE: %v", err)
 	}
 
 	err := ts.env.WithMockRunner(
@@ -280,10 +280,10 @@ func (ts *ModTestSuite) TestMod_Clean_NoForce() {
 // TestMod_Clean_Error tests Clean function with command error
 func (ts *ModTestSuite) TestMod_Clean_Error() {
 	expectedError := require.New(ts.T())
-	ts.Require().NoError(os.Setenv("FORCE", "true"))
+	ts.Require().NoError(os.Setenv("MAGE_X_FORCE", "true"))
 	defer func() {
-		if err := os.Unsetenv("FORCE"); err != nil {
-			ts.T().Logf("Failed to unset FORCE: %v", err)
+		if err := os.Unsetenv("MAGE_X_FORCE"); err != nil {
+			ts.T().Logf("Failed to unset MAGE_X_FORCE: %v", err)
 		}
 	}()
 
@@ -357,15 +357,8 @@ func (ts *ModTestSuite) TestMod_Graph_Error() {
 	expectedError.Contains(err.Error(), "failed to generate dependency graph")
 }
 
-// TestMod_Why tests the Why function with MODULE environment variable
+// TestMod_Why tests the Why function with a module argument
 func (ts *ModTestSuite) TestMod_Why() {
-	ts.Require().NoError(os.Setenv("MODULE", "github.com/pkg/errors"))
-	defer func() {
-		if err := os.Unsetenv("MODULE"); err != nil {
-			ts.T().Logf("Failed to unset MODULE: %v", err)
-		}
-	}()
-
 	whyOutput := "# github.com/pkg/errors\ntest/module\ngithub.com/pkg/errors"
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/pkg/errors"}).Return(whyOutput, nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Require}}", "all"}).Return("github.com/pkg/errors", nil)
@@ -374,19 +367,15 @@ func (ts *ModTestSuite) TestMod_Why() {
 		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 		func() any { return GetRunner() },
 		func() error {
-			return ts.mod.Why()
+			return ts.mod.Why("github.com/pkg/errors")
 		},
 	)
 
 	ts.Require().NoError(err)
 }
 
-// TestMod_Why_NoModule tests Why function without MODULE environment variable
+// TestMod_Why_NoModule tests Why function without any module arguments
 func (ts *ModTestSuite) TestMod_Why_NoModule() {
-	if err := os.Unsetenv("MODULE"); err != nil {
-		ts.T().Logf("Failed to unset MODULE: %v", err)
-	}
-
 	err := ts.env.WithMockRunner(
 		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 		func() any { return GetRunner() },
@@ -396,18 +385,11 @@ func (ts *ModTestSuite) TestMod_Why_NoModule() {
 	)
 
 	ts.Require().Error(err)
-	ts.Require().Contains(err.Error(), "MODULE environment variable is required")
+	ts.Require().Contains(err.Error(), "module name is required")
 }
 
 // TestMod_Why_IndirectDependency tests Why function for indirect dependency
 func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
-	ts.Require().NoError(os.Setenv("MODULE", "github.com/indirect/dep"))
-	defer func() {
-		if err := os.Unsetenv("MODULE"); err != nil {
-			ts.T().Logf("Failed to unset MODULE: %v", err)
-		}
-	}()
-
 	whyOutput := "# github.com/indirect/dep\ntest/module\ngithub.com/some/other\ngithub.com/indirect/dep"
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/indirect/dep"}).Return(whyOutput, nil)
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"list", "-m", "-f", "{{.Require}}", "all"}).Return("github.com/pkg/errors", nil)
@@ -416,7 +398,7 @@ func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
 		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 		func() any { return GetRunner() },
 		func() error {
-			return ts.mod.Why()
+			return ts.mod.Why("github.com/indirect/dep")
 		},
 	)
 
@@ -426,20 +408,13 @@ func (ts *ModTestSuite) TestMod_Why_IndirectDependency() {
 // TestMod_Why_Error tests Why function with error
 func (ts *ModTestSuite) TestMod_Why_Error() {
 	expectedError := require.New(ts.T())
-	ts.Require().NoError(os.Setenv("MODULE", "github.com/pkg/errors"))
-	defer func() {
-		if err := os.Unsetenv("MODULE"); err != nil {
-			ts.T().Logf("Failed to unset MODULE: %v", err)
-		}
-	}()
-
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "why", "github.com/pkg/errors"}).Return("", errModWhyFailed)
 
 	err := ts.env.WithMockRunner(
 		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 		func() any { return GetRunner() },
 		func() error {
-			return ts.mod.Why()
+			return ts.mod.Why("github.com/pkg/errors")
 		},
 	)
 
@@ -479,16 +454,16 @@ func (ts *ModTestSuite) TestMod_Vendor_Error() {
 	expectedError.Contains(err.Error(), "vendoring failed")
 }
 
-// TestMod_Init tests the Init function with MODULE environment variable
+// TestMod_Init tests the Init function with MAGE_X_MODULE environment variable
 func (ts *ModTestSuite) TestMod_Init() {
 	// Clean up and recreate environment without go.mod for this specific test
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
-	ts.Require().NoError(os.Setenv("MODULE", "github.com/example/project"))
+	ts.Require().NoError(os.Setenv("MAGE_X_MODULE", "github.com/example/project"))
 	defer func() {
-		if err := os.Unsetenv("MODULE"); err != nil {
-			ts.T().Logf("Failed to unset MODULE: %v", err)
+		if err := os.Unsetenv("MAGE_X_MODULE"); err != nil {
+			ts.T().Logf("Failed to unset MAGE_X_MODULE: %v", err)
 		}
 	}()
 
@@ -511,8 +486,8 @@ func (ts *ModTestSuite) TestMod_Init_WithGitRemote() {
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
-	if err := os.Unsetenv("MODULE"); err != nil {
-		ts.T().Logf("Failed to unset MODULE: %v", err)
+	if err := os.Unsetenv("MAGE_X_MODULE"); err != nil {
+		ts.T().Logf("Failed to unset MAGE_X_MODULE: %v", err)
 	}
 
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"remote", "get-url", "origin"}).Return("https://github.com/example/project.git", nil)
@@ -531,10 +506,10 @@ func (ts *ModTestSuite) TestMod_Init_WithGitRemote() {
 
 // TestMod_Init_GoModExists tests Init function when go.mod already exists
 func (ts *ModTestSuite) TestMod_Init_GoModExists() {
-	ts.Require().NoError(os.Setenv("MODULE", "github.com/example/project"))
+	ts.Require().NoError(os.Setenv("MAGE_X_MODULE", "github.com/example/project"))
 	defer func() {
-		if err := os.Unsetenv("MODULE"); err != nil {
-			ts.T().Logf("Failed to unset MODULE: %v", err)
+		if err := os.Unsetenv("MAGE_X_MODULE"); err != nil {
+			ts.T().Logf("Failed to unset MAGE_X_MODULE: %v", err)
 		}
 	}()
 
@@ -556,8 +531,8 @@ func (ts *ModTestSuite) TestMod_Init_NoModule() {
 	ts.env.Cleanup()
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
-	if err := os.Unsetenv("MODULE"); err != nil {
-		ts.T().Logf("Failed to unset MODULE: %v", err)
+	if err := os.Unsetenv("MAGE_X_MODULE"); err != nil {
+		ts.T().Logf("Failed to unset MAGE_X_MODULE: %v", err)
 	}
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"remote", "get-url", "origin"}).Return("", errModNoRemote)
 
@@ -570,7 +545,7 @@ func (ts *ModTestSuite) TestMod_Init_NoModule() {
 	)
 
 	ts.Require().Error(err)
-	ts.Require().Contains(err.Error(), "MODULE environment variable is required")
+	ts.Require().Contains(err.Error(), "module name is required")
 }
 
 // TestMod_Init_InitError tests Init function with init command error
@@ -580,10 +555,10 @@ func (ts *ModTestSuite) TestMod_Init_InitError() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 
 	expectedError := require.New(ts.T())
-	ts.Require().NoError(os.Setenv("MODULE", "github.com/example/project"))
+	ts.Require().NoError(os.Setenv("MAGE_X_MODULE", "github.com/example/project"))
 	defer func() {
-		if err := os.Unsetenv("MODULE"); err != nil {
-			ts.T().Logf("Failed to unset MODULE: %v", err)
+		if err := os.Unsetenv("MAGE_X_MODULE"); err != nil {
+			ts.T().Logf("Failed to unset MAGE_X_MODULE: %v", err)
 		}
 	}()
 

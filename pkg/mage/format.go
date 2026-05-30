@@ -347,23 +347,31 @@ func getFormatExcludePaths() []string {
 	return strings.Split(excludePaths, ",")
 }
 
-// buildFindExcludeArgs builds the find command arguments for excluding paths
-func buildFindExcludeArgs() []string {
+// newExcludeDirPredicate returns a predicate reporting whether a directory should be
+// skipped during a format walk, based on MAGE_X_FORMAT_EXCLUDE_PATHS. A directory is
+// skipped when its base name exactly matches one of the (trimmed, non-empty) exclude
+// entries, at any depth. This mirrors findGoFiles' historical behavior and unifies
+// exclusion semantics across Go, YAML, and JSON discovery so a directory like ci-tester
+// is pruned regardless of file extension.
+func newExcludeDirPredicate() func(name string) bool {
 	excludePaths := getFormatExcludePaths()
-	var args []string
+	excluded := make(map[string]struct{}, len(excludePaths))
 	for _, excludePath := range excludePaths {
-		trimmed := strings.TrimSpace(excludePath)
-		if trimmed != "" {
-			// Add patterns for both direct matches and subdirectories
-			args = append(args, "-not", "-path", "./"+trimmed+"/*")
-			args = append(args, "-not", "-path", "./*"+trimmed+"*/*")
+		if trimmed := strings.TrimSpace(excludePath); trimmed != "" {
+			excluded[trimmed] = struct{}{}
 		}
 	}
-	return args
+	return func(name string) bool {
+		_, ok := excluded[name]
+		return ok
+	}
 }
 
-// findGoFiles finds all Go files in the project
-func findGoFiles() ([]string, error) {
+// findFilesByExt walks the current directory tree collecting files whose extension
+// (case-insensitive) is in exts, skipping any directory for which skipDir(baseName)
+// returns true. Paths are returned in filepath.Walk's deterministic lexical order.
+// Each entry of exts must include the leading dot, e.g. ".yml".
+func findFilesByExt(exts []string, skipDir func(name string) bool) ([]string, error) {
 	var files []string
 
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
@@ -371,26 +379,42 @@ func findGoFiles() ([]string, error) {
 			return fmt.Errorf("failed to walk path %s: %w", path, err)
 		}
 
-		// Skip directories from environment variable
 		if info.IsDir() {
-			excludePaths := getFormatExcludePaths()
-			for _, excludePath := range excludePaths {
-				if info.Name() == strings.TrimSpace(excludePath) {
-					return filepath.SkipDir
-				}
+			if skipDir != nil && skipDir(info.Name()) {
+				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		// Check if it's a Go file
-		if strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, ".pb.go") {
-			files = append(files, path)
+		ext := strings.ToLower(filepath.Ext(path))
+		for _, want := range exts {
+			if ext == want {
+				files = append(files, path)
+				break
+			}
 		}
 
 		return nil
 	})
 	if err != nil {
+		return nil, fmt.Errorf("failed to find files: %w", err)
+	}
+
+	return files, nil
+}
+
+// findGoFiles finds all Go files in the project, excluding generated protobuf files.
+func findGoFiles() ([]string, error) {
+	candidates, err := findFilesByExt([]string{".go"}, newExcludeDirPredicate())
+	if err != nil {
 		return nil, fmt.Errorf("failed to find Go files: %w", err)
+	}
+
+	var files []string
+	for _, file := range candidates {
+		if !strings.HasSuffix(file, ".pb.go") {
+			files = append(files, file)
+		}
 	}
 
 	return files, nil
@@ -473,35 +497,71 @@ func formatYAMLFilesIndividually(files []string, configPath string) error {
 	return lastErr
 }
 
-// formatAllYAMLFiles formats all YAML files at once
-func formatAllYAMLFiles(configPath string) error {
-	if utils.FileExists(configPath) {
-		return GetRunner().RunCmd("yamlfmt", "-conf", configPath, ".")
+// maxYAMLArgBytes caps the cumulative bytes of file-path arguments passed to a single
+// yamlfmt invocation, staying well under the OS argument limit (macOS ARG_MAX is 262144)
+// to avoid E2BIG while leaving room for the config flag and environment.
+const maxYAMLArgBytes = 100_000
+
+// chunkByArgBytes splits files into chunks whose joined path bytes stay within budget.
+// Each chunk holds at least one file, so a single over-budget path becomes its own chunk
+// rather than being dropped. Returns nil for an empty input.
+func chunkByArgBytes(files []string, budget int) [][]string {
+	if len(files) == 0 {
+		return nil
 	}
-	return GetRunner().RunCmd("yamlfmt", ".")
+
+	var (
+		chunks       [][]string
+		current      []string
+		currentBytes int
+	)
+	for _, file := range files {
+		cost := len(file) + 1 // +1 for the inter-argument separator
+		if len(current) > 0 && currentBytes+cost > budget {
+			chunks = append(chunks, current)
+			current = nil
+			currentBytes = 0
+		}
+		current = append(current, file)
+		currentBytes += cost
+	}
+	if len(current) > 0 {
+		chunks = append(chunks, current)
+	}
+
+	return chunks
+}
+
+// formatYAMLFilesBatched formats the given files with yamlfmt in as few invocations as
+// possible, chunked to respect the OS argument-length limit. yamlfmt is all-or-nothing
+// per invocation (a single unparseable file fails the whole call and leaves the rest
+// unformatted), so callers should fall back to per-file formatting on error to isolate
+// the offending file and still format everything else.
+func formatYAMLFilesBatched(files []string, configPath string) error {
+	hasConfig := utils.FileExists(configPath)
+	for _, chunk := range chunkByArgBytes(files, maxYAMLArgBytes) {
+		args := make([]string, 0, len(chunk)+2)
+		if hasConfig {
+			args = append(args, "-conf", configPath)
+		}
+		args = append(args, chunk...)
+		if err := GetRunner().RunCmd("yamlfmt", args...); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // YAML formats YAML files
 func (Format) YAML() error {
 	utils.Header("Formatting YAML Files")
 
-	// Find YAML files
-	excludeArgs := buildFindExcludeArgs()
-	findArgs := make([]string, 0, 6+len(excludeArgs))
-	findArgs = append(findArgs, ".", "-name", "*.yml", "-o", "-name", "*.yaml")
-	findArgs = append(findArgs, excludeArgs...)
-	yamlFilesOutput, err := GetRunner().RunCmdOutput("find", findArgs...)
+	// Find YAML files with a native walk so directory exclusions
+	// (MAGE_X_FORMAT_EXCLUDE_PATHS) apply uniformly to .yml and .yaml.
+	yamlFiles, err := findFilesByExt([]string{".yml", ".yaml"}, newExcludeDirPredicate())
 	if err != nil {
 		return fmt.Errorf("failed to find YAML files: %w", err)
 	}
-
-	if yamlFilesOutput == "" {
-		utils.Info("No YAML files found")
-		return nil
-	}
-
-	// Parse file list
-	yamlFiles := utils.ParseNonEmptyLines(yamlFilesOutput)
 
 	if len(yamlFiles) == 0 {
 		utils.Info("No YAML files found")
@@ -543,18 +603,16 @@ func (Format) YAML() error {
 		safeFiles = yamlFiles
 	}
 
-	// Use yamlfmt with config file
+	// Use yamlfmt with config file when present.
 	configPath := ".github/.yamlfmt"
-	var yamlfmtErr error
 
-	// Choose formatting strategy based on whether we have problematic files
-	needsIndividualFormatting := validationEnabled && len(safeFiles) < len(yamlFiles)
-	if needsIndividualFormatting {
-		// Format only safe files individually to avoid yamlfmt processing problematic ones
+	// Format the explicit safe-file list in batched invocations. Because yamlfmt is
+	// all-or-nothing per call, fall back to per-file formatting on failure so a single
+	// unparseable file is isolated and everything else still gets formatted.
+	yamlfmtErr := formatYAMLFilesBatched(safeFiles, configPath)
+	if yamlfmtErr != nil {
+		utils.Warn("Batch yamlfmt run failed (%v); retrying file-by-file to isolate unparseable files", yamlfmtErr)
 		yamlfmtErr = formatYAMLFilesIndividually(safeFiles, configPath)
-	} else {
-		// Format all files at once (original behavior)
-		yamlfmtErr = formatAllYAMLFiles(configPath)
 	}
 
 	if yamlfmtErr != nil {
@@ -634,23 +692,18 @@ func formatJSONFileNative(file string) bool {
 func (Format) JSON() error {
 	utils.Header("Formatting JSON Files")
 
-	// Find JSON files
-	excludeArgs := buildFindExcludeArgs()
-	findArgs := make([]string, 0, 3+len(excludeArgs))
-	findArgs = append(findArgs, ".", "-name", "*.json")
-	findArgs = append(findArgs, excludeArgs...)
-	jsonFiles, err := GetRunner().RunCmdOutput("find", findArgs...)
+	// Find JSON files with a native walk that honors MAGE_X_FORMAT_EXCLUDE_PATHS.
+	files, err := findFilesByExt([]string{".json"}, newExcludeDirPredicate())
 	if err != nil {
 		return fmt.Errorf("failed to find JSON files: %w", err)
 	}
 
-	if jsonFiles == "" {
+	if len(files) == 0 {
 		utils.Info("No JSON files found")
 		return nil
 	}
 
 	// Format JSON files using native Go
-	files := utils.ParseNonEmptyLines(jsonFiles)
 	formatted := 0
 
 	for _, file := range files {

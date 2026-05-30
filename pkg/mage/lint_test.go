@@ -13,6 +13,10 @@ import (
 )
 
 func TestLintAll(t *testing.T) {
+	orig := commandExists
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
+	defer func() { commandExists = orig }()
+
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 
@@ -64,6 +68,10 @@ func TestLintAll(t *testing.T) {
 }
 
 func TestLintGo(t *testing.T) {
+	orig := commandExists
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
+	defer func() { commandExists = orig }()
+
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 
@@ -265,24 +273,24 @@ func TestLintConfig(t *testing.T) {
   }
 }`)
 
+	// Lint.Config does not shell out: it discovers config files on disk and
+	// validates JSON syntax, returning an error only when a *.json config is
+	// malformed. So the error path is driven by file contents, not a mock runner.
 	tests := []struct {
 		name      string
-		setupMock func()
+		setup     func()
 		expectErr bool
 	}{
 		{
-			name: "successful config lint",
-			setupMock: func() {
-				env.Builder.ExpectAnyCommand(nil) // config validation
-			},
+			name:      "successful config lint",
+			setup:     func() {}, // valid .golangci.json from CreateFile above
 			expectErr: false,
 		},
 		{
 			name: "config lint issues",
-			setupMock: func() {
-				// Reset expectations to avoid conflicts with previous test
-				env.Runner.ExpectedCalls = nil
-				env.Builder.ExpectAnyCommand(assert.AnError) // config issues found
+			setup: func() {
+				// Overwrite the config with malformed JSON so validateJSONFile fails.
+				env.CreateFile(".golangci.json", `{ "linters": { "enable": [ `)
 			},
 			expectErr: true,
 		},
@@ -290,26 +298,25 @@ func TestLintConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.setupMock()
+			tt.setup()
 
 			lint := Lint{}
-			err := env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-				func() any { return GetRunner() },
-				lint.Config,
-			)
+			err := lint.Config()
 
 			if tt.expectErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 			}
-			env.Runner.AssertExpectations(t)
 		})
 	}
 }
 
 func TestLintFix(t *testing.T) {
+	orig := commandExists
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
+	defer func() { commandExists = orig }()
+
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 

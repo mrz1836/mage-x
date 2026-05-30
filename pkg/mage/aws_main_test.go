@@ -5,7 +5,6 @@ package mage
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,17 +14,10 @@ import (
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
-// Static test errors
-var (
-	errAWSLoginTestFailed   = errors.New("login test failed")
-	errAWSSetupTestFailed   = errors.New("setup test failed")
-	errAWSRefreshTestFailed = errors.New("refresh test failed")
-	errAWSStatusTestFailed  = errors.New("status test failed")
-)
-
 // AWSMainTestSuite defines the test suite for AWS main methods
 type AWSMainTestSuite struct {
 	suite.Suite
+
 	env    *testutil.TestEnvironment
 	aws    AWS
 	awsDir string
@@ -35,10 +27,10 @@ type AWSMainTestSuite struct {
 func (ts *AWSMainTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.awsDir = filepath.Join(ts.env.TempDir, ".aws")
-	os.MkdirAll(ts.awsDir, 0o700)
+	ts.Require().NoError(os.MkdirAll(ts.awsDir, 0o700))
 
 	// Override HOME
-	os.Setenv("HOME", ts.env.TempDir)
+	ts.T().Setenv("HOME", ts.env.TempDir)
 
 	ts.aws = AWS{}
 }
@@ -54,12 +46,13 @@ func (ts *AWSMainTestSuite) TestStatus_NoCredentialsFile() {
 	err := ts.aws.Status()
 
 	// Should not error, just warn
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestStatus_SingleProfile tests Status with one profile
 func (ts *AWSMainTestSuite) TestStatus_SingleProfile() {
 	// Create credentials file
+	// #nosec G101 -- test fixture credentials
 	credContent := `[default]
 aws_access_key_id = AKIAIOSFODNN7EXAMPLE
 aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -75,19 +68,20 @@ aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 	}).Return("", errAWSCommandFailed)
 
 	err = ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.aws.Status()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestStatus_MultipleProfiles tests Status with multiple profiles
 func (ts *AWSMainTestSuite) TestStatus_MultipleProfiles() {
 	// Create credentials file with multiple profiles
+	// #nosec G101 -- test fixture credentials
 	credContent := `[default]
 aws_access_key_id = KEY1
 
@@ -120,19 +114,20 @@ aws_access_key_id = KEY3
 	}).Return("", errAWSCommandFailed).Maybe()
 
 	err = ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.aws.Status()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestStatus_FilterByProfile tests Status with profile filter
 func (ts *AWSMainTestSuite) TestStatus_FilterByProfile() {
 	// Create credentials file
+	// #nosec G101 -- test fixture credentials
 	credContent := `[default]
 aws_access_key_id = KEY1
 
@@ -151,14 +146,14 @@ aws_access_key_id = KEY2
 	}).Return("", errAWSCommandFailed)
 
 	err = ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.aws.Status("profile=production")
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestWriteAWSCredentials tests credential file writing
@@ -167,15 +162,16 @@ func (ts *AWSMainTestSuite) TestWriteAWSCredentials() {
 		credPath := filepath.Join(ts.awsDir, awsCredentialsFile)
 
 		err := writeAWSCredentials(credPath, "default", "AKIATEST", "SECRET", "")
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 
 		// Verify file exists and has correct content
+		// #nosec G304 -- test reads credentials path in temp fixture
 		content, err := os.ReadFile(credPath)
 		ts.Require().NoError(err)
 
-		ts.Assert().Contains(string(content), "[default]")
-		ts.Assert().Contains(string(content), "aws_access_key_id = AKIATEST")
-		ts.Assert().Contains(string(content), "aws_secret_access_key = SECRET")
+		ts.Contains(string(content), "[default]")
+		ts.Contains(string(content), "aws_access_key_id = AKIATEST")
+		ts.Contains(string(content), "aws_secret_access_key = SECRET")
 	})
 
 	ts.Run("update existing credentials", func() {
@@ -187,26 +183,28 @@ func (ts *AWSMainTestSuite) TestWriteAWSCredentials() {
 
 		// Update credentials
 		err = writeAWSCredentials(credPath, "default", "KEY2", "SECRET2", "")
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 
 		// Verify updated
+		// #nosec G304 -- test reads credentials path in temp fixture
 		content, err := os.ReadFile(credPath)
 		ts.Require().NoError(err)
 
-		ts.Assert().Contains(string(content), "KEY2")
-		ts.Assert().NotContains(string(content), "KEY1")
+		ts.Contains(string(content), "KEY2")
+		ts.NotContains(string(content), "KEY1")
 	})
 
 	ts.Run("write with session token", func() {
 		credPath := filepath.Join(ts.awsDir, awsCredentialsFile)
 
 		err := writeAWSCredentials(credPath, "default", "KEY", "SECRET", "TOKEN123")
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 
+		// #nosec G304 -- test reads credentials path in temp fixture
 		content, err := os.ReadFile(credPath)
 		ts.Require().NoError(err)
 
-		ts.Assert().Contains(string(content), "aws_session_token = TOKEN123")
+		ts.Contains(string(content), "aws_session_token = TOKEN123")
 	})
 
 	ts.Run("create backup", func() {
@@ -221,13 +219,14 @@ aws_access_key_id = ORIGINAL
 
 		// Update (should create backup)
 		err = writeAWSCredentials(credPath, "default", "UPDATED", "SECRET", "")
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 
 		// Verify backup exists
 		backupPath := credPath + awsBackupSuffix
+		// #nosec G304 -- test reads backup path derived from temp fixture
 		backupContent, err := os.ReadFile(backupPath)
-		ts.Assert().NoError(err)
-		ts.Assert().Contains(string(backupContent), "ORIGINAL")
+		ts.Require().NoError(err)
+		ts.Contains(string(backupContent), "ORIGINAL")
 	})
 }
 
@@ -237,27 +236,29 @@ func (ts *AWSMainTestSuite) TestWriteAWSConfig() {
 		configPath := filepath.Join(ts.awsDir, awsConfigFile)
 
 		err := writeAWSConfig(configPath, "default", "arn:aws:iam::123456789012:mfa/test")
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 
+		// #nosec G304 -- test reads config path in temp fixture
 		content, err := os.ReadFile(configPath)
 		ts.Require().NoError(err)
 
-		ts.Assert().Contains(string(content), "[default]")
-		ts.Assert().Contains(string(content), "mfa_serial = arn:aws:iam::123456789012:mfa/test")
+		ts.Contains(string(content), "[default]")
+		ts.Contains(string(content), "mfa_serial = arn:aws:iam::123456789012:mfa/test")
 	})
 
 	ts.Run("write with profile prefix", func() {
 		configPath := filepath.Join(ts.awsDir, awsConfigFile)
 
 		err := writeAWSConfig(configPath, "production", "arn:aws:iam::123456789012:mfa/prod")
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 
+		// #nosec G304 -- test reads config path in temp fixture
 		content, err := os.ReadFile(configPath)
 		ts.Require().NoError(err)
 
 		// Non-default profiles get "profile " prefix
-		ts.Assert().Contains(string(content), "[profile production]")
-		ts.Assert().Contains(string(content), "mfa_serial = arn:aws:iam::123456789012:mfa/prod")
+		ts.Contains(string(content), "[profile production]")
+		ts.Contains(string(content), "mfa_serial = arn:aws:iam::123456789012:mfa/prod")
 	})
 }
 
@@ -273,7 +274,7 @@ region = us-east-1
 		ts.Require().NoError(err)
 
 		sourceProfile := getSourceProfile("mrz")
-		ts.Assert().Equal("mrz-base", sourceProfile)
+		ts.Equal("mrz-base", sourceProfile)
 	})
 
 	ts.Run("source profile not found", func() {
@@ -285,18 +286,21 @@ region = us-east-1
 		ts.Require().NoError(err)
 
 		sourceProfile := getSourceProfile("test")
-		ts.Assert().Empty(sourceProfile)
+		ts.Empty(sourceProfile)
 	})
 
 	ts.Run("config file missing", func() {
 		sourceProfile := getSourceProfile("any")
-		ts.Assert().Empty(sourceProfile)
+		ts.Empty(sourceProfile)
 	})
 }
 
 // TestHasValidAWSSetup tests setup detection
 func (ts *AWSMainTestSuite) TestHasValidAWSSetup() {
 	ts.Run("valid setup exists", func() {
+		// hasValidAWSSetup requires BOTH a long-term access key in credentials
+		// AND an mfa_serial in config for the (base) profile.
+		// #nosec G101 -- test fixture credentials
 		credContent := `[default]
 aws_access_key_id = KEY1
 aws_secret_access_key = SECRET1
@@ -305,21 +309,30 @@ aws_secret_access_key = SECRET1
 		err := os.WriteFile(credPath, []byte(credContent), 0o600)
 		ts.Require().NoError(err)
 
+		// The "default" profile maps to a literal "[default]" config section.
+		configContent := `[default]
+mfa_serial = arn:aws:iam::123456789012:mfa/default
+region = us-east-1
+`
+		configPath := filepath.Join(ts.awsDir, awsConfigFile)
+		err = os.WriteFile(configPath, []byte(configContent), 0o600)
+		ts.Require().NoError(err)
+
 		hasSetup := hasValidAWSSetup("default")
-		ts.Assert().True(hasSetup)
+		ts.True(hasSetup)
 	})
 
 	ts.Run("no setup exists", func() {
 		hasSetup := hasValidAWSSetup("nonexistent")
-		ts.Assert().False(hasSetup)
+		ts.False(hasSetup)
 	})
 
 	ts.Run("credentials file missing", func() {
 		// Remove credentials file
-		os.Remove(filepath.Join(ts.awsDir, awsCredentialsFile))
+		ts.Require().NoError(os.Remove(filepath.Join(ts.awsDir, awsCredentialsFile)))
 
 		hasSetup := hasValidAWSSetup("default")
-		ts.Assert().False(hasSetup)
+		ts.False(hasSetup)
 	})
 }
 
@@ -327,6 +340,7 @@ aws_secret_access_key = SECRET1
 func (ts *AWSMainTestSuite) TestDisplayAWSProfileStatus() {
 	section := &awsINISection{
 		Name: "testprofile",
+		// #nosec G101 -- test fixture credentials
 		Values: map[string]string{
 			"aws_access_key_id":     "AKIAIOSFODNN7EXAMPLE",
 			"aws_secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
@@ -340,7 +354,8 @@ func (ts *AWSMainTestSuite) TestDisplayAWSProfileStatus() {
 		"Arn":     "arn:aws:iam::123456789012:user/testuser",
 		"UserId":  "AIDAI1234567890EXAMPLE",
 	}
-	mockJSON, _ := json.Marshal(mockResponse)
+	mockJSON, err := json.Marshal(mockResponse)
+	ts.Require().NoError(err)
 
 	ts.env.Runner.On("RunCmdOutput", "aws", []string{
 		"sts", "get-caller-identity",
@@ -348,19 +363,19 @@ func (ts *AWSMainTestSuite) TestDisplayAWSProfileStatus() {
 		"--profile", "testprofile",
 	}).Return(string(mockJSON), nil)
 
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+	err = ts.env.WithMockRunner(
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			// This function prints output, just verify it doesn't panic
-			ts.Assert().NotPanics(func() {
+			ts.NotPanics(func() {
 				displayAWSProfileStatus(section, nil)
 			})
 			return nil
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestAWSConfigSectionName tests section name formatting
@@ -378,7 +393,7 @@ func (ts *AWSMainTestSuite) TestAWSConfigSectionName() {
 	for _, tt := range tests {
 		ts.Run(tt.profile, func() {
 			result := getConfigSectionName(tt.profile)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 		})
 	}
 }

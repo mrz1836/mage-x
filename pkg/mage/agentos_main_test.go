@@ -4,7 +4,6 @@
 package mage
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,16 +13,10 @@ import (
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
-// Static test errors
-var (
-	errAgentOSInstallTestFailed = errors.New("install test failed")
-	errAgentOSCheckTestFailed   = errors.New("check test failed")
-	errAgentOSUpgradeTestFailed = errors.New("upgrade test failed")
-)
-
 // AgentOSMainTestSuite defines the test suite for AgentOS main methods
 type AgentOSMainTestSuite struct {
 	suite.Suite
+
 	env     *testutil.TestEnvironment
 	agentos AgentOS
 }
@@ -32,6 +25,7 @@ type AgentOSMainTestSuite struct {
 func (ts *AgentOSMainTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.env.CreateGoMod("test/module")
+	ts.T().Setenv("GOTELEMETRY", "off")
 	ts.agentos = AgentOS{}
 }
 
@@ -45,132 +39,114 @@ func (ts *AgentOSMainTestSuite) TearDownTest() {
 func (ts *AgentOSMainTestSuite) TestInstall_AlreadyInstalled() {
 	// Create a mock project directory
 	projectDir := filepath.Join(ts.env.TempDir, DefaultAgentOSBaseDir)
-	err := os.MkdirAll(projectDir, 0o755)
+	err := os.MkdirAll(projectDir, 0o750)
 	ts.Require().NoError(err)
 
-	// Change to temp directory
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	// Create minimal config
 	configContent := `
-agent_os:
+agentos:
   base_dir: ` + DefaultAgentOSBaseDir + `
 `
-	err = os.WriteFile(".mage.yaml", []byte(configContent), 0o644)
+	err = os.WriteFile(".mage.yaml", []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
 	// Attempt install
 	err = ts.agentos.Install()
 
 	// Should return errAgentOSAlreadyInstalled
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errAgentOSAlreadyInstalled)
+	ts.Require().Error(err)
+	ts.ErrorIs(err, errAgentOSAlreadyInstalled)
 }
 
 // TestCheck_NoBase tests Check when base is not installed
 func (ts *AgentOSMainTestSuite) TestCheck_NoBase() {
 	// Create config pointing to non-existent base
 	configContent := `
-agent_os:
+agentos:
   home_dir: nonexistent-home
 `
 	configPath := filepath.Join(ts.env.TempDir, ".mage.yaml")
-	err := os.WriteFile(configPath, []byte(configContent), 0o644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
-	// Change to temp directory
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	// Override HOME to temp dir
-	oldHome := os.Getenv("HOME")
-	os.Setenv("HOME", ts.env.TempDir)
-	defer os.Setenv("HOME", oldHome)
+	ts.T().Setenv("HOME", ts.env.TempDir)
 
 	// Run check - should detect base not installed
 	err = ts.agentos.Check()
 
 	// Should return errAgentOSNotInstalled
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errAgentOSNotInstalled)
+	ts.Require().Error(err)
+	ts.ErrorIs(err, errAgentOSNotInstalled)
 }
 
 // TestCheck_BaseInstalled tests Check with base installed
 func (ts *AgentOSMainTestSuite) TestCheck_BaseInstalled() {
 	// Create base directory and config
 	homeDir := filepath.Join(ts.env.TempDir, ".agent-os")
-	err := os.MkdirAll(homeDir, 0o755)
+	err := os.MkdirAll(homeDir, 0o750)
 	ts.Require().NoError(err)
 
 	configFile := filepath.Join(homeDir, DefaultAgentOSConfigFile)
 	configContent := "version: v1.0.0\n"
-	err = os.WriteFile(configFile, []byte(configContent), 0o644)
+	err = os.WriteFile(configFile, []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
 	// Create project directory
 	projectDir := filepath.Join(ts.env.TempDir, DefaultAgentOSBaseDir)
 	specsDir := filepath.Join(projectDir, "specs")
-	err = os.MkdirAll(specsDir, 0o755)
+	err = os.MkdirAll(specsDir, 0o750)
 	ts.Require().NoError(err)
 
 	// Create mage config
 	mageConfig := `
-agent_os:
+agentos:
   home_dir: .agent-os
   base_dir: ` + DefaultAgentOSBaseDir + `
   claude_code_commands: false
   use_claude_code_subagents: false
 `
-	err = os.WriteFile(filepath.Join(ts.env.TempDir, ".mage.yaml"), []byte(mageConfig), 0o644)
+	err = os.WriteFile(filepath.Join(ts.env.TempDir, ".mage.yaml"), []byte(mageConfig), 0o600)
 	ts.Require().NoError(err)
 
-	// Change to temp directory
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	// Override HOME
-	oldHome := os.Getenv("HOME")
-	os.Setenv("HOME", ts.env.TempDir)
-	defer os.Setenv("HOME", oldHome)
+	ts.T().Setenv("HOME", ts.env.TempDir)
 
 	// Run check - should succeed
 	err = ts.agentos.Check()
 
 	// Should succeed (base and project exist)
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestUpgrade_NoBase tests Upgrade when base is not installed
 func (ts *AgentOSMainTestSuite) TestUpgrade_NoBase() {
 	// Create config pointing to non-existent base
 	configContent := `
-agent_os:
+agentos:
   home_dir: nonexistent-upgrade-home
 `
 	configPath := filepath.Join(ts.env.TempDir, ".mage.yaml")
-	err := os.WriteFile(configPath, []byte(configContent), 0o644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
-	// Change to temp directory
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	// Override HOME
-	oldHome := os.Getenv("HOME")
-	os.Setenv("HOME", ts.env.TempDir)
-	defer os.Setenv("HOME", oldHome)
+	ts.T().Setenv("HOME", ts.env.TempDir)
 
 	// Attempt upgrade
 	err = ts.agentos.Upgrade()
 
 	// Should return errAgentOSNotInstalled
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errAgentOSNotInstalled)
+	ts.Require().Error(err)
+	ts.ErrorIs(err, errAgentOSNotInstalled)
 }
 
 // TestAgentOSPathHelpers tests path helper functions with edge cases
@@ -183,7 +159,7 @@ func (ts *AgentOSMainTestSuite) TestAgentOSPathHelpers() {
 		}
 
 		path := getAgentOSHomePath(config)
-		ts.Assert().Contains(path, "very/long/custom/path/to/agent-os/installation")
+		ts.Contains(path, "very/long/custom/path/to/agent-os/installation")
 	})
 
 	ts.Run("project dir with relative path", func() {
@@ -194,7 +170,7 @@ func (ts *AgentOSMainTestSuite) TestAgentOSPathHelpers() {
 		}
 
 		path := getAgentOSProjectDir(config)
-		ts.Assert().Equal("./relative/path/to/project", path)
+		ts.Equal("./relative/path/to/project", path)
 	})
 
 	ts.Run("project dir with tilde expansion", func() {
@@ -205,7 +181,7 @@ func (ts *AgentOSMainTestSuite) TestAgentOSPathHelpers() {
 		}
 
 		path := getAgentOSProjectDir(config)
-		ts.Assert().Equal("~/agent-os-custom", path)
+		ts.Equal("~/agent-os-custom", path)
 	})
 }
 
@@ -265,23 +241,23 @@ func (ts *AgentOSMainTestSuite) TestAgentOSConfigVariations() {
 
 			// Verify arg count matches expectations
 			if tt.profile != "" && tt.profile != "default" {
-				ts.Assert().GreaterOrEqual(len(args), 2, "should have profile args")
+				ts.GreaterOrEqual(len(args), 2, "should have profile args")
 			}
 
 			if !tt.claudeCodeCmds {
-				ts.Assert().Contains(args, "--no-claude-code-commands")
+				ts.Contains(args, "--no-claude-code-commands")
 			}
 
 			if tt.agentOSCmds {
-				ts.Assert().Contains(args, "--agent-os-commands")
+				ts.Contains(args, "--agent-os-commands")
 			}
 
 			if !tt.subagents {
-				ts.Assert().Contains(args, "--no-subagents")
+				ts.Contains(args, "--no-subagents")
 			}
 
 			if tt.standardsAsSkills {
-				ts.Assert().Contains(args, "--standards-as-skills")
+				ts.Contains(args, "--standards-as-skills")
 			}
 		})
 	}
@@ -337,11 +313,11 @@ func (ts *AgentOSMainTestSuite) TestAgentOSVersionParsing() {
 		ts.Run(tt.name, func() {
 			// Create temp home with config
 			homeDir := filepath.Join(ts.env.TempDir, ".agent-os-"+tt.name)
-			err := os.MkdirAll(homeDir, 0o755)
+			err := os.MkdirAll(homeDir, 0o750)
 			ts.Require().NoError(err)
 
 			configFile := filepath.Join(homeDir, DefaultAgentOSConfigFile)
-			err = os.WriteFile(configFile, []byte(tt.yamlContent), 0o644)
+			err = os.WriteFile(configFile, []byte(tt.yamlContent), 0o600)
 			ts.Require().NoError(err)
 
 			config := &Config{
@@ -350,17 +326,15 @@ func (ts *AgentOSMainTestSuite) TestAgentOSVersionParsing() {
 				},
 			}
 
-			oldHome := os.Getenv("HOME")
-			os.Setenv("HOME", ts.env.TempDir)
-			defer os.Setenv("HOME", oldHome)
+			ts.T().Setenv("HOME", ts.env.TempDir)
 
 			version, err := getAgentOSVersion(config)
 
 			if tt.wantError {
-				ts.Assert().Error(err)
+				ts.Require().Error(err)
 			} else {
-				ts.Assert().NoError(err)
-				ts.Assert().Equal(tt.wantVersion, version)
+				ts.Require().NoError(err)
+				ts.Equal(tt.wantVersion, version)
 			}
 		})
 	}

@@ -812,7 +812,8 @@ func TestRunInModuleDir_ConcurrentSafety(t *testing.T) {
 				}
 
 				// Use runInModuleDir directly to test the generic function
-				_, err := runInModuleDir(module, &simpleRunner{},
+				_, err := runInModuleDir(
+					module, &simpleRunner{},
 					func(_ DirRunner, _ string) (struct{}, error) {
 						return struct{}{}, nil
 					},

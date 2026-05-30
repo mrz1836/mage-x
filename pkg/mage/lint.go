@@ -652,7 +652,7 @@ func parseGolangciTimeout(configPath string) (string, error) {
 
 // ensureGolangciLint ensures golangci-lint is installed with retry logic
 func ensureGolangciLint(cfg *Config) error {
-	if utils.CommandExists("golangci-lint") {
+	if commandExists("golangci-lint") {
 		return nil
 	}
 

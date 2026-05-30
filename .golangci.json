@@ -10,7 +10,7 @@
                 ".*_test\\.go$",
                 "testdata",
                 "vendor",
-                "\\.git",
+                "(^|/)\\.git(/|$)",
                 "examples",
                 "templates"
             ]
@@ -37,37 +37,6 @@
         }
     },
     "issues": {
-        "exclude-rules": [
-            {
-                "linters": [
-                    "gocyclo",
-                    "dupl",
-                    "funlen",
-                    "gocognit",
-                    "gochecknoglobals"
-                ],
-                "path": "_test\\.go"
-            },
-            {
-                "linters": [
-                    "goprintffuncname"
-                ],
-                "path": "pkg/utils/logger\\.go"
-            },
-            {
-                "linters": [
-                    "stylecheck"
-                ],
-                "text": "ST1000:"
-            },
-            {
-                "linters": [
-                    "lll"
-                ],
-                "source": "https://"
-            }
-        ],
-        "exclude-use-default": false,
         "fix": true,
         "max-issues-per-linter": 0,
         "max-same-issues": 0,
@@ -144,14 +113,47 @@
             "wastedassign",
             "zerologlint"
         ],
+        "exclusions": {
+            "paths": [
+                "vendor",
+                "(^|/)\\.git(/|$)",
+                "testdata",
+                "examples",
+                "tmp",
+                "bin"
+            ],
+            "rules": [
+                {
+                    "linters": [
+                        "gocyclo",
+                        "dupl",
+                        "funlen",
+                        "gocognit",
+                        "gochecknoglobals"
+                    ],
+                    "path": "_test\\.go"
+                },
+                {
+                    "linters": [
+                        "goprintffuncname"
+                    ],
+                    "path": "pkg/utils/logger\\.go"
+                },
+                {
+                    "linters": [
+                        "stylecheck"
+                    ],
+                    "text": "ST1000:"
+                },
+                {
+                    "linters": [
+                        "lll"
+                    ],
+                    "source": "https://"
+                }
+            ]
+        },
         "settings": {
-            "depguard": {
-                "include-go-root": false,
-                "list-type": "blacklist",
-                "packages": [
-                    "github.com/sirupsen/logrus"
-                ]
-            },
             "dogsled": {
                 "max-blank-identifiers": 2
             },
@@ -182,9 +184,6 @@
                     }
                 ]
             },
-            "funcorder": {
-                "constructor-after-struct": true
-            },
             "funlen": {
                 "lines": 100,
                 "statements": 50
@@ -208,7 +207,6 @@
                 "min-complexity": 15
             },
             "govet": {
-                "check-shadowing": true,
                 "disable": [
                     "buildtag"
                 ],
@@ -264,9 +262,6 @@
             },
             "unparam": {
                 "check-exported": false
-            },
-            "unused": {
-                "check-exported": false
             }
         }
     },
@@ -282,19 +277,12 @@
     "run": {
         "allow-parallel-runners": true,
         "build-tags": [
-            "mage"
+            "mage",
+            "integration"
         ],
-        "cache": true,
         "concurrency": 8,
-        "exclude-dirs": [
-            "vendor",
-            ".git",
-            "testdata",
-            "examples",
-            "tmp",
-            "bin"
-        ],
         "issues-exit-code": 1,
+        "relative-path-mode": "gomod",
         "tests": true,
         "timeout": "15m"
     },

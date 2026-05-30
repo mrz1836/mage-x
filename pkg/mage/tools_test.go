@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/mrz1836/mage-x/pkg/exec"
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
@@ -43,16 +44,19 @@ func (ts *ToolsTestSuite) TearDownTest() {
 
 // TestTools_Default tests the Default function
 func (ts *ToolsTestSuite) TestTools_Default() {
-	// Mock config loading and tool installation
 	ts.setupSuccessfulInstall()
 
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-		func() any { return GetRunner() },
-		func() error {
-			return ts.tools.Default()
-		},
-	)
+	// golangci-lint is installed via ensureGolangciLint (network download) when absent.
+	// Stub commandExists so installTool short-circuits for golangci-lint before reaching
+	// that path; remaining module tools still exercise the dry-run executor. Suite tests
+	// run serially, so the package-global swap with a deferred restore is safe.
+	orig := commandExists
+	defer func() { commandExists = orig }()
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
+
+	err := ts.withDryRunSecureRunner(func() error {
+		return ts.tools.Default()
+	})
 
 	ts.Require().NoError(err)
 }
@@ -61,13 +65,13 @@ func (ts *ToolsTestSuite) TestTools_Default() {
 func (ts *ToolsTestSuite) TestTools_Install() {
 	ts.setupSuccessfulInstall()
 
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-		func() any { return GetRunner() },
-		func() error {
-			return ts.tools.Install()
-		},
-	)
+	orig := commandExists
+	defer func() { commandExists = orig }()
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
+
+	err := ts.withDryRunSecureRunner(func() error {
+		return ts.tools.Install()
+	})
 
 	ts.Require().NoError(err)
 }
@@ -76,26 +80,21 @@ func (ts *ToolsTestSuite) TestTools_Install() {
 func (ts *ToolsTestSuite) TestTools_Install_ConfigError() {
 	TestResetConfig() // This causes LoadConfig to create a default config
 
-	// Mock expected tool installation calls for default config
-	fumptVersion := GetDefaultGofumptVersion()
-	if fumptVersion == "" {
-		fumptVersion = "latest"
-	}
-	govulnVersion := GetDefaultGoVulnCheckVersion()
-	if govulnVersion == "" {
-		govulnVersion = "latest"
-	}
+	// golangci-lint's install path (ensureGolangciLint) downloads install.sh over the
+	// network, which the dry-run executor does NOT gate - so a dry-run runner alone is
+	// not deterministic when golangci-lint is absent from PATH (clean CI runner). Stub
+	// the commandExists seam so golangci-lint short-circuits as already-installed before
+	// reaching that network path; the remaining module tools still exercise the real
+	// install path through the dry-run secure runner. The result is deterministic and
+	// offline whether or not any dev tool is on PATH. Suite tests run serially, so the
+	// package-global swap with a deferred restore is safe.
+	orig := commandExists
+	defer func() { commandExists = orig }()
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
 
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
-
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-		func() any { return GetRunner() },
-		func() error {
-			return ts.tools.Install()
-		},
-	)
+	err := ts.withDryRunSecureRunner(func() error {
+		return ts.tools.Install()
+	})
 
 	ts.Require().NoError(err) // Should succeed with default config
 }
@@ -104,13 +103,12 @@ func (ts *ToolsTestSuite) TestTools_Install_ConfigError() {
 func (ts *ToolsTestSuite) TestTools_Update() {
 	ts.setupSuccessfulUpdate()
 
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-		func() any { return GetRunner() },
-		func() error {
-			return ts.tools.Update()
-		},
-	)
+	// Update unconditionally reaches the retry-capable executor (brew upgrade and
+	// per-tool go install), so it requires a *SecureCommandRunner. A dry-run secure
+	// runner exercises the real update path without network access.
+	err := ts.withDryRunSecureRunner(func() error {
+		return ts.tools.Update()
+	})
 
 	ts.Require().NoError(err)
 }
@@ -119,27 +117,12 @@ func (ts *ToolsTestSuite) TestTools_Update() {
 func (ts *ToolsTestSuite) TestTools_Update_ConfigError() {
 	TestResetConfig() // This causes LoadConfig to create a default config
 
-	// Mock expected tool update calls for default config
-	fumptVersion := GetDefaultGofumptVersion()
-	if fumptVersion == "" {
-		fumptVersion = "latest"
-	}
-	govulnVersion := GetDefaultGoVulnCheckVersion()
-	if govulnVersion == "" {
-		govulnVersion = "latest"
-	}
-
-	ts.env.Runner.On("RunCmd", "brew", []string{"upgrade", "golangci-lint"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
-
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-		func() any { return GetRunner() },
-		func() error {
-			return ts.tools.Update()
-		},
-	)
+	// Update routes brew upgrade and go install through the retry-capable executor,
+	// so it requires a *SecureCommandRunner. Use a dry-run secure runner so the real
+	// update path runs against the default config without touching the network.
+	err := ts.withDryRunSecureRunner(func() error {
+		return ts.tools.Update()
+	})
 
 	ts.Require().NoError(err) // Should succeed with default config
 }
@@ -223,21 +206,14 @@ func (ts *ToolsTestSuite) TestTools_List_ConfigError() {
 // TestTools_VulnCheck tests the VulnCheck function
 func (ts *ToolsTestSuite) TestTools_VulnCheck() {
 	ts.setupConfig()
-	// Since govulncheck likely isn't installed, expect installation first
-	govulnVersion := GetDefaultGoVulnCheckVersion()
-	if govulnVersion == "" {
-		govulnVersion = "latest"
-	}
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
-	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
 
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-		func() any { return GetRunner() },
-		func() error {
-			return ts.tools.VulnCheck()
-		},
-	)
+	// VulnCheck may install govulncheck (via installToolFromModule, which requires a
+	// *SecureCommandRunner) and then run it. A dry-run secure runner sends both the
+	// install and the govulncheck run through the dry-run executor without the network,
+	// passing whether or not govulncheck is already on PATH.
+	err := ts.withDryRunSecureRunner(func() error {
+		return ts.tools.VulnCheck()
+	})
 
 	ts.Require().NoError(err)
 }
@@ -245,20 +221,12 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck() {
 // TestTools_VulnCheck_InstallFirst tests VulnCheck function when govulncheck needs to be installed
 func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallFirst() {
 	ts.setupConfig()
-	govulnVersion := GetDefaultGoVulnCheckVersion()
-	if govulnVersion == "" {
-		govulnVersion = "latest"
-	}
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
-	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
 
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-		func() any { return GetRunner() },
-		func() error {
-			return ts.tools.VulnCheck()
-		},
-	)
+	// Exercise the install-then-run path through a dry-run secure runner so both the
+	// govulncheck install and the run go through the real (network-free) code path.
+	err := ts.withDryRunSecureRunner(func() error {
+		return ts.tools.VulnCheck()
+	})
 
 	ts.Require().NoError(err)
 }
@@ -301,12 +269,16 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_InstallError() {
 func (ts *ToolsTestSuite) TestTools_VulnCheck_CheckError() {
 	expectedError := require.New(ts.T())
 	ts.setupConfig()
-	// Expect installation first, then failure on check
-	govulnVersion := GetDefaultGoVulnCheckVersion()
-	if govulnVersion == "" {
-		govulnVersion = "latest"
-	}
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
+
+	// Stub the commandExists seam so govulncheck is treated as already installed: this
+	// skips the install path (which would need a *SecureCommandRunner) and lets the
+	// govulncheck run fail through the mock. Suite tests run serially, so swapping the
+	// package-global with a deferred restore is safe and keeps it from leaking into
+	// TestTools_VulnCheck_InstallError.
+	orig := commandExists
+	defer func() { commandExists = orig }()
+	commandExists = func(name string) bool { return name == "govulncheck" }
+
 	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(errVulnerabilityFound)
 
 	err := ts.env.WithMockRunner(
@@ -325,21 +297,12 @@ func (ts *ToolsTestSuite) TestTools_VulnCheck_CheckError() {
 func (ts *ToolsTestSuite) TestTools_VulnCheck_ConfigError() {
 	TestResetConfig() // This causes LoadConfig to create a default config
 
-	// Mock installation and vulnerability check calls
-	govulnVersion := GetDefaultGoVulnCheckVersion()
-	if govulnVersion == "" {
-		govulnVersion = "latest"
-	}
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
-	ts.env.Runner.On("RunCmd", "govulncheck", []string{"-show", "verbose", "./..."}).Return(nil)
-
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-		func() any { return GetRunner() },
-		func() error {
-			return ts.tools.VulnCheck()
-		},
-	)
+	// VulnCheck against the default config may install govulncheck (needs a
+	// *SecureCommandRunner) and then run it. A dry-run secure runner sends both through
+	// the network-free executor.
+	err := ts.withDryRunSecureRunner(func() error {
+		return ts.tools.VulnCheck()
+	})
 
 	ts.Require().NoError(err) // Should succeed with default config
 }
@@ -509,16 +472,13 @@ func (ts *ToolsTestSuite) TestInstallTool_NewInstall() {
 		Check:   "mockgen",
 	}
 
-	expectedCmd := "go.uber.org/mock/mockgen@" + mockgenVersion
-	ts.env.Runner.On("RunCmd", "go", []string{"install", expectedCmd}).Return(nil)
-
-	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
-		func() any { return GetRunner() },
-		func() error {
-			return installTool(tool)
-		},
-	)
+	// installTool routes uninstalled tools through installToolFromModule, which
+	// type-asserts the runner to *SecureCommandRunner to reach the retry-capable
+	// executor. A dry-run secure runner exercises the real install path without the
+	// network, passing whether or not mockgen is already on PATH.
+	err := ts.withDryRunSecureRunner(func() error {
+		return installTool(tool)
+	})
 
 	ts.Require().NoError(err)
 }
@@ -532,6 +492,13 @@ func (ts *ToolsTestSuite) TestInstallTool_GolangciLint() {
 	}
 
 	ts.setupConfig()
+
+	// ensureGolangciLint downloads install.sh when golangci-lint is absent, which requires
+	// a *SecureCommandRunner and network access — neither available in the mock-runner path.
+	// Stub commandExists so installTool treats golangci-lint as already installed.
+	orig := commandExists
+	defer func() { commandExists = orig }()
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
 
 	err := ts.env.WithMockRunner(
 		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
@@ -582,51 +549,49 @@ func (ts *ToolsTestSuite) setupConfig() {
 	})
 }
 
-// setupSuccessfulInstall sets up mocks for successful tool installation
+// setupSuccessfulInstall configures the tool set for a successful install run.
+//
+// Prod no longer routes module installs through CommandRunner.RunCmd: installTool ->
+// installToolFromModule type-asserts the runner to *SecureCommandRunner and drives
+// exec.ExecuteWithRetry on its executor. Tests therefore exercise the install path via
+// withDryRunSecureRunner rather than mocking RunCmd, so this helper only seeds config.
 func (ts *ToolsTestSuite) setupSuccessfulInstall() {
 	ts.setupConfig()
-
-	// Get versions from environment or use @latest as fallback
-	fumptVersion := GetDefaultGofumptVersion()
-	if fumptVersion == "" {
-		fumptVersion = "latest"
-	}
-	govulnVersion := GetDefaultGoVulnCheckVersion()
-	if govulnVersion == "" {
-		govulnVersion = "latest"
-	}
-
-	// Mock installation commands for various tools
-	// Note: golangci-lint is a special case and uses ensureGolangciLint which we can't easily mock here
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil).Maybe()
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil).Maybe()
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "gotest.tools/gotestsum@v1.8.0"}).Return(nil).Maybe()
-
-	// golangci-lint might try brew or curl installation
-	ts.env.Runner.On("RunCmd", "brew", []string{"install", "golangci-lint"}).Return(nil).Maybe()
 }
 
-// setupSuccessfulUpdate sets up mocks for successful tool updates
+// setupSuccessfulUpdate configures the tool set for a successful update run.
+//
+// Tools.Update reaches the retry-capable executor for both the brew upgrade and each
+// per-tool go install, so it requires a *SecureCommandRunner. Tests run it via
+// withDryRunSecureRunner instead of mocking RunCmd; this helper only seeds config.
 func (ts *ToolsTestSuite) setupSuccessfulUpdate() {
 	ts.setupConfig()
+}
 
-	// Get versions from environment or use @latest as fallback
-	fumptVersion := GetDefaultGofumptVersion()
-	if fumptVersion == "" {
-		fumptVersion = "latest"
+// withDryRunSecureRunner installs a real *SecureCommandRunner whose executor runs in
+// dry-run mode for the duration of fn, restoring the previous runner afterwards.
+//
+// This exercises prod's actual install/update code path (which type-asserts the runner
+// to *SecureCommandRunner to access the retry-capable executor) without touching the
+// network. Mirrors the established pattern in format_retry_test.go.
+func (ts *ToolsTestSuite) withDryRunSecureRunner(fn func() error) error {
+	originalRunner := GetRunner()
+	defer func() {
+		if err := SetRunner(originalRunner); err != nil {
+			ts.T().Logf("failed to restore original runner: %v", err)
+		}
+	}()
+
+	executor := exec.NewBuilder().
+		WithDryRun(true).
+		WithValidation().
+		Build()
+
+	if err := SetRunner(&SecureCommandRunner{executor: executor}); err != nil {
+		return err
 	}
-	govulnVersion := GetDefaultGoVulnCheckVersion()
-	if govulnVersion == "" {
-		govulnVersion = "latest"
-	}
 
-	// Mock brew upgrade for golangci-lint (assumes Mac)
-	ts.env.Runner.On("RunCmd", "brew", []string{"upgrade", "golangci-lint"}).Return(nil)
-
-	// Mock go install commands for tool updates
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "mvdan.cc/gofumpt@" + fumptVersion}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/vuln/cmd/govulncheck@" + govulnVersion}).Return(nil)
-	ts.env.Runner.On("RunCmd", "go", []string{"install", "gotest.tools/gotestsum@v1.8.0"}).Return(nil)
+	return fn()
 }
 
 // TestToolsTestSuite runs the test suite

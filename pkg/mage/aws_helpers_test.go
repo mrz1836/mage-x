@@ -17,16 +17,23 @@ import (
 
 // Static test errors
 var (
-	errAWSTestFailed     = errors.New("aws test failed")
-	errAWSCommandFailed  = errors.New("aws command failed")
-	errAWSInvalidJSON    = errors.New("invalid json")
-	errAWSInvalidProfile = errors.New("invalid profile")
-	errAWSSTSTestFailed  = errors.New("sts test failed")
+	errAWSCommandFailed = errors.New("aws command failed")
+	errAWSInvalidRunner = errors.New("invalid command runner")
+	errAWSSTSTestFailed = errors.New("sts test failed")
 )
+
+func setTestCommandRunner(r any) error {
+	runner, ok := r.(CommandRunner)
+	if !ok {
+		return errAWSInvalidRunner
+	}
+	return SetRunner(runner)
+}
 
 // AWSHelpersTestSuite defines the test suite for AWS helper functions
 type AWSHelpersTestSuite struct {
 	suite.Suite
+
 	env    *testutil.TestEnvironment
 	awsDir string
 }
@@ -35,10 +42,10 @@ type AWSHelpersTestSuite struct {
 func (ts *AWSHelpersTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.awsDir = filepath.Join(ts.env.TempDir, ".aws")
-	os.MkdirAll(ts.awsDir, 0o700)
+	ts.Require().NoError(os.MkdirAll(ts.awsDir, 0o700))
 
 	// Override HOME for AWS directory detection
-	os.Setenv("HOME", ts.env.TempDir)
+	ts.T().Setenv("HOME", ts.env.TempDir)
 }
 
 // TearDownTest runs after each test
@@ -73,7 +80,7 @@ func (ts *AWSHelpersTestSuite) TestGetConfigSectionName() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			result := getConfigSectionName(tt.profile)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 		})
 	}
 }
@@ -90,6 +97,7 @@ func (ts *AWSHelpersTestSuite) TestParseAWSINI() {
 	}{
 		{
 			name: "single section",
+			// #nosec G101 -- test fixture credentials
 			iniContent: `[default]
 aws_access_key_id = AKIAIOSFODNN7EXAMPLE
 aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -151,7 +159,7 @@ region = us-west-2
 		ts.Run(tt.name, func() {
 			ini := parseAWSINI([]byte(tt.iniContent))
 
-			ts.Assert().Len(ini.Sections, tt.wantSections)
+			ts.Len(ini.Sections, tt.wantSections)
 
 			if tt.checkSection != "" {
 				found := false
@@ -160,13 +168,13 @@ region = us-west-2
 						found = true
 						if tt.checkKey != "" {
 							value, ok := section.Values[tt.checkKey]
-							ts.Assert().True(ok, "key should exist")
-							ts.Assert().Equal(tt.checkValue, value)
+							ts.True(ok, "key should exist")
+							ts.Equal(tt.checkValue, value)
 						}
 						break
 					}
 				}
-				ts.Assert().True(found, "section should exist")
+				ts.True(found, "section should exist")
 			}
 		})
 	}
@@ -198,16 +206,16 @@ func (ts *AWSHelpersTestSuite) TestWriteAWSINI() {
 	content := string(data)
 
 	// Verify sections are present
-	ts.Assert().Contains(content, "[default]")
-	ts.Assert().Contains(content, "[production]")
+	ts.Contains(content, "[default]")
+	ts.Contains(content, "[production]")
 
 	// Verify key-value pairs
-	ts.Assert().Contains(content, "aws_access_key_id = KEY1")
-	ts.Assert().Contains(content, "region = us-west-2")
+	ts.Contains(content, "aws_access_key_id = KEY1")
+	ts.Contains(content, "region = us-west-2")
 
 	// Parse it back and verify
 	parsedINI := parseAWSINI(data)
-	ts.Assert().Len(parsedINI.Sections, 2)
+	ts.Len(parsedINI.Sections, 2)
 }
 
 // TestGetOrCreateSection tests section creation and retrieval
@@ -224,16 +232,16 @@ func (ts *AWSHelpersTestSuite) TestGetOrCreateSection() {
 
 	ts.Run("get existing section", func() {
 		section := getOrCreateSection(ini, "existing")
-		ts.Assert().NotNil(section)
-		ts.Assert().Equal("existing", section.Name)
-		ts.Assert().Len(ini.Sections, 1)
+		ts.NotNil(section)
+		ts.Equal("existing", section.Name)
+		ts.Len(ini.Sections, 1)
 	})
 
 	ts.Run("create new section", func() {
 		section := getOrCreateSection(ini, "new")
-		ts.Assert().NotNil(section)
-		ts.Assert().Equal("new", section.Name)
-		ts.Assert().Len(ini.Sections, 2)
+		ts.NotNil(section)
+		ts.Equal("new", section.Name)
+		ts.Len(ini.Sections, 2)
 	})
 }
 
@@ -247,22 +255,22 @@ func (ts *AWSHelpersTestSuite) TestSetINIValue() {
 
 	ts.Run("set new value", func() {
 		setINIValue(section, "key1", "value1")
-		ts.Assert().Equal("value1", section.Values["key1"])
-		ts.Assert().Contains(section.KeyOrder, "key1")
-		ts.Assert().Len(section.KeyOrder, 1)
+		ts.Equal("value1", section.Values["key1"])
+		ts.Contains(section.KeyOrder, "key1")
+		ts.Len(section.KeyOrder, 1)
 	})
 
 	ts.Run("update existing value", func() {
 		setINIValue(section, "key1", "updated")
-		ts.Assert().Equal("updated", section.Values["key1"])
-		ts.Assert().Len(section.KeyOrder, 1, "should not duplicate in key order")
+		ts.Equal("updated", section.Values["key1"])
+		ts.Len(section.KeyOrder, 1, "should not duplicate in key order")
 	})
 
 	ts.Run("set multiple values", func() {
 		setINIValue(section, "key2", "value2")
 		setINIValue(section, "key3", "value3")
-		ts.Assert().Len(section.Values, 3)
-		ts.Assert().Len(section.KeyOrder, 3)
+		ts.Len(section.Values, 3)
+		ts.Len(section.KeyOrder, 3)
 	})
 }
 
@@ -274,7 +282,8 @@ func (ts *AWSHelpersTestSuite) TestMaskCredential() {
 		want       string
 	}{
 		{
-			name:       "standard access key",
+			name: "standard access key",
+			// #nosec G101 -- test fixture credential
 			credential: "AKIAIOSFODNN7EXAMPLE",
 			want:       "AKIA************MPLE",
 		},
@@ -299,7 +308,8 @@ func (ts *AWSHelpersTestSuite) TestMaskCredential() {
 			want:       "1234*6789",
 		},
 		{
-			name:       "long secret",
+			name: "long secret",
+			// #nosec G101 -- test fixture credential
 			credential: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
 			want:       "wJal********************************EKEY",
 		},
@@ -308,12 +318,12 @@ func (ts *AWSHelpersTestSuite) TestMaskCredential() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			result := maskCredential(tt.credential)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 
 			// Verify first 4 and last 4 are preserved for long strings
 			if len(tt.credential) > 8 {
-				ts.Assert().Equal(tt.credential[:4], result[:4])
-				ts.Assert().Equal(tt.credential[len(tt.credential)-4:], result[len(result)-4:])
+				ts.Equal(tt.credential[:4], result[:4])
+				ts.Equal(tt.credential[len(tt.credential)-4:], result[len(result)-4:])
 			}
 		})
 	}
@@ -330,19 +340,20 @@ func (ts *AWSHelpersTestSuite) TestBackupFile() {
 
 		// Create backup
 		err = backupFile(filePath)
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 
 		// Verify backup exists
 		backupPath := filePath + awsBackupSuffix
+		// #nosec G304 -- test reads backup path derived from temp fixture
 		backupContent, err := os.ReadFile(backupPath)
-		ts.Assert().NoError(err)
-		ts.Assert().Equal(originalContent, backupContent)
+		ts.Require().NoError(err)
+		ts.Equal(originalContent, backupContent)
 	})
 
 	ts.Run("backup non-existent file", func() {
 		// Should not error
 		err := backupFile(filepath.Join(ts.awsDir, "nonexistent"))
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -358,7 +369,8 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 				"Expiration":      "2024-12-31T23:59:59Z",
 			},
 		}
-		mockJSON, _ := json.Marshal(mockResponse)
+		mockJSON, err := json.Marshal(mockResponse)
+		ts.Require().NoError(err)
 
 		// Mock the runner
 		ts.env.Runner.On("RunCmdOutput", "aws", []string{
@@ -369,49 +381,54 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 			"--output", "json",
 		}).Return(string(mockJSON), nil)
 
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) },
+		err = ts.env.WithMockRunner(
+			setTestCommandRunner,
 			func() any { return GetRunner() },
 			func() error {
-				creds, err := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "123456", 43200)
-				if err != nil {
-					return err
+				creds, tokenErr := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "123456", 43200)
+				if tokenErr != nil {
+					return tokenErr
 				}
 
 				// Verify credentials
-				ts.Assert().Equal("ASIATESTACCESSKEY", creds.AccessKeyID)
-				ts.Assert().Equal("TestSecretKey123", creds.SecretAccessKey)
-				ts.Assert().Equal("TestSessionToken456", creds.SessionToken)
-				ts.Assert().Equal("2024-12-31T23:59:59Z", creds.Expiration)
+				ts.Equal("ASIATESTACCESSKEY", creds.AccessKeyID)
+				ts.Equal("TestSecretKey123", creds.SecretAccessKey)
+				ts.Equal("TestSessionToken456", creds.SessionToken)
+				ts.Equal("2024-12-31T23:59:59Z", creds.Expiration)
 
 				return nil
 			},
 		)
 
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("invalid JSON response", func() {
-		// Mock invalid JSON
+		// Mock invalid JSON. Use a distinct token-code so this expectation has
+		// unique args: SetupTest runs once per top-level test (not per ts.Run),
+		// so all subtests here share ts.env.Runner. testify's findExpectedCall
+		// returns the FIRST registered call matching the args, so reusing the
+		// "successful" subtest's token-code ("123456") would match its valid-JSON
+		// expectation instead of this one.
 		ts.env.Runner.On("RunCmdOutput", "aws", []string{
 			"sts", "get-session-token",
 			"--serial-number", "arn:aws:iam::123456789012:mfa/test",
-			"--token-code", "123456",
+			"--token-code", "654321",
 			"--duration-seconds", "43200",
 			"--output", "json",
 		}).Return("invalid json{{{", nil)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			setTestCommandRunner,
 			func() any { return GetRunner() },
 			func() error {
-				_, err := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "123456", 43200)
+				_, err := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "654321", 43200)
 				return err
 			},
 		)
 
-		ts.Assert().Error(err)
-		ts.Assert().Contains(err.Error(), "failed to parse STS response")
+		ts.Require().Error(err)
+		ts.Contains(err.Error(), "failed to parse STS response")
 	})
 
 	ts.Run("STS call fails", func() {
@@ -425,7 +442,7 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 		}).Return("", errAWSSTSTestFailed)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			setTestCommandRunner,
 			func() any { return GetRunner() },
 			func() error {
 				_, err := getAWSSessionToken("default", "arn:aws:iam::123456789012:mfa/test", "invalid", 43200)
@@ -433,8 +450,8 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 			},
 		)
 
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errSTSCallFailed)
+		ts.Require().Error(err)
+		ts.ErrorIs(err, errSTSCallFailed)
 	})
 }
 
@@ -447,28 +464,29 @@ func (ts *AWSHelpersTestSuite) TestCheckAWSSession() {
 			"Arn":     "arn:aws:iam::123456789012:user/testuser",
 			"UserId":  "AIDAI1234567890EXAMPLE",
 		}
-		mockJSON, _ := json.Marshal(mockResponse)
+		mockJSON, err := json.Marshal(mockResponse)
+		ts.Require().NoError(err)
 
 		ts.env.Runner.On("RunCmdOutput", "aws", []string{
 			"sts", "get-caller-identity",
 			"--output", "json",
 		}).Return(string(mockJSON), nil)
 
-		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) },
+		err = ts.env.WithMockRunner(
+			setTestCommandRunner,
 			func() any { return GetRunner() },
 			func() error {
 				accountID, userARN, isValid := checkAWSSession("default")
 
-				ts.Assert().True(isValid)
-				ts.Assert().Equal("123456789012", accountID)
-				ts.Assert().Equal("arn:aws:iam::123456789012:user/testuser", userARN)
+				ts.True(isValid)
+				ts.Equal("123456789012", accountID)
+				ts.Equal("arn:aws:iam::123456789012:user/testuser", userARN)
 
 				return nil
 			},
 		)
 
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("invalid session", func() {
@@ -479,16 +497,16 @@ func (ts *AWSHelpersTestSuite) TestCheckAWSSession() {
 		}).Return("", errAWSCommandFailed)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) },
+			setTestCommandRunner,
 			func() any { return GetRunner() },
 			func() error {
 				_, _, isValid := checkAWSSession("expired")
-				ts.Assert().False(isValid)
+				ts.False(isValid)
 				return nil
 			},
 		)
 
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 	})
 }
 
@@ -505,8 +523,8 @@ mfa_serial = arn:aws:iam::123456789012:mfa/testuser
 		ts.Require().NoError(err)
 
 		serial, err := getMFASerial("default")
-		ts.Assert().NoError(err)
-		ts.Assert().Equal("arn:aws:iam::123456789012:mfa/testuser", serial)
+		ts.Require().NoError(err)
+		ts.Equal("arn:aws:iam::123456789012:mfa/testuser", serial)
 	})
 
 	ts.Run("MFA serial not found", func() {
@@ -519,17 +537,17 @@ region = us-east-1
 		ts.Require().NoError(err)
 
 		_, err = getMFASerial("default")
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errMFASerialNotFound)
+		ts.Require().Error(err)
+		ts.ErrorIs(err, errMFASerialNotFound)
 	})
 
 	ts.Run("config file missing", func() {
 		// Remove config file
-		os.Remove(filepath.Join(ts.awsDir, awsConfigFile))
+		ts.Require().NoError(os.Remove(filepath.Join(ts.awsDir, awsConfigFile)))
 
 		_, err := getMFASerial("default")
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errMFASerialNotFound)
+		ts.Require().Error(err)
+		ts.ErrorIs(err, errMFASerialNotFound)
 	})
 }
 

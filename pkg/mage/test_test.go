@@ -12,6 +12,24 @@ import (
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
+// clearCIEnv blanks the CI-detection environment variables for the duration of
+// the test so the CI-aware test runner (getTestRunner -> GetCIRunner) takes the
+// non-CI mock path regardless of ambient CI env that other tests in the package
+// may have left set (e.g. CI=true streams real `go test -json`, bypassing the
+// mock). t.Setenv restores the prior values on cleanup. Note: MAGE_X_CI_MODE=false
+// alone is not sufficient because GetCIRunner auto-enables CI mode whenever
+// IsCI() is true, so the detection vars themselves must be cleared.
+func clearCIEnv(t *testing.T) {
+	t.Helper()
+	for _, key := range []string{
+		"CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS",
+		"JENKINS_URL", "TF_BUILD", "BUILDKITE", "DRONE", "CODEBUILD_CI",
+		"TEAMCITY_VERSION", "BITBUCKET_BUILD_NUMBER", "MAGE_X_CI_MODE",
+	} {
+		t.Setenv(key, "")
+	}
+}
+
 func TestTestRun(t *testing.T) {
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
@@ -50,7 +68,7 @@ func TestTestRun(t *testing.T) {
 			err := env.WithMockRunner(
 				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
 				func() any { return GetRunner() },
-				test.Run,
+				func() error { return test.Run() },
 			)
 
 			if tt.expectErr {
@@ -128,6 +146,7 @@ func TestTestRunWithCoverage(t *testing.T) {
 }
 
 func TestTestRace(t *testing.T) {
+	clearCIEnv(t) // Test.Race routes through the CI-aware runner; force the non-CI mock path.
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 
@@ -400,6 +419,7 @@ func TestTestClean(t *testing.T) {
 }
 
 func TestTestUnit(t *testing.T) {
+	clearCIEnv(t) // Test.Unit routes through the CI-aware runner; force the non-CI mock path.
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 
@@ -414,11 +434,8 @@ func TestTestUnit(t *testing.T) {
 		{
 			name: "successful unit tests",
 			setupMock: func() {
-				// Mock go list for package discovery
-				packageList := `github.com/test/project/pkg/utils
-github.com/test/project/pkg/common
-github.com/test/project/pkg/mage`
-				env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(packageList, nil).Once()
+				// Module discovery walks the filesystem (findAllModules), so the
+				// only runner call is the single combined `go test ... ./...` pass.
 				env.Builder.ExpectGoCommand("test", nil)
 			},
 			expectErr: false,
@@ -428,11 +445,6 @@ github.com/test/project/pkg/mage`
 			setupMock: func() {
 				// Reset expectations to avoid conflicts with previous test
 				env.Runner.ExpectedCalls = nil
-				// Mock go list for package discovery
-				packageList := `github.com/test/project/pkg/utils
-github.com/test/project/pkg/common
-github.com/test/project/pkg/mage`
-				env.Runner.On("RunCmdOutput", "go", []string{"list", "./..."}).Return(packageList, nil).Once()
 				env.Builder.ExpectGoCommand("test", assert.AnError)
 			},
 			expectErr: true,

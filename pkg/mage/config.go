@@ -71,6 +71,7 @@ type PreBuildConfig struct {
 type TestConfig struct {
 	AutoDiscoverBuildTags        bool     `yaml:"auto_discover_build_tags"`
 	AutoDiscoverBuildTagsExclude []string `yaml:"auto_discover_build_tags_exclude"`
+	CombineBuildTags             bool     `yaml:"combine_build_tags"` // Run all discovered tags in a single test pass instead of one pass per tag
 	BenchCPU                     int      `yaml:"bench_cpu"`
 	BenchMem                     bool     `yaml:"bench_mem"`
 	BenchTime                    string   `yaml:"bench_time"`
@@ -354,6 +355,7 @@ func defaultConfig() *Config {
 			},
 		},
 		Test: TestConfig{
+			CombineBuildTags:            true,
 			Parallel:                    runtime.NumCPU(),
 			Timeout:                     DefaultTimeout,
 			IntegrationTimeout:          LongTimeout,
@@ -474,6 +476,12 @@ func applyEnvOverrides(c *Config) {
 	// Auto discover build tags exclude override (ParseStringSlice handles trimming)
 	if tags := env.ParseStringSlice("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE"); tags != nil {
 		c.Test.AutoDiscoverBuildTagsExclude = tags
+	}
+
+	// Combine discovered build tags into a single test pass (default on).
+	// Set to false to fall back to one separate test pass per tag.
+	if v, ok := env.ParseBool("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE"); ok {
+		c.Test.CombineBuildTags = v
 	}
 
 	// Test exclude modules override (ParseStringSlice handles trimming)

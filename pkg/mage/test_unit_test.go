@@ -582,7 +582,7 @@ func TestRunCoverageTestsForModulesWithRunner_NilConfig(t *testing.T) {
 	t.Parallel()
 
 	// Test that nil config returns appropriate error
-	err := runCoverageTestsForModulesWithRunner(nil, nil, false, nil, "", nil)
+	err := runCoverageTestsForModulesWithRunner(nil, nil, false, nil, "", "coverage.txt", nil)
 	assert.ErrorIs(t, err, errConfigNil)
 }
 

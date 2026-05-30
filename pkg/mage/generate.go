@@ -178,7 +178,8 @@ func (Generate) Proto() error {
 		}
 
 		if hasService {
-			args = append(args,
+			args = append(
+				args,
 				"--go-grpc_out=.",
 				"--go-grpc_opt=paths=source_relative",
 			)

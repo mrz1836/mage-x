@@ -21,7 +21,7 @@ var (
 // globalRunnerMu serializes access to the global command runner during tests.
 // This prevents race conditions when parallel tests modify the global runner.
 //
-//nolint:gochecknoglobals // Required for test synchronization
+
 var globalRunnerMu sync.Mutex
 
 // MockCommandRunner for testing

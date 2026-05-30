@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	ErrFindFailed                   = errors.New("find failed")
 	ErrYamlfmtExecutionFailed       = errors.New("yamlfmt execution failed")
 	ErrYamlfmtConfigExecutionFailed = errors.New("yamlfmt config execution failed")
 )
@@ -396,186 +395,150 @@ func checkColonSpacing(t *testing.T, line, filename string, lineNum int) {
 	}
 }
 
-// TestYamlfmtMockScenarios tests yamlfmt with mock command runner scenarios
+// setupYAMLTestDir creates an isolated temp working directory containing the given files
+// (keyed by relative path), disables YAML line-length validation, and restores the working
+// directory and environment on cleanup. Format.YAML() now discovers files with a native
+// filesystem walk, so tests stage real files instead of mocking the external `find`.
+// stubFormatToolsInstalled marks the formatting tools (gofumpt, gci, goimports,
+// yamlfmt) as already present on PATH for the duration of the test, restoring the
+// real check on cleanup. Format tests inject a MockCommandRunner and assert only on
+// the formatting commands; without this stub, a host missing one of these tools
+// (notably yamlfmt in CI) makes installTool attempt a real "go install" through the
+// mock runner, which fails the SecureCommandRunner type assertion. Stubbing keeps
+// these unit tests host-independent. Other CommandExists callers are unaffected
+// because this seam only gates installTool.
+func stubFormatToolsInstalled(t *testing.T) {
+	t.Helper()
+	orig := commandExists
+	t.Cleanup(func() { commandExists = orig })
+	commandExists = func(cmd string) bool {
+		switch cmd {
+		case "gofumpt", "gci", "goimports", "yamlfmt":
+			return true
+		default:
+			return orig(cmd)
+		}
+	}
+}
+
+func setupYAMLTestDir(t *testing.T, files map[string]string) {
+	t.Helper()
+
+	stubFormatToolsInstalled(t)
+
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	tmpDir := t.TempDir()
+	require.NoError(t, os.Chdir(tmpDir))
+	t.Cleanup(func() { _ = os.Chdir(origDir) }) //nolint:errcheck // test cleanup
+
+	for path, content := range files {
+		if dir := filepath.Dir(path); dir != "." {
+			require.NoError(t, os.MkdirAll(dir, 0o750))
+		}
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+	}
+
+	origValidation, hadValidation := os.LookupEnv("MAGE_X_YAML_VALIDATION")
+	require.NoError(t, os.Setenv("MAGE_X_YAML_VALIDATION", "false"))
+	t.Cleanup(func() {
+		if hadValidation {
+			_ = os.Setenv("MAGE_X_YAML_VALIDATION", origValidation) //nolint:errcheck // test cleanup
+		} else {
+			_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
+		}
+	})
+}
+
+// TestYamlfmtMockScenarios tests yamlfmt invocation with a mock command runner. With
+// native-walk discovery, Format.YAML() feeds yamlfmt the explicit selected-file list
+// (never "."), so these tests stage real files and assert the yamlfmt argv. Walk yields
+// files in lexical order.
 func TestYamlfmtMockScenarios(t *testing.T) {
 	t.Run("successful yamlfmt formatting", func(t *testing.T) {
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+		setupYAMLTestDir(t, map[string]string{
+			"test.yml":    "a: 1\n",
+			"config.yaml": "b: 2\n",
+		})
 
-		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
-		// Create mock runner
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml\nconfig.yaml", nil)
-		mockRunner.On("RunCmd", "yamlfmt", ".").Return(nil)
+		// Lexical walk order: config.yaml then test.yml. No config file present.
+		mockRunner.On("RunCmd", "yamlfmt", "config.yaml", "test.yml").Return(nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		// Test successful YAML formatting
-		formatter := Format{}
-		err := formatter.YAML()
+		err := Format{}.YAML()
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
 	})
 
 	t.Run("yamlfmt with config file", func(t *testing.T) {
-		// Create temporary directory with config file
-		tmpDir := t.TempDir()
-		origDir, err := os.Getwd()
-		require.NoError(t, err)
-		defer func() { _ = os.Chdir(origDir) }() //nolint:errcheck // test cleanup
+		setupYAMLTestDir(t, map[string]string{
+			".github/.yamlfmt": "formatter:\n  type: basic\n",
+			"test.yml":         "a: 1\n",
+		})
 
-		err = os.Chdir(tmpDir)
-		require.NoError(t, err)
-
-		// Create .github directory and config file
-		err = os.MkdirAll(".github", 0o750)
-		require.NoError(t, err)
-		err = os.WriteFile(".github/.yamlfmt", []byte("formatter:\n  type: basic\n"), 0o600)
-		require.NoError(t, err)
-
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
-
-		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
-		// Create mock runner
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		mockRunner.On("RunCmd", "yamlfmt", "-conf", ".github/.yamlfmt", ".").Return(nil)
+		mockRunner.On("RunCmd", "yamlfmt", "-conf", ".github/.yamlfmt", "test.yml").Return(nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		// Test YAML formatting with config file
-		formatter := Format{}
-		err = formatter.YAML()
+		err := Format{}.YAML()
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
 	})
 
 	t.Run("no YAML files found", func(t *testing.T) {
-		// Save original runner
+		setupYAMLTestDir(t, nil) // empty directory
+
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
-		// Create mock runner that returns no YAML files
+		// No expectations set: any yamlfmt call would fail the mock.
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		// Test YAML formatting when no files are found
-		formatter := Format{}
-		err := formatter.YAML()
+		err := Format{}.YAML()
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
 	})
 
-	t.Run("find command fails", func(t *testing.T) {
-		// Save original runner
-		originalRunner := GetRunner()
-		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
-
-		// Create mock runner that fails the find command
-		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", ErrFindFailed)
-		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
-
-		// Test YAML formatting when find command fails
-		formatter := Format{}
-		err := formatter.YAML()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to find YAML files")
-		mockRunner.AssertExpectations(t)
-	})
-
 	t.Run("yamlfmt execution fails", func(t *testing.T) {
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+		setupYAMLTestDir(t, map[string]string{"test.yml": "a: 1\n"})
 
-		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
-		// Create mock runner that fails yamlfmt execution
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		mockRunner.On("RunCmd", "yamlfmt", ".").Return(ErrYamlfmtExecutionFailed)
+		// The batch run fails, then the per-file fallback retries the same file; the
+		// expectation matches both invocations.
+		mockRunner.On("RunCmd", "yamlfmt", "test.yml").Return(ErrYamlfmtExecutionFailed)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		// Test YAML formatting when yamlfmt execution fails
-		formatter := Format{}
-		err := formatter.YAML()
+		err := Format{}.YAML()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "yamlfmt formatting failed")
 		mockRunner.AssertExpectations(t)
 	})
 
 	t.Run("yamlfmt with config file execution fails", func(t *testing.T) {
-		// Create temporary directory with config file
-		tmpDir := t.TempDir()
-		origDir, err := os.Getwd()
-		require.NoError(t, err)
-		defer func() { _ = os.Chdir(origDir) }() //nolint:errcheck // test cleanup
+		setupYAMLTestDir(t, map[string]string{
+			".github/.yamlfmt": "formatter:\n  type: basic\n",
+			"test.yml":         "a: 1\n",
+		})
 
-		err = os.Chdir(tmpDir)
-		require.NoError(t, err)
-
-		// Create .github directory and config file
-		err = os.MkdirAll(".github", 0o750)
-		require.NoError(t, err)
-		err = os.WriteFile(".github/.yamlfmt", []byte("formatter:\n  type: basic\n"), 0o600)
-		require.NoError(t, err)
-
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
-
-		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
-		// Create mock runner that fails yamlfmt with config
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		mockRunner.On("RunCmd", "yamlfmt", "-conf", ".github/.yamlfmt", ".").Return(ErrYamlfmtConfigExecutionFailed)
+		mockRunner.On("RunCmd", "yamlfmt", "-conf", ".github/.yamlfmt", "test.yml").Return(ErrYamlfmtConfigExecutionFailed)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		// Test YAML formatting when yamlfmt with config fails
-		formatter := Format{}
-		err = formatter.YAML()
+		err := Format{}.YAML()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "yamlfmt formatting failed")
 		mockRunner.AssertExpectations(t)
@@ -585,30 +548,18 @@ func TestYamlfmtMockScenarios(t *testing.T) {
 // TestYamlfmtMockInstallationScenarios tests yamlfmt installation scenarios with mocks
 func TestYamlfmtMockInstallationScenarios(t *testing.T) {
 	t.Run("yamlfmt installation success", func(t *testing.T) {
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+		setupYAMLTestDir(t, map[string]string{"test.yml": "a: 1\n"})
 
-		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Create mock secure runner
 		mockRunner := &MockSecureCommandRunner{}
-		mockRunner.MockCommandRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		mockRunner.MockCommandRunner.On("RunCmd", "yamlfmt", ".").Return(nil)
+		mockRunner.MockCommandRunner.On("RunCmd", "yamlfmt", "test.yml").Return(nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		// Test YAML formatting that might trigger installation
-		formatter := Format{}
-		err := formatter.YAML()
+		// Test YAML formatting through the secure-runner wrapper
+		err := Format{}.YAML()
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
 	})
@@ -647,153 +598,102 @@ func TestYamlfmtVersionManagement(t *testing.T) {
 	})
 }
 
-// TestYamlfmtEdgeCases tests yamlfmt edge cases and error scenarios
+// TestYamlfmtEdgeCases tests yamlfmt edge cases and exclusion handling.
 func TestYamlfmtEdgeCases(t *testing.T) {
 	t.Run("empty yaml files list", func(t *testing.T) {
-		// Save original runner
+		setupYAMLTestDir(t, nil) // empty directory
+
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
-		// Create mock runner that returns empty string (no files)
+		// No expectations: yamlfmt must not be called when no YAML files exist.
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("", nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		// Test YAML formatting with no files
-		formatter := Format{}
-		err := formatter.YAML()
+		err := Format{}.YAML()
 		require.NoError(t, err)
-
-		// Should not call yamlfmt when no files are found
 		mockRunner.AssertExpectations(t)
 	})
 
 	t.Run("yaml alias method", func(t *testing.T) {
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+		setupYAMLTestDir(t, map[string]string{"test.yml": "a: 1\n"})
 
-		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
-		// Create mock runner
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		mockRunner.On("RunCmd", "yamlfmt", ".").Return(nil)
+		mockRunner.On("RunCmd", "yamlfmt", "test.yml").Return(nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		// Test Yaml() alias method
-		formatter := Format{}
-		err := formatter.Yaml()
+		// Test the Yaml() alias method.
+		err := Format{}.Yaml()
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
 	})
 
-	t.Run("exclude paths handling", func(t *testing.T) {
-		// Disable YAML validation for this test
-		originalValidation := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalValidation == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalValidation) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+	t.Run("exclude paths prune both .yml and .yaml", func(t *testing.T) {
+		setupYAMLTestDir(t, map[string]string{
+			"keep.yml":                "a: 1\n",
+			"custom_exclude/skip.yml": "x: 1\n",
+			"build/skip.yaml":         "y: 2\n",
+		})
 
-		// Test that exclude paths are properly applied to YAML find command
-		originalEnv := os.Getenv("MAGE_X_FORMAT_EXCLUDE_PATHS")
-		defer func() {
-			if originalEnv == "" {
+		origExclude, hadExclude := os.LookupEnv("MAGE_X_FORMAT_EXCLUDE_PATHS")
+		require.NoError(t, os.Setenv("MAGE_X_FORMAT_EXCLUDE_PATHS", "custom_exclude,build"))
+		t.Cleanup(func() {
+			if hadExclude {
+				_ = os.Setenv("MAGE_X_FORMAT_EXCLUDE_PATHS", origExclude) //nolint:errcheck // test cleanup
+			} else {
 				_ = os.Unsetenv("MAGE_X_FORMAT_EXCLUDE_PATHS") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_FORMAT_EXCLUDE_PATHS", originalEnv) //nolint:errcheck // test cleanup
 			}
-		}()
+		})
 
-		// Set custom exclude paths
-		_ = os.Setenv("MAGE_X_FORMAT_EXCLUDE_PATHS", "custom_exclude,build") //nolint:errcheck // test setup
-
-		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
-		// Create mock runner with custom exclude paths
+		// Only the un-excluded file reaches yamlfmt; the .yml AND .yaml under excluded
+		// directories are pruned. This is the precedence bug the fix resolves — previously
+		// excludes applied only to .yaml, never .yml.
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./custom_exclude/*", "-not", "-path", "./*custom_exclude*/*", "-not", "-path", "./build/*", "-not", "-path", "./*build*/*").Return("test.yml", nil)
-		mockRunner.On("RunCmd", "yamlfmt", ".").Return(nil)
+		mockRunner.On("RunCmd", "yamlfmt", "keep.yml").Return(nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		// Test YAML formatting with custom exclude paths
-		formatter := Format{}
-		err := formatter.YAML()
+		err := Format{}.YAML()
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
 	})
 }
 
-// TestYamlfmtWithDifferentRunners tests yamlfmt with different types of command runners
+// TestYamlfmtWithDifferentRunners tests yamlfmt with different command-runner types.
 func TestYamlfmtWithDifferentRunners(t *testing.T) {
 	t.Run("with mock command runner", func(t *testing.T) {
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+		setupYAMLTestDir(t, map[string]string{"test.yml": "a: 1\n"})
 
-		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Test with basic MockCommandRunner
 		mockRunner := &MockCommandRunner{}
-		mockRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		mockRunner.On("RunCmd", "yamlfmt", ".").Return(nil)
+		mockRunner.On("RunCmd", "yamlfmt", "test.yml").Return(nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		formatter := Format{}
-		err := formatter.YAML()
+		err := Format{}.YAML()
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
 	})
 
 	t.Run("with mock secure command runner", func(t *testing.T) {
-		// Disable YAML validation for this test
-		originalEnv := os.Getenv("MAGE_X_YAML_VALIDATION")
-		defer func() {
-			if originalEnv == "" {
-				_ = os.Unsetenv("MAGE_X_YAML_VALIDATION") //nolint:errcheck // test cleanup
-			} else {
-				_ = os.Setenv("MAGE_X_YAML_VALIDATION", originalEnv) //nolint:errcheck // test cleanup
-			}
-		}()
-		_ = os.Setenv("MAGE_X_YAML_VALIDATION", "false") //nolint:errcheck // test setup
+		setupYAMLTestDir(t, map[string]string{"test.yml": "a: 1\n"})
 
-		// Save original runner
 		originalRunner := GetRunner()
 		defer func() { _ = SetRunner(originalRunner) }() //nolint:errcheck // test cleanup
 
 		// Test with MockSecureCommandRunner
 		mockRunner := &MockSecureCommandRunner{}
-		mockRunner.MockCommandRunner.On("RunCmdOutput", "find", ".", "-name", "*.yml", "-o", "-name", "*.yaml", "-not", "-path", "./vendor/*", "-not", "-path", "./*vendor*/*", "-not", "-path", "./node_modules/*", "-not", "-path", "./*node_modules*/*", "-not", "-path", "./.git/*", "-not", "-path", "./*.git*/*", "-not", "-path", "./.idea/*", "-not", "-path", "./*.idea*/*", "-not", "-path", "./.vscode/*", "-not", "-path", "./*.vscode*/*").Return("test.yml", nil)
-		mockRunner.MockCommandRunner.On("RunCmd", "yamlfmt", ".").Return(nil)
+		mockRunner.MockCommandRunner.On("RunCmd", "yamlfmt", "test.yml").Return(nil)
 		_ = SetRunner(mockRunner) //nolint:errcheck // test setup
 
-		formatter := Format{}
-		err := formatter.YAML()
+		err := Format{}.YAML()
 		require.NoError(t, err)
 		mockRunner.AssertExpectations(t)
 	})

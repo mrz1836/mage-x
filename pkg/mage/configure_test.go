@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v3"
+
+	commonconfig "github.com/mrz1836/mage-x/pkg/common/config"
 )
 
 // ConfigureTestSuite provides a comprehensive test suite for configuration management functionality
@@ -282,7 +284,7 @@ func (ts *ConfigureTestSuite) TestConfigureExport() {
 
 		err := configure.Export()
 		ts.Require().Error(err)
-		ts.Require().ErrorIs(err, ErrUnsupportedFormat)
+		ts.Require().ErrorIs(err, commonconfig.ErrUnsupportedFormat)
 	})
 
 	ts.Run("ExportWithFileExtension", func() {
@@ -646,7 +648,7 @@ func (ts *ConfigureTestSuite) TestErrorMessages() {
 	ts.Run("StaticErrors", func() {
 		// Test that static errors are properly defined
 		ts.Require().Error(ErrConfigFileExists)
-		ts.Require().Error(ErrUnsupportedFormat)
+		ts.Require().Error(commonconfig.ErrUnsupportedFormat)
 		ts.Require().Error(ErrFileEnvRequired)
 		ts.Require().Error(ErrImportFileNotFound)
 		ts.Require().Error(ErrUnsupportedFileFormat)
@@ -656,7 +658,7 @@ func (ts *ConfigureTestSuite) TestErrorMessages() {
 
 		// Test error messages are meaningful
 		ts.Require().Contains(ErrConfigFileExists.Error(), "configuration file already exists")
-		ts.Require().Contains(ErrUnsupportedFormat.Error(), "unsupported format")
+		ts.Require().Contains(commonconfig.ErrUnsupportedFormat.Error(), "unsupported format")
 		ts.Require().Contains(ErrFileEnvRequired.Error(), "FILE environment variable is required")
 		ts.Require().Contains(ErrImportFileNotFound.Error(), "import file not found")
 		ts.Require().Contains(ErrUnsupportedFileFormat.Error(), "unsupported file format")

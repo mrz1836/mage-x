@@ -39,7 +39,7 @@ func buildMagexForSignalTest(t *testing.T) string {
 	dir := t.TempDir()
 	bin := filepath.Join(dir, "magex")
 
-	build := exec.Command("go", "build", "-o", bin, "./cmd/magex") //nolint:gosec // test paths
+	build := testCommand(t, "go", "build", "-o", bin, "./cmd/magex")
 	build.Dir = repoRootForSignalTest(t)
 	build.Env = append(os.Environ(), "GOTOOLCHAIN=local")
 	if out, err := build.CombinedOutput(); err != nil {
@@ -53,7 +53,7 @@ func buildMagexForSignalTest(t *testing.T) string {
 // for the test to send a signal.
 func newMagexCmd(t *testing.T, bin string, args ...string) *exec.Cmd {
 	t.Helper()
-	cmd := exec.Command(bin, args...) //nolint:gosec // test-controlled
+	cmd := testCommand(t, bin, args...)
 	cmd.Dir = repoRootForSignalTest(t)
 	return cmd
 }
@@ -78,7 +78,9 @@ func waitOrTimeout(t *testing.T, cmd *exec.Cmd, deadline time.Duration) (int, bo
 		return -1, false
 	case <-time.After(deadline):
 		// Force-kill so the test process doesn't leak the child.
-		_ = cmd.Process.Kill()
+		if err := cmd.Process.Kill(); err != nil {
+			t.Fatalf("kill timed-out magex process: %v", err)
+		}
 		<-done
 		return -1, true
 	}
@@ -100,14 +102,20 @@ func TestMagex_SIGINTCleanExit_ExitCode130(t *testing.T) {
 	if err != nil {
 		t.Fatalf("pipe: %v", err)
 	}
-	defer func() { _ = stderrR.Close() }()
+	defer func() {
+		if err := stderrR.Close(); err != nil && !errors.Is(err, os.ErrClosed) {
+			t.Errorf("close stderr reader: %v", err)
+		}
+	}()
 	cmd.Stderr = stderrW
 	cmd.Stdout = os.Stdout
 
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("start magex: %v", err)
 	}
-	_ = stderrW.Close() // child holds the write end; parent only reads
+	if err := stderrW.Close(); err != nil {
+		t.Fatalf("close stderr writer: %v", err)
+	}
 
 	// Give magex time to enter the lint loop and spawn golangci-lint.
 	time.Sleep(2 * time.Second)
@@ -153,7 +161,7 @@ func TestMagex_SIGINTCleanExit_ExitCode130(t *testing.T) {
 }
 
 // TestMagex_SIGTERMCleanExit_ExitCode143 proves the CI path: SIGTERM (which
-// CI runners like GitHub Actions send when cancelling a job) is handled and
+// CI runners like GitHub Actions send when canceling a job) is handled and
 // produces exit code 143.
 func TestMagex_SIGTERMCleanExit_ExitCode143(t *testing.T) {
 	bin := buildMagexForSignalTest(t)
@@ -197,12 +205,16 @@ func TestMagex_DoubleSIGINT_ForceExit(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	_ = cmd.Process.Signal(syscall.SIGINT)
+	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
+		t.Fatalf("send first SIGINT: %v", err)
+	}
 	// Brief gap so the handler observes signal #1 before #2 arrives,
 	// otherwise the buffered channel may swallow them as a pair on the
 	// first read.
 	time.Sleep(50 * time.Millisecond)
-	_ = cmd.Process.Signal(syscall.SIGINT)
+	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
+		t.Fatalf("send second SIGINT: %v", err)
+	}
 
 	exitCode, timedOut := waitOrTimeout(t, cmd, 10*time.Second)
 	if timedOut {

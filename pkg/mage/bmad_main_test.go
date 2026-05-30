@@ -16,15 +16,13 @@ import (
 
 // Static test errors
 var (
-	errBmadMainTestFailed    = errors.New("bmad main test failed")
-	errBmadInstallTestFailed = errors.New("bmad install test failed")
-	errBmadCheckTestFailed   = errors.New("bmad check test failed")
-	errBmadUpgradeTestFailed = errors.New("bmad upgrade test failed")
+	errBmadMainTestFailed = errors.New("bmad main test failed")
 )
 
 // BmadMainTestSuite defines the test suite for Bmad main methods
 type BmadMainTestSuite struct {
 	suite.Suite
+
 	env  *testutil.TestEnvironment
 	bmad Bmad
 }
@@ -51,13 +49,10 @@ bmad:
   version_tag: "@beta"
 `
 	configPath := filepath.Join(ts.env.TempDir, ".mage.yaml")
-	err := os.WriteFile(configPath, []byte(configContent), 0o644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
-	// Change to temp directory
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	// Note: If npm is actually installed on the system, this test will pass
 	// In a real CI environment without npm, it would detect the missing prerequisite
@@ -65,7 +60,7 @@ bmad:
 	// Either succeeds (npm present) or fails with appropriate error
 	if err != nil {
 		// Should be a prerequisite error
-		ts.Assert().True(
+		ts.True(
 			errors.Is(err, errNpmNotInstalled) || errors.Is(err, errNpxNotInstalled),
 			"should be npm or npx error",
 		)
@@ -76,7 +71,7 @@ bmad:
 func (ts *BmadMainTestSuite) TestCheck_Success() {
 	// Create BMAD project directory
 	projectDir := filepath.Join(ts.env.TempDir, DefaultBmadProjectDir)
-	err := os.MkdirAll(projectDir, 0o755)
+	err := os.MkdirAll(projectDir, 0o750)
 	ts.Require().NoError(err)
 
 	// Create config
@@ -85,21 +80,21 @@ bmad:
   project_dir: ` + DefaultBmadProjectDir + `
 `
 	configPath := filepath.Join(ts.env.TempDir, ".mage.yaml")
-	err = os.WriteFile(configPath, []byte(configContent), 0o644)
+	err = os.WriteFile(configPath, []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
-	// Change to temp directory
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
-	// Mock npm view command for version check
+	// Mock npm view command for version check.
+	// The config above sets no package_name/version_tag, so getBmadVersion
+	// falls back to the defaults: DefaultBmadPackageName + DefaultBmadVersionTag.
+	// DefaultBmadVersionTag is now "", so the packageSpec is just the package name.
 	ts.env.Runner.On("RunCmdOutput", CmdNpm, []string{
-		"view", "bmad-method@beta", "version",
+		"view", DefaultBmadPackageName + DefaultBmadVersionTag, "version",
 	}).Return("1.0.0", nil).Maybe()
 
 	err = ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.bmad.Check()
@@ -145,7 +140,7 @@ func (ts *BmadMainTestSuite) TestGetBmadProjectDir() {
 			}
 
 			result := getBmadProjectDir(config)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 		})
 	}
 }
@@ -201,6 +196,13 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
+			// Use a fresh environment (and thus a fresh mock runner) per subtest.
+			// All four subtests build the identical npm packageSpec
+			// ("bmad-method@beta"), so a shared mock would resolve every call to
+			// the first-registered expectation and cross-contaminate results.
+			env := testutil.NewTestEnvironment(ts.T())
+			defer env.Cleanup()
+
 			config := &Config{
 				Bmad: BmadConfig{
 					PackageName: tt.packageName,
@@ -208,14 +210,15 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 				},
 			}
 
-			// Mock npm view command
+			// Mock npm view command: getBmadVersion runs
+			// `npm view <packageName><versionTag> version`.
 			packageSpec := tt.packageName + tt.versionTag
-			ts.env.Runner.On("RunCmdOutput", CmdNpm, []string{
+			env.Runner.On("RunCmdOutput", CmdNpm, []string{
 				"view", packageSpec, "version",
 			}).Return(tt.mockOutput, tt.mockError)
 
-			err := ts.env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) },
+			err := env.WithMockRunner(
+				setTestCommandRunner,
 				func() any { return GetRunner() },
 				func() error {
 					version, err := getBmadVersion(config)
@@ -224,15 +227,15 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 						return err
 					}
 
-					ts.Assert().Equal(tt.wantVersion, version)
+					ts.Equal(tt.wantVersion, version)
 					return err
 				},
 			)
 
 			if tt.wantError {
-				ts.Assert().Error(err)
+				ts.Require().Error(err)
 			} else {
-				ts.Assert().NoError(err)
+				ts.Require().NoError(err)
 			}
 		})
 	}
@@ -243,7 +246,7 @@ func (ts *BmadMainTestSuite) TestVerifyBmadInstallation() {
 	ts.Run("installation verified", func() {
 		// Create project directory
 		projectDir := filepath.Join(ts.env.TempDir, "_bmad")
-		err := os.MkdirAll(projectDir, 0o755)
+		err := os.MkdirAll(projectDir, 0o750)
 		ts.Require().NoError(err)
 
 		config := &Config{
@@ -253,7 +256,7 @@ func (ts *BmadMainTestSuite) TestVerifyBmadInstallation() {
 		}
 
 		err = verifyBmadInstallation(config)
-		ts.Assert().NoError(err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("project directory missing", func() {
@@ -264,8 +267,8 @@ func (ts *BmadMainTestSuite) TestVerifyBmadInstallation() {
 		}
 
 		err := verifyBmadInstallation(config)
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errBmadNotInstalled)
+		ts.Require().Error(err)
+		ts.ErrorIs(err, errBmadNotInstalled)
 	})
 }
 
@@ -276,7 +279,7 @@ func (ts *BmadMainTestSuite) TestCheckBmadPrerequisites() {
 	err := checkBmadPrerequisites()
 	// Either succeeds (prerequisites present) or returns specific error
 	if err != nil {
-		ts.Assert().True(
+		ts.True(
 			errors.Is(err, errNpmNotInstalled) || errors.Is(err, errNpxNotInstalled),
 			"should return specific prerequisite error",
 		)
@@ -319,7 +322,7 @@ func (ts *BmadMainTestSuite) TestPrintBmadUpgradeSummary() {
 
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
-			ts.Assert().NotPanics(func() {
+			ts.NotPanics(func() {
 				printBmadUpgradeSummary(tt.oldVersion, tt.newVersion)
 			})
 		})
@@ -366,7 +369,7 @@ func (ts *BmadMainTestSuite) TestBmadConfigVariations() {
 
 			// Verify getter functions work correctly
 			projectDir := getBmadProjectDir(config)
-			ts.Assert().Equal(tt.projectDir, projectDir)
+			ts.Equal(tt.projectDir, projectDir)
 
 			// Verify package spec construction
 			expectedPackageSpec := tt.packageName + tt.versionTag
@@ -377,7 +380,7 @@ func (ts *BmadMainTestSuite) TestBmadConfigVariations() {
 			}).Return("1.0.0", nil)
 
 			err := ts.env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) },
+				setTestCommandRunner,
 				func() any { return GetRunner() },
 				func() error {
 					_, err := getBmadVersion(config)
@@ -385,7 +388,7 @@ func (ts *BmadMainTestSuite) TestBmadConfigVariations() {
 				},
 			)
 
-			ts.Assert().NoError(err)
+			ts.Require().NoError(err)
 		})
 	}
 }

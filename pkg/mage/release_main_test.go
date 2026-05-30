@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
@@ -17,15 +18,14 @@ import (
 
 // Static test errors
 var (
-	errReleaseMainTestFailed    = errors.New("release main test failed")
-	errReleaseLocalInstallError = errors.New("local install error")
-	errReleaseGoreleaser        = errors.New("goreleaser error")
-	errReleaseGitError          = errors.New("git error")
+	errReleaseGoreleaser = errors.New("goreleaser error")
+	errReleaseGitError   = errors.New("git error")
 )
 
 // ReleaseMainTestSuite defines the test suite for Release main methods
 type ReleaseMainTestSuite struct {
 	suite.Suite
+
 	env     *testutil.TestEnvironment
 	release Release
 }
@@ -48,19 +48,20 @@ func (ts *ReleaseMainTestSuite) TestEnsureGoreleaser_AlreadyInstalled() {
 	ts.env.Runner.On("RunCmd", "which", []string{"goreleaser"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ensureGoreleaser()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestEnsureGoreleaser_NeedsInstall tests when goreleaser needs installation
 func (ts *ReleaseMainTestSuite) TestEnsureGoreleaser_NeedsInstall() {
-	// Mock which command to return error (not found)
+	// Mock which command to return error (not found). Defined first so it still matches
+	// the goreleaser lookup before the catch-all below.
 	ts.env.Runner.On("RunCmd", "which", []string{"goreleaser"}).Return(errReleaseGoreleaser)
 
 	// Mock brew install (for macOS simulation)
@@ -69,8 +70,13 @@ func (ts *ReleaseMainTestSuite) TestEnsureGoreleaser_NeedsInstall() {
 	// Mock go install (fallback)
 	ts.env.Runner.On("RunCmd", "go", []string{"install", "github.com/goreleaser/goreleaser@latest"}).Return(nil).Maybe()
 
+	// Catch-all so installGoreleaser's unmocked "curl ... | sh" (and any OS-specific
+	// fallback) returns success instead of panicking on an unexpected call. The test
+	// ignores the result, so this only prevents the panic across OSes.
+	ts.env.Runner.On("RunCmd", mock.Anything, mock.Anything).Return(nil).Maybe()
+
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ensureGoreleaser()
@@ -100,22 +106,20 @@ func (ts *ReleaseMainTestSuite) TestValidate_CleanRepo() {
 	configContent := `# .goreleaser.yml
 version: 2
 `
-	err := os.WriteFile(filepath.Join(ts.env.TempDir, ".goreleaser.yml"), []byte(configContent), 0o644)
+	err := os.WriteFile(filepath.Join(ts.env.TempDir, ".goreleaser.yml"), []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	err = ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Validate()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestValidate_DirtyRepo tests validation with uncommitted changes
@@ -124,15 +128,15 @@ func (ts *ReleaseMainTestSuite) TestValidate_DirtyRepo() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"status", "--porcelain"}).Return("M file.go\n", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Validate()
 		},
 	)
 
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errGitDirtyWorkingTree)
+	ts.Require().Error(err)
+	ts.ErrorIs(err, errGitDirtyWorkingTree)
 }
 
 // TestValidate_NoTags tests validation with no git tags
@@ -144,15 +148,15 @@ func (ts *ReleaseMainTestSuite) TestValidate_NoTags() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("", errReleaseGitError)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Validate()
 		},
 	)
 
-	ts.Assert().Error(err)
-	ts.Assert().Contains(err.Error(), "no git tags found")
+	ts.Require().Error(err)
+	ts.Contains(err.Error(), "no git tags found")
 }
 
 // TestCheck_ConfigExists tests Check with existing config
@@ -160,26 +164,24 @@ func (ts *ReleaseMainTestSuite) TestCheck_ConfigExists() {
 	// Create goreleaser config
 	configContent := `version: 2
 `
-	err := os.WriteFile(filepath.Join(ts.env.TempDir, ".goreleaser.yml"), []byte(configContent), 0o644)
+	err := os.WriteFile(filepath.Join(ts.env.TempDir, ".goreleaser.yml"), []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
 	// Mock goreleaser check
 	ts.env.Runner.On("RunCmd", "which", []string{"goreleaser"}).Return(nil)
 	ts.env.Runner.On("RunCmd", "goreleaser", []string{"check"}).Return(nil)
 
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	err = ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Check()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestCheck_NoConfig tests Check with missing config
@@ -187,20 +189,18 @@ func (ts *ReleaseMainTestSuite) TestCheck_NoConfig() {
 	// Mock goreleaser presence
 	ts.env.Runner.On("RunCmd", "which", []string{"goreleaser"}).Return(nil)
 
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Check()
 		},
 	)
 
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errNoGoreleaserConfig)
+	ts.Require().Error(err)
+	ts.ErrorIs(err, errNoGoreleaserConfig)
 }
 
 // TestInit_Success tests Init creating config
@@ -211,69 +211,67 @@ func (ts *ReleaseMainTestSuite) TestInit_Success() {
 	// Mock goreleaser init
 	ts.env.Runner.On("RunCmd", "goreleaser", []string{"init"}).Return(nil)
 
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Init()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestInit_ConfigExists tests Init with existing config
 func (ts *ReleaseMainTestSuite) TestInit_ConfigExists() {
 	// Create existing config
-	err := os.WriteFile(filepath.Join(ts.env.TempDir, ".goreleaser.yml"), []byte("version: 2\n"), 0o644)
+	err := os.WriteFile(filepath.Join(ts.env.TempDir, ".goreleaser.yml"), []byte("version: 2\n"), 0o600)
 	ts.Require().NoError(err)
 
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	err = ts.release.Init()
 
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errGoreleaserConfigExists)
+	ts.Require().Error(err)
+	ts.ErrorIs(err, errGoreleaserConfigExists)
 }
 
 // TestClean_Success tests Clean removing dist directory
 func (ts *ReleaseMainTestSuite) TestClean_Success() {
 	// Create dist directory
 	distDir := filepath.Join(ts.env.TempDir, "dist")
-	err := os.MkdirAll(distDir, 0o755)
+	err := os.MkdirAll(distDir, 0o750)
 	ts.Require().NoError(err)
 
-	// Create some temp files
-	tempFile := filepath.Join(ts.env.TempDir, ".goreleaser-temp")
-	err = os.WriteFile(tempFile, []byte("temp"), 0o644)
+	// Create some temp files. Clean uses filepath.Glob(".goreleaser-*")
+	// relative to the working directory, so the file must live in TempDir
+	// (where we chdir below) and the glob will yield the relative basename.
+	const tempFileName = ".goreleaser-temp"
+	tempFile := filepath.Join(ts.env.TempDir, tempFileName)
+	err = os.WriteFile(tempFile, []byte("temp"), 0o600)
 	ts.Require().NoError(err)
 
 	// Mock rm command
-	ts.env.Runner.On("RunCmd", "rm", []string{"-rf", "dist"}).Return(nil)
-	ts.env.Runner.On("RunCmd", "rm", []string{"-f", tempFile}).Return(nil).Maybe()
+	ts.env.Runner.On("RunCmd", "rm", []string{"-rf", "dist"}).Return(nil).Once()
+	// Clean globs relative paths, so it removes the basename, not the absolute path.
+	ts.env.Runner.On("RunCmd", "rm", []string{"-f", tempFileName}).Return(nil).Once()
 
 	// Mock go clean
 	ts.env.Runner.On("RunCmd", "go", []string{"clean", "-cache"}).Return(nil)
 
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	err = ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Clean()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestChangelog_NoTags tests Changelog with no previous tags
@@ -285,14 +283,14 @@ func (ts *ReleaseMainTestSuite) TestChangelog_NoTags() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"log", "--pretty=format:- %s"}).Return("- Initial commit\n- Add feature\n", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Changelog()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestChangelog_WithTag tests Changelog since last tag
@@ -304,14 +302,14 @@ func (ts *ReleaseMainTestSuite) TestChangelog_WithTag() {
 	ts.env.Runner.On("RunCmdOutput", "git", []string{"log", "--pretty=format:- %s", "v1.0.0..HEAD"}).Return("- Fix bug\n- Add feature\n", nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Changelog()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestGoreleaserConfigFiles tests config file detection
@@ -319,8 +317,8 @@ func (ts *ReleaseMainTestSuite) TestGoreleaserConfigFiles() {
 	files := GoreleaserConfigFiles()
 
 	// Should return a list of possible config file names
-	ts.Assert().NotEmpty(files)
-	ts.Assert().Contains(files, ".goreleaser.yml")
+	ts.NotEmpty(files)
+	ts.Contains(files, ".goreleaser.yml")
 }
 
 // TestReleaseHelpers tests various helper functions
@@ -336,9 +334,9 @@ func (ts *ReleaseMainTestSuite) TestReleaseHelpers() {
 
 		for _, filename := range tests {
 			testDir := filepath.Join(ts.env.TempDir, filename)
-			os.MkdirAll(filepath.Dir(testDir), 0o755)
+			ts.Require().NoError(os.MkdirAll(filepath.Dir(testDir), 0o750))
 			configPath := filepath.Join(ts.env.TempDir, filename)
-			err := os.WriteFile(configPath, []byte("version: 2\n"), 0o644)
+			err := os.WriteFile(configPath, []byte("version: 2\n"), 0o600)
 			ts.Require().NoError(err)
 
 			files := GoreleaserConfigFiles()
@@ -349,9 +347,9 @@ func (ts *ReleaseMainTestSuite) TestReleaseHelpers() {
 					break
 				}
 			}
-			ts.Assert().True(found, "config file %s should be in list", filename)
+			ts.True(found, "config file %s should be in list", filename)
 
-			os.Remove(configPath)
+			ts.Require().NoError(os.Remove(configPath))
 		}
 	})
 
@@ -363,7 +361,7 @@ func (ts *ReleaseMainTestSuite) TestReleaseHelpers() {
 		}
 
 		// This is implicitly tested by buildAndInstallFromTag logic
-		ts.Assert().NotEmpty(expectedName)
+		ts.NotEmpty(expectedName)
 	})
 
 	ts.Run("installation path detection", func() {
@@ -373,7 +371,7 @@ func (ts *ReleaseMainTestSuite) TestReleaseHelpers() {
 			if runtime.GOOS == OSWindows {
 				expectedPath += ".exe"
 			}
-			ts.Assert().NotEmpty(expectedPath)
+			ts.NotEmpty(expectedPath)
 		}
 	})
 }
@@ -387,14 +385,14 @@ func (ts *ReleaseMainTestSuite) TestReleaseSnapshot() {
 	ts.env.Runner.On("RunCmd", "goreleaser", []string{"release", "--snapshot", "--skip=publish", "--clean"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Snapshot()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestReleaseTest tests test release (dry run)
@@ -406,14 +404,14 @@ func (ts *ReleaseMainTestSuite) TestReleaseTest() {
 	ts.env.Runner.On("RunCmd", "goreleaser", []string{"release", "--skip=publish", "--clean"}).Return(nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.release.Test()
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.Require().NoError(err)
 }
 
 // TestReleaseMainTestSuite runs the test suite

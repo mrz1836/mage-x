@@ -4,7 +4,6 @@
 package mage
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,10 +16,8 @@ import (
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
-// Static test errors to satisfy err113 linter
-var (
-	errNotGitRepository = errors.New("not a git repository")
-)
+// errNotGitRepository is declared in version_bump_branch_test.go (an untagged
+// file), so it is available package-wide without redeclaring it here.
 
 // CommonTestSuite defines the test suite for common functions
 type CommonTestSuite struct {
@@ -44,6 +41,10 @@ func (ts *CommonTestSuite) TearDownTest() {
 func (ts *CommonTestSuite) TestGetVersion() {
 	ts.Run("version from git tag", func() {
 		ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).Return("v1.2.3", nil)
+		// getVersionFromGit also confirms we are exactly on the tag and the tree is clean
+		// before returning the tag (otherwise it reports a dev build).
+		ts.env.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--always", "--dirty"}).Return("v1.2.3", nil)
+		ts.env.Runner.On("RunCmdOutput", "git", []string{"status", "--porcelain"}).Return("", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -293,10 +294,12 @@ func (ts *CommonTestSuite) TestIsNewer() {
 			expected: true,
 		},
 		{
-			name:     "longer version newer",
+			// "1.0.0.1" has four components and is not valid semver (X.Y.Z), so
+			// ParseSemanticVersion rejects it and isNewer conservatively returns false.
+			name:     "four-component version is invalid (not newer)",
 			versionA: "1.0.0.1",
 			versionB: "1.0.0",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "shorter version older",

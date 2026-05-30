@@ -66,9 +66,9 @@ func (ts *BmadTestSuite) TestVerifyBmadInstallation_Success() {
 
 	// Create the project directory
 	projectDir := DefaultBmadProjectDir
-	err := os.MkdirAll(projectDir, 0o755)
+	err := os.MkdirAll(projectDir, 0o750)
 	ts.Require().NoError(err)
-	defer os.RemoveAll(projectDir)
+	cleanupRemoveAll(ts.T(), projectDir)
 
 	config, err := GetConfig()
 	ts.Require().NoError(err)
@@ -87,8 +87,12 @@ func (ts *BmadTestSuite) TestBmadConstants() {
 
 	// Verify default value constants
 	ts.Require().NotEmpty(DefaultBmadProjectDir, "DefaultBmadProjectDir should be defined")
-	ts.Require().NotEmpty(DefaultBmadVersionTag, "DefaultBmadVersionTag should be defined")
 	ts.Require().NotEmpty(DefaultBmadPackageName, "DefaultBmadPackageName should be defined")
+
+	// DefaultBmadVersionTag is intentionally empty: an empty tag is appended to the
+	// package name (packageName + versionTag), so npm resolves the latest published
+	// version. It was changed from "@alpha" to "" in commit 5722e20.
+	ts.Require().Empty(DefaultBmadVersionTag, "DefaultBmadVersionTag should default to latest (empty tag)")
 }
 
 // TestBmadConfigDefaults tests that BMAD config defaults are properly set
@@ -134,13 +138,13 @@ func (ts *BmadTestSuite) TestBmadProjectDirCreation() {
 	ts.Require().True(os.IsNotExist(err))
 
 	// Create the directory
-	err = os.MkdirAll(projectDir, 0o755)
+	err = os.MkdirAll(projectDir, 0o750)
 	ts.Require().NoError(err)
-	defer os.RemoveAll(projectDir)
+	cleanupRemoveAll(ts.T(), projectDir)
 
 	// Create a sample file to simulate BMAD installation
 	sampleFile := filepath.Join(projectDir, "agents")
-	err = os.MkdirAll(sampleFile, 0o755)
+	err = os.MkdirAll(sampleFile, 0o750)
 	ts.Require().NoError(err)
 
 	// Verify directory exists
@@ -153,7 +157,6 @@ func (ts *BmadTestSuite) TestBmadProjectDirCreation() {
 func (ts *BmadTestSuite) setupBmadConfig() {
 	TestSetConfig(&Config{
 		Bmad: BmadConfig{
-			Enabled:     true,
 			ProjectDir:  "_bmad",
 			VersionTag:  "@beta",
 			PackageName: "bmad-method",

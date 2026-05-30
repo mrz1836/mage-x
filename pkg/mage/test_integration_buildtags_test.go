@@ -21,12 +21,14 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 	// Create a temporary project directory
 	tempDir, err := os.MkdirTemp("", "mage-buildtag-integration-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	cleanupRemoveAll(t, tempDir)
 
 	// Change to temp directory
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(originalDir)
+	defer func() {
+		require.NoError(t, os.Chdir(originalDir))
+	}()
 	require.NoError(t, os.Chdir(tempDir))
 
 	// Clean environment variables that could interfere with tests
@@ -43,15 +45,15 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 	originalEnvValues := make(map[string]string)
 	for _, envVar := range envVarsToClean {
 		originalEnvValues[envVar] = os.Getenv(envVar)
-		os.Unsetenv(envVar)
+		require.NoError(t, os.Unsetenv(envVar))
 	}
 	defer func() {
 		// Restore original environment values
 		for envVar, originalValue := range originalEnvValues {
 			if originalValue != "" {
-				os.Setenv(envVar, originalValue)
+				require.NoError(t, os.Setenv(envVar, originalValue))
 			} else {
-				os.Unsetenv(envVar)
+				require.NoError(t, os.Unsetenv(envVar))
 			}
 		}
 	}()
@@ -102,8 +104,8 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 		require.NoError(t, os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "true"))
 		require.NoError(t, os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE", "integration,e2e"))
 		cleanup := func() {
-			os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")
-			os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")
+			require.NoError(t, os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS"))
+			require.NoError(t, os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE"))
 			TestResetConfig()
 		}
 		defer cleanup()
@@ -210,29 +212,30 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 		coverageFiles := []string{"coverage_1.txt", "coverage_2.txt"}
 		for _, file := range coverageFiles {
 			content := "mode: atomic\ntest/pkg coverage 1\n"
-			err := os.WriteFile(file, []byte(content), 0o644)
+			err := os.WriteFile(file, []byte(content), 0o600)
 			require.NoError(t, err)
 		}
 
-		// Test handleCoverageFilesWithBuildTag
-		handleCoverageFilesWithBuildTag(coverageFiles, "")
+		// Base (untagged) coverage consolidates to the canonical coverage.txt
+		finalizeCoverageProfiles(coverageFiles, coverageOutputForTag(""))
 		assert.FileExists(t, "coverage.txt")
 
 		// Clean up
-		os.Remove("coverage.txt")
+		require.NoError(t, os.Remove("coverage.txt"))
 
 		// Test with build tag
 		for _, file := range coverageFiles {
 			content := "mode: atomic\ntest/pkg coverage 1\n"
-			err := os.WriteFile(file, []byte(content), 0o644)
+			err := os.WriteFile(file, []byte(content), 0o600)
 			require.NoError(t, err)
 		}
 
-		handleCoverageFilesWithBuildTag(coverageFiles, "unit")
+		// An isolated per-tag pass consolidates to coverage_<tag>.txt
+		finalizeCoverageProfiles(coverageFiles, coverageOutputForTag("unit"))
 		assert.FileExists(t, "coverage_unit.txt")
 
 		// Clean up
-		os.Remove("coverage_unit.txt")
+		require.NoError(t, os.Remove("coverage_unit.txt"))
 	})
 }
 
@@ -240,11 +243,13 @@ func TestBuildTagAutoDiscoveryIntegration(t *testing.T) {
 func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "mage-buildtag-edge-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	cleanupRemoveAll(t, tempDir)
 
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(originalDir)
+	defer func() {
+		require.NoError(t, os.Chdir(originalDir))
+	}()
 	require.NoError(t, os.Chdir(tempDir))
 
 	// Clean environment variables that could interfere with tests
@@ -261,15 +266,15 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 	originalEnvValues := make(map[string]string)
 	for _, envVar := range envVarsToClean {
 		originalEnvValues[envVar] = os.Getenv(envVar)
-		os.Unsetenv(envVar)
+		require.NoError(t, os.Unsetenv(envVar))
 	}
 	defer func() {
 		// Restore original environment values
 		for envVar, originalValue := range originalEnvValues {
 			if originalValue != "" {
-				os.Setenv(envVar, originalValue)
+				require.NoError(t, os.Setenv(envVar, originalValue))
 			} else {
-				os.Unsetenv(envVar)
+				require.NoError(t, os.Unsetenv(envVar))
 			}
 		}
 	}()
@@ -293,12 +298,14 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 
 		tags, err := GetDiscoveredBuildTags(config, tempDir)
 		require.NoError(t, err)
-		assert.Greater(t, len(tags), 0)
+		assert.NotEmpty(t, tags)
 	})
 
 	t.Run("WhitespaceInExclusions", func(t *testing.T) {
 		require.NoError(t, os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE", "  unit  ,  integration  ,  e2e  "))
-		defer os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")
+		defer func() {
+			require.NoError(t, os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE"))
+		}()
 
 		TestResetConfig()
 		config, err := GetConfig()
@@ -317,21 +324,27 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 
 	t.Run("InvalidConfigurationValues", func(t *testing.T) {
 		// Ensure clean environment by explicitly unsetting related vars first
-		os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")
-		os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")
+		require.NoError(t, os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS"))
+		require.NoError(t, os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE"))
 
-		// Test with invalid boolean values
+		// Establish a known on-disk baseline (false). The sibling EmptyExclusionList
+		// subtest writes a .mage.yaml with auto_discover_build_tags: true into the
+		// same tempDir (still our cwd), so we overwrite it to keep this case hermetic.
+		createMageConfig(t, tempDir, false, []string{})
+
+		// "maybe" is not a recognized boolean, so env.ParseBool reports it as absent
+		// and applyEnvOverrides leaves the on-disk value untouched.
 		require.NoError(t, os.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "maybe"))
 		defer func() {
-			os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS")
-			os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE")
+			require.NoError(t, os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS"))
+			require.NoError(t, os.Unsetenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE"))
 		}()
 
 		TestResetConfig()
 		config, err := GetConfig()
 		require.NoError(t, err)
 
-		// Invalid values should not change the default
+		// The invalid value must not flip the configured default (false).
 		assert.False(t, config.Test.AutoDiscoverBuildTags)
 	})
 }
@@ -349,7 +362,7 @@ func main() {
 	fmt.Println("Hello, World!")
 }
 `
-	err := os.WriteFile(filepath.Join(baseDir, "main.go"), []byte(mainContent), 0o644)
+	err := os.WriteFile(filepath.Join(baseDir, "main.go"), []byte(mainContent), 0o600)
 	require.NoError(t, err)
 
 	// Create go.mod
@@ -357,7 +370,7 @@ func main() {
 
 go 1.21
 `
-	err = os.WriteFile(filepath.Join(baseDir, "go.mod"), []byte(goModContent), 0o644)
+	err = os.WriteFile(filepath.Join(baseDir, "go.mod"), []byte(goModContent), 0o600)
 	require.NoError(t, err)
 
 	// Create unit test file
@@ -372,7 +385,7 @@ func TestUnit(t *testing.T) {
 	t.Log("Unit test")
 }
 `
-	err = os.WriteFile(filepath.Join(baseDir, "unit_test.go"), []byte(unitTestContent), 0o644)
+	err = os.WriteFile(filepath.Join(baseDir, "unit_test.go"), []byte(unitTestContent), 0o600)
 	require.NoError(t, err)
 
 	// Create integration test file
@@ -387,7 +400,7 @@ func TestIntegration(t *testing.T) {
 	t.Log("Integration test")
 }
 `
-	err = os.WriteFile(filepath.Join(baseDir, "integration_test.go"), []byte(integrationTestContent), 0o644)
+	err = os.WriteFile(filepath.Join(baseDir, "integration_test.go"), []byte(integrationTestContent), 0o600)
 	require.NoError(t, err)
 
 	// Create e2e test file
@@ -402,7 +415,7 @@ func TestE2E(t *testing.T) {
 	t.Log("E2E test")
 }
 `
-	err = os.WriteFile(filepath.Join(baseDir, "e2e_test.go"), []byte(e2eTestContent), 0o644)
+	err = os.WriteFile(filepath.Join(baseDir, "e2e_test.go"), []byte(e2eTestContent), 0o600)
 	require.NoError(t, err)
 
 	// Create performance test file
@@ -417,12 +430,12 @@ func TestPerformance(t *testing.T) {
 	t.Log("Performance test")
 }
 `
-	err = os.WriteFile(filepath.Join(baseDir, "performance_test.go"), []byte(performanceTestContent), 0o644)
+	err = os.WriteFile(filepath.Join(baseDir, "performance_test.go"), []byte(performanceTestContent), 0o600)
 	require.NoError(t, err)
 
 	// Create subdirectory with more test files
 	subDir := filepath.Join(baseDir, "pkg", "util")
-	err = os.MkdirAll(subDir, 0o755)
+	err = os.MkdirAll(subDir, 0o750)
 	require.NoError(t, err)
 
 	subTestContent := `//go:build unit
@@ -436,7 +449,7 @@ func TestUtilUnit(t *testing.T) {
 	t.Log("Util unit test")
 }
 `
-	err = os.WriteFile(filepath.Join(subDir, "util_test.go"), []byte(subTestContent), 0o644)
+	err = os.WriteFile(filepath.Join(subDir, "util_test.go"), []byte(subTestContent), 0o600)
 	require.NoError(t, err)
 }
 
@@ -454,7 +467,7 @@ func TestLinuxCgo(t *testing.T) {
 	t.Log("Linux CGO test")
 }
 `
-	err := os.WriteFile(filepath.Join(baseDir, "linux_cgo_test.go"), []byte(andContent), 0o644)
+	err := os.WriteFile(filepath.Join(baseDir, "linux_cgo_test.go"), []byte(andContent), 0o600)
 	require.NoError(t, err)
 
 	// File with complex OR expression
@@ -470,7 +483,7 @@ func TestWindowsDarwinFast(t *testing.T) {
 	t.Log("Windows/Darwin fast test")
 }
 `
-	err = os.WriteFile(filepath.Join(baseDir, "windows_darwin_test.go"), []byte(orContent), 0o644)
+	err = os.WriteFile(filepath.Join(baseDir, "windows_darwin_test.go"), []byte(orContent), 0o600)
 	require.NoError(t, err)
 
 	// File with parentheses and negation
@@ -486,7 +499,7 @@ func TestComplex(t *testing.T) {
 	t.Log("Complex build tag test")
 }
 `
-	err = os.WriteFile(filepath.Join(baseDir, "complex_test.go"), []byte(complexContent), 0o644)
+	err = os.WriteFile(filepath.Join(baseDir, "complex_test.go"), []byte(complexContent), 0o600)
 	require.NoError(t, err)
 }
 
@@ -506,7 +519,7 @@ func createMageConfig(t *testing.T, baseDir string, autoDiscover bool, excludeTa
 		configContent += "]"
 	}
 
-	err := os.WriteFile(filepath.Join(baseDir, ".mage.yaml"), []byte(configContent), 0o644)
+	err := os.WriteFile(filepath.Join(baseDir, ".mage.yaml"), []byte(configContent), 0o600)
 	require.NoError(t, err)
 }
 

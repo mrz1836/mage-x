@@ -673,9 +673,14 @@ func TestDefaultPathCache_TTLEviction(t *testing.T) {
 	err = cacheImpl.Set("c", NewPathBuilder("/path/c"))
 	require.NoError(t, err)
 
-	// First item should be expired, manually expire
+	// First item should be expired, manually expire.
 	expired := cacheImpl.Expire()
-	assert.Equal(t, 1, expired, "Should have expired 1 item")
+	// "a" (age ~60ms) is always expired against the 50ms TTL. "b" (age ~30ms)
+	// may also be expired since time.Sleep only guarantees a minimum and
+	// scheduling jitter under -race can push its age past the TTL, so accept
+	// 1 or 2 expired items. "c" (age ~0ms) is never expired.
+	assert.GreaterOrEqual(t, expired, 1, "Should have expired at least 1 item (a)")
+	assert.LessOrEqual(t, expired, 2, "Should have expired at most 2 items (a and possibly b)")
 
 	// "a" should be expired
 	assert.False(t, cacheImpl.Contains("a"), "a should be expired")

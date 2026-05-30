@@ -25,19 +25,34 @@ func (ts *BenchTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.env.CreateGoMod("test/module")
 	ts.bench = Bench{}
+
+	// Start each test from a clean profile/file env. Other tests in the package
+	// (run earlier, e.g. via the integration build tag) may leave a
+	// MAGE_X_BENCH_* variable set; if not cleared here it leaks into the very
+	// first bench subtest and adds an unexpected -memprofile/-cpuprofile flag to
+	// the go test command, breaking the mock-runner assertion.
+	for _, key := range []string{"MAGE_X_BENCH_CPU_PROFILE", "MAGE_X_BENCH_MEM_PROFILE", "MAGE_X_BENCH_FILE", "BENCH_OLD"} {
+		if err := os.Unsetenv(key); err != nil {
+			ts.T().Logf("Failed to unset %s: %v", key, err)
+		}
+	}
 }
 
 // TearDownTest runs after each test
 func (ts *BenchTestSuite) TearDownTest() {
-	// Clean up environment variables that might be set by tests
-	if err := os.Unsetenv("BENCH_CPU_PROFILE"); err != nil {
-		ts.T().Logf("Failed to unset BENCH_CPU_PROFILE: %v", err)
+	// Clean up environment variables that might be set by tests.
+	// CPU/Mem/Profile/Regression set the MAGE_X_-prefixed variables directly in
+	// production (via os.Setenv), and DefaultWithArgs reads them back through
+	// GetMageXEnv (EnvPrefix="MAGE_X_"). They must be unset here, otherwise a
+	// profile/file value leaks from one subtest into a later Default()/Save() run.
+	if err := os.Unsetenv("MAGE_X_BENCH_CPU_PROFILE"); err != nil {
+		ts.T().Logf("Failed to unset MAGE_X_BENCH_CPU_PROFILE: %v", err)
 	}
-	if err := os.Unsetenv("BENCH_MEM_PROFILE"); err != nil {
-		ts.T().Logf("Failed to unset BENCH_MEM_PROFILE: %v", err)
+	if err := os.Unsetenv("MAGE_X_BENCH_MEM_PROFILE"); err != nil {
+		ts.T().Logf("Failed to unset MAGE_X_BENCH_MEM_PROFILE: %v", err)
 	}
-	if err := os.Unsetenv("BENCH_FILE"); err != nil {
-		ts.T().Logf("Failed to unset BENCH_FILE: %v", err)
+	if err := os.Unsetenv("MAGE_X_BENCH_FILE"); err != nil {
+		ts.T().Logf("Failed to unset MAGE_X_BENCH_FILE: %v", err)
 	}
 	if err := os.Unsetenv("BENCH_OLD"); err != nil {
 		ts.T().Logf("Failed to unset BENCH_OLD: %v", err)
@@ -68,7 +83,7 @@ func (ts *BenchTestSuite) TearDownTest() {
 func (ts *BenchTestSuite) TestBenchDefault() {
 	ts.Run("successful benchmark execution", func() {
 		// Mock successful go test benchmark command
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return(nil)
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -137,27 +152,29 @@ func (ts *BenchTestSuite) TestBenchDefault() {
 	// Test removed: benchmark count is now parameter-only, no environment variable support
 
 	ts.Run("benchmark with CPU and memory profiling", func() {
-		// Set environment variables for profiling
-		originalCPUProfile := os.Getenv("BENCH_CPU_PROFILE")
-		originalMemProfile := os.Getenv("BENCH_MEM_PROFILE")
+		// DefaultWithArgs reads the profile paths via GetMageXEnv, i.e. the
+		// MAGE_X_-prefixed variables (EnvPrefix="MAGE_X_"). The un-prefixed names
+		// are not consulted by production.
+		originalCPUProfile := os.Getenv("MAGE_X_BENCH_CPU_PROFILE")
+		originalMemProfile := os.Getenv("MAGE_X_BENCH_MEM_PROFILE")
 		defer func() {
-			if err := os.Setenv("BENCH_CPU_PROFILE", originalCPUProfile); err != nil {
-				ts.T().Logf("Failed to restore BENCH_CPU_PROFILE: %v", err)
+			if err := os.Setenv("MAGE_X_BENCH_CPU_PROFILE", originalCPUProfile); err != nil {
+				ts.T().Logf("Failed to restore MAGE_X_BENCH_CPU_PROFILE: %v", err)
 			}
-			if err := os.Setenv("BENCH_MEM_PROFILE", originalMemProfile); err != nil {
-				ts.T().Logf("Failed to restore BENCH_MEM_PROFILE: %v", err)
+			if err := os.Setenv("MAGE_X_BENCH_MEM_PROFILE", originalMemProfile); err != nil {
+				ts.T().Logf("Failed to restore MAGE_X_BENCH_MEM_PROFILE: %v", err)
 			}
 		}()
 
-		if err := os.Setenv("BENCH_CPU_PROFILE", "cpu.prof"); err != nil {
-			ts.T().Fatalf("Failed to set BENCH_CPU_PROFILE: %v", err)
+		if err := os.Setenv("MAGE_X_BENCH_CPU_PROFILE", "cpu.prof"); err != nil {
+			ts.T().Fatalf("Failed to set MAGE_X_BENCH_CPU_PROFILE: %v", err)
 		}
-		if err := os.Setenv("BENCH_MEM_PROFILE", "mem.prof"); err != nil {
-			ts.T().Fatalf("Failed to set BENCH_MEM_PROFILE: %v", err)
+		if err := os.Setenv("MAGE_X_BENCH_MEM_PROFILE", "mem.prof"); err != nil {
+			ts.T().Fatalf("Failed to set MAGE_X_BENCH_MEM_PROFILE: %v", err)
 		}
 
 		// Mock successful go test benchmark command with profiling
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-cpuprofile", "cpu.prof", "-memprofile", "mem.prof", "./..."}).Return(nil)
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "-cpuprofile", "cpu.prof", "-memprofile", "mem.prof", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -293,7 +310,7 @@ func (ts *BenchTestSuite) TestBenchCompare() {
 func (ts *BenchTestSuite) TestBenchSave() {
 	ts.Run("successful benchmark save with default filename", func() {
 		// Mock successful go test benchmark command and output
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -309,19 +326,20 @@ func (ts *BenchTestSuite) TestBenchSave() {
 	})
 
 	ts.Run("benchmark save with custom filename", func() {
-		// Set environment variable for custom output file
-		originalBenchFile := os.Getenv("BENCH_FILE")
+		// SaveWithArgs resolves the output file via GetMageXEnv("BENCH_FILE"),
+		// i.e. the MAGE_X_-prefixed variable (EnvPrefix="MAGE_X_").
+		originalBenchFile := os.Getenv("MAGE_X_BENCH_FILE")
 		defer func() {
-			if err := os.Setenv("BENCH_FILE", originalBenchFile); err != nil {
-				ts.T().Logf("Failed to restore BENCH_FILE: %v", err)
+			if err := os.Setenv("MAGE_X_BENCH_FILE", originalBenchFile); err != nil {
+				ts.T().Logf("Failed to restore MAGE_X_BENCH_FILE: %v", err)
 			}
 		}()
-		if err := os.Setenv("BENCH_FILE", "custom-bench.txt"); err != nil {
-			ts.T().Fatalf("Failed to set BENCH_FILE: %v", err)
+		if err := os.Setenv("MAGE_X_BENCH_FILE", "custom-bench.txt"); err != nil {
+			ts.T().Fatalf("Failed to set MAGE_X_BENCH_FILE: %v", err)
 		}
 
 		// Mock successful go test benchmark command and output
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -338,19 +356,20 @@ func (ts *BenchTestSuite) TestBenchSave() {
 	})
 
 	ts.Run("benchmark save with directory creation", func() {
-		// Set environment variable for output file in subdirectory
-		originalBenchFile := os.Getenv("BENCH_FILE")
+		// SaveWithArgs resolves the output file via GetMageXEnv("BENCH_FILE"),
+		// i.e. the MAGE_X_-prefixed variable (EnvPrefix="MAGE_X_").
+		originalBenchFile := os.Getenv("MAGE_X_BENCH_FILE")
 		defer func() {
-			if err := os.Setenv("BENCH_FILE", originalBenchFile); err != nil {
-				ts.T().Logf("Failed to restore BENCH_FILE: %v", err)
+			if err := os.Setenv("MAGE_X_BENCH_FILE", originalBenchFile); err != nil {
+				ts.T().Logf("Failed to restore MAGE_X_BENCH_FILE: %v", err)
 			}
 		}()
-		if err := os.Setenv("BENCH_FILE", "benchmarks/results.txt"); err != nil {
-			ts.T().Fatalf("Failed to set BENCH_FILE: %v", err)
+		if err := os.Setenv("MAGE_X_BENCH_FILE", "benchmarks/results.txt"); err != nil {
+			ts.T().Fatalf("Failed to set MAGE_X_BENCH_FILE: %v", err)
 		}
 
 		// Mock successful go test benchmark command and output
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -372,7 +391,7 @@ func (ts *BenchTestSuite) TestBenchSave() {
 func (ts *BenchTestSuite) TestBenchCPU() {
 	ts.Run("successful CPU profiling", func() {
 		// Mock successful go test benchmark command with CPU profiling
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-cpuprofile", "cpu.prof", "./..."}).Return(nil)
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "-cpuprofile", "cpu.prof", "./..."}).Return(nil)
 		// Mock CPU profile analysis
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "cpu.prof"}).Return(nil)
 
@@ -390,19 +409,10 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 	})
 
 	ts.Run("CPU profiling with custom profile name", func() {
-		// Set environment variable for custom CPU profile name
-		originalCPUProfile := os.Getenv("CPU_PROFILE")
-		defer func() {
-			if err := os.Setenv("CPU_PROFILE", originalCPUProfile); err != nil {
-				ts.T().Logf("Failed to restore CPU_PROFILE: %v", err)
-			}
-		}()
-		if err := os.Setenv("CPU_PROFILE", "custom-cpu.prof"); err != nil {
-			ts.T().Fatalf("Failed to set CPU_PROFILE: %v", err)
-		}
-
-		// Mock successful go test benchmark command with custom CPU profile
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-cpuprofile", "custom-cpu.prof", "./..."}).Return(nil)
+		// Custom profile name is supplied through the "profile" parameter
+		// (CPUWithArgs). It is exported via MAGE_X_BENCH_CPU_PROFILE and emitted
+		// as -cpuprofile by DefaultWithArgs.
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "-cpuprofile", "custom-cpu.prof", "./..."}).Return(nil)
 		// Mock CPU profile analysis
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "custom-cpu.prof"}).Return(nil)
 
@@ -412,7 +422,7 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 			},
 			func() any { return GetRunner() },
 			func() error {
-				return ts.bench.CPU()
+				return ts.bench.CPUWithArgs("profile=custom-cpu.prof")
 			},
 		)
 
@@ -424,7 +434,7 @@ func (ts *BenchTestSuite) TestBenchCPU() {
 func (ts *BenchTestSuite) TestBenchMem() {
 	ts.Run("successful memory profiling", func() {
 		// Mock successful go test benchmark command with memory profiling
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-memprofile", "mem.prof", "./..."}).Return(nil)
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "-memprofile", "mem.prof", "./..."}).Return(nil)
 		// Mock memory profile analysis
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "-alloc_space", "mem.prof"}).Return(nil)
 
@@ -442,19 +452,10 @@ func (ts *BenchTestSuite) TestBenchMem() {
 	})
 
 	ts.Run("memory profiling with custom profile name", func() {
-		// Set environment variable for custom memory profile name
-		originalMemProfile := os.Getenv("MEM_PROFILE")
-		defer func() {
-			if err := os.Setenv("MEM_PROFILE", originalMemProfile); err != nil {
-				ts.T().Logf("Failed to restore MEM_PROFILE: %v", err)
-			}
-		}()
-		if err := os.Setenv("MEM_PROFILE", "custom-mem.prof"); err != nil {
-			ts.T().Fatalf("Failed to set MEM_PROFILE: %v", err)
-		}
-
-		// Mock successful go test benchmark command with custom memory profile
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-memprofile", "custom-mem.prof", "./..."}).Return(nil)
+		// Custom profile name is supplied through the "profile" parameter
+		// (MemWithArgs). It is exported via MAGE_X_BENCH_MEM_PROFILE and emitted
+		// as -memprofile by DefaultWithArgs.
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "-memprofile", "custom-mem.prof", "./..."}).Return(nil)
 		// Mock memory profile analysis
 		ts.env.Runner.On("RunCmd", "go", []string{"tool", "pprof", "-top", "-alloc_space", "custom-mem.prof"}).Return(nil)
 
@@ -464,7 +465,7 @@ func (ts *BenchTestSuite) TestBenchMem() {
 			},
 			func() any { return GetRunner() },
 			func() error {
-				return ts.bench.Mem()
+				return ts.bench.MemWithArgs("profile=custom-mem.prof")
 			},
 		)
 
@@ -476,7 +477,7 @@ func (ts *BenchTestSuite) TestBenchMem() {
 func (ts *BenchTestSuite) TestBenchProfile() {
 	ts.Run("successful full profiling", func() {
 		// Mock successful go test benchmark command with both CPU and memory profiling
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "-cpuprofile", "cpu.prof", "-memprofile", "mem.prof", "./..."}).Return(nil)
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "-cpuprofile", "cpu.prof", "-memprofile", "mem.prof", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -496,7 +497,7 @@ func (ts *BenchTestSuite) TestBenchProfile() {
 func (ts *BenchTestSuite) TestBenchTrace() {
 	ts.Run("successful execution tracing", func() {
 		// Mock successful go test benchmark command with tracing
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", "trace.out", "-benchtime", "10s", "./..."}).Return(nil)
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", "trace.out", "-benchtime", "3s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -512,19 +513,9 @@ func (ts *BenchTestSuite) TestBenchTrace() {
 	})
 
 	ts.Run("tracing with custom trace file", func() {
-		// Set environment variable for custom trace file
-		originalTraceFile := os.Getenv("TRACE_FILE")
-		defer func() {
-			if err := os.Setenv("TRACE_FILE", originalTraceFile); err != nil {
-				ts.T().Logf("Failed to restore TRACE_FILE: %v", err)
-			}
-		}()
-		if err := os.Setenv("TRACE_FILE", "custom-trace.out"); err != nil {
-			ts.T().Fatalf("Failed to set TRACE_FILE: %v", err)
-		}
-
-		// Mock successful go test benchmark command with custom trace file
-		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", "custom-trace.out", "-benchtime", "10s", "./..."}).Return(nil)
+		// Custom trace file is supplied through the "trace" parameter
+		// (TraceWithArgs) and emitted as the -trace argument.
+		ts.env.Runner.On("RunCmd", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-trace", "custom-trace.out", "-benchtime", "3s", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -532,7 +523,7 @@ func (ts *BenchTestSuite) TestBenchTrace() {
 			},
 			func() any { return GetRunner() },
 			func() error {
-				return ts.bench.Trace()
+				return ts.bench.TraceWithArgs("trace=custom-trace.out")
 			},
 		)
 
@@ -544,7 +535,7 @@ func (ts *BenchTestSuite) TestBenchTrace() {
 func (ts *BenchTestSuite) TestBenchRegression() {
 	ts.Run("regression check with new baseline creation", func() {
 		// Mock successful benchmark save
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "./..."}).Return("BenchmarkTest 1000 1000000 ns/op", nil)
 
 		err := ts.env.WithMockRunner(
 			func(r any) error {
@@ -565,7 +556,7 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 		ts.env.CreateFile("bench-baseline.txt", "BenchmarkTest 1000 1000000 ns/op")
 
 		// Mock successful benchmark save and comparison
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1200 800000 ns/op", nil)
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "./..."}).Return("BenchmarkTest 1200 800000 ns/op", nil)
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/perf/cmd/benchstat@latest"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"bench-baseline.txt", "bench-current.txt"}).Return(nil)
 
@@ -599,7 +590,7 @@ func (ts *BenchTestSuite) TestBenchRegression() {
 		ts.env.CreateFile("bench-baseline.txt", "BenchmarkTest 1000 1000000 ns/op")
 
 		// Mock successful benchmark save and comparison
-		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "10s", "./..."}).Return("BenchmarkTest 1200 800000 ns/op", nil)
+		ts.env.Runner.On("RunCmdOutput", "go", []string{"test", "-bench=.", "-benchmem", "-run=^$", "-benchtime", "3s", "./..."}).Return("BenchmarkTest 1200 800000 ns/op", nil)
 		ts.env.Runner.On("RunCmd", "go", []string{"install", "golang.org/x/perf/cmd/benchstat@latest"}).Return(nil)
 		ts.env.Runner.On("RunCmd", "benchstat", []string{"bench-baseline.txt", "bench-current.txt"}).Return(nil)
 

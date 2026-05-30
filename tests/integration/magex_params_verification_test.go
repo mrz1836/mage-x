@@ -4,8 +4,6 @@
 package integration
 
 import (
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -18,7 +16,7 @@ import (
 func TestParameterVerification(t *testing.T) {
 	// Build magex once for all tests
 	magexBinary := buildMagexForTesting(t)
-	defer os.Remove(magexBinary)
+	cleanupFile(t, magexBinary)
 
 	magexPath, err := filepath.Abs(magexBinary)
 	require.NoError(t, err)
@@ -28,13 +26,13 @@ func TestParameterVerification(t *testing.T) {
 		testDir := setupGoProject(t)
 
 		// Run test without verbose
-		cmd1 := exec.Command(magexPath, "test")
+		cmd1 := testCommand(t, magexPath, "test")
 		cmd1.Dir = testDir
 		output1, err1 := cmd1.CombinedOutput()
 		output1Str := string(output1)
 
 		// Run test with verbose
-		cmd2 := exec.Command(magexPath, "test", "verbose=true")
+		cmd2 := testCommand(t, magexPath, "test", "verbose=true")
 		cmd2.Dir = testDir
 		output2, err2 := cmd2.CombinedOutput()
 		output2Str := string(output2)
@@ -62,13 +60,13 @@ func TestParameterVerification(t *testing.T) {
 		testDir := setupGoProject(t)
 
 		// Run test for all packages
-		cmd1 := exec.Command(magexPath, "test", "package=./...")
+		cmd1 := testCommand(t, magexPath, "test", "package=./...")
 		cmd1.Dir = testDir
 		output1, err1 := cmd1.CombinedOutput()
 		output1Str := string(output1)
 
 		// Run test for specific package
-		cmd2 := exec.Command(magexPath, "test", "package=./pkg/utils")
+		cmd2 := testCommand(t, magexPath, "test", "package=./pkg/utils")
 		cmd2.Dir = testDir
 		output2, err2 := cmd2.CombinedOutput()
 		output2Str := string(output2)
@@ -96,7 +94,7 @@ func TestParameterVerification(t *testing.T) {
 
 		for _, format := range formats {
 			t.Run("Format_"+format, func(t *testing.T) {
-				cmd := exec.Command(magexPath, "mod:graph", "format="+format)
+				cmd := testCommand(t, magexPath, "mod:graph", "format="+format)
 				cmd.Dir = testDir
 
 				output, err := cmd.CombinedOutput()
@@ -108,25 +106,26 @@ func TestParameterVerification(t *testing.T) {
 						!strings.Contains(outputStr, "invalid format") {
 						t.Errorf("Unexpected error for format=%s: %v", format, err)
 					}
-				} else {
-					// Different formats should produce different outputs
-					switch format {
-					case "tree":
-						if hasTreeSymbols(outputStr) {
-							t.Logf("✓ Tree format working - contains tree symbols")
-						}
-					case "json":
-						if strings.Contains(outputStr, "{") && strings.Contains(outputStr, "}") {
-							t.Logf("✓ JSON format working - contains JSON brackets")
-						}
-					case "dot":
-						if strings.Contains(outputStr, "digraph") && strings.Contains(outputStr, "->") {
-							t.Logf("✓ DOT format working - contains digraph and arrows")
-						}
-					case "mermaid":
-						if strings.Contains(outputStr, "graph TD") || strings.Contains(outputStr, "-->") {
-							t.Logf("✓ Mermaid format working - contains graph syntax")
-						}
+					return
+				}
+
+				// Different formats should produce different outputs
+				switch format {
+				case "tree":
+					if hasTreeSymbols(outputStr) {
+						t.Logf("✓ Tree format working - contains tree symbols")
+					}
+				case "json":
+					if strings.Contains(outputStr, "{") && strings.Contains(outputStr, "}") {
+						t.Logf("✓ JSON format working - contains JSON brackets")
+					}
+				case "dot":
+					if strings.Contains(outputStr, "digraph") && strings.Contains(outputStr, "->") {
+						t.Logf("✓ DOT format working - contains digraph and arrows")
+					}
+				case "mermaid":
+					if strings.Contains(outputStr, "graph TD") || strings.Contains(outputStr, "-->") {
+						t.Logf("✓ Mermaid format working - contains graph syntax")
 					}
 				}
 			})
@@ -138,13 +137,13 @@ func TestParameterVerification(t *testing.T) {
 		testDir := setupGoModule(t)
 
 		// Run without show_versions
-		cmd1 := exec.Command(magexPath, "mod:graph", "show_versions=false")
+		cmd1 := testCommand(t, magexPath, "mod:graph", "show_versions=false")
 		cmd1.Dir = testDir
 		output1, err1 := cmd1.CombinedOutput()
 		output1Str := string(output1)
 
 		// Run with show_versions
-		cmd2 := exec.Command(magexPath, "mod:graph", "show_versions=true")
+		cmd2 := testCommand(t, magexPath, "mod:graph", "show_versions=true")
 		cmd2.Dir = testDir
 		output2, err2 := cmd2.CombinedOutput()
 		output2Str := string(output2)
@@ -170,7 +169,7 @@ func TestParameterVerification(t *testing.T) {
 
 		for _, platform := range platforms {
 			t.Run("Platform_"+strings.ReplaceAll(platform, "/", "_"), func(t *testing.T) {
-				cmd := exec.Command(magexPath, "build", "platform="+platform)
+				cmd := testCommand(t, magexPath, "build", "platform="+platform)
 				cmd.Dir = testDir
 
 				output, err := cmd.CombinedOutput()
@@ -205,7 +204,7 @@ func TestParameterVerification(t *testing.T) {
 
 		for _, tt := range invalidTests {
 			t.Run(tt.command+"_"+tt.param, func(t *testing.T) {
-				cmd := exec.Command(magexPath, tt.command, tt.param)
+				cmd := testCommand(t, magexPath, tt.command, tt.param)
 				cmd.Dir = testDir
 
 				output, err := cmd.CombinedOutput()
@@ -243,7 +242,7 @@ func TestParameterVerification(t *testing.T) {
 
 		for _, param := range boolTests {
 			t.Run("Bool_"+strings.ReplaceAll(param, "=", "_"), func(t *testing.T) {
-				cmd := exec.Command(magexPath, "test", param)
+				cmd := testCommand(t, magexPath, "test", param)
 				cmd.Dir = testDir
 
 				output, err := cmd.CombinedOutput()
@@ -263,7 +262,7 @@ func TestParameterVerification(t *testing.T) {
 // TestParameterPassthrough tests that parameters are passed through the execution pipeline
 func TestParameterPassthrough(t *testing.T) {
 	magexBinary := buildMagexForTesting(t)
-	defer os.Remove(magexBinary)
+	cleanupFile(t, magexBinary)
 
 	magexPath, err := filepath.Abs(magexBinary)
 	require.NoError(t, err)
@@ -273,7 +272,7 @@ func TestParameterPassthrough(t *testing.T) {
 		testDir := setupGoModule(t)
 
 		// Use a command with multiple parameters
-		cmd := exec.Command(magexPath, "mod:graph",
+		cmd := testCommand(t, magexPath, "mod:graph",
 			"depth=2",
 			"show_versions=true",
 			"format=tree")
@@ -283,7 +282,7 @@ func TestParameterPassthrough(t *testing.T) {
 		outputStr := string(output)
 
 		// Should succeed and respect all parameters
-		assert.NoError(t, err, "Multiple parameter command failed: %s", outputStr)
+		require.NoError(t, err, "Multiple parameter command failed: %s", outputStr)
 
 		// Check depth limit
 		depth := countTreeDepth(outputStr)
@@ -305,7 +304,7 @@ func TestParameterPassthrough(t *testing.T) {
 		testDir := setupGoModule(t)
 
 		// Test with conflicting depth values (later should win)
-		cmd := exec.Command(magexPath, "mod:graph", "depth=1", "depth=3")
+		cmd := testCommand(t, magexPath, "mod:graph", "depth=1", "depth=3")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()

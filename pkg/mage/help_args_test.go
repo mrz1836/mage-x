@@ -21,7 +21,7 @@ import (
 // registry exactly once. The package-level tests need this because they assert
 // behavior of the help system, which reads from the global registry.
 //
-//nolint:gochecknoglobals // test-only once-guard for registry initialization
+
 var ensureCommandsRegistered = sync.OnceFunc(func() {
 	reg := registry.Global()
 	if reg.IsRegistered() {

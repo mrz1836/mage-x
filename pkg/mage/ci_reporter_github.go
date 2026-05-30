@@ -85,10 +85,11 @@ func (r *githubReporter) WriteStepSummary(result *CIResult) error {
 		return nil
 	}
 
-	// Skip writing empty summaries - these create confusing duplicate blocks with zeros
-	// A valid summary must have either: test results (Total > 0), a defined status, or failures
+	// Skip writing empty summaries - a meaningful summary needs tests or failures.
+	// A zero-test, zero-failure run produces a confusing all-zeros "passed" table even
+	// though its status is set, so skip regardless of status.
 	if result == nil ||
-		(result.Summary.Total == 0 && result.Summary.Status == "" && len(result.Failures) == 0) {
+		(result.Summary.Total == 0 && len(result.Failures) == 0) {
 		return nil
 	}
 
