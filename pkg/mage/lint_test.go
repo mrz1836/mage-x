@@ -13,6 +13,10 @@ import (
 )
 
 func TestLintAll(t *testing.T) {
+	orig := commandExists
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
+	defer func() { commandExists = orig }()
+
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 
@@ -64,6 +68,10 @@ func TestLintAll(t *testing.T) {
 }
 
 func TestLintGo(t *testing.T) {
+	orig := commandExists
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
+	defer func() { commandExists = orig }()
+
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 
@@ -305,6 +313,10 @@ func TestLintConfig(t *testing.T) {
 }
 
 func TestLintFix(t *testing.T) {
+	orig := commandExists
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
+	defer func() { commandExists = orig }()
+
 	env := testutil.NewTestEnvironment(t)
 	defer env.Cleanup()
 

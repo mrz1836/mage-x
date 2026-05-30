@@ -46,10 +46,14 @@ func (ts *ToolsTestSuite) TearDownTest() {
 func (ts *ToolsTestSuite) TestTools_Default() {
 	ts.setupSuccessfulInstall()
 
-	// installTool routes uninstalled tools through installToolFromModule, which
-	// requires a *SecureCommandRunner so it can reach the retry-capable executor.
-	// Use a dry-run secure runner so the real install path is exercised without
-	// touching the network (mirrors format_retry_test.go).
+	// golangci-lint is installed via ensureGolangciLint (network download) when absent.
+	// Stub commandExists so installTool short-circuits for golangci-lint before reaching
+	// that path; remaining module tools still exercise the dry-run executor. Suite tests
+	// run serially, so the package-global swap with a deferred restore is safe.
+	orig := commandExists
+	defer func() { commandExists = orig }()
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
+
 	err := ts.withDryRunSecureRunner(func() error {
 		return ts.tools.Default()
 	})
@@ -60,6 +64,10 @@ func (ts *ToolsTestSuite) TestTools_Default() {
 // TestTools_Install tests the Install function
 func (ts *ToolsTestSuite) TestTools_Install() {
 	ts.setupSuccessfulInstall()
+
+	orig := commandExists
+	defer func() { commandExists = orig }()
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
 
 	err := ts.withDryRunSecureRunner(func() error {
 		return ts.tools.Install()
@@ -484,6 +492,13 @@ func (ts *ToolsTestSuite) TestInstallTool_GolangciLint() {
 	}
 
 	ts.setupConfig()
+
+	// ensureGolangciLint downloads install.sh when golangci-lint is absent, which requires
+	// a *SecureCommandRunner and network access — neither available in the mock-runner path.
+	// Stub commandExists so installTool treats golangci-lint as already installed.
+	orig := commandExists
+	defer func() { commandExists = orig }()
+	commandExists = func(name string) bool { return name == CmdGolangciLint }
 
 	err := ts.env.WithMockRunner(
 		func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
