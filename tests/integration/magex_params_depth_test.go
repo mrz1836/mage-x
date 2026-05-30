@@ -86,7 +86,7 @@ func TestModGraphDepthParameter(t *testing.T) {
 		// With depth=1, should see at most depth 1
 		maxDepth := countTreeDepth(outputStr)
 		assert.LessOrEqual(t, maxDepth, 1, "Depth=1 should show at most depth 1, but saw depth %d", maxDepth)
-		assert.Greater(t, maxDepth, 0, "Depth=1 should show some dependencies, but saw depth %d", maxDepth)
+		assert.Positive(t, maxDepth, "Depth=1 should show some dependencies, but saw depth %d", maxDepth)
 
 		// Should contain tree symbols for direct dependencies
 		assert.True(t, strings.Contains(outputStr, "├──") || strings.Contains(outputStr, "└──"),
@@ -110,7 +110,7 @@ func TestModGraphDepthParameter(t *testing.T) {
 		assert.LessOrEqual(t, maxDepth, 3, "Depth=3 should show at most depth 3, but saw depth %d", maxDepth)
 
 		// Should show more dependencies than depth=1
-		assert.Greater(t, maxDepth, 0, "Depth=3 should show some dependencies")
+		assert.Positive(t, maxDepth, "Depth=3 should show some dependencies")
 	})
 
 	t.Run("DepthComparison", func(t *testing.T) {

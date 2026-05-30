@@ -21,6 +21,7 @@ var (
 // ModGraphTestSuite defines the test suite for mod graph functions
 type ModGraphTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 	mod Mod
 }
@@ -68,8 +69,8 @@ func (ts *ModGraphTestSuite) TestParseModuleNameVersion() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			name, version := parseModuleNameVersion(tt.module)
-			ts.Assert().Equal(tt.wantName, name)
-			ts.Assert().Equal(tt.wantVersion, version)
+			ts.Equal(tt.wantName, name)
+			ts.Equal(tt.wantVersion, version)
 		})
 	}
 }
@@ -126,12 +127,12 @@ github.com/test/app@v1.0.0 github.com/stretchr/testify@v1.8.0
 		ts.Run(tt.name, func() {
 			graph := parseModGraph(tt.input)
 
-			ts.Assert().Len(graph.Nodes, tt.wantNodes)
+			ts.Len(graph.Nodes, tt.wantNodes)
 
 			for parent, expectedEdges := range tt.wantEdges {
 				edges, exists := graph.Edges[parent]
-				ts.Assert().True(exists, "parent should have edges")
-				ts.Assert().Len(edges, expectedEdges)
+				ts.True(exists, "parent should have edges")
+				ts.Len(edges, expectedEdges)
 			}
 		})
 	}
@@ -193,7 +194,7 @@ func (ts *ModGraphTestSuite) TestFilterGraph() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			filtered := filterGraph(graph, tt.filter)
-			ts.Assert().Len(filtered.Nodes, tt.wantNodes)
+			ts.Len(filtered.Nodes, tt.wantNodes)
 		})
 	}
 }
@@ -252,7 +253,7 @@ func (ts *ModGraphTestSuite) TestCalculateMaxDepth() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			depth := calculateMaxDepth(tt.graph, tt.rootKey)
-			ts.Assert().Equal(tt.wantDepth, depth)
+			ts.Equal(tt.wantDepth, depth)
 		})
 	}
 }
@@ -321,7 +322,7 @@ func (ts *ModGraphTestSuite) TestFindDuplicateDependencies() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			duplicates := findDuplicateDependencies(tt.graph)
-			ts.Assert().Len(duplicates, tt.wantDuplicates)
+			ts.Len(duplicates, tt.wantDuplicates)
 		})
 	}
 }
@@ -348,7 +349,7 @@ func (ts *ModGraphTestSuite) TestGetTreeSymbol() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			result := getTreeSymbol(tt.isLast)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 		})
 	}
 }
@@ -375,7 +376,7 @@ func (ts *ModGraphTestSuite) TestGetTreePrefix() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			result := getTreePrefix(tt.parentIsLast)
-			ts.Assert().Equal(tt.wantPrefix, result)
+			ts.Equal(tt.wantPrefix, result)
 		})
 	}
 }
@@ -399,7 +400,7 @@ github.com/test/app@v1.0.0 github.com/stretchr/testify@v1.8.0
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestModGraph_JSONFormat tests JSON output format
@@ -417,7 +418,7 @@ func (ts *ModGraphTestSuite) TestModGraph_JSONFormat() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestModGraph_DOTFormat tests DOT output format
@@ -435,7 +436,7 @@ func (ts *ModGraphTestSuite) TestModGraph_DOTFormat() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestModGraph_MermaidFormat tests Mermaid output format
@@ -453,7 +454,7 @@ func (ts *ModGraphTestSuite) TestModGraph_MermaidFormat() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestModGraph_UnsupportedFormat tests unsupported format error
@@ -471,8 +472,8 @@ func (ts *ModGraphTestSuite) TestModGraph_UnsupportedFormat() {
 		},
 	)
 
-	ts.Assert().Error(err)
-	ts.Assert().Contains(err.Error(), "unsupported format")
+	ts.Error(err)
+	ts.Contains(err.Error(), "unsupported format")
 }
 
 // TestModGraph_WithFilter tests filtering
@@ -491,7 +492,7 @@ github.com/test/app@v1.0.0 github.com/stretchr/testify@v1.8.0
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestDisplayJSONGraph tests JSON graph display
@@ -507,7 +508,7 @@ func (ts *ModGraphTestSuite) TestDisplayJSONGraph() {
 	}
 
 	// This should not panic
-	ts.Assert().NotPanics(func() {
+	ts.NotPanics(func() {
 		displayJSONGraph(graph, "root@v1.0.0")
 	})
 }
@@ -533,7 +534,7 @@ mfa_serial = arn:aws:iam::123:mfa/user
 	ini2 := parseAWSINI(output)
 
 	// Should have same number of sections
-	ts.Assert().Equal(len(ini.Sections), len(ini2.Sections))
+	ts.Assert().Len(ini2.Sections, len(ini.Sections))
 
 	// Check values are preserved
 	for _, section1 := range ini.Sections {
@@ -543,13 +544,13 @@ mfa_serial = arn:aws:iam::123:mfa/user
 				found = true
 				for key, value1 := range section1.Values {
 					value2, exists := section2.Values[key]
-					ts.Assert().True(exists, "key %s should exist in second parse", key)
-					ts.Assert().Equal(value1, value2, "values for key %s should match", key)
+					ts.True(exists, "key %s should exist in second parse", key)
+					ts.Equal(value1, value2, "values for key %s should match", key)
 				}
 				break
 			}
 		}
-		ts.Assert().True(found, "section %s should exist in second parse", section1.Name)
+		ts.True(found, "section %s should exist in second parse", section1.Name)
 	}
 }
 

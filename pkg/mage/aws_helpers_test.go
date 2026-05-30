@@ -27,6 +27,7 @@ var (
 // AWSHelpersTestSuite defines the test suite for AWS helper functions
 type AWSHelpersTestSuite struct {
 	suite.Suite
+
 	env    *testutil.TestEnvironment
 	awsDir string
 }
@@ -73,7 +74,7 @@ func (ts *AWSHelpersTestSuite) TestGetConfigSectionName() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			result := getConfigSectionName(tt.profile)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 		})
 	}
 }
@@ -151,7 +152,7 @@ region = us-west-2
 		ts.Run(tt.name, func() {
 			ini := parseAWSINI([]byte(tt.iniContent))
 
-			ts.Assert().Len(ini.Sections, tt.wantSections)
+			ts.Len(ini.Sections, tt.wantSections)
 
 			if tt.checkSection != "" {
 				found := false
@@ -160,13 +161,13 @@ region = us-west-2
 						found = true
 						if tt.checkKey != "" {
 							value, ok := section.Values[tt.checkKey]
-							ts.Assert().True(ok, "key should exist")
-							ts.Assert().Equal(tt.checkValue, value)
+							ts.True(ok, "key should exist")
+							ts.Equal(tt.checkValue, value)
 						}
 						break
 					}
 				}
-				ts.Assert().True(found, "section should exist")
+				ts.True(found, "section should exist")
 			}
 		})
 	}
@@ -198,16 +199,16 @@ func (ts *AWSHelpersTestSuite) TestWriteAWSINI() {
 	content := string(data)
 
 	// Verify sections are present
-	ts.Assert().Contains(content, "[default]")
-	ts.Assert().Contains(content, "[production]")
+	ts.Contains(content, "[default]")
+	ts.Contains(content, "[production]")
 
 	// Verify key-value pairs
-	ts.Assert().Contains(content, "aws_access_key_id = KEY1")
-	ts.Assert().Contains(content, "region = us-west-2")
+	ts.Contains(content, "aws_access_key_id = KEY1")
+	ts.Contains(content, "region = us-west-2")
 
 	// Parse it back and verify
 	parsedINI := parseAWSINI(data)
-	ts.Assert().Len(parsedINI.Sections, 2)
+	ts.Len(parsedINI.Sections, 2)
 }
 
 // TestGetOrCreateSection tests section creation and retrieval
@@ -224,16 +225,16 @@ func (ts *AWSHelpersTestSuite) TestGetOrCreateSection() {
 
 	ts.Run("get existing section", func() {
 		section := getOrCreateSection(ini, "existing")
-		ts.Assert().NotNil(section)
-		ts.Assert().Equal("existing", section.Name)
-		ts.Assert().Len(ini.Sections, 1)
+		ts.NotNil(section)
+		ts.Equal("existing", section.Name)
+		ts.Len(ini.Sections, 1)
 	})
 
 	ts.Run("create new section", func() {
 		section := getOrCreateSection(ini, "new")
-		ts.Assert().NotNil(section)
-		ts.Assert().Equal("new", section.Name)
-		ts.Assert().Len(ini.Sections, 2)
+		ts.NotNil(section)
+		ts.Equal("new", section.Name)
+		ts.Len(ini.Sections, 2)
 	})
 }
 
@@ -247,22 +248,22 @@ func (ts *AWSHelpersTestSuite) TestSetINIValue() {
 
 	ts.Run("set new value", func() {
 		setINIValue(section, "key1", "value1")
-		ts.Assert().Equal("value1", section.Values["key1"])
-		ts.Assert().Contains(section.KeyOrder, "key1")
-		ts.Assert().Len(section.KeyOrder, 1)
+		ts.Equal("value1", section.Values["key1"])
+		ts.Contains(section.KeyOrder, "key1")
+		ts.Len(section.KeyOrder, 1)
 	})
 
 	ts.Run("update existing value", func() {
 		setINIValue(section, "key1", "updated")
-		ts.Assert().Equal("updated", section.Values["key1"])
-		ts.Assert().Len(section.KeyOrder, 1, "should not duplicate in key order")
+		ts.Equal("updated", section.Values["key1"])
+		ts.Len(section.KeyOrder, 1, "should not duplicate in key order")
 	})
 
 	ts.Run("set multiple values", func() {
 		setINIValue(section, "key2", "value2")
 		setINIValue(section, "key3", "value3")
-		ts.Assert().Len(section.Values, 3)
-		ts.Assert().Len(section.KeyOrder, 3)
+		ts.Len(section.Values, 3)
+		ts.Len(section.KeyOrder, 3)
 	})
 }
 
@@ -308,12 +309,12 @@ func (ts *AWSHelpersTestSuite) TestMaskCredential() {
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
 			result := maskCredential(tt.credential)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 
 			// Verify first 4 and last 4 are preserved for long strings
 			if len(tt.credential) > 8 {
-				ts.Assert().Equal(tt.credential[:4], result[:4])
-				ts.Assert().Equal(tt.credential[len(tt.credential)-4:], result[len(result)-4:])
+				ts.Equal(tt.credential[:4], result[:4])
+				ts.Equal(tt.credential[len(tt.credential)-4:], result[len(result)-4:])
 			}
 		})
 	}
@@ -330,19 +331,19 @@ func (ts *AWSHelpersTestSuite) TestBackupFile() {
 
 		// Create backup
 		err = backupFile(filePath)
-		ts.Assert().NoError(err)
+		ts.NoError(err)
 
 		// Verify backup exists
 		backupPath := filePath + awsBackupSuffix
 		backupContent, err := os.ReadFile(backupPath)
-		ts.Assert().NoError(err)
-		ts.Assert().Equal(originalContent, backupContent)
+		ts.NoError(err)
+		ts.Equal(originalContent, backupContent)
 	})
 
 	ts.Run("backup non-existent file", func() {
 		// Should not error
 		err := backupFile(filepath.Join(ts.awsDir, "nonexistent"))
-		ts.Assert().NoError(err)
+		ts.NoError(err)
 	})
 }
 
@@ -379,16 +380,16 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 				}
 
 				// Verify credentials
-				ts.Assert().Equal("ASIATESTACCESSKEY", creds.AccessKeyID)
-				ts.Assert().Equal("TestSecretKey123", creds.SecretAccessKey)
-				ts.Assert().Equal("TestSessionToken456", creds.SessionToken)
-				ts.Assert().Equal("2024-12-31T23:59:59Z", creds.Expiration)
+				ts.Equal("ASIATESTACCESSKEY", creds.AccessKeyID)
+				ts.Equal("TestSecretKey123", creds.SecretAccessKey)
+				ts.Equal("TestSessionToken456", creds.SessionToken)
+				ts.Equal("2024-12-31T23:59:59Z", creds.Expiration)
 
 				return nil
 			},
 		)
 
-		ts.Assert().NoError(err)
+		ts.NoError(err)
 	})
 
 	ts.Run("invalid JSON response", func() {
@@ -415,8 +416,8 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 			},
 		)
 
-		ts.Assert().Error(err)
-		ts.Assert().Contains(err.Error(), "failed to parse STS response")
+		ts.Error(err)
+		ts.Contains(err.Error(), "failed to parse STS response")
 	})
 
 	ts.Run("STS call fails", func() {
@@ -438,8 +439,8 @@ func (ts *AWSHelpersTestSuite) TestGetAWSSessionToken() {
 			},
 		)
 
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errSTSCallFailed)
+		ts.Error(err)
+		ts.ErrorIs(err, errSTSCallFailed)
 	})
 }
 
@@ -465,15 +466,15 @@ func (ts *AWSHelpersTestSuite) TestCheckAWSSession() {
 			func() error {
 				accountID, userARN, isValid := checkAWSSession("default")
 
-				ts.Assert().True(isValid)
-				ts.Assert().Equal("123456789012", accountID)
-				ts.Assert().Equal("arn:aws:iam::123456789012:user/testuser", userARN)
+				ts.True(isValid)
+				ts.Equal("123456789012", accountID)
+				ts.Equal("arn:aws:iam::123456789012:user/testuser", userARN)
 
 				return nil
 			},
 		)
 
-		ts.Assert().NoError(err)
+		ts.NoError(err)
 	})
 
 	ts.Run("invalid session", func() {
@@ -488,12 +489,12 @@ func (ts *AWSHelpersTestSuite) TestCheckAWSSession() {
 			func() any { return GetRunner() },
 			func() error {
 				_, _, isValid := checkAWSSession("expired")
-				ts.Assert().False(isValid)
+				ts.False(isValid)
 				return nil
 			},
 		)
 
-		ts.Assert().NoError(err)
+		ts.NoError(err)
 	})
 }
 
@@ -510,8 +511,8 @@ mfa_serial = arn:aws:iam::123456789012:mfa/testuser
 		ts.Require().NoError(err)
 
 		serial, err := getMFASerial("default")
-		ts.Assert().NoError(err)
-		ts.Assert().Equal("arn:aws:iam::123456789012:mfa/testuser", serial)
+		ts.NoError(err)
+		ts.Equal("arn:aws:iam::123456789012:mfa/testuser", serial)
 	})
 
 	ts.Run("MFA serial not found", func() {
@@ -524,8 +525,8 @@ region = us-east-1
 		ts.Require().NoError(err)
 
 		_, err = getMFASerial("default")
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errMFASerialNotFound)
+		ts.Error(err)
+		ts.ErrorIs(err, errMFASerialNotFound)
 	})
 
 	ts.Run("config file missing", func() {
@@ -533,8 +534,8 @@ region = us-east-1
 		os.Remove(filepath.Join(ts.awsDir, awsConfigFile))
 
 		_, err := getMFASerial("default")
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errMFASerialNotFound)
+		ts.Error(err)
+		ts.ErrorIs(err, errMFASerialNotFound)
 	})
 }
 

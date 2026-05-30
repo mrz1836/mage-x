@@ -4,6 +4,7 @@
 package mage
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -269,7 +270,7 @@ func (ts *AgentOSTestSuite) TestCheckAgentOSPrerequisites() {
 	if err != nil {
 		// Verify it's one of the expected errors
 		ts.Require().True(
-			err == errCurlNotInstalled || err == errBashNotInstalled,
+			errors.Is(err, errCurlNotInstalled) || errors.Is(err, errBashNotInstalled),
 			"Should fail with curl or bash not installed error",
 		)
 	}

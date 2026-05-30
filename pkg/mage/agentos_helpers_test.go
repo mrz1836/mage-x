@@ -26,6 +26,7 @@ var (
 // AgentOSHelpersTestSuite defines the test suite for AgentOS helper functions
 type AgentOSHelpersTestSuite struct {
 	suite.Suite
+
 	env *testutil.TestEnvironment
 }
 
@@ -96,7 +97,7 @@ func (ts *AgentOSHelpersTestSuite) TestCheckAgentOSPrerequisites() {
 				// In CI/local environments with curl and bash, this may not fail
 				// The test validates the error types are correct if it does fail
 				if err != nil {
-					ts.Assert().ErrorIs(err, tt.wantError)
+					ts.ErrorIs(err, tt.wantError)
 				}
 			}
 			_ = originalCommandExists // Suppress unused warning
@@ -150,7 +151,7 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSHomePath() {
 			// Derive the expected absolute path the same way production does:
 			// filepath.Join(<resolved home>, <relative dir>).
 			wantPath := filepath.Join(tmpHome, tt.wantRelDir)
-			ts.Assert().Equal(wantPath, path)
+			ts.Equal(wantPath, path)
 		})
 	}
 }
@@ -188,7 +189,7 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSProjectDir() {
 			}
 
 			result := getAgentOSProjectDir(config)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 		})
 	}
 }
@@ -203,7 +204,7 @@ func (ts *AgentOSHelpersTestSuite) TestIsAgentOSBaseInstalled() {
 		}
 
 		result := isAgentOSBaseInstalled(config)
-		ts.Assert().False(result)
+		ts.False(result)
 	})
 
 	ts.Run("base installed", func() {
@@ -228,7 +229,7 @@ func (ts *AgentOSHelpersTestSuite) TestIsAgentOSBaseInstalled() {
 		defer os.Setenv("HOME", oldHome)
 
 		result := isAgentOSBaseInstalled(config)
-		ts.Assert().True(result)
+		ts.True(result)
 	})
 }
 
@@ -327,11 +328,11 @@ func (ts *AgentOSHelpersTestSuite) TestBuildAgentOSInstallArgs() {
 			}
 
 			for _, expected := range tt.expectedContains {
-				ts.Assert().Contains(argsStr, expected, "args should contain %s", expected)
+				ts.Contains(argsStr, expected, "args should contain %s", expected)
 			}
 
 			for _, missing := range tt.expectedMissing {
-				ts.Assert().NotContains(argsStr, missing, "args should not contain %s", missing)
+				ts.NotContains(argsStr, missing, "args should not contain %s", missing)
 			}
 		})
 	}
@@ -408,10 +409,10 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSVersion() {
 			version, err := getAgentOSVersion(config)
 
 			if tt.wantError {
-				ts.Assert().Error(err)
+				ts.Error(err)
 			} else {
-				ts.Assert().NoError(err)
-				ts.Assert().Equal(tt.wantVersion, version)
+				ts.NoError(err)
+				ts.Equal(tt.wantVersion, version)
 			}
 		})
 	}
@@ -433,7 +434,7 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		}
 
 		err = verifyAgentOSInstallation(config)
-		ts.Assert().NoError(err)
+		ts.NoError(err)
 	})
 
 	ts.Run("project directory missing", func() {
@@ -444,8 +445,8 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		}
 
 		err := verifyAgentOSInstallation(config)
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errAgentOSProjectNotFound)
+		ts.Error(err)
+		ts.ErrorIs(err, errAgentOSProjectNotFound)
 	})
 
 	ts.Run("standards directory missing", func() {
@@ -461,8 +462,8 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		}
 
 		err = verifyAgentOSInstallation(config)
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errAgentOSStandardsNotFound)
+		ts.Error(err)
+		ts.ErrorIs(err, errAgentOSStandardsNotFound)
 	})
 }
 
@@ -478,7 +479,7 @@ func (ts *AgentOSHelpersTestSuite) TestPrintAgentOSInstallSuccess() {
 		},
 	}
 
-	ts.Assert().NotPanics(func() {
+	ts.NotPanics(func() {
 		printAgentOSInstallSuccess(config)
 	})
 }
@@ -514,7 +515,7 @@ func (ts *AgentOSHelpersTestSuite) TestPrintAgentOSUpgradeSummary() {
 
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
-			ts.Assert().NotPanics(func() {
+			ts.NotPanics(func() {
 				printAgentOSUpgradeSummary(tt.oldVersion, tt.newVersion)
 			})
 		})

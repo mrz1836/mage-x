@@ -294,7 +294,7 @@ func TestBuildTagConfigurationEdgeCases(t *testing.T) {
 
 		tags, err := GetDiscoveredBuildTags(config, tempDir)
 		require.NoError(t, err)
-		assert.Greater(t, len(tags), 0)
+		assert.NotEmpty(t, tags)
 	})
 
 	t.Run("WhitespaceInExclusions", func(t *testing.T) {

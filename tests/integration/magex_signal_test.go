@@ -153,7 +153,7 @@ func TestMagex_SIGINTCleanExit_ExitCode130(t *testing.T) {
 }
 
 // TestMagex_SIGTERMCleanExit_ExitCode143 proves the CI path: SIGTERM (which
-// CI runners like GitHub Actions send when cancelling a job) is handled and
+// CI runners like GitHub Actions send when canceling a job) is handled and
 // produces exit code 143.
 func TestMagex_SIGTERMCleanExit_ExitCode143(t *testing.T) {
 	bin := buildMagexForSignalTest(t)

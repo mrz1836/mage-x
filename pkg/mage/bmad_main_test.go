@@ -25,6 +25,7 @@ var (
 // BmadMainTestSuite defines the test suite for Bmad main methods
 type BmadMainTestSuite struct {
 	suite.Suite
+
 	env  *testutil.TestEnvironment
 	bmad Bmad
 }
@@ -65,7 +66,7 @@ bmad:
 	// Either succeeds (npm present) or fails with appropriate error
 	if err != nil {
 		// Should be a prerequisite error
-		ts.Assert().True(
+		ts.True(
 			errors.Is(err, errNpmNotInstalled) || errors.Is(err, errNpxNotInstalled),
 			"should be npm or npx error",
 		)
@@ -148,7 +149,7 @@ func (ts *BmadMainTestSuite) TestGetBmadProjectDir() {
 			}
 
 			result := getBmadProjectDir(config)
-			ts.Assert().Equal(tt.want, result)
+			ts.Equal(tt.want, result)
 		})
 	}
 }
@@ -235,15 +236,15 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 						return err
 					}
 
-					ts.Assert().Equal(tt.wantVersion, version)
+					ts.Equal(tt.wantVersion, version)
 					return err
 				},
 			)
 
 			if tt.wantError {
-				ts.Assert().Error(err)
+				ts.Error(err)
 			} else {
-				ts.Assert().NoError(err)
+				ts.NoError(err)
 			}
 		})
 	}
@@ -264,7 +265,7 @@ func (ts *BmadMainTestSuite) TestVerifyBmadInstallation() {
 		}
 
 		err = verifyBmadInstallation(config)
-		ts.Assert().NoError(err)
+		ts.NoError(err)
 	})
 
 	ts.Run("project directory missing", func() {
@@ -275,8 +276,8 @@ func (ts *BmadMainTestSuite) TestVerifyBmadInstallation() {
 		}
 
 		err := verifyBmadInstallation(config)
-		ts.Assert().Error(err)
-		ts.Assert().ErrorIs(err, errBmadNotInstalled)
+		ts.Error(err)
+		ts.ErrorIs(err, errBmadNotInstalled)
 	})
 }
 
@@ -287,7 +288,7 @@ func (ts *BmadMainTestSuite) TestCheckBmadPrerequisites() {
 	err := checkBmadPrerequisites()
 	// Either succeeds (prerequisites present) or returns specific error
 	if err != nil {
-		ts.Assert().True(
+		ts.True(
 			errors.Is(err, errNpmNotInstalled) || errors.Is(err, errNpxNotInstalled),
 			"should return specific prerequisite error",
 		)
@@ -330,7 +331,7 @@ func (ts *BmadMainTestSuite) TestPrintBmadUpgradeSummary() {
 
 	for _, tt := range tests {
 		ts.Run(tt.name, func() {
-			ts.Assert().NotPanics(func() {
+			ts.NotPanics(func() {
 				printBmadUpgradeSummary(tt.oldVersion, tt.newVersion)
 			})
 		})
@@ -377,7 +378,7 @@ func (ts *BmadMainTestSuite) TestBmadConfigVariations() {
 
 			// Verify getter functions work correctly
 			projectDir := getBmadProjectDir(config)
-			ts.Assert().Equal(tt.projectDir, projectDir)
+			ts.Equal(tt.projectDir, projectDir)
 
 			// Verify package spec construction
 			expectedPackageSpec := tt.packageName + tt.versionTag
@@ -396,7 +397,7 @@ func (ts *BmadMainTestSuite) TestBmadConfigVariations() {
 				},
 			)
 
-			ts.Assert().NoError(err)
+			ts.NoError(err)
 		})
 	}
 }

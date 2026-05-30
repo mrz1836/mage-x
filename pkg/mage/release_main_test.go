@@ -27,6 +27,7 @@ var (
 // ReleaseMainTestSuite defines the test suite for Release main methods
 type ReleaseMainTestSuite struct {
 	suite.Suite
+
 	env     *testutil.TestEnvironment
 	release Release
 }
@@ -56,7 +57,7 @@ func (ts *ReleaseMainTestSuite) TestEnsureGoreleaser_AlreadyInstalled() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestEnsureGoreleaser_NeedsInstall tests when goreleaser needs installation
@@ -122,7 +123,7 @@ version: 2
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestValidate_DirtyRepo tests validation with uncommitted changes
@@ -138,8 +139,8 @@ func (ts *ReleaseMainTestSuite) TestValidate_DirtyRepo() {
 		},
 	)
 
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errGitDirtyWorkingTree)
+	ts.Error(err)
+	ts.ErrorIs(err, errGitDirtyWorkingTree)
 }
 
 // TestValidate_NoTags tests validation with no git tags
@@ -158,8 +159,8 @@ func (ts *ReleaseMainTestSuite) TestValidate_NoTags() {
 		},
 	)
 
-	ts.Assert().Error(err)
-	ts.Assert().Contains(err.Error(), "no git tags found")
+	ts.Error(err)
+	ts.Contains(err.Error(), "no git tags found")
 }
 
 // TestCheck_ConfigExists tests Check with existing config
@@ -186,7 +187,7 @@ func (ts *ReleaseMainTestSuite) TestCheck_ConfigExists() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestCheck_NoConfig tests Check with missing config
@@ -206,8 +207,8 @@ func (ts *ReleaseMainTestSuite) TestCheck_NoConfig() {
 		},
 	)
 
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errNoGoreleaserConfig)
+	ts.Error(err)
+	ts.ErrorIs(err, errNoGoreleaserConfig)
 }
 
 // TestInit_Success tests Init creating config
@@ -230,7 +231,7 @@ func (ts *ReleaseMainTestSuite) TestInit_Success() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestInit_ConfigExists tests Init with existing config
@@ -245,8 +246,8 @@ func (ts *ReleaseMainTestSuite) TestInit_ConfigExists() {
 
 	err = ts.release.Init()
 
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errGoreleaserConfigExists)
+	ts.Error(err)
+	ts.ErrorIs(err, errGoreleaserConfigExists)
 }
 
 // TestClean_Success tests Clean removing dist directory
@@ -284,7 +285,7 @@ func (ts *ReleaseMainTestSuite) TestClean_Success() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestChangelog_NoTags tests Changelog with no previous tags
@@ -303,7 +304,7 @@ func (ts *ReleaseMainTestSuite) TestChangelog_NoTags() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestChangelog_WithTag tests Changelog since last tag
@@ -322,7 +323,7 @@ func (ts *ReleaseMainTestSuite) TestChangelog_WithTag() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestGoreleaserConfigFiles tests config file detection
@@ -330,8 +331,8 @@ func (ts *ReleaseMainTestSuite) TestGoreleaserConfigFiles() {
 	files := GoreleaserConfigFiles()
 
 	// Should return a list of possible config file names
-	ts.Assert().NotEmpty(files)
-	ts.Assert().Contains(files, ".goreleaser.yml")
+	ts.NotEmpty(files)
+	ts.Contains(files, ".goreleaser.yml")
 }
 
 // TestReleaseHelpers tests various helper functions
@@ -360,7 +361,7 @@ func (ts *ReleaseMainTestSuite) TestReleaseHelpers() {
 					break
 				}
 			}
-			ts.Assert().True(found, "config file %s should be in list", filename)
+			ts.True(found, "config file %s should be in list", filename)
 
 			os.Remove(configPath)
 		}
@@ -374,7 +375,7 @@ func (ts *ReleaseMainTestSuite) TestReleaseHelpers() {
 		}
 
 		// This is implicitly tested by buildAndInstallFromTag logic
-		ts.Assert().NotEmpty(expectedName)
+		ts.NotEmpty(expectedName)
 	})
 
 	ts.Run("installation path detection", func() {
@@ -384,7 +385,7 @@ func (ts *ReleaseMainTestSuite) TestReleaseHelpers() {
 			if runtime.GOOS == OSWindows {
 				expectedPath += ".exe"
 			}
-			ts.Assert().NotEmpty(expectedPath)
+			ts.NotEmpty(expectedPath)
 		}
 	})
 }
@@ -405,7 +406,7 @@ func (ts *ReleaseMainTestSuite) TestReleaseSnapshot() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestReleaseTest tests test release (dry run)
@@ -424,7 +425,7 @@ func (ts *ReleaseMainTestSuite) TestReleaseTest() {
 		},
 	)
 
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestReleaseMainTestSuite runs the test suite

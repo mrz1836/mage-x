@@ -927,9 +927,9 @@ func (ts *BuildTestSuite) TestPackageDiscoveryUtilities() {
 				packages, err := ts.build.discoverPackages("")
 				ts.Require().NoError(err)
 				ts.Require().Len(packages, 3)
-				ts.Assert().Contains(packages, "github.com/example/pkg1")
-				ts.Assert().Contains(packages, "github.com/example/pkg2")
-				ts.Assert().Contains(packages, "github.com/example/pkg3")
+				ts.Contains(packages, "github.com/example/pkg1")
+				ts.Contains(packages, "github.com/example/pkg2")
+				ts.Contains(packages, "github.com/example/pkg3")
 			},
 		)
 	})
@@ -948,8 +948,8 @@ func (ts *BuildTestSuite) TestPackageDiscoveryUtilities() {
 				mainPkgs, err := ts.build.findMainPackages()
 				ts.Require().NoError(err)
 				ts.Require().Len(mainPkgs, 2)
-				ts.Assert().Contains(mainPkgs, "github.com/test/cmd/app")
-				ts.Assert().Contains(mainPkgs, "github.com/test/cmd/tool")
+				ts.Contains(mainPkgs, "github.com/test/cmd/app")
+				ts.Contains(mainPkgs, "github.com/test/cmd/tool")
 				return nil
 			},
 		)
@@ -962,20 +962,20 @@ func (ts *BuildTestSuite) TestPackageDiscoveryUtilities() {
 		// Test batch size 2
 		batches := ts.build.splitIntoBatches(packages, 2)
 		ts.Require().Len(batches, 3) // 5 packages / 2 per batch = 3 batches
-		ts.Assert().Len(batches[0], 2)
-		ts.Assert().Len(batches[1], 2)
-		ts.Assert().Len(batches[2], 1) // Last batch has remainder
+		ts.Len(batches[0], 2)
+		ts.Len(batches[1], 2)
+		ts.Len(batches[2], 1) // Last batch has remainder
 
 		// Test batch size 3
 		batches = ts.build.splitIntoBatches(packages, 3)
 		ts.Require().Len(batches, 2) // 5 packages / 3 per batch = 2 batches
-		ts.Assert().Len(batches[0], 3)
-		ts.Assert().Len(batches[1], 2)
+		ts.Len(batches[0], 3)
+		ts.Len(batches[1], 2)
 
 		// Test invalid batch size (should default to 10)
 		batches = ts.build.splitIntoBatches(packages, 0)
 		ts.Require().Len(batches, 1) // All in one batch since we have fewer than 10
-		ts.Assert().Len(batches[0], 5)
+		ts.Len(batches[0], 5)
 	})
 }
 

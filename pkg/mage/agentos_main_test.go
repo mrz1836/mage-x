@@ -24,6 +24,7 @@ var (
 // AgentOSMainTestSuite defines the test suite for AgentOS main methods
 type AgentOSMainTestSuite struct {
 	suite.Suite
+
 	env     *testutil.TestEnvironment
 	agentos AgentOS
 }
@@ -65,8 +66,8 @@ agentos:
 	err = ts.agentos.Install()
 
 	// Should return errAgentOSAlreadyInstalled
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errAgentOSAlreadyInstalled)
+	ts.Error(err)
+	ts.ErrorIs(err, errAgentOSAlreadyInstalled)
 }
 
 // TestCheck_NoBase tests Check when base is not installed
@@ -94,8 +95,8 @@ agentos:
 	err = ts.agentos.Check()
 
 	// Should return errAgentOSNotInstalled
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errAgentOSNotInstalled)
+	ts.Error(err)
+	ts.ErrorIs(err, errAgentOSNotInstalled)
 }
 
 // TestCheck_BaseInstalled tests Check with base installed
@@ -141,7 +142,7 @@ agentos:
 	err = ts.agentos.Check()
 
 	// Should succeed (base and project exist)
-	ts.Assert().NoError(err)
+	ts.NoError(err)
 }
 
 // TestUpgrade_NoBase tests Upgrade when base is not installed
@@ -169,8 +170,8 @@ agentos:
 	err = ts.agentos.Upgrade()
 
 	// Should return errAgentOSNotInstalled
-	ts.Assert().Error(err)
-	ts.Assert().ErrorIs(err, errAgentOSNotInstalled)
+	ts.Error(err)
+	ts.ErrorIs(err, errAgentOSNotInstalled)
 }
 
 // TestAgentOSPathHelpers tests path helper functions with edge cases
@@ -183,7 +184,7 @@ func (ts *AgentOSMainTestSuite) TestAgentOSPathHelpers() {
 		}
 
 		path := getAgentOSHomePath(config)
-		ts.Assert().Contains(path, "very/long/custom/path/to/agent-os/installation")
+		ts.Contains(path, "very/long/custom/path/to/agent-os/installation")
 	})
 
 	ts.Run("project dir with relative path", func() {
@@ -194,7 +195,7 @@ func (ts *AgentOSMainTestSuite) TestAgentOSPathHelpers() {
 		}
 
 		path := getAgentOSProjectDir(config)
-		ts.Assert().Equal("./relative/path/to/project", path)
+		ts.Equal("./relative/path/to/project", path)
 	})
 
 	ts.Run("project dir with tilde expansion", func() {
@@ -205,7 +206,7 @@ func (ts *AgentOSMainTestSuite) TestAgentOSPathHelpers() {
 		}
 
 		path := getAgentOSProjectDir(config)
-		ts.Assert().Equal("~/agent-os-custom", path)
+		ts.Equal("~/agent-os-custom", path)
 	})
 }
 
@@ -265,23 +266,23 @@ func (ts *AgentOSMainTestSuite) TestAgentOSConfigVariations() {
 
 			// Verify arg count matches expectations
 			if tt.profile != "" && tt.profile != "default" {
-				ts.Assert().GreaterOrEqual(len(args), 2, "should have profile args")
+				ts.GreaterOrEqual(len(args), 2, "should have profile args")
 			}
 
 			if !tt.claudeCodeCmds {
-				ts.Assert().Contains(args, "--no-claude-code-commands")
+				ts.Contains(args, "--no-claude-code-commands")
 			}
 
 			if tt.agentOSCmds {
-				ts.Assert().Contains(args, "--agent-os-commands")
+				ts.Contains(args, "--agent-os-commands")
 			}
 
 			if !tt.subagents {
-				ts.Assert().Contains(args, "--no-subagents")
+				ts.Contains(args, "--no-subagents")
 			}
 
 			if tt.standardsAsSkills {
-				ts.Assert().Contains(args, "--standards-as-skills")
+				ts.Contains(args, "--standards-as-skills")
 			}
 		})
 	}
@@ -357,10 +358,10 @@ func (ts *AgentOSMainTestSuite) TestAgentOSVersionParsing() {
 			version, err := getAgentOSVersion(config)
 
 			if tt.wantError {
-				ts.Assert().Error(err)
+				ts.Error(err)
 			} else {
-				ts.Assert().NoError(err)
-				ts.Assert().Equal(tt.wantVersion, version)
+				ts.NoError(err)
+				ts.Equal(tt.wantVersion, version)
 			}
 		})
 	}

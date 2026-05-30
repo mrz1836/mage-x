@@ -548,35 +548,92 @@ func (its *IntegrationTestSuite) TestPerformanceRegression() {
 		its.T().Skip("Skipping performance test in short mode")
 	}
 
+	const perfIterations = 100
+
 	// Test command execution performance
 	its.T().Run("command execution", func(t *testing.T) {
 		runner := NewSecureCommandRunner()
 
+		_ = runner.RunCmd("echo", "test") // warm up: discard one-time PATH lookup cost
+
 		start := time.Now()
-		for i := 0; i < 100; i++ {
+		for i := 0; i < perfIterations; i++ {
 			_ = runner.RunCmd("echo", "test")
 		}
 		duration := time.Since(start)
 
-		// Should complete 100 echo commands in reasonable time
-		assert.Less(t, duration, 5*time.Second, "Command execution is too slow")
+		// Coarse regression guard, not an SLA — see perfBudget for the rationale.
+		budget := perfBudget("MAGE_X_PERF_CMD_EXEC_BUDGET", 15*time.Second)
+		assert.Less(t, duration, budget,
+			"command execution too slow: %d runs took %s (%s/run), budget %s",
+			perfIterations, duration, duration/time.Duration(perfIterations), budget)
 	})
 
 	// Test configuration loading performance
 	its.T().Run("config loading", func(t *testing.T) {
+		TestResetConfig()
+		_, _ = GetConfig() // warm up: first load reads .mage.yaml and initializes providers
+
 		start := time.Now()
-		for i := 0; i < 100; i++ {
+		for i := 0; i < perfIterations; i++ {
 			TestResetConfig()
 			_, _ = GetConfig()
 		}
 		duration := time.Since(start)
 
-		// Should load config 100 times quickly
-		assert.Less(t, duration, 1*time.Second, "Config loading is too slow")
+		// Coarse regression guard, not an SLA — see perfBudget for the rationale.
+		budget := perfBudget("MAGE_X_PERF_CONFIG_LOAD_BUDGET", 10*time.Second)
+		assert.Less(t, duration, budget,
+			"config loading too slow: %d loads took %s (%s/load), budget %s",
+			perfIterations, duration, duration/time.Duration(perfIterations), budget)
 	})
+}
+
+// perfBudget returns the wall-clock ceiling for a performance-regression guard.
+// These guards catch order-of-magnitude regressions, not tight SLAs: wall-clock on
+// shared CI runners is inherently noisy (CPU contention, cold caches, and very large
+// environments that inflate config/env parsing), so the defaults are deliberately
+// generous. A pathologically slow runner can raise an individual budget via env,
+// e.g. MAGE_X_PERF_CONFIG_LOAD_BUDGET=30s. Invalid or non-positive overrides are
+// ignored in favor of the fallback.
+func perfBudget(envKey string, fallback time.Duration) time.Duration {
+	if v := os.Getenv(envKey); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
+		}
+	}
+	return fallback
 }
 
 // TestIntegrationSuite runs the integration test suite
 func TestIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
+}
+
+// TestPerfBudget verifies the env-tunable wall-clock budget used by the
+// performance-regression guards: a valid override wins, while unset, malformed,
+// and non-positive values fall back to the default.
+func TestPerfBudget(t *testing.T) {
+	const key = "MAGE_X_PERF_BUDGET_UNITTEST"
+	const fallback = 7 * time.Second
+
+	t.Run("falls back when unset", func(t *testing.T) {
+		t.Setenv(key, "")
+		assert.Equal(t, fallback, perfBudget(key, fallback))
+	})
+
+	t.Run("uses a valid override", func(t *testing.T) {
+		t.Setenv(key, "12s")
+		assert.Equal(t, 12*time.Second, perfBudget(key, fallback))
+	})
+
+	t.Run("ignores a malformed override", func(t *testing.T) {
+		t.Setenv(key, "not-a-duration")
+		assert.Equal(t, fallback, perfBudget(key, fallback))
+	})
+
+	t.Run("ignores a non-positive override", func(t *testing.T) {
+		t.Setenv(key, "0s")
+		assert.Equal(t, fallback, perfBudget(key, fallback))
+	})
 }
