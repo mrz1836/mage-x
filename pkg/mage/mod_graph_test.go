@@ -4,18 +4,11 @@
 package mage
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
-)
-
-// Static test errors
-var (
-	errModGraphTestFailed = errors.New("mod graph test failed")
-	errModGraphCmdFailed  = errors.New("mod graph command failed")
 )
 
 // ModGraphTestSuite defines the test suite for mod graph functions
@@ -392,7 +385,7 @@ github.com/test/app@v1.0.0 github.com/stretchr/testify@v1.8.0
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(mockGraphOutput, nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestRunner,
 		func() any { return GetRunner() },
 		func() error {
 			// Test with tree format
@@ -411,7 +404,7 @@ func (ts *ModGraphTestSuite) TestModGraph_JSONFormat() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(mockGraphOutput, nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.mod.Graph("format=json")
@@ -429,7 +422,7 @@ func (ts *ModGraphTestSuite) TestModGraph_DOTFormat() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(mockGraphOutput, nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.mod.Graph("format=dot")
@@ -447,7 +440,7 @@ func (ts *ModGraphTestSuite) TestModGraph_MermaidFormat() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(mockGraphOutput, nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.mod.Graph("format=mermaid")
@@ -465,14 +458,14 @@ func (ts *ModGraphTestSuite) TestModGraph_UnsupportedFormat() {
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(mockGraphOutput, nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.mod.Graph("format=invalid")
 		},
 	)
 
-	ts.Error(err)
+	ts.Require().Error(err)
 	ts.Contains(err.Error(), "unsupported format")
 }
 
@@ -485,7 +478,7 @@ github.com/test/app@v1.0.0 github.com/stretchr/testify@v1.8.0
 	ts.env.Runner.On("RunCmdOutput", "go", []string{"mod", "graph"}).Return(mockGraphOutput, nil)
 
 	err := ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.mod.Graph("filter=testify", "format=tree")
@@ -534,7 +527,7 @@ mfa_serial = arn:aws:iam::123:mfa/user
 	ini2 := parseAWSINI(output)
 
 	// Should have same number of sections
-	ts.Assert().Len(ini2.Sections, len(ini.Sections))
+	ts.Len(ini2.Sections, len(ini.Sections))
 
 	// Check values are preserved
 	for _, section1 := range ini.Sections {

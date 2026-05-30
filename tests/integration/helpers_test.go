@@ -4,73 +4,119 @@
 package integration
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
+	"testing"
+	"time"
 )
+
+const integrationCommandTimeout = 2 * time.Minute
+
+func TestMain(m *testing.M) {
+	os.Exit(runTestMain(m))
+}
+
+func runTestMain(m *testing.M) int {
+	cacheRoot, err := os.MkdirTemp("", "magex-integration-cache-*")
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "failed to create integration cache root: %v\n", err)
+		return 1
+	}
+	defer func() {
+		if removeErr := os.RemoveAll(cacheRoot); removeErr != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "failed to remove integration cache root: %v\n", removeErr)
+		}
+	}()
+
+	cacheDirs := map[string]string{
+		"GOCACHE":        filepath.Join(cacheRoot, "go-build"),
+		"MAGEFILE_CACHE": filepath.Join(cacheRoot, "magefile"),
+	}
+	for key, dir := range cacheDirs {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "failed to create %s directory: %v\n", key, err)
+			return 1
+		}
+		if err := os.Setenv(key, dir); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "failed to set %s: %v\n", key, err)
+			return 1
+		}
+	}
+	if err := os.Setenv("GOTELEMETRY", "off"); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "failed to disable Go telemetry: %v\n", err)
+		return 1
+	}
+
+	return m.Run()
+}
+
+func testCommand(t *testing.T, name string, args ...string) *exec.Cmd {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(t.Context(), integrationCommandTimeout)
+	t.Cleanup(cancel)
+
+	return exec.CommandContext(ctx, name, args...) //nolint:gosec // integration tests execute fixed, test-controlled commands.
+}
+
+func cleanupFile(t *testing.T, path string) {
+	t.Helper()
+
+	t.Cleanup(func() {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			t.Errorf("remove %s: %v", path, err)
+		}
+	})
+}
 
 // countTreeDepth accurately counts the maximum depth in a dependency tree output
 // Returns the maximum depth found in the tree structure
 func countTreeDepth(output string) int {
-	lines := strings.Split(output, "\n")
 	maxDepth := 0
 
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
+	for _, line := range strings.Split(output, "\n") {
+		if !isDependencyTreeLine(line) {
 			continue
 		}
 
-		// Count the depth by analyzing the tree structure
-		// Root has no indentation (depth 0)
-		// Level 1 has "├──" or "└──" with some spacing (depth 1)
-		// Level 2 has "│   ├──" or "│   └──" (depth 2)
-		// Each "│   " pattern indicates one level of nesting
-
-		if strings.Contains(line, "├──") || strings.Contains(line, "└──") {
-			depth := 0
-
-			// Convert to runes to handle Unicode characters properly
-			runes := []rune(line)
-			i := 0
-
-			// Count vertical pipes that indicate nesting levels
-			for i < len(runes) {
-				// Look for "│   " pattern (pipe followed by spaces)
-				if i+4 <= len(runes) && string(runes[i:i+4]) == "│   " {
-					depth++
-					i += 4
-				} else if i+3 <= len(runes) && string(runes[i:i+3]) == "│  " {
-					// Handle slight variations in spacing
-					depth++
-					i += 3
-				} else if runes[i] == '├' || runes[i] == '└' {
-					// Found the branch symbol, this line represents depth+1
-					depth++
-					break
-				} else if runes[i] == ' ' || runes[i] == '\t' {
-					// Skip whitespace
-					i++
-				} else {
-					// Hit content, break
-					break
-				}
-			}
-
-			if depth > maxDepth {
-				maxDepth = depth
-			}
-		} else if strings.Contains(line, "testmodule") || strings.Contains(line, "Dependency Tree:") {
-			// Root module or header - depth 0
-			// Don't update maxDepth as this could be a header
+		if depth := treeLineDepth(line); depth > maxDepth {
+			maxDepth = depth
 		}
 	}
 
 	return maxDepth
 }
 
-// verifyDepthLimit checks that the tree output respects the specified depth limit
-func verifyDepthLimit(output string, expectedMaxDepth int) bool {
-	actualMaxDepth := countTreeDepth(output)
-	return actualMaxDepth <= expectedMaxDepth
+func isDependencyTreeLine(line string) bool {
+	return strings.Contains(line, "├──") || strings.Contains(line, "└──")
+}
+
+func treeLineDepth(line string) int {
+	depth := 0
+	runes := []rune(line)
+
+	for i := 0; i < len(runes); {
+		switch {
+		case i+4 <= len(runes) && string(runes[i:i+4]) == "│   ":
+			depth++
+			i += 4
+		case i+3 <= len(runes) && string(runes[i:i+3]) == "│  ":
+			depth++
+			i += 3
+		case runes[i] == '├' || runes[i] == '└':
+			return depth + 1
+		case runes[i] == ' ' || runes[i] == '\t':
+			i++
+		default:
+			return depth
+		}
+	}
+
+	return depth
 }
 
 // hasTreeSymbols checks if the output contains dependency tree symbols
@@ -95,32 +141,6 @@ func countDependencyLines(output string) int {
 	}
 
 	return count
-}
-
-// extractDependencyNames extracts all dependency names from the tree output
-func extractDependencyNames(output string) []string {
-	lines := strings.Split(output, "\n")
-	var deps []string
-
-	for _, line := range lines {
-		if strings.Contains(line, "├──") || strings.Contains(line, "└──") {
-			// Extract the part after the tree symbols
-			parts := strings.Fields(line)
-			for _, part := range parts {
-				// Look for package names (containing dots or slashes)
-				if strings.Contains(part, ".") || strings.Contains(part, "/") {
-					// Clean up version info if present
-					if idx := strings.Index(part, "@"); idx != -1 {
-						part = part[:idx]
-					}
-					deps = append(deps, part)
-					break
-				}
-			}
-		}
-	}
-
-	return deps
 }
 
 // compareTreeOutputs compares two tree outputs and returns analysis

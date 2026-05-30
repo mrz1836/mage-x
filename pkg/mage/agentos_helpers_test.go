@@ -4,7 +4,6 @@
 package mage
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,15 +11,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
-)
-
-// Static test errors for linter compliance
-var (
-	errAgentOSTestFailed       = errors.New("test failed")
-	errAgentOSCommandNotFound  = errors.New("command not found")
-	errAgentOSScriptFailed     = errors.New("script execution failed")
-	errAgentOSVersionInvalid   = errors.New("invalid version")
-	errAgentOSDirectoryMissing = errors.New("directory missing")
 )
 
 // AgentOSHelpersTestSuite defines the test suite for AgentOS helper functions
@@ -34,6 +24,7 @@ type AgentOSHelpersTestSuite struct {
 func (ts *AgentOSHelpersTestSuite) SetupTest() {
 	ts.env = testutil.NewTestEnvironment(ts.T())
 	ts.env.CreateGoMod("test/module")
+	ts.T().Setenv("GOTELEMETRY", "off")
 }
 
 // TearDownTest runs after each test
@@ -210,11 +201,11 @@ func (ts *AgentOSHelpersTestSuite) TestIsAgentOSBaseInstalled() {
 	ts.Run("base installed", func() {
 		// Create config file
 		homeDir := filepath.Join(ts.env.TempDir, ".agent-os")
-		err := os.MkdirAll(homeDir, 0o755)
+		err := os.MkdirAll(homeDir, 0o750)
 		ts.Require().NoError(err)
 
 		configFile := filepath.Join(homeDir, DefaultAgentOSConfigFile)
-		err = os.WriteFile(configFile, []byte("version: v1.0.0\n"), 0o644)
+		err = os.WriteFile(configFile, []byte("version: v1.0.0\n"), 0o600)
 		ts.Require().NoError(err)
 
 		config := &Config{
@@ -223,10 +214,7 @@ func (ts *AgentOSHelpersTestSuite) TestIsAgentOSBaseInstalled() {
 			},
 		}
 
-		// Override user home to temp dir
-		oldHome := os.Getenv("HOME")
-		os.Setenv("HOME", ts.env.TempDir)
-		defer os.Setenv("HOME", oldHome)
+		ts.T().Setenv("HOME", ts.env.TempDir)
 
 		result := isAgentOSBaseInstalled(config)
 		ts.True(result)
@@ -388,11 +376,11 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSVersion() {
 		ts.Run(tt.name, func() {
 			// Create config file
 			homeDir := filepath.Join(ts.env.TempDir, ".agent-os-version-test-"+tt.name)
-			err := os.MkdirAll(homeDir, 0o755)
+			err := os.MkdirAll(homeDir, 0o750)
 			ts.Require().NoError(err)
 
 			configFile := filepath.Join(homeDir, DefaultAgentOSConfigFile)
-			err = os.WriteFile(configFile, []byte(tt.configYAML), 0o644)
+			err = os.WriteFile(configFile, []byte(tt.configYAML), 0o600)
 			ts.Require().NoError(err)
 
 			config := &Config{
@@ -401,17 +389,14 @@ func (ts *AgentOSHelpersTestSuite) TestGetAgentOSVersion() {
 				},
 			}
 
-			// Override user home
-			oldHome := os.Getenv("HOME")
-			os.Setenv("HOME", ts.env.TempDir)
-			defer os.Setenv("HOME", oldHome)
+			ts.T().Setenv("HOME", ts.env.TempDir)
 
 			version, err := getAgentOSVersion(config)
 
 			if tt.wantError {
-				ts.Error(err)
+				ts.Require().Error(err)
 			} else {
-				ts.NoError(err)
+				ts.Require().NoError(err)
 				ts.Equal(tt.wantVersion, version)
 			}
 		})
@@ -424,7 +409,7 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		// Create project directory and standards directory
 		projectDir := filepath.Join(ts.env.TempDir, "agent-os-project")
 		standardsDir := filepath.Join(projectDir, "standards")
-		err := os.MkdirAll(standardsDir, 0o755)
+		err := os.MkdirAll(standardsDir, 0o750)
 		ts.Require().NoError(err)
 
 		config := &Config{
@@ -434,7 +419,7 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		}
 
 		err = verifyAgentOSInstallation(config)
-		ts.NoError(err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("project directory missing", func() {
@@ -445,14 +430,14 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		}
 
 		err := verifyAgentOSInstallation(config)
-		ts.Error(err)
+		ts.Require().Error(err)
 		ts.ErrorIs(err, errAgentOSProjectNotFound)
 	})
 
 	ts.Run("standards directory missing", func() {
 		// Create project directory but not standards
 		projectDir := filepath.Join(ts.env.TempDir, "agent-os-project-no-standards")
-		err := os.MkdirAll(projectDir, 0o755)
+		err := os.MkdirAll(projectDir, 0o750)
 		ts.Require().NoError(err)
 
 		config := &Config{
@@ -462,7 +447,7 @@ func (ts *AgentOSHelpersTestSuite) TestVerifyAgentOSInstallation() {
 		}
 
 		err = verifyAgentOSInstallation(config)
-		ts.Error(err)
+		ts.Require().Error(err)
 		ts.ErrorIs(err, errAgentOSStandardsNotFound)
 	})
 }

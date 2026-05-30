@@ -21,6 +21,104 @@ import (
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
+func cleanupRemoveAll(t *testing.T, path string) {
+	t.Helper()
+	t.Cleanup(func() {
+		if err := os.RemoveAll(path); err != nil {
+			t.Logf("failed to remove %s: %v", path, err)
+		}
+	})
+}
+
+func cleanupRemove(t *testing.T, path string) {
+	t.Helper()
+	t.Cleanup(func() {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			t.Logf("failed to remove %s: %v", path, err)
+		}
+	})
+}
+
+func chdirForTest(t *testing.T, dir string) func() {
+	t.Helper()
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("Failed to change to test directory: %v", err)
+	}
+	return func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Errorf("failed to restore working directory %s: %v", originalDir, err)
+		}
+	}
+}
+
+func setenvForTest(t *testing.T, key, value string) {
+	t.Helper()
+	originalValue, wasSet := os.LookupEnv(key)
+	if err := os.Setenv(key, value); err != nil {
+		t.Fatalf("failed to set %s: %v", key, err)
+	}
+	t.Cleanup(func() {
+		var err error
+		if wasSet {
+			err = os.Setenv(key, originalValue)
+		} else {
+			err = os.Unsetenv(key)
+		}
+		if err != nil {
+			t.Errorf("failed to restore %s: %v", key, err)
+		}
+	})
+}
+
+func writeHTTPResponse(w http.ResponseWriter, data string) {
+	if _, err := w.Write([]byte(data)); err != nil {
+		return
+	}
+}
+
+func handlePartialContentWithResume(w http.ResponseWriter, r *http.Request, attempt *atomic.Int32, fullContent string) {
+	currentAttempt := attempt.Add(1)
+	if r.Header.Get("Range") != "" && currentAttempt > 1 {
+		// Resume request - return remaining content
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes 20-%d/%d", len(fullContent)-1, len(fullContent)))
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(fullContent)-20))
+		w.WriteHeader(http.StatusPartialContent)
+		writeHTTPResponse(w, fullContent[20:])
+		return
+	}
+
+	if currentAttempt != 1 {
+		return
+	}
+
+	// First attempt - return partial content then "disconnect"
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(fullContent)))
+	w.WriteHeader(http.StatusOK)
+	writeHTTPResponse(w, fullContent[:20]) // Only first 20 characters
+
+	// Flush the partial response to ensure it's sent
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+
+	// Simulate connection failure by hijacking the connection and closing it
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		return
+	}
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		return
+	}
+	if closeErr := conn.Close(); closeErr != nil {
+		return
+	}
+}
+
 // TestIntegration_ToolInstallationWithNetworkFailures tests tool installation
 // with various network failure scenarios
 func TestIntegration_ToolInstallationWithNetworkFailures(t *testing.T) {
@@ -53,18 +151,15 @@ func TestIntegration_ToolInstallationWithNetworkFailures(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create temp directory: %v", err)
 		}
-		defer os.RemoveAll(tempDir)
+		cleanupRemoveAll(t, tempDir)
 
 		// Set GOPATH temporarily
-		originalGOPATH := os.Getenv("GOPATH")
-		os.Setenv("GOPATH", tempDir)
-		defer os.Setenv("GOPATH", originalGOPATH)
+		setenvForTest(t, "GOPATH", tempDir)
 
 		// Set PATH to include our temp bin directory
 		binDir := filepath.Join(tempDir, "bin")
 		originalPATH := os.Getenv("PATH")
-		os.Setenv("PATH", binDir+string(os.PathListSeparator)+originalPATH)
-		defer os.Setenv("PATH", originalPATH)
+		setenvForTest(t, "PATH", binDir+string(os.PathListSeparator)+originalPATH)
 
 		// Test gofumpt installation with retry logic
 		format := Format{}
@@ -85,18 +180,15 @@ func TestIntegration_ToolInstallationWithNetworkFailures(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create temp directory: %v", err)
 		}
-		defer os.RemoveAll(tempDir)
+		cleanupRemoveAll(t, tempDir)
 
 		// Set GOPATH temporarily
-		originalGOPATH := os.Getenv("GOPATH")
-		os.Setenv("GOPATH", tempDir)
-		defer os.Setenv("GOPATH", originalGOPATH)
+		setenvForTest(t, "GOPATH", tempDir)
 
 		// Set PATH to include our temp bin directory
 		binDir := filepath.Join(tempDir, "bin")
 		originalPATH := os.Getenv("PATH")
-		os.Setenv("PATH", binDir+string(os.PathListSeparator)+originalPATH)
-		defer os.Setenv("PATH", originalPATH)
+		setenvForTest(t, "PATH", binDir+string(os.PathListSeparator)+originalPATH)
 
 		// Test govulncheck installation with retry logic
 		tools := Tools{}
@@ -116,18 +208,15 @@ func TestIntegration_ToolInstallationWithNetworkFailures(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create temp directory: %v", err)
 		}
-		defer os.RemoveAll(tempDir)
+		cleanupRemoveAll(t, tempDir)
 
 		// Set GOPATH temporarily
-		originalGOPATH := os.Getenv("GOPATH")
-		os.Setenv("GOPATH", tempDir)
-		defer os.Setenv("GOPATH", originalGOPATH)
+		setenvForTest(t, "GOPATH", tempDir)
 
 		// Set PATH to include our temp bin directory
 		binDir := filepath.Join(tempDir, "bin")
 		originalPATH := os.Getenv("PATH")
-		os.Setenv("PATH", binDir+string(os.PathListSeparator)+originalPATH)
-		defer os.Setenv("PATH", originalPATH)
+		setenvForTest(t, "PATH", binDir+string(os.PathListSeparator)+originalPATH)
 
 		// Create test YAML files for formatting
 		testYAMLDir := filepath.Join(tempDir, "test_yaml")
@@ -136,17 +225,7 @@ func TestIntegration_ToolInstallationWithNetworkFailures(t *testing.T) {
 			t.Fatalf("Failed to create test YAML directory: %v", err)
 		}
 
-		// Change to test directory
-		originalDir, err := os.Getwd()
-		if err != nil {
-			t.Fatalf("Failed to get current directory: %v", err)
-		}
-		defer os.Chdir(originalDir)
-
-		err = os.Chdir(testYAMLDir)
-		if err != nil {
-			t.Fatalf("Failed to change to test directory: %v", err)
-		}
+		defer chdirForTest(t, testYAMLDir)()
 
 		// Create a test YAML file
 		testYAMLContent := `name:    test
@@ -188,18 +267,15 @@ config:
 		if err != nil {
 			t.Fatalf("Failed to create temp directory: %v", err)
 		}
-		defer os.RemoveAll(tempDir)
+		cleanupRemoveAll(t, tempDir)
 
 		// Set GOPATH temporarily
-		originalGOPATH := os.Getenv("GOPATH")
-		os.Setenv("GOPATH", tempDir)
-		defer os.Setenv("GOPATH", originalGOPATH)
+		setenvForTest(t, "GOPATH", tempDir)
 
 		// Set PATH to include our temp bin directory
 		binDir := filepath.Join(tempDir, "bin")
 		originalPATH := os.Getenv("PATH")
-		os.Setenv("PATH", binDir+string(os.PathListSeparator)+originalPATH)
-		defer os.Setenv("PATH", originalPATH)
+		setenvForTest(t, "PATH", binDir+string(os.PathListSeparator)+originalPATH)
 
 		// Create test directory structure
 		testYAMLDir := filepath.Join(tempDir, "test_yaml_config")
@@ -229,17 +305,7 @@ config:
 			t.Fatalf("Failed to create yamlfmt config: %v", err)
 		}
 
-		// Change to test directory
-		originalDir, err := os.Getwd()
-		if err != nil {
-			t.Fatalf("Failed to get current directory: %v", err)
-		}
-		defer os.Chdir(originalDir)
-
-		err = os.Chdir(testYAMLDir)
-		if err != nil {
-			t.Fatalf("Failed to change to test directory: %v", err)
-		}
+		defer chdirForTest(t, testYAMLDir)()
 
 		// Create test YAML files
 		testFiles := map[string]string{
@@ -307,11 +373,11 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 					// Fail first 2 attempts, succeed on 3rd
 					if attempt.Load() < 3 {
 						w.WriteHeader(http.StatusInternalServerError)
-						w.Write([]byte("Server temporarily unavailable"))
+						writeHTTPResponse(w, "Server temporarily unavailable")
 						return
 					}
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte("Success after retries"))
+					writeHTTPResponse(w, "Success after retries")
 				})
 			},
 			expectSuccess: true,
@@ -332,9 +398,11 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 			serverBehavior: func(attempt *atomic.Int32) http.HandlerFunc {
 				return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 					attempt.Add(1)
-					// Every attempt is slower than the per-attempt Timeout (1s),
-					// guaranteeing a context deadline on the first attempt.
-					time.Sleep(2 * time.Second)
+					// Just over the per-attempt Timeout (1s) so the client still
+					// hits a context deadline on the first attempt. Kept tight
+					// (not 2s) because `defer server.Close()` blocks until this
+					// handler returns, so the sleep is the subtest's wall time.
+					time.Sleep(1300 * time.Millisecond)
 					w.WriteHeader(http.StatusRequestTimeout)
 				})
 			},
@@ -347,34 +415,7 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 			serverBehavior: func(attempt *atomic.Int32) http.HandlerFunc {
 				fullContent := "This is the full content that should be downloaded completely"
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					attempt.Add(1)
-
-					rangeHeader := r.Header.Get("Range")
-					if rangeHeader != "" && attempt.Load() > 1 {
-						// Resume request - return remaining content
-						w.Header().Set("Content-Range", fmt.Sprintf("bytes 20-%d/%d", len(fullContent)-1, len(fullContent)))
-						w.Header().Set("Content-Length", fmt.Sprintf("%d", len(fullContent)-20))
-						w.WriteHeader(http.StatusPartialContent)
-						w.Write([]byte(fullContent[20:]))
-					} else if attempt.Load() == 1 {
-						// First attempt - return partial content then "disconnect"
-						w.Header().Set("Content-Length", fmt.Sprintf("%d", len(fullContent)))
-						w.WriteHeader(http.StatusOK)
-						w.Write([]byte(fullContent[:20])) // Only first 20 characters
-
-						// Flush the partial response to ensure it's sent
-						if flusher, ok := w.(http.Flusher); ok {
-							flusher.Flush()
-						}
-
-						// Simulate connection failure by hijacking the connection and closing it
-						if hijacker, ok := w.(http.Hijacker); ok {
-							conn, _, err := hijacker.Hijack()
-							if err == nil {
-								conn.Close()
-							}
-						}
-					}
+					handlePartialContentWithResume(w, r, attempt, fullContent)
 				})
 			},
 			expectSuccess: true,
@@ -386,7 +427,7 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					attempt.Add(1)
 					w.WriteHeader(http.StatusNotFound)
-					w.Write([]byte("Resource not found"))
+					writeHTTPResponse(w, "Resource not found")
 				})
 			},
 			expectSuccess: false,
@@ -397,10 +438,12 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 			serverBehavior: func(attempt *atomic.Int32) http.HandlerFunc {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					attempt.Add(1)
-					// All attempts timeout
-					time.Sleep(3 * time.Second) // Longer than reasonable timeout
+					// Just over the per-attempt Timeout (1s) so every attempt times
+					// out. Kept tight (not 3s) because `defer server.Close()` blocks
+					// until this handler returns — the sleep is the subtest's wall time.
+					time.Sleep(1300 * time.Millisecond)
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte("Should not reach here"))
+					writeHTTPResponse(w, "Should not reach here")
 				})
 			},
 			expectSuccess: false,
@@ -421,7 +464,7 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create temp directory: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			cleanupRemoveAll(t, tempDir)
 
 			destPath := filepath.Join(tempDir, "test_file.txt")
 			config := &utils.DownloadConfig{
@@ -442,25 +485,26 @@ func TestIntegration_DownloadWithNetworkSimulation(t *testing.T) {
 			if tc.expectSuccess {
 				if err != nil {
 					t.Errorf("Expected success for %s, got error: %v", tc.description, err)
-				} else {
-					t.Logf("Successfully completed: %s (attempts: %d)", tc.description, attempt.Load())
+					return
 				}
+				t.Logf("Successfully completed: %s (attempts: %d)", tc.description, attempt.Load())
+				return
+			}
+
+			if err == nil {
+				t.Errorf("Expected failure for %s, but succeeded", tc.description)
 			} else {
-				if err == nil {
-					t.Errorf("Expected failure for %s, but succeeded", tc.description)
-				} else {
-					t.Logf("Expected failure occurred: %s - %v (attempts: %d)", tc.description, err, attempt.Load())
+				t.Logf("Expected failure occurred: %s - %v (attempts: %d)", tc.description, err, attempt.Load())
+			}
+			if tc.expectDeadline {
+				// The per-attempt timeout must surface as context.DeadlineExceeded
+				// (wrapped by the retry package's "permanent error" wrapper) and
+				// must NOT be retried: exactly one attempt should reach the server.
+				if !errors.Is(err, context.DeadlineExceeded) {
+					t.Errorf("Expected context.DeadlineExceeded for %s, got: %v", tc.description, err)
 				}
-				if tc.expectDeadline {
-					// The per-attempt timeout must surface as context.DeadlineExceeded
-					// (wrapped by the retry package's "permanent error" wrapper) and
-					// must NOT be retried: exactly one attempt should reach the server.
-					if !errors.Is(err, context.DeadlineExceeded) {
-						t.Errorf("Expected context.DeadlineExceeded for %s, got: %v", tc.description, err)
-					}
-					if attempt.Load() != 1 {
-						t.Errorf("Expected exactly 1 attempt (per-attempt timeout is non-retriable) for %s, got %d", tc.description, attempt.Load())
-					}
+				if attempt.Load() != 1 {
+					t.Errorf("Expected exactly 1 attempt (per-attempt timeout is non-retriable) for %s, got %d", tc.description, attempt.Load())
 				}
 			}
 		})
@@ -500,18 +544,15 @@ func TestIntegration_GolangciLintInstallation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	cleanupRemoveAll(t, tempDir)
 
 	// Set GOPATH temporarily
-	originalGOPATH := os.Getenv("GOPATH")
-	os.Setenv("GOPATH", tempDir)
-	defer os.Setenv("GOPATH", originalGOPATH)
+	setenvForTest(t, "GOPATH", tempDir)
 
 	// Set PATH to include our temp bin directory
 	binDir := filepath.Join(tempDir, "bin")
 	originalPATH := os.Getenv("PATH")
-	os.Setenv("PATH", binDir+string(os.PathListSeparator)+originalPATH)
-	defer os.Setenv("PATH", originalPATH)
+	setenvForTest(t, "PATH", binDir+string(os.PathListSeparator)+originalPATH)
 
 	// Ensure golangci-lint is not already installed
 	if utils.CommandExists("golangci-lint") {
@@ -555,7 +596,7 @@ func TestIntegration_ConcurrentDownloads(t *testing.T) {
 		// Fail approximately 30% of requests
 		if count%3 == 0 {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Server error"))
+			writeHTTPResponse(w, "Server error")
 			return
 		}
 
@@ -563,7 +604,7 @@ func TestIntegration_ConcurrentDownloads(t *testing.T) {
 		content := strings.Repeat("A", contentSize)
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(content)))
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(content))
+		writeHTTPResponse(w, content)
 	}))
 	defer server.Close()
 
@@ -571,7 +612,7 @@ func TestIntegration_ConcurrentDownloads(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	cleanupRemoveAll(t, tempDir)
 
 	config := &utils.DownloadConfig{
 		MaxRetries:        3,
@@ -635,7 +676,7 @@ func TestIntegration_NetworkLatency(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Content delivered with latency"))
+		writeHTTPResponse(w, "Content delivered with latency")
 	}))
 	defer server.Close()
 
@@ -643,7 +684,7 @@ func TestIntegration_NetworkLatency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	cleanupRemoveAll(t, tempDir)
 
 	destPath := filepath.Join(tempDir, "latency_test.txt")
 
@@ -737,7 +778,7 @@ func TestIntegration_NetworkConnectivity(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create temp directory: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			cleanupRemoveAll(t, tempDir)
 
 			destPath := filepath.Join(tempDir, "test_file.txt")
 			config := &utils.DownloadConfig{
@@ -757,21 +798,22 @@ func TestIntegration_NetworkConnectivity(t *testing.T) {
 			if tc.expectError {
 				if err == nil {
 					t.Errorf("Expected error for %s, but succeeded", tc.description)
-				} else {
-					t.Logf("Expected error occurred for %s: %v (duration: %v)", tc.description, err, duration)
+					return
 				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error for %s: %v (duration: %v)", tc.description, err, duration)
-				} else {
-					t.Logf("Success for %s (duration: %v)", tc.description, duration)
+				t.Logf("Expected error occurred for %s: %v (duration: %v)", tc.description, err, duration)
+				return
+			}
 
-					// Verify file was created and has content
-					if stat, statErr := os.Stat(destPath); statErr != nil {
-						t.Errorf("Downloaded file not found: %v", statErr)
-					} else if stat.Size() == 0 {
-						t.Error("Downloaded file is empty")
-					}
+			if err != nil {
+				t.Errorf("Unexpected error for %s: %v (duration: %v)", tc.description, err, duration)
+			} else {
+				t.Logf("Success for %s (duration: %v)", tc.description, duration)
+
+				// Verify file was created and has content
+				if stat, statErr := os.Stat(destPath); statErr != nil {
+					t.Errorf("Downloaded file not found: %v", statErr)
+				} else if stat.Size() == 0 {
+					t.Error("Downloaded file is empty")
 				}
 			}
 		})

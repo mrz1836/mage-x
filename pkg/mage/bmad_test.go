@@ -66,9 +66,9 @@ func (ts *BmadTestSuite) TestVerifyBmadInstallation_Success() {
 
 	// Create the project directory
 	projectDir := DefaultBmadProjectDir
-	err := os.MkdirAll(projectDir, 0o755)
+	err := os.MkdirAll(projectDir, 0o750)
 	ts.Require().NoError(err)
-	defer os.RemoveAll(projectDir)
+	cleanupRemoveAll(ts.T(), projectDir)
 
 	config, err := GetConfig()
 	ts.Require().NoError(err)
@@ -138,13 +138,13 @@ func (ts *BmadTestSuite) TestBmadProjectDirCreation() {
 	ts.Require().True(os.IsNotExist(err))
 
 	// Create the directory
-	err = os.MkdirAll(projectDir, 0o755)
+	err = os.MkdirAll(projectDir, 0o750)
 	ts.Require().NoError(err)
-	defer os.RemoveAll(projectDir)
+	cleanupRemoveAll(ts.T(), projectDir)
 
 	// Create a sample file to simulate BMAD installation
 	sampleFile := filepath.Join(projectDir, "agents")
-	err = os.MkdirAll(sampleFile, 0o755)
+	err = os.MkdirAll(sampleFile, 0o750)
 	ts.Require().NoError(err)
 
 	// Verify directory exists

@@ -870,6 +870,14 @@ func TestCountGoLinesWithStatsExcludeDir(t *testing.T) {
 
 // TestMetricsSize tests the Size method with success path
 func TestMetricsSize(t *testing.T) {
+	// Isolate GOMODCACHE: Metrics.Size() reports the module cache size via
+	// getDirSize(os.Getenv("GOMODCACHE")). The runner is mocked, but that walk
+	// is real — against the developer's multi-GB module cache it takes ~55s.
+	// Pointing GOMODCACHE at an empty temp dir keeps the code path exercised
+	// while reducing the walk to ~0s. t.Setenv runs after the test binary is
+	// compiled, so it only affects os.Getenv at runtime (build is unaffected).
+	t.Setenv("GOMODCACHE", t.TempDir())
+
 	// Save and restore runner
 	originalRunner := GetRunner()
 	t.Cleanup(func() {

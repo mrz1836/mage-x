@@ -40,11 +40,11 @@ func (ts *SpeckitTestSuite) TestBackupSpeckitConstitution() {
 
 	// Create test constitution file
 	constitutionDir := ".specify/memory"
-	err := os.MkdirAll(constitutionDir, 0o755)
+	err := os.MkdirAll(constitutionDir, 0o750)
 	ts.Require().NoError(err)
 
 	constitutionPath := filepath.Join(constitutionDir, "constitution.md")
-	err = os.WriteFile(constitutionPath, []byte("# Test Constitution\n\nThis is a test constitution."), 0o644)
+	err = os.WriteFile(constitutionPath, []byte("# Test Constitution\n\nThis is a test constitution."), 0o600)
 	ts.Require().NoError(err)
 
 	config, err := GetConfig()
@@ -55,12 +55,12 @@ func (ts *SpeckitTestSuite) TestBackupSpeckitConstitution() {
 	ts.Require().FileExists(backupPath)
 
 	// Verify backup content
+	// #nosec G304 -- test reads backup path returned from temp fixture
 	content, err := os.ReadFile(backupPath)
 	ts.Require().NoError(err)
 	ts.Require().Contains(string(content), "# Test Constitution")
 
-	// Cleanup
-	_ = os.Remove(backupPath)
+	cleanupRemove(ts.T(), backupPath)
 }
 
 // TestBackupSpeckitConstitution_NotFound tests backup when constitution doesn't exist
@@ -80,12 +80,12 @@ func (ts *SpeckitTestSuite) TestRestoreSpeckitConstitution() {
 
 	// Create backup file
 	backupDir := ".specify/backups"
-	err := os.MkdirAll(backupDir, 0o755)
+	err := os.MkdirAll(backupDir, 0o750)
 	ts.Require().NoError(err)
 
 	backupPath := filepath.Join(backupDir, "constitution.backup.20251212.120000.md")
 	backupContent := "# Restored Constitution\n\nThis content should be restored."
-	err = os.WriteFile(backupPath, []byte(backupContent), 0o644)
+	err = os.WriteFile(backupPath, []byte(backupContent), 0o600)
 	ts.Require().NoError(err)
 
 	config, err := GetConfig()
@@ -96,13 +96,13 @@ func (ts *SpeckitTestSuite) TestRestoreSpeckitConstitution() {
 
 	// Verify restored content
 	constitutionPath := getSpeckitConstitutionPath(config)
+	// #nosec G304 -- test reads restored path derived from test config
 	content, err := os.ReadFile(constitutionPath)
 	ts.Require().NoError(err)
 	ts.Require().Equal(backupContent, string(content))
 
-	// Cleanup
-	_ = os.Remove(backupPath)
-	_ = os.Remove(constitutionPath)
+	cleanupRemove(ts.T(), backupPath)
+	cleanupRemove(ts.T(), constitutionPath)
 }
 
 // TestUpdateSpeckitVersionFile tests the version file creation
@@ -125,6 +125,7 @@ func (ts *SpeckitTestSuite) TestUpdateSpeckitVersionFile() {
 		versionFile = DefaultSpeckitVersionFile
 	}
 
+	// #nosec G304 -- test reads version path from test config
 	content, err := os.ReadFile(versionFile)
 	ts.Require().NoError(err)
 
@@ -135,8 +136,7 @@ func (ts *SpeckitTestSuite) TestUpdateSpeckitVersionFile() {
 	ts.Require().Contains(contentStr, "constitution_backup=")
 	ts.Require().Contains(contentStr, "last_upgrade=")
 
-	// Cleanup
-	_ = os.Remove(versionFile)
+	cleanupRemove(ts.T(), versionFile)
 }
 
 // TestCleanOldSpeckitBackups tests the backup cleanup functionality
@@ -145,15 +145,15 @@ func (ts *SpeckitTestSuite) TestCleanOldSpeckitBackups() {
 
 	// Create backup directory with multiple files
 	backupDir := ".specify/backups"
-	err := os.MkdirAll(backupDir, 0o755)
+	err := os.MkdirAll(backupDir, 0o750)
 	ts.Require().NoError(err)
 
 	// Create 10 mock backup files
 	for i := 1; i <= 10; i++ {
 		filename := filepath.Join(backupDir,
 			fmt.Sprintf("constitution.backup.2025110%d.100000.md", i))
-		err := os.WriteFile(filename, []byte("test backup content"), 0o644)
-		ts.Require().NoError(err)
+		writeErr := os.WriteFile(filename, []byte("test backup content"), 0o600)
+		ts.Require().NoError(writeErr)
 	}
 
 	config, err := GetConfig()
@@ -168,8 +168,7 @@ func (ts *SpeckitTestSuite) TestCleanOldSpeckitBackups() {
 	ts.Require().NoError(err)
 	ts.Require().Len(entries, 5)
 
-	// Cleanup
-	_ = os.RemoveAll(backupDir)
+	cleanupRemoveAll(ts.T(), backupDir)
 }
 
 // TestCleanOldSpeckitBackups_NoBackups tests cleanup when no backups exist

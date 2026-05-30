@@ -16,10 +16,7 @@ import (
 
 // Static test errors
 var (
-	errBmadMainTestFailed    = errors.New("bmad main test failed")
-	errBmadInstallTestFailed = errors.New("bmad install test failed")
-	errBmadCheckTestFailed   = errors.New("bmad check test failed")
-	errBmadUpgradeTestFailed = errors.New("bmad upgrade test failed")
+	errBmadMainTestFailed = errors.New("bmad main test failed")
 )
 
 // BmadMainTestSuite defines the test suite for Bmad main methods
@@ -52,13 +49,10 @@ bmad:
   version_tag: "@beta"
 `
 	configPath := filepath.Join(ts.env.TempDir, ".mage.yaml")
-	err := os.WriteFile(configPath, []byte(configContent), 0o644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
-	// Change to temp directory
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	// Note: If npm is actually installed on the system, this test will pass
 	// In a real CI environment without npm, it would detect the missing prerequisite
@@ -77,7 +71,7 @@ bmad:
 func (ts *BmadMainTestSuite) TestCheck_Success() {
 	// Create BMAD project directory
 	projectDir := filepath.Join(ts.env.TempDir, DefaultBmadProjectDir)
-	err := os.MkdirAll(projectDir, 0o755)
+	err := os.MkdirAll(projectDir, 0o750)
 	ts.Require().NoError(err)
 
 	// Create config
@@ -86,13 +80,10 @@ bmad:
   project_dir: ` + DefaultBmadProjectDir + `
 `
 	configPath := filepath.Join(ts.env.TempDir, ".mage.yaml")
-	err = os.WriteFile(configPath, []byte(configContent), 0o644)
+	err = os.WriteFile(configPath, []byte(configContent), 0o600)
 	ts.Require().NoError(err)
 
-	// Change to temp directory
-	oldPwd, _ := os.Getwd()
-	os.Chdir(ts.env.TempDir)
-	defer os.Chdir(oldPwd)
+	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
 	// Mock npm view command for version check.
 	// The config above sets no package_name/version_tag, so getBmadVersion
@@ -103,7 +94,7 @@ bmad:
 	}).Return("1.0.0", nil).Maybe()
 
 	err = ts.env.WithMockRunner(
-		func(r any) error { return SetRunner(r.(CommandRunner)) },
+		setTestCommandRunner,
 		func() any { return GetRunner() },
 		func() error {
 			return ts.bmad.Check()
@@ -227,7 +218,7 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 			}).Return(tt.mockOutput, tt.mockError)
 
 			err := env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) },
+				setTestCommandRunner,
 				func() any { return GetRunner() },
 				func() error {
 					version, err := getBmadVersion(config)
@@ -242,9 +233,9 @@ func (ts *BmadMainTestSuite) TestGetBmadVersion() {
 			)
 
 			if tt.wantError {
-				ts.Error(err)
+				ts.Require().Error(err)
 			} else {
-				ts.NoError(err)
+				ts.Require().NoError(err)
 			}
 		})
 	}
@@ -255,7 +246,7 @@ func (ts *BmadMainTestSuite) TestVerifyBmadInstallation() {
 	ts.Run("installation verified", func() {
 		// Create project directory
 		projectDir := filepath.Join(ts.env.TempDir, "_bmad")
-		err := os.MkdirAll(projectDir, 0o755)
+		err := os.MkdirAll(projectDir, 0o750)
 		ts.Require().NoError(err)
 
 		config := &Config{
@@ -265,7 +256,7 @@ func (ts *BmadMainTestSuite) TestVerifyBmadInstallation() {
 		}
 
 		err = verifyBmadInstallation(config)
-		ts.NoError(err)
+		ts.Require().NoError(err)
 	})
 
 	ts.Run("project directory missing", func() {
@@ -276,7 +267,7 @@ func (ts *BmadMainTestSuite) TestVerifyBmadInstallation() {
 		}
 
 		err := verifyBmadInstallation(config)
-		ts.Error(err)
+		ts.Require().Error(err)
 		ts.ErrorIs(err, errBmadNotInstalled)
 	})
 }
@@ -389,7 +380,7 @@ func (ts *BmadMainTestSuite) TestBmadConfigVariations() {
 			}).Return("1.0.0", nil)
 
 			err := ts.env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) },
+				setTestCommandRunner,
 				func() any { return GetRunner() },
 				func() error {
 					_, err := getBmadVersion(config)
@@ -397,7 +388,7 @@ func (ts *BmadMainTestSuite) TestBmadConfigVariations() {
 				},
 			)
 
-			ts.NoError(err)
+			ts.Require().NoError(err)
 		})
 	}
 }

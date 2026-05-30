@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,7 +19,7 @@ import (
 func TestMagexParametersComprehensive(t *testing.T) {
 	// Build magex once for all tests
 	magexBinary := buildMagexForTesting(t)
-	defer os.Remove(magexBinary)
+	cleanupFile(t, magexBinary)
 
 	// Get the absolute path to the test binary
 	magexPath, err := filepath.Abs(magexBinary)
@@ -31,14 +30,14 @@ func TestMagexParametersComprehensive(t *testing.T) {
 		testDir := setupGoModule(t)
 
 		// Run mod:graph with depth=1
-		cmd := exec.Command(magexPath, "mod:graph", "depth=1")
+		cmd := testCommand(t, magexPath, "mod:graph", "depth=1")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
 		outputStr := string(output)
 
 		// Should succeed
-		assert.NoError(t, err, "Command failed: %s", outputStr)
+		require.NoError(t, err, "Command failed: %s", outputStr)
 
 		// Use helper function to count depth accurately
 		maxDepth := countTreeDepth(outputStr)
@@ -47,7 +46,7 @@ func TestMagexParametersComprehensive(t *testing.T) {
 		assert.LessOrEqual(t, maxDepth, 1, "Depth parameter not respected - saw depth %d when requested 1", maxDepth)
 
 		// Verify parameter is actually working by comparing with depth=3
-		cmd3 := exec.Command(magexPath, "mod:graph", "depth=3")
+		cmd3 := testCommand(t, magexPath, "mod:graph", "depth=3")
 		cmd3.Dir = testDir
 		output3, err3 := cmd3.CombinedOutput()
 		outputStr3 := string(output3)
@@ -73,7 +72,7 @@ func TestMagexParametersComprehensive(t *testing.T) {
 		testDir := setupGoProject(t)
 
 		// Run test:cover with package parameter
-		cmd := exec.Command(magexPath, "test:cover", "package=./pkg/utils")
+		cmd := testCommand(t, magexPath, "test:cover", "package=./pkg/utils")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
@@ -97,7 +96,7 @@ func TestMagexParametersComprehensive(t *testing.T) {
 		testDir := setupGoProject(t)
 
 		// Run build with platform parameter
-		cmd := exec.Command(magexPath, "build", "platform=linux/amd64")
+		cmd := testCommand(t, magexPath, "build", "platform=linux/amd64")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
@@ -117,7 +116,7 @@ func TestMagexParametersComprehensive(t *testing.T) {
 		testDir := setupGoProject(t)
 
 		// Run test with verbose parameter
-		cmd := exec.Command(magexPath, "test", "verbose=true")
+		cmd := testCommand(t, magexPath, "test", "verbose=true")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
@@ -137,7 +136,7 @@ func TestMagexParametersComprehensive(t *testing.T) {
 		testDir := setupGoProject(t)
 
 		// Run lint with fix parameter
-		cmd := exec.Command(magexPath, "lint", "fix=true")
+		cmd := testCommand(t, magexPath, "lint", "fix=true")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
@@ -157,14 +156,14 @@ func TestMagexParametersComprehensive(t *testing.T) {
 		testDir := setupGoModule(t)
 
 		// Run mod:graph with multiple parameters
-		cmd := exec.Command(magexPath, "mod:graph", "depth=2", "format=tree", "show_versions=true")
+		cmd := testCommand(t, magexPath, "mod:graph", "depth=2", "format=tree", "show_versions=true")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
 		outputStr := string(output)
 
 		// Should succeed
-		assert.NoError(t, err, "Command failed: %s", outputStr)
+		require.NoError(t, err, "Command failed: %s", outputStr)
 
 		// Check that versions are shown (@ symbol indicates version)
 		if !strings.Contains(outputStr, "@") {
@@ -177,7 +176,7 @@ func TestMagexParametersComprehensive(t *testing.T) {
 		testDir := setupGoProject(t)
 
 		// Run test with race detector (boolean flag)
-		cmd := exec.Command(magexPath, "test:race", "short")
+		cmd := testCommand(t, magexPath, "test:race", "short")
 		cmd.Dir = testDir
 
 		output, err := cmd.CombinedOutput()
@@ -198,7 +197,7 @@ func buildMagexForTesting(t *testing.T) string {
 	t.Helper()
 
 	// Build magex from the project root
-	cmd := exec.Command("go", "build", "-o", "magex-test", "../../cmd/magex")
+	cmd := testCommand(t, "go", "build", "-o", "magex-test", "../../cmd/magex")
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "Failed to build magex: %s", string(output))
 
@@ -218,13 +217,15 @@ go 1.21
 
 require github.com/stretchr/testify v1.8.4
 `
-	err := os.WriteFile(filepath.Join(testDir, "go.mod"), []byte(goModContent), 0o644)
+	err := os.WriteFile(filepath.Join(testDir, "go.mod"), []byte(goModContent), 0o600)
 	require.NoError(t, err)
 
 	// Run go mod download to populate the module graph
-	cmd := exec.Command("go", "mod", "download")
+	cmd := testCommand(t, "go", "mod", "download")
 	cmd.Dir = testDir
-	_ = cmd.Run() // Ignore errors as it might fail in CI
+	if err := cmd.Run(); err != nil {
+		t.Logf("go mod download failed; continuing because dependency resolution may be unavailable in CI: %v", err)
+	}
 
 	return testDir
 }
@@ -244,11 +245,11 @@ func main() {
     fmt.Println("Hello, World!")
 }
 `
-	err := os.WriteFile(filepath.Join(testDir, "main.go"), []byte(mainContent), 0o644)
+	err := os.WriteFile(filepath.Join(testDir, "main.go"), []byte(mainContent), 0o600)
 	require.NoError(t, err)
 
 	// Create pkg/utils directory
-	err = os.MkdirAll(filepath.Join(testDir, "pkg", "utils"), 0o755)
+	err = os.MkdirAll(filepath.Join(testDir, "pkg", "utils"), 0o750)
 	require.NoError(t, err)
 
 	// Create a simple utils file
@@ -258,7 +259,7 @@ func Add(a, b int) int {
     return a + b
 }
 `
-	err = os.WriteFile(filepath.Join(testDir, "pkg", "utils", "math.go"), []byte(utilsContent), 0o644)
+	err = os.WriteFile(filepath.Join(testDir, "pkg", "utils", "math.go"), []byte(utilsContent), 0o600)
 	require.NoError(t, err)
 
 	return testDir
@@ -270,7 +271,7 @@ func TestParameterParsing(t *testing.T) {
 	// by running commands and checking their output
 
 	magexBinary := buildMagexForTesting(t)
-	defer os.Remove(magexBinary)
+	cleanupFile(t, magexBinary)
 
 	magexPath, err := filepath.Abs(magexBinary)
 	require.NoError(t, err)
@@ -325,7 +326,7 @@ func TestParameterParsing(t *testing.T) {
 			testDir := tt.setup(t)
 
 			args := append([]string{tt.command}, tt.args...)
-			cmd := exec.Command(magexPath, args...)
+			cmd := testCommand(t, magexPath, args...)
 			cmd.Dir = testDir
 
 			var stdout, stderr bytes.Buffer
@@ -359,7 +360,7 @@ func TestParameterParsing(t *testing.T) {
 // TestParameterHelp tests that parameter information is shown in help
 func TestParameterHelp(t *testing.T) {
 	magexBinary := buildMagexForTesting(t)
-	defer os.Remove(magexBinary)
+	cleanupFile(t, magexBinary)
 
 	magexPath, err := filepath.Abs(magexBinary)
 	require.NoError(t, err)
@@ -385,13 +386,13 @@ func TestParameterHelp(t *testing.T) {
 
 	for _, tc := range commandsWithParams {
 		t.Run(fmt.Sprintf("Help_%s", tc.command), func(t *testing.T) {
-			cmd := exec.Command(magexPath, "-h", tc.command)
+			cmd := testCommand(t, magexPath, "-h", tc.command)
 
 			output, err := cmd.CombinedOutput()
 			outputStr := string(output)
 
 			// Should succeed
-			assert.NoError(t, err, "Help command failed: %s", outputStr)
+			require.NoError(t, err, "Help command failed: %s", outputStr)
 
 			// Check that parameter information is shown
 			for _, param := range tc.expectedParams {

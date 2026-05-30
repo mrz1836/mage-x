@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/mrz1836/mage-x/pkg/testhelpers"
@@ -38,11 +39,11 @@ func (its *IntegrationTestSuite) SetupSuite() {
 }
 
 // createTestProject creates a standardized test project with go.mod and main.go
-func (its *IntegrationTestSuite) createTestProject(name, module string) string {
+func (its *IntegrationTestSuite) createTestProject(name, module string) {
 	its.T().Helper()
 
 	projectDir := filepath.Join(its.TmpDir, name)
-	its.RequireNoError(os.MkdirAll(projectDir, 0o755))
+	its.RequireNoError(os.MkdirAll(projectDir, 0o750))
 	its.RequireNoError(os.Chdir(projectDir))
 
 	// Create go.mod
@@ -50,13 +51,11 @@ func (its *IntegrationTestSuite) createTestProject(name, module string) string {
 
 go 1.24
 `
-	its.RequireNoError(os.WriteFile("go.mod", []byte(goMod), 0o644))
-
-	return projectDir
+	its.RequireNoError(os.WriteFile("go.mod", []byte(goMod), 0o600))
 }
 
 // setupGoProject creates a complete Go project with main.go
-func (its *IntegrationTestSuite) setupGoProject(dir, module, mainContent string) {
+func (its *IntegrationTestSuite) setupGoProject(mainContent string) {
 	its.T().Helper()
 
 	if mainContent == "" {
@@ -70,7 +69,7 @@ func main() {
 `
 	}
 
-	its.RequireNoError(os.WriteFile("main.go", []byte(mainContent), 0o644))
+	its.RequireNoError(os.WriteFile("main.go", []byte(mainContent), 0o600))
 }
 
 // setupMageConfig creates and sets a mage configuration for testing
@@ -100,7 +99,7 @@ func (its *IntegrationTestSuite) TestBuildIntegration() {
 
 	// Create test project
 	its.createTestProject("test-project", "test-project")
-	its.setupGoProject("", "test-project", "")
+	its.setupGoProject("")
 	its.setupMageConfig("test-project", "test-app", "test-project")
 
 	// Test build
@@ -110,7 +109,7 @@ func (its *IntegrationTestSuite) TestBuildIntegration() {
 
 	// Verify binary exists
 	binaryPath := filepath.Join("bin", "test-app")
-	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(binaryPath); os.IsNotExist(statErr) {
 		its.T().Errorf("Expected binary at %s, but it doesn't exist", binaryPath)
 	}
 
@@ -162,9 +161,9 @@ func TestSecureCommandExecution(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := runner.RunCmd(tt.cmd, tt.args...)
 			if tt.shouldErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -188,7 +187,7 @@ func Add(a, b int) int {
 
 func main() {}
 `
-	its.RequireNoError(os.WriteFile("main.go", []byte(mainGo), 0o644))
+	its.RequireNoError(os.WriteFile("main.go", []byte(mainGo), 0o600))
 
 	// Create test file
 	testGo := `package main
@@ -201,7 +200,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 `
-	its.RequireNoError(os.WriteFile("main_test.go", []byte(testGo), 0o644))
+	its.RequireNoError(os.WriteFile("main_test.go", []byte(testGo), 0o600))
 
 	// Setup config
 	TestSetConfig(&Config{
@@ -222,26 +221,26 @@ func TestAdd(t *testing.T) {
 	})
 
 	// Test workflow: Format -> Test -> Build
-	its.T().Run("format", func(t *testing.T) {
+	its.Run("format", func() {
 		format := Format{}
 		// Skip if gofumpt not installed
 		if _, err := GetRunner().RunCmdOutput("which", "gofumpt"); err != nil {
-			t.Skip("gofumpt not installed")
+			its.T().Skip("gofumpt not installed")
 		}
 		err := format.Default()
-		assert.NoError(t, err)
+		its.Require().NoError(err)
 	})
 
-	its.T().Run("test", func(t *testing.T) {
+	its.Run("test", func() {
 		test := Test{}
 		err := test.Unit()
-		assert.NoError(t, err)
+		its.Require().NoError(err)
 	})
 
-	its.T().Run("build", func(t *testing.T) {
+	its.Run("build", func() {
 		build := Build{}
 		err := build.Default()
-		assert.NoError(t, err)
+		its.Require().NoError(err)
 	})
 }
 
@@ -293,16 +292,16 @@ func (its *IntegrationTestSuite) TestConfigurationLoading() {
 	}
 
 	// Test default config
-	its.T().Run("default config", func(t *testing.T) {
+	its.Run("default config", func() {
 		// Create a completely isolated directory with no go.mod
 		isolatedDir := filepath.Join(its.TmpDir, "isolated")
-		its.RequireNoError(os.MkdirAll(isolatedDir, 0o755))
+		its.RequireNoError(os.MkdirAll(isolatedDir, 0o750))
 		its.RequireNoError(os.Chdir(isolatedDir))
 
 		// Ensure ambient MAGE_X_* env overrides do not contaminate the
 		// default-value assertions below (applyEnvOverrides reads these).
 		restoreEnv := unsetEnvVars(
-			t,
+			its.T(),
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
 			// The mage-x test runner exports MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE
@@ -320,25 +319,25 @@ func (its *IntegrationTestSuite) TestConfigurationLoading() {
 
 		TestResetConfig() // Reset
 		config, err := GetConfig()
-		assert.NoError(t, err)
-		assert.NotNil(t, config)
-		assert.Equal(t, "app", config.Project.Binary)
+		its.Require().NoError(err)
+		its.Require().NotNil(config)
+		its.Equal("app", config.Project.Binary)
 
 		// Test-section defaults from defaultConfig() (config.go).
 		// CombineBuildTags defaults to true; auto-discover defaults to off.
-		assert.True(t, config.Test.CombineBuildTags,
+		its.True(config.Test.CombineBuildTags,
 			"CombineBuildTags should default to true")
-		assert.False(t, config.Test.AutoDiscoverBuildTags,
+		its.False(config.Test.AutoDiscoverBuildTags,
 			"AutoDiscoverBuildTags should default to false")
-		assert.Empty(t, config.Test.AutoDiscoverBuildTagsExclude,
+		its.Empty(config.Test.AutoDiscoverBuildTagsExclude,
 			"AutoDiscoverBuildTagsExclude should default to empty")
 	})
 
 	// Test custom config
-	its.T().Run("custom config", func(t *testing.T) {
+	its.Run("custom config", func() {
 		// Guard against ambient overrides for the merge-preservation assertions.
 		restoreEnv := unsetEnvVars(
-			t,
+			its.T(),
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
 			// The mage-x test runner exports MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE
@@ -370,32 +369,32 @@ test:
   cover: true
   race: true
 `
-		its.RequireNoError(os.WriteFile(".mage.yaml", []byte(configYAML), 0o644))
+		its.RequireNoError(os.WriteFile(".mage.yaml", []byte(configYAML), 0o600))
 
 		TestResetConfig() // Reset
 		config, err := GetConfig()
-		assert.NoError(t, err)
-		assert.Equal(t, "my-app", config.Project.Name)
-		assert.Equal(t, "myapp", config.Project.Binary)
-		assert.Equal(t, "dist", config.Build.Output)
-		assert.True(t, config.Test.Cover)
-		assert.True(t, config.Test.Race)
+		its.Require().NoError(err)
+		its.Equal("my-app", config.Project.Name)
+		its.Equal("myapp", config.Project.Binary)
+		its.Equal("dist", config.Build.Output)
+		its.True(config.Test.Cover)
+		its.True(config.Test.Race)
 
 		// The loader unmarshals YAML into a defaultConfig() base
 		// (config_provider.go), so fields omitted from the file keep their
 		// defaults. The fixture sets no combine/auto-discover keys, so
 		// CombineBuildTags must remain at its true default.
-		assert.True(t, config.Test.CombineBuildTags,
+		its.True(config.Test.CombineBuildTags,
 			"CombineBuildTags should be preserved from defaults when omitted from YAML")
-		assert.False(t, config.Test.AutoDiscoverBuildTags,
+		its.False(config.Test.AutoDiscoverBuildTags,
 			"AutoDiscoverBuildTags should stay at its false default when omitted from YAML")
 	})
 
 	// Test that the new test-section build-tag keys are actually wired
 	// through YAML unmarshalling (proves the assertions above are meaningful).
-	its.T().Run("custom config build tag overrides", func(t *testing.T) {
+	its.Run("custom config build tag overrides", func() {
 		restoreEnv := unsetEnvVars(
-			t,
+			its.T(),
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS",
 			"MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE",
 			// The mage-x test runner exports MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE
@@ -424,16 +423,16 @@ test:
     - integration
     - e2e
 `
-		its.RequireNoError(os.WriteFile(".mage.yaml", []byte(configYAML), 0o644))
+		its.RequireNoError(os.WriteFile(".mage.yaml", []byte(configYAML), 0o600))
 
 		TestResetConfig() // Reset
 		config, err := GetConfig()
-		assert.NoError(t, err)
-		assert.False(t, config.Test.CombineBuildTags,
+		its.Require().NoError(err)
+		its.False(config.Test.CombineBuildTags,
 			"combine_build_tags: false in YAML must override the true default")
-		assert.True(t, config.Test.AutoDiscoverBuildTags,
+		its.True(config.Test.AutoDiscoverBuildTags,
 			"auto_discover_build_tags: true must be read from YAML")
-		assert.Equal(t, []string{"integration", "e2e"}, config.Test.AutoDiscoverBuildTagsExclude,
+		its.Equal([]string{"integration", "e2e"}, config.Test.AutoDiscoverBuildTagsExclude,
 			"auto_discover_build_tags_exclude must be read from YAML")
 	})
 }
@@ -454,15 +453,15 @@ func unsetEnvVars(t *testing.T, keys ...string) func() {
 	for _, k := range keys {
 		v, ok := os.LookupEnv(k)
 		originals[k] = saved{val: v, set: ok}
-		_ = os.Unsetenv(k)
+		require.NoError(t, os.Unsetenv(k))
 	}
 
 	return func() {
 		for k, s := range originals {
 			if s.set {
-				_ = os.Setenv(k, s.val)
+				require.NoError(t, os.Setenv(k, s.val))
 			} else {
-				_ = os.Unsetenv(k)
+				require.NoError(t, os.Unsetenv(k))
 			}
 		}
 	}
@@ -484,7 +483,7 @@ func main() {
 	println("cache test")
 }
 `
-	its.RequireNoError(os.WriteFile("main.go", []byte(mainGo), 0o644))
+	its.RequireNoError(os.WriteFile("main.go", []byte(mainGo), 0o600))
 
 	// Setup config
 	its.setupMageConfig("cache-test", "cache-app", "cache-test")
@@ -514,9 +513,9 @@ func (its *IntegrationTestSuite) TestErrorHandling() {
 	}
 
 	// Test build error handling
-	its.T().Run("build with missing main", func(t *testing.T) {
+	its.Run("build with missing main", func() {
 		// Create go.mod but no main.go file
-		its.RequireNoError(os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0o644))
+		its.RequireNoError(os.WriteFile("go.mod", []byte("module test\n\ngo 1.24\n"), 0o600))
 
 		TestSetConfig(&Config{
 			Project: ProjectConfig{
@@ -531,14 +530,14 @@ func (its *IntegrationTestSuite) TestErrorHandling() {
 		build := Build{}
 		err := build.Default()
 		// Should fail due to missing main
-		assert.Error(t, err)
+		its.Require().Error(err)
 	})
 
 	// Test with invalid configuration
-	its.T().Run("invalid platform", func(t *testing.T) {
+	its.Run("invalid platform", func() {
 		build := Build{}
 		err := build.Platform("invalid-platform")
-		assert.Error(t, err)
+		its.Require().Error(err)
 	})
 }
 
@@ -551,39 +550,41 @@ func (its *IntegrationTestSuite) TestPerformanceRegression() {
 	const perfIterations = 100
 
 	// Test command execution performance
-	its.T().Run("command execution", func(t *testing.T) {
+	its.Run("command execution", func() {
 		runner := NewSecureCommandRunner()
 
-		_ = runner.RunCmd("echo", "test") // warm up: discard one-time PATH lookup cost
+		its.Require().NoError(runner.RunCmd("echo", "test")) // warm up: discard one-time PATH lookup cost
 
 		start := time.Now()
 		for i := 0; i < perfIterations; i++ {
-			_ = runner.RunCmd("echo", "test")
+			its.Require().NoError(runner.RunCmd("echo", "test"))
 		}
 		duration := time.Since(start)
 
 		// Coarse regression guard, not an SLA — see perfBudget for the rationale.
 		budget := perfBudget("MAGE_X_PERF_CMD_EXEC_BUDGET", 15*time.Second)
-		assert.Less(t, duration, budget,
+		its.Less(duration, budget,
 			"command execution too slow: %d runs took %s (%s/run), budget %s",
 			perfIterations, duration, duration/time.Duration(perfIterations), budget)
 	})
 
 	// Test configuration loading performance
-	its.T().Run("config loading", func(t *testing.T) {
+	its.Run("config loading", func() {
 		TestResetConfig()
-		_, _ = GetConfig() // warm up: first load reads .mage.yaml and initializes providers
+		_, err := GetConfig() // warm up: first load reads .mage.yaml and initializes providers
+		its.Require().NoError(err)
 
 		start := time.Now()
 		for i := 0; i < perfIterations; i++ {
 			TestResetConfig()
-			_, _ = GetConfig()
+			_, err = GetConfig()
+			its.Require().NoError(err)
 		}
 		duration := time.Since(start)
 
 		// Coarse regression guard, not an SLA — see perfBudget for the rationale.
 		budget := perfBudget("MAGE_X_PERF_CONFIG_LOAD_BUDGET", 10*time.Second)
-		assert.Less(t, duration, budget,
+		its.Less(duration, budget,
 			"config loading too slow: %d loads took %s (%s/load), budget %s",
 			perfIterations, duration, duration/time.Duration(perfIterations), budget)
 	})

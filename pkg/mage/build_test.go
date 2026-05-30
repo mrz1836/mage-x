@@ -20,9 +20,18 @@ import (
 
 // Static test errors to satisfy err113 linter
 var (
-	errBuildError    = errors.New("build error")
-	errGitErrorBuild = errors.New("git error")
+	errBuildError           = errors.New("build error")
+	errGitErrorBuild        = errors.New("git error")
+	errUnexpectedTestRunner = errors.New("unexpected test runner type")
 )
+
+func setTestRunner(r any) error {
+	runner, ok := r.(CommandRunner)
+	if !ok {
+		return errUnexpectedTestRunner
+	}
+	return SetRunner(runner)
+}
 
 // BuildTestSuite defines the test suite for Build namespace methods
 type BuildTestSuite struct {
@@ -130,12 +139,13 @@ func (ts *BuildTestSuite) withGoListOutput(output string, fn func()) {
 // Compile-time assertion that the stub satisfies the executor contract.
 var _ pkgexec.Executor = (*goListStubExecutor)(nil)
 
-// withEnv temporarily sets an environment variable for the duration of fn,
-// restoring the previous value (or unsetting it) afterwards. Used to pin the
-// prebuild strategy so the assertions are deterministic and sandbox-safe.
-func (ts *BuildTestSuite) withEnv(key, value string, fn func()) {
+// withBuildStrategy temporarily sets the build strategy for the duration of fn,
+// restoring the previous value (or unsetting it) afterwards.
+func (ts *BuildTestSuite) withFullBuildStrategy(fn func()) {
+	const key = "MAGE_X_BUILD_STRATEGY"
+
 	prev, had := os.LookupEnv(key)
-	ts.Require().NoError(os.Setenv(key, value))
+	ts.Require().NoError(os.Setenv(key, "full"))
 	defer func() {
 		if had {
 			ts.Require().NoError(os.Setenv(key, prev))
@@ -160,7 +170,7 @@ func main() {
 		ts.mockBuildCommand("bin/module")
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Default()
@@ -200,7 +210,7 @@ func main() {
 		})).Return(errBuildError)
 
 		err := env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Default()
@@ -238,7 +248,7 @@ func main() {
 
 		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.All()
@@ -271,7 +281,7 @@ func main() {
 
 		TestResetConfig() // Reset global config
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.All()
@@ -298,7 +308,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-linux-amd64")
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Platform("linux/amd64")
@@ -310,7 +320,7 @@ func main() {
 
 	ts.Run("handles invalid platform format", func() {
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Platform("invalid-platform")
@@ -335,7 +345,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-windows-amd64.exe")
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Platform("windows/amd64")
@@ -362,7 +372,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-linux-amd64")
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Linux()
@@ -387,7 +397,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-darwin-arm64")
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Darwin()
@@ -411,7 +421,7 @@ func main() {
 		ts.mockBuildCommand("bin/module-windows-amd64.exe")
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Windows()
@@ -434,7 +444,7 @@ func (ts *BuildTestSuite) TestBuildClean() {
 		ts.env.Runner.On("RunCmd", "go", []string{"clean", "-testcache"}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Clean()
@@ -463,7 +473,7 @@ func main() {
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Install()
@@ -492,7 +502,7 @@ func main() {
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Dev()
@@ -518,7 +528,7 @@ func main() {}`)
 		ts.env.Runner.On("RunCmd", "go", []string{"generate", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.Generate()
@@ -546,7 +556,7 @@ func (ts *BuildTestSuite) TestBuildPreBuild() {
 		config.Build.Parallel = 0
 		TestSetConfig(config)
 
-		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+		ts.withFullBuildStrategy(func() {
 			// Mock go build with flexible args (no parallel flag expected)
 			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 				// Should be ["build", "./..."] or ["build", "-v", "./..."]
@@ -563,7 +573,7 @@ func (ts *BuildTestSuite) TestBuildPreBuild() {
 			})).Return(nil)
 
 			err := ts.env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				setTestRunner,
 				func() any { return GetRunner() },
 				func() error {
 					return ts.build.PreBuild()
@@ -584,7 +594,7 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 
 		// Pin the full strategy (see TestBuildPreBuild for rationale) so the
 		// parallelism flag is plumbed straight through to `go build`.
-		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+		ts.withFullBuildStrategy(func() {
 			// Mock go build with -p 2 flag
 			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 				// Should contain ["build", "-p", "2", "./..."]
@@ -601,7 +611,7 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 			})).Return(nil)
 
 			err := ts.env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				setTestRunner,
 				func() any { return GetRunner() },
 				func() error {
 					return ts.build.PreBuildWithArgs()
@@ -617,7 +627,7 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 		defer func() { os.Args = originalArgs }()
 		os.Args = []string{"magex", "build:prebuild", "p=4"}
 
-		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+		ts.withFullBuildStrategy(func() {
 			// Mock go build with -p 4 flag
 			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 				// Should contain ["build", "-p", "4", "./..."]
@@ -634,7 +644,7 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 			})).Return(nil)
 
 			err := ts.env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				setTestRunner,
 				func() any { return GetRunner() },
 				func() error {
 					return ts.build.PreBuildWithArgs()
@@ -658,7 +668,7 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 		config.Build.Parallel = 0
 		TestSetConfig(config)
 
-		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+		ts.withFullBuildStrategy(func() {
 			// Mock go build without -p flag
 			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 				// Should be ["build", "./..."] or ["build", "-v", "./..."]
@@ -675,7 +685,7 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 			})).Return(nil)
 
 			err := ts.env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				setTestRunner,
 				func() any { return GetRunner() },
 				func() error {
 					return ts.build.PreBuildWithArgs()
@@ -699,7 +709,7 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 		// Pin the full strategy. buildFull appends -p before -v, so the expected
 		// command is ["build", "-p", "1", "-v", "./..."]. (The previous "-v -p"
 		// ordering never matched the production arg construction.)
-		ts.withEnv("MAGE_X_BUILD_STRATEGY", "full", func() {
+		ts.withFullBuildStrategy(func() {
 			// Mock go build with -p 1 and -v flags
 			ts.env.Runner.On("RunCmd", "go", mock.MatchedBy(func(args []string) bool {
 				// Should contain ["build", "-p", "1", "-v", "./..."]
@@ -716,7 +726,7 @@ func (ts *BuildTestSuite) TestBuildPreBuildWithArgs() {
 			})).Return(nil)
 
 			err := ts.env.WithMockRunner(
-				func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup function returns error
+				setTestRunner,
 				func() any { return GetRunner() },
 				func() error {
 					return ts.build.PreBuildWithArgs()
@@ -821,7 +831,7 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 			"github.com/example/pkg1\ngithub.com/example/pkg2\ngithub.com/example/pkg3",
 			func() {
 				err := ts.env.WithMockRunner(
-					func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+					setTestRunner,
 					func() any { return GetRunner() },
 					func() error {
 						return ts.build.buildIncremental(2, 0, "", false, "1")
@@ -863,7 +873,7 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 			"github.com/example/cmd/app\ngithub.com/example/pkg1",
 			func() {
 				err := ts.env.WithMockRunner(
-					func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+					setTestRunner,
 					func() any { return GetRunner() },
 					func() error {
 						return ts.build.buildMainsFirst(10, false, "", false, "")
@@ -888,7 +898,7 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 		})).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				// Smart strategy will select based on available memory
@@ -903,7 +913,7 @@ func (ts *BuildTestSuite) TestBuildStrategies() {
 		ts.env.Runner.On("RunCmd", "go", []string{"build", "-p", "4", "./..."}).Return(nil)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				return ts.build.buildFull("4", false, "")
@@ -942,7 +952,7 @@ func (ts *BuildTestSuite) TestPackageDiscoveryUtilities() {
 		)
 
 		err := ts.env.WithMockRunner(
-			func(r any) error { return SetRunner(r.(CommandRunner)) }, //nolint:errcheck // Test setup
+			setTestRunner,
 			func() any { return GetRunner() },
 			func() error {
 				mainPkgs, err := ts.build.findMainPackages()

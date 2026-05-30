@@ -968,52 +968,62 @@ func BenchmarkCalculateFuzzTimeout(b *testing.B) {
 }
 
 // TestWarmFuzzBuildCache tests the build cache warmup function
+// fuzzWarmupCompileEnv gates the real-compile subtests of TestWarmFuzzBuildCache.
+// A successful `go test -fuzz` must build the fuzz-instrumented standard library
+// (~20s) — a Go-toolchain cost unrelated to this package's logic, and not
+// exercised by the race detector since it happens in a subprocess. Set this to
+// any non-empty value (e.g. in a dedicated fuzz validation run) to exercise the
+// successful-warm path. The function's own branches (error, timeout, zero-timeout)
+// are verified on every run by the cheap subtests below.
+const fuzzWarmupCompileEnv = "MAGE_X_FUZZ_WARMUP_COMPILE_TEST"
+
 func TestWarmFuzzBuildCache(t *testing.T) {
-	t.Run("valid package compiles successfully", func(t *testing.T) {
-		// Use a known valid package from this repo
-		elapsed := warmFuzzBuildCache("github.com/mrz1836/mage-x/pkg/utils", "FuzzDummy", 2*time.Minute)
-		assert.Greater(t, elapsed, time.Duration(0), "warmup should take some time")
-	})
+	const pkg = "github.com/mrz1836/mage-x/pkg/mage"
+
+	if os.Getenv(fuzzWarmupCompileEnv) != "" {
+		// All three subtests target the SAME package, so only the first pays the
+		// cold fuzz-instrumented compile; the rest hit the warm build cache.
+		t.Run("real fuzz test warms cache with fuzz instrumentation", func(t *testing.T) {
+			// FuzzSimple exists in this file, so fuzz-specific instrumentation is
+			// genuinely exercised. This is the one cold compile.
+			elapsed := warmFuzzBuildCache(pkg, "FuzzSimple", 2*time.Minute)
+			assert.Greater(t, elapsed, time.Duration(0), "warmup should take some time")
+		})
+
+		t.Run("nonexistent fuzz test still warms build cache", func(t *testing.T) {
+			// Unmatched fuzz name: the package still compiles with fuzz
+			// instrumentation (the goal); it simply finds 0 matches.
+			elapsed := warmFuzzBuildCache(pkg, "FuzzNonExistentTest", 2*time.Minute)
+			assert.Greater(t, elapsed, time.Duration(0), "warmup should complete even with unmatched fuzz name")
+		})
+
+		t.Run("empty fuzz test name still compiles package", func(t *testing.T) {
+			// Edge case: empty name → -fuzz=^$ matches nothing, but the package
+			// still compiles with fuzz instrumentation.
+			elapsed := warmFuzzBuildCache(pkg, "", 2*time.Minute)
+			assert.Greater(t, elapsed, time.Duration(0), "warmup should complete with empty fuzz test name")
+		})
+	} else {
+		t.Logf("skipping real fuzz-compile subtests (~20s); set %s=1 to run them", fuzzWarmupCompileEnv)
+	}
 
 	t.Run("invalid package returns quickly without panic", func(t *testing.T) {
-		// warmFuzzBuildCache is non-fatal: it should log and return, not panic
+		// warmFuzzBuildCache is non-fatal: it should log and return, not panic.
 		elapsed := warmFuzzBuildCache("github.com/nonexistent/package/does/not/exist", "FuzzDummy", 30*time.Second)
 		assert.Greater(t, elapsed, time.Duration(0), "should still return elapsed time")
 	})
 
 	t.Run("very short timeout triggers deadline exceeded", func(t *testing.T) {
-		// Use a real package but with an impossibly short timeout
-		elapsed := warmFuzzBuildCache("github.com/mrz1836/mage-x/pkg/mage", "FuzzDummy", 1*time.Nanosecond)
-		// Should return very quickly (either timeout or immediate failure)
+		// Real package but with an impossibly short timeout — returns very quickly.
+		elapsed := warmFuzzBuildCache(pkg, "FuzzSimple", 1*time.Nanosecond)
 		assert.Greater(t, elapsed, time.Duration(0))
 	})
 
 	t.Run("zero timeout disables warmup at call site", func(t *testing.T) {
-		// Verify the calling convention: WarmupTimeout=0 means caller skips the call
+		// Verify the calling convention: WarmupTimeout=0 means caller skips the call.
 		cfg := FuzzTimingConfig{WarmupTimeout: 0}
 		assert.Equal(t, time.Duration(0), cfg.WarmupTimeout)
-		// The caller checks `if fuzzTimingCfg.WarmupTimeout > 0` before calling
-	})
-
-	t.Run("real fuzz test warms cache with fuzz instrumentation", func(t *testing.T) {
-		// Use a real fuzz test from this package to verify fuzz-specific
-		// instrumentation is used (FuzzSimple exists in this file)
-		elapsed := warmFuzzBuildCache("github.com/mrz1836/mage-x/pkg/mage", "FuzzSimple", 2*time.Minute)
-		assert.Greater(t, elapsed, time.Duration(0), "warmup should take some time")
-	})
-
-	t.Run("nonexistent fuzz test still warms build cache", func(t *testing.T) {
-		// Even if the fuzz test name doesn't match, the package compiles with
-		// fuzz instrumentation which is the goal — the test simply finds 0 matches
-		elapsed := warmFuzzBuildCache("github.com/mrz1836/mage-x/pkg/mage", "FuzzNonExistentTest", 2*time.Minute)
-		assert.Greater(t, elapsed, time.Duration(0), "warmup should complete even with unmatched fuzz name")
-	})
-
-	t.Run("empty fuzz test name still compiles package", func(t *testing.T) {
-		// Edge case: empty string for fuzz test name — the regex becomes -fuzz=^$
-		// which matches nothing, but the package still compiles with fuzz instrumentation
-		elapsed := warmFuzzBuildCache("github.com/mrz1836/mage-x/pkg/utils", "", 2*time.Minute)
-		assert.Greater(t, elapsed, time.Duration(0), "warmup should complete with empty fuzz test name")
+		// The caller checks `if fuzzTimingCfg.WarmupTimeout > 0` before calling.
 	})
 }
 
