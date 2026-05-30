@@ -221,11 +221,7 @@ func (w *DefaultPathWatcher) checkForChanges() {
 			return nil
 		})
 		if err != nil {
-			select {
-			case w.errors <- err:
-			default:
-				// Error channel is full, drop the error
-			}
+			w.emitError(err)
 		}
 	}
 }
@@ -267,13 +263,18 @@ func (w *DefaultPathWatcher) checkFileForChanges(path string, info fs.FileInfo, 
 	}
 }
 
-// emitEvent sends an event to the events channel
+// emitEvent sends an event to the events channel.
+//
+// The read lock is held for the entire send so that Close, which acquires the
+// write lock before closing the events channel, cannot close the channel out
+// from under an in-flight send (a data race and a "send on closed channel"
+// panic). The non-blocking select keeps the lock from ever being held while
+// waiting on a full buffer.
 func (w *DefaultPathWatcher) emitEvent(event *PathEvent) {
 	w.mu.RLock()
-	running := w.running
-	w.mu.RUnlock()
+	defer w.mu.RUnlock()
 
-	if !running {
+	if !w.running {
 		return
 	}
 
@@ -281,6 +282,25 @@ func (w *DefaultPathWatcher) emitEvent(event *PathEvent) {
 	case w.events <- event:
 	default:
 		// Events channel is full, drop the event
+	}
+}
+
+// emitError sends an error to the errors channel.
+//
+// Like emitEvent, the read lock is held across the send so that Close cannot
+// close the errors channel out from under an in-flight send.
+func (w *DefaultPathWatcher) emitError(err error) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if !w.running {
+		return
+	}
+
+	select {
+	case w.errors <- err:
+	default:
+		// Errors channel is full, drop the error
 	}
 }
 
