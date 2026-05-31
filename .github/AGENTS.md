@@ -20,7 +20,6 @@ Our technical standards are organized into focused, portable documents in the `.
 * **[Go Essentials](tech-conventions/go-essentials.md)** - Context-first design, interfaces, goroutines, error handling
 * **[Testing Standards](tech-conventions/testing-standards.md)** - Unit tests, coverage requirements, best practices
 * **[Commenting & Documentation](tech-conventions/commenting-documentation.md)** - Code comments, package docs, markdown
-* **[CLAUDE.md "For AI Assistants"](CLAUDE.md#for-ai-assistants)** - `magex` calling convention, running a single test (`test:run name=… pkg=…`), JSON help (`magex help:command command=<name> json=true`)
 
 ### Version Control & Collaboration
 * **[Commit & Branch Conventions](tech-conventions/commit-branch-conventions.md)** - Git workflow standards
