@@ -23,7 +23,6 @@
        &nbsp;&nbsp;&nbsp;&nbsp; <code>Quality</code> &nbsp;&nbsp;
     </td>
     <td align="left">
-       <a href="https://goreportcard.com/report/github.com/mrz1836/mage-x"><img src="https://goreportcard.com/badge/github.com/mrz1836/mage-x?style=flat-square" alt="Go Report"></a>
        <a href="https://app.codecov.io/gh/mrz1836/mage-x/tree/master"><img src="https://codecov.io/gh/mrz1836/mage-x/branch/master/graph/badge.svg?style=flat-square" alt="Coverage"></a>
     </td>
   </tr>
