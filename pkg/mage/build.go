@@ -707,13 +707,13 @@ func (b Build) Dev() error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// Force dev version by setting environment variable
-	if setErr := os.Setenv("MAGE_X_VERSION", versionDev); setErr != nil {
+	// Force dev version via the release-version override read by getVersion
+	if setErr := os.Setenv("MAGE_X_RELEASE_VERSION", versionDev); setErr != nil {
 		return fmt.Errorf("failed to set dev version: %w", setErr)
 	}
 	defer func() {
-		if unsetErr := os.Unsetenv("MAGE_X_VERSION"); unsetErr != nil {
-			utils.Error("Failed to unset MAGE_X_VERSION: %v", unsetErr)
+		if unsetErr := os.Unsetenv("MAGE_X_RELEASE_VERSION"); unsetErr != nil {
+			utils.Error("Failed to unset MAGE_X_RELEASE_VERSION: %v", unsetErr)
 		}
 	}()
 

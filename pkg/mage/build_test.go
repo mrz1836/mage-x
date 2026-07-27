@@ -511,8 +511,8 @@ func main() {
 
 		ts.Require().NoError(err)
 
-		// Verify that MAGE_X_VERSION environment variable was cleaned up
-		ts.Require().Empty(os.Getenv("MAGE_X_VERSION"))
+		// Verify that MAGE_X_RELEASE_VERSION environment variable was cleaned up
+		ts.Require().Empty(os.Getenv("MAGE_X_RELEASE_VERSION"))
 	})
 }
 
