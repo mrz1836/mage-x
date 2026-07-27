@@ -512,6 +512,9 @@ func TestMetrics_AdditionalCoverage(t *testing.T) {
 		collector := NewMetricsCollector(&config)
 
 		timer := collector.StartTimer("test_timer", nil)
+		// Sleep so the measured span exceeds the clock's resolution; without it
+		// Stop() can legitimately return 0 on a fast machine.
+		time.Sleep(time.Millisecond)
 		duration := timer.Stop()
 		require.Greater(t, duration, time.Duration(0))
 	})
@@ -524,6 +527,9 @@ func TestMetrics_AdditionalCoverage(t *testing.T) {
 
 		timer := collector.StartTimer("test_timer", nil)
 		testErr := errors.New("test error") //nolint:err113 // test error
+		// Sleep so the measured span exceeds the clock's resolution; without it
+		// StopWithError() can legitimately return 0 on a fast machine.
+		time.Sleep(time.Millisecond)
 		duration := timer.StopWithError(testErr)
 		require.Greater(t, duration, time.Duration(0))
 	})
@@ -534,6 +540,9 @@ func TestMetrics_AdditionalCoverage(t *testing.T) {
 		collector := NewMetricsCollector(&config)
 
 		timer := collector.StartTimer("test_timer", nil)
+		// Sleep so the measured span exceeds the clock's resolution; without it
+		// Stop() can legitimately return 0 on a fast machine.
+		time.Sleep(time.Millisecond)
 		duration := timer.Stop()
 		require.Greater(t, duration, time.Duration(0))
 	})
@@ -545,6 +554,9 @@ func TestMetrics_AdditionalCoverage(t *testing.T) {
 
 		timer := collector.StartTimer("test_timer", nil)
 		testErr := errors.New("test error") //nolint:err113 // test error
+		// Sleep so the measured span exceeds the clock's resolution; without it
+		// StopWithError() can legitimately return 0 on a fast machine.
+		time.Sleep(time.Millisecond)
 		duration := timer.StopWithError(testErr)
 		require.Greater(t, duration, time.Duration(0))
 	})

@@ -670,7 +670,9 @@ func TestDownloadScript(t *testing.T) {
 			return nil
 		}
 
-		err := DownloadScript(ctx, "http://invalid.example.test:12345/script.sh", "", config, executor)
+		// Loopback with nothing listening: the download fails without the test
+		// resolving or dialing anything outside this machine.
+		err := DownloadScript(ctx, "http://127.0.0.1:1/script.sh", "", config, executor)
 
 		// Should fail during download
 		if err == nil {
