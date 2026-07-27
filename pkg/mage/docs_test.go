@@ -2,6 +2,8 @@ package mage
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -69,10 +71,19 @@ func (ts *DocsTestSuite) TestDocsGoDocs() {
 	docs := Docs{}
 
 	ts.Run("GoDocsBasic", func() {
-		// This test may fail without network access or valid module
-		err := docs.GoDocs()
-		// Should either succeed or fail gracefully
-		ts.Require().True(err == nil || err != nil)
+		// Point the module proxy at a local test server so this test never
+		// reaches the real proxy.golang.org over the network.
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"Version":"v0.0.0","Time":"2024-01-01T00:00:00Z"}`))
+		}))
+		defer server.Close()
+
+		originalBaseURL := docsProxyBaseURL
+		docsProxyBaseURL = server.URL
+		defer func() { docsProxyBaseURL = originalBaseURL }()
+
+		ts.Require().NoError(docs.GoDocs())
 	})
 }
 

@@ -37,6 +37,11 @@ const (
 	versionDev = "dev"
 )
 
+// docsProxyBaseURL is the base URL of the Go module proxy used to trigger a
+// pkg.go.dev sync. It is a package-level variable so tests can point it at a
+// local server and avoid reaching the real proxy.golang.org over the network.
+var docsProxyBaseURL = "https://proxy.golang.org"
+
 // DocServer represents a documentation server configuration
 type DocServer struct {
 	Tool     string   // "pkgsite", "godoc", or "none"
@@ -107,7 +112,7 @@ func (Docs) GoDocs(args ...string) error {
 	}
 
 	// Construct pkg.go.dev URL
-	proxyURL := fmt.Sprintf("https://proxy.golang.org/%s/@v/%s.info", module, currentVersion)
+	proxyURL := fmt.Sprintf("%s/%s/@v/%s.info", docsProxyBaseURL, module, currentVersion)
 
 	utils.Info("Triggering sync for %s@%s", module, currentVersion)
 
