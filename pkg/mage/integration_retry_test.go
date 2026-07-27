@@ -190,16 +190,24 @@ func TestIntegration_ToolInstallationWithNetworkFailures(t *testing.T) {
 		originalPATH := os.Getenv("PATH")
 		setenvForTest(t, "PATH", binDir+string(os.PathListSeparator)+originalPATH)
 
-		// Test govulncheck installation with retry logic
-		tools := Tools{}
-		err = tools.VulnCheck()
+		// Force the installation path: a host that already has govulncheck would
+		// otherwise skip the install and run a full scan, which downloads the
+		// vulnerability database. The mock runner then keeps the install itself
+		// from shelling out to `go install`, which would fetch over the network.
+		setCommandsMissing(t, "govulncheck")
 
-		if err != nil {
-			t.Logf("Govulncheck installation failed (expected in integration test): %v", err)
-			// Don't fail the test - this is expected to sometimes fail in CI
-		} else {
-			t.Log("Govulncheck installation succeeded with retry logic")
-		}
+		withMockRunner(t, func(_ *MockCommandRunner) {
+			// Test govulncheck installation with retry logic
+			tools := Tools{}
+			err = tools.VulnCheck()
+
+			if err != nil {
+				t.Logf("Govulncheck installation failed (expected without network access): %v", err)
+				// Don't fail the test - this is expected to sometimes fail in CI
+			} else {
+				t.Log("Govulncheck installation succeeded with retry logic")
+			}
+		})
 	})
 
 	t.Run("YamlfmtInstallation_NetworkRetry", func(t *testing.T) {

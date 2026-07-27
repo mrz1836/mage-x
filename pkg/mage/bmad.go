@@ -170,13 +170,13 @@ func (Bmad) Upgrade() error {
 
 // checkBmadPrerequisites verifies that required tools are installed
 func checkBmadPrerequisites() error {
-	if !utils.CommandExists(CmdNpm) {
+	if !commandExists(CmdNpm) {
 		utils.Error("npm not found")
 		utils.Info("Install Node.js from: https://nodejs.org/")
 		return errNpmNotInstalled
 	}
 
-	if !utils.CommandExists(CmdNpx) {
+	if !commandExists(CmdNpx) {
 		utils.Error("npx not found")
 		utils.Info("npx should be included with npm. Try reinstalling Node.js")
 		return errNpxNotInstalled

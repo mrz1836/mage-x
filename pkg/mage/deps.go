@@ -807,7 +807,7 @@ func (Deps) Audit(args ...string) error {
 	}
 
 	// Ensure govulncheck is installed
-	if !utils.CommandExists("govulncheck") {
+	if !commandExists("govulncheck") {
 		utils.Info("Installing govulncheck...")
 
 		vulnVersion := config.Tools.GoVulnCheck
@@ -946,7 +946,7 @@ func (Deps) Audit(args ...string) error {
 
 // findGovulncheckCommand finds the govulncheck command, trying PATH first, then GOPATH/bin
 func findGovulncheckCommand() string {
-	if utils.CommandExists("govulncheck") {
+	if commandExists("govulncheck") {
 		return "govulncheck"
 	}
 

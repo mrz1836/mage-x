@@ -54,17 +54,17 @@ bmad:
 
 	defer chdirForTest(ts.T(), ts.env.TempDir)()
 
-	// Note: If npm is actually installed on the system, this test will pass
-	// In a real CI environment without npm, it would detect the missing prerequisite
+	// Pin npm as missing rather than depending on the host. On a machine that
+	// has npm, Check() would otherwise run `npm view` and query the registry
+	// over the network.
+	setCommandsMissing(ts.T(), CmdNpm)
+
 	err = ts.bmad.Check()
-	// Either succeeds (npm present) or fails with appropriate error
-	if err != nil {
-		// Should be a prerequisite error
-		ts.True(
-			errors.Is(err, errNpmNotInstalled) || errors.Is(err, errNpxNotInstalled),
-			"should be npm or npx error",
-		)
-	}
+	ts.Require().Error(err)
+	ts.True(
+		errors.Is(err, errNpmNotInstalled) || errors.Is(err, errNpxNotInstalled),
+		"should be npm or npx error",
+	)
 }
 
 // TestCheck_Success tests Check with valid installation

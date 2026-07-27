@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +13,9 @@ import (
 
 	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
+
+// errVulnCheckUnavailable stands in for a failed govulncheck installation.
+var errVulnCheckUnavailable = errors.New("govulncheck unavailable in tests")
 
 // DepsCoverageTestSuite provides comprehensive coverage for Deps methods
 type DepsCoverageTestSuite struct {
@@ -547,10 +551,20 @@ func TestDepsVulnCheckWithoutGoMod(t *testing.T) {
 	require.NoError(t, os.Chdir(tmpDir))
 	defer func() { _ = os.Chdir(origDir) }() //nolint:errcheck // cleanup in defer
 
-	// Should fail because no go.mod (error message varies by environment)
-	err = deps.VulnCheck()
-	require.Error(t, err)
-	// Just verify an error occurred - exact message depends on govulncheck availability
+	// Report govulncheck as missing and route the resulting install through the
+	// mock runner. The real scanner downloads the vulnerability database over
+	// the network, which a unit test must not do.
+	setCommandsMissing(t, "govulncheck")
+
+	withMockRunner(t, func(mockRunner *MockCommandRunner) {
+		mockRunner.On("RunCmd", "go", "install", "golang.org/x/vuln/cmd/govulncheck@latest").
+			Return(errVulnCheckUnavailable).Maybe()
+
+		// Should fail because no go.mod (error message varies by environment)
+		err = deps.VulnCheck()
+		require.Error(t, err)
+		// Just verify an error occurred - exact message depends on govulncheck availability
+	})
 }
 
 func TestDepsAuditWithoutGoMod(t *testing.T) {
