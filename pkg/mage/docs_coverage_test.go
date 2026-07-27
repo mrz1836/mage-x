@@ -175,7 +175,9 @@ func (ts *DocsCoverageTestSuite) TestDocsGoDocsExercise() {
 	// reaches the real proxy.golang.org over the network.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"Version":"v0.0.0","Time":"2024-01-01T00:00:00Z"}`))
+		if _, err := w.Write([]byte(`{"Version":"v0.0.0","Time":"2024-01-01T00:00:00Z"}`)); err != nil {
+			ts.T().Errorf("failed to write proxy response: %v", err)
+		}
 	}))
 	defer server.Close()
 

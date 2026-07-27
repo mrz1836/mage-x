@@ -40,6 +40,8 @@ const (
 // docsProxyBaseURL is the base URL of the Go module proxy used to trigger a
 // pkg.go.dev sync. It is a package-level variable so tests can point it at a
 // local server and avoid reaching the real proxy.golang.org over the network.
+//
+//nolint:gochecknoglobals // seam required to keep docs tests off the network
 var docsProxyBaseURL = "https://proxy.golang.org"
 
 // DocServer represents a documentation server configuration
