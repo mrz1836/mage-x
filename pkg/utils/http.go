@@ -22,6 +22,9 @@ var ErrHTTPAPIError = errors.New("HTTP API error")
 var defaultClient = &http.Client{
 	Timeout: 30 * time.Second,
 	Transport: &http.Transport{
+		// A custom transport does not inherit http.DefaultTransport's proxy
+		// handling, so set it explicitly to honor HTTP(S)_PROXY/NO_PROXY.
+		Proxy:                 http.ProxyFromEnvironment,
 		MaxIdleConns:          100,
 		MaxIdleConnsPerHost:   10,
 		IdleConnTimeout:       90 * time.Second,
