@@ -2,6 +2,7 @@ package mage
 
 import (
 	"errors"
+	"net/http"
 	"sync"
 	"testing"
 
@@ -320,14 +321,14 @@ func TestUpdateNamespace_Check(t *testing.T) {
 		// Mock getting current version - first try current git tag command, then fallback
 		mockRunner.On("RunCmdOutput", "git", "tag", "--sort=-version:refname", "--points-at", "HEAD").Return("v1.0.0", nil).Maybe()
 		mockRunner.On("RunCmdOutput", "git", "describe", "--tags", "--abbrev=0").Return("v1.0.0", nil).Maybe()
-		// Mock checking for updates (simulate no internet)
+
+		// Serve the release lookup locally so the check never reaches GitHub
+		withFakeGitHubAPI(t, func(w http.ResponseWriter, _ *http.Request) {
+			writeFakeGitHubJSON(t, w, `{"tag_name":"v1.0.0","name":"v1.0.0","body":"notes","prerelease":false,"draft":false}`)
+		})
 
 		update := NewUpdateNamespace()
-		// Check method might fail due to network, but shouldn't panic
-		if err := update.Check(); err != nil {
-			// Expected to potentially fail in test environment
-			t.Logf("Update check failed as expected: %v", err)
-		}
+		require.NoError(t, update.Check())
 	})
 }
 

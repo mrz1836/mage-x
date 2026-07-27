@@ -3,7 +3,7 @@ package mage
 import (
 	"archive/tar"
 	"compress/gzip"
-	"errors"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -325,54 +325,57 @@ func TestIsNewer(t *testing.T) {
 	}
 }
 
-// TestGetReleaseForChannel tests channel-based release selection
+// TestGetReleaseForChannel tests channel-based release selection against a fake
+// GitHub API, so each channel's selection logic is asserted without the test
+// depending on network access or on what is actually published upstream.
 func TestGetReleaseForChannel(t *testing.T) {
+	const latestStableJSON = `{"tag_name":"v1.2.0","name":"v1.2.0","body":"stable notes","prerelease":false,"draft":false}`
+	const releaseListJSON = `[
+		{"tag_name":"v1.3.0-beta.1","name":"v1.3.0-beta.1","body":"beta notes","prerelease":true,"draft":false},
+		{"tag_name":"v1.2.0","name":"v1.2.0","body":"stable notes","prerelease":false,"draft":false}
+	]`
+
 	tests := []struct {
 		name    string
 		channel UpdateChannel
-		wantErr bool
+		wantTag string
 	}{
 		{
 			name:    "stable channel",
 			channel: StableChannel,
-			wantErr: false, // Will fail in test env but testing code path
+			wantTag: "v1.2.0",
 		},
 		{
 			name:    "beta channel",
 			channel: BetaChannel,
-			wantErr: false,
+			wantTag: "v1.3.0-beta.1",
 		},
 		{
 			name:    "edge channel",
 			channel: EdgeChannel,
-			wantErr: false,
+			wantTag: "v1.3.0-beta.1",
 		},
 		{
 			name:    "invalid channel defaults to stable",
 			channel: UpdateChannel("invalid"),
-			wantErr: false,
+			wantTag: "v1.2.0",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// This test will make actual network calls in integration testing
-			// For unit tests, we just verify the function doesn't panic
-			// and handles channels correctly
-			_, err := getReleaseForChannel("mrz1836", "mage-x", tt.channel)
-			// In test environment without network, we expect errors
-			// but we're testing the channel logic paths exist
-			if err != nil {
-				// Verify it's a network/API error, not a panic or logic error
-				assert.True(t,
-					errors.Is(err, errGitHubAPIError) ||
-						errors.Is(err, errNoReleasesFound) ||
-						errors.Is(err, errNoBetaReleasesFound) ||
-						strings.Contains(err.Error(), "failed") ||
-						strings.Contains(err.Error(), "gh CLI") ||
-						strings.Contains(err.Error(), "rate limit"),
-					"unexpected error type: %v", err)
-			}
+			withFakeGitHubAPI(t, func(w http.ResponseWriter, r *http.Request) {
+				if strings.HasSuffix(r.URL.Path, "/releases/latest") {
+					writeFakeGitHubJSON(t, w, latestStableJSON)
+					return
+				}
+				writeFakeGitHubJSON(t, w, releaseListJSON)
+			})
+
+			release, err := getReleaseForChannel("mrz1836", "mage-x", tt.channel)
+			require.NoError(t, err)
+			require.NotNil(t, release)
+			assert.Equal(t, tt.wantTag, release.TagName)
 		})
 	}
 }
