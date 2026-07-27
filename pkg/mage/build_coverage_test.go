@@ -65,11 +65,12 @@ func (ts *BuildCoverageTestSuite) TearDownTest() {
 	// Clean up environment variables - wrap in anonymous function for error handling
 	defer func() {
 		// Ignore cleanup errors in teardown
-		_ = os.Unsetenv("MAGE_X_CACHE_DISABLED") //nolint:errcheck // cleanup in defer // cleanup in defer
-		_ = os.Unsetenv("GOOS")                  //nolint:errcheck // cleanup in defer // cleanup in defer
-		_ = os.Unsetenv("GOARCH")                //nolint:errcheck // cleanup in defer
-		_ = os.Unsetenv("MAGE_X_VERSION")        //nolint:errcheck // cleanup in defer
-		_ = os.Unsetenv("CLEAN_CACHE")           //nolint:errcheck // cleanup in defer
+		_ = os.Unsetenv("MAGE_X_CACHE_DISABLED")  //nolint:errcheck // cleanup in defer // cleanup in defer
+		_ = os.Unsetenv("GOOS")                   //nolint:errcheck // cleanup in defer // cleanup in defer
+		_ = os.Unsetenv("GOARCH")                 //nolint:errcheck // cleanup in defer
+		_ = os.Unsetenv("MAGE_X_VERSION")         //nolint:errcheck // cleanup in defer
+		_ = os.Unsetenv("MAGE_X_RELEASE_VERSION") //nolint:errcheck // cleanup in defer
+		_ = os.Unsetenv("CLEAN_CACHE")            //nolint:errcheck // cleanup in defer
 	}()
 
 	// Reset config
