@@ -9,10 +9,18 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 // TestMageCompatibility tests that magex is compatible with existing mage usage
 func TestMain(m *testing.M) {
+	// Keep the suite hermetic: the magex binary under test must not reach the
+	// internet, directly or through a tool it shells out to.
+	if err := testhelpers.BlockExternalNetwork(); err != nil {
+		panic("Failed to block external network: " + err.Error())
+	}
+
 	// Build magex binary for testing
 	if err := buildMagexBinary(); err != nil {
 		panic("Failed to build magex binary: " + err.Error())

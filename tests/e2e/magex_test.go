@@ -10,10 +10,19 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 // TestMain sets up the test environment
 func TestMain(m *testing.M) {
+	// Keep the suite hermetic: the magex binary under test must not reach the
+	// internet, directly or through a tool it shells out to.
+	if err := testhelpers.BlockExternalNetwork(); err != nil {
+		fmt.Printf("Failed to block external network: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Build magex binary for testing
 	if err := buildMagexBinary(); err != nil {
 		fmt.Printf("Failed to build magex binary: %v\n", err)

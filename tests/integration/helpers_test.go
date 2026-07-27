@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 const integrationCommandTimeout = 2 * time.Minute
@@ -48,6 +50,13 @@ func runTestMain(m *testing.M) int {
 	}
 	if err := os.Setenv("GOTELEMETRY", "off"); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "failed to disable Go telemetry: %v\n", err)
+		return 1
+	}
+
+	// Integration tests shell out to magex, go and git; keep all of that off the
+	// network so a test run never reaches the internet.
+	if err := testhelpers.BlockExternalNetwork(); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "failed to block external network: %v\n", err)
 		return 1
 	}
 

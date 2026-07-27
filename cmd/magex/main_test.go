@@ -5,6 +5,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 func TestMain(m *testing.M) {
@@ -50,6 +54,14 @@ func runTestMain(m *testing.M) int {
 		_, _ = fmt.Fprintf(os.Stderr, "failed to disable Go telemetry: %v\n", err)
 		return 1
 	}
+
+	// Keep the package hermetic: no test may reach the internet, either directly
+	// or through a tool it shells out to.
+	if err := testhelpers.BlockExternalNetwork(); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "failed to block external network: %v\n", err)
+		return 1
+	}
+	utils.DefaultHTTPClient().Transport = testhelpers.LoopbackOnlyTransport()
 
 	return m.Run()
 }
@@ -3530,6 +3542,18 @@ func TestUpdateCommandsNoStaleBanner(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Serve the release lookup locally so update:check never queries
+			// GitHub. GITHUB_API_URL also disables the gh CLI path, which would
+			// otherwise talk to github.com regardless of this server.
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if _, writeErr := w.Write([]byte(`{"tag_name":"v0.0.1","name":"v0.0.1","body":"notes","prerelease":false,"draft":false}`)); writeErr != nil {
+					t.Errorf("failed to write fake GitHub API response: %v", writeErr)
+				}
+			}))
+			defer server.Close()
+			t.Setenv("GITHUB_API_URL", server.URL)
+
 			// Capture stdout and stderr
 			oldStdout := os.Stdout
 			oldStderr := os.Stderr

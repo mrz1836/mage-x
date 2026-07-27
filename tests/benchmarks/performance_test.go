@@ -10,10 +10,18 @@ import (
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/mage/registry"
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
 // TestMain sets up benchmarking environment
 func TestMain(m *testing.M) {
+	// Keep benchmarks hermetic: the magex binary under test must not reach the
+	// internet, directly or through a tool it shells out to.
+	if err := testhelpers.BlockExternalNetwork(); err != nil {
+		fmt.Printf("Failed to block external network: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Build magex binary for benchmarking
 	if err := buildMagexBinary(); err != nil {
 		fmt.Printf("Failed to build magex binary: %v\n", err)

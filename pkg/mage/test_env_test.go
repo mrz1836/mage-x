@@ -5,6 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/mrz1836/mage-x/pkg/testhelpers"
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 func TestMain(m *testing.M) {
@@ -41,6 +44,14 @@ func runTestMain(m *testing.M) int {
 		_, _ = fmt.Fprintf(os.Stderr, "failed to disable Go telemetry: %v\n", err)
 		return 1
 	}
+
+	// Keep the package hermetic: no test may reach the internet, either directly
+	// or through a tool it shells out to (go, gh, curl, npm, govulncheck).
+	if err := testhelpers.BlockExternalNetwork(); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "failed to block external network: %v\n", err)
+		return 1
+	}
+	utils.DefaultHTTPClient().Transport = testhelpers.LoopbackOnlyTransport()
 
 	return m.Run()
 }
