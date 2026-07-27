@@ -49,12 +49,47 @@ func getSupportedModels() map[string]string {
 	}
 }
 
-// checkTmux verifies tmux is installed and available
+// checkTmux verifies tmux is installed and available. It runs through the shared
+// command runner so tests can inject a mock instead of depending on a real tmux
+// binary being present on the host.
 func checkTmux() error {
-	if _, err := exec.LookPath("tmux"); err != nil {
+	if _, err := GetRunner().RunCmdOutput("tmux", "-V"); err != nil {
 		return fmt.Errorf("%w. Install from: %s", errTmuxNotFound, tmuxInstallURL)
 	}
 	return nil
+}
+
+// tmuxSessions runs "tmux ls" through the shared runner and returns one entry per
+// session. An empty slice means no sessions exist (including "no server running").
+func tmuxSessions() ([]string, error) {
+	output, err := GetRunner().RunCmdOutput("tmux", "ls")
+	if err != nil {
+		if isNoTmuxSessions(output, err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to list sessions: %w", err)
+	}
+
+	var sessions []string
+	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+		if strings.TrimSpace(line) != "" {
+			sessions = append(sessions, line)
+		}
+	}
+	return sessions, nil
+}
+
+// isNoTmuxSessions reports whether a "tmux ls" failure simply means there are no
+// sessions. tmux exits 1 with a "no server running" message; that message may be
+// in the captured output or in the wrapped error, depending on the runner.
+func isNoTmuxSessions(output string, err error) bool {
+	combined := output + "\n" + err.Error()
+	if strings.Contains(combined, "no server running") || strings.Contains(combined, "no sessions") {
+		return true
+	}
+
+	var exitErr *exec.ExitError
+	return errors.As(err, &exitErr) && exitErr.ExitCode() == 1
 }
 
 // validateModel checks if the model is in the supported list and returns the full model name
@@ -124,10 +159,7 @@ func getExpandedDir(params map[string]string) (string, error) {
 
 // sessionExists checks if a tmux session exists
 func sessionExists(name string) bool {
-	ctx := runtimectx.Context()
-	// #nosec G204 -- fixed tmux command with session name parameter
-	cmd := exec.CommandContext(ctx, "tmux", "has-session", "-t", name)
-	return cmd.Run() == nil
+	return GetRunner().RunCmd("tmux", "has-session", "-t", name) == nil
 }
 
 // List shows all tmux sessions with status
@@ -140,32 +172,17 @@ func (Tmux) List() error {
 	}
 
 	// Run tmux ls to get session list
-	ctx := runtimectx.Context()
-	cmd := exec.CommandContext(ctx, "tmux", "ls")
-	output, err := cmd.CombinedOutput()
-	// Handle no sessions case gracefully
+	sessions, err := tmuxSessions()
 	if err != nil {
-		if strings.Contains(string(output), "no server running") ||
-			strings.Contains(string(output), "no sessions") ||
-			cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 1 {
-			utils.Info("No tmux sessions found")
-			return nil
-		}
-		return fmt.Errorf("failed to list sessions: %w", err)
+		return err
 	}
-
-	// Parse and display sessions
-	sessions := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(sessions) == 0 || (len(sessions) == 1 && sessions[0] == "") {
+	if len(sessions) == 0 {
 		utils.Info("No tmux sessions found")
 		return nil
 	}
 
 	utils.Info("Found %d session(s):\n", len(sessions))
 	for _, session := range sessions {
-		if session == "" {
-			continue
-		}
 		// tmux ls output format: "name: X windows (created TIME) [WIDTHxHEIGHT] (attached)"
 		// Display as-is for now, can enhance parsing later
 		fmt.Printf("  • %s\n", session)
@@ -216,11 +233,7 @@ func (Tmux) Start(args ...string) error {
 	utils.Info("Using model: %s", fullModel)
 
 	// Create new tmux session in detached mode first
-	ctx := runtimectx.Context()
-	//nolint:gosec // claudeCmd is constructed from validated inputs
-	createCmd := exec.CommandContext(ctx, "tmux", "new", "-d", "-s", sessionName, "-c", dir, claudeCmd)
-
-	if err := createCmd.Run(); err != nil {
+	if err := GetRunner().RunCmd("tmux", "new", "-d", "-s", sessionName, "-c", dir, claudeCmd); err != nil {
 		return fmt.Errorf("failed to create tmux session: %w", err)
 	}
 
@@ -301,10 +314,7 @@ func (Tmux) Kill(args ...string) error {
 	utils.Info("Killing session '%s'...", sessionName)
 
 	// Kill the session
-	ctx := runtimectx.Context()
-	//nolint:gosec // sessionName is validated and passed safely to tmux
-	cmd := exec.CommandContext(ctx, "tmux", "kill-session", "-t", sessionName)
-	if err := cmd.Run(); err != nil {
+	if err := GetRunner().RunCmd("tmux", "kill-session", "-t", sessionName); err != nil {
 		return fmt.Errorf("failed to kill session: %w", err)
 	}
 
@@ -322,23 +332,11 @@ func (Tmux) KillAll() error {
 	}
 
 	// Get list of sessions
-	ctx := runtimectx.Context()
-	cmd := exec.CommandContext(ctx, "tmux", "ls")
-	output, err := cmd.CombinedOutput()
-	// Handle no sessions case gracefully
+	sessions, err := tmuxSessions()
 	if err != nil {
-		if strings.Contains(string(output), "no server running") ||
-			strings.Contains(string(output), "no sessions") ||
-			cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 1 {
-			utils.Info("No tmux sessions to kill")
-			return nil
-		}
-		return fmt.Errorf("failed to list sessions: %w", err)
+		return err
 	}
-
-	// Parse sessions
-	sessions := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(sessions) == 0 || (len(sessions) == 1 && sessions[0] == "") {
+	if len(sessions) == 0 {
 		utils.Info("No tmux sessions to kill")
 		return nil
 	}
@@ -346,9 +344,6 @@ func (Tmux) KillAll() error {
 	// Show sessions that will be killed
 	utils.Warn("This will kill %d tmux session(s):", len(sessions))
 	for _, session := range sessions {
-		if session == "" {
-			continue
-		}
 		// Extract just the session name (before the colon)
 		name := strings.Split(session, ":")[0]
 		fmt.Printf("  • %s\n", name)
@@ -370,8 +365,7 @@ func (Tmux) KillAll() error {
 
 	// Kill all sessions (kill-server stops tmux entirely)
 	utils.Info("Killing all sessions...")
-	cmd = exec.CommandContext(ctx, "tmux", "kill-server")
-	if err := cmd.Run(); err != nil {
+	if err := GetRunner().RunCmd("tmux", "kill-server"); err != nil {
 		return fmt.Errorf("failed to kill sessions: %w", err)
 	}
 
@@ -389,35 +383,19 @@ func (Tmux) Status(args ...string) error {
 	}
 
 	// Get list of sessions
-	ctx := runtimectx.Context()
-	cmd := exec.CommandContext(ctx, "tmux", "ls")
-	output, err := cmd.CombinedOutput()
-	// Handle no sessions case gracefully
+	sessions, err := tmuxSessions()
 	if err != nil {
-		if strings.Contains(string(output), "no server running") ||
-			strings.Contains(string(output), "no sessions") ||
-			cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 1 {
-			utils.Info("No tmux sessions found")
-			utils.Info("\nTo start a new session:")
-			utils.Info("  magex tmux:start")
-			return nil
-		}
-		return fmt.Errorf("failed to list sessions: %w", err)
+		return err
 	}
-
-	// Parse and display sessions with enhanced status
-	sessions := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(sessions) == 0 || (len(sessions) == 1 && sessions[0] == "") {
+	if len(sessions) == 0 {
 		utils.Info("No tmux sessions found")
+		utils.Info("\nTo start a new session:")
+		utils.Info("  magex tmux:start")
 		return nil
 	}
 
 	utils.Info("Found %d session(s):\n", len(sessions))
 	for _, session := range sessions {
-		if session == "" {
-			continue
-		}
-
 		// Parse session info
 		// Format: "name: X windows (created TIME) [WIDTHxHEIGHT] (attached)"
 		parts := strings.Split(session, ":")
