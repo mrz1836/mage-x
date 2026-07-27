@@ -22,11 +22,6 @@ func getVersion() string {
 		return releaseVersion
 	}
 
-	// Check for environment variable override
-	if envVersion := env.MustGet("MAGE_X_VERSION"); envVersion != "" {
-		return envVersion
-	}
-
 	// Try to get from git
 	if gitVersion := getVersionFromGit(); gitVersion != "" {
 		return gitVersion
