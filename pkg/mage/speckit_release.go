@@ -108,7 +108,7 @@ func resolveTagViaCurl(ownerRepo string) (string, error) {
 		return "", fmt.Errorf("%w: curl", errSpeckitToolMissing)
 	}
 
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", ownerRepo)
+	url := fmt.Sprintf("%s/repos/%s/releases/latest", gitHubAPIBaseURL(), ownerRepo)
 	args := []string{
 		"-fsSL",
 		"-H", "Accept: application/vnd.github+json",

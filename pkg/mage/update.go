@@ -251,7 +251,7 @@ func getReleaseForChannel(owner, repo string, channel UpdateChannel) (*GitHubRel
 // getLatestStableRelease gets the latest stable release
 func getLatestStableRelease(owner, repo string) (*GitHubRelease, error) {
 	// Try gh CLI first if available
-	if utils.CommandExists("gh") {
+	if useGitHubCLI() {
 		if release, err := getLatestStableReleaseViaGH(owner, repo); err == nil {
 			return release, nil
 		}
@@ -314,14 +314,14 @@ func getLatestStableReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 func getLatestStableReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
 	defer cancel()
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
+	url := fmt.Sprintf("%s/repos/%s/%s/releases/latest", gitHubAPIBaseURL(), owner, repo)
 	return utils.HTTPGetJSON[GitHubRelease](ctx, url)
 }
 
 // getLatestBetaRelease gets the latest beta release
 func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
 	// Try gh CLI first if available
-	if utils.CommandExists("gh") {
+	if useGitHubCLI() {
 		if release, err := getLatestBetaReleaseViaGH(owner, repo); err == nil {
 			return release, nil
 		}
@@ -370,7 +370,7 @@ func getLatestBetaReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
 	defer cancel()
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
+	url := fmt.Sprintf("%s/repos/%s/%s/releases", gitHubAPIBaseURL(), owner, repo)
 	releases, err := utils.HTTPGetJSON[[]GitHubRelease](ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch releases from GitHub API: %w", err)
@@ -398,7 +398,7 @@ func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 // getLatestEdgeRelease gets the latest edge release (any release including pre-release)
 func getLatestEdgeRelease(owner, repo string) (*GitHubRelease, error) {
 	// Try gh CLI first if available
-	if utils.CommandExists("gh") {
+	if useGitHubCLI() {
 		if release, err := getLatestEdgeReleaseViaGH(owner, repo); err == nil {
 			return release, nil
 		}
@@ -435,7 +435,7 @@ func getLatestEdgeReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
 func getLatestEdgeReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
 	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
 	defer cancel()
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
+	url := fmt.Sprintf("%s/repos/%s/%s/releases", gitHubAPIBaseURL(), owner, repo)
 	releases, err := utils.HTTPGetJSON[[]GitHubRelease](ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch releases from GitHub API: %w", err)

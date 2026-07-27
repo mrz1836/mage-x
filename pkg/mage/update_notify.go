@@ -269,7 +269,7 @@ func StartBackgroundUpdateCheck(ctx context.Context) <-chan *UpdateCheckResult {
 // fetchLatestReleaseWithAuth fetches the latest release with authentication fallback
 func fetchLatestReleaseWithAuth(ctx context.Context) (*GitHubRelease, error) {
 	token := getGitHubTokenForUpdateCheck()
-	url := "https://api.github.com/repos/" + magexGitHubOwner + "/" + magexGitHubRepo + "/releases/latest"
+	url := gitHubAPIBaseURL() + "/repos/" + magexGitHubOwner + "/" + magexGitHubRepo + "/releases/latest"
 
 	// Try authenticated request first (higher rate limit: 5000/hr vs 60/hr)
 	if token != "" {

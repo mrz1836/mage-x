@@ -1553,7 +1553,7 @@ func getPreviousTag() string {
 func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
 	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
 	defer cancel()
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
+	url := fmt.Sprintf("%s/repos/%s/%s/releases/latest", gitHubAPIBaseURL(), owner, repo)
 	return utils.HTTPGetJSON[GitHubRelease](ctx, url)
 }
 
