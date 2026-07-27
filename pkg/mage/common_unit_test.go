@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mrz1836/mage-x/pkg/mage/testutil"
 )
 
 // TestGetDirSizeUnit tests the getDirSize function
@@ -145,6 +147,138 @@ func TestFormatReleaseNotesUnit(t *testing.T) {
 			assert.Equal(t, tc.expected, result)
 		})
 	}
+}
+
+// withVersionMockRunner runs fn with the test environment's mock runner installed.
+func withVersionMockRunner(t *testing.T, testEnv *testutil.TestEnvironment, fn func() error) error {
+	t.Helper()
+
+	return testEnv.WithMockRunner(
+		func(r interface{}) error {
+			return SetRunner(r.(CommandRunner)) //nolint:errcheck // type assertion is safe in test
+		},
+		func() interface{} { return GetRunner() },
+		fn,
+	)
+}
+
+// versionTestProjectTag is the most recent tag of the project being built in these tests.
+const versionTestProjectTag = "v0.5.0"
+
+// mockGitVersionCommands stubs the three git commands the version resolver invokes,
+// against a clean working tree. describe is the `git describe --tags --always --dirty`
+// output, which is what distinguishes a checkout sitting exactly on a tag from one
+// carrying commits on top of it.
+func mockGitVersionCommands(testEnv *testutil.TestEnvironment, describe string) {
+	testEnv.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--abbrev=0"}).
+		Return(versionTestProjectTag, nil).Maybe()
+	testEnv.Runner.On("RunCmdOutput", "git", []string{"describe", "--tags", "--always", "--dirty"}).
+		Return(describe, nil).Maybe()
+	testEnv.Runner.On("RunCmdOutput", "git", []string{"status", "--porcelain"}).
+		Return("", nil).Maybe()
+}
+
+// TestGetVersionIgnoresMageXVersionEnv guards against the toolchain pin leaking into
+// the version stamped onto a target binary.
+//
+// MAGE_X_VERSION selects which mage-x release CI installs. Projects declare it in their
+// .github/env files, which are loaded into the process environment at startup, so any
+// project built locally would otherwise be stamped with the pinned tool version instead
+// of its own. The build version must be resolved from the project being built:
+// MAGE_X_RELEASE_VERSION -> git tag -> VERSION file -> config -> "dev".
+func TestGetVersionIgnoresMageXVersionEnv(t *testing.T) {
+	const pinnedToolVersion = "v1.24.1"
+
+	t.Run("exact clean tag resolves to the project tag", func(t *testing.T) {
+		testEnv := testutil.NewTestEnvironment(t)
+		defer testEnv.Cleanup()
+
+		t.Setenv("MAGE_X_VERSION", pinnedToolVersion)
+		t.Setenv("MAGE_X_RELEASE_VERSION", "")
+		TestResetConfig()
+
+		mockGitVersionCommands(testEnv, versionTestProjectTag)
+
+		require.NoError(t, withVersionMockRunner(t, testEnv, func() error {
+			version := getVersion()
+			require.Equal(t, versionTestProjectTag, version)
+			require.NotEqual(t, pinnedToolVersion, version)
+			return nil
+		}))
+	})
+
+	t.Run("commits ahead of the tag resolve to dev", func(t *testing.T) {
+		testEnv := testutil.NewTestEnvironment(t)
+		defer testEnv.Cleanup()
+
+		t.Setenv("MAGE_X_VERSION", pinnedToolVersion)
+		t.Setenv("MAGE_X_RELEASE_VERSION", "")
+		TestResetConfig()
+
+		mockGitVersionCommands(testEnv, "v0.5.0-1-g3b88731")
+
+		require.NoError(t, withVersionMockRunner(t, testEnv, func() error {
+			version := getVersion()
+			require.Equal(t, versionDev, version)
+			require.NotEqual(t, pinnedToolVersion, version)
+			return nil
+		}))
+	})
+
+	t.Run("release version override still wins", func(t *testing.T) {
+		testEnv := testutil.NewTestEnvironment(t)
+		defer testEnv.Cleanup()
+
+		t.Setenv("MAGE_X_VERSION", pinnedToolVersion)
+		t.Setenv("MAGE_X_RELEASE_VERSION", "v9.9.9")
+		TestResetConfig()
+
+		mockGitVersionCommands(testEnv, versionTestProjectTag)
+
+		require.NoError(t, withVersionMockRunner(t, testEnv, func() error {
+			require.Equal(t, "v9.9.9", getVersion())
+			return nil
+		}))
+	})
+
+	t.Run("default ldflags do not carry the pin", func(t *testing.T) {
+		testEnv := testutil.NewTestEnvironment(t)
+		defer testEnv.Cleanup()
+
+		t.Setenv("MAGE_X_VERSION", pinnedToolVersion)
+		t.Setenv("MAGE_X_RELEASE_VERSION", "")
+		TestResetConfig()
+
+		mockGitVersionCommands(testEnv, "v0.5.0-1-g3b88731")
+		testEnv.Runner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).
+			Return("3b88731", nil).Maybe()
+
+		require.NoError(t, withVersionMockRunner(t, testEnv, func() error {
+			flags := defaultLDFlags()
+			require.Contains(t, flags, "-X main.version="+versionDev)
+			require.NotContains(t, flags, "-X main.version="+pinnedToolVersion)
+			return nil
+		}))
+	})
+
+	t.Run("ldflags template expansion does not carry the pin", func(t *testing.T) {
+		testEnv := testutil.NewTestEnvironment(t)
+		defer testEnv.Cleanup()
+
+		t.Setenv("MAGE_X_VERSION", pinnedToolVersion)
+		t.Setenv("MAGE_X_RELEASE_VERSION", "")
+		TestResetConfig()
+
+		mockGitVersionCommands(testEnv, "v0.5.0-1-g3b88731")
+		testEnv.Runner.On("RunCmdOutput", "git", []string{"rev-parse", "--short", "HEAD"}).
+			Return("3b88731", nil).Maybe()
+
+		require.NoError(t, withVersionMockRunner(t, testEnv, func() error {
+			expanded := expandLDFlagsTemplates([]string{"-X main.version={{.Version}}"})
+			require.Equal(t, []string{"-X main.version=" + versionDev}, expanded)
+			return nil
+		}))
+	})
 }
 
 // TestGetVersionFromGitUnit tests the getVersionFromGit function
