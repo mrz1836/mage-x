@@ -204,30 +204,14 @@ func buildMagexForTesting(t *testing.T) string {
 	return "magex-test"
 }
 
-// Helper function to setup a basic Go module for testing
+// Helper function to setup a basic Go module for testing.
+//
+// The dependencies are local modules rather than published ones so mod:graph
+// resolves them without touching the network; see writeModuleGraphFixture.
 func setupGoModule(t *testing.T) string {
 	t.Helper()
 
-	testDir := t.TempDir()
-
-	// Create go.mod
-	goModContent := `module testmodule
-
-go 1.21
-
-require github.com/stretchr/testify v1.8.4
-`
-	err := os.WriteFile(filepath.Join(testDir, "go.mod"), []byte(goModContent), 0o600)
-	require.NoError(t, err)
-
-	// Run go mod download to populate the module graph
-	cmd := testCommand(t, "go", "mod", "download")
-	cmd.Dir = testDir
-	if err := cmd.Run(); err != nil {
-		t.Logf("go mod download failed; continuing because dependency resolution may be unavailable in CI: %v", err)
-	}
-
-	return testDir
+	return writeModuleGraphFixture(t, 3)
 }
 
 // Helper function to setup a basic Go project for testing

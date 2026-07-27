@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/mrz1836/mage-x/pkg/testhelpers"
 )
 
@@ -61,6 +63,60 @@ func runTestMain(m *testing.M) int {
 	}
 
 	return m.Run()
+}
+
+// fixtureDepVersion is the version every fixture dependency is required at. The
+// modules only exist on disk, so the exact value does not matter - it just has
+// to be valid semver for the require directives.
+const fixtureDepVersion = "v1.0.0"
+
+// writeModuleGraphFixture creates a Go module whose dependency graph resolves
+// entirely from disk: the module requires the head of a chain, each chain entry
+// requires the next, and the module replaces every one of them with a directory
+// written next to it. Nothing is ever fetched, so `go mod graph` succeeds with
+// GOPROXY=off and renders the same tree on every machine - a chain of length n
+// produces exactly n levels below the root. The returned path is the main
+// module's directory.
+//
+// The chain modules live in a sibling directory rather than under the main
+// module so magex's multi-module discovery, which walks down from the working
+// directory, does not pick them up as extra modules to build and test.
+//
+// They declare go 1.16 deliberately: module graph pruning (go 1.17 and later)
+// drops the requirements of indirect modules, which would flatten the tree to a
+// single level and make the depth assertions meaningless.
+func writeModuleGraphFixture(t *testing.T, length int) string {
+	t.Helper()
+
+	fixtureRoot := t.TempDir()
+	moduleDir := filepath.Join(fixtureRoot, "testmodule")
+	require.NoError(t, os.MkdirAll(moduleDir, 0o750))
+
+	deps := make([]string, length)
+	for i := range deps {
+		deps[i] = fmt.Sprintf("example.com/dep/d%d", i+1)
+	}
+
+	var mainMod strings.Builder
+	fmt.Fprintf(&mainMod, "module testmodule\n\ngo 1.21\n\nrequire %s %s\n\n", deps[0], fixtureDepVersion)
+
+	for i, dep := range deps {
+		fmt.Fprintf(&mainMod, "replace %s => ../deps/d%d\n", dep, i+1)
+
+		depDir := filepath.Join(fixtureRoot, "deps", fmt.Sprintf("d%d", i+1))
+		require.NoError(t, os.MkdirAll(depDir, 0o750))
+
+		var depMod strings.Builder
+		fmt.Fprintf(&depMod, "module %s\n\ngo 1.16\n", dep)
+		if i+1 < len(deps) {
+			fmt.Fprintf(&depMod, "\nrequire %s %s\n", deps[i+1], fixtureDepVersion)
+		}
+		require.NoError(t, os.WriteFile(filepath.Join(depDir, "go.mod"), []byte(depMod.String()), 0o600))
+	}
+
+	require.NoError(t, os.WriteFile(filepath.Join(moduleDir, "go.mod"), []byte(mainMod.String()), 0o600))
+
+	return moduleDir
 }
 
 func testCommand(t *testing.T, name string, args ...string) *exec.Cmd {
