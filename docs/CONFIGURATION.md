@@ -441,7 +441,15 @@ export MAGE_X_BUILD_PLATFORM="linux/amd64"
 export MAGE_X_BUILD_CGO_ENABLED="false"
 export MAGE_X_BUILD_OUTPUT_DIR="dist"
 export MAGE_X_BUILD_BINARY="myapp"
+export MAGE_X_BUILD_TIMEOUT="5m"   # Per-invocation timeout for `go build`/`go run` (default 5m)
 ```
+
+> **`MAGE_X_BUILD_TIMEOUT`** caps how long a single `go build` (or `go run`) invocation
+> may run before it is canceled. It accepts any [Go duration string](https://pkg.go.dev/time#ParseDuration)
+> (e.g. `90s`, `10m`); invalid or empty values fall back to the 5-minute default.
+> Raise it when warming a cold build cache for a large dependency tree — for example
+> `magex build:prebuild` with low parallelism on a constrained CI runner, where a
+> single batch can otherwise exceed the default and be killed mid-compile.
 
 ### Test Variables
 ```bash

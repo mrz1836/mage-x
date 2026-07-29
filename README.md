@@ -483,6 +483,10 @@ magex build:prebuild strategy=full p=8              # Traditional full build wit
 magex build:prebuild strategy=incremental batch=5 delay=100   # 100ms delay between batches
 magex build:prebuild strategy=mains-first mains-only=true     # Only build main packages
 magex build:prebuild exclude=test verbose=true                # Exclude test packages, verbose output
+
+# Raise the per-invocation build timeout for large cold-cache builds (default 5m).
+# Each batch is one `go build`; low parallelism (p=1) on a big module can exceed the default.
+MAGE_X_BUILD_TIMEOUT=15m magex build:prebuild strategy=incremental p=1
 ```
 
 </details>

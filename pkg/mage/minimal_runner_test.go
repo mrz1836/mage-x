@@ -20,6 +20,9 @@ var (
 	errMinimalCommandOutputFailed = errors.New("command output failed")
 	errMinimalExecutionFailed     = errors.New("execution failed")
 	errMinimalOtherError          = errors.New("some other error")
+	// errMinimalSignalInterrupt mimics the error returned when the graceful-cancel
+	// path signals a child process; it does NOT wrap a context error.
+	errMinimalSignalInterrupt = errors.New("signal: interrupt")
 )
 
 // MinimalRunnerTestSuite defines the test suite for minimal runner functions
@@ -479,10 +482,16 @@ func TestSecureCommandRunner_getCommandTimeout(t *testing.T) {
 			expected: 5 * time.Minute,
 		},
 		{
-			name:     "go build gets 3 minutes",
+			name:     "go build gets default 5 minutes",
 			cmd:      "go",
 			args:     []string{"build", "./cmd/app"},
-			expected: 3 * time.Minute,
+			expected: DefaultGoBuildTimeout,
+		},
+		{
+			name:     "go run gets default 5 minutes",
+			cmd:      "go",
+			args:     []string{"run", "./cmd/app"},
+			expected: DefaultGoBuildTimeout,
 		},
 		{
 			name:     "go fmt gets 2 minutes",
@@ -641,6 +650,52 @@ func TestSecureCommandRunner_getCommandTimeout(t *testing.T) {
 	}
 }
 
+// TestSecureCommandRunner_getCommandTimeout_BuildTimeoutOverride verifies that
+// MAGE_X_BUILD_TIMEOUT overrides the default go build/run timeout and that
+// invalid values fall back to the default.
+func TestSecureCommandRunner_getCommandTimeout_BuildTimeoutOverride(t *testing.T) {
+	runner := &SecureCommandRunner{}
+
+	tests := []struct {
+		name     string
+		envValue string
+		args     []string
+		expected time.Duration
+	}{
+		{
+			name:     "override applies to go build",
+			envValue: "12m",
+			args:     []string{"build", "./..."},
+			expected: 12 * time.Minute,
+		},
+		{
+			name:     "override applies to go run",
+			envValue: "90s",
+			args:     []string{"run", "./cmd/app"},
+			expected: 90 * time.Second,
+		},
+		{
+			name:     "invalid value falls back to default",
+			envValue: "not-a-duration",
+			args:     []string{"build", "./..."},
+			expected: DefaultGoBuildTimeout,
+		},
+		{
+			name:     "empty value falls back to default",
+			envValue: "",
+			args:     []string{"build", "./..."},
+			expected: DefaultGoBuildTimeout,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(EnvBuildTimeout, tt.envValue)
+			assert.Equal(t, tt.expected, runner.getCommandTimeout("go", tt.args))
+		})
+	}
+}
+
 // TestSecureCommandRunner_ContextErrors tests context cancellation error messages
 func TestSecureCommandRunner_ContextErrors(t *testing.T) {
 	t.Run("context deadline exceeded provides clear error message", func(t *testing.T) {
@@ -721,11 +776,42 @@ func TestMinimalRunnerTestSuite(t *testing.T) {
 	suite.Run(t, new(MinimalRunnerTestSuite))
 }
 
+// runCtxState selects which run context a wrapTimeoutError test case exercises,
+// avoiding a context.Context field inside the table (see the containedctx linter).
+type runCtxState int
+
+const (
+	runCtxLive     runCtxState = iota // live context, Err() == nil
+	runCtxDeadline                    // deadline already elapsed, Err() == DeadlineExceeded
+	runCtxCanceled                    // explicitly canceled, Err() == Canceled
+)
+
+// newRunCtx builds a run context in the requested state. The returned cancel func
+// must be called by the caller to release resources.
+func newRunCtx(t *testing.T, state runCtxState) context.Context {
+	t.Helper()
+	switch state {
+	case runCtxDeadline:
+		ctx, cancel := context.WithDeadline(context.Background(), time.Unix(0, 0))
+		t.Cleanup(cancel)
+		return ctx
+	case runCtxCanceled:
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		return ctx
+	case runCtxLive:
+		fallthrough
+	default:
+		return context.Background()
+	}
+}
+
 // TestWrapTimeoutError tests the wrapTimeoutError helper function
 func TestWrapTimeoutError(t *testing.T) {
 	tests := []struct {
 		name           string
 		inputErr       error
+		runCtx         runCtxState
 		ctx            CommandContext
 		expectNil      bool
 		expectContains []string
@@ -795,11 +881,58 @@ func TestWrapTimeoutError(t *testing.T) {
 			},
 			expectErrorIs: context.DeadlineExceeded,
 		},
+		{
+			// Graceful-cancel path: the child is killed with SIGINT and returns
+			// "signal: interrupt" (not a context error). The deadline is only
+			// observable via the run context, so it must still read as a timeout.
+			name:     "signal interrupt with deadline context reported as timeout",
+			inputErr: errMinimalSignalInterrupt,
+			runCtx:   runCtxDeadline,
+			ctx:      CommandContext{Name: "go", Timeout: 3 * time.Minute},
+			expectContains: []string{
+				"go",
+				"exceeded timeout of 3m0s",
+				"signal: interrupt",
+			},
+			expectErrorIs: context.DeadlineExceeded,
+		},
+		{
+			name:     "signal interrupt with deadline context and dir",
+			inputErr: errMinimalSignalInterrupt,
+			runCtx:   runCtxDeadline,
+			ctx:      CommandContext{Name: "go", Dir: "/project", Timeout: 3 * time.Minute},
+			expectContains: []string{
+				"in '/project'",
+				"exceeded timeout of 3m0s",
+				"signal: interrupt",
+			},
+			expectErrorIs: context.DeadlineExceeded,
+		},
+		{
+			name:     "signal interrupt with canceled context reported as canceled",
+			inputErr: errMinimalSignalInterrupt,
+			runCtx:   runCtxCanceled,
+			ctx:      CommandContext{Name: "go", Timeout: 5 * time.Minute},
+			expectContains: []string{
+				"was canceled after 5m0s",
+				"signal: interrupt",
+			},
+			expectErrorIs: context.Canceled,
+		},
+		{
+			// A genuine command failure with a live context must NOT be relabeled
+			// as a timeout or cancellation.
+			name:           "real failure with live context passes through unchanged",
+			inputErr:       errMinimalOtherError,
+			runCtx:         runCtxLive,
+			ctx:            CommandContext{Name: "go", Timeout: 5 * time.Minute},
+			expectContains: []string{"some other error"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := wrapTimeoutError(tt.inputErr, tt.ctx)
+			result := wrapTimeoutError(tt.inputErr, newRunCtx(t, tt.runCtx), tt.ctx)
 
 			if tt.expectNil {
 				assert.NoError(t, result)
@@ -821,7 +954,7 @@ func TestWrapTimeoutError(t *testing.T) {
 // TestWrapTimeoutErrorPreservesOriginal verifies that errors.Is works correctly
 func TestWrapTimeoutErrorPreservesOriginal(t *testing.T) {
 	baseErr := context.DeadlineExceeded
-	wrappedErr := wrapTimeoutError(baseErr, CommandContext{
+	wrappedErr := wrapTimeoutError(baseErr, context.Background(), CommandContext{
 		Name:    "test-cmd",
 		Timeout: 5 * time.Minute,
 	})
