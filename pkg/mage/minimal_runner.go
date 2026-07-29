@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mrz1836/mage-x/pkg/common/env"
 	"github.com/mrz1836/mage-x/pkg/common/providers"
 	"github.com/mrz1836/mage-x/pkg/exec"
 	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
@@ -16,6 +17,12 @@ import (
 var (
 	errRunnerNil = errors.New("runner cannot be nil")
 )
+
+// DefaultGoBuildTimeout is the fallback per-invocation timeout for `go build`
+// and `go run` when MAGE_X_BUILD_TIMEOUT is unset or cannot be parsed. It matches
+// the allowance given to `go install`/`go get`/`go mod`, because a cold build
+// compiles the full dependency tree and is at least as expensive as those.
+const DefaultGoBuildTimeout = 5 * time.Minute
 
 // SecureCommandRunner provides a secure implementation of CommandRunner using pkg/exec
 type SecureCommandRunner struct {
@@ -44,7 +51,7 @@ func (r *SecureCommandRunner) RunCmd(name string, args ...string) error {
 	defer cancel()
 
 	err := r.executor.Execute(ctx, name, args...)
-	return wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
+	return wrapTimeoutError(err, ctx, CommandContext{Name: name, Timeout: timeout})
 }
 
 // RunCmdOutput executes a command and returns its output
@@ -56,7 +63,7 @@ func (r *SecureCommandRunner) RunCmdOutput(name string, args ...string) (string,
 	defer cancel()
 
 	output, err := r.executor.ExecuteOutput(ctx, name, args...)
-	return strings.TrimSpace(output), wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
+	return strings.TrimSpace(output), wrapTimeoutError(err, ctx, CommandContext{Name: name, Timeout: timeout})
 }
 
 // RunCmdInDir executes a command in the specified working directory.
@@ -68,7 +75,7 @@ func (r *SecureCommandRunner) RunCmdInDir(dir, name string, args ...string) erro
 	defer cancel()
 
 	err := r.executor.ExecuteInDir(ctx, dir, name, args...)
-	return wrapTimeoutError(err, CommandContext{Name: name, Dir: dir, Timeout: timeout})
+	return wrapTimeoutError(err, ctx, CommandContext{Name: name, Dir: dir, Timeout: timeout})
 }
 
 // RunCmdOutputInDir executes a command in the specified directory and returns output.
@@ -80,20 +87,20 @@ func (r *SecureCommandRunner) RunCmdOutputInDir(dir, name string, args ...string
 	defer cancel()
 
 	output, err := r.executor.ExecuteOutputInDir(ctx, dir, name, args...)
-	return strings.TrimSpace(output), wrapTimeoutError(err, CommandContext{Name: name, Dir: dir, Timeout: timeout})
+	return strings.TrimSpace(output), wrapTimeoutError(err, ctx, CommandContext{Name: name, Dir: dir, Timeout: timeout})
 }
 
 // RunCmdWithEnv executes a command with additional environment variables.
 // This is goroutine-safe unlike os.Setenv() - each command gets its own environment.
 // Use this for cross-compilation where GOOS/GOARCH need to be set per-command.
-func (r *SecureCommandRunner) RunCmdWithEnv(env []string, name string, args ...string) error {
+func (r *SecureCommandRunner) RunCmdWithEnv(envVars []string, name string, args ...string) error {
 	ctx := runtimectx.Context()
 	timeout := r.getCommandTimeout(name, args)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err := r.executor.ExecuteWithEnv(ctx, env, name, args...)
-	return wrapTimeoutError(err, CommandContext{Name: name, Timeout: timeout})
+	err := r.executor.ExecuteWithEnv(ctx, envVars, name, args...)
+	return wrapTimeoutError(err, ctx, CommandContext{Name: name, Timeout: timeout})
 }
 
 // getCommandTimeout returns appropriate timeout based on command type
@@ -125,8 +132,11 @@ func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time
 				// Allow 5 minutes for package operations
 				return 5 * time.Minute
 			case CmdGoBuild, "run":
-				// Allow 3 minutes for build operations
-				return 3 * time.Minute
+				// Build/run operations. The default is generous because a cold
+				// build (e.g. the build:prebuild cache-warming path) compiles the
+				// entire dependency tree; override with MAGE_X_BUILD_TIMEOUT when
+				// building large modules on constrained runners.
+				return env.GetDuration(EnvBuildTimeout, DefaultGoBuildTimeout)
 			case CmdGoVet, CmdGoList:
 				// Allow 1 minute for vet and list operations
 				return 1 * time.Minute
@@ -198,31 +208,68 @@ type CommandContext struct {
 
 // wrapTimeoutError wraps context timeout/cancellation errors with descriptive messages.
 // Returns the original error unchanged if it's not a timeout or cancellation error.
-func wrapTimeoutError(err error, ctx CommandContext) error {
+//
+// A context deadline can surface in two different ways depending on how the child
+// process terminates:
+//
+//  1. Directly — the executor returns an error that wraps context.DeadlineExceeded.
+//  2. Indirectly — the graceful-cancel path signals the child (SIGINT) and the
+//     process exits with "signal: interrupt", which does NOT wrap
+//     context.DeadlineExceeded. In that case only the run context reflects the
+//     deadline, so we inspect runCtx.Err() as well.
+//
+// Checking runCtx.Err() catches case (2), so a timed-out command is reported as a
+// timeout instead of a cryptic "signal: interrupt".
+func wrapTimeoutError(err error, runCtx context.Context, cmdCtx CommandContext) error {
 	if err == nil {
 		return nil
 	}
 
-	if errors.Is(err, context.DeadlineExceeded) {
-		if ctx.Dir != "" {
-			return fmt.Errorf("command '%s' in '%s' exceeded timeout of %s: %w",
-				ctx.Name, ctx.Dir, ctx.Timeout, err)
-		}
-		return fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
-			ctx.Name, ctx.Timeout, err)
+	ctxErr := runCtx.Err()
+
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctxErr, context.DeadlineExceeded) {
+		return formatTimeoutError(cmdCtx, ensureCause(err, context.DeadlineExceeded))
 	}
 
-	if errors.Is(err, context.Canceled) {
-		if ctx.Dir != "" {
-			return fmt.Errorf("command '%s' in '%s' was canceled: %w",
-				ctx.Name, ctx.Dir, err)
-		}
-		return fmt.Errorf("command '%s' was canceled after %s: %w",
-			ctx.Name, ctx.Timeout, err)
+	if errors.Is(err, context.Canceled) || errors.Is(ctxErr, context.Canceled) {
+		return formatCanceledError(cmdCtx, ensureCause(err, context.Canceled))
 	}
 
 	// Return err unchanged if not a timeout/cancellation - it already has context from exec layer
 	return err
+}
+
+// ensureCause guarantees the returned error unwraps to sentinel while preserving
+// the original error's message. When err already wraps sentinel it is returned
+// unchanged; otherwise sentinel is wrapped with err's text appended. The latter
+// happens when a deadline is only observable via the run context because the child
+// was terminated by a signal (e.g. "signal: interrupt") rather than returning the
+// context error itself.
+func ensureCause(err, sentinel error) error {
+	if errors.Is(err, sentinel) {
+		return err
+	}
+	return fmt.Errorf("%w (%w)", sentinel, err)
+}
+
+// formatTimeoutError renders a descriptive timeout error for the given command.
+func formatTimeoutError(cmdCtx CommandContext, cause error) error {
+	if cmdCtx.Dir != "" {
+		return fmt.Errorf("command '%s' in '%s' exceeded timeout of %s: %w",
+			cmdCtx.Name, cmdCtx.Dir, cmdCtx.Timeout, cause)
+	}
+	return fmt.Errorf("command '%s' exceeded timeout of %s (context deadline exceeded): %w",
+		cmdCtx.Name, cmdCtx.Timeout, cause)
+}
+
+// formatCanceledError renders a descriptive cancellation error for the given command.
+func formatCanceledError(cmdCtx CommandContext, cause error) error {
+	if cmdCtx.Dir != "" {
+		return fmt.Errorf("command '%s' in '%s' was canceled: %w",
+			cmdCtx.Name, cmdCtx.Dir, cause)
+	}
+	return fmt.Errorf("command '%s' was canceled after %s: %w",
+		cmdCtx.Name, cmdCtx.Timeout, cause)
 }
 
 // truncateString truncates a string to the specified length

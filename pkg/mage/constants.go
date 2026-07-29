@@ -182,6 +182,13 @@ const (
 	// DefaultFuzzWarmupTimeout is the timeout for pre-compiling fuzz test binaries
 	// with coverage instrumentation to warm the Go build cache before running individual tests.
 	DefaultFuzzWarmupTimeout = "5m"
+
+	// EnvBuildTimeout is the environment variable that overrides the per-invocation
+	// timeout for `go build` and `go run` commands. It accepts any Go duration
+	// string (e.g. "10m"); when unset or unparseable, DefaultGoBuildTimeout applies.
+	// This is primarily useful for cold-cache prebuilds of large dependency trees,
+	// which can exceed the default on constrained CI runners.
+	EnvBuildTimeout = "MAGE_X_BUILD_TIMEOUT"
 )
 
 // Coverage modes
