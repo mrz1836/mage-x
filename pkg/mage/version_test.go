@@ -1,10 +1,7 @@
 package mage
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"strconv"
 	"strings"
@@ -22,7 +19,6 @@ type VersionTestSuite struct {
 	suite.Suite
 
 	origEnvVars map[string]string
-	mockServer  *httptest.Server
 }
 
 // SetupSuite runs before all tests in the suite
@@ -44,11 +40,6 @@ func (ts *VersionTestSuite) TearDownSuite() {
 		} else {
 			ts.Require().NoError(os.Setenv(env, value))
 		}
-	}
-
-	// Clean up mock server if it exists
-	if ts.mockServer != nil {
-		ts.mockServer.Close()
 	}
 }
 
@@ -374,88 +365,9 @@ func (ts *VersionTestSuite) TestVersionBumpNamespace() {
 	})
 }
 
-// TestGitHubAPIOperations tests GitHub API integration
-func (ts *VersionTestSuite) TestGitHubAPIOperations() {
-	ts.Run("GetLatestGitHubReleaseSuccess", func() {
-		// Create mock GitHub API server
-		mockRelease := GitHubRelease{
-			TagName:     "v1.2.3",
-			Name:        "Test Release",
-			Prerelease:  false,
-			Draft:       false,
-			PublishedAt: time.Now(),
-			Body:        "Test release notes",
-			HTMLURL:     "https://github.com/test/repo/releases/tag/v1.2.3",
-			Assets: []VersionReleaseAsset{
-				{
-					Name:               "test-binary",
-					BrowserDownloadURL: "https://github.com/test/repo/releases/download/v1.2.3/test-binary",
-					Size:               1024,
-				},
-			},
-		}
-
-		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ts.Equal("/repos/test/repo/releases/latest", r.URL.Path)
-			ts.Equal("GET", r.Method)
-
-			w.Header().Set("Content-Type", "application/json")
-			ts.NoError(json.NewEncoder(w).Encode(mockRelease))
-		}))
-		defer mockServer.Close()
-
-		// Temporarily patch the GitHub API URL
-		// In a real implementation, we'd have a way to configure the base URL
-
-		// This test would need a way to inject the mock server URL
-		// For now, we test the error handling path
-		_, err := getLatestGitHubRelease("test", "repo")
-		// This will fail with a network error, but we're testing the function signature
-		ts.Require().Error(err)
-	})
-
-	ts.Run("GetLatestGitHubRelease404", func() {
-		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte("Not Found")) //nolint:errcheck // Test HTTP handler
-		}))
-		defer mockServer.Close()
-
-		// This would need URL injection to work properly
-		_, err := getLatestGitHubRelease("nonexistent", "repo")
-		ts.Require().Error(err)
-	})
-
-	ts.Run("GetLatestGitHubReleaseInvalidJSON", func() {
-		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte("invalid json")) //nolint:errcheck // Test HTTP handler
-		}))
-		defer mockServer.Close()
-
-		_, err := getLatestGitHubRelease("test", "repo")
-		ts.Require().Error(err)
-	})
-}
-
-// TestVersionCheck tests the Version.Check method
-func (ts *VersionTestSuite) TestVersionCheck() {
-	version := Version{}
-
-	ts.Run("CheckWithInvalidModule", func() {
-		// This test depends on the current module configuration
-		err := version.Check()
-		// May succeed or fail depending on the environment
-		ts.Require().True(err == nil || err != nil)
-	})
-
-	ts.Run("CheckParseModuleError", func() {
-		// Test would require mocking utils.GetModuleName()
-		// For now, we test that the method exists and handles errors
-		err := version.Check()
-		ts.Require().True(err == nil || err != nil)
-	})
-}
+// Note: the GitHub REST/CLI release-lookup tests (TestGitHubAPIOperations,
+// TestVersionCheck) were removed with the in-house update engine. The update
+// surface is now backed by go-selfupdate and covered offline in update_test.go.
 
 // TestVersionBumpIntegration tests the full version bump workflow
 func (ts *VersionTestSuite) TestVersionBumpIntegration() {
@@ -558,23 +470,9 @@ func (ts *VersionTestSuite) TestVersionHelperFunctions() {
 	})
 }
 
-// TestVersionUpdate tests the Version.Update method
-func (ts *VersionTestSuite) TestVersionUpdate() {
-	version := Version{}
-
-	ts.Run("UpdateWithNoReleases", func() {
-		// This test depends on the current module and GitHub API
-		err := version.Update()
-		// May succeed or fail depending on the environment
-		ts.Require().True(err == nil || err != nil)
-	})
-
-	ts.Run("UpdateWhenAlreadyLatest", func() {
-		// Test would require mocking GitHub API response
-		err := version.Update()
-		ts.Require().True(err == nil || err != nil)
-	})
-}
+// Note: TestVersionUpdate was removed with the in-house update engine.
+// Version.Update is now a thin deprecated alias over the go-selfupdate-backed
+// Update.Install, exercised offline in update_test.go.
 
 // TestVersionChangelog tests the Version.Changelog method
 func (ts *VersionTestSuite) TestVersionChangelog() {
@@ -733,72 +631,12 @@ func (ts *VersionTestSuite) TestErrorHandling() {
 		ts.Require().NoError(err, "RC versions should be parsed successfully")
 		ts.Require().Equal("v1.1.0", result, "Bumping v1.0.0-rc.1 minor should give v1.1.0")
 	})
-
-	ts.Run("HTTPClientTimeout", func() {
-		// Test that HTTP client has timeout configured
-		start := time.Now()
-		_, err := getLatestGitHubRelease("nonexistent", "repo")
-		duration := time.Since(start)
-
-		// Should fail within reasonable time (network timeout)
-		ts.Require().Error(err)
-		ts.Require().Less(duration, 15*time.Second) // Should timeout before 15 seconds
-	})
 }
 
-// TestGitHubReleaseStruct tests the GitHubRelease and related structures
-func (ts *VersionTestSuite) TestGitHubReleaseStruct() {
-	ts.Run("GitHubReleaseJSONSerialization", func() {
-		release := GitHubRelease{
-			TagName:     "v1.0.0",
-			Name:        "Test Release",
-			Prerelease:  false,
-			Draft:       false,
-			PublishedAt: time.Now(),
-			Body:        "Release notes",
-			HTMLURL:     "https://github.com/test/repo/releases/tag/v1.0.0",
-			Assets: []VersionReleaseAsset{
-				{
-					Name:               "binary",
-					BrowserDownloadURL: "https://example.com/binary",
-					Size:               1024,
-				},
-			},
-		}
-
-		// Test JSON marshaling
-		data, err := json.Marshal(release)
-		ts.Require().NoError(err)
-		ts.Require().Contains(string(data), "v1.0.0")
-
-		// Test JSON unmarshaling
-		var unmarshaled GitHubRelease
-		err = json.Unmarshal(data, &unmarshaled)
-		ts.Require().NoError(err)
-		ts.Require().Equal(release.TagName, unmarshaled.TagName)
-		ts.Require().Equal(release.Name, unmarshaled.Name)
-		ts.Require().Len(unmarshaled.Assets, len(release.Assets))
-	})
-
-	ts.Run("VersionReleaseAssetStruct", func() {
-		asset := VersionReleaseAsset{
-			Name:               "test-binary",
-			BrowserDownloadURL: "https://example.com/download",
-			Size:               2048,
-		}
-
-		data, err := json.Marshal(asset)
-		ts.Require().NoError(err)
-		ts.Require().Contains(string(data), "test-binary")
-
-		var unmarshaled VersionReleaseAsset
-		err = json.Unmarshal(data, &unmarshaled)
-		ts.Require().NoError(err)
-		ts.Require().Equal(asset.Name, unmarshaled.Name)
-		ts.Require().Equal(asset.BrowserDownloadURL, unmarshaled.BrowserDownloadURL)
-		ts.Require().Equal(asset.Size, unmarshaled.Size)
-	})
-
+// TestBuildInfoStruct tests the BuildInfo structure. The GitHubRelease and
+// VersionReleaseAsset serialization subtests were removed with the in-house
+// update engine; those types now live in go-selfupdate.
+func (ts *VersionTestSuite) TestBuildInfoStruct() {
 	ts.Run("BuildInfoStruct", func() {
 		buildInfo := BuildInfo{
 			Version:   "v1.0.0",
@@ -954,25 +792,8 @@ func BenchmarkGitOperations(b *testing.B) {
 	})
 }
 
-// Test HTTP client context handling
-func TestGitHubAPIContextHandling(t *testing.T) {
-	t.Run("HTTPRequestUsesContext", func(t *testing.T) {
-		// Test that HTTP requests properly use context
-		// This verifies the context.Background() usage in getLatestGitHubRelease
-
-		// Create a canceled context to test timeout behavior
-		// The function doesn't take context as parameter, but internally uses context.Background()
-
-		// The function doesn't take context as parameter, but internally uses context.Background()
-		// So we test that it doesn't hang indefinitely
-		start := time.Now()
-		_, err := getLatestGitHubRelease("nonexistent", "repo")
-		duration := time.Since(start)
-
-		require.Error(t, err)
-		require.Less(t, duration, 15*time.Second) // Should not hang indefinitely
-	})
-}
+// Note: TestGitHubAPIContextHandling was removed with the in-house GitHub
+// release lookup. go-selfupdate owns release resolution now.
 
 // Test helper functions for version string manipulation
 func TestVersionStringHelpers(t *testing.T) {

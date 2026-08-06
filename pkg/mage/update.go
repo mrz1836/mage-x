@@ -2,895 +2,445 @@
 package mage
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
+	"runtime/debug"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/magefile/mage/mg"
+	selfupdate "github.com/mrz1836/go-selfupdate"
+	"github.com/mrz1836/go-selfupdate/notify"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
-	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
+// Self-update identity. mage-x updates itself from its own GitHub releases;
+// these values pin the owner/repo/binary that go-selfupdate resolves against.
 const (
-	// magexModule is the module path for the magex binary
-	magexModule = "github.com/mrz1836/mage-x"
+	// updateOwner is the GitHub account hosting mage-x releases.
+	updateOwner = "mrz1836"
+	// updateRepo is the mage-x repository name.
+	updateRepo = "mage-x"
+	// updateBinaryName is the executable name inside a mage-x release archive.
+	updateBinaryName = "magex"
+	// updateAppName identifies mage-x to the passive notifier (banner text,
+	// cache slug, and environment-variable prefix).
+	updateAppName = "magex"
+	// updateModulePath is the go-installable package path for the magex binary.
+	// A `go install` build is refreshed with "<updateModulePath>@latest".
+	updateModulePath = "github.com/mrz1836/mage-x/cmd/magex"
+	// updateTokenEnvVar names the mage-x-specific GitHub token, consulted before
+	// GITHUB_TOKEN and GH_TOKEN to lift the anonymous rate limit.
+	updateTokenEnvVar = "MAGE_X_GITHUB_TOKEN" //nolint:gosec // G101: environment variable name, not a hardcoded credential
+	// updateUpgradeCommand is the line the passive banner tells users to run.
+	updateUpgradeCommand = "magex update"
 
-	// maxUpdateFileSize is the maximum allowed size for extracted files (500MB)
-	// This prevents zip bomb attacks during update extraction
-	maxUpdateFileSize = 500 * 1024 * 1024
+	// legacyDisableUpdateCheckEnv is the pre-go-selfupdate opt-out variable. It
+	// is still honored alongside go-selfupdate's MAGEX_NO_UPDATE_CHECK (and the
+	// shared NO_UPDATE_CHECK / CI gates) so existing setups keep working.
+	legacyDisableUpdateCheckEnv = "MAGEX_DISABLE_UPDATE_CHECK"
 
-	// downloadTimeout is the maximum time allowed for downloading update files
-	downloadTimeout = 5 * time.Minute
+	// updateCacheDirName and updateCacheFileName preserve the historical passive
+	// check cache location (~/.magex/update-check.json) so the notifier keeps
+	// the state it already maintains.
+	updateCacheDirName  = ".magex"
+	updateCacheFileName = "update-check.json"
 )
 
-// Static errors to satisfy err113 linter
-var (
-	errNoReleasesFound     = errors.New("no releases found")
-	errNoBetaReleasesFound = errors.New("no beta releases found")
-	errNoTarGzFound        = errors.New("no tar.gz file found in update directory")
-	errMagexBinaryNotFound = errors.New("magex binary not found in extracted files")
-	errPathTraversal       = errors.New("path traversal attempt detected")
-	errChecksumMismatch    = errors.New("checksum verification failed")
-	errFileTooLarge        = errors.New("file exceeds maximum allowed size")
-	errChecksumFetchFailed = errors.New("failed to fetch checksums file")
-	errChecksumNotFound    = errors.New("checksum not found in checksums file")
-	errDownloadFailed      = errors.New("download failed")
+// Network timeouts bounding the explicit update commands. The passive check
+// keeps its own (shorter) timeout inside go-selfupdate.
+const (
+	// updateCheckTimeout bounds an explicit `update:check` release lookup.
+	updateCheckTimeout = 30 * time.Second
+	// updateInstallTimeout bounds a full download+install or `go install`.
+	updateInstallTimeout = 6 * time.Minute
 )
 
-// Update namespace for auto-update functionality
+// Update namespace for self-update functionality.
 type Update mg.Namespace
 
-// UpdateChannel represents a release channel
-type UpdateChannel string
+// Test seams. These package-level function variables are the entire network
+// and exec boundary of the update surface, so the test suite stubs them and
+// stays fully offline. Production wires them to go-selfupdate and `go install`.
+//
+//nolint:gochecknoglobals // seams required to keep the update tests network-free
+var (
+	checkFn     = selfupdate.Check
+	installFn   = selfupdate.Install
+	preflightFn = selfupdate.InstallPreflight
+	goInstallFn = runGoInstallLatest
 
-const (
-	// StableChannel represents the stable release channel.
-	StableChannel UpdateChannel = "stable"
-	// BetaChannel represents the beta release channel.
-	BetaChannel UpdateChannel = "beta"
-	// EdgeChannel represents the edge release channel.
-	EdgeChannel UpdateChannel = "edge"
+	// canGoInstallUpdate reports whether the running binary is a `go install`
+	// build AND the go toolchain is available, i.e. an ErrManagedInstall binary
+	// can be auto-refreshed with `go install …@latest`. It is a seam so the
+	// managed-install branch is testable without a real go-install layout.
+	canGoInstallUpdate = func() bool {
+		return isGoInstallBinary() && commandExists("go")
+	}
 )
 
-// UpdateInfo contains update information
-type UpdateInfo struct {
-	Channel         UpdateChannel
-	CurrentVersion  string
-	LatestVersion   string
-	UpdateAvailable bool
-	ReleaseNotes    string
-	DownloadURL     string
-	ChecksumSHA256  string // Expected SHA256 checksum of the downloaded file (hex-encoded)
+// registeredBinaryVersion holds the version main resolved at startup. It is
+// read from the background update-check goroutine and written by
+// RegisterBinaryVersion, so it must be accessed atomically.
+//
+//nolint:gochecknoglobals // required for version registration from main
+var registeredBinaryVersion atomic.Value
+
+// RegisterBinaryVersion records the running binary's resolved version so both
+// the update commands and the passive banner report it correctly. main calls
+// this once at startup with the value from ResolveVersion; when it is not
+// called (library use, tests) the version falls back to "dev".
+func RegisterBinaryVersion(version string) {
+	registeredBinaryVersion.Store(version)
 }
 
-// Check checks for available updates in the specified channel
-func (Update) Check() error {
+// resolvedBinaryVersion returns the version registered by main, or "dev" when
+// none was registered.
+func resolvedBinaryVersion() string {
+	if v, ok := registeredBinaryVersion.Load().(string); ok && v != "" {
+		return v
+	}
+	return versionDev
+}
+
+// ResolveVersion picks the most trustworthy version string for the running
+// binary, so both supported install methods report a correct version:
+//
+//   - a goreleaser binary carries its version in ldflags (main.version);
+//   - a `go install …@vX` build carries the module version in build info;
+//   - a local `go build` has neither and is reported as "dev".
+//
+// The ldflags value wins when present because it is the release's own stamp;
+// build info is the fallback that makes `go install` builds self-aware.
+func ResolveVersion(ldflags string) string {
+	if ldflags != "" && ldflags != versionDev {
+		return ldflags
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		if v := bi.Main.Version; v != "" && v != "(devel)" {
+			return v
+		}
+	}
+	return versionDev
+}
+
+// selfUpdateConfig builds the go-selfupdate configuration for mage-x's own
+// binary. TargetPath is left empty so go-selfupdate resolves the running
+// executable (symlinks followed) itself.
+func selfUpdateConfig() selfupdate.Config {
+	return selfupdate.Config{
+		Owner:          updateOwner,
+		Repo:           updateRepo,
+		BinaryName:     updateBinaryName,
+		CurrentVersion: resolvedBinaryVersion(),
+		TokenEnvVar:    updateTokenEnvVar,
+	}
+}
+
+// notifyConfig builds the passive-notifier configuration. It pins the cache to
+// the historical ~/.magex/update-check.json location and derives the mage-x
+// opt-out variable (MAGEX_NO_UPDATE_CHECK) and token from the app identity.
+func notifyConfig() notify.Config {
+	return notify.Config{
+		Owner:          updateOwner,
+		Repo:           updateRepo,
+		AppName:        updateAppName,
+		BinaryName:     updateBinaryName,
+		CurrentVersion: resolvedBinaryVersion(),
+		UpgradeCommand: updateUpgradeCommand,
+		TokenEnvVar:    updateTokenEnvVar,
+		CacheDir:       filepath.Join(env.Home(), updateCacheDirName),
+		CacheFileName:  updateCacheFileName,
+	}
+}
+
+// updateArgs is the parsed set of update command switches.
+type updateArgs struct {
+	check   bool
+	force   bool
+	verbose bool
+}
+
+// parseUpdateArgs accepts BOTH CLI syntaxes so the same handler serves the new
+// verbs and the historical namespaced commands:
+//
+//   - flag form:      --check/-c, --force/-f, --verbose/-v
+//   - key=value form: check=true, force=true, verbose=true (or bare check/force/verbose)
+//
+// Dash tokens are matched as flags; any other unknown dash token is ignored so
+// it never pollutes the key=value parse. Remaining tokens are parsed as
+// parameters, so `magex update:install force=true` and `magex update --force`
+// are equivalent.
+func parseUpdateArgs(args ...string) updateArgs {
+	var ua updateArgs
+	kv := make([]string, 0, len(args))
+
+	for _, a := range args {
+		switch a {
+		case "--check", "-c", "-check":
+			ua.check = true
+		case "--force", "-f", "-force":
+			ua.force = true
+		case "--verbose", "-v", "-verbose":
+			ua.verbose = true
+		default:
+			// An unrecognized dash token is not a key=value parameter; drop it
+			// rather than let it become params["--whatever"]=true.
+			if strings.HasPrefix(a, "-") {
+				continue
+			}
+			kv = append(kv, a)
+		}
+	}
+
+	params := utils.ParseParams(kv)
+	if utils.IsParamTrue(params, "check") {
+		ua.check = true
+	}
+	if utils.IsParamTrue(params, "force") {
+		ua.force = true
+	}
+	if utils.IsParamTrue(params, "verbose") {
+		ua.verbose = true
+	}
+	return ua
+}
+
+// Check reports whether a newer magex release is available. It performs no
+// writes. Arguments are accepted for CLI symmetry (so `magex update:check
+// verbose=true` is valid) but do not change the read-only behavior.
+func (Update) Check(_ ...string) error {
 	utils.Header("Checking for Updates")
 
-	channel := getUpdateChannel()
-	utils.Info("Update channel: %s", channel)
+	cfg := selfUpdateConfig()
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), updateCheckTimeout)
+	defer cancel()
 
-	info, err := checkForUpdates(channel)
+	info, err := checkFn(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to check for updates: %w", err)
 	}
-
-	utils.Info("Current version: %s", info.CurrentVersion)
-	utils.Info("Latest version:  %s", info.LatestVersion)
 
 	if info.UpdateAvailable {
-		utils.Success("🎉 Update available!")
-		if info.ReleaseNotes != "" {
-			utils.Info("Release Notes:")
-			utils.Info("%s", info.ReleaseNotes)
-		}
-		utils.Info("Run 'magex update:install' to update")
+		utils.Info("A new version of magex is available: %s -> %s", info.CurrentVersion, info.LatestVersion)
+		utils.Info(`Run "magex update" to install it.`)
 	} else {
-		utils.Success("✅ You are running the latest version")
+		utils.Success("magex is up to date (%s)", info.CurrentVersion)
 	}
-
 	return nil
 }
 
-// Install installs the latest update
-func (Update) Install() error {
+// Install updates magex to the latest release. It supports both install
+// methods:
+//
+//   - A binary install in a writable, unmanaged directory (e.g. ~/.local/bin)
+//     is replaced in place by go-selfupdate.
+//   - A `go install` build (in GOBIN/GOPATH/bin) cannot be overwritten by
+//     go-selfupdate, so it is refreshed by auto-running
+//     `go install <module>@latest`.
+//   - Any other managed case (Homebrew, a root-owned system dir, or `go`
+//     missing) falls back to clear, copy-pasteable guidance.
+func (Update) Install(args ...string) error {
+	ua := parseUpdateArgs(args...)
+
+	// check-only short-circuits to the read-only report.
+	if ua.check {
+		return Update{}.Check(args...)
+	}
+
 	utils.Header("Installing Update")
 
-	channel := getUpdateChannel()
-	info, err := checkForUpdates(channel)
-	if err != nil {
-		return fmt.Errorf("failed to check for updates: %w", err)
+	cfg := selfUpdateConfig()
+
+	// Preflight resolves the running binary and applies the same location
+	// guards Install would, without any network access, so we can pick the
+	// right route before downloading anything.
+	preErr := preflightFn(cfg)
+	switch {
+	case preErr == nil:
+		return installInPlace(cfg, ua)
+	case errors.Is(preErr, selfupdate.ErrManagedInstall):
+		return installManaged()
+	case errors.Is(preErr, selfupdate.ErrInstallDirNotWritable):
+		utils.Error("Cannot update magex in place: %v", preErr)
+		utils.Info("Move the magex binary to a user-writable directory on your PATH")
+		utils.Info("(for example ~/.local/bin) to enable in-place self-update, or reinstall with:")
+		utils.Info("  go install %s@latest", updateModulePath)
+		return preErr
+	default:
+		return fmt.Errorf("update preflight failed: %w", preErr)
+	}
+}
+
+// installInPlace performs a go-selfupdate in-place binary replacement. It maps
+// the parsed switches onto go-selfupdate options and, on success, prints a
+// closing line and clears the passive-check cache so the next run does not show
+// a stale "update available" banner.
+func installInPlace(cfg selfupdate.Config, ua updateArgs) error {
+	ctx, cancel := context.WithTimeout(runtimectx.Context(), updateInstallTimeout)
+	defer cancel()
+
+	var opts []selfupdate.Option
+	if ua.force {
+		opts = append(opts, selfupdate.WithForce())
+	}
+	if ua.verbose {
+		opts = append(opts, selfupdate.WithVerbose())
 	}
 
-	if !info.UpdateAvailable {
-		utils.Success("Already running the latest version: %s", info.CurrentVersion)
+	result, err := installFn(ctx, cfg, opts...)
+	if err != nil {
+		return fmt.Errorf("update failed: %w", err)
+	}
+
+	if result.Updated {
+		utils.Success("Updated magex to %s", result.LatestVersion)
+		clearUpdateCache()
+	}
+	// When not updated, go-selfupdate has already explained why on stdout
+	// ("already up to date" or "development build; run with --force"), so we
+	// add nothing here.
+	return nil
+}
+
+// installManaged handles the ErrManagedInstall case. A `go install` build is
+// updated by auto-running `go install <module>@latest`; every other managed
+// case (Homebrew, root-owned system dir, or `go` missing) is instructed
+// instead, since overwriting a file another installer owns would break both.
+func installManaged() error {
+	if canGoInstallUpdate() {
+		utils.Info("Detected a `go install` build of magex; updating with:")
+		utils.Info("  go install %s@latest", updateModulePath)
+
+		ctx, cancel := context.WithTimeout(runtimectx.Context(), updateInstallTimeout)
+		defer cancel()
+
+		if err := goInstallFn(ctx); err != nil {
+			return fmt.Errorf("go install update failed: %w", err)
+		}
+
+		utils.Success("Updated magex via `go install %s@latest`", updateModulePath)
+		clearUpdateCache()
 		return nil
 	}
 
-	utils.Info("Updating from %s to %s", info.CurrentVersion, info.LatestVersion)
+	utils.Warn("magex was installed by another tool and cannot self-update in place.")
+	utils.Info("To update, run:")
+	utils.Info("  go install %s@latest", updateModulePath)
+	utils.Info("Or drop a prebuilt binary into a user-writable directory on your PATH")
+	utils.Info("(for example ~/.local/bin) to enable in-place self-update.")
+	return nil
+}
 
-	// Create update directory with random suffix for security
-	// Using MkdirTemp prevents symlink race attacks on predictable paths
-	updateDir, err := os.MkdirTemp("", "mage-update-*")
+// isGoInstallBinary reports whether the running binary lives in GOBIN or a
+// GOPATH/bin directory — i.e. it was produced by `go install` rather than
+// dropped in as a release binary. It resolves symlinks on both sides so a
+// GOPATH under a symlinked home still matches, and is self-contained so it does
+// not depend on go-selfupdate internals. This distinguishes the go-install case
+// (auto-updatable via `go install`) from other managed cases (Homebrew, system
+// package managers) that share the ErrManagedInstall signal.
+func isGoInstallBinary() bool {
+	exe, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("failed to create update directory: %w", err)
+		return false
 	}
-	defer func() {
-		// Ignore error in defer cleanup
-		if err := os.RemoveAll(updateDir); err != nil {
-			// Best effort cleanup - ignore error
-			utils.Warn("failed to clean up update directory %s: %v", updateDir, err)
+	return isGoInstallPath(exe, os.Getenv)
+}
+
+// isGoInstallPath is isGoInstallBinary with the executable path and environment
+// injected, so it is testable without touching process state.
+func isGoInstallPath(exePath string, getenv func(string) string) bool {
+	if resolved, rerr := filepath.EvalSymlinks(exePath); rerr == nil {
+		exePath = resolved
+	}
+	dir := realDir(filepath.Dir(exePath))
+	if dir == "" {
+		return false
+	}
+
+	var candidates []string
+	if gobin := strings.TrimSpace(getenv("GOBIN")); gobin != "" {
+		candidates = append(candidates, gobin)
+	}
+
+	gopath := strings.TrimSpace(getenv("GOPATH"))
+	if gopath == "" {
+		if home, herr := os.UserHomeDir(); herr == nil {
+			gopath = filepath.Join(home, "go")
 		}
-	}()
-
-	// Download update
-	if err := downloadUpdate(info, updateDir); err != nil {
-		return fmt.Errorf("failed to download update: %w", err)
+	}
+	for _, entry := range filepath.SplitList(gopath) {
+		if entry != "" {
+			candidates = append(candidates, filepath.Join(entry, "bin"))
+		}
 	}
 
-	// Install update
-	if err := installUpdate(info, updateDir); err != nil {
-		return fmt.Errorf("failed to install update: %w", err)
+	for _, candidate := range candidates {
+		if resolved := realDir(candidate); resolved != "" && resolved == dir {
+			return true
+		}
 	}
+	return false
+}
 
-	utils.Success("Successfully updated to version %s", info.LatestVersion)
+// realDir returns dir as an absolute path with symlinks resolved, falling back
+// to the cleaned absolute form when the path does not exist on disk.
+func realDir(dir string) string {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return ""
+	}
+	if resolved, rerr := filepath.EvalSymlinks(abs); rerr == nil {
+		return resolved
+	}
+	return filepath.Clean(abs)
+}
 
-	// Clear the update cache so the user doesn't see stale "update available" notifications
-	// The next run will perform a fresh check and correctly detect the new version
-	cache := NewUpdateNotifyCache()
-	if err := cache.Clear(); err != nil {
-		// Non-fatal: log but don't fail the installation
+// runGoInstallLatest refreshes a go-install build of magex by running
+// `go install <module>@latest`. It is the production implementation behind the
+// goInstallFn seam.
+func runGoInstallLatest(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return GetRunner().RunCmd("go", "install", updateModulePath+"@latest")
+}
+
+// clearUpdateCache removes the passive-check cache so the next invocation
+// performs a fresh check and does not show a stale "update available" banner
+// right after an update.
+func clearUpdateCache() {
+	if err := notify.ClearCache(notifyConfig()); err != nil {
 		utils.Warn("failed to clear update cache: %v", err)
 	}
-
-	utils.Info("Please restart your application to use the new version")
-
-	return nil
 }
 
-// Helper functions
+// RegisterBinaryVersion, StartBackgroundUpdateCheck, and ShowUpdateBanner are
+// the three thin wrappers main wires up; keeping them here keeps main's call
+// sites unchanged across the refactor.
 
-// getUpdateChannel returns the configured update channel
-func getUpdateChannel() UpdateChannel {
-	channel := strings.ToLower(env.GetString("UPDATE_CHANNEL", "stable"))
-
-	switch channel {
-	case "beta":
-		return BetaChannel
-	case "edge":
-		return EdgeChannel
-	default:
-		return StableChannel
+// StartBackgroundUpdateCheck kicks off the passive update check in the
+// background and returns a channel that yields at most one result. It honors the
+// legacy MAGEX_DISABLE_UPDATE_CHECK opt-out in addition to go-selfupdate's own
+// gates (MAGEX_NO_UPDATE_CHECK, the shared NO_UPDATE_CHECK, CI, and dev builds).
+func StartBackgroundUpdateCheck(ctx context.Context) <-chan *notify.Result {
+	if env.GetBool(legacyDisableUpdateCheckEnv, false) {
+		ch := make(chan *notify.Result)
+		close(ch)
+		return ch
 	}
+	return notify.StartBackgroundCheck(ctx, notifyConfig())
 }
 
-// checkForUpdates checks for available updates
-func checkForUpdates(channel UpdateChannel) (*UpdateInfo, error) {
-	current := getVersionInfoForUpdate()
-
-	// Always use the magex module for updates, regardless of current working directory
-	module := magexModule
-
-	// Parse module to get owner/repo
-	parts := strings.Split(module, "/")
-	if len(parts) < 3 {
-		return nil, fmt.Errorf("%w: %s", errCannotParseGitHubInfo, module)
-	}
-
-	owner := parts[1]
-	repo := parts[2]
-
-	// Get releases based on channel
-	release, err := getReleaseForChannel(owner, repo, channel)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get release for channel %s: %w", channel, err)
-	}
-
-	info := &UpdateInfo{
-		Channel:         channel,
-		CurrentVersion:  current,
-		LatestVersion:   release.TagName,
-		UpdateAvailable: isNewer(release.TagName, current),
-		ReleaseNotes:    formatReleaseNotes(release.Body),
-	}
-
-	// Find appropriate asset - pattern: mage-x_VERSION_OS_ARCH.tar.gz
-	assetPattern := fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
-	var checksumURL string
-
-	for _, asset := range release.Assets {
-		if strings.Contains(asset.Name, assetPattern) {
-			info.DownloadURL = asset.BrowserDownloadURL
-		}
-		// Look for checksums file (goreleaser convention: checksums.txt)
-		if strings.HasSuffix(asset.Name, "checksums.txt") {
-			checksumURL = asset.BrowserDownloadURL
-		}
-	}
-
-	// Try to fetch and parse the checksum for our asset
-	if checksumURL != "" && info.DownloadURL != "" {
-		assetName := filepath.Base(info.DownloadURL)
-		if checksum, err := fetchChecksumForAsset(checksumURL, assetName); err == nil {
-			info.ChecksumSHA256 = checksum
-		}
-	}
-
-	return info, nil
-}
-
-// getReleaseForChannel gets the appropriate release for a channel
-func getReleaseForChannel(owner, repo string, channel UpdateChannel) (*GitHubRelease, error) {
-	switch channel {
-	case StableChannel:
-		return getLatestStableRelease(owner, repo)
-	case BetaChannel:
-		return getLatestBetaRelease(owner, repo)
-	case EdgeChannel:
-		return getLatestEdgeRelease(owner, repo)
-	default:
-		return getLatestStableRelease(owner, repo)
-	}
-}
-
-// getLatestStableRelease gets the latest stable release
-func getLatestStableRelease(owner, repo string) (*GitHubRelease, error) {
-	// Try gh CLI first if available
-	if useGitHubCLI() {
-		if release, err := getLatestStableReleaseViaGH(owner, repo); err == nil {
-			return release, nil
-		}
-		utils.Info("gh CLI failed, falling back to GitHub API...")
-	}
-
-	// Fallback to direct GitHub API
-	return getLatestStableReleaseViaAPI(owner, repo)
-}
-
-// convertGHReleaseToGitHubRelease converts gh CLI response to GitHub API format
-func convertGHReleaseToGitHubRelease(ghRelease *GHReleaseResponse) (*GitHubRelease, error) {
-	// Parse the publishedAt time
-	publishedAt, err := time.Parse(time.RFC3339, ghRelease.PublishedAt)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse publishedAt time: %w", err)
-	}
-
-	// Convert assets
-	assets := make([]VersionReleaseAsset, len(ghRelease.Assets))
-	for i, asset := range ghRelease.Assets {
-		assets[i] = VersionReleaseAsset{
-			Name:               asset.Name,
-			BrowserDownloadURL: asset.URL,
-			Size:               asset.Size,
-		}
-	}
-
-	return &GitHubRelease{
-		TagName:     ghRelease.TagName,
-		Name:        ghRelease.TagName, // gh CLI doesn't return name, use tagName
-		Prerelease:  ghRelease.IsPrerelease,
-		Draft:       ghRelease.IsDraft,
-		PublishedAt: publishedAt,
-		Body:        ghRelease.Body,
-		HTMLURL:     ghRelease.URL,
-		Assets:      assets,
-	}, nil
-}
-
-// getLatestStableReleaseViaGH gets the latest stable release using gh CLI
-func getLatestStableReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
-	repoName := fmt.Sprintf("%s/%s", owner, repo)
-
-	// Get the latest release using gh CLI
-	output, err := utils.RunCmdOutput("gh", "release", "view", "--repo", repoName, "--json", "tagName,assets,body,isPrerelease,isDraft,publishedAt,url")
-	if err != nil {
-		return nil, fmt.Errorf("gh CLI command failed: %w", err)
-	}
-
-	var ghRelease GHReleaseResponse
-	if err := json.Unmarshal([]byte(output), &ghRelease); err != nil {
-		return nil, fmt.Errorf("failed to parse gh CLI response: %w", err)
-	}
-
-	return convertGHReleaseToGitHubRelease(&ghRelease)
-}
-
-// getLatestStableReleaseViaAPI gets the latest stable release using GitHub API
-func getLatestStableReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
-	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
-	defer cancel()
-	url := fmt.Sprintf("%s/repos/%s/%s/releases/latest", gitHubAPIBaseURL(), owner, repo)
-	return utils.HTTPGetJSON[GitHubRelease](ctx, url)
-}
-
-// getLatestBetaRelease gets the latest beta release
-func getLatestBetaRelease(owner, repo string) (*GitHubRelease, error) {
-	// Try gh CLI first if available
-	if useGitHubCLI() {
-		if release, err := getLatestBetaReleaseViaGH(owner, repo); err == nil {
-			return release, nil
-		}
-		utils.Info("gh CLI failed, falling back to GitHub API...")
-	}
-
-	// Fallback to direct GitHub API
-	return getLatestBetaReleaseViaAPI(owner, repo)
-}
-
-// getLatestBetaReleaseViaGH gets the latest beta release using gh CLI.
-// Beta channel prioritizes prereleases but falls back to stable if none exist.
-func getLatestBetaReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
-	repoName := fmt.Sprintf("%s/%s", owner, repo)
-
-	// Get all releases using gh CLI
-	output, err := utils.RunCmdOutput("gh", "release", "list", "--repo", repoName, "--json", "tagName,assets,body,isPrerelease,isDraft,publishedAt,url", "--limit", "20")
-	if err != nil {
-		return nil, fmt.Errorf("gh CLI command failed: %w", err)
-	}
-
-	var ghReleases []GHReleaseResponse
-	if err := json.Unmarshal([]byte(output), &ghReleases); err != nil {
-		return nil, fmt.Errorf("failed to parse gh CLI response: %w", err)
-	}
-
-	// First pass: look for the latest prerelease (beta/alpha/rc)
-	for _, ghRelease := range ghReleases {
-		if !ghRelease.IsDraft && ghRelease.IsPrerelease {
-			return convertGHReleaseToGitHubRelease(&ghRelease)
-		}
-	}
-
-	// Fallback: if no prerelease found, return the latest stable
-	for _, ghRelease := range ghReleases {
-		if !ghRelease.IsDraft {
-			return convertGHReleaseToGitHubRelease(&ghRelease)
-		}
-	}
-
-	return nil, errNoBetaReleasesFound
-}
-
-// getLatestBetaReleaseViaAPI gets the latest beta release using GitHub API.
-// Beta channel prioritizes prereleases but falls back to stable if none exist.
-func getLatestBetaReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
-	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
-	defer cancel()
-	url := fmt.Sprintf("%s/repos/%s/%s/releases", gitHubAPIBaseURL(), owner, repo)
-	releases, err := utils.HTTPGetJSON[[]GitHubRelease](ctx, url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch releases from GitHub API: %w", err)
-	}
-
-	// First pass: look for the latest prerelease (beta/alpha/rc)
-	for i := range *releases {
-		release := &(*releases)[i]
-		if !release.Draft && release.Prerelease {
-			return release, nil
-		}
-	}
-
-	// Fallback: if no prerelease found, return the latest stable
-	for i := range *releases {
-		release := &(*releases)[i]
-		if !release.Draft {
-			return release, nil
-		}
-	}
-
-	return nil, errNoBetaReleasesFound
-}
-
-// getLatestEdgeRelease gets the latest edge release (any release including pre-release)
-func getLatestEdgeRelease(owner, repo string) (*GitHubRelease, error) {
-	// Try gh CLI first if available
-	if useGitHubCLI() {
-		if release, err := getLatestEdgeReleaseViaGH(owner, repo); err == nil {
-			return release, nil
-		}
-		utils.Info("gh CLI failed, falling back to GitHub API...")
-	}
-
-	// Fallback to direct GitHub API
-	return getLatestEdgeReleaseViaAPI(owner, repo)
-}
-
-// getLatestEdgeReleaseViaGH gets the latest edge release using gh CLI
-func getLatestEdgeReleaseViaGH(owner, repo string) (*GitHubRelease, error) {
-	repoName := fmt.Sprintf("%s/%s", owner, repo)
-
-	// Get all releases using gh CLI (edge means the very latest, including prereleases)
-	output, err := utils.RunCmdOutput("gh", "release", "list", "--repo", repoName, "--json", "tagName,assets,body,isPrerelease,isDraft,publishedAt,url", "--limit", "1")
-	if err != nil {
-		return nil, fmt.Errorf("gh CLI command failed: %w", err)
-	}
-
-	var ghReleases []GHReleaseResponse
-	if err := json.Unmarshal([]byte(output), &ghReleases); err != nil {
-		return nil, fmt.Errorf("failed to parse gh CLI response: %w", err)
-	}
-
-	if len(ghReleases) > 0 {
-		return convertGHReleaseToGitHubRelease(&ghReleases[0])
-	}
-
-	return nil, errNoReleasesFound
-}
-
-// getLatestEdgeReleaseViaAPI gets the latest edge release using GitHub API
-func getLatestEdgeReleaseViaAPI(owner, repo string) (*GitHubRelease, error) {
-	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
-	defer cancel()
-	url := fmt.Sprintf("%s/repos/%s/%s/releases", gitHubAPIBaseURL(), owner, repo)
-	releases, err := utils.HTTPGetJSON[[]GitHubRelease](ctx, url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch releases from GitHub API: %w", err)
-	}
-	if len(*releases) > 0 {
-		return &(*releases)[0], nil
-	}
-	return nil, errNoReleasesFound
-}
-
-// fetchChecksumForAsset fetches the checksums file and extracts the checksum for the specified asset.
-// Returns the hex-encoded SHA256 checksum or an error if not found.
-func fetchChecksumForAsset(checksumURL, assetName string) (string, error) {
-	ctx, cancel := context.WithTimeout(runtimectx.Context(), 30*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "GET", checksumURL, http.NoBody)
-	if err != nil {
-		return "", fmt.Errorf("failed to create checksum request: %w", err)
-	}
-
-	resp, err := utils.DefaultHTTPClient().Do(req) // #nosec G704 -- URL is the checksums file for the update
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch checksums file: %w", err)
-	}
-	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			utils.Warn("failed to close checksum response body: %v", closeErr)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("%w: status %d", errChecksumFetchFailed, resp.StatusCode)
-	}
-
-	// Limit read to 1MB (checksums file should be small)
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
-	if err != nil {
-		return "", fmt.Errorf("failed to read checksums data: %w", err)
-	}
-
-	// Parse checksums file (goreleaser format: "checksum  filename")
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
-		parts := strings.Fields(line)
-		if len(parts) >= 2 && parts[1] == assetName {
-			// Validate it looks like a hex SHA256 (64 chars)
-			if len(parts[0]) == 64 {
-				return parts[0], nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("%w: %s", errChecksumNotFound, assetName)
-}
-
-// downloadUpdate downloads the update with security verification
-func downloadUpdate(info *UpdateInfo, dir string) error {
-	if info.DownloadURL == "" {
-		// No binary asset, use go install
-		return nil
-	}
-
-	utils.Info("Downloading update...")
-
-	// Create HTTP client with explicit timeout to prevent hanging downloads
-	ctx, cancel := context.WithTimeout(runtimectx.Context(), downloadTimeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "GET", info.DownloadURL, http.NoBody)
-	if err != nil {
-		return fmt.Errorf("failed to create download request: %w", err)
-	}
-
-	client := &http.Client{
-		Timeout: downloadTimeout,
-		Transport: &http.Transport{
-			TLSHandshakeTimeout:   10 * time.Second,
-			ResponseHeaderTimeout: 30 * time.Second,
-		},
-	}
-
-	resp, err := client.Do(req) // #nosec G704 -- URL is the release download URL
-	if err != nil {
-		return fmt.Errorf("failed to download update: %w", err)
-	}
-	defer func() {
-		// Ignore error in defer cleanup
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			// Best effort cleanup - ignore error
-			utils.Warn("failed to close response body: %v", closeErr)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%w: status %d", errDownloadFailed, resp.StatusCode)
-	}
-
-	// Save to file
-	filename := filepath.Base(info.DownloadURL)
-	targetPath := filepath.Join(dir, filename)
-
-	// Save response body to file
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read download response: %w", err)
-	}
-
-	// Verify checksum if provided (security: prevent MITM attacks)
-	if info.ChecksumSHA256 != "" {
-		actualHash := sha256.Sum256(data)
-		actualHashHex := hex.EncodeToString(actualHash[:])
-
-		if !strings.EqualFold(actualHashHex, info.ChecksumSHA256) {
-			return fmt.Errorf("%w: expected %s, got %s",
-				errChecksumMismatch, info.ChecksumSHA256, actualHashHex)
-		}
-		utils.Info("Checksum verified: %s", actualHashHex[:16]+"...")
-	} else {
-		utils.Warn("No checksum available for verification - proceeding with caution")
-	}
-
-	fileOps := fileops.New()
-	return fileOps.File.WriteFile(targetPath, data, fileops.PermFile)
-}
-
-// validateExtractPath validates that a file path stays within the destination directory
-// and prevents directory traversal attacks (Zip Slip vulnerability)
-func validateExtractPath(destDir, tarPath string) (string, error) {
-	// Reject absolute paths in tar entries (Zip Slip defense)
-	if filepath.IsAbs(tarPath) {
-		return "", fmt.Errorf("%w: absolute path not allowed: %s", errPathTraversal, tarPath)
-	}
-
-	// Clean the destination directory path
-	destDir = filepath.Clean(destDir)
-
-	// Join and clean the target path
-	targetPath := filepath.Join(destDir, tarPath)
-	targetPath = filepath.Clean(targetPath)
-
-	// Check if the target path is within the destination directory
-	relPath, err := filepath.Rel(destDir, targetPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to determine relative path: %w", err)
-	}
-
-	// Reject paths that escape the destination directory
-	if strings.HasPrefix(relPath, "..") || strings.Contains(relPath, string(filepath.Separator)+"..") {
-		return "", fmt.Errorf("%w: %s", errPathTraversal, tarPath)
-	}
-
-	return targetPath, nil
-}
-
-// extractTarGz extracts a tar.gz file to the specified directory
-func extractTarGz(src, dest string) error {
-	// Open the tar.gz file
-	//nolint:gosec // G304: src path validated by caller
-	file, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("failed to open tar.gz file: %w", err)
-	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			utils.Warn("failed to close tar.gz file: %v", closeErr)
-		}
-	}()
-
-	// Create gzip reader
-	gzipReader, err := gzip.NewReader(file)
-	if err != nil {
-		return fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer func() {
-		if closeErr := gzipReader.Close(); closeErr != nil {
-			utils.Warn("failed to close gzip reader: %v", closeErr)
-		}
-	}()
-
-	// Create tar reader
-	tarReader := tar.NewReader(gzipReader)
-
-	// Extract files
-	for {
-		header, err := tarReader.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read tar header: %w", err)
-		}
-
-		// Skip directories
-		if header.Typeflag == tar.TypeDir {
-			continue
-		}
-
-		// Only extract regular files
-		if header.Typeflag != tar.TypeReg {
-			continue
-		}
-
-		// Validate and create secure destination file path
-		destPath, err := validateExtractPath(dest, header.Name)
-		if err != nil {
-			utils.Info("Skipping malicious file path: %s (%v)", header.Name, err)
-			continue
-		}
-
-		// Ensure the destination directory exists
-		if dirErr := os.MkdirAll(filepath.Dir(destPath), fileops.PermDirSensitive); dirErr != nil { // #nosec G703 -- destPath validated by validateExtractPath
-			return fmt.Errorf("failed to create destination directory for %s: %w", destPath, dirErr)
-		}
-
-		// Normalize file permissions for security
-		// Executables get 0o755, regular files get 0o644
-		// This prevents malicious tar files from setting dangerous permissions (e.g., 0o777, setuid)
-		// Mask to standard permission bits to avoid overflow when converting int64 to FileMode
-
-		mode := normalizeFileMode(os.FileMode(header.Mode & 0o7777))
-
-		// Create the file with normalized permissions
-		//nolint:gosec // G304: destPath validated by validateExtractPath function
-		destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
-		if err != nil {
-			return fmt.Errorf("failed to create destination file %s: %w", destPath, err)
-		}
-
-		// Copy file content with size limit to prevent zip bomb attacks
-		limitedReader := io.LimitReader(tarReader, maxUpdateFileSize)
-		n, copyErr := io.Copy(destFile, limitedReader)
-		closeErr := destFile.Close()
-
-		// Check if file exceeded size limit
-		if n >= maxUpdateFileSize {
-			// Clean up the oversized file
-			if rmErr := os.Remove(destPath); rmErr != nil { // #nosec G703,G706 -- destPath validated; log message doesn't reach HTTP output
-				utils.Warn("failed to remove oversized file %s: %v", destPath, rmErr)
-			}
-			return fmt.Errorf("%w: %s exceeds %d bytes", errFileTooLarge, header.Name, maxUpdateFileSize)
-		}
-
-		if copyErr != nil {
-			return fmt.Errorf("failed to extract file %s: %w", destPath, copyErr)
-		}
-		if closeErr != nil {
-			return fmt.Errorf("failed to close destination file %s: %w", destPath, closeErr)
-		}
-
-		utils.Info("Extracted: %s", filepath.Base(destPath))
-	}
-
-	return nil
-}
-
-// normalizeFileMode normalizes file permissions for security.
-// Executables get 0o755, regular files get 0o644.
-// This strips dangerous bits like setuid/setgid and prevents overly permissive modes.
-func normalizeFileMode(mode os.FileMode) os.FileMode {
-	// Clear setuid, setgid, and sticky bits for security
-	mode &^= os.ModeSetuid | os.ModeSetgid | os.ModeSticky
-
-	// If file has any execute bit, make it 0o755, otherwise 0o644
-	if mode&0o111 != 0 {
-		return fileops.PermFileExecutable
-	}
-	return fileops.PermFile
-}
-
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	//nolint:gosec // G304: src path validated by caller
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("failed to open source file: %w", err)
-	}
-	defer func() {
-		if closeErr := srcFile.Close(); closeErr != nil {
-			utils.Warn("failed to close source file: %v", closeErr)
-		}
-	}()
-
-	//nolint:gosec // G304: dst path validated by caller
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
-	}
-	defer func() {
-		if closeErr := dstFile.Close(); closeErr != nil {
-			utils.Warn("failed to close destination file: %v", closeErr)
-		}
-	}()
-
-	if _, err := io.Copy(dstFile, srcFile); err != nil {
-		return fmt.Errorf("failed to copy file: %w", err)
-	}
-
-	return nil
-}
-
-// installBinaryFallback copies src to dst via a temp file then atomically
-// renames it into place. This avoids truncating a running binary in-place on
-// Linux (which would corrupt its memory-map and raise SIGBUS).
-func installBinaryFallback(src, dst string) error {
-	tmpPath := dst + ".new"
-	if copyErr := copyFile(src, tmpPath); copyErr != nil {
-		if rmErr := os.Remove(tmpPath); rmErr != nil { // #nosec G703 -- tmpPath derived from validated dst
-			utils.Warn("failed to remove temp binary: %v", rmErr)
-		}
-		return fmt.Errorf("failed to install binary: %w", copyErr)
-	}
-	if renErr := os.Rename(tmpPath, dst); renErr != nil { // #nosec G703 -- tmpPath/dst are from validated internal paths
-		if rmErr := os.Remove(tmpPath); rmErr != nil { // #nosec G703 -- tmpPath derived from validated dst
-			utils.Warn("failed to remove temp binary: %v", rmErr)
-		}
-		return fmt.Errorf("failed to install binary: %w", renErr)
-	}
-	if removeErr := os.Remove(src); removeErr != nil { // #nosec G703 -- src is from internal download process
-		utils.Warn("failed to remove temporary binary: %v", removeErr)
-	}
-	return nil
-}
-
-// installUpdate installs the downloaded update
-func installUpdate(info *UpdateInfo, updateDir string) error {
-	// Get GOPATH for installation location
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		gopath = filepath.Join(os.Getenv("HOME"), "go")
-	}
-	outputPath := filepath.Join(gopath, "bin", "magex")
-
-	// If no binary was downloaded, fall back to go install
-	if info.DownloadURL == "" {
-		utils.Info("No binary asset found, using go install...")
-		if err := GetRunner().RunCmd("go", "install", fmt.Sprintf("%s@%s", magexModule, info.LatestVersion)); err != nil {
-			return err
-		}
-		createMagexAliases(gopath, outputPath)
-		return nil
-	}
-
-	utils.Info("Installing downloaded binary...")
-
-	// Find the downloaded tar.gz file
-	files, err := os.ReadDir(updateDir)
-	if err != nil {
-		return fmt.Errorf("failed to read update directory: %w", err)
-	}
-
-	var tarGzPath string
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".tar.gz") {
-			tarGzPath = filepath.Join(updateDir, file.Name())
-			break
-		}
-	}
-
-	if tarGzPath == "" {
-		return errNoTarGzFound
-	}
-
-	// Create temporary extraction directory
-	extractDir := filepath.Join(updateDir, "extract")
-	if mkdirErr := os.MkdirAll(extractDir, fileops.PermDirSensitive); mkdirErr != nil {
-		return fmt.Errorf("failed to create extraction directory: %w", mkdirErr)
-	}
-
-	// Extract the tar.gz
-	if extractErr := extractTarGz(tarGzPath, extractDir); extractErr != nil {
-		return fmt.Errorf("failed to extract binary: %w", extractErr)
-	}
-
-	// Find the magex binary in extracted files
-	extractedFiles, err := os.ReadDir(extractDir)
-	if err != nil {
-		return fmt.Errorf("failed to read extraction directory: %w", err)
-	}
-
-	var binaryPath string
-	for _, file := range extractedFiles {
-		if file.Name() == "magex" || (runtime.GOOS == OSWindows && file.Name() == "magex.exe") {
-			binaryPath = filepath.Join(extractDir, file.Name())
-			break
-		}
-	}
-
-	if binaryPath == "" {
-		return errMagexBinaryNotFound
-	}
-
-	// Move binary to final location; fall back to copy+atomic-rename on
-	// cross-filesystem moves (e.g. /tmp → ~/go/bin).
-	if renameErr := os.Rename(binaryPath, outputPath); renameErr != nil { // #nosec G703 -- binaryPath/outputPath are from validated internal download
-		if err := installBinaryFallback(binaryPath, outputPath); err != nil {
-			return err
-		}
-	}
-
-	// Ensure binary is executable
-	if chmodErr := os.Chmod(outputPath, fileops.PermFileExecutable); chmodErr != nil { // #nosec G703 -- outputPath is from validated config
-		return fmt.Errorf("failed to make binary executable: %w", chmodErr)
-	}
-
-	utils.Success("Binary installed to: %s", outputPath)
-
-	// Create symlink aliases (uses config if available, falls back to defaults)
-	createMagexAliases(gopath, outputPath)
-
-	return nil
-}
-
-// createMagexAliases creates symlink aliases for the magex binary.
-// It tries config-based aliases first, falling back to hardcoded defaults
-// since update:install is always for the magex binary regardless of CWD.
-func createMagexAliases(gopath, outputPath string) {
-	var aliases []string
-
-	config, err := GetConfig()
-	if err == nil {
-		aliases = config.Project.Aliases
-	}
-
-	// Fall back to defaults when config is unavailable or has no aliases
-	// (e.g., when running update:install from a directory without .mage.yaml)
-	if len(aliases) == 0 {
-		aliases = getDefaultAliases("magex")
-	}
-
-	for _, alias := range aliases {
-		createSymlinkAlias(gopath, outputPath, alias)
-	}
-}
-
-// getVersionInfoForUpdate returns version specifically for update checking
-// This prioritizes the binary version and always returns "dev" to force updates when needed
-func getVersionInfoForUpdate() string {
-	buildInfo := getBuildInfo()
-
-	// If we have a proper version in the binary, use it
-	if buildInfo.Version != versionDev {
-		return buildInfo.Version
-	}
-
-	// Binary shows "dev" - provide helpful context but always return "dev" to force update
-	utils.Info("Detecting current version...")
-	if module, err := utils.GetModuleName(); err == nil && strings.Contains(module, "mage-x") {
-		// We're in the mage-x development environment - show git context
-		if tag := getCurrentGitTag(); tag != "" {
-			utils.Info("Found tag on HEAD commit: %s", tag)
-		}
-	}
-
-	// Always return "dev" when binary shows "dev" to ensure update happens
-	// This forces the comparison "dev" < "v1.x.x" = true, triggering update
-	return versionDev
+// ShowUpdateBanner prints the passive "a new version is available" banner when
+// result reports an available update, and stays silent otherwise.
+func ShowUpdateBanner(result *notify.Result) {
+	notify.ShowBanner(notifyConfig(), result)
 }

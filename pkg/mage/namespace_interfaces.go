@@ -402,10 +402,10 @@ type GenerateNamespace interface {
 // UpdateNamespace interface defines the contract for update operations
 type UpdateNamespace interface {
 	// Check checks for available updates
-	Check() error
+	Check(args ...string) error
 
 	// Install installs the latest update
-	Install() error
+	Install(args ...string) error
 }
 
 // ModNamespace interface defines the contract for Go module operations

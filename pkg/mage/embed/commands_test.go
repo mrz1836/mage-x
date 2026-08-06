@@ -1445,7 +1445,7 @@ func TestDataTableIntegrity(t *testing.T) {
 		{"vetCommands", getVetCommands(), 1},
 		{"configureCommands", getConfigureCommands(), 7},
 		{"helpCommands", getHelpCommands(), 7},
-		{"versionCommands", getVersionCommands(), 6},
+		{"versionCommands", getVersionCommands(), 4}, // show, bump, changelog, tag (check/update registered explicitly)
 		{"installCommands", getInstallCommands(), 15},
 		{"yamlCommands", getYamlCommands(), 5},
 		{"bmadCommands", getBmadCommands(), 3},
@@ -1735,13 +1735,16 @@ func TestTotalCommandCount(t *testing.T) {
 		}
 	}
 
-	// Expected: 175 data table + 1 deps:audit + 7 top-level = 183
+	// Namespace commands are unchanged: version:check/version:update moved out
+	// of the version data table into explicit deprecated registrations, so the
+	// count is the same. Top-level grew by one: the new `update` verb (its
+	// `upgrade` alias is not a separate command).
 	assert.Equal(t, 176, namespaceCommands,
-		"Should have 176 namespace commands (175 from tables + 1 deps:audit)")
-	assert.Equal(t, 7, topLevelCommands,
-		"Should have 7 top-level commands")
-	assert.Len(t, commands, 183,
-		"Should have 183 total commands")
+		"Should have 176 namespace commands (data tables + deps:audit + test:run + explicit version:check/update)")
+	assert.Equal(t, 8, topLevelCommands,
+		"Should have 8 top-level commands (incl. the new update verb)")
+	assert.Len(t, commands, 184,
+		"Should have 184 total commands")
 }
 
 // TestMissingBindingPanics verifies commands without bindings cause panic
@@ -2064,7 +2067,7 @@ func TestGetterFunctionsExpectedCounts(t *testing.T) {
 		{"getVetCommands", getVetCommands, 1},
 		{"getConfigureCommands", getConfigureCommands, 7},
 		{"getHelpCommands", getHelpCommands, 7},
-		{"getVersionCommands", getVersionCommands, 6},
+		{"getVersionCommands", getVersionCommands, 4}, // check/update registered explicitly as deprecated aliases
 		{"getInstallCommands", getInstallCommands, 15},
 		{"getYamlCommands", getYamlCommands, 5},
 		{"getBmadCommands", getBmadCommands, 3},
@@ -2213,10 +2216,12 @@ func TestTotalCommandsFromGetters(t *testing.T) {
 		total += len(getter())
 	}
 
-	// Expected: 165 commands from data tables (test:run is registered separately
-	// via an explicit builder so it can carry Options + the test:specific alias).
-	assert.Equal(t, 165, total,
-		"Total commands from all getters should equal 165")
+	// Expected: 163 commands from data tables. test:run is registered separately
+	// via an explicit builder (Options + test:specific alias), and version:check
+	// / version:update moved out of the version table into explicit deprecated
+	// registrations, so the version getter now returns 4 instead of 6.
+	assert.Equal(t, 163, total,
+		"Total commands from all getters should equal 163")
 }
 
 // BenchmarkGetterFunctions benchmarks the getter function calls

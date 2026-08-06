@@ -2,7 +2,6 @@ package mage
 
 import (
 	"errors"
-	"net/http"
 	"sync"
 	"testing"
 
@@ -317,19 +316,11 @@ func TestModNamespace_Download(t *testing.T) {
 }
 
 func TestUpdateNamespace_Check(t *testing.T) {
-	withMockRunner(t, func(mockRunner *MockCommandRunner) {
-		// Mock getting current version - first try current git tag command, then fallback
-		mockRunner.On("RunCmdOutput", "git", "tag", "--sort=-version:refname", "--points-at", "HEAD").Return("v1.0.0", nil).Maybe()
-		mockRunner.On("RunCmdOutput", "git", "describe", "--tags", "--abbrev=0").Return("v1.0.0", nil).Maybe()
+	// Stub the go-selfupdate release lookup so the check is fully offline.
+	withStubbedUpdateCheck(t, "v1.0.0", false)
 
-		// Serve the release lookup locally so the check never reaches GitHub
-		withFakeGitHubAPI(t, func(w http.ResponseWriter, _ *http.Request) {
-			writeFakeGitHubJSON(t, w, `{"tag_name":"v1.0.0","name":"v1.0.0","body":"notes","prerelease":false,"draft":false}`)
-		})
-
-		update := NewUpdateNamespace()
-		require.NoError(t, update.Check())
-	})
+	update := NewUpdateNamespace()
+	require.NoError(t, update.Check())
 }
 
 func TestGenerateNamespace_Default(t *testing.T) {

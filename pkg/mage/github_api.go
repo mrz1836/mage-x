@@ -19,16 +19,12 @@ var githubAPIBaseURL = defaultGitHubAPIBaseURL
 // gitHubAPIBaseURL returns the base URL for GitHub REST API requests, with no
 // trailing slash. GITHUB_API_URL takes precedence so GitHub Enterprise hosts
 // (and test harnesses driving the compiled binary) can redirect the calls.
+//
+// This is still consumed by speckit_release.go; the self-update path no longer
+// talks to the GitHub REST API directly (go-selfupdate owns that now).
 func gitHubAPIBaseURL() string {
 	if configured := env.Get("GITHUB_API_URL"); configured != "" {
 		return strings.TrimSuffix(configured, "/")
 	}
 	return strings.TrimSuffix(githubAPIBaseURL, "/")
-}
-
-// useGitHubCLI reports whether release lookups may shell out to the gh CLI. It
-// is skipped when the API endpoint has been redirected, because gh talks to its
-// own configured host and would ignore the override.
-func useGitHubCLI() bool {
-	return gitHubAPIBaseURL() == defaultGitHubAPIBaseURL && commandExists("gh")
 }

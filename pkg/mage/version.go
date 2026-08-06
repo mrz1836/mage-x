@@ -2,7 +2,6 @@
 package mage
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/magefile/mage/mg"
 
-	"github.com/mrz1836/mage-x/pkg/mage/runtimectx"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -317,43 +315,6 @@ func createVersionTag(newVersion string) error {
 
 // Version namespace for version management tasks
 type Version mg.Namespace
-
-// GitHubRelease represents a GitHub release
-type GitHubRelease struct {
-	TagName     string                `json:"tag_name"`
-	Name        string                `json:"name"`
-	Prerelease  bool                  `json:"prerelease"`
-	Draft       bool                  `json:"draft"`
-	PublishedAt time.Time             `json:"published_at"`
-	Body        string                `json:"body"`
-	HTMLURL     string                `json:"html_url"`
-	Assets      []VersionReleaseAsset `json:"assets"`
-}
-
-// VersionReleaseAsset represents a release asset
-type VersionReleaseAsset struct {
-	Name               string `json:"name"`
-	BrowserDownloadURL string `json:"browser_download_url"`
-	Size               int64  `json:"size"`
-}
-
-// GHReleaseResponse represents a GitHub release from gh CLI
-type GHReleaseResponse struct {
-	TagName      string           `json:"tagName"`
-	Body         string           `json:"body"`
-	IsPrerelease bool             `json:"isPrerelease"`
-	IsDraft      bool             `json:"isDraft"`
-	PublishedAt  string           `json:"publishedAt"`
-	URL          string           `json:"url"`
-	Assets       []GHReleaseAsset `json:"assets"`
-}
-
-// GHReleaseAsset represents a release asset from gh CLI
-type GHReleaseAsset struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-	Size int64  `json:"size"`
-}
 
 // BuildInfo contains all build-time information
 type BuildInfo struct {
@@ -826,116 +787,20 @@ func (Version) Modules(args ...string) error {
 	return nil
 }
 
-// Check checks for available updates
-func (Version) Check(_ ...string) error {
-	utils.Header("Checking for Updates")
-
-	current := getVersionInfo()
-	utils.Info("Current version: %s", current)
-
-	// Get module info
-	module, err := utils.GetModuleName()
-	if err != nil {
-		return fmt.Errorf("failed to get module name: %w", err)
-	}
-
-	// Parse module to get owner/repo
-	parts := strings.Split(module, "/")
-	if len(parts) < 3 {
-		return fmt.Errorf("%w: %s", errCannotParseGitHubInfo, module)
-	}
-
-	owner := parts[1]
-	repo := parts[2]
-
-	// Check GitHub releases
-	latest, err := getLatestGitHubRelease(owner, repo)
-	if err != nil {
-		// Check if it's a 404 (no releases found)
-		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "Not Found") {
-			utils.Warn("No GitHub releases found for %s/%s", owner, repo)
-			utils.Info("This project may use Git tags instead of GitHub releases")
-			utils.Info("To create a release:")
-			utils.Info("1. Visit https://github.com/%s/%s/releases", owner, repo)
-			utils.Info("2. Click 'Create a new release'")
-			utils.Info("3. Select tag %s and publish", current)
-			return nil
-		}
-		return fmt.Errorf("failed to check for updates: %w", err)
-	}
-
-	utils.Info("Latest version: %s", latest.TagName)
-
-	// Compare versions
-	if isNewer(latest.TagName, current) {
-		utils.Success("🎉 New version available: %s", latest.TagName)
-		utils.Info("GitHubRelease: %s", latest.Name)
-		if latest.Body != "" {
-			utils.Info("GitHubRelease Notes:")
-			utils.Info("%s", formatReleaseNotes(latest.Body))
-		}
-		utils.Info("Update with: go install %s@%s", module, latest.TagName)
-	} else {
-		utils.Success("✅ You are running the latest version")
-	}
-
-	return nil
+// Check is a retained thin alias over the go-selfupdate-backed Update.Check.
+// Prefer "magex update:check" (or "magex update --check"); this exists so
+// existing invocations keep working. The command form is marked deprecated in
+// the registry, which prints a migration notice at runtime.
+func (Version) Check(args ...string) error {
+	return Update{}.Check(args...)
 }
 
-// Update updates to the latest version
-func (Version) Update() error {
-	utils.Header("Updating to Latest Version")
-
-	// Check for updates first
-	current := getVersionInfo()
-	utils.Info("Current version: %s", current)
-
-	// Get module info
-	module, err := utils.GetModuleName()
-	if err != nil {
-		return fmt.Errorf("failed to get module name: %w", err)
-	}
-
-	// Parse module to get owner/repo
-	parts := strings.Split(module, "/")
-	if len(parts) < 3 {
-		return fmt.Errorf("%w: %s", errCannotParseGitHubInfo, module)
-	}
-
-	owner := parts[1]
-	repo := parts[2]
-
-	// Get latest release
-	latest, err := getLatestGitHubRelease(owner, repo)
-	if err != nil {
-		// Check if it's a 404 (no releases found)
-		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "Not Found") {
-			utils.Warn("No GitHub releases found for %s/%s", owner, repo)
-			utils.Info("Cannot update without published releases")
-			utils.Info("Current version: %s", current)
-			return nil
-		}
-		return fmt.Errorf("failed to check for updates: %w", err)
-	}
-
-	if !isNewer(latest.TagName, current) {
-		utils.Success("Already running the latest version: %s", current)
-		return nil
-	}
-
-	utils.Info("Updating to version %s...", latest.TagName)
-
-	// Use go install to update
-	pkg := fmt.Sprintf("%s@%s", module, latest.TagName)
-
-	if err := GetRunner().RunCmd("go", "install", pkg); err != nil {
-		return fmt.Errorf("update failed: %w", err)
-	}
-
-	utils.Success("Successfully updated to version %s", latest.TagName)
-	utils.Info("Restart your application to use the new version")
-
-	return nil
+// Update is a retained thin alias over the go-selfupdate-backed Update.Install.
+// Prefer "magex update" (or "magex update:install"); this exists so existing
+// invocations keep working. The command form is marked deprecated in the
+// registry, which prints a migration notice at runtime.
+func (Version) Update(args ...string) error {
+	return Update{}.Install(args...)
 }
 
 // Bump bumps the version number
@@ -1548,16 +1413,6 @@ func getPreviousTag() string {
 
 	return ""
 }
-
-// getLatestGitHubRelease fetches the latest release from GitHub
-func getLatestGitHubRelease(owner, repo string) (*GitHubRelease, error) {
-	ctx, cancel := context.WithTimeout(runtimectx.Context(), 10*time.Second)
-	defer cancel()
-	url := fmt.Sprintf("%s/repos/%s/%s/releases/latest", gitHubAPIBaseURL(), owner, repo)
-	return utils.HTTPGetJSON[GitHubRelease](ctx, url)
-}
-
-// isNewer checks if version a is newer than version b
 
 // bumpVersion bumps the version according to type
 func bumpVersion(current, bumpType string) (string, error) {

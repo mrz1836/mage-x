@@ -249,8 +249,18 @@ func getGenerateCommands() []CommandDef {
 
 func getUpdateCommands() []CommandDef {
 	return []CommandDef{
-		{Method: "check", Desc: "Check for updates"},
-		{Method: "install", Desc: "Install updates"},
+		{
+			Method:   "check",
+			Desc:     "Check whether a newer magex release is available",
+			Usage:    "magex update:check",
+			Examples: []string{"magex update:check", "magex update --check", "magex update check=true"},
+		},
+		{
+			Method:   "install",
+			Desc:     "Update magex to the latest release",
+			Usage:    "magex update:install [force=true] [verbose=true] [check=true]",
+			Examples: []string{"magex update:install", "magex update:install force=true", "magex update --force"},
+		},
 	}
 }
 
@@ -336,8 +346,8 @@ func getHelpCommands() []CommandDef {
 func getVersionCommands() []CommandDef {
 	return []CommandDef{
 		{Method: "show", Desc: "Display current version information"},
-		{Method: "check", Desc: "Check version information and compare with latest"},
-		{Method: "update", Desc: "Update to latest version"},
+		// version:check and version:update are registered explicitly below as
+		// deprecated aliases over the go-selfupdate-backed update surface.
 		{Method: "bump", Desc: "Bump version with parameters: bump=<major|minor|patch> branch=<branch-name> push dry-run force major-confirm", Usage: "magex version:bump [bump=<type>] [branch=<branch-name>] [push] [dry-run] [force] [major-confirm]", Examples: []string{"magex version:bump bump=patch branch=master push", "magex version:bump bump=minor branch=main", "magex version:bump bump=major major-confirm branch=master push", "magex version:bump bump=patch dry-run", "magex version:bump bump=patch"}},
 		{Method: "changelog", Desc: "Generate changelog from git history with parameters: from=<tag> to=<tag>", Usage: "magex version:changelog [from=<tag>] [to=<tag>]", Examples: []string{"magex version:changelog", "magex version:changelog from=v1.0.0", "magex version:changelog from=v1.0.0 to=v1.1.0"}},
 		{Method: "tag", Desc: "Create version tag"},
@@ -583,8 +593,8 @@ func generateMethodBindings(g mage.Generate) map[string]MethodBinding {
 
 func updateMethodBindings(u mage.Update) map[string]MethodBinding {
 	return map[string]MethodBinding{
-		"check":   {NoArgs: u.Check},
-		"install": {NoArgs: u.Install},
+		"check":   {WithArgs: u.Check},
+		"install": {WithArgs: u.Install},
 	}
 }
 
@@ -660,11 +670,10 @@ func helpMethodBindings(h mage.Help) map[string]MethodBinding {
 func versionMethodBindings(v mage.Version) map[string]MethodBinding {
 	return map[string]MethodBinding{
 		"show":      {NoArgs: v.Show},
-		"check":     {WithArgs: v.Check}, // Version.Check takes _ ...string
-		"update":    {NoArgs: v.Update},
 		"bump":      {WithArgs: v.Bump},
 		"changelog": {WithArgs: v.Changelog},
 		"tag":       {WithArgs: v.Tag}, // Version.Tag takes _ ...string
+		// "check" and "update" are registered explicitly (deprecated aliases).
 	}
 }
 
@@ -907,7 +916,38 @@ func registerGenerateCommands(reg *registry.Registry) {
 func registerUpdateCommands(reg *registry.Registry) {
 	u := mage.Update{}
 	registerNamespaceCommands(reg, "update", "Update", getUpdateCommands(), updateMethodBindings(u))
+
+	// Top-level `update` verb (with `upgrade` alias) matching the ecosystem
+	// convention. It routes to Update.Install, which itself short-circuits to a
+	// read-only check when --check/-c (or check=true) is present, so a single
+	// handler serves "install by default; --check => check".
+	reg.MustRegister(
+		registry.NewCommand("update").
+			WithDescription("Update magex to the latest release (use --check to only check)").
+			WithLongDescription("Update the magex binary to the latest release.\n\n"+
+				"Binary installs in a writable directory (for example ~/.local/bin) are\n"+
+				"replaced in place. A `go install` build is refreshed by auto-running\n"+
+				"`go install "+updateModulePathForHelp+"@latest`. Other managed installs\n"+
+				"(Homebrew, system directories) print copy-pasteable guidance instead.\n\n"+
+				"Flags: --check/-c (check only), --force/-f, --verbose/-v.\n"+
+				"The key=value forms (check=true, force=true, verbose=true) work too.").
+			WithArgsFunc(func(args ...string) error { return u.Install(args...) }).
+			WithCategory("Update").
+			WithAliases("upgrade").
+			WithUsage("magex update [--check|-c] [--force|-f] [--verbose|-v]").
+			WithExamples(
+				"magex update",
+				"magex update --check",
+				"magex update --force",
+				"magex upgrade",
+			).
+			MustBuild(),
+	)
 }
+
+// updateModulePathForHelp is the go-installable magex package path, surfaced in
+// help text for the top-level update command.
+const updateModulePathForHelp = "github.com/mrz1836/mage-x/cmd/magex"
 
 func registerModCommands(reg *registry.Registry) {
 	m := mage.Mod{}
@@ -942,6 +982,29 @@ func registerHelpCommands(reg *registry.Registry) {
 func registerVersionCommands(reg *registry.Registry) {
 	v := mage.Version{}
 	registerNamespaceCommands(reg, "version", "Version Management", getVersionCommands(), versionMethodBindings(v))
+
+	// version:check and version:update are deprecated thin aliases over the
+	// go-selfupdate-backed update surface. They keep working, but the registry
+	// prints a migration notice when they run.
+	reg.MustRegister(
+		registry.NewNamespaceCommand("version", "check").
+			WithDescription("Check for a newer magex release (deprecated: use update:check)").
+			WithArgsFunc(v.Check).
+			WithCategory("Version Management").
+			WithUsage("magex version:check").
+			Deprecated(`use "magex update:check" (or "magex update --check")`).
+			MustBuild(),
+	)
+
+	reg.MustRegister(
+		registry.NewNamespaceCommand("version", "update").
+			WithDescription("Update magex to the latest release (deprecated: use update)").
+			WithArgsFunc(v.Update).
+			WithCategory("Version Management").
+			WithUsage("magex version:update").
+			Deprecated(`use "magex update" (or "magex update:install")`).
+			MustBuild(),
+	)
 }
 
 func registerInstallCommands(reg *registry.Registry) {
