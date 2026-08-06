@@ -2,730 +2,514 @@ package mage
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
+	"time"
 
+	selfupdate "github.com/mrz1836/go-selfupdate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mrz1836/mage-x/pkg/common/fileops"
+	pkglog "github.com/mrz1836/mage-x/pkg/log"
 )
 
-// TestGetUpdateChannel tests the getUpdateChannel function
-func TestGetUpdateChannel(t *testing.T) {
-	tests := []struct {
-		name   string
-		envVal string
-		want   UpdateChannel
-	}{
-		{
-			name:   "default to stable when no env set",
-			envVal: "",
-			want:   StableChannel,
-		},
-		{
-			name:   "beta channel",
-			envVal: "beta",
-			want:   BetaChannel,
-		},
-		{
-			name:   "Beta channel with capital B",
-			envVal: "Beta",
-			want:   BetaChannel,
-		},
-		{
-			name:   "edge channel",
-			envVal: "edge",
-			want:   EdgeChannel,
-		},
-		{
-			name:   "EDGE channel uppercase",
-			envVal: "EDGE",
-			want:   EdgeChannel,
-		},
-		{
-			name:   "stable channel explicit",
-			envVal: "stable",
-			want:   StableChannel,
-		},
-		{
-			name:   "invalid channel defaults to stable",
-			envVal: "invalid",
-			want:   StableChannel,
-		},
-	}
+// errUpdateTest is a sentinel used to drive the update error paths offline.
+var errUpdateTest = errors.New("update test failure")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variable
-			if tt.envVal != "" {
-				t.Setenv("UPDATE_CHANNEL", tt.envVal)
-			}
+// ============================================================================
+// Test seams / helpers — every one keeps the update path fully offline.
+// ============================================================================
 
-			got := getUpdateChannel()
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-// TestValidateExtractPath tests the security-critical path validation function
-func TestValidateExtractPath(t *testing.T) {
-	tests := []struct {
-		name        string
-		destDir     string
-		tarPath     string
-		wantErr     bool
-		errContains string
-	}{
-		{
-			name:    "valid simple file path",
-			destDir: "/tmp/extract",
-			tarPath: "magex",
-			wantErr: false,
-		},
-		{
-			name:    "valid nested file path",
-			destDir: "/tmp/extract",
-			tarPath: "bin/magex",
-			wantErr: false,
-		},
-		{
-			name:    "valid file with dots in name",
-			destDir: "/tmp/extract",
-			tarPath: "magex.exe",
-			wantErr: false,
-		},
-		{
-			name:        "path traversal with ..",
-			destDir:     "/tmp/extract",
-			tarPath:     "../../../etc/passwd",
-			wantErr:     true,
-			errContains: "path traversal",
-		},
-		{
-			name:        "path traversal in subdirectory",
-			destDir:     "/tmp/extract",
-			tarPath:     "subdir/../../etc/passwd",
-			wantErr:     true,
-			errContains: "path traversal",
-		},
-		{
-			name:        "absolute path attempt",
-			destDir:     "/tmp/extract",
-			tarPath:     "/etc/passwd",
-			wantErr:     true,
-			errContains: "path traversal",
-		},
-		{
-			name:    "multiple slashes normalized",
-			destDir: "/tmp/extract",
-			tarPath: "bin//magex",
-			wantErr: false,
-		},
-		{
-			name:    "trailing slash in tarPath",
-			destDir: "/tmp/extract",
-			tarPath: "bin/",
-			wantErr: false,
-		},
-		{
-			name:        "hidden parent traversal",
-			destDir:     "/tmp/extract",
-			tarPath:     "bin/../../../etc/passwd",
-			wantErr:     true,
-			errContains: "path traversal",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := validateExtractPath(tt.destDir, tt.tarPath)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.errContains)
-				assert.Empty(t, got)
-			} else {
-				require.NoError(t, err)
-				assert.NotEmpty(t, got)
-				// Verify the path is within destDir
-				relPath, err := filepath.Rel(tt.destDir, got)
-				require.NoError(t, err)
-				assert.False(t, strings.HasPrefix(relPath, ".."), "path should be within destDir")
-			}
-		})
-	}
-}
-
-// TestExtractTarGz tests tar.gz extraction with security validation
-func TestExtractTarGz(t *testing.T) {
-	tests := []struct {
-		name        string
-		setupTar    func(t *testing.T, tarPath string)
-		wantErr     bool
-		errContains string
-		checkFiles  []string // Files that should exist after extraction
-	}{
-		{
-			name: "valid single file extraction",
-			setupTar: func(t *testing.T, tarPath string) {
-				createTestTarGz(t, tarPath, map[string]string{
-					"test.txt": "hello world",
-				})
-			},
-			wantErr:    false,
-			checkFiles: []string{"test.txt"},
-		},
-		{
-			name: "valid multiple files",
-			setupTar: func(t *testing.T, tarPath string) {
-				createTestTarGz(t, tarPath, map[string]string{
-					"file1.txt":      "content1",
-					"bin/magex":      "binary content",
-					"docs/README.md": "readme",
-				})
-			},
-			wantErr:    false,
-			checkFiles: []string{"file1.txt", "bin/magex", "docs/README.md"},
-		},
-		{
-			name: "malicious path traversal attempt skipped",
-			setupTar: func(t *testing.T, tarPath string) {
-				// Create a tar with path traversal attempt
-				file, err := os.Create(tarPath) //nolint:gosec // test file
-				require.NoError(t, err)
-				defer file.Close() //nolint:errcheck // test file
-
-				gzipWriter := gzip.NewWriter(file)
-				defer gzipWriter.Close() //nolint:errcheck // test file
-
-				tarWriter := tar.NewWriter(gzipWriter)
-				defer tarWriter.Close() //nolint:errcheck // test file
-
-				// Add a malicious entry
-				content := []byte("malicious content")
-				header := &tar.Header{
-					Name:     "../../../etc/passwd",
-					Mode:     0o644,
-					Size:     int64(len(content)),
-					Typeflag: tar.TypeReg,
-				}
-				require.NoError(t, tarWriter.WriteHeader(header))
-				_, err = tarWriter.Write(content)
-				require.NoError(t, err)
-			},
-			wantErr:    false,      // Should succeed but skip malicious files
-			checkFiles: []string{}, // No files should be extracted
-		},
-		{
-			name: "empty tar file",
-			setupTar: func(t *testing.T, tarPath string) {
-				createTestTarGz(t, tarPath, map[string]string{})
-			},
-			wantErr:    false,
-			checkFiles: []string{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create temporary directories
-			tempDir := t.TempDir()
-			tarPath := filepath.Join(tempDir, "test.tar.gz")
-			extractDir := filepath.Join(tempDir, "extract")
-			require.NoError(t, os.MkdirAll(extractDir, 0o750))
-
-			// Setup test tar file
-			tt.setupTar(t, tarPath)
-
-			// Extract
-			err := extractTarGz(tarPath, extractDir)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				if tt.errContains != "" {
-					assert.Contains(t, err.Error(), tt.errContains)
-				}
-			} else {
-				require.NoError(t, err)
-
-				// Check expected files exist
-				for _, expectedFile := range tt.checkFiles {
-					expectedPath := filepath.Join(extractDir, expectedFile)
-					_, err := os.Stat(expectedPath)
-					assert.NoError(t, err, "expected file %s should exist", expectedFile)
-				}
-			}
-		})
-	}
-}
-
-// TestIsNewer tests version comparison logic
-func TestIsNewer(t *testing.T) {
-	tests := []struct {
-		name       string
-		newVersion string
-		oldVersion string
-		want       bool
-	}{
-		{
-			name:       "newer version",
-			newVersion: "v1.2.0",
-			oldVersion: "v1.1.0",
-			want:       true,
-		},
-		{
-			name:       "same version",
-			newVersion: "v1.1.0",
-			oldVersion: "v1.1.0",
-			want:       false,
-		},
-		{
-			name:       "older version",
-			newVersion: "v1.0.0",
-			oldVersion: "v1.1.0",
-			want:       false,
-		},
-		{
-			name:       "dev version always needs update",
-			newVersion: "v1.0.0",
-			oldVersion: "dev",
-			want:       true,
-		},
-		{
-			name:       "versions without v prefix",
-			newVersion: "1.2.0",
-			oldVersion: "1.1.0",
-			want:       true,
-		},
-		{
-			name:       "prerelease versions",
-			newVersion: "v1.2.0-beta.1",
-			oldVersion: "v1.1.0",
-			want:       true,
-		},
-		{
-			name:       "empty old version",
-			newVersion: "v1.0.0",
-			oldVersion: "",
-			want:       true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := isNewer(tt.newVersion, tt.oldVersion)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-// TestGetReleaseForChannel tests channel-based release selection against a fake
-// GitHub API, so each channel's selection logic is asserted without the test
-// depending on network access or on what is actually published upstream.
-func TestGetReleaseForChannel(t *testing.T) {
-	const latestStableJSON = `{"tag_name":"v1.2.0","name":"v1.2.0","body":"stable notes","prerelease":false,"draft":false}`
-	const releaseListJSON = `[
-		{"tag_name":"v1.3.0-beta.1","name":"v1.3.0-beta.1","body":"beta notes","prerelease":true,"draft":false},
-		{"tag_name":"v1.2.0","name":"v1.2.0","body":"stable notes","prerelease":false,"draft":false}
-	]`
-
-	tests := []struct {
-		name    string
-		channel UpdateChannel
-		wantTag string
-	}{
-		{
-			name:    "stable channel",
-			channel: StableChannel,
-			wantTag: "v1.2.0",
-		},
-		{
-			name:    "beta channel",
-			channel: BetaChannel,
-			wantTag: "v1.3.0-beta.1",
-		},
-		{
-			name:    "edge channel",
-			channel: EdgeChannel,
-			wantTag: "v1.3.0-beta.1",
-		},
-		{
-			name:    "invalid channel defaults to stable",
-			channel: UpdateChannel("invalid"),
-			wantTag: "v1.2.0",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			withFakeGitHubAPI(t, func(w http.ResponseWriter, r *http.Request) {
-				if strings.HasSuffix(r.URL.Path, "/releases/latest") {
-					writeFakeGitHubJSON(t, w, latestStableJSON)
-					return
-				}
-				writeFakeGitHubJSON(t, w, releaseListJSON)
-			})
-
-			release, err := getReleaseForChannel("mrz1836", "mage-x", tt.channel)
-			require.NoError(t, err)
-			require.NotNil(t, release)
-			assert.Equal(t, tt.wantTag, release.TagName)
-		})
-	}
-}
-
-// TestUpdateInfo tests the UpdateInfo structure
-func TestUpdateInfo(t *testing.T) {
-	tests := []struct {
-		name string
-		info UpdateInfo
-	}{
-		{
-			name: "complete update info",
-			info: UpdateInfo{
-				Channel:         StableChannel,
-				CurrentVersion:  "v1.0.0",
-				LatestVersion:   "v1.1.0",
-				UpdateAvailable: true,
-				ReleaseNotes:    "New features",
-				DownloadURL:     "https://github.com/example/releases/download/v1.1.0/binary.tar.gz",
-			},
-		},
-		{
-			name: "no update available",
-			info: UpdateInfo{
-				Channel:         BetaChannel,
-				CurrentVersion:  "v1.1.0",
-				LatestVersion:   "v1.1.0",
-				UpdateAvailable: false,
-			},
-		},
-		{
-			name: "edge channel with prerelease",
-			info: UpdateInfo{
-				Channel:         EdgeChannel,
-				CurrentVersion:  "v1.0.0",
-				LatestVersion:   "v1.1.0-beta.1",
-				UpdateAvailable: true,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Verify structure fields
-			assert.NotEmpty(t, tt.info.Channel)
-			assert.NotEmpty(t, tt.info.CurrentVersion)
-			assert.NotEmpty(t, tt.info.LatestVersion)
-
-			// Verify update logic
-			if tt.info.UpdateAvailable {
-				// When update is available, latest should differ from current
-				// or current should be "dev"
-				shouldUpdate := tt.info.CurrentVersion != tt.info.LatestVersion ||
-					tt.info.CurrentVersion == "dev"
-				assert.True(t, shouldUpdate, "UpdateAvailable should match version comparison")
-			}
-		})
-	}
-}
-
-// TestCopyFile tests file copying functionality
-func TestCopyFile(t *testing.T) {
-	tests := []struct {
-		name        string
-		srcContent  string
-		wantErr     bool
-		errContains string
-	}{
-		{
-			name:       "successful copy",
-			srcContent: "test content",
-			wantErr:    false,
-		},
-		{
-			name:       "copy empty file",
-			srcContent: "",
-			wantErr:    false,
-		},
-		{
-			name:       "copy large file",
-			srcContent: strings.Repeat("abcd", 1000),
-			wantErr:    false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tempDir := t.TempDir()
-			srcPath := filepath.Join(tempDir, "source.txt")
-			dstPath := filepath.Join(tempDir, "dest.txt")
-
-			// Create source file
-			err := os.WriteFile(srcPath, []byte(tt.srcContent), 0o644) //nolint:gosec // test file
-			require.NoError(t, err)
-
-			// Copy file
-			err = copyFile(srcPath, dstPath)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				if tt.errContains != "" {
-					assert.Contains(t, err.Error(), tt.errContains)
-				}
-			} else {
-				require.NoError(t, err)
-
-				// Verify destination file exists and has same content
-				dstContent, err := os.ReadFile(dstPath) //nolint:gosec // test file
-				require.NoError(t, err)
-				assert.Equal(t, tt.srcContent, string(dstContent))
-			}
-		})
-	}
-}
-
-// TestUpdateChannel validates UpdateChannel constants
-func TestUpdateChannel(t *testing.T) {
-	tests := []struct {
-		name    string
-		channel UpdateChannel
-		want    string
-	}{
-		{
-			name:    "stable channel constant",
-			channel: StableChannel,
-			want:    "stable",
-		},
-		{
-			name:    "beta channel constant",
-			channel: BetaChannel,
-			want:    "beta",
-		},
-		{
-			name:    "edge channel constant",
-			channel: EdgeChannel,
-			want:    "edge",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, string(tt.channel))
-		})
-	}
-}
-
-// TestGetVersionInfoForUpdate tests version detection for updates
-func TestGetVersionInfoForUpdate(t *testing.T) {
-	t.Run("returns version string", func(t *testing.T) {
-		version := getVersionInfoForUpdate()
-		// Should return either "dev" or a version string
-		assert.NotEmpty(t, version)
-		// Version should be either "dev" or start with "v" or be a semantic version
-		isValid := version == "dev" ||
-			strings.HasPrefix(version, "v") ||
-			strings.Contains(version, ".")
-		assert.True(t, isValid, "version should be dev or valid semver: %s", version)
-	})
-}
-
-// TestErrorConstants verifies error constants are defined
-func TestErrorConstants(t *testing.T) {
-	tests := []struct {
-		name string
-		err  error
-		want string
-	}{
-		{
-			name: "no releases found error",
-			err:  errNoReleasesFound,
-			want: "no releases found",
-		},
-		{
-			name: "no beta releases found error",
-			err:  errNoBetaReleasesFound,
-			want: "no beta releases found",
-		},
-		{
-			name: "no tar.gz found error",
-			err:  errNoTarGzFound,
-			want: "no tar.gz file found",
-		},
-		{
-			name: "magex binary not found error",
-			err:  errMagexBinaryNotFound,
-			want: "magex binary not found",
-		},
-		{
-			name: "path traversal error",
-			err:  errPathTraversal,
-			want: "path traversal",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.Error(t, tt.err)
-			assert.Contains(t, tt.err.Error(), tt.want)
-		})
-	}
-}
-
-// TestCreateMagexAliases tests that createMagexAliases creates aliases
-// even when no .mage.yaml is present (the normal user scenario for update:install)
-func TestCreateMagexAliases(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("symlink tests not supported on Windows")
-	}
-
-	t.Run("creates mgx alias without config file", func(t *testing.T) {
-		// Set up a temp directory to act as GOPATH with a fake magex binary
-		tempDir := t.TempDir()
-		binDir := filepath.Join(tempDir, "bin")
-		require.NoError(t, os.MkdirAll(binDir, fileops.PermDirSensitive))
-
-		magexPath := filepath.Join(binDir, "magex")
-		require.NoError(t, os.WriteFile(magexPath, []byte("fake binary"), 0o755)) //nolint:gosec // test file
-
-		// Change to a directory without .mage.yaml to simulate running from any dir
-		origDir, err := os.Getwd()
-		require.NoError(t, err)
-		require.NoError(t, os.Chdir(t.TempDir()))
-		t.Cleanup(func() {
-			require.NoError(t, os.Chdir(origDir))
-		})
-
-		// Call the function under test
-		createMagexAliases(tempDir, magexPath)
-
-		// Verify the mgx symlink was created
-		mgxPath := filepath.Join(binDir, "mgx")
-		info, err := os.Lstat(mgxPath)
-		require.NoError(t, err, "mgx symlink should exist")
-		assert.NotEqual(t, 0, info.Mode()&os.ModeSymlink, "mgx should be a symlink")
-
-		// Verify it points to the magex binary
-		target, err := os.Readlink(mgxPath)
-		require.NoError(t, err)
-		assert.Equal(t, magexPath, target)
-	})
-
-	t.Run("does not fail if alias already exists", func(t *testing.T) {
-		tempDir := t.TempDir()
-		binDir := filepath.Join(tempDir, "bin")
-		require.NoError(t, os.MkdirAll(binDir, fileops.PermDirSensitive))
-
-		magexPath := filepath.Join(binDir, "magex")
-		require.NoError(t, os.WriteFile(magexPath, []byte("fake binary"), 0o755)) //nolint:gosec // test file
-
-		// Pre-create the mgx symlink
-		mgxPath := filepath.Join(binDir, "mgx")
-		require.NoError(t, os.Symlink(magexPath, mgxPath))
-
-		// Change to dir without .mage.yaml
-		origDir, err := os.Getwd()
-		require.NoError(t, err)
-		require.NoError(t, os.Chdir(t.TempDir()))
-		t.Cleanup(func() {
-			require.NoError(t, os.Chdir(origDir))
-		})
-
-		// Should not panic or error
-		createMagexAliases(tempDir, magexPath)
-
-		// Symlink should still exist and point to magex
-		target, err := os.Readlink(mgxPath)
-		require.NoError(t, err)
-		assert.Equal(t, magexPath, target)
-	})
-}
-
-// Helper function to create a test tar.gz file
-func createTestTarGz(t *testing.T, tarPath string, files map[string]string) {
+// saveUpdateSeams snapshots and restores the update seam variables so a test
+// can stub the network/exec boundary without leaking into its neighbors.
+func saveUpdateSeams(t *testing.T) {
 	t.Helper()
+	oc, oi, op, og, ocan := checkFn, installFn, preflightFn, goInstallFn, canGoInstallUpdate
+	t.Cleanup(func() {
+		checkFn, installFn, preflightFn, goInstallFn, canGoInstallUpdate = oc, oi, op, og, ocan
+	})
+}
 
-	file, err := os.Create(tarPath) //nolint:gosec // test file
-	require.NoError(t, err)
-	defer file.Close() //nolint:errcheck // test file
+// stubbedCurrentVersion is the running version reported by withStubbedUpdateCheck.
+const stubbedCurrentVersion = "v1.0.0"
 
-	gzipWriter := gzip.NewWriter(file)
-	defer gzipWriter.Close() //nolint:errcheck // test file
+// withStubbedUpdateCheck stubs the checkFn seam so Update.Check runs fully
+// offline, reporting stubbedCurrentVersion as the running build and the given
+// latest/availability. It is shared with the namespace tests that exercise
+// Update.Check through the namespace wrapper.
+func withStubbedUpdateCheck(t *testing.T, latest string, available bool) {
+	t.Helper()
+	orig := checkFn
+	checkFn = func(_ context.Context, _ selfupdate.Config) (*selfupdate.Info, error) {
+		return &selfupdate.Info{
+			CurrentVersion:  stubbedCurrentVersion,
+			LatestVersion:   latest,
+			UpdateAvailable: available,
+		}, nil
+	}
+	t.Cleanup(func() { checkFn = orig })
+}
 
-	tarWriter := tar.NewWriter(gzipWriter)
-	defer tarWriter.Close() //nolint:errcheck // test file
+// captureUpdateLog redirects the shared CLI logger into a buffer for the
+// duration of fn and returns everything written. The update tests are not
+// parallel, so the global redirect is safe.
+func captureUpdateLog(t *testing.T, fn func()) string {
+	t.Helper()
+	var buf bytes.Buffer
+	logger := pkglog.Default()
+	logger.SetOutput(&buf)
+	t.Cleanup(func() { logger.SetOutput(os.Stdout) })
+	fn()
+	return buf.String()
+}
 
-	for name, content := range files {
-		// Create directory entries if needed
-		dir := filepath.Dir(name)
-		if dir != "." && dir != "" {
-			header := &tar.Header{
-				Name:     dir + "/",
-				Mode:     0o755,
-				Typeflag: tar.TypeDir,
-			}
-			require.NoError(t, tarWriter.WriteHeader(header))
-		}
+// roundTripFunc adapts a function into an http.RoundTripper so a test can serve
+// release archives and checksums from memory, with no sockets.
+type roundTripFunc func(*http.Request) (*http.Response, error)
 
-		// Create file entry
-		contentBytes := []byte(content)
-		header := &tar.Header{
-			Name:     name,
-			Mode:     0o644,
-			Size:     int64(len(contentBytes)),
-			Typeflag: tar.TypeReg,
-		}
-		require.NoError(t, tarWriter.WriteHeader(header))
-		_, err := tarWriter.Write(contentBytes)
-		require.NoError(t, err)
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func memResponse(code int, body []byte) *http.Response {
+	return &http.Response{
+		StatusCode: code,
+		Body:       io.NopCloser(bytes.NewReader(body)),
+		Header:     make(http.Header),
 	}
 }
 
-// TestDownloadUpdateAssetPattern tests the asset pattern matching for different platforms
-func TestDownloadUpdateAssetPattern(t *testing.T) {
+// fakeReleaseSource is an injected selfupdate.ReleaseSource that returns a canned
+// release without touching the network.
+type fakeReleaseSource struct{ release *selfupdate.Release }
+
+func (f fakeReleaseSource) Latest(_ context.Context) (*selfupdate.Release, error) {
+	return f.release, nil
+}
+
+// makeTarGz builds an in-memory gzip'd tar containing a single named file.
+func makeTarGz(t *testing.T, name string, content []byte) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	require.NoError(t, tw.WriteHeader(&tar.Header{
+		Name:     name,
+		Mode:     0o755,
+		Size:     int64(len(content)),
+		Typeflag: tar.TypeReg,
+	}))
+	_, err := tw.Write(content)
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	require.NoError(t, gz.Close())
+	return buf.Bytes()
+}
+
+// ============================================================================
+// ResolveVersion
+// ============================================================================
+
+func TestResolveVersion(t *testing.T) {
+	t.Run("ldflags value wins", func(t *testing.T) {
+		assert.Equal(t, "v1.2.3", ResolveVersion("v1.2.3"))
+	})
+
+	t.Run("dev ldflags falls through to build info or dev", func(t *testing.T) {
+		// Under `go test`, build info Main.Version is "(devel)"/empty, so the
+		// resolver falls all the way through to "dev".
+		assert.Equal(t, versionDev, ResolveVersion(versionDev))
+	})
+
+	t.Run("empty ldflags falls through to build info or dev", func(t *testing.T) {
+		assert.Equal(t, versionDev, ResolveVersion(""))
+	})
+}
+
+// ============================================================================
+// parseUpdateArgs — both CLI syntaxes
+// ============================================================================
+
+func TestParseUpdateArgs(t *testing.T) {
 	tests := []struct {
-		name        string
-		assetName   string
-		shouldMatch bool
+		name string
+		args []string
+		want updateArgs
 	}{
-		{
-			name:        "matches current platform",
-			assetName:   "mage-x_" + runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz",
-			shouldMatch: true,
-		},
-		{
-			name:        "linux amd64",
-			assetName:   "mage-x_linux_amd64.tar.gz",
-			shouldMatch: runtime.GOOS == "linux" && runtime.GOARCH == "amd64",
-		},
-		{
-			name:        "darwin arm64",
-			assetName:   "mage-x_darwin_arm64.tar.gz",
-			shouldMatch: runtime.GOOS == "darwin" && runtime.GOARCH == "arm64",
-		},
-		{
-			name:        "windows amd64",
-			assetName:   "mage-x_windows_amd64.tar.gz",
-			shouldMatch: runtime.GOOS == "windows" && runtime.GOARCH == "amd64",
-		},
-		{
-			name:        "wrong platform",
-			assetName:   "mage-x_wrongos_wrongarch.tar.gz",
-			shouldMatch: false,
+		{"empty", nil, updateArgs{}},
+		{"flag --check", []string{"--check"}, updateArgs{check: true}},
+		{"flag -c", []string{"-c"}, updateArgs{check: true}},
+		{"flag --force", []string{"--force"}, updateArgs{force: true}},
+		{"flag -f", []string{"-f"}, updateArgs{force: true}},
+		{"flag --verbose", []string{"--verbose"}, updateArgs{verbose: true}},
+		{"flag -v", []string{"-v"}, updateArgs{verbose: true}},
+		{"single-dash long forms", []string{"-check", "-force", "-verbose"}, updateArgs{check: true, force: true, verbose: true}},
+		{"kv check=true", []string{"check=true"}, updateArgs{check: true}},
+		{"kv force=true", []string{"force=true"}, updateArgs{force: true}},
+		{"kv verbose=true", []string{"verbose=true"}, updateArgs{verbose: true}},
+		{"bare kv token", []string{"check"}, updateArgs{check: true}},
+		{"kv false is not set", []string{"check=false"}, updateArgs{}},
+		{"mix flag and kv", []string{"--force", "verbose=true"}, updateArgs{force: true, verbose: true}},
+		{"all short flags", []string{"-c", "-f", "-v"}, updateArgs{check: true, force: true, verbose: true}},
+		{"unknown dash token ignored", []string{"--nope", "force=true"}, updateArgs{force: true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, parseUpdateArgs(tt.args...))
+		})
+	}
+}
+
+// ============================================================================
+// Config builders
+// ============================================================================
+
+func TestSelfUpdateConfigIdentity(t *testing.T) {
+	cfg := selfUpdateConfig()
+	assert.Equal(t, updateOwner, cfg.Owner)
+	assert.Equal(t, updateRepo, cfg.Repo)
+	assert.Equal(t, updateBinaryName, cfg.BinaryName)
+	assert.Equal(t, updateTokenEnvVar, cfg.TokenEnvVar)
+	assert.NotEmpty(t, cfg.CurrentVersion)
+}
+
+func TestNotifyConfigIdentity(t *testing.T) {
+	home := filepath.Join(t.TempDir(), "home")
+	t.Setenv("HOME", home)
+	cfg := notifyConfig()
+	assert.Equal(t, updateOwner, cfg.Owner)
+	assert.Equal(t, updateRepo, cfg.Repo)
+	assert.Equal(t, updateAppName, cfg.AppName)
+	assert.Equal(t, updateUpgradeCommand, cfg.UpgradeCommand)
+	assert.Equal(t, updateTokenEnvVar, cfg.TokenEnvVar)
+	assert.Equal(t, filepath.Join(home, updateCacheDirName), cfg.CacheDir)
+	assert.Equal(t, updateCacheFileName, cfg.CacheFileName)
+}
+
+// ============================================================================
+// Update.Check — output for both branches
+// ============================================================================
+
+func TestUpdateCheck(t *testing.T) {
+	t.Run("up to date", func(t *testing.T) {
+		saveUpdateSeams(t)
+		withStubbedUpdateCheck(t, "v1.0.0", false)
+		out := captureUpdateLog(t, func() {
+			require.NoError(t, Update{}.Check())
+		})
+		assert.Contains(t, out, "magex is up to date (v1.0.0)")
+	})
+
+	t.Run("update available", func(t *testing.T) {
+		saveUpdateSeams(t)
+		withStubbedUpdateCheck(t, "v2.0.0", true)
+		out := captureUpdateLog(t, func() {
+			require.NoError(t, Update{}.Check())
+		})
+		assert.Contains(t, out, "A new version of magex is available: v1.0.0 -> v2.0.0")
+		assert.Contains(t, out, `Run "magex update" to install it.`)
+	})
+
+	t.Run("check error is surfaced", func(t *testing.T) {
+		saveUpdateSeams(t)
+		checkFn = func(_ context.Context, _ selfupdate.Config) (*selfupdate.Info, error) {
+			return nil, errUpdateTest
+		}
+		require.Error(t, Update{}.Check())
+	})
+}
+
+// ============================================================================
+// Update.Install — branch routing (which seam ran + output)
+// ============================================================================
+
+func TestUpdateInstallBinaryInPlace(t *testing.T) {
+	saveUpdateSeams(t)
+	t.Setenv("HOME", t.TempDir()) // isolate the cache clear
+
+	var installCalled, goCalled bool
+	var gotOpts int
+	preflightFn = func(_ selfupdate.Config) error { return nil }
+	installFn = func(_ context.Context, _ selfupdate.Config, opts ...selfupdate.Option) (selfupdate.Result, error) {
+		installCalled = true
+		gotOpts = len(opts)
+		return selfupdate.Result{Updated: true, PreviousVersion: "v1.0.0", LatestVersion: "v2.0.0"}, nil
+	}
+	goInstallFn = func(_ context.Context) error { goCalled = true; return nil }
+
+	out := captureUpdateLog(t, func() {
+		require.NoError(t, Update{}.Install())
+	})
+
+	assert.True(t, installCalled, "installFn should run for a writable, unmanaged binary")
+	assert.False(t, goCalled, "goInstallFn must not run for an in-place update")
+	assert.Equal(t, 0, gotOpts, "no flags means no selfupdate options")
+	assert.Contains(t, out, "Updated magex to v2.0.0")
+}
+
+func TestUpdateInstallMapsForceAndVerbose(t *testing.T) {
+	saveUpdateSeams(t)
+	t.Setenv("HOME", t.TempDir())
+
+	var gotOpts int
+	preflightFn = func(_ selfupdate.Config) error { return nil }
+	installFn = func(_ context.Context, _ selfupdate.Config, opts ...selfupdate.Option) (selfupdate.Result, error) {
+		gotOpts = len(opts)
+		return selfupdate.Result{Updated: true, LatestVersion: "v2.0.0"}, nil
+	}
+
+	require.NoError(t, Update{}.Install("--force", "--verbose"))
+	assert.Equal(t, 2, gotOpts, "--force and --verbose should each map to one selfupdate option")
+}
+
+func TestUpdateInstallGoInstallBinary(t *testing.T) {
+	saveUpdateSeams(t)
+	t.Setenv("HOME", t.TempDir())
+
+	var installCalled, goCalled bool
+	preflightFn = func(_ selfupdate.Config) error {
+		return fmt.Errorf("%w: go bin", selfupdate.ErrManagedInstall)
+	}
+	canGoInstallUpdate = func() bool { return true }
+	installFn = func(_ context.Context, _ selfupdate.Config, _ ...selfupdate.Option) (selfupdate.Result, error) {
+		installCalled = true
+		return selfupdate.Result{}, nil
+	}
+	goInstallFn = func(_ context.Context) error { goCalled = true; return nil }
+
+	out := captureUpdateLog(t, func() {
+		require.NoError(t, Update{}.Install())
+	})
+
+	assert.True(t, goCalled, "goInstallFn should run for a go-install build")
+	assert.False(t, installCalled, "installFn must not run for a managed binary")
+	assert.Contains(t, out, "go install "+updateModulePath+"@latest")
+}
+
+func TestUpdateInstallManagedInstructs(t *testing.T) {
+	saveUpdateSeams(t)
+
+	var installCalled, goCalled bool
+	preflightFn = func(_ selfupdate.Config) error {
+		return fmt.Errorf("%w: homebrew", selfupdate.ErrManagedInstall)
+	}
+	canGoInstallUpdate = func() bool { return false } // e.g. Homebrew, or `go` missing
+	installFn = func(_ context.Context, _ selfupdate.Config, _ ...selfupdate.Option) (selfupdate.Result, error) {
+		installCalled = true
+		return selfupdate.Result{}, nil
+	}
+	goInstallFn = func(_ context.Context) error { goCalled = true; return nil }
+
+	out := captureUpdateLog(t, func() {
+		require.NoError(t, Update{}.Install())
+	})
+
+	assert.False(t, installCalled, "no in-place install for a managed binary")
+	assert.False(t, goCalled, "no auto go-install when it is not a go-install build")
+	assert.Contains(t, out, "go install "+updateModulePath+"@latest")
+	assert.Contains(t, out, "~/.local/bin")
+}
+
+func TestUpdateInstallNotWritable(t *testing.T) {
+	saveUpdateSeams(t)
+
+	var installCalled, goCalled bool
+	preflightFn = func(_ selfupdate.Config) error {
+		return fmt.Errorf("%w: /usr/local/bin", selfupdate.ErrInstallDirNotWritable)
+	}
+	installFn = func(_ context.Context, _ selfupdate.Config, _ ...selfupdate.Option) (selfupdate.Result, error) {
+		installCalled = true
+		return selfupdate.Result{}, nil
+	}
+	goInstallFn = func(_ context.Context) error { goCalled = true; return nil }
+
+	var err error
+	out := captureUpdateLog(t, func() {
+		err = Update{}.Install()
+	})
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, selfupdate.ErrInstallDirNotWritable)
+	assert.False(t, installCalled)
+	assert.False(t, goCalled)
+	assert.Contains(t, out, "~/.local/bin")
+}
+
+func TestUpdateInstallCheckOnlyDelegates(t *testing.T) {
+	saveUpdateSeams(t)
+
+	var checkCalled, preflightCalled bool
+	checkFn = func(_ context.Context, _ selfupdate.Config) (*selfupdate.Info, error) {
+		checkCalled = true
+		return &selfupdate.Info{CurrentVersion: "v1.0.0", LatestVersion: "v1.0.0"}, nil
+	}
+	preflightFn = func(_ selfupdate.Config) error { preflightCalled = true; return nil }
+
+	require.NoError(t, Update{}.Install("--check"))
+	assert.True(t, checkCalled, "check-only should perform a read-only check")
+	assert.False(t, preflightCalled, "check-only must not reach preflight/install")
+}
+
+func TestUpdateInstallPreflightErrorSurfaces(t *testing.T) {
+	saveUpdateSeams(t)
+	preflightFn = func(_ selfupdate.Config) error { return errUpdateTest }
+	require.Error(t, Update{}.Install())
+}
+
+// ============================================================================
+// isGoInstallBinary / isGoInstallPath
+// ============================================================================
+
+func TestIsGoInstallPath(t *testing.T) {
+	tmp := t.TempDir()
+
+	gopath := filepath.Join(tmp, "go")
+	gopathBin := filepath.Join(gopath, "bin")
+	require.NoError(t, os.MkdirAll(gopathBin, 0o750))
+	gopathExe := filepath.Join(gopathBin, "magex")
+	require.NoError(t, os.WriteFile(gopathExe, []byte("x"), 0o600))
+
+	gobin := filepath.Join(tmp, "custombin")
+	require.NoError(t, os.MkdirAll(gobin, 0o750))
+	gobinExe := filepath.Join(gobin, "magex")
+	require.NoError(t, os.WriteFile(gobinExe, []byte("x"), 0o600))
+
+	local := filepath.Join(tmp, "local")
+	require.NoError(t, os.MkdirAll(local, 0o750))
+	localExe := filepath.Join(local, "magex")
+	require.NoError(t, os.WriteFile(localExe, []byte("x"), 0o600))
+
+	t.Run("binary under GOPATH/bin is a go-install build", func(t *testing.T) {
+		getenv := func(k string) string {
+			if k == "GOPATH" {
+				return gopath
+			}
+			return ""
+		}
+		assert.True(t, isGoInstallPath(gopathExe, getenv))
+	})
+
+	t.Run("binary under GOBIN is a go-install build", func(t *testing.T) {
+		getenv := func(k string) string {
+			if k == "GOBIN" {
+				return gobin
+			}
+			return ""
+		}
+		assert.True(t, isGoInstallPath(gobinExe, getenv))
+	})
+
+	t.Run("binary in an unrelated dir is not a go-install build", func(t *testing.T) {
+		getenv := func(k string) string {
+			if k == "GOPATH" {
+				return gopath
+			}
+			return ""
+		}
+		assert.False(t, isGoInstallPath(localExe, getenv))
+	})
+}
+
+// ============================================================================
+// StartBackgroundUpdateCheck — legacy opt-out
+// ============================================================================
+
+func TestStartBackgroundUpdateCheckLegacyOptOut(t *testing.T) {
+	t.Setenv(legacyDisableUpdateCheckEnv, "true")
+
+	ch := StartBackgroundUpdateCheck(context.Background())
+	select {
+	case r, ok := <-ch:
+		assert.False(t, ok, "channel must be closed with no result when opted out")
+		assert.Nil(t, r)
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected an immediately closed channel")
+	}
+}
+
+// ============================================================================
+// High-fidelity: real go-selfupdate Check+Install, offline via injected Source
+// and an in-memory RoundTripper. No sockets.
+// ============================================================================
+
+func TestSelfUpdatePipelineOffline(t *testing.T) {
+	if runtime.GOOS == OSWindows {
+		t.Skip("go-selfupdate does not support in-place install on Windows")
+	}
+
+	const version = "v2.3.4"
+	binContent := []byte("#!/bin/sh\necho new-magex\n")
+	archive := makeTarGz(t, updateBinaryName, binContent)
+
+	assetName := fmt.Sprintf("mage-x_2.3.4_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
+	checksumAsset := "mage-x_2.3.4_checksums.txt"
+	digest := sha256.Sum256(archive)
+	checksums := fmt.Sprintf("%s  %s\n", hex.EncodeToString(digest[:]), assetName)
+
+	const (
+		downloadURL = "https://example.invalid/dl/" + "mage-x.tar.gz"
+		checksumURL = "https://example.invalid/dl/checksums.txt"
+	)
+
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.String() {
+		case downloadURL:
+			return memResponse(http.StatusOK, archive), nil
+		case checksumURL:
+			return memResponse(http.StatusOK, []byte(checksums)), nil
+		default:
+			return memResponse(http.StatusNotFound, nil), nil
+		}
+	})
+
+	release := &selfupdate.Release{
+		TagName: version,
+		Name:    version,
+		Assets: []selfupdate.ReleaseAsset{
+			{Name: assetName, BrowserDownloadURL: downloadURL},
+			{Name: checksumAsset, BrowserDownloadURL: checksumURL},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pattern := runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz"
-			matches := strings.Contains(tt.assetName, pattern)
-			assert.Equal(t, tt.shouldMatch, matches)
-		})
+	target := filepath.Join(t.TempDir(), updateBinaryName)
+	require.NoError(t, os.WriteFile(target, []byte("old-magex"), 0o600))
+
+	cfg := selfupdate.Config{
+		Owner:          updateOwner,
+		Repo:           updateRepo,
+		BinaryName:     updateBinaryName,
+		CurrentVersion: "v1.0.0",
+		TargetPath:     target,
+		Source:         fakeReleaseSource{release: release},
+		Client:         &http.Client{Transport: transport},
+		Stdout:         io.Discard,
 	}
+
+	t.Run("check reports the newer version", func(t *testing.T) {
+		info, err := selfupdate.Check(context.Background(), cfg)
+		require.NoError(t, err)
+		assert.True(t, info.UpdateAvailable)
+		assert.Equal(t, version, info.LatestVersion)
+		assert.Equal(t, assetName, info.AssetName)
+	})
+
+	t.Run("install verifies the checksum and replaces the binary", func(t *testing.T) {
+		res, err := selfupdate.Install(context.Background(), cfg)
+		require.NoError(t, err)
+		assert.True(t, res.Updated)
+		assert.Equal(t, version, res.LatestVersion)
+
+		got, err := os.ReadFile(target) //nolint:gosec // G304: target is a test-controlled temp path
+		require.NoError(t, err)
+		assert.Equal(t, binContent, got, "the target binary should be replaced with the archived one")
+	})
 }

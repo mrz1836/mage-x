@@ -1,7 +1,6 @@
 package mage
 
 import (
-	"net/http"
 	"testing"
 )
 
@@ -112,10 +111,8 @@ func testUpdateNamespace(t *testing.T) {
 		t.Fatal("NewUpdateNamespace returned nil")
 	}
 
-	// Serve the release lookup locally: Check() otherwise queries GitHub
-	withFakeGitHubAPI(t, func(w http.ResponseWriter, _ *http.Request) {
-		writeFakeGitHubJSON(t, w, `{"tag_name":"v1.0.0","name":"v1.0.0","body":"notes","prerelease":false,"draft":false}`)
-	})
+	// Stub the go-selfupdate release lookup so Check() stays offline.
+	withStubbedUpdateCheck(t, "v1.0.0", false)
 
 	// Test that it implements the interface using Check method
 	if err := ns.Check(); err != nil {

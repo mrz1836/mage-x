@@ -17,22 +17,34 @@ The `magex` binary is MAGE-X's revolutionary hybrid approach that provides **tru
 
 ## 📦 Installation
 
-### Quick Install
-```bash
-# Step 1: Install magex binary
-go install github.com/mrz1836/mage-x/cmd/magex@latest
+Two install routes are supported, and **both self-update cleanly**.
 
-# Step 2: Auto-update to latest stable release (with proper version info)
-magex update:install
+### Option A — `go install` (needs the Go toolchain)
+```bash
+go install github.com/mrz1836/mage-x/cmd/magex@latest
+```
+The binary reports its module version, and `magex update` refreshes it by re-running `go install …@latest`.
+
+### Option B — prebuilt binary (no Go toolchain)
+Download the archive for your platform from the [latest release](https://github.com/mrz1836/mage-x/releases/latest) and place `magex` on your `PATH`. A user-writable directory such as `~/.local/bin` lets `magex update` replace it **in place**.
+```bash
+mkdir -p ~/.local/bin
+tar -xzf mage-x_*_"$(uname -s | tr '[:upper:]' '[:lower:]')"_*.tar.gz -C ~/.local/bin magex
 ```
 
 ### Verify Installation
 ```bash
 magex --version
-# Should show: MAGE-X version 1.x.x (not "dev")
+# Shows the resolved version for both install methods.
 ```
 
-> 💡 **Why two steps?** The `go install` command doesn't embed version information, so `magex update:install` downloads the latest pre-built release with proper version info.
+### Keeping magex up to date
+```bash
+magex update            # Update to the latest release
+magex update --check    # Check for a newer version without installing
+magex update --force    # Reinstall even if already current
+```
+`magex update` replaces a prebuilt binary in place and refreshes a `go install` build with `go install …@latest`; any other managed install prints a copy-pasteable command instead. A passive background check prints a one-line banner when a newer release exists — silence it with `MAGEX_NO_UPDATE_CHECK=1`, or set `MAGE_X_GITHUB_TOKEN` to lift the GitHub rate limit.
 
 ### Alternative Methods
 
@@ -387,7 +399,6 @@ echo $PATH
 
 # Reinstall if needed
 go install github.com/mrz1836/mage-x/cmd/magex@latest
-magex update:install
 ```
 
 #### Plugin Compilation Fails
@@ -410,7 +421,6 @@ ls -la $(which magex)
 # Reinstall with proper permissions
 sudo rm $(which magex)
 go install github.com/mrz1836/mage-x/cmd/magex@latest
-magex update:install
 ```
 
 ### Debug Output
@@ -440,7 +450,6 @@ MAGEX_VERBOSE=true MAGEX_DEBUG=true magex build
 1. **Install magex**:
    ```bash
    go install github.com/mrz1836/mage-x/cmd/magex@latest
-   magex update:install
    ```
 2. **Replace commands**: Use `magex` instead of `mage`
 3. **Remove boilerplate**: Delete wrapper functions from magefile.go
@@ -451,7 +460,6 @@ MAGEX_VERBOSE=true MAGEX_DEBUG=true magex build
 1. **Install binary**:
    ```bash
    go install github.com/mrz1836/mage-x/cmd/magex@latest
-   magex update:install
    ```
 2. **Remove imports**: No more `_ "github.com/mrz1836/mage-x/pkg/mage"`
 3. **Simplify magefile**: Keep only custom functions
@@ -480,7 +488,6 @@ MAGEX_VERBOSE=true MAGEX_DEBUG=true magex build
 
 ### Planned Features
 - **Tab completion** for shells (bash, zsh, fish)
-- **Update notifications** for new releases
 - **Command history** and favorites
 - **Interactive mode** with command prompt
 - **Remote command execution**
@@ -497,7 +504,6 @@ MAGEX_VERBOSE=true MAGEX_DEBUG=true magex build
 
 ```bash
 go install github.com/mrz1836/mage-x/cmd/magex@latest
-magex update:install
 cd your-project
 magex build  # It just works! 🚀
 ```

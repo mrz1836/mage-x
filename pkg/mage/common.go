@@ -69,54 +69,6 @@ func getCPUCount() int {
 	return runtime.NumCPU()
 }
 
-// isNewer checks if version a is newer than version b
-func isNewer(a, b string) bool {
-	bClean := strings.TrimPrefix(b, "v")
-
-	// Special case: any version is newer than dev or empty
-	if bClean == versionDev || bClean == "" {
-		return true
-	}
-
-	// Strip prerelease suffix (e.g., "-beta.1") for comparison
-	aClean := stripPrerelease(a)
-	bClean = stripPrerelease(b)
-
-	aV, err := ParseSemanticVersion(aClean)
-	if err != nil {
-		return false
-	}
-
-	bV, err := ParseSemanticVersion(bClean)
-	if err != nil {
-		return false
-	}
-
-	return aV.IsNewerThan(bV)
-}
-
-// stripPrerelease removes prerelease suffix from version string
-func stripPrerelease(version string) string {
-	if idx := strings.Index(version, "-"); idx != -1 {
-		return version[:idx]
-	}
-	return version
-}
-
-// formatReleaseNotes formats release notes for display
-func formatReleaseNotes(body string) string {
-	lines := strings.Split(body, "\n")
-	var formatted []string
-
-	for _, line := range lines {
-		if strings.TrimSpace(line) != "" {
-			formatted = append(formatted, "  "+line)
-		}
-	}
-
-	return strings.Join(formatted, "\n")
-}
-
 // getVersionFromGit gets version from git, returning versionDev for development builds
 func getVersionFromGit() string {
 	tag, err := GetRunner().RunCmdOutput("git", "describe", "--tags", "--abbrev=0")

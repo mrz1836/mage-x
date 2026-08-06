@@ -249,7 +249,7 @@ func TestCalculateFuzzTimeoutWithSeedCount(t *testing.T) {
 			expected:  1*time.Minute + 15*time.Second, // 10s + (10 * 500ms) + 1m = 1m15s
 		},
 		{
-			name:      "60 seeds (like FuzzValidateExtractPath)",
+			name:      "60 seeds (large seed corpus)",
 			fuzzTime:  5 * time.Second,
 			seedCount: 60,
 			expected:  1*time.Minute + 35*time.Second, // 5s + (60 * 500ms) + 1m = 1m35s
@@ -1055,11 +1055,11 @@ func TestWarmFuzzBuildCacheNegativeIgnored(t *testing.T) {
 	assert.Equal(t, 5*time.Minute, cfg.WarmupTimeout, "negative warmup timeout should be ignored, default preserved")
 }
 
-// TestCountFuzzSeedsRealWorld tests seed counting on actual fuzz tests in the repo
+// TestCountFuzzSeedsRealWorld tests seed counting on an actual fuzz test in the repo
 func TestCountFuzzSeedsRealWorld(t *testing.T) {
-	// Test counting seeds in the actual FuzzValidateExtractPath test
-	// This test has seeds added via a loop over a slice of test cases
-	info, err := CountFuzzSeeds(".", "FuzzValidateExtractPath")
+	// Test counting seeds in the actual FuzzParseLine test, which adds seeds via
+	// a loop over a slice of test cases.
+	info, err := CountFuzzSeeds(".", "FuzzParseLine")
 	require.NoError(t, err)
 	require.NotNil(t, info)
 
@@ -1067,5 +1067,5 @@ func TestCountFuzzSeedsRealWorld(t *testing.T) {
 	// CodeSeeds will be 1 (the f.Add call in the loop)
 	assert.Equal(t, 1, info.CodeSeeds, "should detect 1 f.Add call (in loop)")
 	assert.True(t, info.HasLoopedSeeds, "should detect that seeds are added in a loop")
-	assert.Contains(t, info.SourceFile, "update_fuzz_test.go", "should find correct source file")
+	assert.Contains(t, info.SourceFile, "ci_stream_parser_test.go", "should find correct source file")
 }

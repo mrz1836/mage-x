@@ -71,83 +71,9 @@ func TestGetCPUCountUnit(t *testing.T) {
 	assert.Equal(t, runtime.NumCPU(), count)
 }
 
-// TestIsNewerUnit tests the isNewer version comparison function
-func TestIsNewerUnit(t *testing.T) {
-	testCases := []struct {
-		name     string
-		versionA string
-		versionB string
-		expected bool
-	}{
-		{"newer version", "2.0.0", "1.0.0", true},
-		{"older version", "1.0.0", "2.0.0", false},
-		{"same version", "1.0.0", "1.0.0", false},
-		{"with v prefix", "v2.0.0", "v1.0.0", true},
-		{"mixed v prefix", "2.0.0", "v1.0.0", true},
-		{"compare to dev", "1.0.0", "dev", true},
-		{"patch version newer", "1.0.1", "1.0.0", true},
-		{"minor version newer", "1.1.0", "1.0.9", true},
-		{"shorter version older", "1.0", "1.0.0", false},
-		{"pre-release versions", "2.0.0-alpha", "1.0.0", true},
-		{"empty version b", "1.0.0", "", true},
-		// When b is empty, function returns true (any version is newer than empty)
-		{"both empty returns true", "", "", true},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := isNewer(tc.versionA, tc.versionB)
-			assert.Equal(t, tc.expected, result,
-				"isNewer(%q, %q) expected %v, got %v", tc.versionA, tc.versionB, tc.expected, result)
-		})
-	}
-}
-
-// TestStripPrereleaseUnit tests the stripPrerelease function
-func TestStripPrereleaseUnit(t *testing.T) {
-	testCases := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{"no prerelease", "1.0.0", "1.0.0"},
-		{"with alpha", "2.0.0-alpha", "2.0.0"},
-		{"with beta", "1.5.0-beta.1", "1.5.0"},
-		{"with rc", "3.0.0-rc1", "3.0.0"},
-		{"multiple dashes", "1.0.0-pre-release-1", "1.0.0"},
-		{"empty string", "", ""},
-		{"only prerelease", "-alpha", ""},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := stripPrerelease(tc.input)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
-
-// TestFormatReleaseNotesUnit tests the formatReleaseNotes function
-func TestFormatReleaseNotesUnit(t *testing.T) {
-	testCases := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{"simple notes", "Added feature\nFixed bug", "  Added feature\n  Fixed bug"},
-		{"with empty lines", "Added feature\n\nFixed bug", "  Added feature\n  Fixed bug"},
-		{"empty input", "", ""},
-		{"single line", "Single feature", "  Single feature"},
-		{"whitespace lines", "Line1\n   \nLine2", "  Line1\n  Line2"},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := formatReleaseNotes(tc.input)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
+// Note: isNewer, stripPrerelease, and formatReleaseNotes were removed with the
+// in-house update engine; their behavior now lives in (and is tested by)
+// github.com/mrz1836/go-selfupdate.
 
 // withVersionMockRunner runs fn with the test environment's mock runner installed.
 func withVersionMockRunner(t *testing.T, testEnv *testutil.TestEnvironment, fn func() error) error {

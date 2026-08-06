@@ -71,11 +71,15 @@ var (
 	buildTime = "unknown"
 )
 
-// getBuildInfo returns the build information struct
-// This function encapsulates the global variables and provides a clean interface
+// getBuildInfo returns the build information struct.
+//
+// Version is resolved via mage.ResolveVersion so both supported install methods
+// report correctly: a goreleaser binary uses its ldflags stamp, a `go install`
+// build reports its module version (from build info), and a local build is
+// "dev". Commit/BuildDate/BuildTime come straight from ldflags.
 func getBuildInfo() BuildInfo {
 	return BuildInfo{
-		Version:   version,
+		Version:   mage.ResolveVersion(version),
 		Commit:    commit,
 		BuildDate: buildDate,
 		BuildTime: buildTime,
@@ -211,9 +215,11 @@ func run(ctx context.Context, args []string) int {
 		}
 	}
 
-	// Register the binary's version with the mage package for update checking
-	// This ensures the update checker uses the version embedded via ldflags in main
-	mage.RegisterBinaryVersion(version)
+	// Register the binary's resolved version with the mage package so the
+	// update surface and passive banner report it correctly. ResolveVersion
+	// makes a `go install`ed binary aware of its module version and falls back
+	// to "dev" for a local build.
+	mage.RegisterBinaryVersion(getBuildInfo().Version)
 
 	// Start background update check (non-blocking)
 	// This runs in a goroutine and checks for new versions of MAGE-X
@@ -366,8 +372,9 @@ func run(ctx context.Context, args []string) int {
 	// Check for update notification after command execution
 	// Skip showing banner for update commands to avoid displaying stale data
 	// right after the user just performed an update action. The cache is cleared
-	// during update:install, so the next CLI invocation will show correct data.
-	if !strings.HasPrefix(command, "update:") && command != "update" {
+	// during an in-place/go-install update, so the next CLI invocation will show
+	// correct data.
+	if !strings.HasPrefix(command, "update:") && command != "update" && command != "upgrade" {
 		// Wait briefly for the background check to complete
 		select {
 		case result := <-updateResultChan:

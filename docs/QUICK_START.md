@@ -33,14 +33,28 @@ MAGE-X now provides **true zero-boilerplate** tooling through the `magex` binary
 
 ### ⚡ Installation & Setup
 
+MAGE-X ships as the `magex` binary and supports two install routes — **both self-update cleanly**.
+
+**Option A — `go install`** (needs the Go toolchain):
+
 ```bash
-# Step 1: Install magex binary
 go install github.com/mrz1836/mage-x/cmd/magex@latest
+```
 
-# Step 2: Auto-update to latest stable release (with proper version info)
-magex update:install
+The binary reports its module version, and `magex update` refreshes it by re-running `go install …@latest`.
 
-# Step 3: Use immediately in ANY Go project!
+**Option B — prebuilt binary** (no Go toolchain):
+
+Download the archive for your platform from the [latest release](https://github.com/mrz1836/mage-x/releases/latest) and place `magex` on your `PATH`. A user-writable directory such as `~/.local/bin` lets `magex update` replace it in place.
+
+```bash
+mkdir -p ~/.local/bin
+tar -xzf mage-x_*_"$(uname -s | tr '[:upper:]' '[:lower:]')"_*.tar.gz -C ~/.local/bin magex
+```
+
+Then use it immediately in ANY Go project:
+
+```bash
 cd your-go-project
 magex build         # Automatically detects & builds your project
 magex test          # Run tests
@@ -50,23 +64,15 @@ magex release:multi # Multi-platform release
 # That's it! No magefile.go needed! 🚀
 ```
 
-> 💡 **Why the update step?** The `go install` command doesn't embed version information in the binary, so you get a "dev" version. Running `magex update:install` downloads the latest pre-built release with proper version info embedded. After step 2, `magex --version` will show the correct version instead of "dev".
+### 🔧 Keeping magex up to date
 
-### 🔧 Troubleshooting Installation
-
-**Problem:** `magex --version` shows "dev"
-**Solution:** Run `magex update:install` to get the properly versioned binary
-
-**Problem:** `magex update:check` says the latest version but binary shows "dev"
-**Solution:** This is expected behavior - the update check reads git tags, not binary version. Run `magex update:install` to fix.
-
-**Problem:** Want to ensure you have the absolute latest release
-**Solution:**
 ```bash
-magex update:check    # Check what's available
-magex update:install  # Install latest release
-magex --version       # Verify version
+magex update            # Update to the latest release
+magex update --check    # Check for a newer version without installing
+magex --version         # Show the current version
 ```
+
+`magex update` handles both install methods automatically: a prebuilt binary in a writable directory is replaced **in place**, while a `go install` build is refreshed with `go install …@latest`. A background check also prints a one-line banner when a newer release is available — set `MAGEX_NO_UPDATE_CHECK=1` to silence it, or `MAGE_X_GITHUB_TOKEN` to lift the GitHub rate limit.
 
 ### 📋 See What's Available
 
@@ -267,7 +273,7 @@ magex build:all    # Builds for all platforms
 
 ## 🔧 Troubleshooting
 
-### Multi-Binary Projects (like go-pre-commit)
+### Multi-Binary Projects
 
 **Problem:** "no main package found for binary build"
 

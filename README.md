@@ -155,17 +155,28 @@ MAGE-X automatically detects your project structure and **just works**:
 
 ### Zero Boilerplate Installation
 
+MAGE-X ships as the `magex` binary (short alias `mgx`). Two install routes are supported, and **both self-update cleanly**:
+
+**a) `go install`** (needs the Go toolchain):
+
 ```bash
-# Install magex (production branch)
 go install github.com/mrz1836/mage-x/cmd/magex@latest
+```
 
-# Auto-update to latest stable release (with proper version info)
-magex update:install
+The binary reports its module version, and `magex update` refreshes it by re-running `go install …@latest`.
 
-# MAGE-X automatically checks for updates in the background
-# and notifies you when new versions are available
+**b) Prebuilt binary** (no Go toolchain required):
 
-# Now use it in ANY Go project (no setup!)
+Grab the archive for your platform from the [latest release](https://github.com/mrz1836/mage-x/releases/latest) and drop `magex` into a user-writable directory on your `PATH`. `~/.local/bin` is ideal — a writable location lets `magex update` replace the binary **in place**.
+
+```bash
+mkdir -p ~/.local/bin
+tar -xzf mage-x_*_"$(uname -s | tr '[:upper:]' '[:lower:]')"_*.tar.gz -C ~/.local/bin magex
+```
+
+Then use it in ANY Go project (no setup!):
+
+```bash
 # Use either 'magex' or its shorter alias 'mgx'
 magex build         # Automatically detects & builds your project
 magex test          # Run your tests
@@ -175,6 +186,23 @@ magex format:fix    # Format your code
 
 # That's it! No magefile.go needed! 🚀
 ```
+
+### Keeping magex up to date
+
+```bash
+magex update            # Update to the latest release
+magex update --check    # Only check for a newer version (alias: -c)
+magex update --force    # Reinstall even if already current (alias: -f)
+magex update --verbose  # Narrate each step             (alias: -v)
+```
+
+`magex update` "just works" for both install methods:
+
+- A **prebuilt binary** in a writable directory (like `~/.local/bin`) is replaced **in place**.
+- A **`go install` build** (in `~/go/bin`) is refreshed by auto-running `go install github.com/mrz1836/mage-x/cmd/magex@latest`.
+- Any other managed install (Homebrew, a root-owned system dir, or a missing `go`) prints a clear, copy-pasteable command instead of guessing.
+
+MAGE-X also runs a **passive background check** and prints a one-line banner when a newer release exists. Set `MAGE_X_GITHUB_TOKEN` to lift the GitHub rate limit, or `MAGEX_NO_UPDATE_CHECK=1` to silence the check (the legacy `MAGEX_DISABLE_UPDATE_CHECK`, the shared `NO_UPDATE_CHECK`, and `CI` are honored too). The older `magex update:check` / `magex update:install` forms still work.
 
 <br>
 
@@ -877,8 +905,10 @@ magex help:gettingstarted # Getting started guide
 magex help:completions    # Generate shell completions
 
 # Update Management
-magex update:check        # Check for updates
-magex update:install      # Install the latest update
+magex update              # Update magex to the latest release
+magex update --check      # Check for a newer version without installing
+magex update --force      # Reinstall even if already current
+# (legacy, still supported: magex update:check / magex update:install)
 
 # Installation Management
 magex install:default     # Default installation
