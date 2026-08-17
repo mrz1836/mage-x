@@ -616,16 +616,16 @@ func TestSecureCommandRunner_getCommandTimeout(t *testing.T) {
 			expected: 3 * time.Minute,
 		},
 		{
-			name:     "echo gets 30 seconds",
+			name:     "echo gets 60 seconds",
 			cmd:      "echo",
 			args:     []string{"hello"},
-			expected: 30 * time.Second,
+			expected: 60 * time.Second,
 		},
 		{
-			name:     "git gets 30 seconds",
+			name:     "git gets 60 seconds",
 			cmd:      "git",
 			args:     []string{"status"},
-			expected: 30 * time.Second,
+			expected: 60 * time.Second,
 		},
 		// Edge cases
 		{

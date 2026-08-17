@@ -173,8 +173,8 @@ func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time
 	case "staticcheck", "gosec", "govulncheck":
 		return 3 * time.Minute
 	default:
-		// Default timeout for other commands
-		return 30 * time.Second
+		// Default timeout for other commands (e.g. goimports on cold cache)
+		return 60 * time.Second
 	}
 }
 
