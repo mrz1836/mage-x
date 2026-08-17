@@ -19,6 +19,7 @@ type Config struct {
 	Build    BuildConfig       `yaml:"build"`
 	Docs     DocsConfig        `yaml:"docs"`
 	Download DownloadConfig    `yaml:"download"`
+	Format   FormatConfig      `yaml:"format"`
 	Lint     LintConfig        `yaml:"lint"`
 	Metadata map[string]string `yaml:"metadata,omitempty"`
 	Project  ProjectConfig     `yaml:"project"`
@@ -142,6 +143,15 @@ type DownloadConfig struct {
 type DocsConfig struct {
 	Tool string `yaml:"tool"` // "pkgsite", "godoc", or "" for auto-detect
 	Port int    `yaml:"port"` // 0 for default port
+}
+
+// FormatConfig contains formatter-specific settings
+type FormatConfig struct {
+	// GoimportsTimeout overrides the per-invocation timeout for goimports
+	// (e.g. "2m", "90s"). goimports has no persistent cache between runs and
+	// must type-check the full transitive import graph every invocation, so
+	// modules with a large dependency tree may need more than the default.
+	GoimportsTimeout string `yaml:"goimports_timeout"`
 }
 
 // SpeckitConfig contains spec-kit CLI management settings
@@ -292,6 +302,9 @@ func cleanConfigValues(config *Config) {
 
 	// Clean Docs config strings
 	config.Docs.Tool = env.CleanValue(config.Docs.Tool)
+
+	// Clean Format config strings
+	config.Format.GoimportsTimeout = env.CleanValue(config.Format.GoimportsTimeout)
 
 	// Clean Metadata map
 	for k, v := range config.Metadata {

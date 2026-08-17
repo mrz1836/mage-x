@@ -616,16 +616,22 @@ func TestSecureCommandRunner_getCommandTimeout(t *testing.T) {
 			expected: 3 * time.Minute,
 		},
 		{
-			name:     "echo gets 60 seconds",
-			cmd:      "echo",
-			args:     []string{"hello"},
-			expected: 60 * time.Second,
+			name:     "goimports gets 2 minutes",
+			cmd:      "goimports",
+			args:     []string{"-w", "."},
+			expected: 2 * time.Minute,
 		},
 		{
-			name:     "git gets 60 seconds",
+			name:     "echo gets 30 seconds",
+			cmd:      "echo",
+			args:     []string{"hello"},
+			expected: 30 * time.Second,
+		},
+		{
+			name:     "git gets 30 seconds",
 			cmd:      "git",
 			args:     []string{"status"},
-			expected: 60 * time.Second,
+			expected: 30 * time.Second,
 		},
 		// Edge cases
 		{
@@ -692,6 +698,48 @@ func TestSecureCommandRunner_getCommandTimeout_BuildTimeoutOverride(t *testing.T
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(EnvBuildTimeout, tt.envValue)
 			assert.Equal(t, tt.expected, runner.getCommandTimeout("go", tt.args))
+		})
+	}
+}
+
+// TestSecureCommandRunner_getCommandTimeout_GoimportsTimeoutOverride verifies
+// that format.goimports_timeout in .mage.yaml overrides the default goimports
+// timeout and that unset/invalid values fall back to the default.
+func TestSecureCommandRunner_getCommandTimeout_GoimportsTimeoutOverride(t *testing.T) {
+	runner := &SecureCommandRunner{}
+
+	tests := []struct {
+		name             string
+		goimportsTimeout string
+		expected         time.Duration
+	}{
+		{
+			name:             "override applies to goimports",
+			goimportsTimeout: "5m",
+			expected:         5 * time.Minute,
+		},
+		{
+			name:             "invalid value falls back to default",
+			goimportsTimeout: "not-a-duration",
+			expected:         DefaultGoimportsTimeout,
+		},
+		{
+			name:             "empty value falls back to default",
+			goimportsTimeout: "",
+			expected:         DefaultGoimportsTimeout,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			TestSetConfig(&Config{
+				Format: FormatConfig{
+					GoimportsTimeout: tt.goimportsTimeout,
+				},
+			})
+			defer TestResetConfig()
+
+			assert.Equal(t, tt.expected, runner.getCommandTimeout("goimports", []string{"-w", "."}))
 		})
 	}
 }

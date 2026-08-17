@@ -24,6 +24,28 @@ var (
 // compiles the full dependency tree and is at least as expensive as those.
 const DefaultGoBuildTimeout = 5 * time.Minute
 
+// DefaultGoimportsTimeout is the fallback per-invocation timeout for
+// goimports when format.goimports_timeout is unset in .mage.yaml or cannot
+// be parsed.
+const DefaultGoimportsTimeout = 2 * time.Minute
+
+// goimportsTimeout returns the configured goimports timeout, preferring
+// format.goimports_timeout from .mage.yaml when set to a valid duration and
+// falling back to DefaultGoimportsTimeout otherwise.
+func goimportsTimeout() time.Duration {
+	cfg, err := GetConfig()
+	if err != nil || cfg == nil || cfg.Format.GoimportsTimeout == "" {
+		return DefaultGoimportsTimeout
+	}
+
+	duration, err := time.ParseDuration(cfg.Format.GoimportsTimeout)
+	if err != nil {
+		return DefaultGoimportsTimeout
+	}
+
+	return duration
+}
+
 // SecureCommandRunner provides a secure implementation of CommandRunner using pkg/exec
 type SecureCommandRunner struct {
 	executor exec.FullExecutor // Single validated executor for all operations
@@ -172,9 +194,15 @@ func (r *SecureCommandRunner) getCommandTimeout(name string, args []string) time
 		return 30 * time.Minute
 	case "staticcheck", "gosec", "govulncheck":
 		return 3 * time.Minute
+	case "goimports":
+		// goimports has no persistent cache between invocations and must
+		// type-check the full transitive import graph on every run, which
+		// can take well over a minute on modules with a large dependency tree.
+		// Allow projects to override via .mage.yaml (format.goimports_timeout).
+		return goimportsTimeout()
 	default:
-		// Default timeout for other commands (e.g. goimports on cold cache)
-		return 60 * time.Second
+		// Default timeout for other commands
+		return 30 * time.Second
 	}
 }
 

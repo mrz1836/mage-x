@@ -42,6 +42,8 @@ download:
   max_retries: 5
   timeout_ms: 60000
   user_agent: mage-x-downloader/1.0
+format:
+  goimports_timeout: ""
 lint:
   disable_linters: []
   enable_all: false
