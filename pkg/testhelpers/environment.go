@@ -486,6 +486,8 @@ func (te *TestEnvironment) SetupGitRepo() {
 		{"git", "init"},
 		{"git", "config", "user.email", "test@example.com"},
 		{"git", "config", "user.name", "Test User"},
+		{"git", "config", "commit.gpgsign", "false"},
+		{"git", "config", "tag.gpgsign", "false"},
 	}
 
 	for _, cmd := range cmds {

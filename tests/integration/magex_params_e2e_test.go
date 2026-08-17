@@ -151,6 +151,18 @@ func FuzzTest(f *testing.F) {
 		err = cmd.Run()
 		require.NoError(t, err)
 
+		// Disable commit/tag signing so this test doesn't depend on the
+		// developer machine's global git config.
+		cmd = testCommand(t, "git", "config", "commit.gpgsign", "false")
+		cmd.Dir = testDir
+		err = cmd.Run()
+		require.NoError(t, err)
+
+		cmd = testCommand(t, "git", "config", "tag.gpgsign", "false")
+		cmd.Dir = testDir
+		err = cmd.Run()
+		require.NoError(t, err)
+
 		// Create initial commit
 		testFile := filepath.Join(testDir, "test.txt")
 		err = os.WriteFile(testFile, []byte("test"), 0o600)

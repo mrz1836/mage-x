@@ -239,10 +239,13 @@ func initGit(t *testing.T, dir string) {
 		}
 	}
 
-	// Configure git user (required for commits)
+	// Configure git user (required for commits) and disable commit/tag signing
+	// so the test doesn't depend on the developer machine's global git config.
 	configCommands := [][]string{
 		{"git", "config", "user.name", "Test User"},
 		{"git", "config", "user.email", "test@example.com"},
+		{"git", "config", "commit.gpgsign", "false"},
+		{"git", "config", "tag.gpgsign", "false"},
 	}
 
 	for _, configCmd := range configCommands {
