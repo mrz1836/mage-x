@@ -225,6 +225,102 @@ func TestStreamParser_Parse(t *testing.T) {
 	})
 }
 
+// TestStreamParser_BuildFailure proves a package that fails to build - rather
+// than any test failing - is captured as a real failure instead of silently
+// vanishing. Before this, "go test" could exit non-zero with zero failures
+// reported: a CGo package whose C library is missing (govips/libvips is a real
+// example) never gets a test event, so GetStats() reported 0 failed even though
+// the run was broken. The event shapes below (ImportPath/build-output/build-fail,
+// then a top-level "fail" with an empty Test and FailedBuild set) are the exact
+// sequence `go test -json` emits for this case.
+func TestStreamParser_BuildFailure(t *testing.T) {
+	t.Parallel()
+
+	t.Run("transitive cgo dependency fails to build", func(t *testing.T) {
+		t.Parallel()
+		parser := NewStreamParser(20, true)
+
+		input := `{"ImportPath":"github.com/davidbyttow/govips/v2/vips","Action":"build-output","Output":"# github.com/davidbyttow/govips/v2/vips\n"}
+{"ImportPath":"github.com/davidbyttow/govips/v2/vips","Action":"build-output","Output":"Package vips was not found in the pkg-config search path.\n"}
+{"ImportPath":"github.com/davidbyttow/govips/v2/vips","Action":"build-fail"}
+{"Action":"fail","Package":"example.com/functions/image-processor","Elapsed":0,"FailedBuild":"github.com/davidbyttow/govips/v2/vips"}`
+
+		if err := parser.Parse(strings.NewReader(input)); err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+
+		total, passed, failed, skipped := parser.GetStats()
+		if failed != 1 {
+			t.Errorf("failed = %d, want 1 (a build failure must count as a failure)", failed)
+		}
+		if total != 0 || passed != 0 || skipped != 0 {
+			t.Errorf("total/passed/skipped = %d/%d/%d, want 0/0/0 (no test ever ran)", total, passed, skipped)
+		}
+
+		failures := parser.GetFailures()
+		if len(failures) != 1 {
+			t.Fatalf("GetFailures() = %d, want 1", len(failures))
+		}
+
+		f := failures[0]
+		if f.Package != "example.com/functions/image-processor" {
+			t.Errorf("Package = %q, want the test package, not the failed dependency", f.Package)
+		}
+		if f.Type != FailureTypeBuild {
+			t.Errorf("Type = %q, want %q", f.Type, FailureTypeBuild)
+		}
+		if f.Error != "Package vips was not found in the pkg-config search path." {
+			t.Errorf("Error = %q, want the real compiler diagnostic, not the '# <import path>' banner", f.Error)
+		}
+		if !strings.Contains(f.Output, "pkg-config search path") {
+			t.Errorf("Output = %q, want it to retain the full build diagnostic", f.Output)
+		}
+	})
+
+	t.Run("package's own source fails to build", func(t *testing.T) {
+		t.Parallel()
+		parser := NewStreamParser(20, true)
+
+		input := `{"ImportPath":"example.com/pkg/broken","Action":"build-output","Output":"# example.com/pkg/broken\n"}
+{"ImportPath":"example.com/pkg/broken","Action":"build-output","Output":"./file.go:10:2: undefined: Foo\n"}
+{"ImportPath":"example.com/pkg/broken","Action":"build-fail"}
+{"Action":"fail","Package":"example.com/pkg/broken","Elapsed":0,"FailedBuild":"example.com/pkg/broken"}`
+
+		if err := parser.Parse(strings.NewReader(input)); err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+
+		failures := parser.GetFailures()
+		if len(failures) != 1 {
+			t.Fatalf("GetFailures() = %d, want 1", len(failures))
+		}
+		if failures[0].Error != "./file.go:10:2: undefined: Foo" {
+			t.Errorf("Error = %q, want the compile error line", failures[0].Error)
+		}
+	})
+
+	t.Run("normal package-level pass/fail bookkeeping is unaffected", func(t *testing.T) {
+		t.Parallel()
+		parser := NewStreamParser(20, true)
+
+		// A package-level "fail" with no FailedBuild is the ordinary aggregate
+		// event go test emits alongside per-test fail events; it must remain a
+		// no-op so it isn't double-counted against the real per-test failure.
+		input := `{"Action":"run","Package":"pkg/foo","Test":"TestOne"}
+{"Action":"fail","Package":"pkg/foo","Test":"TestOne","Elapsed":0.1}
+{"Action":"fail","Package":"pkg/foo","Elapsed":0.1}`
+
+		if err := parser.Parse(strings.NewReader(input)); err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+
+		_, _, failed, _ := parser.GetStats()
+		if failed != 1 {
+			t.Errorf("failed = %d, want 1 (package-level fail without FailedBuild must not add a second failure)", failed)
+		}
+	})
+}
+
 func TestStreamParser_Deduplication(t *testing.T) {
 	t.Parallel()
 
