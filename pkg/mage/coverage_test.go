@@ -862,3 +862,52 @@ func TestIsMultiModuleCoverage(t *testing.T) {
 	// Result depends on content, just exercise the function
 	_ = result
 }
+
+// TestIsMultiModuleCoverageDetectsNestedModule proves detection works for any
+// nested Go module discovered on disk, not just a hardcoded fixture path. This
+// covers the regression where a merged coverage.txt containing packages from a
+// nested module (e.g. a magefiles/ build-tool module) went undetected, letting
+// CoverReport crash with "no required module provides package ..." instead of
+// falling back to the multi-module report path.
+func TestIsMultiModuleCoverageDetectsNestedModule(t *testing.T) {
+	tempDir := t.TempDir()
+	originalWd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tempDir))
+	defer func() {
+		_ = os.Chdir(originalWd) //nolint:errcheck // cleanup in defer
+	}()
+
+	require.NoError(t, os.WriteFile("go.mod", []byte("module example.com/root\n\ngo 1.24\n"), 0o600))
+
+	// Nested module lives at an arbitrary directory name (not the ".github/test-module"
+	// fixture path) to prove detection generalizes.
+	require.NoError(t, os.MkdirAll("buildtools", 0o750))
+	require.NoError(t, os.WriteFile(
+		filepath.Join("buildtools", "go.mod"),
+		[]byte("module example.com/root/buildtools\n\ngo 1.24\n"),
+		0o600,
+	))
+
+	t.Run("nested module package is detected", func(t *testing.T) {
+		coverageFile := filepath.Join(tempDir, "nested.out")
+		content := "mode: set\n" +
+			"example.com/root/internal/foo/foo.go:1.1,3.2 1 1\n" +
+			"example.com/root/buildtools/main.go:1.1,3.2 1 1\n"
+		require.NoError(t, os.WriteFile(coverageFile, []byte(content), 0o600))
+
+		assert.True(t, isMultiModuleCoverage(coverageFile),
+			"a profile containing a package from a nested module must be detected")
+	})
+
+	t.Run("root-module-only package is not flagged", func(t *testing.T) {
+		coverageFile := filepath.Join(tempDir, "root-only.out")
+		content := "mode: set\n" +
+			"example.com/root/internal/foo/foo.go:1.1,3.2 1 1\n" +
+			"example.com/root/internal/bar/bar.go:1.1,3.2 1 1\n"
+		require.NoError(t, os.WriteFile(coverageFile, []byte(content), 0o600))
+
+		assert.False(t, isMultiModuleCoverage(coverageFile),
+			"ordinary subpackages of the root module must not be treated as a nested module")
+	})
+}
