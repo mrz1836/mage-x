@@ -17,14 +17,26 @@ import (
 	"sync/atomic"
 )
 
-// TestEvent represents a single event from `go test -json` output
+// TestEvent represents a single event from `go test -json` output.
+//
+// Two distinct event shapes are folded into this one struct. Normal test events
+// use Package/Test with actions run/pass/fail/skip/output. A package that fails
+// to compile instead produces build-output/build-fail events keyed by ImportPath
+// (the package that didn't compile, which may be a transitive dependency), plus a
+// terminal "fail" event on the test package itself with Test empty and
+// FailedBuild set to the ImportPath that broke the build. Without handling
+// ImportPath/FailedBuild, a build failure silently vanishes: no test event is
+// ever emitted for it, so it does not count as a failure even though `go test`
+// itself exits non-zero.
 type TestEvent struct {
-	Time    string  `json:"Time"`
-	Action  string  `json:"Action"`
-	Package string  `json:"Package"`
-	Test    string  `json:"Test"`
-	Elapsed float64 `json:"Elapsed"`
-	Output  string  `json:"Output"`
+	Time        string  `json:"Time"`
+	Action      string  `json:"Action"`
+	Package     string  `json:"Package"`
+	ImportPath  string  `json:"ImportPath"`
+	Test        string  `json:"Test"`
+	Elapsed     float64 `json:"Elapsed"`
+	Output      string  `json:"Output"`
+	FailedBuild string  `json:"FailedBuild"`
 }
 
 // TestEventHandler processes test events from go test -json
@@ -144,10 +156,16 @@ type streamParser struct {
 	passCount     atomic.Int32
 	failCount     atomic.Int32
 	skipCount     atomic.Int32
-	currentTest   map[string]*testState // pkg:test -> state
+	currentTest   map[string]*testState       // pkg:test -> state
+	buildOutput   map[string]*strings.Builder // ImportPath -> accumulated build-output text
 	dedup         bool
 	adaptiveMode  bool // Whether to adapt strategy based on test count
 }
+
+// maxBuildOutputSize caps accumulated build-output text per import path.
+// Compiler/cgo/pkg-config diagnostics are normally a handful of lines; this is
+// a generous safety bound against a pathological, very chatty build failure.
+const maxBuildOutputSize = 64 * 1024
 
 // testState tracks state for a running test
 type testState struct {
@@ -178,6 +196,7 @@ func NewStreamParser(contextLines int, dedup bool) StreamParser {
 		signatures:    make(map[string]bool),
 		uniqueTests:   make(map[uint64]struct{}),
 		currentTest:   make(map[string]*testState),
+		buildOutput:   make(map[string]*strings.Builder),
 		dedup:         dedup,
 		adaptiveMode:  true,
 	}
@@ -206,6 +225,7 @@ func NewStreamParserWithOptions(opts StreamParserOptions) StreamParser {
 		signatures:    make(map[string]bool),
 		uniqueTests:   make(map[uint64]struct{}),
 		currentTest:   make(map[string]*testState),
+		buildOutput:   make(map[string]*strings.Builder),
 		dedup:         opts.Dedup,
 		adaptiveMode:  opts.AdaptiveMode,
 	}
@@ -282,11 +302,26 @@ func (p *streamParser) processEvent(event *TestEvent) {
 	case "pass":
 		p.OnTestPass(event.Package, event.Test, event.Elapsed)
 	case "fail":
-		p.OnTestFail(event.Package, event.Test, event.Elapsed, p.getTestOutput(key))
+		if event.Test == "" && event.FailedBuild != "" {
+			// A package failed to compile rather than any test failing. Without
+			// this branch the event falls into OnTestFail's package-level early
+			// return and vanishes entirely: no test ever ran, so nothing would
+			// otherwise register the failure.
+			p.onBuildFail(event.Package, event.FailedBuild)
+		} else {
+			p.OnTestFail(event.Package, event.Test, event.Elapsed, p.getTestOutput(key))
+		}
 	case "skip":
 		p.OnTestSkip(event.Package, event.Test, event.Elapsed)
 	case "output":
 		p.OnOutput(event.Package, event.Test, event.Output)
+	case "build-output":
+		p.onBuildOutput(event.ImportPath, event.Output)
+	case "build-fail":
+		// Marks the end of a build-output run for ImportPath. The authoritative,
+		// actionable signal is the later "fail" event on the test package itself
+		// (handled above), which is what names the package the rest of the
+		// pipeline reports against, so there is nothing to do here.
 	}
 }
 
@@ -399,6 +434,67 @@ func (p *streamParser) OnTestFail(pkg, test string, elapsed float64, output stri
 	p.mu.Lock()
 	p.failures = append(p.failures, failure)
 	delete(p.currentTest, pkg+":"+test)
+	p.mu.Unlock()
+}
+
+// onBuildOutput accumulates compiler/build diagnostic text for an import path
+// that is failing to build, keyed by ImportPath since these events precede and
+// are not yet associated with the dependent test package that will report them.
+func (p *streamParser) onBuildOutput(importPath, output string) {
+	if importPath == "" {
+		return
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	sb, ok := p.buildOutput[importPath]
+	if !ok {
+		sb = &strings.Builder{}
+		p.buildOutput[importPath] = sb
+	}
+	if sb.Len() >= maxBuildOutputSize {
+		return
+	}
+	sb.WriteString(output)
+}
+
+// onBuildFail records a package-level failure caused by a build error rather
+// than a test failure. pkg is the test package go test was asked to run;
+// failedBuild is the import path that actually failed to compile (pkg itself,
+// for a package with its own compile error, or a transitive dependency such as
+// a cgo package missing a system library). Without this, a build failure never
+// produces a test event and silently doesn't count as a failure anywhere.
+func (p *streamParser) onBuildFail(pkg, failedBuild string) {
+	p.failCount.Add(1)
+
+	p.mu.Lock()
+	output := ""
+	if sb, ok := p.buildOutput[failedBuild]; ok {
+		output = sb.String()
+	}
+	p.mu.Unlock()
+
+	failure := CITestFailure{
+		Package: pkg,
+		Type:    FailureTypeBuild,
+		Output:  output,
+		Error:   extractBuildErrorMessage(failedBuild, output),
+	}
+	failure.Signature = generateSignature(pkg, "", "", 0, FailureTypeBuild)
+
+	if p.dedup && failure.Signature != "" {
+		p.mu.Lock()
+		if p.signatures[failure.Signature] {
+			p.mu.Unlock()
+			return
+		}
+		p.signatures[failure.Signature] = true
+		p.mu.Unlock()
+	}
+
+	p.mu.Lock()
+	p.failures = append(p.failures, failure)
 	p.mu.Unlock()
 }
 
@@ -763,6 +859,29 @@ func extractErrorMessage(output string) string {
 	}
 
 	return "test failed"
+}
+
+// extractBuildErrorMessage extracts a concise, actionable message from
+// accumulated build-output text for failedBuild. The first line of build-output
+// is always a "# <import path>" banner that go build/test emits to mark which
+// package the following diagnostics belong to (see extractErrorMessage's
+// fallback, which would otherwise return that banner verbatim instead of the
+// actual compiler/linker/pkg-config error beneath it).
+func extractBuildErrorMessage(failedBuild, output string) string {
+	banner := "# " + failedBuild
+
+	for _, line := range strings.Split(output, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || trimmed == banner || strings.HasPrefix(trimmed, "# ") {
+			continue
+		}
+		if len(trimmed) > 200 {
+			return trimmed[:200] + "..."
+		}
+		return trimmed
+	}
+
+	return fmt.Sprintf("package %s failed to build", failedBuild)
 }
 
 // formatDurationSeconds formats elapsed seconds as duration string

@@ -237,8 +237,16 @@ func (r *ciRunner) runTestWithCI(ctx context.Context, name string, args ...strin
 	// Wait for command to complete
 	cmdErr := cmd.Wait()
 
-	// Collect results
-	r.collectResults()
+	// Collect results, carrying the real process exit code alongside the parsed
+	// test counts. This is the ground-truth signal used to fall back to an error
+	// status when the exit code is non-zero but no failures were parsed - e.g. a
+	// go test output shape the streaming parser doesn't (yet) recognize - instead
+	// of silently reporting a passed run.
+	exitCode := 0
+	if cmd.ProcessState != nil {
+		exitCode = cmd.ProcessState.ExitCode()
+	}
+	r.collectResults(exitCode)
 
 	// Note: Failures are reported in GenerateReport() to avoid duplicates
 	// when tests run multiple times (e.g., with different build tags)
@@ -270,8 +278,10 @@ func (r *ciRunner) processOutput(stdout io.Reader) (retErr error) {
 	return r.parser.Parse(tee)
 }
 
-// collectResults gathers test results from parser
-func (r *ciRunner) collectResults() {
+// collectResults gathers test results from parser. exitCode is the real `go
+// test` process exit code, used as a fallback status signal independent of
+// whatever the streaming parser did or didn't recognize in the output.
+func (r *ciRunner) collectResults(exitCode int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -279,10 +289,16 @@ func (r *ciRunner) collectResults() {
 	uniqueTotal := r.parser.GetUniqueTestCount()
 	failures := r.parser.GetFailures()
 
-	// Determine status
+	// Determine status. A non-zero exit code with zero parsed failures means the
+	// process failed for a reason the parser doesn't attribute to any package or
+	// test - e.g. a future go test output shape it doesn't yet recognize - so
+	// report it as an error rather than silently reporting a passed run.
 	status := TestStatusPassed
-	if failed > 0 {
+	switch {
+	case failed > 0:
 		status = TestStatusFailed
+	case exitCode != 0:
+		status = TestStatusError
 	}
 
 	duration := time.Since(r.startTime)
@@ -296,6 +312,7 @@ func (r *ciRunner) collectResults() {
 			Failed:      len(failures), // Use deduplicated count, not raw count which includes parent tests
 			Skipped:     skipped,
 			Duration:    formatDurationForSummary(duration),
+			ExitCode:    exitCode,
 		},
 		Failures:  failures,
 		Timestamp: r.startTime,
