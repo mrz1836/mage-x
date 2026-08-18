@@ -283,13 +283,131 @@ func (Test) CoverReport() error {
 
 	// Check if this is a multi-module coverage file
 	if isMultiModuleCoverage("coverage.txt") {
-		utils.Info("Multi-module coverage file detected. Coverage files generated successfully.")
-		utils.Info("Note: Individual module coverage reports cannot be displayed with 'go tool cover' for multi-module projects.")
-		return nil
+		return coverReportMultiModule("coverage.txt")
 	}
 
 	utils.Info("Coverage Report:")
 	return GetRunner().RunCmd("go", "tool", "cover", "-func=coverage.txt")
+}
+
+// coverReportMultiModule prints a per-module function coverage report for a merged
+// profile that spans the root module and one or more nested modules (e.g. a
+// magefiles/ build-tool module with its own go.mod). "go tool cover -func" can only
+// resolve packages that belong to the module active in its working directory, so a
+// single combined run against the merged profile fails once it reaches a package
+// from a different module. This splits the profile by module and reports each
+// slice from that module's own directory instead.
+func coverReportMultiModule(coverageFile string) error {
+	modules, err := findAllModules()
+	if err != nil {
+		utils.Warn("Failed to discover modules for per-module coverage report: %v", err)
+		utils.Info("Coverage data is available in %s for external tools.", coverageFile)
+		return nil
+	}
+
+	content, err := os.ReadFile(coverageFile) // #nosec G304 -- coverage file path is controlled
+	if err != nil {
+		return fmt.Errorf("failed to read coverage file: %w", err)
+	}
+	lines := strings.Split(string(content), "\n")
+	mode := "mode: set"
+	if len(lines) > 0 && strings.HasPrefix(lines[0], "mode:") {
+		mode = lines[0]
+		lines = lines[1:]
+	}
+
+	utils.Info("Multi-module coverage file detected. Reporting per module:")
+
+	// Bucket each line under the most specific (deepest) module that owns it. A
+	// naive "starts with this module's path" match would put a nested module's
+	// own lines in the root module's bucket too, since the nested module's
+	// package path is textually nested under the root module's path even though
+	// it belongs to a different module.
+	buckets := make(map[string][]string, len(modules))
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		idx := strings.Index(line, ":")
+		if idx <= 0 {
+			continue
+		}
+		pkg := line[:idx]
+		if owner := ownerModule(modules, pkg); owner != "" {
+			buckets[owner] = append(buckets[owner], line)
+		}
+	}
+
+	reported := false
+	for _, module := range modules {
+		moduleLines := buckets[module.Module]
+		if len(moduleLines) == 0 {
+			continue
+		}
+		if err := reportModuleCoverage(module, mode, moduleLines); err != nil {
+			utils.Warn("Failed to generate coverage report for %s: %v", module.Relative, err)
+			continue
+		}
+		reported = true
+	}
+
+	if !reported {
+		utils.Info("Note: No per-module packages could be resolved for a function report.")
+		utils.Info("Coverage data is available in %s for external tools.", coverageFile)
+	}
+	return nil
+}
+
+// ownerModule returns the module path that most specifically owns pkg — the
+// discovered module whose path is the longest matching prefix — or "" if none of
+// the discovered modules match. This ensures a nested module's packages are
+// attributed to that module rather than to the shallower (e.g. root) module whose
+// path happens to be a textual prefix of it.
+func ownerModule(modules []ModuleInfo, pkg string) string {
+	best := ""
+	for _, m := range modules {
+		if m.Module == "" {
+			continue
+		}
+		if pkg != m.Module && !strings.HasPrefix(pkg, m.Module+"/") {
+			continue
+		}
+		if len(m.Module) > len(best) {
+			best = m.Module
+		}
+	}
+	return best
+}
+
+// reportModuleCoverage writes a temporary profile containing just one module's
+// coverage lines and runs "go tool cover -func" against it from that module's own
+// directory, where its packages are resolvable.
+func reportModuleCoverage(module ModuleInfo, mode string, moduleLines []string) error {
+	tmpFile, err := os.CreateTemp("", "mage-x-cover-*.out")
+	if err != nil {
+		return fmt.Errorf("failed to create temp coverage file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer func() {
+		_ = os.Remove(tmpPath) //nolint:errcheck // best-effort cleanup of a temp file
+	}()
+
+	profile := mode + "\n" + strings.Join(moduleLines, "\n") + "\n"
+	_, writeErr := tmpFile.WriteString(profile)
+	closeErr := tmpFile.Close()
+	if writeErr != nil {
+		return fmt.Errorf("failed to write temp coverage file: %w", writeErr)
+	}
+	if closeErr != nil {
+		return fmt.Errorf("failed to close temp coverage file: %w", closeErr)
+	}
+
+	label := module.Relative
+	if module.IsRoot {
+		label = "(root)"
+	}
+	utils.Info("\n📦 %s:", label)
+	return runCommandInModule(module, "go", "tool", "cover", "-func="+tmpPath)
 }
 
 // CoverHTML generates HTML coverage report
@@ -373,7 +491,12 @@ func finalizeCoverageProfiles(coverageFiles []string, output string) {
 	}
 }
 
-// isMultiModuleCoverage checks if a coverage file contains packages from multiple modules
+// isMultiModuleCoverage checks if a coverage file contains packages from a nested
+// Go module — any subdirectory with its own go.mod, such as a magefiles/ build-tool
+// module. Module boundaries are discovered dynamically via findAllModules (the same
+// discovery used to run tests per module) rather than matched against a hardcoded
+// path, so this generalizes to any nested-module layout instead of only the
+// .github/test-module fixture used by this repo's own tests.
 func isMultiModuleCoverage(coverageFile string) bool {
 	content, err := os.ReadFile(coverageFile) // #nosec G304 -- coverage file path is controlled
 	if err != nil {
@@ -389,30 +512,48 @@ func isMultiModuleCoverage(coverageFile string) bool {
 	}
 	utils.Debug("Current module: %s", currentModule)
 
-	// Check if any line contains a package path from a submodule
+	nestedModules, err := findAllModules()
+	if err != nil {
+		utils.Debug("Failed to discover modules: %v", err)
+	}
+	nestedPrefixes := make([]string, 0, len(nestedModules))
+	for _, m := range nestedModules {
+		if m.IsRoot || m.Module == "" || m.Module == currentModule {
+			continue
+		}
+		nestedPrefixes = append(nestedPrefixes, m.Module)
+	}
+
+	// Check if any line contains a package path from a nested module
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
 		if line == "" || strings.HasPrefix(line, "mode:") {
 			continue
 		}
 		// Coverage lines start with the package path
-		if idx := strings.Index(line, ":"); idx > 0 {
-			pkg := line[:idx]
-			// Check if this package is from a submodule by looking for paths that contain
-			// the main module but have their own go.mod (like .github/test-module)
-			if strings.HasPrefix(pkg, currentModule+"/") {
-				// Extract the relative path after the module name
-				relativePath := strings.TrimPrefix(pkg, currentModule+"/")
-				// Check for common submodule patterns
-				if strings.HasPrefix(relativePath, ".github/test-module/") {
-					utils.Debug("Found package from submodule: %s", pkg)
-					return true
-				}
-			} else if !strings.HasPrefix(pkg, currentModule) && strings.Contains(pkg, "/") {
-				// Package from completely different module
-				utils.Debug("Found package from different module: %s", pkg)
-				return true
+		idx := strings.Index(line, ":")
+		if idx <= 0 {
+			continue
+		}
+		pkg := line[:idx]
+
+		matchedNested := false
+		for _, nested := range nestedPrefixes {
+			if pkg == nested || strings.HasPrefix(pkg, nested+"/") {
+				utils.Debug("Found package from nested module %s: %s", nested, pkg)
+				matchedNested = true
+				break
 			}
+		}
+		if matchedNested {
+			return true
+		}
+
+		if !strings.HasPrefix(pkg, currentModule) && strings.Contains(pkg, "/") {
+			// Package from a module that wasn't discovered on disk (e.g. an
+			// unusual layout or a profile generated elsewhere).
+			utils.Debug("Found package from different module: %s", pkg)
+			return true
 		}
 	}
 	return false
