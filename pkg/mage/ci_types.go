@@ -100,6 +100,11 @@ type CISummary struct {
 	Skipped           int        `json:"skipped"`
 	DeadlineTolerated int        `json:"deadline_tolerated,omitempty"`
 	Duration          string     `json:"duration"`
+	// ExitCode is the real `go test` process exit code. It is the ground-truth
+	// signal consumers can cross-check against Failed/Status: a non-zero
+	// ExitCode with Failed == 0 means the process failed for a reason nothing
+	// else in this summary attributes to a specific package or test.
+	ExitCode int `json:"exit_code,omitempty"`
 }
 
 // CIMetadata contains execution context information

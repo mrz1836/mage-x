@@ -430,6 +430,75 @@ main.dereference(0x0)
 	})
 }
 
+// TestCollectResults_ExitCodeFallback proves collectResults falls back to an
+// error status when the real process exit code is non-zero but the streaming
+// parser recorded zero failures - the defense-in-depth path for a failure
+// category the parser doesn't (yet) recognize, independent of any specific
+// output shape.
+func TestCollectResults_ExitCodeFallback(t *testing.T) {
+	t.Parallel()
+
+	newRunner := func(t *testing.T) *ciRunner {
+		t.Helper()
+		runner, ok := NewCIRunner(&mockCommandRunner{}, CIRunnerOptions{
+			Mode: DefaultCIMode(),
+		}).(*ciRunner)
+		if !ok {
+			t.Fatal("Failed to create ciRunner")
+		}
+		return runner
+	}
+
+	t.Run("zero exit code with no failures is passed", func(t *testing.T) {
+		t.Parallel()
+		runner := newRunner(t)
+
+		runner.collectResults(0)
+
+		if runner.results.Summary.Status != TestStatusPassed {
+			t.Errorf("Status = %q, want %q", runner.results.Summary.Status, TestStatusPassed)
+		}
+		if runner.results.Summary.ExitCode != 0 {
+			t.Errorf("ExitCode = %d, want 0", runner.results.Summary.ExitCode)
+		}
+	})
+
+	t.Run("non-zero exit code with no parsed failures is error, not passed", func(t *testing.T) {
+		t.Parallel()
+		runner := newRunner(t)
+
+		runner.collectResults(1)
+
+		if runner.results.Summary.Status != TestStatusError {
+			t.Errorf("Status = %q, want %q (a non-zero exit must never be reported as passed)",
+				runner.results.Summary.Status, TestStatusError)
+		}
+		if runner.results.Summary.Failed != 0 {
+			t.Errorf("Failed = %d, want 0 (no test failures were parsed)", runner.results.Summary.Failed)
+		}
+		if runner.results.Summary.ExitCode != 1 {
+			t.Errorf("ExitCode = %d, want 1", runner.results.Summary.ExitCode)
+		}
+	})
+
+	t.Run("parsed failures take precedence over exit code status", func(t *testing.T) {
+		t.Parallel()
+		runner := newRunner(t)
+
+		mustParseLine(t, runner.parser, []byte(`{"Action":"run","Package":"pkg/foo","Test":"TestOne"}`))
+		mustParseLine(t, runner.parser, []byte(`{"Action":"fail","Package":"pkg/foo","Test":"TestOne","Elapsed":0.1}`))
+
+		runner.collectResults(1)
+
+		if runner.results.Summary.Status != TestStatusFailed {
+			t.Errorf("Status = %q, want %q", runner.results.Summary.Status, TestStatusFailed)
+		}
+		if runner.results.Summary.Failed != 1 {
+			t.Errorf("Failed = %d, want 1", runner.results.Summary.Failed)
+		}
+	})
+}
+
 func TestMultiReporter(t *testing.T) {
 	t.Parallel()
 
