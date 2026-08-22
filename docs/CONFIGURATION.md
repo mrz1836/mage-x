@@ -442,6 +442,7 @@ export MAGE_X_BUILD_CGO_ENABLED="false"
 export MAGE_X_BUILD_OUTPUT_DIR="dist"
 export MAGE_X_BUILD_BINARY="myapp"
 export MAGE_X_BUILD_TIMEOUT="5m"   # Per-invocation timeout for `go build`/`go run` (default 5m)
+export MAGE_X_INSTALL_DIR="$HOME/.local/bin"   # where `build:dev` installs (default: GOBIN, else GOPATH/bin)
 ```
 
 > **`MAGE_X_BUILD_TIMEOUT`** caps how long a single `go build` (or `go run`) invocation
@@ -450,6 +451,13 @@ export MAGE_X_BUILD_TIMEOUT="5m"   # Per-invocation timeout for `go build`/`go r
 > Raise it when warming a cold build cache for a large dependency tree — for example
 > `magex build:prebuild` with low parallelism on a constrained CI runner, where a
 > single batch can otherwise exceed the default and be killed mid-compile.
+
+> **`MAGE_X_INSTALL_DIR`** (or `build.install_dir` in `.mage.yaml`) controls where
+> `magex build:dev` installs the binary. By default `go install` writes to `GOBIN`
+> (or `GOPATH/bin`); set this to install where your `PATH` prefers — e.g.
+> `~/.local/bin` — so a freshly built dev binary is not shadowed by an older
+> release install earlier on `PATH`. Supports `~` and `$VAR` expansion. When empty,
+> the default behavior is unchanged.
 
 ### Test Variables
 ```bash

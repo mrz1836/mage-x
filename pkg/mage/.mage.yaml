@@ -14,7 +14,8 @@ build:
   goflags: []
   ldflags: []
   output: bin
-  parallel: 10
+  install_dir: ""
+  parallel: 12
   platforms:
     - linux/amd64
     - darwin/amd64
@@ -109,7 +110,7 @@ test:
   fuzz_baseline_overhead_per_seed: 500ms
   integration_tag: ""
   integration_timeout: 30m
-  parallel: 10
+  parallel: 12
   race: false
   short: false
   shuffle: false
