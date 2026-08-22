@@ -717,6 +717,33 @@ func (b Build) Dev() error {
 		}
 	}()
 
+	// Optional per-project install directory. `go install` normally writes to GOBIN
+	// (or GOPATH/bin); MAGE_X_INSTALL_DIR / build.install_dir lets a project install
+	// the dev binary where its PATH prefers (e.g. ~/.local/bin) so a freshly built
+	// binary is not shadowed by an older release install. `go install` honors GOBIN,
+	// so we point it at the requested directory for this build and restore it after.
+	installDir := resolveInstallDir(config.Build.InstallDir)
+	if installDir != "" {
+		if mkErr := os.MkdirAll(installDir, 0o750); mkErr != nil {
+			return fmt.Errorf("failed to create install directory %q: %w", installDir, mkErr)
+		}
+		oldGOBIN, hadGOBIN := os.LookupEnv("GOBIN")
+		if setErr := os.Setenv("GOBIN", installDir); setErr != nil {
+			return fmt.Errorf("failed to set GOBIN: %w", setErr)
+		}
+		defer func() {
+			var restoreErr error
+			if hadGOBIN {
+				restoreErr = os.Setenv("GOBIN", oldGOBIN)
+			} else {
+				restoreErr = os.Unsetenv("GOBIN")
+			}
+			if restoreErr != nil {
+				utils.Error("Failed to restore GOBIN: %v", restoreErr)
+			}
+		}()
+	}
+
 	args := []string{"install"}
 	args = append(args, buildFlags(config)...)
 
@@ -735,13 +762,44 @@ func (b Build) Dev() error {
 		return fmt.Errorf("dev build failed: %w", err)
 	}
 
+	utils.Success("Installed development build of %s to %s", config.Project.Binary, devInstallLocation(installDir))
+	return nil
+}
+
+// resolveInstallDir expands ~ and environment variables in a configured dev-build
+// install directory. It returns "" when unset, signaling callers to fall back to
+// the default (GOBIN, then GOPATH/bin).
+func resolveInstallDir(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	raw = os.ExpandEnv(raw)
+	switch {
+	case raw == "~":
+		return env.Home()
+	case strings.HasPrefix(raw, "~/"):
+		return filepath.Join(env.Home(), raw[2:])
+	default:
+		return raw
+	}
+}
+
+// devInstallLocation reports the directory `go install` writes the dev binary to,
+// preferring an explicit install dir, then GOBIN, then GOPATH/bin. It is used only
+// to report the destination accurately in the success message.
+func devInstallLocation(installDir string) string {
+	if installDir != "" {
+		return installDir
+	}
+	if gobin := os.Getenv("GOBIN"); gobin != "" {
+		return gobin
+	}
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
-		gopath = filepath.Join(os.Getenv("HOME"), "go")
+		gopath = filepath.Join(env.Home(), "go")
 	}
-
-	utils.Success("Installed development build of %s to %s", config.Project.Binary, filepath.Join(gopath, "bin"))
-	return nil
+	return filepath.Join(gopath, "bin")
 }
 
 // Generate runs go generate
