@@ -46,15 +46,20 @@ type ProjectConfig struct {
 
 // BuildConfig contains build-specific settings
 type BuildConfig struct {
-	GoFlags   []string       `yaml:"goflags"`
-	LDFlags   []string       `yaml:"ldflags"`
-	Output    string         `yaml:"output"`
-	Parallel  int            `yaml:"parallel"`
-	Platforms []string       `yaml:"platforms"`
-	Tags      []string       `yaml:"tags"`
-	TrimPath  bool           `yaml:"trimpath"`
-	Verbose   bool           `yaml:"verbose"`
-	PreBuild  PreBuildConfig `yaml:"prebuild"`
+	GoFlags []string `yaml:"goflags"`
+	LDFlags []string `yaml:"ldflags"`
+	Output  string   `yaml:"output"`
+	// InstallDir overrides where `build:dev` installs the binary. When empty,
+	// `go install` uses GOBIN (or GOPATH/bin). Set it (or MAGE_X_INSTALL_DIR) so
+	// the dev binary lands where a project's PATH prefers (e.g. ~/.local/bin) and
+	// is not shadowed by an older release install. Supports ~ and $VAR expansion.
+	InstallDir string         `yaml:"install_dir"`
+	Parallel   int            `yaml:"parallel"`
+	Platforms  []string       `yaml:"platforms"`
+	Tags       []string       `yaml:"tags"`
+	TrimPath   bool           `yaml:"trimpath"`
+	Verbose    bool           `yaml:"verbose"`
+	PreBuild   PreBuildConfig `yaml:"prebuild"`
 }
 
 // PreBuildConfig contains pre-build specific settings
@@ -479,6 +484,13 @@ func applyEnvOverrides(c *Config) {
 	// Parallel override
 	if v, ok := env.ParseInt("MAGE_X_PARALLEL", env.Positive); ok {
 		c.Build.Parallel = v
+	}
+
+	// Dev-build install directory override. build:dev installs here instead of
+	// GOBIN/GOPATH/bin, so a freshly built binary lands where the project's PATH
+	// prefers (e.g. ~/.local/bin) and is not shadowed by an older release install.
+	if v := env.MustGet("MAGE_X_INSTALL_DIR"); v != "" {
+		c.Build.InstallDir = v
 	}
 
 	// Auto discover build tags override (can enable or disable)
