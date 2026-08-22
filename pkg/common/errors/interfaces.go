@@ -4,7 +4,6 @@ package errors
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -347,7 +346,7 @@ func Is(err, target error) bool {
 	if errors.As(err, &mageErr) {
 		return mageErr.Is(target)
 	}
-	return errors.Is(fmt.Errorf("%w", err), target)
+	return errors.Is(err, target)
 }
 
 // As finds the first error in err's chain that matches target
@@ -356,7 +355,7 @@ func As(err error, target any) bool {
 	if errors.As(err, &mageErr) {
 		return mageErr.As(target)
 	}
-	return fmt.Errorf("%w", err) != nil
+	return errors.As(err, target)
 }
 
 // GetCode returns the error code from a MageError
