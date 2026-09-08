@@ -63,12 +63,19 @@ func (Release) Default(args ...string) error {
 		return fmt.Errorf("failed to set GORELEASER_CURRENT_TAG: %w", err)
 	}
 
-	// Run goreleaser release
-	if err := GetRunner().RunCmd("goreleaser", "release", "--clean"); err != nil {
-		return fmt.Errorf("release failed for tag %s: %w", latestTag, err)
+	// Idempotency guard: if a duplicate or concurrent workflow run has already
+	// published this tag, GitHub's immutable-releases feature makes a second
+	// `goreleaser release` fail with "already exists and is immutable". Detect an
+	// already-published release up front and skip GoReleaser instead of failing
+	// the job. Any lookup problem is non-fatal — we log it and fall through to
+	// GoReleaser rather than masking a genuine release.
+	if !releaseAlreadyPublished(latestTag) {
+		// Run goreleaser release
+		if err := GetRunner().RunCmd("goreleaser", "release", "--clean"); err != nil {
+			return fmt.Errorf("release failed for tag %s: %w", latestTag, err)
+		}
+		utils.Success("Release %s completed successfully", latestTag)
 	}
-
-	utils.Success("Release %s completed successfully", latestTag)
 
 	// Parse command-line parameters
 	params := utils.ParseParams(args)
