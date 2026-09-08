@@ -306,7 +306,7 @@ type ErrorMatcher interface {
 
 // New creates a new MageError with the given message
 func New(message string) MageError {
-	return NewBuilder().WithMessage(message).Build()
+	return NewBuilder().WithMessage("%s", message).Build()
 }
 
 // Newf creates a new MageError with a formatted message
@@ -316,7 +316,7 @@ func Newf(format string, args ...any) MageError {
 
 // WithCode creates a new MageError with the given code and message
 func WithCode(code ErrorCode, message string) MageError {
-	return NewBuilder().WithCode(code).WithMessage(message).Build()
+	return NewBuilder().WithCode(code).WithMessage("%s", message).Build()
 }
 
 // WithCodef creates a new MageError with the given code and formatted message
@@ -329,7 +329,7 @@ func Wrap(err error, message string) MageError {
 	if err == nil {
 		return nil
 	}
-	return NewBuilder().WithCause(err).WithMessage(message).Build()
+	return NewBuilder().WithCause(err).WithMessage("%s", message).Build()
 }
 
 // Wrapf wraps an error with a formatted message
