@@ -174,7 +174,7 @@ func registerAdditionalErrors(registry ErrorRegistry) {
 func NewBuildError(message string, cause error) MageError {
 	return NewBuilder().
 		WithCode(ErrBuildFailed).
-		WithMessage(message).
+		WithMessage("%s", message).
 		WithCause(cause).
 		WithOperation("build").
 		WithStackTrace().
@@ -185,7 +185,7 @@ func NewBuildError(message string, cause error) MageError {
 func NewConfigError(message, configFile string) MageError {
 	return NewBuilder().
 		WithCode(ErrConfigInvalid).
-		WithMessage(message).
+		WithMessage("%s", message).
 		WithResource(configFile).
 		WithOperation("config").
 		Build()
@@ -195,7 +195,7 @@ func NewConfigError(message, configFile string) MageError {
 func NewFileError(code ErrorCode, message, path string) MageError {
 	return NewBuilder().
 		WithCode(code).
-		WithMessage(message).
+		WithMessage("%s", message).
 		WithResource(path).
 		WithOperation("file").
 		Build()

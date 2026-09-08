@@ -18,7 +18,7 @@ const gracefulCancelDelay = 5 * time.Second
 // window elapses. Works on Unix; on Windows os.Interrupt is best-effort but
 // WaitDelay still guarantees termination.
 //
-// Requires Go 1.20+ (mage-x's go.mod is on 1.25).
+// Requires Go 1.20+ (mage-x's go.mod is on 1.26).
 func applyGracefulCancel(cmd *exec.Cmd) {
 	cmd.Cancel = func() error {
 		if cmd.Process == nil {

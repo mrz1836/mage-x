@@ -600,7 +600,7 @@ func runFuzzWithOptions(opts fuzzOptions, argsList ...string) error {
 		return fmt.Errorf("fuzz tests failed: %w", err)
 	}
 
-	utils.Success(opts.successMessage)
+	utils.Success("%s", opts.successMessage)
 	return nil
 }
 
@@ -637,7 +637,7 @@ func runFuzzWithDuration(fuzzTime time.Duration, opts fuzzOptions) error {
 		return fmt.Errorf("fuzz tests failed: %w", err)
 	}
 
-	utils.Success(opts.successMessage)
+	utils.Success("%s", opts.successMessage)
 	return nil
 }
 

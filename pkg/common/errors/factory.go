@@ -39,7 +39,7 @@ func (f *CommonErrorFactory) Wrapf(err error, format string, args ...any) error 
 
 // WithCode creates an error with a specific error code
 func (f *CommonErrorFactory) WithCode(code ErrorCode, message string) MageError {
-	return NewBuilder().WithCode(code).WithMessage(message).Build()
+	return NewBuilder().WithCode(code).WithMessage("%s", message).Build()
 }
 
 // WithCodef creates an error with a specific error code and formatted message
