@@ -88,14 +88,18 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
 		mockRunner.SetOutput("git log --oneline -5 --no-decorate", "abc123 Recent commit\ndef456 Other commit")                            // Recent commits
 
-		// CRITICAL: Mock that v1.4.0 already exists on remote
+		// CRITICAL: Mock that v1.4.0 already exists on remote, pointing at a
+		// DIFFERENT commit than our local tag (i.e. created from another branch).
+		// This is a genuine conflict and must fail the push.
 		mockRunner.SetOutput("git ls-remote --tags origin v1.4.0", "98abdabb5b928ada967550c3218ea0faf7cc40b7\trefs/tags/v1.4.0")
+		// Local v1.4.0 (just created on HEAD) resolves to a different commit.
+		mockRunner.SetOutput("git rev-list -n 1 v1.4.0", "1234567890abcdef1234567890abcdef12345678")
 
 		version := Version{}
 
 		// Test version bump with push parameter
 		err := version.Bump("push=true", "bump=minor")
-		require.Error(t, err, "Expected error when tag already exists on remote")
+		require.Error(t, err, "Expected error when tag already exists on remote at a different commit")
 		require.Contains(t, err.Error(), "already exists on remote", "Error should mention tag already exists on remote")
 
 		// Verify git ls-remote check was performed
@@ -107,6 +111,44 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 		expectedPushCmd := []string{"git", "push", "origin", "v1.4.0"}
 		require.False(t, mockRunner.HasCommand(expectedPushCmd),
 			"Git push should not be called when tag already exists on remote. Commands: %v", mockRunner.GetCommands())
+	})
+
+	t.Run("TagAlreadyExistsOnRemoteSameCommit", func(t *testing.T) {
+		mockRunner := NewVersionBumpMockRunner()
+		require.NoError(t, SetRunner(mockRunner))
+
+		// Simulate a duplicate/concurrent bump: v1.4.0 already exists on the
+		// remote pointing at the SAME commit we are publishing. This is the
+		// double-run case — it must succeed idempotently, not fail.
+
+		mockRunner.SetOutput("git status --porcelain", "")
+		mockRunner.SetOutput("git tag --points-at HEAD", "")
+		mockRunner.SetOutput("git tag --sort=-version:refname", "v1.3.0\nv1.2.0")
+		mockRunner.SetOutput("git describe --tags --abbrev=0", "v1.3.0")
+		mockRunner.SetOutput("git rev-list --count v1.3.0..HEAD", "22")
+		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)")
+		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")
+		mockRunner.SetOutput("git log --oneline -5 --no-decorate", "abc123 Recent commit\ndef456 Other commit")
+
+		// Remote already has v1.4.0 at the same commit our local tag resolves to.
+		const sameCommit = "98abdabb5b928ada967550c3218ea0faf7cc40b7"
+		mockRunner.SetOutput("git ls-remote --tags origin v1.4.0", sameCommit+"\trefs/tags/v1.4.0")
+		mockRunner.SetOutput("git rev-list -n 1 v1.4.0", sameCommit)
+
+		version := Version{}
+
+		err := version.Bump("push=true", "bump=minor")
+		require.NoError(t, err, "A tag already published at the same commit must be treated as success")
+
+		// Verify the remote check was performed.
+		expectedCheckCmd := []string{"git", "ls-remote", "--tags", "origin", "v1.4.0"}
+		require.True(t, mockRunner.HasCommand(expectedCheckCmd),
+			"Expected the remote tag check to be performed. Commands: %v", mockRunner.GetCommands())
+
+		// Verify git push was NOT called (the release is already on the remote).
+		expectedPushCmd := []string{"git", "push", "origin", "v1.4.0"}
+		require.False(t, mockRunner.HasCommand(expectedPushCmd),
+			"Git push should not run when the exact tag is already published. Commands: %v", mockRunner.GetCommands())
 	})
 
 	t.Run("TagDoesNotExistOnRemote", func(t *testing.T) {

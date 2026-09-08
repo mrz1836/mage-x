@@ -913,34 +913,59 @@ func handlePushTag(newVersion string) error {
 		return nil // Don't fail the entire operation, just skip the push
 	}
 
-	// Check if tag already exists on remote to provide a better error message
-	remoteTagCheck, err := GetRunner().RunCmdOutput("git", "ls-remote", "--tags", "origin", newVersion)
-	if err == nil && strings.Contains(remoteTagCheck, newVersion) {
-		utils.Error("❌ Tag %s already exists on remote", newVersion)
-		utils.Warn("💡 This usually means:")
-		utils.Warn("   • The tag was created from a different branch")
-		utils.Warn("   • Another developer created this tag")
-		utils.Warn("   • Your local tags were out of sync with remote")
-		utils.Info("To see all remote tags: git ls-remote --tags origin")
-		utils.Info("To fetch all remote tags: git fetch --tags origin")
-		utils.Info("To see where the remote tag points: git ls-remote --tags origin %s", newVersion)
-		return fmt.Errorf("%w: %s", errTagAlreadyExistsOnRemote, newVersion)
+	// Determine whether origin already has this tag and, if so, whether it points
+	// at the same commit we are about to publish. A tag already present at the
+	// *same* commit means a concurrent or repeated version:bump already pushed
+	// this exact release — that is success, not a failure. A tag present at a
+	// *different* commit is a genuine conflict worth stopping for.
+	if remoteCommit, remoteHasTag := remoteTagCommit(newVersion); remoteHasTag {
+		localCommit := localTagCommit(newVersion)
+		switch {
+		case localCommit != "" && localCommit == remoteCommit:
+			utils.Success("✅ Tag %s already exists on remote at the same commit (%s); nothing to push", newVersion, shortSHA(remoteCommit))
+			return nil
+		case localCommit != "" && localCommit != remoteCommit:
+			utils.Error("❌ Tag %s already exists on remote pointing at a different commit", newVersion)
+			utils.Warn("💡 This usually means:")
+			utils.Warn("   • The tag was created from a different branch")
+			utils.Warn("   • Another developer created this tag")
+			utils.Warn("   • Your local tags were out of sync with remote")
+			utils.Info("   • Local tag → %s, remote tag → %s", shortSHA(localCommit), shortSHA(remoteCommit))
+			utils.Info("To see all remote tags: git ls-remote --tags origin")
+			utils.Info("To fetch all remote tags: git fetch --tags origin")
+			return fmt.Errorf("%w: %s", errTagAlreadyExistsOnRemote, newVersion)
+		default:
+			// Remote has the tag but the local tag commit could not be resolved.
+			// Fall through and let the push decide rather than guessing.
+		}
 	}
 
 	utils.Info("Pushing tag to remote...")
 	if err := GetRunner().RunCmd("git", "push", "origin", newVersion); err != nil {
+		// A concurrent or duplicate run may have created the tag between the
+		// existence check above and this push. If origin now holds the tag at
+		// the same commit we intended to publish, the push is effectively a
+		// no-op success — do not fail the bump over a harmless duplicate.
+		if remoteCommit, remoteHasTag := remoteTagCommit(newVersion); remoteHasTag {
+			if localCommit := localTagCommit(newVersion); localCommit != "" && localCommit == remoteCommit {
+				utils.Success("✅ Tag %s already present on remote at the same commit (%s) — pushed by a concurrent run; continuing", newVersion, shortSHA(remoteCommit))
+				return nil
+			}
+		}
+
 		utils.Error("❌ Failed to push tag to remote")
 
 		// Provide helpful diagnostic information
-		if strings.Contains(err.Error(), "does not appear to be a git repository") {
+		switch {
+		case strings.Contains(err.Error(), "does not appear to be a git repository"):
 			utils.Warn("💡 Troubleshooting tips:")
 			utils.Warn("   • Check if 'origin' remote exists: git remote -v")
 			utils.Warn("   • Add remote if missing: git remote add origin <repo-url>")
-		} else if strings.Contains(err.Error(), "Could not read from remote repository") {
+		case strings.Contains(err.Error(), "Could not read from remote repository"):
 			utils.Warn("💡 Troubleshooting tips:")
 			utils.Warn("   • Check repository access permissions")
 			utils.Warn("   • Verify SSH keys or authentication tokens")
-		} else {
+		default:
 			utils.Warn("💡 To push manually: git push origin %s", newVersion)
 		}
 
@@ -948,6 +973,64 @@ func handlePushTag(newVersion string) error {
 	}
 	utils.Success("✅ Tag pushed to remote")
 	return nil
+}
+
+// remoteTagCommit returns the commit SHA that origin's copy of tag points at and
+// whether the remote has the tag at all. Annotated tags are peeled to their
+// underlying commit (the "^{}" entry). Any error — most importantly an
+// unreachable remote — is reported as "tag not found" so the caller proceeds to
+// the push, where a genuine network failure surfaces with full diagnostics
+// rather than being silently swallowed here.
+func remoteTagCommit(tag string) (commit string, exists bool) {
+	out, err := GetRunner().RunCmdOutput("git", "ls-remote", "--tags", "origin", tag)
+	if err != nil {
+		return "", false
+	}
+
+	wantDirect := "refs/tags/" + tag
+	wantPeeled := wantDirect + "^{}"
+	var direct, peeled string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue
+		}
+		switch fields[1] {
+		case wantPeeled:
+			peeled = fields[0]
+		case wantDirect:
+			direct = fields[0]
+		}
+	}
+
+	switch {
+	case peeled != "": // annotated tag → the commit it ultimately points to
+		return peeled, true
+	case direct != "": // lightweight tag → already a commit
+		return direct, true
+	default:
+		return "", false
+	}
+}
+
+// localTagCommit returns the commit SHA the local tag resolves to, peeling
+// annotated tags to their commit. Returns "" when the tag cannot be resolved.
+func localTagCommit(tag string) string {
+	out, err := GetRunner().RunCmdOutput("git", "rev-list", "-n", "1", tag)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// shortSHA trims a git object hash to its first 12 characters for logging,
+// leaving shorter values untouched.
+func shortSHA(sha string) string {
+	const n = 12
+	if len(sha) <= n {
+		return sha
+	}
+	return sha[:n]
 }
 
 // checkLocalTagExists checks if a tag exists locally and whether it points to HEAD
