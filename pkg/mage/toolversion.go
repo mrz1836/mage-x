@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
@@ -153,7 +154,7 @@ func GetToolVersion(toolName string, opts ...ToolVersionOption) string {
 func resolveToolVersion(cfg ToolConfig, options *toolVersionOptions) string {
 	// Try primary env var
 	if version := env.MustGet(cfg.PrimaryEnv); version != "" {
-		return stripSuffix(version, cfg.StripSuffix)
+		return applyDualVersionSelection(cfg, stripSuffix(version, cfg.StripSuffix))
 	}
 
 	// Try legacy env var (if defined)
@@ -187,6 +188,73 @@ func getUnknownToolVersion(toolName string, options *toolVersionOptions) string 
 	}
 
 	return VersionLatest
+}
+
+// detectGoMinorForToolSelection reports the active Go toolchain's major/minor version
+// (the `go` on PATH that will run `go install`). It is a package variable so tests can
+// stub Go-version detection without executing the real `go` binary.
+//
+//nolint:gochecknoglobals // Injectable seam for testing dual-version selection.
+var detectGoMinorForToolSelection = func() (major, minor int, ok bool) {
+	v, err := utils.GetGoVersion() // e.g. "1.26.0"
+	if err != nil {
+		return 0, 0, false
+	}
+	return parseGoMajorMinor(v)
+}
+
+// parseGoMajorMinor extracts the major and minor components from a Go version string.
+// It accepts "1.26.0", "1.26", "1.26.x" and (after trimming) "go1.26". ok is false when
+// the string cannot be parsed.
+func parseGoMajorMinor(s string) (major, minor int, ok bool) {
+	s = strings.TrimSpace(s)
+	s = strings.TrimPrefix(s, "go")
+	parts := strings.SplitN(s, ".", 3)
+	if len(parts) < 2 {
+		return 0, 0, false
+	}
+	major, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, false
+	}
+	minor, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, false
+	}
+	return major, minor, true
+}
+
+// applyDualVersionSelection optionally overrides a tool's baseline version with a newer
+// "latest" pin when the active Go toolchain is new enough, mirroring the GoFortress
+// setup-benchstat selection. This lets one set of synced env files work across repos on
+// different Go versions without forcing every repo to upgrade Go alongside a tool bump.
+//
+// It is opt-in and inert unless <PrimaryEnv>_LATEST is set:
+//   - <PrimaryEnv>_LATEST unset             -> baseline (default; no behavior change)
+//   - active Go >= <PrimaryEnv>_LATEST_MIN_GO -> the _LATEST pin
+//   - active Go below that, or undetectable  -> baseline (conservative)
+//
+// _LATEST_MIN_GO defaults to 1.26 when unset or unparseable, matching benchstat.
+func applyDualVersionSelection(cfg ToolConfig, baseline string) string {
+	latest := env.MustGet(cfg.PrimaryEnv + "_LATEST")
+	if latest == "" {
+		return baseline
+	}
+
+	minMajor, minMinor, ok := parseGoMajorMinor(env.MustGet(cfg.PrimaryEnv + "_LATEST_MIN_GO"))
+	if !ok {
+		minMajor, minMinor = 1, 26
+	}
+
+	major, minor, ok := detectGoMinorForToolSelection()
+	if !ok {
+		return baseline
+	}
+
+	if major > minMajor || (major == minMajor && minor >= minMinor) {
+		return stripSuffix(latest, cfg.StripSuffix)
+	}
+	return baseline
 }
 
 // stripSuffix removes a suffix from version string if present.
