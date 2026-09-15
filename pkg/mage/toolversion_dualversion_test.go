@@ -49,6 +49,11 @@ func TestGetToolVersion_DualVersion(t *testing.T) {
 
 	t.Run("no _LATEST set uses baseline (inert)", func(t *testing.T) {
 		t.Setenv("MAGE_X_GOFUMPT_VERSION", baseline)
+		// Clear the _LATEST pins so a value inherited from the process
+		// environment (e.g. synced .github/env files in CI) cannot leak in and
+		// make the selection non-inert.
+		t.Setenv("MAGE_X_GOFUMPT_VERSION_LATEST", "")
+		t.Setenv("MAGE_X_GOFUMPT_VERSION_LATEST_MIN_GO", "")
 		// detector must not even be consulted; make it fail loudly if it is.
 		stubGoMinor(t, 1, 30, true)
 		if got := GetToolVersion("gofumpt"); got != baseline {
