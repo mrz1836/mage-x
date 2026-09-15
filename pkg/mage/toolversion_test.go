@@ -40,6 +40,11 @@ func TestGetToolVersion_PrimaryEnv(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set primary env var
 			t.Setenv(tt.primaryEnv, tt.primaryVal)
+			// Clear dual-version pins so values inherited from the process
+			// environment (e.g. synced .github/env files in CI) cannot leak in
+			// and override the primary env var under test.
+			t.Setenv(tt.primaryEnv+"_LATEST", "")
+			t.Setenv(tt.primaryEnv+"_LATEST_MIN_GO", "")
 
 			got := GetToolVersion(tt.toolName)
 			if got != tt.want {
