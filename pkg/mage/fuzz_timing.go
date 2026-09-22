@@ -466,12 +466,14 @@ func WarnIfHighSeedCount(seedInfo *FuzzSeedInfo, fuzzTime time.Duration, cfg Fuz
 // FuzzTestDiagnosticInfo contains information about a completed fuzz test run
 // used for diagnosing context deadline exceeded failures.
 type FuzzTestDiagnosticInfo struct {
-	TestName     string        // Name of the fuzz test function
-	Package      string        // Package path
-	TestErr      error         // Error returned by the test, if any
-	TestOutput   string        // Captured test output (may be empty in non-CI mode)
-	TestDuration time.Duration // Wall-clock duration of the test run
-	FuzzTime     time.Duration // The -fuzztime value used
+	TestName         string        // Name of the fuzz test function
+	Package          string        // Package path
+	TestErr          error         // Error returned by the test, if any
+	TestOutput       string        // Captured test output (may be empty in non-CI mode)
+	TestDuration     time.Duration // Wall-clock duration of the test run
+	FuzzTime         time.Duration // The -fuzztime value used
+	SeedCount        int           // Number of seed corpus entries (drives baseline gathering time)
+	BaselineOverhead time.Duration // Per-seed baseline overhead used to size the tolerance window (0 = unknown)
 }
 
 // DiagnoseFuzzContextDeadline detects when a fuzz test failed due to Go's
@@ -504,12 +506,22 @@ func DiagnoseFuzzContextDeadline(info FuzzTestDiagnosticInfo) bool {
 	// Check if the test duration is within a tolerance window of fuzztime.
 	// If the test failed near the fuzztime boundary, it's likely the internal
 	// fuzztime context that expired, not mage-x's -timeout.
-	// Window: [fuzzTime - 1s, fuzzTime + 2s]
+	//
+	// The observed wall-clock (TestDuration) covers more than the -fuzztime
+	// window: Go's fuzzer runs the full seed corpus ("gathering baseline
+	// coverage") BEFORE the timer starts, and drains its workers AFTER it fires.
+	// So a seeded fuzz test on a slow runner systematically overshoots fuzzTime.
+	// Widen the upper bound by the estimated baseline-gathering time so those
+	// runs aren't misclassified as real failures. This stays far below the
+	// calculated -timeout (fuzzTime + baseline + >=90s buffer), so a genuine
+	// -timeout kill is still classified as a real failure.
+	// Window: [fuzzTime - 1s, fuzzTime + baselineAllowance + 2s]
+	baselineAllowance := time.Duration(info.SeedCount) * info.BaselineOverhead
 	lowerBound := info.FuzzTime - 1*time.Second
 	if lowerBound < 0 {
 		lowerBound = 0
 	}
-	upperBound := info.FuzzTime + 2*time.Second
+	upperBound := info.FuzzTime + baselineAllowance + 2*time.Second
 
 	if info.TestDuration < lowerBound || info.TestDuration > upperBound {
 		return false

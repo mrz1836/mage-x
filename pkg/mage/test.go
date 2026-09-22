@@ -1685,12 +1685,14 @@ func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages 
 			deadlineTolerated := false
 			if testErr != nil {
 				diagnosed := DiagnoseFuzzContextDeadline(FuzzTestDiagnosticInfo{
-					TestName:     test,
-					Package:      pkg,
-					TestErr:      testErr,
-					TestOutput:   testOutput,
-					TestDuration: testDuration,
-					FuzzTime:     fuzzTime,
+					TestName:         test,
+					Package:          pkg,
+					TestErr:          testErr,
+					TestOutput:       testOutput,
+					TestDuration:     testDuration,
+					FuzzTime:         fuzzTime,
+					SeedCount:        seedCount,
+					BaselineOverhead: fuzzTimingCfg.BaselineOverheadPerSeed,
 				})
 				if diagnosed && !isFuzzStrictDeadline() {
 					deadlineTolerated = true

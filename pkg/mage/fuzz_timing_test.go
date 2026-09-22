@@ -846,6 +846,54 @@ func TestDiagnoseFuzzContextDeadline(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			// Regression: a seeded fuzz test on a slow CI runner. Baseline
+			// gathering of the seed corpus (6 seeds) runs before the 5s
+			// -fuzztime window, pushing wall-clock to 7.2s. Without accounting
+			// for baseline this fell just outside fuzzTime+2s (7s) and was
+			// misclassified as a real failure (the go-alert-system flake).
+			name: "seeded test overshoots fuzztime+2s but within baseline allowance",
+			info: FuzzTestDiagnosticInfo{
+				TestName:         "FuzzAlertMessageBanPeerRead",
+				Package:          "./app/models",
+				TestErr:          errContextDeadline,
+				TestDuration:     7200 * time.Millisecond,
+				FuzzTime:         5 * time.Second,
+				SeedCount:        6,
+				BaselineOverhead: 500 * time.Millisecond,
+			},
+			expected: true,
+		},
+		{
+			// Same seed budget, but the run is far beyond even the widened
+			// window (5s fuzz + 3s baseline + 2s = 10s upper bound). A genuine
+			// hang must still be reported as a real failure, not tolerated.
+			name: "seeded test far beyond baseline-widened window stays a failure",
+			info: FuzzTestDiagnosticInfo{
+				TestName:         "FuzzFoo",
+				Package:          "./pkg/foo",
+				TestErr:          errContextDeadline,
+				TestDuration:     20 * time.Second,
+				FuzzTime:         5 * time.Second,
+				SeedCount:        6,
+				BaselineOverhead: 500 * time.Millisecond,
+			},
+			expected: false,
+		},
+		{
+			// Without seed metadata the window is unchanged (fuzzTime+2s), so
+			// the same 7.2s wall-clock is not tolerated. Confirms the widening
+			// is driven only by known baseline work, preserving prior behavior.
+			name: "unseeded test at same duration keeps original tight window",
+			info: FuzzTestDiagnosticInfo{
+				TestName:     "FuzzFoo",
+				Package:      "./pkg/foo",
+				TestErr:      errContextDeadline,
+				TestDuration: 7200 * time.Millisecond,
+				FuzzTime:     5 * time.Second,
+			},
+			expected: false,
+		},
 	}
 
 	for _, tt := range tests {
