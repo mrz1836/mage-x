@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -20,6 +19,9 @@ const (
 	// DefaultDelegateTimeout is the default timeout for delegated mage commands.
 	// A value of 0 means no timeout — the command runs until completion or signal.
 	DefaultDelegateTimeout = 0 * time.Second
+	// stderrDrainDelay is how long a delegated command's stderr may stay open after
+	// the command exits, which happens when it leaves a background process running.
+	stderrDrainDelay = 2 * time.Second
 )
 
 var (
@@ -165,34 +167,31 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 		}
 	}
 
-	// Set up stdio with error filtering for stderr
+	// Set up stdio with error filtering for stderr. os/exec owns the stderr pipe:
+	// Wait returns once the filter has seen all of it, unlike cmd.StderrPipe, which
+	// Wait closes as soon as the process exits, dropping output not yet read.
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
-
-	// Create buffer and WaitGroup for stderr capture
-	var stderrBuf strings.Builder
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	// Create a pipe to capture stderr for filtering
-	stderrPipe, err := cmd.StderrPipe()
-	if err != nil {
-		return DelegateResult{ExitCode: 1, Err: fmt.Errorf("failed to create stderr pipe: %w", err)}
-	}
+	stderr := &stderrFilter{out: os.Stderr}
+	cmd.Stderr = stderr
+	// A background process the command started may keep stderr open; stop waiting
+	// for it once the command itself has exited and this delay has passed.
+	cmd.WaitDelay = stderrDrainDelay
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
 		return DelegateResult{ExitCode: 1, Err: fmt.Errorf("failed to start custom command '%s': %w", command, err)}
 	}
 
-	// Filter stderr output in a goroutine, capturing content for error reporting
-	go filterStderr(stderrPipe, &stderrBuf, &wg)
-
-	// Wait for the command to finish
+	// Wait for the command to finish and its stderr to be fully captured
 	waitErr := cmd.Wait()
+	stderr.Flush()
 
-	// Wait for stderr to be fully captured before returning
-	wg.Wait()
+	// ErrWaitDelay means the command succeeded but something it left running still
+	// held stderr; that is not a failure of the command.
+	if errors.Is(waitErr, exec.ErrWaitDelay) {
+		waitErr = nil
+	}
 
 	if waitErr != nil {
 		// Extract actual exit code from the error
@@ -211,7 +210,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 		}
 
 		// Include captured stderr in the error message if available
-		if stderrContent := strings.TrimSpace(stderrBuf.String()); stderrContent != "" {
+		if stderrContent := strings.TrimSpace(stderr.buf.String()); stderrContent != "" {
 			return DelegateResult{
 				ExitCode: exitCode,
 				Err:      fmt.Errorf("%w '%s':\n%s", ErrCommandFailed, command, stderrContent),
@@ -226,34 +225,53 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 	return DelegateResult{ExitCode: 0, Err: nil}
 }
 
-// filterStderr filters stderr output for real-time display while capturing all content for error reporting
-// The "Unknown target specified" messages are filtered from display to avoid duplication when shown in error
-func filterStderr(stderrPipe io.ReadCloser, buf *strings.Builder, wg *sync.WaitGroup) {
-	defer wg.Done()
-	defer func() {
-		if err := stderrPipe.Close(); err != nil {
-			// Log error but don't fail the operation
-			fmt.Fprintf(os.Stderr, "Warning: failed to close stderr pipe: %v\n", err)
+// stderrFilter receives a delegated command's stderr. It passes each line through
+// to out as the line completes, capturing every line for error reporting. The
+// "Unknown target specified" lines are filtered from display to avoid duplication
+// when shown in the error. os/exec calls Write from one goroutine and is done with
+// it by the time Wait returns, so the fields need no locking.
+type stderrFilter struct {
+	out     io.Writer
+	buf     strings.Builder // every line, for the error message
+	partial []byte          // the start of a line whose '\n' hasn't arrived yet
+}
+
+// Write handles each complete line in p, holding back a trailing partial line.
+func (f *stderrFilter) Write(p []byte) (int, error) {
+	f.partial = append(f.partial, p...)
+	for {
+		i := bytes.IndexByte(f.partial, '\n')
+		if i < 0 {
+			return len(p), nil
 		}
-	}()
-
-	scanner := bufio.NewScanner(stderrPipe)
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Always capture to buffer for error message (we need the full context)
-		buf.WriteString(line)
-		buf.WriteString("\n")
-
-		// Filter "Unknown target specified" from real-time display to avoid duplication
-		// (it will still appear in the error message if command fails)
-		if strings.Contains(line, "Unknown target specified:") {
-			continue // Skip displaying this line
-		}
-
-		// Pass through all other stderr output to user in real-time
-		fmt.Fprintln(os.Stderr, line) // #nosec G705 -- intentionally printing subprocess stderr to user
+		f.line(string(f.partial[:i]))
+		f.partial = f.partial[i+1:]
 	}
+}
+
+// Flush handles a final line that ended without a '\n'.
+func (f *stderrFilter) Flush() {
+	if len(f.partial) > 0 {
+		f.line(string(f.partial))
+		f.partial = nil
+	}
+}
+
+func (f *stderrFilter) line(line string) {
+	line = strings.TrimSuffix(line, "\r")
+
+	// Always capture to buffer for error message (we need the full context)
+	f.buf.WriteString(line)
+	f.buf.WriteString("\n")
+
+	// Filter "Unknown target specified" from real-time display to avoid duplication
+	// (it will still appear in the error message if command fails)
+	if strings.Contains(line, "Unknown target specified:") {
+		return
+	}
+
+	// Pass through all other stderr output to user in real-time
+	_, _ = fmt.Fprintln(f.out, line) //nolint:errcheck // #nosec G705 -- intentionally printing subprocess stderr to user; nothing to do if it fails
 }
 
 // HasMagefile checks if magefiles/ directory or magefile.go exists in the current directory
