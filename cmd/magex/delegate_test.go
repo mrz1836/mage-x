@@ -3,13 +3,12 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -408,95 +407,169 @@ func TestGetMagefilePath_NoFiles(t *testing.T) {
 	}
 }
 
-func TestFilterStderr(t *testing.T) {
-	// Create a pipe to simulate stderr input
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("Failed to create pipe: %v", err)
-	}
-
-	// Capture stderr output
-	oldStderr := os.Stderr
-	stderrR, stderrW, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("Failed to create stderr pipe: %v", err)
-	}
-	os.Stderr = stderrW
-
-	// Write test data to the pipe
-	testData := `Normal error message
+func TestStderrFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		writes   []string
+		shown    string
+		captured string
+	}{
+		{
+			name: "filters unknown-target lines from display but captures them",
+			writes: []string{`Normal error message
 Unknown target specified: somecommand
 Another normal message
 Unknown target specified: anothercommand
 Final message
-`
+`},
+			shown: "Normal error message\nAnother normal message\nFinal message\n",
+			captured: "Normal error message\nUnknown target specified: somecommand\nAnother normal message\n" +
+				"Unknown target specified: anothercommand\nFinal message\n",
+		},
+		{
+			name:     "joins a line split across writes",
+			writes:   []string{"first li", "ne\nsec", "ond line\n"},
+			shown:    "first line\nsecond line\n",
+			captured: "first line\nsecond line\n",
+		},
+		{
+			name:     "flushes a final line without a newline",
+			writes:   []string{"done\nno newline"},
+			shown:    "done\nno newline\n",
+			captured: "done\nno newline\n",
+		},
+		{
+			name:     "strips carriage returns",
+			writes:   []string{"windows line\r\n"},
+			shown:    "windows line\n",
+			captured: "windows line\n",
+		},
+		{
+			name:     "handles a line longer than bufio.Scanner's limit",
+			writes:   []string{strings.Repeat("x", 100_000) + "\n"},
+			shown:    strings.Repeat("x", 100_000) + "\n",
+			captured: strings.Repeat("x", 100_000) + "\n",
+		},
+	}
 
-	// Create buffer and WaitGroup for the new function signature
-	var buf strings.Builder
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	// Write data and close the writer
-	go func() {
-		defer func() {
-			if closeErr := w.Close(); closeErr != nil {
-				t.Logf("Failed to close pipe writer: %v", closeErr)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var out strings.Builder
+			f := &stderrFilter{out: &out}
+			for _, w := range tt.writes {
+				n, err := f.Write([]byte(w))
+				require.NoError(t, err)
+				assert.Equal(t, len(w), n)
 			}
-		}()
-		if _, writeErr := fmt.Fprint(w, testData); writeErr != nil {
-			t.Logf("Failed to write test data: %v", writeErr)
+			f.Flush()
+
+			assert.Equal(t, tt.shown, out.String())
+			assert.Equal(t, tt.captured, f.buf.String())
+		})
+	}
+}
+
+// setupStderrMagefile writes a magefile.go into a fresh temp dir and changes into it.
+func setupStderrMagefile(t *testing.T, magefile string) {
+	t.Helper()
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go command not available")
+	}
+
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if chErr := os.Chdir(oldDir); chErr != nil {
+			t.Errorf("failed to restore directory: %v", chErr)
 		}
-	}()
+	})
+	require.NoError(t, os.Chdir(t.TempDir()))
 
-	// Filter stderr in a goroutine
-	go filterStderr(r, &buf, &wg)
+	require.NoError(t, os.WriteFile("go.mod", []byte("module testmod\n\ngo 1.21\n"), 0o600))
+	require.NoError(t, os.WriteFile(magefileFilename, []byte(magefile), 0o600))
+}
 
-	// Wait for filtering to complete
-	wg.Wait()
+// TestDelegateToMageWithTimeout_CapturesAllStderr checks that stderr written just
+// before the command exits still reaches the error message: Wait used to close
+// the stderr pipe on exit, racing the reader for the last of the output.
+func TestDelegateToMageWithTimeout_CapturesAllStderr(t *testing.T) {
+	setupStderrMagefile(t, `/`+`/go:build mage
 
-	// Close the stderr writer to signal end
-	if closeErr := stderrW.Close(); closeErr != nil {
-		t.Logf("Failed to close stderr writer: %v", closeErr)
-	}
+package main
 
-	// Restore stderr and read the output
-	os.Stderr = oldStderr
-	var output strings.Builder
-	_, err = io.Copy(&output, stderrR)
-	if err != nil {
-		t.Fatalf("Failed to read stderr output: %v", err)
-	}
-	if err := stderrR.Close(); err != nil {
-		t.Logf("Failed to close stderr reader: %v", err)
-	}
+import (
+	"errors"
+	"fmt"
+	"os"
+)
 
-	result := output.String()
+func Noisy() error {
+	for i := 0; i < 2000; i++ {
+		fmt.Fprintf(os.Stderr, "stderr line %d\n", i)
+	}
+	fmt.Fprint(os.Stderr, "last line, no newline")
+	return errors.New("noisy failure")
+}
+`)
 
-	// Check that normal messages are preserved in stderr output
-	if !strings.Contains(result, "Normal error message") {
-		t.Errorf("Normal error messages should be preserved, got: %q", result)
-	}
-	if !strings.Contains(result, "Another normal message") {
-		t.Errorf("Normal error messages should be preserved, got: %q", result)
-	}
-	if !strings.Contains(result, "Final message") {
-		t.Errorf("Normal error messages should be preserved, got: %q", result)
-	}
+	result := DelegateToMageWithTimeout(context.Background(), "noisy", 60*time.Second)
 
-	// Check that "Unknown target specified" messages are filtered out
-	if strings.Contains(result, "Unknown target specified:") {
-		t.Errorf("'Unknown target specified' messages should be filtered out, got: %q", result)
-	}
+	require.Error(t, result.Err)
+	assert.NotEqual(t, 0, result.ExitCode)
+	assert.Contains(t, result.Err.Error(), "stderr line 0\n")
+	assert.Contains(t, result.Err.Error(), "stderr line 1999\n")
+	assert.Contains(t, result.Err.Error(), "last line, no newline")
+}
 
-	// Check that buffer captured ALL messages (including filtered ones) for error reporting
-	captured := buf.String()
-	if !strings.Contains(captured, "Normal error message") {
-		t.Errorf("Buffer should capture normal messages, got: %q", captured)
+// TestDelegateToMageWithTimeout_BackgroundProcessHoldsStderr checks that a
+// command which leaves a process running with its stderr still succeeds, and
+// doesn't wait for that process to exit.
+func TestDelegateToMageWithTimeout_BackgroundProcessHoldsStderr(t *testing.T) {
+	if _, err := exec.LookPath("sleep"); err != nil {
+		t.Skip("sleep command not available")
 	}
-	// Buffer SHOULD capture filtered messages - they're needed for error reporting
-	if !strings.Contains(captured, "Unknown target specified:") {
-		t.Errorf("Buffer should capture all messages for error reporting, got: %q", captured)
+	setupStderrMagefile(t, `/`+`/go:build mage
+
+package main
+
+import (
+	"os"
+	"os/exec"
+	"strconv"
+)
+
+func Spawn() error {
+	cmd := exec.Command("sleep", "30")
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return err
 	}
+	return os.WriteFile("sleep.pid", []byte(strconv.Itoa(cmd.Process.Pid)), 0o600)
+}
+`)
+	dir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		pidBytes, readErr := os.ReadFile(filepath.Join(dir, "sleep.pid")) //nolint:gosec // test-controlled path
+		if readErr != nil {
+			return
+		}
+		pid, convErr := strconv.Atoi(string(pidBytes))
+		if convErr != nil {
+			return
+		}
+		if proc, findErr := os.FindProcess(pid); findErr == nil {
+			_ = proc.Kill() //nolint:errcheck // best-effort cleanup of the background sleep
+		}
+	})
+
+	start := time.Now()
+	result := DelegateToMageWithTimeout(context.Background(), "spawn", 60*time.Second)
+
+	require.NoError(t, result.Err)
+	assert.Equal(t, 0, result.ExitCode)
+	// Building the magefile takes a few seconds; the sleep would hold stderr for 30.
+	assert.Less(t, time.Since(start), 25*time.Second, "should not wait for the background process")
 }
 
 func TestConvertToMageFormat(t *testing.T) {

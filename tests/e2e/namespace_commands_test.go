@@ -494,23 +494,10 @@ func (UniqueNS) Execute() error {
 			isKnownFailure := strings.Contains(combinedOutput, "Unknown target specified") ||
 				strings.Contains(combinedOutput, "custom command failed")
 
-			// Pipe warnings from Go's exec package are acceptable - they indicate
-			// the command ran but had issues with pipe cleanup (race condition)
-			isPipeWarning := strings.Contains(errOutput, "failed to close stderr pipe") ||
-				strings.Contains(errOutput, "failed to close stdout pipe")
-
-			if !isKnownFailure && !isPipeWarning {
+			if !isKnownFailure {
 				// Unexpected error
 				t.Errorf("magex %s failed unexpectedly: %v\nStdout: %s\nStderr: %s",
 					variation.input, err, output, errOutput)
-				return
-			}
-
-			// If it's just a pipe warning without command output, log and pass
-			// (the command delegation worked, just had cleanup issues)
-			if isPipeWarning && !isKnownFailure {
-				t.Logf("Case variation '%s' completed with pipe warning (acceptable): %s",
-					variation.input, errOutput)
 				return
 			}
 

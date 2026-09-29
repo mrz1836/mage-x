@@ -452,25 +452,6 @@ func SlowCmd() error {
 	// This tests the timeout detection path (lines 215-220)
 }
 
-// TestFilterStderr_CloseError tests filterStderr when closing the pipe fails.
-func TestFilterStderr_CloseError(t *testing.T) {
-	// Create a closed pipe to trigger close error
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-
-	// Close the read end immediately
-	require.NoError(t, r.Close())
-
-	var buf []byte
-
-	// This should handle the close error gracefully
-	// We can't directly test filterStderr since it's called in a goroutine,
-	// but we can verify the behavior indirectly
-	// Note: ignoring errors on purpose to test error handling
-	_, _ = w.Write(buf) //nolint:errcheck // testing error handling behavior
-	_ = w.Close()       //nolint:errcheck // testing error handling behavior
-}
-
 // TestGetMagefilePath_ErrorHandling tests GetMagefilePath with various error conditions.
 func TestGetMagefilePath_ErrorHandling(t *testing.T) {
 	tests := []struct {
