@@ -1450,3 +1450,32 @@ func TestParallel_Sync(t *testing.T) {
 		}
 	})
 }
+
+// TestPromptForSecret tests that secret prompts fall back to reading a line
+// when stdin isn't a terminal
+func TestPromptForSecret(t *testing.T) {
+	t.Run("reads a line from a pipe", func(t *testing.T) {
+		withMockedStdin(t, "  s3cr3t  \n", func() {
+			secret, err := PromptForSecret("Secret")
+			require.NoError(t, err)
+			assert.Equal(t, "s3cr3t", secret)
+		})
+	})
+
+	t.Run("reads from a reader set with SetPromptInput", func(t *testing.T) {
+		prev := SetPromptInput(strings.NewReader("from-reader\n"))
+		t.Cleanup(func() { SetPromptInput(prev) })
+
+		secret, err := PromptForSecret("Secret")
+		require.NoError(t, err)
+		assert.Equal(t, "from-reader", secret)
+	})
+
+	t.Run("EOF returns an empty string", func(t *testing.T) {
+		withMockedStdin(t, "", func() {
+			secret, err := PromptForSecret("")
+			require.NoError(t, err)
+			assert.Empty(t, secret)
+		})
+	})
+}

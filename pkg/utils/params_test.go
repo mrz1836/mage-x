@@ -2,6 +2,7 @@ package utils
 
 import (
 	"maps"
+	"slices"
 	"testing"
 )
 
@@ -232,6 +233,47 @@ func TestIsParamFalse(t *testing.T) {
 			result := IsParamFalse(params, tt.key)
 			if result != tt.expected {
 				t.Errorf("IsParamFalse() = %v, expected %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestMageArgs(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		joined   string
+		expected []string
+	}{
+		{
+			name: "neither set",
+		},
+		{
+			name:     "JSON keeps arguments that contain spaces",
+			json:     `["msg=hello world","count=2"]`,
+			joined:   "msg=hello world count=2",
+			expected: []string{"msg=hello world", "count=2"},
+		},
+		{
+			name:     "MAGE_ARGS alone is split on whitespace",
+			joined:   "bump=patch  push",
+			expected: []string{"bump=patch", "push"},
+		},
+		{
+			name:     "invalid JSON falls back to MAGE_ARGS",
+			json:     "not json",
+			joined:   "a b",
+			expected: []string{"a", "b"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(EnvMageArgsJSON, tt.json)
+			t.Setenv(EnvMageArgs, tt.joined)
+
+			if got := MageArgs(); !slices.Equal(got, tt.expected) {
+				t.Errorf("MageArgs() = %q, want %q", got, tt.expected)
 			}
 		})
 	}

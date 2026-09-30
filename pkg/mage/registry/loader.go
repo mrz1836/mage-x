@@ -82,71 +82,27 @@ type CommandInfo struct {
 	Description string
 }
 
-// parseMagefile parses a magefile to discover exported functions
+// parseMagefile parses a magefile to discover the targets mage can run
 func (l *Loader) parseMagefile(path string) ([]CommandInfo, error) {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse file %s: %w", path, err)
 	}
 
-	var commands []CommandInfo
-
-	// Look for exported functions and types
-	for _, decl := range file.Decls {
-		switch d := decl.(type) {
-		case *ast.FuncDecl:
-			// Check if it's an exported function
-			if d.Name.IsExported() {
-				cmd := CommandInfo{
-					Name:        d.Name.Name,
-					Description: extractDescription(d.Doc),
-				}
-
-				// Check if it's a method (namespace function)
-				if d.Recv != nil && len(d.Recv.List) > 0 {
-					cmd.IsNamespace = true
-					cmd.Namespace = getReceiverType(d.Recv)
-					cmd.Method = d.Name.Name
-				}
-
-				commands = append(commands, cmd)
-			}
-
-		case *ast.GenDecl:
-			// Look for type aliases that might be namespace re-exports
-			if d.Tok == token.TYPE {
-				for _, spec := range d.Specs {
-					if ts, ok := spec.(*ast.TypeSpec); ok && ts.Name.IsExported() {
-						// Skip if this is just a mg.Namespace alias (these are framework types, not custom commands)
-						if isNamespaceAlias(ts) {
-							continue
-						}
-						// This might be a real namespace type
-						commands = append(commands, CommandInfo{
-							Name:        ts.Name.Name,
-							IsNamespace: true,
-							Namespace:   ts.Name.Name,
-							Description: extractDescription(d.Doc),
-						})
-					}
-				}
-			}
-		}
-	}
-
-	return commands, nil
+	return mageTargets([]*ast.File{file}), nil
 }
 
-// parseMagefilesDir parses all Go files in the magefiles directory to discover exported functions
+// parseMagefilesDir parses all Go files in the magefiles directory to discover
+// the targets mage can run. A namespace type may be declared in a different
+// file from its methods, so the files are examined together.
 func (l *Loader) parseMagefilesDir(dir string) ([]CommandInfo, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read magefiles directory: %w", err)
 	}
 
-	var allCommands []CommandInfo
-
+	var files []*ast.File
+	fset := token.NewFileSet()
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue // Skip subdirectories
@@ -162,37 +118,126 @@ func (l *Loader) parseMagefilesDir(dir string) ([]CommandInfo, error) {
 			continue
 		}
 
-		filePath := filepath.Join(dir, entry.Name())
-		commands, err := l.parseMagefile(filePath)
+		file, err := parser.ParseFile(fset, filepath.Join(dir, entry.Name()), nil, parser.ParseComments)
 		if err != nil {
 			if l.verbose {
 				utils.Info("Warning: failed to parse %s: %v", entry.Name(), err)
 			}
 			continue // Skip files that can't be parsed, don't fail the entire discovery
 		}
-
-		allCommands = append(allCommands, commands...)
+		files = append(files, file)
 	}
 
-	return allCommands, nil
+	return mageTargets(files), nil
+}
+
+// mageTargets returns the targets mage would find in a magefile package: the
+// exported functions with a target signature, and methods with one on types
+// declared as mg.Namespace. Other exported functions, methods and types aren't
+// targets, and mage refuses to run them.
+func mageTargets(files []*ast.File) []CommandInfo {
+	namespaces := make(map[string]bool)
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				if ts, ok := spec.(*ast.TypeSpec); ok && isMageNamespace(ts) {
+					namespaces[ts.Name.Name] = true
+				}
+			}
+		}
+	}
+
+	var commands []CommandInfo
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || !fn.Name.IsExported() || !isMageTarget(fn.Type) {
+				continue
+			}
+
+			cmd := CommandInfo{
+				Name:        fn.Name.Name,
+				Description: extractDescription(fn.Doc),
+			}
+			if fn.Recv != nil {
+				namespace := getReceiverType(fn.Recv)
+				if !namespaces[namespace] {
+					continue // mage only runs methods of mg.Namespace types
+				}
+				cmd.IsNamespace = true
+				cmd.Namespace = namespace
+				cmd.Method = fn.Name.Name
+			}
+			commands = append(commands, cmd)
+		}
+	}
+
+	return commands
+}
+
+// isMageTarget reports whether a function signature is one mage runs as a
+// target: an optional context.Context first, then only string, int, float64,
+// bool or time.Duration arguments (plain or pointer), returning nothing or an
+// error. This mirrors mage's own parse package.
+func isMageTarget(ft *ast.FuncType) bool {
+	params := ft.Params.List
+	if len(params) > 0 && isSelector(params[0].Type, "context", "Context") {
+		if len(params[0].Names) > 1 {
+			return false // mage takes a single context
+		}
+		params = params[1:]
+	}
+	for _, param := range params {
+		if !isMageArgType(param.Type) {
+			return false
+		}
+	}
+
+	switch ft.Results.NumFields() {
+	case 0:
+		return true
+	case 1:
+		ident, ok := ft.Results.List[0].Type.(*ast.Ident)
+		return ok && ident.Name == "error"
+	default:
+		return false
+	}
+}
+
+// isMageArgType reports whether mage accepts a target argument of this type
+func isMageArgType(expr ast.Expr) bool {
+	if star, ok := expr.(*ast.StarExpr); ok {
+		expr = star.X // optional argument
+	}
+	if ident, ok := expr.(*ast.Ident); ok {
+		switch ident.Name {
+		case "string", "int", "float64", "bool":
+			return true
+		}
+	}
+	return isSelector(expr, "time", "Duration")
+}
+
+// isSelector reports whether expr is the qualified identifier pkg.name
+func isSelector(expr ast.Expr, pkg, name string) bool {
+	sel, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	ident, ok := sel.X.(*ast.Ident)
+	return ok && ident.Name == pkg && sel.Sel.Name == name
 }
 
 // Helper functions
 
-// isNamespaceAlias checks if a type spec is just a mg.Namespace alias
-func isNamespaceAlias(ts *ast.TypeSpec) bool {
-	if ts.Type == nil {
-		return false
-	}
-
-	// Check if the type is a selector expression like mg.Namespace
-	if sel, ok := ts.Type.(*ast.SelectorExpr); ok {
-		if ident, ok := sel.X.(*ast.Ident); ok {
-			return ident.Name == "mg" && sel.Sel.Name == "Namespace"
-		}
-	}
-
-	return false
+// isMageNamespace reports whether a type spec declares a mage namespace, which
+// mage recognizes only as mg.Namespace spelled with the "mg" import name
+func isMageNamespace(ts *ast.TypeSpec) bool {
+	return isSelector(ts.Type, "mg", "Namespace")
 }
 
 // extractDescription extracts the description from doc comments

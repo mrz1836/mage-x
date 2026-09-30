@@ -2,8 +2,38 @@
 package utils
 
 import (
+	"encoding/json"
+	"os"
 	"strings"
 )
+
+// Environment variables magex sets to pass arguments to a delegated mage target
+const (
+	// EnvMageArgs holds the arguments joined with spaces
+	EnvMageArgs = "MAGE_ARGS"
+	// EnvMageArgsJSON holds the arguments as a JSON array of strings, which keeps
+	// arguments that contain spaces intact
+	EnvMageArgsJSON = "MAGE_ARGS_JSON"
+)
+
+// MageArgs returns the arguments magex passed to a delegated mage target, for
+// example to hand to ParseParams. It reads MAGE_ARGS_JSON, which keeps an
+// argument like msg="hello world" in one piece, and falls back to splitting
+// MAGE_ARGS on whitespace. It returns nil when neither is set.
+func MageArgs() []string {
+	if encoded := os.Getenv(EnvMageArgsJSON); encoded != "" {
+		var args []string
+		if err := json.Unmarshal([]byte(encoded), &args); err == nil {
+			return args
+		}
+	}
+
+	if joined := os.Getenv(EnvMageArgs); joined != "" {
+		return strings.Fields(joined)
+	}
+
+	return nil
+}
 
 // ParseParams parses command-line arguments into a map of key-value pairs
 // Supports both key=value and boolean flags (key without value means key=true)

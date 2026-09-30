@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -57,6 +58,8 @@ func TestLoader_parseMagefile(t *testing.T) {
 	magefileContent := `//go:build mage
 package main
 
+import "github.com/magefile/mage/mg"
+
 // Build builds the project
 func Build() error {
 	return nil
@@ -73,7 +76,7 @@ func helper() error {
 }
 
 // Build namespace for advanced builds
-type Build struct{}
+type Build mg.Namespace
 
 // Linux builds for Linux
 func (Build) Linux() error {
@@ -632,8 +635,10 @@ func TestLoader_DiscoverUserCommands_Namespaces(t *testing.T) {
 	magefileContent := `//go:build mage
 package main
 
+import "github.com/magefile/mage/mg"
+
 // Build namespace for advanced builds
-type Build struct{}
+type Build mg.Namespace
 
 // Linux builds for Linux
 func (Build) Linux() error {
@@ -666,9 +671,9 @@ func (b *Build) FreeBSD() error {
 		t.Fatalf("DiscoverUserCommands() failed: %v", err)
 	}
 
-	// Should find 5 commands: Build type + 4 methods
-	if len(commands) != 5 {
-		t.Errorf("Expected 5 commands, got %d", len(commands))
+	// Should find the 4 methods; the namespace type itself isn't a target
+	if len(commands) != 4 {
+		t.Errorf("Expected 4 commands, got %d", len(commands))
 	}
 
 	// Check namespace methods
@@ -732,8 +737,8 @@ func internalBuild() error {
 // Namespace type alias (should be ignored)
 type NS = mg.Namespace
 
-// Custom namespace (should be included)
-type Deploy struct{}
+// Custom namespace (its methods should be included)
+type Deploy mg.Namespace
 
 // Deploy method (should be included)
 func (Deploy) Production() error {
@@ -751,9 +756,9 @@ func (Deploy) Production() error {
 		t.Fatalf("DiscoverUserCommands() failed: %v", err)
 	}
 
-	// Should find: Build function + Deploy type + Production method = 3 commands
-	if len(commands) != 3 {
-		t.Errorf("Expected 3 commands, got %d", len(commands))
+	// Should find: Build function + Production method = 2 commands
+	if len(commands) != 2 {
+		t.Errorf("Expected 2 commands, got %d", len(commands))
 		for _, cmd := range commands {
 			t.Logf("Found command: %s (namespace: %v)", cmd.Name, cmd.IsNamespace)
 		}
@@ -767,13 +772,13 @@ func (Deploy) Production() error {
 	}
 
 	// Verify exported functions are included
-	var foundBuild, foundDeploy, foundProduction bool
+	var foundBuild, foundProduction bool
 	for _, cmd := range commands {
 		switch {
 		case cmd.Name == buildCmdName && !cmd.IsNamespace:
 			foundBuild = true
-		case cmd.Name == "Deploy" && cmd.IsNamespace:
-			foundDeploy = true
+		case cmd.Name == "Deploy":
+			t.Error("the Deploy namespace type itself is not a target")
 		case cmd.Method == "Production" && cmd.IsNamespace:
 			foundProduction = true
 		}
@@ -781,9 +786,6 @@ func (Deploy) Production() error {
 
 	if !foundBuild {
 		t.Error("Build function should be included")
-	}
-	if !foundDeploy {
-		t.Error("Deploy type should be included")
 	}
 	if !foundProduction {
 		t.Error("Production method should be included")
@@ -1192,10 +1194,15 @@ func TestLoader_parseMagefilesDir(t *testing.T) {
 	content1 := `//go:build mage
 package main
 
+import "github.com/magefile/mage/mg"
+
 // Build builds the project
 func Build() error {
 	return nil
 }
+
+// Deploy namespace, whose methods live in another file
+type Deploy mg.Namespace
 `
 
 	file2 := filepath.Join(tmpDir, "commands2.go")
@@ -1206,9 +1213,6 @@ package main
 func Test() error {
 	return nil
 }
-
-// Deploy namespace
-type Deploy struct{}
 
 // Production deploys to production
 func (Deploy) Production() error {
@@ -1231,16 +1235,16 @@ func (Deploy) Production() error {
 		t.Fatalf("parseMagefilesDir() failed: %v", err)
 	}
 
-	// Should find 4 commands: Build, Test, Deploy type, Production method
-	if len(commands) != 4 {
-		t.Errorf("Expected 4 commands, got %d", len(commands))
+	// Should find 3 commands: Build, Test, and the Production method
+	if len(commands) != 3 {
+		t.Errorf("Expected 3 commands, got %d", len(commands))
 		for _, cmd := range commands {
 			t.Logf("Found command: %s (namespace: %v)", cmd.Name, cmd.IsNamespace)
 		}
 	}
 
 	// Verify all expected commands are found
-	expectedCommands := map[string]bool{buildCmdName: false, testCmdName: false, "Deploy": false}
+	expectedCommands := map[string]bool{buildCmdName: false, testCmdName: false}
 	var foundProduction bool
 	for _, cmd := range commands {
 		if _, exists := expectedCommands[cmd.Name]; exists {
@@ -1333,5 +1337,117 @@ func TestLoader_parseMagefilesDir_MixedContent(t *testing.T) {
 	// Verify Build command is found
 	if commands[0].Name != buildCmdName {
 		t.Errorf("Expected Build command, got %s", commands[0].Name)
+	}
+}
+
+// TestMageTargets checks that only functions mage would run are listed, using
+// the rules from mage's parse package
+func TestMageTargets(t *testing.T) {
+	tests := []struct {
+		name string
+		src  string
+		want []string
+	}{
+		{
+			name: "signatures mage accepts",
+			src: `package main
+
+import (
+	"context"
+	"time"
+)
+
+func A() {}
+func B() error { return nil }
+func C(ctx context.Context) {}
+func D(ctx context.Context) error { return nil }
+func E(msg string, n int, f float64, ok bool, d time.Duration) error { return nil }
+func F(msg *string) error { return nil }
+func G(a, b string) {}
+`,
+			want: []string{"A", "B", "C", "D", "E", "F", "G"},
+		},
+		{
+			name: "signatures mage refuses",
+			src: `package main
+
+import "context"
+
+func H(items []string) error { return nil }
+func I() (bool, error) { return false, nil }
+func J() string { return "" }
+func K(a, b context.Context) error { return nil }
+func L(opts ...string) error { return nil }
+func M(v any) error { return nil }
+func N(ctx context.Context, other context.Context) {}
+func O() (err1, err2 error) { return nil, nil }
+`,
+		},
+		{
+			name: "methods count only on mg.Namespace types",
+			src: `package main
+
+import "github.com/magefile/mage/mg"
+
+type Deploy mg.Namespace
+type helper struct{}
+type Config struct{}
+
+func (Deploy) Prod() error { return nil }
+func (*Deploy) Stage() error { return nil }
+func (Deploy) internal() error { return nil }
+func (Deploy) Bad() (int, error) { return 0, nil }
+func (helper) Do() error { return nil }
+func (Config) Load() error { return nil }
+`,
+			want: []string{"Deploy:Prod", "Deploy:Stage"},
+		},
+		{
+			name: "grouped namespace declarations",
+			src: `package main
+
+import "github.com/magefile/mage/mg"
+
+type (
+	Build mg.Namespace
+	Test  mg.Namespace
+)
+
+func (Build) Linux() error { return nil }
+func (Test) Unit() error { return nil }
+`,
+			want: []string{"Build:Linux", "Test:Unit"},
+		},
+		{
+			name: "types are not targets",
+			src: `package main
+
+import "github.com/mrz1836/mage-x/pkg/mage"
+
+type Config struct{}
+type Build = mage.Build
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			file, err := parser.ParseFile(token.NewFileSet(), "magefile.go", tt.src, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+
+			var got []string
+			for _, cmd := range mageTargets([]*ast.File{file}) {
+				if cmd.IsNamespace {
+					got = append(got, cmd.Namespace+":"+cmd.Method)
+				} else {
+					got = append(got, cmd.Name)
+				}
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("mageTargets() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }

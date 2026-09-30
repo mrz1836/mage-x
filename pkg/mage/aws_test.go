@@ -4,16 +4,20 @@
 package mage
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	pkglog "github.com/mrz1836/mage-x/pkg/log"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -210,6 +214,42 @@ func TestSetINIValue(t *testing.T) {
 	})
 }
 
+// TestDeleteINIValue tests removing values from sections
+func TestDeleteINIValue(t *testing.T) {
+	newSection := func() *awsINISection {
+		return &awsINISection{
+			Name:     "default",
+			Values:   map[string]string{"a": "1", "b": "2", "c": "3"},
+			KeyOrder: []string{"a", "b", "c"},
+		}
+	}
+
+	t.Run("removes the key and keeps the order of the rest", func(t *testing.T) {
+		section := newSection()
+
+		deleteINIValue(section, "b")
+		assert.NotContains(t, section.Values, "b")
+		assert.Equal(t, []string{"a", "c"}, section.KeyOrder)
+	})
+
+	t.Run("missing key is a no-op", func(t *testing.T) {
+		section := newSection()
+
+		deleteINIValue(section, "missing")
+		assert.Len(t, section.Values, 3)
+		assert.Equal(t, []string{"a", "b", "c"}, section.KeyOrder)
+	})
+
+	t.Run("re-adding a removed key writes it once", func(t *testing.T) {
+		section := newSection()
+
+		deleteINIValue(section, "b")
+		setINIValue(section, "b", "4")
+		ini := &awsINIFile{Sections: []*awsINISection{section}}
+		assert.Equal(t, "[default]\na = 1\nc = 3\nb = 4\n", string(writeAWSINI(ini)))
+	})
+}
+
 // TestMaskCredential tests credential masking
 func TestMaskCredential(t *testing.T) {
 	tests := []struct {
@@ -398,14 +438,51 @@ func TestBackupFile(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check backup exists
-		backupPath := testFile + awsBackupSuffix
-		_, err = os.Stat(backupPath)
-		assert.NoError(t, err)
+		backups := listBackups(testFile)
+		require.Len(t, backups, 1)
+		assert.True(t, strings.HasPrefix(filepath.Base(backups[0]), "test-creds.bak."), "got %s", backups[0])
 
-		// Verify content
-		content, err := os.ReadFile(backupPath)
+		// Verify content and owner-only permissions
+		content, err := os.ReadFile(backups[0])
 		require.NoError(t, err)
 		assert.Equal(t, "test content", string(content))
+		info, err := os.Stat(backups[0])
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	})
+
+	t.Run("keeps only the newest backups", func(t *testing.T) {
+		testFile := filepath.Join(t.TempDir(), "credentials")
+		for i := 1; i <= awsBackupsKept+2; i++ {
+			require.NoError(t, os.WriteFile(testFile, []byte(fmt.Sprintf("v%d", i)), 0o600))
+			require.NoError(t, backupFile(testFile))
+		}
+
+		backups := listBackups(testFile)
+		require.Len(t, backups, awsBackupsKept)
+		for i, backup := range backups {
+			content, err := os.ReadFile(backup) //nolint:gosec // path constructed from test temp dir
+			require.NoError(t, err)
+			assert.Equal(t, fmt.Sprintf("v%d", awsBackupsKept+2-i), string(content), "backups are listed newest first")
+		}
+	})
+
+	t.Run("never removes files it didn't create", func(t *testing.T) {
+		dir := t.TempDir()
+		testFile := filepath.Join(dir, "credentials")
+		legacy := testFile + awsBackupSuffix
+		handMade := testFile + awsBackupSuffix + ".old"
+		for _, path := range []string{testFile, legacy, handMade} {
+			require.NoError(t, os.WriteFile(path, []byte("keep"), 0o600))
+		}
+
+		for i := 0; i < awsBackupsKept+2; i++ {
+			require.NoError(t, backupFile(testFile))
+		}
+
+		assert.Len(t, listBackups(testFile), awsBackupsKept)
+		assert.FileExists(t, legacy)
+		assert.FileExists(t, handMade)
 	})
 }
 
@@ -479,6 +556,27 @@ func TestWriteAWSCredentials(t *testing.T) {
 		assert.NotContains(t, string(content), "AKIA1")
 	})
 
+	t.Run("long-term keys drop a leftover session token", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		credPath := filepath.Join(tmpDir, "credentials")
+
+		// Session credentials an earlier refresh wrote over the long-term keys
+		err := writeOrUpdateAWSSessionCredentials(credPath, "dev-base", &awsSTSCredentials{
+			AccessKeyID:     "ASIATEMP",
+			SecretAccessKey: "SECRETTEMP",
+			SessionToken:    "TOKTEMP",
+			Expiration:      "2030-01-01T00:00:00Z",
+		})
+		require.NoError(t, err)
+
+		err = writeAWSCredentials(credPath, "dev-base", "AKIALONG", "SECRETLONG", "")
+		require.NoError(t, err)
+
+		content, err := os.ReadFile(credPath)
+		require.NoError(t, err)
+		assert.Equal(t, "[dev-base]\naws_access_key_id = AKIALONG\naws_secret_access_key = SECRETLONG\n", string(content))
+	})
+
 	t.Run("add new profile to existing file", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		credPath := filepath.Join(tmpDir, "credentials")
@@ -513,8 +611,9 @@ func TestWriteAWSCredentials(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify backup exists with old content
-		backupPath := credPath + awsBackupSuffix
-		backupContent, err := os.ReadFile(backupPath)
+		backups := listBackups(credPath)
+		require.NotEmpty(t, backups)
+		backupContent, err := os.ReadFile(backups[0])
 		require.NoError(t, err)
 		assert.Contains(t, string(backupContent), "OLD")
 	})
@@ -620,6 +719,7 @@ aws_secret_access_key = SECRET_ORIGINAL
 		assert.Contains(t, string(content), "ASIA_SESSION")
 		assert.Contains(t, string(content), "SECRET_SESSION")
 		assert.Contains(t, string(content), "TOKEN_SESSION")
+		assert.Contains(t, string(content), "magex_session_expiration = 2024-01-01T00:00:00Z")
 	})
 
 	t.Run("create new profile if not found", func(t *testing.T) {
@@ -671,121 +771,160 @@ aws_access_key_id = AKIA
 	})
 }
 
-// TestGetSourceProfile tests source_profile retrieval
-func TestGetSourceProfile(t *testing.T) {
-	t.Run("get source_profile for non-default profile", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		awsDir := filepath.Join(tmpDir, ".aws")
-		err := os.MkdirAll(awsDir, 0o700)
-		require.NoError(t, err)
+// TestGetBaseProfile tests resolving a session profile to its base profile
+func TestGetBaseProfile(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		want   string
+	}{
+		{
+			name:   "magex_base_profile link",
+			config: "[profile dev]\nmagex_base_profile = team-base\n",
+			want:   "team-base",
+		},
+		{
+			name:   "magex_base_profile wins over source_profile",
+			config: "[profile dev]\nsource_profile = old-base\nmagex_base_profile = team-base\n",
+			want:   "team-base",
+		},
+		{
+			name:   "legacy source_profile without role_arn",
+			config: "[profile dev]\nsource_profile = team-base\nregion = us-east-1\n",
+			want:   "team-base",
+		},
+		{
+			name:   "source_profile with role_arn is an assume-role profile, not a link",
+			config: "[profile dev]\nrole_arn = arn:aws:iam::123456789012:role/admin\nsource_profile = team-base\n",
+		},
+		{
+			name:   "no link falls back to <profile>-base when it has an MFA serial",
+			config: "[profile dev]\nregion = us-east-1\n\n[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n",
+			want:   "dev-base",
+		},
+		{
+			name:   "no link and <profile>-base has no MFA serial",
+			config: "[profile dev]\nregion = us-east-1\n\n[profile dev-base]\nregion = us-east-1\n",
+		},
+		{
+			name: "config file missing",
+		},
+	}
 
-		// Write config with source_profile
-		configContent := `[profile mrz]
-source_profile = mrz-base
-region = us-east-1
-`
-		err = os.WriteFile(filepath.Join(awsDir, "config"), []byte(configContent), 0o600)
-		require.NoError(t, err)
-
-		// Override HOME for this test
-		originalHome := os.Getenv("HOME")
-		defer func() {
-			_ = os.Setenv("HOME", originalHome)
-		}()
-		_ = os.Setenv("HOME", tmpDir)
-
-		sourceProfile := getSourceProfile("mrz")
-		assert.Equal(t, "mrz-base", sourceProfile)
-	})
-
-	t.Run("return empty when source_profile not found", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		awsDir := filepath.Join(tmpDir, ".aws")
-		err := os.MkdirAll(awsDir, 0o700)
-		require.NoError(t, err)
-
-		// Write config without source_profile
-		configContent := `[profile mrz]
-region = us-east-1
-`
-		err = os.WriteFile(filepath.Join(awsDir, "config"), []byte(configContent), 0o600)
-		require.NoError(t, err)
-
-		originalHome := os.Getenv("HOME")
-		defer func() {
-			_ = os.Setenv("HOME", originalHome)
-		}()
-		_ = os.Setenv("HOME", tmpDir)
-
-		sourceProfile := getSourceProfile("mrz")
-		assert.Empty(t, sourceProfile)
-	})
-
-	t.Run("return empty when config file missing", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		awsDir := filepath.Join(tmpDir, ".aws")
-		err := os.MkdirAll(awsDir, 0o700)
-		require.NoError(t, err)
-
-		originalHome := os.Getenv("HOME")
-		defer func() {
-			_ = os.Setenv("HOME", originalHome)
-		}()
-		_ = os.Setenv("HOME", tmpDir)
-
-		sourceProfile := getSourceProfile("mrz")
-		assert.Empty(t, sourceProfile)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withMockedHome(t, "", tt.config)
+			assert.Equal(t, tt.want, getBaseProfile("dev"))
+		})
+	}
 }
 
-// TestWriteAWSConfigSourceProfile tests writing source_profile
-func TestWriteAWSConfigSourceProfile(t *testing.T) {
-	t.Run("write source_profile for non-default profile", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		configPath := filepath.Join(tmpDir, "config")
+// TestSetBaseProfileLink tests the line-level config edit that links a session profile
+func TestSetBaseProfileLink(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		section string
+		want    string
+	}{
+		{
+			name:    "empty file",
+			section: "profile dev",
+			want:    "[profile dev]\nmagex_base_profile = dev-base\n",
+		},
+		{
+			name:    "appends a missing section",
+			content: "[default]\nregion = us-east-1\n",
+			section: "profile dev",
+			want:    "[default]\nregion = us-east-1\n\n[profile dev]\nmagex_base_profile = dev-base\n",
+		},
+		{
+			name:    "appends after a file without a trailing newline",
+			content: "[default]\nregion = us-east-1",
+			section: "profile dev",
+			want:    "[default]\nregion = us-east-1\n\n[profile dev]\nmagex_base_profile = dev-base\n",
+		},
+		{
+			name: "replaces a legacy source_profile and keeps every other line",
+			content: "# work account\n[profile dev]\nregion = us-east-1\nsource_profile = dev-base\n" +
+				"s3 =\n  max_concurrent_requests = 20\n\n[profile other]\nsource_profile = dev-base\n",
+			section: "profile dev",
+			want: "# work account\n[profile dev]\nregion = us-east-1\nmagex_base_profile = dev-base\n" +
+				"s3 =\n  max_concurrent_requests = 20\n\n[profile other]\nsource_profile = dev-base\n",
+		},
+		{
+			name:    "keeps source_profile on an assume-role profile",
+			content: "[profile dev]\nrole_arn = arn:aws:iam::123456789012:role/admin\nsource_profile = dev-base\n",
+			section: "profile dev",
+			want:    "[profile dev]\nmagex_base_profile = dev-base\nrole_arn = arn:aws:iam::123456789012:role/admin\nsource_profile = dev-base\n",
+		},
+		{
+			name:    "updates an existing link and drops a leftover source_profile",
+			content: "[profile dev]\nsource_profile = old-base\nmagex_base_profile = old-base\n",
+			section: "profile dev",
+			want:    "[profile dev]\nmagex_base_profile = dev-base\n",
+		},
+		{
+			name:    "adds the link under an existing header",
+			content: "[profile dev]\nregion = us-east-1\n",
+			section: "profile dev",
+			want:    "[profile dev]\nmagex_base_profile = dev-base\nregion = us-east-1\n",
+		},
+		{
+			name:    "default profile section",
+			content: "[default]\nsource_profile = dev-base\n",
+			section: "default",
+			want:    "[default]\nmagex_base_profile = dev-base\n",
+		},
+		{
+			name:    "keeps CRLF line endings",
+			content: "[profile dev]\r\nsource_profile = dev-base\r\nregion = us-east-1\r\n",
+			section: "profile dev",
+			want:    "[profile dev]\r\nmagex_base_profile = dev-base\r\nregion = us-east-1\r\n",
+		},
+		{
+			name:    "ignores an indented key with the same name",
+			content: "[profile dev]\nservices =\n  source_profile = x\n",
+			section: "profile dev",
+			want:    "[profile dev]\nmagex_base_profile = dev-base\nservices =\n  source_profile = x\n",
+		},
+	}
 
-		err := writeAWSConfigSourceProfile(configPath, "mrz", "mrz-base")
-		require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, setBaseProfileLink(tt.content, tt.section, "dev-base"))
+		})
+	}
+}
 
-		content, err := os.ReadFile(configPath)
+// TestWriteAWSConfigBaseProfile tests writing the base profile link to the config file
+func TestWriteAWSConfigBaseProfile(t *testing.T) {
+	t.Run("creates a missing file with owner-only permissions", func(t *testing.T) {
+		configPath := filepath.Join(t.TempDir(), "config")
+
+		require.NoError(t, writeAWSConfigBaseProfile(configPath, "dev", "dev-base"))
+
+		content, err := os.ReadFile(configPath) //nolint:gosec // path constructed from test temp dir
 		require.NoError(t, err)
-		assert.Contains(t, string(content), "[profile mrz]")
-		assert.Contains(t, string(content), "source_profile = mrz-base")
+		assert.Equal(t, "[profile dev]\nmagex_base_profile = dev-base\n", string(content))
+		info, err := os.Stat(configPath)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 	})
 
-	t.Run("write source_profile for default profile", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		configPath := filepath.Join(tmpDir, "config")
+	t.Run("updates an existing file", func(t *testing.T) {
+		configPath := filepath.Join(t.TempDir(), "config")
+		require.NoError(t, os.WriteFile(configPath, []byte("[profile dev]\nsource_profile = dev-base\nregion = us-east-1\n"), 0o600))
 
-		err := writeAWSConfigSourceProfile(configPath, "default", "default-base")
-		require.NoError(t, err)
+		require.NoError(t, writeAWSConfigBaseProfile(configPath, "dev", "dev-base"))
 
-		content, err := os.ReadFile(configPath)
+		content, err := os.ReadFile(configPath) //nolint:gosec // path constructed from test temp dir
 		require.NoError(t, err)
-		assert.Contains(t, string(content), "[default]")
-		assert.Contains(t, string(content), "source_profile = default-base")
+		assert.Equal(t, "[profile dev]\nmagex_base_profile = dev-base\nregion = us-east-1\n", string(content))
 	})
 
-	t.Run("update existing profile", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		configPath := filepath.Join(tmpDir, "config")
-
-		// Write initial config
-		initial := `[profile mrz]
-region = us-east-1
-`
-		err := os.WriteFile(configPath, []byte(initial), 0o600)
-		require.NoError(t, err)
-
-		// Add source_profile
-		err = writeAWSConfigSourceProfile(configPath, "mrz", "mrz-base")
-		require.NoError(t, err)
-
-		content, err := os.ReadFile(configPath)
-		require.NoError(t, err)
-		assert.Contains(t, string(content), "[profile mrz]")
-		assert.Contains(t, string(content), "source_profile = mrz-base")
-		assert.Contains(t, string(content), "region = us-east-1")
+	t.Run("fails when the config path can't be read", func(t *testing.T) {
+		require.Error(t, writeAWSConfigBaseProfile(t.TempDir(), "dev", "dev-base"))
 	})
 }
 
@@ -1283,30 +1422,30 @@ func TestHasValidAWSSetup_Table(t *testing.T) {
 		{
 			name:       "base half-done: key present but no mfa_serial in config",
 			makeAWSDir: true,
-			credsFile:  "[mrz-ro-base]\n" + "aws_access_key_id = AKIATEST\n",
-			config:     "[profile mrz-ro]\nsource_profile = mrz-ro-base\n",
-			profile:    "mrz-ro",
+			credsFile:  "[dev-base]\n" + "aws_access_key_id = AKIATEST\n",
+			config:     "[profile dev]\nsource_profile = dev-base\n",
+			profile:    "dev",
 			want:       false,
 		},
 		{
 			name:       "post-setup pre-refresh (primary bug-fix case)",
 			makeAWSDir: true,
-			credsFile: "[mrz-ro-base]\n" +
+			credsFile: "[dev-base]\n" +
 				"aws_access_key_id = AKIATEST\n" +
 				"aws_secret_access_key = SECRETTEST\n",
-			config: "[profile mrz-ro-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
-				"[profile mrz-ro]\nsource_profile = mrz-ro-base\n",
-			profile: "mrz-ro",
+			config: "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
+				"[profile dev]\nsource_profile = dev-base\n",
+			profile: "dev",
 			want:    true,
 		},
 		{
 			name:       "post-refresh has both base and session sections",
 			makeAWSDir: true,
-			credsFile: "[mrz-ro-base]\naws_access_key_id = AKIATEST\n\n" +
-				"[mrz-ro]\naws_access_key_id = ASIASESSION\naws_session_token = TOK\n",
-			config: "[profile mrz-ro-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
-				"[profile mrz-ro]\nsource_profile = mrz-ro-base\n",
-			profile: "mrz-ro",
+			credsFile: "[dev-base]\naws_access_key_id = AKIATEST\n\n" +
+				"[dev]\naws_access_key_id = ASIASESSION\naws_session_token = TOK\n",
+			config: "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
+				"[profile dev]\nsource_profile = dev-base\n",
+			profile: "dev",
 			want:    true,
 		},
 		{
@@ -1329,17 +1468,34 @@ func TestHasValidAWSSetup_Table(t *testing.T) {
 			name:       "dangling source_profile points to missing base",
 			makeAWSDir: true,
 			credsFile:  "[other-base]\n" + "aws_access_key_id = AKIATEST\n",
-			config: "[profile mrz-ro]\nsource_profile = mrz-ro-base\n\n" +
+			config: "[profile dev]\nsource_profile = dev-base\n\n" +
 				"[profile other-base]\nmfa_serial = " + baseProfileMFA + "\n",
-			profile: "mrz-ro",
+			profile: "dev",
 			want:    false,
 		},
 		{
 			name:       "user passes base profile name directly",
 			makeAWSDir: true,
-			credsFile:  "[mrz-ro-base]\n" + "aws_access_key_id = AKIATEST\n",
-			config:     "[profile mrz-ro-base]\nmfa_serial = " + baseProfileMFA + "\n",
-			profile:    "mrz-ro-base",
+			credsFile:  "[dev-base]\n" + "aws_access_key_id = AKIATEST\n",
+			config:     "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n",
+			profile:    "dev-base",
+			want:       true,
+		},
+		{
+			name:       "session linked with magex_base_profile",
+			makeAWSDir: true,
+			credsFile:  "[dev-base]\n" + "aws_access_key_id = AKIATEST\n",
+			config: "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
+				"[profile dev]\nmagex_base_profile = dev-base\n",
+			profile: "dev",
+			want:    true,
+		},
+		{
+			name:       "session without a link pairs with <profile>-base",
+			makeAWSDir: true,
+			credsFile:  "[dev-base]\n" + "aws_access_key_id = AKIATEST\n",
+			config:     "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n",
+			profile:    "dev",
 			want:       true,
 		},
 	}
@@ -1378,21 +1534,21 @@ func TestHasValidAWSSetup_Table(t *testing.T) {
 // ============================================================================
 
 func TestStatusBaseProfileResolution(t *testing.T) {
-	const credsBothSections = "[mrz-ro-base]\n" +
+	const credsBothSections = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n" +
 		"aws_secret_access_key = SECRETBASE\n\n" +
-		"[mrz-ro]\n" +
+		"[dev]\n" +
 		"aws_access_key_id = ASIASESSION\n" +
 		"aws_secret_access_key = SECRETSESSION\n" +
 		"aws_session_token = TOKSESSION\n"
 
-	const credsBaseOnly = "[mrz-ro-base]\n" +
+	const credsBaseOnly = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n"
 
-	const configBoth = "[profile mrz-ro-base]\n" +
+	const configBoth = "[profile dev-base]\n" +
 		"mfa_serial = " + baseProfileMFA + "\n\n" +
-		"[profile mrz-ro]\n" +
-		"source_profile = mrz-ro-base\n"
+		"[profile dev]\n" +
+		"source_profile = dev-base\n"
 
 	// extractProfilesFromCalls returns the profile names checkAWSSession was
 	// invoked for, derived from "--profile <name>" pairs in captured args.
@@ -1415,11 +1571,11 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 			return "", errTestSTSUnavailable
 		})
 
-		err := AWS{}.Status("profile=mrz-ro")
+		err := AWS{}.Status("profile=dev")
 		require.NoError(t, err)
 
 		profiles := extractProfiles(mock.allCalls)
-		assert.Contains(t, profiles, "mrz-ro-base", "Status should display base profile when filtered by session name")
+		assert.Contains(t, profiles, "dev-base", "Status should display base profile when filtered by session name")
 	})
 
 	t.Run("filter by session profile post-refresh shows both sections", func(t *testing.T) {
@@ -1428,12 +1584,12 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 			return "", errTestSTSUnavailable
 		})
 
-		err := AWS{}.Status("profile=mrz-ro")
+		err := AWS{}.Status("profile=dev")
 		require.NoError(t, err)
 
 		profiles := extractProfiles(mock.allCalls)
-		assert.Contains(t, profiles, "mrz-ro-base")
-		assert.Contains(t, profiles, "mrz-ro")
+		assert.Contains(t, profiles, "dev-base")
+		assert.Contains(t, profiles, "dev")
 	})
 
 	t.Run("filter by base profile directly shows only base", func(t *testing.T) {
@@ -1442,12 +1598,12 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 			return "", errTestSTSUnavailable
 		})
 
-		err := AWS{}.Status("profile=mrz-ro-base")
+		err := AWS{}.Status("profile=dev-base")
 		require.NoError(t, err)
 
 		profiles := extractProfiles(mock.allCalls)
-		assert.Contains(t, profiles, "mrz-ro-base")
-		assert.NotContains(t, profiles, "mrz-ro", "filtering by base name should not double-print session section")
+		assert.Contains(t, profiles, "dev-base")
+		assert.NotContains(t, profiles, "dev", "filtering by base name should not double-print session section")
 	})
 
 	t.Run("no filter displays every section", func(t *testing.T) {
@@ -1460,7 +1616,7 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 		require.NoError(t, err)
 
 		profiles := extractProfiles(mock.allCalls)
-		assert.ElementsMatch(t, []string{"mrz-ro-base", "mrz-ro"}, profiles)
+		assert.ElementsMatch(t, []string{"dev-base", "dev"}, profiles)
 	})
 
 	t.Run("filter that matches nothing returns nil and skips STS calls", func(t *testing.T) {
@@ -1480,7 +1636,7 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 			return "", errTestSTSUnavailable
 		})
 
-		err := AWS{}.Status("profile=mrz-ro")
+		err := AWS{}.Status("profile=dev")
 		require.NoError(t, err)
 		assert.Empty(t, mock.allCalls)
 	})
@@ -1491,22 +1647,22 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 // ============================================================================
 
 func TestLoginFlow(t *testing.T) {
-	const credsBaseOnly = "[mrz-ro-base]\n" +
+	const credsBaseOnly = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n" +
 		"aws_secret_access_key = SECRETBASE\n"
 
-	const credsBothSections = "[mrz-ro-base]\n" +
+	const credsBothSections = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n" +
 		"aws_secret_access_key = SECRETBASE\n\n" +
-		"[mrz-ro]\n" +
+		"[dev]\n" +
 		"aws_access_key_id = ASIASTALE\n" +
 		"aws_secret_access_key = SECRETSTALE\n" +
 		"aws_session_token = TOKSTALE\n"
 
-	const configBoth = "[profile mrz-ro-base]\n" +
+	const configBoth = "[profile dev-base]\n" +
 		"mfa_serial = " + baseProfileMFA + "\n\n" +
-		"[profile mrz-ro]\n" +
-		"source_profile = mrz-ro-base\n"
+		"[profile dev]\n" +
+		"source_profile = dev-base\n"
 
 	t.Run("login_after_setup_before_refresh_enters_refresh_path (regression)", func(t *testing.T) {
 		skipIfNoAWSCLI(t)
@@ -1521,20 +1677,20 @@ func TestLoginFlow(t *testing.T) {
 			return "", errTestUnexpectedRunnerCall
 		})
 
-		err := AWS{}.Login("profile=mrz-ro")
+		err := AWS{}.Login("profile=dev")
 		require.NoError(t, err)
 
 		// The STS call must target the BASE profile (long-term keys).
 		require.NotEmpty(t, mock.allCalls)
 		stsArgs := mock.allCalls[len(mock.allCalls)-1]
-		assert.True(t, argsContain(stsArgs, "--profile", "mrz-ro-base"),
-			"Refresh path must invoke STS with --profile mrz-ro-base; got %v", stsArgs)
+		assert.True(t, argsContain(stsArgs, "--profile", "dev-base"),
+			"Refresh path must invoke STS with --profile dev-base; got %v", stsArgs)
 		assert.True(t, argsContain(stsArgs, "--token-code", "123456"))
 
 		// Credentials file should now contain the session section with the new token.
 		ini := readCredentialsINI(t)
-		session := findSection(ini, "mrz-ro")
-		require.NotNil(t, session, "session profile [mrz-ro] must be written after Refresh")
+		session := findSection(ini, "dev")
+		require.NotNil(t, session, "session profile [dev] must be written after Refresh")
 		assert.Equal(t, "TOKNEW", session.Values["aws_session_token"])
 		assert.Equal(t, "ASIANEW", session.Values["aws_access_key_id"])
 	})
@@ -1552,27 +1708,28 @@ func TestLoginFlow(t *testing.T) {
 			return "", errTestUnexpectedSTSDuringSetup
 		})
 
-		err := AWS{}.Login("profile=mrz-ro")
+		err := AWS{}.Login("profile=dev")
 		require.NoError(t, err)
 
 		assert.Empty(t, mock.allCalls, "Setup path must not invoke STS")
 
 		creds := readCredentialsINI(t)
-		base := findSection(creds, "mrz-ro-base")
-		require.NotNil(t, base, "[mrz-ro-base] must be written to credentials")
+		base := findSection(creds, "dev-base")
+		require.NotNil(t, base, "[dev-base] must be written to credentials")
 		assert.Equal(t, "AKIATEST", base.Values["aws_access_key_id"])
 		assert.Equal(t, "SECRETTEST", base.Values["aws_secret_access_key"])
 		// Session profile section must NOT be written by Setup.
-		assert.Nil(t, findSection(creds, "mrz-ro"))
+		assert.Nil(t, findSection(creds, "dev"))
 
 		config := readConfigINI(t)
-		baseCfg := findSection(config, "profile mrz-ro-base")
-		require.NotNil(t, baseCfg, "[profile mrz-ro-base] must be written to config")
+		baseCfg := findSection(config, "profile dev-base")
+		require.NotNil(t, baseCfg, "[profile dev-base] must be written to config")
 		assert.Equal(t, "arn:aws:iam::1:mfa/u", baseCfg.Values["mfa_serial"])
 
-		sessionCfg := findSection(config, "profile mrz-ro")
-		require.NotNil(t, sessionCfg, "[profile mrz-ro] must be written to config")
-		assert.Equal(t, "mrz-ro-base", sessionCfg.Values["source_profile"])
+		sessionCfg := findSection(config, "profile dev")
+		require.NotNil(t, sessionCfg, "[profile dev] must be written to config")
+		assert.Equal(t, "dev-base", sessionCfg.Values[awsBaseProfileKey])
+		assert.NotContains(t, sessionCfg.Values, "source_profile", "the AWS SDKs for Go reject source_profile without role_arn")
 	})
 
 	t.Run("login_with_healthy_setup_refreshes_session_token", func(t *testing.T) {
@@ -1588,12 +1745,12 @@ func TestLoginFlow(t *testing.T) {
 			return "", errTestUnexpectedRunnerCall
 		})
 
-		err := AWS{}.Login("profile=mrz-ro")
+		err := AWS{}.Login("profile=dev")
 		require.NoError(t, err)
 		require.NotEmpty(t, mock.allCalls)
 
 		ini := readCredentialsINI(t)
-		session := findSection(ini, "mrz-ro")
+		session := findSection(ini, "dev")
 		require.NotNil(t, session)
 		assert.Equal(t, "TOKFRESH", session.Values["aws_session_token"])
 	})
@@ -1616,23 +1773,24 @@ func TestSetupWritesBothProfileSections(t *testing.T) {
 		return "", errTestSetupRunnerInvoked
 	})
 
-	require.NoError(t, AWS{}.Setup("profile=mrz-ro"))
+	require.NoError(t, AWS{}.Setup("profile=dev"))
 
 	creds := readCredentialsINI(t)
-	base := findSection(creds, "mrz-ro-base")
+	base := findSection(creds, "dev-base")
 	require.NotNil(t, base)
 	assert.Equal(t, "AKIATEST", base.Values["aws_access_key_id"])
 	assert.Equal(t, "SECRETTEST", base.Values["aws_secret_access_key"])
-	assert.Nil(t, findSection(creds, "mrz-ro"), "Setup must not write the session profile to credentials")
+	assert.Nil(t, findSection(creds, "dev"), "Setup must not write the session profile to credentials")
 
 	config := readConfigINI(t)
-	baseCfg := findSection(config, "profile mrz-ro-base")
+	baseCfg := findSection(config, "profile dev-base")
 	require.NotNil(t, baseCfg)
 	assert.Equal(t, "arn:aws:iam::123456789012:mfa/test", baseCfg.Values["mfa_serial"])
 
-	sessionCfg := findSection(config, "profile mrz-ro")
+	sessionCfg := findSection(config, "profile dev")
 	require.NotNil(t, sessionCfg)
-	assert.Equal(t, "mrz-ro-base", sessionCfg.Values["source_profile"])
+	assert.Equal(t, "dev-base", sessionCfg.Values[awsBaseProfileKey])
+	assert.NotContains(t, sessionCfg.Values, "source_profile", "the AWS SDKs for Go reject source_profile without role_arn")
 
 	// Re-running Setup creates .bak files for both credentials and config.
 	withMockedPrompts(t, []string{
@@ -1640,15 +1798,15 @@ func TestSetupWritesBothProfileSections(t *testing.T) {
 		"SECRETTWO",
 		"arn:aws:iam::123456789012:mfa/test",
 	})
-	require.NoError(t, AWS{}.Setup("profile=mrz-ro"))
+	require.NoError(t, AWS{}.Setup("profile=dev"))
 
 	awsDir, err := getAWSDir()
 	require.NoError(t, err)
-	assert.FileExists(t, filepath.Join(awsDir, awsCredentialsFile+awsBackupSuffix))
-	assert.FileExists(t, filepath.Join(awsDir, awsConfigFile+awsBackupSuffix))
+	assert.NotEmpty(t, listBackups(filepath.Join(awsDir, awsCredentialsFile)))
+	assert.NotEmpty(t, listBackups(filepath.Join(awsDir, awsConfigFile)))
 
 	creds = readCredentialsINI(t)
-	base = findSection(creds, "mrz-ro-base")
+	base = findSection(creds, "dev-base")
 	require.NotNil(t, base)
 	assert.Equal(t, "AKIATWO", base.Values["aws_access_key_id"])
 }
@@ -1658,13 +1816,13 @@ func TestSetupWritesBothProfileSections(t *testing.T) {
 // ============================================================================
 
 func TestRefreshFlow(t *testing.T) {
-	const credsBaseOnly = "[mrz-ro-base]\n" +
+	const credsBaseOnly = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n" +
 		"aws_secret_access_key = SECRETBASE\n"
-	const configBoth = "[profile mrz-ro-base]\n" +
+	const configBoth = "[profile dev-base]\n" +
 		"mfa_serial = " + baseProfileMFA + "\n\n" +
-		"[profile mrz-ro]\n" +
-		"source_profile = mrz-ro-base\n"
+		"[profile dev]\n" +
+		"source_profile = dev-base\n"
 
 	t.Run("writes session creds under session profile", func(t *testing.T) {
 		skipIfNoAWSCLI(t)
@@ -1676,17 +1834,17 @@ func TestRefreshFlow(t *testing.T) {
 			if argsContain(args, "sts", "get-session-token") {
 				assert.True(t, argsContain(args, "--serial-number", baseProfileMFA))
 				assert.True(t, argsContain(args, "--token-code", "123456"))
-				assert.True(t, argsContain(args, "--profile", "mrz-ro-base"))
+				assert.True(t, argsContain(args, "--profile", "dev-base"))
 				return stsSessionTokenJSON("ASIASESSION", "SECSESSION", "TOKSESSION"), nil
 			}
 			return "", errTestUnexpectedRunnerCall
 		})
 
-		require.NoError(t, AWS{}.Refresh("profile=mrz-ro"))
+		require.NoError(t, AWS{}.Refresh("profile=dev"))
 		require.NotEmpty(t, mock.allCalls)
 
 		ini := readCredentialsINI(t)
-		session := findSection(ini, "mrz-ro")
+		session := findSection(ini, "dev")
 		require.NotNil(t, session)
 		assert.Equal(t, "ASIASESSION", session.Values["aws_access_key_id"])
 		assert.Equal(t, "SECSESSION", session.Values["aws_secret_access_key"])
@@ -1703,7 +1861,7 @@ func TestRefreshFlow(t *testing.T) {
 			return "", errTestSTSDuringInvalidMFA
 		})
 
-		err := AWS{}.Refresh("profile=mrz-ro")
+		err := AWS{}.Refresh("profile=dev")
 		require.Error(t, err)
 		require.ErrorIs(t, err, errInvalidMFAToken, "expected errInvalidMFAToken, got: %v", err)
 		assert.Empty(t, mock.allCalls, "runner must not be invoked when validation fails")
@@ -1727,14 +1885,669 @@ func TestRefreshFlow(t *testing.T) {
 			return "", errTestUnexpectedRunnerCall
 		})
 
-		require.NoError(t, AWS{}.Refresh("profile=mrz-ro", "base=custom-base"))
+		require.NoError(t, AWS{}.Refresh("profile=dev", "base=custom-base"))
 		require.NotEmpty(t, mock.allCalls)
 
 		ini := readCredentialsINI(t)
-		session := findSection(ini, "mrz-ro")
+		session := findSection(ini, "dev")
 		require.NotNil(t, session)
 		assert.Equal(t, "TOKNEW", session.Values["aws_session_token"])
 	})
+}
+
+// ============================================================================
+// Refresh — base profiles that can't start a new session, and never
+// overwriting long-term keys
+// ============================================================================
+
+var (
+	errTestCallerIdentityFailed = errors.New("test: sts get-caller-identity failed")
+	// errTestSTSRejectsSessionCreds is the error the runner returns when the base
+	// profile's credentials are temporary (captured from a real AWS CLI run)
+	errTestSTSRejectsSessionCreds = errors.New("command failed [aws sts get-session-token]: exit status 254\n" +
+		"aws: [ERROR]: An error occurred (AccessDenied) when calling the GetSessionToken operation: " +
+		"Cannot call GetSessionToken with session credentials")
+)
+
+// callerIdentityJSON is a canned sts get-caller-identity response.
+const callerIdentityJSON = `{"UserId": "AIDATEST", "Account": "123456789012", "Arn": "arn:aws:iam::123456789012:user/test"}`
+
+// captureAWSLog redirects the shared CLI logger into a buffer while fn runs and
+// returns what it wrote.
+func captureAWSLog(t *testing.T, fn func()) string {
+	t.Helper()
+	var buf bytes.Buffer
+	logger := pkglog.Default()
+	logger.SetOutput(&buf)
+	t.Cleanup(func() { logger.SetOutput(os.Stdout) })
+	fn()
+	return buf.String()
+}
+
+// awsTestPath returns the path of a file in ~/.aws under the mocked HOME.
+func awsTestPath(t *testing.T, name string) string {
+	t.Helper()
+	awsDir, err := getAWSDir()
+	require.NoError(t, err)
+	return filepath.Join(awsDir, name)
+}
+
+// assertAWSFileUntouched fails when ~/.aws/<name> differs from want or was backed up.
+func assertAWSFileUntouched(t *testing.T, name, want string) {
+	t.Helper()
+	data, err := os.ReadFile(awsTestPath(t, name)) //nolint:gosec // path constructed from test temp dir
+	require.NoError(t, err)
+	assert.Equal(t, want, string(data), "%s must not be rewritten", name)
+	backups, err := filepath.Glob(awsTestPath(t, name+awsBackupSuffix+"*"))
+	require.NoError(t, err)
+	assert.Empty(t, backups, "%s must not be backed up", name)
+}
+
+func TestRefreshBaseHoldsSessionCreds(t *testing.T) {
+	// What an older refresh left behind after writing a session over the base
+	// profile's long-term keys
+	const credsSessionInBase = "[dev-base]\n" +
+		"aws_access_key_id = ASIABASE\n" +
+		"aws_secret_access_key = SECRETBASE\n" +
+		"aws_session_token = TOKBASE\n"
+	// The same credentials after deleting the token line by hand, which leaves
+	// a temporary key that can't be used at all
+	const credsTokenDeleted = "[dev-base]\n" +
+		"aws_access_key_id = ASIABASE\n" +
+		"aws_secret_access_key = SECRETBASE\n"
+	const configBoth = "[profile dev-base]\n" +
+		"mfa_serial = " + baseProfileMFA + "\n\n" +
+		"[profile dev]\n" +
+		"magex_base_profile = dev-base\n"
+
+	tests := []struct {
+		name      string
+		credsFile string
+		profile   string
+		loggedIn  bool
+		wantErr   error
+	}{
+		{name: "session profile still logged in", credsFile: credsSessionInBase, profile: "dev", loggedIn: true},
+		{name: "session profile logged out", credsFile: credsSessionInBase, profile: "dev", wantErr: errBaseHasSessionCreds},
+		{name: "base profile refreshed directly while logged in", credsFile: credsSessionInBase, profile: "dev-base", loggedIn: true},
+		{name: "base profile refreshed directly after it expired", credsFile: credsSessionInBase, profile: "dev-base", wantErr: errBaseHasSessionCreds},
+		{name: "session token line deleted by hand", credsFile: credsTokenDeleted, profile: "dev", wantErr: errBaseHasSessionCreds},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			skipIfNoAWSCLI(t)
+
+			withMockedHome(t, tt.credsFile, configBoth)
+			withMockedPrompts(t, nil) // an MFA prompt would hit EOF
+			mock := withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+				if tt.loggedIn && argsContain(args, "sts", "get-caller-identity") {
+					return callerIdentityJSON, nil
+				}
+				return "", errTestCallerIdentityFailed
+			})
+
+			var err error
+			output := captureAWSLog(t, func() { err = AWS{}.Refresh("profile=" + tt.profile) })
+
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				assert.NotContains(t, output, "Already logged in")
+			} else {
+				require.NoError(t, err)
+				assert.Contains(t, output, "Already logged in: profile '"+tt.profile+"' has an active session (Account: 123456789012)")
+			}
+			assert.Contains(t, output, "Profile 'dev-base' holds temporary session credentials")
+			assert.Contains(t, output, "Re-enter your long-term keys with: magex aws:setup profile=dev")
+
+			// Only the session check reaches AWS: no MFA code, no STS token call, no write
+			require.Len(t, mock.allCalls, 1)
+			assert.True(t, argsContain(mock.allCalls[0], "get-caller-identity"), "got %v", mock.allCalls[0])
+			assert.True(t, argsContain(mock.allCalls[0], "--profile", tt.profile), "got %v", mock.allCalls[0])
+			assertAWSFileUntouched(t, awsCredentialsFile, tt.credsFile)
+			assertAWSFileUntouched(t, awsConfigFile, configBoth)
+		})
+	}
+
+	const credsLongTerm = "[dev-base]\n" +
+		"aws_access_key_id = AKIABASE\n" +
+		"aws_secret_access_key = SECRETBASE\n"
+	const olderBackup = awsCredentialsFile + awsBackupSuffix + ".20260101T000000.000Z"
+	const newerBackup = awsCredentialsFile + awsBackupSuffix + ".20260201T000000.000Z"
+	const legacyBackup = awsCredentialsFile + awsBackupSuffix
+
+	backups := []struct {
+		name  string
+		files map[string]string // backup file name in ~/.aws -> content
+		want  string            // backup the hint should name, "" for none
+	}{
+		{
+			name:  "points at a .bak from older versions that has the long-term keys",
+			files: map[string]string{legacyBackup: credsLongTerm},
+			want:  legacyBackup,
+		},
+		{
+			name:  "ignores a backup that only has temporary keys",
+			files: map[string]string{legacyBackup: credsTokenDeleted},
+		},
+		{
+			name:  "skips newer backups that only have temporary keys",
+			files: map[string]string{newerBackup: credsSessionInBase, olderBackup: credsLongTerm},
+			want:  olderBackup,
+		},
+		{
+			name:  "prefers the newest timestamped backup",
+			files: map[string]string{newerBackup: credsLongTerm, olderBackup: credsLongTerm, legacyBackup: credsLongTerm},
+			want:  newerBackup,
+		},
+	}
+
+	for _, tt := range backups {
+		t.Run(tt.name, func(t *testing.T) {
+			skipIfNoAWSCLI(t)
+
+			withMockedHome(t, credsSessionInBase, configBoth)
+			for name, content := range tt.files {
+				require.NoError(t, os.WriteFile(awsTestPath(t, name), []byte(content), 0o600))
+			}
+			withMockedPrompts(t, nil)
+			withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+				return "", errTestCallerIdentityFailed
+			})
+
+			var err error
+			output := captureAWSLog(t, func() { err = AWS{}.Refresh("profile=dev") })
+
+			require.ErrorIs(t, err, errBaseHasSessionCreds)
+			if tt.want != "" {
+				assert.Contains(t, output, awsTestPath(t, tt.want)+" still has the long-term keys for 'dev-base'")
+				assert.Contains(t, output, "Replace both aws_access_key_id and aws_secret_access_key under [dev-base]")
+				assert.Contains(t, output, "Or re-enter your keys with: magex aws:setup profile=dev")
+			} else {
+				assert.NotContains(t, output, "still has the long-term keys")
+				assert.Contains(t, output, "Re-enter your long-term keys with: magex aws:setup profile=dev")
+			}
+		})
+	}
+}
+
+func TestRefreshSTSRejectsSessionCreds(t *testing.T) {
+	// The credentials file holds long-term keys, but the AWS CLI resolved
+	// temporary credentials from somewhere else
+	const credsBaseOnly = "[dev-base]\n" +
+		"aws_access_key_id = AKIABASE\n" +
+		"aws_secret_access_key = SECRETBASE\n"
+	const configBoth = "[profile dev-base]\n" +
+		"mfa_serial = " + baseProfileMFA + "\n\n" +
+		"[profile dev]\n" +
+		"magex_base_profile = dev-base\n"
+
+	tests := []struct {
+		name     string
+		loggedIn bool
+		wantErr  error
+	}{
+		{name: "session profile still logged in", loggedIn: true},
+		{name: "session profile logged out", wantErr: errBaseHasSessionCreds},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			skipIfNoAWSCLI(t)
+
+			withMockedHome(t, credsBaseOnly, configBoth)
+			withMockedPrompts(t, []string{"123456"})
+			withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+				switch {
+				case argsContain(args, "sts", "get-session-token"):
+					return "", errTestSTSRejectsSessionCreds
+				case tt.loggedIn && argsContain(args, "sts", "get-caller-identity"):
+					return callerIdentityJSON, nil
+				default:
+					return "", errTestCallerIdentityFailed
+				}
+			})
+
+			var err error
+			output := captureAWSLog(t, func() { err = AWS{}.Refresh("profile=dev") })
+
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				assert.NotContains(t, err.Error(), "command failed", "the raw AWS CLI error must not reach the user")
+			} else {
+				require.NoError(t, err)
+				assert.Contains(t, output, "Already logged in: profile 'dev'")
+			}
+			assert.Contains(t, output, "The AWS CLI resolved temporary session credentials for 'dev-base'")
+			assert.Contains(t, output, "aws configure list --profile dev-base")
+			assertAWSFileUntouched(t, awsCredentialsFile, credsBaseOnly)
+			assertAWSFileUntouched(t, awsConfigFile, configBoth)
+		})
+	}
+}
+
+func TestRefreshBaseProfileWithLongTermKeys(t *testing.T) {
+	const credsBaseOnly = "[dev-base]\n" +
+		"aws_access_key_id = AKIABASE\n" +
+		"aws_secret_access_key = SECRETBASE\n"
+	const credsProd = "[prod]\n" +
+		"aws_access_key_id = AKIAPROD\n" +
+		"aws_secret_access_key = SECRETPROD\n"
+
+	t.Run("writes the session to the linked session profile", func(t *testing.T) {
+		skipIfNoAWSCLI(t)
+
+		withMockedHome(t, credsBaseOnly, "[profile dev-base]\n"+
+			"mfa_serial = "+baseProfileMFA+"\n\n"+
+			"[profile dev]\n"+
+			"magex_base_profile = dev-base\n\n"+
+			"[profile dev-admin]\n"+
+			"role_arn = arn:aws:iam::123456789012:role/admin\n"+
+			"source_profile = dev-base\n")
+		withMockedPrompts(t, []string{"123456"})
+		mock := withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+			if argsContain(args, "sts", "get-session-token") {
+				return stsSessionTokenJSON("ASIASESSION", "SECSESSION", "TOKSESSION"), nil
+			}
+			return "", errTestUnexpectedRunnerCall
+		})
+
+		require.NoError(t, AWS{}.Refresh("profile=dev-base"))
+
+		require.Len(t, mock.allCalls, 1)
+		assert.True(t, argsContain(mock.allCalls[0], "--profile", "dev-base"),
+			"STS must still be called with the base profile's long-term keys; got %v", mock.allCalls[0])
+
+		ini := readCredentialsINI(t)
+		base := findSection(ini, "dev-base")
+		require.NotNil(t, base)
+		assert.Equal(t, "AKIABASE", base.Values["aws_access_key_id"], "long-term keys must survive the refresh")
+		assert.NotContains(t, base.Values, "aws_session_token")
+
+		session := findSection(ini, "dev")
+		require.NotNil(t, session, "the session belongs in the linked session profile")
+		assert.Equal(t, "ASIASESSION", session.Values["aws_access_key_id"])
+		assert.Equal(t, "TOKSESSION", session.Values["aws_session_token"])
+		assert.Nil(t, findSection(ini, "dev-admin"), "assume-role profiles are not session targets")
+	})
+
+	t.Run("pairs the base with <name> when the session profile has no link", func(t *testing.T) {
+		skipIfNoAWSCLI(t)
+
+		withMockedHome(t, credsBaseOnly, "[profile dev-base]\n"+
+			"mfa_serial = "+baseProfileMFA+"\n\n"+
+			"[profile dev]\n"+
+			"region = us-east-1\n")
+		withMockedPrompts(t, []string{"123456"})
+		mock := withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+			if argsContain(args, "sts", "get-session-token") {
+				return stsSessionTokenJSON("ASIASESSION", "SECSESSION", "TOKSESSION"), nil
+			}
+			return "", errTestUnexpectedRunnerCall
+		})
+
+		require.NoError(t, AWS{}.Refresh("profile=dev-base"))
+
+		require.Len(t, mock.allCalls, 1)
+		assert.True(t, argsContain(mock.allCalls[0], "--profile", "dev-base"), "got %v", mock.allCalls[0])
+		ini := readCredentialsINI(t)
+		assert.Equal(t, "AKIABASE", findSection(ini, "dev-base").Values["aws_access_key_id"])
+		session := findSection(ini, "dev")
+		require.NotNil(t, session)
+		assert.Equal(t, "TOKSESSION", session.Values["aws_session_token"])
+	})
+
+	refusals := []struct {
+		name      string
+		credsFile string
+		config    string
+		profile   string
+	}{
+		{
+			name:      "no linked session profile",
+			credsFile: credsProd,
+			config:    "[profile prod]\nmfa_serial = " + baseProfileMFA + "\n",
+			profile:   "prod",
+		},
+		{
+			name:      "profile linked to itself",
+			credsFile: credsProd,
+			config:    "[profile prod]\nmfa_serial = " + baseProfileMFA + "\nsource_profile = prod\n",
+			profile:   "prod",
+		},
+		{
+			name:      "several linked session profiles",
+			credsFile: credsBaseOnly,
+			config: "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
+				"[profile dev]\nmagex_base_profile = dev-base\n\n" +
+				"[profile dev-rw]\nsource_profile = dev-base\n",
+			profile: "dev-base",
+		},
+	}
+
+	for _, tt := range refusals {
+		t.Run("refuses with "+tt.name, func(t *testing.T) {
+			skipIfNoAWSCLI(t)
+
+			withMockedHome(t, tt.credsFile, tt.config)
+			withMockedPrompts(t, nil)
+			mock := withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+				return "", errTestUnexpectedRunnerCall
+			})
+
+			err := AWS{}.Refresh("profile=" + tt.profile)
+
+			require.ErrorIs(t, err, errWouldOverwriteLongTermKeys)
+			assert.Empty(t, mock.allCalls, "nothing may reach AWS before the refusal")
+			assertAWSFileUntouched(t, awsCredentialsFile, tt.credsFile)
+		})
+	}
+}
+
+func TestRefreshBaseProfileLink(t *testing.T) {
+	const credsBaseOnly = "[dev-base]\n" +
+		"aws_access_key_id = AKIABASE\n" +
+		"aws_secret_access_key = SECRETBASE\n"
+	const baseConfig = "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n"
+
+	// refresh runs a successful MFA refresh and returns the log output and the STS call
+	refresh := func(t *testing.T, args ...string) (string, []string) {
+		t.Helper()
+		withMockedPrompts(t, []string{"123456"})
+		mock := withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+			if argsContain(args, "sts", "get-session-token") {
+				return stsSessionTokenJSON("ASIASESSION", "SECSESSION", "TOKSESSION"), nil
+			}
+			return "", errTestUnexpectedRunnerCall
+		})
+
+		var err error
+		output := captureAWSLog(t, func() { err = AWS{}.Refresh(args...) })
+		require.NoError(t, err)
+		require.Len(t, mock.allCalls, 1)
+		return output, mock.allCalls[0]
+	}
+
+	t.Run("replaces a legacy source_profile link and keeps the rest of the file", func(t *testing.T) {
+		skipIfNoAWSCLI(t)
+		withMockedHome(t, credsBaseOnly, baseConfig+"\n# edited by hand\n[profile dev]\nsource_profile = dev-base\nregion = us-east-1\n")
+
+		output, stsCall := refresh(t, "profile=dev")
+
+		assert.True(t, argsContain(stsCall, "--profile", "dev-base"), "got %v", stsCall)
+		content, err := os.ReadFile(awsTestPath(t, awsConfigFile)) //nolint:gosec // path constructed from test temp dir
+		require.NoError(t, err)
+		assert.Equal(t, baseConfig+"\n# edited by hand\n[profile dev]\nmagex_base_profile = dev-base\nregion = us-east-1\n", string(content))
+		backups, err := filepath.Glob(awsTestPath(t, awsConfigFile+awsBackupSuffix+"*"))
+		require.NoError(t, err)
+		assert.NotEmpty(t, backups, "config must be backed up before it's edited")
+		assert.Contains(t, output, "Linked 'dev' to 'dev-base' with magex_base_profile instead of source_profile")
+	})
+
+	t.Run("saves an explicit base= when the profile has no link", func(t *testing.T) {
+		skipIfNoAWSCLI(t)
+		withMockedHome(t, "[team-base]\naws_access_key_id = AKIATEAM\naws_secret_access_key = SECRETTEAM\n",
+			"[profile team-base]\nmfa_serial = "+baseProfileMFA+"\n")
+
+		output, stsCall := refresh(t, "profile=dev", "base=team-base")
+
+		assert.True(t, argsContain(stsCall, "--profile", "team-base"), "got %v", stsCall)
+		assert.Equal(t, "team-base", getBaseProfile("dev"), "later refreshes must find the base without base=")
+		assert.Contains(t, output, "Saved 'team-base' as the base profile for 'dev'")
+	})
+
+	unchanged := []struct {
+		name   string
+		config string
+		args   []string
+	}{
+		{
+			name:   "already linked with magex_base_profile",
+			config: baseConfig + "\n[profile dev]\nmagex_base_profile = dev-base\n",
+			args:   []string{"profile=dev"},
+		},
+		{
+			name:   "base found by name without a link",
+			config: baseConfig,
+			args:   []string{"profile=dev"},
+		},
+		{
+			name:   "explicit base= that matches the name aws:setup uses",
+			config: baseConfig,
+			args:   []string{"profile=dev", "base=dev-base"},
+		},
+		{
+			name: "explicit base= while a link exists",
+			config: baseConfig + "\n[profile dev]\nmagex_base_profile = dev-base\n\n" +
+				"[profile other-base]\nmfa_serial = " + baseProfileMFA + "\n",
+			args: []string{"profile=dev", "base=other-base"},
+		},
+	}
+
+	for _, tt := range unchanged {
+		t.Run("leaves config alone: "+tt.name, func(t *testing.T) {
+			skipIfNoAWSCLI(t)
+			withMockedHome(t, credsBaseOnly, tt.config)
+
+			refresh(t, tt.args...)
+
+			assertAWSFileUntouched(t, awsConfigFile, tt.config)
+		})
+	}
+}
+
+func TestStatusWarnsAboutLegacyLink(t *testing.T) {
+	const creds = "[dev]\naws_access_key_id = ASIASESSION\naws_secret_access_key = SECSESSION\naws_session_token = TOK\n"
+
+	tests := []struct {
+		name   string
+		config string
+		warn   bool
+	}{
+		{name: "source_profile without role_arn", config: "[profile dev]\nsource_profile = dev-base\n", warn: true},
+		{name: "magex_base_profile", config: "[profile dev]\nmagex_base_profile = dev-base\n"},
+		{name: "assume-role profile", config: "[profile dev]\nrole_arn = arn:aws:iam::123456789012:role/admin\nsource_profile = dev-base\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withMockedHome(t, creds, tt.config)
+			withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+				return "", errTestSTSUnavailable
+			})
+
+			var err error
+			output := captureAWSLog(t, func() { err = AWS{}.Status("profile=dev") })
+
+			require.NoError(t, err)
+			if tt.warn {
+				assert.Contains(t, output, "source_profile without role_arn")
+				assert.Contains(t, output, "magex aws:refresh profile=dev")
+			} else {
+				assert.NotContains(t, output, "source_profile without role_arn")
+			}
+		})
+	}
+}
+
+func TestSessionExpiryText(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name       string
+		expiration string
+		want       string
+	}{
+		{name: "expires later", expiration: "2026-01-01T19:12:00Z", want: "expires in 7h12m"},
+		{name: "offset time from STS", expiration: "2026-01-01T13:30:00+00:00", want: "expires in 1h30m"},
+		{name: "rounds to the minute", expiration: "2026-01-01T12:45:40Z", want: "expires in 46m"},
+		{name: "under a minute left", expiration: "2026-01-01T12:00:30Z", want: "expires in under a minute"},
+		{name: "already expired", expiration: "2026-01-01T10:00:00Z", want: "expired 2h0m ago"},
+		{name: "not recorded", expiration: ""},
+		{name: "not a timestamp", expiration: "soon"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, sessionExpiryText(tt.expiration, now))
+		})
+	}
+}
+
+func TestStatusShowsKeyKinds(t *testing.T) {
+	expiration := time.Now().Add(3 * time.Hour).UTC().Format(time.RFC3339)
+	withMockedHome(t, "[dev-base]\n"+
+		"aws_access_key_id = AKIABASE\n"+
+		"aws_secret_access_key = SECRETBASE\n\n"+
+		"[dev]\n"+
+		"aws_access_key_id = ASIASESSION\n"+
+		"aws_secret_access_key = SECSESSION\n"+
+		"aws_session_token = TOK\n"+
+		"magex_session_expiration = "+expiration+"\n", "")
+	withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+		return callerIdentityJSON, nil
+	})
+
+	var err error
+	output := captureAWSLog(t, func() { err = AWS{}.Status() })
+
+	require.NoError(t, err)
+	assert.Contains(t, output, "Session Token: Present, expires in 3h0m", "a session shows how long it has left")
+	assert.Contains(t, output, "Session Status: ✓ Active (Account: 123456789012)")
+	assert.Contains(t, output, "Session Status: ✓ Long-term keys, no MFA (Account: 123456789012)")
+	assert.Contains(t, output, "Where a policy requires MFA, these keys can only read")
+}
+
+func TestLinkedSessionProfiles(t *testing.T) {
+	t.Run("only plain profiles linked to the base", func(t *testing.T) {
+		withMockedHome(t, "", "[default]\nsource_profile = shared-base\n\n"+
+			"[profile a]\nsource_profile = shared-base\n\n"+
+			"[profile b]\nsource_profile = other-base\n\n"+
+			"[profile c]\nmagex_base_profile = shared-base\n\n"+
+			"[profile d]\nmagex_base_profile = other-base\nsource_profile = shared-base\n\n"+
+			"[profile admin]\nrole_arn = arn:aws:iam::123456789012:role/admin\nsource_profile = shared-base\n\n"+
+			"[sso-session corp]\nsource_profile = shared-base\n\n"+
+			"[profile shared-base]\nmfa_serial = "+baseProfileMFA+"\nsource_profile = shared-base\n")
+
+		assert.Equal(t, []string{"default", "a", "c"}, linkedSessionProfiles("shared-base"))
+		assert.Empty(t, linkedSessionProfiles("unknown-base"))
+	})
+
+	pairing := []struct {
+		name   string
+		creds  string
+		config string
+		want   []string
+	}{
+		{
+			name:   "pairs <name> with <name>-base when it has no link",
+			config: "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n\n[profile dev]\nregion = us-east-1\n",
+			want:   []string{"dev"},
+		},
+		{
+			name:   "pairs a session profile found only in the credentials file",
+			creds:  "[dev]\naws_access_key_id = ASIASESSION\n",
+			config: "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n",
+			want:   []string{"dev"},
+		},
+		{
+			name:   "no pairing when <name> links to another base",
+			config: "[profile dev]\nmagex_base_profile = other-base\n",
+		},
+		{
+			name:   "no pairing with an assume-role profile",
+			config: "[profile dev]\nrole_arn = arn:aws:iam::123456789012:role/admin\nsource_profile = x\n",
+		},
+		{
+			name:   "no pairing when <name> doesn't exist",
+			config: "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n",
+		},
+	}
+
+	for _, tt := range pairing {
+		t.Run(tt.name, func(t *testing.T) {
+			withMockedHome(t, tt.creds, tt.config)
+			assert.Equal(t, tt.want, linkedSessionProfiles("dev-base"))
+		})
+	}
+
+	t.Run("missing config file", func(t *testing.T) {
+		withMockedHome(t, "", "")
+		assert.Empty(t, linkedSessionProfiles("shared-base"))
+	})
+}
+
+func TestCredentialSectionKinds(t *testing.T) {
+	tests := []struct {
+		name          string
+		section       *awsINISection
+		wantTemporary bool
+		wantLongTerm  bool
+	}{
+		{name: "missing section"},
+		{
+			name:         "long-term keys",
+			section:      &awsINISection{Values: map[string]string{"aws_access_key_id": "AKIA", "aws_secret_access_key": "S"}},
+			wantLongTerm: true,
+		},
+		{
+			name:          "session credentials",
+			section:       &awsINISection{Values: map[string]string{"aws_access_key_id": "ASIA", "aws_session_token": "T"}},
+			wantTemporary: true,
+		},
+		{
+			name:          "temporary key with its token line deleted",
+			section:       &awsINISection{Values: map[string]string{"aws_access_key_id": "ASIAX", "aws_secret_access_key": "S"}},
+			wantTemporary: true,
+		},
+		{
+			name:         "empty session token is ignored",
+			section:      &awsINISection{Values: map[string]string{"aws_access_key_id": "AKIA", "aws_session_token": ""}},
+			wantLongTerm: true,
+		},
+		{
+			name:    "no access key",
+			section: &awsINISection{Values: map[string]string{"region": "us-east-1"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantTemporary, hasTemporaryCreds(tt.section))
+			assert.Equal(t, tt.wantLongTerm, hasLongTermKeys(tt.section))
+		})
+	}
+}
+
+func TestLoadAWSINISection(t *testing.T) {
+	credPath := filepath.Join(t.TempDir(), awsCredentialsFile)
+	require.NoError(t, os.WriteFile(credPath, []byte("[a]\naws_access_key_id = AKIAA\n\n[b]\naws_access_key_id = AKIAB\n"), 0o600))
+
+	section := loadAWSINISection(credPath, "b")
+	require.NotNil(t, section)
+	assert.Equal(t, "AKIAB", section.Values["aws_access_key_id"])
+	assert.Nil(t, loadAWSINISection(credPath, "missing"))
+	assert.Nil(t, loadAWSINISection(credPath+".missing", "a"))
+}
+
+func TestSetupProfileName(t *testing.T) {
+	tests := []struct {
+		profile     string
+		baseProfile string
+		want        string
+	}{
+		{profile: "dev", baseProfile: "dev-base", want: "dev"},
+		{profile: "dev-base", baseProfile: "dev-base", want: "dev"},
+		{profile: "prod", baseProfile: "prod", want: "prod"},
+		{profile: "dev", baseProfile: "custom", want: "dev"},
+		{profile: "odd", baseProfile: "-base", want: "odd"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.profile+"/"+tt.baseProfile, func(t *testing.T) {
+			assert.Equal(t, tt.want, setupProfileName(tt.profile, tt.baseProfile))
+		})
+	}
 }
 
 // ============================================================================

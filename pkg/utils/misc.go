@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/term"
 )
 
 // errParallelExecution is returned when parallel execution fails
@@ -99,6 +101,27 @@ func PromptForInput(prompt string) (string, error) {
 	}
 
 	return strings.TrimSpace(scanner.Text()), nil
+}
+
+// PromptForSecret prompts for a value such as a password or secret key without
+// echoing it when stdin is a terminal. Otherwise (a pipe, or a reader set with
+// SetPromptInput) it reads a line like PromptForInput.
+func PromptForSecret(prompt string) (string, error) {
+	fd := int(os.Stdin.Fd())
+	if promptInput != nil || !term.IsTerminal(fd) {
+		return PromptForInput(prompt)
+	}
+
+	if prompt != "" {
+		fmt.Printf("%s: ", prompt)
+	}
+	secret, err := term.ReadPassword(fd)
+	fmt.Print("\n") // the Enter key isn't echoed either
+	if err != nil {
+		return "", fmt.Errorf("failed to read input: %w", err)
+	}
+
+	return strings.TrimSpace(string(secret)), nil
 }
 
 // defaultReadBufferSize is the buffer size for reading files (128KB)

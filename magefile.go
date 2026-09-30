@@ -14,13 +14,10 @@ import (
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
-// getMageArgs reads and parses arguments from the MAGE_ARGS environment variable
+// getMageArgs reads the arguments magex passed in MAGE_ARGS_JSON (or MAGE_ARGS)
 // This is how magex passes parameters to namespace methods
 func getMageArgs() []string {
-	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
-		return strings.Fields(mageArgs)
-	}
-	return nil
+	return utils.MageArgs()
 }
 
 // Namespace types - these enable namespace:method syntax in mage
@@ -358,13 +355,8 @@ func VersionShow() error {
 // VersionBump bumps the version
 func VersionBump() error {
 	var v mage.Version
-	// Get arguments from MAGE_ARGS environment variable if available
-	// This is set by magex when delegating to mage
-	var args []string
-	if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
-		args = strings.Fields(mageArgs)
-	}
-	return v.Bump(args...)
+	// Get arguments magex set when delegating to mage, if any
+	return v.Bump(utils.MageArgs()...)
 }
 
 // VersionCheck checks version information

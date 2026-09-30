@@ -343,9 +343,10 @@ func (ts *AWSHelpersTestSuite) TestBackupFile() {
 		ts.Require().NoError(err)
 
 		// Verify backup exists
-		backupPath := filePath + awsBackupSuffix
+		backups := listBackups(filePath)
+		ts.Require().Len(backups, 1)
 		// #nosec G304 -- test reads backup path derived from temp fixture
-		backupContent, err := os.ReadFile(backupPath)
+		backupContent, err := os.ReadFile(backups[0])
 		ts.Require().NoError(err)
 		ts.Equal(originalContent, backupContent)
 	})

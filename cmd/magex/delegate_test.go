@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -409,53 +410,48 @@ func TestGetMagefilePath_NoFiles(t *testing.T) {
 
 func TestStderrFilter(t *testing.T) {
 	tests := []struct {
-		name     string
-		writes   []string
-		shown    string
-		captured string
+		name   string
+		writes []string
+		shown  string
+		hidden string
 	}{
 		{
-			name: "filters unknown-target lines from display but captures them",
+			name: "holds unknown-target lines back from display for the error message",
 			writes: []string{`Normal error message
 Unknown target specified: somecommand
 Another normal message
 Unknown target specified: anothercommand
 Final message
 `},
-			shown: "Normal error message\nAnother normal message\nFinal message\n",
-			captured: "Normal error message\nUnknown target specified: somecommand\nAnother normal message\n" +
-				"Unknown target specified: anothercommand\nFinal message\n",
+			shown:  "Normal error message\nAnother normal message\nFinal message\n",
+			hidden: "Unknown target specified: somecommand\nUnknown target specified: anothercommand\n",
 		},
 		{
-			name:     "joins a line split across writes",
-			writes:   []string{"first li", "ne\nsec", "ond line\n"},
-			shown:    "first line\nsecond line\n",
-			captured: "first line\nsecond line\n",
+			name:   "joins a line split across writes",
+			writes: []string{"first li", "ne\nsec", "ond line\n"},
+			shown:  "first line\nsecond line\n",
 		},
 		{
-			name:     "flushes a final line without a newline",
-			writes:   []string{"done\nno newline"},
-			shown:    "done\nno newline\n",
-			captured: "done\nno newline\n",
+			name:   "flushes a final line without a newline",
+			writes: []string{"done\nno newline"},
+			shown:  "done\nno newline\n",
 		},
 		{
-			name:     "strips carriage returns",
-			writes:   []string{"windows line\r\n"},
-			shown:    "windows line\n",
-			captured: "windows line\n",
+			name:   "strips carriage returns",
+			writes: []string{"windows line\r\n"},
+			shown:  "windows line\n",
 		},
 		{
-			name:     "handles a line longer than bufio.Scanner's limit",
-			writes:   []string{strings.Repeat("x", 100_000) + "\n"},
-			shown:    strings.Repeat("x", 100_000) + "\n",
-			captured: strings.Repeat("x", 100_000) + "\n",
+			name:   "handles a line longer than bufio.Scanner's limit",
+			writes: []string{strings.Repeat("x", 100_000) + "\n"},
+			shown:  strings.Repeat("x", 100_000) + "\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var out strings.Builder
-			f := &stderrFilter{out: &out}
+			out := &lockedBuffer{}
+			f := &stderrFilter{out: out}
 			for _, w := range tt.writes {
 				n, err := f.Write([]byte(w))
 				require.NoError(t, err)
@@ -464,9 +460,84 @@ Final message
 			f.Flush()
 
 			assert.Equal(t, tt.shown, out.String())
-			assert.Equal(t, tt.captured, f.buf.String())
+			assert.Equal(t, tt.hidden, f.Hidden())
 		})
 	}
+}
+
+// lockedBuffer is a strings.Builder safe for the stderrFilter's timer goroutine
+// to write while a test reads it.
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf strings.Builder
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// TestStderrFilter_PartialLines covers output that doesn't end in a newline,
+// such as a prompt waiting for input, which is shown once stderr goes quiet.
+func TestStderrFilter_PartialLines(t *testing.T) {
+	waitShown := func(t *testing.T, out *lockedBuffer, want string) {
+		t.Helper()
+		assert.Eventually(t, func() bool { return out.String() == want },
+			20*stderrPartialDelay, stderrPartialDelay/5, "want %q shown, got %q", want, out.String())
+	}
+
+	t.Run("shows a prompt without a newline once stderr goes quiet", func(t *testing.T) {
+		out := &lockedBuffer{}
+		f := &stderrFilter{out: out}
+
+		_, err := f.Write([]byte("Type 'DESTROY' to confirm: "))
+		require.NoError(t, err)
+		waitShown(t, out, "Type 'DESTROY' to confirm: ")
+
+		// The rest of the line and the next one follow without repeating the prompt
+		_, err = f.Write([]byte("\nDestroying...\n"))
+		require.NoError(t, err)
+		f.Flush()
+		assert.Equal(t, "Type 'DESTROY' to confirm: \nDestroying...\n", out.String())
+	})
+
+	t.Run("shows the rest of a line whose start was already shown", func(t *testing.T) {
+		out := &lockedBuffer{}
+		f := &stderrFilter{out: out}
+
+		_, err := f.Write([]byte("Downloading"))
+		require.NoError(t, err)
+		waitShown(t, out, "Downloading")
+
+		_, err = f.Write([]byte("... done\n"))
+		require.NoError(t, err)
+		f.Flush()
+		assert.Equal(t, "Downloading... done\n", out.String())
+		assert.Empty(t, f.Hidden())
+	})
+
+	t.Run("keeps a partial unknown-target line hidden", func(t *testing.T) {
+		out := &lockedBuffer{}
+		f := &stderrFilter{out: out}
+
+		_, err := f.Write([]byte("Unknown tar"))
+		require.NoError(t, err)
+		time.Sleep(3 * stderrPartialDelay)
+		assert.Empty(t, out.String(), "a line that may report an unknown target waits for its newline")
+
+		_, err = f.Write([]byte("get specified: \"x\"\n"))
+		require.NoError(t, err)
+		f.Flush()
+		assert.Empty(t, out.String())
+		assert.Equal(t, "Unknown target specified: \"x\"\n", f.Hidden())
+	})
 }
 
 // setupStderrMagefile writes a magefile.go into a fresh temp dir and changes into it.
@@ -489,9 +560,37 @@ func setupStderrMagefile(t *testing.T, magefile string) {
 	require.NoError(t, os.WriteFile(magefileFilename, []byte(magefile), 0o600))
 }
 
+// captureStderr redirects os.Stderr while fn runs and returns what was written.
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	oldStderr := os.Stderr
+	os.Stderr = w
+	t.Cleanup(func() { os.Stderr = oldStderr })
+
+	var out strings.Builder
+	done := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(&out, r) //nolint:errcheck // test helper; a short read shows up as a failed assertion
+		close(done)
+	}()
+
+	fn()
+
+	// Stop writing, and wait for the copy to finish before reading out
+	os.Stderr = oldStderr
+	require.NoError(t, w.Close())
+	<-done
+	require.NoError(t, r.Close())
+	return out.String()
+}
+
 // TestDelegateToMageWithTimeout_CapturesAllStderr checks that stderr written just
-// before the command exits still reaches the error message: Wait used to close
-// the stderr pipe on exit, racing the reader for the last of the output.
+// before the command exits is still displayed, and that the error doesn't repeat
+// it: Wait used to close the stderr pipe on exit, racing the reader for the last
+// of the output.
 func TestDelegateToMageWithTimeout_CapturesAllStderr(t *testing.T) {
 	setupStderrMagefile(t, `/`+`/go:build mage
 
@@ -512,13 +611,18 @@ func Noisy() error {
 }
 `)
 
-	result := DelegateToMageWithTimeout(context.Background(), "noisy", 60*time.Second)
+	var result DelegateResult
+	shown := captureStderr(t, func() {
+		result = DelegateToMageWithTimeout(context.Background(), "noisy", 60*time.Second)
+	})
 
 	require.Error(t, result.Err)
 	assert.NotEqual(t, 0, result.ExitCode)
-	assert.Contains(t, result.Err.Error(), "stderr line 0\n")
-	assert.Contains(t, result.Err.Error(), "stderr line 1999\n")
-	assert.Contains(t, result.Err.Error(), "last line, no newline")
+	assert.Contains(t, shown, "stderr line 0\n")
+	assert.Contains(t, shown, "stderr line 1999\n")
+	assert.Contains(t, shown, "last line, no newline")
+	assert.NotContains(t, result.Err.Error(), "stderr line", "stderr was already shown; the error must not repeat it")
+	assert.Contains(t, result.Err.Error(), "exit status")
 }
 
 // TestDelegateToMageWithTimeout_BackgroundProcessHoldsStderr checks that a
@@ -570,6 +674,31 @@ func Spawn() error {
 	assert.Equal(t, 0, result.ExitCode)
 	// Building the magefile takes a few seconds; the sleep would hold stderr for 30.
 	assert.Less(t, time.Since(start), 25*time.Second, "should not wait for the background process")
+}
+
+// TestDelegateToMageWithTimeout_PassesArgsAsJSON checks that arguments reach
+// the target through MAGE_ARGS_JSON intact, including ones that contain spaces.
+func TestDelegateToMageWithTimeout_PassesArgsAsJSON(t *testing.T) {
+	if _, err := exec.LookPath("mage"); err != nil {
+		t.Skip("needs the mage binary, which receives arguments only through the environment")
+	}
+	setupStderrMagefile(t, `/`+`/go:build mage
+
+package main
+
+import "os"
+
+func Echo() error {
+	return os.WriteFile("args.txt", []byte(os.Getenv("MAGE_ARGS_JSON")+"\n"+os.Getenv("MAGE_ARGS")), 0o600)
+}
+`)
+
+	result := DelegateToMageWithTimeout(context.Background(), "echo", 60*time.Second, "msg=hello world", "count=2")
+
+	require.NoError(t, result.Err)
+	got, err := os.ReadFile("args.txt")
+	require.NoError(t, err)
+	assert.Equal(t, `["msg=hello world","count=2"]`+"\nmsg=hello world count=2", string(got))
 }
 
 func TestConvertToMageFormat(t *testing.T) {

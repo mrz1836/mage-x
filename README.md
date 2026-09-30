@@ -802,6 +802,8 @@ magex aws:status profile=dev       # Show specific profile
 1. Run `magex aws:setup` to configure your Access Key, Secret Key, and MFA device ARN
 2. Run `magex aws:login` daily to refresh your session credentials with MFA
 
+**Profiles:** `aws:setup profile=<name>` stores your long-term keys in `<name>-base`, and `aws:refresh` writes MFA session credentials to `<name>`, the profile to use with the AWS CLI, Terraform, Pulumi, and the SDKs. The session profile points at its base with `magex_base_profile` in `~/.aws/config`, a key AWS tools ignore. Older versions wrote `source_profile` instead, which the AWS SDK for Go rejects without `role_arn`; `aws:refresh` replaces it automatically.
+
 </details>
 
 <details>
