@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
 const (
@@ -134,7 +137,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 	if magePath, err := exec.LookPath("mage"); err == nil {
 		// Use mage binary - mage handles both directory and file automatically
 		// NOTE: mage binary does NOT support command-line arguments for custom functions
-		// Arguments must be passed via environment variables (MAGE_ARGS)
+		// Arguments must be passed via environment variables (MAGE_ARGS, MAGE_ARGS_JSON)
 		cmdArgs := []string{mageCommand}
 		// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
 		cmd = exec.CommandContext(execCtx, magePath, cmdArgs...)
@@ -161,9 +164,14 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 	// Set up environment
 	cmd.Env = os.Environ()
 
-	// Make arguments available via environment variable for magefile functions to access
+	// Make arguments available via environment variables for magefile functions to
+	// access (utils.MageArgs reads them): MAGE_ARGS joins them with spaces, and
+	// MAGE_ARGS_JSON keeps arguments that contain spaces intact
 	if len(args) > 0 {
-		cmd.Env = append(cmd.Env, "MAGE_ARGS="+strings.Join(args, " "))
+		cmd.Env = append(cmd.Env, utils.EnvMageArgs+"="+strings.Join(args, " "))
+		if encoded, err := json.Marshal(args); err == nil {
+			cmd.Env = append(cmd.Env, utils.EnvMageArgsJSON+"="+string(encoded))
+		}
 	}
 
 	// Set working directory if not already set (directory case sets it specifically)

@@ -4,7 +4,6 @@ package mage
 import (
 	"errors"
 	"fmt"
-	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -68,11 +67,9 @@ type VersionModule struct {
 
 // parseBumpConfig parses command line arguments into bump configuration
 func parseBumpConfig(args []string) (*bumpConfig, error) {
-	// If no args provided, try to get from MAGE_ARGS environment variable
+	// If no args provided, try the ones magex passes in MAGE_ARGS_JSON / MAGE_ARGS
 	if len(args) == 0 {
-		if mageArgs := os.Getenv("MAGE_ARGS"); mageArgs != "" {
-			args = strings.Fields(mageArgs)
-		}
+		args = utils.MageArgs()
 	}
 
 	params := utils.ParseParams(args)

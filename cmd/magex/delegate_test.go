@@ -676,6 +676,31 @@ func Spawn() error {
 	assert.Less(t, time.Since(start), 25*time.Second, "should not wait for the background process")
 }
 
+// TestDelegateToMageWithTimeout_PassesArgsAsJSON checks that arguments reach
+// the target through MAGE_ARGS_JSON intact, including ones that contain spaces.
+func TestDelegateToMageWithTimeout_PassesArgsAsJSON(t *testing.T) {
+	if _, err := exec.LookPath("mage"); err != nil {
+		t.Skip("needs the mage binary, which receives arguments only through the environment")
+	}
+	setupStderrMagefile(t, `/`+`/go:build mage
+
+package main
+
+import "os"
+
+func Echo() error {
+	return os.WriteFile("args.txt", []byte(os.Getenv("MAGE_ARGS_JSON")+"\n"+os.Getenv("MAGE_ARGS")), 0o600)
+}
+`)
+
+	result := DelegateToMageWithTimeout(context.Background(), "echo", 60*time.Second, "msg=hello world", "count=2")
+
+	require.NoError(t, result.Err)
+	got, err := os.ReadFile("args.txt")
+	require.NoError(t, err)
+	assert.Equal(t, `["msg=hello world","count=2"]`+"\nmsg=hello world count=2", string(got))
+}
+
 func TestConvertToMageFormat(t *testing.T) {
 	tests := []struct {
 		input    string
