@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,11 @@ const (
 	// stderrDrainDelay is how long a delegated command's stderr may stay open after
 	// the command exits, which happens when it leaves a background process running.
 	stderrDrainDelay = 2 * time.Second
+	// stderrPartialDelay is how long a delegated command's stderr must go quiet
+	// before a line without its newline yet, such as a prompt, is displayed.
+	stderrPartialDelay = 150 * time.Millisecond
+	// unknownTargetMessage starts the line mage prints for a target it can't find.
+	unknownTargetMessage = "Unknown target specified:"
 )
 
 var (
@@ -209,11 +215,11 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 			}
 		}
 
-		// Include captured stderr in the error message if available
-		if stderrContent := strings.TrimSpace(stderr.buf.String()); stderrContent != "" {
+		// Stderr was shown as it arrived, so the error only adds what was held back
+		if hidden := strings.TrimSpace(stderr.Hidden()); hidden != "" {
 			return DelegateResult{
 				ExitCode: exitCode,
-				Err:      fmt.Errorf("%w '%s':\n%s", ErrCommandFailed, command, stderrContent),
+				Err:      fmt.Errorf("%w '%s':\n%s", ErrCommandFailed, command, hidden),
 			}
 		}
 		return DelegateResult{
@@ -225,53 +231,106 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 	return DelegateResult{ExitCode: 0, Err: nil}
 }
 
-// stderrFilter receives a delegated command's stderr. It passes each line through
-// to out as the line completes, capturing every line for error reporting. The
-// "Unknown target specified" lines are filtered from display to avoid duplication
-// when shown in the error. os/exec calls Write from one goroutine and is done with
-// it by the time Wait returns, so the fields need no locking.
+// stderrFilter receives a delegated command's stderr and passes it through to
+// out: each line as it completes, and a partial line, such as a prompt with no
+// trailing newline, once stderrPartialDelay passes without more output. Lines
+// reporting an unknown target are held back from the display and kept for the
+// error message instead. os/exec calls Write from one goroutine, but the
+// partial-line timer runs on another, so mu guards the fields.
 type stderrFilter struct {
-	out     io.Writer
-	buf     strings.Builder // every line, for the error message
+	out io.Writer
+
+	mu      sync.Mutex
+	hidden  strings.Builder // lines held back from the display, for the error message
 	partial []byte          // the start of a line whose '\n' hasn't arrived yet
+	shown   int             // how much of partial has been displayed already
+	timer   *time.Timer     // displays partial once the output goes quiet
 }
 
-// Write handles each complete line in p, holding back a trailing partial line.
+// Write handles each complete line in p, and schedules a trailing partial line
+// to be displayed if nothing follows it.
 func (f *stderrFilter) Write(p []byte) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	f.partial = append(f.partial, p...)
 	for {
 		i := bytes.IndexByte(f.partial, '\n')
 		if i < 0 {
-			return len(p), nil
+			break
 		}
-		f.line(string(f.partial[:i]))
+		f.line(f.partial[:i])
 		f.partial = f.partial[i+1:]
+		f.shown = 0
 	}
+
+	if len(f.partial) > f.shown {
+		if f.timer == nil {
+			f.timer = time.AfterFunc(stderrPartialDelay, f.showPartial)
+		} else {
+			f.timer.Reset(stderrPartialDelay)
+		}
+	}
+
+	return len(p), nil
 }
 
 // Flush handles a final line that ended without a '\n'.
 func (f *stderrFilter) Flush() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.timer != nil {
+		f.timer.Stop()
+	}
 	if len(f.partial) > 0 {
-		f.line(string(f.partial))
-		f.partial = nil
+		f.line(f.partial)
+		f.partial, f.shown = nil, 0
 	}
 }
 
-func (f *stderrFilter) line(line string) {
-	line = strings.TrimSuffix(line, "\r")
+// Hidden returns the lines held back from the display.
+func (f *stderrFilter) Hidden() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
-	// Always capture to buffer for error message (we need the full context)
-	f.buf.WriteString(line)
-	f.buf.WriteString("\n")
+	return f.hidden.String()
+}
 
-	// Filter "Unknown target specified" from real-time display to avoid duplication
-	// (it will still appear in the error message if command fails)
-	if strings.Contains(line, "Unknown target specified:") {
+// showPartial displays the part of the pending line not shown yet. A line that
+// may still turn out to report an unknown target waits for its newline.
+func (f *stderrFilter) showPartial() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	pending := f.partial[f.shown:]
+	if len(pending) == 0 || (f.shown == 0 && mayReportUnknownTarget(string(f.partial))) {
+		return
+	}
+	_, _ = f.out.Write(pending) //nolint:errcheck // #nosec G705 -- intentionally printing subprocess stderr to user; nothing to do if it fails
+	f.shown = len(f.partial)
+}
+
+// line handles a complete line (f.mu held), displaying whatever part of it
+// showPartial hasn't already.
+func (f *stderrFilter) line(raw []byte) {
+	line := strings.TrimSuffix(string(raw), "\r")
+
+	// mage's "Unknown target specified" goes in the error message instead of the display
+	if f.shown == 0 && strings.Contains(line, unknownTargetMessage) {
+		f.hidden.WriteString(line)
+		f.hidden.WriteString("\n")
 		return
 	}
 
-	// Pass through all other stderr output to user in real-time
-	_, _ = fmt.Fprintln(f.out, line) //nolint:errcheck // #nosec G705 -- intentionally printing subprocess stderr to user; nothing to do if it fails
+	rest := line[min(f.shown, len(line)):]
+	_, _ = fmt.Fprintln(f.out, rest) //nolint:errcheck // #nosec G705 -- intentionally printing subprocess stderr to user; nothing to do if it fails
+}
+
+// mayReportUnknownTarget reports whether an incomplete line is, or may still
+// become, mage's unknown-target message.
+func mayReportUnknownTarget(partial string) bool {
+	return strings.Contains(partial, unknownTargetMessage) || strings.HasPrefix(unknownTargetMessage, partial)
 }
 
 // HasMagefile checks if magefiles/ directory or magefile.go exists in the current directory
