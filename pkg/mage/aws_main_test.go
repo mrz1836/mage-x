@@ -262,9 +262,21 @@ func (ts *AWSMainTestSuite) TestWriteAWSConfig() {
 	})
 }
 
-// TestGetSourceProfile tests source profile retrieval
-func (ts *AWSMainTestSuite) TestGetSourceProfile() {
-	ts.Run("source profile found", func() {
+// TestGetBaseProfile tests resolving a session profile to its base profile
+func (ts *AWSMainTestSuite) TestGetBaseProfile() {
+	ts.Run("magex_base_profile link", func() {
+		configContent := `[profile dev]
+magex_base_profile = dev-base
+region = us-east-1
+`
+		configPath := filepath.Join(ts.awsDir, awsConfigFile)
+		err := os.WriteFile(configPath, []byte(configContent), 0o600)
+		ts.Require().NoError(err)
+
+		ts.Equal("dev-base", getBaseProfile("dev"))
+	})
+
+	ts.Run("legacy source_profile link", func() {
 		configContent := `[profile dev]
 source_profile = dev-base
 region = us-east-1
@@ -273,11 +285,10 @@ region = us-east-1
 		err := os.WriteFile(configPath, []byte(configContent), 0o600)
 		ts.Require().NoError(err)
 
-		sourceProfile := getSourceProfile("dev")
-		ts.Equal("dev-base", sourceProfile)
+		ts.Equal("dev-base", getBaseProfile("dev"))
 	})
 
-	ts.Run("source profile not found", func() {
+	ts.Run("no link", func() {
 		configContent := `[profile test]
 region = us-east-1
 `
@@ -285,13 +296,12 @@ region = us-east-1
 		err := os.WriteFile(configPath, []byte(configContent), 0o600)
 		ts.Require().NoError(err)
 
-		sourceProfile := getSourceProfile("test")
-		ts.Empty(sourceProfile)
+		ts.Empty(getBaseProfile("test"))
 	})
 
 	ts.Run("config file missing", func() {
-		sourceProfile := getSourceProfile("any")
-		ts.Empty(sourceProfile)
+		ts.Require().NoError(os.RemoveAll(filepath.Join(ts.awsDir, awsConfigFile)))
+		ts.Empty(getBaseProfile("any"))
 	})
 }
 
