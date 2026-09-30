@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/magefile/mage/mg"
@@ -18,23 +19,34 @@ import (
 
 // AWS credential management constants
 const (
-	awsDefaultDuration = 43200 // 12 hours in seconds
-	awsDefaultProfile  = "default"
-	awsCredentialsFile = "credentials"
-	awsConfigFile      = "config"
-	awsBackupSuffix    = ".bak"
-	mfaTokenLength     = 6
-	awsInstallURL      = "https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+	awsDefaultDuration   = 43200 // 12 hours in seconds
+	awsDefaultProfile    = "default"
+	awsBaseProfileSuffix = "-base"
+	awsCredentialsFile   = "credentials"
+	awsConfigFile        = "config"
+	awsBackupSuffix      = ".bak"
+	mfaTokenLength       = 6
+	awsInstallURL        = "https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+
+	// awsSessionCredsRejection is how STS refuses GetSessionToken when called with
+	// temporary credentials: only long-term IAM keys can start a new session
+	awsSessionCredsRejection = "Cannot call GetSessionToken with session credentials"
+
+	// awsTemporaryKeyPrefix starts every temporary STS access key ID; long-term
+	// IAM user keys start with "AKIA"
+	awsTemporaryKeyPrefix = "ASIA"
 )
 
 // Static errors for AWS operations
 var (
-	errMFASerialNotFound   = errors.New("MFA serial not found in config. Run 'magex aws:setup' first")
-	errInvalidMFAToken     = errors.New("MFA token must be exactly 6 digits")
-	errEmptyInput          = errors.New("input cannot be empty")
-	errSTSCallFailed       = errors.New("AWS STS get-session-token failed")
-	errAWSCredBackupFailed = errors.New("failed to backup credentials file")
-	errAWSCLINotFound      = errors.New("AWS CLI not found in PATH")
+	errMFASerialNotFound          = errors.New("MFA serial not found in config. Run 'magex aws:setup' first")
+	errInvalidMFAToken            = errors.New("MFA token must be exactly 6 digits")
+	errEmptyInput                 = errors.New("input cannot be empty")
+	errSTSCallFailed              = errors.New("AWS STS get-session-token failed")
+	errAWSCredBackupFailed        = errors.New("failed to backup credentials file")
+	errAWSCLINotFound             = errors.New("AWS CLI not found in PATH")
+	errBaseHasSessionCreds        = errors.New("base profile holds temporary session credentials instead of long-term IAM keys")
+	errWouldOverwriteLongTermKeys = errors.New("refusing to overwrite long-term IAM keys with session credentials")
 )
 
 // mfaTokenPattern validates 6-digit MFA tokens (compiled once at package level)
@@ -114,7 +126,7 @@ func (AWS) Setup(args ...string) error {
 	if profileParam != "" {
 		// If profile given, assume it's the session profile, derive base
 		sessionProfile = profileParam
-		baseProfile = profileParam + "-base"
+		baseProfile = profileParam + awsBaseProfileSuffix
 		utils.Info("Setting up profiles: base='%s', session='%s'", baseProfile, sessionProfile)
 	} else {
 		// Prompt for both profile names
@@ -217,6 +229,12 @@ func (AWS) Refresh(args ...string) error {
 		}
 	}
 
+	awsDir, err := getAWSDir()
+	if err != nil {
+		return err
+	}
+	credPath := filepath.Join(awsDir, awsCredentialsFile)
+
 	// Determine base profile (where long-term credentials and MFA serial are stored)
 	baseProfile := baseParamExplicit
 	if baseProfile == "" {
@@ -226,6 +244,17 @@ func (AWS) Refresh(args ...string) error {
 	if baseProfile == "" {
 		// Fallback: same profile for base and session (backward compatibility)
 		baseProfile = profile
+	}
+
+	// Writing the session into the base itself would replace its long-term keys
+	// with temporary ones, which STS can't start a new session from
+	if baseProfile == profile && hasLongTermKeys(loadAWSCredentialsSection(credPath, profile)) {
+		sessionProfile, linkErr := sessionProfileForBase(baseProfile)
+		if linkErr != nil {
+			return linkErr
+		}
+		utils.Info("'%s' holds your long-term keys; refreshing its session profile '%s' instead", baseProfile, sessionProfile)
+		profile = sessionProfile
 	}
 
 	// Get MFA serial from BASE profile's config
@@ -241,6 +270,11 @@ func (AWS) Refresh(args ...string) error {
 	utils.Info("MFA Device: %s", mfaSerial)
 	utils.Println("")
 
+	// STS would reject the call, so don't ask for an MFA code it can't use
+	if hasTemporaryCreds(loadAWSCredentialsSection(credPath, baseProfile)) {
+		return reportBaseHasSessionCreds(credPath, profile, baseProfile)
+	}
+
 	// Prompt for MFA token
 	mfaToken, err := promptForMFAToken()
 	if err != nil {
@@ -251,16 +285,16 @@ func (AWS) Refresh(args ...string) error {
 	utils.Info("Getting session token from AWS STS...")
 	creds, err := getAWSSessionToken(baseProfile, mfaSerial, mfaToken, duration)
 	if err != nil {
+		// Temporary credentials resolved from elsewhere (e.g. environment
+		// variables or the config file) only show up as this rejection
+		if strings.Contains(err.Error(), awsSessionCredsRejection) {
+			utils.Println("")
+			return reportBaseHasSessionCreds(credPath, profile, baseProfile)
+		}
 		return err
 	}
 
 	// Backup and update credentials - write to SESSION profile
-	awsDir, err := getAWSDir()
-	if err != nil {
-		return err
-	}
-
-	credPath := filepath.Join(awsDir, awsCredentialsFile)
 	if err := writeOrUpdateAWSSessionCredentials(credPath, profile, creds); err != nil {
 		return err
 	}
@@ -489,6 +523,87 @@ func getSourceProfile(profile string) string {
 	return ""
 }
 
+// linkedSessionProfiles returns the profiles whose source_profile points at
+// baseProfile, as aws:setup links them. Assume-role profiles are skipped: the
+// AWS CLI ignores static credentials stored for them.
+func linkedSessionProfiles(baseProfile string) []string {
+	awsDir, err := getAWSDir()
+	if err != nil {
+		return nil
+	}
+
+	data, err := os.ReadFile(filepath.Join(awsDir, awsConfigFile)) //nolint:gosec // path is constructed from known safe components
+	if err != nil {
+		return nil
+	}
+
+	var linked []string
+	for _, section := range parseAWSINI(data).Sections {
+		name, isProfile := strings.CutPrefix(section.Name, "profile ")
+		if !isProfile && section.Name != awsDefaultProfile {
+			continue // sso-session and other non-profile sections
+		}
+		if name == baseProfile || section.Values["source_profile"] != baseProfile || section.Values["role_arn"] != "" {
+			continue
+		}
+		linked = append(linked, name)
+	}
+
+	return linked
+}
+
+// sessionProfileForBase returns the session profile to refresh when the user
+// names a base profile that holds long-term keys. Without exactly one linked
+// session profile it explains the alternatives and returns an error.
+func sessionProfileForBase(baseProfile string) (string, error) {
+	linked := linkedSessionProfiles(baseProfile)
+	if len(linked) == 1 {
+		return linked[0], nil
+	}
+
+	utils.Warn("Profile '%s' holds long-term IAM keys; refreshing it in place would replace them with temporary credentials that can't be refreshed again", baseProfile)
+	if len(linked) == 0 {
+		utils.Info("Store the session in its own profile instead: magex aws:refresh profile=<session-profile> base=%s", baseProfile)
+	} else {
+		utils.Info("Refresh one of its session profiles instead (%s), e.g.: magex aws:refresh profile=%s", strings.Join(linked, ", "), linked[0])
+	}
+
+	return "", fmt.Errorf("%w: %s", errWouldOverwriteLongTermKeys, baseProfile)
+}
+
+// loadAWSCredentialsSection returns a profile's section of a credentials file,
+// or nil when the file or section doesn't exist
+func loadAWSCredentialsSection(path, profile string) *awsINISection {
+	data, err := os.ReadFile(path) //nolint:gosec // path is constructed from known safe components
+	if err != nil {
+		return nil
+	}
+
+	for _, section := range parseAWSINI(data).Sections {
+		if section.Name == profile {
+			return section
+		}
+	}
+
+	return nil
+}
+
+// hasTemporaryCreds reports whether a credentials section holds temporary STS
+// credentials. The access key prefix still identifies them after the session
+// token line has been deleted by hand.
+func hasTemporaryCreds(section *awsINISection) bool {
+	if section == nil {
+		return false
+	}
+	return section.Values["aws_session_token"] != "" ||
+		strings.HasPrefix(section.Values["aws_access_key_id"], awsTemporaryKeyPrefix)
+}
+
+// hasLongTermKeys reports whether a credentials section holds long-term IAM keys
+func hasLongTermKeys(section *awsINISection) bool {
+	return section != nil && section.Values["aws_access_key_id"] != "" && !hasTemporaryCreds(section)
+}
+
 // promptForNonEmpty prompts for input and validates it's not empty
 func promptForNonEmpty(prompt string) (string, error) {
 	value, err := utils.PromptForInput(prompt)
@@ -657,6 +772,12 @@ func setINIValue(section *awsINISection, key, value string) {
 	section.Values[key] = value
 }
 
+// deleteINIValue removes a key from a section, keeping the order of the rest
+func deleteINIValue(section *awsINISection, key string) {
+	delete(section.Values, key)
+	section.KeyOrder = slices.DeleteFunc(section.KeyOrder, func(k string) bool { return k == key })
+}
+
 // backupFile creates a backup of a file
 func backupFile(path string) error {
 	if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
@@ -699,6 +820,9 @@ func writeAWSCredentials(path, profile, accessKeyID, secretKey, sessionToken str
 	setINIValue(section, "aws_secret_access_key", secretKey)
 	if sessionToken != "" {
 		setINIValue(section, "aws_session_token", sessionToken)
+	} else {
+		// A leftover token would be sent along with the new long-term keys, and AWS rejects that pair
+		deleteINIValue(section, "aws_session_token")
 	}
 
 	// Write file with sensitive permissions
@@ -833,6 +957,61 @@ func checkAWSSession(profile string) (string, string, bool) {
 	}
 
 	return response.Account, response.Arn, true
+}
+
+// reportBaseHasSessionCreds handles a refresh that STS can't serve because the
+// base profile's credentials are temporary. It isn't an error while the requested
+// profile is still logged in; either way it explains how to recover.
+func reportBaseHasSessionCreds(credPath, profile, baseProfile string) error {
+	accountID, _, active := checkAWSSession(profile)
+	if active {
+		utils.Success("Already logged in: profile '%s' has an active session (Account: %s)", profile, accountID)
+	}
+
+	if hasTemporaryCreds(loadAWSCredentialsSection(credPath, baseProfile)) {
+		utils.Warn("Profile '%s' holds temporary session credentials (ASIA… keys) instead of long-term IAM keys (AKIA… keys), so AWS can't start a new session from it", baseProfile)
+		printRestoreKeysHint(credPath, profile, baseProfile)
+	} else {
+		utils.Warn("The AWS CLI resolved temporary session credentials for '%s' instead of long-term IAM keys, so AWS can't start a new session from them", baseProfile)
+		listCmd := "aws configure list"
+		if baseProfile != awsDefaultProfile {
+			listCmd += " --profile " + baseProfile
+		}
+		utils.Info("See where they come from with: %s", listCmd)
+	}
+
+	if active {
+		return nil
+	}
+	return fmt.Errorf("%w: %s", errBaseHasSessionCreds, baseProfile)
+}
+
+// printRestoreKeysHint explains how to put long-term keys back into baseProfile,
+// pointing at the credentials backup when it still holds them
+func printRestoreKeysHint(credPath, profile, baseProfile string) {
+	setupCmd := "magex aws:setup profile=" + setupProfileName(profile, baseProfile)
+
+	backupPath := credPath + awsBackupSuffix
+	if hasLongTermKeys(loadAWSCredentialsSection(backupPath, baseProfile)) {
+		utils.Info("%s still has the long-term keys for '%s'", backupPath, baseProfile)
+		utils.Info("Replace both aws_access_key_id and aws_secret_access_key under [%s] in %s with the ones from that backup, and delete any aws_session_token line there",
+			baseProfile, credPath)
+		utils.Info("Do it before running aws:setup or refreshing another profile, since both overwrite that backup")
+		utils.Info("Or re-enter your keys with: %s", setupCmd)
+		return
+	}
+
+	utils.Info("Re-enter your long-term keys with: %s", setupCmd)
+}
+
+// setupProfileName returns the profile= value for aws:setup, which stores the
+// long-term keys under "<profile>-base": baseProfile itself when it follows that
+// naming, otherwise a new base for profile
+func setupProfileName(profile, baseProfile string) string {
+	if name := strings.TrimSuffix(baseProfile, awsBaseProfileSuffix); name != baseProfile && name != "" {
+		return name
+	}
+	return profile
 }
 
 // displayAWSProfileStatus displays the status of a single profile
