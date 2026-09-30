@@ -734,8 +734,8 @@ func TestGetSourceProfile(t *testing.T) {
 		require.NoError(t, err)
 
 		// Write config with source_profile
-		configContent := `[profile mrz]
-source_profile = mrz-base
+		configContent := `[profile dev]
+source_profile = dev-base
 region = us-east-1
 `
 		err = os.WriteFile(filepath.Join(awsDir, "config"), []byte(configContent), 0o600)
@@ -748,8 +748,8 @@ region = us-east-1
 		}()
 		_ = os.Setenv("HOME", tmpDir)
 
-		sourceProfile := getSourceProfile("mrz")
-		assert.Equal(t, "mrz-base", sourceProfile)
+		sourceProfile := getSourceProfile("dev")
+		assert.Equal(t, "dev-base", sourceProfile)
 	})
 
 	t.Run("return empty when source_profile not found", func(t *testing.T) {
@@ -759,7 +759,7 @@ region = us-east-1
 		require.NoError(t, err)
 
 		// Write config without source_profile
-		configContent := `[profile mrz]
+		configContent := `[profile dev]
 region = us-east-1
 `
 		err = os.WriteFile(filepath.Join(awsDir, "config"), []byte(configContent), 0o600)
@@ -771,7 +771,7 @@ region = us-east-1
 		}()
 		_ = os.Setenv("HOME", tmpDir)
 
-		sourceProfile := getSourceProfile("mrz")
+		sourceProfile := getSourceProfile("dev")
 		assert.Empty(t, sourceProfile)
 	})
 
@@ -787,7 +787,7 @@ region = us-east-1
 		}()
 		_ = os.Setenv("HOME", tmpDir)
 
-		sourceProfile := getSourceProfile("mrz")
+		sourceProfile := getSourceProfile("dev")
 		assert.Empty(t, sourceProfile)
 	})
 }
@@ -798,13 +798,13 @@ func TestWriteAWSConfigSourceProfile(t *testing.T) {
 		tmpDir := t.TempDir()
 		configPath := filepath.Join(tmpDir, "config")
 
-		err := writeAWSConfigSourceProfile(configPath, "mrz", "mrz-base")
+		err := writeAWSConfigSourceProfile(configPath, "dev", "dev-base")
 		require.NoError(t, err)
 
 		content, err := os.ReadFile(configPath)
 		require.NoError(t, err)
-		assert.Contains(t, string(content), "[profile mrz]")
-		assert.Contains(t, string(content), "source_profile = mrz-base")
+		assert.Contains(t, string(content), "[profile dev]")
+		assert.Contains(t, string(content), "source_profile = dev-base")
 	})
 
 	t.Run("write source_profile for default profile", func(t *testing.T) {
@@ -825,20 +825,20 @@ func TestWriteAWSConfigSourceProfile(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "config")
 
 		// Write initial config
-		initial := `[profile mrz]
+		initial := `[profile dev]
 region = us-east-1
 `
 		err := os.WriteFile(configPath, []byte(initial), 0o600)
 		require.NoError(t, err)
 
 		// Add source_profile
-		err = writeAWSConfigSourceProfile(configPath, "mrz", "mrz-base")
+		err = writeAWSConfigSourceProfile(configPath, "dev", "dev-base")
 		require.NoError(t, err)
 
 		content, err := os.ReadFile(configPath)
 		require.NoError(t, err)
-		assert.Contains(t, string(content), "[profile mrz]")
-		assert.Contains(t, string(content), "source_profile = mrz-base")
+		assert.Contains(t, string(content), "[profile dev]")
+		assert.Contains(t, string(content), "source_profile = dev-base")
 		assert.Contains(t, string(content), "region = us-east-1")
 	})
 }
@@ -1337,30 +1337,30 @@ func TestHasValidAWSSetup_Table(t *testing.T) {
 		{
 			name:       "base half-done: key present but no mfa_serial in config",
 			makeAWSDir: true,
-			credsFile:  "[mrz-ro-base]\n" + "aws_access_key_id = AKIATEST\n",
-			config:     "[profile mrz-ro]\nsource_profile = mrz-ro-base\n",
-			profile:    "mrz-ro",
+			credsFile:  "[dev-base]\n" + "aws_access_key_id = AKIATEST\n",
+			config:     "[profile dev]\nsource_profile = dev-base\n",
+			profile:    "dev",
 			want:       false,
 		},
 		{
 			name:       "post-setup pre-refresh (primary bug-fix case)",
 			makeAWSDir: true,
-			credsFile: "[mrz-ro-base]\n" +
+			credsFile: "[dev-base]\n" +
 				"aws_access_key_id = AKIATEST\n" +
 				"aws_secret_access_key = SECRETTEST\n",
-			config: "[profile mrz-ro-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
-				"[profile mrz-ro]\nsource_profile = mrz-ro-base\n",
-			profile: "mrz-ro",
+			config: "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
+				"[profile dev]\nsource_profile = dev-base\n",
+			profile: "dev",
 			want:    true,
 		},
 		{
 			name:       "post-refresh has both base and session sections",
 			makeAWSDir: true,
-			credsFile: "[mrz-ro-base]\naws_access_key_id = AKIATEST\n\n" +
-				"[mrz-ro]\naws_access_key_id = ASIASESSION\naws_session_token = TOK\n",
-			config: "[profile mrz-ro-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
-				"[profile mrz-ro]\nsource_profile = mrz-ro-base\n",
-			profile: "mrz-ro",
+			credsFile: "[dev-base]\naws_access_key_id = AKIATEST\n\n" +
+				"[dev]\naws_access_key_id = ASIASESSION\naws_session_token = TOK\n",
+			config: "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n\n" +
+				"[profile dev]\nsource_profile = dev-base\n",
+			profile: "dev",
 			want:    true,
 		},
 		{
@@ -1383,17 +1383,17 @@ func TestHasValidAWSSetup_Table(t *testing.T) {
 			name:       "dangling source_profile points to missing base",
 			makeAWSDir: true,
 			credsFile:  "[other-base]\n" + "aws_access_key_id = AKIATEST\n",
-			config: "[profile mrz-ro]\nsource_profile = mrz-ro-base\n\n" +
+			config: "[profile dev]\nsource_profile = dev-base\n\n" +
 				"[profile other-base]\nmfa_serial = " + baseProfileMFA + "\n",
-			profile: "mrz-ro",
+			profile: "dev",
 			want:    false,
 		},
 		{
 			name:       "user passes base profile name directly",
 			makeAWSDir: true,
-			credsFile:  "[mrz-ro-base]\n" + "aws_access_key_id = AKIATEST\n",
-			config:     "[profile mrz-ro-base]\nmfa_serial = " + baseProfileMFA + "\n",
-			profile:    "mrz-ro-base",
+			credsFile:  "[dev-base]\n" + "aws_access_key_id = AKIATEST\n",
+			config:     "[profile dev-base]\nmfa_serial = " + baseProfileMFA + "\n",
+			profile:    "dev-base",
 			want:       true,
 		},
 	}
@@ -1432,21 +1432,21 @@ func TestHasValidAWSSetup_Table(t *testing.T) {
 // ============================================================================
 
 func TestStatusBaseProfileResolution(t *testing.T) {
-	const credsBothSections = "[mrz-ro-base]\n" +
+	const credsBothSections = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n" +
 		"aws_secret_access_key = SECRETBASE\n\n" +
-		"[mrz-ro]\n" +
+		"[dev]\n" +
 		"aws_access_key_id = ASIASESSION\n" +
 		"aws_secret_access_key = SECRETSESSION\n" +
 		"aws_session_token = TOKSESSION\n"
 
-	const credsBaseOnly = "[mrz-ro-base]\n" +
+	const credsBaseOnly = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n"
 
-	const configBoth = "[profile mrz-ro-base]\n" +
+	const configBoth = "[profile dev-base]\n" +
 		"mfa_serial = " + baseProfileMFA + "\n\n" +
-		"[profile mrz-ro]\n" +
-		"source_profile = mrz-ro-base\n"
+		"[profile dev]\n" +
+		"source_profile = dev-base\n"
 
 	// extractProfilesFromCalls returns the profile names checkAWSSession was
 	// invoked for, derived from "--profile <name>" pairs in captured args.
@@ -1469,11 +1469,11 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 			return "", errTestSTSUnavailable
 		})
 
-		err := AWS{}.Status("profile=mrz-ro")
+		err := AWS{}.Status("profile=dev")
 		require.NoError(t, err)
 
 		profiles := extractProfiles(mock.allCalls)
-		assert.Contains(t, profiles, "mrz-ro-base", "Status should display base profile when filtered by session name")
+		assert.Contains(t, profiles, "dev-base", "Status should display base profile when filtered by session name")
 	})
 
 	t.Run("filter by session profile post-refresh shows both sections", func(t *testing.T) {
@@ -1482,12 +1482,12 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 			return "", errTestSTSUnavailable
 		})
 
-		err := AWS{}.Status("profile=mrz-ro")
+		err := AWS{}.Status("profile=dev")
 		require.NoError(t, err)
 
 		profiles := extractProfiles(mock.allCalls)
-		assert.Contains(t, profiles, "mrz-ro-base")
-		assert.Contains(t, profiles, "mrz-ro")
+		assert.Contains(t, profiles, "dev-base")
+		assert.Contains(t, profiles, "dev")
 	})
 
 	t.Run("filter by base profile directly shows only base", func(t *testing.T) {
@@ -1496,12 +1496,12 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 			return "", errTestSTSUnavailable
 		})
 
-		err := AWS{}.Status("profile=mrz-ro-base")
+		err := AWS{}.Status("profile=dev-base")
 		require.NoError(t, err)
 
 		profiles := extractProfiles(mock.allCalls)
-		assert.Contains(t, profiles, "mrz-ro-base")
-		assert.NotContains(t, profiles, "mrz-ro", "filtering by base name should not double-print session section")
+		assert.Contains(t, profiles, "dev-base")
+		assert.NotContains(t, profiles, "dev", "filtering by base name should not double-print session section")
 	})
 
 	t.Run("no filter displays every section", func(t *testing.T) {
@@ -1514,7 +1514,7 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 		require.NoError(t, err)
 
 		profiles := extractProfiles(mock.allCalls)
-		assert.ElementsMatch(t, []string{"mrz-ro-base", "mrz-ro"}, profiles)
+		assert.ElementsMatch(t, []string{"dev-base", "dev"}, profiles)
 	})
 
 	t.Run("filter that matches nothing returns nil and skips STS calls", func(t *testing.T) {
@@ -1534,7 +1534,7 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 			return "", errTestSTSUnavailable
 		})
 
-		err := AWS{}.Status("profile=mrz-ro")
+		err := AWS{}.Status("profile=dev")
 		require.NoError(t, err)
 		assert.Empty(t, mock.allCalls)
 	})
@@ -1545,22 +1545,22 @@ func TestStatusBaseProfileResolution(t *testing.T) {
 // ============================================================================
 
 func TestLoginFlow(t *testing.T) {
-	const credsBaseOnly = "[mrz-ro-base]\n" +
+	const credsBaseOnly = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n" +
 		"aws_secret_access_key = SECRETBASE\n"
 
-	const credsBothSections = "[mrz-ro-base]\n" +
+	const credsBothSections = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n" +
 		"aws_secret_access_key = SECRETBASE\n\n" +
-		"[mrz-ro]\n" +
+		"[dev]\n" +
 		"aws_access_key_id = ASIASTALE\n" +
 		"aws_secret_access_key = SECRETSTALE\n" +
 		"aws_session_token = TOKSTALE\n"
 
-	const configBoth = "[profile mrz-ro-base]\n" +
+	const configBoth = "[profile dev-base]\n" +
 		"mfa_serial = " + baseProfileMFA + "\n\n" +
-		"[profile mrz-ro]\n" +
-		"source_profile = mrz-ro-base\n"
+		"[profile dev]\n" +
+		"source_profile = dev-base\n"
 
 	t.Run("login_after_setup_before_refresh_enters_refresh_path (regression)", func(t *testing.T) {
 		skipIfNoAWSCLI(t)
@@ -1575,20 +1575,20 @@ func TestLoginFlow(t *testing.T) {
 			return "", errTestUnexpectedRunnerCall
 		})
 
-		err := AWS{}.Login("profile=mrz-ro")
+		err := AWS{}.Login("profile=dev")
 		require.NoError(t, err)
 
 		// The STS call must target the BASE profile (long-term keys).
 		require.NotEmpty(t, mock.allCalls)
 		stsArgs := mock.allCalls[len(mock.allCalls)-1]
-		assert.True(t, argsContain(stsArgs, "--profile", "mrz-ro-base"),
-			"Refresh path must invoke STS with --profile mrz-ro-base; got %v", stsArgs)
+		assert.True(t, argsContain(stsArgs, "--profile", "dev-base"),
+			"Refresh path must invoke STS with --profile dev-base; got %v", stsArgs)
 		assert.True(t, argsContain(stsArgs, "--token-code", "123456"))
 
 		// Credentials file should now contain the session section with the new token.
 		ini := readCredentialsINI(t)
-		session := findSection(ini, "mrz-ro")
-		require.NotNil(t, session, "session profile [mrz-ro] must be written after Refresh")
+		session := findSection(ini, "dev")
+		require.NotNil(t, session, "session profile [dev] must be written after Refresh")
 		assert.Equal(t, "TOKNEW", session.Values["aws_session_token"])
 		assert.Equal(t, "ASIANEW", session.Values["aws_access_key_id"])
 	})
@@ -1606,27 +1606,27 @@ func TestLoginFlow(t *testing.T) {
 			return "", errTestUnexpectedSTSDuringSetup
 		})
 
-		err := AWS{}.Login("profile=mrz-ro")
+		err := AWS{}.Login("profile=dev")
 		require.NoError(t, err)
 
 		assert.Empty(t, mock.allCalls, "Setup path must not invoke STS")
 
 		creds := readCredentialsINI(t)
-		base := findSection(creds, "mrz-ro-base")
-		require.NotNil(t, base, "[mrz-ro-base] must be written to credentials")
+		base := findSection(creds, "dev-base")
+		require.NotNil(t, base, "[dev-base] must be written to credentials")
 		assert.Equal(t, "AKIATEST", base.Values["aws_access_key_id"])
 		assert.Equal(t, "SECRETTEST", base.Values["aws_secret_access_key"])
 		// Session profile section must NOT be written by Setup.
-		assert.Nil(t, findSection(creds, "mrz-ro"))
+		assert.Nil(t, findSection(creds, "dev"))
 
 		config := readConfigINI(t)
-		baseCfg := findSection(config, "profile mrz-ro-base")
-		require.NotNil(t, baseCfg, "[profile mrz-ro-base] must be written to config")
+		baseCfg := findSection(config, "profile dev-base")
+		require.NotNil(t, baseCfg, "[profile dev-base] must be written to config")
 		assert.Equal(t, "arn:aws:iam::1:mfa/u", baseCfg.Values["mfa_serial"])
 
-		sessionCfg := findSection(config, "profile mrz-ro")
-		require.NotNil(t, sessionCfg, "[profile mrz-ro] must be written to config")
-		assert.Equal(t, "mrz-ro-base", sessionCfg.Values["source_profile"])
+		sessionCfg := findSection(config, "profile dev")
+		require.NotNil(t, sessionCfg, "[profile dev] must be written to config")
+		assert.Equal(t, "dev-base", sessionCfg.Values["source_profile"])
 	})
 
 	t.Run("login_with_healthy_setup_refreshes_session_token", func(t *testing.T) {
@@ -1642,12 +1642,12 @@ func TestLoginFlow(t *testing.T) {
 			return "", errTestUnexpectedRunnerCall
 		})
 
-		err := AWS{}.Login("profile=mrz-ro")
+		err := AWS{}.Login("profile=dev")
 		require.NoError(t, err)
 		require.NotEmpty(t, mock.allCalls)
 
 		ini := readCredentialsINI(t)
-		session := findSection(ini, "mrz-ro")
+		session := findSection(ini, "dev")
 		require.NotNil(t, session)
 		assert.Equal(t, "TOKFRESH", session.Values["aws_session_token"])
 	})
@@ -1670,23 +1670,23 @@ func TestSetupWritesBothProfileSections(t *testing.T) {
 		return "", errTestSetupRunnerInvoked
 	})
 
-	require.NoError(t, AWS{}.Setup("profile=mrz-ro"))
+	require.NoError(t, AWS{}.Setup("profile=dev"))
 
 	creds := readCredentialsINI(t)
-	base := findSection(creds, "mrz-ro-base")
+	base := findSection(creds, "dev-base")
 	require.NotNil(t, base)
 	assert.Equal(t, "AKIATEST", base.Values["aws_access_key_id"])
 	assert.Equal(t, "SECRETTEST", base.Values["aws_secret_access_key"])
-	assert.Nil(t, findSection(creds, "mrz-ro"), "Setup must not write the session profile to credentials")
+	assert.Nil(t, findSection(creds, "dev"), "Setup must not write the session profile to credentials")
 
 	config := readConfigINI(t)
-	baseCfg := findSection(config, "profile mrz-ro-base")
+	baseCfg := findSection(config, "profile dev-base")
 	require.NotNil(t, baseCfg)
 	assert.Equal(t, "arn:aws:iam::123456789012:mfa/test", baseCfg.Values["mfa_serial"])
 
-	sessionCfg := findSection(config, "profile mrz-ro")
+	sessionCfg := findSection(config, "profile dev")
 	require.NotNil(t, sessionCfg)
-	assert.Equal(t, "mrz-ro-base", sessionCfg.Values["source_profile"])
+	assert.Equal(t, "dev-base", sessionCfg.Values["source_profile"])
 
 	// Re-running Setup creates .bak files for both credentials and config.
 	withMockedPrompts(t, []string{
@@ -1694,7 +1694,7 @@ func TestSetupWritesBothProfileSections(t *testing.T) {
 		"SECRETTWO",
 		"arn:aws:iam::123456789012:mfa/test",
 	})
-	require.NoError(t, AWS{}.Setup("profile=mrz-ro"))
+	require.NoError(t, AWS{}.Setup("profile=dev"))
 
 	awsDir, err := getAWSDir()
 	require.NoError(t, err)
@@ -1702,7 +1702,7 @@ func TestSetupWritesBothProfileSections(t *testing.T) {
 	assert.FileExists(t, filepath.Join(awsDir, awsConfigFile+awsBackupSuffix))
 
 	creds = readCredentialsINI(t)
-	base = findSection(creds, "mrz-ro-base")
+	base = findSection(creds, "dev-base")
 	require.NotNil(t, base)
 	assert.Equal(t, "AKIATWO", base.Values["aws_access_key_id"])
 }
@@ -1712,13 +1712,13 @@ func TestSetupWritesBothProfileSections(t *testing.T) {
 // ============================================================================
 
 func TestRefreshFlow(t *testing.T) {
-	const credsBaseOnly = "[mrz-ro-base]\n" +
+	const credsBaseOnly = "[dev-base]\n" +
 		"aws_access_key_id = AKIABASE\n" +
 		"aws_secret_access_key = SECRETBASE\n"
-	const configBoth = "[profile mrz-ro-base]\n" +
+	const configBoth = "[profile dev-base]\n" +
 		"mfa_serial = " + baseProfileMFA + "\n\n" +
-		"[profile mrz-ro]\n" +
-		"source_profile = mrz-ro-base\n"
+		"[profile dev]\n" +
+		"source_profile = dev-base\n"
 
 	t.Run("writes session creds under session profile", func(t *testing.T) {
 		skipIfNoAWSCLI(t)
@@ -1730,17 +1730,17 @@ func TestRefreshFlow(t *testing.T) {
 			if argsContain(args, "sts", "get-session-token") {
 				assert.True(t, argsContain(args, "--serial-number", baseProfileMFA))
 				assert.True(t, argsContain(args, "--token-code", "123456"))
-				assert.True(t, argsContain(args, "--profile", "mrz-ro-base"))
+				assert.True(t, argsContain(args, "--profile", "dev-base"))
 				return stsSessionTokenJSON("ASIASESSION", "SECSESSION", "TOKSESSION"), nil
 			}
 			return "", errTestUnexpectedRunnerCall
 		})
 
-		require.NoError(t, AWS{}.Refresh("profile=mrz-ro"))
+		require.NoError(t, AWS{}.Refresh("profile=dev"))
 		require.NotEmpty(t, mock.allCalls)
 
 		ini := readCredentialsINI(t)
-		session := findSection(ini, "mrz-ro")
+		session := findSection(ini, "dev")
 		require.NotNil(t, session)
 		assert.Equal(t, "ASIASESSION", session.Values["aws_access_key_id"])
 		assert.Equal(t, "SECSESSION", session.Values["aws_secret_access_key"])
@@ -1757,7 +1757,7 @@ func TestRefreshFlow(t *testing.T) {
 			return "", errTestSTSDuringInvalidMFA
 		})
 
-		err := AWS{}.Refresh("profile=mrz-ro")
+		err := AWS{}.Refresh("profile=dev")
 		require.Error(t, err)
 		require.ErrorIs(t, err, errInvalidMFAToken, "expected errInvalidMFAToken, got: %v", err)
 		assert.Empty(t, mock.allCalls, "runner must not be invoked when validation fails")
@@ -1781,11 +1781,11 @@ func TestRefreshFlow(t *testing.T) {
 			return "", errTestUnexpectedRunnerCall
 		})
 
-		require.NoError(t, AWS{}.Refresh("profile=mrz-ro", "base=custom-base"))
+		require.NoError(t, AWS{}.Refresh("profile=dev", "base=custom-base"))
 		require.NotEmpty(t, mock.allCalls)
 
 		ini := readCredentialsINI(t)
-		session := findSection(ini, "mrz-ro")
+		session := findSection(ini, "dev")
 		require.NotNil(t, session)
 		assert.Equal(t, "TOKNEW", session.Values["aws_session_token"])
 	})

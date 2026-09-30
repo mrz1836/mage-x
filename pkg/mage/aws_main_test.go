@@ -265,16 +265,16 @@ func (ts *AWSMainTestSuite) TestWriteAWSConfig() {
 // TestGetSourceProfile tests source profile retrieval
 func (ts *AWSMainTestSuite) TestGetSourceProfile() {
 	ts.Run("source profile found", func() {
-		configContent := `[profile mrz]
-source_profile = mrz-base
+		configContent := `[profile dev]
+source_profile = dev-base
 region = us-east-1
 `
 		configPath := filepath.Join(ts.awsDir, awsConfigFile)
 		err := os.WriteFile(configPath, []byte(configContent), 0o600)
 		ts.Require().NoError(err)
 
-		sourceProfile := getSourceProfile("mrz")
-		ts.Equal("mrz-base", sourceProfile)
+		sourceProfile := getSourceProfile("dev")
+		ts.Equal("dev-base", sourceProfile)
 	})
 
 	ts.Run("source profile not found", func() {

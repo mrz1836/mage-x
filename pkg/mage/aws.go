@@ -134,12 +134,12 @@ func (AWS) Setup(args ...string) error {
 		utils.Println("")
 
 		var err error
-		baseProfile, err = promptForNonEmpty("Base profile name (for long-term keys, e.g., mrz-base)")
+		baseProfile, err = promptForNonEmpty("Base profile name (for long-term keys, e.g., dev-base)")
 		if err != nil {
 			return err
 		}
 
-		sessionProfile, err = promptForNonEmpty("Session profile name (for temp creds, e.g., mrz)")
+		sessionProfile, err = promptForNonEmpty("Session profile name (for temp creds, e.g., dev)")
 		if err != nil {
 			return err
 		}
@@ -341,8 +341,8 @@ func (AWS) Status(args ...string) error {
 		configINI = parseAWSINI(configData)
 	}
 
-	// Resolve session -> base so a filter like "profile=mrz-ro" also matches
-	// credentials stored under "mrz-ro-base".
+	// Resolve session -> base so a filter like "profile=dev" also matches
+	// credentials stored under "dev-base".
 	resolvedBase := ""
 	if profileFilter != "" {
 		resolvedBase = getSourceProfile(profileFilter)
