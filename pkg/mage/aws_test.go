@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -436,14 +437,51 @@ func TestBackupFile(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check backup exists
-		backupPath := testFile + awsBackupSuffix
-		_, err = os.Stat(backupPath)
-		assert.NoError(t, err)
+		backups := listBackups(testFile)
+		require.Len(t, backups, 1)
+		assert.True(t, strings.HasPrefix(filepath.Base(backups[0]), "test-creds.bak."), "got %s", backups[0])
 
-		// Verify content
-		content, err := os.ReadFile(backupPath)
+		// Verify content and owner-only permissions
+		content, err := os.ReadFile(backups[0])
 		require.NoError(t, err)
 		assert.Equal(t, "test content", string(content))
+		info, err := os.Stat(backups[0])
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	})
+
+	t.Run("keeps only the newest backups", func(t *testing.T) {
+		testFile := filepath.Join(t.TempDir(), "credentials")
+		for i := 1; i <= awsBackupsKept+2; i++ {
+			require.NoError(t, os.WriteFile(testFile, []byte(fmt.Sprintf("v%d", i)), 0o600))
+			require.NoError(t, backupFile(testFile))
+		}
+
+		backups := listBackups(testFile)
+		require.Len(t, backups, awsBackupsKept)
+		for i, backup := range backups {
+			content, err := os.ReadFile(backup) //nolint:gosec // path constructed from test temp dir
+			require.NoError(t, err)
+			assert.Equal(t, fmt.Sprintf("v%d", awsBackupsKept+2-i), string(content), "backups are listed newest first")
+		}
+	})
+
+	t.Run("never removes files it didn't create", func(t *testing.T) {
+		dir := t.TempDir()
+		testFile := filepath.Join(dir, "credentials")
+		legacy := testFile + awsBackupSuffix
+		handMade := testFile + awsBackupSuffix + ".old"
+		for _, path := range []string{testFile, legacy, handMade} {
+			require.NoError(t, os.WriteFile(path, []byte("keep"), 0o600))
+		}
+
+		for i := 0; i < awsBackupsKept+2; i++ {
+			require.NoError(t, backupFile(testFile))
+		}
+
+		assert.Len(t, listBackups(testFile), awsBackupsKept)
+		assert.FileExists(t, legacy)
+		assert.FileExists(t, handMade)
 	})
 }
 
@@ -567,8 +605,9 @@ func TestWriteAWSCredentials(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify backup exists with old content
-		backupPath := credPath + awsBackupSuffix
-		backupContent, err := os.ReadFile(backupPath)
+		backups := listBackups(credPath)
+		require.NotEmpty(t, backups)
+		backupContent, err := os.ReadFile(backups[0])
 		require.NoError(t, err)
 		assert.Contains(t, string(backupContent), "OLD")
 	})
@@ -1756,8 +1795,8 @@ func TestSetupWritesBothProfileSections(t *testing.T) {
 
 	awsDir, err := getAWSDir()
 	require.NoError(t, err)
-	assert.FileExists(t, filepath.Join(awsDir, awsCredentialsFile+awsBackupSuffix))
-	assert.FileExists(t, filepath.Join(awsDir, awsConfigFile+awsBackupSuffix))
+	assert.NotEmpty(t, listBackups(filepath.Join(awsDir, awsCredentialsFile)))
+	assert.NotEmpty(t, listBackups(filepath.Join(awsDir, awsConfigFile)))
 
 	creds = readCredentialsINI(t)
 	base = findSection(creds, "dev-base")
@@ -1963,21 +2002,36 @@ func TestRefreshBaseHoldsSessionCreds(t *testing.T) {
 		})
 	}
 
+	const credsLongTerm = "[dev-base]\n" +
+		"aws_access_key_id = AKIABASE\n" +
+		"aws_secret_access_key = SECRETBASE\n"
+	const olderBackup = awsCredentialsFile + awsBackupSuffix + ".20260101T000000.000Z"
+	const newerBackup = awsCredentialsFile + awsBackupSuffix + ".20260201T000000.000Z"
+	const legacyBackup = awsCredentialsFile + awsBackupSuffix
+
 	backups := []struct {
-		name           string
-		backup         string
-		pointsAtBackup bool
+		name  string
+		files map[string]string // backup file name in ~/.aws -> content
+		want  string            // backup the hint should name, "" for none
 	}{
 		{
-			name: "points at a backup that still has the long-term keys",
-			backup: "[dev-base]\n" +
-				"aws_access_key_id = AKIABASE\n" +
-				"aws_secret_access_key = SECRETBASE\n",
-			pointsAtBackup: true,
+			name:  "points at a .bak from older versions that has the long-term keys",
+			files: map[string]string{legacyBackup: credsLongTerm},
+			want:  legacyBackup,
 		},
 		{
-			name:   "ignores a backup that only has temporary keys",
-			backup: credsTokenDeleted,
+			name:  "ignores a backup that only has temporary keys",
+			files: map[string]string{legacyBackup: credsTokenDeleted},
+		},
+		{
+			name:  "skips newer backups that only have temporary keys",
+			files: map[string]string{newerBackup: credsSessionInBase, olderBackup: credsLongTerm},
+			want:  olderBackup,
+		},
+		{
+			name:  "prefers the newest timestamped backup",
+			files: map[string]string{newerBackup: credsLongTerm, olderBackup: credsLongTerm, legacyBackup: credsLongTerm},
+			want:  newerBackup,
 		},
 	}
 
@@ -1986,8 +2040,9 @@ func TestRefreshBaseHoldsSessionCreds(t *testing.T) {
 			skipIfNoAWSCLI(t)
 
 			withMockedHome(t, credsSessionInBase, configBoth)
-			backupPath := awsTestPath(t, awsCredentialsFile+awsBackupSuffix)
-			require.NoError(t, os.WriteFile(backupPath, []byte(tt.backup), 0o600))
+			for name, content := range tt.files {
+				require.NoError(t, os.WriteFile(awsTestPath(t, name), []byte(content), 0o600))
+			}
 			withMockedPrompts(t, nil)
 			withMockedRunner(t, func(cmd string, args ...string) (string, error) {
 				return "", errTestCallerIdentityFailed
@@ -1997,12 +2052,12 @@ func TestRefreshBaseHoldsSessionCreds(t *testing.T) {
 			output := captureAWSLog(t, func() { err = AWS{}.Refresh("profile=dev") })
 
 			require.ErrorIs(t, err, errBaseHasSessionCreds)
-			if tt.pointsAtBackup {
-				assert.Contains(t, output, backupPath+" still has the long-term keys for 'dev-base'")
+			if tt.want != "" {
+				assert.Contains(t, output, awsTestPath(t, tt.want)+" still has the long-term keys for 'dev-base'")
 				assert.Contains(t, output, "Replace both aws_access_key_id and aws_secret_access_key under [dev-base]")
 				assert.Contains(t, output, "Or re-enter your keys with: magex aws:setup profile=dev")
 			} else {
-				assert.NotContains(t, output, backupPath)
+				assert.NotContains(t, output, "still has the long-term keys")
 				assert.Contains(t, output, "Re-enter your long-term keys with: magex aws:setup profile=dev")
 			}
 		})

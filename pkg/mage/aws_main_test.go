@@ -222,9 +222,10 @@ aws_access_key_id = ORIGINAL
 		ts.Require().NoError(err)
 
 		// Verify backup exists
-		backupPath := credPath + awsBackupSuffix
+		backups := listBackups(credPath)
+		ts.Require().NotEmpty(backups)
 		// #nosec G304 -- test reads backup path derived from temp fixture
-		backupContent, err := os.ReadFile(backupPath)
+		backupContent, err := os.ReadFile(backups[0])
 		ts.Require().NoError(err)
 		ts.Contains(string(backupContent), "ORIGINAL")
 	})

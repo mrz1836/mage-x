@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/magefile/mage/mg"
 
@@ -25,6 +26,8 @@ const (
 	awsCredentialsFile   = "credentials"
 	awsConfigFile        = "config"
 	awsBackupSuffix      = ".bak"
+	awsBackupsKept       = 5                      // timestamped backups kept per file
+	awsBackupTimeFormat  = "20060102T150405.000Z" // UTC, sorts in time order
 	mfaTokenLength       = 6
 	awsInstallURL        = "https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
 
@@ -855,24 +858,86 @@ func deleteINIValue(section *awsINISection, key string) {
 	section.KeyOrder = slices.DeleteFunc(section.KeyOrder, func(k string) bool { return k == key })
 }
 
-// backupFile creates a backup of a file
+// backupFile copies a file to "<path>.bak.<UTC time>" and removes all but the
+// newest few backups, so the copy made before a bad write survives the next
+// several writes
 func backupFile(path string) error {
-	if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
+	data, err := os.ReadFile(path) //nolint:gosec // path is from known safe source
+	if errors.Is(err, os.ErrNotExist) {
 		return nil // Nothing to backup
 	}
-
-	data, err := os.ReadFile(path) //nolint:gosec // path is from known safe source
 	if err != nil {
 		return fmt.Errorf("%w: %w", errAWSCredBackupFailed, err)
 	}
 
-	backupPath := path + awsBackupSuffix
-	if err := os.WriteFile(backupPath, data, fileops.PermFileSensitive); err != nil { // #nosec G703 -- backupPath is constructed from validated config
+	backupPath, err := writeNewBackup(path, data)
+	if err != nil {
 		return fmt.Errorf("%w: %w", errAWSCredBackupFailed, err)
 	}
-
 	utils.Info("Backup created: %s", backupPath)
+
+	if backups := listBackups(path); len(backups) > awsBackupsKept {
+		for _, old := range backups[awsBackupsKept:] {
+			_ = os.Remove(old) //nolint:errcheck // best effort: an extra backup does no harm
+		}
+	}
+
 	return nil
+}
+
+// writeNewBackup writes data to a new "<path>.bak.<UTC time>" file, adding a
+// counter when that name is taken, and returns the file's path
+func writeNewBackup(path string, data []byte) (string, error) {
+	name := path + awsBackupSuffix + "." + time.Now().UTC().Format(awsBackupTimeFormat)
+	for attempt := 1; attempt <= 100; attempt++ {
+		backupPath := name
+		if attempt > 1 {
+			backupPath = fmt.Sprintf("%s-%d", name, attempt)
+		}
+
+		file, err := os.OpenFile(backupPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, fileops.PermFileSensitive) //nolint:gosec // path is from known safe source
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+
+		_, writeErr := file.Write(data)
+		if err := errors.Join(writeErr, file.Close()); err != nil {
+			return "", err
+		}
+		return backupPath, nil
+	}
+
+	return "", fmt.Errorf("%s: %w", name, os.ErrExist)
+}
+
+// listBackups returns the timestamped backups of path, newest first. Files
+// that only look similar, such as a ".bak" from older versions, aren't listed.
+func listBackups(path string) []string {
+	dir := filepath.Dir(path)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+
+	prefix := filepath.Base(path) + awsBackupSuffix + "."
+	var backups []string
+	for _, entry := range entries {
+		stamp, ok := strings.CutPrefix(entry.Name(), prefix)
+		if !ok || entry.IsDir() {
+			continue
+		}
+		stamp, _, _ = strings.Cut(stamp, "-") // drop a counter added for a name clash
+		if _, parseErr := time.Parse(awsBackupTimeFormat, stamp); parseErr == nil {
+			backups = append(backups, filepath.Join(dir, entry.Name()))
+		}
+	}
+
+	// ReadDir sorts by name, and the timestamps sort in time order
+	slices.Reverse(backups)
+	return backups
 }
 
 // writeAWSCredentials writes credentials to the credentials file
@@ -1142,21 +1207,32 @@ func reportBaseHasSessionCreds(credPath, profile, baseProfile string) error {
 }
 
 // printRestoreKeysHint explains how to put long-term keys back into baseProfile,
-// pointing at the credentials backup when it still holds them
+// pointing at the newest credentials backup that still holds them
 func printRestoreKeysHint(credPath, profile, baseProfile string) {
 	setupCmd := "magex aws:setup profile=" + setupProfileName(profile, baseProfile)
 
-	backupPath := credPath + awsBackupSuffix
-	if hasLongTermKeys(loadAWSINISection(backupPath, baseProfile)) {
+	if backupPath := findLongTermKeysBackup(credPath, baseProfile); backupPath != "" {
 		utils.Info("%s still has the long-term keys for '%s'", backupPath, baseProfile)
 		utils.Info("Replace both aws_access_key_id and aws_secret_access_key under [%s] in %s with the ones from that backup, and delete any aws_session_token line there",
 			baseProfile, credPath)
-		utils.Info("Do it before running aws:setup or refreshing another profile, since both overwrite that backup")
+		utils.Info("Do it soon: only the %d newest backups are kept, and each aws:setup or refresh makes one", awsBackupsKept)
 		utils.Info("Or re-enter your keys with: %s", setupCmd)
 		return
 	}
 
 	utils.Info("Re-enter your long-term keys with: %s", setupCmd)
+}
+
+// findLongTermKeysBackup returns the newest credentials backup that still has
+// long-term keys for profile, checking a ".bak" from older versions last, or ""
+// when none does
+func findLongTermKeysBackup(credPath, profile string) string {
+	for _, backupPath := range append(listBackups(credPath), credPath+awsBackupSuffix) {
+		if hasLongTermKeys(loadAWSINISection(backupPath, profile)) {
+			return backupPath
+		}
+	}
+	return ""
 }
 
 // setupProfileName returns the profile= value for aws:setup, which stores the
