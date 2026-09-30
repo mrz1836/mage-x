@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -560,7 +561,12 @@ func TestWriteAWSCredentials(t *testing.T) {
 		credPath := filepath.Join(tmpDir, "credentials")
 
 		// Session credentials an earlier refresh wrote over the long-term keys
-		err := writeAWSCredentials(credPath, "dev-base", "ASIATEMP", "SECRETTEMP", "TOKTEMP")
+		err := writeOrUpdateAWSSessionCredentials(credPath, "dev-base", &awsSTSCredentials{
+			AccessKeyID:     "ASIATEMP",
+			SecretAccessKey: "SECRETTEMP",
+			SessionToken:    "TOKTEMP",
+			Expiration:      "2030-01-01T00:00:00Z",
+		})
 		require.NoError(t, err)
 
 		err = writeAWSCredentials(credPath, "dev-base", "AKIALONG", "SECRETLONG", "")
@@ -713,6 +719,7 @@ aws_secret_access_key = SECRET_ORIGINAL
 		assert.Contains(t, string(content), "ASIA_SESSION")
 		assert.Contains(t, string(content), "SECRET_SESSION")
 		assert.Contains(t, string(content), "TOKEN_SESSION")
+		assert.Contains(t, string(content), "magex_session_expiration = 2024-01-01T00:00:00Z")
 	})
 
 	t.Run("create new profile if not found", func(t *testing.T) {
@@ -2361,6 +2368,54 @@ func TestStatusWarnsAboutLegacyLink(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSessionExpiryText(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name       string
+		expiration string
+		want       string
+	}{
+		{name: "expires later", expiration: "2026-01-01T19:12:00Z", want: "expires in 7h12m"},
+		{name: "offset time from STS", expiration: "2026-01-01T13:30:00+00:00", want: "expires in 1h30m"},
+		{name: "rounds to the minute", expiration: "2026-01-01T12:45:40Z", want: "expires in 46m"},
+		{name: "under a minute left", expiration: "2026-01-01T12:00:30Z", want: "expires in under a minute"},
+		{name: "already expired", expiration: "2026-01-01T10:00:00Z", want: "expired 2h0m ago"},
+		{name: "not recorded", expiration: ""},
+		{name: "not a timestamp", expiration: "soon"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, sessionExpiryText(tt.expiration, now))
+		})
+	}
+}
+
+func TestStatusShowsKeyKinds(t *testing.T) {
+	expiration := time.Now().Add(3 * time.Hour).UTC().Format(time.RFC3339)
+	withMockedHome(t, "[dev-base]\n"+
+		"aws_access_key_id = AKIABASE\n"+
+		"aws_secret_access_key = SECRETBASE\n\n"+
+		"[dev]\n"+
+		"aws_access_key_id = ASIASESSION\n"+
+		"aws_secret_access_key = SECSESSION\n"+
+		"aws_session_token = TOK\n"+
+		"magex_session_expiration = "+expiration+"\n", "")
+	withMockedRunner(t, func(cmd string, args ...string) (string, error) {
+		return callerIdentityJSON, nil
+	})
+
+	var err error
+	output := captureAWSLog(t, func() { err = AWS{}.Status() })
+
+	require.NoError(t, err)
+	assert.Contains(t, output, "Session Token: Present, expires in 3h0m", "a session shows how long it has left")
+	assert.Contains(t, output, "Session Status: ✓ Active (Account: 123456789012)")
+	assert.Contains(t, output, "Session Status: ✓ Long-term keys, no MFA (Account: 123456789012)")
+	assert.Contains(t, output, "Where a policy requires MFA, these keys can only read")
 }
 
 func TestLinkedSessionProfiles(t *testing.T) {

@@ -43,6 +43,10 @@ const (
 	// file. AWS tools ignore it, unlike the source_profile line older versions of
 	// aws:setup wrote: the AWS SDKs for Go reject source_profile without role_arn
 	awsBaseProfileKey = "magex_base_profile"
+
+	// awsSessionExpirationKey records when a session profile's credentials
+	// expire, next to them in the credentials file (AWS tools ignore it)
+	awsSessionExpirationKey = "magex_session_expiration"
 )
 
 // Static errors for AWS operations
@@ -977,6 +981,7 @@ func writeAWSCredentials(path, profile, accessKeyID, secretKey, sessionToken str
 	} else {
 		// A leftover token would be sent along with the new long-term keys, and AWS rejects that pair
 		deleteINIValue(section, "aws_session_token")
+		deleteINIValue(section, awsSessionExpirationKey)
 	}
 
 	// Write file with sensitive permissions
@@ -1147,6 +1152,9 @@ func writeOrUpdateAWSSessionCredentials(path, profile string, creds *awsSTSCrede
 	setINIValue(section, "aws_access_key_id", creds.AccessKeyID)
 	setINIValue(section, "aws_secret_access_key", creds.SecretAccessKey)
 	setINIValue(section, "aws_session_token", creds.SessionToken)
+	if creds.Expiration != "" {
+		setINIValue(section, awsSessionExpirationKey, creds.Expiration)
+	}
 
 	// Write file with sensitive permissions
 	if err := os.WriteFile(path, writeAWSINI(ini), fileops.PermFileSensitive); err != nil {
@@ -1267,12 +1275,14 @@ func displayAWSProfileStatus(section *awsINISection, configINI *awsINIFile) {
 		utils.Info("  Access Key ID: %s", maskCredential(accessKey))
 	}
 
-	// Check for session token
-	hasSessionToken := false
-	if _, ok := section.Values["aws_session_token"]; ok {
-		hasSessionToken = true
+	// Check for session token, and when it expires if refresh recorded that
+	_, hasSessionToken := section.Values["aws_session_token"]
+	switch expiry := sessionExpiryText(section.Values[awsSessionExpirationKey], time.Now()); {
+	case hasSessionToken && expiry != "":
+		utils.Info("  Session Token: Present, %s", expiry)
+	case hasSessionToken:
 		utils.Info("  Session Token: Present")
-	} else {
+	default:
 		utils.Info("  Session Token: Not present (long-term credentials)")
 	}
 
@@ -1289,20 +1299,50 @@ func displayAWSProfileStatus(section *awsINISection, configINI *awsINIFile) {
 
 	// Check if session is valid by calling AWS
 	accountID, userARN, isValid := checkAWSSession(section.Name)
-	if isValid {
+	switch {
+	case isValid && hasSessionToken:
 		utils.Success("  Session Status: ✓ Active (Account: %s)", accountID)
-		// Extract username from ARN for cleaner display
-		if parts := strings.Split(userARN, "/"); len(parts) > 1 {
-			utils.Info("  Identity: %s", parts[len(parts)-1])
-		}
-	} else {
-		if hasSessionToken {
-			utils.Error("  Session Status: ✗ Expired or Invalid")
-			utils.Info("  Run 'magex aws:refresh profile=%s' to refresh", section.Name)
-		} else {
-			utils.Warn("  Session Status: ✗ Not authenticated (needs MFA)")
-		}
+	case isValid:
+		utils.Success("  Session Status: ✓ Long-term keys, no MFA (Account: %s)", accountID)
+	case hasSessionToken:
+		utils.Error("  Session Status: ✗ Expired or Invalid")
+		utils.Info("  Run 'magex aws:refresh profile=%s' to refresh", section.Name)
+	default:
+		utils.Warn("  Session Status: ✗ Not authenticated (needs MFA)")
 	}
+	if !isValid {
+		return
+	}
+
+	// Extract username from ARN for cleaner display
+	if parts := strings.Split(userARN, "/"); len(parts) > 1 {
+		utils.Info("  Identity: %s", parts[len(parts)-1])
+	}
+	if !hasSessionToken {
+		utils.Info("  Where a policy requires MFA, these keys can only read; use an MFA session profile for changes")
+	}
+}
+
+// sessionExpiryText describes when a session expires ("expires in 7h12m") or
+// expired ("expired 2h0m ago"), or returns "" when expiration isn't an RFC 3339 time
+func sessionExpiryText(expiration string, now time.Time) string {
+	expires, err := time.Parse(time.RFC3339, expiration)
+	if err != nil {
+		return ""
+	}
+
+	if left := expires.Sub(now); left > 0 {
+		return "expires in " + roughDuration(left)
+	}
+	return "expired " + roughDuration(now.Sub(expires)) + " ago"
+}
+
+// roughDuration formats a duration to the minute, e.g. "7h12m"
+func roughDuration(d time.Duration) string {
+	if d < time.Minute {
+		return "under a minute"
+	}
+	return strings.TrimSuffix(d.Round(time.Minute).String(), "0s")
 }
 
 // ============================================================================
