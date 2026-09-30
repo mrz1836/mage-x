@@ -161,7 +161,7 @@ func (AWS) Setup(args ...string) error {
 		return err
 	}
 
-	secretKey, err := promptForNonEmpty("AWS Secret Access Key")
+	secretKey, err := promptForNonEmptySecret("AWS Secret Access Key")
 	if err != nil {
 		return err
 	}
@@ -687,6 +687,18 @@ func hasLongTermKeys(section *awsINISection) bool {
 // promptForNonEmpty prompts for input and validates it's not empty
 func promptForNonEmpty(prompt string) (string, error) {
 	value, err := utils.PromptForInput(prompt)
+	return nonEmptyInput(prompt, value, err)
+}
+
+// promptForNonEmptySecret is promptForNonEmpty without echoing the input when
+// stdin is a terminal
+func promptForNonEmptySecret(prompt string) (string, error) {
+	value, err := utils.PromptForSecret(prompt)
+	return nonEmptyInput(prompt, value, err)
+}
+
+// nonEmptyInput trims a prompt's answer and rejects it when empty
+func nonEmptyInput(prompt, value string, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
