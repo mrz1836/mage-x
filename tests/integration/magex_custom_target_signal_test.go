@@ -186,32 +186,8 @@ func TestMagex_CustomTargetHandlesCtrlC(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir := t.TempDir()
-			require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/sigrepro\n\ngo 1.24\n"), secureFilePerm))
-			require.NoError(t, os.WriteFile(filepath.Join(dir, "magefile.go"), []byte(tt.magefile), secureFilePerm))
-
-			out := &lineRecorder{}
-			cmd := testCommand(t, bin, "serve")
-			cmd.Dir = dir
-			cmd.Stdout = out
-			cmd.Stderr = out
-			// Its own process group, like a shell job, so the signal below
-			// reaches magex, mage, and the compiled magefile, as Ctrl-C does
-			cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-			// Don't hang on output held open by anything left behind
-			cmd.WaitDelay = 5 * time.Second
-
-			require.NoError(t, cmd.Start())
+			cmd, out := startMagexServe(t, bin, tt.magefile)
 			pgid := cmd.Process.Pid
-			t.Cleanup(func() {
-				// Best effort: if the test failed early, stop whatever is left
-				_ = syscall.Kill(-pgid, syscall.SIGKILL) //nolint:errcheck // the group is normally gone already
-			})
-
-			// mage compiles the magefile first, which can take a while on a cold cache
-			require.Eventually(t, func() bool {
-				return strings.Contains(out.String(), "serve: running")
-			}, 2*time.Minute, 50*time.Millisecond, "the Serve target never started; output:\n%s", out)
 
 			signaled := time.Now()
 			require.NoError(t, syscall.Kill(-pgid, syscall.SIGINT))
@@ -227,9 +203,85 @@ func TestMagex_CustomTargetHandlesCtrlC(t *testing.T) {
 				assert.Contains(t, output, line)
 			}
 			assert.NotContains(t, output, "custom command failed")
-			assert.Eventually(t, func() bool {
-				return errors.Is(syscall.Kill(-pgid, 0), syscall.ESRCH)
-			}, 2*time.Second, 50*time.Millisecond, "processes were left running in magex's process group")
+			assertGroupGone(t, pgid)
 		})
 	}
+}
+
+// TestMagex_CustomTargetHandlesSIGTERM proves that a SIGTERM sent to magex
+// alone, as a process supervisor or a CI runner may send it, reaches the
+// custom target as an interrupt, which mage would not pass on: the target
+// finishes its own shutdown, magex exits 143 without reporting a failure, and
+// it takes about the target's cleanup time, not the 10 seconds before a kill.
+func TestMagex_CustomTargetHandlesSIGTERM(t *testing.T) {
+	if !hasMageBinary() {
+		t.Skip("Skipping: mage binary not installed (required for custom magefile execution)")
+	}
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("Skipping: go not installed (mage needs it to compile the magefile)")
+	}
+	if _, err := exec.LookPath("ps"); err != nil {
+		t.Skip("Skipping: ps not installed (magex needs it to reach the compiled magefile)")
+	}
+	bin := buildMagexForSignalTest(t)
+
+	cmd, out := startMagexServe(t, bin, serveMagefile)
+	pgid := cmd.Process.Pid
+
+	signaled := time.Now()
+	require.NoError(t, syscall.Kill(cmd.Process.Pid, syscall.SIGTERM))
+
+	exitCode, timedOut := waitOrTimeout(t, cmd, 30*time.Second)
+	exited := time.Since(signaled)
+	t.Logf("magex exited with %d at %+.2fs; output, timed from the SIGTERM:\n%s", exitCode, exited.Seconds(), out.Since(signaled))
+
+	require.False(t, timedOut, "magex did not exit within 30s of SIGTERM")
+	assert.Equal(t, 143, exitCode)
+	output := out.String()
+	assert.Contains(t, output, "serve: interrupt received, shutting down...")
+	assert.Contains(t, output, "serve: shutdown complete")
+	assert.NotContains(t, output, "custom command failed")
+	assert.Less(t, exited, 8*time.Second, "the target should stop on its own, well before magex would kill it")
+	assertGroupGone(t, pgid)
+}
+
+// startMagexServe writes magefile to a new module, starts magex serve there in
+// its own process group, like a shell job, and returns once the Serve target
+// is running. Signaling the group reaches magex, mage, and the compiled
+// magefile, as Ctrl-C does.
+func startMagexServe(t *testing.T, bin, magefile string) (*exec.Cmd, *lineRecorder) {
+	t.Helper()
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/sigrepro\n\ngo 1.24\n"), secureFilePerm))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "magefile.go"), []byte(magefile), secureFilePerm))
+
+	out := &lineRecorder{}
+	cmd := testCommand(t, bin, "serve")
+	cmd.Dir = dir
+	cmd.Stdout = out
+	cmd.Stderr = out
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// Don't hang on output held open by anything left behind
+	cmd.WaitDelay = 5 * time.Second
+
+	require.NoError(t, cmd.Start())
+	pgid := cmd.Process.Pid
+	t.Cleanup(func() {
+		// Best effort: if the test failed early, stop whatever is left
+		_ = syscall.Kill(-pgid, syscall.SIGKILL) //nolint:errcheck // the group is normally gone already
+	})
+
+	// mage compiles the magefile first, which can take a while on a cold cache
+	require.Eventually(t, func() bool {
+		return strings.Contains(out.String(), "serve: running")
+	}, 2*time.Minute, 50*time.Millisecond, "the Serve target never started; output:\n%s", out)
+	return cmd, out
+}
+
+// assertGroupGone checks that nothing is left running in process group pgid.
+func assertGroupGone(t *testing.T, pgid int) {
+	t.Helper()
+	assert.Eventually(t, func() bool {
+		return errors.Is(syscall.Kill(-pgid, 0), syscall.ESRCH)
+	}, 2*time.Second, 50*time.Millisecond, "processes were left running in magex's process group")
 }

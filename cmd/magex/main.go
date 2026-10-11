@@ -437,13 +437,33 @@ const (
 	exitCodeSIGTERM = 143 // 128 + 15 (SIGTERM)
 )
 
+// signalCancelError is the cause of the root context's cancellation when magex
+// gets a signal. A delegated custom command reads it (see canceledBySignal) to
+// tell a terminal's Ctrl-C, which has already reached every process in the
+// foreground group, from a SIGTERM sent to magex alone.
+type signalCancelError struct {
+	sig os.Signal
+}
+
+// Error describes the signal that canceled the context.
+func (e signalCancelError) Error() string {
+	return "canceled by signal: " + e.sig.String()
+}
+
+// canceledBySignal reports whether ctx was canceled because magex got sig.
+func canceledBySignal(ctx context.Context, sig os.Signal) bool {
+	var cause signalCancelError
+	return errors.As(context.Cause(ctx), &cause) && cause.sig == sig
+}
+
 // installSignalHandler wires sigCh to a goroutine that, on the first signal,
-// prints a single banner and invokes cancel; on a second signal, restores the
-// OS default handler and calls exit(130) as a force-quit escape hatch.
+// prints a single banner and invokes cancel with a signalCancelError naming the
+// signal; on a second signal, restores the OS default handler and calls
+// exit(130) as a force-quit escape hatch.
 //
 // Extracted from main() for testability; the goroutine returns when sigCh is
 // closed (test seam: signal.Stop closes nothing; tests close their own channel).
-func installSignalHandler(sigCh <-chan os.Signal, cancelledBy *atomic.Int32, cancel context.CancelFunc, exit func(int), stderr io.Writer) <-chan struct{} {
+func installSignalHandler(sigCh <-chan os.Signal, cancelledBy *atomic.Int32, cancel context.CancelCauseFunc, exit func(int), stderr io.Writer) <-chan struct{} {
 	done := make(chan struct{})
 	var bannerOnce sync.Once
 	go func() {
@@ -460,7 +480,7 @@ func installSignalHandler(sigCh <-chan os.Signal, cancelledBy *atomic.Int32, can
 		bannerOnce.Do(func() {
 			_, _ = fmt.Fprintln(stderr, "\n⚠  Canceled by user (Ctrl+C) — stopping...") //nolint:errcheck // banner on shutdown path; nothing to do if write fails
 		})
-		cancel()
+		cancel(signalCancelError{sig: first})
 
 		// Second signal → force exit. Restore OS default so a third Ctrl+C
 		// kills even if os.Exit itself is slow.
@@ -549,8 +569,9 @@ func forceExitHooksFrom(ctx context.Context) *forceExitHooks {
 }
 
 func main() {
-	rootCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// The cause records which signal canceled the context, if one did
+	rootCtx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
 	// Commands register cleanup that a forced exit must still do; they reach
 	// these hooks through the context
 	exitHooks := &forceExitHooks{}

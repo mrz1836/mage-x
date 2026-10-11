@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -1050,6 +1052,148 @@ func TestDelegateToMageWithTimeoutKillsAtTimeout(t *testing.T) {
 	assert.Less(t, time.Since(start), 10*time.Second)
 }
 
+// useFakeMageWithChild is useFakeMage with a fake mage that, like mage running
+// a compiled magefile, catches the interrupt without passing it on, and runs a
+// child in the foreground, as mage runs the compiled magefile. The child sets
+// childTrap, writes its PID to child.pid, creates started, and then runs until
+// a file named finish appears. So that a child the test failed to stop can't
+// run on, it also stops once the dir is removed, or after a minute. Returns the
+// dir.
+func useFakeMageWithChild(t *testing.T, childTrap string) string {
+	t.Helper()
+	dir := useFakeMage(t, "trap ':' INT\nsh ./child.sh\n")
+	if _, err := exec.LookPath("ps"); err != nil {
+		t.Skip("ps is needed to find the processes a delegated command starts")
+	}
+	child := childTrap + "\necho $$ > child.pid\n: > started\n" +
+		"i=0\nwhile [ ! -e finish ] && [ -e child.sh ] && [ $i -lt 1200 ]; do sleep 0.05; i=$((i+1)); done\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "child.sh"), []byte(child), secureFilePerm))
+	// However the test ends, let a child that is still running exit
+	t.Cleanup(func() {
+		_ = os.WriteFile(filepath.Join(dir, "finish"), nil, secureFilePerm) //nolint:errcheck // best-effort cleanup
+	})
+	return dir
+}
+
+// childPID returns the PID the fake mage's child wrote to dir/child.pid.
+func childPID(t *testing.T, dir string) int {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(dir, "child.pid")) //nolint:gosec // test-controlled temp dir
+	require.NoError(t, err)
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	require.NoError(t, err)
+	return pid
+}
+
+// processRunning reports whether a process with pid is still running.
+func processRunning(pid int) bool {
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+	defer func() {
+		_ = proc.Release() //nolint:errcheck // nothing to do if releasing the handle fails
+	}()
+	return proc.Signal(syscall.Signal(0)) == nil
+}
+
+// TestDelegateToMageWithTimeoutSIGTERMInterruptsTheTarget checks that after a
+// SIGTERM sent to magex alone, which mage would not pass on, the process the
+// command runs, the compiled magefile under mage, gets exactly one interrupt
+// and can stop on its own, well before the command would be killed.
+func TestDelegateToMageWithTimeoutSIGTERMInterruptsTheTarget(t *testing.T) {
+	dir := useFakeMageWithChild(t, "trap 'echo interrupted >> interrupts; exit 0' INT")
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
+	cancelWhenCreated(filepath.Join(dir, "started"), func() { cancel(signalCancelError{sig: syscall.SIGTERM}) })
+
+	const killDelay = 30 * time.Second
+	start := time.Now()
+	result := delegateToMage(ctx, "serve", DefaultDelegateTimeout, delegateOptions{killDelay: killDelay})
+
+	require.ErrorIs(t, result.Err, ErrCommandCanceled)
+	require.NotErrorIs(t, result.Err, ErrCommandFailed)
+	assert.Less(t, time.Since(start), killDelay, "the target should stop on the interrupt, not be killed")
+	interrupts, err := os.ReadFile(filepath.Join(dir, "interrupts")) //nolint:gosec // test-controlled temp dir
+	require.NoError(t, err, "the target never got the interrupt")
+	assert.Equal(t, "interrupted\n", string(interrupts), "the target should get exactly one interrupt")
+}
+
+// TestDelegateToMageWithTimeoutSIGINTSendsTheTargetNothing checks that after a
+// SIGINT magex sends nothing to the processes the command started: a
+// terminal's Ctrl-C has already reached them, and a second interrupt would cut
+// a mage target's cleanup short.
+func TestDelegateToMageWithTimeoutSIGINTSendsTheTargetNothing(t *testing.T) {
+	dir := useFakeMageWithChild(t, "trap 'echo interrupted >> interrupts' INT")
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
+	cancelWhenCreated(filepath.Join(dir, "started"), func() { cancel(signalCancelError{sig: os.Interrupt}) })
+
+	var listed atomic.Bool
+	opts := delegateOptions{
+		killDelay: time.Minute,
+		processes: func() (map[int][]int, error) {
+			listed.Store(true)
+			return processChildren()
+		},
+	}
+	finished := make(chan DelegateResult, 1)
+	go func() {
+		finished <- delegateToMage(ctx, "serve", DefaultDelegateTimeout, opts)
+	}()
+
+	// stopDelegated signals as soon as ctx is canceled; give it time to, then let
+	// the child finish
+	<-ctx.Done()
+	time.Sleep(300 * time.Millisecond)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "finish"), nil, secureFilePerm))
+
+	select {
+	case result := <-finished:
+		require.ErrorIs(t, result.Err, ErrCommandCanceled)
+	case <-time.After(30 * time.Second):
+		t.Fatal("the command did not finish")
+	}
+	assert.NoFileExists(t, filepath.Join(dir, "interrupts"), "the target should get no interrupt from magex")
+	assert.False(t, listed.Load(), "magex has no reason to look for the command's processes")
+}
+
+// TestDelegateToMageWithTimeoutKillTakesTheTarget checks that killing the
+// command, when it outlives killDelay after an interrupt or when the timeout
+// expires, kills the processes it started too, which would otherwise keep
+// running without it.
+func TestDelegateToMageWithTimeoutKillTakesTheTarget(t *testing.T) {
+	tests := []struct {
+		name    string
+		timeout time.Duration
+		cancel  bool
+		wantErr error
+	}{
+		{name: "after the interrupt", cancel: true, wantErr: ErrCommandCanceled},
+		// Long enough for the child to start, even on a loaded machine
+		{name: "at the timeout", timeout: 2 * time.Second, wantErr: ErrCommandTimeout},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// The child ignores the interrupt, so only a kill stops it
+			dir := useFakeMageWithChild(t, "trap '' INT")
+			ctx, cancel := context.WithCancelCause(context.Background())
+			defer cancel(nil)
+			if tt.cancel {
+				cancelWhenCreated(filepath.Join(dir, "started"), func() { cancel(signalCancelError{sig: syscall.SIGTERM}) })
+			}
+
+			result := delegateToMage(ctx, "serve", tt.timeout, delegateOptions{killDelay: 200 * time.Millisecond})
+
+			require.ErrorIs(t, result.Err, tt.wantErr)
+			pid := childPID(t, dir)
+			assert.Eventually(t, func() bool { return !processRunning(pid) }, 10*time.Second, 50*time.Millisecond,
+				"the command's child should be killed with it")
+		})
+	}
+}
+
 // TestStopDelegatedTimeoutCutsKillDelayShort checks that the timeout stays a
 // hard limit after an interrupt too: a command still running when the timeout
 // expires during killDelay is killed then.
@@ -1086,7 +1230,7 @@ func TestStopDelegatedTimeoutCutsKillDelayShort(t *testing.T) {
 	timeoutC := make(chan time.Time)
 	stopped := make(chan stopReason, 1)
 	go func() {
-		stopped <- stopDelegated(ctx, cmd.Process, timeoutC, time.Minute, exited)
+		stopped <- stopDelegated(ctx, cmd.Process, delegateOptions{killDelay: time.Minute}, timeoutC, exited)
 	}()
 
 	// Once the command has the interrupt, stopDelegated is waiting out killDelay

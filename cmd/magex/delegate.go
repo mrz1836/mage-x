@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/mrz1836/mage-x/pkg/utils"
@@ -65,11 +66,30 @@ const (
 	stopTimedOut
 )
 
-// delegateOptions holds the settings of a delegated run that tests shorten.
+// delegateOptions holds the settings of a delegated run that tests shorten or
+// replace.
 type delegateOptions struct {
 	// killDelay is how long the command may keep running after the parent
 	// context is canceled before it is killed.
 	killDelay time.Duration
+	// processes lists the running processes' PIDs keyed by their parent's PID,
+	// to reach the processes the command started. nil means processChildren.
+	processes func() (map[int][]int, error)
+}
+
+// processTree lists the running processes with o.processes, or with
+// processChildren if it is nil. A failure gives an empty list: reaching the
+// command's own processes is a best effort.
+func (o delegateOptions) processTree() map[int][]int {
+	list := o.processes
+	if list == nil {
+		list = processChildren
+	}
+	children, err := list()
+	if err != nil {
+		return nil
+	}
+	return children
 }
 
 // DelegateResult contains the result of a delegated mage command execution
@@ -99,9 +119,12 @@ func DelegateToMage(ctx context.Context, command string, args ...string) (result
 //
 // Canceling ctx (magex got Ctrl-C or SIGTERM) lets the command stop on its own:
 // it gets os.Interrupt, and is killed only if it is still running 10 seconds
-// later. The result is then ErrCommandCanceled, however the command exited. A
-// timeout greater than 0 is a hard limit: the command is killed as soon as it
-// expires, and the result is ErrCommandTimeout with exit code 124.
+// later. After a SIGTERM, the processes the command started, such as the
+// compiled magefile, get an interrupt too, since mage passes nothing on. The
+// result is then ErrCommandCanceled, however the command exited. A timeout
+// greater than 0 is a hard limit: the command is killed as soon as it expires,
+// and the result is ErrCommandTimeout with exit code 124. Killing the command
+// kills the processes it started too.
 func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time.Duration, args ...string) DelegateResult {
 	return delegateToMage(ctx, command, timeout, delegateOptions{killDelay: interruptKillDelay}, args...)
 }
@@ -239,7 +262,7 @@ func delegateToMage(ctx context.Context, command string, timeout time.Duration, 
 	}
 
 	// Wait for the command to finish and its stderr to be fully captured
-	stopped, waitErr := waitDelegated(ctx, cmd, timeout, opts.killDelay)
+	stopped, waitErr := waitDelegated(ctx, cmd, timeout, opts)
 	stderr.Flush()
 
 	// ErrWaitDelay means the command succeeded but something it left running still
@@ -296,10 +319,9 @@ func delegateToMage(ctx context.Context, command string, timeout time.Duration, 
 // already reached the command and the target it runs, since they share the
 // foreground process group, and mage gives the target 5 seconds to clean up.
 // So cmd gets os.Interrupt, and is killed only if it is still running after
-// killDelay. A timeout greater than 0 is a hard limit: cmd is killed as soon
-// as it expires; mage doesn't pass a signal sent only to it on to the target,
-// so waiting longer would gain nothing.
-func waitDelegated(ctx context.Context, cmd *exec.Cmd, timeout, killDelay time.Duration) (stopReason, error) {
+// opts.killDelay. A timeout greater than 0 is a hard limit: cmd is killed as
+// soon as it expires.
+func waitDelegated(ctx context.Context, cmd *exec.Cmd, timeout time.Duration, opts delegateOptions) (stopReason, error) {
 	var timeoutC <-chan time.Time
 	if timeout > 0 {
 		timer := time.NewTimer(timeout)
@@ -310,7 +332,7 @@ func waitDelegated(ctx context.Context, cmd *exec.Cmd, timeout, killDelay time.D
 	exited := make(chan struct{})
 	stopped := make(chan stopReason, 1)
 	go func() {
-		stopped <- stopDelegated(ctx, cmd.Process, timeoutC, killDelay, exited)
+		stopped <- stopDelegated(ctx, cmd.Process, opts, timeoutC, exited)
 	}()
 
 	err := cmd.Wait()
@@ -320,33 +342,51 @@ func waitDelegated(ctx context.Context, cmd *exec.Cmd, timeout, killDelay time.D
 
 // stopDelegated watches a running command for waitDelegated until exited
 // closes, stopping the command if ctx is canceled or timeoutC fires first.
-func stopDelegated(ctx context.Context, proc *os.Process, timeoutC <-chan time.Time, killDelay time.Duration, exited <-chan struct{}) stopReason {
+func stopDelegated(ctx context.Context, proc *os.Process, opts delegateOptions, timeoutC <-chan time.Time, exited <-chan struct{}) stopReason {
 	select {
 	case <-exited:
 		return stopNone
 	case <-timeoutC:
-		killDelegated(proc)
+		killDelegated(proc, opts)
 		return stopTimedOut
 	case <-ctx.Done():
 	}
 
+	// A SIGTERM was sent to magex alone: mage doesn't catch SIGTERM and passes
+	// nothing on, so the compiled magefile it runs never hears of it. Give that
+	// process the interrupt the magefile's generated main handles, as Ctrl-C
+	// would. After a SIGINT nothing more is sent: a terminal's Ctrl-C has already
+	// reached it, and a second interrupt makes mage give up the cleanup at once.
+	// The command's processes are listed before it is signaled, in case that
+	// ends it and they are reparented out of reach.
+	var children []int
+	if canceledBySignal(ctx, syscall.SIGTERM) {
+		children = opts.processTree()[proc.Pid]
+	}
+
 	// Best effort: this fails on Windows, and mage ignores it while the target runs
 	_ = proc.Signal(os.Interrupt) //nolint:errcheck // a command that missed it is killed after killDelay
+	signalPIDs(children, os.Interrupt)
 
-	grace := time.NewTimer(killDelay)
+	grace := time.NewTimer(opts.killDelay)
 	defer grace.Stop()
 	select {
 	case <-exited:
 	case <-grace.C:
-		killDelegated(proc)
+		killDelegated(proc, opts)
 	case <-timeoutC:
-		killDelegated(proc)
+		killDelegated(proc, opts)
 	}
 	return stopCanceled
 }
 
-// killDelegated kills a delegated command that would not stop on its own.
-func killDelegated(proc *os.Process) {
+// killDelegated kills a delegated command that would not stop on its own, and
+// every process it started, so that none is left running without it, such as
+// the compiled magefile mage runs. Those processes are listed before the
+// command is killed, while they are still its own.
+func killDelegated(proc *os.Process, opts delegateOptions) {
+	descendants := descendantPIDs(opts.processTree(), proc.Pid)
+	signalPIDs(descendants, os.Kill)
 	_ = proc.Kill() //nolint:errcheck // it fails only if the command has already exited, which is the goal
 }
 

@@ -37,8 +37,8 @@ func TestInstallSignalHandler_FirstSIGINT(t *testing.T) {
 	var cancelledBy atomic.Int32
 	var stderr bytes.Buffer
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
 
 	exitCalled := make(chan int, 1)
 	exit := func(code int) { exitCalled <- code }
@@ -62,6 +62,8 @@ func TestInstallSignalHandler_FirstSIGINT(t *testing.T) {
 	if got := cancelledBy.Load(); got != cancelledBySIGINT {
 		t.Fatalf("cancelledBy = %d, want %d (SIGINT)", got, cancelledBySIGINT)
 	}
+	assert.True(t, canceledBySignal(ctx, os.Interrupt), "the cause should record SIGINT")
+	assert.False(t, canceledBySignal(ctx, syscall.SIGTERM))
 	if !bytes.Contains(stderr.Bytes(), []byte("Canceled by user")) {
 		t.Fatalf("stderr missing banner: %q", stderr.String())
 	}
@@ -78,8 +80,8 @@ func TestInstallSignalHandler_SIGTERM(t *testing.T) {
 	var cancelledBy atomic.Int32
 	var stderr bytes.Buffer
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
 
 	done := installSignalHandler(sigCh, &cancelledBy, cancel, func(int) {}, &stderr)
 
@@ -99,6 +101,30 @@ func TestInstallSignalHandler_SIGTERM(t *testing.T) {
 	if got := cancelledBy.Load(); got != cancelledBySIGTERM {
 		t.Fatalf("cancelledBy = %d, want %d (SIGTERM)", got, cancelledBySIGTERM)
 	}
+	assert.True(t, canceledBySignal(ctx, syscall.SIGTERM), "the cause should record SIGTERM")
+	assert.False(t, canceledBySignal(ctx, os.Interrupt))
+	// A context derived from the root sees the same cause, as a delegation does
+	derived, stop := context.WithCancel(ctx)
+	defer stop()
+	assert.True(t, canceledBySignal(derived, syscall.SIGTERM), "a derived context should see the root's cause")
+}
+
+// TestCanceledBySignal checks that only a cancellation caused by the named
+// signal counts, not a plain cancel or a live context.
+func TestCanceledBySignal(t *testing.T) {
+	live, stopLive := context.WithCancelCause(context.Background())
+	defer stopLive(nil)
+	assert.False(t, canceledBySignal(live, syscall.SIGTERM), "a live context")
+
+	plain, stopPlain := context.WithCancel(context.Background())
+	stopPlain()
+	assert.False(t, canceledBySignal(plain, syscall.SIGTERM), "a plain cancel")
+
+	byTerm, stopByTerm := context.WithCancelCause(context.Background())
+	stopByTerm(signalCancelError{sig: syscall.SIGTERM})
+	assert.True(t, canceledBySignal(byTerm, syscall.SIGTERM))
+	assert.False(t, canceledBySignal(byTerm, os.Interrupt))
+	assert.Equal(t, "canceled by signal: terminated", context.Cause(byTerm).Error())
 }
 
 // TestInstallSignalHandler_SecondSignalForceExits verifies that a second
@@ -108,8 +134,8 @@ func TestInstallSignalHandler_SecondSignalForceExits(t *testing.T) {
 	var cancelledBy atomic.Int32
 	var stderr bytes.Buffer
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
 
 	exitCalled := make(chan int, 1)
 	exit := func(code int) { exitCalled <- code }
@@ -146,8 +172,8 @@ func TestInstallSignalHandler_BannerPrintedExactlyOnce(t *testing.T) {
 	var cancelledBy atomic.Int32
 	var stderr bytes.Buffer
 
-	_, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	_, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
 
 	exitCalled := make(chan int, 1)
 	done := installSignalHandler(sigCh, &cancelledBy, cancel, func(code int) { exitCalled <- code }, &stderr)
@@ -179,8 +205,8 @@ func TestInstallSignalHandler_ChannelCloseExitsCleanly(t *testing.T) {
 	var cancelledBy atomic.Int32
 	var stderr bytes.Buffer
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
 
 	done := installSignalHandler(sigCh, &cancelledBy, cancel, func(int) {
 		t.Errorf("exit should not be called on clean shutdown")
@@ -216,8 +242,8 @@ func TestInstallSignalHandler_ForceExitRestoresMagefileFirst(t *testing.T) {
 	sigCh := make(chan os.Signal, 2)
 	var cancelledBy atomic.Int32
 	var stderr bytes.Buffer
-	_, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	_, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
 
 	restoredAtExit := make(chan bool, 1)
 	exit := hooks.wrapExit(func(int) {
