@@ -278,9 +278,10 @@ magex devsetup   # Your custom command
 
 magex runs custom commands through `mage`, and a target handles Ctrl+C the same way it would under `mage`:
 
-- **First Ctrl+C**: the target receives the interrupt and can shut down on its own (cancel a context, stop child processes, flush state); `mage` gives it 5 seconds. magex waits for that cleanup, up to 10 seconds before it kills the command, then exits with code 130 without reporting a failure.
+- **First Ctrl+C**: the target receives the interrupt and can shut down on its own (cancel a context, stop child processes, flush state); `mage` gives it 5 seconds. magex waits for that cleanup, then exits with code 130 without reporting a failure. A command still running 10 seconds after the interrupt is killed, with every process it started, and magex prints a line saying so.
 - **Second Ctrl+C**: magex exits immediately.
-- **Timeout**: `-t` is a hard limit. `magex -t 5m deploy` kills the command as soon as 5 minutes pass and exits with code 124.
+- **SIGTERM** sent to magex alone, as a process supervisor or a CI runner may send it: `mage` doesn't pass signals on, so magex passes it to the target as an interrupt, and the target shuts down as it would after Ctrl+C; magex then exits with code 143. magex finds the target's process with `ps`. A SIGTERM sent to the whole process group (`kill -TERM -<pgid>`, `timeout`) also reaches `mage`, which it stops at once, so magex can't wait for the target's cleanup then.
+- **Timeout**: `-t` is a hard limit. `magex -t 5m deploy` kills the command, with every process it started, as soon as 5 minutes pass, and exits with code 124.
 
 ### Plugin System
 
@@ -309,14 +310,14 @@ magex -search alias
 ### Batch Operations
 
 ```bash
-# Run multiple commands
-magex build test lint
+# magex runs one command per call; the words after it are its parameters
+magex bench time=50ms
 
-# Parallel execution
-magex -parallel build test
+# Run several commands in a row
+magex build && magex test && magex lint
 
-# With timeout
-magex -timeout 10m build
+# Time limit for a custom magefile command (built-in commands ignore -t)
+magex -t 10m deploy
 ```
 
 ## 🚀 Performance
