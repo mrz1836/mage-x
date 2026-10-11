@@ -195,9 +195,7 @@ test:
   verbose: false             # Verbose test output
   race: false               # Enable race detector
   parallel: 4               # Number of parallel tests
-  tags:                     # Test-specific build tags
-    - integration
-    - e2e
+  tags: "integration,e2e"   # Build tags for tests, fuzz tests, and benchmarks (one comma-separated string)
   output_dir: "test-results" # Test output directory
   bench_time: "10s"         # Benchmark duration
   mem_profile: false        # Enable memory profiling
@@ -211,9 +209,16 @@ test:
 
 ### Build Tag Auto-Discovery
 
-When `auto_discover_build_tags` is enabled, the test runner scans `//go:build`
+When `auto_discover_build_tags` is enabled, mage-x scans `//go:build`
 constraints in the source tree and runs the discovered tags automatically (tags
-in `auto_discover_build_tags_exclude` are skipped).
+in `auto_discover_build_tags_exclude` are skipped). The same build tags apply
+to tests (`magex test`, `test:unit`, `test:short`, `test:race`, `test:cover`,
+`test:coverrace`), fuzz tests (`test:fuzz`, `test:fuzzshort`), and benchmarks
+(`magex bench`, `test:benchshort`, and the `bench:*` commands).
+
+`tags` is always applied as well: the discovered tags are merged with it. With
+`tags: "integration"` and a discovered `unit` tag, the tests run with
+`-tags unit,integration`.
 
 `combine_build_tags` controls how those tags are executed:
 
@@ -221,8 +226,25 @@ in `auto_discover_build_tags_exclude` are skipped).
   pass. Go build tags are additive, so the untagged suite compiles alongside
   every tagged file and runs **once** — avoiding the re-run of the base suite
   for each tag.
-- **`false`:** a separate pass per tag (base pass, then one pass per tag). Use
-  this only when tags are mutually exclusive and cannot be enabled together.
+- **`false`:** a separate pass per tag: a base pass with `tags`, then one pass
+  per discovered tag merged with `tags`. Use this only when tags are mutually
+  exclusive and cannot be enabled together.
+
+With separate passes, fuzz tests and benchmarks behave like this:
+
+- **Fuzz tests** list their targets once per pass, and each target is fuzzed
+  once, with the tags of the first pass that lists it.
+- **Benchmarks** run once per pass. `bench:save` and `bench:regression` append
+  every pass's results to the one results file, each under a `# Build tags:`
+  line. Profiles and traces (`bench:cpu`, `bench:mem`, `bench:profile`,
+  `bench:trace`) get one file per pass, named after the pass's tags: `cpu.prof`
+  becomes `cpu.base.prof` for the pass without tags, `cpu.unit.prof` for the
+  `unit` pass, and `cpu.unit_integration.prof` for a pass with several tags.
+  With a single pass the file names do not change.
+
+If `go test -list` fails for a fuzz package under every pass, `test:fuzz` skips
+the package with a warning that shows the first line of go's error, such as
+`build constraints exclude all Go files` or a compile error.
 
 ### Test Types
 
@@ -233,13 +255,13 @@ Different test configurations for different scenarios:
 test:
   timeout: 300
   coverage: true
-  tags: []
+  tags: ""
 
 # Integration tests
 test:
   timeout: 1200
   coverage: false
-  tags: ["integration"]
+  tags: "integration"
 
 # Performance tests
 test:
