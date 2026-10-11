@@ -1026,8 +1026,9 @@ func TestDelegateToMageWithTimeoutCanceledCommandKilledAfterDelay(t *testing.T) 
 	cancelWhenCreated(filepath.Join(dir, "started"), cancel)
 
 	const killDelay = 200 * time.Millisecond
+	var notices strings.Builder
 	start := time.Now()
-	result := delegateToMage(ctx, "serve", DefaultDelegateTimeout, delegateOptions{killDelay: killDelay})
+	result := delegateToMage(ctx, "serve", DefaultDelegateTimeout, delegateOptions{killDelay: killDelay, notices: &notices})
 	elapsed := time.Since(start)
 
 	require.ErrorIs(t, result.Err, ErrCommandCanceled)
@@ -1036,6 +1037,8 @@ func TestDelegateToMageWithTimeoutCanceledCommandKilledAfterDelay(t *testing.T) 
 	assert.Equal(t, exitCodeSIGINT, result.ExitCode)
 	assert.GreaterOrEqual(t, elapsed, killDelay)
 	assert.Less(t, elapsed, interruptKillDelay, "should be killed after the given delay, not the default one")
+	assert.Equal(t, "⚠  Custom command 'serve' was still running 200ms after the interrupt — killed it.\n", notices.String(),
+		"magex should say it killed the command")
 }
 
 // TestDelegateToMageWithTimeoutKillsAtTimeout checks that the timeout stays a
@@ -1164,13 +1167,18 @@ func TestDelegateToMageWithTimeoutSIGINTSendsTheTargetNothing(t *testing.T) {
 // running without it.
 func TestDelegateToMageWithTimeoutKillTakesTheTarget(t *testing.T) {
 	tests := []struct {
-		name    string
-		timeout time.Duration
-		cancel  bool
-		wantErr error
+		name       string
+		timeout    time.Duration
+		cancel     bool
+		wantErr    error
+		wantNotice string
 	}{
-		{name: "after the interrupt", cancel: true, wantErr: ErrCommandCanceled},
-		// Long enough for the child to start, even on a loaded machine
+		{
+			name: "after the interrupt", cancel: true, wantErr: ErrCommandCanceled,
+			wantNotice: "⚠  Custom command 'serve' was still running 200ms after the interrupt — killed it.\n",
+		},
+		// Long enough for the child to start, even on a loaded machine; the
+		// timeout reports itself, so there is no notice
 		{name: "at the timeout", timeout: 2 * time.Second, wantErr: ErrCommandTimeout},
 	}
 
@@ -1184,9 +1192,11 @@ func TestDelegateToMageWithTimeoutKillTakesTheTarget(t *testing.T) {
 				cancelWhenCreated(filepath.Join(dir, "started"), func() { cancel(signalCancelError{sig: syscall.SIGTERM}) })
 			}
 
-			result := delegateToMage(ctx, "serve", tt.timeout, delegateOptions{killDelay: 200 * time.Millisecond})
+			var notices strings.Builder
+			result := delegateToMage(ctx, "serve", tt.timeout, delegateOptions{killDelay: 200 * time.Millisecond, notices: &notices})
 
 			require.ErrorIs(t, result.Err, tt.wantErr)
+			assert.Equal(t, tt.wantNotice, notices.String())
 			pid := childPID(t, dir)
 			assert.Eventually(t, func() bool { return !processRunning(pid) }, 10*time.Second, 50*time.Millisecond,
 				"the command's child should be killed with it")
@@ -1229,8 +1239,9 @@ func TestStopDelegatedTimeoutCutsKillDelayShort(t *testing.T) {
 	cancel()
 	timeoutC := make(chan time.Time)
 	stopped := make(chan stopReason, 1)
+	var notices strings.Builder
 	go func() {
-		stopped <- stopDelegated(ctx, cmd.Process, delegateOptions{killDelay: time.Minute}, timeoutC, exited)
+		stopped <- stopDelegated(ctx, cmd.Process, "serve", delegateOptions{killDelay: time.Minute, notices: &notices}, timeoutC, exited)
 	}()
 
 	// Once the command has the interrupt, stopDelegated is waiting out killDelay
@@ -1245,6 +1256,7 @@ func TestStopDelegatedTimeoutCutsKillDelayShort(t *testing.T) {
 	}
 	<-exited
 	assert.Equal(t, "signal: killed", cmd.ProcessState.String())
+	assert.Empty(t, notices.String(), "the timeout reports itself; the kill notice is for the grace period")
 }
 
 // TestDelegateToMageWithTimeoutCanceledBeforeStart checks that a command isn't

@@ -75,6 +75,17 @@ type delegateOptions struct {
 	// processes lists the running processes' PIDs keyed by their parent's PID,
 	// to reach the processes the command started. nil means processChildren.
 	processes func() (map[int][]int, error)
+	// notices receives what magex itself reports about the run, such as that it
+	// killed the command. nil means os.Stderr.
+	notices io.Writer
+}
+
+// noticeWriter returns where magex reports on the run.
+func (o delegateOptions) noticeWriter() io.Writer {
+	if o.notices == nil {
+		return os.Stderr
+	}
+	return o.notices
 }
 
 // processTree lists the running processes with o.processes, or with
@@ -262,7 +273,7 @@ func delegateToMage(ctx context.Context, command string, timeout time.Duration, 
 	}
 
 	// Wait for the command to finish and its stderr to be fully captured
-	stopped, waitErr := waitDelegated(ctx, cmd, timeout, opts)
+	stopped, waitErr := waitDelegated(ctx, cmd, command, timeout, opts)
 	stderr.Flush()
 
 	// ErrWaitDelay means the command succeeded but something it left running still
@@ -319,9 +330,9 @@ func delegateToMage(ctx context.Context, command string, timeout time.Duration, 
 // already reached the command and the target it runs, since they share the
 // foreground process group, and mage gives the target 5 seconds to clean up.
 // So cmd gets os.Interrupt, and is killed only if it is still running after
-// opts.killDelay. A timeout greater than 0 is a hard limit: cmd is killed as
-// soon as it expires.
-func waitDelegated(ctx context.Context, cmd *exec.Cmd, timeout time.Duration, opts delegateOptions) (stopReason, error) {
+// opts.killDelay, with a notice naming command. A timeout greater than 0 is a
+// hard limit: cmd is killed as soon as it expires.
+func waitDelegated(ctx context.Context, cmd *exec.Cmd, command string, timeout time.Duration, opts delegateOptions) (stopReason, error) {
 	var timeoutC <-chan time.Time
 	if timeout > 0 {
 		timer := time.NewTimer(timeout)
@@ -332,7 +343,7 @@ func waitDelegated(ctx context.Context, cmd *exec.Cmd, timeout time.Duration, op
 	exited := make(chan struct{})
 	stopped := make(chan stopReason, 1)
 	go func() {
-		stopped <- stopDelegated(ctx, cmd.Process, opts, timeoutC, exited)
+		stopped <- stopDelegated(ctx, cmd.Process, command, opts, timeoutC, exited)
 	}()
 
 	err := cmd.Wait()
@@ -342,7 +353,8 @@ func waitDelegated(ctx context.Context, cmd *exec.Cmd, timeout time.Duration, op
 
 // stopDelegated watches a running command for waitDelegated until exited
 // closes, stopping the command if ctx is canceled or timeoutC fires first.
-func stopDelegated(ctx context.Context, proc *os.Process, opts delegateOptions, timeoutC <-chan time.Time, exited <-chan struct{}) stopReason {
+// command names it in the notice of a kill after an interrupt.
+func stopDelegated(ctx context.Context, proc *os.Process, command string, opts delegateOptions, timeoutC <-chan time.Time, exited <-chan struct{}) stopReason {
 	select {
 	case <-exited:
 		return stopNone
@@ -374,6 +386,9 @@ func stopDelegated(ctx context.Context, proc *os.Process, opts delegateOptions, 
 	case <-exited:
 	case <-grace.C:
 		killDelegated(proc, opts)
+		// Say so: the target's own output stops mid-cleanup, and only the exit
+		// status would tell. The timeout below reports itself as an error.
+		_, _ = fmt.Fprintf(opts.noticeWriter(), "⚠  Custom command '%s' was still running %s after the interrupt — killed it.\n", command, opts.killDelay) //nolint:errcheck // notice on the shutdown path; nothing to do if the write fails
 	case <-timeoutC:
 		killDelegated(proc, opts)
 	}
