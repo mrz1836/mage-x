@@ -224,6 +224,20 @@ go test -fuzz=FuzzReverse -fuzztime=10s ./pkg/utils
 FUZZ_TIME=30s mage test:fuzzshort
 ```
 
+### Build Tags for Tests, Fuzz Tests, and Benchmarks
+
+Tests, fuzz tests, and benchmarks all run with the same build tags: `test.tags`
+from `.mage.yaml`, merged with the tags that `test.auto_discover_build_tags`
+finds in `//go:build` lines. A fuzz target or benchmark in a file guarded by
+`//go:build integration` is therefore fuzzed by `magex test:fuzz` and run by
+`magex bench` as soon as `integration` is discovered or listed in `test.tags`.
+
+With `test.combine_build_tags: false`, each command runs a base pass plus one
+pass per discovered tag; see
+[Build Tag Auto-Discovery](CONFIGURATION.md#build-tag-auto-discovery) for how
+fuzz targets are de-duplicated and how benchmark output files are named per
+pass.
+
 ### Troubleshooting: Fuzz Test "context deadline exceeded"
 
 Go's fuzz tests have **two independent timeout systems**, and understanding this distinction is key to diagnosing failures:

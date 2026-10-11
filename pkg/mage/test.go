@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -153,7 +154,7 @@ func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	displayTestHeader(opts.testType, config)
+	discoveredTags := displayTestHeader(opts.testType, config)
 
 	// Discover and filter modules
 	result, err := discoverAndFilterModules(config, ModuleDiscoveryOptions{
@@ -167,36 +168,54 @@ func runBenchmarkWithOptions(opts benchmarkOptions, argsList ...string) error {
 		return nil
 	}
 
-	// Build base benchmark args
-	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
+	// Get benchmark time and count from parameters
+	benchTime := utils.GetParam(params, "time", opts.defaultBenchTime)
+	count := utils.GetParam(params, "count", "")
 
-	if config.Test.Verbose {
+	// Run one benchmark pass per build tag set, like the test passes
+	passes := testBuildTagPasses(config, discoveredTags)
+	for _, tags := range passes {
+		if tags != "" || len(passes) > 1 {
+			utils.Info("Running %s%s", strings.ToLower(opts.logPrefix), buildTagPassInfo(tags))
+		}
+
+		args := benchmarkArgs(config.Test.Verbose, tags, benchTime, count)
+		passErr := forEachModule(result.Modules, ModuleIteratorOptions{
+			Operation: opts.logPrefix,
+			Verb:      "completed",
+		}, func(module ModuleInfo) error {
+			return runCommandInModule(module, "go", args...)
+		})
+		if passErr != nil {
+			if len(passes) == 1 {
+				return passErr
+			}
+			return fmt.Errorf("%s%s failed: %w", opts.logPrefix, buildTagPassInfo(tags), passErr)
+		}
+	}
+	return nil
+}
+
+// benchmarkArgs returns the go test arguments for one benchmark pass.
+func benchmarkArgs(verbose bool, tags, benchTime, count string) []string {
+	args := []string{"test", "-bench=.", "-benchmem", "-run=^$"}
+	if verbose {
 		args = append(args, "-v")
 	}
-
-	if config.Test.Tags != "" {
-		args = append(args, "-tags", config.Test.Tags)
-	}
-
-	// Get benchmark time from parameter or use default
-	benchTime := utils.GetParam(params, "time", opts.defaultBenchTime)
+	args = append(args, tagsFlag(tags)...)
 	args = append(args, "-benchtime", benchTime)
-
-	// Get count from parameter
-	count := utils.GetParam(params, "count", "")
 	if count != "" {
 		args = append(args, "-count", count)
 	}
+	return append(args, "./...")
+}
 
-	args = append(args, "./...")
-
-	// Run benchmarks for each module
-	return forEachModule(result.Modules, ModuleIteratorOptions{
-		Operation: opts.logPrefix,
-		Verb:      "completed",
-	}, func(module ModuleInfo) error {
-		return runCommandInModule(module, "go", args...)
-	})
+// buildTagPassInfo describes a build tag pass for log and error messages.
+func buildTagPassInfo(tags string) string {
+	if tags == "" {
+		return " without build tags"
+	}
+	return getTagInfo(tags)
 }
 
 // Test namespace for test-related tasks
@@ -570,7 +589,7 @@ func runFuzzWithOptions(opts fuzzOptions, argsList ...string) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	displayTestHeader(opts.headerName, config)
+	discoveredTags := displayTestHeader(opts.headerName, config)
 	PrintCIBannerIfEnabled(ciParams, config)
 
 	if config.Test.SkipFuzz {
@@ -591,7 +610,8 @@ func runFuzzWithOptions(opts fuzzOptions, argsList ...string) error {
 	}
 
 	ciEnabled := IsCIEnabled(ciParams, config)
-	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
+	tagSets := testBuildTagPasses(config, discoveredTags)
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, tagSets, ciEnabled)
 
 	printCIFuzzSummaryIfEnabled(ciParams, config, results, totalDuration)
 	writeFuzzCIResultsIfEnabled(ciParams, config, results, totalDuration)
@@ -627,8 +647,11 @@ func runFuzzWithDuration(fuzzTime time.Duration, opts fuzzOptions) error {
 		return nil
 	}
 
+	// These entry points print a plain header instead of displayTestHeader, so
+	// discover the build tags without it.
 	ciEnabled := IsCIEnabled(nil, config)
-	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, ciEnabled)
+	tagSets := testBuildTagPasses(config, discoverTestBuildTags(config))
+	results, totalDuration := runFuzzTestsWithResultsCI(config, fuzzTime, packages, tagSets, ciEnabled)
 
 	printCIFuzzSummaryIfEnabled(nil, config, results, totalDuration)
 	writeFuzzCIResultsIfEnabled(nil, config, results, totalDuration)
@@ -1031,6 +1054,104 @@ func buildTagFileToken(buildTag string) string {
 	return strings.ReplaceAll(buildTag, ",", "_")
 }
 
+// splitBuildTags splits a -tags value into its individual tags. Go takes a
+// comma-separated list, and older configurations use spaces, so both count as
+// separators.
+func splitBuildTags(tags string) []string {
+	return strings.FieldsFunc(tags, func(r rune) bool {
+		return r == ',' || unicode.IsSpace(r)
+	})
+}
+
+// mergeBuildTags returns the ordered union of the given -tags values as one
+// comma-separated list: every tag appears once, where it is first seen.
+func mergeBuildTags(tagLists ...string) string {
+	seen := make(map[string]bool)
+	var merged []string
+	for _, list := range tagLists {
+		for _, tag := range splitBuildTags(list) {
+			if seen[tag] {
+				continue
+			}
+			seen[tag] = true
+			merged = append(merged, tag)
+		}
+	}
+	return strings.Join(merged, ",")
+}
+
+// buildTagSetKey identifies a -tags value by the set of tags it enables, so
+// "unit,e2e" and "e2e unit" compare equal.
+func buildTagSetKey(tags string) string {
+	set := splitBuildTags(tags)
+	slices.Sort(set)
+	return strings.Join(slices.Compact(set), ",")
+}
+
+// buildTagPasses returns the -tags values to run, one per pass, in order and
+// without duplicate tag sets. An empty value is a pass without -tags.
+//
+//   - No discovered tags: one pass with testTags (test.tags).
+//   - Combined mode: one pass with every discovered tag plus testTags.
+//   - Per-tag mode: a base pass with testTags, then one pass per discovered
+//     tag merged with testTags.
+func buildTagPasses(testTags string, discovered []string, combine bool) []string {
+	if len(discovered) == 0 {
+		return []string{testTags}
+	}
+	if combine {
+		return []string{mergeBuildTags(strings.Join(discovered, ","), testTags)}
+	}
+
+	passes := []string{testTags}
+	seen := map[string]bool{buildTagSetKey(testTags): true}
+	for _, tag := range discovered {
+		pass := mergeBuildTags(tag, testTags)
+		key := buildTagSetKey(pass)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		passes = append(passes, pass)
+	}
+	return passes
+}
+
+// testBuildTagPasses applies buildTagPasses to the test configuration. The
+// discovered tags only count when auto-discovery is enabled.
+func testBuildTagPasses(config *Config, discovered []string) []string {
+	if !config.Test.AutoDiscoverBuildTags {
+		discovered = nil
+	}
+	return buildTagPasses(config.Test.Tags, discovered, config.Test.CombineBuildTags)
+}
+
+// discoverTestBuildTags runs build tag auto-discovery for commands that do not
+// print the test header. It returns nil when discovery is disabled, finds no
+// tags, or fails; a failure is logged as a warning.
+func discoverTestBuildTags(config *Config) []string {
+	if !config.Test.AutoDiscoverBuildTags {
+		return nil
+	}
+	tags, err := utils.DiscoverBuildTagsFromCurrentDir(config.Test.AutoDiscoverBuildTagsExclude)
+	if err != nil {
+		utils.Warn("Build tag auto-discovery failed: %v", err)
+		return nil
+	}
+	if len(tags) > 0 {
+		utils.Info("Discovered build tags: %s", strings.Join(tags, ", "))
+	}
+	return tags
+}
+
+// tagsFlag returns the -tags flag for a pass, or nothing for a pass without tags.
+func tagsFlag(tags string) []string {
+	if tags == "" {
+		return nil
+	}
+	return []string{"-tags", tags}
+}
+
 // getTagInfo returns formatted tag information string
 func getTagInfo(buildTag string) string {
 	if buildTag != "" {
@@ -1191,12 +1312,12 @@ func runCoverageTestsForModulesWithRunner(config *Config, modules []ModuleInfo, 
 			coverFile = fmt.Sprintf("coverage_%s%s.txt", sanitized, tagSuffix)
 		}
 
-		// Build test args with build tag override if specified
+		// Build test args with the pass's build tags if specified
 		var testArgs []string
 		if buildTag != "" {
-			// Override config tags with discovered build tag
+			// Merge the discovered build tags with the configured test.tags
 			tempConfig := *config
-			tempConfig.Test.Tags = buildTag
+			tempConfig.Test.Tags = mergeBuildTags(buildTag, config.Test.Tags)
 			testArgs = buildTestArgs(&tempConfig, race, true, additionalArgs...)
 		} else {
 			testArgs = buildTestArgs(config, race, true, additionalArgs...)
@@ -1276,12 +1397,12 @@ func runTestsForModulesWithRunner(config *Config, modules []ModuleInfo, race, co
 
 		moduleStart := time.Now()
 
-		// Build test args with build tag override if specified
+		// Build test args with the pass's build tags if specified
 		var testArgs []string
 		if buildTag != "" {
-			// Override config tags with discovered build tag
+			// Merge the discovered build tags with the configured test.tags
 			tempConfig := *config
-			tempConfig.Test.Tags = buildTag
+			tempConfig.Test.Tags = mergeBuildTags(buildTag, config.Test.Tags)
 			testArgs = buildTestArgs(&tempConfig, race, cover, additionalArgs...)
 		} else {
 			testArgs = buildTestArgs(config, race, cover, additionalArgs...)
@@ -1578,145 +1699,229 @@ func findFuzzPackagesInDir(dir string) []string {
 //  2. Fuzzing - the actual -fuzztime duration
 //
 // The timeout is calculated as: fuzzTime + (seedCount * overheadPerSeed) + buffer
-func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages []string, ciEnabled bool) ([]fuzzTestResult, time.Duration) {
+//
+// tagSets are the -tags values to list and run the targets with (see
+// buildTagPasses); each target is listed, warmed up, and fuzzed under the
+// first tag set that lists it.
+func runFuzzTestsWithResultsCI(config *Config, fuzzTime time.Duration, packages, tagSets []string, ciEnabled bool) ([]fuzzTestResult, time.Duration) {
 	startTime := time.Now()
 	var results []fuzzTestResult
 
-	fuzzTimeStr := fuzzTime.String()
-
-	// Get fuzz timing configuration
-	fuzzTimingCfg := FuzzTimingConfigFromTestConfig(&config.Test)
+	if len(tagSets) == 0 {
+		tagSets = []string{config.Test.Tags}
+	}
 
 	for _, pkg := range packages {
 		if runtimectx.CheckCanceled() != nil {
 			return results, time.Since(startTime)
 		}
-		// List fuzz tests in package
-		output, err := GetRunner().RunCmdOutput("go", "test", "-list", "^Fuzz", pkg)
-		if err != nil {
-			continue
-		}
-
-		// Resolve package directory for seed counting
-		pkgDir := resolvePkgDir(pkg)
-
-		// Filter valid fuzz tests first
-		fuzzTests := strings.Split(strings.TrimSpace(output), "\n")
-		var validFuzzTests []string
-		for _, test := range fuzzTests {
-			if strings.HasPrefix(test, "Fuzz") {
-				validFuzzTests = append(validFuzzTests, test)
-			}
-		}
-		if len(validFuzzTests) == 0 {
-			continue
-		}
-
-		// Pre-compile with fuzz-specific instrumentation to warm build cache.
-		// This prevents the first fuzz test per package from timing out due to
-		// compilation overhead in projects with large dependency trees.
-		if fuzzTimingCfg.WarmupTimeout > 0 && len(validFuzzTests) > 0 {
-			utils.Info("Warming build cache for %s...", pkg)
-			warmupDur := warmFuzzBuildCache(pkg, validFuzzTests[0], fuzzTimingCfg.WarmupTimeout)
-			if warmupDur > 5*time.Second {
-				utils.Info("Build cache warmup for %s took %s", pkg, utils.FormatDuration(warmupDur))
-			}
-		}
-
-		for _, test := range validFuzzTests {
-			// Count seeds and calculate appropriate timeout
-			seedInfo, seedErr := CountFuzzSeeds(pkgDir, test)
-			seedCount := 0
-			if seedErr == nil && seedInfo != nil {
-				seedCount = seedInfo.TotalSeeds
-				// Warn if seed count might cause issues
-				WarnIfHighSeedCount(seedInfo, fuzzTime, fuzzTimingCfg)
-			}
-
-			// Calculate timeout based on seed count
-			timeout := CalculateFuzzTimeout(fuzzTime, seedCount, fuzzTimingCfg)
-
-			// Display fuzz test info with seed count
-			if seedCount > 0 {
-				utils.Info("Fuzzing %s.%s (%d seeds, timeout: %s)", pkg, test, seedCount, utils.FormatDuration(timeout))
-			} else {
-				utils.Info("Fuzzing %s.%s (timeout: %s)", pkg, test, utils.FormatDuration(timeout))
-			}
-
-			testStart := time.Now()
-			args := []string{"test", "-run=^$", fmt.Sprintf("-fuzz=^%s$", test)}
-			args = append(args, "-fuzztime", fuzzTimeStr)
-			// Pass calculated timeout to Go's test framework. This controls the
-			// test-level deadline (system 1). Note: Go's fuzzer also creates a
-			// separate internal context tied to -fuzztime for worker coordination
-			// (system 2) that mage-x cannot control. If a fuzz function does
-			// expensive work on large inputs, that internal deadline may expire
-			// independently — see DiagnoseFuzzContextDeadline for detection.
-			args = append(args, "-timeout", timeout.String())
-
-			if config.Test.Verbose {
-				args = append(args, "-v")
-			}
-			args = append(args, pkg)
-
-			var testErr error
-			var testOutput string
-
-			if ciEnabled {
-				// Capture output for CI text parsing with calculated timeout
-				testOutput, testErr = runFuzzTestWithOutputAndTimeout("go", timeout, args...)
-			} else {
-				// Standard execution without output capture (still uses smart timeout)
-				testErr = runFuzzTestWithTimeout("go", timeout, args...)
-			}
-			testDuration := time.Since(testStart)
-
-			// Parse timing from output if available
-			var baselineDur, fuzzingDur time.Duration
-			if testOutput != "" {
-				timing := ParseFuzzOutputTiming(testOutput, testStart)
-				if timing != nil {
-					baselineDur = timing.BaselineDuration
-					fuzzingDur = timing.FuzzingDuration
-				}
-			}
-
-			// Diagnose fuzztime context deadline before appending result
-			deadlineTolerated := false
-			if testErr != nil {
-				diagnosed := DiagnoseFuzzContextDeadline(FuzzTestDiagnosticInfo{
-					TestName:         test,
-					Package:          pkg,
-					TestErr:          testErr,
-					TestOutput:       testOutput,
-					TestDuration:     testDuration,
-					FuzzTime:         fuzzTime,
-					SeedCount:        seedCount,
-					BaselineOverhead: fuzzTimingCfg.BaselineOverheadPerSeed,
-				})
-				if diagnosed && !isFuzzStrictDeadline() {
-					deadlineTolerated = true
-				}
-			}
-
-			results = append(results, fuzzTestResult{
-				Package:           pkg,
-				Test:              test,
-				Duration:          testDuration,
-				Error:             testErr,
-				Output:            testOutput,
-				SeedCount:         seedCount,
-				BaselineDuration:  baselineDur,
-				FuzzingDuration:   fuzzingDur,
-				DeadlineTolerated: deadlineTolerated,
-			})
-
-			// Display timing breakdown
-			displayFuzzTestResult(test, testDuration, baselineDur, seedCount, testErr, deadlineTolerated)
+		for _, group := range listFuzzTargets(pkg, tagSets) {
+			results = append(results, runFuzzTargetGroup(config, fuzzTime, pkg, group, ciEnabled)...)
 		}
 	}
 
 	return results, time.Since(startTime)
+}
+
+// fuzzTargetGroup holds the fuzz targets of one package that run with the same
+// -tags value.
+type fuzzTargetGroup struct {
+	Tags  string
+	Tests []string
+}
+
+// fuzzListArgs returns the go arguments that list the fuzz targets in pkg.
+func fuzzListArgs(pkg, tags string) []string {
+	args := append([]string{"test"}, tagsFlag(tags)...)
+	return append(args, "-list", "^Fuzz", pkg)
+}
+
+// fuzzWarmupArgs returns the go arguments that warm the build cache for pkg.
+// They share every flag that affects the build with fuzzRunArgs, -tags
+// included, so the real run reuses the warmed build instead of compiling again.
+func fuzzWarmupArgs(pkg, firstFuzzTest, tags string) []string {
+	args := append([]string{"test"}, tagsFlag(tags)...)
+	return append(args, "-run=^$", fmt.Sprintf("-fuzz=^%s$", firstFuzzTest), "-fuzztime=1x", pkg)
+}
+
+// fuzzRunArgs returns the go arguments that fuzz one target.
+//
+// timeout is passed to Go's test framework and controls the test-level
+// deadline (system 1). Go's fuzzer also creates a separate internal context
+// tied to -fuzztime for worker coordination (system 2) that mage-x cannot
+// control. If a fuzz function does expensive work on large inputs, that
+// internal deadline may expire independently — see DiagnoseFuzzContextDeadline
+// for detection.
+func fuzzRunArgs(pkg, test, tags, fuzzTime string, timeout time.Duration, verbose bool) []string {
+	args := append([]string{"test"}, tagsFlag(tags)...)
+	args = append(args, "-run=^$", fmt.Sprintf("-fuzz=^%s$", test), "-fuzztime", fuzzTime, "-timeout", timeout.String())
+	if verbose {
+		args = append(args, "-v")
+	}
+	return append(args, pkg)
+}
+
+// listFuzzTargets lists the fuzz targets in pkg once per tag set and returns
+// them grouped by tag set, in tag set order. Each target goes to the first tag
+// set that lists it, so a target that builds under several sets runs once (in
+// per-tag mode the base pass lists every untagged target).
+//
+// A warning is logged when the listing fails under every tag set. A package
+// that lists no targets is skipped quietly, because findFuzzPackagesInDir is a
+// text search and also matches "func Fuzz" inside string fixtures.
+func listFuzzTargets(pkg string, tagSets []string) []fuzzTargetGroup {
+	seen := make(map[string]bool)
+	groups := make([]fuzzTargetGroup, 0, len(tagSets))
+	listed := false
+	failure := ""
+
+	for _, tags := range tagSets {
+		output, err := GetRunner().RunCmdOutput("go", fuzzListArgs(pkg, tags)...)
+		if err != nil {
+			if failure == "" {
+				failure = fuzzListFailureLine(output, err)
+			}
+			continue
+		}
+		listed = true
+
+		group := fuzzTargetGroup{Tags: tags}
+		for _, test := range strings.Split(strings.TrimSpace(output), "\n") {
+			if !strings.HasPrefix(test, "Fuzz") || seen[test] {
+				continue
+			}
+			seen[test] = true
+			group.Tests = append(group.Tests, test)
+		}
+		if len(group.Tests) > 0 {
+			groups = append(groups, group)
+		}
+	}
+
+	if !listed && len(tagSets) > 0 {
+		utils.Warn("Skipping fuzz tests in %s: go test -list failed: %s", pkg, failure)
+	}
+	return groups
+}
+
+// fuzzListFailureLine returns the first line that explains why `go test -list`
+// failed, such as "build constraints exclude all Go files in ..." or a compile
+// error. The runner reports a failure as a "command failed [...]: exit status 1"
+// line followed by the command's output, so the first line of output is
+// preferred, skipping the "# <package>" line go prints before compile errors.
+func fuzzListFailureLine(output string, err error) string {
+	errLines := strings.Split(strings.TrimSpace(err.Error()), "\n")
+	candidates := append(strings.Split(output, "\n"), errLines[1:]...)
+	for _, line := range candidates {
+		if line = strings.TrimSpace(line); line != "" && !strings.HasPrefix(line, "# ") {
+			return line
+		}
+	}
+	return errLines[0]
+}
+
+// runFuzzTargetGroup warms the build cache for one group of fuzz targets and
+// fuzzes each target, all with the group's build tags.
+func runFuzzTargetGroup(config *Config, fuzzTime time.Duration, pkg string, group fuzzTargetGroup, ciEnabled bool) []fuzzTestResult {
+	results := make([]fuzzTestResult, 0, len(group.Tests))
+	fuzzTimeStr := fuzzTime.String()
+	fuzzTimingCfg := FuzzTimingConfigFromTestConfig(&config.Test)
+	tagInfo := getTagInfo(group.Tags)
+
+	// Resolve package directory for seed counting
+	pkgDir := resolvePkgDir(pkg, group.Tags)
+
+	// Pre-compile with fuzz-specific instrumentation to warm build cache.
+	// This prevents the first fuzz test per package from timing out due to
+	// compilation overhead in projects with large dependency trees.
+	if fuzzTimingCfg.WarmupTimeout > 0 && len(group.Tests) > 0 {
+		utils.Info("Warming build cache for %s%s...", pkg, tagInfo)
+		warmupDur := warmFuzzBuildCache(pkg, group.Tests[0], group.Tags, fuzzTimingCfg.WarmupTimeout)
+		if warmupDur > 5*time.Second {
+			utils.Info("Build cache warmup for %s took %s", pkg, utils.FormatDuration(warmupDur))
+		}
+	}
+
+	for _, test := range group.Tests {
+		// Count seeds and calculate appropriate timeout
+		seedInfo, seedErr := CountFuzzSeeds(pkgDir, test)
+		seedCount := 0
+		if seedErr == nil && seedInfo != nil {
+			seedCount = seedInfo.TotalSeeds
+			// Warn if seed count might cause issues
+			WarnIfHighSeedCount(seedInfo, fuzzTime, fuzzTimingCfg)
+		}
+
+		// Calculate timeout based on seed count
+		timeout := CalculateFuzzTimeout(fuzzTime, seedCount, fuzzTimingCfg)
+
+		// Display fuzz test info with seed count
+		if seedCount > 0 {
+			utils.Info("Fuzzing %s.%s%s (%d seeds, timeout: %s)", pkg, test, tagInfo, seedCount, utils.FormatDuration(timeout))
+		} else {
+			utils.Info("Fuzzing %s.%s%s (timeout: %s)", pkg, test, tagInfo, utils.FormatDuration(timeout))
+		}
+
+		testStart := time.Now()
+		args := fuzzRunArgs(pkg, test, group.Tags, fuzzTimeStr, timeout, config.Test.Verbose)
+
+		var testErr error
+		var testOutput string
+
+		if ciEnabled {
+			// Capture output for CI text parsing with calculated timeout
+			testOutput, testErr = runFuzzTestWithOutputAndTimeout("go", timeout, args...)
+		} else {
+			// Standard execution without output capture (still uses smart timeout)
+			testErr = runFuzzTestWithTimeout("go", timeout, args...)
+		}
+		testDuration := time.Since(testStart)
+
+		// Parse timing from output if available
+		var baselineDur, fuzzingDur time.Duration
+		if testOutput != "" {
+			timing := ParseFuzzOutputTiming(testOutput, testStart)
+			if timing != nil {
+				baselineDur = timing.BaselineDuration
+				fuzzingDur = timing.FuzzingDuration
+			}
+		}
+
+		// Diagnose fuzztime context deadline before appending result
+		deadlineTolerated := false
+		if testErr != nil {
+			diagnosed := DiagnoseFuzzContextDeadline(FuzzTestDiagnosticInfo{
+				TestName:         test,
+				Package:          pkg,
+				TestErr:          testErr,
+				TestOutput:       testOutput,
+				TestDuration:     testDuration,
+				FuzzTime:         fuzzTime,
+				SeedCount:        seedCount,
+				BaselineOverhead: fuzzTimingCfg.BaselineOverheadPerSeed,
+			})
+			if diagnosed && !isFuzzStrictDeadline() {
+				deadlineTolerated = true
+			}
+		}
+
+		results = append(results, fuzzTestResult{
+			Package:           pkg,
+			Test:              test,
+			Duration:          testDuration,
+			Error:             testErr,
+			Output:            testOutput,
+			SeedCount:         seedCount,
+			BaselineDuration:  baselineDur,
+			FuzzingDuration:   fuzzingDur,
+			DeadlineTolerated: deadlineTolerated,
+		})
+
+		// Display timing breakdown
+		displayFuzzTestResult(test, testDuration, baselineDur, seedCount, testErr, deadlineTolerated)
+	}
+
+	return results
 }
 
 // displayFuzzTestResult shows a timing breakdown for a completed fuzz test
@@ -1747,8 +1952,10 @@ func displayFuzzTestResult(testName string, totalDur, baselineDur time.Duration,
 	}
 }
 
-// resolvePkgDir converts a package path to a directory path for seed counting
-func resolvePkgDir(pkg string) string {
+// resolvePkgDir converts a package path to a directory path for seed counting.
+// tags are the package's -tags value: go list cannot load a package whose files
+// are all excluded by build constraints.
+func resolvePkgDir(pkg, tags string) string {
 	// Try to find the package directory
 	// First, check if it's relative to current directory
 	if strings.HasPrefix(pkg, "./") {
@@ -1756,7 +1963,9 @@ func resolvePkgDir(pkg string) string {
 	}
 
 	// For module paths, try to resolve via go list
-	output, err := GetRunner().RunCmdOutput("go", "list", "-f", "{{.Dir}}", pkg)
+	args := append([]string{"list"}, tagsFlag(tags)...)
+	args = append(args, "-f", "{{.Dir}}", pkg)
+	output, err := GetRunner().RunCmdOutput("go", args...)
 	if err == nil {
 		return strings.TrimSpace(output)
 	}
@@ -1831,15 +2040,15 @@ func runFuzzTestWithTimeout(name string, timeout time.Duration, args ...string) 
 // populated with the exact same instrumentation that real fuzz runs use. A previous
 // approach using "go test -c -covermode=atomic" produced cache entries with different
 // build keys, causing the first real fuzz invocation to recompile from scratch.
+// For the same reason tags must be the -tags value the real run uses.
 //
 // Returns the elapsed time for the warmup.
-func warmFuzzBuildCache(pkg, firstFuzzTest string, timeout time.Duration) time.Duration {
+func warmFuzzBuildCache(pkg, firstFuzzTest, tags string, timeout time.Duration) time.Duration {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(runtimectx.Context(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "go", "test", "-run=^$", //nolint:gosec // pkg and firstFuzzTest are internal Go identifiers, not user input
-		fmt.Sprintf("-fuzz=^%s$", firstFuzzTest), "-fuzztime=1x", pkg)
+	cmd := exec.CommandContext(ctx, "go", fuzzWarmupArgs(pkg, firstFuzzTest, tags)...) //nolint:gosec // pkg, firstFuzzTest, and tags are internal Go identifiers and configured build tags, not user input
 	cmd.Env = os.Environ()
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard

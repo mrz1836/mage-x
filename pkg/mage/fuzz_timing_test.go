@@ -1034,21 +1034,21 @@ func TestWarmFuzzBuildCache(t *testing.T) {
 		t.Run("real fuzz test warms cache with fuzz instrumentation", func(t *testing.T) {
 			// FuzzSimple exists in this file, so fuzz-specific instrumentation is
 			// genuinely exercised. This is the one cold compile.
-			elapsed := warmFuzzBuildCache(pkg, "FuzzSimple", 2*time.Minute)
+			elapsed := warmFuzzBuildCache(pkg, "FuzzSimple", "", 2*time.Minute)
 			assert.Greater(t, elapsed, time.Duration(0), "warmup should take some time")
 		})
 
 		t.Run("nonexistent fuzz test still warms build cache", func(t *testing.T) {
 			// Unmatched fuzz name: the package still compiles with fuzz
 			// instrumentation (the goal); it simply finds 0 matches.
-			elapsed := warmFuzzBuildCache(pkg, "FuzzNonExistentTest", 2*time.Minute)
+			elapsed := warmFuzzBuildCache(pkg, "FuzzNonExistentTest", "", 2*time.Minute)
 			assert.Greater(t, elapsed, time.Duration(0), "warmup should complete even with unmatched fuzz name")
 		})
 
 		t.Run("empty fuzz test name still compiles package", func(t *testing.T) {
 			// Edge case: empty name → -fuzz=^$ matches nothing, but the package
 			// still compiles with fuzz instrumentation.
-			elapsed := warmFuzzBuildCache(pkg, "", 2*time.Minute)
+			elapsed := warmFuzzBuildCache(pkg, "", "", 2*time.Minute)
 			assert.Greater(t, elapsed, time.Duration(0), "warmup should complete with empty fuzz test name")
 		})
 	} else {
@@ -1057,13 +1057,13 @@ func TestWarmFuzzBuildCache(t *testing.T) {
 
 	t.Run("invalid package returns quickly without panic", func(t *testing.T) {
 		// warmFuzzBuildCache is non-fatal: it should log and return, not panic.
-		elapsed := warmFuzzBuildCache("github.com/nonexistent/package/does/not/exist", "FuzzDummy", 30*time.Second)
+		elapsed := warmFuzzBuildCache("github.com/nonexistent/package/does/not/exist", "FuzzDummy", "", 30*time.Second)
 		assert.Greater(t, elapsed, time.Duration(0), "should still return elapsed time")
 	})
 
 	t.Run("very short timeout triggers deadline exceeded", func(t *testing.T) {
 		// Real package but with an impossibly short timeout — returns very quickly.
-		elapsed := warmFuzzBuildCache(pkg, "FuzzSimple", 1*time.Nanosecond)
+		elapsed := warmFuzzBuildCache(pkg, "FuzzSimple", "", 1*time.Nanosecond)
 		assert.Greater(t, elapsed, time.Duration(0))
 	})
 
