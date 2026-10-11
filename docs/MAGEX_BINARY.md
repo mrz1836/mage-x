@@ -274,6 +274,14 @@ magex deploy     # Your custom command
 magex devsetup   # Your custom command
 ```
 
+#### Stopping a Custom Command
+
+magex runs custom commands through `mage`, and a target handles Ctrl+C the same way it would under `mage`:
+
+- **First Ctrl+C**: the target receives the interrupt and can shut down on its own (cancel a context, stop child processes, flush state); `mage` gives it 5 seconds. magex waits for that cleanup, up to 10 seconds before it kills the command, then exits with code 130 without reporting a failure.
+- **Second Ctrl+C**: magex exits immediately.
+- **Timeout**: `-t` is a hard limit. `magex -t 5m deploy` kills the command as soon as 5 minutes pass and exits with code 124.
+
 ### Plugin System
 
 The `magex` binary can dynamically load user commands via Go's plugin system:

@@ -29,6 +29,10 @@ const (
 	// stderrPartialDelay is how long a delegated command's stderr must go quiet
 	// before a line without its newline yet, such as a prompt, is displayed.
 	stderrPartialDelay = 150 * time.Millisecond
+	// interruptKillDelay is how long a delegated command may keep running after
+	// magex is interrupted before it is killed. mage gives a target 5 seconds to
+	// clean up after Ctrl-C, so this leaves room for that.
+	interruptKillDelay = 10 * time.Second
 	// unknownTargetMessage starts the line mage prints for a target it can't find.
 	unknownTargetMessage = "Unknown target specified:"
 )
@@ -44,7 +48,29 @@ var (
 	ErrMagefileRestoreFailed = errors.New("failed to restore magefile.go after command execution")
 	// ErrCommandTimeout is returned when a delegated command times out
 	ErrCommandTimeout = errors.New("command timed out")
+	// ErrCommandCanceled is returned when magex is interrupted (Ctrl-C or SIGTERM)
+	// while a custom command runs, however the command then exits
+	ErrCommandCanceled = errors.New("custom command canceled")
 )
+
+// stopReason records why a delegated command was stopped before it finished.
+type stopReason int
+
+const (
+	// stopNone means the command ran until it exited on its own.
+	stopNone stopReason = iota
+	// stopCanceled means the parent context was canceled: magex got Ctrl-C or SIGTERM.
+	stopCanceled
+	// stopTimedOut means the -t timeout expired.
+	stopTimedOut
+)
+
+// delegateOptions holds the settings of a delegated run that tests shorten.
+type delegateOptions struct {
+	// killDelay is how long the command may keep running after the parent
+	// context is canceled before it is killed.
+	killDelay time.Duration
+}
 
 // DelegateResult contains the result of a delegated mage command execution
 type DelegateResult struct {
@@ -70,7 +96,18 @@ func DelegateToMage(ctx context.Context, command string, args ...string) (result
 
 // DelegateToMageWithTimeout executes a custom command with a configurable timeout.
 // Returns DelegateResult with the exit code and any error.
-func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time.Duration, args ...string) (result DelegateResult) {
+//
+// Canceling ctx (magex got Ctrl-C or SIGTERM) lets the command stop on its own:
+// it gets os.Interrupt, and is killed only if it is still running 10 seconds
+// later. The result is then ErrCommandCanceled, however the command exited. A
+// timeout greater than 0 is a hard limit: the command is killed as soon as it
+// expires, and the result is ErrCommandTimeout with exit code 124.
+func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time.Duration, args ...string) DelegateResult {
+	return delegateToMage(ctx, command, timeout, delegateOptions{killDelay: interruptKillDelay}, args...)
+}
+
+// delegateToMage is DelegateToMageWithTimeout with the settings tests override.
+func delegateToMage(ctx context.Context, command string, timeout time.Duration, opts delegateOptions, args ...string) (result DelegateResult) {
 	// Convert colon-separated format to mage's camelCase format
 	mageCommand := convertToMageFormat(command)
 
@@ -93,16 +130,6 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 	}
 
 	var cmd *exec.Cmd
-	// Apply timeout only if explicitly requested (timeout > 0).
-	// By default, custom commands run until completion or signal (SIGINT/SIGTERM).
-	var execCtx context.Context
-	var cancel context.CancelFunc
-	if timeout > 0 {
-		execCtx, cancel = context.WithTimeout(ctx, timeout)
-	} else {
-		execCtx, cancel = context.WithCancel(ctx)
-	}
-	defer cancel()
 
 	// Check if we have both magefiles/ directory and magefile.go (conflict situation)
 	hasRootMagefile := false
@@ -112,15 +139,20 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 	hasConflict := useDirectory && hasRootMagefile
 
 	// Handle conflict by temporarily renaming magefile.go
-	tempName := ""
 	if hasConflict {
-		tempName = magefileFilename + ".tmp"
+		tempName := magefileFilename + ".tmp"
 		if err := os.Rename(magefileFilename, tempName); err != nil {
 			return DelegateResult{ExitCode: 1, Err: fmt.Errorf("failed to temporarily rename magefile.go: %w", err)}
 		}
+		restore := &magefileRestore{tempName: tempName}
+		// A second Ctrl-C force-exits magex, which skips the deferred restore
+		// below, so the forced exit restores magefile.go too
+		removeHook := forceExitHooksFrom(ctx).add(restore.onForcedExit)
 		// Use named return to properly capture restore errors
 		defer func() {
-			if restoreErr := os.Rename(tempName, magefileFilename); restoreErr != nil {
+			restoreErr := restore.restore()
+			removeHook()
+			if restoreErr != nil {
 				// Combine errors if command also failed
 				if result.Err != nil {
 					result.Err = fmt.Errorf("%w; additionally, %w: %w", result.Err, ErrMagefileRestoreFailed, restoreErr)
@@ -133,6 +165,10 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 		}()
 	}
 
+	// The commands below are not tied to ctx: exec.CommandContext would kill
+	// them the moment it is canceled, giving the target no chance to clean up.
+	// waitDelegated stops them instead.
+
 	// Try to use mage first if available
 	if magePath, err := exec.LookPath("mage"); err == nil {
 		// Use mage binary - mage handles both directory and file automatically
@@ -140,7 +176,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 		// Arguments must be passed via environment variables (MAGE_ARGS, MAGE_ARGS_JSON)
 		cmdArgs := []string{mageCommand}
 		// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
-		cmd = exec.CommandContext(execCtx, magePath, cmdArgs...)
+		cmd = exec.Command(magePath, cmdArgs...) //nolint:noctx // waitDelegated stops it gracefully; CommandContext would kill it
 	} else {
 		// Fallback to go run with mage tags
 		cmdArgs := make([]string, 0, 4+len(args))
@@ -149,7 +185,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 			cmdArgs = append(cmdArgs, "run", "-tags=mage", ".", mageCommand)
 			cmdArgs = append(cmdArgs, args...)
 			// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
-			cmd = exec.CommandContext(execCtx, "go", cmdArgs...)
+			cmd = exec.Command("go", cmdArgs...) //nolint:noctx // waitDelegated stops it gracefully; CommandContext would kill it
 			// Set the working directory to the magefiles directory
 			cmd.Dir = targetPath
 		} else {
@@ -157,7 +193,7 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 			cmdArgs = append(cmdArgs, "run", "-tags=mage", targetPath, mageCommand)
 			cmdArgs = append(cmdArgs, args...)
 			// #nosec G204,G702 -- This is necessary for dynamic command execution with user-defined commands
-			cmd = exec.CommandContext(execCtx, "go", cmdArgs...)
+			cmd = exec.Command("go", cmdArgs...) //nolint:noctx // waitDelegated stops it gracefully; CommandContext would kill it
 		}
 	}
 
@@ -192,19 +228,33 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 	// for it once the command itself has exited and this delay has passed.
 	cmd.WaitDelay = stderrDrainDelay
 
+	// Don't start the command once magex is already shutting down
+	if ctx.Err() != nil {
+		return DelegateResult{ExitCode: exitCodeSIGINT, Err: fmt.Errorf("%w '%s'", ErrCommandCanceled, command)}
+	}
+
 	// Start the command
 	if err := cmd.Start(); err != nil {
 		return DelegateResult{ExitCode: 1, Err: fmt.Errorf("failed to start custom command '%s': %w", command, err)}
 	}
 
 	// Wait for the command to finish and its stderr to be fully captured
-	waitErr := cmd.Wait()
+	stopped, waitErr := waitDelegated(ctx, cmd, timeout, opts.killDelay)
 	stderr.Flush()
 
 	// ErrWaitDelay means the command succeeded but something it left running still
 	// held stderr; that is not a failure of the command.
 	if errors.Is(waitErr, exec.ErrWaitDelay) {
 		waitErr = nil
+	}
+
+	// Interrupted: magex already said so, and however the command exited, even
+	// killed after ignoring the interrupt, was its response, not a failure
+	if stopped == stopCanceled {
+		if waitErr != nil {
+			return DelegateResult{ExitCode: exitCodeSIGINT, Err: fmt.Errorf("%w '%s': %w", ErrCommandCanceled, command, waitErr)}
+		}
+		return DelegateResult{ExitCode: exitCodeSIGINT, Err: fmt.Errorf("%w '%s'", ErrCommandCanceled, command)}
 	}
 
 	if waitErr != nil {
@@ -215,8 +265,8 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 			exitCode = exitErr.ExitCode()
 		}
 
-		// Check for context deadline exceeded (timeout)
-		if errors.Is(execCtx.Err(), context.DeadlineExceeded) {
+		// Killed because the timeout expired
+		if stopped == stopTimedOut {
 			return DelegateResult{
 				ExitCode: 124, // Standard timeout exit code
 				Err:      fmt.Errorf("%w: '%s' after %v", ErrCommandTimeout, command, timeout),
@@ -237,6 +287,94 @@ func DelegateToMageWithTimeout(ctx context.Context, command string, timeout time
 	}
 
 	return DelegateResult{ExitCode: 0, Err: nil}
+}
+
+// waitDelegated waits for cmd, which has been started, and returns why it was
+// stopped early, if it was, along with Wait's error.
+//
+// Canceling ctx means magex got Ctrl-C or SIGTERM. A terminal's Ctrl-C has
+// already reached the command and the target it runs, since they share the
+// foreground process group, and mage gives the target 5 seconds to clean up.
+// So cmd gets os.Interrupt, and is killed only if it is still running after
+// killDelay. A timeout greater than 0 is a hard limit: cmd is killed as soon
+// as it expires; mage doesn't pass a signal sent only to it on to the target,
+// so waiting longer would gain nothing.
+func waitDelegated(ctx context.Context, cmd *exec.Cmd, timeout, killDelay time.Duration) (stopReason, error) {
+	var timeoutC <-chan time.Time
+	if timeout > 0 {
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+		timeoutC = timer.C
+	}
+
+	exited := make(chan struct{})
+	stopped := make(chan stopReason, 1)
+	go func() {
+		stopped <- stopDelegated(ctx, cmd.Process, timeoutC, killDelay, exited)
+	}()
+
+	err := cmd.Wait()
+	close(exited)
+	return <-stopped, err
+}
+
+// stopDelegated watches a running command for waitDelegated until exited
+// closes, stopping the command if ctx is canceled or timeoutC fires first.
+func stopDelegated(ctx context.Context, proc *os.Process, timeoutC <-chan time.Time, killDelay time.Duration, exited <-chan struct{}) stopReason {
+	select {
+	case <-exited:
+		return stopNone
+	case <-timeoutC:
+		killDelegated(proc)
+		return stopTimedOut
+	case <-ctx.Done():
+	}
+
+	// Best effort: this fails on Windows, and mage ignores it while the target runs
+	_ = proc.Signal(os.Interrupt) //nolint:errcheck // a command that missed it is killed after killDelay
+
+	grace := time.NewTimer(killDelay)
+	defer grace.Stop()
+	select {
+	case <-exited:
+	case <-grace.C:
+		killDelegated(proc)
+	case <-timeoutC:
+		killDelegated(proc)
+	}
+	return stopCanceled
+}
+
+// killDelegated kills a delegated command that would not stop on its own.
+func killDelegated(proc *os.Process) {
+	_ = proc.Kill() //nolint:errcheck // it fails only if the command has already exited, which is the goal
+}
+
+// magefileRestore moves magefile.go back after it was renamed out of the way
+// so that mage builds only magefiles/. Both the deferred restore and a forced
+// exit may run it, even at the same time; the rename happens once, and every
+// caller gets its result.
+type magefileRestore struct {
+	tempName string
+
+	once sync.Once
+	err  error
+}
+
+// restore renames tempName back to magefile.go, the first time it is called.
+func (r *magefileRestore) restore() error {
+	r.once.Do(func() {
+		r.err = os.Rename(r.tempName, magefileFilename)
+	})
+	return r.err
+}
+
+// onForcedExit restores magefile.go before magex force-exits, reporting a
+// failure since nothing else will.
+func (r *magefileRestore) onForcedExit() {
+	if err := r.restore(); err != nil {
+		fmt.Fprintf(os.Stderr, "❌ %v: %v\n", ErrMagefileRestoreFailed, err)
+	}
 }
 
 // stderrFilter receives a delegated command's stderr and passes it through to

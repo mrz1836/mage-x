@@ -414,6 +414,11 @@ func handleCommandError(ctx context.Context, reg *registry.Registry, command str
 
 	exitCode, customErr := tryCustomCommand(ctx, command, commandArgs, discovery, timeout)
 	if customErr != nil {
+		// An interrupted command isn't a failure: the cancel banner and the
+		// command's own output already tell the user what happened
+		if errors.Is(customErr, ErrCommandCanceled) && !errors.Is(customErr, ErrMagefileRestoreFailed) {
+			return exitCode
+		}
 		fmt.Fprintf(os.Stderr, "❌ %v\n", customErr)
 		return exitCode
 	}
@@ -468,9 +473,88 @@ func installSignalHandler(sigCh <-chan os.Signal, cancelledBy *atomic.Int32, can
 	return done
 }
 
+// forceExitHooks holds cleanup that must happen even when a second signal
+// force-exits magex: os.Exit skips deferred calls, so work a defer would
+// normally finish, such as putting a renamed magefile.go back, registers here
+// too. A hook may run at the same time as the defer it backs up, or after it,
+// so it must be safe to run more than once. A nil *forceExitHooks ignores
+// hooks, so code running without main's (tests, library use) needs no special
+// case.
+type forceExitHooks struct {
+	mu     sync.Mutex
+	nextID int
+	hooks  map[int]func()
+}
+
+// add registers fn to run on a forced exit, and returns a function that
+// unregisters it.
+func (h *forceExitHooks) add(fn func()) (remove func()) {
+	if h == nil {
+		return func() {}
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.hooks == nil {
+		h.hooks = make(map[int]func())
+	}
+	id := h.nextID
+	h.nextID++
+	h.hooks[id] = fn
+	return func() {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		delete(h.hooks, id)
+	}
+}
+
+// run calls the registered hooks, in no particular order.
+func (h *forceExitHooks) run() {
+	if h == nil {
+		return
+	}
+	h.mu.Lock()
+	hooks := make([]func(), 0, len(h.hooks))
+	for _, fn := range h.hooks {
+		hooks = append(hooks, fn)
+	}
+	h.mu.Unlock()
+	for _, fn := range hooks {
+		fn()
+	}
+}
+
+// wrapExit returns an exit function that runs the hooks, then calls exit.
+func (h *forceExitHooks) wrapExit(exit func(int)) func(int) {
+	return func(code int) {
+		h.run()
+		exit(code)
+	}
+}
+
+// forceExitHooksKey is the context key under which main stores its forceExitHooks.
+type forceExitHooksKey struct{}
+
+// withForceExitHooks returns a copy of ctx that carries h.
+func withForceExitHooks(ctx context.Context, h *forceExitHooks) context.Context {
+	return context.WithValue(ctx, forceExitHooksKey{}, h)
+}
+
+// forceExitHooksFrom returns the hooks ctx carries, or nil if it carries none.
+func forceExitHooksFrom(ctx context.Context) *forceExitHooks {
+	h, ok := ctx.Value(forceExitHooksKey{}).(*forceExitHooks)
+	if !ok {
+		return nil
+	}
+	return h
+}
+
 func main() {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	// Commands register cleanup that a forced exit must still do; they reach
+	// these hooks through the context
+	exitHooks := &forceExitHooks{}
+	rootCtx = withForceExitHooks(rootCtx, exitHooks)
 	runtimectx.SetRoot(rootCtx)
 
 	// Buffered (size 2) so a fast double-tap is never dropped between
@@ -480,7 +564,7 @@ func main() {
 	defer signal.Stop(sigCh)
 
 	var cancelledBy atomic.Int32
-	_ = installSignalHandler(sigCh, &cancelledBy, cancel, os.Exit, os.Stderr)
+	_ = installSignalHandler(sigCh, &cancelledBy, cancel, exitHooks.wrapExit(os.Exit), os.Stderr)
 
 	code := run(rootCtx, os.Args)
 
