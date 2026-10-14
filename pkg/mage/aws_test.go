@@ -467,6 +467,25 @@ func TestBackupFile(t *testing.T) {
 		}
 	})
 
+	t.Run("keeps only the newest backups made within one millisecond", func(t *testing.T) {
+		testFile := filepath.Join(t.TempDir(), "credentials")
+		now := time.Date(2026, 10, 14, 18, 19, 59, 224_000_000, time.UTC)
+		total := 2 * awsBackupsKept // enough to need "-10", which must sort after "-2"
+		for i := 1; i <= total; i++ {
+			_, err := writeNewBackup(testFile, []byte(fmt.Sprintf("v%d", i)), now)
+			require.NoError(t, err)
+			pruneBackups(testFile)
+		}
+
+		backups := listBackups(testFile)
+		require.Len(t, backups, awsBackupsKept)
+		for i, backup := range backups {
+			content, err := os.ReadFile(backup) //nolint:gosec // path constructed from test temp dir
+			require.NoError(t, err)
+			assert.Equal(t, fmt.Sprintf("v%d", total-i), string(content), "backups are listed newest first")
+		}
+	})
+
 	t.Run("never removes files it didn't create", func(t *testing.T) {
 		dir := t.TempDir()
 		testFile := filepath.Join(dir, "credentials")
