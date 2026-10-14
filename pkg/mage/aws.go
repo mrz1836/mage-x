@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -886,29 +888,44 @@ func backupFile(path string) error {
 		return fmt.Errorf("%w: %w", errAWSCredBackupFailed, err)
 	}
 
-	backupPath, err := writeNewBackup(path, data)
+	backupPath, err := writeNewBackup(path, data, time.Now())
 	if err != nil {
 		return fmt.Errorf("%w: %w", errAWSCredBackupFailed, err)
 	}
 	utils.Info("Backup created: %s", backupPath)
 
+	pruneBackups(path)
+	return nil
+}
+
+// pruneBackups removes all but the newest few backups of path
+func pruneBackups(path string) {
 	if backups := listBackups(path); len(backups) > awsBackupsKept {
 		for _, old := range backups[awsBackupsKept:] {
 			_ = os.Remove(old) //nolint:errcheck // best effort: an extra backup does no harm
 		}
 	}
-
-	return nil
 }
 
-// writeNewBackup writes data to a new "<path>.bak.<UTC time>" file, adding a
-// counter when that name is taken, and returns the file's path
-func writeNewBackup(path string, data []byte) (string, error) {
-	name := path + awsBackupSuffix + "." + time.Now().UTC().Format(awsBackupTimeFormat)
-	for attempt := 1; attempt <= 100; attempt++ {
+// writeNewBackup writes data to a new "<path>.bak.<UTC time>" file stamped with now,
+// adding a counter when backups from the same millisecond exist, and returns the file's path
+func writeNewBackup(path string, data []byte, now time.Time) (string, error) {
+	stamp := now.UTC().Format(awsBackupTimeFormat)
+	name := path + awsBackupSuffix + "." + stamp
+
+	// Count past every backup from this millisecond, not just into the first free
+	// name: one that was pruned would free a name that sorts as the oldest backup
+	first := 1
+	for _, backup := range findBackups(path) {
+		if backup.stamp == stamp {
+			first = max(first, backup.counter+1)
+		}
+	}
+
+	for counter := first; counter < first+100; counter++ {
 		backupPath := name
-		if attempt > 1 {
-			backupPath = fmt.Sprintf("%s-%d", name, attempt)
+		if counter > 1 {
+			backupPath = fmt.Sprintf("%s-%d", name, counter)
 		}
 
 		file, err := os.OpenFile(backupPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, fileops.PermFileSensitive) //nolint:gosec // path is from known safe source
@@ -932,6 +949,23 @@ func writeNewBackup(path string, data []byte) (string, error) {
 // listBackups returns the timestamped backups of path, newest first. Files
 // that only look similar, such as a ".bak" from older versions, aren't listed.
 func listBackups(path string) []string {
+	backups := findBackups(path)
+	paths := make([]string, len(backups))
+	for i, backup := range backups {
+		paths[i] = backup.path
+	}
+	return paths
+}
+
+// awsBackup is a backup named "<file>.bak.<stamp>" or "<file>.bak.<stamp>-<counter>"
+type awsBackup struct {
+	path    string
+	stamp   string
+	counter int // 1 for a name without a counter
+}
+
+// findBackups returns the timestamped backups of path, newest first
+func findBackups(path string) []awsBackup {
 	dir := filepath.Dir(path)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -939,20 +973,29 @@ func listBackups(path string) []string {
 	}
 
 	prefix := filepath.Base(path) + awsBackupSuffix + "."
-	var backups []string
+	var backups []awsBackup
 	for _, entry := range entries {
-		stamp, ok := strings.CutPrefix(entry.Name(), prefix)
+		rest, ok := strings.CutPrefix(entry.Name(), prefix)
 		if !ok || entry.IsDir() {
 			continue
 		}
-		stamp, _, _ = strings.Cut(stamp, "-") // drop a counter added for a name clash
-		if _, parseErr := time.Parse(awsBackupTimeFormat, stamp); parseErr == nil {
-			backups = append(backups, filepath.Join(dir, entry.Name()))
+		stamp, counterText, hasCounter := strings.Cut(rest, "-")
+		if _, parseErr := time.Parse(awsBackupTimeFormat, stamp); parseErr != nil {
+			continue
 		}
+		counter := 1
+		if hasCounter {
+			if counter, err = strconv.Atoi(counterText); err != nil || counter < 2 {
+				continue
+			}
+		}
+		backups = append(backups, awsBackup{path: filepath.Join(dir, entry.Name()), stamp: stamp, counter: counter})
 	}
 
-	// ReadDir sorts by name, and the timestamps sort in time order
-	slices.Reverse(backups)
+	// The stamps sort in time order; the counters must be compared as numbers, or "-10" comes before "-2"
+	slices.SortFunc(backups, func(a, b awsBackup) int {
+		return cmp.Or(strings.Compare(b.stamp, a.stamp), cmp.Compare(b.counter, a.counter))
+	})
 	return backups
 }
 
