@@ -36,6 +36,9 @@ func TestFuzzWithDiscoveredBuildTagsIntegration(t *testing.T) {
 	t.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS", "")
 	t.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE", "")
 	t.Setenv("MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE", "")
+	// Go's fuzzer can report "context deadline exceeded" when -fuzztime expires
+	// mid-input; the runner tolerates that unless strict mode is on, so keep it off.
+	t.Setenv("MAGE_X_FUZZ_STRICT_DEADLINE", "")
 	TestResetConfig()
 	t.Cleanup(TestResetConfig)
 	original := GetRunner()
@@ -64,7 +67,9 @@ func TestFuzzWithDiscoveredBuildTagsIntegration(t *testing.T) {
 	for _, name := range []string{"FuzzX", "FuzzY"} {
 		result, ok := fuzzed[name]
 		require.True(t, ok, "%s should be fuzzed", name)
-		require.NoError(t, result.Error, "%s output:\n%s", name, result.Output)
+		if !result.DeadlineTolerated {
+			require.NoError(t, result.Error, "%s output:\n%s", name, result.Output)
+		}
 		assert.Contains(t, result.Output, "fuzz: elapsed", "%s should reach the fuzzing phase", name)
 	}
 	assert.Equal(t, "example.com/fuzzrepro/tagged", fuzzed["FuzzY"].Package)
