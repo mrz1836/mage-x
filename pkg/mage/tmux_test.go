@@ -101,7 +101,7 @@ func TestValidateModel(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"known model - sonnet", "sonnet", "claude-sonnet-4-5"},
+		{"known model - sonnet", "sonnet", "claude-sonnet-5-5"},
 		{"known model - opus", "opus", "claude-opus-4-5"},
 		{"known model - haiku", "haiku", "claude-haiku-4-5"},
 		{"unknown model", "custom-model", "custom-model"},
@@ -189,7 +189,7 @@ func TestGetSupportedModels(t *testing.T) {
 
 	// Test Anthropic models
 	assert.Equal(t, "claude-opus-4-5", models["opus"])
-	assert.Equal(t, "claude-sonnet-4-5", models["sonnet"])
+	assert.Equal(t, "claude-sonnet-5-5", models["sonnet"])
 	assert.Equal(t, "claude-haiku-4-5", models["haiku"])
 
 	// Test OpenAI models

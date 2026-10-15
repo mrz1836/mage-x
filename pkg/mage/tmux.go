@@ -38,7 +38,7 @@ func getSupportedModels() map[string]string {
 	return map[string]string{
 		// Anthropic
 		"opus":   "claude-opus-4-5",
-		"sonnet": "claude-sonnet-4-5",
+		"sonnet": "claude-sonnet-5-5",
 		"haiku":  "claude-haiku-4-5",
 		// OpenAI
 		"gpt": "gpt-4o",

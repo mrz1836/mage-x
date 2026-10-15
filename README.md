@@ -856,7 +856,7 @@ magex tmux:status                    # Show session health and status
 
 # Supported Models
 # - opus: claude-opus-4-5
-# - sonnet: claude-sonnet-4-5 (default)
+# - sonnet: claude-sonnet-5-5 (default)
 # - haiku: claude-haiku-4-5
 # - gpt: gpt-4o
 # - o1: o1
