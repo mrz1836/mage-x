@@ -101,9 +101,9 @@ func TestValidateModel(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"known model - sonnet", "sonnet", "claude-sonnet-4-5"},
-		{"known model - opus", "opus", "claude-opus-4-5"},
-		{"known model - haiku", "haiku", "claude-haiku-4-5"},
+		{"known model - sonnet", "sonnet", "claude-sonnet-5-5"},
+		{"known model - opus", "opus", "claude-opus-5-5"},
+		{"known model - haiku", "haiku", "claude-haiku-5-5"},
 		{"unknown model", "custom-model", "custom-model"},
 	}
 
@@ -188,17 +188,15 @@ func TestGetSupportedModels(t *testing.T) {
 	require.NotEmpty(t, models)
 
 	// Test Anthropic models
-	assert.Equal(t, "claude-opus-4-5", models["opus"])
-	assert.Equal(t, "claude-sonnet-4-5", models["sonnet"])
-	assert.Equal(t, "claude-haiku-4-5", models["haiku"])
+	assert.Equal(t, "claude-opus-5-5", models["opus"])
+	assert.Equal(t, "claude-sonnet-5-5", models["sonnet"])
+	assert.Equal(t, "claude-haiku-5-5", models["haiku"])
 
 	// Test OpenAI models
-	assert.Equal(t, "gpt-4o", models["gpt"])
-	assert.Equal(t, "o1", models["o1"])
-	assert.Equal(t, "o3-mini", models["o3"])
+	assert.Equal(t, "gpt-6-astra", models["gpt"])
 
 	// Test Google models
-	assert.Equal(t, "gemini-3-flash", models["gemini"])
+	assert.Equal(t, "gemini-4-argon", models["gemini"])
 }
 
 // TestTmux_Attach_NoName tests Attach with missing session name
