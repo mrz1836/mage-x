@@ -178,8 +178,12 @@ func TestBase_GracefulCancel_KillsHungChild(t *testing.T) {
 
 	// gracefulCancelDelay (5s) + slack for SIGKILL delivery and process reaping.
 	select {
-	case <-errCh:
-		// Any return is fine — what matters is that the child died within the bound.
+	case err := <-errCh:
+		// The exact error doesn't matter — what matters is that the child died
+		// within the bound. A SIGKILLed child can never report success, though.
+		if err == nil {
+			t.Fatal("ExecuteStreaming returned nil for a child killed by WaitDelay escalation")
+		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("hung child outlived WaitDelay; SIGKILL escalation failed")
 	}
