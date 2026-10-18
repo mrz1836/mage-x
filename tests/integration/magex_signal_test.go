@@ -81,7 +81,9 @@ func waitOrTimeout(t *testing.T, cmd *exec.Cmd, deadline time.Duration) (int, bo
 		if err := cmd.Process.Kill(); err != nil {
 			t.Fatalf("kill timed-out magex process: %v", err)
 		}
-		<-done
+		// Reap the killed child. Its Wait error (normally "signal: killed") is
+		// diagnostic only, since callers fail the test on timeout.
+		t.Logf("magex reaped after force-kill: %v", <-done)
 		return -1, true
 	}
 }
