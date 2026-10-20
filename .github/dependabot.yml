@@ -18,6 +18,9 @@
 #   • Force‑push and delete‑branch disabled via branch‑protection rules.
 #   • PR limit = 10 to avoid queue flooding.
 #   • All dependency PRs require passing CI checks before merging.
+#   • Cooldown – new releases wait 3 days before a PR opens (Go modules: patch 3,
+#     minor 7, major 14 days); first-party and trusted publishers are excluded.
+#     Cooldown applies to version updates only – security updates are never delayed.
 # ────────────────────────────────────────────────────────────────
 
 version: 2
@@ -39,10 +42,43 @@ updates:
       day: "tuesday"
       time: "11:00"
       timezone: "America/New_York"
+    cooldown:
+      default-days: 3
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+      exclude: ["github.com/mrz1836/*", "golang.org/x/*"]
     allow:
       - dependency-type: "direct"
     groups:
       go-deps:
+        patterns: ["*"]
+    open-pull-requests-limit: 10
+    assignees: ["mrz1836"]
+    labels: ["chore", "dependencies", "gomod"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Go module: examples/with-config
+  - package-ecosystem: "gomod"
+    directory: "/examples/with-config"
+    target-branch: "master"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "11:00"
+      timezone: "America/New_York"
+    cooldown:
+      default-days: 3
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+      exclude: ["github.com/mrz1836/*", "golang.org/x/*"]
+    allow:
+      - dependency-type: "direct"
+    groups:
+      go-deps-with-config:
         patterns: ["*"]
     open-pull-requests-limit: 10
     assignees: ["mrz1836"]
@@ -62,6 +98,9 @@ updates:
       day: "tuesday"
       time: "11:15"
       timezone: "America/New_York"
+    cooldown:
+      default-days: 3
+      exclude: ["actions/*", "github/*", "gitleaks/*", "ossf/*"]
     allow:
       - dependency-type: "direct"
     groups:
@@ -85,6 +124,9 @@ updates:
       day: "tuesday"
       time: "11:30"
       timezone: "America/New_York"
+    cooldown:
+      default-days: 3
+      exclude: ["ghcr.io/devcontainers/features/*"]
     allow:
       - dependency-type: "direct"
     groups:
@@ -108,6 +150,9 @@ updates:
       day: "tuesday"
       time: "11:45"
       timezone: "America/New_York"
+    cooldown:
+      default-days: 3
+      exclude: ["golang"]
     allow:
       - dependency-type: "direct"
     ignore:
