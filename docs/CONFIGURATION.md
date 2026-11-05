@@ -510,6 +510,11 @@ export MAGE_X_FORMAT_EXCLUDE_PATHS="vendor,node_modules,.git,.idea,.vscode,packa
 >
 > An excluded directory is skipped along with everything beneath it.
 
+> **JSON formatting** (part of `magex format:fix`) re-indents files with four spaces and
+> changes nothing else: key order, number literals, and string escapes are kept as
+> written. Files that are already formatted are not rewritten, and
+> rewritten files keep their permissions.
+
 ### Security Variables
 ```bash
 export MAGE_X_SECURITY_ENABLE_VULN_CHECK="true"

@@ -34,19 +34,19 @@ func TestFormatJSONEdgeCases(t *testing.T) {
 		{
 			name:        "unicode characters",
 			input:       `{"emoji":"😀","chinese":"你好","japanese":"こんにちは"}`,                                      //nolint:gosmopolitan // testing unicode support
-			expected:    "{\n    \"chinese\": \"你好\",\n    \"emoji\": \"😀\",\n    \"japanese\": \"こんにちは\"\n}\n", //nolint:gosmopolitan // testing unicode support
+			expected:    "{\n    \"emoji\": \"😀\",\n    \"chinese\": \"你好\",\n    \"japanese\": \"こんにちは\"\n}\n", //nolint:gosmopolitan // testing unicode support
 			description: "JSON with unicode characters should be preserved",
 		},
 		{
 			name:        "escaped characters",
 			input:       `{"newline":"line1\nline2","tab":"before\tafter","quote":"say \"hello\"","backslash":"path\\to\\file"}`,
-			expected:    "{\n    \"backslash\": \"path\\\\to\\\\file\",\n    \"newline\": \"line1\\nline2\",\n    \"quote\": \"say \\\"hello\\\"\",\n    \"tab\": \"before\\tafter\"\n}\n",
+			expected:    "{\n    \"newline\": \"line1\\nline2\",\n    \"tab\": \"before\\tafter\",\n    \"quote\": \"say \\\"hello\\\"\",\n    \"backslash\": \"path\\\\to\\\\file\"\n}\n",
 			description: "Escaped characters should be preserved",
 		},
 		{
 			name:        "null values",
 			input:       `{"value":null,"array":[null,1,null],"nested":{"prop":null}}`,
-			expected:    "{\n    \"array\": [\n        null,\n        1,\n        null\n    ],\n    \"nested\": {\n        \"prop\": null\n    },\n    \"value\": null\n}\n",
+			expected:    "{\n    \"value\": null,\n    \"array\": [\n        null,\n        1,\n        null\n    ],\n    \"nested\": {\n        \"prop\": null\n    }\n}\n",
 			description: "Null values should be preserved",
 		},
 		{
@@ -64,19 +64,19 @@ func TestFormatJSONEdgeCases(t *testing.T) {
 		{
 			name:        "large numbers",
 			input:       `{"small":1,"large":123456789,"float":3.14159265359,"scientific":1.23e-10}`,
-			expected:    "{\n    \"float\": 3.14159265359,\n    \"large\": 123456789,\n    \"scientific\": 1.23e-10,\n    \"small\": 1\n}\n",
+			expected:    "{\n    \"small\": 1,\n    \"large\": 123456789,\n    \"float\": 3.14159265359,\n    \"scientific\": 1.23e-10\n}\n",
 			description: "Various number formats should be preserved",
 		},
 		{
 			name:        "empty structures",
 			input:       `{"empty_object":{},"empty_array":[],"empty_string":""}`,
-			expected:    "{\n    \"empty_array\": [],\n    \"empty_object\": {},\n    \"empty_string\": \"\"\n}\n",
+			expected:    "{\n    \"empty_object\": {},\n    \"empty_array\": [],\n    \"empty_string\": \"\"\n}\n",
 			description: "Empty objects and arrays should be formatted correctly",
 		},
 		{
 			name:        "boolean values",
 			input:       `{"true_val":true,"false_val":false,"mixed":[true,false,true]}`,
-			expected:    "{\n    \"false_val\": false,\n    \"mixed\": [\n        true,\n        false,\n        true\n    ],\n    \"true_val\": true\n}\n",
+			expected:    "{\n    \"true_val\": true,\n    \"false_val\": false,\n    \"mixed\": [\n        true,\n        false,\n        true\n    ]\n}\n",
 			description: "Boolean values should be preserved",
 		},
 		{
@@ -88,13 +88,13 @@ func TestFormatJSONEdgeCases(t *testing.T) {
 		{
 			name:        "duplicate keys",
 			input:       `{"name":"first","name":"second"}`,
-			expected:    "{\n    \"name\": \"second\"\n}\n",
-			description: "Duplicate keys should result in last value winning",
+			expected:    "{\n    \"name\": \"first\",\n    \"name\": \"second\"\n}\n",
+			description: "Duplicate keys should be preserved as written",
 		},
 		{
 			name:        "html characters not escaped",
 			input:       `{"postCreateCommand":"magex lint && magex vet && magex test","htmlChars":"<script>alert('test')</script>","ampersand":"A & B"}`,
-			expected:    "{\n    \"ampersand\": \"A & B\",\n    \"htmlChars\": \"<script>alert('test')</script>\",\n    \"postCreateCommand\": \"magex lint && magex vet && magex test\"\n}\n",
+			expected:    "{\n    \"postCreateCommand\": \"magex lint && magex vet && magex test\",\n    \"htmlChars\": \"<script>alert('test')</script>\",\n    \"ampersand\": \"A & B\"\n}\n",
 			description: "HTML characters like &, <, > should not be escaped to unicode",
 		},
 		{
@@ -111,14 +111,14 @@ func TestFormatJSONEdgeCases(t *testing.T) {
 			err := os.WriteFile(testFile, []byte(tt.input), 0o600)
 			require.NoError(t, err)
 
-			success := formatJSONFileNative(testFile)
+			_, err = formatJSONFileNative(testFile)
 
 			if tt.shouldError {
-				assert.False(t, success, tt.description)
+				require.Error(t, err, tt.description)
 				return
 			}
 
-			assert.True(t, success, tt.description)
+			require.NoError(t, err, tt.description)
 
 			result, err := os.ReadFile(testFile) //nolint:gosec // test file path
 			require.NoError(t, err)
@@ -139,8 +139,8 @@ func TestFormatJSONFileSystemEdgeCases(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }() //nolint:errcheck // cleanup in defer
 
 	t.Run("nonexistent file", func(t *testing.T) {
-		success := formatJSONFileNative(filepath.Join(tmpDir, "nonexistent.json"))
-		assert.False(t, success, "Should fail for nonexistent file")
+		_, err := formatJSONFileNative(filepath.Join(tmpDir, "nonexistent.json"))
+		require.Error(t, err, "Should fail for nonexistent file")
 	})
 
 	t.Run("directory instead of file", func(t *testing.T) {
@@ -148,8 +148,8 @@ func TestFormatJSONFileSystemEdgeCases(t *testing.T) {
 		err := os.Mkdir(dirPath, 0o750)
 		require.NoError(t, err)
 
-		success := formatJSONFileNative(dirPath)
-		assert.False(t, success, "Should fail when trying to format a directory")
+		_, err = formatJSONFileNative(dirPath)
+		require.ErrorIs(t, err, ErrNotRegularFile, "Should fail when trying to format a directory")
 	})
 
 	t.Run("read-only file", func(t *testing.T) {
@@ -157,22 +157,24 @@ func TestFormatJSONFileSystemEdgeCases(t *testing.T) {
 		err := os.WriteFile(readOnlyFile, []byte(`{"test": "value"}`), 0o444) //nolint:gosec // intentionally testing read-only permission
 		require.NoError(t, err)
 
-		success := formatJSONFileNative(readOnlyFile)
-		// Note: This might succeed on some systems where we can create temp files
-		// and replace even read-only files. The behavior is system-dependent.
-		// We just verify the function handles the case gracefully.
-		if success {
-			// If it succeeded, verify the result is properly formatted
-			content, err := os.ReadFile(readOnlyFile) //nolint:gosec // test file path
-			require.NoError(t, err)
-			var jsonData any
-			err = json.Unmarshal(content, &jsonData)
-			require.NoError(t, err, "Result should be valid JSON")
-		}
-		// Either way (success or failure), the function should handle it gracefully
+		// Replacing a read-only file is platform-dependent (Windows refuses), but the
+		// function must never panic, and on success the file must stay read-only.
 		assert.NotPanics(t, func() {
-			formatJSONFileNative(readOnlyFile)
+			_, err = formatJSONFileNative(readOnlyFile)
 		}, "Should not panic for read-only file")
+		if err != nil {
+			t.Logf("Read-only file was not replaced on this platform: %v", err)
+			return
+		}
+
+		content, err := os.ReadFile(readOnlyFile) //nolint:gosec // test file path
+		require.NoError(t, err)
+		want := "{\n    \"test\": \"value\"\n}\n"
+		assert.Equal(t, want, string(content))
+
+		info, err := os.Stat(readOnlyFile)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o444), info.Mode().Perm(), "Read-only permissions should be preserved")
 	})
 
 	t.Run("symlink to json file", func(t *testing.T) {
@@ -185,25 +187,19 @@ func TestFormatJSONFileSystemEdgeCases(t *testing.T) {
 		err = os.Symlink(originalFile, symlinkFile)
 		require.NoError(t, err)
 
-		success := formatJSONFileNative(symlinkFile)
+		changed, err := formatJSONFileNative(symlinkFile)
+		require.NoError(t, err)
+		assert.True(t, changed)
 
-		// Note: Symlink handling can be system-dependent. The test verifies graceful handling.
-		// The important thing is that it doesn't panic and handles the case appropriately
-		assert.NotPanics(t, func() {
-			formatJSONFileNative(symlinkFile)
-		}, "Should not panic for symlink file")
+		// The link itself survives and its target holds the formatted content.
+		info, err := os.Lstat(symlinkFile)
+		require.NoError(t, err)
+		assert.NotZero(t, info.Mode()&os.ModeSymlink, "Symlink should not be replaced by a regular file")
 
-		if success {
-			// If formatting succeeded, verify the result is valid JSON
-			content, err := os.ReadFile(symlinkFile) //nolint:gosec // test file path
-			require.NoError(t, err)
-			var jsonData any
-			err = json.Unmarshal(content, &jsonData)
-			require.NoError(t, err, "Result should be valid JSON")
-			t.Log("Symlink formatting succeeded and result is valid JSON")
-		} else {
-			t.Log("Symlink formatting failed, but function handled it gracefully")
-		}
+		content, err := os.ReadFile(originalFile) //nolint:gosec // test file path
+		require.NoError(t, err)
+		want := "{\n    \"name\": \"test\"\n}\n"
+		assert.Equal(t, want, string(content))
 	})
 }
 
@@ -220,15 +216,17 @@ func TestFormatJSONIdempotent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Format the file the first time
-	success := formatJSONFileNative(testFile)
-	require.True(t, success)
+	changed, err := formatJSONFileNative(testFile)
+	require.NoError(t, err)
+	require.True(t, changed)
 
 	firstFormat, err := os.ReadFile(testFile) //nolint:gosec // test file path
 	require.NoError(t, err)
 
-	// Format the file a second time
-	success = formatJSONFileNative(testFile)
-	require.True(t, success)
+	// Format the file a second time; it is already formatted, so it is not rewritten
+	changed, err = formatJSONFileNative(testFile)
+	require.NoError(t, err)
+	require.False(t, changed)
 
 	secondFormat, err := os.ReadFile(testFile) //nolint:gosec // test file path
 	require.NoError(t, err)
@@ -237,8 +235,9 @@ func TestFormatJSONIdempotent(t *testing.T) {
 	assert.Equal(t, string(firstFormat), string(secondFormat), "Formatting should be idempotent")
 
 	// Format a third time to be sure
-	success = formatJSONFileNative(testFile)
-	require.True(t, success)
+	changed, err = formatJSONFileNative(testFile)
+	require.NoError(t, err)
+	require.False(t, changed)
 
 	thirdFormat, err := os.ReadFile(testFile) //nolint:gosec // test file path
 	require.NoError(t, err)
@@ -262,8 +261,8 @@ func TestFormatJSONErrorRecovery(t *testing.T) {
 		err = os.Mkdir(tmpFile, 0o750)
 		require.NoError(t, err)
 
-		success := formatJSONFileNative(testFile)
-		assert.False(t, success, "Should fail when temp file exists as directory")
+		_, err = formatJSONFileNative(testFile)
+		require.Error(t, err, "Should fail when temp file exists as directory")
 
 		// Cleanup the directory we created
 		_ = os.RemoveAll(tmpFile) //nolint:errcheck // cleanup in defer
@@ -312,8 +311,8 @@ func TestFormatJSONLineEndings(t *testing.T) {
 			err := os.WriteFile(testFile, []byte(tt.input), 0o600)
 			require.NoError(t, err)
 
-			success := formatJSONFileNative(testFile)
-			require.True(t, success)
+			_, err = formatJSONFileNative(testFile)
+			require.NoError(t, err)
 
 			result, err := os.ReadFile(testFile) //nolint:gosec // test file path
 			require.NoError(t, err)
@@ -330,7 +329,7 @@ func TestFormatJSONConcurrent(t *testing.T) {
 
 	const numFiles = 10
 	var wg sync.WaitGroup
-	results := make([]bool, numFiles)
+	results := make([]error, numFiles)
 
 	// Create multiple JSON files
 	for i := range numFiles {
@@ -346,15 +345,15 @@ func TestFormatJSONConcurrent(t *testing.T) {
 		go func(index int) {
 			defer wg.Done()
 			testFile := filepath.Join(tmpDir, fmt.Sprintf("test%d.json", index))
-			results[index] = formatJSONFileNative(testFile)
+			_, results[index] = formatJSONFileNative(testFile)
 		}(i)
 	}
 
 	wg.Wait()
 
 	// Check that all formatting operations succeeded
-	for i, success := range results {
-		assert.True(t, success, "File %d should have been formatted successfully", i)
+	for i, err := range results {
+		require.NoError(t, err, "File %d should have been formatted successfully", i)
 	}
 
 	// Verify all files are properly formatted
@@ -363,7 +362,7 @@ func TestFormatJSONConcurrent(t *testing.T) {
 		content, err := os.ReadFile(testFile) //nolint:gosec // test file path
 		require.NoError(t, err)
 
-		expected := fmt.Sprintf("{\n    \"data\": [\n        1,\n        2,\n        3\n    ],\n    \"file\": %d,\n    \"name\": \"test%d\"\n}\n", i, i)
+		expected := fmt.Sprintf("{\n    \"file\": %d,\n    \"name\": \"test%d\",\n    \"data\": [\n        1,\n        2,\n        3\n    ]\n}\n", i, i)
 		assert.Equal(t, expected, string(content), "File %d should be properly formatted", i)
 	}
 }
@@ -413,9 +412,8 @@ func BenchmarkFormatJSONFileNative(b *testing.B) {
 				}
 
 				// Format the file
-				success := formatJSONFileNative(testFile)
-				if !success {
-					b.Fatal("Formatting failed")
+				if _, err = formatJSONFileNative(testFile); err != nil {
+					b.Fatal(err)
 				}
 			}
 		})
@@ -449,9 +447,8 @@ func BenchmarkFormatJSONMemoryUsage(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		success := formatJSONFileNative(testFile)
-		if !success {
-			b.Fatal("Formatting failed")
+		if _, err = formatJSONFileNative(testFile); err != nil {
+			b.Fatal(err)
 		}
 	}
 }

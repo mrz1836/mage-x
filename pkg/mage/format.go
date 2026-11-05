@@ -2,6 +2,7 @@
 package mage
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 	"github.com/magefile/mage/mg"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
-	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -21,6 +21,7 @@ import (
 var (
 	ErrCodeNotFormatted     = errors.New("code is not properly formatted")
 	ErrUnexpectedRunnerType = errors.New("expected SecureCommandRunner")
+	ErrNotRegularFile       = errors.New("not a regular file")
 )
 
 // Format namespace for code formatting tasks
@@ -686,58 +687,84 @@ func (Format) Yaml() error {
 	return formatter.YAML()
 }
 
-// formatJSONFile formats a single JSON file using native Go
+// formatJSONFile formats a single JSON file in place and logs the outcome. It reports
+// whether the file was rewritten.
 func formatJSONFile(file string) bool {
-	utils.Info("Formatting %s", file)
-
-	return formatJSONFileNative(file)
+	changed, err := formatJSONFileNative(file)
+	if err != nil {
+		utils.Warn("Skipping %s: %v", file, err)
+		return false
+	}
+	if changed {
+		utils.Info("Formatted %s", file)
+	}
+	return changed
 }
 
-// formatJSONFileNative formats a single JSON file using Go's standard library
-func formatJSONFileNative(file string) bool {
-	// Read the JSON file
-	data, err := os.ReadFile(file) //nolint:gosec // file path is user-provided via API
+// formatJSONFileNative formats a single JSON file in place with formatJSONBytes and
+// reports whether the file was rewritten.
+//
+// A file that is already formatted is left untouched. Otherwise the new content is
+// written to a temporary file and renamed into place, keeping the original permissions.
+// A symlink is resolved first, so its target is updated and the link itself survives.
+func formatJSONFileNative(file string) (bool, error) {
+	target, err := filepath.EvalSymlinks(file)
 	if err != nil {
-		utils.Warn("Failed to read %s: %v", file, err)
-		return false
+		return false, fmt.Errorf("failed to resolve %s: %w", file, err)
 	}
 
-	// Parse JSON to validate it and format it
-	var jsonData any
-	if unmarshalErr := json.Unmarshal(data, &jsonData); unmarshalErr != nil {
-		utils.Warn("Invalid JSON in %s: %v", file, unmarshalErr)
-		return false
+	info, err := os.Stat(target)
+	if err != nil {
+		return false, fmt.Errorf("failed to stat %s: %w", file, err)
+	}
+	if !info.Mode().IsRegular() {
+		return false, fmt.Errorf("%w: %s", ErrNotRegularFile, file)
 	}
 
-	// Format JSON with 4-space indentation and disabled HTML escaping
-	var formatted strings.Builder
-	encoder := json.NewEncoder(&formatted)
-	encoder.SetIndent("", "    ")
-	encoder.SetEscapeHTML(false) // Disable HTML escaping to preserve & characters
-	if err := encoder.Encode(jsonData); err != nil {
-		utils.Warn("Failed to format JSON in %s: %v", file, err)
-		return false
+	data, err := os.ReadFile(target)
+	if err != nil {
+		return false, fmt.Errorf("failed to read %s: %w", file, err)
 	}
 
-	// Get formatted data as bytes
-	formattedData := []byte(formatted.String())
-
-	// Write to temporary file first for atomic operation
-	tmpFile := file + ".tmp"
-	if err := os.WriteFile(tmpFile, formattedData, fileops.PermFileSensitive); err != nil {
-		utils.Warn("Failed to write temporary file %s: %v", tmpFile, err)
-		return false
+	formatted, err := formatJSONBytes(data)
+	if err != nil {
+		return false, fmt.Errorf("invalid JSON in %s: %w", file, err)
+	}
+	if bytes.Equal(formatted, data) {
+		return false, nil
 	}
 
-	// Move temp file to original
-	if err := os.Rename(tmpFile, file); err != nil {
-		utils.Warn("Failed to replace %s: %v", file, err)
-		// Clean up temp file on failure
-		_ = os.Remove(tmpFile) //nolint:errcheck // cleanup on failure, ignore error
-		return false
+	// Write to a temporary file and rename it into place, so a failure never leaves a
+	// partial file behind. The temporary file stays owner-writable so it can always be
+	// removed; the original permissions are applied once it has replaced the target.
+	perm := info.Mode().Perm()
+	tmpFile := target + ".tmp"
+	if err = os.WriteFile(tmpFile, formatted, perm|0o200); err != nil { // #nosec G703 -- tmpFile sits next to a file found by the project walk
+		return false, fmt.Errorf("failed to write temporary file %s: %w", tmpFile, err)
+	}
+	if err = os.Rename(tmpFile, target); err != nil {
+		_ = os.Remove(tmpFile) //nolint:errcheck // best-effort cleanup after a failure
+		return false, fmt.Errorf("failed to replace %s: %w", file, err)
+	}
+	if err = os.Chmod(target, perm); err != nil {
+		return false, fmt.Errorf("failed to restore permissions of %s: %w", file, err)
 	}
 
-	return true
+	return true, nil
+}
+
+// formatJSONBytes re-indents a JSON document with four spaces and ends it with a single
+// newline. Only insignificant whitespace changes: key order, number literals, and string
+// escapes are kept exactly as written, so lockfiles and other tool-managed JSON round-trip
+// unchanged apart from indentation.
+func formatJSONBytes(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	// json.Indent drops leading whitespace but copies trailing whitespace verbatim.
+	if err := json.Indent(&buf, bytes.TrimRight(data, " \t\r\n"), "", "    "); err != nil {
+		return nil, err
+	}
+	buf.WriteByte('\n')
+	return buf.Bytes(), nil
 }
 
 // JSON formats JSON files
@@ -755,7 +782,7 @@ func (Format) JSON() error {
 		return nil
 	}
 
-	// Format JSON files using native Go
+	// Format JSON files using native Go; files already formatted are left untouched.
 	formatted := 0
 
 	for _, file := range files {
@@ -765,9 +792,9 @@ func (Format) JSON() error {
 	}
 
 	if formatted > 0 {
-		utils.Success("Formatted %d JSON files", formatted)
+		utils.Success("Formatted %d of %d JSON files", formatted, len(files))
 	} else {
-		utils.Info("No JSON files formatted")
+		utils.Info("No JSON files changed (%d checked)", len(files))
 	}
 	return nil
 }

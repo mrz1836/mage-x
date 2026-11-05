@@ -312,6 +312,22 @@ func TestFormatJSONNativeWalk(t *testing.T) {
 		mockRunner.AssertNotCalled(t, "RunCmdOutput")
 	})
 
+	t.Run("keeps key order and leaves excluded files untouched", func(t *testing.T) {
+		lockfile := `{"name":"app","lockfileVersion":3,"requires":true}`
+		formatWalkTestEnv(t, map[string]string{
+			"package.json":      `{"name":"app","version":"1.0.0","dependencies":{"b":"1","a":"2"}}`,
+			"package-lock.json": lockfile,
+		}, map[string]string{"MAGE_X_FORMAT_EXCLUDE_PATHS": "package-lock.json"})
+		installMockRunner(t)
+
+		require.NoError(t, Format{}.JSON())
+
+		// Compare bytes, not JSON semantics: the original key order must survive.
+		want := "{\n    \"name\": \"app\",\n    \"version\": \"1.0.0\",\n    \"dependencies\": {\n        \"b\": \"1\",\n        \"a\": \"2\"\n    }\n}\n"
+		assert.Equal(t, want, readTestFile(t, "package.json"))
+		assert.Equal(t, lockfile, readTestFile(t, "package-lock.json"), "excluded file must be left untouched")
+	})
+
 	t.Run("no JSON files is a no-op", func(t *testing.T) {
 		formatWalkTestEnv(t, map[string]string{"notes.txt": "hi"}, nil)
 		installMockRunner(t)
