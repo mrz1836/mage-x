@@ -114,30 +114,54 @@ func TestFormatHelperFunctions(t *testing.T) {
 		}
 	})
 
-	t.Run("newExcludeDirPredicate", func(t *testing.T) {
+	t.Run("newFormatExcludeMatcher", func(t *testing.T) {
 		tests := []struct {
 			name     string
 			envValue string
-			skipped  []string
+			excluded []string
 			kept     []string
 		}{
 			{
 				name:     "default excludes",
 				envValue: "",
-				skipped:  []string{"vendor", "node_modules", ".git", ".idea", ".vscode"},
-				kept:     []string{"cmd", "pkg", "ci-tester", "src"},
+				excluded: []string{"vendor", "node_modules", ".git", ".idea", ".vscode", "a/b/vendor"},
+				kept:     []string{"cmd", "pkg", "ci-tester", "src", "package-lock.json"},
 			},
 			{
 				name:     "custom single exclude",
 				envValue: "ci-tester",
-				skipped:  []string{"ci-tester"},
+				excluded: []string{"ci-tester", "deep/nested/ci-tester"},
 				kept:     []string{"vendor", "node_modules", "src"},
 			},
 			{
 				name:     "multiple excludes with spaces and empties",
 				envValue: "vendor, ci-tester ,,build",
-				skipped:  []string{"vendor", "ci-tester", "build"},
+				excluded: []string{"vendor", "ci-tester", "build"},
 				kept:     []string{"node_modules", ".git", "src"},
+			},
+			{
+				name:     "file names match at any depth",
+				envValue: "package-lock.json",
+				excluded: []string{"package-lock.json", "web/package-lock.json"},
+				kept:     []string{"package.json", "web/package.json", "package-lock.json.bak"},
+			},
+			{
+				name:     "base-name globs",
+				envValue: "*.min.json,*-lock.*",
+				excluded: []string{"app.min.json", "dist/app.min.json", "pnpm-lock.yaml", "web/yarn-lock.json"},
+				kept:     []string{"app.json", "min.json", "lockfile.json"},
+			},
+			{
+				name:     "paths with a slash are relative to the root",
+				envValue: "docs/generated, ./testdata/*.json, build/",
+				excluded: []string{"docs/generated", "testdata/fixture.json", "build", "src/build"},
+				kept:     []string{"docs", "other/docs/generated", "testdata", "testdata/sub/fixture.json"},
+			},
+			{
+				name:     "malformed glob is matched literally",
+				envValue: "[broken",
+				excluded: []string{"[broken", "a/[broken"},
+				kept:     []string{"broken", "b"},
 			},
 		}
 
@@ -150,15 +174,20 @@ func TestFormatHelperFunctions(t *testing.T) {
 				}
 				defer func() { _ = os.Unsetenv("MAGE_X_FORMAT_EXCLUDE_PATHS") }() //nolint:errcheck // test cleanup
 
-				skip := newExcludeDirPredicate()
-				for _, name := range tt.skipped {
-					assert.True(t, skip(name), "expected directory %q to be skipped", name)
+				matcher := newFormatExcludeMatcher()
+				for _, p := range tt.excluded {
+					assert.True(t, matcher.excludes(filepath.FromSlash(p)), "expected %q to be excluded", p)
 				}
-				for _, name := range tt.kept {
-					assert.False(t, skip(name), "expected directory %q to be kept", name)
+				for _, p := range tt.kept {
+					assert.False(t, matcher.excludes(filepath.FromSlash(p)), "expected %q to be kept", p)
 				}
 			})
 		}
+	})
+
+	t.Run("nil matcher excludes nothing", func(t *testing.T) {
+		var matcher *formatExcludeMatcher
+		assert.False(t, matcher.excludes("vendor"))
 	})
 }
 

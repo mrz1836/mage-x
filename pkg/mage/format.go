@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -347,49 +348,100 @@ func getFormatExcludePaths() []string {
 	return strings.Split(excludePaths, ",")
 }
 
-// newExcludeDirPredicate returns a predicate reporting whether a directory should be
-// skipped during a format walk, based on MAGE_X_FORMAT_EXCLUDE_PATHS. A directory is
-// skipped when its base name exactly matches one of the (trimmed, non-empty) exclude
-// entries, at any depth. This mirrors findGoFiles' historical behavior and unifies
-// exclusion semantics across Go, YAML, and JSON discovery so a directory like ci-tester
-// is pruned regardless of file extension.
-func newExcludeDirPredicate() func(name string) bool {
-	excludePaths := getFormatExcludePaths()
-	excluded := make(map[string]struct{}, len(excludePaths))
-	for _, excludePath := range excludePaths {
-		if trimmed := strings.TrimSpace(excludePath); trimmed != "" {
-			excluded[trimmed] = struct{}{}
+// formatExcludeMatcher decides which directories and files a format walk skips, based on
+// the patterns in MAGE_X_FORMAT_EXCLUDE_PATHS. Each pattern is a literal name or a glob
+// with path.Match syntax:
+//
+//   - A pattern without a slash matches the base name of a directory or file at any
+//     depth, e.g. "vendor", "package-lock.json", or "*.min.json".
+//   - A pattern with a slash matches the path relative to the project root, e.g.
+//     "docs/generated" or "testdata/*.json".
+//
+// An excluded directory is skipped together with everything beneath it, so the same
+// exclusions apply to Go, YAML, and JSON discovery.
+type formatExcludeMatcher struct {
+	names []string // patterns matched against a base name
+	paths []string // patterns matched against a root-relative, slash-separated path
+}
+
+// newFormatExcludeMatcher builds a matcher from MAGE_X_FORMAT_EXCLUDE_PATHS. Entries are
+// trimmed, a leading "./" and trailing "/" are dropped, and empty entries are ignored.
+func newFormatExcludeMatcher() *formatExcludeMatcher {
+	matcher := &formatExcludeMatcher{}
+	for _, entry := range getFormatExcludePaths() {
+		pattern := filepath.ToSlash(strings.TrimSpace(entry))
+		pattern = strings.TrimSuffix(strings.TrimPrefix(pattern, "./"), "/")
+		switch {
+		case pattern == "" || pattern == ".":
+			continue
+		case strings.Contains(pattern, "/"):
+			matcher.paths = append(matcher.paths, pattern)
+		default:
+			matcher.names = append(matcher.names, pattern)
 		}
 	}
-	return func(name string) bool {
-		_, ok := excluded[name]
-		return ok
+	return matcher
+}
+
+// excludes reports whether relPath, a path relative to the walk root, is excluded.
+// A nil matcher excludes nothing.
+func (m *formatExcludeMatcher) excludes(relPath string) bool {
+	if m == nil {
+		return false
 	}
+	slashPath := filepath.ToSlash(relPath)
+	name := path.Base(slashPath)
+	for _, pattern := range m.names {
+		if matchExcludePattern(pattern, name) {
+			return true
+		}
+	}
+	for _, pattern := range m.paths {
+		if matchExcludePattern(pattern, slashPath) {
+			return true
+		}
+	}
+	return false
+}
+
+// matchExcludePattern reports whether value matches pattern. A malformed glob is compared
+// literally, so a stray metacharacter never silently disables an exclusion.
+func matchExcludePattern(pattern, value string) bool {
+	matched, err := path.Match(pattern, value)
+	if err != nil {
+		return pattern == value
+	}
+	return matched
 }
 
 // findFilesByExt walks the current directory tree collecting files whose extension
-// (case-insensitive) is in exts, skipping any directory for which skipDir(baseName)
-// returns true. Paths are returned in filepath.Walk's deterministic lexical order.
-// Each entry of exts must include the leading dot, e.g. ".yml".
-func findFilesByExt(exts []string, skipDir func(name string) bool) ([]string, error) {
+// (case-insensitive) is in exts, skipping every directory and file that exclude
+// excludes; a nil exclude skips nothing. Paths are returned in filepath.Walk's
+// deterministic lexical order. Each entry of exts must include the leading dot,
+// e.g. ".yml".
+func findFilesByExt(exts []string, exclude *formatExcludeMatcher) ([]string, error) {
 	var files []string
 
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(".", func(walkPath string, info os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("failed to walk path %s: %w", path, err)
+			return fmt.Errorf("failed to walk path %s: %w", walkPath, err)
 		}
 
-		if info.IsDir() {
-			if skipDir != nil && skipDir(info.Name()) {
+		if walkPath != "." && exclude.excludes(walkPath) {
+			if info.IsDir() {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		ext := strings.ToLower(filepath.Ext(path))
+		if info.IsDir() {
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(walkPath))
 		for _, want := range exts {
 			if ext == want {
-				files = append(files, path)
+				files = append(files, walkPath)
 				break
 			}
 		}
@@ -405,7 +457,7 @@ func findFilesByExt(exts []string, skipDir func(name string) bool) ([]string, er
 
 // findGoFiles finds all Go files in the project, excluding generated protobuf files.
 func findGoFiles() ([]string, error) {
-	candidates, err := findFilesByExt([]string{".go"}, newExcludeDirPredicate())
+	candidates, err := findFilesByExt([]string{".go"}, newFormatExcludeMatcher())
 	if err != nil {
 		return nil, fmt.Errorf("failed to find Go files: %w", err)
 	}
@@ -556,9 +608,9 @@ func formatYAMLFilesBatched(files []string, configPath string) error {
 func (Format) YAML() error {
 	utils.Header("Formatting YAML Files")
 
-	// Find YAML files with a native walk so directory exclusions
-	// (MAGE_X_FORMAT_EXCLUDE_PATHS) apply uniformly to .yml and .yaml.
-	yamlFiles, err := findFilesByExt([]string{".yml", ".yaml"}, newExcludeDirPredicate())
+	// Find YAML files with a native walk so exclusions (MAGE_X_FORMAT_EXCLUDE_PATHS)
+	// apply uniformly to .yml and .yaml.
+	yamlFiles, err := findFilesByExt([]string{".yml", ".yaml"}, newFormatExcludeMatcher())
 	if err != nil {
 		return fmt.Errorf("failed to find YAML files: %w", err)
 	}
@@ -693,7 +745,7 @@ func (Format) JSON() error {
 	utils.Header("Formatting JSON Files")
 
 	// Find JSON files with a native walk that honors MAGE_X_FORMAT_EXCLUDE_PATHS.
-	files, err := findFilesByExt([]string{".json"}, newExcludeDirPredicate())
+	files, err := findFilesByExt([]string{".json"}, newFormatExcludeMatcher())
 	if err != nil {
 		return fmt.Errorf("failed to find JSON files: %w", err)
 	}
