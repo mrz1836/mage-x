@@ -492,6 +492,29 @@ export MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE="mage,windows"
 export MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE="true"   # false = one test pass per tag
 ```
 
+### Format Variables
+```bash
+export MAGE_X_FORMAT_EXCLUDE_PATHS="vendor,node_modules,.git,.idea,.vscode,package-lock.json"
+```
+
+> **`MAGE_X_FORMAT_EXCLUDE_PATHS`** is a comma-separated list of directories and files
+> that `magex format` skips when it discovers Go, YAML, and JSON files. It defaults to
+> `vendor,node_modules,.git,.idea,.vscode`; setting it replaces the default, so repeat any
+> default entries you still want. Each entry is a name or a glob in
+> [`path.Match`](https://pkg.go.dev/path#Match) syntax:
+>
+> - An entry without a slash matches a directory or file name at any depth, e.g. `vendor`,
+>   `package-lock.json`, or `*.min.json`.
+> - An entry with a slash matches a path relative to the project root, e.g.
+>   `docs/generated` or `testdata/*.json`.
+>
+> An excluded directory is skipped along with everything beneath it.
+
+> **JSON formatting** (part of `magex format:fix`) re-indents files with four spaces and
+> changes nothing else: key order, number literals, and string escapes are kept as
+> written. Files that are already formatted are not rewritten, and
+> rewritten files keep their permissions.
+
 ### Security Variables
 ```bash
 export MAGE_X_SECURITY_ENABLE_VULN_CHECK="true"

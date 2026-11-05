@@ -2,17 +2,18 @@
 package mage
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/magefile/mage/mg"
 
 	"github.com/mrz1836/mage-x/pkg/common/env"
-	"github.com/mrz1836/mage-x/pkg/common/fileops"
 	"github.com/mrz1836/mage-x/pkg/utils"
 )
 
@@ -20,6 +21,7 @@ import (
 var (
 	ErrCodeNotFormatted     = errors.New("code is not properly formatted")
 	ErrUnexpectedRunnerType = errors.New("expected SecureCommandRunner")
+	ErrNotRegularFile       = errors.New("not a regular file")
 )
 
 // Format namespace for code formatting tasks
@@ -347,49 +349,100 @@ func getFormatExcludePaths() []string {
 	return strings.Split(excludePaths, ",")
 }
 
-// newExcludeDirPredicate returns a predicate reporting whether a directory should be
-// skipped during a format walk, based on MAGE_X_FORMAT_EXCLUDE_PATHS. A directory is
-// skipped when its base name exactly matches one of the (trimmed, non-empty) exclude
-// entries, at any depth. This mirrors findGoFiles' historical behavior and unifies
-// exclusion semantics across Go, YAML, and JSON discovery so a directory like ci-tester
-// is pruned regardless of file extension.
-func newExcludeDirPredicate() func(name string) bool {
-	excludePaths := getFormatExcludePaths()
-	excluded := make(map[string]struct{}, len(excludePaths))
-	for _, excludePath := range excludePaths {
-		if trimmed := strings.TrimSpace(excludePath); trimmed != "" {
-			excluded[trimmed] = struct{}{}
+// formatExcludeMatcher decides which directories and files a format walk skips, based on
+// the patterns in MAGE_X_FORMAT_EXCLUDE_PATHS. Each pattern is a literal name or a glob
+// with path.Match syntax:
+//
+//   - A pattern without a slash matches the base name of a directory or file at any
+//     depth, e.g. "vendor", "package-lock.json", or "*.min.json".
+//   - A pattern with a slash matches the path relative to the project root, e.g.
+//     "docs/generated" or "testdata/*.json".
+//
+// An excluded directory is skipped together with everything beneath it, so the same
+// exclusions apply to Go, YAML, and JSON discovery.
+type formatExcludeMatcher struct {
+	names []string // patterns matched against a base name
+	paths []string // patterns matched against a root-relative, slash-separated path
+}
+
+// newFormatExcludeMatcher builds a matcher from MAGE_X_FORMAT_EXCLUDE_PATHS. Entries are
+// trimmed, a leading "./" and trailing "/" are dropped, and empty entries are ignored.
+func newFormatExcludeMatcher() *formatExcludeMatcher {
+	matcher := &formatExcludeMatcher{}
+	for _, entry := range getFormatExcludePaths() {
+		pattern := filepath.ToSlash(strings.TrimSpace(entry))
+		pattern = strings.TrimSuffix(strings.TrimPrefix(pattern, "./"), "/")
+		switch {
+		case pattern == "" || pattern == ".":
+			continue
+		case strings.Contains(pattern, "/"):
+			matcher.paths = append(matcher.paths, pattern)
+		default:
+			matcher.names = append(matcher.names, pattern)
 		}
 	}
-	return func(name string) bool {
-		_, ok := excluded[name]
-		return ok
+	return matcher
+}
+
+// excludes reports whether relPath, a path relative to the walk root, is excluded.
+// A nil matcher excludes nothing.
+func (m *formatExcludeMatcher) excludes(relPath string) bool {
+	if m == nil {
+		return false
 	}
+	slashPath := filepath.ToSlash(relPath)
+	name := path.Base(slashPath)
+	for _, pattern := range m.names {
+		if matchExcludePattern(pattern, name) {
+			return true
+		}
+	}
+	for _, pattern := range m.paths {
+		if matchExcludePattern(pattern, slashPath) {
+			return true
+		}
+	}
+	return false
+}
+
+// matchExcludePattern reports whether value matches pattern. A malformed glob is compared
+// literally, so a stray metacharacter never silently disables an exclusion.
+func matchExcludePattern(pattern, value string) bool {
+	matched, err := path.Match(pattern, value)
+	if err != nil {
+		return pattern == value
+	}
+	return matched
 }
 
 // findFilesByExt walks the current directory tree collecting files whose extension
-// (case-insensitive) is in exts, skipping any directory for which skipDir(baseName)
-// returns true. Paths are returned in filepath.Walk's deterministic lexical order.
-// Each entry of exts must include the leading dot, e.g. ".yml".
-func findFilesByExt(exts []string, skipDir func(name string) bool) ([]string, error) {
+// (case-insensitive) is in exts, skipping every directory and file that exclude
+// excludes; a nil exclude skips nothing. Paths are returned in filepath.Walk's
+// deterministic lexical order. Each entry of exts must include the leading dot,
+// e.g. ".yml".
+func findFilesByExt(exts []string, exclude *formatExcludeMatcher) ([]string, error) {
 	var files []string
 
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(".", func(walkPath string, info os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("failed to walk path %s: %w", path, err)
+			return fmt.Errorf("failed to walk path %s: %w", walkPath, err)
 		}
 
-		if info.IsDir() {
-			if skipDir != nil && skipDir(info.Name()) {
+		if walkPath != "." && exclude.excludes(walkPath) {
+			if info.IsDir() {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		ext := strings.ToLower(filepath.Ext(path))
+		if info.IsDir() {
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(walkPath))
 		for _, want := range exts {
 			if ext == want {
-				files = append(files, path)
+				files = append(files, walkPath)
 				break
 			}
 		}
@@ -405,7 +458,7 @@ func findFilesByExt(exts []string, skipDir func(name string) bool) ([]string, er
 
 // findGoFiles finds all Go files in the project, excluding generated protobuf files.
 func findGoFiles() ([]string, error) {
-	candidates, err := findFilesByExt([]string{".go"}, newExcludeDirPredicate())
+	candidates, err := findFilesByExt([]string{".go"}, newFormatExcludeMatcher())
 	if err != nil {
 		return nil, fmt.Errorf("failed to find Go files: %w", err)
 	}
@@ -556,9 +609,9 @@ func formatYAMLFilesBatched(files []string, configPath string) error {
 func (Format) YAML() error {
 	utils.Header("Formatting YAML Files")
 
-	// Find YAML files with a native walk so directory exclusions
-	// (MAGE_X_FORMAT_EXCLUDE_PATHS) apply uniformly to .yml and .yaml.
-	yamlFiles, err := findFilesByExt([]string{".yml", ".yaml"}, newExcludeDirPredicate())
+	// Find YAML files with a native walk so exclusions (MAGE_X_FORMAT_EXCLUDE_PATHS)
+	// apply uniformly to .yml and .yaml.
+	yamlFiles, err := findFilesByExt([]string{".yml", ".yaml"}, newFormatExcludeMatcher())
 	if err != nil {
 		return fmt.Errorf("failed to find YAML files: %w", err)
 	}
@@ -634,58 +687,84 @@ func (Format) Yaml() error {
 	return formatter.YAML()
 }
 
-// formatJSONFile formats a single JSON file using native Go
+// formatJSONFile formats a single JSON file in place and logs the outcome. It reports
+// whether the file was rewritten.
 func formatJSONFile(file string) bool {
-	utils.Info("Formatting %s", file)
-
-	return formatJSONFileNative(file)
+	changed, err := formatJSONFileNative(file)
+	if err != nil {
+		utils.Warn("Skipping %s: %v", file, err)
+		return false
+	}
+	if changed {
+		utils.Info("Formatted %s", file)
+	}
+	return changed
 }
 
-// formatJSONFileNative formats a single JSON file using Go's standard library
-func formatJSONFileNative(file string) bool {
-	// Read the JSON file
-	data, err := os.ReadFile(file) //nolint:gosec // file path is user-provided via API
+// formatJSONFileNative formats a single JSON file in place with formatJSONBytes and
+// reports whether the file was rewritten.
+//
+// A file that is already formatted is left untouched. Otherwise the new content is
+// written to a temporary file and renamed into place, keeping the original permissions.
+// A symlink is resolved first, so its target is updated and the link itself survives.
+func formatJSONFileNative(file string) (bool, error) {
+	target, err := filepath.EvalSymlinks(file)
 	if err != nil {
-		utils.Warn("Failed to read %s: %v", file, err)
-		return false
+		return false, fmt.Errorf("failed to resolve %s: %w", file, err)
 	}
 
-	// Parse JSON to validate it and format it
-	var jsonData any
-	if unmarshalErr := json.Unmarshal(data, &jsonData); unmarshalErr != nil {
-		utils.Warn("Invalid JSON in %s: %v", file, unmarshalErr)
-		return false
+	info, err := os.Stat(target)
+	if err != nil {
+		return false, fmt.Errorf("failed to stat %s: %w", file, err)
+	}
+	if !info.Mode().IsRegular() {
+		return false, fmt.Errorf("%w: %s", ErrNotRegularFile, file)
 	}
 
-	// Format JSON with 4-space indentation and disabled HTML escaping
-	var formatted strings.Builder
-	encoder := json.NewEncoder(&formatted)
-	encoder.SetIndent("", "    ")
-	encoder.SetEscapeHTML(false) // Disable HTML escaping to preserve & characters
-	if err := encoder.Encode(jsonData); err != nil {
-		utils.Warn("Failed to format JSON in %s: %v", file, err)
-		return false
+	data, err := os.ReadFile(target)
+	if err != nil {
+		return false, fmt.Errorf("failed to read %s: %w", file, err)
 	}
 
-	// Get formatted data as bytes
-	formattedData := []byte(formatted.String())
-
-	// Write to temporary file first for atomic operation
-	tmpFile := file + ".tmp"
-	if err := os.WriteFile(tmpFile, formattedData, fileops.PermFileSensitive); err != nil {
-		utils.Warn("Failed to write temporary file %s: %v", tmpFile, err)
-		return false
+	formatted, err := formatJSONBytes(data)
+	if err != nil {
+		return false, fmt.Errorf("invalid JSON in %s: %w", file, err)
+	}
+	if bytes.Equal(formatted, data) {
+		return false, nil
 	}
 
-	// Move temp file to original
-	if err := os.Rename(tmpFile, file); err != nil {
-		utils.Warn("Failed to replace %s: %v", file, err)
-		// Clean up temp file on failure
-		_ = os.Remove(tmpFile) //nolint:errcheck // cleanup on failure, ignore error
-		return false
+	// Write to a temporary file and rename it into place, so a failure never leaves a
+	// partial file behind. The temporary file stays owner-writable so it can always be
+	// removed; the original permissions are applied once it has replaced the target.
+	perm := info.Mode().Perm()
+	tmpFile := target + ".tmp"
+	if err = os.WriteFile(tmpFile, formatted, perm|0o200); err != nil { // #nosec G703 -- tmpFile sits next to a file found by the project walk
+		return false, fmt.Errorf("failed to write temporary file %s: %w", tmpFile, err)
+	}
+	if err = os.Rename(tmpFile, target); err != nil {
+		_ = os.Remove(tmpFile) //nolint:errcheck // best-effort cleanup after a failure
+		return false, fmt.Errorf("failed to replace %s: %w", file, err)
+	}
+	if err = os.Chmod(target, perm); err != nil {
+		return false, fmt.Errorf("failed to restore permissions of %s: %w", file, err)
 	}
 
-	return true
+	return true, nil
+}
+
+// formatJSONBytes re-indents a JSON document with four spaces and ends it with a single
+// newline. Only insignificant whitespace changes: key order, number literals, and string
+// escapes are kept exactly as written, so lockfiles and other tool-managed JSON round-trip
+// unchanged apart from indentation.
+func formatJSONBytes(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	// json.Indent drops leading whitespace but copies trailing whitespace verbatim.
+	if err := json.Indent(&buf, bytes.TrimRight(data, " \t\r\n"), "", "    "); err != nil {
+		return nil, err
+	}
+	buf.WriteByte('\n')
+	return buf.Bytes(), nil
 }
 
 // JSON formats JSON files
@@ -693,7 +772,7 @@ func (Format) JSON() error {
 	utils.Header("Formatting JSON Files")
 
 	// Find JSON files with a native walk that honors MAGE_X_FORMAT_EXCLUDE_PATHS.
-	files, err := findFilesByExt([]string{".json"}, newExcludeDirPredicate())
+	files, err := findFilesByExt([]string{".json"}, newFormatExcludeMatcher())
 	if err != nil {
 		return fmt.Errorf("failed to find JSON files: %w", err)
 	}
@@ -703,7 +782,7 @@ func (Format) JSON() error {
 		return nil
 	}
 
-	// Format JSON files using native Go
+	// Format JSON files using native Go; files already formatted are left untouched.
 	formatted := 0
 
 	for _, file := range files {
@@ -713,9 +792,9 @@ func (Format) JSON() error {
 	}
 
 	if formatted > 0 {
-		utils.Success("Formatted %d JSON files", formatted)
+		utils.Success("Formatted %d of %d JSON files", formatted, len(files))
 	} else {
-		utils.Info("No JSON files formatted")
+		utils.Info("No JSON files changed (%d checked)", len(files))
 	}
 	return nil
 }

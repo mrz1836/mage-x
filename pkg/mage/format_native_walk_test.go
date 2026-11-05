@@ -92,7 +92,7 @@ func TestChunkByArgBytes(t *testing.T) {
 	})
 }
 
-// TestFindFilesByExt verifies native-walk discovery, extension matching, and dir exclusion.
+// TestFindFilesByExt verifies native-walk discovery, extension matching, and exclusions.
 func TestFindFilesByExt(t *testing.T) {
 	t.Run("matches extensions case-insensitively and skips others", func(t *testing.T) {
 		formatWalkTestEnv(t, map[string]string{
@@ -104,7 +104,7 @@ func TestFindFilesByExt(t *testing.T) {
 			"sub/e.yaml": "w: 4\n",
 		}, nil)
 
-		got, err := findFilesByExt([]string{".yml", ".yaml"}, newExcludeDirPredicate())
+		got, err := findFilesByExt([]string{".yml", ".yaml"}, newFormatExcludeMatcher())
 		require.NoError(t, err)
 		// Deterministic lexical order from filepath.Walk.
 		assert.Equal(t, []string{"a.yml", "b.yaml", "c.YML", "sub/e.yaml"}, got)
@@ -120,13 +120,13 @@ func TestFindFilesByExt(t *testing.T) {
 			"node_modules/pkg/thing.yaml":    "n: 1\n",
 		}, map[string]string{"MAGE_X_FORMAT_EXCLUDE_PATHS": "vendor,node_modules,ci-tester"})
 
-		got, err := findFilesByExt([]string{".yml", ".yaml"}, newExcludeDirPredicate())
+		got, err := findFilesByExt([]string{".yml", ".yaml"}, newFormatExcludeMatcher())
 		require.NoError(t, err)
 		assert.Equal(t, []string{"deep/nested/keep2.yaml", "keep.yml"}, got,
 			"both .yml and .yaml under excluded dirs must be pruned, at any depth")
 	})
 
-	t.Run("nil predicate disables exclusion", func(t *testing.T) {
+	t.Run("nil matcher disables exclusion", func(t *testing.T) {
 		formatWalkTestEnv(t, map[string]string{
 			"keep.yml":       "a: 1\n",
 			"vendor/dep.yml": "v: 1\n",
@@ -139,7 +139,7 @@ func TestFindFilesByExt(t *testing.T) {
 
 	t.Run("empty tree yields no files", func(t *testing.T) {
 		formatWalkTestEnv(t, nil, nil)
-		got, err := findFilesByExt([]string{".yml", ".yaml"}, newExcludeDirPredicate())
+		got, err := findFilesByExt([]string{".yml", ".yaml"}, newFormatExcludeMatcher())
 		require.NoError(t, err)
 		assert.Empty(t, got)
 	})
@@ -150,9 +150,25 @@ func TestFindFilesByExt(t *testing.T) {
 			"b.yml":  "x: 1\n",
 			"c.go":   "package x",
 		}, nil)
-		got, err := findFilesByExt([]string{".json"}, newExcludeDirPredicate())
+		got, err := findFilesByExt([]string{".json"}, newFormatExcludeMatcher())
 		require.NoError(t, err)
 		assert.Equal(t, []string{"a.json"}, got)
+	})
+
+	t.Run("skips excluded files by name, glob, and root-relative path", func(t *testing.T) {
+		formatWalkTestEnv(t, map[string]string{
+			"package.json":                "{}",
+			"package-lock.json":           "{}",
+			"web/package-lock.json":       "{}",
+			"dist/app.min.json":           "{}",
+			"docs/guide.json":             "{}",
+			"docs/generated/api.json":     "{}",
+			"other/docs/generated/x.json": "{}",
+		}, map[string]string{"MAGE_X_FORMAT_EXCLUDE_PATHS": "package-lock.json,*.min.json,docs/generated"})
+
+		got, err := findFilesByExt([]string{".json"}, newFormatExcludeMatcher())
+		require.NoError(t, err)
+		assert.Equal(t, []string{"docs/guide.json", "other/docs/generated/x.json", "package.json"}, got)
 	})
 }
 
@@ -294,6 +310,22 @@ func TestFormatJSONNativeWalk(t *testing.T) {
 
 		mockRunner.AssertNotCalled(t, "RunCmd")
 		mockRunner.AssertNotCalled(t, "RunCmdOutput")
+	})
+
+	t.Run("keeps key order and leaves excluded files untouched", func(t *testing.T) {
+		lockfile := `{"name":"app","lockfileVersion":3,"requires":true}`
+		formatWalkTestEnv(t, map[string]string{
+			"package.json":      `{"name":"app","version":"1.0.0","dependencies":{"b":"1","a":"2"}}`,
+			"package-lock.json": lockfile,
+		}, map[string]string{"MAGE_X_FORMAT_EXCLUDE_PATHS": "package-lock.json"})
+		installMockRunner(t)
+
+		require.NoError(t, Format{}.JSON())
+
+		// Compare bytes, not JSON semantics: the original key order must survive.
+		want := "{\n    \"name\": \"app\",\n    \"version\": \"1.0.0\",\n    \"dependencies\": {\n        \"b\": \"1\",\n        \"a\": \"2\"\n    }\n}\n"
+		assert.Equal(t, want, readTestFile(t, "package.json"))
+		assert.Equal(t, lockfile, readTestFile(t, "package-lock.json"), "excluded file must be left untouched")
 	})
 
 	t.Run("no JSON files is a no-op", func(t *testing.T) {

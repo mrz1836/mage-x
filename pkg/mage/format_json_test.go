@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,9 +37,9 @@ func TestFormatJSONFileNative(t *testing.T) {
 			expected: "{\n    \"name\": \"test\",\n    \"value\": 123\n}\n",
 		},
 		{
-			name:     "nested object",
+			name:     "nested object keeps key order",
 			input:    `{"user":{"name":"john","age":30},"active":true}`,
-			expected: "{\n    \"active\": true,\n    \"user\": {\n        \"age\": 30,\n        \"name\": \"john\"\n    }\n}\n",
+			expected: "{\n    \"user\": {\n        \"name\": \"john\",\n        \"age\": 30\n    },\n    \"active\": true\n}\n",
 		},
 		{
 			name:     "array",
@@ -69,14 +71,14 @@ func TestFormatJSONFileNative(t *testing.T) {
 			require.NoError(t, err)
 
 			// Test formatting
-			success := formatJSONFileNative(testFile)
+			_, err = formatJSONFileNative(testFile)
 
 			if tt.shouldError {
-				assert.False(t, success, "Expected formatting to fail")
+				require.Error(t, err, "Expected formatting to fail")
 				return
 			}
 
-			assert.True(t, success, "Expected formatting to succeed")
+			require.NoError(t, err, "Expected formatting to succeed")
 
 			// Check the result
 			result, err := os.ReadFile(testFile) //nolint:gosec // test file path
@@ -194,7 +196,7 @@ func TestFormatJSONIntegration(t *testing.T) {
 
 	// Verify all files are properly formatted
 	expectedResults := map[string]string{
-		"package.json":     "{\n    \"dependencies\": {\n        \"lodash\": \"^4.17.21\"\n    },\n    \"name\": \"test\",\n    \"version\": \"1.0.0\"\n}\n",
+		"package.json":     "{\n    \"name\": \"test\",\n    \"version\": \"1.0.0\",\n    \"dependencies\": {\n        \"lodash\": \"^4.17.21\"\n    }\n}\n",
 		"config.json":      "{\n    \"database\": {\n        \"host\": \"localhost\",\n        \"port\": 5432\n    },\n    \"debug\": true\n}\n",
 		"nested/data.json": "[\n    {\n        \"id\": 1,\n        \"name\": \"item1\"\n    },\n    {\n        \"id\": 2,\n        \"name\": \"item2\"\n    }\n]\n",
 	}
@@ -224,8 +226,9 @@ func TestAtomicJSONFormatting(t *testing.T) {
 	require.NoError(t, err)
 
 	// Format the file
-	success := formatJSONFileNative(testFile)
-	require.True(t, success)
+	changed, err := formatJSONFileNative(testFile)
+	require.NoError(t, err)
+	require.True(t, changed)
 
 	// Check that temp file is cleaned up
 	tempFile := testFile + ".tmp"
@@ -242,4 +245,111 @@ func TestAtomicJSONFormatting(t *testing.T) {
 	require.NoError(t, err)
 	expected := "{\n    \"name\": \"test\"\n}\n"
 	assert.Equal(t, expected, string(content))
+}
+
+// TestFormatJSONBytes verifies that formatting changes only insignificant whitespace.
+func TestFormatJSONBytes(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "keeps key order",
+			input:    `{"name":"x","version":"1.0.0","dependencies":{"b":"1","a":"2"}}`,
+			expected: "{\n    \"name\": \"x\",\n    \"version\": \"1.0.0\",\n    \"dependencies\": {\n        \"b\": \"1\",\n        \"a\": \"2\"\n    }\n}\n",
+		},
+		{
+			name:     "keeps number literals",
+			input:    `{"big":12345678901234567890,"float":1.0,"exp":1e3,"neg":-0.5}`,
+			expected: "{\n    \"big\": 12345678901234567890,\n    \"float\": 1.0,\n    \"exp\": 1e3,\n    \"neg\": -0.5\n}\n",
+		},
+		{
+			name:     "keeps string escapes",
+			input:    `{"unicode":"caf\u00e9","slash":"a\/b","html":"<a&b>"}`,
+			expected: "{\n    \"unicode\": \"caf\\u00e9\",\n    \"slash\": \"a\\/b\",\n    \"html\": \"<a&b>\"\n}\n",
+		},
+		{
+			name:     "compacts empty containers",
+			input:    `{"a": { }, "b": [ ]}`,
+			expected: "{\n    \"a\": {},\n    \"b\": []\n}\n",
+		},
+		{
+			name:     "normalizes surrounding whitespace",
+			input:    "\n\t {\"a\":1} \r\n\n",
+			expected: "{\n    \"a\": 1\n}\n",
+		},
+		{
+			name:     "reindents two-space documents",
+			input:    "{\n  \"a\": [\n    1\n  ]\n}\n",
+			expected: "{\n    \"a\": [\n        1\n    ]\n}\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := formatJSONBytes([]byte(tt.input))
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, string(got))
+
+			again, err := formatJSONBytes(got)
+			require.NoError(t, err)
+			assert.Equal(t, string(got), string(again), "formatting must be idempotent")
+		})
+	}
+
+	t.Run("rejects invalid documents", func(t *testing.T) {
+		for _, input := range []string{"", "   ", `{"a":}`, `{"a":1}{"b":2}`, "{\"a\":1} // comment"} {
+			_, err := formatJSONBytes([]byte(input))
+			assert.Error(t, err, "input %q", input)
+		}
+	})
+}
+
+// TestFormatJSONFileNativePreservesPermissions verifies that rewriting a file keeps its
+// permission bits instead of tightening them.
+func TestFormatJSONFileNativePreservesPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permission bits are not supported on Windows")
+	}
+
+	for _, perm := range []os.FileMode{0o644, 0o640, 0o600, 0o444} {
+		t.Run(perm.String(), func(t *testing.T) {
+			testFile := filepath.Join(t.TempDir(), "test.json")
+			require.NoError(t, os.WriteFile(testFile, []byte(`{"b":1,"a":2}`), 0o600))
+			require.NoError(t, os.Chmod(testFile, perm))
+
+			changed, err := formatJSONFileNative(testFile)
+			require.NoError(t, err)
+			require.True(t, changed)
+
+			info, err := os.Stat(testFile)
+			require.NoError(t, err)
+			assert.Equal(t, perm, info.Mode().Perm(), "permissions must be preserved")
+			assert.Equal(t, "{\n    \"b\": 1,\n    \"a\": 2\n}\n", readTestFile(t, testFile))
+
+			_, err = os.Stat(testFile + ".tmp")
+			assert.True(t, os.IsNotExist(err), "temporary file must be removed")
+		})
+	}
+}
+
+// TestFormatJSONFileNativeLeavesFormattedFileUntouched verifies that an already formatted
+// file is not rewritten.
+func TestFormatJSONFileNativeLeavesFormattedFileUntouched(t *testing.T) {
+	testFile := filepath.Join(t.TempDir(), "test.json")
+	formatted := "{\n    \"b\": 1,\n    \"a\": 2\n}\n"
+	require.NoError(t, os.WriteFile(testFile, []byte(formatted), 0o600))
+
+	past := time.Now().Add(-time.Hour).Truncate(time.Second)
+	require.NoError(t, os.Chtimes(testFile, past, past))
+
+	changed, err := formatJSONFileNative(testFile)
+	require.NoError(t, err)
+	assert.False(t, changed)
+
+	info, err := os.Stat(testFile)
+	require.NoError(t, err)
+	assert.True(t, info.ModTime().Equal(past), "an already formatted file must not be rewritten")
+	assert.Equal(t, formatted, readTestFile(t, testFile))
 }

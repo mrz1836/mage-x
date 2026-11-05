@@ -298,8 +298,8 @@ func TestFormatJSONRealWorldExamples(t *testing.T) {
 			err := os.WriteFile(testFile, []byte(tt.input), 0o600)
 			require.NoError(t, err, tt.description)
 
-			success := formatJSONFileNative(testFile)
-			assert.True(t, success, "Formatting should succeed for %s", tt.description)
+			_, err = formatJSONFileNative(testFile)
+			require.NoError(t, err, "Formatting should succeed for %s", tt.description)
 
 			// Read the formatted result
 			result, err := os.ReadFile(testFile) //nolint:gosec // test file path
@@ -319,8 +319,9 @@ func TestFormatJSONRealWorldExamples(t *testing.T) {
 			err = os.WriteFile(testFile, result, 0o600) // #nosec G703 -- testFile is a controlled test path from t.TempDir()
 			require.NoError(t, err)
 
-			success = formatJSONFileNative(testFile)
-			assert.True(t, success, "Second formatting should succeed for %s", tt.description)
+			changed, err := formatJSONFileNative(testFile)
+			require.NoError(t, err, "Second formatting should succeed for %s", tt.description)
+			assert.False(t, changed, "Formatted output should not be rewritten for %s", tt.description)
 
 			secondResult, err := os.ReadFile(testFile) //nolint:gosec // test file path
 			require.NoError(t, err)
@@ -345,8 +346,8 @@ func TestFormatJSONLargeFile(t *testing.T) {
 		err := os.WriteFile(testFile, []byte(largeJSON), 0o600)
 		require.NoError(t, err)
 
-		success := formatJSONFileNative(testFile)
-		assert.True(t, success, "Should handle large JSON files")
+		_, err = formatJSONFileNative(testFile)
+		require.NoError(t, err, "Should handle large JSON files")
 
 		// Verify the result is valid and well-formatted
 		result, err := os.ReadFile(testFile) //nolint:gosec // test file path
@@ -396,8 +397,8 @@ func TestFormatJSONSpecialCases(t *testing.T) {
 			err := os.WriteFile(testFile, []byte(tt.input), 0o600)
 			require.NoError(t, err)
 
-			success := formatJSONFileNative(testFile)
-			assert.False(t, success, tt.description)
+			_, err = formatJSONFileNative(testFile)
+			require.Error(t, err, tt.description)
 
 			// Verify original file content is unchanged when formatting fails
 			content, err := os.ReadFile(testFile) //nolint:gosec // test file path
