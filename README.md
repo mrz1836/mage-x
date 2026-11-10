@@ -727,6 +727,18 @@ magex version:bump bump=minor dry-run      # Preview minor bump
 magex version:bump bump=major major-confirm push dry-run  # Preview major bump with push
 magex version:bump bump=patch branch=master dry-run      # Preview branch switch and bump
 
+# Pin the version (tag nothing unless the bump creates exactly the version you chose)
+magex version:bump bump=patch branch=master push expect=v1.4.3                # Fails if the next patch isn't v1.4.3
+magex version:bump bump=major branch=master major-confirm push expect=v2.0.0  # A confirmed v2.0.0 can't become v3.0.0
+magex version:bump bump=minor dry-run expect=1.5.0                            # Preview: a mismatch is only a warning
+# - expect takes vX.Y.Z or X.Y.Z; anything else (or an empty expect=) fails before any git command runs
+# - It is checked after branch= fetches tags and pulls, right before the tag is created, so a version
+#   tagged by someone else meanwhile stops the bump with a non-zero exit, naming both versions:
+#   expected v1.4.3, but the next patch is v1.4.4: another version was tagged meanwhile; nothing was tagged
+# - dry-run doesn't fetch: it checks expect against the tags the clone already has, warns on a mismatch,
+#   and still exits zero
+# - expect pins the root version, so it can't be combined with module=
+
 # Sub-module Versioning (for multi-module repositories like spv-wallet)
 magex version:modules                           # List all discovered sub-modules
 magex version:bump module=models bump=patch     # Bump specific sub-module

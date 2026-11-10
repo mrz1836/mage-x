@@ -4,6 +4,7 @@ package mage
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -19,6 +20,9 @@ import (
 var (
 	errCannotParseGitHubInfo        = errors.New("cannot parse GitHub info from module")
 	errInvalidBumpType              = errors.New("invalid BUMP type (must be major, minor, or patch)")
+	errInvalidExpectedVersion       = errors.New("expect must be a release version such as v1.4.3 or 1.4.3")
+	errExpectWithModule             = errors.New("expect can't be combined with module: it pins the root module's next version")
+	errExpectedVersionMismatch      = errors.New("nothing was tagged") // closes the expect mismatch error, which names both versions
 	errVersionUncommittedChanges    = errors.New("working directory has uncommitted changes")
 	errGitHubAPIError               = errors.New("GitHub API error")
 	errInvalidVersionFormat         = errors.New("invalid version format")
@@ -47,6 +51,11 @@ const (
 	maxAutoIncrementAttempts = 100
 )
 
+// releaseVersionPattern matches a release version as the expect parameter
+// takes it: MAJOR.MINOR.PATCH without leading zeros, with or without a leading
+// "v", and with no pre-release or build suffix, since a bump never makes one.
+var releaseVersionPattern = regexp.MustCompile(`^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
+
 // bumpConfig holds parsed configuration for version bump operation
 type bumpConfig struct {
 	bumpType     string
@@ -55,6 +64,7 @@ type bumpConfig struct {
 	push         bool
 	force        bool
 	module       string // NEW: "", "models", "all", "*"
+	expect       string // the version the bump must create, as vX.Y.Z; "" when not pinned
 	params       map[string]string
 }
 
@@ -80,15 +90,72 @@ func parseBumpConfig(args []string) (*bumpConfig, error) {
 		return nil, fmt.Errorf("%w: %s", errInvalidBumpType, bumpType)
 	}
 
+	expect, err := parseExpectedVersion(params)
+	if err != nil {
+		return nil, err
+	}
+
+	module := utils.GetParam(params, "module", "")
+	if expect != "" && module != "" {
+		return nil, errExpectWithModule
+	}
+
 	return &bumpConfig{
 		bumpType:     bumpType,
 		targetBranch: utils.GetParam(params, "branch", ""),
 		dryRun:       utils.IsParamTrue(params, "dry-run"),
 		push:         utils.IsParamTrue(params, "push"),
 		force:        utils.IsParamTrue(params, "force"),
-		module:       utils.GetParam(params, "module", ""),
+		module:       module,
+		expect:       expect,
 		params:       params,
 	}, nil
+}
+
+// parseExpectedVersion reads the expect parameter, the version the caller
+// expects the bump to create. It returns "" when expect is not given, and the
+// version in the vX.Y.Z form magex prints otherwise. A value that is present
+// but not a release version (including an empty one) is an error, so a pin
+// the caller meant to set is never silently dropped.
+func parseExpectedVersion(params map[string]string) (string, error) {
+	if !utils.HasParam(params, "expect") {
+		return "", nil
+	}
+
+	value := params["expect"]
+	if !releaseVersionPattern.MatchString(value) {
+		return "", fmt.Errorf("%w, got %q", errInvalidExpectedVersion, value)
+	}
+	return "v" + strings.TrimPrefix(value, "v"), nil
+}
+
+// checkExpectedVersion compares newVersion, the version the bump worked out
+// from current (after the fetch and pull that branch= asks for), with the
+// version the caller pinned with expect, so a release tagged by someone else
+// in the meantime can't change what gets tagged. It must run before anything
+// is tagged. Outside dry-run a mismatch is an error naming both versions; in
+// dry-run, which does not fetch, it is reported as a warning.
+func checkExpectedVersion(cfg *bumpConfig, current, newVersion string) error {
+	if cfg.expect == "" {
+		return nil
+	}
+	if newVersion == cfg.expect {
+		utils.Success("%s matches expect", newVersion)
+		return nil
+	}
+
+	mismatch := fmt.Sprintf("expected %s, but the next %s is %s", cfg.expect, cfg.bumpType, newVersion)
+	// The expected version, or a later one, is already tagged: the usual cause
+	// is a release made after the caller chose expect
+	if !isVersionHigher(cfg.expect, current) {
+		mismatch += ": another version was tagged meanwhile"
+	}
+
+	if cfg.dryRun {
+		utils.Warn("⚠️  %s (would fail in normal mode)", mismatch)
+		return nil
+	}
+	return fmt.Errorf("%s; %w", mismatch, errExpectedVersionMismatch)
 }
 
 // discoverModules finds all sub-modules (*/go.mod) in the repository
@@ -878,6 +945,11 @@ func (Version) Bump(args ...string) error {
 	utils.Info("  From:    %s", current)
 	utils.Info("  To:      %s", newVersion)
 	utils.Info("  Type:    %s bump", cfg.bumpType)
+
+	// Stop before tagging unless this is the version the caller pinned with expect
+	if err := checkExpectedVersion(cfg, current, newVersion); err != nil {
+		return err
+	}
 
 	// Handle dry-run mode
 	if cfg.dryRun {
