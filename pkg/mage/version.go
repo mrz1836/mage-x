@@ -869,13 +869,28 @@ func (Version) Update(args ...string) error {
 }
 
 // Bump bumps the version number. With push, it returns an error unless the new
-// tag reaches origin; the error says how to push or delete the local tag.
+// tag reaches origin; the error says how to push or delete the local tag. With
+// json, it ends stdout with the outcome as one JSON line (see bumpResult).
 func (Version) Bump(args ...string) error {
 	utils.Header("Bumping Version")
 
+	// With json, print the outcome as one JSON line once the bump, and its
+	// switch back to the starting branch, is over
+	report := startBumpReport(args)
+	err := runBump(report, args)
+	report.finish(err)
+	return err
+}
+
+// runBump bumps the version as args ask, recording the outcome in report,
+// which is nil without json.
+func runBump(report *bumpReport, args []string) error {
 	// Parse configuration from arguments
 	cfg, err := parseBumpConfig(args)
 	if err != nil {
+		return err
+	}
+	if err = report.configure(cfg); err != nil {
 		return err
 	}
 
@@ -929,6 +944,7 @@ func (Version) Bump(args ...string) error {
 	if err != nil {
 		return err
 	}
+	report.versions(current, newVersion)
 
 	// If we skipped versions, inform the user
 	if len(skipped) > 0 {
@@ -961,12 +977,14 @@ func (Version) Bump(args ...string) error {
 	if err := createVersionTag(newVersion); err != nil {
 		return err
 	}
+	report.tagged(newVersion)
 
 	// Push if requested
 	if cfg.push {
 		if err := handlePushTag(newVersion); err != nil {
 			return err
 		}
+		report.pushed()
 	} else {
 		utils.Info("To push the tag, run: git push origin %s", newVersion)
 		utils.Info("Or add 'push' parameter to push automatically")

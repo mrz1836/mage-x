@@ -757,6 +757,28 @@ magex version:bump module=models dry-run        # Preview sub-module bump
 # - If network issues occur during pull, operation stops but still switches back to original branch
 ```
 
+**Machine-readable outcome** (`json` or `json=true`): `magex version:bump bump=patch branch=master push json` prints its usual output and then, as the last line of stdout, one JSON object describing what happened, on success and on failure. The exit status is unchanged. When stdout and stderr are merged into one stream, it is the last line that starts with `{`:
+
+```json
+{"from":"v1.4.2","to":"v1.4.3","bump":"patch","expect":"","dryRun":false,"tag":"v1.4.3","commit":"<full SHA>","pushed":true,"startBranch":"feature-x","branch":"feature-x","warnings":[],"error":""}
+```
+
+| Field         | Value                                                                                  |
+|---------------|----------------------------------------------------------------------------------------|
+| `from`, `to`  | The version bumped from and to, as `vX.Y.Z`, or `""` if the run stopped before that    |
+| `bump`        | `patch`, `minor`, or `major`                                                           |
+| `expect`      | The version `expect=` pinned, as `vX.Y.Z`, or `""` when not given                      |
+| `dryRun`      | Whether this was a dry-run, which tags nothing                                         |
+| `tag`         | The tag created, or `""`                                                               |
+| `commit`      | The full SHA of the commit the tag points at, or `""`                                  |
+| `pushed`      | `true` only if origin has the tag at that commit                                       |
+| `startBranch` | The branch the clone was on, or `""` when HEAD was detached                            |
+| `branch`      | The branch the clone ended on; when it isn't `startBranch`, `warnings` says so         |
+| `warnings`    | The warnings printed, as plain text without colors or emoji (always a list)            |
+| `error`       | The error the run failed with, or `""`                                                 |
+
+A run that fails partway fills in what it reached: a tag created whose push was refused, or never made because origin was missing or unreachable, has `tag` and `commit` set, `pushed` false, and `error` set; an `expect` mismatch tags nothing, so `tag` is `""` and `error` names both versions. `json` can't be combined with `module`.
+
 </details>
 
 <details>

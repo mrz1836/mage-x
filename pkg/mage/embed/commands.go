@@ -17,6 +17,7 @@ type MethodBinding struct {
 type CommandDef struct {
 	Method   string   // e.g., "default", "all", "linux"
 	Desc     string   // Short description
+	LongDesc string   // Optional detailed description, shown by magex -h <command>
 	Aliases  []string // Optional aliases
 	Usage    string   // Optional usage pattern
 	Examples []string // Optional examples
@@ -40,6 +41,9 @@ func registerNamespaceCommands(
 		}
 		if binding.WithArgs != nil {
 			builder = builder.WithArgsFunc(binding.WithArgs)
+		}
+		if cmd.LongDesc != "" {
+			builder = builder.WithLongDescription(cmd.LongDesc)
 		}
 		if len(cmd.Aliases) > 0 {
 			builder = builder.WithAliases(cmd.Aliases...)
@@ -343,12 +347,35 @@ func getHelpCommands() []CommandDef {
 	}
 }
 
+// versionBumpLongDesc is version:bump's detailed help, which documents the
+// JSON line that json prints. Scripts read its field names, so they must not
+// change.
+const versionBumpLongDesc = "Create the next version tag, optionally on another branch (branch=) and\n" +
+	"pushed to origin (push).\n\n" +
+	"With json (or json=true), magex prints its usual output and then, as the last\n" +
+	"line of stdout, one JSON object describing the outcome, on success and on\n" +
+	"failure; the exit status is unchanged. When stdout and stderr are merged, it\n" +
+	"is the last line that starts with {. A run that fails partway fills in what it\n" +
+	"reached. The fields:\n" +
+	"  from, to     the version bumped from and to, as vX.Y.Z, or \"\"\n" +
+	"  bump         patch, minor, or major\n" +
+	"  expect       the version expect= pinned, as vX.Y.Z, or \"\"\n" +
+	"  dryRun       whether this was a dry-run, which tags nothing\n" +
+	"  tag          the tag created, or \"\"\n" +
+	"  commit       the full SHA of the commit the tag points at, or \"\"\n" +
+	"  pushed       true only if origin has the tag at that commit\n" +
+	"  startBranch  the branch the clone was on, or \"\" when HEAD was detached\n" +
+	"  branch       the branch the clone ended on, or \"\" when HEAD is detached\n" +
+	"  warnings     the warnings printed, as plain text, always a list\n" +
+	"  error        the error the run failed with, or \"\"\n" +
+	"json can't be combined with module."
+
 func getVersionCommands() []CommandDef {
 	return []CommandDef{
 		{Method: "show", Desc: "Display current version information"},
 		// version:check and version:update are registered explicitly below as
 		// deprecated aliases over the go-selfupdate-backed update surface.
-		{Method: "bump", Desc: "Bump version with parameters: bump=<major|minor|patch> branch=<branch-name> push dry-run force major-confirm expect=<vX.Y.Z> (fail, tagging nothing, unless the bump creates that version)", Usage: "magex version:bump [bump=<type>] [branch=<branch-name>] [push] [dry-run] [force] [major-confirm] [expect=<vX.Y.Z>]", Examples: []string{"magex version:bump bump=patch branch=master push", "magex version:bump bump=minor branch=main", "magex version:bump bump=major major-confirm branch=master push", "magex version:bump bump=patch branch=master push expect=v1.4.3", "magex version:bump bump=patch dry-run", "magex version:bump bump=patch"}},
+		{Method: "bump", Desc: "Bump version with parameters: bump=<major|minor|patch> branch=<branch-name> push dry-run force major-confirm expect=<vX.Y.Z> (fail, tagging nothing, unless the bump creates that version) json (end stdout with the outcome as one JSON line)", LongDesc: versionBumpLongDesc, Usage: "magex version:bump [bump=<type>] [branch=<branch-name>] [push] [dry-run] [force] [major-confirm] [expect=<vX.Y.Z>] [json]", Examples: []string{"magex version:bump bump=patch branch=master push", "magex version:bump bump=minor branch=main", "magex version:bump bump=major major-confirm branch=master push", "magex version:bump bump=patch branch=master push expect=v1.4.3", "magex version:bump bump=patch branch=master push json", "magex version:bump bump=patch dry-run", "magex version:bump bump=patch"}},
 		{Method: "changelog", Desc: "Generate changelog from git history with parameters: from=<tag> to=<tag>", Usage: "magex version:changelog [from=<tag>] [to=<tag>]", Examples: []string{"magex version:changelog", "magex version:changelog from=v1.0.0", "magex version:changelog from=v1.0.0 to=v1.1.0"}},
 		{Method: "tag", Desc: "Create version tag"},
 	}
