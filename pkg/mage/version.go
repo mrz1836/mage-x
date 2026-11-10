@@ -34,6 +34,7 @@ var (
 	errUnexpectedlyLargeVersionJump = errors.New("unexpectedly large version jump")
 	errBranchNotFound               = errors.New("branch does not exist locally or remotely")
 	errTagAlreadyExistsOnRemote     = errors.New("tag already exists on remote")
+	errTagNotPushed                 = errors.New("failed to push tag")
 	errMaxAutoIncrementAttempts     = errors.New("could not find available version after 100 attempts")
 	errSubmoduleNotFound            = errors.New("sub-module not found")
 )
@@ -800,7 +801,8 @@ func (Version) Update(args ...string) error {
 	return Update{}.Install(args...)
 }
 
-// Bump bumps the version number
+// Bump bumps the version number. With push, it returns an error unless the new
+// tag reaches origin; the error says how to push or delete the local tag.
 func (Version) Bump(args ...string) error {
 	utils.Header("Bumping Version")
 
@@ -901,13 +903,14 @@ func (Version) Bump(args ...string) error {
 	return nil
 }
 
-// handlePushTag handles the logic for pushing a git tag to remote
+// handlePushTag pushes a git tag to origin. The caller asked for the push, so
+// it is an error whenever the tag does not reach origin: the tag would exist
+// only in the local repository, and the next bump would skip its version.
 func handlePushTag(newVersion string) error {
-	// Check if remote exists before attempting push
+	// Check that origin exists and answers before attempting the push
 	if err := validateGitRemote("origin"); err != nil {
 		utils.Warn("⚠️  Git remote validation failed: %s", err.Error())
-		utils.Info("To push manually later, run: git push origin %s", newVersion)
-		return nil // Don't fail the entire operation, just skip the push
+		return unpushedTagError(newVersion, err)
 	}
 
 	// Determine whether origin already has this tag and, if so, whether it points
@@ -966,10 +969,18 @@ func handlePushTag(newVersion string) error {
 			utils.Warn("💡 To push manually: git push origin %s", newVersion)
 		}
 
-		return fmt.Errorf("failed to push tag: %w", err)
+		return unpushedTagError(newVersion, err)
 	}
 	utils.Success("✅ Tag pushed to remote")
 	return nil
+}
+
+// unpushedTagError reports that tag, which the caller asked to push, did not
+// reach origin because of cause. The tag is left in the local repository, so
+// the error also says how to finish the push or undo the tag.
+func unpushedTagError(tag string, cause error) error {
+	return fmt.Errorf("%w: %w\ntag %s was left in the local repository: push it with 'git push origin %s' or delete it with 'git tag -d %s'",
+		errTagNotPushed, cause, tag, tag, tag)
 }
 
 // remoteTagCommit returns the commit SHA that origin's copy of tag points at and
@@ -1217,7 +1228,8 @@ func isGitDirty() bool {
 	return err == nil && strings.TrimSpace(output) != ""
 }
 
-// validateGitRemote checks if a git remote exists and is accessible
+// validateGitRemote checks if a git remote exists and is accessible. An error
+// means a push to the remote cannot be expected to work.
 func validateGitRemote(remoteName string) error {
 	// Check if remote exists
 	output, err := GetRunner().RunCmdOutput("git", "remote", "-v")
@@ -1229,11 +1241,9 @@ func validateGitRemote(remoteName string) error {
 		return fmt.Errorf("%w: remote '%s' not found. Available remotes:\n%s", errRemoteNotFound, remoteName, output)
 	}
 
-	// Check if we can reach the remote (this is optional and non-blocking)
-	// We'll do a lightweight check that doesn't modify anything
+	// Check that we can reach the remote with a lightweight, read-only request
 	err = GetRunner().RunCmd("git", "ls-remote", "--exit-code", remoteName, "HEAD")
 	if err != nil {
-		// Don't fail hard on connectivity issues, just warn
 		return fmt.Errorf("remote '%s' exists but may not be accessible: %w", remoteName, err)
 	}
 

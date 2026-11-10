@@ -130,10 +130,11 @@ func lightweightLsRemote(tag, commit string) string {
 
 // command-key helpers for the tag under test.
 const (
-	keyRemoteV = "git remote -v"
-	keyLsTags  = "git ls-remote --tags origin " + testTag
-	keyRevList = "git rev-list -n 1 " + testTag
-	keyPush    = "git push origin " + testTag
+	keyRemoteV      = "git remote -v"
+	keyLsRemoteHead = "git ls-remote --exit-code origin HEAD"
+	keyLsTags       = "git ls-remote --tags origin " + testTag
+	keyRevList      = "git rev-list -n 1 " + testTag
+	keyPush         = "git push origin " + testTag
 )
 
 // withValidRemote wires up the commands validateGitRemote("origin") needs so a
@@ -251,14 +252,54 @@ func TestHandlePushTag(t *testing.T) {
 		assert.True(t, r.pushed(), "an unresolved local tag must not be treated as a match; push should proceed")
 	})
 
-	t.Run("remote validation failure skips push without erroring", func(t *testing.T) {
+	t.Run("missing origin remote fails the bump without pushing", func(t *testing.T) {
 		r := newScriptedRunner()
-		// keyRemoteV unset → validateGitRemote cannot find 'origin' → non-fatal skip.
+		// keyRemoteV unset → validateGitRemote cannot find 'origin'.
 		require.NoError(t, SetRunner(r))
 
-		require.NoError(t, handlePushTag(testTag), "remote validation issues are non-fatal by design")
+		err := handlePushTag(testTag)
+		require.Error(t, err, "a requested push that cannot happen must not report success")
+		require.ErrorIs(t, err, errTagNotPushed)
+		require.ErrorIs(t, err, errRemoteNotFound)
+		assertUnpushedTagHint(t, err)
 		assert.False(t, r.pushed(), "no push should be attempted when the remote is not usable")
 	})
+
+	t.Run("unreachable origin remote fails the bump without pushing", func(t *testing.T) {
+		r := newScriptedRunner()
+		withValidRemote(r)
+		r.fail(keyLsRemoteHead, errLsRemoteNetwork)
+		require.NoError(t, SetRunner(r))
+
+		err := handlePushTag(testTag)
+		require.Error(t, err, "a requested push that cannot happen must not report success")
+		require.ErrorIs(t, err, errTagNotPushed)
+		require.ErrorIs(t, err, errLsRemoteNetwork)
+		assertUnpushedTagHint(t, err)
+		assert.False(t, r.pushed(), "no push should be attempted when the remote is not reachable")
+	})
+
+	t.Run("refused push says how to finish or undo", func(t *testing.T) {
+		r := newScriptedRunner()
+		withValidRemote(r)
+		r.fail(keyPush, errPushRejected)
+		require.NoError(t, SetRunner(r))
+
+		err := handlePushTag(testTag)
+		require.Error(t, err)
+		require.ErrorIs(t, err, errTagNotPushed)
+		require.ErrorIs(t, err, errPushRejected)
+		assert.True(t, strings.HasPrefix(err.Error(), "failed to push tag: "), "a refused push keeps its error: %v", err)
+		assertUnpushedTagHint(t, err)
+	})
+}
+
+// assertUnpushedTagHint checks that err tells the user how to finish the push
+// of testTag or undo the local tag.
+func assertUnpushedTagHint(t *testing.T, err error) {
+	t.Helper()
+	assert.Contains(t, err.Error(), "git push origin "+testTag, "the error must say how to finish the push")
+	assert.Contains(t, err.Error(), "git tag -d "+testTag, "the error must say how to undo the tag")
 }
 
 func TestRemoteTagCommit(t *testing.T) {
