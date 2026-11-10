@@ -362,6 +362,7 @@ func (Help) Examples() error {
 				"mage version:check  # Check for updates",
 				"mage version:update  # Update to latest",
 				"mage version:bump bump=minor push",
+				"mage version:bump bump=patch branch=master push expect=v1.4.3  # Fail unless the new tag is v1.4.3",
 				"mage version:bump module=models bump=patch  # Bump sub-module",
 				"mage version:bump module=all bump=minor  # Bump all sub-modules",
 				"mage git:tag version=1.2.3",

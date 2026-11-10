@@ -348,7 +348,7 @@ func getVersionCommands() []CommandDef {
 		{Method: "show", Desc: "Display current version information"},
 		// version:check and version:update are registered explicitly below as
 		// deprecated aliases over the go-selfupdate-backed update surface.
-		{Method: "bump", Desc: "Bump version with parameters: bump=<major|minor|patch> branch=<branch-name> push dry-run force major-confirm", Usage: "magex version:bump [bump=<type>] [branch=<branch-name>] [push] [dry-run] [force] [major-confirm]", Examples: []string{"magex version:bump bump=patch branch=master push", "magex version:bump bump=minor branch=main", "magex version:bump bump=major major-confirm branch=master push", "magex version:bump bump=patch dry-run", "magex version:bump bump=patch"}},
+		{Method: "bump", Desc: "Bump version with parameters: bump=<major|minor|patch> branch=<branch-name> push dry-run force major-confirm expect=<vX.Y.Z> (fail, tagging nothing, unless the bump creates that version)", Usage: "magex version:bump [bump=<type>] [branch=<branch-name>] [push] [dry-run] [force] [major-confirm] [expect=<vX.Y.Z>]", Examples: []string{"magex version:bump bump=patch branch=master push", "magex version:bump bump=minor branch=main", "magex version:bump bump=major major-confirm branch=master push", "magex version:bump bump=patch branch=master push expect=v1.4.3", "magex version:bump bump=patch dry-run", "magex version:bump bump=patch"}},
 		{Method: "changelog", Desc: "Generate changelog from git history with parameters: from=<tag> to=<tag>", Usage: "magex version:changelog [from=<tag>] [to=<tag>]", Examples: []string{"magex version:changelog", "magex version:changelog from=v1.0.0", "magex version:changelog from=v1.0.0 to=v1.1.0"}},
 		{Method: "tag", Desc: "Create version tag"},
 	}
