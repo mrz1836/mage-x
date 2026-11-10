@@ -736,6 +736,10 @@ magex version:bump module=models dry-run        # Preview sub-module bump
 
 # Important Notes:
 # - Uncommitted changes will block version bump operation (safety check)
+# - With push, the bump fails (non-zero exit) unless the new tag reaches origin:
+#   a missing or unreachable origin, or a refused push, leaves the tag only in the
+#   local repository, and the error says how to push it (git push origin <tag>)
+#   or delete it (git tag -d <tag>)
 # - When using branch parameter, you will ALWAYS return to your original branch after completion
 # - Branch switch-back happens even if tag creation or push fails (guaranteed cleanup)
 # - If network issues occur during pull, operation stops but still switches back to original branch
