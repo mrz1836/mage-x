@@ -739,6 +739,21 @@ magex version:bump bump=minor dry-run expect=1.5.0                            # 
 #   and still exits zero
 # - expect pins the root version, so it can't be combined with module=
 
+# Update the branch fast-forward only (never tag commits origin's branch doesn't have)
+magex version:bump bump=patch branch=master push ff-only  # Fails, tagging nothing, if master has unpushed commits
+# - Without ff-only, branch= runs git fetch --tags --force origin, then git pull --rebase origin: local commits
+#   origin doesn't have are rebased onto origin's branch, and that rebased commit is what gets tagged and pushed
+# - ff-only fetches the branch into origin/<branch> and compares with it, so it also works when the branch
+#   tracks no upstream: behind, it fast-forwards; level, it changes nothing; with commits origin doesn't have
+#   (ahead or diverged), it stops before tagging with a non-zero exit, naming how many and how to resolve it:
+#   ff-only: branch 'master' has 2 commits that origin/master doesn't have, so it can't be fast-forwarded; nothing was tagged
+#   to release them, push them first (git push origin master); to drop them, reset the branch to origin in a
+#   terminal (git checkout master && git reset --hard origin/master)
+# - When it stops, the branch's commits are left as they were, and you end on the branch you started on
+#   (with json, the JSON line reports tag "", pushed false, and this error)
+# - ff-only needs branch=, and can't be combined with module=<name> or module=all, which don't switch branches;
+#   dry-run only says what it would do
+
 # Sub-module Versioning (for multi-module repositories like spv-wallet)
 magex version:modules                           # List all discovered sub-modules
 magex version:bump module=models bump=patch     # Bump specific sub-module

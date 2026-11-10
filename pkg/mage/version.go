@@ -41,6 +41,11 @@ var (
 	errTagNotPushed                 = errors.New("failed to push tag")
 	errMaxAutoIncrementAttempts     = errors.New("could not find available version after 100 attempts")
 	errSubmoduleNotFound            = errors.New("sub-module not found")
+	errInvalidFFOnly                = errors.New("ff-only must be true or false")
+	errFFOnlyWithoutBranch          = errors.New("ff-only needs branch=: without it, version:bump doesn't fetch or update any branch")
+	errFFOnlyWithModule             = errors.New("ff-only can't be combined with module=<name> or module=all: they don't switch to or update a branch")
+	errBranchHasUnpushedCommits     = errors.New("nothing was tagged") // closes the ff-only error, which counts the commits origin doesn't have
+	errUnexpectedRevListOutput      = errors.New("unexpected git rev-list output")
 )
 
 // Version operation constants
@@ -63,6 +68,7 @@ type bumpConfig struct {
 	dryRun       bool
 	push         bool
 	force        bool
+	ffOnly       bool   // update targetBranch from origin fast-forward only, instead of pull --rebase
 	module       string // NEW: "", "models", "all", "*"
 	expect       string // the version the bump must create, as vX.Y.Z; "" when not pinned
 	params       map[string]string
@@ -100,12 +106,19 @@ func parseBumpConfig(args []string) (*bumpConfig, error) {
 		return nil, errExpectWithModule
 	}
 
+	targetBranch := utils.GetParam(params, "branch", "")
+	ffOnly, err := parseFFOnly(params, targetBranch, module)
+	if err != nil {
+		return nil, err
+	}
+
 	return &bumpConfig{
 		bumpType:     bumpType,
-		targetBranch: utils.GetParam(params, "branch", ""),
+		targetBranch: targetBranch,
 		dryRun:       utils.IsParamTrue(params, "dry-run"),
 		push:         utils.IsParamTrue(params, "push"),
 		force:        utils.IsParamTrue(params, "force"),
+		ffOnly:       ffOnly,
 		module:       module,
 		expect:       expect,
 		params:       params,
@@ -127,6 +140,28 @@ func parseExpectedVersion(params map[string]string) (string, error) {
 		return "", fmt.Errorf("%w, got %q", errInvalidExpectedVersion, value)
 	}
 	return "v" + strings.TrimPrefix(value, "v"), nil
+}
+
+// parseFFOnly reads the ff-only parameter, which makes branch= update the
+// branch from origin fast-forward only (see fastForwardBranch). It is false
+// when ff-only is not given or is false. A value that is neither true nor
+// false is an error, and so is ff-only where there is no branch to update:
+// without branch=, or with a sub-module bump, which never switches branches.
+// A caller who asked for the check never gets a release without it.
+func parseFFOnly(params map[string]string, targetBranch, module string) (bool, error) {
+	if !utils.HasParam(params, "ff-only") || utils.IsParamFalse(params, "ff-only") {
+		return false, nil
+	}
+	if !utils.IsParamTrue(params, "ff-only") {
+		return false, fmt.Errorf("%w, got %q", errInvalidFFOnly, params["ff-only"])
+	}
+	if targetBranch == "" {
+		return false, errFFOnlyWithoutBranch
+	}
+	if module != "" && module != "*" {
+		return false, errFFOnlyWithModule
+	}
+	return true, nil
 }
 
 // checkExpectedVersion compares newVersion, the version the bump worked out
@@ -504,7 +539,7 @@ func bumpRootAndAllSubmodules(cfg *bumpConfig) error {
 	}
 
 	// Handle branch switching logic
-	cleanup, err := handleBranchSwitch(cfg.targetBranch, cfg.bumpType, cfg.dryRun)
+	cleanup, err := handleBranchSwitch(cfg.targetBranch, cfg.bumpType, cfg.dryRun, cfg.ffOnly)
 	if cleanup != nil {
 		defer cleanup()
 	}
@@ -926,7 +961,7 @@ func runBump(report *bumpReport, args []string) error {
 	}
 
 	// Handle branch switching logic
-	cleanup, err := handleBranchSwitch(cfg.targetBranch, cfg.bumpType, cfg.dryRun)
+	cleanup, err := handleBranchSwitch(cfg.targetBranch, cfg.bumpType, cfg.dryRun, cfg.ffOnly)
 	if cleanup != nil {
 		defer cleanup()
 	}
@@ -1793,8 +1828,89 @@ func pullLatestBranch() error {
 	return nil
 }
 
-// handleBranchSwitch handles the branch switching logic and returns cleanup function if needed
-func handleBranchSwitch(targetBranch, bumpType string, dryRun bool) (func(), error) {
+// fastForwardBranch updates the checked-out branch from origin, fast-forward
+// only, for ff-only. It fetches the tags, as pullLatestBranch does, and the
+// branch itself into origin/<branch>, so it works whether or not the branch
+// tracks an upstream. Then it compares HEAD with origin/<branch>: behind, it
+// fast-forwards; level, it changes nothing; with commits origin doesn't have
+// (ahead or diverged), it returns an error and leaves the branch as it was, so
+// the bump never tags a commit origin's branch doesn't have.
+func fastForwardBranch(branch string) error {
+	remoteBranch := "origin/" + branch
+	remoteRef := "refs/remotes/" + remoteBranch
+	utils.Info("Updating '%s' from %s (fast-forward only)...", branch, remoteBranch)
+
+	if err := GetRunner().RunCmd("git", "fetch", "--tags", "--force", "origin", "+refs/heads/"+branch+":"+remoteRef); err != nil {
+		return fmt.Errorf("failed to fetch branch '%s' from origin: %w", branch, err)
+	}
+
+	ahead, behind, err := countAheadBehind(remoteRef)
+	if err != nil {
+		return fmt.Errorf("failed to compare HEAD with %s: %w", remoteBranch, err)
+	}
+
+	switch {
+	case ahead > 0:
+		return unpushedCommitsError(branch, ahead, behind)
+	case behind > 0:
+		if err := GetRunner().RunCmd("git", "merge", "--ff-only", remoteRef); err != nil {
+			return fmt.Errorf("failed to fast-forward '%s' to %s: %w", branch, remoteBranch, err)
+		}
+		utils.Success("Fast-forwarded '%s' by %d commit%s to %s", branch, behind, pluralize(behind), remoteBranch)
+	default:
+		utils.Success("'%s' is level with %s", branch, remoteBranch)
+	}
+	return nil
+}
+
+// countAheadBehind counts the commits HEAD has that ref doesn't (ahead) and
+// the commits ref has that HEAD doesn't (behind).
+func countAheadBehind(ref string) (ahead, behind int, err error) {
+	output, err := GetRunner().RunCmdOutput("git", "rev-list", "--left-right", "--count", "HEAD..."+ref)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	fields := strings.Fields(output)
+	if len(fields) == 2 {
+		var aheadErr, behindErr error
+		ahead, aheadErr = strconv.Atoi(fields[0])
+		behind, behindErr = strconv.Atoi(fields[1])
+		if aheadErr == nil && behindErr == nil {
+			return ahead, behind, nil
+		}
+	}
+	return 0, 0, fmt.Errorf("%w %q", errUnexpectedRevListOutput, output)
+}
+
+// unpushedCommitsError reports, for ff-only, that branch has ahead commits
+// origin/<branch> doesn't have (and, when they have diverged, that
+// origin/<branch> has behind commits branch doesn't), so nothing was tagged.
+// It says how to release the commits or drop them.
+func unpushedCommitsError(branch string, ahead, behind int) error {
+	remoteBranch := "origin/" + branch
+	them := "them"
+	if ahead == 1 {
+		them = "it"
+	}
+	reset := fmt.Sprintf("to drop %s, reset the branch to origin in a terminal (git checkout %s && git reset --hard %s)", them, branch, remoteBranch)
+
+	if behind > 0 {
+		return fmt.Errorf("ff-only: branch '%s' has diverged from %s: it has %d commit%s that %s doesn't have, and %s has %d commit%s it doesn't; %w\n"+
+			"to release %s, rebase %s onto %s and push %s first (git checkout %s && git pull --rebase origin %s && git push origin %s); %s",
+			branch, remoteBranch, ahead, pluralize(ahead), remoteBranch, remoteBranch, behind, pluralize(behind), errBranchHasUnpushedCommits,
+			them, them, remoteBranch, them, branch, branch, branch, reset)
+	}
+	return fmt.Errorf("ff-only: branch '%s' has %d commit%s that %s doesn't have, so it can't be fast-forwarded; %w\n"+
+		"to release %s, push %s first (git push origin %s); %s",
+		branch, ahead, pluralize(ahead), remoteBranch, errBranchHasUnpushedCommits,
+		them, them, branch, reset)
+}
+
+// handleBranchSwitch handles the branch switching logic and returns cleanup function if needed.
+// It updates the target branch from origin with pullLatestBranch, or with
+// fastForwardBranch when ffOnly is set.
+func handleBranchSwitch(targetBranch, bumpType string, dryRun, ffOnly bool) (func(), error) {
 	if targetBranch == "" {
 		return handleNoBranchSpecified(bumpType)
 	}
@@ -1807,10 +1923,10 @@ func handleBranchSwitch(targetBranch, bumpType string, dryRun bool) (func(), err
 
 	// Check if target branch is different from current
 	if targetBranch != originalBranch {
-		return handleDifferentBranch(targetBranch, originalBranch, dryRun)
+		return handleDifferentBranch(targetBranch, originalBranch, dryRun, ffOnly)
 	}
 
-	return handleSameBranch(targetBranch, dryRun)
+	return handleSameBranch(targetBranch, dryRun, ffOnly)
 }
 
 // handleNoBranchSpecified handles the case when no branch parameter is provided
@@ -1827,7 +1943,7 @@ func handleNoBranchSpecified(bumpType string) (func(), error) {
 }
 
 // handleDifferentBranch handles switching to a different branch
-func handleDifferentBranch(targetBranch, originalBranch string, dryRun bool) (func(), error) {
+func handleDifferentBranch(targetBranch, originalBranch string, dryRun, ffOnly bool) (func(), error) {
 	if !dryRun {
 		// Validate target branch exists
 		if err := isValidBranch(targetBranch); err != nil {
@@ -1850,31 +1966,62 @@ func handleDifferentBranch(targetBranch, originalBranch string, dryRun bool) (fu
 			}
 		}
 
-		// Pull latest changes to ensure we're up to date
-		if err := pullLatestBranch(); err != nil {
-			return cleanup, fmt.Errorf("failed to pull latest changes on branch '%s': %w", targetBranch, err)
+		// Pull latest changes to ensure we're up to date (fast-forward only with ff-only)
+		if err := updateSwitchedBranch(targetBranch, ffOnly); err != nil {
+			return cleanup, err
 		}
 
 		return cleanup, nil
 	}
 
 	utils.Info("🔧 DRY-RUN: Would switch from branch '%s' to '%s'", originalBranch, targetBranch)
-	utils.Info("🔧 DRY-RUN: Would pull latest changes on '%s'", targetBranch)
+	if ffOnly {
+		logDryRunFastForward(targetBranch)
+	} else {
+		utils.Info("🔧 DRY-RUN: Would pull latest changes on '%s'", targetBranch)
+	}
 	return func() {}, nil // no-op cleanup function for dry-run
 }
 
+// updateSwitchedBranch brings the branch handleDifferentBranch switched to up
+// to date with origin: with fastForwardBranch for ff-only, which stops before
+// tagging when the branch has commits origin doesn't have, and otherwise with
+// pullLatestBranch.
+func updateSwitchedBranch(targetBranch string, ffOnly bool) error {
+	if ffOnly {
+		return fastForwardBranch(targetBranch)
+	}
+	if err := pullLatestBranch(); err != nil {
+		return fmt.Errorf("failed to pull latest changes on branch '%s': %w", targetBranch, err)
+	}
+	return nil
+}
+
 // handleSameBranch handles the case when already on the target branch
-func handleSameBranch(targetBranch string, dryRun bool) (func(), error) {
+func handleSameBranch(targetBranch string, dryRun, ffOnly bool) (func(), error) {
 	utils.Info("Already on target branch '%s'", targetBranch)
-	if !dryRun {
+	switch {
+	case dryRun && ffOnly:
+		logDryRunFastForward(targetBranch)
+	case dryRun:
+		utils.Info("🔧 DRY-RUN: Would pull latest changes on current branch '%s'", targetBranch)
+	case ffOnly:
+		// With ff-only, update the branch fast-forward only, or stop before tagging
+		if err := fastForwardBranch(targetBranch); err != nil {
+			return nil, err
+		}
+	default:
 		// Still pull latest changes even if we're on the right branch
 		if err := pullLatestBranch(); err != nil {
 			return nil, err
 		}
-	} else {
-		utils.Info("🔧 DRY-RUN: Would pull latest changes on current branch '%s'", targetBranch)
 	}
 	return func() {}, nil // no-op cleanup function
+}
+
+// logDryRunFastForward says what ff-only would do to branch outside dry-run.
+func logDryRunFastForward(branch string) {
+	utils.Info("🔧 DRY-RUN: Would fast-forward '%s' to origin/%s, failing if it has commits origin/%s doesn't have", branch, branch, branch)
 }
 
 // Additional methods for Version namespace required by tests
