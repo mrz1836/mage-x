@@ -43,7 +43,7 @@ func TestVersionBumpWithBranchParameter(t *testing.T) {
 		mockRunner.SetOutput("git rev-list --count v1.3.27..HEAD", "3")                                                                    // Distance from tag
 		mockRunner.SetOutput("git remote -v", "origin\tgit@github.com:test/repo.git (fetch)\norigin\tgit@github.com:test/repo.git (push)") // Mock git remote
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
-		mockRunner.SetOutput("git ls-remote --tags origin v1.3.28", "")                                                                    // Tag doesn't exist on remote yet
+		mockRunner.SetOutput("git ls-remote origin refs/tags/v1.3.28 refs/tags/v1.3.28^{}", "")                                            // Tag doesn't exist on remote yet
 
 		version := Version{}
 

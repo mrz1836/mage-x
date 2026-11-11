@@ -112,18 +112,19 @@ func lsRemoteLine(sha, ref string) string {
 	return sha + "\t" + ref
 }
 
-// annotatedLsRemote renders `git ls-remote --tags origin <testTag>` output for
-// an annotated tag pointing at commit: the tag-object line plus the peeled
-// ("^{}") commit line. Scoped to the tag under test (testTag); the tag-object
-// hash is irrelevant to the peel logic, so a fixed placeholder is used.
+// annotatedLsRemote renders the output of keyLsTags for an annotated tag
+// pointing at commit: the tag-object line plus the peeled ("^{}") commit line.
+// Scoped to the tag under test (testTag); the tag-object hash is irrelevant to
+// the peel logic, so a fixed placeholder is used.
 func annotatedLsRemote(commit string) string {
 	ref := "refs/tags/" + testTag
 	return lsRemoteLine(testTagObjA, ref) + "\n" +
 		lsRemoteLine(commit, ref+"^{}")
 }
 
-// lightweightLsRemote renders `git ls-remote --tags origin <tag>` output for a
-// lightweight tag: a single line pointing directly at the commit.
+// lightweightLsRemote renders origin's ls-remote output for a lightweight tag:
+// a single line pointing directly at the commit, with no peeled ("^{}") line
+// since a commit has nothing to peel.
 func lightweightLsRemote(tag, commit string) string {
 	return lsRemoteLine(commit, "refs/tags/"+tag)
 }
@@ -132,7 +133,7 @@ func lightweightLsRemote(tag, commit string) string {
 const (
 	keyRemoteV      = "git remote -v"
 	keyLsRemoteHead = "git ls-remote --exit-code origin HEAD"
-	keyLsTags       = "git ls-remote --tags origin " + testTag
+	keyLsTags       = "git ls-remote origin refs/tags/" + testTag + " refs/tags/" + testTag + "^{}"
 	keyRevList      = "git rev-list -n 1 " + testTag
 	keyPush         = "git push origin " + testTag
 )
@@ -305,6 +306,17 @@ func assertUnpushedTagHint(t *testing.T, err error) {
 func TestRemoteTagCommit(t *testing.T) {
 	originalRunner := GetRunner()
 	t.Cleanup(func() { require.NoError(t, SetRunner(originalRunner)) })
+
+	t.Run("asks origin for the tag and its peeled commit by full ref name", func(t *testing.T) {
+		r := newScriptedRunner()
+		require.NoError(t, SetRunner(r))
+
+		// A pattern such as "v1.27.0" matches the tail of a ref name, so it never
+		// matches "refs/tags/v1.27.0^{}": origin would list an annotated tag's
+		// object but not the commit it points at.
+		remoteTagCommit(testTag)
+		assert.Equal(t, []string{"git ls-remote origin refs/tags/v1.27.0 refs/tags/v1.27.0^{}"}, r.commands)
+	})
 
 	t.Run("annotated tag returns peeled commit", func(t *testing.T) {
 		r := newScriptedRunner()

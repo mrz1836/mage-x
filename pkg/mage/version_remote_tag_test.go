@@ -91,7 +91,7 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 		// CRITICAL: Mock that v1.4.0 already exists on remote, pointing at a
 		// DIFFERENT commit than our local tag (i.e. created from another branch).
 		// This is a genuine conflict and must fail the push.
-		mockRunner.SetOutput("git ls-remote --tags origin v1.4.0", "98abdabb5b928ada967550c3218ea0faf7cc40b7\trefs/tags/v1.4.0")
+		mockRunner.SetOutput("git ls-remote origin refs/tags/v1.4.0 refs/tags/v1.4.0^{}", "98abdabb5b928ada967550c3218ea0faf7cc40b7\trefs/tags/v1.4.0")
 		// Local v1.4.0 (just created on HEAD) resolves to a different commit.
 		mockRunner.SetOutput("git rev-list -n 1 v1.4.0", "1234567890abcdef1234567890abcdef12345678")
 
@@ -103,9 +103,9 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 		require.Contains(t, err.Error(), "already exists on remote", "Error should mention tag already exists on remote")
 
 		// Verify git ls-remote check was performed
-		expectedCheckCmd := []string{"git", "ls-remote", "--tags", "origin", "v1.4.0"}
+		expectedCheckCmd := []string{"git", "ls-remote", "origin", "refs/tags/v1.4.0", "refs/tags/v1.4.0^{}"}
 		require.True(t, mockRunner.HasCommand(expectedCheckCmd),
-			"Expected 'git ls-remote --tags origin v1.4.0' check to be performed. Commands: %v", mockRunner.GetCommands())
+			"Expected 'git ls-remote origin refs/tags/v1.4.0 refs/tags/v1.4.0^{}' check to be performed. Commands: %v", mockRunner.GetCommands())
 
 		// Verify git push was NOT called (because check failed)
 		expectedPushCmd := []string{"git", "push", "origin", "v1.4.0"}
@@ -132,7 +132,7 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 
 		// Remote already has v1.4.0 at the same commit our local tag resolves to.
 		const sameCommit = "98abdabb5b928ada967550c3218ea0faf7cc40b7"
-		mockRunner.SetOutput("git ls-remote --tags origin v1.4.0", sameCommit+"\trefs/tags/v1.4.0")
+		mockRunner.SetOutput("git ls-remote origin refs/tags/v1.4.0 refs/tags/v1.4.0^{}", sameCommit+"\trefs/tags/v1.4.0")
 		mockRunner.SetOutput("git rev-list -n 1 v1.4.0", sameCommit)
 
 		version := Version{}
@@ -141,7 +141,7 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 		require.NoError(t, err, "A tag already published at the same commit must be treated as success")
 
 		// Verify the remote check was performed.
-		expectedCheckCmd := []string{"git", "ls-remote", "--tags", "origin", "v1.4.0"}
+		expectedCheckCmd := []string{"git", "ls-remote", "origin", "refs/tags/v1.4.0", "refs/tags/v1.4.0^{}"}
 		require.True(t, mockRunner.HasCommand(expectedCheckCmd),
 			"Expected the remote tag check to be performed. Commands: %v", mockRunner.GetCommands())
 
@@ -168,7 +168,7 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 		mockRunner.SetOutput("git log --oneline -5 --no-decorate", "abc123 Recent commit\ndef456 Other commit")                            // Recent commits
 
 		// Mock that v1.4.0 does NOT exist on remote (empty response)
-		mockRunner.SetOutput("git ls-remote --tags origin v1.4.0", "")
+		mockRunner.SetOutput("git ls-remote origin refs/tags/v1.4.0 refs/tags/v1.4.0^{}", "")
 
 		version := Version{}
 
@@ -177,9 +177,9 @@ func TestVersionBumpTagExistsOnRemote(t *testing.T) {
 		require.NoError(t, err, "Should succeed when tag doesn't exist on remote")
 
 		// Verify git ls-remote check was performed
-		expectedCheckCmd := []string{"git", "ls-remote", "--tags", "origin", "v1.4.0"}
+		expectedCheckCmd := []string{"git", "ls-remote", "origin", "refs/tags/v1.4.0", "refs/tags/v1.4.0^{}"}
 		require.True(t, mockRunner.HasCommand(expectedCheckCmd),
-			"Expected 'git ls-remote --tags origin v1.4.0' check to be performed. Commands: %v", mockRunner.GetCommands())
+			"Expected 'git ls-remote origin refs/tags/v1.4.0 refs/tags/v1.4.0^{}' check to be performed. Commands: %v", mockRunner.GetCommands())
 
 		// Verify git push WAS called (because check passed)
 		expectedPushCmd := []string{"git", "push", "origin", "v1.4.0"}
@@ -260,12 +260,12 @@ func TestVersionBumpAutoIncrement(t *testing.T) {
 		mockRunner.SetOutput("git ls-remote --exit-code origin HEAD", "abc123\trefs/heads/main")                                           // Mock remote accessibility
 
 		// Mock tag existence checks
-		mockRunner.SetOutput("git tag -l v1.4.0", "v1.4.0")                       // v1.4.0 exists locally
-		mockRunner.SetOutput("git rev-parse v1.4.0", "different123")              // Points to different commit
-		mockRunner.SetOutput("git rev-parse HEAD", "abc123")                      // Current HEAD
-		mockRunner.SetOutput("git tag -l v1.5.0", "")                             // v1.5.0 doesn't exist
-		mockRunner.SetOutput("git ls-remote --tags origin v1.5.0", "")            // v1.5.0 doesn't exist on remote
-		mockRunner.SetOutput("git log --oneline -5 --no-decorate", "abc123 Test") // Recent commits
+		mockRunner.SetOutput("git tag -l v1.4.0", "v1.4.0")                                   // v1.4.0 exists locally
+		mockRunner.SetOutput("git rev-parse v1.4.0", "different123")                          // Points to different commit
+		mockRunner.SetOutput("git rev-parse HEAD", "abc123")                                  // Current HEAD
+		mockRunner.SetOutput("git tag -l v1.5.0", "")                                         // v1.5.0 doesn't exist
+		mockRunner.SetOutput("git ls-remote origin refs/tags/v1.5.0 refs/tags/v1.5.0^{}", "") // v1.5.0 doesn't exist on remote
+		mockRunner.SetOutput("git log --oneline -5 --no-decorate", "abc123 Test")             // Recent commits
 
 		version := Version{}
 
@@ -316,7 +316,7 @@ func TestVersionBumpAutoIncrement(t *testing.T) {
 		mockRunner.SetOutput("git rev-parse v1.5.0", "different456")
 		mockRunner.SetOutput("git tag -l v1.6.0", "")
 		mockRunner.SetOutput("git rev-parse HEAD", "abc123")
-		mockRunner.SetOutput("git ls-remote --tags origin v1.6.0", "")
+		mockRunner.SetOutput("git ls-remote origin refs/tags/v1.6.0 refs/tags/v1.6.0^{}", "")
 
 		version := Version{}
 
@@ -400,7 +400,7 @@ func TestVersionBumpCompleteScenario(t *testing.T) {
 		mockRunner.SetOutput("git rev-parse v1.4.0", "98abdabb5b928ada967550c3218ea0faf7cc40b7") // Points to different commit
 		mockRunner.SetOutput("git rev-parse HEAD", "78baa5e3d7bd355019db6caaa11286779aba6832")   // Current HEAD
 		mockRunner.SetOutput("git tag -l v1.5.0", "")                                            // v1.5.0 doesn't exist
-		mockRunner.SetOutput("git ls-remote --tags origin v1.5.0", "")                           // v1.5.0 doesn't exist on remote
+		mockRunner.SetOutput("git ls-remote origin refs/tags/v1.5.0 refs/tags/v1.5.0^{}", "")    // v1.5.0 doesn't exist on remote
 
 		version := Version{}
 

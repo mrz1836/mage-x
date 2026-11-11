@@ -1115,13 +1115,17 @@ func unpushedTagError(tag string, cause error) error {
 // the push, where a genuine network failure surfaces with full diagnostics
 // rather than being silently swallowed here.
 func remoteTagCommit(tag string) (commit string, exists bool) {
-	out, err := GetRunner().RunCmdOutput("git", "ls-remote", "--tags", "origin", tag)
+	wantDirect := "refs/tags/" + tag
+	wantPeeled := wantDirect + "^{}"
+
+	// Ask for both refs by full name: ls-remote matches a pattern against the
+	// tail of each ref name, so the bare tag name never matches the peeled
+	// "<tag>^{}" entry and an annotated tag would come back as its tag object.
+	out, err := GetRunner().RunCmdOutput("git", "ls-remote", "origin", wantDirect, wantPeeled)
 	if err != nil {
 		return "", false
 	}
 
-	wantDirect := "refs/tags/" + tag
-	wantPeeled := wantDirect + "^{}"
 	var direct, peeled string
 	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
 		fields := strings.Fields(line)
