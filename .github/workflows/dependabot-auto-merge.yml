@@ -1816,17 +1816,19 @@ jobs:
 
       # --------------------------------------------------------------------
       # Last, for an approval or a skip-untrusted-actor revocation (whose apply
-      # keeps an App approval of the head): is the PR still on the analyzed
-      # commit and base? If not, `apply` would only skip or keep, but joining
-      # its queue would still replace the pending apply of the newer evaluation
+      # can keep an App approval of the head): is the PR still on the analyzed
+      # commit and base? If not, `apply` would only skip (an approval) or revoke
+      # on stale grounds, even a newer evaluation's approval, and joining its
+      # queue would still replace the pending apply of the newer evaluation
       # (GitHub keeps one pending job per group: the last to arrive, not the
       # freshest evaluation). A retarget keeps the head, and its own evaluation
       # may skip `analyze` (e.g. manual-no-metadata), leaving this one running
       # to displace its revocation. So it stays out. So does an approval when
       # the PR can't be re-read (fail closed: re-run to retry), while a
       # revocation then goes ahead: `apply` keeps an approval only on the head
-      # and base this run verified. Other revocations always go ahead. Never
-      # fails the job (that would turn the decision into a revoke).
+      # and base this run verified. Other revocations always go ahead, and
+      # `apply` keeps no approval for them. Never fails the job (that would
+      # turn the decision into a revoke).
       # --------------------------------------------------------------------
       - name: 📌 Confirm the head and base before approving or keeping an approval
         id: head
@@ -1875,9 +1877,10 @@ jobs:
   #             auto-merge after a push by someone else), then dismiss the App's
   #             approvals. Only ever on a same-repo Dependabot PR. A failed call
   #             doesn't skip the rest: everything is attempted, then the job fails
-  #             and the PR comment says what's left. Once the head has moved, a
-  #             newer evaluation decides it: an App approval of the current head
-  #             stands, and only authorization for older commits is revoked.
+  #             and the PR comment says what's left. Only an evaluation of the
+  #             current head and base that failed nothing but the actor guard
+  #             keeps an App approval of that head; any other revokes it too,
+  #             including one that judged an older head or base (fail closed).
   #
   # SECURITY: this is the only job that can read the App private key. Every step in
   # a job can read every secret the job uses (they sit in the runner's memory), so
@@ -2163,16 +2166,20 @@ jobs:
           fi
 
           # An App approval of the current head was made by an evaluation that
-          # Dependabot triggered and that verified that exact commit. It stands when
-          # this run judged other content (the head has moved since), or when only
-          # who triggered this run is in question (skip-untrusted-actor: the actor
-          # guard runs last, so the commits and the verified base's rules passed),
-          # as long as the PR still targets that base: after a retarget, this run
-          # vouches for nothing, and it may have displaced the retarget's own
-          # revocation in the queue. Unreadable reviews can't show one, so the
-          # arming is revoked below (fail closed).
-          if [[ "$CURRENT_SHA" != "$VERIFIED_SHA" ||
-                ( "$ACTION" == "skip-untrusted-actor" && -n "$VERIFIED_BASE" && "$CURRENT_BASE" == "$VERIFIED_BASE" ) ]]; then
+          # Dependabot triggered and that verified that exact commit on the base
+          # the PR targeted then (the review records the commit, not the base). It
+          # stands only when this run vouches for that commit on the current base:
+          # only who triggered this run is in question (skip-untrusted-actor: the
+          # actor guard runs last, so the commits and the verified base's rules
+          # passed), on the head and base this run verified. A run that judged
+          # another commit or base vouches for nothing, and it may have displaced
+          # the newer evaluation's own revocation in the queue (e.g. a retarget's,
+          # which skips `analyze` and its stale check), so it revokes an approval
+          # of the current head too. Fail closed: re-running the latest evaluation
+          # restores a sound one. Unreadable reviews can't show one, so the arming
+          # is revoked below.
+          if [[ "$CURRENT_SHA" == "$VERIFIED_SHA" && "$ACTION" == "skip-untrusted-actor" &&
+                -n "$VERIFIED_BASE" && "$CURRENT_BASE" == "$VERIFIED_BASE" ]]; then
             if grep -q " $CURRENT_SHA\$" <<< "$APPROVALS"; then
               echo "✅ $APP_BOT approved the current head $CURRENT_SHA in an evaluation Dependabot triggered — nothing to revoke"
               outcome kept-current
@@ -2180,12 +2187,10 @@ jobs:
             elif [[ "$REVIEWS_READ" != "true" ]]; then
               echo "⚠️ Can't check for an App approval of the current head $CURRENT_SHA, so revoking anyway"
             fi
-          fi
-          if [[ "$CURRENT_SHA" != "$VERIFIED_SHA" && "$REVIEWS_READ" == "true" ]]; then
-            echo "📌 Head moved from $VERIFIED_SHA to $CURRENT_SHA, which no App approval covers yet"
           elif [[ "$CURRENT_SHA" != "$VERIFIED_SHA" ]]; then
-            echo "📌 Head moved from $VERIFIED_SHA to $CURRENT_SHA"
-          elif [[ "$ACTION" == "skip-untrusted-actor" && ( -z "$VERIFIED_BASE" || "$CURRENT_BASE" != "$VERIFIED_BASE" ) ]]; then
+            echo "📌 Head moved from $VERIFIED_SHA to $CURRENT_SHA since this evaluation, so no App approval is kept (re-run the latest run for $CURRENT_SHA to re-evaluate it)"
+            WHY="$WHY, and the PR has since moved on to ${CURRENT_SHA:0:7}, which this evaluation can't vouch for"
+          elif [[ "$ACTION" == "skip-untrusted-actor" ]]; then
             echo "📌 Base changed from ${VERIFIED_BASE:-<unknown>} to ${CURRENT_BASE:-<unknown>} since this evaluation, so no App approval is kept"
           fi
 
