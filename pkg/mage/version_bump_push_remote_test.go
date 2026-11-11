@@ -160,3 +160,74 @@ func TestVersionBumpPushRealRemote(t *testing.T) {
 		})
 	}
 }
+
+// TestVersionBumpPushTagAlreadyOnOrigin runs version:bump push in a clone
+// whose bare origin already has the version the bump creates, pushed from
+// another clone that this one never fetched. A tag on origin at the commit the
+// bump tags is the same release already published, so the bump succeeds
+// without pushing; a tag at another commit is a conflict and fails the bump.
+// version:bump makes annotated tags, which origin lists as the tag object with
+// a peeled entry for the commit. Nothing here reaches the network.
+func TestVersionBumpPushTagAlreadyOnOrigin(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping real git repository test in short mode")
+	}
+
+	useRealGitRunner(t)
+	isolateGit(t)
+
+	const tag = "v1.4.3"
+
+	tests := []struct {
+		name          string
+		tagArgs       []string // how the other clone tags its HEAD as tag
+		anotherCommit bool     // the other clone tags a new commit instead of origin's master
+		wantErr       error
+		wantLog       string
+	}{
+		{
+			name:    "annotated tag at the same commit is already published",
+			tagArgs: []string{"tag", "-a", tag, "-m", "Release " + tag},
+			wantLog: "Tag " + tag + " already exists on remote at the same commit",
+		},
+		{
+			name:    "lightweight tag at the same commit is already published",
+			tagArgs: []string{"tag", tag},
+			wantLog: "Tag " + tag + " already exists on remote at the same commit",
+		},
+		{
+			name:          "annotated tag at another commit is a conflict",
+			tagArgs:       []string{"tag", "-a", tag, "-m", "Release " + tag},
+			anotherCommit: true,
+			wantErr:       errTagAlreadyExistsOnRemote,
+			wantLog:       "Tag " + tag + " already exists on remote pointing at a different commit",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			race := newBumpRace(t)
+			if tt.anotherCommit {
+				gitIn(t, race.other, "commit", "--allow-empty", "-m", "change released elsewhere")
+			}
+			gitIn(t, race.other, tt.tagArgs...)
+			gitIn(t, race.other, "push", "origin", tag)
+			originTag := gitIn(t, race.origin, "rev-parse", "refs/tags/"+tag)
+
+			t.Chdir(race.work)
+			var err error
+			log := captureCLILog(t, func() { err = Version{}.Bump("bump=patch", "push=true") })
+
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Contains(t, log, tt.wantLog)
+			assert.NotContains(t, log, "Pushing tag to remote", "the bump must not push over origin's tag")
+			assert.Equal(t, gitIn(t, race.work, "rev-parse", "HEAD"), gitIn(t, race.work, "rev-list", "-n", "1", tag),
+				"the bump should tag the clone's HEAD as %s", tag)
+			assert.Equal(t, originTag, gitIn(t, race.origin, "rev-parse", "refs/tags/"+tag), "origin's %s must be left as it was", tag)
+		})
+	}
+}
