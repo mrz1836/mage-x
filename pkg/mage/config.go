@@ -514,6 +514,12 @@ func applyEnvOverrides(c *Config) {
 		c.Test.ExcludeModules = mods
 	}
 
+	// Test coverpkg override (ParseStringSlice handles trimming). Lets a project
+	// widen coverage attribution (e.g. "./...") without editing a synced .mage.yaml.
+	if pkgs := env.ParseStringSlice("MAGE_X_TEST_COVERPKG"); pkgs != nil {
+		c.Test.CoverPkg = pkgs
+	}
+
 	// Test timeout override
 	if v := env.MustGet("MAGE_X_TEST_TIMEOUT"); v != "" {
 		c.Test.Timeout = v

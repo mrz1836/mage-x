@@ -490,7 +490,18 @@ export MAGE_X_TEST_PARALLEL="4"
 export MAGE_X_AUTO_DISCOVER_BUILD_TAGS="true"
 export MAGE_X_AUTO_DISCOVER_BUILD_TAGS_EXCLUDE="mage,windows"
 export MAGE_X_AUTO_DISCOVER_BUILD_TAGS_COMBINE="true"   # false = one test pass per tag
+export MAGE_X_TEST_EXCLUDE_MODULES="module1,module2"
+export MAGE_X_TEST_COVERPKG="./..."
 ```
+
+> **`MAGE_X_TEST_COVERPKG`** (or `test.coverpkg` in `.mage.yaml`) sets the `-coverpkg`
+> flag for the coverage runs (`magex test:cover` and `magex test:coverrace`). It is a
+> comma-separated list of package patterns; the value replaces `test.coverpkg` from
+> `.mage.yaml`. Coverage tests run inside each module's directory, so `./...` means
+> every package in that module, and a package gets coverage from the tests of any
+> package that runs its code, not only its own tests. Full import-path patterns such as
+> `github.com/org/repo/internal/...` also work. When unset or empty, the
+> `.mage.yaml` value is used, and with neither set `-coverpkg` is not passed.
 
 ### Format Variables
 ```bash
